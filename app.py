@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 import chromadb
 from openai import OpenAI
 import os
@@ -73,7 +74,7 @@ collection = chroma_client.get_or_create_collection(
 # -----------------------------
 @app.post("/ask")
 async def ask_question(payload: dict):
-    question = payload["question"]
+    question = payload["message"]
     role = payload.get("role", "standard")
 
     # Retrieve relevant context from Chroma
@@ -105,6 +106,7 @@ async def ask_question(payload: dict):
 
 
     return StreamingResponse(generate(), media_type="text/plain")
+
 
 
 
