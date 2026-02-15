@@ -5,7 +5,9 @@ python-dotenv
 pydantic
 numpy==1.26.4
 openai==1.12.0
+httpx==0.27.0
 
 typing_extensions
+
 
 
