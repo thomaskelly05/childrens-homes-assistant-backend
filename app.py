@@ -20,7 +20,7 @@ app.add_middleware(
 # -----------------------------
 # OPENAI CLIENT
 # -----------------------------
-client = OpenAI()
+client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
 # -----------------------------
 # SYSTEM PROMPT FOR EXPANDED ANSWERS
@@ -105,6 +105,7 @@ async def ask_question(payload: dict):
 
 
     return StreamingResponse(generate(), media_type="text/plain")
+
 
 
 
