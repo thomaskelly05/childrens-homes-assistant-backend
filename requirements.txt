@@ -1,6 +1,7 @@
 fastapi
 uvicorn
-chromadb
+chromadb==0.4.22
 python-dotenv
 pydantic
+
 typing_extensions
