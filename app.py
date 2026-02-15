@@ -56,7 +56,10 @@ Always give expanded, structured answers with headings, paragraphs, and bullet p
 # -----------------------------
 CHROMA_DIR = "chroma_db"
 
-chroma_client = chromadb.PersistentClient(path=CHROMA_DIR)
+chroma_client = chromadb.PersistentClient(
+    path=CHROMA_DIR,
+    settings=chromadb.config.Settings(chroma_server_nofile=4096)
+)
 
 collection = chroma_client.get_or_create_collection(
     name="children_home_docs",
@@ -100,4 +103,5 @@ async def ask_question(payload: dict):
 
 
     return StreamingResponse(generate(), media_type="text/plain")
+
 
