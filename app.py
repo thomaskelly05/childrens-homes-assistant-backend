@@ -1,3 +1,5 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import chromadb
 from openai import OpenAI
 import os
@@ -103,5 +105,6 @@ async def ask_question(payload: dict):
 
 
     return StreamingResponse(generate(), media_type="text/plain")
+
 
 
