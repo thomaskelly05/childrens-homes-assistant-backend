@@ -73,7 +73,7 @@ collection = chroma_client.get_or_create_collection(
 @app.post("/ask")
 async def ask_question(payload: dict):
     question = payload["question"]
-role = payload.get("role", "standard")
+    role = payload.get("role", "standard")
 
     # Retrieve relevant context from Chroma
     results = collection.query(
@@ -86,9 +86,9 @@ role = payload.get("role", "standard")
 
     # Build the messages for the model
     messages = [
-    {"role": "system", "content": SYSTEM_PROMPT.format(role=role)},
-    {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {question}"}
-]
+        {"role": "system", "content": SYSTEM_PROMPT.format(role=role)},
+        {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {question}"}
+    ]
 
     # Generator for streaming
     def generate():
