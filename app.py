@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 import chromadb
-from chromadb.config import Settings
 from openai import OpenAI
 import os
 
@@ -101,5 +100,6 @@ async def ask_question(payload: dict):
         for chunk in response:
             if chunk.choices and chunk.choices[0].delta.get("content"):
                 yield chunk.choices[0].delta["content"]
+
 
     return StreamingResponse(generate(), media_type="text/plain")
