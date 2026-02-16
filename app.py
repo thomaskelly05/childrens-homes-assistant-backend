@@ -6,37 +6,23 @@ import openai
 import os
 from pypdf import PdfReader
 
-# ---------------------------------------------------------
-# CREATE APP
-# ---------------------------------------------------------
 app = FastAPI()
 
-# ---------------------------------------------------------
-# CORS
-# ---------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # tighten later to ["https://www.indicare.co.uk"]
+    allow_origins=["*"],   # tighten later
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ---------------------------------------------------------
-# REQUEST MODEL
-# ---------------------------------------------------------
 class ChatRequest(BaseModel):
     message: str
     role: str
 
-# ---------------------------------------------------------
-# OPENAI CONFIG
-# ---------------------------------------------------------
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# ---------------------------------------------------------
-# LOAD PDF ON STARTUP
-# ---------------------------------------------------------
+# ---- load ONE pdf for now ----
 def load_pdf_text(path: str) -> str:
     try:
         reader = PdfReader(path)
@@ -46,18 +32,20 @@ def load_pdf_text(path: str) -> str:
         print("Error loading PDF:", e)
         return ""
 
-PDF_TEXT = load_pdf_text("core_policy.pdf")  # <-- your PDF filename
+PDF_TEXT = load_pdf_text("documents/childrens_homes_regulations.pdf")
 
-# ---------------------------------------------------------
-# STREAMING ENDPOINT
-# ---------------------------------------------------------
 @app.post("/ask")
 async def ask(request: ChatRequest):
 
-    system_context = (
-        f"You are in {request.role} mode. "
-        f"Use the following PDF content as your primary reference where relevant:\n\n{PDF_TEXT}"
-    )
+    system_context = f"""
+You are in {request.role} mode.
+
+You must answer ONLY from the following document content.
+If the answer is not in the document, say you cannot find it.
+
+Document content:
+{PDF_TEXT}
+"""
 
     completion = openai.ChatCompletion.create(
         model="gpt-4o-mini",
