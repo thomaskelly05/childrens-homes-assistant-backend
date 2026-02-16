@@ -5,6 +5,12 @@ from fastapi.responses import StreamingResponse
 from openai import OpenAI
 import os
 from pypdf import PdfReader
+import logging
+
+# ---------------------------------------------------------
+# LOGGING
+# ---------------------------------------------------------
+logger = logging.getLogger("uvicorn.error")
 
 # ---------------------------------------------------------
 # OPENAI CLIENT (new API)
@@ -28,6 +34,7 @@ class ChatRequest(BaseModel):
     message: str
     role: str
     mode: str  # "ask" or "training"
+    speed: str | None = "fast"  # "fast" or "deep"
 
 # ---------------------------------------------------------
 # LOAD PDFs
@@ -36,7 +43,8 @@ def load_pdf_pages(path: str):
     try:
         reader = PdfReader(path)
         return [{"index": i, "text": (p.extract_text() or "")} for i, p in enumerate(reader.pages)]
-    except:
+    except Exception as e:
+        logger.error(f"Error loading PDF {path}: {e}")
         return []
 
 PDF_GUIDE_PAGES = load_pdf_pages("childrens_home_guide.pdf")
@@ -49,14 +57,15 @@ def simple_retrieve(pages, query: str, top_k: int = 3):
     terms = [w.lower() for w in query.split() if len(w) > 3]
     scored = []
     for page in pages:
-        score = sum(page["text"].lower().count(t) for t in terms)
+        text_lower = page["text"].lower()
+        score = sum(text_lower.count(t) for t in terms)
         if score > 0:
             scored.append((score, page))
     scored.sort(key=lambda x: x[0], reverse=True)
     return [p["text"] for score, p in scored[:top_k]]
 
 # ---------------------------------------------------------
-# PROMPT BLOCKS (FULL CONTENT)
+# PROMPT BLOCKS
 # ---------------------------------------------------------
 
 STYLE_BLOCK = """
@@ -82,7 +91,10 @@ MANAGER:
 Operational leader. Balances practice, staff wellbeing, rotas, incidents, quality assurance, and communication with the RI. Thinks about patterns, systems, and how to embed good practice across the home.
 
 RESPONSIBLE INDIVIDUAL:
-Strategic, governance‑focused, supportive. Offers guidance, oversight, and reflective challenge to the Manager. Thinks about organisational assurance, regulatory alignment, and how to evidence strong practice. Helps the Manager grow in confidence and capability.
+Strategic, calm, and supportive. Offers reflective challenge without judgement.
+Focuses on assurance, oversight, and strengthening systems.
+Helps the Manager think clearly, prioritise, and evidence strong practice.
+Frames guidance as partnership: “Let’s think this through together.”
 """
 
 ASK_MODE = """
@@ -160,6 +172,34 @@ Role‑specific focus:
 - RI: how would you assure yourself that practice is safe, effective, and well‑led?
 """
 
+TRAINING_SCENARIO_GUIDANCE = """
+TRAINING MODE SCENARIO GUIDANCE:
+
+Support Worker:
+- Focus on shift‑based decisions.
+- Explore safety, relationships, and recording.
+- Keep scenarios simple and grounded in daily practice.
+
+Senior Support Worker:
+- Explore guiding staff, maintaining routines, and modelling practice.
+- Include reflective questions about team dynamics and consistency.
+
+Manager:
+- Explore leadership decisions, oversight, rotas, quality assurance, and communication.
+- Include reflective questions about patterns, systems, and embedding practice.
+
+Responsible Individual:
+- Explore governance, assurance, oversight, and supporting the manager.
+- Include reflective questions about evidence, monitoring, and organisational learning.
+"""
+
+# ---------------------------------------------------------
+# HEALTH CHECK
+# ---------------------------------------------------------
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
 # ---------------------------------------------------------
 # MAIN ENDPOINT
 # ---------------------------------------------------------
@@ -177,7 +217,7 @@ async def ask(request: ChatRequest):
         "\n\n---\n\n".join(guide_snippets)
     )
 
-    BASE_PROMPT = f"""
+    base_prompt = f"""
 You are supporting a staff member in a UK children’s home.
 
 {STYLE_BLOCK}
@@ -198,8 +238,13 @@ Current role: {request.role}
 Current mode: {request.mode}
 """
 
-    # Choose model
     if request.mode == "training":
+        system_prompt = base_prompt + TRAINING_BLOCK + TRAINING_SCENARIO_GUIDANCE
+    else:
+        system_prompt = base_prompt
+
+    # Choose model based on speed
+    if request.speed == "deep":
         model_name = "gpt-4o"
     else:
         model_name = "gpt-4o-mini"
@@ -208,18 +253,23 @@ Current mode: {request.mode}
         completion = client.chat.completions.create(
             model=model_name,
             messages=[
-                {"role": "system", "content": BASE_PROMPT},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": request.message}
             ],
             stream=True
         )
     except Exception as e:
+        logger.error(f"OpenAI error: {e}")
         return StreamingResponse(iter([f"Error: {str(e)}"]), media_type="text/plain")
 
     async def stream():
-        for chunk in completion:
-            delta = chunk.choices[0].delta
-            if delta and delta.content:
-                yield delta.content
+        try:
+            for chunk in completion:
+                delta = chunk.choices[0].delta
+                if delta and delta.content:
+                    yield delta.content
+        except Exception as e:
+            logger.error(f"Streaming error: {e}")
+            yield "\nThere was a problem streaming the response. You might consider trying again."
 
     return StreamingResponse(stream(), media_type="text/plain")
