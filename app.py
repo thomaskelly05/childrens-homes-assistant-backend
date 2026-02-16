@@ -46,7 +46,6 @@ def load_pdf_text(path: str) -> str:
         print("Error loading PDF:", e)
         return ""
 
-# These filenames MUST match exactly what is in your project folder
 PDF1 = load_pdf_text("childrens_home_guide.pdf")
 PDF2 = load_pdf_text("childrens_homes_regulations_2015.pdf")
 
@@ -94,3 +93,4 @@ Document content begins below:
                     yield delta["content"]
 
     return StreamingResponse(event_stream(), media_type="text/plain")
+
