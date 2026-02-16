@@ -3,37 +3,40 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import openai
 import os
+from fastapi.responses import StreamingResponse
 
-# -----------------------------
+# ---------------------------------------------------------
 # CORS FIX FOR SQUARESPACE
-# -----------------------------
+# ---------------------------------------------------------
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://www.indicare.co.uk"],
+    allow_origins=["https://www.indicare.co.uk"],  # Your Squarespace domain
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# -----------------------------
+# ---------------------------------------------------------
 # REQUEST MODEL
-# -----------------------------
+# ---------------------------------------------------------
 class ChatRequest(BaseModel):
     message: str
     role: str
 
-# -----------------------------
+# ---------------------------------------------------------
 # OPENAI CONFIG
-# -----------------------------
+# ---------------------------------------------------------
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# -----------------------------
+# ---------------------------------------------------------
 # STREAMING ENDPOINT
-# -----------------------------
+# ---------------------------------------------------------
 @app.post("/ask")
 async def ask(request: ChatRequest):
+
+    # Prepare the OpenAI streaming call
     completion = openai.ChatCompletion.create(
         model="gpt-4o-mini",
         messages=[
@@ -43,6 +46,7 @@ async def ask(request: ChatRequest):
         stream=True
     )
 
+    # Generator that yields chunks as they arrive
     async def event_stream():
         for chunk in completion:
             if "choices" in chunk and len(chunk["choices"]) > 0:
@@ -50,4 +54,5 @@ async def ask(request: ChatRequest):
                 if "content" in delta:
                     yield delta["content"]
 
-    return event_stream()
+    # Return streaming response
+    return StreamingResponse(event_stream(), media_type="text/plain")
