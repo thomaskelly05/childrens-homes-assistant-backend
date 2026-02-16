@@ -186,16 +186,16 @@ Rules:
 """
 
 # ---------------------------------------------------------
-# FORMATTING RULES
+# FORMATTING RULES (HEADINGS RESTORED)
 # ---------------------------------------------------------
 FORMAT_BLOCK = """
 FORMAT RULES:
-- Plain text only.
-- Simple headings (frontend will style them).
+- Use simple headings written as plain text, ending with a colon.
+  Example: Daily Log Example:
+- Do NOT use markdown symbols (#, *, >).
 - Short paragraphs.
 - Blank line between paragraphs.
-- No markdown symbols (#, *, -, >).
-- No bullet points unless the user asks.
+- Lists are allowed but must be written with hyphens or numbers, not markdown bullets.
 """
 
 # ---------------------------------------------------------
