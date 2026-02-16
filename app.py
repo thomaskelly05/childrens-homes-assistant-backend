@@ -185,13 +185,30 @@ Never contradict the PDFs.
 Never invent statutory duties.
 Use internet knowledge only to clarify or contextualise.
 """
-
 FORMAT_BLOCK = """
 FORMATTING:
-Use simple headings ending with a colon.
-No markdown symbols (#, *, >).
-Short paragraphs with blank lines.
+Use short, natural paragraphs.
+Use HTML bold for headings, e.g. <strong>Heading:</strong>
+Do not use markdown symbols (#, *, >).
 Lists allowed with hyphens or numbers.
+Keep the tone conversational, not report‑like.
+"""
+
+CONVERSATION_DELIVERY = """
+CONVERSATION DELIVERY:
+
+Write as if you are speaking directly to the staff member, not writing an article.
+
+Keep the tone relational, warm, and grounded in real children’s‑home practice.
+
+Adapt your stance based on hierarchy (see hierarchy rules above).
+
+General conversational rules:
+- Speak in short, natural paragraphs.
+- Use gentle, human language.
+- Avoid sounding like a report or policy document.
+- Use HTML headings for structure, e.g. <strong>What’s happening:</strong>
+- Never use markdown (#, *, >).
 """
 
 TRAINING_BLOCK = """
@@ -258,6 +275,7 @@ You are supporting a staff member in a UK children’s home.
 {STYLE_BLOCK}
 {ROLE_BLOCK}
 {CONVERSATIONAL_HIERARCHY}
+{CONVERSATION_DELIVERY}
 {ASK_MODE}
 {BEST_PRACTICE}
 {INTERNET_ACCESS}
@@ -309,3 +327,4 @@ Current mode: {request.mode}
             yield "\nThere was a problem streaming the response. You might consider trying again."
 
     return StreamingResponse(stream(), media_type="text/plain")
+
