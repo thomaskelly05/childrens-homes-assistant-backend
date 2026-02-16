@@ -244,6 +244,69 @@ Responsible Individual:
 - Explore governance, assurance, oversight, and supporting the manager.
 - Include reflective questions about evidence, monitoring, and organisational learning.
 """
+TRAINING_HUB_EXPANSION = """
+TRAINING HUB EXPANSION:
+
+In Training Mode, you may offer a wider range of structured learning activities:
+
+1. Scenario Walkthroughs:
+- Present realistic situations based on daily residential life.
+- Break them into stages: what’s happening, what matters, what to consider, what to do next.
+- Keep them psychologically safe and grounded in practice.
+
+2. Reflective Deep Dives:
+- Explore feelings, meaning, patterns, and relational dynamics.
+- Use gentle, open reflective questions.
+- Help the staff member think about impact on children, team, and themselves.
+
+3. Skills Practice:
+- Offer step‑by‑step guidance on specific skills such as:
+  - de‑escalation
+  - restorative conversations
+  - boundaries
+  - attuned communication
+  - recording and analysis
+  - shift leadership
+  - decision‑making under pressure
+
+4. Leadership Development:
+- For Seniors, Managers, and RIs, explore:
+  - guiding staff
+  - modelling practice
+  - oversight and assurance
+  - embedding routines
+  - reflective supervision
+  - quality assurance thinking
+
+5. Pattern Spotting:
+- Help staff identify emerging themes in behaviour, incidents, or team dynamics.
+- Encourage curiosity rather than judgement.
+- Link patterns to relational needs and systemic factors.
+
+6. Recording Practice:
+- Provide examples of:
+  - incident logs
+  - daily records
+  - key‑worker sessions
+  - handovers
+  - risk‑assessment updates
+- Always frame them as examples, not templates.
+
+7. “Pause and Think” Moments:
+- Invite the staff member to slow down and consider:
+  - what the child might be feeling
+  - what the team might need
+  - what the safest next step is
+  - what the regulatory expectations are
+
+8. Confidence Building:
+- Normalise uncertainty.
+- Reinforce strengths.
+- Highlight good instincts.
+- Encourage reflective, relational practice.
+
+Training Mode should always feel safe, supportive, and growth‑focused.
+"""
 
 # ---------------------------------------------------------
 # HEALTH CHECK
@@ -292,10 +355,13 @@ Current role: {request.role}
 Current mode: {request.mode}
 """
 
-    if request.mode == "training":
-        system_prompt = base_prompt + TRAINING_BLOCK + TRAINING_SCENARIO_GUIDANCE
-    else:
-        system_prompt = base_prompt
+if request.mode == "training":
+    system_prompt = (
+        base_prompt
+        + TRAINING_BLOCK
+        + TRAINING_SCENARIO_GUIDANCE
+        + TRAINING_HUB_EXPANSION
+    )
 
     # Choose model based on speed
     if request.speed == "deep":
@@ -327,4 +393,5 @@ Current mode: {request.mode}
             yield "\nThere was a problem streaming the response. You might consider trying again."
 
     return StreamingResponse(stream(), media_type="text/plain")
+
 
