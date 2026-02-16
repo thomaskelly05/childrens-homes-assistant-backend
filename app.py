@@ -105,8 +105,8 @@ async def ask_question(payload: dict):
         if delta and delta.content:
             yield delta.content
 
-
     return StreamingResponse(generate(), media_type="text/plain")
+
 
 
 
