@@ -6,6 +6,9 @@ import openai
 import os
 from pypdf import PdfReader
 
+# ---------------------------------------------------------
+# APP
+# ---------------------------------------------------------
 app = FastAPI()
 
 app.add_middleware(
@@ -23,6 +26,9 @@ class ChatRequest(BaseModel):
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+# ---------------------------------------------------------
+# LOAD PDFs
+# ---------------------------------------------------------
 def load_pdf(path: str) -> str:
     try:
         reader = PdfReader(path)
@@ -40,6 +46,9 @@ PDF_TEXT = (
     PDF_GUIDE
 )
 
+# ---------------------------------------------------------
+# BRITISH THERAPEUTIC STYLE
+# ---------------------------------------------------------
 STYLE_BLOCK = """
 WRITING STYLE (BRITISH + THERAPEUTIC):
 Use British spelling, grammar, and phrasing at all times.
@@ -79,6 +88,9 @@ When giving scenarios:
 - focus on relational practice, safety, and emotional containment
 """
 
+# ---------------------------------------------------------
+# ROLE PROFILES
+# ---------------------------------------------------------
 ROLE_BLOCK = """
 ROLE BEHAVIOUR:
 
@@ -98,6 +110,9 @@ OFSTED INSPECTOR:
 Analytical, evidence‑based. Interprets practice through judgement areas and impact on children.
 """
 
+# ---------------------------------------------------------
+# BEST PRACTICE EXAMPLES
+# ---------------------------------------------------------
 BEST_PRACTICE = """
 BEST‑PRACTICE EXAMPLES (allowed):
 You ARE allowed to create examples of:
@@ -116,6 +131,9 @@ Rules:
 - Must not contradict the Regulations or statutory guidance.
 """
 
+# ---------------------------------------------------------
+# TRAINING MODE
+# ---------------------------------------------------------
 TRAINING_BLOCK = """
 TRAINING MODE:
 Provide:
@@ -134,6 +152,42 @@ Training should feel:
 - role‑appropriate
 """
 
+# ---------------------------------------------------------
+# INTERNET ACCESS (SAFE + CONTROLLED)
+# ---------------------------------------------------------
+INTERNET_ACCESS = """
+INTERNET ACCESS (allowed with safeguards):
+
+You ARE allowed to use general internet knowledge to support your answers, including:
+- definitions
+- sector terminology
+- common practice in UK children’s homes
+- Ofsted updates
+- DfE publications
+- safeguarding frameworks
+- research summaries
+- reputable sector information
+
+Hierarchy of authority:
+1. Children's Homes Regulations 2015 (highest)
+2. Children's Home Guide
+3. Ofsted inspection frameworks
+4. DfE publications and statutory guidance
+5. Trusted internet sources
+6. General internet knowledge (only when safe)
+
+Rules:
+- Never contradict the PDFs.
+- Never invent regulations or statutory duties.
+- Never present internet information as if it is from the PDFs.
+- Internet knowledge may only clarify, expand, or contextualise.
+- If internet information is uncertain, say so gently.
+- Keep the tone British, therapeutic, and grounded in practice.
+"""
+
+# ---------------------------------------------------------
+# FORMATTING RULES
+# ---------------------------------------------------------
 FORMAT_BLOCK = """
 FORMAT RULES:
 - Plain text only.
@@ -144,6 +198,9 @@ FORMAT RULES:
 - No bullet points unless the user asks.
 """
 
+# ---------------------------------------------------------
+# MAIN ENDPOINT
+# ---------------------------------------------------------
 @app.post("/ask")
 async def ask(request: ChatRequest):
 
@@ -153,6 +210,7 @@ You are supporting a staff member in a UK children’s home.
 {STYLE_BLOCK}
 {ROLE_BLOCK}
 {BEST_PRACTICE}
+{INTERNET_ACCESS}
 {FORMAT_BLOCK}
 
 PRIMARY SOURCES:
