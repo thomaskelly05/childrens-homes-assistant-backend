@@ -9,14 +9,18 @@ import os
 # FASTAPI SETUP
 # -----------------------------
 app = FastAPI()
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=[
+        "https://ornate-capybara-f27110.netlify.app",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000"
+    ],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # -----------------------------
 # OPENAI CLIENT
@@ -106,3 +110,4 @@ async def ask_question(payload: dict):
                 yield delta.content
 
     return StreamingResponse(generate(), media_type="text/plain")
+
