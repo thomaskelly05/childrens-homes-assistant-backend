@@ -94,18 +94,20 @@ async def ask_question(payload: dict):
 
     # Generator for streaming
     def generate():
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages,
-            stream=True
-        )
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages,
+        stream=True
+    )
 
-        for chunk in response:
-            if chunk.choices and chunk.choices[0].delta.get("content"):
-                yield chunk.choices[0].delta["content"]
+    for chunk in response:
+        delta = chunk.choices[0].delta
+        if delta and delta.content:
+            yield delta.content
 
 
     return StreamingResponse(generate(), media_type="text/plain")
+
 
 
 
