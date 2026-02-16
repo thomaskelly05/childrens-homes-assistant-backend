@@ -385,8 +385,7 @@ Current mode: {request.mode}
         return StreamingResponse(
             iter([f"Error: {str(e)}"]), media_type="text/plain"
         )
-
-       async def stream():
+    async def stream():
         try:
             for chunk in completion:
                 delta = chunk.choices[0].delta
@@ -400,3 +399,5 @@ Current mode: {request.mode}
             )
 
     return StreamingResponse(stream(), media_type="text/plain")
+
+
