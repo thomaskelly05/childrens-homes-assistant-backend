@@ -355,13 +355,15 @@ Current role: {request.role}
 Current mode: {request.mode}
 """
 
-if request.mode == "training":
-    system_prompt = (
-        base_prompt
-        + TRAINING_BLOCK
-        + TRAINING_SCENARIO_GUIDANCE
-        + TRAINING_HUB_EXPANSION
-    )
+    if request.mode == "training":
+        system_prompt = (
+            base_prompt
+            + TRAINING_BLOCK
+            + TRAINING_SCENARIO_GUIDANCE
+            + TRAINING_HUB_EXPANSION
+        )
+    else:
+        system_prompt = base_prompt
 
     # Choose model based on speed
     if request.speed == "deep":
@@ -374,13 +376,15 @@ if request.mode == "training":
             model=model_name,
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": request.message}
+                {"role": "user", "content": request.message},
             ],
-            stream=True
+            stream=True,
         )
     except Exception as e:
         logger.error(f"OpenAI error: {e}")
-        return StreamingResponse(iter([f"Error: {str(e)}"]), media_type="text/plain")
+        return StreamingResponse(
+            iter([f"Error: {str(e)}"]), media_type="text/plain"
+        )
 
     async def stream():
         try:
@@ -390,8 +394,9 @@ if request.mode == "training":
                     yield delta.content
         except Exception as e:
             logger.error(f"Streaming error: {e}")
-            yield "\nThere was a problem streaming the response. You might consider trying again."
+            yield (
+                "\nThere was a problem streaming the response. "
+                "You might consider trying again."
+            )
 
     return StreamingResponse(stream(), media_type="text/plain")
-
-
