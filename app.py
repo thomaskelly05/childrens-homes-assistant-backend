@@ -1,113 +1,53 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
-import chromadb
-from openai import OpenAI
+from pydantic import BaseModel
+import openai
 import os
 
 # -----------------------------
-# FASTAPI SETUP
+# CORS FIX FOR SQUARESPACE
 # -----------------------------
 app = FastAPI()
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://ornate-capybara-f27110.netlify.app",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000"
-    ],
-    allow_credentials=False,
+    allow_origins=["https://www.indicare.co.uk"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# -----------------------------
+# REQUEST MODEL
+# -----------------------------
+class ChatRequest(BaseModel):
+    message: str
+    role: str
 
 # -----------------------------
-# OPENAI CLIENT
+# OPENAI CONFIG
 # -----------------------------
-client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-
-# -----------------------------
-# SYSTEM PROMPT FOR EXPANDED ANSWERS
-# -----------------------------
-SYSTEM_PROMPT = """
-You are a specialist assistant for children's homes.
-
-Your current persona is: {role}
-
-If role=new_starter:
-    Be gentle, encouraging, and confidence-building.
-    Break things down simply.
-    Normalise uncertainty.
-
-If role=manager:
-    Be structured, decisive, and operational.
-    Focus on risk, proportionality, and oversight.
-
-If role=ri:
-    Think strategically and reflectively.
-    Focus on governance, culture, quality, and reliability.
-
-If role=ofsted:
-    Be objective, curious, and evidence-focused.
-    Reflect on SCCIF, regulation, and lived experience.
-
-If role=standard:
-    Be warm, balanced, and professional.
-
-Always give expanded, structured answers with headings, paragraphs, and bullet points.
-"""
-
-# -----------------------------
-# CONNECT TO CHROMA
-# -----------------------------
-CHROMA_DIR = "chroma_db"
-
-chroma_client = chromadb.PersistentClient(
-    path=CHROMA_DIR,
-    settings=chromadb.config.Settings(chroma_server_nofile=4096)
-)
-
-collection = chroma_client.get_or_create_collection(
-    name="children_home_docs",
-    metadata={"hnsw:space": "cosine"}
-)
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # -----------------------------
 # STREAMING ENDPOINT
 # -----------------------------
 @app.post("/ask")
-async def ask_question(payload: dict):
-    question = payload["message"]
-    role = payload.get("role", "standard")
-
-    # Retrieve relevant context from Chroma
-    results = collection.query(
-        query_texts=[question],
-        n_results=4
+async def ask(request: ChatRequest):
+    completion = openai.ChatCompletion.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": f"You are in {request.role} mode."},
+            {"role": "user", "content": request.message}
+        ],
+        stream=True
     )
 
-    context_chunks = results["documents"][0] if results["documents"] else []
-    context = "\n\n".join(context_chunks)
+    async def event_stream():
+        for chunk in completion:
+            if "choices" in chunk and len(chunk["choices"]) > 0:
+                delta = chunk["choices"][0]["delta"]
+                if "content" in delta:
+                    yield delta["content"]
 
-    # Build the messages for the model
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT.format(role=role)},
-        {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {question}"}
-    ]
-
-    # Generator for streaming
-    def generate():
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages,
-            stream=True
-        )
-
-        for chunk in response:
-            delta = chunk.choices[0].delta
-            if delta and delta.content:
-                yield delta.content
-
-    return StreamingResponse(generate(), media_type="text/plain")
-
+    return event_stream()
