@@ -46,11 +46,16 @@ def load_pdf_text(path: str) -> str:
         print("Error loading PDF:", e)
         return ""
 
-PDF1 = load_pdf_text("childrens_home_guide.pdf")
-PDF2 = load_pdf_text("childrens_homes_regulations_2015.pdf")
+PDF_GUIDE = load_pdf_text("childrens_home_guide.pdf")
+PDF_REGS = load_pdf_text("childrens_homes_regulations_2015.pdf")
 
-# Combine both PDFs into one knowledge base
-PDF_TEXT = PDF1 + "\n\n" + PDF2
+# Weighted combination: Regulations first, Guide second
+PDF_TEXT = (
+    "### CHILDREN'S HOMES REGULATIONS 2015 ###\n\n" +
+    PDF_REGS +
+    "\n\n\n### CHILDREN'S HOME GUIDE ###\n\n" +
+    PDF_GUIDE
+)
 
 # ---------------------------------------------------------
 # STREAMING ENDPOINT
@@ -58,17 +63,34 @@ PDF_TEXT = PDF1 + "\n\n" + PDF2
 @app.post("/ask")
 async def ask(request: ChatRequest):
 
-    # System message forces PDF‑only answers
+    # -----------------------------------------------------
+    # SYSTEM PROMPT — upgraded for depth, spacing, clarity
+    # -----------------------------------------------------
     system_context = f"""
 You are in {request.role} mode.
 
 You must answer ONLY using the information found in the following documents:
 
-- children's home guide
-- children's homes regulations 2015
+- Children's Homes Regulations 2015
+- Children's Home Guide
 
 If the answer is not in these documents, say:
 "I cannot find this information in the documents provided."
+
+When you answer:
+
+- Provide **clear, structured, in‑depth explanations**
+- Use **short paragraphs** with **line spacing** between them
+- Write in a **calm, professional, therapeutic tone**
+- Expand on meaning, purpose, and implications of the information
+- Reference which document the information comes from (e.g., "This comes from the Regulations PDF")
+- Prioritise the Regulations over the Guide when both contain relevant material
+- Avoid bullet points unless the user specifically asks for them
+- Never invent information not present in the documents
+- If the user asks for interpretation, provide it — but stay grounded in the text
+
+You should behave like a thoughtful, reflective colleague in a children's home,
+helping staff understand the regulatory and therapeutic context.
 
 Document content begins below:
 ------------------------------------------------------------
@@ -76,6 +98,9 @@ Document content begins below:
 ------------------------------------------------------------
 """
 
+    # -----------------------------------------------------
+    # OPENAI CALL (ChatCompletion API, old version)
+    # -----------------------------------------------------
     completion = openai.ChatCompletion.create(
         model="gpt-4o-mini",
         messages=[
@@ -93,4 +118,3 @@ Document content begins below:
                     yield delta["content"]
 
     return StreamingResponse(event_stream(), media_type="text/plain")
-
