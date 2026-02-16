@@ -6,9 +6,6 @@ import openai
 import os
 from pypdf import PdfReader
 
-# ---------------------------------------------------------
-# APP
-# ---------------------------------------------------------
 app = FastAPI()
 
 app.add_middleware(
@@ -26,10 +23,7 @@ class ChatRequest(BaseModel):
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# ---------------------------------------------------------
-# LOAD PDFs
-# ---------------------------------------------------------
-def load_pdf(path):
+def load_pdf(path: str) -> str:
     try:
         reader = PdfReader(path)
         return "\n\n".join([p.extract_text() or "" for p in reader.pages])
@@ -46,9 +40,6 @@ PDF_TEXT = (
     PDF_GUIDE
 )
 
-# ---------------------------------------------------------
-# UNIFIED BRITISH THERAPEUTIC STYLE BLOCK
-# ---------------------------------------------------------
 STYLE_BLOCK = """
 WRITING STYLE (BRITISH + THERAPEUTIC):
 Use British spelling, grammar, and phrasing at all times.
@@ -88,9 +79,6 @@ When giving scenarios:
 - focus on relational practice, safety, and emotional containment
 """
 
-# ---------------------------------------------------------
-# ROLE PROFILES
-# ---------------------------------------------------------
 ROLE_BLOCK = """
 ROLE BEHAVIOUR:
 
@@ -110,9 +98,6 @@ OFSTED INSPECTOR:
 Analytical, evidence‑based. Interprets practice through judgement areas and impact on children.
 """
 
-# ---------------------------------------------------------
-# BEST PRACTICE EXAMPLES
-# ---------------------------------------------------------
 BEST_PRACTICE = """
 BEST‑PRACTICE EXAMPLES (allowed):
 You ARE allowed to create examples of:
@@ -131,9 +116,6 @@ Rules:
 - Must not contradict the Regulations or statutory guidance.
 """
 
-# ---------------------------------------------------------
-# TRAINING MODE
-# ---------------------------------------------------------
 TRAINING_BLOCK = """
 TRAINING MODE:
 Provide:
@@ -152,9 +134,6 @@ Training should feel:
 - role‑appropriate
 """
 
-# ---------------------------------------------------------
-# FORMATTING RULES
-# ---------------------------------------------------------
 FORMAT_BLOCK = """
 FORMAT RULES:
 - Plain text only.
@@ -165,9 +144,6 @@ FORMAT RULES:
 - No bullet points unless the user asks.
 """
 
-# ---------------------------------------------------------
-# MAIN ENDPOINT
-# ---------------------------------------------------------
 @app.post("/ask")
 async def ask(request: ChatRequest):
 
