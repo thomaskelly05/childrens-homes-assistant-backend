@@ -6,8 +6,14 @@ from openai import OpenAI
 import os
 from pypdf import PdfReader
 
+# ---------------------------------------------------------
+# OPENAI CLIENT (new API)
+# ---------------------------------------------------------
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# ---------------------------------------------------------
+# FASTAPI APP
+# ---------------------------------------------------------
 app = FastAPI()
 
 app.add_middleware(
@@ -21,27 +27,155 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     message: str
     role: str
-    mode: str
+    mode: str  # "ask" or "training"
 
-def load_pdf(path: str) -> str:
+# ---------------------------------------------------------
+# LOAD PDFs
+# ---------------------------------------------------------
+def load_pdf_pages(path: str):
     try:
         reader = PdfReader(path)
-        return "\n\n".join([p.extract_text() or "" for p in reader.pages])
+        return [{"index": i, "text": (p.extract_text() or "")} for i, p in enumerate(reader.pages)]
     except:
-        return ""
+        return []
 
-PDF_GUIDE = load_pdf("childrens_home_guide.pdf")
-PDF_REGS = load_pdf("childrens_homes_regulations_2015.pdf")
+PDF_GUIDE_PAGES = load_pdf_pages("childrens_home_guide.pdf")
+PDF_REGS_PAGES = load_pdf_pages("childrens_homes_regulations_2015.pdf")
 
-PDF_TEXT = (
-    "CHILDREN'S HOMES REGULATIONS 2015\n\n" +
-    PDF_REGS +
-    "\n\nCHILDREN'S HOME GUIDE\n\n" +
-    PDF_GUIDE
-)
+# ---------------------------------------------------------
+# SIMPLE RETRIEVAL
+# ---------------------------------------------------------
+def simple_retrieve(pages, query: str, top_k: int = 3):
+    terms = [w.lower() for w in query.split() if len(w) > 3]
+    scored = []
+    for page in pages:
+        score = sum(page["text"].lower().count(t) for t in terms)
+        if score > 0:
+            scored.append((score, page))
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [p["text"] for score, p in scored[:top_k]]
 
+# ---------------------------------------------------------
+# PROMPT BLOCKS (FULL CONTENT)
+# ---------------------------------------------------------
+
+STYLE_BLOCK = """
+WRITING STYLE (BRITISH + THERAPEUTIC):
+Use British spelling, grammar, and phrasing at all times.
+Tone is calm, steady, warm but professional, and emotionally attuned.
+Be reflective rather than directive. Support confidence and clarity.
+Avoid Americanisms, avoid jargon unless sector‑standard, avoid judgemental language.
+Focus on the child’s lived experience, emotional safety, and relational practice.
+Model curiosity, empathy, and good professional boundaries.
+"""
+
+ROLE_BLOCK = """
+ROLE BEHAVIOUR:
+
+SUPPORT WORKER:
+Focuses on safe, consistent, child‑centred practice. Needs clarity, reassurance, and practical steps. Benefits from understanding the “why” behind decisions without being overloaded.
+
+SENIOR SUPPORT WORKER:
+Experienced, steady, and shift‑focused. Supports other staff, maintains routines, and ensures consistency. Bridges practice and leadership. Thinks about how decisions affect the team and the children’s day.
+
+MANAGER:
+Operational leader. Balances practice, staff wellbeing, rotas, incidents, quality assurance, and communication with the RI. Thinks about patterns, systems, and how to embed good practice across the home.
+
+RESPONSIBLE INDIVIDUAL:
+Strategic, governance‑focused, supportive. Offers guidance, oversight, and reflective challenge to the Manager. Thinks about organisational assurance, regulatory alignment, and how to evidence strong practice. Helps the Manager grow in confidence and capability.
+"""
+
+ASK_MODE = """
+ASK MODE ROLE ADAPTATION:
+
+SUPPORT WORKER:
+- Simple, clear, confidence‑building explanations.
+- Focus on what to do, why it matters, and how to keep children safe.
+- Offer reassurance and practical next steps.
+- Avoid policy-heavy language.
+
+SENIOR SUPPORT WORKER:
+- Slightly deeper explanations.
+- Connect practice to consistency, routines, and shift leadership.
+- Offer guidance on how to support or guide other staff.
+- Use light regulatory references when helpful.
+
+MANAGER:
+- Connect practice to operational decisions, staffing, rotas, and oversight.
+- Offer leadership framing: how to support the team, embed good practice, and maintain quality.
+- Reference patterns, systems, audits, and reflective leadership.
+- Keep the tone supportive and collaborative.
+
+RESPONSIBLE INDIVIDUAL:
+- Provide governance-level insight and supportive challenge.
+- Frame advice in terms of assurance, monitoring, and organisational oversight.
+- Offer guidance to the Manager on strengthening systems, evidencing good practice, and maintaining regulatory alignment.
+- Keep the tone calm, strategic, and encouraging — like a trusted senior colleague helping the Manager think things through.
+"""
+
+BEST_PRACTICE = """
+BEST‑PRACTICE EXAMPLES:
+You may create realistic examples of logs, key‑worker sessions, incidents, handovers,
+risk assessments, behaviour plans, restorative conversations, and staff reflections.
+These must be realistic, professional, aligned with Ofsted expectations.
+They are examples of good practice, not official templates.
+"""
+
+INTERNET_ACCESS = """
+INTERNET ACCESS:
+You may use general internet knowledge for definitions, terminology, sector practice,
+Ofsted updates, DfE publications, safeguarding frameworks, and research summaries.
+
+Hierarchy:
+1. Regulations
+2. Guide
+3. Ofsted frameworks
+4. DfE guidance
+5. Trusted internet sources
+6. General knowledge
+
+Never contradict the PDFs.
+Never invent statutory duties.
+Use internet knowledge only to clarify or contextualise.
+"""
+
+FORMAT_BLOCK = """
+FORMATTING:
+Use simple headings ending with a colon.
+No markdown symbols (#, *, >).
+Short paragraphs with blank lines.
+Lists allowed with hyphens or numbers.
+"""
+
+TRAINING_BLOCK = """
+TRAINING MODE:
+Provide scenarios, reflective questions, step‑by‑step practice, and supportive feedback.
+Ask 2–4 reflective questions one at a time.
+Keep it calm, safe, reflective, and confidence‑building.
+
+Role‑specific focus:
+- Support Worker: what would you do on shift?
+- Senior: how would you guide staff and maintain consistency?
+- Manager: how would you lead, support the team, and strengthen systems?
+- RI: how would you assure yourself that practice is safe, effective, and well‑led?
+"""
+
+# ---------------------------------------------------------
+# MAIN ENDPOINT
+# ---------------------------------------------------------
 @app.post("/ask")
 async def ask(request: ChatRequest):
+
+    # Retrieve relevant PDF extracts
+    regs_snippets = simple_retrieve(PDF_REGS_PAGES, request.message)
+    guide_snippets = simple_retrieve(PDF_GUIDE_PAGES, request.message)
+
+    retrieved_context = (
+        "Relevant extracts from Regulations:\n\n" +
+        "\n\n---\n\n".join(regs_snippets) +
+        "\n\nRelevant extracts from the Guide:\n\n" +
+        "\n\n---\n\n".join(guide_snippets)
+    )
 
     BASE_PROMPT = f"""
 You are supporting a staff member in a UK children’s home.
@@ -57,29 +191,24 @@ PRIMARY SOURCES:
 Children's Homes Regulations 2015
 Children's Home Guide
 
-SECONDARY SOURCES:
-Ofsted inspection frameworks
-DfE publications
-Statutory guidance
+DOCUMENT CONTENT (retrieved extracts only):
+{retrieved_context}
 
-Never contradict the PDFs.
-
-DOCUMENT CONTENT:
-{PDF_TEXT}
+Current role: {request.role}
+Current mode: {request.mode}
 """
 
+    # Choose model
     if request.mode == "training":
-        SYSTEM_PROMPT = BASE_PROMPT + TRAINING_BLOCK
         model_name = "gpt-4o"
     else:
-        SYSTEM_PROMPT = BASE_PROMPT
         model_name = "gpt-4o-mini"
 
     try:
         completion = client.chat.completions.create(
             model=model_name,
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": BASE_PROMPT},
                 {"role": "user", "content": request.message}
             ],
             stream=True
