@@ -386,7 +386,7 @@ Current mode: {request.mode}
             iter([f"Error: {str(e)}"]), media_type="text/plain"
         )
 
-    async def stream():
+       async def stream():
         try:
             for chunk in completion:
                 delta = chunk.choices[0].delta
