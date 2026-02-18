@@ -24,7 +24,10 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://www.indicare.co.uk",
+        "https://indicare.co.uk"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -419,6 +422,7 @@ async def train_endpoint(req: ChatRequest):
     except Exception as e:
         logger.error(f"/train error: {e}")
         return JSONResponse({"error": "Something went wrong processing your training request."}, status_code=500)
+
 
 
 
