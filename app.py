@@ -28,7 +28,7 @@ app.add_middleware(
     allow_origins=[
         "https://www.indicare.co.uk",
         "https://indicare.co.uk",
-        "https://*.squarespace.com"
+        "https://indicarelimited.squarespace.com"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -495,6 +495,7 @@ async def train_endpoint(req: ChatRequest):
     except Exception as e:
         logger.error(f"/train error: {e}")
         return JSONResponse({"error": "Something went wrong processing your training request."}, status_code=500)
+
 
 
 
