@@ -6,6 +6,7 @@ from openai import OpenAI
 import os
 from pypdf import PdfReader
 import logging
+from typing import Optional
 
 # ---------------------------------------------------------
 # LOGGING
@@ -422,6 +423,7 @@ async def train_endpoint(req: ChatRequest):
     except Exception as e:
         logger.error(f"/train error: {e}")
         return JSONResponse({"error": "Something went wrong processing your training request."}, status_code=500)
+
 
 
 
