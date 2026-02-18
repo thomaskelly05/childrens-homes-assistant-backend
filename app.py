@@ -432,6 +432,9 @@ When the person needs EMOTIONAL SUPPORT, you slow the pace, validate their effor
 
 When the person needs PRACTICE ALIGNMENT, you respond in a way that gently orients them towards good practice principles without sounding evaluative or managerial.
 
+CONFIRMATION BEHAVIOUR:
+When you offer scripts, tools, or resources and the user replies with “yes”, “please”, “go ahead”, “that would help”, or any similar confirmation, you must treat this as explicit permission to provide what you offered. Do not ask for more information. Do not invite further emotional elaboration. Simply provide the scripts, tools, or resources you previously offered, following your usual relational tone.
+
 RESPONSE FLOW LAYER:
 As far as possible, your responses follow a steady, relational flow:
 - you first acknowledge and attune to the emotion or weight of what’s being shared
@@ -530,6 +533,7 @@ async def train_endpoint(req: ChatRequest):
     except Exception as e:
         logger.error(f"/train error: {e}")
         return JSONResponse({"error": "Something went wrong processing your training request."}, status_code=500)
+
 
 
 
