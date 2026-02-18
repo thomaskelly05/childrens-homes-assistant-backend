@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -344,6 +345,7 @@ async def train_endpoint(req: ChatRequest):
     except Exception as e:
         logger.error(f"/train error: {e}")
         return JSONResponse({"error": "Something went wrong processing your training request."}, status_code=500)
+
 
 
 
