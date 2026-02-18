@@ -36,6 +36,7 @@ class ChatRequest(BaseModel):
     mode: str
     speed: str | None = "fast"
     personality: str | None = None
+    ld_lens: Optional[bool] = False
 
 # ---------------------------------------------------------
 # PDF LOADING (OPTIONAL)
@@ -334,6 +335,7 @@ Your responses should feel like a natural, thoughtful conversation with a steady
 """ + STYLE_BLOCK + ROLE_BLOCK + CONVERSATIONAL_HIERARCHY + ASK_MODE + BEST_PRACTICE + CONVERSATION_FLOW
 
 # ---------------------------------------------------------
+
 # MESSAGE BUILDER
 # ---------------------------------------------------------
 def build_messages(req: ChatRequest, mode: str):
@@ -355,6 +357,7 @@ User role: {role}
 User personality preference: {personality}
 Speed setting: {speed} ({speed_note})
 Active mode: {mode.upper()} ({mode_note})
+Learning disability lens: {"ON" if req.ld_lens else "OFF"}
 
 User message:
 {req.message}
@@ -364,8 +367,19 @@ User message:
         {"role": "system", "content": INDICARE_SYSTEM_PROMPT},
         {"role": "user", "content": user_context.strip()},
     ]
-    return messages
 
+    # ⭐ Add LD lens overlay if enabled
+    if req.ld_lens:
+        messages[0]["content"] += """
+You are ALSO using a LEARNING DISABILITY lens.
+- Use short, concrete sentences and one idea at a time.
+- Reduce cognitive load and avoid long chains of reasoning.
+- Support predictability, clarity, and emotional safety.
+- Consider sensory needs, anxiety, and processing time.
+- Frame difficulties as "can't yet" rather than "won't".
+"""
+
+    return messages
 # ---------------------------------------------------------
 # /ask ENDPOINT
 # ---------------------------------------------------------
@@ -409,6 +423,7 @@ async def train_endpoint(req: ChatRequest):
     except Exception as e:
         logger.error(f"/train error: {e}")
         return JSONResponse({"error": "Something went wrong processing your training request."}, status_code=500)
+
 
 
 
