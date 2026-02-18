@@ -368,17 +368,13 @@ User message:
         {"role": "user", "content": user_context.strip()},
     ]
 
-    # ⭐ Add LD lens overlay if enabled
-    if req.ld_lens:
-        messages[0]["content"] += """
-You are ALSO using a LEARNING DISABILITY lens.
-- Use short, concrete sentences and one idea at a time.
-- Reduce cognitive load and avoid long chains of reasoning.
-- Support predictability, clarity, and emotional safety.
-- Consider sensory needs, anxiety, and processing time.
-- Frame difficulties as "can't yet" rather than "won't".
-"""
+   # ⭐ Add LD lens overlay if enabled
+if req.ld_lens:
+    messages[0]["content"] += """
+You are also holding a LEARNING DISABILITY lens. This means you slow the pace a little and keep things clear, concrete, and steady. You offer one idea at a time and avoid long chains of reasoning. You stay mindful of cognitive load, sensory needs, and the importance of predictability.
 
+You assume the person may need more processing time, and you frame difficulties as “can’t yet” rather than “won’t”. You help the user think about how anxiety, overwhelm, or sensory discomfort might shape behaviour. You keep your language warm, grounded, and simple without being patronising. You support the adult to create clarity, safety, and emotional steadiness for the child.
+"""
     return messages
 # ---------------------------------------------------------
 # /ask ENDPOINT
@@ -423,6 +419,7 @@ async def train_endpoint(req: ChatRequest):
     except Exception as e:
         logger.error(f"/train error: {e}")
         return JSONResponse({"error": "Something went wrong processing your training request."}, status_code=500)
+
 
 
 
