@@ -10,13 +10,19 @@ import logging
 from prompts.reflective_brain_prompt import REFLECTIVE_BRAIN_SYSTEM_PROMPT
 from prompts.template_engine_prompt import TEMPLATE_ENGINE_SYSTEM_PROMPT
 
+# Overlays
+from prompts.overlays.role_overlay import ROLE_OVERLAY
+from prompts.overlays.ld_overlay import LD_OVERLAY
+from prompts.overlays.training_overlay import TRAINING_OVERLAY
+
 # ---------------------------------------------------------
 # REQUEST MODELS
 # ---------------------------------------------------------
 class ChatRequest(BaseModel):
     message: str
+    role: str | None = None           # rcw, team_leader, registered_manager
     mode: str | None = "default"      # "default" or "training"
-    speed: str | None = "fast"        # optional
+    speed: str | None = "fast"        # "fast" or "slow"
     ld_lens: bool | None = False      # optional
 
 class TemplateRequest(BaseModel):
@@ -65,28 +71,43 @@ app.add_middleware(
 )
 
 # ---------------------------------------------------------
-# /chat — Reflective Brain
+# /chat — Reflective Brain with Overlays
 # ---------------------------------------------------------
 @app.post("/chat")
 async def chat_endpoint(req: ChatRequest):
     try:
-        # Build user message with optional mode + LD lens
+        # Start with the raw user message
         user_message = req.message
 
-        if req.mode == "training":
-            user_message = (
-                "TRAINING MODE ACTIVE:\n"
-                "Be more structured, offer scenarios, reflective steps, and checks for understanding.\n\n"
-                + user_message
-            )
+        # -------------------------------------------------
+        # Apply overlays in a safe, predictable order
+        # -------------------------------------------------
 
+        # 1. Role overlay (RCW, Team Leader, Registered Manager)
+        if req.role:
+            role_key = req.role.lower().strip()
+            role_text = ROLE_OVERLAY.get(role_key, "")
+            if role_text:
+                user_message = role_text + "\n\n" + user_message
+
+        # 2. LD lens overlay
         if req.ld_lens:
+            user_message = LD_OVERLAY + "\n\n" + user_message
+
+        # 3. Training mode overlay
+        if req.mode == "training":
+            user_message = TRAINING_OVERLAY + "\n\n" + user_message
+
+        # 4. Speed setting (future‑proofed)
+        if req.speed == "slow":
             user_message = (
-                "LD LENS ACTIVE:\n"
-                "Slow the pace, keep things concrete, one idea at a time, mindful of cognitive load.\n\n"
-                + user_message
+                "SLOW MODE: Take your time, offer slightly more detail, "
+                "but stay clear and grounded.\n\n" + user_message
             )
 
+        # -------------------------------------------------
+        # Call the Reflective Brain
+        # -------------------------------------------------
         reply = call_model(
             system_prompt=REFLECTIVE_BRAIN_SYSTEM_PROMPT,
             user_message=user_message
