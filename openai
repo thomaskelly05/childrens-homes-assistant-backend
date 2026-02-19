@@ -54,6 +54,37 @@ def call_model(system_prompt: str, user_message: str) -> str:
     return completion.choices[0].message.content
 
 # ---------------------------------------------------------
+# ROLE NORMALISATION MAP
+# ---------------------------------------------------------
+ROLE_MAP = {
+    # RCW
+    "rcw": "rcw",
+    "care worker": "rcw",
+    "residential childcare worker": "rcw",
+    "childcare worker": "rcw",
+    "support worker": "rcw",
+
+    # Team Leader
+    "team leader": "team_leader",
+    "tl": "team_leader",
+    "senior": "team_leader",
+    "shift leader": "team_leader",
+
+    # Registered Manager
+    "registered manager": "registered_manager",
+    "rm": "registered_manager",
+    "manager": "registered_manager",
+    "reg manager": "registered_manager",
+    "home manager": "registered_manager",
+}
+
+def normalise_role(role: str | None) -> str | None:
+    if not role:
+        return None
+    key = role.lower().strip()
+    return ROLE_MAP.get(key, None)
+
+# ---------------------------------------------------------
 # FASTAPI APP
 # ---------------------------------------------------------
 app = FastAPI()
@@ -83,10 +114,10 @@ async def chat_endpoint(req: ChatRequest):
         # Apply overlays in a safe, predictable order
         # -------------------------------------------------
 
-        # 1. Role overlay (RCW, Team Leader, Registered Manager)
-        if req.role:
-            role_key = req.role.lower().strip()
-            role_text = ROLE_OVERLAY.get(role_key, "")
+        # 1. Role overlay (normalised)
+        normalised_role = normalise_role(req.role)
+        if normalised_role:
+            role_text = ROLE_OVERLAY.get(normalised_role, "")
             if role_text:
                 user_message = role_text + "\n\n" + user_message
 
