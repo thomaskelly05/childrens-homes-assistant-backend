@@ -9,6 +9,15 @@ from pypdf import PdfReader
 import logging
 from typing import Optional
 
+from prompts.reflective_brain_prompt import REFLECTIVE_BRAIN_SYSTEM_PROMPT
+from prompts.template_engine_prompt import TEMPLATE_ENGINE_SYSTEM_PROMPT
+
+class ChatRequest(BaseModel):
+    message: str
+
+class TemplateRequest(BaseModel):
+    templateRequest: str
+
 # ---------------------------------------------------------
 # LOGGING
 # ---------------------------------------------------------
@@ -783,7 +792,6 @@ You are also holding a LEARNING DISABILITY lens. This means you slow the pace a 
 You assume the person may need more processing time, and you frame difficulties as “can’t yet” rather than “won’t”. You help the user think about how anxiety, overwhelm, or sensory discomfort might shape behaviour. You keep your language warm, grounded, and simple without being patronising. You support the adult to create clarity, safety, and emotional steadiness for the child.
 """
     return messages
-
 # ---------------------------------------------------------
 # /ask ENDPOINT
 # ---------------------------------------------------------
@@ -791,6 +799,54 @@ You assume the person may need more processing time, and you frame difficulties 
 async def ask_endpoint(req: ChatRequest):
     try:
         messages = build_messages(req, mode="ask")
+
+        completion = client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=messages,
+            temperature=0.4 if (req.speed or "fast") == "fast" else 0.7,
+            max_tokens=900,
+        )
+
+        content = completion.choices[0].message.content
+        return JSONResponse({"response": content})
+
+    except Exception as e:
+        logger.error(f"/ask error: {e}")
+        return JSONResponse({"error": "Something went wrong processing your request."}, status_code=500)
+
+
+# ---------------------------------------------------------
+# /generate-template ENDPOINT (Template Engine)
+# ---------------------------------------------------------
+@app.post("/generate-template")
+async def generate_template_endpoint(req: TemplateRequest):
+    try:
+        reply = call_model(
+            system_prompt=TEMPLATE_ENGINE_SYSTEM_PROMPT,
+            user_message=req.templateRequest
+        )
+        return JSONResponse({"template": reply})
+
+    except Exception as e:
+        logger.error(f"/generate-template error: {e}")
+        return JSONResponse({"error": "Something went wrong processing your request."}, status_code=500)
+
+
+# ---------------------------------------------------------
+# /chat ENDPOINT (Reflective Brain)
+# ---------------------------------------------------------
+@app.post("/chat")
+async def chat_endpoint(req: ChatRequest):
+    try:
+        reply = call_model(
+            system_prompt=REFLECTIVE_BRAIN_SYSTEM_PROMPT,
+            user_message=req.message
+        )
+        return JSONResponse({"reply": reply})
+
+    except Exception as e:
+        logger.error(f"/chat error: {e}")
+        return JSONResponse({"error": "Something went wrong processing your request."}, status_code=500)
 
         completion = client.chat.completions.create(
             model="gpt-4.1-mini",
@@ -827,6 +883,7 @@ async def train_endpoint(req: ChatRequest):
     except Exception as e:
         logger.error(f"/train error: {e}")
         return JSONResponse({"error": "Something went wrong processing your training request."}, status_code=500)
+
 
 
 
