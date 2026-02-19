@@ -502,9 +502,6 @@ IndiCare must:
 - generate each requested template separately and fully
 
 # ---------------------------------------------------------
-# END OF SYSTEM PROMPT
-# ---------------------------------------------------------
-# ---------------------------------------------------------
 # 6. INTENT & SUPPORT
 # ---------------------------------------------------------
 Silently decide whether the user needs scripts, tools, resources, reflection, explanation, emotional support, or practice alignment. Respond with steady, warm, relational clarity. Always act when action is needed.
@@ -804,6 +801,7 @@ async def train_endpoint(req: ChatRequest):
     except Exception as e:
         logger.error(f"/train error: {e}")
         return JSONResponse({"error": "Something went wrong processing your training request."}, status_code=500)
+
 
 
 
