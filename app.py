@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from fastapi.responses import JSONResponse
-from openai import OpenAI
 import os
 import logging
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+from openai import OpenAI
+import markdown
 
 from prompts.reflective_brain_prompt import REFLECTIVE_BRAIN_SYSTEM_PROMPT
 from prompts.template_engine_prompt import TEMPLATE_ENGINE_SYSTEM_PROMPT
@@ -20,12 +22,15 @@ from prompts.overlays.training_overlay import TRAINING_OVERLAY
 # ---------------------------------------------------------
 class ChatRequest(BaseModel):
     message: str
-    role: str | None = None           # rcw, team_leader, registered_manager
-    mode: str | None = "default"      # "default" or "training"
-    speed: str | None = "fast"        # "fast" or "slow"
-    ld_lens: bool | None = False      # optional
+    role: str | None = None          # rcw, team_leader, registered_manager
+    mode: str | None = "default"     # "default" or "training"
+    speed: str | None = "fast"       # "fast" or "slow"
+    ld_lens: bool | None = False     # optional
 
 class TemplateRequest(BaseModel):
+    templateRequest: str
+
+class TemplateRequestV1(BaseModel):
     templateRequest: str
 
 # ---------------------------------------------------------
@@ -110,10 +115,6 @@ async def chat_endpoint(req: ChatRequest):
         # Start with the raw user message
         user_message = req.message
 
-        # -------------------------------------------------
-        # Apply overlays in a safe, predictable order
-        # -------------------------------------------------
-
         # 1. Role overlay (normalised)
         normalised_role = normalise_role(req.role)
         if normalised_role:
@@ -136,9 +137,7 @@ async def chat_endpoint(req: ChatRequest):
                 "but stay clear and grounded.\n\n" + user_message
             )
 
-        # -------------------------------------------------
         # Call the Reflective Brain
-        # -------------------------------------------------
         reply = call_model(
             system_prompt=REFLECTIVE_BRAIN_SYSTEM_PROMPT,
             user_message=user_message
@@ -154,7 +153,7 @@ async def chat_endpoint(req: ChatRequest):
         )
 
 # ---------------------------------------------------------
-# /generate-template — Template Brain
+# /generate-template — legacy (Markdown passthrough)
 # ---------------------------------------------------------
 @app.post("/generate-template")
 async def generate_template_endpoint(req: TemplateRequest):
@@ -167,6 +166,30 @@ async def generate_template_endpoint(req: TemplateRequest):
 
     except Exception as e:
         logger.error(f"/generate-template error: {e}")
+        return JSONResponse(
+            {"error": "Something went wrong processing your request."},
+            status_code=500
+        )
+
+# ---------------------------------------------------------
+# /v1/generate-template — Template Brain (Markdown → HTML)
+# ---------------------------------------------------------
+@app.post("/v1/generate-template")
+async def generate_template_v1(req: TemplateRequestV1):
+    try:
+        # Get raw Markdown from the model
+        raw_markdown = call_model(
+            system_prompt=TEMPLATE_ENGINE_SYSTEM_PROMPT,
+            user_message=req.templateRequest
+        )
+
+        # Convert Markdown → HTML (tables included)
+        html_output = markdown.markdown(raw_markdown, extensions=["tables"])
+
+        return JSONResponse({"template": html_output})
+
+    except Exception as e:
+        logger.error(f"/v1/generate-template error: {e}")
         return JSONResponse(
             {"error": "Something went wrong processing your request."},
             status_code=500
