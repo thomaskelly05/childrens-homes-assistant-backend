@@ -1,0 +1,121 @@
+# -*- coding: utf-8 -*-
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from fastapi.responses import JSONResponse
+from openai import OpenAI
+import os
+import logging
+
+from prompts.reflective_brain_prompt import REFLECTIVE_BRAIN_SYSTEM_PROMPT
+from prompts.template_engine_prompt import TEMPLATE_ENGINE_SYSTEM_PROMPT
+
+# ---------------------------------------------------------
+# REQUEST MODELS
+# ---------------------------------------------------------
+class ChatRequest(BaseModel):
+    message: str
+    mode: str | None = "default"      # "default" or "training"
+    speed: str | None = "fast"        # optional
+    ld_lens: bool | None = False      # optional
+
+class TemplateRequest(BaseModel):
+    templateRequest: str
+
+# ---------------------------------------------------------
+# LOGGING
+# ---------------------------------------------------------
+logger = logging.getLogger("uvicorn.error")
+
+# ---------------------------------------------------------
+# OPENAI CLIENT
+# ---------------------------------------------------------
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# ---------------------------------------------------------
+# SHARED MODEL CALL
+# ---------------------------------------------------------
+def call_model(system_prompt: str, user_message: str) -> str:
+    completion = client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message}
+        ],
+        temperature=0.4,
+        max_tokens=900,
+    )
+    return completion.choices[0].message.content
+
+# ---------------------------------------------------------
+# FASTAPI APP
+# ---------------------------------------------------------
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://www.indicare.co.uk",
+        "https://indicare.co.uk",
+        "https://indicarelimited.squarespace.com"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ---------------------------------------------------------
+# /chat — Reflective Brain
+# ---------------------------------------------------------
+@app.post("/chat")
+async def chat_endpoint(req: ChatRequest):
+    try:
+        # Build user message with optional mode + LD lens
+        user_message = req.message
+
+        if req.mode == "training":
+            user_message = (
+                "TRAINING MODE ACTIVE:\n"
+                "Be more structured, offer scenarios, reflective steps, and checks for understanding.\n\n"
+                + user_message
+            )
+
+        if req.ld_lens:
+            user_message = (
+                "LD LENS ACTIVE:\n"
+                "Slow the pace, keep things concrete, one idea at a time, mindful of cognitive load.\n\n"
+                + user_message
+            )
+
+        reply = call_model(
+            system_prompt=REFLECTIVE_BRAIN_SYSTEM_PROMPT,
+            user_message=user_message
+        )
+
+        return JSONResponse({"reply": reply})
+
+    except Exception as e:
+        logger.error(f"/chat error: {e}")
+        return JSONResponse(
+            {"error": "Something went wrong processing your request."},
+            status_code=500
+        )
+
+# ---------------------------------------------------------
+# /generate-template — Template Brain
+# ---------------------------------------------------------
+@app.post("/generate-template")
+async def generate_template_endpoint(req: TemplateRequest):
+    try:
+        reply = call_model(
+            system_prompt=TEMPLATE_ENGINE_SYSTEM_PROMPT,
+            user_message=req.templateRequest
+        )
+        return JSONResponse({"template": reply})
+
+    except Exception as e:
+        logger.error(f"/generate-template error: {e}")
+        return JSONResponse(
+            {"error": "Something went wrong processing your request."},
+            status_code=500
+        )
