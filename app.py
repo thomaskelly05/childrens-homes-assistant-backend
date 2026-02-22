@@ -19,6 +19,26 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 
 # ---------------------------------------------------------
+# CREATE THE APP FIRST
+# ---------------------------------------------------------
+app = FastAPI()
+
+# ---------------------------------------------------------
+# THEN ADD CORS MIDDLEWARE
+# ---------------------------------------------------------
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://www.indicare.co.uk",
+        "https://indicare.co.uk",
+        "http://localhost:3000",
+        "http://localhost:8000"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+# ---------------------------------------------------------
 # PROMPTS & OVERLAYS
 # ---------------------------------------------------------
 from prompts.reflective_brain_prompt import REFLECTIVE_BRAIN_SYSTEM_PROMPT
@@ -368,6 +388,7 @@ async def delete_user(
 # ============================================================
 # END OF FILE
 # ============================================================
+
 
 
 
