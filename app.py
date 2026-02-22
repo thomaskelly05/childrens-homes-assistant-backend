@@ -315,8 +315,8 @@ class CreateUserRequest(BaseModel):
     password: str
     role: str = "staff"
 
-@app.post("/admin/create-user")
 @require_role("manager", "company", "admin")
+@app.post("/admin/create-user")
 async def create_user(request: Request, body: CreateUserRequest):
     if body.role not in ["staff", "manager", "company", "admin"]:
         raise HTTPException(status_code=400, detail="Invalid role")
@@ -344,9 +344,9 @@ async def create_user(request: Request, body: CreateUserRequest):
 # ------------------------------------------------------------
 # Delete user endpoint (admin only)
 # ------------------------------------------------------------
-@app.delete("/admin/delete-user/{email}")
 @require_role("admin")
-async def delete_user(request: Request, email: str):
+@app.delete("/admin/delete-user/{email}")
+async def delete_user(...):
     conn = get_db()
     cur = conn.cursor()
 
@@ -365,3 +365,4 @@ async def delete_user(request: Request, email: str):
 # ============================================================
 # END OF FILE
 # ============================================================
+
