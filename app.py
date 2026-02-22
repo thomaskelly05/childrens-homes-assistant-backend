@@ -133,48 +133,74 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+from fastapi.responses import StreamingResponse
 
 # ---------------------------------------------------------
-# /chat — Reflective Brain with Overlays
+# /chat — Reflective Brain with Overlays (STREAMING VERSION)
 # ---------------------------------------------------------
 @app.post("/chat")
 async def chat_endpoint(req: ChatRequest):
     try:
         user_message = req.message
 
+        # -----------------------------
+        # Apply role overlays
+        # -----------------------------
         normalised_role = normalise_role(req.role)
         if normalised_role:
             role_text = ROLE_OVERLAY.get(normalised_role, "")
             if role_text:
                 user_message = role_text + "\n\n" + user_message
 
+        # -----------------------------
+        # Apply LD lens
+        # -----------------------------
         if req.ld_lens:
             user_message = LD_OVERLAY + "\n\n" + user_message
 
+        # -----------------------------
+        # Apply training mode
+        # -----------------------------
         if req.mode == "training":
             user_message = TRAINING_OVERLAY + "\n\n" + user_message
 
+        # -----------------------------
+        # Apply slow mode
+        # -----------------------------
         if req.speed == "slow":
             user_message = (
                 "SLOW MODE: Take your time, offer slightly more detail, "
                 "but stay clear and grounded.\n\n" + user_message
             )
 
-        reply = call_model(
-            system_prompt=REFLECTIVE_BRAIN_SYSTEM_PROMPT,
-            user_message=user_message
-        )
+        # -----------------------------
+        # STREAMING GENERATOR
+        # -----------------------------
+        def stream():
+            response = client.chat.completions.create(
+                model="gpt-4.1-mini",
+                messages=[
+                    {"role": "system", "content": REFLECTIVE_BRAIN_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_message}
+                ],
+                temperature=0.4,
+                max_tokens=900,
+                stream=True
+            )
 
-        return JSONResponse({"reply": reply})
+            for chunk in response:
+                delta = chunk.choices[0].delta
+                if delta and delta.get("content"):
+                    yield delta["content"]
+
+        return StreamingResponse(stream(), media_type="text/plain")
 
     except Exception as e:
         logger.error(f"/chat error: {e}")
         return JSONResponse(
             {"error": "Something went wrong processing your request."},
             status_code=500
-        )
-
-# ---------------------------------------------------------
+        )# ---------------------------------------------------------
 # /generate-template — legacy
 # ---------------------------------------------------------
 @app.post("/generate-template")
@@ -388,6 +414,7 @@ async def delete_user(
 # ============================================================
 # END OF FILE
 # ============================================================
+
 
 
 
