@@ -176,22 +176,23 @@ async def chat_endpoint(req: ChatRequest):
         # -----------------------------
         # STREAMING GENERATOR
         # -----------------------------
-        def stream():
-            response = client.chat.completions.create(
-                model="gpt-4.1-mini",
-                messages=[
-                    {"role": "system", "content": REFLECTIVE_BRAIN_SYSTEM_PROMPT},
-                    {"role": "user", "content": user_message}
-                ],
-                temperature=0.4,
-                max_tokens=900,
-                stream=True
-            )
+def stream():
+    response = client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=[
+            {"role": "system", "content": REFLECTIVE_BRAIN_SYSTEM_PROMPT},
+            {"role": "user", "content": user_message}
+        ],
+        temperature=0.4,
+        max_tokens=900,
+        stream=True
+    )
 
-            for chunk in response:
-                delta = chunk.choices[0].delta
-                if delta and delta.get("content"):
-                    yield delta["content"]
+    for chunk in response:
+        delta = chunk.choices[0].delta
+        # delta is an object, so use .content
+        if delta and delta.content:
+            yield delta.content
 
         return StreamingResponse(stream(), media_type="text/plain")
 
@@ -414,6 +415,7 @@ async def delete_user(
 # ============================================================
 # END OF FILE
 # ============================================================
+
 
 
 
