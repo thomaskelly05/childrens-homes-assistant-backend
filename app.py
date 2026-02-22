@@ -208,14 +208,23 @@ async def chat_endpoint(req: ChatRequest):
                     yield delta.content
 
         # IMPORTANT: return is OUTSIDE the loop, but INSIDE try
-        return StreamingResponse(stream(), media_type="text/plain")
+                return StreamingResponse(stream(), media_type="text/plain")
 
     except Exception as e:
         logger.error(f"/chat error: {e}")
         return JSONResponse(
             {"error": "Something went wrong processing your request."},
             status_code=500
-        )            system_prompt=TEMPLATE_ENGINE_SYSTEM_PROMPT,
+        )
+
+# ---------------------------------------------------------
+# /generate-template — legacy
+# ---------------------------------------------------------
+@app.post("/generate-template")
+async def generate_template_endpoint(req: TemplateRequest):
+    try:
+        reply = call_model(
+            system_prompt=TEMPLATE_ENGINE_SYSTEM_PROMPT,
             user_message=req.templateRequest
         )
         return JSONResponse({"template": reply})
@@ -226,7 +235,6 @@ async def chat_endpoint(req: ChatRequest):
             {"error": "Something went wrong processing your request."},
             status_code=500
         )
-
 # ---------------------------------------------------------
 # /v1/generate-template — Markdown → HTML
 # ---------------------------------------------------------
@@ -422,6 +430,7 @@ async def delete_user(
 # ============================================================
 # END OF FILE
 # ============================================================
+
 
 
 
