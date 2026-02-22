@@ -147,6 +147,20 @@ async def chat_endpoint(req: ChatRequest):
         # Apply role overlays
         # -----------------------------
         normalised_role = normalise_role(req.role)
+       from fastapi.responses import StreamingResponse
+
+# ---------------------------------------------------------
+# /chat — Reflective Brain with Overlays (STREAMING VERSION)
+# ---------------------------------------------------------
+@app.post("/chat")
+async def chat_endpoint(req: ChatRequest):
+    try:
+        user_message = req.message
+
+        # -----------------------------
+        # Apply role overlays
+        # -----------------------------
+        normalised_role = normalise_role(req.role)
         if normalised_role:
             role_text = ROLE_OVERLAY.get(normalised_role, "")
             if role_text:
@@ -176,23 +190,22 @@ async def chat_endpoint(req: ChatRequest):
         # -----------------------------
         # STREAMING GENERATOR
         # -----------------------------
-def stream():
-    response = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=[
-            {"role": "system", "content": REFLECTIVE_BRAIN_SYSTEM_PROMPT},
-            {"role": "user", "content": user_message}
-        ],
-        temperature=0.4,
-        max_tokens=900,
-        stream=True
-    )
+        def stream():
+            response = client.chat.completions.create(
+                model="gpt-4.1-mini",
+                messages=[
+                    {"role": "system", "content": REFLECTIVE_BRAIN_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_message}
+                ],
+                temperature=0.4,
+                max_tokens=900,
+                stream=True
+            )
 
-    for chunk in response:
-        delta = chunk.choices[0].delta
-        # NEW: delta.content is the correct attribute
-        if delta and delta.content:
-            yield delta.content
+            for chunk in response:
+                delta = chunk.choices[0].delta
+                if delta and delta.content:
+                    yield delta.content
 
         return StreamingResponse(stream(), media_type="text/plain")
 
@@ -201,14 +214,7 @@ def stream():
         return JSONResponse(
             {"error": "Something went wrong processing your request."},
             status_code=500
-        )# ---------------------------------------------------------
-# /generate-template — legacy
-# ---------------------------------------------------------
-@app.post("/generate-template")
-async def generate_template_endpoint(req: TemplateRequest):
-    try:
-        reply = call_model(
-            system_prompt=TEMPLATE_ENGINE_SYSTEM_PROMPT,
+        )            system_prompt=TEMPLATE_ENGINE_SYSTEM_PROMPT,
             user_message=req.templateRequest
         )
         return JSONResponse({"template": reply})
@@ -415,6 +421,7 @@ async def delete_user(
 # ============================================================
 # END OF FILE
 # ============================================================
+
 
 
 
