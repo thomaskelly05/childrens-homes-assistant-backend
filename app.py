@@ -190,7 +190,7 @@ def stream():
 
     for chunk in response:
         delta = chunk.choices[0].delta
-        # delta is an object, so use .content
+        # NEW: delta.content is the correct attribute
         if delta and delta.content:
             yield delta.content
 
@@ -415,6 +415,7 @@ async def delete_user(
 # ============================================================
 # END OF FILE
 # ============================================================
+
 
 
 
