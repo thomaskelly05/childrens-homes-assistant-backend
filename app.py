@@ -147,7 +147,7 @@ async def chat_endpoint(req: ChatRequest):
         # Apply role overlays
         # -----------------------------
         normalised_role = normalise_role(req.role)
-       from fastapi.responses import StreamingResponse
+        from fastapi.responses import StreamingResponse
 
 # ---------------------------------------------------------
 # /chat — Reflective Brain with Overlays (STREAMING VERSION)
@@ -207,6 +207,7 @@ async def chat_endpoint(req: ChatRequest):
                 if delta and delta.content:
                     yield delta.content
 
+        # IMPORTANT: return is OUTSIDE the loop, but INSIDE try
         return StreamingResponse(stream(), media_type="text/plain")
 
     except Exception as e:
@@ -421,6 +422,7 @@ async def delete_user(
 # ============================================================
 # END OF FILE
 # ============================================================
+
 
 
 
