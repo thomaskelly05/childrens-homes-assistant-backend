@@ -346,23 +346,19 @@ async def create_user(request: Request, body: CreateUserRequest):
 # ------------------------------------------------------------
 @require_role("admin")
 @app.delete("/admin/delete-user/{email}")
-async def delete_user(...):
+async def delete_user(request: Request, email: str):
     conn = get_db()
     cur = conn.cursor()
 
     cur.execute("DELETE FROM users WHERE email = %s", (email,))
-    deleted = cur.rowcount
     conn.commit()
 
     cur.close()
     conn.close()
 
-    if deleted == 0:
-        raise HTTPException(status_code=404, detail="User not found")
-
     return {"message": "User deleted successfully"}
-
 # ============================================================
 # END OF FILE
 # ============================================================
+
 
