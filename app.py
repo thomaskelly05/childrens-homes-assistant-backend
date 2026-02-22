@@ -6,6 +6,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import Header
 from pydantic import BaseModel
 from openai import OpenAI
 import markdown
@@ -317,7 +318,11 @@ class CreateUserRequest(BaseModel):
 
 @require_role("manager", "company", "admin")
 @app.post("/admin/create-user")
-async def create_user(request: Request, body: CreateUserRequest):
+async def create_user(
+    request: Request,
+    body: CreateUserRequest,
+    authorization: str = Header(...)
+):
     if body.role not in ["staff", "manager", "company", "admin"]:
         raise HTTPException(status_code=400, detail="Invalid role")
 
@@ -340,13 +345,16 @@ async def create_user(request: Request, body: CreateUserRequest):
         conn.close()
 
     return {"message": "User created successfully"}
-
 # ------------------------------------------------------------
 # Delete user endpoint (admin only)
 # ------------------------------------------------------------
 @require_role("admin")
 @app.delete("/admin/delete-user/{email}")
-async def delete_user(request: Request, email: str):
+async def delete_user(
+    request: Request,
+    email: str,
+    authorization: str = Header(...)
+):
     conn = get_db()
     cur = conn.cursor()
 
@@ -360,5 +368,6 @@ async def delete_user(request: Request, email: str):
 # ============================================================
 # END OF FILE
 # ============================================================
+
 
 
