@@ -11,8 +11,10 @@ markdown
 PyJWT==2.8.0
 bcrypt
 psycopg2-binary
+python-multipart
 
 typing_extensions
+
 
 
 
