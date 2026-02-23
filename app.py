@@ -58,14 +58,11 @@ from prompts.overlays.training_overlay import TRAINING_OVERLAY
 # DB
 # ---------------------------------------------------------
 def get_db():
-    return psycopg2.connect(
-        host=os.getenv("DB_HOST"),
-        database=os.getenv("DB_NAME"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASS"),
-        cursor_factory=RealDictCursor,
-    )
-
+    url = os.getenv("DATABASE_URL")
+    if not url:
+        raise Exception("DATABASE_URL is not set")
+    return psycopg2.connect(url, cursor_factory=RealDictCursor)
+    
 # ---------------------------------------------------------
 # AUTH HELPERS
 # ---------------------------------------------------------
@@ -466,3 +463,4 @@ async def my_templates(user=Depends(get_current_user)):
     except Exception as e:
         logger.error(f"/me/templates error: {e}")
         raise HTTPException(status_code=500, detail="Could not fetch templates")
+
