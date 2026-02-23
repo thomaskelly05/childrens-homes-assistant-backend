@@ -4,7 +4,7 @@ import logging
 
 from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi import Header
 from pydantic import BaseModel
@@ -19,18 +19,19 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 
 # ---------------------------------------------------------
-# CREATE THE APP FIRST
+# CREATE THE APP
 # ---------------------------------------------------------
 app = FastAPI()
 
 # ---------------------------------------------------------
-# THEN ADD CORS MIDDLEWARE
+# CORS
 # ---------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://www.indicare.co.uk",
         "https://indicare.co.uk",
+        "https://indicarelimited.squarespace.com",
         "http://localhost:3000",
         "http://localhost:8000"
     ],
@@ -38,6 +39,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 # ---------------------------------------------------------
 # PROMPTS & OVERLAYS
 # ---------------------------------------------------------
@@ -118,78 +120,36 @@ def normalise_role(role: str | None) -> str | None:
     return ROLE_MAP.get(key, None)
 
 # ---------------------------------------------------------
-# FASTAPI APP
-# ---------------------------------------------------------
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "https://www.indicare.co.uk",
-        "https://indicare.co.uk",
-        "https://indicarelimited.squarespace.com"
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-from fastapi.responses import StreamingResponse
-
-# ---------------------------------------------------------
-# /chat — Reflective Brain with Overlays (STREAMING VERSION)
+# /chat — STREAMING VERSION
 # ---------------------------------------------------------
 @app.post("/chat")
 async def chat_endpoint(req: ChatRequest):
     try:
         user_message = req.message
 
-        # -----------------------------
         # Apply role overlays
-        # -----------------------------
-        normalised_role = normalise_role(req.role)
-        from fastapi.responses import StreamingResponse
-
-# ---------------------------------------------------------
-# /chat — Reflective Brain with Overlays (STREAMING VERSION)
-# ---------------------------------------------------------
-@app.post("/chat")
-async def chat_endpoint(req: ChatRequest):
-    try:
-        user_message = req.message
-
-        # -----------------------------
-        # Apply role overlays
-        # -----------------------------
         normalised_role = normalise_role(req.role)
         if normalised_role:
             role_text = ROLE_OVERLAY.get(normalised_role, "")
             if role_text:
                 user_message = role_text + "\n\n" + user_message
 
-        # -----------------------------
-        # Apply LD lens
-        # -----------------------------
+        # LD lens
         if req.ld_lens:
             user_message = LD_OVERLAY + "\n\n" + user_message
 
-        # -----------------------------
-        # Apply training mode
-        # -----------------------------
+        # Training mode
         if req.mode == "training":
             user_message = TRAINING_OVERLAY + "\n\n" + user_message
 
-        # -----------------------------
-        # Apply slow mode
-        # -----------------------------
+        # Slow mode
         if req.speed == "slow":
             user_message = (
                 "SLOW MODE: Take your time, offer slightly more detail, "
                 "but stay clear and grounded.\n\n" + user_message
             )
 
-        # -----------------------------
         # STREAMING GENERATOR
-        # -----------------------------
         def stream():
             response = client.chat.completions.create(
                 model="gpt-4.1-mini",
@@ -207,8 +167,7 @@ async def chat_endpoint(req: ChatRequest):
                 if delta and delta.content:
                     yield delta.content
 
-        # IMPORTANT: return is OUTSIDE the loop, but INSIDE try
-                return StreamingResponse(stream(), media_type="text/plain")
+        return StreamingResponse(stream(), media_type="text/plain")
 
     except Exception as e:
         logger.error(f"/chat error: {e}")
@@ -235,6 +194,7 @@ async def generate_template_endpoint(req: TemplateRequest):
             {"error": "Something went wrong processing your request."},
             status_code=500
         )
+
 # ---------------------------------------------------------
 # /v1/generate-template — Markdown → HTML
 # ---------------------------------------------------------
@@ -256,7 +216,6 @@ async def generate_template_v1(req: TemplateRequestV1):
             {"error": "Something went wrong processing your request."},
             status_code=500
         )
-
 # ============================================================
 # AUTHENTICATION MODULE (ADDED AT THE BOTTOM)
 # ============================================================
@@ -430,6 +389,7 @@ async def delete_user(
 # ============================================================
 # END OF FILE
 # ============================================================
+
 
 
 
