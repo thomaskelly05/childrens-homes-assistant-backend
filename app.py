@@ -81,26 +81,7 @@ def root_health_head():
 def health():
     return {"status": "ok"}
 
-# ---------------------------------------------------------
-# DB POOL + DEPENDENCY
-# ---------------------------------------------------------
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL is not set")
-
-POOL = SimpleConnectionPool(
-    1,
-    10,
-    DATABASE_URL,
-    cursor_factory=RealDictCursor,
-)
-
-def db():
-    conn = POOL.getconn()
-    try:
-        yield conn
-    finally:
-        POOL.putconn(conn)
+from db import get_db
 
 # ---------------------------------------------------------
 # OPENAI CLIENT
@@ -731,3 +712,4 @@ async def user_usage(
     )
     by_home = cur.fetchall()
     return {"summary": summary, "by_home": by_home}
+
