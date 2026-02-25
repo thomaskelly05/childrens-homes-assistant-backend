@@ -17,6 +17,7 @@ import jwt
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from psycopg2.pool import SimpleConnectionPool
+from logging import log_chat, log_template
 
 from auth import (
     hash_password,
@@ -354,42 +355,6 @@ async def list_users(
     return {"users": rows}
 
 # ---------------------------------------------------------
-# LOGGING HELPERS
-# ---------------------------------------------------------
-def log_chat(conn, email: str, home_id: int | None, message: str, response: str):
-    cur = conn.cursor()
-    cur.execute(
-        """
-        INSERT INTO chat_logs (user_id, home_id, message, response)
-        VALUES (
-            (SELECT id FROM users WHERE email = %s),
-            %s,
-            %s,
-            %s
-        )
-        """,
-        (email, home_id, message, response),
-    )
-    conn.commit()
-
-def log_template(conn, email: str, home_id: int | None, role: str, input_md: str, output_html: str):
-    cur = conn.cursor()
-    cur.execute(
-        """
-        INSERT INTO template_logs (user_id, home_id, role, input_markdown, output_html)
-        VALUES (
-            (SELECT id FROM users WHERE email = %s),
-            %s,
-            %s,
-            %s,
-            %s
-        )
-        """,
-        (email, home_id, role, input_md, output_html),
-    )
-    conn.commit()
-
-# ---------------------------------------------------------
 # CHAT ENDPOINT
 # ---------------------------------------------------------
 @app.post("/chat")
@@ -685,6 +650,7 @@ async def user_usage(
     )
     by_home = cur.fetchall()
     return {"summary": summary, "by_home": by_home}
+
 
 
 
