@@ -169,7 +169,7 @@ async def login_options():
 @app.post("/login", response_model=LoginResponse)
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    conn=Depends(db),
+    conn=Depends(get_db),
 ):
     email = form_data.username
     password = form_data.password
@@ -192,7 +192,7 @@ async def me(user: CurrentUser = Depends(get_current_user)):
 async def create_user(
     body: CreateUserRequest,
     user: CurrentUser = Depends(require_role("manager", "company", "admin")),
-    conn=Depends(db),
+    conn=Depends(get_db),
 ):
     if body.role not in ["staff", "manager", "company", "admin"]:
         raise HTTPException(status_code=400, detail="Invalid role")
@@ -214,7 +214,7 @@ async def create_user(
 async def delete_user(
     email: str,
     user: CurrentUser = Depends(require_role("admin")),
-    conn=Depends(db),
+    conn=Depends(get_db),
 ):
     cur = conn.cursor()
     cur.execute("DELETE FROM users WHERE email = %s", (email,))
@@ -228,7 +228,7 @@ async def delete_user(
 async def create_home(
     body: CreateHomeRequest,
     user: CurrentUser = Depends(require_role("manager", "company", "admin")),
-    conn=Depends(db),
+    conn=Depends(get_db),
 ):
     name = body.name.strip()
     if not name:
@@ -247,7 +247,7 @@ async def create_home(
 @app.get("/admin/list-homes")
 async def list_homes(
     user: CurrentUser = Depends(require_role("manager", "company", "admin")),
-    conn=Depends(db),
+    conn=Depends(get_db),
 ):
     cur = conn.cursor()
     cur.execute("SELECT id, name FROM homes ORDER BY id ASC")
@@ -258,7 +258,7 @@ async def list_homes(
 async def delete_home(
     home_id: int,
     user: CurrentUser = Depends(require_role("admin")),
-    conn=Depends(db),
+    conn=Depends(get_db),
 ):
     cur = conn.cursor()
     cur.execute("DELETE FROM home_assignments WHERE home_id = %s", (home_id,))
@@ -273,7 +273,7 @@ async def delete_home(
 async def assign_user_to_home(
     body: AssignUserRequest,
     user: CurrentUser = Depends(require_role("manager", "company", "admin")),
-    conn=Depends(db),
+    conn=Depends(get_db),
 ):
     email = body.email.strip()
     home_id = body.home_id
@@ -307,7 +307,7 @@ async def assign_user_to_home(
 async def remove_user_from_home(
     body: AssignUserRequest,
     user: CurrentUser = Depends(require_role("manager", "company", "admin")),
-    conn=Depends(db),
+    conn=Depends(get_db),
 ):
     email = body.email.strip()
     home_id = body.home_id
@@ -327,7 +327,7 @@ async def remove_user_from_home(
 async def home_users(
     home_id: int,
     user: CurrentUser = Depends(require_role("manager", "company", "admin")),
-    conn=Depends(db),
+    conn=Depends(get_db),
 ):
     cur = conn.cursor()
     cur.execute(
@@ -346,7 +346,7 @@ async def home_users(
 @app.get("/admin/list-users")
 async def list_users(
     user: CurrentUser = Depends(require_role("manager", "company", "admin")),
-    conn=Depends(db),
+    conn=Depends(get_db),
 ):
     cur = conn.cursor()
     cur.execute("SELECT email, role FROM users ORDER BY email ASC")
@@ -396,7 +396,7 @@ def log_template(conn, email: str, home_id: int | None, role: str, input_md: str
 async def chat_endpoint(
     req: ChatRequest,
     user: CurrentUser = Depends(get_current_user),
-    conn=Depends(db),
+    conn=Depends(get_db),
 ):
     try:
         user_message = req.message
@@ -482,7 +482,7 @@ def render_markdown(md: str) -> str:
 async def generate_template(
     req: TemplateRequest,
     user: CurrentUser = Depends(get_current_user),
-    conn=Depends(db),
+    conn=Depends(get_db),
 ):
     try:
         try:
@@ -525,7 +525,7 @@ async def generate_template(
 async def generate_template_v1(
     req: TemplateRequest,
     user: CurrentUser = Depends(get_current_user),
-    conn=Depends(db),
+    conn=Depends(get_db),
 ):
     # Same behaviour as /generate-template for consistency
     return await generate_template(req, user, conn)
@@ -536,7 +536,7 @@ async def generate_template_v1(
 @app.get("/me/chats")
 async def my_chats(
     user: CurrentUser = Depends(get_current_user),
-    conn=Depends(db),
+    conn=Depends(get_db),
 ):
     try:
         cur = conn.cursor()
@@ -560,7 +560,7 @@ async def my_chats(
 @app.get("/me/templates")
 async def my_templates(
     user: CurrentUser = Depends(get_current_user),
-    conn=Depends(db),
+    conn=Depends(get_db),
 ):
     try:
         cur = conn.cursor()
@@ -588,7 +588,7 @@ async def my_templates(
 async def home_chats(
     home_id: int,
     user: CurrentUser = Depends(require_role("manager", "company", "admin")),
-    conn=Depends(db),
+    conn=Depends(get_db),
 ):
     cur = conn.cursor()
     cur.execute(
@@ -608,7 +608,7 @@ async def home_chats(
 async def user_chats(
     email: str,
     user: CurrentUser = Depends(require_role("manager", "company", "admin")),
-    conn=Depends(db),
+    conn=Depends(get_db),
 ):
     cur = conn.cursor()
     cur.execute(
@@ -628,7 +628,7 @@ async def user_chats(
 async def home_usage(
     home_id: int,
     user: CurrentUser = Depends(require_role("manager", "company", "admin")),
-    conn=Depends(db),
+    conn=Depends(get_db),
 ):
     cur = conn.cursor()
     cur.execute(
@@ -659,7 +659,7 @@ async def home_usage(
 async def user_usage(
     email: str,
     user: CurrentUser = Depends(require_role("manager", "company", "admin")),
-    conn=Depends(db),
+    conn=Depends(get_db),
 ):
     cur = conn.cursor()
     cur.execute(
@@ -685,5 +685,6 @@ async def user_usage(
     )
     by_home = cur.fetchall()
     return {"summary": summary, "by_home": by_home}
+
 
 
