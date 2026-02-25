@@ -2,12 +2,12 @@
 import os
 import logging
 import datetime
+import traceback
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import OAuth2PasswordRequestForm
-from fastapi import Header
 from pydantic import BaseModel
 from openai import OpenAI
 import markdown
@@ -16,32 +16,30 @@ import bcrypt
 import jwt
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from psycopg2.pool import SimpleConnectionPool
 
-from fastapi import FastAPI
+# ---------------------------------------------------------
+# LOGGING
+# ---------------------------------------------------------
+logger = logging.getLogger("uvicorn.error")
 
-app = FastAPI()
-# -------------------------------
-# Render health check endpoints
-# -------------------------------
-
-@app.get("/", summary="Service health check")
-def health_check():
-    return {
-        "status": "ok",
-        "service": "IndiCare backend running"
-    }
-
-@app.head("/")
-def health_check_head():
-    # HEAD responses return headers only, no body
-    return {}
 # ---------------------------------------------------------
 # CONFIG
 # ---------------------------------------------------------
 SECRET_KEY = os.getenv("JWT_SECRET", "change-me-in-prod")
 ALGORITHM = "HS256"
 
-logger = logging.getLogger("uvicorn.error")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# ---------------------------------------------------------
+# PROMPTS & OVERLAYS
+# ---------------------------------------------------------
+from prompts.reflective_brain_prompt import REFLECTIVE_BRAIN_SYSTEM_PROMPT
+from prompts.template_engine_prompt import TEMPLATE_ENGINE_SYSTEM_PROMPT
+
+from prompts.overlays.role_overlay import ROLE_OVERLAY
+from prompts.overlays.ld_overlay import LD_OVERLAY
+from prompts.overlays.training_overlay import TRAINING_OVERLAY
 
 # ---------------------------------------------------------
 # APP + CORS
@@ -54,6 +52,8 @@ app.add_middleware(
         "https://www.indicare.co.uk",
         "https://indicare.co.uk",
         "https://indicarelimited.squarespace.com",
+        "https://*.squarespace.com",
+        "https://*.squarespace-cdn.com",
         "http://localhost:3000",
         "http://localhost:8000",
     ],
@@ -65,109 +65,47 @@ app.add_middleware(
 @app.options("/{path:path}")
 def preflight_handler(path: str):
     return {}
-# ---------------------------------------------------------
-# PROMPTS & OVERLAYS
-# ---------------------------------------------------------
-from prompts.reflective_brain_prompt import REFLECTIVE_BRAIN_SYSTEM_PROMPT
-from prompts.template_engine_prompt import TEMPLATE_ENGINE_SYSTEM_PROMPT
-
-from prompts.overlays.role_overlay import ROLE_OVERLAY
-from prompts.overlays.ld_overlay import LD_OVERLAY
-from prompts.overlays.training_overlay import TRAINING_OVERLAY
 
 # ---------------------------------------------------------
-# DB
+# HEALTH
 # ---------------------------------------------------------
-def get_db():
-    url = os.getenv("DATABASE_URL")
-    if not url:
-        raise Exception("DATABASE_URL is not set")
-    return psycopg2.connect(url, cursor_factory=RealDictCursor)
-    
+@app.get("/", summary="Service health check")
+def root_health():
+    return {"status": "ok", "service": "IndiCare backend running"}
+
+@app.head("/")
+def root_health_head():
+    return {}
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 # ---------------------------------------------------------
-# AUTH HELPERS
+# DB POOL + DEPENDENCY
 # ---------------------------------------------------------
-def hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL is not set")
 
+POOL = SimpleConnectionPool(
+    1,
+    10,
+    DATABASE_URL,
+    cursor_factory=RealDictCursor,
+)
 
-def verify_password(password: str, hashed: str) -> bool:
-    return bcrypt.checkpw(password.encode(), hashed.encode())
-
-
-def create_access_token(data: dict, expires_delta: datetime.timedelta | None = None) -> str:
-    to_encode = data.copy()
-    expire = datetime.datetime.utcnow() + (expires_delta or datetime.timedelta(days=7))
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-
-def get_current_user(authorization: str = Header(None)):
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Missing Authorization header")
-
-    token = authorization.replace("Bearer ", "").strip()
-
+def db():
+    conn = POOL.getconn()
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-
-
-def require_role(*roles):
-    def dependency(user=Depends(get_current_user)):
-        if user.get("role") not in roles:
-            raise HTTPException(status_code=403, detail="Insufficient permissions")
-        return user
-    return dependency
+        yield conn
+    finally:
+        POOL.putconn(conn)
 
 # ---------------------------------------------------------
 # OPENAI CLIENT
 # ---------------------------------------------------------
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-def call_model(system_prompt: str, user_message: str) -> str:
-    completion = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message},
-        ],
-        temperature=0.4,
-        max_tokens=900,
-    )
-    return completion.choices[0].message.content
-
-# ---------------------------------------------------------
-# MODELS
-# ---------------------------------------------------------
-class ChatRequest(BaseModel):
-    message: str
-    role: str | None = None
-    mode: str | None = "default"
-    speed: str | None = "fast"
-    ld_lens: bool | None = False
-
-
-class TemplateRequest(BaseModel):
-    templateRequest: str
-
-
-class TemplateRequestV1(BaseModel):
-    templateRequest: str
-
-
-class LoginResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    role: str
-
-
-class CreateUserRequest(BaseModel):
-    email: str
-    password: str
-    role: str = "staff"
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # ---------------------------------------------------------
 # ROLE NORMALISATION
@@ -195,63 +133,117 @@ def normalise_role(role: str | None) -> str | None:
     return ROLE_MAP.get(role.lower().strip(), None)
 
 # ---------------------------------------------------------
-# HEALTH + SELF
+# MODELS
 # ---------------------------------------------------------
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+class CurrentUser(BaseModel):
+    sub: str
+    role: str
 
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    role: str
 
-@app.get("/me")
-async def me(user=Depends(get_current_user)):
-    return {"email": user.get("sub"), "role": user.get("role")}
+class CreateUserRequest(BaseModel):
+    email: str
+    password: str
+    role: str = "staff"
+
+class ChatRequest(BaseModel):
+    message: str
+    role: str | None = None
+    mode: str | None = "default"
+    speed: str | None = "fast"
+    ld_lens: bool | None = False
+    home_id: int | None = None
+
+class TemplateRequest(BaseModel):
+    templateRequest: str
+    home_id: int | None = None
+
+class CreateHomeRequest(BaseModel):
+    name: str
+
+class AssignUserRequest(BaseModel):
+    email: str
+    home_id: int
+
+# ---------------------------------------------------------
+# AUTH HELPERS
+# ---------------------------------------------------------
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+def verify_password(password: str, hashed: str) -> bool:
+    return bcrypt.checkpw(password.encode(), hashed.encode())
+
+def create_access_token(data: dict, expires_delta: datetime.timedelta | None = None) -> str:
+    to_encode = data.copy()
+    expire = datetime.datetime.utcnow() + (expires_delta or datetime.timedelta(days=7))
+    to_encode.update({
+        "exp": expire,
+        "iat": datetime.datetime.utcnow(),
+        "iss": "indicare-backend",
+    })
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def get_current_user(authorization: str = Header(None)) -> CurrentUser:
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+
+    token = authorization.replace("Bearer ", "").strip()
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return CurrentUser(sub=payload["sub"], role=payload["role"])
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+def require_role(*roles):
+    def dependency(user: CurrentUser = Depends(get_current_user)):
+        if user.role not in roles:
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+        return user
+    return dependency
 
 # ---------------------------------------------------------
 # AUTH ENDPOINTS
 # ---------------------------------------------------------
-
-# Explicit OPTIONS handler for CORS preflight
 @app.options("/login")
 async def login_options():
     return {}
 
 @app.post("/login", response_model=LoginResponse)
-def login(form_data: OAuth2PasswordRequestForm = Depends()):
+def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    conn=Depends(db),
+):
     email = form_data.username
     password = form_data.password
 
-    conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT * FROM users WHERE email = %s", (email,))
     user = cur.fetchone()
-    cur.close()
-    conn.close()
 
-    # SAFE CHECKS — must be INSIDE the function
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-
-    if not verify_password(password, user["password_hash"]):
+    if not user or not verify_password(password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     token = create_access_token({"sub": user["email"], "role": user["role"]})
     return LoginResponse(access_token=token, role=user["role"])
 
+@app.get("/me")
+async def me(user: CurrentUser = Depends(get_current_user)):
+    return {"email": user.sub, "role": user.role}
 
-# ---------------------------------------------------------
-# CREATE USER (ADMIN / MANAGER)
-# ---------------------------------------------------------
 @app.post("/admin/create-user")
 async def create_user(
     body: CreateUserRequest,
-    user=Depends(require_role("manager", "company", "admin")),
+    user: CurrentUser = Depends(require_role("manager", "company", "admin")),
+    conn=Depends(db),
 ):
     if body.role not in ["staff", "manager", "company", "admin"]:
         raise HTTPException(status_code=400, detail="Invalid role")
 
     hashed_pw = hash_password(body.password)
-
-    conn = get_db()
     cur = conn.cursor()
     try:
         cur.execute(
@@ -262,27 +254,17 @@ async def create_user(
     except psycopg2.errors.UniqueViolation:
         conn.rollback()
         raise HTTPException(status_code=400, detail="Email already exists")
-    finally:
-        cur.close()
-        conn.close()
-
     return {"message": "User created successfully"}
 
-
-# ---------------------------------------------------------
-# DELETE USER (ADMIN ONLY)
-# ---------------------------------------------------------
 @app.delete("/admin/delete-user/{email}")
 async def delete_user(
     email: str,
-    user=Depends(require_role("admin")),
+    user: CurrentUser = Depends(require_role("admin")),
+    conn=Depends(db),
 ):
-    conn = get_db()
     cur = conn.cursor()
     cur.execute("DELETE FROM users WHERE email = %s", (email,))
     conn.commit()
-    cur.close()
-    conn.close()
     return {"message": "User deleted successfully"}
 
 # ---------------------------------------------------------
@@ -290,14 +272,14 @@ async def delete_user(
 # ---------------------------------------------------------
 @app.post("/admin/create-home")
 async def create_home(
-    body: dict,
-    user=Depends(require_role("manager", "company", "admin")),
+    body: CreateHomeRequest,
+    user: CurrentUser = Depends(require_role("manager", "company", "admin")),
+    conn=Depends(db),
 ):
-    name = body.get("name", "").strip()
+    name = body.name.strip()
     if not name:
         raise HTTPException(status_code=400, detail="Home name is required")
 
-    conn = get_db()
     cur = conn.cursor()
     try:
         cur.execute("INSERT INTO homes (name) VALUES (%s) RETURNING id", (name,))
@@ -306,108 +288,93 @@ async def create_home(
     except psycopg2.errors.UniqueViolation:
         conn.rollback()
         raise HTTPException(status_code=400, detail="Home name already exists")
-    finally:
-        cur.close()
-        conn.close()
-
     return {"id": home_id, "name": name}
 
-
 @app.get("/admin/list-homes")
-async def list_homes(user=Depends(require_role("manager", "company", "admin"))):
-    conn = get_db()
+async def list_homes(
+    user: CurrentUser = Depends(require_role("manager", "company", "admin")),
+    conn=Depends(db),
+):
     cur = conn.cursor()
     cur.execute("SELECT id, name FROM homes ORDER BY id ASC")
     rows = cur.fetchall()
-    cur.close()
-    conn.close()
     return {"homes": rows}
-
 
 @app.delete("/admin/delete-home/{home_id}")
 async def delete_home(
     home_id: int,
-    user=Depends(require_role("admin")),
+    user: CurrentUser = Depends(require_role("admin")),
+    conn=Depends(db),
 ):
-    conn = get_db()
     cur = conn.cursor()
-    # Remove assignments first
     cur.execute("DELETE FROM home_assignments WHERE home_id = %s", (home_id,))
     cur.execute("DELETE FROM homes WHERE id = %s", (home_id,))
     conn.commit()
-    cur.close()
-    conn.close()
     return {"message": "Home deleted successfully"}
-
 
 # ---------------------------------------------------------
 # HOME ASSIGNMENTS
 # ---------------------------------------------------------
 @app.post("/admin/assign-user-to-home")
 async def assign_user_to_home(
-    body: dict,
-    user=Depends(require_role("manager", "company", "admin")),
+    body: AssignUserRequest,
+    user: CurrentUser = Depends(require_role("manager", "company", "admin")),
+    conn=Depends(db),
 ):
-    email = body.get("email", "").strip()
-    home_id = body.get("home_id")
+    email = body.email.strip()
+    home_id = body.home_id
 
     if not email or not home_id:
         raise HTTPException(status_code=400, detail="email and home_id are required")
 
-    conn = get_db()
     cur = conn.cursor()
-    try:
-        # Ensure user exists
-        cur.execute("SELECT email FROM users WHERE email = %s", (email,))
-        if not cur.fetchone():
-            raise HTTPException(status_code=404, detail="User not found")
+    # Ensure user exists
+    cur.execute("SELECT email FROM users WHERE email = %s", (email,))
+    if not cur.fetchone():
+        raise HTTPException(status_code=404, detail="User not found")
 
-        # Ensure home exists
-        cur.execute("SELECT id FROM homes WHERE id = %s", (home_id,))
-        if not cur.fetchone():
-            raise HTTPException(status_code=404, detail="Home not found")
+    # Ensure home exists
+    cur.execute("SELECT id FROM homes WHERE id = %s", (home_id,))
+    if not cur.fetchone():
+        raise HTTPException(status_code=404, detail="Home not found")
 
-        cur.execute(
-            "INSERT INTO home_assignments (home_id, user_email) VALUES (%s, %s) ON CONFLICT DO NOTHING",
-            (home_id, email),
-        )
-        conn.commit()
-    finally:
-        cur.close()
-        conn.close()
-
+    cur.execute(
+        """
+        INSERT INTO home_assignments (home_id, user_email)
+        VALUES (%s, %s)
+        ON CONFLICT DO NOTHING
+        """,
+        (home_id, email),
+    )
+    conn.commit()
     return {"message": "User assigned to home"}
-
 
 @app.delete("/admin/remove-user-from-home")
 async def remove_user_from_home(
-    body: dict,
-    user=Depends(require_role("manager", "company", "admin")),
+    body: AssignUserRequest,
+    user: CurrentUser = Depends(require_role("manager", "company", "admin")),
+    conn=Depends(db),
 ):
-    email = body.get("email", "").strip()
-    home_id = body.get("home_id")
+    email = body.email.strip()
+    home_id = body.home_id
 
     if not email or not home_id:
         raise HTTPException(status_code=400, detail="email and home_id are required")
 
-    conn = get_db()
     cur = conn.cursor()
     cur.execute(
         "DELETE FROM home_assignments WHERE home_id = %s AND user_email = %s",
         (home_id, email),
     )
     conn.commit()
-    cur.close()
-    conn.close()
     return {"message": "User removed from home"}
-
 
 @app.get("/admin/home-users/{home_id}")
 async def home_users(
     home_id: int,
-    user=Depends(require_role("manager", "company", "admin")),
+    user: CurrentUser = Depends(require_role("manager", "company", "admin")),
+    conn=Depends(db),
 ):
-    conn = get_db()
     cur = conn.cursor()
     cur.execute(
         """
@@ -420,150 +387,67 @@ async def home_users(
         (home_id,),
     )
     rows = cur.fetchall()
-    cur.close()
-    conn.close()
     return {"users": rows}
 
-
-# ---------------------------------------------------------
-# LIST USERS (for dashboard)
-# ---------------------------------------------------------
 @app.get("/admin/list-users")
-async def list_users(user=Depends(require_role("manager", "company", "admin"))):
-    conn = get_db()
+async def list_users(
+    user: CurrentUser = Depends(require_role("manager", "company", "admin")),
+    conn=Depends(db),
+):
     cur = conn.cursor()
     cur.execute("SELECT email, role FROM users ORDER BY email ASC")
     rows = cur.fetchall()
-    cur.close()
-    conn.close()
     return {"users": rows}
 
+# ---------------------------------------------------------
+# LOGGING HELPERS
+# ---------------------------------------------------------
+def log_chat(conn, email: str, home_id: int | None, message: str, response: str):
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO chat_logs (user_id, home_id, message, response)
+        VALUES (
+            (SELECT id FROM users WHERE email = %s),
+            %s,
+            %s,
+            %s
+        )
+        """,
+        (email, home_id, message, response),
+    )
+    conn.commit()
+
+def log_template(conn, email: str, home_id: int | None, role: str, input_md: str, output_html: str):
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO template_logs (user_id, home_id, role, input_markdown, output_html)
+        VALUES (
+            (SELECT id FROM users WHERE email = %s),
+            %s,
+            %s,
+            %s,
+            %s
+        )
+        """,
+        (email, home_id, role, input_md, output_html),
+    )
+    conn.commit()
 
 # ---------------------------------------------------------
-# LOGS & ANALYTICS (assuming chat_logs table)
-# ---------------------------------------------------------
-@app.get("/admin/home-chats/{home_id}")
-async def home_chats(
-    home_id: int,
-    user=Depends(require_role("manager", "company", "admin")),
-):
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        SELECT email, message, timestamp
-        FROM chat_logs
-        WHERE home_id = %s
-        ORDER BY timestamp DESC
-        LIMIT 200
-        """,
-        (home_id,),
-    )
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
-    return {"logs": rows}
-
-
-@app.get("/admin/user-chats/{email}")
-async def user_chats(
-    email: str,
-    user=Depends(require_role("manager", "company", "admin")),
-):
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        SELECT home_id, message, timestamp
-        FROM chat_logs
-        WHERE email = %s
-        ORDER BY timestamp DESC
-        LIMIT 200
-        """,
-        (email,),
-    )
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
-    return {"logs": rows}
-
-
-@app.get("/admin/home-usage/{home_id}")
-async def home_usage(
-    home_id: int,
-    user=Depends(require_role("manager", "company", "admin")),
-):
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        SELECT
-          COUNT(*) AS total_messages,
-          COUNT(DISTINCT email) AS unique_users
-        FROM chat_logs
-        WHERE home_id = %s
-        """,
-        (home_id,),
-    )
-    summary = cur.fetchone()
-    cur.execute(
-        """
-        SELECT email, COUNT(*) AS messages
-        FROM chat_logs
-        WHERE home_id = %s
-        GROUP BY email
-        ORDER BY messages DESC
-        """,
-        (home_id,),
-    )
-    by_user = cur.fetchall()
-    cur.close()
-    conn.close()
-    return {"summary": summary, "by_user": by_user}
-
-
-@app.get("/admin/user-usage/{email}")
-async def user_usage(
-    email: str,
-    user=Depends(require_role("manager", "company", "admin")),
-):
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        SELECT
-          COUNT(*) AS total_messages,
-          COUNT(DISTINCT home_id) AS homes_used
-        FROM chat_logs
-        WHERE email = %s
-        """,
-        (email,),
-    )
-    summary = cur.fetchone()
-    cur.execute(
-        """
-        SELECT home_id, COUNT(*) AS messages
-        FROM chat_logs
-        WHERE email = %s
-        GROUP BY home_id
-        ORDER BY messages DESC
-        """,
-        (email,),
-    )
-    by_home = cur.fetchall()
-    cur.close()
-    conn.close()
-    return {"summary": summary, "by_home": by_home}
-# ---------------------------------------------------------
-# /chat — STREAMING, ROLE‑AWARE, AUTH‑PROTECTED + LOGGING
+# CHAT ENDPOINT
 # ---------------------------------------------------------
 @app.post("/chat")
-async def chat_endpoint(req: ChatRequest, user=Depends(get_current_user)):
+async def chat_endpoint(
+    req: ChatRequest,
+    user: CurrentUser = Depends(get_current_user),
+    conn=Depends(db),
+):
     try:
         user_message = req.message
 
-        # Use explicit role if passed, otherwise the user's stored role
-        effective_role = req.role or user.get("role")
+        effective_role = req.role or user.role
         normalised_role = normalise_role(effective_role)
 
         if normalised_role:
@@ -583,46 +467,47 @@ async def chat_endpoint(req: ChatRequest, user=Depends(get_current_user)):
                 "but stay clear and grounded.\n\n" + user_message
             )
 
-        # We'll capture the full response text as we stream, for logging
+        home_id = req.home_id  # optional but logged if present
+
         def stream_and_log():
             full_response = []
-            response = client.chat.completions.create(
-                model="gpt-4.1-mini",
-                messages=[
-                    {"role": "system", "content": REFLECTIVE_BRAIN_SYSTEM_PROMPT},
-                    {"role": "user", "content": user_message},
-                ],
-                temperature=0.4,
-                max_tokens=900,
-                stream=True,
-            )
-
-            for chunk in response:
-                delta = chunk.choices[0].delta
-                if delta and delta.content:
-                    full_response.append(delta.content)
-                    yield delta.content
-
-            # After streaming completes, log to DB
             try:
-                conn = get_db()
-                cur = conn.cursor()
-                cur.execute(
-                    """
-                    INSERT INTO chat_logs (user_id, message, response)
-                    VALUES (
-                        (SELECT id FROM users WHERE email = %s),
-                        %s,
-                        %s
-                    )
-                    """,
-                    (user.get("sub"), user_message, "".join(full_response)),
+                response = client.chat.completions.create(
+                    model="gpt-4.1-mini",
+                    messages=[
+                        {"role": "system", "content": REFLECTIVE_BRAIN_SYSTEM_PROMPT},
+                        {"role": "user", "content": user_message},
+                    ],
+                    temperature=0.4,
+                    max_tokens=900,
+                    stream=True,
                 )
-                conn.commit()
-                cur.close()
-                conn.close()
-            except Exception as log_err:
-                logger.error(f"Failed to log chat: {log_err}")
+
+                for chunk in response:
+                    try:
+                        delta = chunk.choices[0].delta
+                        if delta and delta.content:
+                            full_response.append(delta.content)
+                            yield delta.content
+                    except Exception as stream_err:
+                        logger.error(f"Streaming error: {stream_err}")
+                        break
+
+                # After streaming completes, log to DB
+                try:
+                    log_chat(
+                        conn,
+                        email=user.sub,
+                        home_id=home_id,
+                        message=user_message,
+                        response="".join(full_response),
+                    )
+                except Exception as log_err:
+                    logger.error(f"Failed to log chat: {log_err}")
+
+            except Exception as e:
+                logger.error(f"OpenAI /chat error: {e}")
+                yield "\n[Sorry, something went wrong generating this response.]"
 
         return StreamingResponse(stream_and_log(), media_type="text/plain")
 
@@ -634,97 +519,72 @@ async def chat_endpoint(req: ChatRequest, user=Depends(get_current_user)):
         )
 
 # ---------------------------------------------------------
-# TEMPLATE ENDPOINTS (AUTH‑PROTECTED + LOGGING)
+# TEMPLATE ENGINE
 # ---------------------------------------------------------
+def render_markdown(md: str) -> str:
+    return markdown.markdown(md, extensions=["tables"])
+
 @app.post("/generate-template")
-async def generate_template_endpoint(
+async def generate_template(
     req: TemplateRequest,
-    user=Depends(get_current_user),
+    user: CurrentUser = Depends(get_current_user),
+    conn=Depends(db),
 ):
     try:
-        raw_markdown = call_model(
-            system_prompt=TEMPLATE_ENGINE_SYSTEM_PROMPT,
-            user_message=req.templateRequest,
-        )
-
-        # Log template generation
         try:
-            conn = get_db()
-            cur = conn.cursor()
-            cur.execute(
-                """
-                INSERT INTO template_logs (user_id, input_markdown, output_html)
-                VALUES (
-                    (SELECT id FROM users WHERE email = %s),
-                    %s,
-                    %s
-                )
-                """,
-                (user.get("sub"), req.templateRequest, raw_markdown),
+            raw_markdown = client.chat.completions.create(
+                model="gpt-4.1-mini",
+                messages=[
+                    {"role": "system", "content": TEMPLATE_ENGINE_SYSTEM_PROMPT},
+                    {"role": "user", "content": req.templateRequest},
+                ],
+                temperature=0.4,
+                max_tokens=900,
+            ).choices[0].message.content
+        except Exception as model_err:
+            logger.error(f"Template model error: {model_err}")
+            raise HTTPException(status_code=500, detail="Template generation failed")
+
+        html_output = render_markdown(raw_markdown)
+
+        try:
+            log_template(
+                conn,
+                email=user.sub,
+                home_id=req.home_id,
+                role=user.role,
+                input_md=req.templateRequest,
+                output_html=html_output,
             )
-            conn.commit()
-            cur.close()
-            conn.close()
         except Exception as log_err:
             logger.error(f"Failed to log template: {log_err}")
 
-        return JSONResponse({"template": raw_markdown})
+        return JSONResponse({"template": html_output})
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"/generate-template error: {e}")
-        return JSONResponse(
-            {"error": "Something went wrong processing your request."},
-            status_code=500,
-        )
-
+        raise HTTPException(status_code=500, detail="Something went wrong processing your request.")
 
 @app.post("/v1/generate-template")
 async def generate_template_v1(
-    req: TemplateRequestV1,
-    user=Depends(get_current_user),
+    req: TemplateRequest,
+    user: CurrentUser = Depends(get_current_user),
+    conn=Depends(db),
 ):
-    try:
-        raw_markdown = call_model(
-            system_prompt=TEMPLATE_ENGINE_SYSTEM_PROMPT,
-            user_message=req.templateRequest,
-        )
-        html_output = markdown.markdown(raw_markdown, extensions=["tables"])
-
-        # Log template generation
-        try:
-            conn = get_db()
-            cur = conn.cursor()
-            cur.execute(
-                """
-                INSERT INTO template_logs (user_id, input_markdown, output_html)
-                VALUES (
-                    (SELECT id FROM users WHERE email = %s),
-                    %s,
-                    %s
-                )
-                """,
-                (user.get("sub"), req.templateRequest, html_output),
-            )
-            conn.commit()
-            cur.close()
-            conn.close()
-        except Exception as log_err:
-            logger.error(f"Failed to log template v1: {log_err}")
-
-        return JSONResponse({"template": html_output})
-    except Exception as e:
-        logger.error(f"/v1/generate-template error: {e}")
-        return JSONResponse(
-            {"error": "Something went wrong processing your request."},
-            status_code=500,
-        )
+    # Same behaviour as /generate-template for consistency
+    return await generate_template(req, user, conn)
 
 # ---------------------------------------------------------
-# OPTIONAL: SIMPLE DASHBOARD ENDPOINTS
+# USER DASHBOARD ENDPOINTS
 # ---------------------------------------------------------
 @app.get("/me/chats")
-async def my_chats(user=Depends(get_current_user)):
+async def my_chats(
+    user: CurrentUser = Depends(get_current_user),
+    conn=Depends(db),
+):
     try:
-        conn = get_db()
         cur = conn.cursor()
         cur.execute(
             """
@@ -735,21 +595,20 @@ async def my_chats(user=Depends(get_current_user)):
             ORDER BY c.created_at DESC
             LIMIT 50
             """,
-            (user.get("sub"),),
+            (user.sub,),
         )
         rows = cur.fetchall()
-        cur.close()
-        conn.close()
         return {"chats": rows}
     except Exception as e:
         logger.error(f"/me/chats error: {e}")
         raise HTTPException(status_code=500, detail="Could not fetch chats")
 
-
 @app.get("/me/templates")
-async def my_templates(user=Depends(get_current_user)):
+async def my_templates(
+    user: CurrentUser = Depends(get_current_user),
+    conn=Depends(db),
+):
     try:
-        conn = get_db()
         cur = conn.cursor()
         cur.execute(
             """
@@ -760,17 +619,115 @@ async def my_templates(user=Depends(get_current_user)):
             ORDER BY t.created_at DESC
             LIMIT 50
             """,
-            (user.get("sub"),),
+            (user.sub,),
         )
         rows = cur.fetchall()
-        cur.close()
-        conn.close()
         return {"templates": rows}
     except Exception as e:
         logger.error(f"/me/templates error: {e}")
         raise HTTPException(status_code=500, detail="Could not fetch templates")
 
+# ---------------------------------------------------------
+# ADMIN ANALYTICS
+# ---------------------------------------------------------
+@app.get("/admin/home-chats/{home_id}")
+async def home_chats(
+    home_id: int,
+    user: CurrentUser = Depends(require_role("manager", "company", "admin")),
+    conn=Depends(db),
+):
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT email, message, timestamp
+        FROM chat_logs_view_by_home
+        WHERE home_id = %s
+        ORDER BY timestamp DESC
+        LIMIT 200
+        """,
+        (home_id,),
+    )
+    rows = cur.fetchall()
+    return {"logs": rows}
 
+@app.get("/admin/user-chats/{email}")
+async def user_chats(
+    email: str,
+    user: CurrentUser = Depends(require_role("manager", "company", "admin")),
+    conn=Depends(db),
+):
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT home_id, message, timestamp
+        FROM chat_logs_view_by_user
+        WHERE email = %s
+        ORDER BY timestamp DESC
+        LIMIT 200
+        """,
+        (email,),
+    )
+    rows = cur.fetchall()
+    return {"logs": rows}
 
+@app.get("/admin/home-usage/{home_id}")
+async def home_usage(
+    home_id: int,
+    user: CurrentUser = Depends(require_role("manager", "company", "admin")),
+    conn=Depends(db),
+):
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT
+          COUNT(*) AS total_messages,
+          COUNT(DISTINCT email) AS unique_users
+        FROM chat_logs_view_by_home
+        WHERE home_id = %s
+        """,
+        (home_id,),
+    )
+    summary = cur.fetchone()
+    cur.execute(
+        """
+        SELECT email, COUNT(*) AS messages
+        FROM chat_logs_view_by_home
+        WHERE home_id = %s
+        GROUP BY email
+        ORDER BY messages DESC
+        """,
+        (home_id,),
+    )
+    by_user = cur.fetchall()
+    return {"summary": summary, "by_user": by_user}
 
-
+@app.get("/admin/user-usage/{email}")
+async def user_usage(
+    email: str,
+    user: CurrentUser = Depends(require_role("manager", "company", "admin")),
+    conn=Depends(db),
+):
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT
+          COUNT(*) AS total_messages,
+          COUNT(DISTINCT home_id) AS homes_used
+        FROM chat_logs_view_by_user
+        WHERE email = %s
+        """,
+        (email,),
+    )
+    summary = cur.fetchone()
+    cur.execute(
+        """
+        SELECT home_id, COUNT(*) AS messages
+        FROM chat_logs_view_by_user
+        WHERE email = %s
+        GROUP BY home_id
+        ORDER BY messages DESC
+        """,
+        (email,),
+    )
+    by_home = cur.fetchall()
+    return {"summary": summary, "by_home": by_home}
