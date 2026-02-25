@@ -44,6 +44,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.options("/{path:path}")
+def preflight_handler(path: str):
+    return {}
 # ---------------------------------------------------------
 # PROMPTS & OVERLAYS
 # ---------------------------------------------------------
@@ -188,6 +191,12 @@ async def me(user=Depends(get_current_user)):
 # ---------------------------------------------------------
 # AUTH ENDPOINTS
 # ---------------------------------------------------------
+
+# Explicit OPTIONS handler for CORS preflight
+@app.options("/login")
+async def login_options():
+    return {}
+
 @app.post("/login", response_model=LoginResponse)
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
     email = form_data.username
@@ -200,13 +209,20 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
     cur.close()
     conn.close()
 
-    if not user or not verify_password(password, user["password_hash"]):
+    # SAFE CHECKS — must be INSIDE the function
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    if not verify_password(password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     token = create_access_token({"sub": user["email"], "role": user["role"]})
     return LoginResponse(access_token=token, role=user["role"])
 
 
+# ---------------------------------------------------------
+# CREATE USER (ADMIN / MANAGER)
+# ---------------------------------------------------------
 @app.post("/admin/create-user")
 async def create_user(
     body: CreateUserRequest,
@@ -235,6 +251,9 @@ async def create_user(
     return {"message": "User created successfully"}
 
 
+# ---------------------------------------------------------
+# DELETE USER (ADMIN ONLY)
+# ---------------------------------------------------------
 @app.delete("/admin/delete-user/{email}")
 async def delete_user(
     email: str,
@@ -247,7 +266,6 @@ async def delete_user(
     cur.close()
     conn.close()
     return {"message": "User deleted successfully"}
-
 # ---------------------------------------------------------
 # /chat — STREAMING, ROLE‑AWARE, AUTH‑PROTECTED + LOGGING
 # ---------------------------------------------------------
@@ -463,4 +481,5 @@ async def my_templates(user=Depends(get_current_user)):
     except Exception as e:
         logger.error(f"/me/templates error: {e}")
         raise HTTPException(status_code=500, detail="Could not fetch templates")
+
 
