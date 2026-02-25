@@ -20,18 +20,21 @@ from psycopg2.extras import RealDictCursor
 from fastapi import FastAPI
 
 app = FastAPI()
+# -------------------------------
+# Render health check endpoints
+# -------------------------------
 
-# -------------------------------
-# Render health check endpoint
-# -------------------------------
-@app.get("/")
-def root():
-    return {"status": "ok", "service": "IndiCare backend running"}
+@app.get("/", summary="Service health check")
+def health_check():
+    return {
+        "status": "ok",
+        "service": "IndiCare backend running"
+    }
 
 @app.head("/")
-def root_head():
+def health_check_head():
+    # HEAD responses return headers only, no body
     return {}
-
 # ---------------------------------------------------------
 # CONFIG
 # ---------------------------------------------------------
@@ -766,6 +769,7 @@ async def my_templates(user=Depends(get_current_user)):
     except Exception as e:
         logger.error(f"/me/templates error: {e}")
         raise HTTPException(status_code=500, detail="Could not fetch templates")
+
 
 
 
