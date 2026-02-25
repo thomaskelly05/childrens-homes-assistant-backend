@@ -1,4 +1,4 @@
-# logging.py
+# log_helpers.py
 import datetime
 from psycopg2.extensions import connection as PGConnection
 
