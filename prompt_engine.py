@@ -4,7 +4,7 @@ from overlays.training_overlay import TRAINING_OVERLAY
 from overlays.reflective_brain_prompt import REFLECTIVE_BRAIN_SYSTEM_PROMPT
 from overlays.template_engine_prompt import TEMPLATE_ENGINE_SYSTEM_PROMPT
 
-from app_logging import logger  # if you have a logger module
+from log_helpers import logger  # if you have a logger module
 from openai import OpenAI
 
 client = OpenAI()
