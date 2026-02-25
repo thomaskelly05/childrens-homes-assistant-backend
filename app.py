@@ -17,6 +17,21 @@ import jwt
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+from fastapi import FastAPI
+
+app = FastAPI()
+
+# -------------------------------
+# Render health check endpoint
+# -------------------------------
+@app.get("/")
+def root():
+    return {"status": "ok", "service": "IndiCare backend running"}
+
+@app.head("/")
+def root_head():
+    return {}
+
 # ---------------------------------------------------------
 # CONFIG
 # ---------------------------------------------------------
@@ -751,6 +766,7 @@ async def my_templates(user=Depends(get_current_user)):
     except Exception as e:
         logger.error(f"/me/templates error: {e}")
         raise HTTPException(status_code=500, detail="Could not fetch templates")
+
 
 
 
