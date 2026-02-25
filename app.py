@@ -266,6 +266,276 @@ async def delete_user(
     cur.close()
     conn.close()
     return {"message": "User deleted successfully"}
+
+# ---------------------------------------------------------
+# HOMES
+# ---------------------------------------------------------
+@app.post("/admin/create-home")
+async def create_home(
+    body: dict,
+    user=Depends(require_role("manager", "company", "admin")),
+):
+    name = body.get("name", "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Home name is required")
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO homes (name) VALUES (%s) RETURNING id", (name,))
+        home_id = cur.fetchone()["id"]
+        conn.commit()
+    except psycopg2.errors.UniqueViolation:
+        conn.rollback()
+        raise HTTPException(status_code=400, detail="Home name already exists")
+    finally:
+        cur.close()
+        conn.close()
+
+    return {"id": home_id, "name": name}
+
+
+@app.get("/admin/list-homes")
+async def list_homes(user=Depends(require_role("manager", "company", "admin"))):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id, name FROM homes ORDER BY id ASC")
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return {"homes": rows}
+
+
+@app.delete("/admin/delete-home/{home_id}")
+async def delete_home(
+    home_id: int,
+    user=Depends(require_role("admin")),
+):
+    conn = get_db()
+    cur = conn.cursor()
+    # Remove assignments first
+    cur.execute("DELETE FROM home_assignments WHERE home_id = %s", (home_id,))
+    cur.execute("DELETE FROM homes WHERE id = %s", (home_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {"message": "Home deleted successfully"}
+
+
+# ---------------------------------------------------------
+# HOME ASSIGNMENTS
+# ---------------------------------------------------------
+@app.post("/admin/assign-user-to-home")
+async def assign_user_to_home(
+    body: dict,
+    user=Depends(require_role("manager", "company", "admin")),
+):
+    email = body.get("email", "").strip()
+    home_id = body.get("home_id")
+
+    if not email or not home_id:
+        raise HTTPException(status_code=400, detail="email and home_id are required")
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        # Ensure user exists
+        cur.execute("SELECT email FROM users WHERE email = %s", (email,))
+        if not cur.fetchone():
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Ensure home exists
+        cur.execute("SELECT id FROM homes WHERE id = %s", (home_id,))
+        if not cur.fetchone():
+            raise HTTPException(status_code=404, detail="Home not found")
+
+        cur.execute(
+            "INSERT INTO home_assignments (home_id, user_email) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+            (home_id, email),
+        )
+        conn.commit()
+    finally:
+        cur.close()
+        conn.close()
+
+    return {"message": "User assigned to home"}
+
+
+@app.delete("/admin/remove-user-from-home")
+async def remove_user_from_home(
+    body: dict,
+    user=Depends(require_role("manager", "company", "admin")),
+):
+    email = body.get("email", "").strip()
+    home_id = body.get("home_id")
+
+    if not email or not home_id:
+        raise HTTPException(status_code=400, detail="email and home_id are required")
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "DELETE FROM home_assignments WHERE home_id = %s AND user_email = %s",
+        (home_id, email),
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {"message": "User removed from home"}
+
+
+@app.get("/admin/home-users/{home_id}")
+async def home_users(
+    home_id: int,
+    user=Depends(require_role("manager", "company", "admin")),
+):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT u.email, u.role
+        FROM home_assignments ha
+        JOIN users u ON ha.user_email = u.email
+        WHERE ha.home_id = %s
+        ORDER BY u.email ASC
+        """,
+        (home_id,),
+    )
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return {"users": rows}
+
+
+# ---------------------------------------------------------
+# LIST USERS (for dashboard)
+# ---------------------------------------------------------
+@app.get("/admin/list-users")
+async def list_users(user=Depends(require_role("manager", "company", "admin"))):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT email, role FROM users ORDER BY email ASC")
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return {"users": rows}
+
+
+# ---------------------------------------------------------
+# LOGS & ANALYTICS (assuming chat_logs table)
+# ---------------------------------------------------------
+@app.get("/admin/home-chats/{home_id}")
+async def home_chats(
+    home_id: int,
+    user=Depends(require_role("manager", "company", "admin")),
+):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT email, message, timestamp
+        FROM chat_logs
+        WHERE home_id = %s
+        ORDER BY timestamp DESC
+        LIMIT 200
+        """,
+        (home_id,),
+    )
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return {"logs": rows}
+
+
+@app.get("/admin/user-chats/{email}")
+async def user_chats(
+    email: str,
+    user=Depends(require_role("manager", "company", "admin")),
+):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT home_id, message, timestamp
+        FROM chat_logs
+        WHERE email = %s
+        ORDER BY timestamp DESC
+        LIMIT 200
+        """,
+        (email,),
+    )
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return {"logs": rows}
+
+
+@app.get("/admin/home-usage/{home_id}")
+async def home_usage(
+    home_id: int,
+    user=Depends(require_role("manager", "company", "admin")),
+):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT
+          COUNT(*) AS total_messages,
+          COUNT(DISTINCT email) AS unique_users
+        FROM chat_logs
+        WHERE home_id = %s
+        """,
+        (home_id,),
+    )
+    summary = cur.fetchone()
+    cur.execute(
+        """
+        SELECT email, COUNT(*) AS messages
+        FROM chat_logs
+        WHERE home_id = %s
+        GROUP BY email
+        ORDER BY messages DESC
+        """,
+        (home_id,),
+    )
+    by_user = cur.fetchall()
+    cur.close()
+    conn.close()
+    return {"summary": summary, "by_user": by_user}
+
+
+@app.get("/admin/user-usage/{email}")
+async def user_usage(
+    email: str,
+    user=Depends(require_role("manager", "company", "admin")),
+):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT
+          COUNT(*) AS total_messages,
+          COUNT(DISTINCT home_id) AS homes_used
+        FROM chat_logs
+        WHERE email = %s
+        """,
+        (email,),
+    )
+    summary = cur.fetchone()
+    cur.execute(
+        """
+        SELECT home_id, COUNT(*) AS messages
+        FROM chat_logs
+        WHERE email = %s
+        GROUP BY home_id
+        ORDER BY messages DESC
+        """,
+        (email,),
+    )
+    by_home = cur.fetchall()
+    cur.close()
+    conn.close()
+    return {"summary": summary, "by_home": by_home}
 # ---------------------------------------------------------
 # /chat — STREAMING, ROLE‑AWARE, AUTH‑PROTECTED + LOGGING
 # ---------------------------------------------------------
@@ -481,5 +751,6 @@ async def my_templates(user=Depends(get_current_user)):
     except Exception as e:
         logger.error(f"/me/templates error: {e}")
         raise HTTPException(status_code=500, detail="Could not fetch templates")
+
 
 
