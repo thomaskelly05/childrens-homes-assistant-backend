@@ -17,7 +17,8 @@ import jwt
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from psycopg2.pool import SimpleConnectionPool
-from logging import log_chat, log_template
+
+from log_helpers import log_chat, log_template
 
 from auth import (
     hash_password,
@@ -650,6 +651,7 @@ async def user_usage(
     )
     by_home = cur.fetchall()
     return {"summary": summary, "by_home": by_home}
+
 
 
 
