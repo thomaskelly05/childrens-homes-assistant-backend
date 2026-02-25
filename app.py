@@ -19,6 +19,8 @@ from psycopg2.extras import RealDictCursor
 from psycopg2.pool import SimpleConnectionPool
 
 from log_helpers import log_chat, log_template
+from prompt_engine import build_chat_prompt, run_chat_stream
+from prompt_engine import build_template_prompt, run_template_completion
 
 from auth import (
     hash_password,
@@ -437,6 +439,27 @@ async def chat_endpoint(
             {"error": "Something went wrong processing your request."},
             status_code=500,
         )
+        system_prompt, user_prompt = build_chat_prompt(
+    message=req.message,
+    role=req.role or user.role,
+    ld_lens=req.ld_lens,
+    training_mode=(req.mode == "training"),
+    speed=req.speed,
+)
+
+def stream_and_log():
+    full = []
+    for chunk in run_chat_stream(system_prompt, user_prompt):
+        full.append(chunk)
+        yield chunk
+
+    log_chat(
+        conn,
+        email=user.sub,
+        home_id=req.home_id,
+        message=user_prompt,
+        response="".join(full),
+    )
 
 # ---------------------------------------------------------
 # TEMPLATE ENGINE
@@ -495,6 +518,9 @@ async def generate_template_v1(
 ):
     # Same behaviour as /generate-template for consistency
     return await generate_template(req, user, conn)
+
+system_prompt, user_prompt = build_template_prompt(req.templateRequest)
+raw_markdown = run_template_completion(system_prompt, user_prompt)
 
 # ---------------------------------------------------------
 # USER DASHBOARD ENDPOINTS
@@ -651,6 +677,7 @@ async def user_usage(
     )
     by_home = cur.fetchall()
     return {"summary": summary, "by_home": by_home}
+
 
 
 
