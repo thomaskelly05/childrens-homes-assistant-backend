@@ -27,7 +27,7 @@ def list_staff(conn):
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT id, email, role, home_id, created_at
+            SELECT id, email, role, home_id, created_at, updated_at, archived
             FROM users
             WHERE role = 'staff'
             ORDER BY email
