@@ -634,7 +634,7 @@ def list_providers_endpoint(
     user: CurrentUser = Depends(get_current_user),
     conn=Depends(get_db),
 ):
-    if user.role not in ("provider_admin", "regional_manager"):
+    if user.role not in ("provider_admin", "regional_manager", "admin"):
         raise HTTPException(status_code=403, detail="Not authorised")
 
     rows = list_providers(conn)
@@ -944,6 +944,7 @@ def update_staff_endpoint(user_id: int, data: StaffUpdate, conn=Depends(get_db))
 def archive_staff_endpoint(user_id: int, conn=Depends(get_db)):
     archive_staff(conn, user_id)
     return {"status": "archived"}
+
 
 
 
