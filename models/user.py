@@ -1,14 +1,14 @@
-from pydantic import BaseModel
 from datetime import datetime
+from pydantic import BaseModel
 
 class UserOut(BaseModel):
     id: int
     email: str
     role: str
     home_id: int | None = None
-    archived: bool
     created_at: datetime
     updated_at: datetime
+    archived: bool
 
 class StaffCreate(BaseModel):
     email: str
