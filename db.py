@@ -78,13 +78,13 @@ def update_staff(conn, user_id, data):
         )
         conn.commit()
 
-
 def archive_staff(conn, user_id):
     with conn.cursor() as cur:
         cur.execute(
             """
             UPDATE users
-            SET archived = TRUE
+            SET archived = TRUE,
+                updated_at = NOW()
             WHERE id = %s
             """,
             (user_id,)
