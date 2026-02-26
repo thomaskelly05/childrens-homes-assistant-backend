@@ -27,10 +27,11 @@ def create_provider(conn: PGConnection, data: ProviderCreate) -> int:
                 now,
             )
         )
-        provider_id = cur.fetchone()[0]
+        row = cur.fetchone()
+        provider_id = row["id"]
         conn.commit()
         return provider_id
-
+        
 def get_provider(conn: PGConnection, provider_id: int):
     with conn.cursor() as cur:
         cur.execute(
