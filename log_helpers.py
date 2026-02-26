@@ -1,8 +1,32 @@
 # log_helpers.py
 import datetime
+import logging
 from psycopg2.extensions import connection as PGConnection
 
-def log_chat(conn: PGConnection, user_email: str, role: str, home_id: int | None, message: str, response: str):
+# ---------------------------------------------------------
+# LOGGER
+# ---------------------------------------------------------
+logger = logging.getLogger("indicare")
+logger.setLevel(logging.INFO)
+
+# Avoid duplicate handlers (Render restarts can cause this)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+# ---------------------------------------------------------
+# CHAT LOGGING
+# ---------------------------------------------------------
+def log_chat(
+    conn: PGConnection,
+    user_email: str,
+    role: str,
+    home_id: int | None,
+    message: str,
+    response: str
+):
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -13,7 +37,18 @@ def log_chat(conn: PGConnection, user_email: str, role: str, home_id: int | None
         )
         conn.commit()
 
-def log_template(conn: PGConnection, user_email: str, role: str, home_id: int | None, template_name: str, prompt: str, output: str):
+# ---------------------------------------------------------
+# TEMPLATE LOGGING
+# ---------------------------------------------------------
+def log_template(
+    conn: PGConnection,
+    user_email: str,
+    role: str,
+    home_id: int | None,
+    template_name: str,
+    prompt: str,
+    output: str
+):
     with conn.cursor() as cur:
         cur.execute(
             """
