@@ -31,7 +31,8 @@ def create_provider(conn: PGConnection, data: ProviderCreate) -> int:
         provider_id = row["id"]
         conn.commit()
         return provider_id
-        
+
+
 def get_provider(conn: PGConnection, provider_id: int):
     with conn.cursor() as cur:
         cur.execute(
@@ -46,6 +47,7 @@ def get_provider(conn: PGConnection, provider_id: int):
         )
         return cur.fetchone()
 
+
 def list_providers(conn: PGConnection):
     with conn.cursor() as cur:
         cur.execute(
@@ -59,6 +61,7 @@ def list_providers(conn: PGConnection):
             """
         )
         return cur.fetchall()
+
 
 def update_provider(conn: PGConnection, provider_id: int, data: ProviderUpdate):
     fields = []
@@ -83,5 +86,19 @@ def update_provider(conn: PGConnection, provider_id: int, data: ProviderUpdate):
             WHERE id = %s
             """,
             tuple(values)
+        )
+        conn.commit()
+
+
+def archive_provider(conn: PGConnection, provider_id: int):
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE providers
+            SET archived = TRUE,
+                updated_at = %s
+            WHERE id = %s
+            """,
+            (datetime.utcnow(), provider_id)
         )
         conn.commit()
