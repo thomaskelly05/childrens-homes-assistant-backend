@@ -1,8 +1,11 @@
 # prompt_engine.py
 
-from overlays.training_overlay import TRAINING_OVERLAY
-from overlays.reflective_brain_prompt import REFLECTIVE_BRAIN_SYSTEM_PROMPT
-from overlays.template_engine_prompt import TEMPLATE_ENGINE_SYSTEM_PROMPT
+from prompts.overlays.training_overlay import TRAINING_OVERLAY
+from prompts.overlays.role_overlay import ROLE_OVERLAY
+from prompts.overlays.ld_overlay import LD_OVERLAY
+
+from prompts.reflective_brain_prompt import REFLECTIVE_BRAIN_SYSTEM_PROMPT
+from prompts.template_engine_prompt import TEMPLATE_ENGINE_SYSTEM_PROMPT
 
 from log_helpers import logger  # if you have a logger module
 from openai import OpenAI
