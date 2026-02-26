@@ -39,6 +39,8 @@ from auth import (
     require_role,
     CurrentUser,
 )
+from models.user import UserOut
+from services.user_service import get_user, assign_staff_to_home
 
 # ---------------------------------------------------------
 # LOGGING
@@ -860,6 +862,26 @@ def update_home_endpoint(
         updated_at=row["updated_at"],
     )
 
+@app.patch("/staff/{user_id}/assign-home", response_model=UserOut)
+def assign_home_endpoint(
+    user_id: int,
+    home_id: int,
+    user: CurrentUser = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    if user.role != "provider_admin":
+        raise HTTPException(status_code=403, detail="Not authorised")
+
+    assign_staff_to_home(conn, user_id, home_id)
+    updated = get_user(conn, user_id)
+
+    return UserOut(
+        id=updated["id"],
+        email=updated["email"],
+        role=updated["role"],
+        home_id=updated["home_id"],
+        created_at=updated["created_at"],
+    )
 
 
 
