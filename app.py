@@ -21,6 +21,13 @@ from psycopg2.pool import SimpleConnectionPool
 from log_helpers import log_chat, log_template
 from prompt_engine import build_chat_prompt, run_chat_stream
 from prompt_engine import build_template_prompt, run_template_completion
+from models.provider import ProviderCreate, ProviderUpdate, ProviderOut
+from services.provider_service import (
+    create_provider,
+    get_provider,
+    list_providers,
+    update_provider,
+)
 
 from auth import (
     hash_password,
@@ -609,6 +616,126 @@ async def user_usage(
     )
     by_home = cur.fetchall()
     return {"summary": summary, "by_home": by_home}
+
+# ---------------------------------------------------------
+# PROVIDERS ENDPOINTS
+# ---------------------------------------------------------
+
+from fastapi import HTTPException, Depends
+
+@app.get("/providers", response_model=list[ProviderOut])
+def list_providers_endpoint(
+    user: CurrentUser = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    if user.role not in ("provider_admin", "regional_manager"):
+        raise HTTPException(status_code=403, detail="Not authorised")
+
+    rows = list_providers(conn)
+
+    return [
+        ProviderOut(
+            id=row[0],
+            name=row[1],
+            region=row[2],
+            address=row[3],
+            postcode=row[4],
+            local_authority=row[5],
+            safeguarding_lead_name=row[6],
+            safeguarding_lead_email=row[7],
+            archived=row[8],
+            created_at=row[9],
+            updated_at=row[10],
+        )
+        for row in rows
+    ]
+
+
+@app.post("/providers", response_model=ProviderOut)
+def create_provider_endpoint(
+    data: ProviderCreate,
+    user: CurrentUser = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    if user.role != "provider_admin":
+        raise HTTPException(status_code=403, detail="Not authorised")
+
+    provider_id = create_provider(conn, data)
+    row = get_provider(conn, provider_id)
+
+    return ProviderOut(
+        id=row[0],
+        name=row[1],
+        region=row[2],
+        address=row[3],
+        postcode=row[4],
+        local_authority=row[5],
+        safeguarding_lead_name=row[6],
+        safeguarding_lead_email=row[7],
+        archived=row[8],
+        created_at=row[9],
+        updated_at=row[10],
+    )
+
+
+@app.get("/providers/{provider_id}", response_model=ProviderOut)
+def get_provider_endpoint(
+    provider_id: int,
+    user: CurrentUser = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    if user.role not in ("provider_admin", "regional_manager"):
+        raise HTTPException(status_code=403, detail="Not authorised")
+
+    row = get_provider(conn, provider_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Provider not found")
+
+    return ProviderOut(
+        id=row[0],
+        name=row[1],
+        region=row[2],
+        address=row[3],
+        postcode=row[4],
+        local_authority=row[5],
+        safeguarding_lead_name=row[6],
+        safeguarding_lead_email=row[7],
+        archived=row[8],
+        created_at=row[9],
+        updated_at=row[10],
+    )
+
+
+@app.patch("/providers/{provider_id}", response_model=ProviderOut)
+def update_provider_endpoint(
+    provider_id: int,
+    data: ProviderUpdate,
+    user: CurrentUser = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    if user.role != "provider_admin":
+        raise HTTPException(status_code=403, detail="Not authorised")
+
+    update_provider(conn, provider_id, data)
+    row = get_provider(conn, provider_id)
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Provider not found")
+
+    return ProviderOut(
+        id=row[0],
+        name=row[1],
+        region=row[2],
+        address=row[3],
+        postcode=row[4],
+        local_authority=row[5],
+        safeguarding_lead_name=row[6],
+        safeguarding_lead_email=row[7],
+        archived=row[8],
+        created_at=row[9],
+        updated_at=row[10],
+    )
+
 
 
 
