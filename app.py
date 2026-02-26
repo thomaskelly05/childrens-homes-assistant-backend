@@ -41,6 +41,7 @@ from auth import (
 )
 from models.user import UserOut
 from services.user_service import get_user, assign_staff_to_home
+from services.user_service import get_user
 
 # ---------------------------------------------------------
 # LOGGING
@@ -883,6 +884,37 @@ def assign_home_endpoint(
         created_at=updated["created_at"],
     )
 
+@app.get("/homes/{home_id}/staff", response_model=list[UserOut])
+def list_staff_in_home(
+    home_id: int,
+    user: CurrentUser = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    if user.role not in ("provider_admin", "regional_manager", "manager"):
+        raise HTTPException(status_code=403, detail="Not authorised")
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT *
+            FROM users
+            WHERE home_id = %s
+            ORDER BY email
+            """,
+            (home_id,)
+        )
+        rows = cur.fetchall()
+
+    return [
+        UserOut(
+            id=row["id"],
+            email=row["email"],
+            role=row["role"],
+            home_id=row["home_id"],
+            created_at=row["created_at"],
+        )
+        for row in rows
+    ]
 
 
 
