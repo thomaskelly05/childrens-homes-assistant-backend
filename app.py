@@ -519,9 +519,6 @@ async def generate_template_v1(
     # Same behaviour as /generate-template for consistency
     return await generate_template(req, user, conn)
 
-system_prompt, user_prompt = build_template_prompt(req.templateRequest)
-raw_markdown = run_template_completion(system_prompt, user_prompt)
-
 # ---------------------------------------------------------
 # USER DASHBOARD ENDPOINTS
 # ---------------------------------------------------------
@@ -677,6 +674,7 @@ async def user_usage(
     )
     by_home = cur.fetchall()
     return {"summary": summary, "by_home": by_home}
+
 
 
 
