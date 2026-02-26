@@ -635,17 +635,17 @@ def list_providers_endpoint(
 
     return [
         ProviderOut(
-            id=row[0],
-            name=row[1],
-            region=row[2],
-            address=row[3],
-            postcode=row[4],
-            local_authority=row[5],
-            safeguarding_lead_name=row[6],
-            safeguarding_lead_email=row[7],
-            archived=row[8],
-            created_at=row[9],
-            updated_at=row[10],
+            id=row["id"],
+            name=row["name"],
+            region=row["region"],
+            address=row["address"],
+            postcode=row["postcode"],
+            local_authority=row["local_authority"],
+            safeguarding_lead_name=row["safeguarding_lead_name"],
+            safeguarding_lead_email=row["safeguarding_lead_email"],
+            archived=row["archived"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
         )
         for row in rows
     ]
@@ -664,17 +664,17 @@ def create_provider_endpoint(
     row = get_provider(conn, provider_id)
 
     return ProviderOut(
-        id=row[0],
-        name=row[1],
-        region=row[2],
-        address=row[3],
-        postcode=row[4],
-        local_authority=row[5],
-        safeguarding_lead_name=row[6],
-        safeguarding_lead_email=row[7],
-        archived=row[8],
-        created_at=row[9],
-        updated_at=row[10],
+        id=row["id"],
+        name=row["name"],
+        region=row["region"],
+        address=row["address"],
+        postcode=row["postcode"],
+        local_authority=row["local_authority"],
+        safeguarding_lead_name=row["safeguarding_lead_name"],
+        safeguarding_lead_email=row["safeguarding_lead_email"],
+        archived=row["archived"],
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
     )
 
 
@@ -692,17 +692,17 @@ def get_provider_endpoint(
         raise HTTPException(status_code=404, detail="Provider not found")
 
     return ProviderOut(
-        id=row[0],
-        name=row[1],
-        region=row[2],
-        address=row[3],
-        postcode=row[4],
-        local_authority=row[5],
-        safeguarding_lead_name=row[6],
-        safeguarding_lead_email=row[7],
-        archived=row[8],
-        created_at=row[9],
-        updated_at=row[10],
+        id=row["id"],
+        name=row["name"],
+        region=row["region"],
+        address=row["address"],
+        postcode=row["postcode"],
+        local_authority=row["local_authority"],
+        safeguarding_lead_name=row["safeguarding_lead_name"],
+        safeguarding_lead_email=row["safeguarding_lead_email"],
+        archived=row["archived"],
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
     )
 
 
@@ -723,18 +723,19 @@ def update_provider_endpoint(
         raise HTTPException(status_code=404, detail="Provider not found")
 
     return ProviderOut(
-        id=row[0],
-        name=row[1],
-        region=row[2],
-        address=row[3],
-        postcode=row[4],
-        local_authority=row[5],
-        safeguarding_lead_name=row[6],
-        safeguarding_lead_email=row[7],
-        archived=row[8],
-        created_at=row[9],
-        updated_at=row[10],
+        id=row["id"],
+        name=row["name"],
+        region=row["region"],
+        address=row["address"],
+        postcode=row["postcode"],
+        local_authority=row["local_authority"],
+        safeguarding_lead_name=row["safeguarding_lead_name"],
+        safeguarding_lead_email=row["safeguarding_lead_email"],
+        archived=row["archived"],
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
     )
+
 
 
 
