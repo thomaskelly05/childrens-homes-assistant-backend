@@ -41,6 +41,7 @@ from auth import (
 
 from models.user import UserOut
 from services.user_service import get_user, assign_staff_to_home
+from db.staff import list_staff
 
 # ---------------------------------------------------------
 # LOGGING
@@ -944,6 +945,7 @@ def update_staff_endpoint(user_id: int, data: StaffUpdate, conn=Depends(get_db))
 def archive_staff_endpoint(user_id: int, conn=Depends(get_db)):
     archive_staff(conn, user_id)
     return {"status": "archived"}
+
 
 
 
