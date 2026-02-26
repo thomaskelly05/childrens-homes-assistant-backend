@@ -63,7 +63,6 @@ def create_staff(conn, data):
         conn.commit()
         return new_id
 
-
 def update_staff(conn, user_id, data):
     with conn.cursor() as cur:
         cur.execute(
@@ -71,7 +70,8 @@ def update_staff(conn, user_id, data):
             UPDATE users
             SET email = COALESCE(%s, email),
                 role = COALESCE(%s, role),
-                home_id = COALESCE(%s, home_id)
+                home_id = COALESCE(%s, home_id),
+                updated_at = NOW()
             WHERE id = %s
             """,
             (data.email, data.role, data.home_id, user_id)
