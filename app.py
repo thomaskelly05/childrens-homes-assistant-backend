@@ -76,6 +76,8 @@ app.add_middleware(
         "https://www.indicare.co.uk",
         "https://indicare.co.uk",
         "https://indicarelimited.squarespace.com",
+        "https://childrens-homes-assistant.squarespace.com",
+        "https://www.childrens-homes-assistant.com",
         "https://*.squarespace.com",
         "https://*.squarespace-cdn.com",
         "http://localhost:3000",
@@ -942,6 +944,7 @@ def update_staff_endpoint(user_id: int, data: StaffUpdate, conn=Depends(get_db))
 def archive_staff_endpoint(user_id: int, conn=Depends(get_db)):
     archive_staff(conn, user_id)
     return {"status": "archived"}
+
 
 
 
