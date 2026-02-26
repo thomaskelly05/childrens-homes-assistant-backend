@@ -22,6 +22,8 @@ from log_helpers import log_chat, log_template
 from prompt_engine import build_chat_prompt, run_chat_stream
 from prompt_engine import build_template_prompt, run_template_completion
 from models.provider import ProviderCreate, ProviderUpdate, ProviderOut
+from models.home import HomeCreate, HomeUpdate, HomeOut
+from services.home_service import create_home, get_home, list_homes, update_home
 from services.provider_service import (
     create_provider,
     get_provider,
@@ -736,6 +738,127 @@ def update_provider_endpoint(
         updated_at=row["updated_at"],
     )
 
+# ---------------------------------------------------------
+# HOMES ENDPOINTS
+# ---------------------------------------------------------
+
+@app.get("/providers/{provider_id}/homes", response_model=list[HomeOut])
+def list_homes_endpoint(
+    provider_id: int,
+    user: CurrentUser = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    if user.role not in ("provider_admin", "regional_manager"):
+        raise HTTPException(status_code=403, detail="Not authorised")
+
+    rows = list_homes(conn, provider_id)
+
+    return [
+        HomeOut(
+            id=row["id"],
+            provider_id=row["provider_id"],
+            name=row["name"],
+            address=row["address"],
+            postcode=row["postcode"],
+            region=row["region"],
+            local_authority=row["local_authority"],
+            ofsted_urn=row["ofsted_urn"],
+            registered_manager_id=row["registered_manager_id"],
+            archived=row["archived"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        )
+        for row in rows
+    ]
+
+
+@app.post("/homes", response_model=HomeOut)
+def create_home_endpoint(
+    data: HomeCreate,
+    user: CurrentUser = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    if user.role != "provider_admin":
+        raise HTTPException(status_code=403, detail="Not authorised")
+
+    home_id = create_home(conn, data)
+    row = get_home(conn, home_id)
+
+    return HomeOut(
+        id=row["id"],
+        provider_id=row["provider_id"],
+        name=row["name"],
+        address=row["address"],
+        postcode=row["postcode"],
+        region=row["region"],
+        local_authority=row["local_authority"],
+        ofsted_urn=row["ofsted_urn"],
+        registered_manager_id=row["registered_manager_id"],
+        archived=row["archived"],
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+    )
+
+
+@app.get("/homes/{home_id}", response_model=HomeOut)
+def get_home_endpoint(
+    home_id: int,
+    user: CurrentUser = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    if user.role not in ("provider_admin", "regional_manager"):
+        raise HTTPException(status_code=403, detail="Not authorised")
+
+    row = get_home(conn, home_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Home not found")
+
+    return HomeOut(
+        id=row["id"],
+        provider_id=row["provider_id"],
+        name=row["name"],
+        address=row["address"],
+        postcode=row["postcode"],
+        region=row["region"],
+        local_authority=row["local_authority"],
+        ofsted_urn=row["ofsted_urn"],
+        registered_manager_id=row["registered_manager_id"],
+        archived=row["archived"],
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+    )
+
+
+@app.patch("/homes/{home_id}", response_model=HomeOut)
+def update_home_endpoint(
+    home_id: int,
+    data: HomeUpdate,
+    user: CurrentUser = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    if user.role != "provider_admin":
+        raise HTTPException(status_code=403, detail="Not authorised")
+
+    update_home(conn, home_id, data)
+    row = get_home(conn, home_id)
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Home not found")
+
+    return HomeOut(
+        id=row["id"],
+        provider_id=row["provider_id"],
+        name=row["name"],
+        address=row["address"],
+        postcode=row["postcode"],
+        region=row["region"],
+        local_authority=row["local_authority"],
+        ofsted_urn=row["ofsted_urn"],
+        registered_manager_id=row["registered_manager_id"],
+        archived=row["archived"],
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+    )
 
 
 
