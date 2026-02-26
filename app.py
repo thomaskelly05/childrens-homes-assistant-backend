@@ -915,6 +915,34 @@ def list_staff_in_home(
         )
         for row in rows
     ]
+@app.get("/staff/{user_id}", response_model=UserOut)
+def get_staff_endpoint(user_id: int, conn=Depends(get_db)):
+    row = get_staff(conn, user_id)
+    if not row:
+        raise HTTPException(404)
+    return UserOut(**row)
+
+@app.get("/staff", response_model=list[UserOut])
+def list_staff_endpoint(conn=Depends(get_db)):
+    rows = list_staff(conn)
+    return [UserOut(**row) for row in rows]
+
+@app.post("/staff", response_model=UserOut)
+def create_staff_endpoint(data: StaffCreate, conn=Depends(get_db)):
+    new_id = create_staff(conn, data)
+    row = get_staff(conn, new_id)
+    return UserOut(**row)
+
+@app.patch("/staff/{user_id}", response_model=UserOut)
+def update_staff_endpoint(user_id: int, data: StaffUpdate, conn=Depends(get_db)):
+    update_staff(conn, user_id, data)
+    row = get_staff(conn, user_id)
+    return UserOut(**row)
+
+@app.patch("/staff/{user_id}/archive")
+def archive_staff_endpoint(user_id: int, conn=Depends(get_db)):
+    archive_staff(conn, user_id)
+    return {"status": "archived"}
 
 
 
