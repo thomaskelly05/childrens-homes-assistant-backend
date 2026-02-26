@@ -897,7 +897,7 @@ def list_staff_in_home(
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT *
+            SELECT id, email, role, home_id, created_at, updated_at, archived
             FROM users
             WHERE home_id = %s
             ORDER BY email
@@ -906,15 +906,7 @@ def list_staff_in_home(
         )
         rows = cur.fetchall()
 
-    return [
-        UserOut(
-            id=row["id"],
-            email=row["email"],
-            role=row["role"],
-            home_id=row["home_id"],
-            created_at=row["created_at"],
-        )
-        for row in rows
+    return [UserOut(**row) for row in rows]
     ]
 @app.get("/staff/{user_id}", response_model=UserOut)
 def get_staff_endpoint(user_id: int, conn=Depends(get_db)):
@@ -944,6 +936,7 @@ def update_staff_endpoint(user_id: int, data: StaffUpdate, conn=Depends(get_db))
 def archive_staff_endpoint(user_id: int, conn=Depends(get_db)):
     archive_staff(conn, user_id)
     return {"status": "archived"}
+
 
 
 
