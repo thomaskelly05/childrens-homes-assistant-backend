@@ -1,16 +1,39 @@
 from datetime import datetime
+from psycopg2.extensions import connection as PGConnection
+from models.user import StaffCreate, StaffUpdate
 
-def get_staff(conn, user_id: int):
+
+# ---------------------------------------------------------
+# GET USER (required by your endpoints)
+# ---------------------------------------------------------
+def get_user(conn: PGConnection, user_id: int):
     with conn.cursor() as cur:
         cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
         return cur.fetchone()
 
-def list_staff(conn):
+
+# ---------------------------------------------------------
+# GET STAFF (alias of get_user, used elsewhere)
+# ---------------------------------------------------------
+def get_staff(conn: PGConnection, user_id: int):
+    return get_user(conn, user_id)
+
+
+# ---------------------------------------------------------
+# LIST STAFF
+# ---------------------------------------------------------
+def list_staff(conn: PGConnection):
     with conn.cursor() as cur:
-        cur.execute("SELECT * FROM users WHERE archived = FALSE ORDER BY email")
+        cur.execute(
+            "SELECT * FROM users WHERE archived = FALSE ORDER BY email"
+        )
         return cur.fetchall()
 
-def create_staff(conn, data: StaffCreate):
+
+# ---------------------------------------------------------
+# CREATE STAFF
+# ---------------------------------------------------------
+def create_staff(conn: PGConnection, data: StaffCreate):
     now = datetime.utcnow()
     with conn.cursor() as cur:
         cur.execute(
@@ -25,7 +48,11 @@ def create_staff(conn, data: StaffCreate):
         conn.commit()
         return row["id"]
 
-def update_staff(conn, user_id: int, data: StaffUpdate):
+
+# ---------------------------------------------------------
+# UPDATE STAFF
+# ---------------------------------------------------------
+def update_staff(conn: PGConnection, user_id: int, data: StaffUpdate):
     fields = []
     values = []
 
@@ -47,10 +74,31 @@ def update_staff(conn, user_id: int, data: StaffUpdate):
         )
         conn.commit()
 
-def archive_staff(conn, user_id: int):
+
+# ---------------------------------------------------------
+# ARCHIVE STAFF (soft delete)
+# ---------------------------------------------------------
+def archive_staff(conn: PGConnection, user_id: int):
     with conn.cursor() as cur:
         cur.execute(
             "UPDATE users SET archived = TRUE, updated_at = %s WHERE id = %s",
             (datetime.utcnow(), user_id)
+        )
+        conn.commit()
+
+
+# ---------------------------------------------------------
+# ASSIGN STAFF TO HOME (required by your endpoint)
+# ---------------------------------------------------------
+def assign_staff_to_home(conn: PGConnection, user_id: int, home_id: int):
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE users
+            SET home_id = %s,
+                updated_at = %s
+            WHERE id = %s
+            """,
+            (home_id, datetime.utcnow(), user_id)
         )
         conn.commit()
