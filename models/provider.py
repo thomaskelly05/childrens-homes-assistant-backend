@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from datetime import datetime
 
 class ProviderBase(BaseModel):
@@ -8,7 +8,7 @@ class ProviderBase(BaseModel):
     postcode: str | None = None
     local_authority: str | None = None
     safeguarding_lead_name: str | None = None
-    safeguarding_lead_email: EmailStr | None = None
+    safeguarding_lead_email: str | None = None  # changed from EmailStr
 
 class ProviderCreate(ProviderBase):
     pass
@@ -20,7 +20,7 @@ class ProviderUpdate(BaseModel):
     postcode: str | None = None
     local_authority: str | None = None
     safeguarding_lead_name: str | None = None
-    safeguarding_lead_email: EmailStr | None = None
+    safeguarding_lead_email: str | None = None  # changed from EmailStr
     archived: bool | None = None
 
 class ProviderOut(ProviderBase):
