@@ -356,7 +356,6 @@ async def list_users(
     cur.execute("SELECT email, role FROM users ORDER BY email ASC")
     rows = cur.fetchall()
     return {"users": rows}
-
 # ---------------------------------------------------------
 # CHAT ENDPOINT
 # ---------------------------------------------------------
@@ -367,69 +366,33 @@ async def chat_endpoint(
     conn=Depends(get_db),
 ):
     try:
-        user_message = req.message
+        system_prompt, user_prompt = build_chat_prompt(
+            message=req.message,
+            role=req.role or user.role,
+            ld_lens=req.ld_lens,
+            training_mode=(req.mode == "training"),
+            speed=req.speed,
+        )
 
-        effective_role = req.role or user.role
-        normalised_role = normalise_role(effective_role)
-
-        if normalised_role:
-            overlay = ROLE_OVERLAY.get(normalised_role, "")
-            if overlay:
-                user_message = overlay + "\n\n" + user_message
-
-        if req.ld_lens:
-            user_message = LD_OVERLAY + "\n\n" + user_message
-
-        if req.mode == "training":
-            user_message = TRAINING_OVERLAY + "\n\n" + user_message
-
-        if req.speed == "slow":
-            user_message = (
-                "SLOW MODE: Take your time, offer slightly more detail, "
-                "but stay clear and grounded.\n\n" + user_message
-            )
-
-        home_id = req.home_id  # optional but logged if present
+        home_id = req.home_id
 
         def stream_and_log():
-            full_response = []
+            full = []
+            for chunk in run_chat_stream(system_prompt, user_prompt):
+                full.append(chunk)
+                yield chunk
+
             try:
-                response = client.chat.completions.create(
-                    model="gpt-4.1-mini",
-                    messages=[
-                        {"role": "system", "content": REFLECTIVE_BRAIN_SYSTEM_PROMPT},
-                        {"role": "user", "content": user_message},
-                    ],
-                    temperature=0.4,
-                    max_tokens=900,
-                    stream=True,
+                log_chat(
+                    conn,
+                    user_email=user.sub,
+                    role=user.role,
+                    home_id=home_id,
+                    message=user_prompt,
+                    response="".join(full),
                 )
-
-                for chunk in response:
-                    try:
-                        delta = chunk.choices[0].delta
-                        if delta and delta.content:
-                            full_response.append(delta.content)
-                            yield delta.content
-                    except Exception as stream_err:
-                        logger.error(f"Streaming error: {stream_err}")
-                        break
-
-                # After streaming completes, log to DB
-                try:
-                    log_chat(
-                        conn,
-                        email=user.sub,
-                        home_id=home_id,
-                        message=user_message,
-                        response="".join(full_response),
-                    )
-                except Exception as log_err:
-                    logger.error(f"Failed to log chat: {log_err}")
-
-            except Exception as e:
-                logger.error(f"OpenAI /chat error: {e}")
-                yield "\n[Sorry, something went wrong generating this response.]"
+            except Exception as log_err:
+                logger.error(f"Failed to log chat: {log_err}")
 
         return StreamingResponse(stream_and_log(), media_type="text/plain")
 
@@ -439,33 +402,13 @@ async def chat_endpoint(
             {"error": "Something went wrong processing your request."},
             status_code=500,
         )
-        system_prompt, user_prompt = build_chat_prompt(
-    message=req.message,
-    role=req.role or user.role,
-    ld_lens=req.ld_lens,
-    training_mode=(req.mode == "training"),
-    speed=req.speed,
-)
-
-def stream_and_log():
-    full = []
-    for chunk in run_chat_stream(system_prompt, user_prompt):
-        full.append(chunk)
-        yield chunk
-
-    log_chat(
-        conn,
-        email=user.sub,
-        home_id=req.home_id,
-        message=user_prompt,
-        response="".join(full),
-    )
 
 # ---------------------------------------------------------
 # TEMPLATE ENGINE
 # ---------------------------------------------------------
 def render_markdown(md: str) -> str:
     return markdown.markdown(md, extensions=["tables"])
+
 
 @app.post("/generate-template")
 async def generate_template(
@@ -474,18 +417,10 @@ async def generate_template(
     conn=Depends(get_db),
 ):
     try:
-        try:
-            raw_markdown = client.chat.completions.create(
-                model="gpt-4.1-mini",
-                messages=[
-                    {"role": "system", "content": TEMPLATE_ENGINE_SYSTEM_PROMPT},
-                    {"role": "user", "content": req.templateRequest},
-                ],
-                temperature=0.4,
-                max_tokens=900,
-            ).choices[0].message.content
-        except Exception as model_err:
-            logger.error(f"Template model error: {model_err}")
+        system_prompt, user_prompt = build_template_prompt(req.templateRequest)
+        raw_markdown = run_template_completion(system_prompt, user_prompt)
+
+        if raw_markdown is None:
             raise HTTPException(status_code=500, detail="Template generation failed")
 
         html_output = render_markdown(raw_markdown)
@@ -493,11 +428,12 @@ async def generate_template(
         try:
             log_template(
                 conn,
-                email=user.sub,
-                home_id=req.home_id,
+                user_email=user.sub,
                 role=user.role,
-                input_md=req.templateRequest,
-                output_html=html_output,
+                home_id=req.home_id,
+                template_name="default",
+                prompt=req.templateRequest,
+                output=html_output,
             )
         except Exception as log_err:
             logger.error(f"Failed to log template: {log_err}")
@@ -510,15 +446,14 @@ async def generate_template(
         logger.error(f"/generate-template error: {e}")
         raise HTTPException(status_code=500, detail="Something went wrong processing your request.")
 
+
 @app.post("/v1/generate-template")
 async def generate_template_v1(
     req: TemplateRequest,
     user: CurrentUser = Depends(get_current_user),
     conn=Depends(get_db),
 ):
-    # Same behaviour as /generate-template for consistency
     return await generate_template(req, user, conn)
-
 # ---------------------------------------------------------
 # USER DASHBOARD ENDPOINTS
 # ---------------------------------------------------------
@@ -674,6 +609,7 @@ async def user_usage(
     )
     by_home = cur.fetchall()
     return {"summary": summary, "by_home": by_home}
+
 
 
 
