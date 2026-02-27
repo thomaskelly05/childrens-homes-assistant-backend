@@ -3,6 +3,8 @@ import os
 import logging
 import datetime
 import traceback
+from fastapi.responses import FileResponse
+import os
 
 from fastapi import FastAPI, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
@@ -41,6 +43,7 @@ from auth import (
 from models.user import UserOut
 from services.user_service import get_user, assign_staff_to_home
 from db import list_staff
+
 
 # ---------------------------------------------------------
 # LOGGING
@@ -92,6 +95,11 @@ app.add_middleware(
 def preflight_handler(path: str):
     return {}
 
+# Serve static admin script
+@app.get("/script.js")
+def serve_script():
+    script_path = os.path.join(os.path.dirname(__file__), "script.js")
+    return FileResponse(script_path, media_type="application/javascript")
 # ---------------------------------------------------------
 # HEALTH
 # ---------------------------------------------------------
@@ -952,6 +960,7 @@ def update_staff_endpoint(user_id: int, data: StaffUpdate, conn=Depends(get_db))
 def archive_staff_endpoint(user_id: int, conn=Depends(get_db)):
     archive_staff(conn, user_id)
     return {"status": "archived"}
+
 
 
 
