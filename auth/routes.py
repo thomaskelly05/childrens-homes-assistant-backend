@@ -7,9 +7,9 @@ router = APIRouter()
 
 @router.post("/login")
 def login_post(
+    response: Response,
     email: str = Form(...),
     password: str = Form(...),
-    response: Response,
     conn=Depends(get_db)
 ):
     with conn.cursor() as cur:
