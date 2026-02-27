@@ -941,12 +941,14 @@ def get_home_endpoint(
         updated_at=row["updated_at"],
     )
 
-# ---------------------------------------------------------
-# STAFF ENDPOINTS
-# ---------------------------------------------------------
-
 @app.get("/staff")
-def list_staff(conn=Depends(get_db)):
+def list_staff(
+    user: CurrentUser = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    if user.role not in ("provider_admin", "regional_manager"):
+        raise HTTPException(status_code=403, detail="Not authorised")
+
     with conn.cursor() as cur:
         cur.execute("""
             SELECT id, email, home_id, created_at, updated_at
@@ -955,9 +957,15 @@ def list_staff(conn=Depends(get_db)):
         """)
         return cur.fetchall()
 
-
 @app.get("/homes/{home_id}/staff")
-def staff_for_home(home_id: int, conn=Depends(get_db)):
+def staff_for_home(
+    home_id: int,
+    user: CurrentUser = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    if user.role not in ("provider_admin", "regional_manager"):
+        raise HTTPException(status_code=403, detail="Not authorised")
+
     with conn.cursor() as cur:
         cur.execute("""
             SELECT id, email, created_at, updated_at
@@ -966,9 +974,16 @@ def staff_for_home(home_id: int, conn=Depends(get_db)):
         """, (home_id,))
         return cur.fetchall()
 
-
 @app.post("/staff/{staff_id}/reassign")
-def reassign_staff(staff_id: int, new_home_id: int, conn=Depends(get_db)):
+def reassign_staff(
+    staff_id: int,
+    new_home_id: int,
+    user: CurrentUser = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    if user.role != "provider_admin":
+        raise HTTPException(status_code=403, detail="Not authorised")
+
     with conn.cursor() as cur:
         cur.execute("""
             UPDATE users
@@ -976,13 +991,9 @@ def reassign_staff(staff_id: int, new_home_id: int, conn=Depends(get_db)):
             WHERE id = %s
         """, (new_home_id, staff_id))
         conn.commit()
+
     return {"status": "ok"}
-
-
-
-
-
-
+    
 
 
 
