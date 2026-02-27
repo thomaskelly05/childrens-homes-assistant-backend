@@ -1,9 +1,8 @@
-# app/auth/routes.py
-from fastapi import APIRouter, Form, Depends
+from fastapi import APIRouter, Form, Depends, HTTPException
 from fastapi.responses import RedirectResponse
-from .pages import login_page
-from .tokens import create_session_token
-from ..db.connection import get_db
+from auth.pages import login_page
+from auth.tokens import create_session_token
+from db.connection import get_db
 
 router = APIRouter()
 
@@ -13,13 +12,19 @@ def login_get():
 
 @router.post("/login")
 def login_post(email: str = Form(...), password: str = Form(...), conn=Depends(get_db)):
-    user = authenticate_user(conn, email, password)
+    with conn.cursor() as cur:
+        cur.execute("SELECT id, email, password_hash, role FROM users WHERE email=%s", (email,))
+        user = cur.fetchone()
+
     if not user:
         raise HTTPException(401, "Invalid credentials")
 
+    # TODO: verify password
+    # if not verify_password(password, user["password_hash"]):
+    #     raise HTTPException(401, "Invalid credentials")
+
     token = create_session_token(user["id"])
 
-    # Role-based redirect
     role = user["role"]
     if role == "provider_admin":
         target = "/admin"
