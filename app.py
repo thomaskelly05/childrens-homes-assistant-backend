@@ -1,53 +1,28 @@
 import logging
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from auth.routes import router as auth_router
+from providers.routes import router as providers_router
+from homes.routes import router as homes_router
+from staff.routes import router as staff_router
+
 logging.basicConfig(level=logging.DEBUG)
 
-# -*- coding: utf-8 -*-
-import os
-import logging
-import datetime
-import traceback
-from fastapi.responses import FileResponse
-import os
+app = FastAPI()
 
-from fastapi import FastAPI, Depends, HTTPException, Header
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
-from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel
-from openai import OpenAI
-import markdown
-
-import bcrypt
-import jwt
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from psycopg2.pool import SimpleConnectionPool
-
-from log_helpers import log_chat, log_template
-from prompt_engine import build_chat_prompt, run_chat_stream
-from prompt_engine import build_template_prompt, run_template_completion
-from models.provider import ProviderCreate, ProviderUpdate, ProviderOut
-from models.home import HomeCreate, HomeUpdate, HomeOut
-from services.home_service import create_home, get_home, list_homes, update_home
-from services.provider_service import (
-    create_provider,
-    get_provider,
-    list_providers,
-    update_provider,
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://your-squarespace-domain"],  # adjust
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-from auth import (
-    hash_password,
-    verify_password,
-    create_access_token,
-    get_current_user,
-    require_role,
-    CurrentUser,
-)
-from models.user import UserOut
-from services.user_service import get_user, assign_staff_to_home
-from db import list_staff
 
-
+app.include_router(auth_router)
+app.include_router(providers_router)
+app.include_router(homes_router)
+app.include_router(staff_router)
 # ---------------------------------------------------------
 # LOGGING
 # ---------------------------------------------------------
@@ -994,6 +969,7 @@ def reassign_staff(
 
     return {"status": "ok"}
     
+
 
 
 
