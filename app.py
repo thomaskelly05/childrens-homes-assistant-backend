@@ -81,8 +81,13 @@ app.add_middleware(
         "https://indicarelimited.squarespace.com",
         "https://childrens-homes-assistant.squarespace.com",
         "https://www.childrens-homes-assistant.com",
-        "https://*.squarespace.com",
-        "https://*.squarespace-cdn.com",
+
+        # Squarespace asset domains (must be explicit)
+        "https://static1.squarespace.com",
+        "https://images.squarespace-cdn.com",
+        "https://assets.squarespace.com",
+
+        # Local dev
         "http://localhost:3000",
         "http://localhost:8000",
     ],
@@ -980,6 +985,7 @@ def update_staff_endpoint(user_id: int, data: StaffUpdate, conn=Depends(get_db))
 def archive_staff_endpoint(user_id: int, conn=Depends(get_db)):
     archive_staff(conn, user_id)
     return {"status": "archived"}
+
 
 
 
