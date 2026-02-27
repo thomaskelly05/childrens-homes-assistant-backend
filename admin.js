@@ -1,4 +1,7 @@
 (function () {
+  // ---------------------------------------------------------
+  // API wrapper (authenticated, cookie-based)
+  // ---------------------------------------------------------
   const API = async (path, options = {}) => {
     const url = "https://childrens-homes-assistant-backend-new.onrender.com" + path;
 
@@ -13,11 +16,13 @@
     return res.json();
   };
 
-  /* ---------------------------------------------------------
-     Base Layout
-  --------------------------------------------------------- */
+  // ---------------------------------------------------------
+  // Base layout
+  // ---------------------------------------------------------
   function renderBase() {
     const root = document.getElementById("ic-admin-root");
+    if (!root) return;
+
     root.innerHTML = `
       <div id="ic-admin-container">
         <aside id="ic-sidebar">
@@ -47,90 +52,108 @@
     `;
   }
 
-  /* ---------------------------------------------------------
-     Sidebar
-  --------------------------------------------------------- */
+  // ---------------------------------------------------------
+  // Sidebar behaviour
+  // ---------------------------------------------------------
   function initSidebar() {
     document.querySelectorAll(".ic-sidebar-item").forEach(item => {
       item.addEventListener("click", () => {
-        document.querySelectorAll(".ic-sidebar-item").forEach(i => i.classList.remove("active"));
+        document
+          .querySelectorAll(".ic-sidebar-item")
+          .forEach(i => i.classList.remove("active"));
         item.classList.add("active");
 
         const target = item.dataset.target;
-
         if (target === "staff") loadStaff();
 
-        document.getElementById("ic-" + target).scrollIntoView({ behavior: "smooth" });
+        const section = document.getElementById("ic-" + target);
+        if (section) section.scrollIntoView({ behavior: "smooth" });
       });
     });
   }
 
-  /* ---------------------------------------------------------
-     Overview
-  --------------------------------------------------------- */
+  // ---------------------------------------------------------
+  // Overview
+  // ---------------------------------------------------------
   async function loadOverview() {
-    const data = await API("/overview");
+    try {
+      const data = await API("/overview");
+      const container = document.getElementById("ic-overview-cards");
+      if (!container) return;
 
-    const container = document.getElementById("ic-overview-cards");
-    container.innerHTML = `
-      <div class="ic-card">
-        <div class="ic-card-number">${data.providers}</div>
-        <div class="ic-card-label">Providers</div>
-      </div>
-      <div class="ic-card">
-        <div class="ic-card-number">${data.homes}</div>
-        <div class="ic-card-label">Homes</div>
-      </div>
-      <div class="ic-card">
-        <div class="ic-card-number">${data.staff}</div>
-        <div class="ic-card-label">Staff</div>
-      </div>
-    `;
+      container.innerHTML = `
+        <div class="ic-card">
+          <div class="ic-card-number">${data.providers}</div>
+          <div class="ic-card-label">Providers</div>
+        </div>
+        <div class="ic-card">
+          <div class="ic-card-number">${data.homes}</div>
+          <div class="ic-card-label">Homes</div>
+        </div>
+        <div class="ic-card">
+          <div class="ic-card-number">${data.staff}</div>
+          <div class="ic-card-label">Staff</div>
+        </div>
+      `;
+    } catch (err) {
+      console.error(err);
+      const container = document.getElementById("ic-overview-cards");
+      if (container) container.innerHTML = "Error loading overview";
+    }
   }
 
-  /* ---------------------------------------------------------
-     Providers & Homes
-  --------------------------------------------------------- */
+  // ---------------------------------------------------------
+  // Providers & Homes
+  // ---------------------------------------------------------
   async function loadProviders() {
-    const providers = await API("/providers");
-const homes = await API("/homes");
-
-    const grouped = {};
-    homes.forEach(h => {
-      if (!grouped[h.provider_id]) grouped[h.provider_id] = [];
-      grouped[h.provider_id].push(h);
-    });
-
     const container = document.getElementById("ic-providers-list");
-    container.innerHTML = "";
+    if (!container) return;
 
-    providers.forEach(p => {
-      const card = document.createElement("div");
-      card.className = "ic-provider-card";
+    container.innerHTML = "Loading...";
 
-      card.innerHTML = `
-        <div class="ic-provider-title">${p.name}</div>
-        <div class="ic-homes"></div>
-        <div class="ic-add-home-btn" data-provider="${p.id}">+ Add home</div>
-      `;
+    try {
+      const providers = await API("/providers");
+      const homes = await API("/homes");
 
-      const homesContainer = card.querySelector(".ic-homes");
-      (grouped[p.id] || []).forEach(h => {
-        const hCard = document.createElement("div");
-        hCard.className = "ic-home-card";
-        hCard.textContent = h.name;
-        homesContainer.appendChild(hCard);
+      const grouped = {};
+      homes.forEach(h => {
+        if (!grouped[h.provider_id]) grouped[h.provider_id] = [];
+        grouped[h.provider_id].push(h);
       });
 
-      container.appendChild(card);
-    });
+      container.innerHTML = "";
 
-    initAddHomeButtons();
+      providers.forEach(p => {
+        const card = document.createElement("div");
+        card.className = "ic-provider-card";
+
+        card.innerHTML = `
+          <div class="ic-provider-title">${p.name}</div>
+          <div class="ic-homes"></div>
+          <div class="ic-add-home-btn" data-provider="${p.id}">+ Add home</div>
+        `;
+
+        const homesContainer = card.querySelector(".ic-homes");
+        (grouped[p.id] || []).forEach(h => {
+          const hCard = document.createElement("div");
+          hCard.className = "ic-home-card";
+          hCard.textContent = h.name;
+          homesContainer.appendChild(hCard);
+        });
+
+        container.appendChild(card);
+      });
+
+      initAddHomeButtons();
+    } catch (err) {
+      console.error(err);
+      container.innerHTML = "Error loading providers";
+    }
   }
 
-  /* ---------------------------------------------------------
-     Drawer for Adding Homes
-  --------------------------------------------------------- */
+  // ---------------------------------------------------------
+  // Drawer for adding homes
+  // ---------------------------------------------------------
   function initAddHomeButtons() {
     document.querySelectorAll(".ic-add-home-btn").forEach(btn => {
       btn.addEventListener("click", () => openHomeDrawer(btn.dataset.provider));
@@ -139,6 +162,8 @@ const homes = await API("/homes");
 
   function openHomeDrawer(providerId) {
     const drawer = document.getElementById("ic-drawer");
+    if (!drawer) return;
+
     drawer.innerHTML = `
       <h3>Add Home</h3>
       <input id="ic-home-name" placeholder="Home name">
@@ -146,57 +171,73 @@ const homes = await API("/homes");
     `;
     drawer.classList.add("open");
 
-    document.getElementById("ic-create-home").onclick = async () => {
-      const name = document.getElementById("ic-home-name").value.trim();
+    const createBtn = document.getElementById("ic-create-home");
+    if (!createBtn) return;
+
+    createBtn.onclick = async () => {
+      const nameInput = document.getElementById("ic-home-name");
+      const name = nameInput ? nameInput.value.trim() : "";
       if (!name) return;
 
-      await API("/homes", {
-        method: "POST",
-        body: { name, provider_id: Number(providerId) }
-      });
-
-      drawer.classList.remove("open");
-      loadProviders();
+      try {
+        await API("/homes", {
+          method: "POST",
+          body: { name, provider_id: Number(providerId) }
+        });
+        drawer.classList.remove("open");
+        loadProviders();
+        loadOverview();
+      } catch (err) {
+        console.error(err);
+      }
     };
   }
 
-  /* ---------------------------------------------------------
-     Staff List
-  --------------------------------------------------------- */
+  // ---------------------------------------------------------
+  // Staff list
+  // ---------------------------------------------------------
   async function loadStaff() {
     const list = document.getElementById("ic-staff-list");
+    if (!list) return;
+
     list.innerHTML = "Loading...";
 
-    const staff = await API("/staff");
-    const homes = await API("/public/homes");
+    try {
+      const staff = await API("/staff");
+      const homes = await API("/homes");
 
-    const homeMap = {};
-    homes.forEach(h => homeMap[h.id] = h);
+      const homeMap = {};
+      homes.forEach(h => (homeMap[h.id] = h));
 
-    list.innerHTML = "";
+      list.innerHTML = "";
 
-    staff.forEach(s => {
-      const item = document.createElement("div");
-      item.className = "ic-staff-item";
+      staff.forEach(s => {
+        const item = document.createElement("div");
+        item.className = "ic-staff-item";
 
-      const home = homeMap[s.home_id];
-      const homeName = home ? home.name : "Unassigned";
+        const home = homeMap[s.home_id];
+        const homeName = home ? home.name : "Unassigned";
 
-      item.innerHTML = `
-        <strong>${s.email}</strong>
-        <div>${homeName}</div>
-      `;
+        item.innerHTML = `
+          <strong>${s.email}</strong>
+          <div>${homeName}</div>
+        `;
 
-      item.addEventListener("click", () => openStaffDrawer(s, homeMap));
-      list.appendChild(item);
-    });
+        item.addEventListener("click", () => openStaffDrawer(s, homeMap));
+        list.appendChild(item);
+      });
+    } catch (err) {
+      console.error(err);
+      list.innerHTML = "Error loading staff";
+    }
   }
 
-  /* ---------------------------------------------------------
-     Staff Drawer
-  --------------------------------------------------------- */
+  // ---------------------------------------------------------
+  // Staff drawer (reassignment)
+  // ---------------------------------------------------------
   function openStaffDrawer(staff, homeMap) {
     const drawer = document.getElementById("ic-drawer");
+    if (!drawer) return;
 
     drawer.innerHTML = `
       <h3>${staff.email}</h3>
@@ -208,7 +249,6 @@ const homes = await API("/homes");
     `;
 
     const select = drawer.querySelector("#ic-staff-home-select");
-
     Object.values(homeMap).forEach(home => {
       const opt = document.createElement("option");
       opt.value = home.id;
@@ -219,21 +259,27 @@ const homes = await API("/homes");
 
     drawer.classList.add("open");
 
-    document.getElementById("ic-save-staff").onclick = async () => {
+    const saveBtn = document.getElementById("ic-save-staff");
+    if (!saveBtn) return;
+
+    saveBtn.onclick = async () => {
       const newHomeId = Number(select.value);
-
-      await API(`/staff/${staff.id}/reassign?new_home_id=${newHomeId}`, {
-        method: "POST"
-      });
-
-      drawer.classList.remove("open");
-      loadStaff();
+      try {
+        await API(`/staff/${staff.id}/reassign?new_home_id=${newHomeId}`, {
+          method: "POST"
+        });
+        drawer.classList.remove("open");
+        loadStaff();
+        loadOverview();
+      } catch (err) {
+        console.error(err);
+      }
     };
   }
 
-  /* ---------------------------------------------------------
-     Init
-  --------------------------------------------------------- */
+  // ---------------------------------------------------------
+  // Init
+  // ---------------------------------------------------------
   renderBase();
   initSidebar();
   loadOverview();
