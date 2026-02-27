@@ -328,81 +328,82 @@
       }
     }
   };
+// ---------------------------------------------------------
+// Providers & Homes (Accordion)
+// ---------------------------------------------------------
+async function loadProviders() {
+  const list = document.getElementById("ic-providers-list");
+  if (!list) return;
 
-  // ---------------------------------------------------------
-  // Providers & Homes (Accordion)
-  // ---------------------------------------------------------
-  async function loadProviders() {
-    const list = document.getElementById("ic-providers-list");
-    if (!list) return;
+  list.innerHTML = "Loading...";
 
-    list.innerHTML = "Loading...";
+  try {
+    // UPDATED ENDPOINTS
+    const providers = await IndiCare.api("/public/providers");
+    const homes = await IndiCare.api("/public/homes");
 
-    try {
-      const providers = await IndiCare.api("/providers");
-      const homes = await IndiCare.api("/homes");
+    list.innerHTML = "";
 
-      list.innerHTML = "";
+    providers.forEach(provider => {
+      const providerEl = document.createElement("div");
+      providerEl.className = "ic-provider";
 
-      providers.forEach(provider => {
-        const providerEl = document.createElement("div");
-        providerEl.className = "ic-provider";
+      providerEl.innerHTML = [
+        '<div class="ic-provider-name">',
+        provider.name,
+        '</div>',
+        '<div class="ic-provider-homes" id="homes-',
+        provider.id,
+        '"></div>'
+      ].join("");
 
-        providerEl.innerHTML = [
-          '<div class="ic-provider-name">', 
-          provider.name, 
-          '</div>',
-          '<div class="ic-provider-homes" id="homes-',
-          provider.id,
-          '"></div>'
-        ].join("");
-
-        providerEl.addEventListener("click", () => {
-          const homesEl = document.getElementById("homes-" + provider.id);
-          if (!homesEl) return;
-          const isOpen = homesEl.style.display === "block";
-          homesEl.style.display = isOpen ? "none" : "block";
-        });
-
-        list.appendChild(providerEl);
-
+      providerEl.addEventListener("click", () => {
         const homesEl = document.getElementById("homes-" + provider.id);
         if (!homesEl) return;
-
-        const providerHomes = homes.filter(h => h.provider_id === provider.id);
-
-        providerHomes.forEach(home => {
-          const homeEl = document.createElement("div");
-          homeEl.className = "ic-home";
-          homeEl.textContent = home.name;
-          homesEl.appendChild(homeEl);
-        });
-
-        const addHome = document.createElement("div");
-        addHome.className = "ic-add-btn";
-        addHome.textContent = "+ Add home";
-        addHome.addEventListener("click", e => {
-          e.stopPropagation();
-          Drawer.open("home", provider.id);
-        });
-        homesEl.appendChild(addHome);
+        const isOpen = homesEl.style.display === "block";
+        homesEl.style.display = isOpen ? "none" : "block";
       });
-    } catch (err) {
-      console.error(err);
-      list.textContent = "Error loading providers";
-    }
-  }
-    // ---------------------------------------------------------
-  // Init
-  // ---------------------------------------------------------
-  function init() {
-    renderBaseLayout();
-    enhanceSidebar();
-    Drawer.init();
-    runHealthCheck();
-    loadOverview();
-    loadProviders();
-  }
 
-  init();
+      list.appendChild(providerEl);
+
+      const homesEl = document.getElementById("homes-" + provider.id);
+      if (!homesEl) return;
+
+      const providerHomes = homes.filter(h => h.provider_id === provider.id);
+
+      providerHomes.forEach(home => {
+        const homeEl = document.createElement("div");
+        homeEl.className = "ic-home";
+        homeEl.textContent = home.name;
+        homesEl.appendChild(homeEl);
+      });
+
+      const addHome = document.createElement("div");
+      addHome.className = "ic-add-btn";
+      addHome.textContent = "+ Add home";
+      addHome.addEventListener("click", e => {
+        e.stopPropagation();
+        Drawer.open("home", provider.id);
+      });
+      homesEl.appendChild(addHome);
+    });
+  } catch (err) {
+    console.error(err);
+    list.textContent = "Error loading providers";
+  }
+}
+
+ // ---------------------------------------------------------
+// Init
+// ---------------------------------------------------------
+function init() {
+  renderBaseLayout();
+  enhanceSidebar();
+  Drawer.init();
+  runHealthCheck();
+  loadOverview();
+  loadProviders();
+}
+
+init();
 })();
