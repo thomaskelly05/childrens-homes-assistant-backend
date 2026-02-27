@@ -92,8 +92,8 @@
      Providers & Homes
   --------------------------------------------------------- */
   async function loadProviders() {
-    const providers = await API("/public/providers");
-    const homes = await API("/public/homes");
+    const providers = await API("/providers");
+const homes = await API("/homes");
 
     const grouped = {};
     homes.forEach(h => {
