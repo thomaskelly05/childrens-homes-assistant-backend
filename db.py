@@ -21,7 +21,10 @@ def get_db():
     finally:
         POOL.putconn(conn)
 
+
+# ---------------------------------------------------------
 # STAFF QUERIES
+# ---------------------------------------------------------
 
 def list_staff(conn):
     with conn.cursor() as cur:
@@ -40,7 +43,7 @@ def get_staff(conn, user_id):
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT id, email, role, home_id, created_at
+            SELECT id, email, role, home_id, created_at, updated_at, archived
             FROM users
             WHERE id = %s
             """,
@@ -63,6 +66,7 @@ def create_staff(conn, data):
         conn.commit()
         return new_id
 
+
 def update_staff(conn, user_id, data):
     with conn.cursor() as cur:
         cur.execute(
@@ -77,6 +81,7 @@ def update_staff(conn, user_id, data):
             (data.email, data.role, data.home_id, user_id)
         )
         conn.commit()
+
 
 def archive_staff(conn, user_id):
     with conn.cursor() as cur:
@@ -103,3 +108,85 @@ def assign_staff_to_home(conn, user_id, home_id):
             (home_id, user_id)
         )
         conn.commit()
+
+
+# ---------------------------------------------------------
+# PROVIDER QUERIES
+# ---------------------------------------------------------
+
+def list_providers(conn):
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+                id,
+                name,
+                region,
+                address,
+                postcode,
+                local_authority,
+                safeguarding_lead_name,
+                safeguarding_lead_email,
+                archived,
+                created_at,
+                updated_at
+            FROM providers
+            WHERE archived = FALSE
+            ORDER BY name
+            """
+        )
+        return cur.fetchall()
+
+
+def get_provider(conn, provider_id):
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+                id,
+                name,
+                region,
+                address,
+                postcode,
+                local_authority,
+                safeguarding_lead_name,
+                safeguarding_lead_email,
+                archived,
+                created_at,
+                updated_at
+            FROM providers
+            WHERE id = %s
+            """,
+            (provider_id,)
+        )
+        return cur.fetchone()
+
+
+def create_provider(conn, data):
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO providers
+                (name,
+                 region,
+                 address,
+                 postcode,
+                 local_authority,
+                 safeguarding_lead_name,
+                 safeguarding_lead_email)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+            """,
+            (
+                data.name,
+                data.region,
+                data.address,
+                data.postcode,
+                data.local_authority,
+                data.safeguarding_lead_name,
+                data.safeguarding_lead_email,
+            )
+        )
+        new_id = cur.fetchone()["id"]
+        conn.commit()
+        return new_id
