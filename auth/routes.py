@@ -3,8 +3,7 @@ from fastapi.responses import JSONResponse
 from auth.tokens import create_session_token
 from db.connection import get_db
 
-# Router MUST be defined before any @router decorators
-router = APIRouter()
+router = APIRouter()   # MUST be before any @router decorators
 
 @router.post("/login")
 def login_post(
@@ -13,7 +12,6 @@ def login_post(
     password: str = Form(...),
     conn=Depends(get_db)
 ):
-    # Debug logging (optional but helpful)
     print("DEBUG: login_post called with", email)
 
     with conn.cursor() as cur:
@@ -29,10 +27,9 @@ def login_post(
         print("DEBUG: user not found")
         return JSONResponse({"success": False}, status_code=401)
 
-    # If your DB returns tuples instead of dicts, fix here:
+    # If your DB returns tuples instead of dicts, use indices:
     # id = user[0]
     # role = user[3]
-    # Otherwise, if using DictCursor:
     id = user["id"]
     role = user["role"]
 
@@ -40,7 +37,6 @@ def login_post(
     token = create_session_token(id)
     print("DEBUG: token created")
 
-    # Set session cookie
     response.set_cookie(
         "session",
         token,
