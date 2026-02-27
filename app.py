@@ -10,7 +10,10 @@ from staff.routes import router as staff_router
 logging.basicConfig(level=logging.DEBUG)
 
 app = FastAPI()
-
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+    
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,3 +26,4 @@ app.include_router(auth_router)
 app.include_router(providers_router)
 app.include_router(homes_router)
 app.include_router(staff_router)
+
