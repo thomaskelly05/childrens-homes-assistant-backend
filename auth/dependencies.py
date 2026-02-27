@@ -1,13 +1,13 @@
 import jwt
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Cookie
 from fastapi.responses import RedirectResponse
 from db.connection import get_db
 
 SECRET = "your-secret-key"
 
-def get_current_user(session: str | None = None, conn=Depends(get_db)):
+def get_current_user(session: str = Cookie(None), conn=Depends(get_db)):
     if not session:
-        raise HTTPException(401, "Missing session")
+        raise HTTPException(401, "Missing session cookie")
 
     try:
         payload = jwt.decode(session, SECRET, algorithms=["HS256"])
