@@ -190,3 +190,50 @@ def create_provider(conn, data):
         new_id = cur.fetchone()["id"]
         conn.commit()
         return new_id
+
+# ---------------------------------------------------------
+# HOME QUERIES
+# ---------------------------------------------------------
+
+def list_homes(conn):
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+                id,
+                provider_id,
+                name,
+                address,
+                postcode,
+                region,
+                archived,
+                created_at,
+                updated_at
+            FROM homes
+            WHERE archived = FALSE
+            ORDER BY name
+            """
+        )
+        return cur.fetchall()
+
+
+def get_home(conn, home_id):
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+                id,
+                provider_id,
+                name,
+                address,
+                postcode,
+                region,
+                archived,
+                created_at,
+                updated_at
+            FROM homes
+            WHERE id = %s
+            """,
+            (home_id,)
+        )
+        return cur.fetchone()
