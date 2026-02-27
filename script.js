@@ -347,14 +347,14 @@
         `;
 
         providerEl.addEventListener("click", () => {
-          const homesEl = document.getElementById(`homes-${provider.id}`);
+          const homesEl = document.getElementById(\`homes-\${provider.id}\`);
           const isOpen = homesEl.style.display === "block";
           homesEl.style.display = isOpen ? "none" : "block";
         });
 
         list.appendChild(providerEl);
 
-        const homesEl = document.getElementById(`homes-${provider.id}`);
+        const homesEl = document.getElementById(\`homes-\${provider.id}\`);
         const providerHomes = homes.filter(h => h.provider_id === provider.id);
 
         providerHomes.forEach(home => {
@@ -385,3 +385,10 @@
     renderBaseLayout();
     enhanceSidebar();
     Drawer.init();
+    runHealthCheck();
+    loadOverview();
+    loadProviders();
+  }
+
+  init();
+})();
