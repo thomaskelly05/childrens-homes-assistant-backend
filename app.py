@@ -622,7 +622,23 @@ async def user_usage(
     )
     by_home = cur.fetchall()
     return {"summary": summary, "by_home": by_home}
+@app.get("/overview")
+def overview(conn=Depends(get_db)):
+    with conn.cursor() as cur:
+        cur.execute("SELECT COUNT(*) FROM providers")
+        providers = cur.fetchone()["count"]
 
+        cur.execute("SELECT COUNT(*) FROM homes")
+        homes = cur.fetchone()["count"]
+
+        cur.execute("SELECT COUNT(*) FROM users WHERE role = 'staff'")
+        staff = cur.fetchone()["count"]
+
+    return {
+        "providers": providers,
+        "homes": homes,
+        "staff": staff,
+    }
 # ---------------------------------------------------------
 # PROVIDERS ENDPOINTS
 # ---------------------------------------------------------
@@ -936,6 +952,7 @@ def update_staff_endpoint(user_id: int, data: StaffUpdate, conn=Depends(get_db))
 def archive_staff_endpoint(user_id: int, conn=Depends(get_db)):
     archive_staff(conn, user_id)
     return {"status": "archived"}
+
 
 
 
