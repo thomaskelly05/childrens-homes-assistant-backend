@@ -657,21 +657,14 @@ def overview(conn=Depends(get_db)):
     # ---------------------------------------------------------
 # PUBLIC PROVIDERS & HOMES LIST ENDPOINTS
 # ---------------------------------------------------------
-
 @app.get("/providers")
-async def list_providers(conn=Depends(get_db)):
-    cur = conn.cursor()
-    cur.execute("SELECT id, name FROM providers ORDER BY name ASC")
-    rows = cur.fetchall()
-    return [{"id": r[0], "name": r[1]} for r in rows]
+async def get_providers(conn=Depends(get_db)):
+    return list_providers(conn)
 
 
 @app.get("/homes")
-async def list_homes(conn=Depends(get_db)):
-    cur = conn.cursor()
-    cur.execute("SELECT id, name, provider_id FROM homes ORDER BY name ASC")
-    rows = cur.fetchall()
-    return [{"id": r[0], "name": r[1], "provider_id": r[2]} for r in rows]
+async def get_homes(conn=Depends(get_db)):
+    return list_homes(conn)
 # ---------------------------------------------------------
 # PROVIDERS ENDPOINTS
 # ---------------------------------------------------------
@@ -985,6 +978,7 @@ def update_staff_endpoint(user_id: int, data: StaffUpdate, conn=Depends(get_db))
 def archive_staff_endpoint(user_id: int, conn=Depends(get_db)):
     archive_staff(conn, user_id)
     return {"status": "archived"}
+
 
 
 
