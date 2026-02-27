@@ -14,7 +14,7 @@
   };
 
   /* ---------------------------------------------------------
-     Render Base Layout
+     Base Layout
   --------------------------------------------------------- */
   function renderBase() {
     const root = document.getElementById("ic-admin-root");
@@ -23,6 +23,7 @@
         <aside id="ic-sidebar">
           <div class="ic-sidebar-item active" data-target="overview">Overview</div>
           <div class="ic-sidebar-item" data-target="providers">Providers & Homes</div>
+          <div class="ic-sidebar-item" data-target="staff">Staff</div>
         </aside>
 
         <main id="ic-main">
@@ -34,6 +35,11 @@
             <h2 style="color:#6CAEE0; margin-bottom:16px;">Providers & Homes</h2>
             <div id="ic-providers-list"></div>
           </section>
+
+          <section id="ic-staff">
+            <h2 style="color:#6CAEE0; margin-bottom:16px;">Staff</h2>
+            <div id="ic-staff-list"></div>
+          </section>
         </main>
       </div>
 
@@ -42,7 +48,7 @@
   }
 
   /* ---------------------------------------------------------
-     Sidebar Behaviour
+     Sidebar
   --------------------------------------------------------- */
   function initSidebar() {
     document.querySelectorAll(".ic-sidebar-item").forEach(item => {
@@ -51,14 +57,16 @@
         item.classList.add("active");
 
         const target = item.dataset.target;
-        const section = document.getElementById("ic-" + target);
-        section.scrollIntoView({ behavior: "smooth" });
+
+        if (target === "staff") loadStaff();
+
+        document.getElementById("ic-" + target).scrollIntoView({ behavior: "smooth" });
       });
     });
   }
 
   /* ---------------------------------------------------------
-     Overview Cards
+     Overview
   --------------------------------------------------------- */
   async function loadOverview() {
     const data = await API("/overview");
@@ -125,11 +133,11 @@
   --------------------------------------------------------- */
   function initAddHomeButtons() {
     document.querySelectorAll(".ic-add-home-btn").forEach(btn => {
-      btn.addEventListener("click", () => openDrawer(btn.dataset.provider));
+      btn.addEventListener("click", () => openHomeDrawer(btn.dataset.provider));
     });
   }
 
-  function openDrawer(providerId) {
+  function openHomeDrawer(providerId) {
     const drawer = document.getElementById("ic-drawer");
     drawer.innerHTML = `
       <h3>Add Home</h3>
@@ -149,6 +157,77 @@
 
       drawer.classList.remove("open");
       loadProviders();
+    };
+  }
+
+  /* ---------------------------------------------------------
+     Staff List
+  --------------------------------------------------------- */
+  async function loadStaff() {
+    const list = document.getElementById("ic-staff-list");
+    list.innerHTML = "Loading...";
+
+    const staff = await API("/staff");
+    const homes = await API("/public/homes");
+
+    const homeMap = {};
+    homes.forEach(h => homeMap[h.id] = h);
+
+    list.innerHTML = "";
+
+    staff.forEach(s => {
+      const item = document.createElement("div");
+      item.className = "ic-staff-item";
+
+      const home = homeMap[s.home_id];
+      const homeName = home ? home.name : "Unassigned";
+
+      item.innerHTML = `
+        <strong>${s.email}</strong>
+        <div>${homeName}</div>
+      `;
+
+      item.addEventListener("click", () => openStaffDrawer(s, homeMap));
+      list.appendChild(item);
+    });
+  }
+
+  /* ---------------------------------------------------------
+     Staff Drawer
+  --------------------------------------------------------- */
+  function openStaffDrawer(staff, homeMap) {
+    const drawer = document.getElementById("ic-drawer");
+
+    drawer.innerHTML = `
+      <h3>${staff.email}</h3>
+
+      <label>Assigned home</label>
+      <select id="ic-staff-home-select"></select>
+
+      <button id="ic-save-staff">Save</button>
+    `;
+
+    const select = drawer.querySelector("#ic-staff-home-select");
+
+    Object.values(homeMap).forEach(home => {
+      const opt = document.createElement("option");
+      opt.value = home.id;
+      opt.textContent = home.name;
+      if (home.id === staff.home_id) opt.selected = true;
+      select.appendChild(opt);
+    });
+
+    drawer.classList.add("open");
+
+    document.getElementById("ic-save-staff").onclick = async () => {
+      const newHomeId = Number(select.value);
+
+      await API(`/staff/${staff.id}/reassign?new_home_id=${newHomeId}`, {
+        method: "POST"
+      });
+
+      drawer.classList.remove("open");
+      loadStaff();
     };
   }
 
