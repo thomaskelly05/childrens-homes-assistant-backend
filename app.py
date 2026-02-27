@@ -114,9 +114,6 @@ def root_health_head():
 @app.get("/health")
 def health():
     return {"status": "ok"}
-
-from db import get_db
-
 # ---------------------------------------------------------
 # OPENAI CLIENT
 # ---------------------------------------------------------
@@ -970,4 +967,5 @@ def reassign_staff(
 
     return {"status": "ok"}
     
+
 
