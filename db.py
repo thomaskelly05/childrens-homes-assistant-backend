@@ -191,6 +191,7 @@ def create_provider(conn, data):
         conn.commit()
         return new_id
 
+
 # ---------------------------------------------------------
 # HOME QUERIES
 # ---------------------------------------------------------
@@ -206,6 +207,9 @@ def list_homes(conn):
                 address,
                 postcode,
                 region,
+                local_authority,
+                ofsted_urn,
+                registered_manager_id,
                 archived,
                 created_at,
                 updated_at
@@ -228,6 +232,9 @@ def get_home(conn, home_id):
                 address,
                 postcode,
                 region,
+                local_authority,
+                ofsted_urn,
+                registered_manager_id,
                 archived,
                 created_at,
                 updated_at
