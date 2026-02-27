@@ -1,12 +1,16 @@
 // IndiCare Admin – Single-file Admin Console
 // ------------------------------------------
-// 1) Serve this file from your backend as /script.js
-// 2) In Squarespace footer, keep only:
+// 1) Save this as script.js in your backend repo
+// 2) Serve it at: https://childrens-homes-assistant-backend-new.onrender.com/script.js
+// 3) In Squarespace footer, keep ONLY:
+//
 //    <div id="indicare-admin-root"></div>
-//    <script src="https://YOUR_BACKEND_URL/script.js"></script>
+//    <script src="https://childrens-homes-assistant-backend-new.onrender.com/script.js"></script>
+//
+// Delete all other IndiCare-related <script> and <style> blocks from the footer.
 
 (function () {
-  const BACKEND_BASE_URL = "https://YOUR_BACKEND_URL"; // <-- CHANGE THIS
+  const BACKEND_BASE_URL = "https://childrens-homes-assistant-backend-new.onrender.com";
 
   // -----------------------------
   // Core API helper
