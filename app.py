@@ -798,7 +798,18 @@ def update_provider_endpoint(
         updated_at=row["updated_at"],
     )
 
+# ---------------------------------------------------------
+# SERVICE-LAYER: LIST ALL HOMES (used by public_homes)
+# ---------------------------------------------------------
 
+def list_homes(conn):
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, name, provider_id
+        FROM homes
+        ORDER BY id ASC
+    """)
+    return cur.fetchall()
 # ---------------------------------------------------------
 # HOMES ENDPOINTS (ADMIN‑RESTRICTED)
 # ---------------------------------------------------------
@@ -888,6 +899,7 @@ def get_home_endpoint(
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
+
 
 
 
