@@ -279,7 +279,7 @@ async def create_home(
     return {"id": home_id, "name": name}
 
 @app.get("/admin/list-homes")
-async def list_homes(
+async def admin_list_homes(
     user: CurrentUser = Depends(require_role("manager", "company", "admin")),
     conn=Depends(get_db),
 ):
@@ -888,6 +888,7 @@ def get_home_endpoint(
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
+
 
 
 
