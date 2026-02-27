@@ -37,9 +37,15 @@
         <aside id="ic-sidebar"></aside>
         <main id="ic-main">
           <section id="ic-overview"></section>
+
           <section id="ic-providers">
             <h2>Providers & Homes</h2>
             <div id="ic-providers-list"></div>
+          </section>
+
+          <section id="ic-staff">
+            <h2>Staff</h2>
+            <div id="ic-staff-list"></div>
           </section>
         </main>
       </div>
@@ -47,7 +53,7 @@
   }
 
   // ---------------------------------------------------------
-  // Sidebar Enhancements
+  // Sidebar
   // ---------------------------------------------------------
   function enhanceSidebar() {
     const sidebar = document.getElementById("ic-sidebar");
@@ -56,11 +62,15 @@
     sidebar.innerHTML = `
       <div class="ic-sidebar-item" data-target="overview">Overview</div>
       <div class="ic-sidebar-item" data-target="providers">Providers & Homes</div>
+      <div class="ic-sidebar-item" data-target="staff">Staff</div>
     `;
 
     sidebar.querySelectorAll(".ic-sidebar-item").forEach(item => {
       item.addEventListener("click", () => {
         const target = item.getAttribute("data-target");
+
+        if (target === "staff") loadStaff();
+
         document.getElementById("ic-main").scrollTo({
           top: document.getElementById("ic-" + target).offsetTop,
           behavior: "smooth"
@@ -82,7 +92,7 @@
       }
     },
 
-    open(type, providerId) {
+    openHomeCreator(providerId) {
       const drawer = document.getElementById("ic-drawer");
       drawer.innerHTML = `
         <div class="ic-drawer-content">
@@ -113,6 +123,49 @@
 
         drawer.style.display = "none";
         loadProviders();
+      };
+    },
+
+    openStaffDrawer(staff, homeMap) {
+      const drawer = document.getElementById("ic-drawer");
+
+      drawer.innerHTML = `
+        <div class="ic-drawer-content">
+          <h3>${staff.email}</h3>
+
+          <label>Assigned home</label>
+          <select id="ic-staff-home-select"></select>
+
+          <button id="ic-save-staff" class="primary-btn">Save</button>
+          <button id="ic-close-drawer">Close</button>
+        </div>
+      `;
+
+      const select = drawer.querySelector("#ic-staff-home-select");
+
+      Object.values(homeMap).forEach(home => {
+        const opt = document.createElement("option");
+        opt.value = home.id;
+        opt.textContent = home.name;
+        if (home.id === staff.home_id) opt.selected = true;
+        select.appendChild(opt);
+      });
+
+      drawer.style.display = "block";
+
+      document.getElementById("ic-close-drawer").onclick = () => {
+        drawer.style.display = "none";
+      };
+
+      document.getElementById("ic-save-staff").onclick = async () => {
+        const newHomeId = parseInt(select.value, 10);
+
+        await IndiCare.api(`/staff/${staff.id}/reassign?new_home_id=${newHomeId}`, {
+          method: "POST"
+        });
+
+        drawer.style.display = "none";
+        loadStaff();
       };
     }
   };
@@ -153,7 +206,7 @@
   }
 
   // ---------------------------------------------------------
-  // Providers & Homes (Accordion)
+  // Providers & Homes
   // ---------------------------------------------------------
   async function loadProviders() {
     const list = document.getElementById("ic-providers-list");
@@ -162,7 +215,6 @@
     list.innerHTML = "Loading...";
 
     try {
-      // UPDATED ENDPOINTS
       const providers = await IndiCare.api("/public/providers");
       const homes = await IndiCare.api("/public/homes");
 
@@ -172,18 +224,13 @@
         const providerEl = document.createElement("div");
         providerEl.className = "ic-provider";
 
-        providerEl.innerHTML = [
-          '<div class="ic-provider-name">',
-          provider.name,
-          '</div>',
-          '<div class="ic-provider-homes" id="homes-',
-          provider.id,
-          '"></div>'
-        ].join("");
+        providerEl.innerHTML = `
+          <div class="ic-provider-name">${provider.name}</div>
+          <div class="ic-provider-homes" id="homes-${provider.id}"></div>
+        `;
 
         providerEl.addEventListener("click", () => {
           const homesEl = document.getElementById("homes-" + provider.id);
-          if (!homesEl) return;
           const isOpen = homesEl.style.display === "block";
           homesEl.style.display = isOpen ? "none" : "block";
         });
@@ -191,8 +238,6 @@
         list.appendChild(providerEl);
 
         const homesEl = document.getElementById("homes-" + provider.id);
-        if (!homesEl) return;
-
         const providerHomes = homes.filter(h => h.provider_id === provider.id);
 
         providerHomes.forEach(home => {
@@ -207,13 +252,52 @@
         addHome.textContent = "+ Add home";
         addHome.addEventListener("click", e => {
           e.stopPropagation();
-          Drawer.open("home", provider.id);
+          Drawer.openHomeCreator(provider.id);
         });
         homesEl.appendChild(addHome);
       });
     } catch (err) {
       console.error(err);
       list.textContent = "Error loading providers";
+    }
+  }
+
+  // ---------------------------------------------------------
+  // Staff Loader
+  // ---------------------------------------------------------
+  async function loadStaff() {
+    const list = document.getElementById("ic-staff-list");
+    if (!list) return;
+
+    list.innerHTML = "Loading...";
+
+    try {
+      const staff = await IndiCare.api("/staff");
+      const homes = await IndiCare.api("/public/homes");
+
+      const homeMap = {};
+      homes.forEach(h => homeMap[h.id] = h);
+
+      list.innerHTML = "";
+
+      staff.forEach(s => {
+        const item = document.createElement("div");
+        item.className = "ic-staff-item";
+
+        const home = homeMap[s.home_id];
+        const homeName = home ? home.name : "Unassigned";
+
+        item.innerHTML = `
+          <strong>${s.email}</strong>
+          <div>${homeName}</div>
+        `;
+
+        item.addEventListener("click", () => Drawer.openStaffDrawer(s, homeMap));
+        list.appendChild(item);
+      });
+    } catch (err) {
+      console.error(err);
+      list.textContent = "Error loading staff";
     }
   }
 
