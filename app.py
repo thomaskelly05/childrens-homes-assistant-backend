@@ -91,15 +91,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.options("/{path:path}")
-def preflight_handler(path: str):
-    return {}
-
-# Serve static admin script
+# Serve static admin script FIRST
 @app.get("/script.js")
 def serve_script():
     script_path = os.path.join(os.path.dirname(__file__), "script.js")
     return FileResponse(script_path, media_type="application/javascript")
+
+# Then the wildcard OPTIONS route
+@app.options("/{path:path}")
+def preflight_handler(path: str):
+    return {}
 # ---------------------------------------------------------
 # HEALTH
 # ---------------------------------------------------------
@@ -960,6 +961,7 @@ def update_staff_endpoint(user_id: int, data: StaffUpdate, conn=Depends(get_db))
 def archive_staff_endpoint(user_id: int, conn=Depends(get_db)):
     archive_staff(conn, user_id)
     return {"status": "archived"}
+
 
 
 
