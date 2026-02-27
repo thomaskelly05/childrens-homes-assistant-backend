@@ -661,14 +661,14 @@ def overview(conn=Depends(get_db)):
 # ---------------------------------------------------------
 
 @app.get("/public/providers")
-async def public_providers(conn=Depends(get_db)):
-    rows = await list_providers(conn)
+def public_providers(conn=Depends(get_db)):
+    rows = list_providers(conn)  # sync call
     return [{"id": r["id"], "name": r["name"]} for r in rows]
 
 
 @app.get("/public/homes")
-async def public_homes(conn=Depends(get_db)):
-    rows = await list_homes(conn)
+def public_homes(conn=Depends(get_db)):
+    rows = list_homes(conn)  # sync call
     return [
         {
             "id": r["id"],
@@ -888,6 +888,7 @@ def get_home_endpoint(
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
+
 
 
 
