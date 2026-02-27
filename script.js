@@ -103,12 +103,12 @@
               <div class="ic-admin-panel-header">
                 <div>
                   <div class="ic-admin-panel-title">System health</div>
-                  <div class="ic-admin-panel-subtitle">Live view of IndiCare’s backend and authentication.</div>
+                  <div class="ic-admin-panel-subtitle">Live view of IndiCare's backend and authentication.</div>
                 </div>
                 <span class="ic-admin-badge">Live</span>
               </div>
               <div class="ic-admin-panel-body">
-                <div id="ic-health-status">Checking system health…</div>
+                <div id="ic-health-status">Checking system health...</div>
                 <div id="ic-health-details" style="display:none; margin-top:10px;">
                   <div class="ic-health-row"><div class="ic-health-label">API status</div><div class="ic-health-value" id="ic-health-api"></div></div>
                   <div class="ic-health-row"><div class="ic-health-label">Response time</div><div class="ic-health-value" id="ic-health-latency"></div></div>
@@ -127,7 +127,7 @@
                 <span class="ic-admin-badge">Live</span>
               </div>
               <div class="ic-admin-panel-body">
-                <div id="ic-overview-loading">Loading overview…</div>
+                <div id="ic-overview-loading">Loading overview...</div>
                 <div id="ic-overview-content" style="display:none; margin-top:10px;">
                   <div class="ic-overview-row"><div>Providers</div><div id="ic-overview-providers"></div></div>
                   <div class="ic-overview-row"><div>Homes</div><div id="ic-overview-homes"></div></div>
@@ -171,7 +171,7 @@
 
       <div class="ic-drawer" id="ic-drawer">
         <div class="ic-drawer-title" id="ic-drawer-title"></div>
-        <input class="ic-input" id="ic-drawer-input" placeholder="Name…" />
+        <input class="ic-input" id="ic-drawer-input" placeholder="Name..." />
         <div class="ic-btn" id="ic-drawer-save">Save</div>
       </div>
     `;
@@ -245,7 +245,10 @@
     try {
       const data = await IndiCare.api("/overview");
 
-      const set = (id, v) => (document.getElementById(id).textContent = v);
+      const set = (id, v) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = v;
+      };
 
       set("ic-overview-providers", data.providers);
       set("ic-overview-homes", data.homes);
@@ -261,8 +264,7 @@
       loading.style.color = "#b91c1c";
     }
   }
-
-  // ---------------------------------------------------------
+    // ---------------------------------------------------------
   // Drawer
   // ---------------------------------------------------------
   const Drawer = {
@@ -279,25 +281,28 @@
       this.inputEl = document.getElementById("ic-drawer-input");
       this.saveEl = document.getElementById("ic-drawer-save");
 
-      this.saveEl.addEventListener("click", () => this.save());
+      if (this.saveEl) {
+        this.saveEl.addEventListener("click", () => this.save());
+      }
     },
 
     open(mode, providerId = null) {
       this.mode = mode;
       this.providerId = providerId;
-      this.inputEl.value = "";
+      if (this.inputEl) this.inputEl.value = "";
 
-      if (mode === "provider") this.titleEl.textContent = "Add provider";
-      if (mode === "home") this.titleEl.textContent = "Add home";
+      if (mode === "provider" && this.titleEl) this.titleEl.textContent = "Add provider";
+      if (mode === "home" && this.titleEl) this.titleEl.textContent = "Add home";
 
-      this.el.classList.add("open");
+      if (this.el) this.el.classList.add("open");
     },
 
     close() {
-      this.el.classList.remove("open");
+      if (this.el) this.el.classList.remove("open");
     },
 
     async save() {
+      if (!this.inputEl) return;
       const name = this.inputEl.value.trim();
       if (!name) return;
 
@@ -329,7 +334,9 @@
   // ---------------------------------------------------------
   async function loadProviders() {
     const list = document.getElementById("ic-providers-list");
-    list.innerHTML = "Loading…";
+    if (!list) return;
+
+    list.innerHTML = "Loading...";
 
     try {
       const providers = await IndiCare.api("/providers");
@@ -341,20 +348,27 @@
         const providerEl = document.createElement("div");
         providerEl.className = "ic-provider";
 
-        providerEl.innerHTML = `
-          <div class="ic-provider-name">${provider.name}</div>
-          <div class="ic-provider-homes" id="homes-${provider.id}"></div>
-        `;
+        providerEl.innerHTML = [
+          '<div class="ic-provider-name">', 
+          provider.name, 
+          '</div>',
+          '<div class="ic-provider-homes" id="homes-',
+          provider.id,
+          '"></div>'
+        ].join("");
 
         providerEl.addEventListener("click", () => {
-          const homesEl = document.getElementById(\`homes-\${provider.id}\`);
+          const homesEl = document.getElementById("homes-" + provider.id);
+          if (!homesEl) return;
           const isOpen = homesEl.style.display === "block";
           homesEl.style.display = isOpen ? "none" : "block";
         });
 
         list.appendChild(providerEl);
 
-        const homesEl = document.getElementById(\`homes-\${provider.id}\`);
+        const homesEl = document.getElementById("homes-" + provider.id);
+        if (!homesEl) return;
+
         const providerHomes = homes.filter(h => h.provider_id === provider.id);
 
         providerHomes.forEach(home => {
@@ -374,11 +388,11 @@
         homesEl.appendChild(addHome);
       });
     } catch (err) {
+      console.error(err);
       list.textContent = "Error loading providers";
     }
   }
-
-  // ---------------------------------------------------------
+    // ---------------------------------------------------------
   // Init
   // ---------------------------------------------------------
   function init() {
