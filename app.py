@@ -105,6 +105,21 @@ def serve_script():
     script_path = os.path.join(os.path.dirname(__file__), "script.js")
     return FileResponse(script_path, media_type="application/javascript")
 
+from fastapi.responses import FileResponse
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+@app.get("/admin.css")
+def serve_admin_css():
+    path = os.path.join(BASE_DIR, "admin.css")
+    return FileResponse(path, media_type="text/css")
+
+@app.get("/admin.js")
+def serve_admin_js():
+    path = os.path.join(BASE_DIR, "admin.js")
+    return FileResponse(path, media_type="application/javascript")
+
 # Then the wildcard OPTIONS route
 @app.options("/{path:path}")
 def preflight_handler(path: str):
@@ -925,6 +940,7 @@ def get_home_endpoint(
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
+
 
 
 
