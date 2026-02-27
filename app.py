@@ -923,7 +923,7 @@ def list_staff_in_home(
         rows = cur.fetchall()
 
     return [UserOut(**row) for row in rows]
-    ]
+
 @app.get("/staff/{user_id}", response_model=UserOut)
 def get_staff_endpoint(user_id: int, conn=Depends(get_db)):
     row = get_staff(conn, user_id)
@@ -952,6 +952,7 @@ def update_staff_endpoint(user_id: int, data: StaffUpdate, conn=Depends(get_db))
 def archive_staff_endpoint(user_id: int, conn=Depends(get_db)):
     archive_staff(conn, user_id)
     return {"status": "archived"}
+
 
 
 
