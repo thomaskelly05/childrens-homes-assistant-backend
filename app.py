@@ -1,3 +1,6 @@
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
 # -*- coding: utf-8 -*-
 import os
 import logging
@@ -885,6 +888,7 @@ def get_home_endpoint(
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
+
 
 
 
