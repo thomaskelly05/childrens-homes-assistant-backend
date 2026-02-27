@@ -662,23 +662,49 @@ def overview(conn=Depends(get_db)):
 
 @app.get("/public/providers")
 def public_providers(conn=Depends(get_db)):
-    rows = list_providers(conn)  # sync call
+    rows = list_providers(conn)
     return [{"id": r["id"], "name": r["name"]} for r in rows]
 
 
 @app.get("/public/homes")
 def public_homes(conn=Depends(get_db)):
-    rows = list_homes(conn)  # sync call
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT
+            id,
+            name,
+            provider_id,
+            address,
+            postcode,
+            region,
+            local_authority,
+            ofsted_urn,
+            registered_manager_id,
+            archived,
+            created_at,
+            updated_at
+        FROM homes
+        ORDER BY id ASC
+    """)
+    rows = cur.fetchall()
+
     return [
         {
             "id": r["id"],
             "name": r["name"],
             "provider_id": r["provider_id"],
+            "address": r["address"],
+            "postcode": r["postcode"],
+            "region": r["region"],
+            "local_authority": r["local_authority"],
+            "ofsted_urn": r["ofsted_urn"],
+            "registered_manager_id": r["registered_manager_id"],
+            "archived": r["archived"],
+            "created_at": r["created_at"],
+            "updated_at": r["updated_at"],
         }
         for r in rows
     ]
-
-
 # ---------------------------------------------------------
 # PROVIDERS ENDPOINTS (ADMIN‑RESTRICTED)
 # ---------------------------------------------------------
@@ -899,6 +925,7 @@ def get_home_endpoint(
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
+
 
 
 
