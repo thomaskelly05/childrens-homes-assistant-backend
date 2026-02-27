@@ -1,18 +1,15 @@
 from fastapi import APIRouter, Form, Depends, HTTPException, Response
+from fastapi.responses import JSONResponse
 from auth.tokens import create_session_token
 from db.connection import get_db
 
 router = APIRouter()
 
-@router.get("/login")
-def login_get():
-    return login_page()
-
 @router.post("/login")
 def login_post(
     email: str = Form(...),
     password: str = Form(...),
-    response: Response = None,
+    response: Response,
     conn=Depends(get_db)
 ):
     with conn.cursor() as cur:
@@ -20,12 +17,11 @@ def login_post(
         user = cur.fetchone()
 
     if not user:
-        raise HTTPException(401, "Invalid credentials")
+        return JSONResponse({"success": False}, status_code=401)
 
     token = create_session_token(user["id"])
     role = user["role"]
 
-    # Set cookie but DO NOT redirect
     response.set_cookie(
         "session",
         token,
@@ -35,5 +31,4 @@ def login_post(
         max_age=60*60*24*7
     )
 
-    # Return JSON so frontend can redirect safely
-    return {"success": True, "role": role}
+    return JSONResponse({"success": True, "role": role})
