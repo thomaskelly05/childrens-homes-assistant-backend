@@ -653,20 +653,31 @@ def overview(conn=Depends(get_db)):
         "homes": homes,
         "staff": staff,
     }
-
-    # ---------------------------------------------------------
-# PUBLIC PROVIDERS & HOMES LIST ENDPOINTS
 # ---------------------------------------------------------
-@app.get("/providers")
-async def get_providers(conn=Depends(get_db)):
-    return list_providers(conn)
-
-
-@app.get("/homes")
-async def get_homes(conn=Depends(get_db)):
-    return list_homes(conn)
+# PUBLIC PROVIDERS & HOMES LIST ENDPOINTS (for UI)
 # ---------------------------------------------------------
-# PROVIDERS ENDPOINTS
+
+@app.get("/public/providers")
+async def public_providers(conn=Depends(get_db)):
+    rows = await list_providers(conn)
+    return [{"id": r["id"], "name": r["name"]} for r in rows]
+
+
+@app.get("/public/homes")
+async def public_homes(conn=Depends(get_db)):
+    rows = await list_homes(conn)
+    return [
+        {
+            "id": r["id"],
+            "name": r["name"],
+            "provider_id": r["provider_id"],
+        }
+        for r in rows
+    ]
+
+
+# ---------------------------------------------------------
+# PROVIDERS ENDPOINTS (ADMIN‑RESTRICTED)
 # ---------------------------------------------------------
 
 from fastapi import HTTPException, Depends
@@ -784,8 +795,9 @@ def update_provider_endpoint(
         updated_at=row["updated_at"],
     )
 
+
 # ---------------------------------------------------------
-# HOMES ENDPOINTS
+# HOMES ENDPOINTS (ADMIN‑RESTRICTED)
 # ---------------------------------------------------------
 
 @app.get("/providers/{provider_id}/homes", response_model=list[HomeOut])
@@ -873,112 +885,6 @@ def get_home_endpoint(
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
-
-
-@app.patch("/homes/{home_id}", response_model=HomeOut)
-def update_home_endpoint(
-    home_id: int,
-    data: HomeUpdate,
-    user: CurrentUser = Depends(get_current_user),
-    conn=Depends(get_db),
-):
-    if user.role != "provider_admin":
-        raise HTTPException(status_code=403, detail="Not authorised")
-
-    update_home(conn, home_id, data)
-    row = get_home(conn, home_id)
-
-    if not row:
-        raise HTTPException(status_code=404, detail="Home not found")
-
-    return HomeOut(
-        id=row["id"],
-        provider_id=row["provider_id"],
-        name=row["name"],
-        address=row["address"],
-        postcode=row["postcode"],
-        region=row["region"],
-        local_authority=row["local_authority"],
-        ofsted_urn=row["ofsted_urn"],
-        registered_manager_id=row["registered_manager_id"],
-        archived=row["archived"],
-        created_at=row["created_at"],
-        updated_at=row["updated_at"],
-    )
-
-@app.patch("/staff/{user_id}/assign-home", response_model=UserOut)
-def assign_home_endpoint(
-    user_id: int,
-    home_id: int,
-    user: CurrentUser = Depends(get_current_user),
-    conn=Depends(get_db),
-):
-    if user.role != "provider_admin":
-        raise HTTPException(status_code=403, detail="Not authorised")
-
-    assign_staff_to_home(conn, user_id, home_id)
-    updated = get_user(conn, user_id)
-
-    return UserOut(
-        id=updated["id"],
-        email=updated["email"],
-        role=updated["role"],
-        home_id=updated["home_id"],
-        created_at=updated["created_at"],
-    )
-
-@app.get("/homes/{home_id}/staff", response_model=list[UserOut])
-def list_staff_in_home(
-    home_id: int,
-    user: CurrentUser = Depends(get_current_user),
-    conn=Depends(get_db),
-):
-    if user.role not in ("provider_admin", "regional_manager", "manager"):
-        raise HTTPException(status_code=403, detail="Not authorised")
-
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            SELECT id, email, role, home_id, created_at, updated_at, archived
-            FROM users
-            WHERE home_id = %s
-            ORDER BY email
-            """,
-            (home_id,)
-        )
-        rows = cur.fetchall()
-
-    return [UserOut(**row) for row in rows]
-
-@app.get("/staff/{user_id}", response_model=UserOut)
-def get_staff_endpoint(user_id: int, conn=Depends(get_db)):
-    row = get_staff(conn, user_id)
-    if not row:
-        raise HTTPException(404)
-    return UserOut(**row)
-
-@app.get("/staff", response_model=list[UserOut])
-def list_staff_endpoint(conn=Depends(get_db)):
-    rows = list_staff(conn)
-    return [UserOut(**row) for row in rows]
-
-@app.post("/staff", response_model=UserOut)
-def create_staff_endpoint(data: StaffCreate, conn=Depends(get_db)):
-    new_id = create_staff(conn, data)
-    row = get_staff(conn, new_id)
-    return UserOut(**row)
-
-@app.patch("/staff/{user_id}", response_model=UserOut)
-def update_staff_endpoint(user_id: int, data: StaffUpdate, conn=Depends(get_db)):
-    update_staff(conn, user_id, data)
-    row = get_staff(conn, user_id)
-    return UserOut(**row)
-
-@app.patch("/staff/{user_id}/archive")
-def archive_staff_endpoint(user_id: int, conn=Depends(get_db)):
-    archive_staff(conn, user_id)
-    return {"status": "archived"}
-
 
 
 
