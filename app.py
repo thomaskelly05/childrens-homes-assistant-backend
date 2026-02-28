@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 
 # Create app FIRST
 app = FastAPI(
@@ -38,6 +39,11 @@ from assistant.routes import router as assistant_router
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+# robots.txt (Googlebot will stop probing /admin)
+@app.get("/robots.txt", response_class=PlainTextResponse)
+def robots():
+    return "User-agent: *\nDisallow: /admin"
 
 # Mount routes
 app.include_router(login_router, prefix="")
