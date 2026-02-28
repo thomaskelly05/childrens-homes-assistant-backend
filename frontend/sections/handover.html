@@ -1,0 +1,35 @@
+async function loadHandover() {
+    const incoming = await fetch("/handover/incoming", { credentials: "include" }).then(r => r.json());
+
+    content.innerHTML = `
+        <div class="panel">
+            <h2>Handover</h2>
+
+            <h3>Incoming</h3>
+            <pre>${JSON.stringify(incoming, null, 2)}</pre>
+
+            <h3>Outgoing</h3>
+            <textarea id="environment" placeholder="Environment"></textarea>
+            <textarea id="incidents" placeholder="Incidents"></textarea>
+            <textarea id="staff_wellbeing" placeholder="Staff wellbeing"></textarea>
+            <textarea id="operational_notes" placeholder="Operational notes"></textarea>
+
+            <button id="save-handover">Submit Handover</button>
+        </div>
+    `;
+
+    document.getElementById("save-handover").onclick = async () => {
+        await fetch("/handover/outgoing", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                environment: document.getElementById("environment").value,
+                incidents: document.getElementById("incidents").value,
+                staff_wellbeing: document.getElementById("staff_wellbeing").value,
+                operational_notes: document.getElementById("operational_notes").value
+            })
+        });
+        alert("Handover submitted");
+    };
+}
