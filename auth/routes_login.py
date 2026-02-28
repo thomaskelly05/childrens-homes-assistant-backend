@@ -7,7 +7,9 @@ import bcrypt
 
 router = APIRouter()
 
+# Support both /log-in and /login
 @router.post("/log-in")
+@router.post("/login")
 def login(response: Response, username: str, password: str, conn = Depends(get_db)):
     with conn.cursor() as cur:
         cur.execute("""
