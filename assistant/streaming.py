@@ -1,5 +1,3 @@
-# assistant/streaming.py
-
 from openai import OpenAI
 
 client = OpenAI()
@@ -15,5 +13,10 @@ def run_chat_stream(system_prompt: str, user_prompt: str):
     )
 
     for chunk in stream:
-        if chunk.choices and chunk.choices[0].delta.get("content"):
-            yield chunk.choices[0].delta["content"]
+        # New OpenAI client: delta is a model, not a dict
+        if (
+            chunk.choices
+            and chunk.choices[0].delta
+            and chunk.choices[0].delta.content
+        ):
+            yield chunk.choices[0].delta.content
