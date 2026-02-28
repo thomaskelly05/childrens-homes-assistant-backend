@@ -7,7 +7,6 @@ router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 @router.get("/overview")
 def get_overview(conn = Depends(get_db), user = Depends(get_current_user)):
     with conn.cursor() as cur:
-        # Manager updates
         cur.execute("""
             SELECT message, created_at
             FROM manager_updates
@@ -17,9 +16,8 @@ def get_overview(conn = Depends(get_db), user = Depends(get_current_user)):
         """, (user["home_id"],))
         updates = cur.fetchall()
 
-        # Staff on shift
         cur.execute("""
-            SELECT full_name, role
+            SELECT full_name, role, shift_start, shift_end
             FROM staff_shifts
             WHERE home_id = %s AND shift_date = CURRENT_DATE
         """, (user["home_id"],))
