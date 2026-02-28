@@ -6,14 +6,14 @@ from auth.dependencies import JWT_SECRET, JWT_ALGORITHM
 from pydantic import BaseModel
 import bcrypt
 
-router = APIRouter()   # ← no default_response_class here
+router = APIRouter()
 
 class LoginRequest(BaseModel):
     email: str
     password: str
 
-@router.post("/log-in", response_class=Response)
-@router.post("/login", response_class=Response)
+@router.post("/log-in")
+@router.post("/login")
 def login(data: LoginRequest, response: Response, conn = Depends(get_db)):
     email = data.email
     password = data.password
@@ -50,7 +50,7 @@ def login(data: LoginRequest, response: Response, conn = Depends(get_db)):
 
         token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-        # Set cookie correctly
+        # Set cookie
         response.set_cookie(
             key="access_token",
             value=token,
@@ -62,7 +62,7 @@ def login(data: LoginRequest, response: Response, conn = Depends(get_db)):
             domain="childrens-homes-assistant-backend-new.onrender.com"
         )
 
-        # Return JSON (not the Response object)
+        # Normal JSON response
         return {
             "message": "Logged in successfully",
             "id": user["id"],
