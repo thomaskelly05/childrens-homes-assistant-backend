@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
+from fastapi.staticfiles import StaticFiles
 
 # Create app FIRST
 app = FastAPI(
@@ -56,7 +57,5 @@ app.include_router(homes_router, prefix="")
 app.include_router(staff_router, prefix="")
 app.include_router(assistant_router, prefix="/api")
 
-@app.get("/")
-def root():
-    return {"message": "IndiCare backend running"}
-
+# 🔥 Serve the frontend folder at the root URL
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
