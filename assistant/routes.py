@@ -6,7 +6,6 @@ from pydantic import BaseModel
 import markdown
 import logging
 
-from auth.dependencies import get_current_user
 from db.connection import get_db
 
 from assistant.prompts import build_chat_prompt, build_template_prompt
@@ -34,13 +33,12 @@ class TemplateRequest(BaseModel):
 @router.post("/chat")
 async def chat_endpoint(
     req: ChatRequest,
-    user=Depends(get_current_user),
     conn=Depends(get_db),
 ):
     try:
         system_prompt, user_prompt = build_chat_prompt(
             message=req.message,
-            role=req.role or user.role,
+            role=req.role or "unknown",
             ld_lens=req.ld_lens,
             training_mode=(req.mode == "training"),
             speed=req.speed,
@@ -57,8 +55,8 @@ async def chat_endpoint(
             try:
                 log_chat(
                     conn,
-                    user_email=user.sub,
-                    role=user.role,
+                    user_email="anonymous",
+                    role=req.role or "unknown",
                     home_id=home_id,
                     message=user_prompt,
                     response="".join(full),
@@ -76,7 +74,6 @@ async def chat_endpoint(
 @router.post("/generate-template")
 async def generate_template(
     req: TemplateRequest,
-    user=Depends(get_current_user),
     conn=Depends(get_db),
 ):
     try:
@@ -98,8 +95,8 @@ async def generate_template(
 
         log_template(
             conn,
-            user_email=user.sub,
-            role=user.role,
+            user_email="anonymous",
+            role="unknown",
             home_id=req.home_id,
             template_name="default",
             prompt=req.templateRequest,
