@@ -1,0 +1,35 @@
+async function loadJournal() {
+    const res = await fetch("/staff/journal", { credentials: "include" });
+    const data = await res.json();
+
+    content.innerHTML = `
+        <div class="panel">
+            <h2>Staff Journal</h2>
+
+            <label>Holding Today</label>
+            <textarea id="holding">${data.holding_today || ""}</textarea>
+
+            <label>Practice Today</label>
+            <textarea id="practice">${data.practice_today || ""}</textarea>
+
+            <label>Reflection Today</label>
+            <textarea id="reflection">${data.reflection_today || ""}</textarea>
+
+            <button id="save-journal">Save</button>
+        </div>
+    `;
+
+    document.getElementById("save-journal").onclick = async () => {
+        await fetch("/staff/journal", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                holding_today: document.getElementById("holding").value,
+                practice_today: document.getElementById("practice").value,
+                reflection_today: document.getElementById("reflection").value
+            })
+        });
+        alert("Saved");
+    };
+}
