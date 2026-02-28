@@ -81,6 +81,7 @@ async def generate_template(
 ):
     try:
         system_prompt, user_prompt = build_template_prompt(req.templateRequest)
+
         from openai import OpenAI
         client = OpenAI()
 
