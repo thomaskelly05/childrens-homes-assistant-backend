@@ -1,0 +1,21 @@
+async function loadHome() {
+    const res = await fetch("/dashboard/overview", { credentials: "include" });
+    const data = await res.json();
+
+    content.innerHTML = `
+        <div class="panel">
+            <h2>Welcome, ${data.staff_name}</h2>
+            <p>Role: ${data.role}</p>
+
+            <h3>Manager Updates</h3>
+            <ul>
+                ${data.updates.map(u => `<li>${u.message}</li>`).join("")}
+            </ul>
+
+            <h3>Staff on Shift Today</h3>
+            <ul>
+                ${data.staff_today.map(s => `<li>${s.full_name} — ${s.role}</li>`).join("")}
+            </ul>
+        </div>
+    `;
+}
