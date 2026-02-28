@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from db.connection import get_db
-from utils.auth import get_current_user
+from auth.routes_login import get_current_user
 from models.staff_journal import StaffJournal
 
 router = APIRouter(prefix="/staff/journal", tags=["Staff Journal"])
