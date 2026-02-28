@@ -1,11 +1,36 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>IndiCare Staff Dashboard</title>
-  </head>
-  <body>
-    <h1>IndiCare staff dashboard is wired</h1>
-    <p>If you can see this, the frontend is being served correctly.</p>
-  </body>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+    <div class="layout">
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">IndiCare</div>
+
+            <nav>
+                <button data-section="home">Home</button>
+                <button data-section="assistant">Assistant</button>
+                <button data-section="journal">Journal</button>
+                <button data-section="handover">Handover</button>
+                <button data-section="tasks">Tasks</button>
+                <button data-section="account">Account</button>
+            </nav>
+        </aside>
+
+        <!-- Main content -->
+        <main id="content">
+            <div class="loading">Loading…</div>
+        </main>
+
+    </div>
+
+    <script src="app.js"></script>
+</body>
 </html>
