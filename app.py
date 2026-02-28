@@ -34,6 +34,9 @@ from providers.routes import router as providers_router
 from homes.routes import router as homes_router
 from staff.routes import router as staff_router
 from assistant.routes import router as assistant_router
+from routers.staff_journal_routes import router as staff_journal_router
+
+app.include_router(staff_journal_router)
 
 # Health check
 @app.get("/health")
@@ -56,3 +59,4 @@ app.include_router(assistant_router, prefix="/api")
 @app.get("/")
 def root():
     return {"message": "IndiCare backend running"}
+
