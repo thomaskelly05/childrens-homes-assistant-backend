@@ -8,12 +8,11 @@ JWT_SECRET = "your_jwt_secret_here"
 JWT_ALGORITHM = "HS256"
 
 
-def get_current_user(request: Request, conn = Depends(get_db)):
+def verify_jwt(request: Request):
     """
     Extracts and validates the JWT from the secure cookie.
-    Returns the user record from the database.
+    Returns the decoded payload.
     """
-
     token = request.cookies.get("access_token")
 
     if not token:
@@ -21,8 +20,18 @@ def get_current_user(request: Request, conn = Depends(get_db)):
 
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return payload
     except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+
+def get_current_user(request: Request, conn = Depends(get_db)):
+    """
+    Uses verify_jwt() to decode the token,
+    then fetches the user from the database.
+    """
+
+    payload = verify_jwt(request)
 
     user_id = payload.get("sub")
     role = payload.get("role")
@@ -40,9 +49,13 @@ def get_current_user(request: Request, conn = Depends(get_db)):
         cur.execute("""
             SELECT 
                 id,
-                username,
+                email,
                 full_name,
-                role
+                role,
+                home_id,
+                archived,
+                created_at,
+                updated_at
             FROM users
             WHERE id = %s
         """, (user_id,))
