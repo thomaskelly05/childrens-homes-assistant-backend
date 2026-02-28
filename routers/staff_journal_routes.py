@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from db.connection import get_db
 from auth.dependencies import get_current_user
-from models.staff_journal import StaffJournal
 
 router = APIRouter(prefix="/staff/journal", tags=["Staff Journal"])
 
@@ -12,33 +11,56 @@ class JournalEntry(BaseModel):
     reflection_today: str | None = None
 
 @router.get("", response_model=JournalEntry)
-def get_journal(db=Depends(get_db), current_user=Depends(get_current_user)):
-    entry = (
-        db.query(StaffJournal)
-        .filter(StaffJournal.staff_id == current_user["id"])
-        .order_by(StaffJournal.created_at.desc())
-        .first()
-    )
+def get_journal(conn = Depends(get_db), current_user = Depends(get_current_user)):
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+                holding_today,
+                practice_today,
+                reflection_today
+            FROM staff_journal
+            WHERE staff_id = %s
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            (current_user["id"],),
+        )
+        row = cur.fetchone()
 
-    if not entry:
+    if not row:
         return JournalEntry()
 
     return JournalEntry(
-        holding_today=entry.holding_today,
-        practice_today=entry.practice_today,
-        reflection_today=entry.reflection_today,
+        holding_today=row["holding_today"],
+        practice_today=row["practice_today"],
+        reflection_today=row["reflection_today"],
     )
 
 @router.post("", response_model=JournalEntry)
-def save_journal(payload: JournalEntry, db=Depends(get_db), current_user=Depends(get_current_user)):
-    entry = StaffJournal(
-        staff_id=current_user["id"],
-        holding_today=payload.holding_today,
-        practice_today=payload.practice_today,
-        reflection_today=payload.reflection_today,
-    )
-
-    db.add(entry)
-    db.commit()
+def save_journal(
+    payload: JournalEntry,
+    conn = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO staff_journal (
+                staff_id,
+                holding_today,
+                practice_today,
+                reflection_today
+            )
+            VALUES (%s, %s, %s, %s)
+            """,
+            (
+                current_user["id"],
+                payload.holding_today,
+                payload.practice_today,
+                payload.reflection_today,
+            ),
+        )
+        conn.commit()
 
     return payload
