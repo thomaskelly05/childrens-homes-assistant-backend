@@ -1,51 +1,65 @@
-from fastapi import APIRouter, Form, Depends, HTTPException, Response
-from fastapi.responses import JSONResponse
-from auth.tokens import create_session_token
+from fastapi import APIRouter, Depends, HTTPException, Response
+from datetime import datetime, timedelta, timezone
+from jose import jwt
 from db.connection import get_db
+from auth.dependencies import JWT_SECRET, JWT_ALGORITHM
 
-router = APIRouter()   # MUST be before any @router decorators
+router = APIRouter()
 
-@router.post("/login")
-def login_post(
-    response: Response,
-    email: str = Form(...),
-    password: str = Form(...),
-    conn=Depends(get_db)
-):
-    print("DEBUG: login_post called with", email)
+@router.post("/log-in")
+def login(response: Response, username: str, password: str, conn = Depends(get_db)):
+    """
+    Authenticates a user and issues a secure JWT cookie.
+    This is used by the IndiCare dashboard and staff login flow.
+    """
 
     with conn.cursor() as cur:
-        print("DEBUG: DB cursor opened")
-        cur.execute(
-            "SELECT id, email, password_hash, role FROM users WHERE email=%s",
-            (email,)
-        )
+        cur.execute("""
+            SELECT 
+                id,
+                username,
+                full_name,
+                password_hash,
+                role
+            FROM users
+            WHERE username = %s
+        """, (username,))
         user = cur.fetchone()
-        print("DEBUG: DB query result:", user)
 
-    if not user:
-        print("DEBUG: user not found")
-        return JSONResponse({"success": False}, status_code=401)
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid username or password")
 
-    # If your DB returns tuples instead of dicts, use indices:
-    # id = user[0]
-    # role = user[3]
-    id = user["id"]
-    role = user["role"]
+        # Verify password
+        import bcrypt
+        if not bcrypt.checkpw(password.encode("utf-8"), user["password_hash"].encode("utf-8")):
+            raise HTTPException(status_code=401, detail="Invalid username or password")
 
-    print("DEBUG: token creation starting")
-    token = create_session_token(id)
-    print("DEBUG: token created")
+        # Create JWT payload
+        expiry = datetime.now(timezone.utc) + timedelta(hours=12)
 
-    response.set_cookie(
-        "session",
-        token,
-        httponly=True,
-        secure=True,
-        samesite="None",
-        max_age=60 * 60 * 24 * 7
-    )
+        payload = {
+            "sub": user["id"],
+            "role": user["role"],
+            "exp": int(expiry.timestamp())
+        }
 
-    print("DEBUG: cookie set successfully")
+        token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-    return JSONResponse({"success": True, "role": role})
+        # Set secure cookie
+        response.set_cookie(
+            key="access_token",
+            value=token,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=60 * 60 * 12,  # 12 hours
+            path="/"
+        )
+
+        return {
+            "message": "Logged in successfully",
+            "id": user["id"],
+            "username": user["username"],
+            "full_name": user["full_name"],
+            "role": user["role"]
+        }
