@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Response
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # Import your route modules
@@ -11,8 +11,7 @@ from staff.routes import router as staff_router
 app = FastAPI(
     title="IndiCare Backend",
     description="Safe AI layer for children's homes",
-    version="1.0.0",
-    default_response_class=Response   # 🔥 CRITICAL FIX
+    version="1.0.0"
 )
 
 # CORS for Squarespace + your live domain + Squarespace CDN
