@@ -14,12 +14,13 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS (Squarespace → Render)
+# CORS for Squarespace + your live domain
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://your-squarespace-domain.com",
-        "https://*.squarespace.com"
+        "https://indicare.co.uk",
+        "https://www.indicare.co.uk",
+        "https://indicarelimited.squarespace.com"
     ],
     allow_credentials=True,
     allow_methods=["*"],
