@@ -6,15 +6,14 @@ from auth.dependencies import JWT_SECRET, JWT_ALGORITHM
 from pydantic import BaseModel
 import bcrypt
 
-# 🔥 CRITICAL: ensures FastAPI uses *your* Response object so cookies are not dropped
-router = APIRouter(default_response_class=Response)
+router = APIRouter()   # ❗ No default_response_class here
 
 class LoginRequest(BaseModel):
     email: str
     password: str
 
-@router.post("/log-in")
-@router.post("/login")
+@router.post("/log-in", response_class=Response)
+@router.post("/login", response_class=Response)
 def login(data: LoginRequest, response: Response, conn = Depends(get_db)):
     email = data.email
     password = data.password
@@ -51,7 +50,7 @@ def login(data: LoginRequest, response: Response, conn = Depends(get_db)):
 
         token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-        # 🔥 CRITICAL FIX: cookie must declare domain or browser discards it
+        # Cookie fix
         response.set_cookie(
             key="access_token",
             value=token,
@@ -63,13 +62,4 @@ def login(data: LoginRequest, response: Response, conn = Depends(get_db)):
             domain="childrens-homes-assistant-backend-new.onrender.com"
         )
 
-        return {
-            "message": "Logged in successfully",
-            "id": user["id"],
-            "email": user["email"],
-            "role": user["role"],
-            "home_id": user["home_id"],
-            "archived": user["archived"],
-            "created_at": user["created_at"],
-            "updated_at": user["updated_at"]
-        }
+        return response
