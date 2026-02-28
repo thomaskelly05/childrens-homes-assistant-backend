@@ -1,12 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Import your route modules
+# Existing route modules
 from auth.routes_login import router as login_router
 from auth.routes_admin import router as admin_router
 from providers.routes import router as providers_router
 from homes.routes import router as homes_router
 from staff.routes import router as staff_router
+
+# NEW — Assistant router
+from assistant.routes import router as assistant_router
 
 app = FastAPI(
     title="IndiCare Backend",
@@ -14,7 +17,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS for Squarespace + your live domain + Squarespace CDN
+# CORS for Squarespace + IndiCare domains
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -35,12 +38,15 @@ app.add_middleware(
 def health():
     return {"status": "ok"}
 
-# Mount routes
+# Mount existing routes
 app.include_router(login_router, prefix="")
 app.include_router(admin_router, prefix="")
 app.include_router(providers_router, prefix="")
 app.include_router(homes_router, prefix="")
 app.include_router(staff_router, prefix="")
+
+# Mount assistant routes under /api
+app.include_router(assistant_router, prefix="/api")
 
 @app.get("/")
 def root():
