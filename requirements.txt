@@ -13,8 +13,10 @@ bcrypt
 psycopg2-binary
 python-multipart
 python-jose
+SQLAlchemy==2.0.29
 
 typing_extensions
+
 
 
 
