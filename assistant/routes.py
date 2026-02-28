@@ -7,7 +7,7 @@ import markdown
 import logging
 
 from auth.dependencies import get_current_user
-from db import get_db
+from db.connection import get_db
 
 from assistant.prompts import build_chat_prompt, build_template_prompt
 from assistant.streaming import run_chat_stream
