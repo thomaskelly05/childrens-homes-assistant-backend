@@ -1,33 +1,43 @@
-from fastapi import APIRouter, Depends, HTTPException
-from auth.dependencies import get_current_user
+from fastapi import APIRouter, Depends, HTTPException, Request
 from db.connection import get_db
+from auth.dependencies import verify_jwt
 
 router = APIRouter()
 
 @router.get("/admin")
-def get_admin_identity(
-    user = Depends(get_current_user),
-    conn = Depends(get_db)
-):
-    allowed_roles = ["provider_admin", "regional_manager", "system_admin"]
+def get_admin_identity(request: Request, conn = Depends(get_db)):
+    payload = verify_jwt(request)
 
-    if user["role"] not in allowed_roles:
-        raise HTTPException(status_code=403, detail="Not authorised")
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
     with conn.cursor() as cur:
         cur.execute("""
             SELECT 
                 id,
-                username,
+                email,
                 full_name,
-                role
+                role,
+                home_id,
+                archived,
+                created_at,
+                updated_at
             FROM users
             WHERE id = %s
-        """, (user["id"],))
+        """, (user_id,))
+        user = cur.fetchone()
 
-        row = cur.fetchone()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
 
-        if not row:
-            raise HTTPException(status_code=404, detail="Admin not found")
-
-        return row
+        return {
+            "id": user["id"],
+            "email": user["email"],
+            "full_name": user["full_name"],
+            "role": user["role"],
+            "home_id": user["home_id"],
+            "archived": user["archived"],
+            "created_at": user["created_at"],
+            "updated_at": user["updated_at"]
+        }
