@@ -25,7 +25,9 @@ def login(data: LoginRequest, response: Response, conn = Depends(get_db)):
                 email,
                 full_name,
                 password_hash,
-                role
+                role,
+                home_id,
+                archived
             FROM users
             WHERE email = %s
         """, (email,))
@@ -62,5 +64,7 @@ def login(data: LoginRequest, response: Response, conn = Depends(get_db)):
             "id": user["id"],
             "email": user["email"],
             "full_name": user["full_name"],
-            "role": user["role"]
+            "role": user["role"],
+            "home_id": user["home_id"],
+            "archived": user["archived"]
         }
