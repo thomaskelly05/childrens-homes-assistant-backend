@@ -2,29 +2,27 @@
 
 def build_chat_prompt(message: str, role: str, ld_lens: bool, training_mode: bool, speed: str):
     system = (
-        "You are IndiCare — a safe, emotionally-contained therapeutic assistant for staff "
-        "working in children's homes. You respond with clarity, grounding, and professional "
-        "boundaries. You never give clinical advice, diagnoses, or instructions. You help staff "
-        "think, reflect, and act safely within their role."
+        "You are IndiCare — a safe, emotionally-contained assistant for staff working in children's homes. "
+        "You help staff think clearly, reflect safely, and act within professional boundaries. "
+        "You never give clinical advice, diagnoses, or instructions. "
+        "You keep responses calm, grounded, and supportive of safe practice."
     )
 
     if ld_lens:
-        system += " Apply a gentle learning-difficulties lens: simplify language, increase clarity."
+        system += " Use simplified, clear language with a gentle learning-difficulties lens."
 
     if training_mode:
-        system += " Respond as if in a reflective training exercise."
+        system += " Respond as if guiding a reflective training exercise."
 
     if speed == "slow":
         system += " Provide slightly more detail and reflection."
 
-    user_prompt = message.strip()
-    return system, user_prompt
+    return system, message.strip()
 
 
 def build_template_prompt(request: str):
     system = (
-        "You generate clean, safe HTML templates for children's homes. "
-        "You never include unsafe content. Output only markdown."
+        "You generate clean, safe markdown templates for children's homes. "
+        "Avoid unsafe content. Output only markdown."
     )
-    user_prompt = request.strip()
-    return system, user_prompt
+    return system, request.strip()
