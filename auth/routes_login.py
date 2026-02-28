@@ -9,33 +9,33 @@ import bcrypt
 router = APIRouter()
 
 class LoginRequest(BaseModel):
-    username: str
+    email: str
     password: str
 
 @router.post("/log-in")
 @router.post("/login")
 def login(data: LoginRequest, response: Response, conn = Depends(get_db)):
-    username = data.username
+    email = data.email
     password = data.password
 
     with conn.cursor() as cur:
         cur.execute("""
             SELECT 
                 id,
-                username,
+                email,
                 full_name,
                 password_hash,
                 role
             FROM users
-            WHERE username = %s
-        """, (username,))
+            WHERE email = %s
+        """, (email,))
         user = cur.fetchone()
 
         if not user:
-            raise HTTPException(status_code=401, detail="Invalid username or password")
+            raise HTTPException(status_code=401, detail="Invalid email or password")
 
         if not bcrypt.checkpw(password.encode("utf-8"), user["password_hash"].encode("utf-8")):
-            raise HTTPException(status_code=401, detail="Invalid username or password")
+            raise HTTPException(status_code=401, detail="Invalid email or password")
 
         expiry = datetime.now(timezone.utc) + timedelta(hours=12)
 
@@ -60,7 +60,7 @@ def login(data: LoginRequest, response: Response, conn = Depends(get_db)):
         return {
             "message": "Logged in successfully",
             "id": user["id"],
-            "username": user["username"],
+            "email": user["email"],
             "full_name": user["full_name"],
             "role": user["role"]
         }
