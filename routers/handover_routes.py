@@ -8,7 +8,7 @@ router = APIRouter(prefix="/handover", tags=["Handover"])
 class HandoverEntry(BaseModel):
     environment: str | None = None
     incidents: str | None = None
-    staff_wellbeing: str | None = None
+    staff_wellbling: str | None = None
     operational_notes: str | None = None
 
 @router.get("/incoming")
