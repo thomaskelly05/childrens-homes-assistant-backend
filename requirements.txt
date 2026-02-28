@@ -12,8 +12,10 @@ PyJWT==2.8.0
 bcrypt
 psycopg2-binary
 python-multipart
+python-jose
 
 typing_extensions
+
 
 
 
