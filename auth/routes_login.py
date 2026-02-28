@@ -6,7 +6,8 @@ from auth.dependencies import JWT_SECRET, JWT_ALGORITHM
 from pydantic import BaseModel
 import bcrypt
 
-router = APIRouter()
+# 🔥 CRITICAL: ensures FastAPI uses *your* Response object so cookies are not dropped
+router = APIRouter(default_response_class=Response)
 
 class LoginRequest(BaseModel):
     email: str
@@ -50,7 +51,7 @@ def login(data: LoginRequest, response: Response, conn = Depends(get_db)):
 
         token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-        # 🔥 CRITICAL FIX: Explicit cookie domain so the browser stores it
+        # 🔥 CRITICAL FIX: cookie must declare domain or browser discards it
         response.set_cookie(
             key="access_token",
             value=token,
