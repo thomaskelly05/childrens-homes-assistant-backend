@@ -23,11 +23,12 @@ def login(data: LoginRequest, response: Response, conn = Depends(get_db)):
             SELECT 
                 id,
                 email,
-                full_name,
                 password_hash,
                 role,
                 home_id,
-                archived
+                archived,
+                created_at,
+                updated_at
             FROM users
             WHERE email = %s
         """, (email,))
@@ -63,8 +64,9 @@ def login(data: LoginRequest, response: Response, conn = Depends(get_db)):
             "message": "Logged in successfully",
             "id": user["id"],
             "email": user["email"],
-            "full_name": user["full_name"],
             "role": user["role"],
             "home_id": user["home_id"],
-            "archived": user["archived"]
+            "archived": user["archived"],
+            "created_at": user["created_at"],
+            "updated_at": user["updated_at"]
         }
