@@ -50,14 +50,16 @@ def login(data: LoginRequest, response: Response, conn = Depends(get_db)):
 
         token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
+        # 🔥 THE FIX: Explicit cookie domain so the browser stores it
         response.set_cookie(
             key="access_token",
             value=token,
             httponly=True,
             secure=True,
-            samesite="lax",
+            samesite="none",
             max_age=60 * 60 * 12,
-            path="/"
+            path="/",
+            domain="childrens-homes-assistant-backend-new.onrender.com"
         )
 
         return {
