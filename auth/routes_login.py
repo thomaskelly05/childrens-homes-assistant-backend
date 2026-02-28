@@ -3,14 +3,21 @@ from datetime import datetime, timedelta, timezone
 from jose import jwt
 from db.connection import get_db
 from auth.dependencies import JWT_SECRET, JWT_ALGORITHM
+from pydantic import BaseModel
 import bcrypt
 
 router = APIRouter()
 
-# Support both /log-in and /login
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
 @router.post("/log-in")
 @router.post("/login")
-def login(response: Response, username: str, password: str, conn = Depends(get_db)):
+def login(data: LoginRequest, response: Response, conn = Depends(get_db)):
+    username = data.username
+    password = data.password
+
     with conn.cursor() as cur:
         cur.execute("""
             SELECT 
@@ -57,12 +64,3 @@ def login(response: Response, username: str, password: str, conn = Depends(get_d
             "full_name": user["full_name"],
             "role": user["role"]
         }
-
-
-@router.post("/log-out")
-def logout(response: Response):
-    response.delete_cookie(
-        key="access_token",
-        path="/"
-    )
-    return {"message": "Logged out successfully"}
