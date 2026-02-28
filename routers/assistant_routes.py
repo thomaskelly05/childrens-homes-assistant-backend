@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from auth.dependencies import get_current_user
-from db.connection import get_db
 import openai
 
 router = APIRouter(prefix="/assistant", tags=["Assistant"])
