@@ -50,7 +50,7 @@ def login(data: LoginRequest, response: Response, conn = Depends(get_db)):
 
         token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-        # Set cookie
+        # Set cookie (FIRST-PARTY for indicare.co.uk)
         response.set_cookie(
             key="access_token",
             value=token,
@@ -59,10 +59,9 @@ def login(data: LoginRequest, response: Response, conn = Depends(get_db)):
             samesite="none",
             max_age=60 * 60 * 12,
             path="/",
-            domain="childrens-homes-assistant-backend-new.onrender.com"
+            domain="indicare.co.uk"
         )
 
-        # Normal JSON response
         return {
             "message": "Logged in successfully",
             "id": user["id"],
