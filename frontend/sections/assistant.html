@@ -1,0 +1,32 @@
+function loadAssistant() {
+    content.innerHTML = `
+        <div class="panel">
+            <h2>Assistant</h2>
+            <div id="assistant-output" class="assistant-box"></div>
+            <textarea id="assistant-input" placeholder="Type your message…"></textarea>
+            <button id="assistant-send">Send</button>
+        </div>
+    `;
+
+    document.getElementById("assistant-send").onclick = async () => {
+        const input = document.getElementById("assistant-input").value;
+        const output = document.getElementById("assistant-output");
+        output.innerHTML = "";
+
+        const res = await fetch("/assistant/stream", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: input })
+        });
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            output.innerHTML += decoder.decode(value);
+        }
+    };
+}
