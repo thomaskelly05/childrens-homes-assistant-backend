@@ -26,6 +26,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Health check for Render
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 # Mount routes
 app.include_router(login_router, prefix="")
 app.include_router(admin_router, prefix="")
