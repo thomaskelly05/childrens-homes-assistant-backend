@@ -3,16 +3,12 @@ from datetime import datetime, timedelta, timezone
 from jose import jwt
 from db.connection import get_db
 from auth.dependencies import JWT_SECRET, JWT_ALGORITHM
+import bcrypt
 
 router = APIRouter()
 
 @router.post("/log-in")
 def login(response: Response, username: str, password: str, conn = Depends(get_db)):
-    """
-    Authenticates a user and issues a secure JWT cookie.
-    This is used by the IndiCare dashboard and staff login flow.
-    """
-
     with conn.cursor() as cur:
         cur.execute("""
             SELECT 
@@ -29,12 +25,9 @@ def login(response: Response, username: str, password: str, conn = Depends(get_d
         if not user:
             raise HTTPException(status_code=401, detail="Invalid username or password")
 
-        # Verify password
-        import bcrypt
         if not bcrypt.checkpw(password.encode("utf-8"), user["password_hash"].encode("utf-8")):
             raise HTTPException(status_code=401, detail="Invalid username or password")
 
-        # Create JWT payload
         expiry = datetime.now(timezone.utc) + timedelta(hours=12)
 
         payload = {
@@ -45,14 +38,13 @@ def login(response: Response, username: str, password: str, conn = Depends(get_d
 
         token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-        # Set secure cookie
         response.set_cookie(
             key="access_token",
             value=token,
             httponly=True,
             secure=True,
             samesite="lax",
-            max_age=60 * 60 * 12,  # 12 hours
+            max_age=60 * 60 * 12,
             path="/"
         )
 
@@ -63,3 +55,12 @@ def login(response: Response, username: str, password: str, conn = Depends(get_d
             "full_name": user["full_name"],
             "role": user["role"]
         }
+
+
+@router.post("/log-out")
+def logout(response: Response):
+    response.delete_cookie(
+        key="access_token",
+        path="/"
+    )
+    return {"message": "Logged out successfully"}
