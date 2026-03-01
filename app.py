@@ -3,9 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-# -------------------------------------------------------------------
-# ROUTERS (must match your actual filenames)
-# -------------------------------------------------------------------
+# Routers
 from routers.auth_routes import router as auth_router
 from routers.staff_journal_routes import router as journal_router
 from routers.handover_routes import router as handover_router
@@ -28,7 +26,7 @@ app.add_middleware(
 )
 
 # -------------------------------------------------------------------
-# API ROUTERS
+# API ROUTERS (must come BEFORE static files)
 # -------------------------------------------------------------------
 app.include_router(auth_router)
 app.include_router(journal_router)
@@ -39,7 +37,7 @@ app.include_router(assistant_router)
 app.include_router(dashboard_router)
 
 # -------------------------------------------------------------------
-# ROOT ROUTES (served BEFORE static files)
+# HTML ROUTES (served BEFORE static files)
 # -------------------------------------------------------------------
 @app.get("/")
 def serve_dashboard():
@@ -50,6 +48,6 @@ def serve_login():
     return FileResponse("frontend/login.html")
 
 # -------------------------------------------------------------------
-# STATIC FILES (mounted LAST so they don't override API routes)
+# STATIC FILES (mounted at /static, NOT at /)
 # -------------------------------------------------------------------
-app.mount("/", StaticFiles(directory="frontend", html=False), name="static")
+app.mount("/static", StaticFiles(directory="frontend"), name="static")
