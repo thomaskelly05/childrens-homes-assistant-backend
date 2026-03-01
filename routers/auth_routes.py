@@ -32,7 +32,7 @@ def login(payload: LoginRequest, response: Response, conn = Depends(get_db)):
         key="access_token",
         value=token,
         httponly=True,
-        secure=True,
+        secure=False,
         samesite="lax",
         path="/"
     )
