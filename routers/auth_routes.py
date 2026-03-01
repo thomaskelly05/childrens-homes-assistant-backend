@@ -13,10 +13,10 @@ class LoginRequest(BaseModel):
 
 @router.post("/login")
 def login(payload: LoginRequest, response: Response, conn = Depends(get_db)):
-    # Fetch user
+    # Fetch user using your actual schema
     with conn.cursor() as cur:
         cur.execute("""
-            SELECT id, email, password_hash, role, full_name, home_id, archived, created_at, updated_at
+            SELECT id, email, password_hash, role, home_id, archived, created_at, updated_at
             FROM users
             WHERE email = %s
         """, (payload.email,))
@@ -40,8 +40,8 @@ def login(payload: LoginRequest, response: Response, conn = Depends(get_db)):
         key="access_token",
         value=token,
         httponly=True,
-        secure=False,      # MUST be False on Render free-tier
-        samesite="none",   # MUST be None for Android Chrome
+        secure=False,      # required on Render free-tier
+        samesite="none",   # required for Android Chrome
         path="/"
     )
 
