@@ -15,7 +15,3 @@ def get_me(user = Depends(get_current_user)):
         "created_at": user["created_at"],
         "updated_at": user["updated_at"]
     }
-
-@router.post("/logout")
-def logout(user = Depends(get_current_user)):
-    return {"message": "Logged out"}
