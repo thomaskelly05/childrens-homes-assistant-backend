@@ -1,11 +1,13 @@
 import jwt
-import datetime
+from datetime import datetime, timedelta, timezone
 
-SECRET = "your-secret-key"
+JWT_SECRET = "your_jwt_secret_here"
+JWT_ALGORITHM = "HS256"
 
-def create_session_token(user_id: int):
+def create_session_token(user_id: int, role: str):
     payload = {
         "sub": user_id,
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(days=7)
+        "role": role,
+        "exp": datetime.now(timezone.utc) + timedelta(days=7)
     }
-    return jwt.encode(payload, SECRET, algorithm="HS256")
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
