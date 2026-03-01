@@ -8,7 +8,7 @@ def get_me(user = Depends(get_current_user)):
     return {
         "id": user["id"],
         "email": user["email"],
-        "name": user["full_name"],
+        "name": user["email"],  # fallback until you add a name column
         "role": user["role"],
         "home_id": user["home_id"],
         "archived": user["archived"],
@@ -17,5 +17,5 @@ def get_me(user = Depends(get_current_user)):
     }
 
 @router.post("/logout")
-def logout(response = Depends(get_current_user)):
+def logout(user = Depends(get_current_user)):
     return {"message": "Logged out"}
