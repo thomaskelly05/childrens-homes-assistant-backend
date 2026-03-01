@@ -3,35 +3,30 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>IndiCare Staff Dashboard</title>
-    <link rel="stylesheet" href="/styles.css" />
+    <title>IndiCare</title>
+
+    <!-- Correct static paths -->
+    <link rel="stylesheet" href="/static/styles.css" />
 </head>
-
 <body>
-    <div class="layout">
 
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="logo">IndiCare</div>
-
-            <nav>
-                <button data-section="home">Home</button>
-                <button data-section="assistant">Assistant</button>
-                <button data-section="journal">Journal</button>
-                <button data-section="handover">Handover</button>
-                <button data-section="tasks">Tasks</button>
-                <button data-section="account">Account</button>
-            </nav>
-        </aside>
-
-        <!-- Main content -->
-        <main id="content">
-            <div class="loading">Loading…</div>
-        </main>
-
+    <div class="sidebar">
+        <h2>IndiCare</h2>
+        <nav>
+            <button data-section="home">Home</button>
+            <button data-section="assistant">Assistant</button>
+            <button data-section="journal">Journal</button>
+            <button data-section="handover">Handover</button>
+            <button data-section="tasks">Tasks</button>
+            <button data-section="account">Account</button>
+        </nav>
     </div>
 
-    <!-- IMPORTANT: absolute path so the correct file always loads -->
-    <script src="/app.js"></script>
+    <div id="content" class="content">
+        <div class="loading">Loading…</div>
+    </div>
+
+    <!-- Correct static path -->
+    <script src="/static/app.js"></script>
 </body>
 </html>
