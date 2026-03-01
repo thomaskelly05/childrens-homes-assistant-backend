@@ -34,7 +34,7 @@ def login(payload: LoginRequest, conn = Depends(get_db)):
         key="access_token",
         value=token,
         httponly=True,
-        secure=False,      # required for Render free-tier
+        secure=False,      # required on Render free-tier
         samesite="none",   # required for Android Chrome
         path="/"
     )
