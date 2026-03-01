@@ -14,9 +14,7 @@ from routers.dashboard_routes import router as dashboard_router
 
 app = FastAPI(title="IndiCare Staff Backend")
 
-# -------------------------------------------------------------------
-# CORS (required for cookies)
-# -------------------------------------------------------------------
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -25,9 +23,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# -------------------------------------------------------------------
 # API ROUTERS (must come BEFORE static files)
-# -------------------------------------------------------------------
 app.include_router(auth_router)
 app.include_router(journal_router)
 app.include_router(handover_router)
@@ -36,9 +32,7 @@ app.include_router(account_router)
 app.include_router(assistant_router)
 app.include_router(dashboard_router)
 
-# -------------------------------------------------------------------
-# HTML ROUTES (served BEFORE static files)
-# -------------------------------------------------------------------
+# HTML ROUTES
 @app.get("/")
 def serve_dashboard():
     return FileResponse("frontend/index.html")
@@ -47,7 +41,5 @@ def serve_dashboard():
 def serve_login():
     return FileResponse("frontend/login.html")
 
-# -------------------------------------------------------------------
 # STATIC FILES (mounted at /static, NOT at /)
-# -------------------------------------------------------------------
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
