@@ -16,7 +16,7 @@ def login(payload: LoginRequest, response: Response, conn = Depends(get_db)):
     # Fetch user
     with conn.cursor() as cur:
         cur.execute("""
-            SELECT id, email, password_hash, role
+            SELECT id, email, password_hash, role, full_name, home_id, archived, created_at, updated_at
             FROM users
             WHERE email = %s
         """, (payload.email,))
@@ -32,17 +32,20 @@ def login(payload: LoginRequest, response: Response, conn = Depends(get_db)):
     # Create JWT
     token = create_session_token(user["id"], user["role"])
 
-    # Set cookie (secure=False required on Render free tier)
+    # Cookie settings that work on:
+    # - Render free-tier (HTTP→HTTPS redirect)
+    # - Android Chrome (requires SameSite=None)
+    # - Desktop Chrome, Edge, Firefox, Safari
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
-        secure=False,      # ← REQUIRED for Render free-tier
-        samesite="lax",
+        secure=False,      # MUST be False on Render free-tier
+        samesite="none",   # MUST be None for Android Chrome
         path="/"
     )
 
-    # Return the SAME response object so the cookie is preserved
+    # Return the SAME response object so cookie is preserved
     response.status_code = 200
     response.media_type = "application/json"
     response.body = json.dumps({"message": "Logged in"}).encode()
