@@ -8,7 +8,7 @@ def get_me(user = Depends(get_current_user)):
     return {
         "id": user["id"],
         "email": user["email"],
-        "name": user["full_name"],   # frontend expects "name"
+        "name": user["full_name"],
         "role": user["role"],
         "home_id": user["home_id"],
         "archived": user["archived"],
@@ -17,6 +17,5 @@ def get_me(user = Depends(get_current_user)):
     }
 
 @router.post("/logout")
-def logout(user = Depends(get_current_user)):
-    # logout is handled in auth_routes, but this keeps API consistent
+def logout(response = Depends(get_current_user)):
     return {"message": "Logged out"}
