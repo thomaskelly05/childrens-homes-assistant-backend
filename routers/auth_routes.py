@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 from db.connection import get_db
-from auth.jwt import create_access_token
+from auth.tokens import create_session_token
 import bcrypt
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -26,11 +26,7 @@ def login(payload: LoginRequest, response: Response, conn = Depends(get_db)):
     if not bcrypt.checkpw(payload.password.encode(), user["password_hash"].encode()):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    token = create_access_token({
-        "id": user["id"],
-        "email": user["email"],
-        "home_id": user["home_id"]
-    })
+    token = create_session_token(user["id"])
 
     response.set_cookie(
         key="access_token",
