@@ -30,19 +30,26 @@ def login(payload: LoginRequest, conn = Depends(get_db)):
     token = create_session_token(user["id"], user["role"])
 
     response = JSONResponse({"message": "Logged in"})
+
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
-        secure=True,
+        secure=True,  # Required for SameSite=None
         samesite="none",
-        path="/"
+        path="/",
+        domain="childrens-homes-assistant-backend-new.onrender.com"  # Required for Render
     )
 
     return response
 
+
 @router.post("/logout")
 def logout():
     response = JSONResponse({"message": "Logged out"})
-    response.delete_cookie("access_token", path="/")
+    response.delete_cookie(
+        "access_token",
+        path="/",
+        domain="childrens-homes-assistant-backend-new.onrender.com"
+    )
     return response
