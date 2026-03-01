@@ -2,17 +2,9 @@ from fastapi import Depends, HTTPException, Request
 from jose import jwt, JWTError
 from datetime import datetime, timezone
 from db.connection import get_db
-
-# Your JWT secret + algorithm
-JWT_SECRET = "your_jwt_secret_here"
-JWT_ALGORITHM = "HS256"
-
+from auth.tokens import JWT_SECRET, JWT_ALGORITHM
 
 def verify_jwt(request: Request):
-    """
-    Extracts and validates the JWT from the secure cookie.
-    Returns the decoded payload.
-    """
     token = request.cookies.get("access_token")
 
     if not token:
@@ -24,13 +16,7 @@ def verify_jwt(request: Request):
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-
 def get_current_user(request: Request, conn = Depends(get_db)):
-    """
-    Uses verify_jwt() to decode the token,
-    then fetches the user from the database.
-    """
-
     payload = verify_jwt(request)
 
     user_id = payload.get("sub")
@@ -40,11 +26,9 @@ def get_current_user(request: Request, conn = Depends(get_db)):
     if not user_id or not role:
         raise HTTPException(status_code=401, detail="Invalid token payload")
 
-    # Check expiry
     if exp and datetime.now(timezone.utc).timestamp() > exp:
         raise HTTPException(status_code=401, detail="Token expired")
 
-    # Fetch user from DB
     with conn.cursor() as cur:
         cur.execute("""
             SELECT 
@@ -66,16 +50,9 @@ def get_current_user(request: Request, conn = Depends(get_db)):
 
         return user
 
-
 def require_role(allowed_roles: list):
-    """
-    Dependency factory.
-    Ensures the authenticated user has one of the allowed roles.
-    """
-
     def role_checker(user = Depends(get_current_user)):
         if user["role"] not in allowed_roles:
             raise HTTPException(status_code=403, detail="Not authorised")
         return user
-
     return role_checker
