@@ -1,18 +1,28 @@
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Request
 from db.connection import get_db
-from auth.dependencies import get_current_user
+import jwt
+from auth.tokens import JWT_SECRET, JWT_ALGORITHM
 
 router = APIRouter(prefix="/handover", tags=["Handover"])
 
-class HandoverEntry(BaseModel):
-    environment: str | None = None
-    incidents: str | None = None
-    staff_wellbling: str | None = None
-    operational_notes: str | None = None
+def get_user_from_cookie(request: Request):
+    token = request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return {"id": payload["sub"], "role": payload["role"]}
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
 
 @router.get("/incoming")
-def get_incoming(conn = Depends(get_db), user = Depends(get_current_user)):
+def get_incoming_handover(
+    request: Request,
+    conn = Depends(get_db),
+    user = Depends(get_user_from_cookie)
+):
     with conn.cursor() as cur:
         cur.execute("""
             SELECT environment, incidents, staff_wellbeing, operational_notes, created_at
@@ -20,34 +30,16 @@ def get_incoming(conn = Depends(get_db), user = Depends(get_current_user)):
             WHERE home_id = %s
             ORDER BY created_at DESC
             LIMIT 1
-        """, (user["home_id"],))
-        return cur.fetchone()
+        """, (user["id"],))
+        row = cur.fetchone()
 
-@router.post("/outgoing")
-def save_outgoing(payload: HandoverEntry, conn = Depends(get_db), user = Depends(get_current_user)):
-    with conn.cursor() as cur:
-        cur.execute("""
-            INSERT INTO handover (home_id, staff_id, environment, incidents, staff_wellbeing, operational_notes)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (
-            user["home_id"],
-            user["id"],
-            payload.environment,
-            payload.incidents,
-            payload.staff_wellbeing,
-            payload.operational_notes
-        ))
-        conn.commit()
-    return {"status": "saved"}
+    if not row:
+        return {
+            "environment": None,
+            "incidents": None,
+            "staff_wellbeing": None,
+            "operational_notes": None,
+            "created_at": None
+        }
 
-@router.get("/history")
-def get_history(conn = Depends(get_db), user = Depends(get_current_user)):
-    with conn.cursor() as cur:
-        cur.execute("""
-            SELECT environment, incidents, staff_wellbeing, operational_notes, created_at
-            FROM handover
-            WHERE home_id = %s
-            ORDER BY created_at DESC
-            LIMIT 20
-        """, (user["home_id"],))
-        return cur.fetchall()
+    return row
