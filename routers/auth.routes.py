@@ -13,7 +13,11 @@ class LoginRequest(BaseModel):
 @router.post("/login")
 def login(payload: LoginRequest, response: Response, conn = Depends(get_db)):
     with conn.cursor() as cur:
-        cur.execute("SELECT id, email, password_hash FROM staff WHERE email = %s", (payload.email,))
+        cur.execute("""
+            SELECT id, email, password_hash, home_id
+            FROM staff
+            WHERE email = %s
+        """, (payload.email,))
         user = cur.fetchone()
 
     if not user:
@@ -22,9 +26,12 @@ def login(payload: LoginRequest, response: Response, conn = Depends(get_db)):
     if not bcrypt.checkpw(payload.password.encode(), user["password_hash"].encode()):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    token = create_access_token({"id": user["id"], "email": user["email"]})
+    token = create_access_token({
+        "id": user["id"],
+        "email": user["email"],
+        "home_id": user["home_id"]
+    })
 
-    # Set cookie
     response.set_cookie(
         key="access_token",
         value=token,
@@ -35,3 +42,8 @@ def login(payload: LoginRequest, response: Response, conn = Depends(get_db)):
     )
 
     return {"message": "Logged in"}
+
+@router.post("/logout")
+def logout(response: Response):
+    response.delete_cookie("access_token", path="/")
+    return {"message": "Logged out"}
