@@ -1,17 +1,37 @@
-from fastapi import APIRouter, Depends
-from auth.dependencies import get_current_user
+from fastapi import APIRouter, Depends, HTTPException, Request
+from db.connection import get_db
+import jwt
+from auth.tokens import JWT_SECRET, JWT_ALGORITHM
 
 router = APIRouter(prefix="/account", tags=["Account"])
 
+def get_user_from_cookie(request: Request):
+    token = request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return {"id": payload["sub"], "role": payload["role"]}
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+
 @router.get("/me")
-def get_me(user = Depends(get_current_user)):
-    return {
-        "id": user["id"],
-        "email": user["email"],
-        "name": user["email"],  # fallback until you add a name column
-        "role": user["role"],
-        "home_id": user["home_id"],
-        "archived": user["archived"],
-        "created_at": user["created_at"],
-        "updated_at": user["updated_at"]
-    }
+def get_me(
+    request: Request,
+    conn = Depends(get_db),
+    user = Depends(get_user_from_cookie)
+):
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT id, name, email, role, home_id
+            FROM users
+            WHERE id = %s
+        """, (user["id"],))
+        row = cur.fetchone()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return row
