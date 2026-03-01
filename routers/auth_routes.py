@@ -14,8 +14,8 @@ class LoginRequest(BaseModel):
 def login(payload: LoginRequest, response: Response, conn = Depends(get_db)):
     with conn.cursor() as cur:
         cur.execute("""
-            SELECT id, email, password_hash, home_id
-            FROM staff
+            SELECT id, email, password_hash, role
+            FROM users
             WHERE email = %s
         """, (payload.email,))
         user = cur.fetchone()
@@ -26,7 +26,7 @@ def login(payload: LoginRequest, response: Response, conn = Depends(get_db)):
     if not bcrypt.checkpw(payload.password.encode(), user["password_hash"].encode()):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    token = create_session_token(user["id"])
+    token = create_session_token(user["id"], user["role"])
 
     response.set_cookie(
         key="access_token",
