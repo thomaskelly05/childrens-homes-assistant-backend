@@ -28,13 +28,7 @@ app.add_middleware(
 )
 
 # -------------------------------------------------------------------
-# STATIC FRONTEND
-# -------------------------------------------------------------------
-# Serve everything inside /frontend as static files
-app.mount("/static", StaticFiles(directory="frontend"), name="static")
-
-# -------------------------------------------------------------------
-# ROUTERS
+# API ROUTERS
 # -------------------------------------------------------------------
 app.include_router(auth_router)
 app.include_router(journal_router)
@@ -45,15 +39,17 @@ app.include_router(assistant_router)
 app.include_router(dashboard_router)
 
 # -------------------------------------------------------------------
-# ROOT ROUTE (serves dashboard)
+# ROOT ROUTES (served BEFORE static files)
 # -------------------------------------------------------------------
 @app.get("/")
 def serve_dashboard():
     return FileResponse("frontend/index.html")
 
-# -------------------------------------------------------------------
-# LOGIN PAGE
-# -------------------------------------------------------------------
 @app.get("/login.html")
 def serve_login():
     return FileResponse("frontend/login.html")
+
+# -------------------------------------------------------------------
+# STATIC FILES (mounted LAST so they don't override API routes)
+# -------------------------------------------------------------------
+app.mount("/", StaticFiles(directory="frontend", html=False), name="static")
