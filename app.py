@@ -38,8 +38,12 @@ def serve_dashboard():
 def serve_login():
     return FileResponse("frontend/login.html")
 
-# Absolute paths
+# ----------------------------------------------------
+# STATIC FILE MOUNTS (ABSOLUTE PATHS — FIXES 404s)
+# ----------------------------------------------------
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 SECTIONS_DIR = os.path.join(BASE_DIR, "static", "sections")
 
