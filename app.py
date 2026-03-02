@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-# Routers
 from routers.auth_routes import router as auth_router
 from routers.staff_journal_routes import router as journal_router
 from routers.handover_routes import router as handover_router
@@ -14,7 +13,6 @@ from routers.dashboard_routes import router as dashboard_router
 
 app = FastAPI(title="IndiCare Staff Backend")
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,7 +21,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# API ROUTERS (all mounted under /api)
 app.include_router(auth_router, prefix="/api")
 app.include_router(journal_router, prefix="/api")
 app.include_router(handover_router, prefix="/api")
@@ -32,7 +29,6 @@ app.include_router(account_router, prefix="/api")
 app.include_router(assistant_router, prefix="/api")
 app.include_router(dashboard_router, prefix="/api")
 
-# HTML ROUTES
 @app.get("/")
 def serve_dashboard():
     return FileResponse("frontend/index.html")
@@ -41,5 +37,4 @@ def serve_dashboard():
 def serve_login():
     return FileResponse("frontend/login.html")
 
-# STATIC FILES
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
