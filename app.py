@@ -23,14 +23,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# API ROUTERS (must come BEFORE static files)
-app.include_router(auth_router)
-app.include_router(journal_router)
-app.include_router(handover_router)
-app.include_router(tasks_router)
-app.include_router(account_router)
-app.include_router(assistant_router)
-app.include_router(dashboard_router)
+# API ROUTERS (all mounted under /api)
+app.include_router(auth_router, prefix="/api")
+app.include_router(journal_router, prefix="/api")
+app.include_router(handover_router, prefix="/api")
+app.include_router(tasks_router, prefix="/api")
+app.include_router(account_router, prefix="/api")
+app.include_router(assistant_router, prefix="/api")
+app.include_router(dashboard_router, prefix="/api")
 
 # HTML ROUTES
 @app.get("/")
@@ -41,5 +41,5 @@ def serve_dashboard():
 def serve_login():
     return FileResponse("frontend/login.html")
 
-# STATIC FILES (mounted at /static, NOT at /)
+# STATIC FILES
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
