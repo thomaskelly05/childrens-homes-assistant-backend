@@ -38,8 +38,8 @@ def serve_dashboard():
 def serve_login():
     return FileResponse("frontend/login.html")
 
-# FIXED STATIC MOUNT
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-STATIC_DIR = os.path.join(BASE_DIR, "static")
+# Serve CSS + JS from frontend/
+app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+# Serve section HTML files from static/sections/
+app.mount("/static/sections", StaticFiles(directory="static/sections"), name="sections")
