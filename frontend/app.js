@@ -105,7 +105,7 @@ function openAssistantOverlay() {
     overlay.classList.add("visible");
     document.querySelector("[data-section='assistant']").classList.add("active");
 
-    initAssistant(); // full assistant logic goes here
+    initAssistant();
 }
 
 closeBtn.onclick = () => {
@@ -115,18 +115,112 @@ closeBtn.onclick = () => {
 
 
 /* ============================================================
-   ASSISTANT INITIALISATION (placeholder)
+   ASSISTANT INITIALISATION (FULL STREAMING VERSION)
 ============================================================ */
 
 function initAssistant() {
-    // This will be replaced with the full assistant logic:
-    // - streaming
-    // - saved conversations
-    // - template preview
-    // - role/mode/LD/slow toggles
-    // - message rendering
-    // - timestamps
-    // - typing indicator
+    const messagesEl = document.getElementById("assistant-messages");
+    const inputEl = document.getElementById("assistant-input");
+    const sendBtn = document.getElementById("assistant-send");
+
+    const roleEl = document.getElementById("assistant-role");
+    const modeEl = document.getElementById("assistant-mode");
+    const ldEl = document.getElementById("assistant-ld");
+    const slowEl = document.getElementById("assistant-slow");
+
+    let isStreaming = false;
+
+    function appendMessage(role, text) {
+        const wrapper = document.createElement("div");
+        wrapper.className = `assistant-message assistant-${role}`;
+
+        const bubble = document.createElement("div");
+        bubble.className = "assistant-bubble";
+        bubble.textContent = text;
+
+        wrapper.appendChild(bubble);
+        messagesEl.appendChild(wrapper);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function setThinking() {
+        const existing = messagesEl.querySelector(".assistant-thinking");
+        if (existing) existing.remove();
+
+        const thinking = document.createElement("div");
+        thinking.className = "assistant-thinking";
+        thinking.textContent = "Thinking…";
+        messagesEl.appendChild(thinking);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function clearThinking() {
+        const existing = messagesEl.querySelector(".assistant-thinking");
+        if (existing) existing.remove();
+    }
+
+    async function sendMessage() {
+        if (isStreaming) return;
+
+        const text = inputEl.value.trim();
+        if (!text) return;
+
+        appendMessage("user", text);
+        inputEl.value = "";
+        setThinking();
+
+        isStreaming = true;
+
+        try {
+            const res = await fetch("/api/assistant/stream", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({
+                    message: text,
+                    role: roleEl.value,
+                    mode: modeEl.value,
+                    ld_friendly: ldEl.checked,
+                    slow_mode: slowEl.checked
+                })
+            });
+
+            clearThinking();
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let fullText = "";
+
+            const wrapper = document.createElement("div");
+            wrapper.className = "assistant-message assistant-assistant";
+            const bubble = document.createElement("div");
+            bubble.className = "assistant-bubble";
+            wrapper.appendChild(bubble);
+            messagesEl.appendChild(wrapper);
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                fullText += decoder.decode(value);
+                bubble.textContent = fullText;
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
+        } catch (err) {
+            clearThinking();
+            appendMessage("assistant", "I lost connection for a moment. You can try sending that again.");
+        } finally {
+            isStreaming = false;
+        }
+    }
+
+    sendBtn.onclick = sendMessage;
+
+    inputEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
 }
 
 
