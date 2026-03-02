@@ -33,11 +33,9 @@ def get_user_from_cookie(request: Request):
 def build_system_prompt(role, mode, ld, slow):
     parts = []
 
-    # Role awareness
     if role:
         parts.append(f"You are supporting a staff member in the role: {role}.")
 
-    # Reflective modes
     if mode == "reflective":
         parts.append("Use a reflective practice frame. Slow, grounded, curious.")
     elif mode == "grounding":
@@ -51,15 +49,12 @@ def build_system_prompt(role, mode, ld, slow):
     else:
         parts.append("Use a calm, supportive, staff‑focused tone.")
 
-    # LD-friendly adjustments
     if ld:
         parts.append("Use LD‑friendly communication: short sentences, plain language.")
 
-    # Slow mode
     if slow:
         parts.append("Respond gently and slowly, with space between ideas.")
 
-    # Safety boundary
     parts.append("Never mention children. This is a staff‑only reflective tool.")
 
     return " ".join(parts)
@@ -96,7 +91,6 @@ def assistant_stream(
 ):
     prompt = data.get("message", "")
 
-    # These match the new frontend exactly
     role = data.get("role")
     mode = data.get("mode", "standard")
     ld = data.get("ld_friendly", False)
