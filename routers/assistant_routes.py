@@ -1,3 +1,4 @@
+# routers/assistant_routes.py
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 import openai
@@ -5,7 +6,6 @@ import jwt
 from auth.tokens import JWT_SECRET, JWT_ALGORITHM
 
 router = APIRouter(prefix="/assistant", tags=["Assistant"])
-
 
 def get_user_from_cookie(request: Request):
     token = request.cookies.get("access_token")
@@ -19,12 +19,44 @@ def get_user_from_cookie(request: Request):
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
-def stream_response(prompt: str):
+def build_system_prompt(role, mode, ld, slow):
+    parts = []
+
+    if role:
+        parts.append(f"You are supporting a staff member in the role: {role}.")
+
+    if mode == "reflective":
+        parts.append("Use a reflective practice frame. Slow, grounded, curious.")
+    elif mode == "grounding":
+        parts.append("Use grounding techniques. Calm, sensory, stabilising.")
+    elif mode == "debrief":
+        parts.append("Use a debrief frame. Contained, structured, supportive.")
+    elif mode == "planning":
+        parts.append("Use a planning frame. Clear, stepwise, practical.")
+    elif mode == "training":
+        parts.append("Use a training frame. Explain concepts simply.")
+
+    if ld:
+        parts.append("Use LD‑friendly communication: short sentences, plain language.")
+
+    if slow:
+        parts.append("Respond gently and slowly, with space between ideas.")
+
+    parts.append("Never mention children. This is a staff‑only reflective tool.")
+
+    return " ".join(parts)
+
+
+def stream_response(prompt, system_prompt):
     response = openai.ChatCompletion.create(
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt}
+        ],
         stream=True
     )
+
     for chunk in response:
         if "choices" in chunk:
             delta = chunk["choices"][0]["delta"]
@@ -39,4 +71,14 @@ def assistant_stream(
     user = Depends(get_user_from_cookie)
 ):
     prompt = data.get("message", "")
-    return StreamingResponse(stream_response(prompt), media_type="text/plain")
+    role = data.get("role")
+    mode = data.get("mode", "default")
+    ld = data.get("ld_lens", False)
+    slow = data.get("speed") == "slow"
+
+    system_prompt = build_system_prompt(role, mode, ld, slow)
+
+    return StreamingResponse(
+        stream_response(prompt, system_prompt),
+        media_type="text/plain"
+    )
