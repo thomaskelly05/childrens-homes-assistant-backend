@@ -81,12 +81,52 @@ async function loadSection(section) {
 
     switch (section) {
         case "home": return loadHome();
-        case "assistant": return loadAssistant();
+        case "assistant": return openAssistantOverlay();
         case "journal": return loadJournal();
         case "handover": return loadHandover();
         case "tasks": return loadTasks();
         case "account": return loadAccount();
     }
+}
+
+
+/* ============================================================
+   FULL-SCREEN ASSISTANT OVERLAY
+============================================================ */
+
+const overlay = document.getElementById("assistant-overlay");
+const assistantContainer = document.getElementById("assistant-container");
+const closeBtn = document.querySelector(".assistant-close");
+
+function openAssistantOverlay() {
+    const template = document.getElementById("assistant-ui-template").innerHTML;
+    assistantContainer.innerHTML = template;
+
+    overlay.classList.add("visible");
+    document.querySelector("[data-section='assistant']").classList.add("active");
+
+    initAssistant(); // full assistant logic goes here
+}
+
+closeBtn.onclick = () => {
+    overlay.classList.remove("visible");
+    document.querySelector("[data-section='assistant']").classList.remove("active");
+};
+
+
+/* ============================================================
+   ASSISTANT INITIALISATION (placeholder)
+============================================================ */
+
+function initAssistant() {
+    // This will be replaced with the full assistant logic:
+    // - streaming
+    // - saved conversations
+    // - template preview
+    // - role/mode/LD/slow toggles
+    // - message rendering
+    // - timestamps
+    // - typing indicator
 }
 
 
@@ -99,55 +139,6 @@ function loadHome() {
         <h1>Welcome</h1>
         <p class="muted">Select a section from the sidebar to begin.</p>
     `;
-}
-
-
-/* ============================================================
-   ASSISTANT (simple version — replaced later by full UI)
-============================================================ */
-
-async function loadAssistant() {
-    content.innerHTML = `
-        <h1>Assistant</h1>
-        <textarea id="assistant-input" placeholder="Type your reflection or question…"></textarea>
-        <button class="primary" id="assistant-send">Send</button>
-        <div id="assistant-output" class="mt-20"></div>
-    `;
-
-    const sendBtn = document.getElementById("assistant-send");
-    const output = document.getElementById("assistant-output");
-
-    sendBtn.onclick = async () => {
-        const input = document.getElementById("assistant-input").value.trim();
-        if (!input) return;
-
-        output.innerHTML = "<p class='muted'>Thinking…</p>";
-
-        try {
-            const res = await fetch("/api/assistant/stream", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({ message: input })
-            });
-
-            const reader = res.body.getReader();
-            const decoder = new TextDecoder();
-            let text = "";
-
-            output.innerHTML = "<p></p>";
-            const p = output.querySelector("p");
-
-            while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
-                text += decoder.decode(value);
-                p.textContent = text;
-            }
-        } catch {
-            output.innerHTML = "<p class='error'>Connection error. Please try again.</p>";
-        }
-    };
 }
 
 
