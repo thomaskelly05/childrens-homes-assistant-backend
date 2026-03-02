@@ -1,149 +1,246 @@
-// ============================================================
-// DOM ELEMENTS
-// ============================================================
-const content = document.getElementById("content");
-const overlay = document.getElementById("assistant-overlay");
-const assistantContainer = document.getElementById("assistant-container");
-const closeBtn = document.querySelector(".assistant-close");
+// -----------------------------
+// NAVIGATION
+// -----------------------------
+const navItems = document.querySelectorAll(".nav-item[data-section]");
+const contentEl = document.getElementById("content");
 
+navItems.forEach(btn => {
+    btn.addEventListener("click", () => {
+        const section = btn.dataset.section;
 
-// ============================================================
-// SIDEBAR NAVIGATION
-// ============================================================
-document.querySelectorAll(".sidebar nav button").forEach(btn => {
-    btn.addEventListener("click", () => loadSection(btn.dataset.section));
+        // Assistant is special: open drawer, don't load section
+        if (section === "assistant") {
+            openAssistant();
+            return;
+        }
+
+        navItems.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        loadSection(section);
+    });
 });
 
 function loadSection(section) {
-    document.querySelectorAll(".sidebar nav button").forEach(btn => {
-        btn.classList.toggle("active", btn.dataset.section === section);
-    });
-
-    if (section === "assistant") {
-        openAssistantOverlay();
-        return;
-    }
-
-    overlay.classList.remove("visible");
-
-    if (section === "home") {
-        content.innerHTML = `<h1>Welcome to IndiCare</h1>`;
-    } else if (section === "journal") {
-        content.innerHTML = `<h1>Journal</h1>`;
-    } else if (section === "handover") {
-        content.innerHTML = `<h1>Handover</h1>`;
-    } else if (section === "tasks") {
-        content.innerHTML = `<h1>Tasks</h1>`;
-    } else if (section === "account") {
-        loadAccount();
-    }
+    fetch(`/static/sections/${section}.html`)
+        .then(res => res.text())
+        .then(html => {
+            contentEl.innerHTML = html;
+            initSection(section);
+        })
+        .catch(() => {
+            contentEl.innerHTML = "<p>Could not load this section.</p>";
+        });
 }
 
+// -----------------------------
+// ASSISTANT DRAWER
+// -----------------------------
+const assistantPanel = document.getElementById("assistant-panel");
+const assistantOverlay = document.getElementById("assistant-overlay");
+const assistantClose = document.getElementById("assistant-close");
 
-// ============================================================
-// ACCOUNT SECTION
-// ============================================================
-async function loadAccount() {
-    const res = await fetch("/api/account/me");
-    const user = await res.json();
-
-    content.innerHTML = `
-        <h1>Account</h1>
-        <p><strong>Name:</strong> ${user.name}</p>
-        <p><strong>Role:</strong> ${user.role}</p>
-    `;
+function openAssistant() {
+    assistantPanel.classList.add("visible");
+    assistantOverlay.classList.add("visible");
 }
 
-
-// ============================================================
-// ASSISTANT OVERLAY + TEMPLATE CLONE (CRITICAL FIX)
-// ============================================================
-function openAssistantOverlay() {
-    const tpl = document.getElementById("assistant-ui-template");
-    const clone = tpl.content.cloneNode(true);   // correct template cloning
-
-    assistantContainer.innerHTML = "";
-    assistantContainer.appendChild(clone);
-
-    overlay.classList.add("visible");
-
-    initAssistant();   // now wires up the REAL elements
+function closeAssistant() {
+    assistantPanel.classList.remove("visible");
+    assistantOverlay.classList.remove("visible");
 }
 
-closeBtn.addEventListener("click", () => {
-    overlay.classList.remove("visible");
+assistantOverlay.addEventListener("click", closeAssistant);
+assistantClose.addEventListener("click", closeAssistant);
+
+// -----------------------------
+// ASSISTANT STREAMING
+// -----------------------------
+const messagesEl = document.getElementById("assistant-messages");
+const inputEl = document.getElementById("assistant-input");
+const sendBtn = document.getElementById("assistant-send");
+
+const roleEl = document.getElementById("assistant-role");
+const modeEl = document.getElementById("assistant-mode");
+const ldEl = document.getElementById("assistant-ld");
+const slowEl = document.getElementById("assistant-slow");
+
+sendBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    sendAssistantMessage();
 });
 
+inputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendAssistantMessage();
+    }
+});
 
-// ============================================================
-// ASSISTANT INITIALISATION
-// ============================================================
-function initAssistant() {
-    const sendBtn = document.getElementById("assistant-send");
-    const input = document.getElementById("assistant-input");
+function appendMessage(text, type) {
+    const div = document.createElement("div");
+    div.className = `assistant-msg assistant-msg-${type}`;
+    div.textContent = text;
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+}
 
-    sendBtn.addEventListener("click", sendMessage);
-    input.addEventListener("keydown", e => {
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
+function sendAssistantMessage() {
+    const text = inputEl.value.trim();
+    if (!text) return;
+
+    appendMessage(text, "user");
+    inputEl.value = "";
+
+    const payload = {
+        message: text,
+        role: roleEl.value,
+        mode: modeEl.value,
+        ld_friendly: ldEl.checked,
+        slow_mode: slowEl.checked
+    };
+
+    const aiDiv = document.createElement("div");
+    aiDiv.className = "assistant-msg assistant-msg-ai";
+    messagesEl.appendChild(aiDiv);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+
+    fetch("/assistant/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    }).then(res => {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+
+        function read() {
+            reader.read().then(({ done, value }) => {
+                if (done) return;
+                aiDiv.textContent += decoder.decode(value);
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+                read();
+            });
+        }
+
+        read();
+    }).catch(() => {
+        aiDiv.textContent += "\n\n(There was a problem reaching the assistant.)";
+    });
+}
+
+// -----------------------------
+// SECTION INITIALISERS
+// -----------------------------
+function initSection(section) {
+    if (section === "journal") initJournal();
+    if (section === "tasks") initTasks();
+    if (section === "handover") initHandover();
+    if (section === "account") initAccount();
+}
+
+// Journal
+function initJournal() {
+    const textarea = document.getElementById("journal-text");
+    const saveBtn = document.getElementById("save-journal");
+
+    if (!textarea || !saveBtn) return;
+
+    textarea.value = localStorage.getItem("journal") || "";
+
+    saveBtn.addEventListener("click", () => {
+        localStorage.setItem("journal", textarea.value);
+        alert("Journal saved.");
+    });
+}
+
+// Tasks
+let tasks = [];
+
+function initTasks() {
+    const input = document.getElementById("new-task");
+    const addBtn = document.getElementById("add-task");
+    const list = document.getElementById("task-list");
+
+    if (!input || !addBtn || !list) return;
+
+    tasks = JSON.parse(localStorage.getItem("tasks") || "[]");
+    renderTasks(list);
+
+    addBtn.addEventListener("click", () => {
+        const text = input.value.trim();
+        if (!text) return;
+        tasks.push({ text, done: false });
+        localStorage.setItem("tasks", JSON.stringify(tasks));
+        input.value = "";
+        renderTasks(list);
+    });
+
+    list.addEventListener("click", (e) => {
+        if (e.target.tagName === "INPUT") {
+            const index = e.target.dataset.index;
+            tasks[index].done = e.target.checked;
+            localStorage.setItem("tasks", JSON.stringify(tasks));
+            renderTasks(list);
         }
     });
 }
 
-
-// ============================================================
-// SEND MESSAGE TO BACKEND (STREAMING)
-// ============================================================
-async function sendMessage() {
-    const input = document.getElementById("assistant-input");
-    const messagesDiv = document.getElementById("assistant-messages");
-
-    const role = document.getElementById("assistant-role").value;
-    const mode = document.getElementById("assistant-mode").value;
-    const ld = document.getElementById("assistant-ld").checked;
-    const slow = document.getElementById("assistant-slow").checked;
-
-    const text = input.value.trim();
-    if (!text) return;
-
-    messagesDiv.innerHTML += `<div class="msg user">${text}</div>`;
-    input.value = "";
-
-    const assistantMsg = document.createElement("div");
-    assistantMsg.className = "msg assistant";
-    messagesDiv.appendChild(assistantMsg);
-
-    const res = await fetch("/api/assistant/stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            message: text,
-            role: role,
-            mode: mode,
-            ld_friendly: ld,
-            slow_mode: slow
-        })
+function renderTasks(list) {
+    list.innerHTML = "";
+    tasks.forEach((t, i) => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+            <label>
+                <input type="checkbox" data-index="${i}" ${t.done ? "checked" : ""} />
+                ${t.text}
+            </label>
+        `;
+        list.appendChild(li);
     });
+}
 
-    if (!res.ok) {
-        assistantMsg.textContent = "Error: Unable to get response.";
-        return;
+// Handover
+function initHandover() {
+    const textarea = document.getElementById("handover-text");
+    const saveBtn = document.getElementById("save-handover");
+
+    if (!textarea || !saveBtn) return;
+
+    textarea.value = localStorage.getItem("handover") || "";
+
+    saveBtn.addEventListener("click", () => {
+        localStorage.setItem("handover", textarea.value);
+        alert("Handover notes saved.");
+    });
+}
+
+// Account
+function initAccount() {
+    const emailSpan = document.getElementById("user-email");
+    const resetBtn = document.getElementById("reset-password");
+
+    if (emailSpan) {
+        emailSpan.textContent = localStorage.getItem("email") || "unknown";
     }
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-
-    while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        assistantMsg.textContent += decoder.decode(value);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    if (resetBtn) {
+        resetBtn.addEventListener("click", () => {
+            alert("Password reset link sent (placeholder).");
+        });
     }
 }
 
+// -----------------------------
+// LOGOUT
+// -----------------------------
+const logoutBtn = document.getElementById("logout-btn");
+if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+        document.cookie = "access_token=; Max-Age=0; path=/;";
+        window.location.href = "/login.html";
+    });
+}
 
-// ============================================================
+// -----------------------------
 // INITIAL LOAD
-// ============================================================
+// -----------------------------
 loadSection("home");
