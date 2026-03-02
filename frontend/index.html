@@ -4,20 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>IndiCare Staff Dashboard</title>
-
     <link rel="stylesheet" href="/static/styles.css" />
 </head>
-
 <body>
 
-    <!-- ============================================================
-         APP SHELL
-    ============================================================ -->
     <div class="app-shell">
-
-        <!-- ============================================================
-             SIDEBAR
-        ============================================================ -->
+        <!-- SIDEBAR -->
         <aside class="sidebar">
             <div class="sidebar-logo">
                 <span class="logo-dot"></span>
@@ -25,7 +17,7 @@
             </div>
 
             <nav class="sidebar-nav">
-                <button class="nav-item" data-section="home">
+                <button class="nav-item active" data-section="home">
                     <span class="nav-icon">🏠</span>
                     <span class="nav-label">Home</span>
                 </button>
@@ -56,32 +48,28 @@
                     <span class="nav-icon">👤</span>
                     <span class="nav-label">Account</span>
                 </button>
+
+                <button class="nav-item" id="logout-btn">
+                    <span class="nav-icon">🚪</span>
+                    <span class="nav-label">Logout</span>
+                </button>
             </div>
         </aside>
 
-        <!-- ============================================================
-             MAIN CONTENT AREA
-        ============================================================ -->
+        <!-- MAIN CONTENT -->
         <main id="content" class="main-content"></main>
-
     </div>
 
+    <!-- ASSISTANT OVERLAY + PANEL -->
+    <div id="assistant-overlay" class="assistant-overlay"></div>
 
-    <!-- ============================================================
-         ASSISTANT OVERLAY + SLIDE-IN PANEL
-    ============================================================ -->
-    <div id="assistant-overlay" class="assistant-overlay hidden"></div>
-
-    <div id="assistant-panel" class="assistant-panel hidden">
-
+    <div id="assistant-panel" class="assistant-panel">
         <div class="assistant-header">
             <h2>IndiCare Assistant</h2>
-
             <button id="assistant-close" class="assistant-close">×</button>
         </div>
 
         <div class="assistant-controls">
-
             <label>
                 Role:
                 <select id="assistant-role">
@@ -102,32 +90,25 @@
                 </select>
             </label>
 
-            <label>
-                <input type="checkbox" id="assistant-ld">
+            <label class="inline-label">
+                <input type="checkbox" id="assistant-ld" />
                 LD‑friendly
             </label>
 
-            <label>
-                <input type="checkbox" id="assistant-slow">
+            <label class="inline-label">
+                <input type="checkbox" id="assistant-slow" />
                 Slow mode
             </label>
-
         </div>
 
         <div id="assistant-messages" class="assistant-messages"></div>
 
         <div class="assistant-input-row">
-            <textarea id="assistant-input" placeholder="Type your reflection…"></textarea>
+            <textarea id="assistant-input" placeholder="Type your question or reflection…"></textarea>
             <button id="assistant-send" class="primary">Send</button>
         </div>
-
     </div>
 
-
-    <!-- ============================================================
-         JAVASCRIPT
-    ============================================================ -->
     <script src="/static/app.js"></script>
-
 </body>
 </html>
