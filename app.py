@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+import os
 
 from routers.auth_routes import router as auth_router
 from routers.staff_journal_routes import router as journal_router
@@ -37,8 +38,13 @@ def serve_dashboard():
 def serve_login():
     return FileResponse("frontend/login.html")
 
+# Absolute paths
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+SECTIONS_DIR = os.path.join(BASE_DIR, "static", "sections")
+
 # Serve CSS + JS from frontend/
-app.mount("/static", StaticFiles(directory="frontend"), name="static")
+app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
 # Serve section HTML files from static/sections/
-app.mount("/static/sections", StaticFiles(directory="static/sections"), name="sections")
+app.mount("/static/sections", StaticFiles(directory=SECTIONS_DIR), name="sections")
