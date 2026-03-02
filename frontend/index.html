@@ -4,11 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>IndiCare Staff Dashboard</title>
+
+    <!-- Correct static path -->
     <link rel="stylesheet" href="/static/styles.css" />
 </head>
+
 <body>
 
     <div class="app-shell">
+
         <!-- SIDEBAR -->
         <aside class="sidebar">
             <div class="sidebar-logo">
@@ -60,16 +64,19 @@
         <main id="content" class="main-content"></main>
     </div>
 
-    <!-- ASSISTANT OVERLAY + PANEL -->
+    <!-- ASSISTANT OVERLAY -->
     <div id="assistant-overlay" class="assistant-overlay"></div>
 
+    <!-- ASSISTANT PANEL -->
     <div id="assistant-panel" class="assistant-panel">
+
         <div class="assistant-header">
             <h2>IndiCare Assistant</h2>
             <button id="assistant-close" class="assistant-close">×</button>
         </div>
 
         <div class="assistant-controls">
+
             <label>
                 Role:
                 <select id="assistant-role">
@@ -99,6 +106,7 @@
                 <input type="checkbox" id="assistant-slow" />
                 Slow mode
             </label>
+
         </div>
 
         <div id="assistant-messages" class="assistant-messages"></div>
@@ -107,8 +115,11 @@
             <textarea id="assistant-input" placeholder="Type your question or reflection…"></textarea>
             <button id="assistant-send" class="primary">Send</button>
         </div>
+
     </div>
 
+    <!-- Correct static path -->
     <script src="/static/app.js"></script>
+
 </body>
 </html>
