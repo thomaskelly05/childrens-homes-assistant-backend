@@ -1,13 +1,13 @@
 # routers/assistant_routes.py
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
-import openai
+from openai import OpenAI
 import jwt
 import os
 from auth.tokens import JWT_SECRET, JWT_ALGORITHM
 
-# Load OpenAI API key from environment
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Load OpenAI key
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 router = APIRouter(prefix="/assistant", tags=["Assistant"])
 
@@ -28,7 +28,7 @@ def get_user_from_cookie(request: Request):
 
 
 # ------------------------------------------------------------
-# SYSTEM PROMPT BUILDER (IndiCare reflective brain)
+# SYSTEM PROMPT BUILDER
 # ------------------------------------------------------------
 def build_system_prompt(role, mode, ld, slow):
     parts = []
@@ -61,10 +61,10 @@ def build_system_prompt(role, mode, ld, slow):
 
 
 # ------------------------------------------------------------
-# STREAMING RESPONSE GENERATOR
+# STREAMING RESPONSE GENERATOR (OpenAI v1)
 # ------------------------------------------------------------
 def stream_response(prompt, system_prompt):
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": system_prompt},
@@ -74,14 +74,13 @@ def stream_response(prompt, system_prompt):
     )
 
     for chunk in response:
-        if "choices" in chunk:
-            delta = chunk["choices"][0]["delta"]
-            if "content" in delta:
-                yield delta["content"]
+        delta = chunk.choices[0].delta
+        if delta and delta.content:
+            yield delta.content
 
 
 # ------------------------------------------------------------
-# STREAMING ENDPOINT (matches new frontend)
+# STREAMING ENDPOINT
 # ------------------------------------------------------------
 @router.post("/stream")
 def assistant_stream(
