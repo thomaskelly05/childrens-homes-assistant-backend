@@ -13,7 +13,7 @@
         <h2>IndiCare</h2>
         <nav>
             <button data-section="home">Home</button>
-            <button data-section="assistant">Assistant</button>
+            <button data-section="assistant">IndiCare Assistant</button>
             <button data-section="journal">Journal</button>
             <button data-section="handover">Handover</button>
             <button data-section="tasks">Tasks</button>
@@ -24,6 +24,17 @@
     <div id="content" class="content">
         <div class="loading">Loading…</div>
     </div>
+
+    <!-- FULL-SCREEN ASSISTANT OVERLAY -->
+    <div id="assistant-overlay" class="assistant-overlay hidden">
+        <div class="assistant-close">×</div>
+        <div id="assistant-container"></div>
+    </div>
+
+    <!-- ASSISTANT UI TEMPLATE (injected from Squarespace) -->
+    <template id="assistant-ui-template">
+        <!-- Squarespace Code Block content goes here -->
+    </template>
 
     <script src="/static/app.js"></script>
 </body>
