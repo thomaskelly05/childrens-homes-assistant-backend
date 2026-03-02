@@ -40,11 +40,12 @@ def serve_login():
 
 # Absolute paths (fixes Render 404s)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
-SECTIONS_DIR = os.path.join(BASE_DIR, "static", "sections")
+SECTIONS_DIR = os.path.join(BASE_DIR, "frontend", "static", "sections")
 
 # Serve CSS + JS from frontend/
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
-# Serve section HTML files from static/sections/
+# Serve section HTML files from frontend/static/sections/
 app.mount("/static/sections", StaticFiles(directory=SECTIONS_DIR), name="sections")
