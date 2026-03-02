@@ -1,44 +1,98 @@
-<template id="assistant-ui-template">
-    <div class="assistant-header">
-        <h2>IndiCare Assistant</h2>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IndiCare Staff Dashboard</title>
 
-        <div class="assistant-controls">
-            <label>
-                Role:
-                <select id="assistant-role">
-                    <option value="Residential Support Worker">RSW</option>
-                    <option value="Senior Support Worker">Senior</option>
-                    <option value="Manager">Manager</option>
-                </select>
-            </label>
+    <link rel="stylesheet" href="/static/styles.css" />
+</head>
 
-            <label>
-                Mode:
-                <select id="assistant-mode">
-                    <option value="reflective">Reflective</option>
-                    <option value="grounding">Grounding</option>
-                    <option value="debrief">Debrief</option>
-                    <option value="planning">Planning</option>
-                    <option value="training">Training</option>
-                </select>
-            </label>
+<body>
 
-            <label>
-                <input type="checkbox" id="assistant-ld">
-                LD‑friendly
-            </label>
+    <!-- ============================================================
+         SIDEBAR
+    ============================================================ -->
+    <aside class="sidebar">
+        <h2 class="logo">IndiCare</h2>
 
-            <label>
-                <input type="checkbox" id="assistant-slow">
-                Slow mode
-            </label>
+        <nav>
+            <button data-section="home">Home</button>
+            <button data-section="assistant">Assistant</button>
+            <button data-section="journal">Journal</button>
+            <button data-section="handover">Handover</button>
+            <button data-section="tasks">Tasks</button>
+            <button data-section="account">Account</button>
+        </nav>
+    </aside>
+
+    <!-- ============================================================
+         MAIN CONTENT AREA
+    ============================================================ -->
+    <main id="content"></main>
+
+    <!-- ============================================================
+         ASSISTANT SLIDE-IN PANEL
+    ============================================================ -->
+    <div id="assistant-overlay" class="assistant-overlay">
+        <div id="assistant-container" class="assistant-panel">
+            <!-- Template will be injected here -->
         </div>
+        <button class="assistant-close">×</button>
     </div>
 
-    <div id="assistant-messages" class="assistant-messages"></div>
+    <!-- ============================================================
+         ASSISTANT UI TEMPLATE
+    ============================================================ -->
+    <template id="assistant-ui-template">
+        <div class="assistant-header">
+            <h2>IndiCare Assistant</h2>
 
-    <div class="assistant-input-row">
-        <textarea id="assistant-input" placeholder="Type your reflection…"></textarea>
-        <button id="assistant-send" class="primary">Send</button>
-    </div>
-</template>
+            <div class="assistant-controls">
+                <label>
+                    Role:
+                    <select id="assistant-role">
+                        <option value="Residential Support Worker">RSW</option>
+                        <option value="Senior Support Worker">Senior</option>
+                        <option value="Manager">Manager</option>
+                    </select>
+                </label>
+
+                <label>
+                    Mode:
+                    <select id="assistant-mode">
+                        <option value="reflective">Reflective</option>
+                        <option value="grounding">Grounding</option>
+                        <option value="debrief">Debrief</option>
+                        <option value="planning">Planning</option>
+                        <option value="training">Training</option>
+                    </select>
+                </label>
+
+                <label>
+                    <input type="checkbox" id="assistant-ld">
+                    LD‑friendly
+                </label>
+
+                <label>
+                    <input type="checkbox" id="assistant-slow">
+                    Slow mode
+                </label>
+            </div>
+        </div>
+
+        <div id="assistant-messages" class="assistant-messages"></div>
+
+        <div class="assistant-input-row">
+            <textarea id="assistant-input" placeholder="Type your reflection…"></textarea>
+            <button id="assistant-send" class="primary">Send</button>
+        </div>
+    </template>
+
+    <!-- ============================================================
+         JAVASCRIPT
+    ============================================================ -->
+    <script src="/static/app.js"></script>
+
+</body>
+</html>
