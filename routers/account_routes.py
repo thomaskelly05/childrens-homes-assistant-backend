@@ -25,7 +25,7 @@ def get_me(
 ):
     with conn.cursor() as cur:
         cur.execute("""
-            SELECT id, name, email, role, home_id
+            SELECT id, email, role, home_id, archived, created_at, updated_at
             FROM users
             WHERE id = %s
         """, (user["id"],))
