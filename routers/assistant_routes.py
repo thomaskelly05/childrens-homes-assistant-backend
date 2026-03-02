@@ -3,7 +3,11 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 import openai
 import jwt
+import os
 from auth.tokens import JWT_SECRET, JWT_ALGORITHM
+
+# Load OpenAI API key from environment
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 router = APIRouter(prefix="/assistant", tags=["Assistant"])
 
@@ -92,7 +96,7 @@ def assistant_stream(
 ):
     prompt = data.get("message", "")
 
-    # These now match the new frontend exactly
+    # These match the new frontend exactly
     role = data.get("role")
     mode = data.get("mode", "standard")
     ld = data.get("ld_friendly", False)
