@@ -104,7 +104,8 @@ function sendAssistantMessage() {
     messagesEl.appendChild(aiDiv);
     messagesEl.scrollTop = messagesEl.scrollHeight;
 
-    fetch("/assistant/stream", {
+    // FIXED ROUTE
+    fetch("/api/assistant/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
