@@ -6,6 +6,7 @@ from auth.tokens import JWT_SECRET, JWT_ALGORITHM
 
 router = APIRouter(prefix="/assistant", tags=["Assistant"])
 
+
 def get_user_from_cookie(request: Request):
     token = request.cookies.get("access_token")
     if not token:
