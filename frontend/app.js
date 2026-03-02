@@ -1,55 +1,56 @@
-// LOGIN PAGE LOGIC ----------------------------------------------------
+/* ============================================================
+   LOGIN PAGE
+============================================================ */
 
 if (window.location.pathname === "/login.html") {
-    console.log("Login page detected");
-
     const form = document.getElementById("login-form");
     const emailInput = document.getElementById("email");
     const passwordInput = document.getElementById("password");
     const errorBox = document.getElementById("login-error");
 
-    if (!form || !emailInput || !passwordInput) {
-        console.error("Login form elements missing");
-    }
-
-    form.onsubmit = async (e) => {
+    form?.addEventListener("submit", async (e) => {
         e.preventDefault();
-        console.log("Submitting login…");
 
         const email = emailInput.value.trim();
         const password = passwordInput.value.trim();
 
-        const res = await fetch("/auth/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ email, password })
-        });
+        try {
+            const res = await fetch("/api/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ email, password })
+            });
 
-        console.log("Login response:", res.status);
+            if (!res.ok) {
+                errorBox.textContent = "Invalid login.";
+                return;
+            }
 
-        if (!res.ok) {
-            errorBox.textContent = "Invalid login.";
-            return;
+            window.location.href = "/";
+        } catch (err) {
+            errorBox.textContent = "Network error. Please try again.";
         }
-
-        window.location.href = "/";
-    };
+    });
 }
 
 
-
-// ---------------------------------------------------------------------------
-// AUTH CHECK (Dashboard only)
-// ---------------------------------------------------------------------------
+/* ============================================================
+   AUTH CHECK
+============================================================ */
 
 async function checkAuth() {
-    const res = await fetch("/account/me", { credentials: "include" });
-    if (!res.ok) {
+    try {
+        const res = await fetch("/api/account/me", { credentials: "include" });
+        if (!res.ok) {
+            window.location.href = "/login.html";
+            return false;
+        }
+        return true;
+    } catch {
         window.location.href = "/login.html";
         return false;
     }
-    return true;
 }
 
 if (window.location.pathname === "/") {
@@ -57,18 +58,15 @@ if (window.location.pathname === "/") {
 }
 
 
-
-// ---------------------------------------------------------------------------
-// DASHBOARD NAV + SECTION LOADING
-// ---------------------------------------------------------------------------
+/* ============================================================
+   DASHBOARD NAVIGATION
+============================================================ */
 
 const content = document.getElementById("content");
 
 if (content) {
     document.querySelectorAll(".sidebar nav button").forEach(btn => {
-        btn.addEventListener("click", () => {
-            loadSection(btn.dataset.section);
-        });
+        btn.addEventListener("click", () => loadSection(btn.dataset.section));
     });
 
     loadSection("home");
@@ -81,19 +79,20 @@ async function loadSection(section) {
         btn.classList.toggle("active", btn.dataset.section === section);
     });
 
-    if (section === "home") return loadHome();
-    if (section === "assistant") return loadAssistant();
-    if (section === "journal") return loadJournal();
-    if (section === "handover") return loadHandover();
-    if (section === "tasks") return loadTasks();
-    if (section === "account") return loadAccount();
+    switch (section) {
+        case "home": return loadHome();
+        case "assistant": return loadAssistant();
+        case "journal": return loadJournal();
+        case "handover": return loadHandover();
+        case "tasks": return loadTasks();
+        case "account": return loadAccount();
+    }
 }
 
 
-
-// ---------------------------------------------------------------------------
-// HOME
-// ---------------------------------------------------------------------------
+/* ============================================================
+   HOME
+============================================================ */
 
 function loadHome() {
     content.innerHTML = `
@@ -103,10 +102,9 @@ function loadHome() {
 }
 
 
-
-// ---------------------------------------------------------------------------
-// ASSISTANT
-// ---------------------------------------------------------------------------
+/* ============================================================
+   ASSISTANT (simple version — replaced later by full UI)
+============================================================ */
 
 async function loadAssistant() {
     content.innerHTML = `
@@ -116,30 +114,46 @@ async function loadAssistant() {
         <div id="assistant-output" class="mt-20"></div>
     `;
 
-    document.getElementById("assistant-send").onclick = async () => {
+    const sendBtn = document.getElementById("assistant-send");
+    const output = document.getElementById("assistant-output");
+
+    sendBtn.onclick = async () => {
         const input = document.getElementById("assistant-input").value.trim();
         if (!input) return;
 
-        const output = document.getElementById("assistant-output");
         output.innerHTML = "<p class='muted'>Thinking…</p>";
 
-        const res = await fetch("/api/assistant", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ message: input })
-        });
+        try {
+            const res = await fetch("/api/assistant/stream", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ message: input })
+            });
 
-        const data = await res.json();
-        output.innerHTML = `<p>${data.reply}</p>`;
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let text = "";
+
+            output.innerHTML = "<p></p>";
+            const p = output.querySelector("p");
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                text += decoder.decode(value);
+                p.textContent = text;
+            }
+        } catch {
+            output.innerHTML = "<p class='error'>Connection error. Please try again.</p>";
+        }
     };
 }
 
 
-
-// ---------------------------------------------------------------------------
-// JOURNAL
-// ---------------------------------------------------------------------------
+/* ============================================================
+   JOURNAL
+============================================================ */
 
 async function loadJournal() {
     content.innerHTML = `
@@ -153,12 +167,17 @@ async function loadJournal() {
         <button class="primary" id="save-journal">Save</button>
     `;
 
-    const res = await fetch("/staff/journal", { credentials: "include" });
-    const data = await res.json();
+    try {
+        const res = await fetch("/api/staff/journal", { credentials: "include" });
+        const data = await res.json();
 
-    document.getElementById("holding").value = data.holding_today || "";
-    document.getElementById("practice").value = data.practice_today || "";
-    document.getElementById("reflection").value = data.reflection_today || "";
+        document.getElementById("holding").value = data.holding_today || "";
+        document.getElementById("practice").value = data.practice_today || "";
+        document.getElementById("reflection").value = data.reflection_today || "";
+    } catch {
+        content.innerHTML = "<p class='error'>Unable to load journal.</p>";
+        return;
+    }
 
     document.getElementById("save-journal").onclick = async () => {
         const payload = {
@@ -167,7 +186,7 @@ async function loadJournal() {
             reflection_today: document.getElementById("reflection").value
         };
 
-        await fetch("/staff/journal", {
+        await fetch("/api/staff/journal", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
@@ -177,10 +196,9 @@ async function loadJournal() {
 }
 
 
-
-// ---------------------------------------------------------------------------
-// HANDOVER
-// ---------------------------------------------------------------------------
+/* ============================================================
+   HANDOVER
+============================================================ */
 
 async function loadHandover() {
     content.innerHTML = `
@@ -189,23 +207,26 @@ async function loadHandover() {
         <div id="handover-content"></div>
     `;
 
-    const res = await fetch("/handover/incoming", { credentials: "include" });
-    const data = await res.json();
+    try {
+        const res = await fetch("/api/handover/incoming", { credentials: "include" });
+        const data = await res.json();
 
-    document.getElementById("handover-content").innerHTML = `
-        <p><strong>Environment:</strong> ${data.environment || "—"}</p>
-        <p><strong>Incidents:</strong> ${data.incidents || "—"}</p>
-        <p><strong>Staff wellbeing:</strong> ${data.staff_wellbeing || "—"}</p>
-        <p><strong>Operational notes:</strong> ${data.operational_notes || "—"}</p>
-        <p class="muted">Last updated: ${data.created_at || "—"}</p>
-    `;
+        document.getElementById("handover-content").innerHTML = `
+            <p><strong>Environment:</strong> ${data.environment || "—"}</p>
+            <p><strong>Incidents:</strong> ${data.incidents || "—"}</p>
+            <p><strong>Staff wellbeing:</strong> ${data.staff_wellbeing || "—"}</p>
+            <p><strong>Operational notes:</strong> ${data.operational_notes || "—"}</p>
+            <p class="muted">Last updated: ${data.created_at || "—"}</p>
+        `;
+    } catch {
+        content.innerHTML = "<p class='error'>Unable to load handover.</p>";
+    }
 }
 
 
-
-// ---------------------------------------------------------------------------
-// TASKS
-// ---------------------------------------------------------------------------
+/* ============================================================
+   TASKS
+============================================================ */
 
 async function loadTasks() {
     content.innerHTML = `
@@ -215,31 +236,34 @@ async function loadTasks() {
 
     const list = document.getElementById("task-list");
 
-    const res = await fetch("/tasks/today", { credentials: "include" });
-    const tasks = await res.json();
+    try {
+        const res = await fetch("/api/tasks/today", { credentials: "include" });
+        const tasks = await res.json();
 
-    list.innerHTML = tasks.map(t => `
-        <div class="task">
-            <input type="checkbox" ${t.completed ? "checked" : ""} data-id="${t.id}" />
-            <span>${t.task}</span>
-        </div>
-    `).join("");
+        list.innerHTML = tasks.map(t => `
+            <div class="task">
+                <input type="checkbox" ${t.completed ? "checked" : ""} data-id="${t.id}" />
+                <span>${t.task}</span>
+            </div>
+        `).join("");
 
-    list.querySelectorAll("input[type=checkbox]").forEach(box => {
-        box.onchange = async () => {
-            await fetch(`/tasks/complete/${box.dataset.id}`, {
-                method: "POST",
-                credentials: "include"
-            });
-        };
-    });
+        list.querySelectorAll("input[type=checkbox]").forEach(box => {
+            box.onchange = async () => {
+                await fetch(`/api/tasks/complete/${box.dataset.id}`, {
+                    method: "POST",
+                    credentials: "include"
+                });
+            };
+        });
+    } catch {
+        list.innerHTML = "<p class='error'>Unable to load tasks.</p>";
+    }
 }
 
 
-
-// ---------------------------------------------------------------------------
-// ACCOUNT
-// ---------------------------------------------------------------------------
+/* ============================================================
+   ACCOUNT
+============================================================ */
 
 async function loadAccount() {
     content.innerHTML = `
@@ -250,16 +274,21 @@ async function loadAccount() {
         <button id="logout-btn" class="danger mt-20">Logout</button>
     `;
 
-    const res = await fetch("/account/me", { credentials: "include" });
-    const data = await res.json();
+    try {
+        const res = await fetch("/api/account/me", { credentials: "include" });
+        const data = await res.json();
 
-    document.getElementById("account-info").innerHTML = `
-        <p><strong>Name:</strong> ${data.name}</p>
-        <p><strong>Email:</strong> ${data.email}</p>
-    `;
+        document.getElementById("account-info").innerHTML = `
+            <p><strong>Name:</strong> ${data.name}</p>
+            <p><strong>Email:</strong> ${data.email}</p>
+        `;
+    } catch {
+        content.innerHTML = "<p class='error'>Unable to load account.</p>";
+        return;
+    }
 
     document.getElementById("logout-btn").onclick = async () => {
-        await fetch("/auth/logout", {
+        await fetch("/api/auth/logout", {
             method: "POST",
             credentials: "include"
         });
