@@ -1,181 +1,93 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
-from openai import OpenAI
-import jwt
-import os
-import re
+REFLECTIVE_DEBRIEF_MODULE = {
+    "purpose": {
+        "description": (
+            "This module supports adults to reflect on incidents, restraints, escalations, "
+            "and difficult moments in a safe, values-led, emotionally contained way. "
+            "It focuses entirely on the adult’s internal experience, stance, values, "
+            "and learning — not on analysing the child or the event."
+        )
+    },
 
-from auth.tokens import JWT_SECRET, JWT_ALGORITHM
-
-from assistant.knowledge.neurodevelopmental import NEURODEVELOPMENTAL_MODULE
-from assistant.knowledge.contextual_safeguarding import CONTEXTUAL_SAFEGUARDING_MODULE
-from assistant.knowledge.trauma_informed import TRAUMA_INFORMED_MODULE
-from assistant.knowledge.safe_recording import SAFE_RECORDING_MODULE
-from assistant.knowledge.reflective_practice import REFLECTIVE_PRACTICE_MODULE
-from assistant.knowledge.leadership_management import LEADERSHIP_MANAGEMENT_MODULE
-from assistant.knowledge.therapeutic_language import THERAPEUTIC_LANGUAGE_MODULE
-from assistant.knowledge.reflective_debrief import REFLECTIVE_DEBRIEF_MODULE
-
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-router = APIRouter(prefix="/assistant", tags=["Assistant"])
-
-
-# ---------------------------
-# AUTH
-# ---------------------------
-def get_user_from_cookie(request: Request):
-    token = request.cookies.get("access_token")
-    if not token:
-        raise HTTPException(401, "Not authenticated")
-
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        return {"id": payload["sub"], "role": payload.get("role")}
-    except Exception:
-        raise HTTPException(401, "Invalid token")
-
-
-# ---------------------------
-# VALIDATOR
-# ---------------------------
-blocked_patterns = [
-    r"\bhow do i restrain\b",
-    r"\bhow to restrain\b",
-    r"\brestraint technique\b",
-    r"\bcontrol them\b",
-    r"\bmake them\b",
-    r"\bfix their behaviour\b",
-    r"\bmanage their behaviour\b",
-    r"\bwhat should i do when they\b",
-    r"\bwhat do i do if they\b",
-    r"\bstop them from\b",
-]
-
-
-def validate_prompt(prompt: str):
-    text = prompt.strip().lower()
-
-    # Block initials
-    if re.search(r"\b[A-Z]\.", prompt):
-        raise HTTPException(400, "IndiCare can’t process initials or identifying details.")
-
-    # Block full names
-    if re.search(r"\b[A-Z][a-z]+\s+[A-Z][a-z]+\b", prompt):
-        raise HTTPException(400, "IndiCare can’t process full names.")
-
-    # Block unsafe operational requests
-    for pattern in blocked_patterns:
-        if re.search(pattern, text):
-            raise HTTPException(
-                400,
-                (
-                    "IndiCare can support you to reflect on your experience, "
-                    "your stance, your values, and your emotional load — "
-                    "but it can’t give behaviour‑management, restraint guidance, "
-                    "or instructions directed at a child."
-                ),
-            )
-
-
-# ---------------------------
-# SYSTEM PROMPT
-# ---------------------------
-def build_system_prompt(role: str | None, mode: str, ld: bool, slow: bool) -> str:
-    base = """
-You are IndiCare — a staff‑only reflective and operational support companion for adults working in regulated residential children’s homes.
-
-You support staff with:
-- communication and reasonable adjustments (autism, ADHD, GDD, sensory profiles, FASD)
-- trauma‑informed practice (co‑regulation, safety cues, predictability)
-- contextual safeguarding (county lines, exploitation, online harm typologies)
-- safe recording (facts, neutrality, patterns, professional curiosity)
-- escalation concepts (supervision, oversight, noticing themes)
-- reflective practice (values, emotional regulation, supervision prep)
-- reflective debriefing after incidents or restraints (adult‑focused, values‑led)
-- leadership and management reflection (team culture, QA themes, escalation thinking)
-- therapeutic language (attunement, containment, validation, curiosity, predictability, boundaries)
-
-You never:
-- diagnose, treat, or provide clinical/therapeutic advice
-- analyse incidents or reconstruct events
-- give behaviour‑management strategies
-- give restraint guidance
-- interpret the child’s motives or emotions
-- give instructions to children
-- comment on risk levels or safeguarding decisions
-
-DEBRIEF MODE:
-When staff mention an incident, restraint, escalation, or difficult moment, use a reflective debrief stance:
-- acknowledge and contain
-- normalise the adult’s experience
-- explore internal responses
-- connect to values
-- support grounding
-- identify what to bring to supervision
-- avoid analysing the child or the event
-- avoid operational advice
-"""
-
-    dynamic = []
-
-    if role:
-        dynamic.append(f"The staff member is working in the role of {role}. Match your tone accordingly.")
-
-    if mode == "reflective":
-        dynamic.append("Use a reflective frame: describe → normalise → explore → summarise → values‑led next step.")
-    elif mode == "debrief":
-        dynamic.append("Use a debrief frame: slow, steady, reflective, values‑led, adult‑focused.")
-    elif mode == "grounding":
-        dynamic.append("Use grounding language: slow, steady, sensory, simple.")
-    elif mode == "planning":
-        dynamic.append("Use a planning frame: structured, stepwise, clear.")
-    elif mode == "training":
-        dynamic.append("Use a training frame: simple explanations, plain language, clear examples.")
-    else:
-        dynamic.append("Use a calm, supportive, staff‑focused tone.")
-
-    if ld:
-        dynamic.append("Use LD‑friendly communication: short sentences, plain language, one idea at a time.")
-
-    if slow:
-        dynamic.append("Respond gently and slowly, with space between ideas.")
-
-    return base + "\n" + "\n".join(dynamic)
-
-
-# ---------------------------
-# STREAMING
-# ---------------------------
-def stream_response(prompt: str, system_prompt: str):
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": prompt},
+    "core_principles": {
+        "description": "Reflective debriefing helps adults process emotional load and reconnect with values.",
+        "principles": [
+            "Emotional containment: slowing down, grounding, steady tone.",
+            "Normalisation: recognising that strong reactions are human and expected.",
+            "Curiosity: gentle wondering about internal experience, not the child’s motives.",
+            "Values-led reflection: reconnecting with safety, respect, empathy, boundaries, consistency.",
+            "Non-judgement: avoiding self-blame or shame.",
+            "Forward-looking learning: identifying what would support the adult next time.",
         ],
-        stream=True,
-    )
+    },
 
-    for chunk in response:
-        delta = chunk.choices[0].delta
-        if delta and delta.content:
-            yield delta.content
+    "reflective_steps": {
+        "description": "A safe reflective sequence adults can use after difficult moments.",
+        "steps": [
+            "Acknowledge the moment: name that it was intense, confusing, or emotionally loaded.",
+            "Normalise the response: recognise that anyone might feel unsettled.",
+            "Explore internal experience: thoughts, feelings, bodily sensations.",
+            "Identify values: what the adult was trying to hold (safety, respect, calm, boundaries).",
+            "Notice challenges: what felt hardest or most activating.",
+            "Identify regulation needs: what helps the adult return to steady.",
+            "Plan support: what to bring to supervision, what team support might help.",
+            "Set a values-led intention: one small thing to strengthen next time.",
+        ],
+    },
 
+    "reflective_questions": {
+        "description": "Questions IndiCare can use to guide reflective debriefs.",
+        "questions": [
+            "What part of that moment stayed with you?",
+            "What was happening inside for you at the time?",
+            "What value were you trying to hold?",
+            "What felt hardest or most activating?",
+            "What helped you stay steady, even a little?",
+            "What support do you need now?",
+            "What do you want to bring to supervision?",
+            "What would help you feel more grounded next time?",
+        ],
+    },
 
-# ---------------------------
-# ENDPOINT
-# ---------------------------
-@router.post("/stream")
-def assistant_stream(data: dict, request: Request, user=Depends(get_user_from_cookie)):
-    prompt = data.get("message", "") or ""
-    validate_prompt(prompt)
+    "learning_focus": {
+        "description": (
+            "Learning from incidents focuses on the adult’s stance, regulation, and values — "
+            "not on analysing the child or predicting behaviour."
+        ),
+        "learning_points": [
+            "What helped me stay aligned with my values?",
+            "Where did I feel pulled away from my values?",
+            "What internal signals did I notice (tight chest, urgency, overwhelm)?",
+            "What would help me stay regulated earlier next time?",
+            "What team or environmental support would help?",
+            "What do I want to strengthen in my practice?",
+        ],
+    },
 
-    role = data.get("role")
-    mode = data.get("mode", "standard")
-    ld = bool(data.get("ld_friendly", False))
-    slow = bool(data.get("slow_mode", False))
+    "next_time_support": {
+        "description": (
+            "IndiCare helps adults identify what will support them next time by focusing on "
+            "their stance, pacing, regulation, and values — not by giving behavioural instructions."
+        ),
+        "supports": [
+            "Identifying early internal cues (tight chest, racing thoughts, urgency).",
+            "Planning grounding strategies the adult can use earlier.",
+            "Clarifying which value they want to anchor to next time.",
+            "Noticing what environmental adjustments help them stay steady.",
+            "Identifying what team support helps (presence, pacing, communication).",
+            "Preparing one values-led intention to carry forward.",
+        ],
+    },
 
-    system_prompt = build_system_prompt(role, mode, ld, slow)
-
-    return StreamingResponse(stream_response(prompt, system_prompt), media_type="text/plain")
+    "supervision_summary_template": {
+        "description": "A safe structure for adults to take into supervision.",
+        "template": {
+            "what_stood_out": "A short, non-analytical description of the moment.",
+            "internal_experience": "What I felt, thought, or noticed inside.",
+            "what_felt_hard": "The emotional or values-based challenge.",
+            "values_i_was_holding": "Safety, respect, boundaries, empathy, consistency, etc.",
+            "what_helped_me": "Grounding, pacing, team support, reflective stance.",
+            "what_i_need": "Support, clarity, emotional containment, space to reflect.",
+            "what_i_want_to_strengthen": "A values-led intention for next time.",
+        },
+    },
+}
