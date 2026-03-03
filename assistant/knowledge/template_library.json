@@ -1,18 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Template Library</title>
-<style>
-body { font-family: Arial, sans-serif; padding: 40px; max-width: 900px; margin: auto; }
-pre { background: #f4f4f4; padding: 12px; border-radius: 6px; }
-</style>
-</head>
-<body>
-
-<h1>Template Library</h1>
-
-<pre>{
+{
   "risk_assessment_template": "Draft a generic risk assessment template...",
   "placement_plan_template": "Create a generic placement plan template...",
   "daily_log_template": "Create a daily log template...",
@@ -28,7 +14,3 @@ pre { background: #f4f4f4; padding: 12px; border-radius: 6px; }
   "audit_template_environment": "Draft an environment audit template...",
   "audit_template_recording": "Draft a recording audit template..."
 }
-</pre>
-
-</body>
-</html>
