@@ -19,6 +19,8 @@ from assistant.knowledge.team_learning_loop import TEAM_LEARNING_LOOP_MODULE
 from assistant.knowledge.emotional_load import EMOTIONAL_LOAD_MODULE
 from assistant.knowledge.boundaries_identity import BOUNDARIES_IDENTITY_MODULE
 from assistant.knowledge.environment_routines import ENVIRONMENT_ROUTINES_MODULE
+from assistant.knowledge.values_engine import VALUES_ENGINE_MODULE
+from assistant.knowledge.practice_triangle import PRACTICE_TRIANGLE_MODULE
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
