@@ -16,6 +16,9 @@ from assistant.knowledge.leadership_management import LEADERSHIP_MANAGEMENT_MODU
 from assistant.knowledge.therapeutic_language import THERAPEUTIC_LANGUAGE_MODULE
 from assistant.knowledge.reflective_debrief import REFLECTIVE_DEBRIEF_MODULE
 from assistant.knowledge.team_learning_loop import TEAM_LEARNING_LOOP_MODULE
+from assistant.knowledge.emotional_load import EMOTIONAL_LOAD_MODULE
+from assistant.knowledge.boundaries_identity import BOUNDARIES_IDENTITY_MODULE
+from assistant.knowledge.environment_routines import ENVIRONMENT_ROUTINES_MODULE
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
