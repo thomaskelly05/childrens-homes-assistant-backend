@@ -7,11 +7,11 @@
     <link rel="stylesheet" href="styles.css" />
 </head>
 
-<body>
+<body class="mode-reflective">
 
     <!-- Sidebar -->
     <aside id="sidebar">
-        <div class="sidebar-item" data-mode="reflective">Reflective</div>
+        <div class="sidebar-item active" data-mode="reflective">Reflective</div>
         <div class="sidebar-item" data-mode="debrief">Debrief</div>
         <div class="sidebar-item" data-mode="team">Team</div>
         <div class="sidebar-item" data-mode="grounding">Grounding</div>
@@ -19,55 +19,51 @@
         <div class="sidebar-item" data-mode="settings">Settings</div>
     </aside>
 
-    <!-- Main container -->
+    <!-- Header -->
+    <header id="topbar">
+        <div id="mode-indicator">Reflective Mode</div>
+
+        <div id="toggles">
+            <label class="toggle">
+                <input type="checkbox" id="ld-toggle" />
+                <span>LD-friendly</span>
+            </label>
+
+            <label class="toggle">
+                <input type="checkbox" id="slow-toggle" />
+                <span>Slow mode</span>
+            </label>
+        </div>
+    </header>
+
+    <!-- Main -->
     <div id="main">
 
-        <!-- Header -->
-        <header id="topbar">
-            <div id="mode-indicator">Reflective Mode</div>
-
-            <div id="toggles">
-                <label class="toggle">
-                    <input type="checkbox" id="ld-toggle" />
-                    <span>LD-friendly</span>
-                </label>
-
-                <label class="toggle">
-                    <input type="checkbox" id="slow-toggle" />
-                    <span>Slow mode</span>
-                </label>
-            </div>
-        </header>
-
-        <!-- Chat area -->
+        <!-- Chat -->
         <section id="chat-container">
             <div id="messages"></div>
 
-            <!-- Mode chips -->
             <div id="mode-chips">
-                <button class="mode-chip" data-chip="what-stood-out">What stayed with you?</button>
-                <button class="mode-chip" data-chip="values">What value were you holding?</button>
-                <button class="mode-chip" data-chip="hardest">What felt hardest?</button>
+                <button class="mode-chip">What stayed with you?</button>
+                <button class="mode-chip">What value were you holding?</button>
+                <button class="mode-chip">What felt hardest?</button>
             </div>
 
-            <!-- Input area -->
             <div id="input-area">
                 <textarea id="user-input" placeholder="Type your reflection…"></textarea>
                 <button id="send-btn">Send</button>
             </div>
         </section>
 
-        <!-- Supervision summary panel -->
+        <!-- Supervision -->
         <aside id="supervision-panel">
             <h3>Supervision Summary</h3>
-            <div id="summary-content">
-                <p><strong>What stood out:</strong> <span id="sum-stood-out"></span></p>
-                <p><strong>Internal experience:</strong> <span id="sum-internal"></span></p>
-                <p><strong>Values:</strong> <span id="sum-values"></span></p>
-                <p><strong>What felt hard:</strong> <span id="sum-hard"></span></p>
-                <p><strong>Support needed:</strong> <span id="sum-support"></span></p>
-                <p><strong>What to strengthen:</strong> <span id="sum-strengthen"></span></p>
-            </div>
+            <p><strong>What stood out:</strong> <span id="sum-stood-out"></span></p>
+            <p><strong>Internal experience:</strong> <span id="sum-internal"></span></p>
+            <p><strong>Values:</strong> <span id="sum-values"></span></p>
+            <p><strong>What felt hard:</strong> <span id="sum-hard"></span></p>
+            <p><strong>Support needed:</strong> <span id="sum-support"></span></p>
+            <p><strong>What to strengthen:</strong> <span id="sum-strengthen"></span></p>
         </aside>
 
     </div>
