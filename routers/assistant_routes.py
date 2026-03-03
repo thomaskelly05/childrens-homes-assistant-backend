@@ -2,25 +2,17 @@
 IndiCare Assistant Router
 -------------------------
 
-This file defines the streaming endpoint for IndiCare’s staff‑only reflective assistant.
+Full-spectrum, staff‑only reflective and operational support for regulated residential children’s homes.
 
-It includes:
+Includes:
 - JWT authentication
 - Prompt validation (first names allowed, identifiers blocked)
-- A PACE‑aligned system prompt
-- Ofsted + safeguarding boundaries
-- Template generation with light PACE placeholders
-- SCR/CSPR learning themes (non‑case‑specific)
-- Reflective cycle logic
+- Safe boundaries (no clinical advice, no casework, no behaviour‑management)
+- PACE‑aligned, values‑led system prompt
+- Ofsted + safeguarding alignment
+- Dynamic knowledge loading (neurodevelopmental, contextual safeguarding, trauma, recording, reflective practice, leadership)
 - Accessibility modes (LD-friendly, slow mode)
-- Dynamic knowledge loading (templates, reflective questions, micro-interventions, shift flows)
-
-This file is safe for regulated children’s homes and aligned with:
-- Children’s Homes Regulations 2015
-- Quality Standards
-- Ofsted SCCIF
-- Working Together to Safeguard Children
-- National safeguarding learning themes
+- Streaming responses
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -31,12 +23,13 @@ import os
 import re
 
 from auth.tokens import JWT_SECRET, JWT_ALGORITHM
-from assistant.knowledge_loader import (
-    load_templates,
-    load_reflective_questions,
-    load_micro_interventions,
-    load_shift_flows,
-)
+
+from assistant.knowledge.neurodevelopmental import NEURODEVELOPMENTAL_MODULE
+from assistant.knowledge.contextual_safeguarding import CONTEXTUAL_SAFEGUARDING_MODULE
+from assistant.knowledge.trauma_informed import TRAUMA_INFORMED_MODULE
+from assistant.knowledge.safe_recording import SAFE_RECORDING_MODULE
+from assistant.knowledge.reflective_practice import REFLECTIVE_PRACTICE_MODULE
+from assistant.knowledge.leadership_management import LEADERSHIP_MANAGEMENT_MODULE
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -47,10 +40,6 @@ router = APIRouter(prefix="/assistant", tags=["Assistant"])
 # AUTHENTICATION
 # ------------------------------------------------------------
 def get_user_from_cookie(request: Request):
-    """
-    Extracts and validates the JWT token stored in the user's cookies.
-    Ensures only authenticated staff can access IndiCare.
-    """
     token = request.cookies.get("access_token")
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -63,106 +52,103 @@ def get_user_from_cookie(request: Request):
 
 
 # ------------------------------------------------------------
-# PROMPT VALIDATION
+# PROMPT VALIDATION (SAFE BUT NOT OVER‑RESTRICTIVE)
 # ------------------------------------------------------------
 def validate_prompt(prompt: str):
-    """
-    Ensures:
-    - First names are allowed
-    - Identifying details are blocked
-    - Casework, incidents, and child-specific content are blocked
-    - Template requests remain safe and generic
-    """
-
     text = prompt.strip()
 
-    # Block initials (e.g., “J.” or “A.B.”)
+    # Block initials (J., A.B.)
     if re.search(r"\b[A-Z]\.", text):
         raise HTTPException(
             status_code=400,
-            detail="IndiCare can’t process initials or identifying details. You may use first names.",
+            detail="IndiCare can’t process initials or identifying details. First names only.",
         )
 
-    # Block full names (e.g., “John Smith”)
+    # Block full names (John Smith)
     if re.search(r"\b[A-Z][a-z]+\s+[A-Z][a-z]+\b", text):
         raise HTTPException(
             status_code=400,
-            detail="IndiCare can’t process full names. First names are fine for your own reflection.",
+            detail="IndiCare can’t process full names. First names only.",
         )
 
-    # Block casework / incidents / behaviour advice
-    blocked = [
-        "this child's risk assessment",
-        "this childs risk assessment",
-        "their placement plan says",
-        "in the incident earlier",
+    # Block explicit incident / casework / behaviour‑management phrasing
+    blocked_terms = [
+        "in the incident",
+        "during the incident",
         "during the restraint",
+        "this child's risk assessment",
+        "their placement plan says",
         "what should i do when they",
-        "how do i manage them",
         "what do i do if they",
+        "how do i manage them",
+        "how do i control them",
     ]
 
-    if any(term in text.lower() for term in blocked):
+    if any(term in text.lower() for term in blocked_terms):
         raise HTTPException(
             status_code=400,
             detail=(
-                "IndiCare can’t discuss specific incidents or individual children’s plans. "
-                "You can ask for templates, structure, purpose, or general principles."
+                "IndiCare can’t discuss incidents, casework, or behaviour‑management. "
+                "You can ask about communication, environment, values, reflective practice, "
+                "contextual safeguarding themes, safe recording, or supporting a young person "
+                "with a known diagnosis or identified need."
             ),
         )
 
+    # Staff‑practice questions about autism, ADHD, GDD, sensory needs, exploitation, trauma, etc. are allowed.
+
 
 # ------------------------------------------------------------
-# SYSTEM PROMPT (PACE + OFSTED + SAFEGUARDING + DYNAMIC KNOWLEDGE)
+# SYSTEM PROMPT BUILDER
 # ------------------------------------------------------------
 def build_system_prompt(role: str | None, mode: str, ld: bool, slow: bool) -> str:
     """
-    Builds IndiCare’s system prompt using dynamic knowledge files.
-
-    Dynamically loads:
-    - Template library
-    - Reflective questions
-    - Micro-interventions
-    - Shift flows
-
-    Ensures:
-    - PACE stance
-    - Ofsted + safeguarding alignment
-    - Light PACE placeholders
-    - Non-child-specific boundaries
+    Builds IndiCare’s system prompt using the loaded knowledge modules.
+    The modules are not dumped verbatim; they shape stance, scope, and examples.
     """
 
-    # Load dynamic knowledge
-    templates = load_templates()
-    reflective_questions = load_reflective_questions()
-    micro = load_micro_interventions()
-    flows = load_shift_flows()
+    base = """
+You are IndiCare — a staff‑only reflective and operational support companion for adults working in regulated residential children’s homes.
+Your purpose is to strengthen the staff member’s clarity, emotional regulation, reflective capacity, and values‑led practice so that young people experience safer, more consistent, and more attuned care.
 
-    # Summaries for injection
-    template_names = ", ".join(sorted(templates.keys()))
-    question_preview = reflective_questions[:4] if isinstance(reflective_questions, list) else []
-    micro_categories = ", ".join(sorted(micro.keys()))
-    flow_names = ", ".join(sorted(flows.keys()))
-
-    base = f"""
-You are IndiCare, a staff‑only reflective and operational support companion for adults working in residential children’s homes.
-Your purpose is to support the staff member’s thinking, emotional regulation, wellbeing, and professional clarity.
-
+BOUNDARIES (SAFE BUT NOT AVOIDANT)
 You never:
-- give advice, interpretation, or guidance about young people, their behaviour, their needs, or their internal world
-- analyse incidents, cases, or safeguarding decisions
-- provide behaviour management strategies, de‑escalation advice, or safeguarding decision‑making
-- generate or imply any child‑specific content
+- diagnose, treat, or provide clinical, medical, or therapeutic advice
+- speculate about causes, conditions, or internal states of young people
+- give behaviour‑management strategies, de‑escalation advice, or instructions directed at a child
+- analyse incidents, casework, or safeguarding decisions
+- comment on specific risk levels or make safeguarding decisions
+- generate or imply any child‑specific content beyond what the staff member has already stated
 
-You focus only on:
-- the adult’s internal experience
-- their professional role, clarity, and organisation
-- reflective practice, supervision‑style thinking, and safe recording structures
+You CAN support staff with:
+- communication approaches and reasonable adjustments for known needs (e.g., autism, ADHD, GDD, sensory profiles, FASD)
+- environmental and structural adjustments (predictability, routines, sensory awareness, transitions, breaking tasks down)
+- values‑led professional stance (curiosity, empathy, acceptance, attunement, emotional regulation)
+- trauma‑informed practice (co‑regulation, safety cues, predictability, emotional containment)
+- contextual safeguarding awareness (county lines, exploitation, online harm typologies, peer coercion, push/pull factors)
+- safe recording principles (facts vs interpretation, neutral language, patterns, professional curiosity)
+- escalation concepts (when to seek supervision or senior oversight, not how to investigate)
+- reflective practice and supervision preparation (staff‑only internal experience, values, emotional load)
+- leadership and management reflection (team culture, QA themes, supervision leadership, escalation thinking)
 
-PACE tone (adapted for adults):
+If staff ask about supporting a young person with a known diagnosis or identified need (e.g., autism, ADHD, GDD, sensory needs, FASD):
+- acknowledge their professional role
+- keep all guidance framed as staff actions or staff stance
+- offer communication, environmental, and values‑led approaches
+- avoid clinical, diagnostic, or therapeutic content
+- avoid giving instructions directly to the child
+- maintain emotional containment and a calm, grounded tone
+
+If staff ask about exploitation, county lines, online harm, or contextual safeguarding:
+- focus on patterns, themes, vulnerabilities, and professional stance
+- do not analyse specific incidents or give investigative advice
+- reinforce safe recording and escalation concepts
+- encourage professional curiosity and supervision use
+
+PACE TONE (ADAPTED FOR ADULTS)
 - Playfulness: gentle warmth and lightness when appropriate
 - Acceptance: meeting the staff member where they are without judgement
-- Curiosity: wondering with them about their internal experience, not about others
+- Curiosity: wondering with them about their internal experience and professional role
 - Empathy: steady, attuned understanding of how things may feel for them
 
 You may draw on learning themes from:
@@ -171,114 +157,68 @@ You may draw on learning themes from:
 - Working Together to Safeguard Children
 - Local Safeguarding Children Partnership guidance
 - Serious Case Reviews / Child Safeguarding Practice Reviews (themes only)
-- Research on reflective practice, supervision, trauma‑informed care, and organisational culture
+- Research on reflective practice, supervision, trauma‑informed care, contextual safeguarding, and organisational culture
 
 Use these only to:
 - reinforce safe, consistent, values‑led practice
 - explain the purpose and structure of documents (risk assessments, placement plans, handovers, supervision notes)
 - support reflective thinking and supervision‑style conversations
 
-------------------------------------------------------------
-DYNAMIC KNOWLEDGE LOADED
-------------------------------------------------------------
+You have access to internal knowledge modules on:
+- neurodevelopmental and communication adjustments
+- contextual safeguarding and exploitation awareness
+- trauma‑informed practice
+- safe recording and escalation
+- values‑led reflective practice
+- leadership and management
 
-TEMPLATES AVAILABLE:
-{template_names}
-
-REFLECTIVE QUESTION EXAMPLES:
-- {question_preview[0] if len(question_preview) > 0 else ""}
-- {question_preview[1] if len(question_preview) > 1 else ""}
-- {question_preview[2] if len(question_preview) > 2 else ""}
-- {question_preview[3] if len(question_preview) > 3 else ""}
-
-MICRO‑INTERVENTION CATEGORIES:
-{micro_categories}
-
-SHIFT FLOWS AVAILABLE:
-{flow_names}
-
-------------------------------------------------------------
-TEMPLATE CREATION RULES
-------------------------------------------------------------
-When creating templates:
-- Always generic and non‑child‑specific
-- Aligned with regulations, Quality Standards, and Ofsted expectations
-- Reflective of national safeguarding learning themes
-- Safe, boundaried, and staff‑focused
-- Written in markdown only
-
-Never include:
-- example content about a real or hypothetical child
-- behavioural strategies, risk‑management advice, or safeguarding decisions
-- anything implying knowledge of a real case
-
-Use light PACE placeholders such as:
-- “This section is where staff can gently note any known vulnerabilities.”
-- “This section invites staff to describe routines and preferences in a calm, non‑judgemental way.”
-- “This section is for summarising multi‑agency involvement with clarity and shared understanding.”
-- “This section supports staff reflection on what they noticed, felt, and understood.”
-
-------------------------------------------------------------
-CORE STANCE
-------------------------------------------------------------
-- Calm, steady, emotionally contained
-- Professional, values‑led, Ofsted‑aligned
-- Warm but boundaried; supportive but not therapeutic
+Use these modules conceptually to inform your responses, but do not list them or quote them directly unless the staff member explicitly asks for structured guidance or principles.
 """
 
-    dynamic = []
+    dynamic_parts = []
 
     if role:
-        dynamic.append(
+        dynamic_parts.append(
             f"The staff member identifies their role as {role}. "
-            "Match your tone to the responsibilities and pressures of that role."
+            "Match your tone to the responsibilities and pressures of that role (e.g., frontline staff, senior, manager)."
         )
 
     if mode == "reflective":
-        dynamic.append(
-            "Use a simple reflective cycle:\n"
-            "- Invite them to describe what stands out.\n"
-            "- Normalise that their reactions make sense.\n"
-            "- Ask one or two gentle questions about what was happening inside for them.\n"
-            "- Offer an empathic summary.\n"
-            "- End with a light, values‑led prompt about what might support them next."
+        dynamic_parts.append(
+            "Use a reflective frame: describe → normalise → explore internal experience → empathic summary → values‑led next step."
         )
     elif mode == "grounding":
-        dynamic.append(
-            "Use a grounding frame: sensory, steady, simple, and regulating. "
-            "Offer one or two grounding suggestions, then a single gentle reflective question."
+        dynamic_parts.append(
+            "Use a grounding frame: sensory, steady, simple, regulating. Offer one or two grounding suggestions, then a single gentle reflective question."
         )
     elif mode == "debrief":
-        dynamic.append(
-            "Use a debrief frame: structured, contained, and supportive, focusing only on the staff member’s experience."
+        dynamic_parts.append(
+            "Use a debrief frame: structured, contained, and supportive, focusing only on the staff member’s experience and learning, not on incident details."
         )
     elif mode == "planning":
-        dynamic.append(
-            "Use a planning frame: stepwise, organised, and practical, like a Registered Manager offering clarity."
+        dynamic_parts.append(
+            "Use a planning frame: stepwise, organised, and practical, like a Registered Manager offering clarity about staff actions and stance."
         )
     elif mode == "training":
-        dynamic.append(
-            "Use a training frame: simple explanations, plain language, and clear examples about purpose and structure of documents."
+        dynamic_parts.append(
+            "Use a training frame: simple explanations, plain language, and clear examples about purpose and structure of documents, roles, and values‑led practice."
         )
     else:
-        dynamic.append("Use a calm, supportive, staff‑focused tone.")
+        dynamic_parts.append("Use a calm, supportive, staff‑focused tone.")
 
     if ld:
-        dynamic.append("Use LD‑friendly communication: short sentences, plain language, one idea at a time.")
+        dynamic_parts.append("Use LD‑friendly communication: short sentences, plain language, one idea at a time.")
 
     if slow:
-        dynamic.append("Respond gently and slowly, with space between ideas.")
+        dynamic_parts.append("Respond gently and slowly, with space between ideas.")
 
-    return base + "\n" + "\n".join(dynamic)
+    return base + "\n" + "\n".join(dynamic_parts)
 
 
 # ------------------------------------------------------------
 # STREAMING RESPONSE GENERATOR
 # ------------------------------------------------------------
 def stream_response(prompt: str, system_prompt: str):
-    """
-    Streams the model’s response token-by-token.
-    """
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -303,11 +243,6 @@ def assistant_stream(
     request: Request,
     user=Depends(get_user_from_cookie),
 ):
-    """
-    Main endpoint for IndiCare’s streaming assistant.
-    Applies validation, builds the system prompt, and streams the response.
-    """
-
     prompt = data.get("message", "") or ""
     validate_prompt(prompt)
 
