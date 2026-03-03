@@ -1,3 +1,6 @@
+/* ---------------------------------------------------------
+   ROOT DESIGN TOKENS
+--------------------------------------------------------- */
 :root {
   --bg-light: #F7F8FA;
   --panel-light: #ECEEF1;
@@ -27,20 +30,88 @@ body {
   font-family: Inter, system-ui, sans-serif;
   background: var(--bg-light);
   color: var(--text-primary);
-  line-height: 1.6;
   margin: 0;
+  line-height: 1.6;
+  display: flex;
 }
 
+/* ---------------------------------------------------------
+   SIDEBAR
+--------------------------------------------------------- */
+#sidebar {
+  width: 80px;
+  background: white;
+  border-right: 1px solid var(--border-soft);
+  padding-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sidebar-item {
+  padding: var(--space-3) var(--space-2);
+  cursor: pointer;
+  text-align: center;
+  border-left: 4px solid transparent;
+}
+
+.sidebar-item.active {
+  background: var(--panel-light);
+  border-left: 4px solid var(--accent-primary);
+}
+
+/* ---------------------------------------------------------
+   TOP HEADER
+--------------------------------------------------------- */
+#topbar {
+  height: 60px;
+  background: white;
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-4);
+  position: fixed;
+  left: 80px;
+  right: 0;
+  top: 0;
+}
+
+#mode-indicator {
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------
+   MAIN CHAT AREA
+--------------------------------------------------------- */
+#main {
+  flex: 1;
+  margin-left: 80px;
+  padding-top: 60px;
+  display: flex;
+}
+
+#chat-container {
+  flex: 1;
+  padding: var(--space-4);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+#messages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+/* ---------------------------------------------------------
+   MESSAGE BUBBLES
+--------------------------------------------------------- */
 .message {
   max-width: 640px;
   padding: var(--space-3);
   border-radius: 16px;
-  margin-bottom: var(--space-4);
-}
-
-.message.assistant {
-  background: var(--panel-light);
-  margin-right: auto;
 }
 
 .message.user {
@@ -49,6 +120,14 @@ body {
   margin-left: auto;
 }
 
+.message.assistant {
+  background: var(--panel-light);
+  margin-right: auto;
+}
+
+/* ---------------------------------------------------------
+   VALUES TAGS
+--------------------------------------------------------- */
 .values-tag {
   display: inline-block;
   background: var(--values-tag);
@@ -58,16 +137,38 @@ body {
   margin-top: var(--space-2);
 }
 
-.triangle-button {
-  background: var(--panel-light);
-  padding: 8px 12px;
+/* ---------------------------------------------------------
+   INPUT AREA
+--------------------------------------------------------- */
+#input-area {
+  display: flex;
+  gap: var(--space-2);
+}
+
+#user-input {
+  flex: 1;
+  padding: var(--space-3);
   border-radius: 12px;
   border: 1px solid var(--border-soft);
+  resize: none;
+}
+
+#send-btn {
+  padding: var(--space-3) var(--space-4);
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  border-radius: 12px;
   cursor: pointer;
 }
 
-.triangle-button.active {
-  background: var(--triangle-active);
+/* ---------------------------------------------------------
+   MODE CHIPS
+--------------------------------------------------------- */
+#mode-chips {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 
 .mode-chip {
@@ -77,3 +178,22 @@ body {
   background: white;
   cursor: pointer;
 }
+
+/* ---------------------------------------------------------
+   SUPERVISION PANEL
+--------------------------------------------------------- */
+#supervision-panel {
+  width: 320px;
+  background: var(--bg-light);
+  border-left: 1px solid var(--border-soft);
+  padding: var(--space-4);
+  display: none;
+}
+
+/* ---------------------------------------------------------
+   MODE COLOUR VARIANTS
+--------------------------------------------------------- */
+body.mode-reflective { background: var(--mode-reflective); }
+body.mode-debrief { background: var(--mode-debrief); }
+body.mode-team { background: var(--mode-team); }
+body.mode-grounding { background: var(--mode-grounding); }
