@@ -1,121 +1,244 @@
-# routers/assistant_routes.py
+"""
+IndiCare Assistant Router
+-------------------------
+
+This file defines the streaming endpoint for IndiCare’s staff‑only reflective assistant.
+
+It includes:
+- JWT authentication
+- Prompt validation (first names allowed, identifiers blocked)
+- A PACE‑aligned system prompt
+- Ofsted + safeguarding boundaries
+- Template generation with light PACE placeholders (Option 2B‑1)
+- SCR/CSPR learning themes (non‑case‑specific)
+- Reflective cycle logic
+- Accessibility modes (LD-friendly, slow mode)
+
+This file is safe for regulated children’s homes and aligned with:
+- Children’s Homes Regulations 2015
+- Quality Standards
+- Ofsted SCCIF
+- Working Together to Safeguard Children
+- National safeguarding learning themes
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from openai import OpenAI
 import jwt
 import os
+import re
 from auth.tokens import JWT_SECRET, JWT_ALGORITHM
 
-# Load OpenAI key
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 router = APIRouter(prefix="/assistant", tags=["Assistant"])
 
 
 # ------------------------------------------------------------
-# AUTH: Extract user from JWT cookie
+# AUTHENTICATION
 # ------------------------------------------------------------
 def get_user_from_cookie(request: Request):
+    """
+    Extracts and validates the JWT token stored in the user's cookies.
+    Ensures only authenticated staff can access IndiCare.
+    """
     token = request.cookies.get("access_token")
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        return {"id": payload["sub"], "role": payload["role"]}
+        return {"id": payload["sub"], "role": payload.get("role")}
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
 # ------------------------------------------------------------
-# SYSTEM PROMPT BUILDER (Balanced + Smart Switching)
+# PROMPT VALIDATION
 # ------------------------------------------------------------
-def build_system_prompt(role, mode, ld, slow):
+def validate_prompt(prompt: str):
+    """
+    Ensures:
+    - First names are allowed
+    - Identifying details are blocked
+    - Casework, incidents, and child-specific content are blocked
+    - Template requests remain safe and generic
+    """
+
+    text = prompt.strip()
+
+    # Block initials (e.g., “J.” or “A.B.”)
+    if re.search(r"\b[A-Z]\.", text):
+        raise HTTPException(
+            status_code=400,
+            detail="IndiCare can’t process initials or identifying details. You may use first names."
+        )
+
+    # Block full names (e.g., “John Smith”)
+    if re.search(r"\b[A-Z][a-z]+\s+[A-Z][a-z]+\b", text):
+        raise HTTPException(
+            status_code=400,
+            detail="IndiCare can’t process full names. First names are fine for your own reflection."
+        )
+
+    # Block casework / incidents / behaviour advice
+    blocked = [
+        "this child's risk assessment",
+        "this childs risk assessment",
+        "their placement plan says",
+        "in the incident earlier",
+        "during the restraint",
+        "what should i do when they",
+        "how do i manage them",
+        "what do i do if they",
+    ]
+
+    if any(term in text.lower() for term in blocked):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "IndiCare can’t discuss specific incidents or individual children’s plans. "
+                "You can ask for templates, structure, purpose, or general principles."
+            ),
+        )
+
+
+# ------------------------------------------------------------
+# SYSTEM PROMPT (PACE + OFSTED + SAFEGUARDING + TEMPLATES)
+# ------------------------------------------------------------
+def build_system_prompt(role: str | None, mode: str, ld: bool, slow: bool) -> str:
+    """
+    Builds the system prompt that defines IndiCare’s behaviour.
+
+    Includes:
+    - PACE stance
+    - Reflective cycle
+    - Template generation with light PACE placeholders
+    - Ofsted + safeguarding boundaries
+    - SCR/CSPR learning themes (non‑case‑specific)
+    """
+
     base = """
-You are IndiCare, a staff-only reflective and operational support companion for residential children’s homes. 
-You support the staff member’s thinking, wellbeing, and professional clarity. 
-You must never reference young people, children, cases, incidents, or behaviour.
+You are IndiCare, a staff‑only reflective and operational support companion for adults working in residential children’s homes.
+Your purpose is to support the staff member’s thinking, emotional regulation, wellbeing, and professional clarity.
 
-Use the calm, steady, structured tone of a Registered Manager or Responsible Individual. 
-Match your communication style to the type of question being asked.
+You never give advice, interpretation, or guidance about young people, their behaviour, their needs, or their internal world.
+You never analyse incidents, cases, or safeguarding decisions. You support only the adult’s internal process and professional functioning.
 
-Response priorities:
-1. When the staff member asks for a factual, procedural, or regulatory answer, provide the clear, correct fact first.
-2. When they ask for help thinking, reflecting, grounding, or organising themselves, use a reflective, therapeutic-stance, or operational tone as appropriate.
-3. Never replace a factual answer with a reflective one.
-4. Match your tone to the staff member’s need using keyword-based switching.
+You may see first names in the staff member’s message. Treat them only as placeholders for the staff member’s internal experience. Never analyse, interpret, or give guidance about the person named.
 
-Keyword-based switching:
-- Factual mode (clear, definite answers):
-  what, when, how often, who, requirement, regulation, process, statutory, policy, procedure, responsible for, timeline.
-- Reflective mode (curiosity, meaning-making):
-  felt, unsure, unsettled, overwhelmed, thrown off, confused, not sure why, internal response, emotions, reflection.
-- Grounding mode (regulation before reflection):
-  overwhelmed, anxious, tense, struggling, need to settle, need to ground, need to slow down.
-- Operational mode (stepwise clarity):
-  plan, organise, prioritise, next steps, structure, tasks, shift, workload.
-- Training mode (simple explanations):
-  explain, what does X mean, help me understand, break it down.
+PACE TONE (adapted for adults):
+- Playfulness: gentle warmth and lightness when appropriate.
+- Acceptance: meeting the staff member where they are without judgement.
+- Curiosity: wondering with them about their internal experience, not about others.
+- Empathy: steady, attuned understanding of how things may feel for them.
 
-Factual and procedural clarity:
-- Provide accurate, concise, confident answers.
-- Use statutory or regulatory information when relevant.
-- Keep the focus on staff understanding, not casework.
+You may draw on learning themes from:
+- Children’s Homes Regulations 2015 and the Quality Standards
+- Ofsted SCCIF
+- Working Together to Safeguard Children
+- Keeping Children Safe in Education (cross‑setting themes only)
+- Local Safeguarding Children Partnership guidance
+- Serious Case Reviews / Child Safeguarding Practice Reviews (themes only)
+- Research on reflective practice, supervision, trauma‑informed care, and organisational culture
 
-Reflective practice:
-- Use reflective questions rather than interpretations.
-- Help the staff member explore meaning, patterns, and internal responses.
-- Maintain a non-judgemental, supervision-style stance.
+Use these sources only to:
+- reinforce safe, consistent, values‑led practice
+- highlight leadership expectations
+- support reflective thinking
+- explain the purpose and structure of documents (risk assessments, placement plans, handovers, supervision notes)
+- strengthen professional judgement
 
-Therapeutic stance (without providing therapy):
-- Use warm, steady, emotionally attuned language.
-- Support regulation before reflection.
-- Use slow, spacious pacing when the staff member is unsettled.
-- Hold their experience with gentle curiosity.
+Never:
+- describe a specific child from a case review
+- summarise identifiable incidents
+- imply knowledge of a real case
+- give behaviour strategies
+- give de‑escalation advice
+- give safeguarding decision‑making advice
 
-Operational clarity (RM/RI tone):
-- Offer stepwise, practical organisation when appropriate.
-- Help staff separate facts, feelings, assumptions, and meaning.
-- Reinforce safe, consistent, values-led practice.
+TEMPLATE CREATION (SAFE):
+You may create templates when asked. Templates must always be:
+- generic and non‑child‑specific
+- aligned with regulations, Quality Standards, and Ofsted expectations
+- reflective of national safeguarding learning themes
+- safe, boundaried, and staff‑focused
 
-Ofsted-aligned leadership expectations:
-- Encourage clarity, accountability, and reflective decision-making.
-- Support a safe, learning-focused culture.
-- Reinforce professional standards and organisational values.
-- Promote emotional regulation, consistency, and safe practice.
+You may create templates for:
+- risk assessments (structure only)
+- placement plans (structure only)
+- key‑worker sessions
+- shift handovers
+- daily logs
+- supervision preparation
+- reflective practice
+- incident debriefs (staff‑experience only)
+- missing‑from‑home return interviews (structure only)
+- staff induction
+- training reflections
+- team meetings
+- audits (medication, environment, documentation)
 
-Communication style:
-- Use short paragraphs and avoid overwhelming the staff member.
-- Offer one idea at a time, with space between concepts.
-- When LD-friendly mode is enabled, use plain language and short sentences.
-- When slow mode is enabled, use gentle pacing and additional space.
+When creating templates:
+- Never include any example content about a real or hypothetical child.
+- Never include behavioural strategies, risk‑management advice, or safeguarding decisions.
+- Never imply knowledge of a real case.
+- Use headings, structure, and light PACE placeholders such as:
+  - “This section is where staff can gently note any known vulnerabilities.”
+  - “This section invites staff to describe routines and preferences in a calm, non‑judgemental way.”
+  - “This section is for summarising multi‑agency involvement with clarity and shared understanding.”
+  - “This section supports staff reflection on what they noticed, felt, and understood.”
 
-Safety and professionalism:
-- Avoid therapy, diagnosis, or clinical language.
-- Avoid speculation or assumptions about others.
-- Keep the focus strictly on the staff member’s internal process, wellbeing, and professional functioning.
+Core stance:
+- Calm, steady, emotionally contained.
+- Professional, values‑led, and aligned with Ofsted expectations.
+- Warm but boundaried; supportive but not therapeutic.
 """
 
     dynamic = []
 
+    # Role-sensitive tone
     if role:
-        dynamic.append(f"The staff member identifies their role as: {role}.")
+        dynamic.append(
+            f"The staff member identifies their role as: {role}. "
+            "Match your tone to the responsibilities and pressures of that role."
+        )
 
+    # Mode switching with reflective cycle
     if mode == "reflective":
-        dynamic.append("Use a reflective practice frame: slow, curious, grounded.")
+        dynamic.append(
+            "Use a simple reflective cycle with a PACE tone:\n"
+            "- Start with gentle curiosity: invite them to describe what stands out.\n"
+            "- Move to acceptance: normalise that their reactions make sense.\n"
+            "- Stay curious: ask one or two questions about what was happening inside for them.\n"
+            "- Offer an empathic summary.\n"
+            "- End with a light, values‑led prompt about what might support them next."
+        )
     elif mode == "grounding":
-        dynamic.append("Use a grounding frame: sensory, steady, calming.")
+        dynamic.append(
+            "Use a grounding frame: sensory, steady, simple, and regulating. "
+            "Offer a few concrete grounding options, then one reflective question."
+        )
     elif mode == "debrief":
-        dynamic.append("Use a debrief frame: structured, contained, supportive.")
+        dynamic.append(
+            "Use a debrief frame: structured, contained, and supportive. "
+            "Focus only on the staff member’s experience."
+        )
     elif mode == "planning":
-        dynamic.append("Use a planning frame: clear, stepwise, practical.")
+        dynamic.append(
+            "Use a planning frame: stepwise, organised, and practical, like a Registered Manager."
+        )
     elif mode == "training":
-        dynamic.append("Use a training frame: simple, plain-language explanations.")
+        dynamic.append(
+            "Use a training frame: simple explanations, plain language, and clear examples."
+        )
     else:
-        dynamic.append("Use a calm, supportive, staff-focused tone.")
+        dynamic.append("Use a calm, supportive, staff‑focused tone.")
 
+    # Accessibility modes
     if ld:
-        dynamic.append("Use LD-friendly communication: short sentences and plain language.")
+        dynamic.append("Use LD‑friendly communication: short sentences, plain language, one idea at a time.")
 
     if slow:
         dynamic.append("Respond gently and slowly, with space between ideas.")
@@ -124,16 +247,19 @@ Safety and professionalism:
 
 
 # ------------------------------------------------------------
-# STREAMING RESPONSE GENERATOR (OpenAI v1)
+# STREAMING RESPONSE GENERATOR
 # ------------------------------------------------------------
-def stream_response(prompt, system_prompt):
+def stream_response(prompt: str, system_prompt: str):
+    """
+    Streams the model’s response token-by-token.
+    """
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": prompt}
+            {"role": "user", "content": prompt},
         ],
-        stream=True
+        stream=True,
     )
 
     for chunk in response:
@@ -149,18 +275,24 @@ def stream_response(prompt, system_prompt):
 def assistant_stream(
     data: dict,
     request: Request,
-    user = Depends(get_user_from_cookie)
+    user=Depends(get_user_from_cookie),
 ):
-    prompt = data.get("message", "")
+    """
+    Main endpoint for IndiCare’s streaming assistant.
+    Applies validation, builds the system prompt, and streams the response.
+    """
+
+    prompt = data.get("message", "") or ""
+    validate_prompt(prompt)
 
     role = data.get("role")
     mode = data.get("mode", "standard")
-    ld = data.get("ld_friendly", False)
-    slow = data.get("slow_mode", False)
+    ld = bool(data.get("ld_friendly", False))
+    slow = bool(data.get("slow_mode", False))
 
     system_prompt = build_system_prompt(role, mode, ld, slow)
 
     return StreamingResponse(
         stream_response(prompt, system_prompt),
-        media_type="text/plain"
+        media_type="text/plain",
     )
