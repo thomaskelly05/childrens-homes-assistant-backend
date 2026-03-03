@@ -13,11 +13,25 @@ from routers.account_routes import router as account_router
 from routers.assistant_routes import router as assistant_router
 from routers.dashboard_routes import router as dashboard_router
 
+# Knowledge pack validator
+from assistant.knowledge_validator import validate_all_knowledge
+
 # ------------------------------------------------------------
 # APP INITIALISATION
 # ------------------------------------------------------------
 
 app = FastAPI(title="IndiCare Staff Backend")
+
+# ------------------------------------------------------------
+# KNOWLEDGE PACK VALIDATION (FAIL FAST IF BROKEN)
+# ------------------------------------------------------------
+
+try:
+    validate_all_knowledge()
+except Exception as e:
+    print("\n❌ IndiCare Knowledge Pack validation failed:\n")
+    print(str(e))
+    raise
 
 # ------------------------------------------------------------
 # CORS CONFIGURATION (STRICT — REQUIRED FOR COOKIES)
@@ -28,11 +42,11 @@ app.add_middleware(
     allow_origins=[
         "https://www.indicare.co.uk",
         "https://indicare.co.uk",
-        "https://childrens-homes-assistant-frontend.onrender.com",  # if used
-        "http://localhost:5173",  # local dev
-        "http://localhost:3000",  # local dev
+        "https://childrens-homes-assistant-frontend.onrender.com",
+        "http://localhost:5173",
+        "http://localhost:3000",
     ],
-    allow_credentials=True,   # required for JWT cookies
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
