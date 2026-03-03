@@ -1,7 +1,7 @@
 // ---------------------------------------------------------
 // MODE + UI STATE
 // ---------------------------------------------------------
-let currentMode = "reflective"; // default
+let currentMode = "reflective";
 let ldFriendly = false;
 let slowMode = false;
 
@@ -36,26 +36,17 @@ function switchMode(mode) {
     currentMode = mode;
     modeIndicator.textContent = mode.charAt(0).toUpperCase() + mode.slice(1) + " Mode";
 
-    document.body.className = ""; // reset
+    document.body.className = "";
     document.body.classList.add(`mode-${mode}`);
 
-    if (mode === "supervision") {
-        supervisionPanel.style.display = "block";
-    } else {
-        supervisionPanel.style.display = "none";
-    }
+    supervisionPanel.style.display = mode === "supervision" ? "block" : "none";
 }
 
 // ---------------------------------------------------------
 // TOGGLES
 // ---------------------------------------------------------
-ldToggle.addEventListener("change", () => {
-    ldFriendly = ldToggle.checked;
-});
-
-slowToggle.addEventListener("change", () => {
-    slowMode = slowToggle.checked;
-});
+ldToggle.addEventListener("change", () => ldFriendly = ldToggle.checked);
+slowToggle.addEventListener("change", () => slowMode = slowToggle.checked);
 
 // ---------------------------------------------------------
 // MESSAGE HANDLING
@@ -68,18 +59,10 @@ inputEl.addEventListener("keydown", (e) => {
     }
 });
 
-function appendMessage(text, type, valuesTag = null) {
+function appendMessage(text, type) {
     const div = document.createElement("div");
     div.className = `message ${type}`;
     div.textContent = text;
-
-    if (valuesTag) {
-        const tag = document.createElement("span");
-        tag.className = "values-tag";
-        tag.textContent = valuesTag;
-        div.appendChild(document.createElement("br"));
-        div.appendChild(tag);
-    }
 
     messagesEl.appendChild(div);
     messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -96,7 +79,7 @@ function sendMessage() {
 }
 
 // ---------------------------------------------------------
-// STREAMING FROM BACKEND
+// STREAMING
 // ---------------------------------------------------------
 function streamAssistantResponse(userMessage) {
     const aiDiv = document.createElement("div");
@@ -123,7 +106,9 @@ function streamAssistantResponse(userMessage) {
         function read() {
             reader.read().then(({ done, value }) => {
                 if (done) return;
-                aiDiv.textContent += decoder.decode(value);
+                const chunk = decoder.decode(value);
+                aiDiv.textContent += chunk;
+                analyseForSummary(chunk);
                 messagesEl.scrollTop = messagesEl.scrollHeight;
                 read();
             });
@@ -137,11 +122,9 @@ function streamAssistantResponse(userMessage) {
 }
 
 // ---------------------------------------------------------
-// MODE CHIPS (Reflective prompts)
+// MODE CHIPS
 // ---------------------------------------------------------
-const chips = document.querySelectorAll(".mode-chip");
-
-chips.forEach(chip => {
+document.querySelectorAll(".mode-chip").forEach(chip => {
     chip.addEventListener("click", () => {
         inputEl.value = chip.textContent;
         inputEl.focus();
@@ -149,8 +132,30 @@ chips.forEach(chip => {
 });
 
 // ---------------------------------------------------------
-// SUPERVISION SUMMARY BUILDER
+// SUPERVISION SUMMARY AUTO-FILL
 // ---------------------------------------------------------
+function analyseForSummary(text) {
+    const lower = text.toLowerCase();
+
+    if (lower.includes("stood out") || lower.includes("stayed with you"))
+        updateSupervisionSummary("stood_out", text);
+
+    if (lower.includes("inside for you") || lower.includes("internal experience"))
+        updateSupervisionSummary("internal", text);
+
+    if (lower.includes("value"))
+        updateSupervisionSummary("values", text);
+
+    if (lower.includes("felt hard") || lower.includes("challenging"))
+        updateSupervisionSummary("hard", text);
+
+    if (lower.includes("support"))
+        updateSupervisionSummary("support", text);
+
+    if (lower.includes("strengthen") || lower.includes("next time"))
+        updateSupervisionSummary("strengthen", text);
+}
+
 function updateSupervisionSummary(type, text) {
     const map = {
         stood_out: "sum-stood-out",
