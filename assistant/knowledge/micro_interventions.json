@@ -1,29 +1,15 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>PACE Micro-Interventions</title>
-<style>
-body { font-family: Arial, sans-serif; padding: 40px; max-width: 900px; margin: auto; }
-h2 { margin-top: 30px; }
-</style>
-</head>
-<body>
-
-<h1>PACE Micro‑Interventions</h1>
-
-<h2>Grounding</h2>
-<p>Notice your feet on the floor and take one slow breath.</p>
-<p>Name three things you can see, two you can feel, one you can hear.</p>
-
-<h2>Acceptance</h2>
-<p>It makes sense you’d feel this way given the work you do.</p>
-
-<h2>Curiosity</h2>
-<p>If you were gently curious about this feeling, what might it be pointing to?</p>
-
-<h2>Empathy</h2>
-<p>What would you say to a colleague in your position?</p>
-
-</body>
-</html>
+{
+  "grounding": [
+    "Notice your feet on the floor and take one slow breath.",
+    "Name three things you can see, two you can feel, one you can hear."
+  ],
+  "acceptance": [
+    "It makes sense you’d feel this way given the work you do."
+  ],
+  "curiosity": [
+    "If you were gently curious about this feeling, what might it be pointing to?"
+  ],
+  "empathy": [
+    "What would you say to a colleague in your position?"
+  ]
+}
