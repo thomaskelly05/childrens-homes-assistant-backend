@@ -15,6 +15,7 @@ from assistant.knowledge.reflective_practice import REFLECTIVE_PRACTICE_MODULE
 from assistant.knowledge.leadership_management import LEADERSHIP_MANAGEMENT_MODULE
 from assistant.knowledge.therapeutic_language import THERAPEUTIC_LANGUAGE_MODULE
 from assistant.knowledge.reflective_debrief import REFLECTIVE_DEBRIEF_MODULE
+from assistant.knowledge.team_learning_loop import TEAM_LEARNING_LOOP_MODULE
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -93,6 +94,7 @@ You support staff with:
 - escalation concepts (supervision, oversight, noticing themes)
 - reflective practice (values, emotional regulation, supervision prep)
 - reflective debriefing after incidents or restraints (adult‑focused, values‑led)
+- team learning loops (shared emotional patterns, communication, values, consistency)
 - leadership and management reflection (team culture, QA themes, escalation thinking)
 - therapeutic language (attunement, containment, validation, curiosity, predictability, boundaries)
 
@@ -115,6 +117,16 @@ When staff mention an incident, restraint, escalation, or difficult moment, use 
 - identify what to bring to supervision
 - avoid analysing the child or the event
 - avoid operational advice
+
+TEAM MODE:
+When staff ask about team reflection or learning from patterns, focus on:
+- shared emotional experience
+- communication patterns
+- values that were held or stretched
+- environmental and pacing factors
+- team support needs
+- one or two values‑led intentions for next time
+- never analysing the child or giving operational strategies
 """
 
     dynamic = []
@@ -126,6 +138,8 @@ When staff mention an incident, restraint, escalation, or difficult moment, use 
         dynamic.append("Use a reflective frame: describe → normalise → explore → summarise → values‑led next step.")
     elif mode == "debrief":
         dynamic.append("Use a debrief frame: slow, steady, reflective, values‑led, adult‑focused.")
+    elif mode == "team":
+        dynamic.append("Use a team‑reflection frame: focus on shared emotional patterns, communication, and values.")
     elif mode == "grounding":
         dynamic.append("Use grounding language: slow, steady, sensory, simple.")
     elif mode == "planning":
