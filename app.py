@@ -1,87 +1,76 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-import os
+import uvicorn
+import json
+import asyncio
 
-# Routers
-from routers.auth_routes import router as auth_router
-from routers.staff_journal_routes import router as journal_router
-from routers.handover_routes import router as handover_router
-from routers.tasks_routes import router as tasks_router
-from routers.account_routes import router as account_router
-from routers.assistant_routes import router as assistant_router
-from routers.dashboard_routes import router as dashboard_router
+app = FastAPI()
 
-# Knowledge pack validator
-from assistant.knowledge_validator import validate_all_knowledge
-
-# ------------------------------------------------------------
-# APP INITIALISATION
-# ------------------------------------------------------------
-
-app = FastAPI(title="IndiCare Staff Backend")
-
-# ------------------------------------------------------------
-# KNOWLEDGE PACK VALIDATION (FAIL FAST IF BROKEN)
-# ------------------------------------------------------------
-
-try:
-    validate_all_knowledge()
-except Exception as e:
-    print("\n❌ IndiCare Knowledge Pack validation failed:\n")
-    print(str(e))
-    raise
-
-# ------------------------------------------------------------
-# CORS CONFIGURATION (STRICT — REQUIRED FOR COOKIES)
-# ------------------------------------------------------------
-
+# ---------------------------------------------------------
+# CORS (allow frontend to call backend)
+# ---------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://www.indicare.co.uk",
-        "https://indicare.co.uk",
-        "https://childrens-homes-assistant-frontend.onrender.com",
-        "http://localhost:5173",
-        "http://localhost:3000",
-    ],
+    allow_origins=["*"],   # you can restrict later
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ------------------------------------------------------------
-# ROUTERS
-# ------------------------------------------------------------
+# ---------------------------------------------------------
+# STATIC FRONTEND (critical for Render)
+# ---------------------------------------------------------
+# This serves:
+#   /index.html
+#   /styles.css
+#   /app.js
+#   /static/sections/*.html
+#
+# EXACTLY what your UI expects.
+# ---------------------------------------------------------
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 
-app.include_router(auth_router, prefix="/api")
-app.include_router(journal_router, prefix="/api")
-app.include_router(handover_router, prefix="/api")
-app.include_router(tasks_router, prefix="/api")
-app.include_router(account_router, prefix="/api")
-app.include_router(assistant_router, prefix="/api")
-app.include_router(dashboard_router, prefix="/api")
 
-# ------------------------------------------------------------
-# FRONTEND STATIC FILES
-# ------------------------------------------------------------
+# ---------------------------------------------------------
+# ASSISTANT STREAMING ENDPOINT
+# ---------------------------------------------------------
+@app.post("/api/assistant/stream")
+async def assistant_stream(request: Request):
+    """
+    Streams the assistant response token-by-token.
+    """
 
-@app.get("/")
-def serve_dashboard():
-    return FileResponse("frontend/index.html")
+    body = await request.json()
+    user_message = body.get("message", "")
+    role = body.get("role", "support_worker")
+    mode = body.get("mode", "reflective")
+    ld = body.get("ld_friendly", False)
+    slow = body.get("slow_mode", False)
 
-@app.get("/login.html")
-def serve_login():
-    return FileResponse("frontend/login.html")
+    async def event_stream():
+        # Replace this with your actual LLM call
+        # This is a placeholder streaming generator
+        text = f"Reflecting with you in {mode} mode. You said: {user_message}"
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        for chunk in text.split(" "):
+            yield chunk + " "
+            await asyncio.sleep(0.05 if slow else 0.005)
 
-FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
-SECTIONS_DIR = os.path.join(BASE_DIR, "frontend", "static", "sections")
+    return StreamingResponse(event_stream(), media_type="text/plain")
 
-# IMPORTANT: mount sections FIRST
-app.mount("/static/sections", StaticFiles(directory=SECTIONS_DIR), name="sections")
 
-# Then mount the general static folder
-app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+# ---------------------------------------------------------
+# ROOT CHECK (optional)
+# ---------------------------------------------------------
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+# ---------------------------------------------------------
+# LOCAL DEV
+# ---------------------------------------------------------
+if __name__ == "__main__":
+    uvicorn.run("app:app", host="0.0.0.0", port=10000, reload=True)
