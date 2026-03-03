@@ -1,115 +1,122 @@
-// -----------------------------
-// NAVIGATION
-// -----------------------------
-const navItems = document.querySelectorAll(".nav-item[data-section]");
-const contentEl = document.getElementById("content");
+// ---------------------------------------------------------
+// MODE + UI STATE
+// ---------------------------------------------------------
+let currentMode = "reflective"; // default
+let ldFriendly = false;
+let slowMode = false;
 
-navItems.forEach(btn => {
-    btn.addEventListener("click", () => {
-        const section = btn.dataset.section;
+// DOM references
+const sidebarItems = document.querySelectorAll("#sidebar .sidebar-item");
+const modeIndicator = document.getElementById("mode-indicator");
+const messagesEl = document.getElementById("messages");
+const inputEl = document.getElementById("user-input");
+const sendBtn = document.getElementById("send-btn");
+const supervisionPanel = document.getElementById("supervision-panel");
 
-        // Assistant is special: open drawer, don't load section
-        if (section === "assistant") {
-            openAssistant();
-            return;
-        }
+// Toggles
+const ldToggle = document.getElementById("ld-toggle");
+const slowToggle = document.getElementById("slow-toggle");
 
-        navItems.forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        loadSection(section);
+// ---------------------------------------------------------
+// SIDEBAR MODE SWITCHING
+// ---------------------------------------------------------
+sidebarItems.forEach(item => {
+    item.addEventListener("click", () => {
+        const mode = item.dataset.mode;
+        if (!mode) return;
+
+        sidebarItems.forEach(i => i.classList.remove("active"));
+        item.classList.add("active");
+
+        switchMode(mode);
     });
 });
 
-function loadSection(section) {
-    fetch(`/static/sections/${section}.html`)
-        .then(res => res.text())
-        .then(html => {
-            contentEl.innerHTML = html;
-            initSection(section);
-        })
-        .catch(() => {
-            contentEl.innerHTML = "<p>Could not load this section.</p>";
-        });
+function switchMode(mode) {
+    currentMode = mode;
+    modeIndicator.textContent = mode.charAt(0).toUpperCase() + mode.slice(1) + " Mode";
+
+    document.body.className = ""; // reset
+    document.body.classList.add(`mode-${mode}`);
+
+    if (mode === "supervision") {
+        supervisionPanel.style.display = "block";
+    } else {
+        supervisionPanel.style.display = "none";
+    }
 }
 
-// -----------------------------
-// ASSISTANT DRAWER
-// -----------------------------
-const assistantPanel = document.getElementById("assistant-panel");
-const assistantOverlay = document.getElementById("assistant-overlay");
-const assistantClose = document.getElementById("assistant-close");
-
-function openAssistant() {
-    assistantPanel.classList.add("visible");
-    assistantOverlay.classList.add("visible");
-}
-
-function closeAssistant() {
-    assistantPanel.classList.remove("visible");
-    assistantOverlay.classList.remove("visible");
-}
-
-assistantOverlay.addEventListener("click", closeAssistant);
-assistantClose.addEventListener("click", closeAssistant);
-
-// -----------------------------
-// ASSISTANT STREAMING
-// -----------------------------
-const messagesEl = document.getElementById("assistant-messages");
-const inputEl = document.getElementById("assistant-input");
-const sendBtn = document.getElementById("assistant-send");
-
-const roleEl = document.getElementById("assistant-role");
-const modeEl = document.getElementById("assistant-mode");
-const ldEl = document.getElementById("assistant-ld");
-const slowEl = document.getElementById("assistant-slow");
-
-sendBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    sendAssistantMessage();
+// ---------------------------------------------------------
+// TOGGLES
+// ---------------------------------------------------------
+ldToggle.addEventListener("change", () => {
+    ldFriendly = ldToggle.checked;
 });
 
+slowToggle.addEventListener("change", () => {
+    slowMode = slowToggle.checked;
+});
+
+// ---------------------------------------------------------
+// MESSAGE HANDLING
+// ---------------------------------------------------------
+sendBtn.addEventListener("click", sendMessage);
 inputEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        sendAssistantMessage();
+        sendMessage();
     }
 });
 
-function appendMessage(text, type) {
+function appendMessage(text, type, valuesTag = null) {
     const div = document.createElement("div");
-    div.className = `assistant-msg assistant-msg-${type}`;
+    div.className = `message ${type}`;
     div.textContent = text;
+
+    if (valuesTag) {
+        const tag = document.createElement("span");
+        tag.className = "values-tag";
+        tag.textContent = valuesTag;
+        div.appendChild(document.createElement("br"));
+        div.appendChild(tag);
+    }
+
     messagesEl.appendChild(div);
     messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-function sendAssistantMessage() {
+function sendMessage() {
     const text = inputEl.value.trim();
     if (!text) return;
 
     appendMessage(text, "user");
     inputEl.value = "";
 
+    streamAssistantResponse(text);
+}
+
+// ---------------------------------------------------------
+// STREAMING FROM BACKEND
+// ---------------------------------------------------------
+function streamAssistantResponse(userMessage) {
+    const aiDiv = document.createElement("div");
+    aiDiv.className = "message assistant";
+    messagesEl.appendChild(aiDiv);
+
     const payload = {
-        message: text,
-        role: roleEl.value,
-        mode: modeEl.value,
-        ld_friendly: ldEl.checked,
-        slow_mode: slowEl.checked
+        message: userMessage,
+        role: "support_worker",
+        mode: currentMode,
+        ld_friendly: ldFriendly,
+        slow_mode: slowMode
     };
 
-    const aiDiv = document.createElement("div");
-    aiDiv.className = "assistant-msg assistant-msg-ai";
-    messagesEl.appendChild(aiDiv);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-
-    // FIXED ROUTE
     fetch("/api/assistant/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
-    }).then(res => {
+    })
+    .then(res => {
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
 
@@ -123,125 +130,37 @@ function sendAssistantMessage() {
         }
 
         read();
-    }).catch(() => {
-        aiDiv.textContent += "\n\n(There was a problem reaching the assistant.)";
+    })
+    .catch(() => {
+        aiDiv.textContent += "\n(There was a problem reaching IndiCare.)";
     });
 }
 
-// -----------------------------
-// SECTION INITIALISERS
-// -----------------------------
-function initSection(section) {
-    if (section === "journal") initJournal();
-    if (section === "tasks") initTasks();
-    if (section === "handover") initHandover();
-    if (section === "account") initAccount();
-}
+// ---------------------------------------------------------
+// MODE CHIPS (Reflective prompts)
+// ---------------------------------------------------------
+const chips = document.querySelectorAll(".mode-chip");
 
-// Journal
-function initJournal() {
-    const textarea = document.getElementById("journal-text");
-    const saveBtn = document.getElementById("save-journal");
-
-    if (!textarea || !saveBtn) return;
-
-    textarea.value = localStorage.getItem("journal") || "";
-
-    saveBtn.addEventListener("click", () => {
-        localStorage.setItem("journal", textarea.value);
-        alert("Journal saved.");
+chips.forEach(chip => {
+    chip.addEventListener("click", () => {
+        inputEl.value = chip.textContent;
+        inputEl.focus();
     });
+});
+
+// ---------------------------------------------------------
+// SUPERVISION SUMMARY BUILDER
+// ---------------------------------------------------------
+function updateSupervisionSummary(type, text) {
+    const map = {
+        stood_out: "sum-stood-out",
+        internal: "sum-internal",
+        values: "sum-values",
+        hard: "sum-hard",
+        support: "sum-support",
+        strengthen: "sum-strengthen"
+    };
+
+    const el = document.getElementById(map[type]);
+    if (el) el.textContent = text;
 }
-
-// Tasks
-let tasks = [];
-
-function initTasks() {
-    const input = document.getElementById("new-task");
-    const addBtn = document.getElementById("add-task");
-    const list = document.getElementById("task-list");
-
-    if (!input || !addBtn || !list) return;
-
-    tasks = JSON.parse(localStorage.getItem("tasks") || "[]");
-    renderTasks(list);
-
-    addBtn.addEventListener("click", () => {
-        const text = input.value.trim();
-        if (!text) return;
-        tasks.push({ text, done: false });
-        localStorage.setItem("tasks", JSON.stringify(tasks));
-        input.value = "";
-        renderTasks(list);
-    });
-
-    list.addEventListener("click", (e) => {
-        if (e.target.tagName === "INPUT") {
-            const index = e.target.dataset.index;
-            tasks[index].done = e.target.checked;
-            localStorage.setItem("tasks", JSON.stringify(tasks));
-            renderTasks(list);
-        }
-    });
-}
-
-function renderTasks(list) {
-    list.innerHTML = "";
-    tasks.forEach((t, i) => {
-        const li = document.createElement("li");
-        li.innerHTML = `
-            <label>
-                <input type="checkbox" data-index="${i}" ${t.done ? "checked" : ""} />
-                ${t.text}
-            </label>
-        `;
-        list.appendChild(li);
-    });
-}
-
-// Handover
-function initHandover() {
-    const textarea = document.getElementById("handover-text");
-    const saveBtn = document.getElementById("save-handover");
-
-    if (!textarea || !saveBtn) return;
-
-    textarea.value = localStorage.getItem("handover") || "";
-
-    saveBtn.addEventListener("click", () => {
-        localStorage.setItem("handover", textarea.value);
-        alert("Handover notes saved.");
-    });
-}
-
-// Account
-function initAccount() {
-    const emailSpan = document.getElementById("user-email");
-    const resetBtn = document.getElementById("reset-password");
-
-    if (emailSpan) {
-        emailSpan.textContent = localStorage.getItem("email") || "unknown";
-    }
-
-    if (resetBtn) {
-        resetBtn.addEventListener("click", () => {
-            alert("Password reset link sent (placeholder).");
-        });
-    }
-}
-
-// -----------------------------
-// LOGOUT
-// -----------------------------
-const logoutBtn = document.getElementById("logout-btn");
-if (logoutBtn) {
-    logoutBtn.addEventListener("click", () => {
-        document.cookie = "access_token=; Max-Age=0; path=/;";
-        window.location.href = "/login.html";
-    });
-}
-
-// -----------------------------
-// INITIAL LOAD
-// -----------------------------
-loadSection("home");
