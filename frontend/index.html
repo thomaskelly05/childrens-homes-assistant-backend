@@ -3,123 +3,75 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>IndiCare Staff Dashboard</title>
-
-    <!-- Correct static path -->
-    <link rel="stylesheet" href="/static/styles.css" />
+    <title>IndiCare</title>
+    <link rel="stylesheet" href="styles.css" />
 </head>
 
 <body>
 
-    <div class="app-shell">
+    <!-- Sidebar -->
+    <aside id="sidebar">
+        <div class="sidebar-item" data-mode="reflective">Reflective</div>
+        <div class="sidebar-item" data-mode="debrief">Debrief</div>
+        <div class="sidebar-item" data-mode="team">Team</div>
+        <div class="sidebar-item" data-mode="grounding">Grounding</div>
+        <div class="sidebar-item" data-mode="supervision">Supervision</div>
+        <div class="sidebar-item" data-mode="settings">Settings</div>
+    </aside>
 
-        <!-- SIDEBAR -->
-        <aside class="sidebar">
-            <div class="sidebar-logo">
-                <span class="logo-dot"></span>
-                <span class="logo-text">IndiCare</span>
+    <!-- Main container -->
+    <div id="main">
+
+        <!-- Header -->
+        <header id="topbar">
+            <div id="mode-indicator">Reflective Mode</div>
+
+            <div id="toggles">
+                <label class="toggle">
+                    <input type="checkbox" id="ld-toggle" />
+                    <span>LD-friendly</span>
+                </label>
+
+                <label class="toggle">
+                    <input type="checkbox" id="slow-toggle" />
+                    <span>Slow mode</span>
+                </label>
+            </div>
+        </header>
+
+        <!-- Chat area -->
+        <section id="chat-container">
+            <div id="messages"></div>
+
+            <!-- Mode chips -->
+            <div id="mode-chips">
+                <button class="mode-chip" data-chip="what-stood-out">What stayed with you?</button>
+                <button class="mode-chip" data-chip="values">What value were you holding?</button>
+                <button class="mode-chip" data-chip="hardest">What felt hardest?</button>
             </div>
 
-            <nav class="sidebar-nav">
-                <button class="nav-item active" data-section="home">
-                    <span class="nav-icon">🏠</span>
-                    <span class="nav-label">Home</span>
-                </button>
+            <!-- Input area -->
+            <div id="input-area">
+                <textarea id="user-input" placeholder="Type your reflection…"></textarea>
+                <button id="send-btn">Send</button>
+            </div>
+        </section>
 
-                <button class="nav-item" data-section="assistant" id="open-assistant">
-                    <span class="nav-icon">💬</span>
-                    <span class="nav-label">Assistant</span>
-                </button>
-
-                <button class="nav-item" data-section="journal">
-                    <span class="nav-icon">📝</span>
-                    <span class="nav-label">Journal</span>
-                </button>
-
-                <button class="nav-item" data-section="handover">
-                    <span class="nav-icon">🔄</span>
-                    <span class="nav-label">Handover</span>
-                </button>
-
-                <button class="nav-item" data-section="tasks">
-                    <span class="nav-icon">✅</span>
-                    <span class="nav-label">Tasks</span>
-                </button>
-            </nav>
-
-            <div class="sidebar-footer">
-                <button class="nav-item" data-section="account">
-                    <span class="nav-icon">👤</span>
-                    <span class="nav-label">Account</span>
-                </button>
-
-                <button class="nav-item" id="logout-btn">
-                    <span class="nav-icon">🚪</span>
-                    <span class="nav-label">Logout</span>
-                </button>
+        <!-- Supervision summary panel -->
+        <aside id="supervision-panel">
+            <h3>Supervision Summary</h3>
+            <div id="summary-content">
+                <p><strong>What stood out:</strong> <span id="sum-stood-out"></span></p>
+                <p><strong>Internal experience:</strong> <span id="sum-internal"></span></p>
+                <p><strong>Values:</strong> <span id="sum-values"></span></p>
+                <p><strong>What felt hard:</strong> <span id="sum-hard"></span></p>
+                <p><strong>Support needed:</strong> <span id="sum-support"></span></p>
+                <p><strong>What to strengthen:</strong> <span id="sum-strengthen"></span></p>
             </div>
         </aside>
 
-        <!-- MAIN CONTENT -->
-        <main id="content" class="main-content"></main>
     </div>
 
-    <!-- ASSISTANT OVERLAY -->
-    <div id="assistant-overlay" class="assistant-overlay"></div>
-
-    <!-- ASSISTANT PANEL -->
-    <div id="assistant-panel" class="assistant-panel">
-
-        <div class="assistant-header">
-            <h2>IndiCare Assistant</h2>
-            <button id="assistant-close" class="assistant-close">×</button>
-        </div>
-
-        <div class="assistant-controls">
-
-            <label>
-                Role:
-                <select id="assistant-role">
-                    <option value="Residential Support Worker">RSW</option>
-                    <option value="Senior Support Worker">Senior</option>
-                    <option value="Manager">Manager</option>
-                </select>
-            </label>
-
-            <label>
-                Mode:
-                <select id="assistant-mode">
-                    <option value="reflective">Reflective</option>
-                    <option value="grounding">Grounding</option>
-                    <option value="debrief">Debrief</option>
-                    <option value="planning">Planning</option>
-                    <option value="training">Training</option>
-                </select>
-            </label>
-
-            <label class="inline-label">
-                <input type="checkbox" id="assistant-ld" />
-                LD‑friendly
-            </label>
-
-            <label class="inline-label">
-                <input type="checkbox" id="assistant-slow" />
-                Slow mode
-            </label>
-
-        </div>
-
-        <div id="assistant-messages" class="assistant-messages"></div>
-
-        <div class="assistant-input-row">
-            <textarea id="assistant-input" placeholder="Type your question or reflection…"></textarea>
-            <button id="assistant-send" class="primary">Send</button>
-        </div>
-
-    </div>
-
-    <!-- Correct static path -->
-    <script src="/static/app.js"></script>
-
+    <script src="app.js"></script>
 </body>
 </html>
