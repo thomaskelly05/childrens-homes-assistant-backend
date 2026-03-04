@@ -1,215 +1,349 @@
-/* ---------------------------------------------------------
-   ROOT TOKENS
---------------------------------------------------------- */
 :root {
-  --reflective-bg: linear-gradient(135deg, #DDE7F2, #F7F8FA);
-  --debrief-bg: linear-gradient(135deg, #F3EDE4, #FAF8F5);
-  --team-bg: linear-gradient(135deg, #E4F2E8, #F7FAF8);
-  --grounding-bg: linear-gradient(135deg, #EDE7F6, #F8F6FB);
+  --bg-deep: #0f1a2a;
+  --white: #ffffff;
+  --white-soft: #f8fafc;
+  --blue-soft: #f2f6fc;
+  --text-dark: #111827;
+  --text-muted: #6b7280;
+  --accent: #4a6fa5;
+  --border-subtle: #e5e7eb;
+  --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.35);
 
-  --panel: rgba(255, 255, 255, 0.65);
-  --border: rgba(0, 0, 0, 0.08);
-  --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-
-  --text-primary: #1E1F22;
-  --text-secondary: #5A616B;
-
-  --accent: #4A6FA5;
-
+  --radius-subtle: 10px;
   --space-1: 6px;
-  --space-2: 12px;
-  --space-3: 18px;
+  --space-2: 10px;
+  --space-3: 16px;
   --space-4: 24px;
   --space-5: 32px;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
-  font-family: Inter, system-ui, sans-serif;
-  color: var(--text-primary);
-  background: var(--reflective-bg);
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-dark);
   height: 100vh;
   overflow: hidden;
 }
 
-/* ---------------------------------------------------------
-   SIDEBAR (ICON-ONLY)
---------------------------------------------------------- */
+/* Sidebar */
 #sidebar {
-  width: 60px;
-  height: 100vh;
   position: fixed;
   left: 0;
   top: 0;
-  background: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(12px);
-  border-right: 1px solid var(--border);
+  bottom: 0;
+  width: 64px;
+  background: #0b1420;
   display: flex;
   flex-direction: column;
+  align-items: center;
   padding-top: var(--space-4);
   gap: var(--space-2);
 }
 
 .sidebar-item {
-  height: 48px;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #e5e7eb;
   cursor: pointer;
-  border-left: 4px solid transparent;
-  transition: 0.2s;
+  transition: background 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-1px);
 }
 
 .sidebar-item.active {
-  border-left: 4px solid var(--accent);
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
-.icon {
-  font-size: 20px;
-}
-
-/* ---------------------------------------------------------
-   FLOATING HEADER
---------------------------------------------------------- */
+/* Topbar */
 #topbar {
   position: fixed;
-  left: 60px;
+  left: 64px;
   right: 0;
   top: 0;
   height: 64px;
-  background: var(--panel);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
+  background: var(--white);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--space-4);
-  box-shadow: var(--shadow);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.08);
   z-index: 10;
 }
 
-/* ---------------------------------------------------------
-   MAIN LAYOUT
---------------------------------------------------------- */
+.topbar-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.brand {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+
+#mode-indicator {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.control-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+#role-select {
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  padding: 4px 10px;
+  font-size: 13px;
+  background: var(--white-soft);
+}
+
+/* Toggles */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.toggle input {
+  accent-color: var(--accent);
+}
+
+.toggle-label {
+  font-size: 13px;
+}
+
+/* Main layout */
 #main {
+  position: relative;
   display: flex;
   height: 100vh;
   padding-top: 64px;
-  padding-left: 60px;
+  padding-left: 64px;
 }
 
-/* ---------------------------------------------------------
-   CONVERSATION COLUMN (OFFSET RIGHT)
---------------------------------------------------------- */
-#chat-container {
-  width: 1000px;
-  margin-left: 140px;
+/* Chat card */
+#chat-card {
+  position: relative;
+  margin: var(--space-5) auto 0 auto;
+  width: min(960px, calc(100vw - 220px));
+  background: var(--white);
+  border-radius: var(--radius-subtle);
+  box-shadow: var(--shadow-soft);
   padding: var(--space-4);
-  overflow-y: auto;
-  height: calc(100vh - 64px - 120px);
-}
-
-#messages {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  max-height: calc(100vh - 64px - 140px);
 }
 
-/* ---------------------------------------------------------
-   MESSAGE BUBBLES
---------------------------------------------------------- */
+#chat-header-row {
+  margin-bottom: var(--space-3);
+}
+
+.chat-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.chat-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* Messages */
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 .message {
-  max-width: 700px;
-  padding: var(--space-3);
-  border-radius: 20px;
-  box-shadow: var(--shadow);
+  max-width: 80%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-subtle);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .message.user {
-  background: white;
   margin-left: auto;
+  background: var(--white-soft);
+  color: var(--text-dark);
+  border: 1px solid var(--border-subtle);
 }
 
 .message.assistant {
-  background: rgba(255, 255, 255, 0.7);
   margin-right: auto;
+  background: var(--blue-soft);
+  color: #1f2933;
 }
 
-/* ---------------------------------------------------------
-   MODE CHIPS
---------------------------------------------------------- */
+/* Mode chips */
 #mode-chips {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
-  margin-top: var(--space-4);
+  margin-top: var(--space-3);
 }
 
 .mode-chip {
-  padding: 10px 16px;
-  border-radius: 16px;
-  background: white;
-  border: 1px solid var(--border);
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  background: var(--white-soft);
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
   cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-/* ---------------------------------------------------------
-   FLOATING INPUT BAR
---------------------------------------------------------- */
+.mode-chip:hover {
+  border-color: var(--accent);
+  color: #1f2937;
+}
+
+/* Input bar */
 #input-bar {
   position: fixed;
+  left: 64px;
+  right: 0;
   bottom: 24px;
-  left: 200px;
-  width: 1000px;
-  background: white;
-  border-radius: 20px;
-  box-shadow: var(--shadow);
-  padding: var(--space-3);
   display: flex;
-  gap: var(--space-2);
+  justify-content: center;
+  pointer-events: none;
 }
 
-#user-input {
-  flex: 1;
-  border: none;
+#input-bar > * {
+  pointer-events: auto;
+}
+
+#input-bar textarea {
+  width: min(960px, calc(100vw - 220px));
+  border-radius: var(--radius-subtle);
+  border: 1px solid var(--border-subtle);
+  padding: var(--space-2) var(--space-3);
+  font-size: 14px;
   resize: none;
-  font-size: 16px;
   outline: none;
+  box-shadow: var(--shadow-soft);
+  background: var(--white);
+  color: var(--text-dark);
 }
 
 #send-btn {
-  background: var(--accent);
-  color: white;
+  position: absolute;
+  right: calc((100vw - min(960px, calc(100vw - 220px))) / 2 + 8px);
+  bottom: 10px;
+  border-radius: 999px;
   border: none;
-  padding: var(--space-2) var(--space-4);
-  border-radius: 16px;
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--accent);
+  color: var(--white);
   cursor: pointer;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
 }
 
-/* ---------------------------------------------------------
-   SUPERVISION PANEL (SLIDE-IN)
---------------------------------------------------------- */
+/* Supervision panel */
 #supervision-panel {
-  width: 360px;
-  background: var(--panel);
-  backdrop-filter: blur(12px);
-  border-left: 1px solid var(--border);
-  padding: var(--space-4);
   position: fixed;
-  right: -360px;
   top: 64px;
-  height: calc(100vh - 64px);
-  transition: 0.3s ease;
+  right: -360px;
+  width: 360px;
+  bottom: 0;
+  background: var(--white);
+  box-shadow: -18px 0 40px rgba(0, 0, 0, 0.35);
+  padding: var(--space-4);
+  border-radius: var(--radius-subtle) 0 0 var(--radius-subtle);
+  transition: right 0.25s ease;
+  font-size: 13px;
 }
 
 #supervision-panel.active {
   right: 0;
 }
 
-/* ---------------------------------------------------------
-   MODE BACKGROUNDS
---------------------------------------------------------- */
-body.mode-reflective { background: var(--reflective-bg); }
-body.mode-debrief { background: var(--debrief-bg); }
-body.mode-team { background: var(--team-bg); }
-body.mode-grounding { background: var(--grounding-bg); }
+#supervision-panel h3 {
+  margin-top: 0;
+  margin-bottom: var(--space-3);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+#supervision-panel p {
+  margin: 0 0 var(--space-2) 0;
+  color: var(--text-muted);
+}
+
+#supervision-panel strong {
+  color: var(--text-dark);
+}
+
+/* Scrollbars */
+#messages::-webkit-scrollbar {
+  width: 6px;
+}
+#messages::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 999px;
+}
+
+/* Mode background hooks */
+body.mode-reflective {
+  background: var(--bg-deep);
+}
+body.mode-debrief {
+  background: #101827;
+}
+body.mode-team {
+  background: #0f1a2a;
+}
+body.mode-grounding {
+  background: #0d1724;
+}
+body.mode-supervision {
+  background: #0f1a2a;
+}
