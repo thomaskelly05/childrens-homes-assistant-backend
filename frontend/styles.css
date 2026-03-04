@@ -1,165 +1,139 @@
 /* ---------------------------------------------------------
-   ROOT DESIGN TOKENS
+   ROOT TOKENS
 --------------------------------------------------------- */
 :root {
-  --bg-light: #F7F8FA;
-  --panel-light: #ECEEF1;
-  --border-soft: #D8DCE2;
-  --text-primary: #2A2E34;
+  --reflective-bg: linear-gradient(135deg, #DDE7F2, #F7F8FA);
+  --debrief-bg: linear-gradient(135deg, #F3EDE4, #FAF8F5);
+  --team-bg: linear-gradient(135deg, #E4F2E8, #F7FAF8);
+  --grounding-bg: linear-gradient(135deg, #EDE7F6, #F8F6FB);
+
+  --panel: rgba(255, 255, 255, 0.65);
+  --border: rgba(0, 0, 0, 0.08);
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+
+  --text-primary: #1E1F22;
   --text-secondary: #5A616B;
 
-  --mode-reflective: #DDE7F2;
-  --mode-debrief: #F3EDE4;
-  --mode-team: #E4F2E8;
-  --mode-grounding: #EDE7F6;
+  --accent: #4A6FA5;
 
-  --accent-primary: #4A6FA5;
-  --accent-secondary: #8FA4BF;
-
-  --values-tag: #C9D3DD;
-  --triangle-active: #B8C4CE;
-
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 16px;
+  --space-1: 6px;
+  --space-2: 12px;
+  --space-3: 18px;
   --space-4: 24px;
   --space-5: 32px;
 }
 
 body {
-  font-family: Inter, system-ui, sans-serif;
-  background: var(--bg-light);
-  color: var(--text-primary);
   margin: 0;
-  line-height: 1.6;
-  display: flex;
+  font-family: Inter, system-ui, sans-serif;
+  color: var(--text-primary);
+  background: var(--reflective-bg);
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* ---------------------------------------------------------
-   SIDEBAR
+   SIDEBAR (ICON-ONLY)
 --------------------------------------------------------- */
 #sidebar {
-  width: 80px;
-  background: white;
-  border-right: 1px solid var(--border-soft);
-  padding-top: var(--space-4);
+  width: 60px;
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(12px);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
+  padding-top: var(--space-4);
   gap: var(--space-2);
 }
 
 .sidebar-item {
-  padding: var(--space-3) var(--space-2);
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  text-align: center;
   border-left: 4px solid transparent;
+  transition: 0.2s;
 }
 
 .sidebar-item.active {
-  background: var(--panel-light);
-  border-left: 4px solid var(--accent-primary);
+  border-left: 4px solid var(--accent);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.icon {
+  font-size: 20px;
 }
 
 /* ---------------------------------------------------------
-   TOP HEADER
+   FLOATING HEADER
 --------------------------------------------------------- */
 #topbar {
-  height: 60px;
-  background: white;
-  border-bottom: 1px solid var(--border-soft);
+  position: fixed;
+  left: 60px;
+  right: 0;
+  top: 0;
+  height: 64px;
+  background: var(--panel);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--space-4);
-  position: fixed;
-  left: 80px;
-  right: 0;
-  top: 0;
-}
-
-#mode-indicator {
-  font-weight: 600;
+  box-shadow: var(--shadow);
+  z-index: 10;
 }
 
 /* ---------------------------------------------------------
-   MAIN CHAT AREA
+   MAIN LAYOUT
 --------------------------------------------------------- */
 #main {
-  flex: 1;
-  margin-left: 80px;
-  padding-top: 60px;
   display: flex;
+  height: 100vh;
+  padding-top: 64px;
+  padding-left: 60px;
 }
 
+/* ---------------------------------------------------------
+   CONVERSATION COLUMN (OFFSET RIGHT)
+--------------------------------------------------------- */
 #chat-container {
-  flex: 1;
+  width: 1000px;
+  margin-left: 140px; /* offset to the right */
   padding: var(--space-4);
-  max-width: 800px;
-  margin: 0 auto;
+  overflow-y: auto;
+  height: calc(100vh - 64px - 120px);
 }
 
 #messages {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  margin-bottom: var(--space-4);
 }
 
 /* ---------------------------------------------------------
    MESSAGE BUBBLES
 --------------------------------------------------------- */
 .message {
-  max-width: 640px;
+  max-width: 700px;
   padding: var(--space-3);
-  border-radius: 16px;
+  border-radius: 20px;
+  box-shadow: var(--shadow);
 }
 
 .message.user {
   background: white;
-  border: 1px solid var(--border-soft);
   margin-left: auto;
 }
 
 .message.assistant {
-  background: var(--panel-light);
+  background: rgba(255, 255, 255, 0.7);
   margin-right: auto;
-}
-
-/* ---------------------------------------------------------
-   VALUES TAGS
---------------------------------------------------------- */
-.values-tag {
-  display: inline-block;
-  background: var(--values-tag);
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  margin-top: var(--space-2);
-}
-
-/* ---------------------------------------------------------
-   INPUT AREA
---------------------------------------------------------- */
-#input-area {
-  display: flex;
-  gap: var(--space-2);
-}
-
-#user-input {
-  flex: 1;
-  padding: var(--space-3);
-  border-radius: 12px;
-  border: 1px solid var(--border-soft);
-  resize: none;
-}
-
-#send-btn {
-  padding: var(--space-3) var(--space-4);
-  background: var(--accent-primary);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
 }
 
 /* ---------------------------------------------------------
@@ -168,32 +142,74 @@ body {
 #mode-chips {
   display: flex;
   gap: var(--space-2);
-  margin-bottom: var(--space-3);
+  margin-top: var(--space-4);
 }
 
 .mode-chip {
-  padding: 8px 14px;
+  padding: 10px 16px;
   border-radius: 16px;
-  border: 1px solid var(--border-soft);
   background: white;
+  border: 1px solid var(--border);
   cursor: pointer;
 }
 
 /* ---------------------------------------------------------
-   SUPERVISION PANEL
+   FLOATING INPUT BAR
 --------------------------------------------------------- */
-#supervision-panel {
-  width: 320px;
-  background: var(--bg-light);
-  border-left: 1px solid var(--border-soft);
-  padding: var(--space-4);
-  display: none;
+#input-bar {
+  position: fixed;
+  bottom: 24px;
+  left: 200px;
+  width: 1000px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  padding: var(--space-3);
+  display: flex;
+  gap: var(--space-2);
+}
+
+#user-input {
+  flex: 1;
+  border: none;
+  resize: none;
+  font-size: 16px;
+  outline: none;
+}
+
+#send-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: var(--space-2) var(--space-4);
+  border-radius: 16px;
+  cursor: pointer;
 }
 
 /* ---------------------------------------------------------
-   MODE COLOUR VARIANTS
+   SUPERVISION PANEL (SLIDE-IN)
 --------------------------------------------------------- */
-body.mode-reflective { background: var(--mode-reflective); }
-body.mode-debrief { background: var(--mode-debrief); }
-body.mode-team { background: var(--mode-team); }
-body.mode-grounding { background: var(--mode-grounding); }
+#supervision-panel {
+  width: 360px;
+  background: var(--panel);
+  backdrop-filter: blur(12px);
+  border-left: 1px solid var(--border);
+  padding: var(--space-4);
+  position: fixed;
+  right: -360px;
+  top: 64px;
+  height: calc(100vh - 64px);
+  transition: 0.3s ease;
+}
+
+#supervision-panel.active {
+  right: 0;
+}
+
+/* ---------------------------------------------------------
+   MODE BACKGROUNDS
+--------------------------------------------------------- */
+body.mode-reflective { background: var(--reflective-bg); }
+body.mode-debrief { background: var(--debrief-bg); }
+body.mode-team { background: var(--team-bg); }
+body.mode-grounding { background: var(--grounding-bg); }
