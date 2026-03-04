@@ -19,13 +19,14 @@ client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 app = FastAPI()
 
 # ---------------------------------------------------------
-# CORS (IndiCare domains only)
+# CORS (must include your Render domain)
 # ---------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://www.indicare.co.uk",
         "https://indicare.co.uk",
+        "https://childrens-homes-assistant-backend-new.onrender.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -112,12 +113,11 @@ async def assistant_stream(request: Request):
             async for chunk in stream:
                 delta = chunk.choices[0].delta
                 if delta and delta.content:
-                    text = delta.content
-                    yield text
+                    yield delta.content
                     if slow:
                         await asyncio.sleep(0.03)
-        except Exception as e:
-            # Surface a gentle error message to the UI
+
+        except Exception:
             yield "\n\nI ran into a technical issue while responding. "
             yield "You can try again in a moment, or bring this reflection to supervision."
 
