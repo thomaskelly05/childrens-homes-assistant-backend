@@ -9,17 +9,29 @@
 
 <body class="mode-reflective">
 
-    <!-- Sidebar -->
+    <!-- Sidebar (icon-only) -->
     <aside id="sidebar">
-        <div class="sidebar-item active" data-mode="reflective">Reflective</div>
-        <div class="sidebar-item" data-mode="debrief">Debrief</div>
-        <div class="sidebar-item" data-mode="team">Team</div>
-        <div class="sidebar-item" data-mode="grounding">Grounding</div>
-        <div class="sidebar-item" data-mode="supervision">Supervision</div>
-        <div class="sidebar-item" data-mode="settings">Settings</div>
+        <div class="sidebar-item active" data-mode="reflective" title="Reflective">
+            <span class="icon">🜁</span>
+        </div>
+        <div class="sidebar-item" data-mode="debrief" title="Debrief">
+            <span class="icon">🜂</span>
+        </div>
+        <div class="sidebar-item" data-mode="team" title="Team">
+            <span class="icon">🜄</span>
+        </div>
+        <div class="sidebar-item" data-mode="grounding" title="Grounding">
+            <span class="icon">🜃</span>
+        </div>
+        <div class="sidebar-item" data-mode="supervision" title="Supervision">
+            <span class="icon">◆</span>
+        </div>
+        <div class="sidebar-item" data-mode="settings" title="Settings">
+            <span class="icon">⚙</span>
+        </div>
     </aside>
 
-    <!-- Header -->
+    <!-- Floating Header -->
     <header id="topbar">
         <div id="mode-indicator">Reflective Mode</div>
 
@@ -36,10 +48,10 @@
         </div>
     </header>
 
-    <!-- Main -->
+    <!-- Main Layout -->
     <div id="main">
 
-        <!-- Chat -->
+        <!-- Conversation Column -->
         <section id="chat-container">
             <div id="messages"></div>
 
@@ -48,14 +60,15 @@
                 <button class="mode-chip">What value were you holding?</button>
                 <button class="mode-chip">What felt hardest?</button>
             </div>
-
-            <div id="input-area">
-                <textarea id="user-input" placeholder="Type your reflection…"></textarea>
-                <button id="send-btn">Send</button>
-            </div>
         </section>
 
-        <!-- Supervision -->
+        <!-- Floating Input Bar -->
+        <div id="input-bar">
+            <textarea id="user-input" placeholder="Type your reflection…"></textarea>
+            <button id="send-btn">Send</button>
+        </div>
+
+        <!-- Slide-in Supervision Panel -->
         <aside id="supervision-panel">
             <h3>Supervision Summary</h3>
             <p><strong>What stood out:</strong> <span id="sum-stood-out"></span></p>
