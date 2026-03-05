@@ -4,9 +4,7 @@ const chat=document.getElementById("chat")
 const input=document.getElementById("input")
 
 document.getElementById("menuBtn").onclick=()=>{
-
 document.getElementById("drawer").classList.toggle("open")
-
 }
 
 function add(role,text){
@@ -26,7 +24,7 @@ chat.scrollTop=chat.scrollHeight
 async function send(){
 
 const text=input.value.trim()
-if(!text) return
+if(!text)return
 
 add("user",text)
 input.value=""
@@ -76,7 +74,5 @@ send()
 })
 
 function newChat(){
-
 chat.innerHTML='<div class="welcome">What would you like to reflect on today?</div>'
-
 }
