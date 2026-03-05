@@ -7,12 +7,8 @@ const sendBtn=document.getElementById("sendBtn")
 const menuBtn=document.getElementById("menuBtn")
 const drawer=document.getElementById("drawer")
 
-if(menuBtn && drawer){
-
 menuBtn.onclick=()=>{
 drawer.classList.toggle("open")
-}
-
 }
 
 function add(role,text){
@@ -48,10 +44,10 @@ headers:{
 },
 body:JSON.stringify({
 message:text,
-mode:document.getElementById("mode")?.value || "reflective",
-role:document.getElementById("role")?.value || "support_worker",
-ld_friendly:document.getElementById("ld")?.checked || false,
-slow_mode:document.getElementById("slow")?.checked || false
+mode:document.getElementById("mode").value,
+role:document.getElementById("role").value,
+ld_friendly:document.getElementById("ld").checked,
+slow_mode:document.getElementById("slow").checked
 })
 })
 
@@ -83,9 +79,9 @@ chat.scrollTop=chat.scrollHeight
 
 }
 
-sendBtn.addEventListener("click",send)
+sendBtn.onclick=send
 
-input.addEventListener("keydown",(e)=>{
+input.addEventListener("keydown",e=>{
 
 if(e.key==="Enter" && !e.shiftKey){
 
