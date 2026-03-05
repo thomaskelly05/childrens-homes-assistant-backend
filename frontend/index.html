@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <title>IndiCare Assistant</title>
 
@@ -16,7 +15,6 @@
 <link rel="stylesheet" href="/styles.css">
 
 </head>
-
 
 <body>
 
@@ -40,7 +38,6 @@
 <div class="drawer-header">
 
 <h2>IndiCare</h2>
-
 <p>Safe AI for residential children's homes</p>
 
 </div>
@@ -80,13 +77,17 @@
 <div class="drawer-section">
 
 <label>
+
 <input type="checkbox" id="ld">
 LD-friendly
+
 </label>
 
 <label>
+
 <input type="checkbox" id="slow">
 Gentle pace
+
 </label>
 
 </div>
@@ -94,12 +95,13 @@ Gentle pace
 </aside>
 
 
-
 <div class="main">
 
 <header class="header">
 
-<div class="brand">IndiCare Assistant</div>
+<div class="brand">
+IndiCare Assistant
+</div>
 
 </header>
 
@@ -115,16 +117,9 @@ What would you like to reflect on today?
 
 <div class="inputbar">
 
-<button id="micBtn">🎤</button>
+<textarea id="input" placeholder="Type your reflection..."></textarea>
 
-<textarea
-id="input"
-placeholder="Type your reflection..."
-></textarea>
-
-<button id="sendBtn">
-Send
-</button>
+<button id="sendBtn">Send</button>
 
 </div>
 
