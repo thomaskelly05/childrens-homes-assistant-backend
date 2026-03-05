@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 
 <meta charset="UTF-8">
@@ -20,28 +21,22 @@
 
 <div id="app">
 
-<!-- ICON RAIL -->
+<!-- LEFT ICON RAIL -->
 
-<nav class="rail">
+<div class="rail">
 
 <button id="menuBtn">☰</button>
 
 <button onclick="newChat()">＋</button>
 
-</nav>
-
-
-<!-- DRAWER -->
-
-<aside id="drawer">
-
-<div class="drawer-header">
-
-<h2>IndiCare</h2>
-<p>Safe AI for residential children's homes</p>
-
 </div>
 
+
+<!-- COLLAPSIBLE DRAWER -->
+
+<div id="drawer">
+
+<h2>IndiCare</h2>
 
 <div class="drawer-section">
 
@@ -66,7 +61,7 @@
 <select id="role">
 
 <option value="support_worker">Support worker</option>
-<option value="team_leader">Team leader</option>
+<option value="team_leader">Senior</option>
 <option value="manager">Manager</option>
 
 </select>
@@ -74,48 +69,54 @@
 </div>
 
 
-<div class="drawer-section">
-
-<label>
+<label class="toggle">
 
 <input type="checkbox" id="ld">
+
 LD-friendly
 
 </label>
 
-<label>
+
+<label class="toggle">
 
 <input type="checkbox" id="slow">
+
 Gentle pace
 
 </label>
 
+
 </div>
 
-</aside>
 
+<!-- MAIN CHAT AREA -->
 
 <div class="main">
 
-<header class="header">
+<div class="header">
 
-<div class="brand">
+<div class="title">
+
 IndiCare Assistant
+
 </div>
 
-</header>
+</div>
 
 
 <div id="chat" class="chat">
 
 <div class="welcome">
+
 What would you like to reflect on today?
-</div>
 
 </div>
 
+</div>
 
-<div class="inputbar">
+
+<div class="input-bar">
 
 <textarea id="input" placeholder="Type your reflection..."></textarea>
 
@@ -124,11 +125,11 @@ What would you like to reflect on today?
 </div>
 
 
-<footer class="footer">
+<div class="footer">
 
 © 2026 IndiCare — AI support for residential children's homes
 
-</footer>
+</div>
 
 
 </div>
@@ -138,4 +139,5 @@ What would you like to reflect on today?
 <script src="/app.js"></script>
 
 </body>
+
 </html>
