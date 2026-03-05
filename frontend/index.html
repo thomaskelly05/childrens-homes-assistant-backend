@@ -1,14 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>IndiCare Assistant</title>
 
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="/styles.css">
 
 </head>
+
 
 <body>
 
@@ -16,57 +24,85 @@
 
 <!-- ICON RAIL -->
 
-<div class="rail">
+<nav class="rail">
 
 <button id="menuBtn">☰</button>
+
 <button onclick="newChat()">＋</button>
 
-</div>
+</nav>
 
 
 <!-- DRAWER -->
 
-<div class="drawer" id="drawer">
+<aside id="drawer">
 
 <div class="drawer-header">
+
 <h2>IndiCare</h2>
-<p>Safe AI for residential homes</p>
+
+<p>Safe AI for residential children's homes</p>
+
 </div>
 
-<div class="drawer-section">
-<button onclick="newChat()">+ New chat</button>
-</div>
 
 <div class="drawer-section">
+
+<label>Mode</label>
 
 <select id="mode">
+
 <option value="reflective">Reflective</option>
 <option value="debrief">Debrief</option>
-<option value="team">Team reflection</option>
+<option value="team">Team</option>
 <option value="grounding">Grounding</option>
+
 </select>
 
+</div>
+
+
+<div class="drawer-section">
+
+<label>Role</label>
+
 <select id="role">
+
 <option value="support_worker">Support worker</option>
 <option value="team_leader">Team leader</option>
 <option value="manager">Manager</option>
+
 </select>
 
-<label><input type="checkbox" id="ld"> LD-friendly</label>
-<label><input type="checkbox" id="slow"> Gentle pace</label>
-
-</div>
-
 </div>
 
 
-<!-- MAIN -->
+<div class="drawer-section">
+
+<label>
+<input type="checkbox" id="ld">
+LD-friendly
+</label>
+
+<label>
+<input type="checkbox" id="slow">
+Gentle pace
+</label>
+
+</div>
+
+</aside>
+
+
 
 <div class="main">
 
-<div class="header">
-IndiCare Assistant
-</div>
+<header class="header">
+
+<div class="brand">IndiCare Assistant</div>
+
+</header>
+
 
 <div id="chat" class="chat">
 
@@ -81,15 +117,24 @@ What would you like to reflect on today?
 
 <button id="micBtn">🎤</button>
 
-<textarea id="input" placeholder="Type your reflection..."></textarea>
+<textarea
+id="input"
+placeholder="Type your reflection..."
+></textarea>
 
-<button id="sendBtn">Send</button>
+<button id="sendBtn">
+Send
+</button>
 
 </div>
 
-<div class="footer">
+
+<footer class="footer">
+
 © 2026 IndiCare — AI support for residential children's homes
-</div>
+
+</footer>
+
 
 </div>
 
