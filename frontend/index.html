@@ -1,123 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IndiCare Assistant</title>
+<meta charset="UTF-8">
+<title>IndiCare Assistant</title>
 
-  <meta http-equiv="Cache-Control" content="no-store" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
+<meta name="viewport" content="width=device-width,initial-scale=1">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
-    rel="stylesheet"
-  />
+<link rel="stylesheet" href="/styles.css">
 
-  <link rel="stylesheet" href="styles.css" />
 </head>
-<body class="mode-reflective">
-  <!-- Sidebar -->
-  <aside id="sidebar">
-    <button class="sidebar-item active" data-mode="reflective" title="Reflective">
-      <span class="icon-label">R</span>
-    </button>
-    <button class="sidebar-item" data-mode="debrief" title="Debrief">
-      <span class="icon-label">D</span>
-    </button>
-    <button class="sidebar-item" data-mode="team" title="Team">
-      <span class="icon-label">T</span>
-    </button>
-    <button class="sidebar-item" data-mode="grounding" title="Grounding">
-      <span class="icon-label">G</span>
-    </button>
-    <button class="sidebar-item" data-mode="supervision" title="Supervision">
-      <span class="icon-label">S</span>
-    </button>
-    <button class="sidebar-item" data-mode="settings" title="Settings">
-      <span class="icon-label">⚙</span>
-    </button>
-  </aside>
 
-  <!-- Top header -->
-  <header id="topbar">
-    <div class="topbar-left">
-      <div class="brand">IndiCare Assistant</div>
-      <div id="mode-indicator">Reflective mode</div>
-    </div>
+<body>
 
-    <div class="topbar-right">
-      <div class="control-group">
-        <label class="control-label" for="role-select">Role</label>
-        <select id="role-select">
-          <option value="support">Support worker</option>
-          <option value="senior">Senior</option>
-          <option value="manager">Manager</option>
-        </select>
-      </div>
+<div id="app">
 
-      <label class="toggle">
-        <input type="checkbox" id="ld-toggle" />
-        <span class="toggle-label">LD‑friendly</span>
-      </label>
+<!-- ICON RAIL -->
 
-      <label class="toggle">
-        <input type="checkbox" id="slow-toggle" />
-        <span class="toggle-label">Gentle pace</span>
-      </label>
-    </div>
-  </header>
+<div class="rail">
 
-  <!-- Main layout -->
-  <main id="main">
-    <!-- Chat card -->
-    <section id="chat-card">
-      <div id="chat-header-row">
-        <div class="chat-title">Reflective space</div>
-        <div class="chat-subtitle">
-          A quiet place to think about your practice. I’ll stay with you as you go.
-        </div>
-      </div>
+<button id="menuBtn">☰</button>
+<button onclick="newChat()">＋</button>
 
-      <div id="messages"></div>
+</div>
 
-      <div id="mode-chips">
-        <button class="mode-chip" data-chip="stayed">
-          What stayed with you?
-        </button>
-        <button class="mode-chip" data-chip="value">
-          What value were you holding?
-        </button>
-        <button class="mode-chip" data-chip="hardest">
-          What felt hardest?
-        </button>
-      </div>
-    </section>
 
-    <!-- Input bar -->
-    <section id="input-bar">
-      <textarea
-        id="user-input"
-        rows="1"
-        placeholder="When you’re ready, tell me what’s on your mind…"
-      ></textarea>
-      <button id="send-btn">Send</button>
-    </section>
+<!-- DRAWER -->
 
-    <!-- Supervision panel -->
-    <aside id="supervision-panel">
-      <h3>Supervision summary</h3>
-      <p><strong>What stood out:</strong> <span id="sum-stood-out"></span></p>
-      <p><strong>Internal experience:</strong> <span id="sum-internal"></span></p>
-      <p><strong>Values:</strong> <span id="sum-values"></span></p>
-      <p><strong>What felt hard:</strong> <span id="sum-hard"></span></p>
-      <p><strong>Support needed:</strong> <span id="sum-support"></span></p>
-      <p><strong>What to strengthen:</strong> <span id="sum-strengthen"></span></p>
-    </aside>
-  </main>
+<div class="drawer" id="drawer">
 
-  <script src="app.js"></script>
+<div class="drawer-header">
+<h2>IndiCare</h2>
+<p>Safe AI for residential homes</p>
+</div>
+
+<div class="drawer-section">
+<button onclick="newChat()">+ New chat</button>
+</div>
+
+<div class="drawer-section">
+
+<select id="mode">
+<option value="reflective">Reflective</option>
+<option value="debrief">Debrief</option>
+<option value="team">Team reflection</option>
+<option value="grounding">Grounding</option>
+</select>
+
+<select id="role">
+<option value="support_worker">Support worker</option>
+<option value="team_leader">Team leader</option>
+<option value="manager">Manager</option>
+</select>
+
+<label><input type="checkbox" id="ld"> LD-friendly</label>
+<label><input type="checkbox" id="slow"> Gentle pace</label>
+
+</div>
+
+</div>
+
+
+<!-- MAIN -->
+
+<div class="main">
+
+<div class="header">
+IndiCare Assistant
+</div>
+
+<div id="chat" class="chat">
+
+<div class="welcome">
+What would you like to reflect on today?
+</div>
+
+</div>
+
+
+<div class="inputbar">
+
+<button id="micBtn">🎤</button>
+
+<textarea id="input" placeholder="Type your reflection..."></textarea>
+
+<button id="sendBtn">Send</button>
+
+</div>
+
+<div class="footer">
+© 2026 IndiCare — AI support for residential children's homes
+</div>
+
+</div>
+
+</div>
+
+<script src="/app.js"></script>
+
 </body>
 </html>
