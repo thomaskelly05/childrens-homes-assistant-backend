@@ -4,11 +4,14 @@ box-sizing:border-box;
 
 html,body{
 margin:0;
+padding:0;
 height:100%;
 font-family:Inter,system-ui;
+background:#f6f7fb;
 overflow:hidden;
-background:#f8fafc;
 }
+
+/* APP LAYOUT */
 
 #app{
 display:flex;
@@ -16,61 +19,54 @@ height:100vh;
 width:100vw;
 }
 
-/* RAIL */
+/* LEFT RAIL */
 
 .rail{
 width:60px;
-background:white;
+background:#ffffff;
 border-right:1px solid #e5e7eb;
 display:flex;
 flex-direction:column;
 align-items:center;
 padding-top:12px;
 gap:10px;
+z-index:5;
 }
 
 .rail button{
-width:40px;
-height:40px;
+width:38px;
+height:38px;
 border-radius:10px;
 border:none;
 background:#f3f4f6;
 cursor:pointer;
+font-size:16px;
 }
 
 /* DRAWER */
 
 #drawer{
 position:fixed;
-left:60px;
 top:0;
+left:60px;
+width:260px;
 height:100vh;
-width:280px;
-background:white;
+background:#ffffff;
 border-right:1px solid #e5e7eb;
-transform:translateX(-280px);
-transition:.25s;
 padding:20px;
 display:flex;
 flex-direction:column;
 gap:20px;
+
+transform:translateX(-260px);
+transition:transform .25s ease;
 }
 
 #drawer.open{
 transform:translateX(0);
 }
 
-.drawer-header h2{
-margin:0;
-}
-
-.drawer-section{
-display:flex;
-flex-direction:column;
-gap:10px;
-}
-
-/* MAIN */
+/* MAIN AREA */
 
 .main{
 flex:1;
@@ -86,9 +82,9 @@ height:60px;
 display:flex;
 align-items:center;
 padding:0 20px;
+font-weight:600;
 background:white;
 border-bottom:1px solid #e5e7eb;
-font-weight:600;
 }
 
 /* CHAT */
@@ -99,14 +95,14 @@ overflow-y:auto;
 padding:40px;
 display:flex;
 flex-direction:column;
-gap:16px;
+gap:14px;
 }
 
 .welcome{
 text-align:center;
 margin-top:120px;
-color:#9ca3af;
 font-size:22px;
+color:#9ca3af;
 }
 
 /* MESSAGE */
@@ -126,7 +122,7 @@ color:white;
 border:none;
 }
 
-/* INPUT */
+/* INPUT BAR */
 
 .inputbar{
 display:flex;
@@ -142,6 +138,7 @@ resize:none;
 border-radius:12px;
 border:1px solid #d1d5db;
 padding:10px;
+font-family:inherit;
 }
 
 #sendBtn{
