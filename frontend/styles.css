@@ -5,9 +5,9 @@ box-sizing:border-box;
 html,body{
 margin:0;
 height:100%;
-font-family:Inter,system-ui;
+font-family:Inter;
 overflow:hidden;
-background:#f6f7fb;
+background:#f7f8fb;
 }
 
 #app{
@@ -16,7 +16,7 @@ height:100vh;
 width:100vw;
 }
 
-/* RAIL */
+/* ICON RAIL */
 
 .rail{
 width:60px;
@@ -59,10 +59,10 @@ transform:translateX(0);
 }
 
 .drawer-section{
-margin-top:20px;
+margin-bottom:20px;
 display:flex;
 flex-direction:column;
-gap:10px;
+gap:6px;
 }
 
 /* MAIN */
@@ -81,8 +81,11 @@ height:60px;
 display:flex;
 align-items:center;
 padding:0 20px;
-background:white;
 border-bottom:1px solid #e5e7eb;
+background:white;
+}
+
+.title{
 font-weight:600;
 }
 
@@ -104,8 +107,10 @@ color:#9ca3af;
 font-size:22px;
 }
 
+/* MESSAGE */
+
 .msg{
-max-width:700px;
+max-width:650px;
 padding:12px 16px;
 border-radius:14px;
 background:white;
@@ -121,7 +126,7 @@ border:none;
 
 /* INPUT */
 
-.inputbar{
+.input-bar{
 display:flex;
 gap:10px;
 padding:16px;
@@ -131,17 +136,17 @@ background:white;
 
 textarea{
 flex:1;
-resize:none;
 border-radius:12px;
 border:1px solid #d1d5db;
 padding:10px;
+resize:none;
 }
 
 #sendBtn{
 background:#2563eb;
 color:white;
 border:none;
-padding:10px 18px;
+padding:10px 20px;
 border-radius:999px;
 cursor:pointer;
 }
