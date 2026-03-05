@@ -4,14 +4,11 @@ box-sizing:border-box;
 
 html,body{
 margin:0;
-padding:0;
 height:100%;
 font-family:Inter,system-ui;
-background:#f6f7fb;
 overflow:hidden;
+background:#f6f7fb;
 }
-
-/* APP LAYOUT */
 
 #app{
 display:flex;
@@ -19,18 +16,17 @@ height:100vh;
 width:100vw;
 }
 
-/* LEFT RAIL */
+/* RAIL */
 
 .rail{
 width:60px;
-background:#ffffff;
+background:white;
 border-right:1px solid #e5e7eb;
 display:flex;
 flex-direction:column;
 align-items:center;
 padding-top:12px;
 gap:10px;
-z-index:5;
 }
 
 .rail button{
@@ -40,33 +36,36 @@ border-radius:10px;
 border:none;
 background:#f3f4f6;
 cursor:pointer;
-font-size:16px;
 }
 
 /* DRAWER */
 
 #drawer{
 position:fixed;
-top:0;
 left:60px;
+top:0;
 width:260px;
 height:100vh;
-background:#ffffff;
+background:white;
 border-right:1px solid #e5e7eb;
 padding:20px;
-display:flex;
-flex-direction:column;
-gap:20px;
 
 transform:translateX(-260px);
-transition:transform .25s ease;
+transition:.25s;
 }
 
 #drawer.open{
 transform:translateX(0);
 }
 
-/* MAIN AREA */
+.drawer-section{
+margin-top:20px;
+display:flex;
+flex-direction:column;
+gap:10px;
+}
+
+/* MAIN */
 
 .main{
 flex:1;
@@ -82,9 +81,9 @@ height:60px;
 display:flex;
 align-items:center;
 padding:0 20px;
-font-weight:600;
 background:white;
 border-bottom:1px solid #e5e7eb;
+font-weight:600;
 }
 
 /* CHAT */
@@ -101,11 +100,9 @@ gap:14px;
 .welcome{
 text-align:center;
 margin-top:120px;
-font-size:22px;
 color:#9ca3af;
+font-size:22px;
 }
-
-/* MESSAGE */
 
 .msg{
 max-width:700px;
@@ -122,7 +119,7 @@ color:white;
 border:none;
 }
 
-/* INPUT BAR */
+/* INPUT */
 
 .inputbar{
 display:flex;
@@ -138,7 +135,6 @@ resize:none;
 border-radius:12px;
 border:1px solid #d1d5db;
 padding:10px;
-font-family:inherit;
 }
 
 #sendBtn{
@@ -159,40 +155,4 @@ padding:6px;
 border-top:1px solid #e5e7eb;
 background:#fafafa;
 color:#6b7280;
-}
-
-/* LOGIN PAGE */
-
-.login-page{
-display:flex;
-align-items:center;
-justify-content:center;
-height:100vh;
-}
-
-.login-card{
-background:white;
-padding:40px;
-border-radius:12px;
-border:1px solid #e5e7eb;
-width:320px;
-}
-
-.login-card input{
-width:100%;
-padding:10px;
-margin-top:10px;
-border:1px solid #d1d5db;
-border-radius:8px;
-}
-
-.primary{
-margin-top:14px;
-width:100%;
-background:#2563eb;
-color:white;
-border:none;
-padding:10px;
-border-radius:8px;
-cursor:pointer;
 }
