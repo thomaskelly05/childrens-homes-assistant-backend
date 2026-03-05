@@ -1,5 +1,3 @@
-# assistant/routes.py
-
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
@@ -83,7 +81,7 @@ async def generate_template(
         client = OpenAI()
 
         completion = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o-mini-thinking",   # ← MATCHES CHAT MODEL
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
