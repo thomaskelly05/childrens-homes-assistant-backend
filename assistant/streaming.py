@@ -4,7 +4,7 @@ client = OpenAI()
 
 def run_chat_stream(system_prompt: str, user_prompt: str):
     stream = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-4o-mini-thinking",   # ← THIS FIXES THE FLUFF
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
@@ -13,7 +13,6 @@ def run_chat_stream(system_prompt: str, user_prompt: str):
     )
 
     for chunk in stream:
-        # New OpenAI client: delta is a model, not a dict
         if (
             chunk.choices
             and chunk.choices[0].delta
