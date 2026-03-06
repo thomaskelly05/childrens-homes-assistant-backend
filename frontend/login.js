@@ -1,46 +1,46 @@
-const API = "https://childrens-homes-assistant-backend-new.onrender.com"
+const API = "https://childrens-homes-assistant-backend.onrender.com"
 
-const form = document.getElementById("login-form")
-const error = document.getElementById("login-error")
+document.addEventListener("DOMContentLoaded", () => {
 
-form.addEventListener("submit", async (e) => {
+    const form = document.getElementById("login-form")
 
-    e.preventDefault()
+    form.addEventListener("submit", async (e) => {
 
-    const email = document.getElementById("email").value
-    const password = document.getElementById("password").value
+        e.preventDefault()
 
-    error.textContent = ""
+        const email = document.getElementById("email").value
+        const password = document.getElementById("password").value
+        const error = document.getElementById("login-error")
 
-    try {
+        error.innerText = ""
 
-        const res = await fetch(API + "/auth/login", {
+        try {
 
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-
-            credentials: "include",
-
-            body: JSON.stringify({
-                email: email,
-                password: password
+            const res = await fetch(`${API}/auth/login`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                credentials: "include",
+                body: JSON.stringify({
+                    email: email,
+                    password: password
+                })
             })
 
-        })
+            if (!res.ok) {
+                error.innerText = "Invalid email or password"
+                return
+            }
 
-        if (!res.ok) {
-            error.textContent = "Invalid email or password"
-            return
+            window.location.href = "/"
+
+        } catch (err) {
+
+            error.innerText = "Unable to connect to server"
+
         }
 
-        window.location.href = "/"
-
-    } catch (err) {
-
-        error.textContent = "Server connection error"
-
-    }
+    })
 
 })
