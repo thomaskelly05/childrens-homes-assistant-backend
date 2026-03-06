@@ -5,20 +5,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-
-# ---------------------------------------------------------
-# ROUTERS
-# ---------------------------------------------------------
-
+# Routers
 from assistant.routes import router as assistant_router
 from auth.routes import router as auth_router
 
-# New feature routers
 from routers.tasks_routes import router as tasks_router
 from routers.staff_journal_routes import router as journal_router
 from routers.handover_routes import router as handover_router
 from routers.dashboard_routes import router as dashboard_router
 from routers.account_routes import router as account_router
+from routers.conversation_routes import router as conversation_router
 
 
 # ---------------------------------------------------------
@@ -40,11 +36,9 @@ app.add_middleware(
     allow_origins=[
         "https://indicare.co.uk",
         "https://www.indicare.co.uk",
-
-        # Backend
         "https://childrens-homes-assistant-backend-new.onrender.com",
 
-        # Local development
+        # local dev
         "http://localhost:3000",
         "http://localhost:5173",
     ],
@@ -58,18 +52,17 @@ app.add_middleware(
 # ROUTERS
 # ---------------------------------------------------------
 
-# Authentication
 app.include_router(auth_router)
-
-# AI Assistant
 app.include_router(assistant_router)
 
-# Platform Features
 app.include_router(tasks_router)
 app.include_router(journal_router)
 app.include_router(handover_router)
 app.include_router(dashboard_router)
 app.include_router(account_router)
+
+# NEW
+app.include_router(conversation_router)
 
 
 # ---------------------------------------------------------
@@ -85,7 +78,6 @@ def health():
 # STATIC FRONTEND
 # ---------------------------------------------------------
 
-# Only mount frontend if folder exists
 if os.path.isdir("frontend"):
     app.mount(
         "/",
@@ -95,7 +87,7 @@ if os.path.isdir("frontend"):
 
 
 # ---------------------------------------------------------
-# LOCAL DEVELOPMENT
+# LOCAL DEV
 # ---------------------------------------------------------
 
 if __name__ == "__main__":
