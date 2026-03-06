@@ -11,17 +11,19 @@ from auth.tokens import create_session_token, JWT_SECRET, JWT_ALGORITHM
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-# -----------------------------
+# ---------------------------------------------------------
 # LOGIN MODEL
-# -----------------------------
+# ---------------------------------------------------------
+
 class LoginRequest(BaseModel):
     email: str
     password: str
 
 
-# -----------------------------
+# ---------------------------------------------------------
 # LOGIN
-# -----------------------------
+# ---------------------------------------------------------
+
 @router.post("/login")
 def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
 
@@ -59,6 +61,7 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
         user["home_id"]
     )
 
+    # Store token in secure cookie
     response.set_cookie(
         key="access_token",
         value=token,
@@ -70,6 +73,8 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
 
     return {
         "message": "Logged in",
+        "access_token": token,
+        "token_type": "bearer",
         "user": {
             "id": user["id"],
             "email": user["email"],
@@ -78,9 +83,10 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
     }
 
 
-# -----------------------------
+# ---------------------------------------------------------
 # LOGOUT
-# -----------------------------
+# ---------------------------------------------------------
+
 @router.post("/logout")
 def logout(response: Response):
 
@@ -92,9 +98,10 @@ def logout(response: Response):
     return {"message": "Logged out"}
 
 
-# -----------------------------
+# ---------------------------------------------------------
 # AUTH CHECK
-# -----------------------------
+# ---------------------------------------------------------
+
 @router.get("/check")
 def check_auth(request: Request):
 
