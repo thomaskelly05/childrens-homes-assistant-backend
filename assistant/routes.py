@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
-import markdown
 import logging
+import re
 import jwt
 
 from db.connection import get_db
@@ -10,38 +10,22 @@ from auth.tokens import JWT_SECRET, JWT_ALGORITHM
 
 from assistant.prompts import build_chat_prompt, build_template_prompt
 from assistant.streaming import run_chat_stream
-from assistant.logging import log_chat, log_template
+from assistant.logging import log_chat, create_supervision_summary
+
 
 router = APIRouter()
+
 logger = logging.getLogger("uvicorn.error")
 
 
-# ---------------------------
-# USER AUTH FROM COOKIE
-# ---------------------------
-
-def get_user_from_cookie(request: Request):
-
-    token = request.cookies.get("access_token")
-
-    if not token:
-        return None
-
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        return payload
-    except Exception:
-        return None
-
-
-# ---------------------------
+# ---------------------------------------------------------
 # REQUEST MODELS
-# ---------------------------
+# ---------------------------------------------------------
 
 class ChatRequest(BaseModel):
     message: str
     role: str | None = None
-    mode: str | None = "default"
+    mode: str | None = "reflective"
     speed: str | None = "fast"
     ld_lens: bool | None = False
     home_id: int | None = None
@@ -52,88 +36,146 @@ class TemplateRequest(BaseModel):
     home_id: int | None = None
 
 
-# ---------------------------
+# ---------------------------------------------------------
+# USER AUTH
+# ---------------------------------------------------------
+
+def get_user_from_cookie(request):
+
+    token = request.cookies.get("access_token")
+
+    if not token:
+        return {"email": "anonymous"}
+
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+
+        return {
+            "id": payload.get("sub"),
+            "email": payload.get("email"),
+            "role": payload.get("role"),
+            "home_id": payload.get("home_id")
+        }
+
+    except Exception:
+        return {"email": "anonymous"}
+
+
+# ---------------------------------------------------------
+# PROMPT VALIDATION
+# ---------------------------------------------------------
+
+blocked_patterns = [
+    r"\bhow do i restrain\b",
+    r"\bhow to restrain\b",
+    r"\brestraint technique\b",
+    r"\bcontrol them\b",
+    r"\bmake them\b",
+    r"\bfix their behaviour\b",
+    r"\bmanage their behaviour\b",
+    r"\bwhat should i do when they\b",
+    r"\bwhat do i do if they\b",
+]
+
+
+def validate_prompt(prompt: str):
+
+    text = prompt.lower()
+
+    if re.search(r"\b[A-Z]\.", prompt):
+        raise HTTPException(
+            status_code=400,
+            detail="IndiCare cannot process initials or identifying details."
+        )
+
+    if re.search(r"\b[A-Z][a-z]+\s+[A-Z][a-z]+\b", prompt):
+        raise HTTPException(
+            status_code=400,
+            detail="IndiCare cannot process full names."
+        )
+
+    for pattern in blocked_patterns:
+        if re.search(pattern, text):
+            raise HTTPException(
+                status_code=400,
+                detail="IndiCare supports reflection, not behaviour management guidance."
+            )
+
+
+# ---------------------------------------------------------
 # CHAT ENDPOINT
-# ---------------------------
+# ---------------------------------------------------------
 
 @router.post("/chat")
-async def chat_endpoint(
-    req: ChatRequest,
-    request: Request,
-    conn=Depends(get_db),
-):
+async def chat_endpoint(req: ChatRequest, conn=Depends(get_db)):
 
     try:
 
-        # ---------------------------
-        # GET USER FROM JWT COOKIE
-        # ---------------------------
-
-        user = get_user_from_cookie(request)
-
-        user_email = "anonymous"
-        user_role = req.role or "unknown"
-
-        if user:
-            user_email = user.get("email", "unknown")
-            user_role = user.get("role", user_role)
-
-        # ---------------------------
-        # BUILD PROMPT
-        # ---------------------------
+        validate_prompt(req.message)
 
         system_prompt, user_prompt = build_chat_prompt(
             message=req.message,
-            role=user_role,
+            role=req.role or "support_worker",
             ld_lens=req.ld_lens,
             training_mode=(req.mode == "training"),
-            speed=req.speed,
+            speed=req.speed
         )
 
         home_id = req.home_id
 
-        # ---------------------------
-        # STREAM + SAVE CHAT
-        # ---------------------------
-
         def stream_and_log():
 
-            full = []
+            full_response = []
 
             for chunk in run_chat_stream(system_prompt, user_prompt):
-                full.append(chunk)
+
+                full_response.append(chunk)
+
                 yield chunk
 
+            final_text = "".join(full_response)
+
             try:
+
+                user_email = "anonymous"
 
                 log_chat(
                     conn,
                     user_email=user_email,
-                    role=user_role,
+                    role=req.role or "unknown",
                     home_id=home_id,
                     message=user_prompt,
-                    response="".join(full),
+                    response=final_text
+                )
+
+                create_supervision_summary(
+                    conn,
+                    user_email=user_email,
+                    home_id=home_id,
+                    reflection=user_prompt
                 )
 
             except Exception as log_err:
-                logger.error(f"Failed to log chat: {log_err}")
+                logger.error(f"Logging failed: {log_err}")
 
         return StreamingResponse(stream_and_log(), media_type="text/plain")
 
     except Exception as e:
+
         logger.error(f"/chat error: {e}")
-        return JSONResponse({"error": "Something went wrong."}, status_code=500)
+
+        return JSONResponse(
+            {"error": "Something went wrong."},
+            status_code=500
+        )
 
 
-# ---------------------------
-# TEMPLATE GENERATION
-# ---------------------------
+# ---------------------------------------------------------
+# TEMPLATE GENERATOR
+# ---------------------------------------------------------
 
 @router.post("/generate-template")
-async def generate_template(
-    req: TemplateRequest,
-    conn=Depends(get_db),
-):
+async def generate_template(req: TemplateRequest, conn=Depends(get_db)):
 
     try:
 
@@ -143,28 +185,22 @@ async def generate_template(
         client = OpenAI()
 
         completion = client.chat.completions.create(
-            model="gpt-4o-mini-thinking",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
         )
 
-        raw_markdown = completion.choices[0].message["content"]
-        html_output = markdown.markdown(raw_markdown, extensions=["tables"])
+        output = completion.choices[0].message.content
 
-        log_template(
-            conn,
-            user_email="anonymous",
-            role="unknown",
-            home_id=req.home_id,
-            template_name="default",
-            prompt=req.templateRequest,
-            output=html_output,
-        )
-
-        return JSONResponse({"template": html_output})
+        return JSONResponse({"template": output})
 
     except Exception as e:
+
         logger.error(f"/generate-template error: {e}")
-        raise HTTPException(status_code=500, detail="Template generation failed.")
+
+        raise HTTPException(
+            status_code=500,
+            detail="Template generation failed."
+        )
