@@ -1,68 +1,50 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+from psycopg2.extras import RealDictCursor
 from db.connection import get_db
-import jwt
-from auth.tokens import JWT_SECRET, JWT_ALGORITHM
 
-router = APIRouter(prefix="/staff/journal", tags=["Staff Journal"])
-
-class JournalEntry(BaseModel):
-    holding_today: str | None = None
-    practice_today: str | None = None
-    reflection_today: str | None = None
+router = APIRouter(
+    prefix="/staff-journal",
+    tags=["Staff Journal"]
+)
 
 
-def get_user_from_cookie(request: Request):
-    token = request.cookies.get("access_token")
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        return {"id": payload["sub"], "role": payload["role"]}
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid token")
+class Reflection(BaseModel):
+    reflection: str
 
 
-@router.get("", response_model=JournalEntry)
-def get_journal(
-    request: Request,
-    conn = Depends(get_db),
-    user = Depends(get_user_from_cookie)
-):
-    with conn.cursor() as cur:
-        cur.execute("""
-            SELECT holding_today, practice_today, reflection_today
+@router.get("/")
+def get_reflections(conn=Depends(get_db)):
+
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+
+        cur.execute(
+            """
+            SELECT id, reflection, created_at
             FROM staff_journal
-            WHERE staff_id = %s
             ORDER BY created_at DESC
-            LIMIT 1
-        """, (user["id"],))
-        row = cur.fetchone()
+            LIMIT 50
+            """
+        )
 
-    if not row:
-        return JournalEntry()
+        reflections = cur.fetchall()
 
-    return JournalEntry(**row)
+    return reflections
 
 
-@router.post("", response_model=JournalEntry)
-def save_journal(
-    payload: JournalEntry,
-    request: Request,
-    conn = Depends(get_db),
-    user = Depends(get_user_from_cookie)
-):
+@router.post("/save")
+def save_reflection(payload: Reflection, conn=Depends(get_db)):
+
     with conn.cursor() as cur:
-        cur.execute("""
-            INSERT INTO staff_journal (staff_id, holding_today, practice_today, reflection_today)
-            VALUES (%s, %s, %s, %s)
-        """, (
-            user["id"],
-            payload.holding_today,
-            payload.practice_today,
-            payload.reflection_today
-        ))
+
+        cur.execute(
+            """
+            INSERT INTO staff_journal (reflection)
+            VALUES (%s)
+            """,
+            (payload.reflection,)
+        )
+
         conn.commit()
 
-    return payload
+    return {"status": "saved"}
