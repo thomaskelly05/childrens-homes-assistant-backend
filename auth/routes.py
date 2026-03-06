@@ -11,21 +11,14 @@ from auth.tokens import create_session_token, JWT_SECRET, JWT_ALGORITHM
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-# -----------------------------
-# LOGIN MODEL
-# -----------------------------
 class LoginRequest(BaseModel):
     email: str
     password: str
 
 
-# -----------------------------
-# LOGIN
-# -----------------------------
 @router.post("/login")
 def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
 
-    # Use RealDictCursor so we can access fields by name
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
@@ -41,17 +34,18 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    if not user.get("password_hash"):
+    password_hash = user.get("password_hash")
+
+    if not password_hash:
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    # Check password
-    if not bcrypt.checkpw(
-        payload.password.encode("utf-8"),
-        user["password_hash"].encode("utf-8")
-    ):
+    # Ensure hash is bytes
+    if isinstance(password_hash, str):
+        password_hash = password_hash.encode("utf-8")
+
+    if not bcrypt.checkpw(payload.password.encode("utf-8"), password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    # Create session token
     token = create_session_token(
         user["id"],
         user["email"],
@@ -59,13 +53,12 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
         user["home_id"]
     )
 
-    # Set cookie
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
-        secure=True,       # required for HTTPS
-        samesite="none",   # required for cross-site cookies
+        secure=True,
+        samesite="none",
         path="/"
     )
 
@@ -79,23 +72,14 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
     }
 
 
-# -----------------------------
-# LOGOUT
-# -----------------------------
 @router.post("/logout")
 def logout(response: Response):
 
-    response.delete_cookie(
-        key="access_token",
-        path="/"
-    )
+    response.delete_cookie("access_token", path="/")
 
     return {"message": "Logged out"}
 
 
-# -----------------------------
-# AUTH CHECK
-# -----------------------------
 @router.get("/check")
 def check_auth(request: Request):
 
