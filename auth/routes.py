@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from pydantic import BaseModel
 import bcrypt
 import jwt
+from psycopg2.extras import RealDictCursor
 
 from db.connection import get_db
 from auth.tokens import create_session_token, JWT_SECRET, JWT_ALGORITHM
@@ -10,6 +11,9 @@ from auth.tokens import create_session_token, JWT_SECRET, JWT_ALGORITHM
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
+# -----------------------------
+# LOGIN MODEL
+# -----------------------------
 class LoginRequest(BaseModel):
     email: str
     password: str
@@ -21,7 +25,8 @@ class LoginRequest(BaseModel):
 @router.post("/login")
 def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
 
-    with conn.cursor() as cur:
+    # Use RealDictCursor so we can access fields by name
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
             SELECT id, email, password_hash, role, home_id
@@ -34,14 +39,19 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
         user = cur.fetchone()
 
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
+    if not user.get("password_hash"):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    # Check password
     if not bcrypt.checkpw(
-        payload.password.encode(),
-        user["password_hash"].encode()
+        payload.password.encode("utf-8"),
+        user["password_hash"].encode("utf-8")
     ):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
+    # Create session token
     token = create_session_token(
         user["id"],
         user["email"],
@@ -49,16 +59,24 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
         user["home_id"]
     )
 
+    # Set cookie
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
-        secure=True,
-        samesite="none",
+        secure=True,       # required for HTTPS
+        samesite="none",   # required for cross-site cookies
         path="/"
     )
 
-    return {"message": "Logged in"}
+    return {
+        "message": "Logged in",
+        "user": {
+            "id": user["id"],
+            "email": user["email"],
+            "role": user["role"]
+        }
+    }
 
 
 # -----------------------------
@@ -68,7 +86,7 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
 def logout(response: Response):
 
     response.delete_cookie(
-        "access_token",
+        key="access_token",
         path="/"
     )
 
