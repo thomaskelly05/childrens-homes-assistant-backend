@@ -11,11 +11,17 @@ from auth.tokens import create_session_token, JWT_SECRET, JWT_ALGORITHM
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
+# -----------------------------
+# LOGIN MODEL
+# -----------------------------
 class LoginRequest(BaseModel):
     email: str
     password: str
 
 
+# -----------------------------
+# LOGIN
+# -----------------------------
 @router.post("/login")
 def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
 
@@ -39,7 +45,7 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
     if not password_hash:
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    # Ensure hash is bytes
+    # PostgreSQL may return str or bytes
     if isinstance(password_hash, str):
         password_hash = password_hash.encode("utf-8")
 
@@ -72,14 +78,23 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
     }
 
 
+# -----------------------------
+# LOGOUT
+# -----------------------------
 @router.post("/logout")
 def logout(response: Response):
 
-    response.delete_cookie("access_token", path="/")
+    response.delete_cookie(
+        key="access_token",
+        path="/"
+    )
 
     return {"message": "Logged out"}
 
 
+# -----------------------------
+# AUTH CHECK
+# -----------------------------
 @router.get("/check")
 def check_auth(request: Request):
 
