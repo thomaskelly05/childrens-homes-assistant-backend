@@ -1,8 +1,9 @@
 import os
+import uvicorn
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-import uvicorn
 
 # Routers
 from assistant.routes import router as assistant_router
@@ -28,7 +29,13 @@ app.add_middleware(
     allow_origins=[
         "https://indicare.co.uk",
         "https://www.indicare.co.uk",
+
+        # Backend (Render)
         "https://childrens-homes-assistant-backend-new.onrender.com",
+
+        # Local development
+        "http://localhost:3000",
+        "http://localhost:5173",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -57,15 +64,17 @@ def health():
 # STATIC FRONTEND
 # ---------------------------------------------------------
 
-app.mount(
-    "/",
-    StaticFiles(directory="frontend", html=True),
-    name="frontend"
-)
+# Only mount frontend if the folder exists
+if os.path.isdir("frontend"):
+    app.mount(
+        "/",
+        StaticFiles(directory="frontend", html=True),
+        name="frontend"
+    )
 
 
 # ---------------------------------------------------------
-# LOCAL DEV
+# LOCAL DEVELOPMENT
 # ---------------------------------------------------------
 
 if __name__ == "__main__":
