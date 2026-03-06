@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 import markdown
 import logging
+import jwt
 
 from db.connection import get_db
+from auth.tokens import JWT_SECRET, JWT_ALGORITHM
 
 from assistant.prompts import build_chat_prompt, build_template_prompt
 from assistant.streaming import run_chat_stream
@@ -13,6 +15,28 @@ from assistant.logging import log_chat, log_template
 router = APIRouter()
 logger = logging.getLogger("uvicorn.error")
 
+
+# ---------------------------
+# USER AUTH FROM COOKIE
+# ---------------------------
+
+def get_user_from_cookie(request: Request):
+
+    token = request.cookies.get("access_token")
+
+    if not token:
+        return None
+
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return payload
+    except Exception:
+        return None
+
+
+# ---------------------------
+# REQUEST MODELS
+# ---------------------------
 
 class ChatRequest(BaseModel):
     message: str
@@ -28,15 +52,39 @@ class TemplateRequest(BaseModel):
     home_id: int | None = None
 
 
+# ---------------------------
+# CHAT ENDPOINT
+# ---------------------------
+
 @router.post("/chat")
 async def chat_endpoint(
     req: ChatRequest,
+    request: Request,
     conn=Depends(get_db),
 ):
+
     try:
+
+        # ---------------------------
+        # GET USER FROM JWT COOKIE
+        # ---------------------------
+
+        user = get_user_from_cookie(request)
+
+        user_email = "anonymous"
+        user_role = req.role or "unknown"
+
+        if user:
+            user_email = user.get("email", "unknown")
+            user_role = user.get("role", user_role)
+
+        # ---------------------------
+        # BUILD PROMPT
+        # ---------------------------
+
         system_prompt, user_prompt = build_chat_prompt(
             message=req.message,
-            role=req.role or "unknown",
+            role=user_role,
             ld_lens=req.ld_lens,
             training_mode=(req.mode == "training"),
             speed=req.speed,
@@ -44,21 +92,29 @@ async def chat_endpoint(
 
         home_id = req.home_id
 
+        # ---------------------------
+        # STREAM + SAVE CHAT
+        # ---------------------------
+
         def stream_and_log():
+
             full = []
+
             for chunk in run_chat_stream(system_prompt, user_prompt):
                 full.append(chunk)
                 yield chunk
 
             try:
+
                 log_chat(
                     conn,
-                    user_email="anonymous",
-                    role=req.role or "unknown",
+                    user_email=user_email,
+                    role=user_role,
                     home_id=home_id,
                     message=user_prompt,
                     response="".join(full),
                 )
+
             except Exception as log_err:
                 logger.error(f"Failed to log chat: {log_err}")
 
@@ -69,19 +125,25 @@ async def chat_endpoint(
         return JSONResponse({"error": "Something went wrong."}, status_code=500)
 
 
+# ---------------------------
+# TEMPLATE GENERATION
+# ---------------------------
+
 @router.post("/generate-template")
 async def generate_template(
     req: TemplateRequest,
     conn=Depends(get_db),
 ):
+
     try:
+
         system_prompt, user_prompt = build_template_prompt(req.templateRequest)
 
         from openai import OpenAI
         client = OpenAI()
 
         completion = client.chat.completions.create(
-            model="gpt-4o-mini-thinking",   # ← MATCHES CHAT MODEL
+            model="gpt-4o-mini-thinking",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
