@@ -1,37 +1,25 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends
+from psycopg2.extras import RealDictCursor
 from db.connection import get_db
-import jwt
-from auth.tokens import JWT_SECRET, JWT_ALGORITHM
 
-router = APIRouter(prefix="/account", tags=["Account"])
-
-def get_user_from_cookie(request: Request):
-    token = request.cookies.get("access_token")
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        return {"id": payload["sub"], "role": payload["role"]}
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
+router = APIRouter(
+    prefix="/account",
+    tags=["Account"]
+)
 
 @router.get("/me")
-def get_me(
-    request: Request,
-    conn = Depends(get_db),
-    user = Depends(get_user_from_cookie)
-):
-    with conn.cursor() as cur:
-        cur.execute("""
-            SELECT id, email, role, home_id, archived, created_at, updated_at
+def get_account(conn=Depends(get_db)):
+
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+
+        cur.execute(
+            """
+            SELECT id, email, role
             FROM users
-            WHERE id = %s
-        """, (user["id"],))
-        row = cur.fetchone()
+            LIMIT 1
+            """
+        )
 
-    if not row:
-        raise HTTPException(status_code=404, detail="User not found")
+        user = cur.fetchone()
 
-    return row
+    return user
