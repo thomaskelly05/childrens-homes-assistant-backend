@@ -4,49 +4,106 @@ from pydantic import BaseModel
 from db.connection import get_db
 
 router = APIRouter(
-    prefix="/conversation",
-    tags=["Conversation"]
+    prefix="/conversations",
+    tags=["Conversations"]
 )
 
+
 class Message(BaseModel):
-    user_id: int
+    conversation_id: int
     role: str
     message: str
 
 
+class NewConversation(BaseModel):
+    user_id: int
+    title: str
+
+
+# LIST USER CONVERSATIONS
+
 @router.get("/{user_id}")
-def get_history(user_id: int, conn=Depends(get_db)):
+def list_conversations(user_id: int, conn=Depends(get_db)):
+
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+
+        cur.execute(
+            """
+            SELECT id, title, created_at
+            FROM conversations
+            WHERE user_id = %s
+            ORDER BY created_at DESC
+            """,
+            (user_id,)
+        )
+
+        conversations = cur.fetchall()
+
+    return conversations
+
+
+# GET MESSAGES IN CONVERSATION
+
+@router.get("/chat/{conversation_id}")
+def get_messages(conversation_id: int, conn=Depends(get_db)):
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
 
         cur.execute(
             """
             SELECT role, message
-            FROM conversations
-            WHERE user_id = %s
+            FROM messages
+            WHERE conversation_id = %s
             ORDER BY created_at ASC
-            LIMIT 50
             """,
-            (user_id,)
+            (conversation_id,)
         )
 
-        history = cur.fetchall()
+        messages = cur.fetchall()
 
-    return history
+    return messages
 
 
-@router.post("/save")
+# CREATE NEW CONVERSATION
+
+@router.post("/create")
+def create_conversation(payload: NewConversation, conn=Depends(get_db)):
+
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+
+        cur.execute(
+            """
+            INSERT INTO conversations (user_id, title)
+            VALUES (%s,%s)
+            RETURNING id
+            """,
+            (
+                payload.user_id,
+                payload.title
+            )
+        )
+
+        convo = cur.fetchone()
+
+        conn.commit()
+
+    return convo
+
+
+# SAVE MESSAGE
+
+@router.post("/message")
 def save_message(payload: Message, conn=Depends(get_db)):
 
     with conn.cursor() as cur:
 
         cur.execute(
             """
-            INSERT INTO conversations (user_id, role, message)
+            INSERT INTO messages (conversation_id, role, message)
             VALUES (%s,%s,%s)
             """,
             (
-                payload.user_id,
+                payload.conversation_id,
                 payload.role,
                 payload.message
             )
@@ -54,4 +111,4 @@ def save_message(payload: Message, conn=Depends(get_db)):
 
         conn.commit()
 
-    return {"status":"saved"}
+    return {"status": "saved"}
