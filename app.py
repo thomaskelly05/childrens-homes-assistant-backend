@@ -15,18 +15,65 @@ from routers.handover_routes import router as handover_router
 from routers.dashboard_routes import router as dashboard_router
 from routers.account_routes import router as account_router
 from routers.conversation_routes import router as conversation_router
+from routers.reports_routes import router as reports_router
+
+# Optional knowledge validation
+try:
+    from assistant.knowledge_loader import validate_knowledge_files
+except Exception:
+    validate_knowledge_files = None
 
 
 # ---------------------------------------------------------
-# APP
+# CONFIG
+# ---------------------------------------------------------
+
+APP_NAME = "IndiCare Assistant API"
+VERSION = "1.0"
+
+PORT = int(os.environ.get("PORT", 10000))
+
+ALLOWED_ORIGINS = [
+    "https://indicare.co.uk",
+    "https://www.indicare.co.uk",
+
+    # Render deployments
+    "https://childrens-homes-assistant-backend.onrender.com",
+    "https://childrens-homes-assistant-backend-new.onrender.com",
+
+    # Local development
+    "http://localhost:3000",
+    "http://localhost:5173",
+]
+
+
+# ---------------------------------------------------------
+# APP INITIALISATION
 # ---------------------------------------------------------
 
 app = FastAPI(
-    title="IndiCare Assistant API",
-    version="1.0",
+    title=APP_NAME,
+    version=VERSION,
     docs_url="/docs",
     redoc_url=None
 )
+
+
+# ---------------------------------------------------------
+# STARTUP EVENTS
+# ---------------------------------------------------------
+
+@app.on_event("startup")
+def startup_event():
+    """
+    Run startup checks.
+    """
+    if validate_knowledge_files:
+        try:
+            validate_knowledge_files()
+            print("Knowledge files validated.")
+        except Exception as e:
+            print("Knowledge validation failed:", e)
 
 
 # ---------------------------------------------------------
@@ -35,18 +82,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://indicare.co.uk",
-        "https://www.indicare.co.uk",
-
-        # Render backends
-        "https://childrens-homes-assistant-backend.onrender.com",
-        "https://childrens-homes-assistant-backend-new.onrender.com",
-
-        # Local development
-        "http://localhost:3000",
-        "http://localhost:5173",
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -60,46 +96,58 @@ app.add_middleware(
 # Authentication
 app.include_router(auth_router)
 
-# AI Assistant
+# AI assistant
 app.include_router(assistant_router)
 
-# Core system
+# Conversation + chat memory
+app.include_router(conversation_router)
+
+# Tasks and staff tools
 app.include_router(tasks_router)
 app.include_router(journal_router)
 app.include_router(handover_router)
 
-# Manager features
+# Incident report generator
+app.include_router(reports_router)
+
+# Manager / dashboard tools
 app.include_router(dashboard_router)
 
 # User account
 app.include_router(account_router)
 
-# Conversation memory
-app.include_router(conversation_router)
-
 
 # ---------------------------------------------------------
-# HEALTH CHECK
+# HEALTH / STATUS
 # ---------------------------------------------------------
 
-@app.get("/health")
+@app.get("/health", tags=["system"])
 def health():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "service": APP_NAME,
+        "version": VERSION
+    }
 
 
-@app.get("/")
+@app.get("/", tags=["system"])
 def root():
-    return {"service": "IndiCare API running"}
+    return {
+        "message": "IndiCare API running"
+    }
 
 
 # ---------------------------------------------------------
-# STATIC FRONTEND (optional)
+# STATIC FRONTEND (OPTIONAL)
 # ---------------------------------------------------------
 
-if os.path.isdir("frontend"):
+FRONTEND_DIR = "frontend"
+
+if os.path.isdir(FRONTEND_DIR):
+
     app.mount(
         "/",
-        StaticFiles(directory="frontend", html=True),
+        StaticFiles(directory=FRONTEND_DIR, html=True),
         name="frontend"
     )
 
@@ -110,11 +158,9 @@ if os.path.isdir("frontend"):
 
 if __name__ == "__main__":
 
-    port = int(os.environ.get("PORT", 10000))
-
     uvicorn.run(
         "app:app",
         host="0.0.0.0",
-        port=port,
+        port=PORT,
         reload=True
     )
