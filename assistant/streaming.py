@@ -2,13 +2,22 @@ from openai import OpenAI
 
 client = OpenAI()
 
-def run_chat_stream(system_prompt: str, user_prompt: str):
+def run_chat_stream(messages):
+
+    # Convert simple messages into the new typed format
+    formatted_messages = []
+
+    for m in messages:
+        formatted_messages.append({
+            "role": m["role"],
+            "content": [
+                {"type": "text", "text": m["content"]}
+            ]
+        })
+
     stream = client.chat.completions.create(
-        model="gpt-4o-mini",   # ← THIS FIXES THE FLUFF
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+        model="gpt-4o-mini",
+        messages=formatted_messages,
         stream=True,
     )
 
