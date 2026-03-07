@@ -1,0 +1,94 @@
+{
+  "statutory_frameworks": [
+    "Children's Homes (England) Regulations 2015",
+    "Guide to the Children's Homes Regulations including the Quality Standards",
+    "Care Standards Act 2000",
+    "Children Act 1989",
+    "Children Act 2004",
+    "Children and Social Work Act 2017"
+  ],
+
+  "inspection_and_regulation": [
+    "Ofsted Social Care Common Inspection Framework (SCCIF)",
+    "Ofsted Guide to the SCCIF for children's homes",
+    "Ofsted inspection handbook for children's homes",
+    "Regulation 44 Independent Person visits",
+    "Regulation 45 Quality of Care Review requirements"
+  ],
+
+  "safeguarding_frameworks": [
+    "Working Together to Safeguard Children",
+    "Information Sharing: Advice for Practitioners",
+    "Statutory guidance on children who run away or go missing from home or care",
+    "Child Safeguarding Practice Review Panel reports",
+    "Local Safeguarding Children Partnership procedures",
+    "National guidance on safeguarding children in care"
+  ],
+
+  "contextual_safeguarding_and_exploitation": [
+    "Contextual Safeguarding Framework (University of Bedfordshire)",
+    "National Working Group (NWG) guidance on Child Sexual Exploitation",
+    "Home Office County Lines guidance",
+    "Criminal exploitation of children and vulnerable adults guidance",
+    "Serious Violence Strategy",
+    "Child Criminal Exploitation practice guidance",
+    "Peer-on-peer abuse safeguarding guidance"
+  ],
+
+  "missing_children_and_extra_familial_risk": [
+    "Statutory guidance on children who run away or go missing from home or care",
+    "Return Home Interview guidance",
+    "County Lines exploitation guidance",
+    "Child trafficking and modern slavery guidance"
+  ],
+
+  "residential_care_practice": [
+    "Independent Review of Children's Social Care (MacAlister Review)",
+    "Stable Homes Built on Love – children's social care reform strategy",
+    "Residential Care Leadership Board guidance",
+    "Research in Practice residential care resources",
+    "NICE guidance relating to looked-after children",
+    "Children's Commissioner reports on children in care"
+  ],
+
+  "trauma_and_attachment_informed_practice": [
+    "Trauma-informed care frameworks",
+    "Attachment-informed practice",
+    "PACE (Playfulness, Acceptance, Curiosity, Empathy)",
+    "Dyadic Developmental Practice",
+    "Secure Base model (Schofield and Beek)"
+  ],
+
+  "behaviour_support_and_restrictive_practice": [
+    "Positive and Proactive Care: reducing restrictive interventions",
+    "Restraint Reduction Network training standards",
+    "Guidance on behaviour support in residential care settings"
+  ],
+
+  "participation_and_children_rights": [
+    "UN Convention on the Rights of the Child",
+    "Advocacy standards for looked-after children",
+    "Children's Commissioner participation guidance"
+  ],
+
+  "sector_learning_and_research": [
+    "Research in Practice",
+    "Nuffield Family Justice Observatory",
+    "Centre of Expertise on Child Sexual Abuse",
+    "NSPCC safeguarding learning",
+    "Contextual Safeguarding Network",
+    "Youth Endowment Fund research"
+  ],
+
+  "professional_bodies": [
+    "British Association of Social Workers (BASW)",
+    "National Association of Independent Reviewing Officers (NAIRO)",
+    "National Working Group (NWG) on Child Exploitation"
+  ],
+
+  "notes": "These sources inform professional reflection and understanding of residential children’s home practice in England. Guidance should always be checked against the most recent statutory publications and organisational policies.",
+
+  "last_checked": "2026-03",
+  "review_frequency": "6 months",
+  "next_review_due": "2026-09"
+}
