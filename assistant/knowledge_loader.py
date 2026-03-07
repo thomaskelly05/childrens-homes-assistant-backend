@@ -5,7 +5,6 @@ import os
 import logging
 from functools import lru_cache
 
-# Base path for IndiCare knowledge files
 BASE_PATH = os.path.join(os.path.dirname(__file__), "knowledge")
 
 logger = logging.getLogger("indicare.knowledge")
@@ -14,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 
 def _safe_load_json(path: str):
     """
-    Safely loads JSON files and logs useful errors.
+    Safely load JSON with helpful error handling.
     """
     if not os.path.exists(path):
         logger.error(f"Knowledge file missing: {path}")
@@ -42,43 +41,32 @@ def _load_json(filename: str):
 
 @lru_cache(maxsize=None)
 def load_templates():
-    """
-    Returns the template library as a dict:
-    { "template_name": "prompt text" }
-    """
     return _load_json("template_library.json")
 
 
 @lru_cache(maxsize=None)
 def load_reflective_questions():
-    """
-    Returns a list of reflective questions.
-    """
     return _load_json("reflective_questions.json")
 
 
 @lru_cache(maxsize=None)
 def load_micro_interventions():
-    """
-    Returns micro-intervention categories.
-    """
     return _load_json("micro_interventions.json")
 
 
 @lru_cache(maxsize=None)
 def load_shift_flows():
-    """
-    Returns shift flow guidance.
-    """
     return _load_json("shift_flows.json")
 
 
 @lru_cache(maxsize=None)
 def load_guidance_sources():
-    """
-    Returns professional guidance frameworks used by IndiCare.
-    """
     return _load_json("guidance_sources.json")
+
+
+@lru_cache(maxsize=None)
+def load_knowledge_version():
+    return _load_json("version.json")
 
 
 # -----------------------------------------------------
@@ -86,9 +74,6 @@ def load_guidance_sources():
 # -----------------------------------------------------
 
 def get_guidance_review_info():
-    """
-    Returns guidance review metadata such as last checked date.
-    """
     data = load_guidance_sources()
 
     return {
@@ -104,7 +89,7 @@ def get_guidance_review_info():
 
 def reload_knowledge():
     """
-    Clears cached knowledge so files can be reloaded
+    Clears cached knowledge so updates can be loaded
     without restarting the server.
     """
 
@@ -113,8 +98,9 @@ def reload_knowledge():
     load_micro_interventions.cache_clear()
     load_shift_flows.cache_clear()
     load_guidance_sources.cache_clear()
+    load_knowledge_version.cache_clear()
 
-    logger.info("IndiCare knowledge cache cleared and ready to reload.")
+    logger.info("IndiCare knowledge cache cleared.")
 
 
 # -----------------------------------------------------
@@ -123,8 +109,8 @@ def reload_knowledge():
 
 def validate_knowledge_files():
     """
-    Ensures all required knowledge files exist and load correctly.
-    Useful during startup checks.
+    Ensures all required knowledge files exist
+    and are valid JSON.
     """
 
     required_files = [
@@ -133,6 +119,7 @@ def validate_knowledge_files():
         "micro_interventions.json",
         "shift_flows.json",
         "guidance_sources.json",
+        "version.json",
     ]
 
     for file in required_files:
