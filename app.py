@@ -16,11 +16,11 @@ from routers.dashboard_routes import router as dashboard_router
 from routers.account_routes import router as account_router
 from routers.conversation_routes import router as conversation_router
 from routers.reports_routes import router as reports_router
-from routers.risk_routes import router as risk_router
+from routers.documents_routes import router as documents_router
 
 
 APP_NAME = "IndiCare Assistant API"
-VERSION = "1.0"
+VERSION = "1.2"
 
 PORT = int(os.environ.get("PORT", 10000))
 
@@ -45,9 +45,9 @@ app = FastAPI(
 )
 
 
-# ---------------------------------------------------------
+# ---------------------------
 # CORS
-# ---------------------------------------------------------
+# ---------------------------
 
 app.add_middleware(
     CORSMiddleware,
@@ -58,12 +58,14 @@ app.add_middleware(
 )
 
 
-# ---------------------------------------------------------
+# ---------------------------
 # ROUTERS
-# ---------------------------------------------------------
+# ---------------------------
 
 app.include_router(auth_router)
+
 app.include_router(assistant_router)
+
 app.include_router(conversation_router)
 
 app.include_router(tasks_router)
@@ -71,17 +73,20 @@ app.include_router(journal_router)
 app.include_router(handover_router)
 
 app.include_router(reports_router)
-app.include_router(risk_router)
+
+# NEW DOCUMENT GENERATORS
+app.include_router(documents_router)
 
 app.include_router(dashboard_router)
+
 app.include_router(account_router)
 
 
-# ---------------------------------------------------------
+# ---------------------------
 # HEALTH
-# ---------------------------------------------------------
+# ---------------------------
 
-@app.get("/health", tags=["system"])
+@app.get("/health")
 def health():
     return {
         "status": "ok",
@@ -90,16 +95,14 @@ def health():
     }
 
 
-@app.get("/", tags=["system"])
+@app.get("/")
 def root():
-    return {
-        "message": "IndiCare API running"
-    }
+    return {"message": "IndiCare API running"}
 
 
-# ---------------------------------------------------------
-# STATIC FRONTEND (optional)
-# ---------------------------------------------------------
+# ---------------------------
+# OPTIONAL FRONTEND HOSTING
+# ---------------------------
 
 FRONTEND_DIR = "frontend"
 
@@ -111,6 +114,10 @@ if os.path.isdir(FRONTEND_DIR):
         name="frontend"
     )
 
+
+# ---------------------------
+# LOCAL DEV
+# ---------------------------
 
 if __name__ == "__main__":
 
