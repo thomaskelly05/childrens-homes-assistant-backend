@@ -5,25 +5,36 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-# Routers
-from assistant.routes import router as assistant_router
+
+# ---------------------------
+# ROUTERS
+# ---------------------------
+
 from auth.routes import router as auth_router
+
+from routers.chat_routes import router as chat_router
+from routers.conversation_routes import router as conversation_router
 
 from routers.tasks_routes import router as tasks_router
 from routers.staff_journal_routes import router as journal_router
 from routers.handover_routes import router as handover_router
-from routers.dashboard_routes import router as dashboard_router
-from routers.account_routes import router as account_router
-from routers.conversation_routes import router as conversation_router
+
 from routers.reports_routes import router as reports_router
 from routers.documents_routes import router as documents_router
 
+from routers.dashboard_routes import router as dashboard_router
+from routers.account_routes import router as account_router
+
 
 APP_NAME = "IndiCare Assistant API"
-VERSION = "1.2"
+VERSION = "1.3"
 
 PORT = int(os.environ.get("PORT", 10000))
 
+
+# ---------------------------
+# CORS SETTINGS
+# ---------------------------
 
 ALLOWED_ORIGINS = [
     "https://indicare.co.uk",
@@ -45,10 +56,6 @@ app = FastAPI(
 )
 
 
-# ---------------------------
-# CORS
-# ---------------------------
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -64,26 +71,26 @@ app.add_middleware(
 
 app.include_router(auth_router)
 
-app.include_router(assistant_router)
+# Chat system
+app.include_router(chat_router)
 
+# Conversation utilities
 app.include_router(conversation_router)
 
+# Core platform features
 app.include_router(tasks_router)
 app.include_router(journal_router)
 app.include_router(handover_router)
 
 app.include_router(reports_router)
-
-# NEW DOCUMENT GENERATORS
 app.include_router(documents_router)
 
 app.include_router(dashboard_router)
-
 app.include_router(account_router)
 
 
 # ---------------------------
-# HEALTH
+# HEALTH CHECK
 # ---------------------------
 
 @app.get("/health")
@@ -97,7 +104,9 @@ def health():
 
 @app.get("/")
 def root():
-    return {"message": "IndiCare API running"}
+    return {
+        "message": "IndiCare API running"
+    }
 
 
 # ---------------------------
@@ -116,7 +125,7 @@ if os.path.isdir(FRONTEND_DIR):
 
 
 # ---------------------------
-# LOCAL DEV
+# LOCAL DEVELOPMENT
 # ---------------------------
 
 if __name__ == "__main__":
