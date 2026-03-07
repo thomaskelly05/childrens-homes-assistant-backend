@@ -2,9 +2,10 @@ from openai import OpenAI
 
 client = OpenAI()
 
+
 def run_chat_stream(messages):
 
-    # Convert simple messages into the new typed format
+    # Convert simple message format into OpenAI's typed format
     formatted_messages = []
 
     for m in messages:
@@ -22,6 +23,7 @@ def run_chat_stream(messages):
     )
 
     for chunk in stream:
+
         if (
             chunk.choices
             and chunk.choices[0].delta
