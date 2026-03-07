@@ -16,7 +16,9 @@ class ChatRequest(BaseModel):
     user_id: int | None = 1
 
 
-# ---------- AI TITLE GENERATOR ----------
+# ---------------------------------------------------------
+# AI TITLE GENERATOR
+# ---------------------------------------------------------
 
 def generate_title(message: str):
 
@@ -39,7 +41,9 @@ Title:
     return res.choices[0].message.content.strip()
 
 
-# ---------- MAIN CHAT ROUTE ----------
+# ---------------------------------------------------------
+# MAIN CHAT ROUTE
+# ---------------------------------------------------------
 
 @router.post("/")
 def chat(payload: ChatRequest, conn=Depends(get_db)):
@@ -50,7 +54,7 @@ def chat(payload: ChatRequest, conn=Depends(get_db)):
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
 
-        # CREATE NEW CONVERSATION IF NONE EXISTS
+        # CREATE NEW CONVERSATION
 
         if conversation_id is None:
 
@@ -69,7 +73,7 @@ def chat(payload: ChatRequest, conn=Depends(get_db)):
 
             conn.commit()
 
-        # LOAD PREVIOUS MESSAGES
+        # LOAD HISTORY
 
         cur.execute(
             """
@@ -92,19 +96,16 @@ def chat(payload: ChatRequest, conn=Depends(get_db)):
     ]
 
     for h in history:
-        messages.append(
-            {
-                "role": h["role"],
-                "content": h["message"]
-            }
-        )
+        messages.append({
+            "role": h["role"],
+            "content": h["message"]
+        })
 
-    messages.append(
-        {
-            "role": "user",
-            "content": message
-        }
-    )
+    messages.append({
+        "role": "user",
+        "content": message
+    })
+
 
     def stream_and_save():
 
@@ -150,4 +151,59 @@ def chat(payload: ChatRequest, conn=Depends(get_db)):
 
             conn.commit()
 
-    return StreamingResponse(stream_and_save(), media_type="text/plain")
+
+    return StreamingResponse(
+        stream_and_save(),
+        media_type="text/plain",
+        headers={
+            "conversation-id": str(conversation_id)
+        }
+    )
+
+
+# ---------------------------------------------------------
+# GET CONVERSATIONS
+# ---------------------------------------------------------
+
+@router.get("/conversations")
+def get_conversations(user_id: int = 1, conn=Depends(get_db)):
+
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+
+        cur.execute(
+            """
+            SELECT id,title
+            FROM conversations
+            WHERE user_id=%s
+            ORDER BY created_at DESC
+            """,
+            (user_id,)
+        )
+
+        rows = cur.fetchall()
+
+    return rows
+
+
+# ---------------------------------------------------------
+# GET MESSAGES FROM CONVERSATION
+# ---------------------------------------------------------
+
+@router.get("/conversations/{conversation_id}")
+def get_messages(conversation_id: int, conn=Depends(get_db)):
+
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+
+        cur.execute(
+            """
+            SELECT role,message
+            FROM messages
+            WHERE conversation_id=%s
+            ORDER BY created_at ASC
+            """,
+            (conversation_id,)
+        )
+
+        rows = cur.fetchall()
+
+    return rows
