@@ -1,0 +1,21 @@
+Incident Report
+
+Young Person: {{child_name}}
+
+Date: {{date}}
+Time: {{time}}
+
+Staff Involved:
+{{staff}}
+
+Description of Incident:
+
+{{description}}
+
+Action Taken:
+
+{{action}}
+
+Outcome:
+
+{{outcome}}
