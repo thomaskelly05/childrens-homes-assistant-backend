@@ -6,6 +6,7 @@ from assistant.streaming import run_chat_stream
 
 router = APIRouter()
 
+
 @router.post("/chat")
 def chat(payload: dict, conn=Depends(get_db)):
 
@@ -14,12 +15,12 @@ def chat(payload: dict, conn=Depends(get_db)):
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
 
-        # load conversation memory
+        # Load previous messages for conversation memory
         cur.execute(
             """
             SELECT role, message
             FROM conversations
-            WHERE user_id=%s
+            WHERE user_id = %s
             ORDER BY created_at ASC
             LIMIT 20
             """,
@@ -28,44 +29,57 @@ def chat(payload: dict, conn=Depends(get_db)):
 
         history = cur.fetchall()
 
-    messages = []
+    # System prompt for safeguarding-aware responses
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are an assistant helping staff working in UK children's homes. "
+                "Provide trauma-informed, safeguarding-aware guidance. "
+                "Support behaviour management, safeguarding practice, and reflective care."
+            )
+        }
+    ]
 
+    # Add conversation history
     for h in history:
         messages.append({
             "role": h["role"],
             "content": h["message"]
         })
 
+    # Add current user message
     messages.append({
         "role": "user",
         "content": user_message
     })
 
-
     def stream_and_save():
 
         full_response = ""
 
-        for chunk in run_chat_stream(messages):
+        # Run AI streaming response
+        for chunk in run_chat_stream(messages, user_message):
             full_response += chunk
             yield chunk
 
+        # Save conversation to database
         with conn.cursor() as cur:
 
-            # save user message
+            # Save user message
             cur.execute(
                 """
                 INSERT INTO conversations (user_id, role, message)
-                VALUES (%s,'user',%s)
+                VALUES (%s, 'user', %s)
                 """,
                 (user_id, user_message)
             )
 
-            # save assistant message
+            # Save assistant response
             cur.execute(
                 """
                 INSERT INTO conversations (user_id, role, message)
-                VALUES (%s,'assistant',%s)
+                VALUES (%s, 'assistant', %s)
                 """,
                 (user_id, full_response)
             )
