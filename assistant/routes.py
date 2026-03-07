@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
 from psycopg2.extras import RealDictCursor
 from db.connection import get_db
 from assistant.streaming import run_chat_stream
@@ -14,7 +15,6 @@ def chat(payload: dict, conn=Depends(get_db)):
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
 
         # load conversation memory
-
         cur.execute(
             """
             SELECT role, message
@@ -42,14 +42,11 @@ def chat(payload: dict, conn=Depends(get_db)):
     })
 
 
-    # run AI
-
     def stream_and_save():
 
         full_response = ""
 
         for chunk in run_chat_stream(messages):
-
             full_response += chunk
             yield chunk
 
@@ -75,4 +72,4 @@ def chat(payload: dict, conn=Depends(get_db)):
 
             conn.commit()
 
-    return stream_and_save()
+    return StreamingResponse(stream_and_save(), media_type="text/plain")
