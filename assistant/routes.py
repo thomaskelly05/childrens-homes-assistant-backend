@@ -29,7 +29,7 @@ def chat(payload: dict, conn=Depends(get_db)):
 
         history = cur.fetchall()
 
-    # System prompt for safeguarding-aware responses
+    # System prompt
     messages = [
         {
             "role": "system",
@@ -58,15 +58,14 @@ def chat(payload: dict, conn=Depends(get_db)):
 
         full_response = ""
 
-        # Run AI streaming response
-        for chunk in run_chat_stream(messages, user_message):
+        # Stream response from OpenAI
+        for chunk in run_chat_stream(messages):
             full_response += chunk
             yield chunk
 
-        # Save conversation to database
+        # Save conversation
         with conn.cursor() as cur:
 
-            # Save user message
             cur.execute(
                 """
                 INSERT INTO conversations (user_id, role, message)
@@ -75,7 +74,6 @@ def chat(payload: dict, conn=Depends(get_db)):
                 (user_id, user_message)
             )
 
-            # Save assistant response
             cur.execute(
                 """
                 INSERT INTO conversations (user_id, role, message)
