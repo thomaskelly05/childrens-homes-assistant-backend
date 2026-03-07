@@ -16,8 +16,10 @@ python-jose
 python-jose[cryptography]
 passlib[bcrypt]
 python-multipart
+pip install python-docx
 
 typing_extensions
+
 
 
 
