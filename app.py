@@ -23,7 +23,9 @@ from routers.conversation_routes import router as conversation_router
 
 app = FastAPI(
     title="IndiCare Assistant API",
-    version="1.0"
+    version="1.0",
+    docs_url="/docs",
+    redoc_url=None
 )
 
 
@@ -36,9 +38,12 @@ app.add_middleware(
     allow_origins=[
         "https://indicare.co.uk",
         "https://www.indicare.co.uk",
+
+        # Render backends
+        "https://childrens-homes-assistant-backend.onrender.com",
         "https://childrens-homes-assistant-backend-new.onrender.com",
 
-        # local dev
+        # Local development
         "http://localhost:3000",
         "http://localhost:5173",
     ],
@@ -52,16 +57,24 @@ app.add_middleware(
 # ROUTERS
 # ---------------------------------------------------------
 
+# Authentication
 app.include_router(auth_router)
+
+# AI Assistant
 app.include_router(assistant_router)
 
+# Core system
 app.include_router(tasks_router)
 app.include_router(journal_router)
 app.include_router(handover_router)
+
+# Manager features
 app.include_router(dashboard_router)
+
+# User account
 app.include_router(account_router)
 
-# NEW
+# Conversation memory
 app.include_router(conversation_router)
 
 
@@ -74,8 +87,13 @@ def health():
     return {"status": "ok"}
 
 
+@app.get("/")
+def root():
+    return {"service": "IndiCare API running"}
+
+
 # ---------------------------------------------------------
-# STATIC FRONTEND
+# STATIC FRONTEND (optional)
 # ---------------------------------------------------------
 
 if os.path.isdir("frontend"):
@@ -87,7 +105,7 @@ if os.path.isdir("frontend"):
 
 
 # ---------------------------------------------------------
-# LOCAL DEV
+# LOCAL DEVELOPMENT
 # ---------------------------------------------------------
 
 if __name__ == "__main__":
