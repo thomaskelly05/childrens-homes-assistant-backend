@@ -44,10 +44,6 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
 
     password_hash = user.get("password_hash")
 
-    if not password_hash:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-
-    # PostgreSQL may return str or bytes
     if isinstance(password_hash, str):
         password_hash = password_hash.encode("utf-8")
 
@@ -61,7 +57,6 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
         user["home_id"]
     )
 
-    # Store token in secure cookie
     response.set_cookie(
         key="access_token",
         value=token,
@@ -73,12 +68,11 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
 
     return {
         "message": "Logged in",
-        "access_token": token,
-        "token_type": "bearer",
         "user": {
             "id": user["id"],
             "email": user["email"],
-            "role": user["role"]
+            "role": user["role"],
+            "home_id": user["home_id"]
         }
     }
 
@@ -125,3 +119,33 @@ def check_auth(request: Request):
 
     except Exception:
         return {"authenticated": False}
+
+
+# ---------------------------------------------------------
+# CURRENT USER
+# ---------------------------------------------------------
+
+@router.get("/me")
+def get_current_user(request: Request):
+
+    token = request.cookies.get("access_token")
+
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    try:
+        payload = jwt.decode(
+            token,
+            JWT_SECRET,
+            algorithms=[JWT_ALGORITHM]
+        )
+
+        return {
+            "id": payload.get("sub"),
+            "email": payload.get("email"),
+            "role": payload.get("role"),
+            "home_id": payload.get("home_id")
+        }
+
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid session")
