@@ -1,15 +1,24 @@
-const API="https://api.indicare.co.uk"
+const API = "https://api.indicare.co.uk"
 
-let conversation=null
-let userName=""
-let streamingMsg=null
-
+let conversation = null
+let userName = ""
+let streamingMsg = null
 let chat
 
 
+/* -------------------------------- */
+/* INIT */
+/* -------------------------------- */
+
+window.addEventListener("load", () => {
+
+initApp()
+
+})
+
 function initApp(){
 
-chat=document.getElementById("chat")
+chat = document.getElementById("chat")
 
 loadUser()
 loadConversations()
@@ -17,28 +26,50 @@ loadConversations()
 }
 
 
+/* -------------------------------- */
 /* USER */
+/* -------------------------------- */
 
 async function loadUser(){
 
-const res=await fetch(API+"/auth/me",{credentials:"include"})
+try{
 
-const data=await res.json()
+const res = await fetch(API + "/auth/me", {
+credentials: "include"
+})
 
-userName=data.email||"User"
+if(!res.ok){
+
+window.location="/login.html"
+return
+
+}
+
+const data = await res.json()
+
+userName = data.email || "User"
 
 renderHome()
+
+}catch(err){
+
+console.error("User load failed",err)
+window.location="/login.html"
+
+}
 
 }
 
 
+/* -------------------------------- */
 /* HOME */
+/* -------------------------------- */
 
 function renderHome(){
 
-conversation=null
+conversation = null
 
-chat.innerHTML=`
+chat.innerHTML = `
 <div class="home">
 <h2>Hello ${userName}, how can I support you today?</h2>
 <p>IndiCare helps with safeguarding guidance, reports and reflections.</p>
@@ -48,7 +79,9 @@ chat.innerHTML=`
 }
 
 
+/* -------------------------------- */
 /* SIDEBAR */
+/* -------------------------------- */
 
 function toggleSidebar(){
 
@@ -57,7 +90,9 @@ document.getElementById("sidebar").classList.toggle("hidden")
 }
 
 
-/* MESSAGE */
+/* -------------------------------- */
+/* ADD MESSAGE */
+/* -------------------------------- */
 
 function addMsg(role,text){
 
@@ -85,13 +120,16 @@ ${role==="assistant" ? '<div class="copyBtn" onclick="copyText(this)">Copy</div>
 
 chat.appendChild(div)
 
-chat.scrollTop=chat.scrollHeight
+chat.scrollTop = chat.scrollHeight
 
 return div
 
 }
 
-/* STREAM */
+
+/* -------------------------------- */
+/* SEND CHAT */
+/* -------------------------------- */
 
 async function sendChat(){
 
@@ -99,15 +137,15 @@ const input=document.getElementById("chatInput")
 
 const text=input.value.trim()
 
-if(!text)return
+if(!text) return
 
 addMsg("user",text)
 
 input.value=""
 
-streamingMsg=addMsg("assistant","")
+streamingMsg = addMsg("assistant","")
 
-const bubble=streamingMsg.querySelector(".bubble")
+const bubble = streamingMsg.querySelector(".bubble")
 
 bubble.innerHTML=`
 <div class="typing">
@@ -116,7 +154,8 @@ bubble.innerHTML=`
 <span></span>
 </div>
 `
-const res=await fetch(API+"/chat/",{
+
+const res = await fetch(API+"/chat/",{
 
 method:"POST",
 
@@ -133,6 +172,13 @@ conversation_id:conversation
 
 })
 
+if(!res.ok){
+
+bubble.innerHTML="Error contacting AI service."
+return
+
+}
+
 const reader=res.body.getReader()
 
 const decoder=new TextDecoder()
@@ -143,13 +189,13 @@ while(true){
 
 const {done,value}=await reader.read()
 
-if(done)break
+if(done) break
 
-ai+=decoder.decode(value)
+ai += decoder.decode(value)
 
-bubble.innerHTML=marked.parse(ai)
+bubble.innerHTML = marked.parse(ai)
 
-chat.scrollTop=chat.scrollHeight
+chat.scrollTop = chat.scrollHeight
 
 }
 
@@ -158,18 +204,30 @@ loadConversations()
 }
 
 
-/* COPY */
+/* -------------------------------- */
+/* COPY MESSAGE */
+/* -------------------------------- */
 
-function copyMsg(el){
+function copyText(el){
 
-const text=el.parentElement.parentElement.querySelector(".bubble").innerText
+const text = el.parentElement.innerText
 
 navigator.clipboard.writeText(text)
+
+el.innerText = "Copied"
+
+setTimeout(()=>{
+
+el.innerText="Copy"
+
+},2000)
 
 }
 
 
-/* DELETE */
+/* -------------------------------- */
+/* DELETE MESSAGE */
+/* -------------------------------- */
 
 function deleteMsg(el){
 
@@ -178,7 +236,9 @@ el.closest(".msg").remove()
 }
 
 
-/* EDIT */
+/* -------------------------------- */
+/* EDIT MESSAGE */
+/* -------------------------------- */
 
 function editMsg(el){
 
@@ -191,28 +251,36 @@ bubble.closest(".msg").remove()
 }
 
 
+/* -------------------------------- */
 /* REGENERATE */
+/* -------------------------------- */
 
 function regenerate(){
 
-const lastUser=document.querySelector(".msg.user:last-of-type .bubble").innerText
+const last = document.querySelector(".msg.user:last-of-type .bubble")
 
-document.getElementById("chatInput").value=lastUser
+if(!last) return
+
+document.getElementById("chatInput").value = last.innerText
 
 sendChat()
 
 }
 
 
-/* CONVERSATIONS */
+/* -------------------------------- */
+/* LOAD CONVERSATIONS */
+/* -------------------------------- */
 
 async function loadConversations(){
 
-const res=await fetch(API+"/chat/conversations",{credentials:"include"})
+const res = await fetch(API+"/chat/conversations",{
+credentials:"include"
+})
 
-if(!res.ok)return
+if(!res.ok) return
 
-const data=await res.json()
+const data = await res.json()
 
 const list=document.getElementById("conversationList")
 
@@ -224,7 +292,7 @@ const div=document.createElement("div")
 
 div.className="convo"
 
-div.innerText=c.title||"Conversation"
+div.innerText=c.title || "Conversation"
 
 div.onclick=()=>loadConversation(c.id)
 
@@ -235,11 +303,17 @@ list.appendChild(div)
 }
 
 
+/* -------------------------------- */
+/* LOAD CONVERSATION */
+/* -------------------------------- */
+
 async function loadConversation(id){
 
 conversation=id
 
-const res=await fetch(API+"/chat/conversations/"+id,{credentials:"include"})
+const res=await fetch(API+"/chat/conversations/"+id,{
+credentials:"include"
+})
 
 const data=await res.json()
 
@@ -250,7 +324,9 @@ data.forEach(m=>addMsg(m.role,m.message))
 }
 
 
+/* -------------------------------- */
 /* SEARCH */
+/* -------------------------------- */
 
 async function searchConversations(){
 
@@ -263,9 +339,11 @@ return
 
 }
 
-const res=await fetch(API+"/chat/search?q="+q,{credentials:"include"})
+const res=await fetch(API+"/chat/search?q="+q,{
+credentials:"include"
+})
 
-if(!res.ok)return
+if(!res.ok) return
 
 const data=await res.json()
 
@@ -290,7 +368,9 @@ list.appendChild(div)
 }
 
 
+/* -------------------------------- */
 /* NEW CHAT */
+/* -------------------------------- */
 
 function newChat(){
 
@@ -301,7 +381,9 @@ renderHome()
 }
 
 
+/* -------------------------------- */
 /* TOOL PROMPTS */
+/* -------------------------------- */
 
 function toolPrompt(text){
 
@@ -314,11 +396,15 @@ input.focus()
 }
 
 
+/* -------------------------------- */
 /* ACCOUNT */
+/* -------------------------------- */
 
 async function loadAccount(){
 
-const res=await fetch(API+"/auth/me",{credentials:"include"})
+const res=await fetch(API+"/auth/me",{
+credentials:"include"
+})
 
 const user=await res.json()
 
@@ -345,7 +431,9 @@ chat.innerHTML=`
 }
 
 
+/* -------------------------------- */
 /* SETTINGS */
+/* -------------------------------- */
 
 function loadSettings(){
 
@@ -363,28 +451,19 @@ chat.innerHTML=`
 
 }
 
-function copyText(el){
 
-const text = el.parentElement.innerText
-
-navigator.clipboard.writeText(text)
-
-el.innerText = "Copied"
-
-setTimeout(()=>{
-
-el.innerText="Copy"
-
-},2000)
-
-}
+/* -------------------------------- */
 /* LOGOUT */
+/* -------------------------------- */
 
 async function logout(){
 
 await fetch(API+"/auth/logout",{
+
 method:"POST",
+
 credentials:"include"
+
 })
 
 window.location="/login.html"
