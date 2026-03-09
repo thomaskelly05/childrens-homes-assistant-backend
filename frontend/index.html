@@ -18,11 +18,6 @@
 
 let currentUser = null
 
-
-/* -------------------------------- */
-/* AUTH CHECK */
-/* -------------------------------- */
-
 async function checkAuth(){
 
 try{
@@ -44,18 +39,11 @@ loadApp()
 
 }catch(e){
 
-console.error("Auth check failed",e)
-
 window.location="/login.html"
 
 }
 
 }
-
-
-/* -------------------------------- */
-/* LOAD APP UI */
-/* -------------------------------- */
 
 function loadApp(){
 
@@ -67,7 +55,7 @@ document.getElementById("indicareApp").innerHTML = `
 
 <div class="sidebarHeader">IndiCare</div>
 
-<input id="searchBox" placeholder="Search conversations...">
+<input id="searchBox" placeholder="Search conversations..." oninput="searchConversations()">
 
 <div class="sidebarSection">Assistant</div>
 
@@ -99,6 +87,8 @@ document.getElementById("indicareApp").innerHTML = `
 
 <div id="header">
 
+<div id="hamburger" onclick="toggleSidebar()">☰</div>
+
 <div class="logo">IndiCare</div>
 
 </div>
@@ -125,19 +115,9 @@ initApp()
 
 }
 
-
-/* -------------------------------- */
-/* START APP */
-/* -------------------------------- */
-
-window.addEventListener("load", () => {
-
-checkAuth()
-
-})
+window.addEventListener("load",checkAuth)
 
 </script>
-
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="app.js"></script>
