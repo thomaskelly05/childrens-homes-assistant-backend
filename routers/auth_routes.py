@@ -7,24 +7,34 @@ import bcrypt
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
+
 class LoginRequest(BaseModel):
     email: str
     password: str
 
+
 @router.post("/login")
-def login(payload: LoginRequest, conn = Depends(get_db)):
+def login(payload: LoginRequest, conn=Depends(get_db)):
+
     with conn.cursor() as cur:
-        cur.execute("""
-            SELECT id, email, password_hash, role, home_id, archived, created_at, updated_at
+        cur.execute(
+            """
+            SELECT id, email, password_hash, role
             FROM users
             WHERE email = %s
-        """, (payload.email,))
+            """,
+            (payload.email,),
+        )
+
         user = cur.fetchone()
 
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    if not bcrypt.checkpw(payload.password.encode(), user["password_hash"].encode()):
+    if not bcrypt.checkpw(
+        payload.password.encode(),
+        user["password_hash"].encode()
+    ):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = create_session_token(user["id"], user["role"])
@@ -35,10 +45,10 @@ def login(payload: LoginRequest, conn = Depends(get_db)):
         key="access_token",
         value=token,
         httponly=True,
-        secure=True,  # Required for SameSite=None
+        secure=True,
         samesite="none",
         path="/",
-        domain="childrens-homes-assistant-backend-new.onrender.com"  # Required for Render
+        domain=".indicare.co.uk"   # IMPORTANT
     )
 
     return response
@@ -46,10 +56,13 @@ def login(payload: LoginRequest, conn = Depends(get_db)):
 
 @router.post("/logout")
 def logout():
+
     response = JSONResponse({"message": "Logged out"})
+
     response.delete_cookie(
         "access_token",
         path="/",
-        domain="childrens-homes-assistant-backend-new.onrender.com"
+        domain=".indicare.co.uk"
     )
+
     return response
