@@ -1,10 +1,10 @@
-const API="https://api.indicare.co.uk"
-
 async function sendChat(){
 
 const input=document.getElementById("chatInput")
 
-const message=input.value
+const message=input.value.trim()
+
+if(!message)return
 
 input.value=""
 
@@ -41,5 +41,11 @@ ai+=decoder.decode(value)
 document.getElementById("aiOutput").innerHTML=ai
 
 }
+
+}
+
+function newChat(){
+
+document.getElementById("aiOutput").innerHTML=""
 
 }
