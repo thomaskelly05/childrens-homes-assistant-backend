@@ -1,10 +1,10 @@
-let conversation=null
+const API="https://api.indicare.co.uk"
 
 async function sendChat(){
 
 const input=document.getElementById("chatInput")
 
-const text=input.value
+const message=input.value
 
 input.value=""
 
@@ -19,8 +19,7 @@ headers:{
 credentials:"include",
 
 body:JSON.stringify({
-message:text,
-conversation_id:conversation
+message
 })
 
 })
