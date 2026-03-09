@@ -3,6 +3,7 @@ import uvicorn
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 
@@ -63,7 +64,7 @@ async def security_headers(request, call_next):
 
 
 # --------------------------------------------------
-# STREAM BUFFER FIX (Render streaming)
+# STREAM BUFFER FIX
 # --------------------------------------------------
 
 @app.middleware("http")
@@ -77,7 +78,7 @@ async def disable_buffering(request, call_next):
 
 
 # --------------------------------------------------
-# CORS CONFIG
+# CORS
 # --------------------------------------------------
 
 ALLOWED_ORIGINS = [
@@ -155,8 +156,8 @@ def health():
 # API ROOT
 # --------------------------------------------------
 
-@app.get("/")
-def root():
+@app.get("/api")
+def api_root():
     return {
         "message": "IndiCare API running",
         "docs": "/docs",
@@ -165,7 +166,25 @@ def root():
 
 
 # --------------------------------------------------
-# LOCAL DEVELOPMENT
+# FRONTEND HOSTING
+# --------------------------------------------------
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+
+if os.path.isdir(FRONTEND_DIR):
+
+    # Serve frontend assets (css/js/components)
+    app.mount(
+        "/",
+        StaticFiles(directory=FRONTEND_DIR, html=True),
+        name="frontend"
+    )
+
+
+# --------------------------------------------------
+# LOCAL DEV
 # --------------------------------------------------
 
 if __name__ == "__main__":
