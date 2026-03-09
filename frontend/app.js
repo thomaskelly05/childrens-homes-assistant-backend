@@ -1,138 +1,96 @@
-const API="https://api.indicare.co.uk/api/assistant/stream"
+const API="https://api.indicare.co.uk"
+
+let conversation=null
+let userName=""
+let streamingMsg=null
 
 const chat=document.getElementById("chat")
-const input=document.getElementById("input")
-const sendBtn=document.getElementById("sendBtn")
-const historyPanel=document.getElementById("history")
-const search=document.getElementById("search")
 
-let conversations=JSON.parse(localStorage.getItem("indicare_chats")||"[]")
-let currentConversation=null
+function initApp(){
 
-function save(){
-localStorage.setItem("indicare_chats",JSON.stringify(conversations))
+loadUser()
+loadConversations()
+
 }
 
-function renderHistory(){
+async function loadUser(){
 
-historyPanel.innerHTML=""
+const res=await fetch(API+"/account/me",{credentials:"include"})
 
-const filter=search.value?.toLowerCase()||""
+const data=await res.json()
 
-conversations
-.filter(c=>c.title?.toLowerCase().includes(filter))
-.forEach(c=>{
+userName=data.name||""
 
-const item=document.createElement("div")
+renderHome()
 
-item.className="historyItem"
-
-item.textContent=c.title||"New Chat"
-
-item.onclick=()=>loadConversation(c)
-
-historyPanel.appendChild(item)
-
-})
 }
 
-search.oninput=renderHistory
+function renderHome(){
 
-function loadConversation(convo){
+conversation=null
 
-currentConversation=convo
-
-chat.innerHTML=""
-
-convo.messages.forEach(m=>add(m.role,m.text,false))
-}
-
-function newChat(){
-
-chat.innerHTML='<div class="welcome">Hello, how can I support you today?</div>'
-
-const convo={
-id:Date.now(),
-title:"New Chat",
-messages:[]
-}
-
-conversations.unshift(convo)
-
-currentConversation=convo
-
-save()
-
-renderHistory()
-}
-
-function add(role,text,store=true){
-
-document.querySelector(".welcome")?.remove()
-
-const msg=document.createElement("div")
-
-msg.className="msg "+role
-
-msg.innerHTML=`
-<div class="avatar">${role==="assistant"?"AI":"You"}</div>
-<div>
-<div class="bubble">${text}</div>
-<div class="actions">
-<span onclick="copy(this)">Copy</span>
-</div>
+chat.innerHTML=`
+<div class="home">
+<h2>Hello ${userName}, how can I support you today?</h2>
+<p>IndiCare helps with safeguarding guidance, reports and reflections.</p>
 </div>
 `
 
-chat.appendChild(msg)
+}
+
+function addMsg(role,text){
+
+const div=document.createElement("div")
+div.className="msg "+role
+
+div.innerHTML=`
+
+<div class="avatar">${role==="assistant"?"AI":"You"}</div>
+
+<div>
+<div class="bubble">${marked.parse(text)}</div>
+</div>
+`
+
+chat.appendChild(div)
 
 chat.scrollTop=chat.scrollHeight
 
-if(store && currentConversation){
-currentConversation.messages.push({role,text})
-save()
-}
+return div
+
 }
 
-function copy(el){
-const text=el.closest(".msg").querySelector(".bubble").innerText
-navigator.clipboard.writeText(text)
-}
+async function sendChat(){
 
-async function send(){
-
-const text=input.value.trim()
+const text=document.getElementById("chatInput").value.trim()
 
 if(!text)return
 
-add("user",text)
+addMsg("user",text)
 
-input.value=""
+document.getElementById("chatInput").value=""
 
-const res=await fetch(API,{
+streamingMsg=addMsg("assistant","")
+
+const bubble=streamingMsg.querySelector(".bubble")
+
+const res=await fetch(API+"/chat/",{
+
 method:"POST",
+headers:{"Content-Type":"application/json"},
 credentials:"include",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({message:text})
+
+body:JSON.stringify({
+message:text,
+conversation_id:conversation
+})
+
 })
 
 const reader=res.body.getReader()
-
 const decoder=new TextDecoder()
 
-let reply=""
-
-const container=document.createElement("div")
-
-container.className="msg assistant"
-
-container.innerHTML=`<div class="avatar">AI</div><div><div class="bubble"></div></div>`
-
-chat.appendChild(container)
-
-const bubble=container.querySelector(".bubble")
+let ai=""
 
 while(true){
 
@@ -140,37 +98,22 @@ const {done,value}=await reader.read()
 
 if(done)break
 
-reply+=decoder.decode(value,{stream:true})
+ai+=decoder.decode(value)
 
-bubble.textContent=reply
+bubble.innerHTML=marked.parse(ai)
 
 chat.scrollTop=chat.scrollHeight
+
 }
 
-add("assistant",reply)
+loadConversations()
 
-if(currentConversation && currentConversation.messages.length===1){
-
-currentConversation.title=text.slice(0,30)
-
-save()
-
-renderHistory()
-}
 }
 
-sendBtn.onclick=send
+async function logout(){
 
-input.addEventListener("keydown",e=>{
-if(e.key==="Enter"&&!e.shiftKey){
-e.preventDefault()
-send()
-}
-})
+await fetch(API+"/auth/logout",{credentials:"include"})
 
-if(conversations.length){
-loadConversation(conversations[0])
-renderHistory()
-}else{
-newChat()
+window.location="/login.html"
+
 }
