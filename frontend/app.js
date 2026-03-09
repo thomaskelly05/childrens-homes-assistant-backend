@@ -1,4 +1,4 @@
-const API="/api/assistant/stream"
+const API="https://api.indicare.co.uk/api/assistant/stream"
 
 const chat=document.getElementById("chat")
 const input=document.getElementById("input")
@@ -39,15 +39,19 @@ input.value=""
 
 const res=await fetch(API,{
 method:"POST",
+
+credentials:"include",   // important for login sessions
+
 headers:{
 "Content-Type":"application/json"
 },
+
 body:JSON.stringify({
 message:text,
-mode:document.getElementById("mode").value,
-role:document.getElementById("role").value,
-ld_friendly:document.getElementById("ld").checked,
-slow_mode:document.getElementById("slow").checked
+mode:document.getElementById("mode")?.value,
+role:document.getElementById("role")?.value,
+ld_friendly:document.getElementById("ld")?.checked,
+slow_mode:document.getElementById("slow")?.checked
 })
 })
 
@@ -59,7 +63,7 @@ let reply=""
 
 const assistant=document.createElement("div")
 
-assistant.className="msg"
+assistant.className="msg assistant"
 
 chat.appendChild(assistant)
 
@@ -69,7 +73,7 @@ const {done,value}=await reader.read()
 
 if(done) break
 
-reply+=decoder.decode(value)
+reply+=decoder.decode(value,{stream:true})
 
 assistant.textContent=reply
 
