@@ -1,1 +1,22 @@
+:root{
 
+--brand:#2563eb;
+
+--bg:#f5f7fb;
+
+--panel:#ffffff;
+
+--border:#e6e8ef;
+
+--text:#111827;
+
+--muted:#6b7280;
+
+}
+
+body{
+background:var(--bg);
+font-family:Inter,system-ui;
+color:var(--text);
+margin:0;
+}
