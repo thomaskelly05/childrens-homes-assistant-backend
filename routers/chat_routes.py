@@ -6,6 +6,7 @@ from openai import OpenAI
 
 from db.connection import get_db
 from assistant.prompts import build_chat_prompt
+from auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
@@ -19,7 +20,6 @@ client = OpenAI()
 class ChatRequest(BaseModel):
     message: str
     conversation_id: int | None = None
-    user_id: int | None = 1
     role: str | None = "residential staff"
     ld_lens: bool = False
     training_mode: bool = False
@@ -63,15 +63,20 @@ Title:
 # ----------------------------------------------------
 
 @router.post("/")
-def chat(payload: ChatRequest, conn=Depends(get_db)):
+def chat(
+    payload: ChatRequest,
+    user_id: int = Depends(get_current_user),
+    conn=Depends(get_db)
+):
 
     message = payload.message
     conversation_id = payload.conversation_id
-    user_id = payload.user_id
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
 
-        # CREATE NEW CONVERSATION
+        # --------------------------------
+        # CREATE CONVERSATION
+        # --------------------------------
 
         if conversation_id is None:
 
@@ -90,7 +95,25 @@ def chat(payload: ChatRequest, conn=Depends(get_db)):
 
             conn.commit()
 
+        # --------------------------------
+        # VERIFY OWNERSHIP
+        # --------------------------------
+
+        cur.execute(
+            """
+            SELECT id
+            FROM conversations
+            WHERE id=%s AND user_id=%s
+            """,
+            (conversation_id, user_id)
+        )
+
+        if not cur.fetchone():
+            raise Exception("Conversation not found")
+
+        # --------------------------------
         # LOAD HISTORY
+        # --------------------------------
 
         cur.execute(
             """
@@ -105,7 +128,9 @@ def chat(payload: ChatRequest, conn=Depends(get_db)):
 
         history = cur.fetchall()
 
+    # --------------------------------
     # BUILD PROMPT
+    # --------------------------------
 
     system_prompt, user_message = build_chat_prompt(
         message=message,
@@ -130,7 +155,9 @@ def chat(payload: ChatRequest, conn=Depends(get_db)):
     })
 
 
+    # --------------------------------
     # STREAM RESPONSE
+    # --------------------------------
 
     def stream_and_save():
 
@@ -155,8 +182,6 @@ def chat(payload: ChatRequest, conn=Depends(get_db)):
                 full_response += text
 
                 yield text
-
-        # SAVE MESSAGES
 
         with conn.cursor() as cur:
 
@@ -193,7 +218,10 @@ def chat(payload: ChatRequest, conn=Depends(get_db)):
 # ----------------------------------------------------
 
 @router.get("/conversations")
-def get_conversations(user_id: int = 1, conn=Depends(get_db)):
+def get_conversations(
+    user_id: int = Depends(get_current_user),
+    conn=Depends(get_db)
+):
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
 
@@ -218,32 +246,24 @@ def get_conversations(user_id: int = 1, conn=Depends(get_db)):
 # ----------------------------------------------------
 
 @router.get("/conversations/{conversation_id}")
-def get_messages(conversation_id: int, user_id: int = 1, conn=Depends(get_db)):
+def get_messages(
+    conversation_id: int,
+    user_id: int = Depends(get_current_user),
+    conn=Depends(get_db)
+):
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
 
-        # SECURITY CHECK
-
         cur.execute(
             """
-            SELECT id
-            FROM conversations
-            WHERE id=%s AND user_id=%s
+            SELECT m.role,m.message
+            FROM messages m
+            JOIN conversations c ON m.conversation_id = c.id
+            WHERE m.conversation_id=%s
+            AND c.user_id=%s
+            ORDER BY m.created_at ASC
             """,
             (conversation_id, user_id)
-        )
-
-        if not cur.fetchone():
-            return []
-
-        cur.execute(
-            """
-            SELECT role,message
-            FROM messages
-            WHERE conversation_id=%s
-            ORDER BY created_at ASC
-            """,
-            (conversation_id,)
         )
 
         rows = cur.fetchall()
@@ -258,7 +278,7 @@ def get_messages(conversation_id: int, user_id: int = 1, conn=Depends(get_db)):
 @router.get("/search")
 def search_conversations(
     q: str = Query(...),
-    user_id: int = 1,
+    user_id: int = Depends(get_current_user),
     conn=Depends(get_db)
 ):
 
