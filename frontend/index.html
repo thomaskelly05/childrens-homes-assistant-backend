@@ -4,120 +4,39 @@
 <head>
 
 <meta charset="UTF-8">
-<title>IndiCare Assistant</title>
+<title>IndiCare</title>
 
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
 
 </head>
 
 <body>
 
-<div id="app"></div>
+<div id="app">
 
-<script>
-
-async function checkAuth(){
-
-const res=await fetch("https://api.indicare.co.uk/auth/me",{
-credentials:"include"
-})
-
-if(!res.ok){
-
-window.location="/login.html"
-return
-
-}
-
-loadUI()
-
-}
-
-function loadUI(){
-
-document.getElementById("app").innerHTML=`
-
-<div id="sidebar">
-
-<div class="logo">IndiCare</div>
-
-<input id="searchBox" placeholder="Search conversations" onkeyup="searchConversations()">
-
-<div class="sectionTitle">Assistant</div>
-
-<div class="navItem" onclick="newChat()">New Chat</div>
-
-<div class="sectionTitle">Conversations</div>
-
-<div id="conversationList"></div>
-
-<div class="sectionTitle">Account</div>
-
-<div class="navItem" onclick="logout()">Logout</div>
-
-</div>
-
+<div id="sidebar"></div>
 
 <div id="main">
 
-<div id="header">
+<div id="header"></div>
 
-<div class="headerLogo">IndiCare Assistant</div>
-
-</div>
-
-<div id="chat"></div>
-
-<div id="inputBar">
-
-<div id="aiTools">
-
-<button onclick="toolPrompt('Write an incident report about')">
-Incident Report
-</button>
-
-<button onclick="toolPrompt('Create a risk assessment for')">
-Risk Assessment
-</button>
-
-<button onclick="toolPrompt('Provide safeguarding advice regarding')">
-Safeguarding Advice
-</button>
-
-<button onclick="toolPrompt('Reflect on a challenging shift involving')">
-Staff Reflection
-</button>
-
-<button onclick="toolPrompt('Generate a shift handover summary including')">
-Shift Handover
-</button>
+<div id="workspace"></div>
 
 </div>
 
-<div id="inputRow">
-
-<textarea id="chatInput" placeholder="Ask IndiCare..."></textarea>
-
-<button onclick="sendChat()">Send</button>
+<div id="tools"></div>
 
 </div>
 
-</div>
-
-</div>
-
-`
-
-initApp()
-
-}
-
-checkAuth()
-
-</script>
-
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script src="app.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/conversations.js"></script>
+<script src="js/chat.js"></script>
+<script src="js/app.js"></script>
 
 </body>
 </html>
