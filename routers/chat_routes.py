@@ -13,7 +13,7 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
 # --------------------------------------------------
-# AUTO TITLE GENERATOR
+# AUTO CONVERSATION TITLE
 # --------------------------------------------------
 
 def generate_title(message: str):
@@ -105,12 +105,12 @@ Incident resolved safely.
 
 ### Follow-up Required
 - Record in safeguarding log
-- Review behaviour support plan if needed
+- Review behaviour support plan
 """
 
 
 # --------------------------------------------------
-# RISK TEMPLATE
+# RISK ASSESSMENT TEMPLATE
 # --------------------------------------------------
 
 def risk_template(message):
@@ -130,7 +130,54 @@ Young person or others may experience harm.
 - Environmental adjustments
 
 ### Review
-Risk to be monitored by staff team.
+Risk to be monitored and reviewed regularly.
+"""
+
+
+# --------------------------------------------------
+# SAFEGUARDING ADVICE TEMPLATE
+# --------------------------------------------------
+
+def safeguarding_template(message):
+
+    return f"""
+## Safeguarding Advice
+
+### Concern
+{message}
+
+### Immediate Actions
+- Ensure young person's safety
+- Inform senior staff
+- Record safeguarding concern
+
+### Next Steps
+- Follow safeguarding policy
+- Consider referral to safeguarding lead
+- Document all actions taken
+"""
+
+
+# --------------------------------------------------
+# STAFF REFLECTION TEMPLATE
+# --------------------------------------------------
+
+def reflection_template(message):
+
+    return f"""
+## Staff Reflection
+
+### Situation
+{message}
+
+### What Happened
+Staff responded to the situation and attempted to de-escalate behaviour.
+
+### Reflection
+Consider what strategies were effective and what could be improved.
+
+### Learning
+Identify any support, training, or adjustments that may help in future situations.
 """
 
 
@@ -143,16 +190,25 @@ async def generate_stream(message):
     lower = message.lower()
 
     if "incident" in lower:
-
         response = incident_template(message)
 
     elif "risk" in lower:
-
         response = risk_template(message)
 
-    else:
+    elif "safeguarding" in lower:
+        response = safeguarding_template(message)
 
-        response = f"IndiCare AI Response:\n\n{message}"
+    elif "reflect" in lower or "reflection" in lower:
+        response = reflection_template(message)
+
+    else:
+        response = f"""
+## IndiCare AI Response
+
+{message}
+
+IndiCare can assist with safeguarding guidance, reports, and staff reflections.
+"""
 
     for token in response.split(" "):
 
@@ -179,9 +235,7 @@ async def chat(request: Request, conn=Depends(get_db)):
     user_id = payload["sub"]
 
 
-    # --------------------------------
     # CREATE CONVERSATION
-    # --------------------------------
 
     if not cid:
 
@@ -203,9 +257,7 @@ async def chat(request: Request, conn=Depends(get_db)):
         conn.commit()
 
 
-    # --------------------------------
     # SAVE USER MESSAGE
-    # --------------------------------
 
     with conn.cursor() as cur:
 
@@ -220,9 +272,7 @@ async def chat(request: Request, conn=Depends(get_db)):
     conn.commit()
 
 
-    # --------------------------------
     # STREAM AI RESPONSE
-    # --------------------------------
 
     async def stream():
 
