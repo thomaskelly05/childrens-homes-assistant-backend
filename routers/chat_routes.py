@@ -10,9 +10,9 @@ import asyncio
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
-# ------------------------------
+# -----------------------------
 # GET CONVERSATIONS
-# ------------------------------
+# -----------------------------
 
 @router.get("/conversations")
 def conversations(request: Request, conn=Depends(get_db)):
@@ -39,38 +39,9 @@ def conversations(request: Request, conn=Depends(get_db)):
     return rows
 
 
-# ------------------------------
-# SEARCH
-# ------------------------------
-
-@router.get("/search")
-def search(q:str,request:Request,conn=Depends(get_db)):
-
-    token=request.cookies.get("access_token")
-    payload=decode_session_token(token)
-
-    user_id=payload["sub"]
-
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-
-        cur.execute(
-            """
-            SELECT id,title
-            FROM conversations
-            WHERE user_id=%s
-            AND title ILIKE %s
-            """,
-            (user_id,f"%{q}%")
-        )
-
-        rows=cur.fetchall()
-
-    return rows
-
-
-# ------------------------------
-# LOAD MESSAGES
-# ------------------------------
+# -----------------------------
+# LOAD CONVERSATION
+# -----------------------------
 
 @router.get("/conversations/{cid}")
 def load(cid:int,conn=Depends(get_db)):
@@ -92,79 +63,107 @@ def load(cid:int,conn=Depends(get_db)):
     return rows
 
 
-# ------------------------------
-# RENAME
-# ------------------------------
+# -----------------------------
+# INCIDENT REPORT TEMPLATE
+# -----------------------------
 
-@router.post("/rename/{cid}")
-async def rename(cid:int,request:Request,conn=Depends(get_db)):
+def incident_template(message):
 
-    body=await request.json()
+    return f"""
+## Incident Report
 
-    title=body.get("title")
+**Date:**  
+**Time:**  
+**Young Person:**  
+**Staff Involved:**  
 
-    with conn.cursor() as cur:
+### Description of Incident
+{message}
 
-        cur.execute(
-            """
-            UPDATE conversations
-            SET title=%s
-            WHERE id=%s
-            """,
-            (title,cid)
-        )
+### Actions Taken
+- Staff intervened appropriately
+- Situation de-escalated
 
-    conn.commit()
+### Outcome
+Incident resolved safely.
 
-    return {"ok":True}
-
-
-# ------------------------------
-# DELETE
-# ------------------------------
-
-@router.delete("/delete/{cid}")
-def delete(cid:int,conn=Depends(get_db)):
-
-    with conn.cursor() as cur:
-
-        cur.execute("DELETE FROM messages WHERE conversation_id=%s",(cid,))
-        cur.execute("DELETE FROM conversations WHERE id=%s",(cid,))
-
-    conn.commit()
-
-    return {"ok":True}
+### Follow-up Required
+- Record in safeguarding log
+- Review behaviour support plan if needed
+"""
 
 
-# ------------------------------
-# STREAM CHAT
-# ------------------------------
+# -----------------------------
+# RISK TEMPLATE
+# -----------------------------
 
-async def fake_ai_stream(message):
+def risk_template(message):
 
-    response=f"IndiCare AI response for: {message}"
+    return f"""
+## Risk Assessment
+
+### Risk Identified
+{message}
+
+### Potential Harm
+Young person or others may experience harm.
+
+### Control Measures
+- Staff supervision
+- Behaviour support strategies
+- Environmental adjustments
+
+### Review
+Risk to be monitored by staff team.
+"""
+
+
+# -----------------------------
+# AI RESPONSE STREAM
+# -----------------------------
+
+async def generate_stream(message):
+
+    lower = message.lower()
+
+    if "incident" in lower:
+
+        response = incident_template(message)
+
+    elif "risk" in lower:
+
+        response = risk_template(message)
+
+    else:
+
+        response = f"IndiCare AI Response:\n\n{message}"
 
     for token in response.split(" "):
 
-        yield token+" "
+        yield token + " "
 
-        await asyncio.sleep(0.04)
+        await asyncio.sleep(0.03)
 
+
+# -----------------------------
+# CHAT STREAM
+# -----------------------------
 
 @router.post("/")
 async def chat(request:Request,conn=Depends(get_db)):
 
-    body=await request.json()
+    body = await request.json()
 
-    message=body["message"]
-    cid=body.get("conversation_id")
+    message = body["message"]
+    cid = body.get("conversation_id")
 
-    token=request.cookies.get("access_token")
-    payload=decode_session_token(token)
+    token = request.cookies.get("access_token")
+    payload = decode_session_token(token)
 
-    user_id=payload["sub"]
+    user_id = payload["sub"]
 
-    # create conversation
+
+    # CREATE CONVERSATION
 
     if not cid:
 
@@ -179,11 +178,12 @@ async def chat(request:Request,conn=Depends(get_db)):
                 (user_id,message[:40])
             )
 
-            cid=cur.fetchone()["id"]
+            cid = cur.fetchone()["id"]
 
         conn.commit()
 
-    # save user msg
+
+    # SAVE USER MESSAGE
 
     with conn.cursor() as cur:
 
@@ -198,13 +198,15 @@ async def chat(request:Request,conn=Depends(get_db)):
     conn.commit()
 
 
+    # STREAM AI
+
     async def stream():
 
         ai=""
 
-        async for token in fake_ai_stream(message):
+        async for token in generate_stream(message):
 
-            ai+=token
+            ai += token
             yield token
 
         with conn.cursor() as cur:
