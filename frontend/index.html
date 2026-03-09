@@ -2,19 +2,14 @@
 <html>
 
 <head>
-
 <meta charset="UTF-8">
 <title>IndiCare Assistant</title>
-
 <link rel="stylesheet" href="styles.css">
-
 </head>
 
 <body>
 
 <div class="app">
-
-<!-- SIDEBAR -->
 
 <div class="sidebar">
 
@@ -22,25 +17,16 @@
 IndiCare
 </div>
 
-<div class="sidebarTop">
-
 <button class="newChatBtn" onclick="newChat()">
 + New Chat
 </button>
 
-<input
-id="search"
-placeholder="Search conversations..."
->
-
-</div>
+<input id="search" placeholder="Search conversations...">
 
 <div id="history" class="history"></div>
 
 </div>
 
-
-<!-- MAIN -->
 
 <div class="main">
 
@@ -59,23 +45,41 @@ Hello, how can I support you today?
 
 <div class="inputBar">
 
-<textarea
-id="input"
-placeholder="Ask IndiCare anything..."
-></textarea>
+<textarea id="input" placeholder="Ask IndiCare anything..."></textarea>
 
-<button id="sendBtn">
-Send
-</button>
+<button id="sendBtn">Send</button>
 
 </div>
 
 </div>
 
 </div>
+
+<script>
+
+// check login before loading assistant
+
+async function checkAuth(){
+
+const res = await fetch(
+"https://api.indicare.co.uk/account/me",
+{
+credentials:"include"
+})
+
+if(!res.ok){
+
+window.location="/login.html"
+
+}
+
+}
+
+checkAuth()
+
+</script>
 
 <script src="app.js"></script>
 
 </body>
-
 </html>
