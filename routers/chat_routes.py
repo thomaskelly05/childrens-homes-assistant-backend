@@ -222,3 +222,58 @@ async def chat(request:Request,conn=Depends(get_db)):
         conn.commit()
 
     return StreamingResponse(stream(),media_type="text/plain")
+
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+from db.connection import get_db
+
+router = APIRouter(prefix="/chat", tags=["Chat"])
+
+
+# --------------------------------
+# RENAME CONVERSATION
+# --------------------------------
+
+class RenameConversation(BaseModel):
+    title: str
+
+
+@router.post("/conversations/{conversation_id}/rename")
+def rename_conversation(conversation_id: int, payload: RenameConversation, conn=Depends(get_db)):
+
+    with conn.cursor() as cur:
+
+        cur.execute(
+            """
+            UPDATE conversations
+            SET title=%s
+            WHERE id=%s
+            """,
+            (payload.title, conversation_id)
+        )
+
+        conn.commit()
+
+    return {"status": "ok"}
+
+
+# --------------------------------
+# DELETE CONVERSATION
+# --------------------------------
+
+@router.delete("/conversations/{conversation_id}")
+def delete_conversation(conversation_id: int, conn=Depends(get_db)):
+
+    with conn.cursor() as cur:
+
+        cur.execute(
+            """
+            DELETE FROM conversations
+            WHERE id=%s
+            """,
+            (conversation_id,)
+        )
+
+        conn.commit()
+
+    return {"status": "deleted"}
