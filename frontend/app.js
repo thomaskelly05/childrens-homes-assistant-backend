@@ -71,21 +71,16 @@ div.innerHTML=`
 
 <div>
 
-<div class="bubble">${marked.parse(text)}</div>
+<div class="bubble">
 
-<div class="msgActions">
+${marked.parse(text)}
 
-<span onclick="copyMsg(this)">Copy</span>
-
-${role==="user"?'<span onclick="editMsg(this)">Edit</span>':''}
-
-<span onclick="deleteMsg(this)">Delete</span>
-
-${role==="assistant"?'<span onclick="regenerate()">Regenerate</span>':''}
+${role==="assistant" ? '<div class="copyBtn" onclick="copyText(this)">Copy</div>' : ''}
 
 </div>
 
 </div>
+
 `
 
 chat.appendChild(div)
@@ -95,7 +90,6 @@ chat.scrollTop=chat.scrollHeight
 return div
 
 }
-
 
 /* STREAM */
 
