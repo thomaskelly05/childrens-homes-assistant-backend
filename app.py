@@ -13,7 +13,6 @@ from fastapi.staticfiles import StaticFiles
 from auth.routes import router as auth_router
 
 from routers.chat_routes import router as chat_router
-from routers.conversation_routes import router as conversation_router
 
 from routers.tasks_routes import router as tasks_router
 from routers.staff_journal_routes import router as journal_router
@@ -74,9 +73,6 @@ app.include_router(auth_router)
 # Chat system
 app.include_router(chat_router)
 
-# Conversation utilities
-app.include_router(conversation_router)
-
 # Core platform features
 app.include_router(tasks_router)
 app.include_router(journal_router)
@@ -136,3 +132,4 @@ if __name__ == "__main__":
         port=PORT,
         reload=True
     )
+
