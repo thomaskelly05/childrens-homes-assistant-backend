@@ -3,13 +3,75 @@ const API="https://api.indicare.co.uk/api/assistant/stream"
 const chat=document.getElementById("chat")
 const input=document.getElementById("input")
 const sendBtn=document.getElementById("sendBtn")
+const historyPanel=document.getElementById("history")
 
-const menuBtn=document.getElementById("menuBtn")
-const drawer=document.getElementById("drawer")
+let conversations=JSON.parse(localStorage.getItem("indicare_chats")||"[]")
+let currentConversation=null
 
-menuBtn.onclick=()=>{
-drawer.classList.toggle("open")
+
+function renderHistory(){
+
+historyPanel.innerHTML=""
+
+conversations.forEach(c=>{
+
+const item=document.createElement("div")
+
+item.className="historyItem"
+
+item.textContent=c.title||"New Chat"
+
+item.onclick=()=>loadConversation(c)
+
+historyPanel.appendChild(item)
+
+})
+
 }
+
+
+function loadConversation(convo){
+
+currentConversation=convo
+
+chat.innerHTML=""
+
+convo.messages.forEach(m=>{
+
+add(m.role,m.text)
+
+})
+
+}
+
+
+function newChat(){
+
+chat.innerHTML='<div class="welcome">How can I support you today?</div>'
+
+const convo={
+id:Date.now(),
+title:"New Chat",
+messages:[]
+}
+
+conversations.unshift(convo)
+
+currentConversation=convo
+
+save()
+
+renderHistory()
+
+}
+
+
+function save(){
+
+localStorage.setItem("indicare_chats",JSON.stringify(conversations))
+
+}
+
 
 function add(role,text){
 
@@ -25,13 +87,22 @@ chat.appendChild(msg)
 
 chat.scrollTop=chat.scrollHeight
 
+if(currentConversation){
+
+currentConversation.messages.push({role,text})
+
+save()
+
 }
+
+}
+
 
 async function send(){
 
 const text=input.value.trim()
 
-if(!text) return
+if(!text)return
 
 add("user",text)
 
@@ -39,19 +110,12 @@ input.value=""
 
 const res=await fetch(API,{
 method:"POST",
-
-credentials:"include",   // important for login sessions
-
+credentials:"include",
 headers:{
 "Content-Type":"application/json"
 },
-
 body:JSON.stringify({
-message:text,
-mode:document.getElementById("mode")?.value,
-role:document.getElementById("role")?.value,
-ld_friendly:document.getElementById("ld")?.checked,
-slow_mode:document.getElementById("slow")?.checked
+message:text
 })
 })
 
@@ -71,7 +135,7 @@ while(true){
 
 const {done,value}=await reader.read()
 
-if(done) break
+if(done)break
 
 reply+=decoder.decode(value,{stream:true})
 
@@ -81,13 +145,25 @@ chat.scrollTop=chat.scrollHeight
 
 }
 
+if(currentConversation && currentConversation.messages.length===1){
+
+currentConversation.title=text.slice(0,30)
+
+renderHistory()
+
+save()
+
 }
+
+}
+
 
 sendBtn.onclick=send
 
+
 input.addEventListener("keydown",e=>{
 
-if(e.key==="Enter" && !e.shiftKey){
+if(e.key==="Enter"&&!e.shiftKey){
 
 e.preventDefault()
 
@@ -97,8 +173,15 @@ send()
 
 })
 
-function newChat(){
 
-chat.innerHTML='<div class="welcome">What would you like to reflect on today?</div>'
+if(conversations.length){
+
+loadConversation(conversations[0])
+
+renderHistory()
+
+}else{
+
+newChat()
 
 }
