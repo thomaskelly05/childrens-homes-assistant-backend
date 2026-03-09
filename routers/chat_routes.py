@@ -1,18 +1,20 @@
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from psycopg2.extras import RealDictCursor
+from pydantic import BaseModel
 
 from db.connection import get_db
 from auth.tokens import decode_session_token
 
 import asyncio
 
+
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
-# -----------------------------
+# --------------------------------------------------
 # GET CONVERSATIONS
-# -----------------------------
+# --------------------------------------------------
 
 @router.get("/conversations")
 def conversations(request: Request, conn=Depends(get_db)):
@@ -26,7 +28,7 @@ def conversations(request: Request, conn=Depends(get_db)):
 
         cur.execute(
             """
-            SELECT id,title
+            SELECT id, title
             FROM conversations
             WHERE user_id=%s
             ORDER BY created_at DESC
@@ -39,18 +41,18 @@ def conversations(request: Request, conn=Depends(get_db)):
     return rows
 
 
-# -----------------------------
+# --------------------------------------------------
 # LOAD CONVERSATION
-# -----------------------------
+# --------------------------------------------------
 
 @router.get("/conversations/{cid}")
-def load(cid:int,conn=Depends(get_db)):
+def load(cid: int, conn=Depends(get_db)):
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
 
         cur.execute(
             """
-            SELECT role,message
+            SELECT role, message
             FROM messages
             WHERE conversation_id=%s
             ORDER BY created_at
@@ -58,14 +60,14 @@ def load(cid:int,conn=Depends(get_db)):
             (cid,)
         )
 
-        rows=cur.fetchall()
+        rows = cur.fetchall()
 
     return rows
 
 
-# -----------------------------
+# --------------------------------------------------
 # INCIDENT REPORT TEMPLATE
-# -----------------------------
+# --------------------------------------------------
 
 def incident_template(message):
 
@@ -93,9 +95,9 @@ Incident resolved safely.
 """
 
 
-# -----------------------------
+# --------------------------------------------------
 # RISK TEMPLATE
-# -----------------------------
+# --------------------------------------------------
 
 def risk_template(message):
 
@@ -118,9 +120,9 @@ Risk to be monitored by staff team.
 """
 
 
-# -----------------------------
+# --------------------------------------------------
 # AI RESPONSE STREAM
-# -----------------------------
+# --------------------------------------------------
 
 async def generate_stream(message):
 
@@ -145,12 +147,12 @@ async def generate_stream(message):
         await asyncio.sleep(0.03)
 
 
-# -----------------------------
+# --------------------------------------------------
 # CHAT STREAM
-# -----------------------------
+# --------------------------------------------------
 
 @router.post("/")
-async def chat(request:Request,conn=Depends(get_db)):
+async def chat(request: Request, conn=Depends(get_db)):
 
     body = await request.json()
 
@@ -163,7 +165,9 @@ async def chat(request:Request,conn=Depends(get_db)):
     user_id = payload["sub"]
 
 
+    # --------------------------------
     # CREATE CONVERSATION
+    # --------------------------------
 
     if not cid:
 
@@ -175,7 +179,7 @@ async def chat(request:Request,conn=Depends(get_db)):
                 VALUES(%s,%s)
                 RETURNING id
                 """,
-                (user_id,message[:40])
+                (user_id, message[:40])
             )
 
             cid = cur.fetchone()["id"]
@@ -183,7 +187,9 @@ async def chat(request:Request,conn=Depends(get_db)):
         conn.commit()
 
 
+    # --------------------------------
     # SAVE USER MESSAGE
+    # --------------------------------
 
     with conn.cursor() as cur:
 
@@ -192,17 +198,19 @@ async def chat(request:Request,conn=Depends(get_db)):
             INSERT INTO messages(conversation_id,role,message)
             VALUES(%s,'user',%s)
             """,
-            (cid,message)
+            (cid, message)
         )
 
     conn.commit()
 
 
-    # STREAM AI
+    # --------------------------------
+    # STREAM AI RESPONSE
+    # --------------------------------
 
     async def stream():
 
-        ai=""
+        ai = ""
 
         async for token in generate_stream(message):
 
@@ -216,23 +224,17 @@ async def chat(request:Request,conn=Depends(get_db)):
                 INSERT INTO messages(conversation_id,role,message)
                 VALUES(%s,'assistant',%s)
                 """,
-                (cid,ai)
+                (cid, ai)
             )
 
         conn.commit()
 
-    return StreamingResponse(stream(),media_type="text/plain")
-
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
-from db.connection import get_db
-
-router = APIRouter(prefix="/chat", tags=["Chat"])
+    return StreamingResponse(stream(), media_type="text/plain")
 
 
-# --------------------------------
+# --------------------------------------------------
 # RENAME CONVERSATION
-# --------------------------------
+# --------------------------------------------------
 
 class RenameConversation(BaseModel):
     title: str
@@ -257,9 +259,9 @@ def rename_conversation(conversation_id: int, payload: RenameConversation, conn=
     return {"status": "ok"}
 
 
-# --------------------------------
+# --------------------------------------------------
 # DELETE CONVERSATION
-# --------------------------------
+# --------------------------------------------------
 
 @router.delete("/conversations/{conversation_id}")
 def delete_conversation(conversation_id: int, conn=Depends(get_db)):
