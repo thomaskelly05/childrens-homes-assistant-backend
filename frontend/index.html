@@ -12,69 +12,58 @@
 
 <body>
 
-<div id="indicareApp"></div>
+<div id="app"></div>
 
 <script>
 
-let currentUser = null
-
 async function checkAuth(){
 
-try{
-
-const res = await fetch("https://api.indicare.co.uk/auth/me",{
+const res=await fetch("https://api.indicare.co.uk/auth/me",{
 credentials:"include"
 })
 
 if(!res.ok){
+
 window.location="/login.html"
 return
-}
-
-currentUser = await res.json()
-
-loadApp()
-
-}catch(e){
-
-console.error("Auth check failed",e)
-window.location="/login.html"
 
 }
 
+loadUI()
+
 }
 
-function loadApp(){
+function loadUI(){
 
-document.getElementById("indicareApp").innerHTML=`
+document.getElementById("app").innerHTML=`
 
 <div id="sidebar">
 
-<div class="sidebarHeader">IndiCare</div>
+<div class="logo">IndiCare</div>
 
-<input id="searchBox" placeholder="Search conversations..." onkeyup="searchConversations()">
+<input id="searchBox" placeholder="Search conversations" onkeyup="searchConversations()">
 
-<div class="sidebarSection">Assistant</div>
+<div class="sectionTitle">Assistant</div>
 
-<div class="tool" onclick="renderHome()">Home</div>
-<div class="tool" onclick="newChat()">New Chat</div>
+<div class="navItem" onclick="newChat()">New Chat</div>
 
-<div class="sidebarSection">Conversations</div>
+<div class="sectionTitle">Conversations</div>
 
 <div id="conversationList"></div>
 
-<div class="sidebarSection">Account</div>
+<div class="sectionTitle">Account</div>
 
-<div class="tool" onclick="loadAccount()">Account</div>
-<div class="tool" onclick="loadSettings()">Settings</div>
-<div class="tool" onclick="logout()">Logout</div>
+<div class="navItem" onclick="logout()">Logout</div>
 
 </div>
+
 
 <div id="main">
 
 <div id="header">
-<div class="logo">IndiCare</div>
+
+<div class="headerLogo">IndiCare Assistant</div>
+
 </div>
 
 <div id="chat"></div>
@@ -109,7 +98,7 @@ Shift Handover
 
 <textarea id="chatInput" placeholder="Ask IndiCare..."></textarea>
 
-<button class="sendBtn" onclick="sendChat()">Send</button>
+<button onclick="sendChat()">Send</button>
 
 </div>
 
@@ -123,11 +112,7 @@ initApp()
 
 }
 
-window.addEventListener("load",()=>{
-
 checkAuth()
-
-})
 
 </script>
 
