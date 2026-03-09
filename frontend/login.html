@@ -2,59 +2,46 @@
 <html>
 
 <head>
-
 <meta charset="UTF-8">
 <title>IndiCare Login</title>
-
 <link rel="stylesheet" href="styles.css">
-
 </head>
 
 <body class="loginPage">
 
 <div class="loginCard">
 
-<h1 class="brand">
-IndiCare
-</h1>
-
-<p class="tagline">
-AI support for safer children's homes
-</p>
+<div class="brandLogo">IndiCare</div>
+<p class="tagline">AI Assistant for Children's Homes</p>
 
 <input id="email" placeholder="Email">
-
 <input id="password" type="password" placeholder="Password">
 
-<button onclick="login()">Sign In</button>
+<button onclick="login()">Login</button>
 
-<div class="footer">
-
-© 2025 IndiCare Ltd  
-support@indicare.co.uk
-
-</div>
+<p class="footer">
+© 2026 IndiCare Ltd<br>
+Secure safeguarding assistant
+</p>
 
 </div>
 
 <script>
-
-const API="https://api.indicare.co.uk"
 
 async function login(){
 
 const email=document.getElementById("email").value
 const password=document.getElementById("password").value
 
-const res=await fetch(API+"/auth/login",{
+const res=await fetch("https://api.indicare.co.uk/auth/login",{
 
 method:"POST",
-
-credentials:"include",
 
 headers:{
 "Content-Type":"application/json"
 },
+
+credentials:"include",
 
 body:JSON.stringify({
 email,
@@ -69,7 +56,7 @@ window.location="/"
 
 }else{
 
-alert("Login failed")
+alert("Invalid login")
 
 }
 
