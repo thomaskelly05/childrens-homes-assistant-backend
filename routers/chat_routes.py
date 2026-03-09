@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from psycopg2.extras import RealDictCursor
 
@@ -10,15 +10,14 @@ import asyncio
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
-# ---------------------------------------------------------
+# ------------------------------
 # GET CONVERSATIONS
-# ---------------------------------------------------------
+# ------------------------------
 
 @router.get("/conversations")
-def get_conversations(request: Request, conn=Depends(get_db)):
+def conversations(request: Request, conn=Depends(get_db)):
 
     token = request.cookies.get("access_token")
-
     payload = decode_session_token(token)
 
     user_id = payload["sub"]
@@ -27,122 +26,197 @@ def get_conversations(request: Request, conn=Depends(get_db)):
 
         cur.execute(
             """
-            SELECT id, title
+            SELECT id,title
             FROM conversations
-            WHERE user_id = %s
+            WHERE user_id=%s
             ORDER BY created_at DESC
             """,
             (user_id,)
         )
 
-        conversations = cur.fetchall()
+        rows = cur.fetchall()
 
-    return conversations
+    return rows
 
 
-# ---------------------------------------------------------
-# LOAD MESSAGES
-# ---------------------------------------------------------
+# ------------------------------
+# SEARCH
+# ------------------------------
 
-@router.get("/conversations/{conversation_id}")
-def get_messages(conversation_id: int, conn=Depends(get_db)):
+@router.get("/search")
+def search(q:str,request:Request,conn=Depends(get_db)):
+
+    token=request.cookies.get("access_token")
+    payload=decode_session_token(token)
+
+    user_id=payload["sub"]
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
 
         cur.execute(
             """
-            SELECT role, message
-            FROM messages
-            WHERE conversation_id = %s
-            ORDER BY created_at
+            SELECT id,title
+            FROM conversations
+            WHERE user_id=%s
+            AND title ILIKE %s
             """,
-            (conversation_id,)
+            (user_id,f"%{q}%")
         )
 
-        messages = cur.fetchall()
+        rows=cur.fetchall()
 
-    return messages
+    return rows
 
 
-# ---------------------------------------------------------
-# STREAM CHAT RESPONSE
-# ---------------------------------------------------------
+# ------------------------------
+# LOAD MESSAGES
+# ------------------------------
+
+@router.get("/conversations/{cid}")
+def load(cid:int,conn=Depends(get_db)):
+
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+
+        cur.execute(
+            """
+            SELECT role,message
+            FROM messages
+            WHERE conversation_id=%s
+            ORDER BY created_at
+            """,
+            (cid,)
+        )
+
+        rows=cur.fetchall()
+
+    return rows
+
+
+# ------------------------------
+# RENAME
+# ------------------------------
+
+@router.post("/rename/{cid}")
+async def rename(cid:int,request:Request,conn=Depends(get_db)):
+
+    body=await request.json()
+
+    title=body.get("title")
+
+    with conn.cursor() as cur:
+
+        cur.execute(
+            """
+            UPDATE conversations
+            SET title=%s
+            WHERE id=%s
+            """,
+            (title,cid)
+        )
+
+    conn.commit()
+
+    return {"ok":True}
+
+
+# ------------------------------
+# DELETE
+# ------------------------------
+
+@router.delete("/delete/{cid}")
+def delete(cid:int,conn=Depends(get_db)):
+
+    with conn.cursor() as cur:
+
+        cur.execute("DELETE FROM messages WHERE conversation_id=%s",(cid,))
+        cur.execute("DELETE FROM conversations WHERE id=%s",(cid,))
+
+    conn.commit()
+
+    return {"ok":True}
+
+
+# ------------------------------
+# STREAM CHAT
+# ------------------------------
 
 async def fake_ai_stream(message):
 
-    response = f"Thanks for your message: {message}. IndiCare AI response placeholder."
+    response=f"IndiCare AI response for: {message}"
 
-    for word in response.split(" "):
-        yield word + " "
-        await asyncio.sleep(0.03)
+    for token in response.split(" "):
+
+        yield token+" "
+
+        await asyncio.sleep(0.04)
 
 
 @router.post("/")
-async def chat(request: Request, conn=Depends(get_db)):
+async def chat(request:Request,conn=Depends(get_db)):
 
-    body = await request.json()
+    body=await request.json()
 
-    message = body.get("message")
-    conversation_id = body.get("conversation_id")
+    message=body["message"]
+    cid=body.get("conversation_id")
 
-    token = request.cookies.get("access_token")
+    token=request.cookies.get("access_token")
+    payload=decode_session_token(token)
 
-    payload = decode_session_token(token)
+    user_id=payload["sub"]
 
-    user_id = payload["sub"]
+    # create conversation
 
-    # Create conversation if new
-    if not conversation_id:
+    if not cid:
 
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
 
             cur.execute(
                 """
-                INSERT INTO conversations (user_id, title)
-                VALUES (%s, %s)
+                INSERT INTO conversations(user_id,title)
+                VALUES(%s,%s)
                 RETURNING id
                 """,
-                (user_id, message[:40])
+                (user_id,message[:40])
             )
 
-            conversation_id = cur.fetchone()["id"]
+            cid=cur.fetchone()["id"]
 
         conn.commit()
 
-    # Save user message
+    # save user msg
+
     with conn.cursor() as cur:
 
         cur.execute(
             """
-            INSERT INTO messages (conversation_id, role, message)
-            VALUES (%s, 'user', %s)
+            INSERT INTO messages(conversation_id,role,message)
+            VALUES(%s,'user',%s)
             """,
-            (conversation_id, message)
+            (cid,message)
         )
 
     conn.commit()
 
+
     async def stream():
 
-        ai_response = ""
+        ai=""
 
         async for token in fake_ai_stream(message):
 
-            ai_response += token
-
+            ai+=token
             yield token
 
-        # Save AI message
         with conn.cursor() as cur:
 
             cur.execute(
                 """
-                INSERT INTO messages (conversation_id, role, message)
-                VALUES (%s, 'assistant', %s)
+                INSERT INTO messages(conversation_id,role,message)
+                VALUES(%s,'assistant',%s)
                 """,
-                (conversation_id, ai_response)
+                (cid,ai)
             )
 
         conn.commit()
 
-    return StreamingResponse(stream(), media_type="text/plain")
+    return StreamingResponse(stream(),media_type="text/plain")
