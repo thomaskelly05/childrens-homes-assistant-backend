@@ -5,7 +5,7 @@ import jwt
 from psycopg2.extras import RealDictCursor
 
 from db.connection import get_db
-from auth.tokens import create_session_token, JWT_SECRET, JWT_ALGORITHM
+from auth.tokens import create_session_token
 
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
