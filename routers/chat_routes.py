@@ -13,6 +13,20 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
 # --------------------------------------------------
+# AUTO TITLE GENERATOR
+# --------------------------------------------------
+
+def generate_title(message: str):
+
+    message = message.strip()
+
+    if len(message) > 60:
+        message = message[:60]
+
+    return message
+
+
+# --------------------------------------------------
 # GET CONVERSATIONS
 # --------------------------------------------------
 
@@ -28,7 +42,7 @@ def conversations(request: Request, conn=Depends(get_db)):
 
         cur.execute(
             """
-            SELECT id, title
+            SELECT id,title
             FROM conversations
             WHERE user_id=%s
             ORDER BY created_at DESC
@@ -52,7 +66,7 @@ def load(cid: int, conn=Depends(get_db)):
 
         cur.execute(
             """
-            SELECT role, message
+            SELECT role,message
             FROM messages
             WHERE conversation_id=%s
             ORDER BY created_at
@@ -171,6 +185,8 @@ async def chat(request: Request, conn=Depends(get_db)):
 
     if not cid:
 
+        title = generate_title(message)
+
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
 
             cur.execute(
@@ -179,7 +195,7 @@ async def chat(request: Request, conn=Depends(get_db)):
                 VALUES(%s,%s)
                 RETURNING id
                 """,
-                (user_id, message[:40])
+                (user_id,title)
             )
 
             cid = cur.fetchone()["id"]
@@ -198,7 +214,7 @@ async def chat(request: Request, conn=Depends(get_db)):
             INSERT INTO messages(conversation_id,role,message)
             VALUES(%s,'user',%s)
             """,
-            (cid, message)
+            (cid,message)
         )
 
     conn.commit()
@@ -210,7 +226,7 @@ async def chat(request: Request, conn=Depends(get_db)):
 
     async def stream():
 
-        ai = ""
+        ai=""
 
         async for token in generate_stream(message):
 
@@ -224,7 +240,7 @@ async def chat(request: Request, conn=Depends(get_db)):
                 INSERT INTO messages(conversation_id,role,message)
                 VALUES(%s,'assistant',%s)
                 """,
-                (cid, ai)
+                (cid,ai)
             )
 
         conn.commit()
