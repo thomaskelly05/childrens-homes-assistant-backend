@@ -1,22 +1,13 @@
-const API = "https://api.indicare.co.uk"
+const API="https://api.indicare.co.uk"
 
-let conversation = null
-let userName = ""
-let streamingMsg = null
+let conversation=null
+let userName=""
 let chat
 
 
-/* INIT */
-
-window.addEventListener("load", () => {
-
-initApp()
-
-})
-
 function initApp(){
 
-chat = document.getElementById("chat")
+chat=document.getElementById("chat")
 
 loadUser()
 loadConversations()
@@ -28,31 +19,13 @@ loadConversations()
 
 async function loadUser(){
 
-try{
+const res=await fetch(API+"/auth/me",{credentials:"include"})
 
-const res = await fetch(API + "/auth/me", {
-credentials: "include"
-})
+const data=await res.json()
 
-if(!res.ok){
-
-window.location="/login.html"
-return
-
-}
-
-const data = await res.json()
-
-userName = data.email || "User"
+userName=data.email||"User"
 
 renderHome()
-
-}catch(err){
-
-console.error(err)
-window.location="/login.html"
-
-}
 
 }
 
@@ -61,9 +34,9 @@ window.location="/login.html"
 
 function renderHome(){
 
-conversation = null
+conversation=null
 
-chat.innerHTML = `
+chat.innerHTML=`
 <div class="home">
 <h2>Hello ${userName}, how can I support you today?</h2>
 <p>IndiCare helps with safeguarding guidance, reports and reflections.</p>
@@ -91,8 +64,6 @@ div.innerHTML=`
 
 ${marked.parse(text)}
 
-${role==="assistant" ? '<div class="copyBtn" onclick="copyText(this)">Copy</div>' : ''}
-
 </div>
 
 </div>
@@ -101,7 +72,7 @@ ${role==="assistant" ? '<div class="copyBtn" onclick="copyText(this)">Copy</div>
 
 chat.appendChild(div)
 
-chat.scrollTop = chat.scrollHeight
+chat.scrollTop=chat.scrollHeight
 
 return div
 
@@ -116,25 +87,17 @@ const input=document.getElementById("chatInput")
 
 const text=input.value.trim()
 
-if(!text) return
+if(!text)return
 
 addMsg("user",text)
 
 input.value=""
 
-streamingMsg = addMsg("assistant","")
+const assistant=addMsg("assistant","")
 
-const bubble = streamingMsg.querySelector(".bubble")
+const bubble=assistant.querySelector(".bubble")
 
-bubble.innerHTML=`
-<div class="typing">
-<span></span>
-<span></span>
-<span></span>
-</div>
-`
-
-const res = await fetch(API+"/chat/",{
+const res=await fetch(API+"/chat/",{
 
 method:"POST",
 
@@ -151,15 +114,7 @@ conversation_id:conversation
 
 })
 
-if(!res.ok){
-
-bubble.innerHTML="AI error"
-return
-
-}
-
 const reader=res.body.getReader()
-
 const decoder=new TextDecoder()
 
 let ai=""
@@ -168,13 +123,13 @@ while(true){
 
 const {done,value}=await reader.read()
 
-if(done) break
+if(done)break
 
-ai += decoder.decode(value)
+ai+=decoder.decode(value)
 
-bubble.innerHTML = marked.parse(ai)
+bubble.innerHTML=marked.parse(ai)
 
-chat.scrollTop = chat.scrollHeight
+chat.scrollTop=chat.scrollHeight
 
 }
 
@@ -183,21 +138,15 @@ loadConversations()
 }
 
 
-/* COPY */
+/* TOOL PROMPTS */
 
-function copyText(el){
+function toolPrompt(text){
 
-const text = el.parentElement.innerText
+const input=document.getElementById("chatInput")
 
-navigator.clipboard.writeText(text)
+input.value=text+" "
 
-el.innerText = "Copied"
-
-setTimeout(()=>{
-
-el.innerText="Copy"
-
-},2000)
+input.focus()
 
 }
 
@@ -206,13 +155,11 @@ el.innerText="Copy"
 
 async function loadConversations(){
 
-const res = await fetch(API+"/chat/conversations",{
-credentials:"include"
-})
+const res=await fetch(API+"/chat/conversations",{credentials:"include"})
 
-if(!res.ok) return
+if(!res.ok)return
 
-const data = await res.json()
+const data=await res.json()
 
 const list=document.getElementById("conversationList")
 
@@ -222,21 +169,11 @@ data.forEach(c=>{
 
 const div=document.createElement("div")
 
-div.className="convo"
+div.className="tool"
 
-div.innerHTML=`
-<span onclick="loadConversation(${c.id})">
-${c.title || "Conversation"}
-</span>
+div.innerText=c.title||"Conversation"
 
-<div class="convoActions">
-
-<button onclick="renameConversation(${c.id})">✏️</button>
-
-<button onclick="deleteConversation(${c.id})">🗑</button>
-
-</div>
-`
+div.onclick=()=>loadConversation(c.id)
 
 list.appendChild(div)
 
@@ -245,67 +182,17 @@ list.appendChild(div)
 }
 
 
-/* LOAD CONVERSATION */
-
 async function loadConversation(id){
 
 conversation=id
 
-const res=await fetch(API+"/chat/conversations/"+id,{
-credentials:"include"
-})
+const res=await fetch(API+"/chat/conversations/"+id,{credentials:"include"})
 
 const data=await res.json()
 
 chat.innerHTML=""
 
 data.forEach(m=>addMsg(m.role,m.message))
-
-}
-
-
-/* RENAME */
-
-async function renameConversation(id){
-
-const name = prompt("Rename conversation")
-
-if(!name) return
-
-await fetch(API + "/chat/conversations/" + id + "/rename",{
-
-method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-credentials:"include",
-
-body:JSON.stringify({title:name})
-
-})
-
-loadConversations()
-
-}
-
-
-/* DELETE */
-
-async function deleteConversation(id){
-
-if(!confirm("Delete conversation?")) return
-
-await fetch(API + "/chat/conversations/" + id,{
-
-method:"DELETE",
-
-credentials:"include"
-
-})
-
-loadConversations()
 
 }
 
@@ -323,11 +210,9 @@ return
 
 }
 
-const res=await fetch(API+"/chat/search?q="+q,{
-credentials:"include"
-})
+const res=await fetch(API+"/chat/search?q="+q,{credentials:"include"})
 
-if(!res.ok) return
+if(!res.ok)return
 
 const data=await res.json()
 
@@ -339,7 +224,7 @@ data.forEach(c=>{
 
 const div=document.createElement("div")
 
-div.className="convo"
+div.className="tool"
 
 div.innerText=c.title
 
@@ -363,19 +248,6 @@ renderHome()
 }
 
 
-/* TOOL PROMPTS */
-
-function toolPrompt(text){
-
-const input=document.getElementById("chatInput")
-
-input.value=text+" "
-
-input.focus()
-
-}
-
-
 /* ACCOUNT */
 
 async function loadAccount(){
@@ -388,8 +260,6 @@ chat.innerHTML=`
 
 <h2>Account</h2>
 
-<div class="panel">
-
 <p><b>Email</b></p>
 <p>${user.email}</p>
 
@@ -399,8 +269,6 @@ chat.innerHTML=`
 <br>
 
 <button onclick="logout()" class="sendBtn">Logout</button>
-
-</div>
 
 `
 
@@ -415,11 +283,7 @@ chat.innerHTML=`
 
 <h2>Settings</h2>
 
-<div class="panel">
-
-<p>Settings coming soon.</p>
-
-</div>
+<p>Settings will appear here.</p>
 
 `
 
@@ -431,11 +295,8 @@ chat.innerHTML=`
 async function logout(){
 
 await fetch(API+"/auth/logout",{
-
 method:"POST",
-
 credentials:"include"
-
 })
 
 window.location="/login.html"
