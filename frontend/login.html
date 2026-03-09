@@ -1,62 +1,64 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
+
 <head>
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>IndiCare Login</title>
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-
-<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="styles.css">
 
 </head>
 
-<body class="login-page">
+<body class="loginPage">
 
-<div class="login-wrapper">
+<div class="loginContainer">
 
-<div class="login-card">
+<div class="loginCard">
 
-<h1>IndiCare</h1>
+<h1 class="brand">IndiCare</h1>
 
-<p class="login-subtitle">
-AI support for residential children's homes
+<p class="tagline">
+AI support for safer children's homes
 </p>
 
-<form id="login-form">
+<form id="loginForm">
 
 <input
 type="email"
 id="email"
-placeholder="Email address"
+placeholder="Email"
 required
-/>
+>
 
 <input
 type="password"
 id="password"
 placeholder="Password"
 required
-/>
+>
 
-<button type="submit" class="primary">
-Login
+<button type="submit">
+Sign In
 </button>
 
 </form>
 
-<p id="login-error" class="error"></p>
+<p class="copyright">
+© 2025 IndiCare Ltd  
+Supporting safer, smarter children's homes
+</p>
+
+<p class="contact">
+Thomas.kelly@indicare.co.uk
+</p>
 
 </div>
 
 </div>
 
-<script src="/login.js"></script>
+<script src="login.js"></script>
 
 </body>
+
 </html>
