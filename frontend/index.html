@@ -16,6 +16,8 @@
 
 <script>
 
+let currentUser = null
+
 async function checkAuth(){
 
 try{
@@ -25,22 +27,23 @@ credentials:"include"
 })
 
 if(!res.ok){
-
 window.location="/login.html"
 return
-
 }
+
+currentUser = await res.json()
 
 loadApp()
 
 }catch(e){
 
-console.error("Auth check failed",e)
+console.error("Auth check failed", e)
 window.location="/login.html"
 
 }
 
 }
+
 
 function loadApp(){
 
@@ -107,7 +110,12 @@ initApp()
 
 }
 
+
+window.addEventListener("load", () => {
+
 checkAuth()
+
+})
 
 </script>
 
