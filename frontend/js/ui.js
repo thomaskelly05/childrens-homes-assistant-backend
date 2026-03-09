@@ -1,9 +1,19 @@
-async function loadComponent(id,path){
+function copyReport(){
 
-const res=await fetch(path)
+const text=document.getElementById("aiOutput").innerText
 
-const html=await res.text()
+navigator.clipboard.writeText(text)
 
-document.getElementById(id).innerHTML=html
+}
+
+function exportPDF(){
+
+alert("PDF export coming soon")
+
+}
+
+function saveReport(){
+
+alert("Report saved")
 
 }
