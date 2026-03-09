@@ -1,17 +1,19 @@
-const API="https://api.indicare.co.uk"
+const API = "https://api.indicare.co.uk"
 
-let conversation=null
-let userName=""
-let streamingMsg=null
+let conversation = null
+let userName = ""
+let streamingMsg = null
 
-const chat=document.getElementById("chat")
+let chat
 
 
 /* ----------------------------- */
-/* INIT */
+/* INIT APP */
 /* ----------------------------- */
 
 function initApp(){
+
+chat = document.getElementById("chat")
 
 loadUser()
 loadConversations()
@@ -25,18 +27,20 @@ loadConversations()
 
 async function loadUser(){
 
-const res=await fetch(API+"/auth/me",{credentials:"include"})
+const res = await fetch(API + "/auth/me", {
+credentials: "include"
+})
 
 if(!res.ok){
 
-window.location="/login.html"
+window.location = "/login.html"
 return
 
 }
 
-const data=await res.json()
+const data = await res.json()
 
-userName=data.email || "User"
+userName = data.email || "User"
 
 renderHome()
 
@@ -49,9 +53,9 @@ renderHome()
 
 function renderHome(){
 
-conversation=null
+conversation = null
 
-chat.innerHTML=`
+chat.innerHTML = `
 <div class="home">
 
 <h2>Hello ${userName}, how can I support you today?</h2>
@@ -70,13 +74,13 @@ chat.innerHTML=`
 
 function addMsg(role,text){
 
-const div=document.createElement("div")
+const div = document.createElement("div")
 
-div.className="msg "+role
+div.className = "msg " + role
 
-div.innerHTML=`
+div.innerHTML = `
 
-<div class="avatar">${role==="assistant"?"AI":"You"}</div>
+<div class="avatar">${role === "assistant" ? "AI" : "You"}</div>
 
 <div>
 
@@ -88,7 +92,7 @@ div.innerHTML=`
 
 chat.appendChild(div)
 
-chat.scrollTop=chat.scrollHeight
+chat.scrollTop = chat.scrollHeight
 
 return div
 
@@ -101,54 +105,61 @@ return div
 
 async function sendChat(){
 
-const input=document.getElementById("chatInput")
+const input = document.getElementById("chatInput")
 
-const text=input.value.trim()
+const text = input.value.trim()
 
-if(!text)return
+if(!text) return
 
-addMsg("user",text)
+addMsg("user", text)
 
-input.value=""
+input.value = ""
 
-streamingMsg=addMsg("assistant","")
+streamingMsg = addMsg("assistant", "")
 
-const bubble=streamingMsg.querySelector(".bubble")
+const bubble = streamingMsg.querySelector(".bubble")
 
-const res=await fetch(API+"/chat/",{
+const res = await fetch(API + "/chat/", {
 
-method:"POST",
+method: "POST",
 
-headers:{
-"Content-Type":"application/json"
+headers: {
+"Content-Type": "application/json"
 },
 
-credentials:"include",
+credentials: "include",
 
-body:JSON.stringify({
-message:text,
-conversation_id:conversation
+body: JSON.stringify({
+message: text,
+conversation_id: conversation
 })
 
 })
 
-const reader=res.body.getReader()
+if(!res.ok){
 
-const decoder=new TextDecoder()
+bubble.innerHTML = "Error contacting server."
 
-let ai=""
+return
+
+}
+
+const reader = res.body.getReader()
+const decoder = new TextDecoder()
+
+let ai = ""
 
 while(true){
 
-const {done,value}=await reader.read()
+const {done,value} = await reader.read()
 
-if(done)break
+if(done) break
 
-ai+=decoder.decode(value)
+ai += decoder.decode(value)
 
-bubble.innerHTML=marked.parse(ai)
+bubble.innerHTML = marked.parse(ai)
 
-chat.scrollTop=chat.scrollHeight
+chat.scrollTop = chat.scrollHeight
 
 }
 
@@ -163,29 +174,29 @@ loadConversations()
 
 async function loadConversations(){
 
-const res=await fetch(API+"/chat/conversations",{
-
-credentials:"include"
-
+const res = await fetch(API + "/chat/conversations", {
+credentials: "include"
 })
 
-if(!res.ok)return
+if(!res.ok) return
 
-const data=await res.json()
+const data = await res.json()
 
-const list=document.getElementById("conversationList")
+const list = document.getElementById("conversationList")
 
-list.innerHTML=""
+if(!list) return
 
-data.forEach(c=>{
+list.innerHTML = ""
 
-const div=document.createElement("div")
+data.forEach(c => {
 
-div.className="convo"
+const div = document.createElement("div")
 
-div.innerText=c.title || "Conversation"
+div.className = "convo"
 
-div.onclick=()=>loadConversation(c.id)
+div.innerText = c.title || "Conversation"
+
+div.onclick = () => loadConversation(c.id)
 
 list.appendChild(div)
 
@@ -200,21 +211,21 @@ list.appendChild(div)
 
 async function loadConversation(id){
 
-conversation=id
+conversation = id
 
-const res=await fetch(API+"/chat/conversations/"+id,{
-
-credentials:"include"
-
+const res = await fetch(API + "/chat/conversations/" + id, {
+credentials: "include"
 })
 
-const data=await res.json()
+if(!res.ok) return
 
-chat.innerHTML=""
+const data = await res.json()
 
-data.forEach(m=>{
+chat.innerHTML = ""
 
-addMsg(m.role,m.message)
+data.forEach(m => {
+
+addMsg(m.role, m.message)
 
 })
 
@@ -227,7 +238,7 @@ addMsg(m.role,m.message)
 
 function newChat(){
 
-conversation=null
+conversation = null
 
 renderHome()
 
@@ -240,9 +251,9 @@ renderHome()
 
 function toolPrompt(text){
 
-const input=document.getElementById("chatInput")
+const input = document.getElementById("chatInput")
 
-input.value=text+" "
+input.value = text + " "
 
 input.focus()
 
@@ -250,31 +261,29 @@ input.focus()
 
 
 /* ----------------------------- */
-/* ACCOUNT */
+/* ACCOUNT PAGE */
 /* ----------------------------- */
 
 async function loadAccount(){
 
-const res=await fetch(API+"/auth/me",{
-
-credentials:"include"
-
+const res = await fetch(API + "/auth/me", {
+credentials: "include"
 })
 
-const user=await res.json()
+if(!res.ok) return
 
-chat.innerHTML=`
+const user = await res.json()
+
+chat.innerHTML = `
 
 <h2>Account</h2>
 
 <div class="panel">
 
 <p><b>Email</b></p>
-
 <p>${user.email}</p>
 
 <p><b>Role</b></p>
-
 <p>${user.role}</p>
 
 <br>
@@ -289,12 +298,12 @@ chat.innerHTML=`
 
 
 /* ----------------------------- */
-/* SETTINGS */
+/* SETTINGS PAGE */
 /* ----------------------------- */
 
 function loadSettings(){
 
-chat.innerHTML=`
+chat.innerHTML = `
 
 <h2>Settings</h2>
 
@@ -315,14 +324,11 @@ chat.innerHTML=`
 
 async function logout(){
 
-await fetch(API+"/auth/logout",{
-
-method:"POST",
-
-credentials:"include"
-
+await fetch(API + "/auth/logout", {
+method: "POST",
+credentials: "include"
 })
 
-window.location="/login.html"
+window.location = "/login.html"
 
 }
