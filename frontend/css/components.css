@@ -1,1 +1,94 @@
+.logo{
 
+font-size:22px;
+font-weight:700;
+
+margin-bottom:24px;
+
+}
+
+/* SEARCH */
+
+#searchBox{
+
+padding:10px;
+border-radius:8px;
+border:none;
+
+margin-bottom:20px;
+
+}
+
+/* CONVERSATIONS */
+
+.conversation{
+
+padding:6px 0;
+
+cursor:pointer;
+
+}
+
+.conversation:hover{
+
+opacity:0.8;
+
+}
+
+/* DOCUMENT CARD */
+
+.document{
+
+background:white;
+
+width:900px;
+
+border-radius:14px;
+
+padding:30px;
+
+box-shadow:0 10px 40px rgba(0,0,0,0.06);
+
+border:1px solid var(--border);
+
+}
+
+/* INPUT */
+
+.chatInput{
+
+width:900px;
+
+display:flex;
+
+gap:10px;
+
+margin-top:20px;
+
+}
+
+.chatInput textarea{
+
+flex:1;
+
+padding:14px;
+
+border-radius:10px;
+
+border:1px solid var(--border);
+
+}
+
+.chatInput button{
+
+background:var(--brand);
+
+color:white;
+
+border:none;
+
+padding:14px 20px;
+
+border-radius:10px;
+
+}
