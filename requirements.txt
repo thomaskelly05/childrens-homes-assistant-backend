@@ -18,8 +18,10 @@ passlib[bcrypt]
 python-multipart
 python-docx
 reportlab
+itsdangerous
 
 typing_extensions
+
 
 
 
