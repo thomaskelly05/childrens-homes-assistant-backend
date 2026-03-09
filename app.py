@@ -4,6 +4,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 
 
 # ---------------------------
@@ -25,6 +26,10 @@ from routers.dashboard_routes import router as dashboard_router
 from routers.account_routes import router as account_router
 
 
+# ---------------------------
+# APP INFO
+# ---------------------------
+
 APP_NAME = "IndiCare Assistant API"
 VERSION = "1.3"
 
@@ -36,16 +41,20 @@ PORT = int(os.environ.get("PORT", 10000))
 # ---------------------------
 
 ALLOWED_ORIGINS = [
+
     "https://indicare.co.uk",
     "https://www.indicare.co.uk",
 
     "https://childrens-homes-assistant-backend.onrender.com",
-    "https://childrens-homes-assistant-backend-new.onrender.com",
 
     "http://localhost:3000",
     "http://localhost:5173",
 ]
 
+
+# ---------------------------
+# CREATE APP
+# ---------------------------
 
 app = FastAPI(
     title=APP_NAME,
@@ -55,12 +64,27 @@ app = FastAPI(
 )
 
 
+# ---------------------------
+# MIDDLEWARE
+# ---------------------------
+
+# CORS
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+# SESSION COOKIE SUPPORT (required for auth)
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.environ.get("SESSION_SECRET", "indicare-super-secret-key"),
+    same_site="none",   # required for cross-domain cookies
+    https_only=True     # secure cookies for HTTPS
 )
 
 
@@ -98,10 +122,16 @@ def health():
     }
 
 
+# ---------------------------
+# ROOT
+# ---------------------------
+
 @app.get("/")
 def root():
     return {
-        "message": "IndiCare API running"
+        "message": "IndiCare API running",
+        "docs": "/docs",
+        "version": VERSION
     }
 
 
@@ -132,4 +162,3 @@ if __name__ == "__main__":
         port=PORT,
         reload=True
     )
-
