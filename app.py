@@ -155,11 +155,11 @@ def health():
 
 
 # --------------------------------------------------
-# ROOT
+# API ROOT
 # --------------------------------------------------
 
-@app.get("/")
-def root():
+@app.get("/api")
+def api_root():
     return {
         "message": "IndiCare API running",
         "docs": "/docs",
@@ -168,10 +168,12 @@ def root():
 
 
 # --------------------------------------------------
-# OPTIONAL FRONTEND HOSTING
+# FRONTEND HOSTING
 # --------------------------------------------------
 
-FRONTEND_DIR = "frontend"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
 if os.path.isdir(FRONTEND_DIR):
 
