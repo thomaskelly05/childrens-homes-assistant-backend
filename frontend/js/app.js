@@ -1,10 +1,20 @@
+async function loadComponent(url,target){
+
+const res=await fetch(url)
+
+const html=await res.text()
+
+document.getElementById(target).innerHTML=html
+
+}
+
 async function init(){
 
-await loadComponent("sidebar","components/sidebar.html")
+await loadComponent("/components/sidebar.html","sidebar")
 
-await loadComponent("header","components/header.html")
+await loadComponent("/components/header.html","header")
 
-await loadComponent("workspace","components/workspace.html")
+await loadWorkspace()
 
 }
 
