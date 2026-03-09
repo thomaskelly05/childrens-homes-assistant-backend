@@ -1,7 +1,6 @@
 const API="https://api.indicare.co.uk"
 
 let conversation=null
-let userName=""
 let chat
 
 
@@ -9,44 +8,10 @@ function initApp(){
 
 chat=document.getElementById("chat")
 
-loadUser()
 loadConversations()
 
 }
 
-
-/* USER */
-
-async function loadUser(){
-
-const res=await fetch(API+"/auth/me",{credentials:"include"})
-
-const data=await res.json()
-
-userName=data.email||"User"
-
-renderHome()
-
-}
-
-
-/* HOME */
-
-function renderHome(){
-
-conversation=null
-
-chat.innerHTML=`
-<div class="home">
-<h2>Hello ${userName}, how can I support you today?</h2>
-<p>IndiCare helps with safeguarding guidance, reports and reflections.</p>
-</div>
-`
-
-}
-
-
-/* MESSAGE */
 
 function addMsg(role,text){
 
@@ -56,15 +21,9 @@ div.className="msg "+role
 
 div.innerHTML=`
 
-<div class="avatar">${role==="assistant"?"AI":"You"}</div>
-
-<div>
-
 <div class="bubble">
 
 ${marked.parse(text)}
-
-</div>
 
 </div>
 
@@ -78,8 +37,6 @@ return div
 
 }
 
-
-/* CHAT */
 
 async function sendChat(){
 
@@ -129,16 +86,12 @@ ai+=decoder.decode(value)
 
 bubble.innerHTML=marked.parse(ai)
 
-chat.scrollTop=chat.scrollHeight
-
 }
 
 loadConversations()
 
 }
 
-
-/* TOOL PROMPTS */
 
 function toolPrompt(text){
 
@@ -150,8 +103,6 @@ input.focus()
 
 }
 
-
-/* CONVERSATIONS */
 
 async function loadConversations(){
 
@@ -168,8 +119,6 @@ list.innerHTML=""
 data.forEach(c=>{
 
 const div=document.createElement("div")
-
-div.className="tool"
 
 div.innerText=c.title||"Conversation"
 
@@ -197,7 +146,13 @@ data.forEach(m=>addMsg(m.role,m.message))
 }
 
 
-/* SEARCH */
+function newChat(){
+
+conversation=null
+chat.innerHTML=""
+
+}
+
 
 async function searchConversations(){
 
@@ -224,8 +179,6 @@ data.forEach(c=>{
 
 const div=document.createElement("div")
 
-div.className="tool"
-
 div.innerText=c.title
 
 div.onclick=()=>loadConversation(c.id)
@@ -237,66 +190,13 @@ list.appendChild(div)
 }
 
 
-/* NEW CHAT */
-
-function newChat(){
-
-conversation=null
-
-renderHome()
-
-}
-
-
-/* ACCOUNT */
-
-async function loadAccount(){
-
-const res=await fetch(API+"/auth/me",{credentials:"include"})
-
-const user=await res.json()
-
-chat.innerHTML=`
-
-<h2>Account</h2>
-
-<p><b>Email</b></p>
-<p>${user.email}</p>
-
-<p><b>Role</b></p>
-<p>${user.role}</p>
-
-<br>
-
-<button onclick="logout()" class="sendBtn">Logout</button>
-
-`
-
-}
-
-
-/* SETTINGS */
-
-function loadSettings(){
-
-chat.innerHTML=`
-
-<h2>Settings</h2>
-
-<p>Settings will appear here.</p>
-
-`
-
-}
-
-
-/* LOGOUT */
-
 async function logout(){
 
 await fetch(API+"/auth/logout",{
+
 method:"POST",
 credentials:"include"
+
 })
 
 window.location="/login.html"
