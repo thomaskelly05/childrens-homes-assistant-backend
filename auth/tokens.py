@@ -1,19 +1,23 @@
 import jwt
 import os
-from datetime import datetime, timedelta
 
-JWT_SECRET = os.getenv("JWT_SECRET", "super-secret-key")
-JWT_ALGORITHM = "HS256"
+SECRET = os.environ.get("SESSION_SECRET", "super-secret-key")
 
 
-def create_session_token(user_id, email, role, home_id):
+def create_session_token(user_id, role):
 
     payload = {
-        "sub": user_id,
-        "email": email,
-        "role": role,
-        "home_id": home_id,
-        "exp": datetime.utcnow() + timedelta(days=7)
+        "user_id": user_id,
+        "role": role
     }
 
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    return jwt.encode(payload, SECRET, algorithm="HS256")
+
+
+def decode_session_token(token):
+
+    try:
+        payload = jwt.decode(token, SECRET, algorithms=["HS256"])
+        return payload
+    except Exception:
+        return None
