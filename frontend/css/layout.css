@@ -1,1 +1,69 @@
+#app{
 
+display:flex;
+height:100vh;
+
+}
+
+/* SIDEBAR */
+
+#sidebar{
+
+width:260px;
+
+background:linear-gradient(
+180deg,
+#2563eb,
+#1e40af
+);
+
+color:white;
+
+display:flex;
+flex-direction:column;
+
+padding:24px;
+
+}
+
+/* MAIN */
+
+#main{
+
+flex:1;
+display:flex;
+flex-direction:column;
+
+}
+
+/* HEADER */
+
+#header{
+
+height:64px;
+
+background:white;
+
+border-bottom:1px solid var(--border);
+
+display:flex;
+align-items:center;
+
+padding:0 24px;
+
+}
+
+/* WORKSPACE */
+
+#workspace{
+
+flex:1;
+
+overflow:auto;
+
+padding:40px;
+
+display:flex;
+justify-content:center;
+
+}
