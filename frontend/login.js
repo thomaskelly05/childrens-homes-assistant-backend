@@ -10,15 +10,20 @@ const email=document.getElementById("email").value
 const password=document.getElementById("password").value
 
 const res=await fetch(API+"/auth/login",{
+
 method:"POST",
+
 credentials:"include",
+
 headers:{
 "Content-Type":"application/json"
 },
+
 body:JSON.stringify({
 email,
 password
 })
+
 })
 
 if(res.ok){
