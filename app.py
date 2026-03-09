@@ -7,9 +7,9 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 
-# ---------------------------
+# --------------------------------------------------
 # ROUTERS
-# ---------------------------
+# --------------------------------------------------
 
 from auth.routes import router as auth_router
 
@@ -25,15 +25,61 @@ from routers.dashboard_routes import router as dashboard_router
 from routers.account_routes import router as account_router
 
 
+# --------------------------------------------------
+# APP INFO
+# --------------------------------------------------
+
 APP_NAME = "IndiCare Assistant API"
 VERSION = "2.0"
 
 PORT = int(os.environ.get("PORT", 10000))
 
 
-# ---------------------------
-# CORS
-# ---------------------------
+# --------------------------------------------------
+# CREATE APP
+# --------------------------------------------------
+
+app = FastAPI(
+    title=APP_NAME,
+    version=VERSION,
+    docs_url="/docs",
+    redoc_url=None
+)
+
+
+# --------------------------------------------------
+# SECURITY HEADERS
+# --------------------------------------------------
+
+@app.middleware("http")
+async def security_headers(request, call_next):
+
+    response = await call_next(request)
+
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin"
+
+    return response
+
+
+# --------------------------------------------------
+# STREAM BUFFER FIX (Render)
+# --------------------------------------------------
+
+@app.middleware("http")
+async def disable_buffering(request, call_next):
+
+    response = await call_next(request)
+
+    response.headers["X-Accel-Buffering"] = "no"
+
+    return response
+
+
+# --------------------------------------------------
+# CORS CONFIG
+# --------------------------------------------------
 
 ALLOWED_ORIGINS = [
 
@@ -50,48 +96,6 @@ ALLOWED_ORIGINS = [
 ]
 
 
-app = FastAPI(
-    title=APP_NAME,
-    version=VERSION,
-    docs_url="/docs",
-    redoc_url=None
-)
-
-
-# ---------------------------
-# SECURITY HEADERS
-# ---------------------------
-
-@app.middleware("http")
-async def security_headers(request, call_next):
-
-    response = await call_next(request)
-
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["Referrer-Policy"] = "strict-origin"
-
-    return response
-
-
-# ---------------------------
-# STREAM BUFFER FIX (RENDER)
-# ---------------------------
-
-@app.middleware("http")
-async def disable_buffering(request, call_next):
-
-    response = await call_next(request)
-
-    response.headers["X-Accel-Buffering"] = "no"
-
-    return response
-
-
-# ---------------------------
-# CORS
-# ---------------------------
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -101,13 +105,16 @@ app.add_middleware(
 )
 
 
-# ---------------------------
+# --------------------------------------------------
 # SESSION COOKIE
-# ---------------------------
+# --------------------------------------------------
 
 app.add_middleware(
     SessionMiddleware,
-    secret_key=os.environ.get("SESSION_SECRET", "indicare-super-secret-key"),
+    secret_key=os.environ.get(
+        "SESSION_SECRET",
+        "indicare-super-secret-key"
+    ),
     session_cookie="indicare_session",
     same_site="none",
     https_only=True,
@@ -115,9 +122,9 @@ app.add_middleware(
 )
 
 
-# ---------------------------
+# --------------------------------------------------
 # ROUTERS
-# ---------------------------
+# --------------------------------------------------
 
 app.include_router(auth_router)
 
@@ -134,18 +141,35 @@ app.include_router(dashboard_router)
 app.include_router(account_router)
 
 
-# ---------------------------
-# HEALTH
-# ---------------------------
+# --------------------------------------------------
+# HEALTH CHECK
+# --------------------------------------------------
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "service": APP_NAME,
+        "version": VERSION
+    }
 
 
-# ---------------------------
-# FRONTEND
-# ---------------------------
+# --------------------------------------------------
+# ROOT
+# --------------------------------------------------
+
+@app.get("/")
+def root():
+    return {
+        "message": "IndiCare API running",
+        "docs": "/docs",
+        "version": VERSION
+    }
+
+
+# --------------------------------------------------
+# OPTIONAL FRONTEND HOSTING
+# --------------------------------------------------
 
 FRONTEND_DIR = "frontend"
 
@@ -157,20 +181,10 @@ if os.path.isdir(FRONTEND_DIR):
         name="frontend"
     )
 
-from fastapi.staticfiles import StaticFiles
-import os
 
-FRONTEND_DIR = "frontend"
-
-if os.path.isdir(FRONTEND_DIR):
-    app.mount(
-        "/",
-        StaticFiles(directory=FRONTEND_DIR, html=True),
-        name="frontend"
-    )
-# ---------------------------
-# LOCAL DEV
-# ---------------------------
+# --------------------------------------------------
+# LOCAL DEVELOPMENT
+# --------------------------------------------------
 
 if __name__ == "__main__":
 
@@ -180,5 +194,3 @@ if __name__ == "__main__":
         port=PORT,
         reload=True
     )
-
-
