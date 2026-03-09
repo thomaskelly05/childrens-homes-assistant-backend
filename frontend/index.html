@@ -18,23 +18,33 @@
 
 async function checkAuth(){
 
-const res=await fetch(API+"/account/me",{credentials:"include"})
+try{
+
+const res = await fetch("https://api.indicare.co.uk/account/me",{
+credentials:"include"
+})
 
 if(!res.ok){
 
 window.location="/login.html"
-
 return
 
 }
 
 loadApp()
 
+}catch(e){
+
+console.error("Auth check failed",e)
+window.location="/login.html"
+
+}
+
 }
 
 function loadApp(){
 
-document.getElementById("indicareApp").innerHTML=`
+document.getElementById("indicareApp").innerHTML = `
 
 <div id="overlay"></div>
 
@@ -69,13 +79,10 @@ document.getElementById("indicareApp").innerHTML=`
 
 </div>
 
-
 <div id="main">
 
 <div id="header">
-
 <div class="logo">IndiCare</div>
-
 </div>
 
 <div id="chat"></div>
