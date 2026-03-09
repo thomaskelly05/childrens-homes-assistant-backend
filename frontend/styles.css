@@ -330,3 +330,20 @@ display:block;
 }
 
 }
+.copyBtn{
+
+margin-top:10px;
+
+font-size:12px;
+
+cursor:pointer;
+
+color:#2563eb;
+
+}
+
+.copyBtn:hover{
+
+text-decoration:underline;
+
+}
