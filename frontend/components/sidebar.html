@@ -1,13 +1,15 @@
-<div class="logo">IndiCare</div>
+<h2 style="margin-bottom:20px;">IndiCare</h2>
 
-<input id="searchBox" placeholder="Search conversations">
+<input class="search" placeholder="Search conversations">
 
-<div class="sectionTitle">Assistant</div>
+<div class="nav">
 
-<div class="conversation" onclick="newChat()">
-New Chat
+<div class="navItem" onclick="newChat()">New Chat</div>
+
+<div class="navItem">Conversations</div>
+
+<div class="navItem">Account</div>
+
+<div class="navItem" onclick="logout()">Logout</div>
+
 </div>
-
-<div class="sectionTitle">Conversations</div>
-
-<div id="conversationList"></div>
