@@ -5,7 +5,7 @@ import jwt
 from psycopg2.extras import RealDictCursor
 
 from db.connection import get_db
-from auth.tokens import create_session_token
+from auth.tokens import create_session_token, JWT_SECRET, JWT_ALGORITHM
 
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -42,14 +42,15 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    password_hash = user.get("password_hash")
+    password_hash = user["password_hash"]
 
     if isinstance(password_hash, str):
-        password_hash = password_hash.encode("utf-8")
+        password_hash = password_hash.encode()
 
-    if not bcrypt.checkpw(payload.password.encode("utf-8"), password_hash):
+    if not bcrypt.checkpw(payload.password.encode(), password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
+    # Create session token
     token = create_session_token(
         user["id"],
         user["email"],
@@ -63,7 +64,8 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
         httponly=True,
         secure=True,
         samesite="none",
-        path="/"
+        path="/",
+        domain=".indicare.co.uk"
     )
 
     return {
@@ -86,7 +88,8 @@ def logout(response: Response):
 
     response.delete_cookie(
         key="access_token",
-        path="/"
+        path="/",
+        domain=".indicare.co.uk"
     )
 
     return {"message": "Logged out"}
