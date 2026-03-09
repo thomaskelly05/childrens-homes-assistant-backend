@@ -347,3 +347,32 @@ color:#2563eb;
 text-decoration:underline;
 
 }
+.convo{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:10px 14px;
+cursor:pointer;
+border-bottom:1px solid var(--border);
+}
+
+.convo:hover{
+background:#f4f6fb;
+}
+
+.convoActions{
+display:flex;
+gap:6px;
+}
+
+.convoActions button{
+border:none;
+background:none;
+cursor:pointer;
+font-size:14px;
+opacity:0.6;
+}
+
+.convoActions button:hover{
+opacity:1;
+}
