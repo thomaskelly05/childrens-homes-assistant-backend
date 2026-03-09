@@ -363,7 +363,21 @@ chat.innerHTML=`
 
 }
 
+function copyText(el){
 
+const text = el.parentElement.innerText
+
+navigator.clipboard.writeText(text)
+
+el.innerText = "Copied"
+
+setTimeout(()=>{
+
+el.innerText="Copy"
+
+},2000)
+
+}
 /* LOGOUT */
 
 async function logout(){
