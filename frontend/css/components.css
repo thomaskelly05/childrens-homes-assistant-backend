@@ -1,48 +1,59 @@
-#commandPalette{
+.document{
 
-position:fixed;
-
-top:0;
-left:0;
-
-width:100%;
-height:100%;
-
-background:rgba(0,0,0,0.4);
-
-display:none;
-
-align-items:center;
-justify-content:center;
-
-}
-
-.commandBox{
+width:900px;
 
 background:white;
 
-width:600px;
+padding:30px;
 
-padding:20px;
+border-radius:14px;
 
-border-radius:12px;
+border:1px solid #e6e8ef;
 
-box-shadow:0 20px 60px rgba(0,0,0,0.25);
+box-shadow:0 8px 40px rgba(0,0,0,0.06);
+
+line-height:1.7;
 
 }
 
-.commandItem{
+.chatInput{
 
-padding:10px;
+display:flex;
+
+gap:10px;
+
+margin-top:20px;
+
+width:900px;
+
+}
+
+.chatInput textarea{
+
+flex:1;
+
+padding:14px;
+
+border-radius:10px;
+
+border:1px solid #e6e8ef;
+
+font-size:14px;
+
+}
+
+.chatInput button{
+
+background:#2563eb;
+
+color:white;
+
+border:none;
+
+padding:14px 20px;
+
+border-radius:10px;
 
 cursor:pointer;
-
-border-radius:6px;
-
-}
-
-.commandItem:hover{
-
-background:#f3f4f6;
 
 }
