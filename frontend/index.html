@@ -2,76 +2,103 @@
 <html>
 
 <head>
+
 <meta charset="UTF-8">
 <title>IndiCare Assistant</title>
+
 <link rel="stylesheet" href="styles.css">
+
 </head>
 
 <body>
 
-<div class="app">
-
-<div class="sidebar">
-
-<div class="logo">
-IndiCare
-</div>
-
-<button class="newChatBtn" onclick="newChat()">
-+ New Chat
-</button>
-
-<input id="search" placeholder="Search conversations...">
-
-<div id="history" class="history"></div>
-
-</div>
-
-
-<div class="main">
-
-<div class="header">
-IndiCare Assistant
-</div>
-
-<div id="chat" class="chat">
-
-<div class="welcome">
-Hello, how can I support you today?
-</div>
-
-</div>
-
-
-<div class="inputBar">
-
-<textarea id="input" placeholder="Ask IndiCare anything..."></textarea>
-
-<button id="sendBtn">Send</button>
-
-</div>
-
-</div>
-
-</div>
+<div id="indicareApp"></div>
 
 <script>
 
-// check login before loading assistant
+const API="https://api.indicare.co.uk"
 
 async function checkAuth(){
 
-const res = await fetch(
-"https://api.indicare.co.uk/account/me",
-{
-credentials:"include"
-})
+const res=await fetch(API+"/account/me",{credentials:"include"})
 
 if(!res.ok){
 
 window.location="/login.html"
 
+return
+
 }
+
+loadApp()
+
+}
+
+function loadApp(){
+
+document.getElementById("indicareApp").innerHTML=`
+
+<div id="overlay"></div>
+
+<div id="sidebar">
+
+<div class="sidebarHeader">IndiCare</div>
+
+<input id="searchBox" placeholder="Search conversations...">
+
+<div class="sidebarSection">Assistant</div>
+
+<div class="tool" onclick="renderHome()">Home</div>
+<div class="tool" onclick="newChat()">New Chat</div>
+
+<div class="sidebarSection">Tools</div>
+
+<div class="tool" onclick="toolPrompt('Write an incident report about')">Incident Report</div>
+<div class="tool" onclick="toolPrompt('Create a risk assessment for')">Risk Assessment</div>
+<div class="tool" onclick="toolPrompt('Generate a shift handover summary')">Shift Handover</div>
+<div class="tool" onclick="toolPrompt('Provide safeguarding advice regarding')">Safeguarding Advice</div>
+<div class="tool" onclick="toolPrompt('Reflect on a challenging shift')">Staff Reflection</div>
+
+<div class="sidebarSection">Conversations</div>
+
+<div id="conversationList"></div>
+
+<div class="sidebarSection">Account</div>
+
+<div class="tool" onclick="loadAccount()">Account</div>
+<div class="tool" onclick="loadSettings()">Settings</div>
+<div class="tool" onclick="logout()">Logout</div>
+
+</div>
+
+
+<div id="main">
+
+<div id="header">
+
+<div class="logo">IndiCare</div>
+
+</div>
+
+<div id="chat"></div>
+
+<div id="inputBar">
+
+<div id="inputRow">
+
+<textarea id="chatInput" placeholder="Ask IndiCare..."></textarea>
+
+<button class="sendBtn" onclick="sendChat()">Send</button>
+
+</div>
+
+</div>
+
+</div>
+
+`
+
+initApp()
 
 }
 
@@ -79,6 +106,7 @@ checkAuth()
 
 </script>
 
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="app.js"></script>
 
 </body>
