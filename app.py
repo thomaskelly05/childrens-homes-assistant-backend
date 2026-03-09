@@ -40,8 +40,10 @@ ALLOWED_ORIGINS = [
     "https://indicare.co.uk",
     "https://www.indicare.co.uk",
 
+    "https://app.indicare.co.uk",
+    "https://api.indicare.co.uk",
+
     "https://childrens-homes-assistant-backend.onrender.com",
-    "https://childrens-homes-assistant.onrender.com",
 
     "http://localhost:3000",
     "http://localhost:5173",
@@ -178,4 +180,5 @@ if __name__ == "__main__":
         port=PORT,
         reload=True
     )
+
 
