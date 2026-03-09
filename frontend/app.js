@@ -6,9 +6,7 @@ let streamingMsg = null
 let chat
 
 
-/* -------------------------------- */
 /* INIT */
-/* -------------------------------- */
 
 window.addEventListener("load", () => {
 
@@ -26,9 +24,7 @@ loadConversations()
 }
 
 
-/* -------------------------------- */
 /* USER */
-/* -------------------------------- */
 
 async function loadUser(){
 
@@ -53,7 +49,7 @@ renderHome()
 
 }catch(err){
 
-console.error("User load failed",err)
+console.error(err)
 window.location="/login.html"
 
 }
@@ -61,9 +57,7 @@ window.location="/login.html"
 }
 
 
-/* -------------------------------- */
 /* HOME */
-/* -------------------------------- */
 
 function renderHome(){
 
@@ -79,20 +73,7 @@ chat.innerHTML = `
 }
 
 
-/* -------------------------------- */
-/* SIDEBAR */
-/* -------------------------------- */
-
-function toggleSidebar(){
-
-document.getElementById("sidebar").classList.toggle("hidden")
-
-}
-
-
-/* -------------------------------- */
-/* ADD MESSAGE */
-/* -------------------------------- */
+/* MESSAGE */
 
 function addMsg(role,text){
 
@@ -127,9 +108,7 @@ return div
 }
 
 
-/* -------------------------------- */
-/* SEND CHAT */
-/* -------------------------------- */
+/* CHAT */
 
 async function sendChat(){
 
@@ -174,7 +153,7 @@ conversation_id:conversation
 
 if(!res.ok){
 
-bubble.innerHTML="Error contacting AI service."
+bubble.innerHTML="AI error"
 return
 
 }
@@ -204,9 +183,7 @@ loadConversations()
 }
 
 
-/* -------------------------------- */
-/* COPY MESSAGE */
-/* -------------------------------- */
+/* COPY */
 
 function copyText(el){
 
@@ -225,52 +202,7 @@ el.innerText="Copy"
 }
 
 
-/* -------------------------------- */
-/* DELETE MESSAGE */
-/* -------------------------------- */
-
-function deleteMsg(el){
-
-el.closest(".msg").remove()
-
-}
-
-
-/* -------------------------------- */
-/* EDIT MESSAGE */
-/* -------------------------------- */
-
-function editMsg(el){
-
-const bubble=el.parentElement.parentElement.querySelector(".bubble")
-
-document.getElementById("chatInput").value=bubble.innerText
-
-bubble.closest(".msg").remove()
-
-}
-
-
-/* -------------------------------- */
-/* REGENERATE */
-/* -------------------------------- */
-
-function regenerate(){
-
-const last = document.querySelector(".msg.user:last-of-type .bubble")
-
-if(!last) return
-
-document.getElementById("chatInput").value = last.innerText
-
-sendChat()
-
-}
-
-
-/* -------------------------------- */
-/* LOAD CONVERSATIONS */
-/* -------------------------------- */
+/* CONVERSATIONS */
 
 async function loadConversations(){
 
@@ -292,9 +224,19 @@ const div=document.createElement("div")
 
 div.className="convo"
 
-div.innerText=c.title || "Conversation"
+div.innerHTML=`
+<span onclick="loadConversation(${c.id})">
+${c.title || "Conversation"}
+</span>
 
-div.onclick=()=>loadConversation(c.id)
+<div class="convoActions">
+
+<button onclick="renameConversation(${c.id})">✏️</button>
+
+<button onclick="deleteConversation(${c.id})">🗑</button>
+
+</div>
+`
 
 list.appendChild(div)
 
@@ -303,9 +245,7 @@ list.appendChild(div)
 }
 
 
-/* -------------------------------- */
 /* LOAD CONVERSATION */
-/* -------------------------------- */
 
 async function loadConversation(id){
 
@@ -324,9 +264,53 @@ data.forEach(m=>addMsg(m.role,m.message))
 }
 
 
-/* -------------------------------- */
+/* RENAME */
+
+async function renameConversation(id){
+
+const name = prompt("Rename conversation")
+
+if(!name) return
+
+await fetch(API + "/chat/conversations/" + id + "/rename",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+credentials:"include",
+
+body:JSON.stringify({title:name})
+
+})
+
+loadConversations()
+
+}
+
+
+/* DELETE */
+
+async function deleteConversation(id){
+
+if(!confirm("Delete conversation?")) return
+
+await fetch(API + "/chat/conversations/" + id,{
+
+method:"DELETE",
+
+credentials:"include"
+
+})
+
+loadConversations()
+
+}
+
+
 /* SEARCH */
-/* -------------------------------- */
 
 async function searchConversations(){
 
@@ -368,9 +352,7 @@ list.appendChild(div)
 }
 
 
-/* -------------------------------- */
 /* NEW CHAT */
-/* -------------------------------- */
 
 function newChat(){
 
@@ -381,9 +363,7 @@ renderHome()
 }
 
 
-/* -------------------------------- */
 /* TOOL PROMPTS */
-/* -------------------------------- */
 
 function toolPrompt(text){
 
@@ -396,15 +376,11 @@ input.focus()
 }
 
 
-/* -------------------------------- */
 /* ACCOUNT */
-/* -------------------------------- */
 
 async function loadAccount(){
 
-const res=await fetch(API+"/auth/me",{
-credentials:"include"
-})
+const res=await fetch(API+"/auth/me",{credentials:"include"})
 
 const user=await res.json()
 
@@ -431,9 +407,7 @@ chat.innerHTML=`
 }
 
 
-/* -------------------------------- */
 /* SETTINGS */
-/* -------------------------------- */
 
 function loadSettings(){
 
@@ -443,7 +417,7 @@ chat.innerHTML=`
 
 <div class="panel">
 
-<p>Settings will appear here.</p>
+<p>Settings coming soon.</p>
 
 </div>
 
@@ -452,9 +426,7 @@ chat.innerHTML=`
 }
 
 
-/* -------------------------------- */
 /* LOGOUT */
-/* -------------------------------- */
 
 async function logout(){
 
