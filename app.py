@@ -3,7 +3,6 @@ import uvicorn
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 
@@ -64,7 +63,7 @@ async def security_headers(request, call_next):
 
 
 # --------------------------------------------------
-# STREAM BUFFER FIX (Render)
+# STREAM BUFFER FIX (Render streaming)
 # --------------------------------------------------
 
 @app.middleware("http")
@@ -88,8 +87,6 @@ ALLOWED_ORIGINS = [
 
     "https://app.indicare.co.uk",
     "https://api.indicare.co.uk",
-
-    "https://childrens-homes-assistant-backend.onrender.com",
 
     "http://localhost:3000",
     "http://localhost:5173",
@@ -158,30 +155,13 @@ def health():
 # API ROOT
 # --------------------------------------------------
 
-@app.get("/api")
-def api_root():
+@app.get("/")
+def root():
     return {
         "message": "IndiCare API running",
         "docs": "/docs",
-        "version": VERSION
+        "health": "/health"
     }
-
-
-# --------------------------------------------------
-# FRONTEND HOSTING
-# --------------------------------------------------
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
-
-if os.path.isdir(FRONTEND_DIR):
-
-    app.mount(
-        "/",
-        StaticFiles(directory=FRONTEND_DIR, html=True),
-        name="frontend"
-    )
 
 
 # --------------------------------------------------
