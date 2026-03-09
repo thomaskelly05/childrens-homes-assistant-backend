@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from psycopg2.extras import RealDictCursor
 from pydantic import BaseModel
@@ -12,6 +12,10 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 client = OpenAI()
 
 
+# ----------------------------------------------------
+# REQUEST MODEL
+# ----------------------------------------------------
+
 class ChatRequest(BaseModel):
     message: str
     conversation_id: int | None = None
@@ -22,13 +26,15 @@ class ChatRequest(BaseModel):
     speed: str = "normal"
 
 
-# -------------------------------------
-# TITLE GENERATOR
-# -------------------------------------
+# ----------------------------------------------------
+# AI TITLE GENERATOR
+# ----------------------------------------------------
 
 def generate_title(message: str):
 
-    prompt = f"""
+    try:
+
+        prompt = f"""
 Create a short conversation title (max 6 words)
 for a residential children's home staff discussion.
 
@@ -38,18 +44,23 @@ Message:
 Title:
 """
 
-    res = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=20
-    )
+        res = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=20
+        )
 
-    return res.choices[0].message.content.strip()
+        title = res.choices[0].message.content.strip()
+
+        return " ".join(title.split()[:6])
+
+    except Exception:
+        return message[:40]
 
 
-# -------------------------------------
-# CHAT
-# -------------------------------------
+# ----------------------------------------------------
+# MAIN CHAT
+# ----------------------------------------------------
 
 @router.post("/")
 def chat(payload: ChatRequest, conn=Depends(get_db)):
@@ -59,6 +70,8 @@ def chat(payload: ChatRequest, conn=Depends(get_db)):
     user_id = payload.user_id
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
+
+        # CREATE NEW CONVERSATION
 
         if conversation_id is None:
 
@@ -85,7 +98,7 @@ def chat(payload: ChatRequest, conn=Depends(get_db)):
             FROM messages
             WHERE conversation_id=%s
             ORDER BY created_at ASC
-            LIMIT 20
+            LIMIT 40
             """,
             (conversation_id,)
         )
@@ -102,14 +115,10 @@ def chat(payload: ChatRequest, conn=Depends(get_db)):
         speed=payload.speed
     )
 
-    messages = [
-        {
-            "role": "system",
-            "content": system_prompt
-        }
-    ]
+    messages = [{"role": "system", "content": system_prompt}]
 
     for h in history:
+
         messages.append({
             "role": h["role"],
             "content": h["message"]
@@ -179,9 +188,9 @@ def chat(payload: ChatRequest, conn=Depends(get_db)):
     return response
 
 
-# -------------------------------------
+# ----------------------------------------------------
 # GET CONVERSATIONS
-# -------------------------------------
+# ----------------------------------------------------
 
 @router.get("/conversations")
 def get_conversations(user_id: int = 1, conn=Depends(get_db)):
@@ -190,10 +199,11 @@ def get_conversations(user_id: int = 1, conn=Depends(get_db)):
 
         cur.execute(
             """
-            SELECT id,title
+            SELECT id,title,created_at
             FROM conversations
             WHERE user_id=%s
             ORDER BY created_at DESC
+            LIMIT 100
             """,
             (user_id,)
         )
@@ -203,14 +213,28 @@ def get_conversations(user_id: int = 1, conn=Depends(get_db)):
     return rows
 
 
-# -------------------------------------
+# ----------------------------------------------------
 # GET MESSAGES
-# -------------------------------------
+# ----------------------------------------------------
 
 @router.get("/conversations/{conversation_id}")
-def get_messages(conversation_id: int, conn=Depends(get_db)):
+def get_messages(conversation_id: int, user_id: int = 1, conn=Depends(get_db)):
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
+
+        # SECURITY CHECK
+
+        cur.execute(
+            """
+            SELECT id
+            FROM conversations
+            WHERE id=%s AND user_id=%s
+            """,
+            (conversation_id, user_id)
+        )
+
+        if not cur.fetchone():
+            return []
 
         cur.execute(
             """
@@ -220,6 +244,36 @@ def get_messages(conversation_id: int, conn=Depends(get_db)):
             ORDER BY created_at ASC
             """,
             (conversation_id,)
+        )
+
+        rows = cur.fetchall()
+
+    return rows
+
+
+# ----------------------------------------------------
+# SEARCH CONVERSATIONS
+# ----------------------------------------------------
+
+@router.get("/search")
+def search_conversations(
+    q: str = Query(...),
+    user_id: int = 1,
+    conn=Depends(get_db)
+):
+
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+
+        cur.execute(
+            """
+            SELECT id,title
+            FROM conversations
+            WHERE user_id=%s
+            AND title ILIKE %s
+            ORDER BY created_at DESC
+            LIMIT 20
+            """,
+            (user_id, f"%{q}%")
         )
 
         rows = cur.fetchall()
