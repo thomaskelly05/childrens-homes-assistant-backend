@@ -1,69 +1,51 @@
-#app{
+.workspaceContainer{
 
 display:flex;
-height:100vh;
+
+gap:30px;
 
 }
 
-/* SIDEBAR */
-
-#sidebar{
-
-width:260px;
-
-background:linear-gradient(
-180deg,
-#2563eb,
-#1e40af
-);
-
-color:white;
-
-display:flex;
-flex-direction:column;
-
-padding:24px;
-
-}
-
-/* MAIN */
-
-#main{
+.workspaceMain{
 
 flex:1;
+
 display:flex;
+
 flex-direction:column;
+
+align-items:center;
 
 }
 
-/* HEADER */
+.workspaceRight{
 
-#header{
-
-height:64px;
+width:220px;
 
 background:white;
 
-border-bottom:1px solid var(--border);
+border:1px solid var(--border);
 
-display:flex;
-align-items:center;
+padding:20px;
 
-padding:0 24px;
+border-radius:12px;
+
+height:fit-content;
 
 }
 
-/* WORKSPACE */
+.workspaceRight button{
 
-#workspace{
+width:100%;
 
-flex:1;
+margin-bottom:10px;
 
-overflow:auto;
+padding:10px;
 
-padding:40px;
+border-radius:8px;
 
-display:flex;
-justify-content:center;
+border:1px solid var(--border);
+
+cursor:pointer;
 
 }
