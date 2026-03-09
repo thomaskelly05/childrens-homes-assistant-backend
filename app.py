@@ -14,7 +14,6 @@ from starlette.middleware.sessions import SessionMiddleware
 from auth.routes import router as auth_router
 
 from routers.chat_routes import router as chat_router
-
 from routers.tasks_routes import router as tasks_router
 from routers.staff_journal_routes import router as journal_router
 from routers.handover_routes import router as handover_router
@@ -31,7 +30,7 @@ from routers.account_routes import router as account_router
 # ---------------------------
 
 APP_NAME = "IndiCare Assistant API"
-VERSION = "1.3"
+VERSION = "1.4"
 
 PORT = int(os.environ.get("PORT", 10000))
 
@@ -46,6 +45,7 @@ ALLOWED_ORIGINS = [
     "https://www.indicare.co.uk",
 
     "https://childrens-homes-assistant-backend.onrender.com",
+    "https://childrens-homes-assistant.onrender.com",
 
     "http://localhost:3000",
     "http://localhost:5173",
@@ -65,10 +65,24 @@ app = FastAPI(
 
 
 # ---------------------------
-# MIDDLEWARE
+# SECURITY HEADERS
 # ---------------------------
 
+@app.middleware("http")
+async def security_headers(request, call_next):
+
+    response = await call_next(request)
+
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin"
+
+    return response
+
+
+# ---------------------------
 # CORS
+# ---------------------------
 
 app.add_middleware(
     CORSMiddleware,
@@ -78,13 +92,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# SESSION COOKIE SUPPORT (required for auth)
+
+# ---------------------------
+# SESSION MIDDLEWARE
+# ---------------------------
 
 app.add_middleware(
     SessionMiddleware,
     secret_key=os.environ.get("SESSION_SECRET", "indicare-super-secret-key"),
-    same_site="none",   # required for cross-domain cookies
-    https_only=True     # secure cookies for HTTPS
+    session_cookie="indicare_session",
+    same_site="none",
+    https_only=True,
+    max_age=86400
 )
 
 
@@ -94,10 +113,8 @@ app.add_middleware(
 
 app.include_router(auth_router)
 
-# Chat system
 app.include_router(chat_router)
 
-# Core platform features
 app.include_router(tasks_router)
 app.include_router(journal_router)
 app.include_router(handover_router)
@@ -123,19 +140,6 @@ def health():
 
 
 # ---------------------------
-# ROOT
-# ---------------------------
-
-@app.get("/")
-def root():
-    return {
-        "message": "IndiCare API running",
-        "docs": "/docs",
-        "version": VERSION
-    }
-
-
-# ---------------------------
 # OPTIONAL FRONTEND HOSTING
 # ---------------------------
 
@@ -149,9 +153,19 @@ if os.path.isdir(FRONTEND_DIR):
         name="frontend"
     )
 
+else:
+
+    @app.get("/")
+    def root():
+        return {
+            "message": "IndiCare API running",
+            "docs": "/docs",
+            "version": VERSION
+        }
+
 
 # ---------------------------
-# LOCAL DEVELOPMENT
+# LOCAL DEV
 # ---------------------------
 
 if __name__ == "__main__":
