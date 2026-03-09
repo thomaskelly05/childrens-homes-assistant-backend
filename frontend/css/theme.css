@@ -1,22 +1,15 @@
 :root{
 
---brand:#2563eb;
-
---bg:#f5f7fb;
+--bg:#f7f7f7;
 
 --panel:#ffffff;
 
---border:#e6e8ef;
+--border:#e5e7eb;
 
 --text:#111827;
 
 --muted:#6b7280;
 
-}
+--accent:#111827;
 
-body{
-background:var(--bg);
-font-family:Inter,system-ui;
-color:var(--text);
-margin:0;
 }
