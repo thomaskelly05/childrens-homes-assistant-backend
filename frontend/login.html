@@ -5,13 +5,12 @@
 
 <meta charset="UTF-8">
 <title>IndiCare Login</title>
+
 <link rel="stylesheet" href="styles.css">
 
 </head>
 
 <body class="loginPage">
-
-<div class="loginContainer">
 
 <div class="loginCard">
 
@@ -23,41 +22,60 @@ IndiCare
 AI support for safer children's homes
 </p>
 
-<form id="loginForm">
+<input id="email" placeholder="Email">
 
-<input
-type="email"
-id="email"
-placeholder="Email"
-required
->
+<input id="password" type="password" placeholder="Password">
 
-<input
-type="password"
-id="password"
-placeholder="Password"
-required
->
+<button onclick="login()">Sign In</button>
 
-<button type="submit">
-Sign In
-</button>
+<div class="footer">
 
-</form>
-
-<p class="copyright">
-© 2025 IndiCare Ltd
-</p>
-
-<p class="contact">
+© 2025 IndiCare Ltd  
 support@indicare.co.uk
-</p>
 
 </div>
 
 </div>
 
-<script src="login.js"></script>
+<script>
+
+const API="https://api.indicare.co.uk"
+
+async function login(){
+
+const email=document.getElementById("email").value
+const password=document.getElementById("password").value
+
+const res=await fetch(API+"/auth/login",{
+
+method:"POST",
+
+credentials:"include",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+email,
+password
+})
+
+})
+
+if(res.ok){
+
+window.location="/"
+
+}else{
+
+alert("Login failed")
+
+}
+
+}
+
+</script>
 
 </body>
 </html>
