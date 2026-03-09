@@ -13,71 +13,12 @@ background:#f7f8fc;
 --muted:#6b7280;
 }
 
-/* -------------------------- */
-/* LOGIN PAGE */
-/* -------------------------- */
-
-.loginPage{
-display:flex;
-align-items:center;
-justify-content:center;
-height:100vh;
-}
-
-.loginCard{
-background:white;
-padding:40px;
-border-radius:12px;
-width:320px;
-box-shadow:0 20px 40px rgba(0,0,0,0.1);
-text-align:center;
-}
-
-.loginCard input{
-width:100%;
-padding:10px;
-margin-bottom:10px;
-border-radius:8px;
-border:1px solid #ddd;
-}
-
-.loginCard button{
-width:100%;
-padding:12px;
-border:none;
-background:#2563eb;
-color:white;
-border-radius:10px;
-cursor:pointer;
-}
-
-.brand{
-font-size:26px;
-font-weight:700;
-}
-
-.tagline{
-color:#6b7280;
-margin-bottom:20px;
-}
-
-.footer{
-font-size:12px;
-margin-top:20px;
-color:#6b7280;
-}
-
-
-/* -------------------------- */
-/* APP LAYOUT */
-/* -------------------------- */
+/* APP */
 
 #indicareApp{
 display:flex;
 height:100vh;
 }
-
-/* SIDEBAR */
 
 #sidebar{
 width:280px;
@@ -85,7 +26,6 @@ background:white;
 border-right:1px solid var(--border);
 display:flex;
 flex-direction:column;
-overflow:auto;
 }
 
 .sidebarHeader{
@@ -101,66 +41,14 @@ color:var(--muted);
 text-transform:uppercase;
 }
 
-/* SEARCH */
-
-#searchBox{
-margin:10px 16px;
-padding:8px;
-border-radius:8px;
-border:1px solid var(--border);
-}
-
-/* SIDEBAR ITEMS */
-
 .tool{
 padding:12px 16px;
 cursor:pointer;
-font-size:14px;
 }
 
 .tool:hover{
 background:#f4f6fb;
 }
-
-/* CONVERSATION LIST */
-
-.convo{
-padding:10px 16px;
-cursor:pointer;
-font-size:14px;
-border-bottom:1px solid #f0f1f5;
-}
-
-.convo:hover{
-background:#f4f6fb;
-}
-
-
-/* -------------------------- */
-/* MAIN AREA */
-/* -------------------------- */
-
-#main{
-flex:1;
-display:flex;
-flex-direction:column;
-}
-
-#header{
-height:60px;
-display:flex;
-align-items:center;
-padding:0 20px;
-border-bottom:1px solid var(--border);
-background:white;
-}
-
-.logo{
-font-weight:700;
-font-size:18px;
-}
-
-/* CHAT */
 
 #chat{
 flex:1;
@@ -170,20 +58,6 @@ display:flex;
 flex-direction:column;
 gap:16px;
 }
-
-/* HOME SCREEN */
-
-.home{
-max-width:600px;
-margin:auto;
-text-align:center;
-}
-
-.home h2{
-margin-bottom:10px;
-}
-
-/* MESSAGES */
 
 .msg{
 display:flex;
@@ -218,12 +92,7 @@ border:1px solid var(--border);
 padding:14px;
 border-radius:14px;
 line-height:1.5;
-max-width:600px;
 }
-
-/* -------------------------- */
-/* INPUT */
-/* -------------------------- */
 
 #inputBar{
 border-top:1px solid var(--border);
@@ -244,7 +113,6 @@ border:1px solid var(--border);
 border-radius:12px;
 padding:12px;
 resize:none;
-font-family:inherit;
 }
 
 .sendBtn{
@@ -256,123 +124,37 @@ border-radius:10px;
 cursor:pointer;
 }
 
-/* -------------------------- */
-/* PANELS */
-/* -------------------------- */
+/* AI TOOL BUTTONS */
 
-.panel{
-background:white;
-border:1px solid var(--border);
-padding:20px;
-border-radius:12px;
-max-width:600px;
-}
-
-/* -------------------------- */
-/* TYPING ANIMATION */
-/* -------------------------- */
-
-.typing{
+#aiTools{
 display:flex;
-gap:4px;
+gap:10px;
+flex-wrap:wrap;
+padding-bottom:10px;
+max-width:900px;
+margin:auto;
 }
 
-.typing span{
-width:6px;
-height:6px;
-background:#9ca3af;
-border-radius:50%;
-animation:blink 1.2s infinite;
-}
+#aiTools button{
 
-.typing span:nth-child(2){
-animation-delay:.2s
-}
+background:#eef2ff;
+border:1px solid #dbe2ff;
+color:#1f2937;
 
-.typing span:nth-child(3){
-animation-delay:.4s
-}
+padding:8px 12px;
+border-radius:8px;
 
-@keyframes blink{
-0%,80%,100%{opacity:0}
-40%{opacity:1}
-}
-
-
-/* -------------------------- */
-/* MOBILE */
-/* -------------------------- */
-
-@media (max-width:900px){
-
-#sidebar{
-position:fixed;
-left:-280px;
-top:0;
-height:100%;
-z-index:20;
-transition:0.25s;
-}
-
-#sidebar.open{
-left:0;
-}
-
-#overlay{
-position:fixed;
-inset:0;
-background:rgba(0,0,0,0.4);
-display:none;
-}
-
-#overlay.show{
-display:block;
-}
-
-}
-.copyBtn{
-
-margin-top:10px;
-
-font-size:12px;
+font-size:13px;
 
 cursor:pointer;
 
-color:#2563eb;
+transition:all 0.2s ease;
 
 }
 
-.copyBtn:hover{
+#aiTools button:hover{
 
-text-decoration:underline;
+background:#2563eb;
+color:white;
 
-}
-.convo{
-display:flex;
-justify-content:space-between;
-align-items:center;
-padding:10px 14px;
-cursor:pointer;
-border-bottom:1px solid var(--border);
-}
-
-.convo:hover{
-background:#f4f6fb;
-}
-
-.convoActions{
-display:flex;
-gap:6px;
-}
-
-.convoActions button{
-border:none;
-background:none;
-cursor:pointer;
-font-size:14px;
-opacity:0.6;
-}
-
-.convoActions button:hover{
-opacity:1;
 }
