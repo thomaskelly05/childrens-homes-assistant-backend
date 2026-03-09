@@ -1,7 +1,8 @@
 import os
 import uvicorn
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
@@ -64,7 +65,7 @@ async def security_headers(request, call_next):
 
 
 # --------------------------------------------------
-# STREAM BUFFER FIX
+# STREAM BUFFER FIX (Render)
 # --------------------------------------------------
 
 @app.middleware("http")
@@ -78,7 +79,7 @@ async def disable_buffering(request, call_next):
 
 
 # --------------------------------------------------
-# CORS
+# CORS CONFIG
 # --------------------------------------------------
 
 ALLOWED_ORIGINS = [
@@ -175,7 +176,6 @@ FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
 if os.path.isdir(FRONTEND_DIR):
 
-    # Serve frontend assets (css/js/components)
     app.mount(
         "/",
         StaticFiles(directory=FRONTEND_DIR, html=True),
@@ -184,7 +184,32 @@ if os.path.isdir(FRONTEND_DIR):
 
 
 # --------------------------------------------------
-# LOCAL DEV
+# SPA ROUTING (FRONTEND FALLBACK)
+# --------------------------------------------------
+
+@app.get("/{full_path:path}")
+async def spa_fallback(request: Request, full_path: str):
+
+    # Do not override API routes
+    if full_path.startswith("auth") \
+    or full_path.startswith("chat") \
+    or full_path.startswith("tasks") \
+    or full_path.startswith("reports") \
+    or full_path.startswith("documents") \
+    or full_path.startswith("dashboard") \
+    or full_path.startswith("account") \
+    or full_path.startswith("health") \
+    or full_path.startswith("docs") \
+    or full_path.startswith("api"):
+        return {"error": "Not found"}
+
+    index_file = os.path.join(FRONTEND_DIR, "index.html")
+
+    return FileResponse(index_file)
+
+
+# --------------------------------------------------
+# LOCAL DEVELOPMENT
 # --------------------------------------------------
 
 if __name__ == "__main__":
