@@ -15,3 +15,15 @@ throw new Error("API error")
 return res.json()
 
 }
+async function logout(){
+
+await fetch(API+"/auth/logout",{
+
+method:"POST",
+credentials:"include"
+
+})
+
+window.location="/login.html"
+
+}
