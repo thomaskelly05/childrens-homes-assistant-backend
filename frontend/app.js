@@ -115,8 +115,13 @@ streamingMsg=addMsg("assistant","")
 
 const bubble=streamingMsg.querySelector(".bubble")
 
-bubble.innerHTML="..."
-
+bubble.innerHTML=`
+<div class="typing">
+<span></span>
+<span></span>
+<span></span>
+</div>
+`
 const res=await fetch(API+"/chat/",{
 
 method:"POST",
