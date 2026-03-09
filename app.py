@@ -25,18 +25,14 @@ from routers.dashboard_routes import router as dashboard_router
 from routers.account_routes import router as account_router
 
 
-# ---------------------------
-# APP INFO
-# ---------------------------
-
 APP_NAME = "IndiCare Assistant API"
-VERSION = "1.4"
+VERSION = "2.0"
 
 PORT = int(os.environ.get("PORT", 10000))
 
 
 # ---------------------------
-# CORS SETTINGS
+# CORS
 # ---------------------------
 
 ALLOWED_ORIGINS = [
@@ -51,10 +47,6 @@ ALLOWED_ORIGINS = [
     "http://localhost:5173",
 ]
 
-
-# ---------------------------
-# CREATE APP
-# ---------------------------
 
 app = FastAPI(
     title=APP_NAME,
@@ -81,6 +73,20 @@ async def security_headers(request, call_next):
 
 
 # ---------------------------
+# STREAM BUFFER FIX (RENDER)
+# ---------------------------
+
+@app.middleware("http")
+async def disable_buffering(request, call_next):
+
+    response = await call_next(request)
+
+    response.headers["X-Accel-Buffering"] = "no"
+
+    return response
+
+
+# ---------------------------
 # CORS
 # ---------------------------
 
@@ -94,7 +100,7 @@ app.add_middleware(
 
 
 # ---------------------------
-# SESSION MIDDLEWARE
+# SESSION COOKIE
 # ---------------------------
 
 app.add_middleware(
@@ -127,20 +133,16 @@ app.include_router(account_router)
 
 
 # ---------------------------
-# HEALTH CHECK
+# HEALTH
 # ---------------------------
 
 @app.get("/health")
 def health():
-    return {
-        "status": "ok",
-        "service": APP_NAME,
-        "version": VERSION
-    }
+    return {"status": "ok"}
 
 
 # ---------------------------
-# OPTIONAL FRONTEND HOSTING
+# FRONTEND
 # ---------------------------
 
 FRONTEND_DIR = "frontend"
@@ -152,16 +154,6 @@ if os.path.isdir(FRONTEND_DIR):
         StaticFiles(directory=FRONTEND_DIR, html=True),
         name="frontend"
     )
-
-else:
-
-    @app.get("/")
-    def root():
-        return {
-            "message": "IndiCare API running",
-            "docs": "/docs",
-            "version": VERSION
-        }
 
 
 # ---------------------------
