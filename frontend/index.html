@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
 
 <meta charset="UTF-8">
@@ -21,16 +22,25 @@
 IndiCare
 </div>
 
+<div class="sidebarTop">
+
 <button class="newChatBtn" onclick="newChat()">
 + New Chat
 </button>
+
+<input
+id="search"
+placeholder="Search conversations..."
+>
+
+</div>
 
 <div id="history" class="history"></div>
 
 </div>
 
 
-<!-- MAIN AREA -->
+<!-- MAIN -->
 
 <div class="main">
 
@@ -41,10 +51,11 @@ IndiCare Assistant
 <div id="chat" class="chat">
 
 <div class="welcome">
-How can I support you today?
+Hello, how can I support you today?
 </div>
 
 </div>
+
 
 <div class="inputBar">
 
@@ -66,4 +77,5 @@ Send
 <script src="app.js"></script>
 
 </body>
+
 </html>
