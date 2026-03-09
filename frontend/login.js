@@ -1,46 +1,34 @@
-const API = "https://childrens-homes-assistant-backend.onrender.com"
+const API="https://api.indicare.co.uk"
 
-document.addEventListener("DOMContentLoaded", () => {
+const form=document.getElementById("loginForm")
 
-    const form = document.getElementById("login-form")
+form.onsubmit=async e=>{
 
-    form.addEventListener("submit", async (e) => {
+e.preventDefault()
 
-        e.preventDefault()
+const email=document.getElementById("email").value
+const password=document.getElementById("password").value
 
-        const email = document.getElementById("email").value
-        const password = document.getElementById("password").value
-        const error = document.getElementById("login-error")
-
-        error.innerText = ""
-
-        try {
-
-            const res = await fetch(`${API}/auth/login`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                credentials: "include",
-                body: JSON.stringify({
-                    email: email,
-                    password: password
-                })
-            })
-
-            if (!res.ok) {
-                error.innerText = "Invalid email or password"
-                return
-            }
-
-            window.location.href = "/"
-
-        } catch (err) {
-
-            error.innerText = "Unable to connect to server"
-
-        }
-
-    })
-
+const res=await fetch(API+"/auth/login",{
+method:"POST",
+credentials:"include",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+email,
+password
 })
+})
+
+if(res.ok){
+
+window.location="/"
+
+}else{
+
+alert("Login failed")
+
+}
+
+}
