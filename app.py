@@ -155,7 +155,17 @@ if os.path.isdir(FRONTEND_DIR):
         name="frontend"
     )
 
+from fastapi.staticfiles import StaticFiles
+import os
 
+FRONTEND_DIR = "frontend"
+
+if os.path.isdir(FRONTEND_DIR):
+    app.mount(
+        "/",
+        StaticFiles(directory=FRONTEND_DIR, html=True),
+        name="frontend"
+    )
 # ---------------------------
 # LOCAL DEV
 # ---------------------------
@@ -168,3 +178,4 @@ if __name__ == "__main__":
         port=PORT,
         reload=True
     )
+
