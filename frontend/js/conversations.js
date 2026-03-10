@@ -1,52 +1,65 @@
-const list = document.getElementById("conversation-list");
+const list = document.getElementById("conversation-list")
 
-let conversations = JSON.parse(
-  localStorage.getItem("conversations") || "[]"
-);
+let conversations =
+JSON.parse(localStorage.getItem("indicare_conversations") || "[]")
 
+function saveConversations(){
 
-export function addConversation(title, id) {
-
-  conversations.push({
-    title: title,
-    id: id
-  });
-
-  localStorage.setItem(
-    "conversations",
-    JSON.stringify(conversations)
-  );
-
-  renderConversations();
+localStorage.setItem(
+"indicare_conversations",
+JSON.stringify(conversations)
+)
 
 }
 
+function createConversation(title){
 
-export function renderConversations() {
+const id = crypto.randomUUID()
 
-  list.innerHTML = "";
+conversations.unshift({
+id,
+title,
+date: new Date().toISOString()
+})
 
-  conversations.forEach(conv => {
+saveConversations()
 
-    const div = document.createElement("div");
+localStorage.setItem("session_id", id)
 
-    div.className = "conversation-item";
+renderConversations()
 
-    div.innerText = conv.title;
-
-    div.onclick = () => {
-
-      localStorage.setItem("session_id", conv.id);
-
-      location.reload();
-
-    };
-
-    list.appendChild(div);
-
-  });
+location.reload()
 
 }
 
+function renderConversations(){
 
-renderConversations();
+if(!list) return
+
+list.innerHTML=""
+
+conversations.forEach(conv=>{
+
+const div=document.createElement("div")
+
+div.className="conversation-item"
+
+div.innerText=conv.title
+
+div.onclick=()=>{
+
+localStorage.setItem("session_id",conv.id)
+
+location.reload()
+
+}
+
+list.appendChild(div)
+
+})
+
+}
+
+window.createConversation=createConversation
+
+renderConversations()
