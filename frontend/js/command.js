@@ -1,54 +1,121 @@
-document.addEventListener("keydown",function(e){
+const palette = document.getElementById("command-palette");
+const input = document.getElementById("command-input");
+const results = document.getElementById("command-results");
 
-if(e.ctrlKey && e.key==="k"){
+const commands = [
 
-e.preventDefault()
+  {
+    name: "New Reflection",
+    action: () => {
+      location.reload();
+    }
+  },
 
-toggleCommand()
+  {
+    name: "Open Supervision",
+    action: () => {
+      alert("Supervision view coming soon");
+    }
+  },
+
+  {
+    name: "Search Conversations",
+    action: () => {
+      input.placeholder = "Search reflections...";
+    }
+  },
+
+  {
+    name: "Create Template",
+    action: () => {
+      alert("Template generator");
+    }
+  },
+
+  {
+    name: "Open Guidance",
+    action: () => {
+      alert("Guidance search");
+    }
+  }
+
+];
+
+
+function renderCommands(list) {
+
+  results.innerHTML = "";
+
+  list.forEach(cmd => {
+
+    const div = document.createElement("div");
+
+    div.className = "command-item";
+
+    div.innerText = cmd.name;
+
+    div.onclick = () => {
+
+      cmd.action();
+
+      closePalette();
+
+    };
+
+    results.appendChild(div);
+
+  });
 
 }
 
-})
 
-function toggleCommand(){
+function openPalette() {
 
-const el=document.getElementById("commandPalette")
+  palette.classList.remove("hidden");
 
-if(el.style.display==="block"){
+  input.focus();
 
-el.style.display="none"
-
-}else{
-
-el.style.display="block"
+  renderCommands(commands);
 
 }
 
-}
 
-function startWorkflow(type){
+function closePalette() {
 
-toggleCommand()
+  palette.classList.add("hidden");
 
-let prompt=""
-
-if(type==="incident"){
-prompt="Write an incident report about "
-}
-
-if(type==="risk"){
-prompt="Create a risk assessment for "
-}
-
-if(type==="safeguarding"){
-prompt="Provide safeguarding advice regarding "
-}
-
-if(type==="handover"){
-prompt="Generate a shift handover summary including "
-}
-
-document.getElementById("chatInput").value=prompt
-document.getElementById("chatInput").focus()
+  input.value = "";
 
 }
+
+
+document.addEventListener("keydown", e => {
+
+  if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+
+    e.preventDefault();
+
+    openPalette();
+
+  }
+
+  if (e.key === "Escape") {
+
+    closePalette();
+
+  }
+
+});
+
+
+input.addEventListener("input", () => {
+
+  const q = input.value.toLowerCase();
+
+  const filtered = commands.filter(cmd =>
+    cmd.name.toLowerCase().includes(q)
+  );
+
+  renderCommands(filtered);
+
+});
