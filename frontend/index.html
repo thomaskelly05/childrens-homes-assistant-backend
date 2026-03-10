@@ -37,24 +37,39 @@
 © IndiCare
 </footer>
 
+<!-- command palette -->
+<div id="command-palette" class="command-palette hidden">
+
+<div class="command-box">
+
+<input
+id="command-input"
+placeholder="Type a command or search..."
+autocomplete="off"
+/>
+
+<div id="command-results"></div>
+
+</div>
+
+</div>
+
 <script src="/js/api.js"></script>
+<script src="/js/conversations.js"></script>
 <script src="/js/chat.js"></script>
 <script src="/js/workspace.js"></script>
-<script src="/js/conversations.js"></script>
 <script src="/js/command.js"></script>
 <script src="/js/app.js"></script>
 
 <script>
 
-const API = "https://api.indicare.co.uk"
+const API="https://api.indicare.co.uk"
 
 async function checkAuth(){
 
-const res = await fetch(API + "/auth/check",{
-credentials:"include"
-})
+const res=await fetch(API+"/auth/check",{credentials:"include"})
 
-const data = await res.json()
+const data=await res.json()
 
 if(!data.authenticated){
 
