@@ -1,12 +1,14 @@
+import os
 import asyncio
+from openai import AsyncOpenAI
 
-from assistant.mode_detector import detect_mode
-from assistant.streaming import stream_response
-from assistant.prompts import SYSTEM_PROMPT
+client = AsyncOpenAI(
+    api_key=os.environ.get("OPENAI_API_KEY")
+)
 
 
 # --------------------------------------------------
-# MAIN AI STREAM FUNCTION
+# STREAM AI RESPONSE
 # --------------------------------------------------
 
 async def generate_ai_stream(message: str, history=None):
@@ -14,32 +16,38 @@ async def generate_ai_stream(message: str, history=None):
     if history is None:
         history = []
 
-    # Detect assistant mode
-    mode = detect_mode(message)
-
-    # Build messages for the AI
-
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT}
+        {
+            "role": "system",
+            "content": "You are IndiCare, an AI assistant for children's homes staff helping with safeguarding, incident reports, risk assessments and reflective practice."
+        }
     ]
 
-    # Add history
+    # Add conversation history
     for m in history:
         messages.append({
             "role": m["role"],
             "content": m["message"]
         })
 
-    # Add current user message
+    # Add new user message
     messages.append({
         "role": "user",
         "content": message
     })
 
-    # Stream response from assistant engine
+    # Call OpenAI streaming API
 
-    async for token in stream_response(messages):
+    stream = await client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages,
+        stream=True
+    )
 
-        yield token
+    async for chunk in stream:
 
-        await asyncio.sleep(0.01)
+        if chunk.choices[0].delta.content:
+
+            yield chunk.choices[0].delta.content
+
+            await asyncio.sleep(0.01)
