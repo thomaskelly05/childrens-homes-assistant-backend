@@ -1,36 +1,79 @@
-import json
+# assistant/retrieval.py
+
 import os
+import psycopg2
+from openai import OpenAI
+
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 
-KNOWLEDGE_FILE = "assistant/knowledge_store.json"
+def get_db_connection():
+
+    return psycopg2.connect(
+        host=os.environ.get("DB_HOST", "localhost"),
+        database=os.environ.get("DB_NAME", "indicare"),
+        user=os.environ.get("DB_USER", "postgres"),
+        password=os.environ.get("DB_PASSWORD", "postgres")
+    )
 
 
-def load_knowledge():
+def embed_query(text: str):
 
-    if not os.path.exists(KNOWLEDGE_FILE):
-        return []
+    response = client.embeddings.create(
+        model="text-embedding-3-small",
+        input=text
+    )
 
-    with open(KNOWLEDGE_FILE, "r") as f:
-        return json.load(f)
+    return response.data[0].embedding
 
 
-def search_knowledge(query: str, limit: int = 5):
+def retrieve_knowledge(query: str, limit: int = 5):
 
-    knowledge = load_knowledge()
+    conn = get_db_connection()
+    cur = conn.cursor()
 
-    query_words = query.lower().split()
+    embedding = embed_query(query)
 
-    results = []
+    cur.execute(
+        """
+        SELECT
+            content,
+            document_title,
+            section,
+            page_number
+        FROM indicare_knowledge
+        ORDER BY embedding <-> %s
+        LIMIT %s
+        """,
+        (embedding, limit)
+    )
 
-    for item in knowledge:
+    rows = cur.fetchall()
 
-        text = item["text"].lower()
+    cur.close()
+    conn.close()
 
-        score = sum(word in text for word in query_words)
+    if not rows:
+        return ""
 
-        if score > 0:
-            results.append((score, item["text"]))
+    context = []
+    citations = []
 
-    results.sort(reverse=True)
+    for i, row in enumerate(rows):
 
-    return [r[1] for r in results[:limit]]
+        content, doc, section, page = row
+
+        context.append(f"[{i+1}] {content}")
+        citations.append(f"[{i+1}] {doc} – {section} (p.{page})")
+
+    context_text = "\n\n".join(context)
+    citation_text = "\n".join(citations)
+
+    return f"""
+Guidance excerpts:
+
+{context_text}
+
+Sources:
+{citation_text}
+"""
