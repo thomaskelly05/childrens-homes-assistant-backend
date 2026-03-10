@@ -88,7 +88,6 @@ ALLOWED_ORIGINS = [
     "https://www.indicare.co.uk",
 
     "https://app.indicare.co.uk",
-    "https://api.indicare.co.uk",
 
     "http://localhost:3000",
     "http://localhost:5173",
@@ -220,3 +219,4 @@ if __name__ == "__main__":
         port=PORT,
         reload=True
     )
+
