@@ -1,30 +1,26 @@
 <div class="workspace">
 
-  <div class="sidebar">
-
-    <h2>IndiCare</h2>
-
-    <nav>
-
-      <a href="#">Reflect</a>
-      <a href="#">Supervision</a>
-      <a href="#">Templates</a>
-      <a href="#">Guidance</a>
-
-    </nav>
-
-  </div>
+  <div id="sidebar-container"></div>
 
 
   <div class="chat-area">
 
+    <div class="chat-header">
+
+      <h3 id="conversation-title">
+        Reflection
+      </h3>
+
+    </div>
+
+
     <div id="chat-messages" class="chat-messages"></div>
+
 
     <div class="chat-input-bar">
 
       <input
         id="chat-input"
-        type="text"
         placeholder="What would you like to reflect on?"
       />
 
@@ -33,7 +29,7 @@
       </button>
 
       <button id="capture-reflection">
-        Save Reflection
+        Save
       </button>
 
     </div>
@@ -43,11 +39,11 @@
 
   <div class="reflection-panel">
 
-    <h3>Reflection Insights</h3>
+    <h3>Insights</h3>
 
     <div class="reflection-box">
 
-      <p>Conversation themes will appear here.</p>
+      <p>Reflection themes will appear here.</p>
 
     </div>
 
