@@ -19,8 +19,10 @@ python-multipart
 python-docx
 reportlab
 itsdangerous
+pip install pgvector
 
 typing_extensions
+
 
 
 
