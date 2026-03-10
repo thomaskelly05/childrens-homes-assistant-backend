@@ -50,7 +50,10 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
     if not bcrypt.checkpw(payload.password.encode(), password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    # Create session token
+    # ---------------------------------------------------------
+    # CREATE SESSION TOKEN
+    # ---------------------------------------------------------
+
     token = create_session_token(
         user["id"],
         user["email"],
@@ -58,14 +61,19 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
         user["home_id"]
     )
 
+    # ---------------------------------------------------------
+    # SET AUTH COOKIE
+    # ---------------------------------------------------------
+
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
         secure=True,
         samesite="none",
+        domain=".indicare.co.uk",
         path="/",
-        domain=".indicare.co.uk"
+        max_age=86400
     )
 
     return {
@@ -88,8 +96,8 @@ def logout(response: Response):
 
     response.delete_cookie(
         key="access_token",
-        path="/",
-        domain=".indicare.co.uk"
+        domain=".indicare.co.uk",
+        path="/"
     )
 
     return {"message": "Logged out"}
@@ -108,6 +116,7 @@ def check_auth(request: Request):
         return {"authenticated": False}
 
     try:
+
         payload = jwt.decode(
             token,
             JWT_SECRET,
@@ -117,7 +126,7 @@ def check_auth(request: Request):
         return {
             "authenticated": True,
             "user_id": payload.get("sub"),
-            "role": payload.get("role"),
+            "role": payload.get("role")
         }
 
     except Exception:
@@ -137,6 +146,7 @@ def get_current_user(request: Request):
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     try:
+
         payload = jwt.decode(
             token,
             JWT_SECRET,
