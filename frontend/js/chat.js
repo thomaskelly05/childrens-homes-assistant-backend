@@ -38,7 +38,7 @@ if(done)break
 
 ai+=decoder.decode(value)
 
-document.getElementById("aiOutput").innerHTML=ai
+document.getElementById("aiOutput").innerHTML = marked.parse(ai)
 
 }
 
