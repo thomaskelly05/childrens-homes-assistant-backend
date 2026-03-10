@@ -13,6 +13,31 @@ client = AsyncOpenAI(
 )
 
 
+# keywords that trigger guidance search
+GUIDANCE_KEYWORDS = [
+    "regulation",
+    "regulations",
+    "law",
+    "legal",
+    "policy",
+    "guidance",
+    "statutory",
+    "ofsted",
+    "inspection",
+    "safeguarding",
+    "framework",
+    "standard",
+    "procedure"
+]
+
+
+def should_search_guidance(message: str) -> bool:
+
+    text = message.lower()
+
+    return any(keyword in text for keyword in GUIDANCE_KEYWORDS)
+
+
 async def generate_ai_stream(message: str, history=None):
 
     if history is None:
@@ -21,8 +46,11 @@ async def generate_ai_stream(message: str, history=None):
     # Detect response mode
     mode = detect_mode(message)
 
-    # Run web search
-    search_results = web_search(message)
+    # Decide whether to run web search
+    search_results = ""
+
+    if should_search_guidance(message):
+        search_results = web_search(message)
 
     # Build system prompt
     system_prompt, user_message = build_chat_prompt(
@@ -33,7 +61,7 @@ async def generate_ai_stream(message: str, history=None):
         speed="normal"
     )
 
-    # Add web guidance context
+    # Add guidance context if available
     if search_results:
 
         system_prompt += f"""
@@ -41,13 +69,37 @@ async def generate_ai_stream(message: str, history=None):
 ------------------------------------------------------------
 INDICARE WEB GUIDANCE CONTEXT
 
-The following public guidance may support accuracy:
+The following trusted guidance excerpts were retrieved:
 
 {search_results}
 
-Use this information only as supporting context.
-Encourage checking organisational policy or statutory guidance where appropriate.
-Do not treat these sources as definitive.
+------------------------------------------------------------
+GUIDANCE REASONING INSTRUCTIONS
+
+Before answering the user:
+
+1. Review the guidance excerpts.
+2. Identify the most authoritative sources.
+3. Prefer statutory guidance, legislation, and Ofsted frameworks.
+4. Use practice guidance only when statutory guidance is not available.
+
+Authority ranking:
+
+1. Legislation or statutory guidance
+2. Ofsted inspection frameworks
+3. National safeguarding organisations
+4. Practice research sources
+
+When helpful, reference the guidance source naturally in your explanation.
+
+If guidance may vary across organisations, encourage the user to check:
+
+• their organisation's policies  
+• current statutory guidance  
+• their safeguarding lead or manager  
+
+Do not treat retrieved sources as definitive instructions.
+They are supporting context only.
 """
 
     messages = [
