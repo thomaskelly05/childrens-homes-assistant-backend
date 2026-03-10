@@ -1,26 +1,23 @@
-const API = "https://api.indicare.co.uk"
+const API="https://api.indicare.co.uk"
 
-let sessionId = localStorage.getItem("session_id")
+let sessionId=localStorage.getItem("session_id")
 
 if(!sessionId){
 
-sessionId = crypto.randomUUID()
+sessionId=crypto.randomUUID()
 localStorage.setItem("session_id",sessionId)
 
 }
 
-const chatMessages = document.getElementById("chat-messages")
-const chatInput = document.getElementById("chat-input")
-const sendButton = document.getElementById("send-button")
-
-let firstMessage = true
-
+const chatMessages=document.getElementById("chat-messages")
+const chatInput=document.getElementById("chat-input")
+const sendButton=document.getElementById("send-button")
 
 function addMessage(role,text){
 
 const div=document.createElement("div")
 
-div.className="message " + role
+div.className="message "+role
 
 div.innerHTML=text
 
@@ -32,26 +29,22 @@ return div
 
 }
 
-
 function saveConversationTitle(message){
 
-let conversations =
-JSON.parse(localStorage.getItem("indicare_conversations") || "[]")
+let conversations=
+JSON.parse(localStorage.getItem("indicare_conversations")||"[]")
 
-const exists = conversations.find(c => c.id === sessionId)
+const exists=conversations.find(c=>c.id===sessionId)
 
 if(!exists){
 
-let title = message
+let title=message
 
-if(title.length > 40){
-title = title.substring(0,40) + "..."
+if(title.length>40){
+title=title.substring(0,40)+"..."
 }
 
-conversations.unshift({
-id: sessionId,
-title: title
-})
+conversations.unshift({id:sessionId,title:title})
 
 localStorage.setItem(
 "indicare_conversations",
@@ -62,10 +55,9 @@ JSON.stringify(conversations)
 
 }
 
-
 async function sendChat(){
 
-const message = chatInput.value.trim()
+const message=chatInput.value.trim()
 
 if(!message) return
 
@@ -73,18 +65,11 @@ chatInput.value=""
 
 addMessage("user",message)
 
-if(firstMessage){
-
 saveConversationTitle(message)
 
-firstMessage=false
+const assistantDiv=addMessage("assistant","")
 
-}
-
-
-const assistantDiv = addMessage("assistant","")
-
-const response = await fetch(API + "/chat",{
+const response=await fetch(API+"/chat",{
 
 method:"POST",
 
@@ -99,13 +84,11 @@ session_id:sessionId
 
 })
 
+const reader=response.body.getReader()
 
-const reader = response.body.getReader()
-
-const decoder = new TextDecoder()
+const decoder=new TextDecoder()
 
 let text=""
-
 
 while(true){
 
@@ -113,19 +96,17 @@ const {done,value}=await reader.read()
 
 if(done) break
 
-text += decoder.decode(value)
+text+=decoder.decode(value)
 
-assistantDiv.innerHTML = text
+assistantDiv.innerHTML=text
 
-chatMessages.scrollTop = chatMessages.scrollHeight
-
-}
+chatMessages.scrollTop=chatMessages.scrollHeight
 
 }
 
+}
 
-sendButton.onclick = sendChat
-
+sendButton.onclick=sendChat
 
 chatInput.addEventListener("keypress",e=>{
 
