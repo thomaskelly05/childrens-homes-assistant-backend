@@ -181,3 +181,34 @@ border-left: 1px solid var(--border);
 background: var(--bg-panel);
 
 }
+
+.chat-header {
+
+padding: 16px 24px;
+
+border-bottom: 1px solid var(--border);
+
+background: white;
+
+}
+
+.chat-header h2 {
+
+margin: 0;
+font-size: 18px;
+
+}
+
+.reflection-box {
+
+margin-top: 10px;
+
+padding: 16px;
+
+background: #f1f5f9;
+
+border-radius: 8px;
+
+font-size: 14px;
+
+}
