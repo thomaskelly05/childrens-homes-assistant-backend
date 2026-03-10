@@ -1,40 +1,9 @@
-const list = document.getElementById("conversation-list")
+const list=document.getElementById("conversation-list")
 
-let conversations =
+function loadConversations(){
+
+const conversations=
 JSON.parse(localStorage.getItem("indicare_conversations") || "[]")
-
-function saveConversations(){
-
-localStorage.setItem(
-"indicare_conversations",
-JSON.stringify(conversations)
-)
-
-}
-
-function createConversation(title){
-
-const id = crypto.randomUUID()
-
-conversations.unshift({
-id,
-title,
-date: new Date().toISOString()
-})
-
-saveConversations()
-
-localStorage.setItem("session_id", id)
-
-renderConversations()
-
-location.reload()
-
-}
-
-function renderConversations(){
-
-if(!list) return
 
 list.innerHTML=""
 
@@ -60,6 +29,4 @@ list.appendChild(div)
 
 }
 
-window.createConversation=createConversation
-
-renderConversations()
+loadConversations()
