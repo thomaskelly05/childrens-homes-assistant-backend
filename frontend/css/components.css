@@ -120,3 +120,58 @@ border-left: 1px solid var(--border);
 background: var(--bg-panel);
 
 }
+
+#sidebar {
+
+background: var(--bg-sidebar);
+color: white;
+
+padding: 20px;
+
+display: flex;
+flex-direction: column;
+
+}
+
+#sidebar h2 {
+
+margin-top: 0;
+margin-bottom: 20px;
+
+}
+
+#sidebar button {
+
+background: var(--accent);
+color: white;
+
+border: none;
+padding: 10px;
+
+border-radius: 8px;
+
+cursor: pointer;
+
+margin-bottom: 20px;
+
+}
+
+#sidebar a {
+
+display: block;
+
+color: #cbd5f5;
+
+text-decoration: none;
+
+font-size: 14px;
+
+padding: 6px 0;
+
+}
+
+#sidebar a:hover {
+
+color: white;
+
+}
