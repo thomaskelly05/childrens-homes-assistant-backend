@@ -1,24 +1,39 @@
-from openai import OpenAI
+import asyncio
 
-client = OpenAI()
+from assistant.mode_detector import detect_mode
+from assistant.prompts import build_prompt
+from assistant.streaming import stream_response
 
-async def generate_incident_text(description):
 
-    prompt = f"""
-    Write a professional residential children's home incident report.
+# --------------------------------------------------
+# MAIN AI STREAM FUNCTION
+# --------------------------------------------------
 
-    Incident description:
-    {description}
+async def generate_ai_stream(message: str, history=None):
 
-    Include:
-    - description
-    - action taken
-    - outcome
+    """
+    Generates a streamed AI response using the assistant brain
     """
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}]
+    if history is None:
+        history = []
+
+    # Detect assistant mode (incident, safeguarding, risk etc)
+
+    mode = detect_mode(message)
+
+    # Build prompt using assistant prompts + knowledge
+
+    prompt = build_prompt(
+        mode=mode,
+        message=message,
+        history=history
     )
 
-    return response.choices[0].message.content
+    # Stream response from the AI engine
+
+    async for token in stream_response(prompt):
+
+        yield token
+
+        await asyncio.sleep(0.01)
