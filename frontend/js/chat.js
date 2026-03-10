@@ -1,11 +1,11 @@
-import { sendMessage } from "./api.js"
+const API = "https://api.indicare.co.uk"
 
 let sessionId = localStorage.getItem("session_id")
 
 if(!sessionId){
 
 sessionId = crypto.randomUUID()
-localStorage.setItem("session_id", sessionId)
+localStorage.setItem("session_id",sessionId)
 
 }
 
@@ -13,45 +13,7 @@ const chatMessages = document.getElementById("chat-messages")
 const chatInput = document.getElementById("chat-input")
 const sendButton = document.getElementById("send-button")
 
-let firstMessageSent = false
-
-
-function createTitleFromMessage(text){
-
-let title = text.trim()
-
-if(title.length > 40){
-title = title.substring(0,40) + "..."
-}
-
-return title
-
-}
-
-
-function saveConversationTitle(title){
-
-let conversations =
-JSON.parse(localStorage.getItem("indicare_conversations") || "[]")
-
-const exists = conversations.find(c => c.id === sessionId)
-
-if(!exists){
-
-conversations.unshift({
-id: sessionId,
-title: title,
-date: new Date().toISOString()
-})
-
-localStorage.setItem(
-"indicare_conversations",
-JSON.stringify(conversations)
-)
-
-}
-
-}
+let firstMessage = true
 
 
 function addMessage(role,text){
@@ -66,6 +28,38 @@ chatMessages.appendChild(div)
 
 chatMessages.scrollTop=chatMessages.scrollHeight
 
+return div
+
+}
+
+
+function saveConversationTitle(message){
+
+let conversations =
+JSON.parse(localStorage.getItem("indicare_conversations") || "[]")
+
+const exists = conversations.find(c => c.id === sessionId)
+
+if(!exists){
+
+let title = message
+
+if(title.length > 40){
+title = title.substring(0,40) + "..."
+}
+
+conversations.unshift({
+id: sessionId,
+title: title
+})
+
+localStorage.setItem(
+"indicare_conversations",
+JSON.stringify(conversations)
+)
+
+}
+
 }
 
 
@@ -79,31 +73,39 @@ chatInput.value=""
 
 addMessage("user",message)
 
+if(firstMessage){
 
-if(!firstMessageSent){
+saveConversationTitle(message)
 
-const title=createTitleFromMessage(message)
-
-saveConversationTitle(title)
-
-firstMessageSent=true
+firstMessage=false
 
 }
 
 
-const assistantDiv=document.createElement("div")
+const assistantDiv = addMessage("assistant","")
 
-assistantDiv.className="message assistant"
+const response = await fetch(API + "/chat",{
 
-chatMessages.appendChild(assistantDiv)
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+message:message,
+session_id:sessionId
+})
+
+})
 
 
-const stream=await sendMessage(message,sessionId)
+const reader = response.body.getReader()
 
-const reader=stream.getReader()
-const decoder=new TextDecoder()
+const decoder = new TextDecoder()
 
 let text=""
+
 
 while(true){
 
@@ -111,18 +113,19 @@ const {done,value}=await reader.read()
 
 if(done) break
 
-text+=decoder.decode(value)
+text += decoder.decode(value)
 
-assistantDiv.innerHTML=text
+assistantDiv.innerHTML = text
 
-chatMessages.scrollTop=chatMessages.scrollHeight
-
-}
+chatMessages.scrollTop = chatMessages.scrollHeight
 
 }
 
+}
 
-sendButton.onclick=sendChat
+
+sendButton.onclick = sendChat
+
 
 chatInput.addEventListener("keypress",e=>{
 
