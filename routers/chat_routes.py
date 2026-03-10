@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.responses import StreamingResponse
 from psycopg2.extras import RealDictCursor
 from pydantic import BaseModel
@@ -8,8 +8,31 @@ from auth.tokens import decode_session_token
 
 import asyncio
 
-
 router = APIRouter(prefix="/chat", tags=["Chat"])
+
+
+# --------------------------------------------------
+# AUTH HELPER
+# --------------------------------------------------
+
+def get_user_id(request: Request):
+
+    token = request.cookies.get("access_token")
+
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    payload = decode_session_token(token)
+
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    user_id = payload.get("sub")
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid user")
+
+    return user_id
 
 
 # --------------------------------------------------
@@ -33,10 +56,7 @@ def generate_title(message: str):
 @router.get("/conversations")
 def conversations(request: Request, conn=Depends(get_db)):
 
-    token = request.cookies.get("access_token")
-    payload = decode_session_token(token)
-
-    user_id = payload["sub"]
+    user_id = get_user_id(request)
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
 
@@ -60,7 +80,9 @@ def conversations(request: Request, conn=Depends(get_db)):
 # --------------------------------------------------
 
 @router.get("/conversations/{cid}")
-def load(cid: int, conn=Depends(get_db)):
+def load(cid: int, request: Request, conn=Depends(get_db)):
+
+    get_user_id(request)
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
 
@@ -80,7 +102,7 @@ def load(cid: int, conn=Depends(get_db)):
 
 
 # --------------------------------------------------
-# INCIDENT REPORT TEMPLATE
+# INCIDENT TEMPLATE
 # --------------------------------------------------
 
 def incident_template(message):
@@ -110,7 +132,7 @@ Incident resolved safely.
 
 
 # --------------------------------------------------
-# RISK ASSESSMENT TEMPLATE
+# RISK TEMPLATE
 # --------------------------------------------------
 
 def risk_template(message):
@@ -135,7 +157,7 @@ Risk to be monitored and reviewed regularly.
 
 
 # --------------------------------------------------
-# SAFEGUARDING ADVICE TEMPLATE
+# SAFEGUARDING TEMPLATE
 # --------------------------------------------------
 
 def safeguarding_template(message):
@@ -154,7 +176,6 @@ def safeguarding_template(message):
 ### Next Steps
 - Follow safeguarding policy
 - Consider referral to safeguarding lead
-- Document all actions taken
 """
 
 
@@ -182,7 +203,7 @@ Identify any support, training, or adjustments that may help in future situation
 
 
 # --------------------------------------------------
-# AI RESPONSE STREAM
+# AI STREAM
 # --------------------------------------------------
 
 async def generate_stream(message):
@@ -198,16 +219,21 @@ async def generate_stream(message):
     elif "safeguarding" in lower:
         response = safeguarding_template(message)
 
-    elif "reflect" in lower or "reflection" in lower:
+    elif "reflect" in lower:
         response = reflection_template(message)
 
     else:
         response = f"""
-## IndiCare AI Response
+## IndiCare Assistant
 
 {message}
 
-IndiCare can assist with safeguarding guidance, reports, and staff reflections.
+IndiCare can assist with:
+
+• Incident reports  
+• Risk assessments  
+• Safeguarding advice  
+• Staff reflections
 """
 
     for token in response.split(" "):
@@ -224,16 +250,12 @@ IndiCare can assist with safeguarding guidance, reports, and staff reflections.
 @router.post("/")
 async def chat(request: Request, conn=Depends(get_db)):
 
+    user_id = get_user_id(request)
+
     body = await request.json()
 
     message = body["message"]
     cid = body.get("conversation_id")
-
-    token = request.cookies.get("access_token")
-    payload = decode_session_token(token)
-
-    user_id = payload["sub"]
-
 
     # CREATE CONVERSATION
 
@@ -249,7 +271,7 @@ async def chat(request: Request, conn=Depends(get_db)):
                 VALUES(%s,%s)
                 RETURNING id
                 """,
-                (user_id,title)
+                (user_id, title)
             )
 
             cid = cur.fetchone()["id"]
@@ -266,17 +288,17 @@ async def chat(request: Request, conn=Depends(get_db)):
             INSERT INTO messages(conversation_id,role,message)
             VALUES(%s,'user',%s)
             """,
-            (cid,message)
+            (cid, message)
         )
 
     conn.commit()
 
 
-    # STREAM AI RESPONSE
+    # STREAM AI
 
     async def stream():
 
-        ai=""
+        ai = ""
 
         async for token in generate_stream(message):
 
@@ -290,7 +312,7 @@ async def chat(request: Request, conn=Depends(get_db)):
                 INSERT INTO messages(conversation_id,role,message)
                 VALUES(%s,'assistant',%s)
                 """,
-                (cid,ai)
+                (cid, ai)
             )
 
         conn.commit()
