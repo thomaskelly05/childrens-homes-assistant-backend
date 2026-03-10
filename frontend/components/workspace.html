@@ -1,15 +1,56 @@
-<div class="document">
+<div class="workspace">
 
-<h2>Hello, how can I support you today?</h2>
+  <div class="sidebar">
 
-<div id="aiOutput"></div>
+    <h2>IndiCare</h2>
 
-<div class="chatInput">
+    <nav>
 
-<textarea id="chatInput" placeholder="Ask IndiCare..."></textarea>
+      <a href="#">Reflect</a>
+      <a href="#">Supervision</a>
+      <a href="#">Templates</a>
+      <a href="#">Guidance</a>
 
-<button onclick="sendChat()">Send</button>
+    </nav>
 
-</div>
+  </div>
+
+
+  <div class="chat-area">
+
+    <div id="chat-messages" class="chat-messages"></div>
+
+    <div class="chat-input-bar">
+
+      <input
+        id="chat-input"
+        type="text"
+        placeholder="What would you like to reflect on?"
+      />
+
+      <button id="send-button">
+        Send
+      </button>
+
+      <button id="capture-reflection">
+        Save Reflection
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <div class="reflection-panel">
+
+    <h3>Reflection Insights</h3>
+
+    <div class="reflection-box">
+
+      <p>Conversation themes will appear here.</p>
+
+    </div>
+
+  </div>
 
 </div>
