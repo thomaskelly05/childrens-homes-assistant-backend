@@ -2,25 +2,29 @@ import os
 import asyncio
 from openai import AsyncOpenAI
 
+from assistant.prompts import build_chat_prompt
+
 client = AsyncOpenAI(
     api_key=os.environ.get("OPENAI_API_KEY")
 )
 
-
-# --------------------------------------------------
-# STREAM AI RESPONSE
-# --------------------------------------------------
 
 async def generate_ai_stream(message: str, history=None):
 
     if history is None:
         history = []
 
+    # Build IndiCare prompt
+    system_prompt, user_message = build_chat_prompt(
+        message=message,
+        role="residential care staff",
+        ld_lens=False,
+        training_mode=False,
+        speed="normal"
+    )
+
     messages = [
-        {
-            "role": "system",
-            "content": "You are IndiCare, an AI assistant for children's homes staff helping with safeguarding, incident reports, risk assessments and reflective practice."
-        }
+        {"role": "system", "content": system_prompt}
     ]
 
     # Add conversation history
@@ -30,13 +34,11 @@ async def generate_ai_stream(message: str, history=None):
             "content": m["message"]
         })
 
-    # Add new user message
+    # Add new message
     messages.append({
         "role": "user",
-        "content": message
+        "content": user_message
     })
-
-    # Call OpenAI streaming API
 
     stream = await client.chat.completions.create(
         model="gpt-4o-mini",
