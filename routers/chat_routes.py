@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from db.connection import get_db
 from auth.tokens import decode_session_token
 
-import asyncio
+from services.ai_service import generate_ai_stream
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
@@ -102,148 +102,6 @@ def load(cid: int, request: Request, conn=Depends(get_db)):
 
 
 # --------------------------------------------------
-# INCIDENT TEMPLATE
-# --------------------------------------------------
-
-def incident_template(message):
-
-    return f"""
-## Incident Report
-
-**Date:**  
-**Time:**  
-**Young Person:**  
-**Staff Involved:**  
-
-### Description of Incident
-{message}
-
-### Actions Taken
-- Staff intervened appropriately
-- Situation de-escalated
-
-### Outcome
-Incident resolved safely.
-
-### Follow-up Required
-- Record in safeguarding log
-- Review behaviour support plan
-"""
-
-
-# --------------------------------------------------
-# RISK TEMPLATE
-# --------------------------------------------------
-
-def risk_template(message):
-
-    return f"""
-## Risk Assessment
-
-### Risk Identified
-{message}
-
-### Potential Harm
-Young person or others may experience harm.
-
-### Control Measures
-- Staff supervision
-- Behaviour support strategies
-- Environmental adjustments
-
-### Review
-Risk to be monitored and reviewed regularly.
-"""
-
-
-# --------------------------------------------------
-# SAFEGUARDING TEMPLATE
-# --------------------------------------------------
-
-def safeguarding_template(message):
-
-    return f"""
-## Safeguarding Advice
-
-### Concern
-{message}
-
-### Immediate Actions
-- Ensure young person's safety
-- Inform senior staff
-- Record safeguarding concern
-
-### Next Steps
-- Follow safeguarding policy
-- Consider referral to safeguarding lead
-"""
-
-
-# --------------------------------------------------
-# STAFF REFLECTION TEMPLATE
-# --------------------------------------------------
-
-def reflection_template(message):
-
-    return f"""
-## Staff Reflection
-
-### Situation
-{message}
-
-### What Happened
-Staff responded to the situation and attempted to de-escalate behaviour.
-
-### Reflection
-Consider what strategies were effective and what could be improved.
-
-### Learning
-Identify any support, training, or adjustments that may help in future situations.
-"""
-
-
-# --------------------------------------------------
-# AI STREAM
-# --------------------------------------------------
-
-async def generate_stream(message):
-
-    lower = message.lower()
-
-    if "incident" in lower:
-        response = incident_template(message)
-
-    elif "risk" in lower:
-        response = risk_template(message)
-
-    elif "safeguarding" in lower:
-        response = safeguarding_template(message)
-
-    elif "reflect" in lower:
-        response = reflection_template(message)
-
-    else:
-        response = f"""
-## IndiCare Assistant
-
-{message}
-
-IndiCare can assist with:
-
-• Incident reports  
-• Risk assessments  
-• Safeguarding advice  
-• Staff reflections
-"""
-
-    for token in response.split(" "):
-
-        yield token + " "
-
-        await asyncio.sleep(0.03)
-
-
-# --------------------------------------------------
 # CHAT STREAM
 # --------------------------------------------------
 
@@ -257,7 +115,10 @@ async def chat(request: Request, conn=Depends(get_db)):
     message = body["message"]
     cid = body.get("conversation_id")
 
+
+    # --------------------------------------------------
     # CREATE CONVERSATION
+    # --------------------------------------------------
 
     if not cid:
 
@@ -279,7 +140,9 @@ async def chat(request: Request, conn=Depends(get_db)):
         conn.commit()
 
 
+    # --------------------------------------------------
     # SAVE USER MESSAGE
+    # --------------------------------------------------
 
     with conn.cursor() as cur:
 
@@ -294,16 +157,43 @@ async def chat(request: Request, conn=Depends(get_db)):
     conn.commit()
 
 
-    # STREAM AI
+    # --------------------------------------------------
+    # LOAD CONVERSATION HISTORY
+    # --------------------------------------------------
+
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+
+        cur.execute(
+            """
+            SELECT role,message
+            FROM messages
+            WHERE conversation_id=%s
+            ORDER BY created_at
+            """,
+            (cid,)
+        )
+
+        history = cur.fetchall()
+
+
+    # --------------------------------------------------
+    # STREAM AI RESPONSE
+    # --------------------------------------------------
 
     async def stream():
 
         ai = ""
 
-        async for token in generate_stream(message):
+        async for token in generate_ai_stream(
+            message=message,
+            history=history
+        ):
 
             ai += token
             yield token
+
+
+        # SAVE AI MESSAGE
 
         with conn.cursor() as cur:
 
@@ -316,6 +206,7 @@ async def chat(request: Request, conn=Depends(get_db)):
             )
 
         conn.commit()
+
 
     return StreamingResponse(stream(), media_type="text/plain")
 
