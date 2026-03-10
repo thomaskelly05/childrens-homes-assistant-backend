@@ -1,51 +1,86 @@
-async function sendChat(){
+import { sendMessage, captureReflection } from "./api.js";
 
-const input=document.getElementById("chatInput")
+let sessionId = localStorage.getItem("session_id");
 
-const message=input.value.trim()
+if (!sessionId) {
 
-if(!message)return
-
-input.value=""
-
-const res=await fetch(API+"/chat/",{
-
-method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-credentials:"include",
-
-body:JSON.stringify({
-message
-})
-
-})
-
-const reader=res.body.getReader()
-
-const decoder=new TextDecoder()
-
-let ai=""
-
-while(true){
-
-const {done,value}=await reader.read()
-
-if(done)break
-
-ai+=decoder.decode(value)
-
-document.getElementById("aiOutput").innerHTML = marked.parse(ai)
+  sessionId = crypto.randomUUID();
+  localStorage.setItem("session_id", sessionId);
 
 }
 
+const chatMessages = document.getElementById("chat-messages");
+const chatInput = document.getElementById("chat-input");
+const sendButton = document.getElementById("send-button");
+const captureButton = document.getElementById("capture-reflection");
+
+
+function addMessage(role, text) {
+
+  const div = document.createElement("div");
+
+  div.className = `message ${role}`;
+
+  div.innerText = text;
+
+  chatMessages.appendChild(div);
+
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  return div;
+
 }
 
-function newChat(){
 
-document.getElementById("aiOutput").innerHTML=""
+async function sendChat() {
+
+  const message = chatInput.value.trim();
+
+  if (!message) return;
+
+  addMessage("user", message);
+
+  chatInput.value = "";
+
+  const assistantDiv = addMessage("assistant", "");
+
+  const stream = await sendMessage(message, sessionId);
+
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+
+  let text = "";
+
+  while (true) {
+
+    const { done, value } = await reader.read();
+
+    if (done) break;
+
+    text += decoder.decode(value);
+
+    assistantDiv.innerText = text;
+
+  }
 
 }
+
+
+sendButton.onclick = sendChat;
+
+chatInput.addEventListener("keypress", e => {
+
+  if (e.key === "Enter") {
+    sendChat();
+  }
+
+});
+
+
+captureButton.onclick = async () => {
+
+  await captureReflection(sessionId);
+
+  alert("Reflection saved for supervision.");
+
+};
