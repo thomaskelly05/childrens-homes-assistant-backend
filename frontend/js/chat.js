@@ -1,86 +1,133 @@
-import { sendMessage, captureReflection } from "./api.js";
+import { sendMessage } from "./api.js"
 
-let sessionId = localStorage.getItem("session_id");
+let sessionId = localStorage.getItem("session_id")
 
-if (!sessionId) {
+if(!sessionId){
 
-  sessionId = crypto.randomUUID();
-  localStorage.setItem("session_id", sessionId);
+sessionId = crypto.randomUUID()
+localStorage.setItem("session_id", sessionId)
 
 }
 
-const chatMessages = document.getElementById("chat-messages");
-const chatInput = document.getElementById("chat-input");
-const sendButton = document.getElementById("send-button");
-const captureButton = document.getElementById("capture-reflection");
+const chatMessages = document.getElementById("chat-messages")
+const chatInput = document.getElementById("chat-input")
+const sendButton = document.getElementById("send-button")
+
+let firstMessageSent = false
 
 
-function addMessage(role, text) {
+function createTitleFromMessage(text){
 
-  const div = document.createElement("div");
+let title = text.trim()
 
-  div.className = `message ${role}`;
+if(title.length > 40){
+title = title.substring(0,40) + "..."
+}
 
-  div.innerText = text;
-
-  chatMessages.appendChild(div);
-
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-
-  return div;
+return title
 
 }
 
 
-async function sendChat() {
+function saveConversationTitle(title){
 
-  const message = chatInput.value.trim();
+let conversations =
+JSON.parse(localStorage.getItem("indicare_conversations") || "[]")
 
-  if (!message) return;
+const exists = conversations.find(c => c.id === sessionId)
 
-  addMessage("user", message);
+if(!exists){
 
-  chatInput.value = "";
+conversations.unshift({
+id: sessionId,
+title: title,
+date: new Date().toISOString()
+})
 
-  const assistantDiv = addMessage("assistant", "");
+localStorage.setItem(
+"indicare_conversations",
+JSON.stringify(conversations)
+)
 
-  const stream = await sendMessage(message, sessionId);
-
-  const reader = stream.getReader();
-  const decoder = new TextDecoder();
-
-  let text = "";
-
-  while (true) {
-
-    const { done, value } = await reader.read();
-
-    if (done) break;
-
-    text += decoder.decode(value);
-
-    assistantDiv.innerText = text;
-
-  }
+}
 
 }
 
 
-sendButton.onclick = sendChat;
+function addMessage(role,text){
 
-chatInput.addEventListener("keypress", e => {
+const div=document.createElement("div")
 
-  if (e.key === "Enter") {
-    sendChat();
-  }
+div.className="message " + role
 
-});
+div.innerHTML=text
+
+chatMessages.appendChild(div)
+
+chatMessages.scrollTop=chatMessages.scrollHeight
+
+}
 
 
-captureButton.onclick = async () => {
+async function sendChat(){
 
-  await captureReflection(sessionId);
+const message = chatInput.value.trim()
 
-  alert("Reflection saved for supervision.");
+if(!message) return
 
-};
+chatInput.value=""
+
+addMessage("user",message)
+
+
+if(!firstMessageSent){
+
+const title=createTitleFromMessage(message)
+
+saveConversationTitle(title)
+
+firstMessageSent=true
+
+}
+
+
+const assistantDiv=document.createElement("div")
+
+assistantDiv.className="message assistant"
+
+chatMessages.appendChild(assistantDiv)
+
+
+const stream=await sendMessage(message,sessionId)
+
+const reader=stream.getReader()
+const decoder=new TextDecoder()
+
+let text=""
+
+while(true){
+
+const {done,value}=await reader.read()
+
+if(done) break
+
+text+=decoder.decode(value)
+
+assistantDiv.innerHTML=text
+
+chatMessages.scrollTop=chatMessages.scrollHeight
+
+}
+
+}
+
+
+sendButton.onclick=sendChat
+
+chatInput.addEventListener("keypress",e=>{
+
+if(e.key==="Enter"){
+sendChat()
+}
+
+})
