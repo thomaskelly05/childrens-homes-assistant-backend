@@ -1,8 +1,8 @@
 import asyncio
 
 from assistant.mode_detector import detect_mode
-from assistant.prompts import build_prompt
 from assistant.streaming import stream_response
+from assistant.prompts import SYSTEM_PROMPT
 
 
 # --------------------------------------------------
@@ -11,28 +11,34 @@ from assistant.streaming import stream_response
 
 async def generate_ai_stream(message: str, history=None):
 
-    """
-    Generates a streamed AI response using the assistant brain
-    """
-
     if history is None:
         history = []
 
-    # Detect assistant mode (incident, safeguarding, risk etc)
-
+    # Detect assistant mode
     mode = detect_mode(message)
 
-    # Build prompt using assistant prompts + knowledge
+    # Build messages for the AI
 
-    prompt = build_prompt(
-        mode=mode,
-        message=message,
-        history=history
-    )
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT}
+    ]
 
-    # Stream response from the AI engine
+    # Add history
+    for m in history:
+        messages.append({
+            "role": m["role"],
+            "content": m["message"]
+        })
 
-    async for token in stream_response(prompt):
+    # Add current user message
+    messages.append({
+        "role": "user",
+        "content": message
+    })
+
+    # Stream response from assistant engine
+
+    async for token in stream_response(messages):
 
         yield token
 
