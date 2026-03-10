@@ -5,7 +5,7 @@ from openai import AsyncOpenAI
 
 from assistant.mode_detector import detect_mode
 from assistant.prompts import build_chat_prompt
-from assistant.retrieval import retrieve_knowledge
+from assistant.web_search import web_search
 
 
 client = AsyncOpenAI(
@@ -21,8 +21,8 @@ async def generate_ai_stream(message: str, history=None):
     # Detect response mode
     mode = detect_mode(message)
 
-    # Retrieve relevant knowledge
-    knowledge = retrieve_knowledge(message)
+    # Run web search
+    search_results = web_search(message)
 
     # Build system prompt
     system_prompt, user_message = build_chat_prompt(
@@ -33,20 +33,21 @@ async def generate_ai_stream(message: str, history=None):
         speed="normal"
     )
 
-    # Add knowledge context
-    if knowledge:
+    # Add web guidance context
+    if search_results:
 
         system_prompt += f"""
 
 ------------------------------------------------------------
-INDICARE KNOWLEDGE CONTEXT
+INDICARE WEB GUIDANCE CONTEXT
 
-The following guidance may support accuracy:
+The following public guidance may support accuracy:
 
-{knowledge}
+{search_results}
 
-Use this information where helpful but do not assume it is exhaustive.
+Use this information only as supporting context.
 Encourage checking organisational policy or statutory guidance where appropriate.
+Do not treat these sources as definitive.
 """
 
     messages = [
