@@ -1,58 +1,31 @@
-const API = "https://api.indicare.co.uk"
+const API_URL = "https://api.indicare.co.uk";
 
+export async function sendMessage(message, sessionId) {
 
-/* ----------------------------- */
-/* GENERIC API */
-/* ----------------------------- */
-
-async function api(path, options = {}) {
-
-    const res = await fetch(API + path, {
-
-        ...options,
-
-        credentials: "include",
-
-        headers: {
-            "Content-Type": "application/json",
-            ...(options.headers || {})
-        }
-
+  const response = await fetch(`${API_URL}/chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      message: message,
+      session_id: sessionId
     })
+  });
 
-    if (res.status === 401) {
-
-        console.log("Not authenticated")
-
-        window.location = "/login.html"
-
-        return
-    }
-
-    if (!res.ok) {
-
-        throw new Error("API error")
-    }
-
-    return res.json()
+  return response.body;
 }
 
+export async function captureReflection(sessionId) {
 
-/* ----------------------------- */
-/* AUTH */
-/* ----------------------------- */
-
-async function getUser() {
-
-    return await api("/auth/me")
-}
-
-
-async function logout() {
-
-    await api("/auth/logout", {
-        method: "POST"
+  await fetch(`${API_URL}/supervision/capture`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      session_id: sessionId
     })
+  });
 
-    window.location = "/login.html"
 }
