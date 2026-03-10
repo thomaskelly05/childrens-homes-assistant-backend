@@ -6,6 +6,7 @@ from openai import AsyncOpenAI
 from assistant.mode_detector import detect_mode
 from assistant.prompts import build_chat_prompt
 from assistant.web_search import web_search
+from assistant.memory import save_message, load_recent_messages
 
 
 client = AsyncOpenAI(
@@ -38,10 +39,10 @@ def should_search_guidance(message: str) -> bool:
     return any(keyword in text for keyword in GUIDANCE_KEYWORDS)
 
 
-async def generate_ai_stream(message: str, history=None):
+async def generate_ai_stream(message: str, session_id: str):
 
-    if history is None:
-        history = []
+    # Load conversation history from database
+    history = load_recent_messages(session_id)
 
     # Detect response mode
     mode = detect_mode(message)
@@ -119,6 +120,9 @@ They are supporting context only.
         "content": user_message
     })
 
+    # Save the user message to memory
+    save_message(session_id, "user", message)
+
     # Stream response
     stream = await client.chat.completions.create(
         model="gpt-4o-mini",
@@ -126,10 +130,19 @@ They are supporting context only.
         stream=True
     )
 
+    response_text = ""
+
     async for chunk in stream:
 
         if chunk.choices[0].delta.content:
 
-            yield chunk.choices[0].delta.content
+            content = chunk.choices[0].delta.content
+
+            response_text += content
+
+            yield content
 
             await asyncio.sleep(0.01)
+
+    # Save assistant response to memory
+    save_message(session_id, "assistant", response_text)
