@@ -1,66 +1,56 @@
 import os
 import psycopg2
+from psycopg2.extras import RealDictCursor
 
 
 def get_connection():
 
-    return psycopg2.connect(
-        host=os.environ.get("DB_HOST"),
-        database=os.environ.get("DB_NAME"),
-        user=os.environ.get("DB_USER"),
-        password=os.environ.get("DB_PASSWORD")
-    )
+    database_url = os.environ.get("DATABASE_URL")
 
+    if not database_url:
+        raise Exception("DATABASE_URL environment variable missing")
 
-def save_message(session_id, role, message):
-
-    conn = get_connection()
-    cur = conn.cursor()
-
-    cur.execute(
-        """
-        INSERT INTO conversations (session_id, role, message)
-        VALUES (%s, %s, %s)
-        """,
-        (session_id, role, message)
-    )
-
-    conn.commit()
-
-    cur.close()
-    conn.close()
+    return psycopg2.connect(database_url)
 
 
 def load_recent_messages(session_id, limit=10):
 
     conn = get_connection()
-    cur = conn.cursor()
 
-    cur.execute(
-        """
-        SELECT role, message
-        FROM conversations
-        WHERE session_id = %s
-        ORDER BY created_at DESC
-        LIMIT %s
-        """,
-        (session_id, limit)
-    )
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
 
-    rows = cur.fetchall()
+        cur.execute(
+            """
+            SELECT role, message
+            FROM messages
+            WHERE conversation_id=%s
+            ORDER BY created_at DESC
+            LIMIT %s
+            """,
+            (session_id, limit)
+        )
 
-    cur.close()
+        rows = cur.fetchall()
+
     conn.close()
 
-    rows.reverse()
+    return list(reversed(rows))
 
-    history = []
 
-    for r in rows:
+def save_message(session_id, role, message):
 
-        history.append({
-            "role": r[0],
-            "message": r[1]
-        })
+    conn = get_connection()
 
-    return history
+    with conn.cursor() as cur:
+
+        cur.execute(
+            """
+            INSERT INTO messages(conversation_id, role, message)
+            VALUES (%s, %s, %s)
+            """,
+            (session_id, role, message)
+        )
+
+        conn.commit()
+
+    conn.close()
