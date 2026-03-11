@@ -2,43 +2,34 @@ const messagesEl = document.getElementById("messages");
 const inputEl = document.getElementById("chat-input");
 const sendBtn = document.getElementById("send-btn");
 
-if (sendBtn) {
-sendBtn.onclick = sendMessage;
+if(sendBtn){
+sendBtn.onclick = sendMessageHandler;
 }
 
-if (inputEl) {
-inputEl.addEventListener("keypress", function (e) {
-if (e.key === "Enter") {
-sendMessage();
+if(inputEl){
+inputEl.addEventListener("keypress",function(e){
+if(e.key === "Enter"){
+sendMessageHandler();
 }
 });
 }
 
-async function sendMessage() {
+async function sendMessageHandler(){
 
 const message = inputEl.value.trim();
 
-if (!message) return;
+if(!message) return;
 
 appendMessage("user", message);
 
 inputEl.value = "";
 
-const assistantMessageEl = appendMessage("assistant", "...");
+const assistantMessage = appendMessage("assistant","...");
 
-const response = await fetch(API + "/chat/", {
-method: "POST",
-headers: {
-"Content-Type": "application/json"
-},
-credentials: "include",
-body: JSON.stringify({
-message: message
-})
-});
+const response = await sendMessage(message,null);
 
-if (!response.body) {
-assistantMessageEl.innerText = "No response from server";
+if(!response.body){
+assistantMessage.innerText = "No response from server";
 return;
 }
 
@@ -47,17 +38,17 @@ const decoder = new TextDecoder();
 
 let fullText = "";
 
-while (true) {
+while(true){
 
-const { done, value } = await reader.read();
+const {done,value} = await reader.read();
 
-if (done) break;
+if(done) break;
 
 const chunk = decoder.decode(value);
 
 fullText += chunk;
 
-assistantMessageEl.innerText = fullText;
+assistantMessage.innerText = fullText;
 
 messagesEl.scrollTop = messagesEl.scrollHeight;
 
@@ -65,9 +56,7 @@ messagesEl.scrollTop = messagesEl.scrollHeight;
 
 }
 
-function appendMessage(role, text) {
-
-if (!messagesEl) return null;
+function appendMessage(role,text){
 
 const msg = document.createElement("div");
 
