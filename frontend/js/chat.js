@@ -1,20 +1,22 @@
+function initChat(){
+
 const messagesEl = document.getElementById("messages");
 const inputEl = document.getElementById("chat-input");
 const sendBtn = document.getElementById("send-btn");
 
-if(sendBtn){
-sendBtn.onclick = sendMessageHandler;
-}
+if(!messagesEl || !inputEl || !sendBtn) return;
 
-if(inputEl){
-inputEl.addEventListener("keypress",function(e){
+sendBtn.onclick = sendMessage;
+
+inputEl.addEventListener("keypress", function(e){
+
 if(e.key === "Enter"){
-sendMessageHandler();
-}
-});
+sendMessage();
 }
 
-async function sendMessageHandler(){
+});
+
+async function sendMessage(){
 
 const message = inputEl.value.trim();
 
@@ -22,21 +24,30 @@ if(!message) return;
 
 appendMessage("user", message);
 
-inputEl.value = "";
+inputEl.value="";
 
-const assistantMessage = appendMessage("assistant","...");
+const assistantMsg = appendMessage("assistant","...");
 
-const response = await sendMessage(message,null);
+const response = await fetch("https://api.indicare.co.uk/chat/",{
 
-if(!response.body){
-assistantMessage.innerText = "No response from server";
-return;
-}
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+credentials:"include",
+
+body:JSON.stringify({
+message:message
+})
+
+});
 
 const reader = response.body.getReader();
 const decoder = new TextDecoder();
 
-let fullText = "";
+let text="";
 
 while(true){
 
@@ -44,11 +55,9 @@ const {done,value} = await reader.read();
 
 if(done) break;
 
-const chunk = decoder.decode(value);
+text += decoder.decode(value);
 
-fullText += chunk;
-
-assistantMessage.innerText = fullText;
+assistantMsg.innerText=text;
 
 messagesEl.scrollTop = messagesEl.scrollHeight;
 
@@ -58,16 +67,16 @@ messagesEl.scrollTop = messagesEl.scrollHeight;
 
 function appendMessage(role,text){
 
-const msg = document.createElement("div");
+const msg=document.createElement("div");
 
-msg.className = "message " + role;
+msg.className="message "+role;
 
-msg.innerText = text;
+msg.innerText=text;
 
 messagesEl.appendChild(msg);
 
-messagesEl.scrollTop = messagesEl.scrollHeight;
-
 return msg;
+
+}
 
 }
