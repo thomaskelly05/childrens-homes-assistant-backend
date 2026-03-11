@@ -1,21 +1,22 @@
-async function loadComponent(url,target){
+const API = "https://api.indicare.co.uk";
 
-const res=await fetch(url)
+async function sendMessage(message, sessionId) {
 
-const html=await res.text()
+const response = await fetch(API + "/chat", {
 
-document.getElementById(target).innerHTML=html
+method: "POST",
+
+headers: {
+"Content-Type": "application/json"
+},
+
+body: JSON.stringify({
+message: message,
+session_id: sessionId
+})
+
+});
+
+return response.body;
 
 }
-
-async function init(){
-
-await loadComponent("/components/sidebar.html","sidebar")
-
-await loadComponent("/components/header.html","header")
-
-await loadWorkspace()
-
-}
-
-init()
