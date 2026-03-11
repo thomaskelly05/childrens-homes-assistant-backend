@@ -2,54 +2,72 @@ const messagesEl = document.getElementById("messages");
 const inputEl = document.getElementById("chat-input");
 const sendBtn = document.getElementById("send-btn");
 
-if(sendBtn){
-
+if (sendBtn) {
 sendBtn.onclick = sendMessage;
-
 }
 
-if(inputEl){
-
-inputEl.addEventListener("keypress",function(e){
-
-if(e.key==="Enter"){
+if (inputEl) {
+inputEl.addEventListener("keypress", function (e) {
+if (e.key === "Enter") {
 sendMessage();
 }
-
 });
-
 }
 
-async function sendMessage(){
+async function sendMessage() {
 
 const message = inputEl.value.trim();
 
-if(!message) return;
+if (!message) return;
 
 appendMessage("user", message);
 
-inputEl.value="";
+inputEl.value = "";
 
-const response = await fetch(API + "/chat/",{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
+const assistantMessageEl = appendMessage("assistant", "...");
+
+const response = await fetch(API + "/chat/", {
+method: "POST",
+headers: {
+"Content-Type": "application/json"
 },
-credentials:"include",
-body:JSON.stringify({
-message:message
+credentials: "include",
+body: JSON.stringify({
+message: message
 })
 });
 
-const data = await response.json();
+if (!response.body) {
+assistantMessageEl.innerText = "No response from server";
+return;
+}
 
-appendMessage("assistant", data.reply || data.message || "No response");
+const reader = response.body.getReader();
+const decoder = new TextDecoder();
+
+let fullText = "";
+
+while (true) {
+
+const { done, value } = await reader.read();
+
+if (done) break;
+
+const chunk = decoder.decode(value);
+
+fullText += chunk;
+
+assistantMessageEl.innerText = fullText;
+
+messagesEl.scrollTop = messagesEl.scrollHeight;
 
 }
 
-function appendMessage(role,text){
+}
 
-if(!messagesEl) return;
+function appendMessage(role, text) {
+
+if (!messagesEl) return null;
 
 const msg = document.createElement("div");
 
@@ -60,5 +78,7 @@ msg.innerText = text;
 messagesEl.appendChild(msg);
 
 messagesEl.scrollTop = messagesEl.scrollHeight;
+
+return msg;
 
 }
