@@ -23,14 +23,32 @@ sendMessage()
 
 }
 
+function fillPrompt(text){
+
+const input = document.getElementById("chat-input")
+
+if(input){
+input.value = text
+input.focus()
+}
+
+}
+
+window.fillPrompt = fillPrompt
+
 async function sendMessage(){
 
 const input = document.getElementById("chat-input")
 const messages = document.getElementById("messages")
+const welcome = document.getElementById("welcome-panel")
 
 const message = input.value.trim()
 
 if(!message) return
+
+if(welcome){
+welcome.remove()
+}
 
 appendMessage("user",message)
 
