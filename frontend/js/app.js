@@ -1,28 +1,38 @@
-async function loadSidebar(){
+async function loadComponent(url, element){
 
-const res = await fetch("/components/sidebar.html");
+const res = await fetch(url)
+const html = await res.text()
 
-const html = await res.text();
-
-document.getElementById("sidebar").innerHTML = html;
+document.getElementById(element).innerHTML = html
 
 }
 
-async function loadWorkspace(){
+async function init(){
 
-const res = await fetch("/components/workspace.html");
+await loadComponent("/components/sidebar.html","sidebar")
 
-const html = await res.text();
+await loadComponent("/components/workspace.html","workspace")
 
-document.getElementById("workspace").innerHTML = html;
-
-/* IMPORTANT: start chat AFTER workspace loads */
-
-if(typeof initChat === "function"){
-initChat();
+if(window.initChat){
+initChat()
 }
 
 }
 
-loadSidebar();
-loadWorkspace();
+init()
+
+window.openAssistant = async function(){
+
+await loadComponent("/components/workspace.html","workspace")
+
+if(window.initChat){
+initChat()
+}
+
+}
+
+window.createConversation = function(){
+
+document.getElementById("messages").innerHTML=""
+
+}
