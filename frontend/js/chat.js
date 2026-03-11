@@ -1,93 +1,54 @@
-document.addEventListener("DOMContentLoaded", () => {
+const messagesEl = document.getElementById("messages");
+const inputEl = document.getElementById("chat-input");
+const sendBtn = document.getElementById("send-btn");
 
-let sessionId = localStorage.getItem("session_id");
+async function sendMessage(){
 
-if(!sessionId){
-
-sessionId = crypto.randomUUID();
-localStorage.setItem("session_id", sessionId);
-
-}
-
-const chatMessages = document.getElementById("chat-messages");
-const chatInput = document.getElementById("chat-input");
-const sendButton = document.getElementById("send-button");
-
-if(!chatMessages || !chatInput || !sendButton) return;
-
-
-function addMessage(role,text){
-
-const div=document.createElement("div");
-
-div.className="message "+role;
-
-div.innerHTML=text;
-
-chatMessages.appendChild(div);
-
-chatMessages.scrollTop=chatMessages.scrollHeight;
-
-return div;
-
-}
-
-
-async function sendChat(){
-
-const message = chatInput.value.trim();
+const message = inputEl.value.trim();
 
 if(!message) return;
 
-chatInput.value="";
+appendMessage("user", message);
 
-addMessage("user",message);
+inputEl.value="";
 
-const assistantDiv = addMessage("assistant","");
-
-const response = await fetch(API + "/chat",{
-
+const response = await fetch(API + "/chat/", {
 method:"POST",
-
 headers:{
 "Content-Type":"application/json"
 },
-
+credentials:"include",
 body:JSON.stringify({
-message:message,
-session_id:sessionId
+message:message
 })
-
 });
 
-const reader=response.body.getReader();
+const data = await response.json();
 
-const decoder=new TextDecoder();
-
-let text="";
-
-while(true){
-
-const {done,value}=await reader.read();
-
-if(done) break;
-
-text+=decoder.decode(value);
-
-assistantDiv.innerHTML=text;
-
-chatMessages.scrollTop=chatMessages.scrollHeight;
+appendMessage("assistant", data.reply || data.message || "No response");
 
 }
 
+function appendMessage(role,text){
+
+const msg = document.createElement("div");
+
+msg.className = "message " + role;
+
+msg.innerText = text;
+
+messagesEl.appendChild(msg);
+
+messagesEl.scrollTop = messagesEl.scrollHeight;
+
 }
 
-sendButton.onclick=sendChat;
+sendBtn.onclick = sendMessage;
 
-chatInput.addEventListener("keypress",e=>{
+inputEl.addEventListener("keypress",function(e){
 
-if(e.key==="Enter") sendChat();
-
-});
+if(e.key==="Enter"){
+sendMessage();
+}
 
 });
