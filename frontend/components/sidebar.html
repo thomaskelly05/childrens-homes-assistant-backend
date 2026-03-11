@@ -1,31 +1,25 @@
 <div class="sidebar-inner">
 
-<h2>IndiCare</h2>
+  <div class="sidebar-top">
+    <h2>IndiCare</h2>
 
-<button id="new-chat-btn">
-+ New Chat
-</button>
+    <button id="new-chat-btn" class="new-chat-btn">
+      + New Chat
+    </button>
+  </div>
 
-<div class="sidebar-section">
+  <div class="sidebar-section">
+    <div class="sidebar-title">Assistant</div>
 
-<div class="sidebar-title">
-Assistant
-</div>
+    <button class="sidebar-link active" id="assistant-home-btn">
+      AI Assistant
+    </button>
+  </div>
 
-<a id="assistant-home">
-AI Assistant
-</a>
+  <div class="sidebar-section sidebar-grow">
+    <div class="sidebar-title">Recent Chats</div>
 
-</div>
-
-<div class="sidebar-section">
-
-<div class="sidebar-title">
-Recent Chats
-</div>
-
-<div id="conversation-list"></div>
-
-</div>
+    <div id="conversation-list" class="conversation-list"></div>
+  </div>
 
 </div>
