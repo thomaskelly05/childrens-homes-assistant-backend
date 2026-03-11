@@ -1,38 +1,36 @@
-async function loadComponent(url, element){
+async function loadSidebar(){
 
-const res = await fetch(url)
+const res = await fetch("/components/sidebar.html")
 const html = await res.text()
 
-document.getElementById(element).innerHTML = html
+document.getElementById("sidebar").innerHTML = html
+
+const newChatBtn = document.getElementById("new-chat-btn")
+
+if(newChatBtn){
+
+newChatBtn.onclick = createConversation
 
 }
 
-async function init(){
+loadConversations()
 
-await loadComponent("/components/sidebar.html","sidebar")
+}
 
-await loadComponent("/components/workspace.html","workspace")
+async function loadWorkspace(){
 
-if(window.initChat){
+const res = await fetch("/components/workspace.html")
+const html = await res.text()
+
+document.getElementById("workspace").innerHTML = html
+
 initChat()
-}
 
 }
 
-init()
+window.onload = async () => {
 
-window.openAssistant = async function(){
-
-await loadComponent("/components/workspace.html","workspace")
-
-if(window.initChat){
-initChat()
-}
-
-}
-
-window.createConversation = function(){
-
-document.getElementById("messages").innerHTML=""
+await loadSidebar()
+await loadWorkspace()
 
 }
