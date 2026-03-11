@@ -1,82 +1,76 @@
-function initChat(){
+const messagesEl = document.getElementById("messages")
+const inputEl = document.getElementById("chat-input")
+const sendBtn = document.getElementById("send-btn")
 
-const messagesEl = document.getElementById("messages");
-const inputEl = document.getElementById("chat-input");
-const sendBtn = document.getElementById("send-btn");
-
-if(!messagesEl || !inputEl || !sendBtn) return;
-
-sendBtn.onclick = sendMessage;
-
-inputEl.addEventListener("keypress", function(e){
-
-if(e.key === "Enter"){
-sendMessage();
+if(sendBtn){
+sendBtn.onclick = sendMessage
 }
 
-});
+if(inputEl){
+inputEl.addEventListener("keypress",function(e){
+if(e.key==="Enter"){
+sendMessage()
+}
+})
+}
 
 async function sendMessage(){
 
-const message = inputEl.value.trim();
+const message = inputEl.value.trim()
 
-if(!message) return;
+if(!message) return
 
-appendMessage("user", message);
+appendMessage("user",message)
 
-inputEl.value="";
-
-const assistantMsg = appendMessage("assistant","...");
+inputEl.value=""
 
 const response = await fetch("https://api.indicare.co.uk/chat/",{
-
 method:"POST",
-
 headers:{
 "Content-Type":"application/json"
 },
-
 credentials:"include",
-
 body:JSON.stringify({
 message:message
 })
+})
 
-});
+const reader = response.body.getReader()
+const decoder = new TextDecoder()
 
-const reader = response.body.getReader();
-const decoder = new TextDecoder();
+let assistantMsg = ""
 
-let text="";
+appendMessage("assistant","")
+
+const assistantEl = messagesEl.lastChild
 
 while(true){
 
-const {done,value} = await reader.read();
+const {done,value} = await reader.read()
 
-if(done) break;
+if(done) break
 
-text += decoder.decode(value);
+const chunk = decoder.decode(value)
 
-assistantMsg.innerText=text;
+assistantMsg += chunk
 
-messagesEl.scrollTop = messagesEl.scrollHeight;
+assistantEl.innerText = assistantMsg
 
 }
 
+messagesEl.scrollTop = messagesEl.scrollHeight
 }
 
 function appendMessage(role,text){
 
-const msg=document.createElement("div");
+const msg = document.createElement("div")
 
-msg.className="message "+role;
+msg.className = "message " + role
 
-msg.innerText=text;
+msg.innerText = text
 
-messagesEl.appendChild(msg);
+messagesEl.appendChild(msg)
 
-return msg;
-
-}
+messagesEl.scrollTop = messagesEl.scrollHeight
 
 }
