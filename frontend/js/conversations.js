@@ -1,46 +1,42 @@
-function loadConversations(){
+document.addEventListener("DOMContentLoaded", () => {
 
-const list=document.getElementById("conversation-list")
+const list=document.getElementById("conversation-list");
 
-if(!list) return
+if(!list) return;
 
 const conversations=
-JSON.parse(localStorage.getItem("indicare_conversations")||"[]")
+JSON.parse(localStorage.getItem("indicare_conversations")||"[]");
 
-list.innerHTML=""
+list.innerHTML="";
 
 conversations.forEach(conv=>{
 
-const div=document.createElement("div")
+const div=document.createElement("div");
 
-div.className="conversation-item"
+div.className="conversation-item";
 
-div.innerText=conv.title
+div.innerText=conv.title;
 
 div.onclick=()=>{
 
-localStorage.setItem("session_id",conv.id)
+localStorage.setItem("session_id",conv.id);
 
-location.reload()
+location.reload();
 
-}
+};
 
-list.appendChild(div)
+list.appendChild(div);
 
-})
+});
 
-}
+});
 
 function createConversation(){
 
-const id=crypto.randomUUID()
+const id=crypto.randomUUID();
 
-localStorage.setItem("session_id",id)
+localStorage.setItem("session_id",id);
 
-location.reload()
+location.reload();
 
 }
-
-window.createConversation=createConversation
-
-loadConversations()
