@@ -6,8 +6,9 @@ function initChat() {
 
   sendBtn.onclick = sendMessage;
 
-  input.addEventListener("keypress", function (e) {
-    if (e.key === "Enter") {
+  input.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
       sendMessage();
     }
   });
@@ -75,6 +76,9 @@ function createMessageElement(role, text = "") {
   const msg = document.createElement("div");
   msg.className = `message ${role}`;
 
+  wrapper._messageEl = msg;
+  wrapper._rawText = text;
+
   if (role === "assistant") {
     msg.innerHTML = renderMarkdown(text);
 
@@ -86,9 +90,9 @@ function createMessageElement(role, text = "") {
     copyBtn.type = "button";
     copyBtn.textContent = "Copy";
 
-    copyBtn.onclick = async () => {
+    copyBtn.addEventListener("click", async () => {
       try {
-        await navigator.clipboard.writeText(text);
+        await navigator.clipboard.writeText(wrapper._rawText || "");
         copyBtn.textContent = "Copied";
         setTimeout(() => {
           copyBtn.textContent = "Copy";
@@ -96,20 +100,16 @@ function createMessageElement(role, text = "") {
       } catch (err) {
         console.error("Copy failed:", err);
       }
-    };
+    });
+
+    wrapper._copyBtn = copyBtn;
 
     actions.appendChild(copyBtn);
     wrapper.appendChild(msg);
     wrapper.appendChild(actions);
-
-    wrapper._messageEl = msg;
-    wrapper._copyBtn = copyBtn;
-    wrapper._rawText = text;
   } else {
     msg.innerText = text;
     wrapper.appendChild(msg);
-    wrapper._messageEl = msg;
-    wrapper._rawText = text;
   }
 
   return wrapper;
@@ -140,21 +140,6 @@ function updateAssistantMessage(text) {
     if (msg) {
       msg.innerHTML = renderMarkdown(text);
     }
-
-    if (lastWrapper._copyBtn) {
-      lastWrapper._copyBtn.onclick = async () => {
-        try {
-          await navigator.clipboard.writeText(text);
-          lastWrapper._copyBtn.textContent = "Copied";
-          setTimeout(() => {
-            lastWrapper._copyBtn.textContent = "Copy";
-          }, 1500);
-        } catch (err) {
-          console.error("Copy failed:", err);
-        }
-      };
-    }
-
     lastWrapper._rawText = text;
   }
 
@@ -166,7 +151,6 @@ function renderMarkdown(text) {
     return window.marked.parse(text);
   }
 
-  // Fallback if marked is not loaded yet
   return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
