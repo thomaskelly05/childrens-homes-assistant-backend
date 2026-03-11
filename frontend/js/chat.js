@@ -1,32 +1,42 @@
+let conversationId = null
+
 function initChat(){
 
-const messagesEl = document.getElementById("messages")
-const inputEl = document.getElementById("chat-input")
 const sendBtn = document.getElementById("send-btn")
+const input = document.getElementById("chat-input")
 
-if(!messagesEl || !inputEl || !sendBtn) return
-
+if(sendBtn){
 sendBtn.onclick = sendMessage
+}
 
-inputEl.addEventListener("keypress",function(e){
+if(input){
 
-if(e.key==="Enter"){
+input.addEventListener("keypress",function(e){
+
+if(e.key === "Enter"){
 sendMessage()
 }
 
 })
 
+}
+
+}
+
 async function sendMessage(){
 
-const message = inputEl.value.trim()
+const input = document.getElementById("chat-input")
+const messages = document.getElementById("messages")
+
+const message = input.value.trim()
 
 if(!message) return
 
 appendMessage("user",message)
 
-inputEl.value=""
+input.value = ""
 
-const response = await fetch("https://api.indicare.co.uk/chat/",{
+const res = await fetch(API + "/chat/",{
 
 method:"POST",
 
@@ -37,52 +47,65 @@ headers:{
 credentials:"include",
 
 body:JSON.stringify({
-message:message
+message:message,
+conversation_id:conversationId
 })
 
 })
 
-const reader = response.body.getReader()
+const reader = res.body.getReader()
 const decoder = new TextDecoder()
 
-let assistantMsg=""
-
-appendMessage("assistant","")
-
-const assistantEl = messagesEl.lastChild
+let assistantMessage = ""
 
 while(true){
 
-const {done,value}=await reader.read()
+const {done,value} = await reader.read()
 
 if(done) break
 
-const chunk=decoder.decode(value)
+const chunk = decoder.decode(value)
 
-assistantMsg+=chunk
+assistantMessage += chunk
 
-assistantEl.innerText=assistantMsg
+updateAssistantMessage(assistantMessage)
 
 }
-
-messagesEl.scrollTop = messagesEl.scrollHeight
 
 }
 
 function appendMessage(role,text){
 
-const msg=document.createElement("div")
+const messages = document.getElementById("messages")
 
-msg.className="message "+role
+const msg = document.createElement("div")
 
-msg.innerText=text
+msg.className = "message " + role
 
-messagesEl.appendChild(msg)
+msg.innerText = text
 
-messagesEl.scrollTop = messagesEl.scrollHeight
+messages.appendChild(msg)
+
+messages.scrollTop = messages.scrollHeight
 
 }
 
+function updateAssistantMessage(text){
+
+const messages = document.getElementById("messages")
+
+let last = messages.querySelector(".message.assistant:last-child")
+
+if(!last){
+
+last = document.createElement("div")
+last.className = "message assistant"
+messages.appendChild(last)
+
 }
 
-window.initChat = initChat
+last.innerText = text
+
+messages.scrollTop = messages.scrollHeight
+
+}
