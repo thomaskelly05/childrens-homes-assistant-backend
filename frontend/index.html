@@ -63,23 +63,23 @@ autocomplete="off"
 
 <script>
 
-const API="https://api.indicare.co.uk"
-
 async function checkAuth(){
 
-const res=await fetch(API+"/auth/check",{credentials:"include"})
+const res = await fetch("https://api.indicare.co.uk/auth/check", {
+credentials:"include"
+});
 
-const data=await res.json()
+const data = await res.json();
 
 if(!data.authenticated){
 
-window.location="/login.html"
+window.location="/login.html";
 
 }
 
 }
 
-checkAuth()
+checkAuth();
 
 </script>
 
