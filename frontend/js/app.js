@@ -1,34 +1,28 @@
-document.addEventListener("DOMContentLoaded", () => {
-
-loadSidebar();
-loadWorkspace();
-
-});
-
 async function loadSidebar(){
 
-const sidebar=document.getElementById("sidebar");
+const res = await fetch("/components/sidebar.html");
 
-if(!sidebar) return;
+const html = await res.text();
 
-const res=await fetch("/components/sidebar.html");
-
-const html=await res.text();
-
-sidebar.innerHTML=html;
+document.getElementById("sidebar").innerHTML = html;
 
 }
 
 async function loadWorkspace(){
 
-const workspace=document.getElementById("workspace");
+const res = await fetch("/components/workspace.html");
 
-if(!workspace) return;
+const html = await res.text();
 
-const res=await fetch("/components/workspace.html");
+document.getElementById("workspace").innerHTML = html;
 
-const html=await res.text();
+/* IMPORTANT: start chat AFTER workspace loads */
 
-workspace.innerHTML=html;
+if(typeof initChat === "function"){
+initChat();
+}
 
 }
+
+loadSidebar();
+loadWorkspace();
