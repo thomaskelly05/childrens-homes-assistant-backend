@@ -1,31 +1,22 @@
-const API_URL = "https://api.indicare.co.uk";
+const API = "https://api.indicare.co.uk";
 
-export async function sendMessage(message, sessionId) {
+async function sendMessage(message, sessionId) {
 
-  const response = await fetch(`${API_URL}/chat`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      message: message,
-      session_id: sessionId
-    })
-  });
+const response = await fetch(API + "/chat", {
 
-  return response.body;
-}
+method: "POST",
 
-export async function captureReflection(sessionId) {
+headers: {
+"Content-Type": "application/json"
+},
 
-  await fetch(`${API_URL}/supervision/capture`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      session_id: sessionId
-    })
-  });
+body: JSON.stringify({
+message: message,
+session_id: sessionId
+})
+
+});
+
+return response.body;
 
 }
