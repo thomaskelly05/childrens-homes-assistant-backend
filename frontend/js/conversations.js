@@ -1,9 +1,11 @@
-const list=document.getElementById("conversation-list")
-
 function loadConversations(){
 
+const list=document.getElementById("conversation-list")
+
+if(!list) return
+
 const conversations=
-JSON.parse(localStorage.getItem("indicare_conversations") || "[]")
+JSON.parse(localStorage.getItem("indicare_conversations")||"[]")
 
 list.innerHTML=""
 
@@ -28,5 +30,17 @@ list.appendChild(div)
 })
 
 }
+
+function createConversation(){
+
+const id=crypto.randomUUID()
+
+localStorage.setItem("session_id",id)
+
+location.reload()
+
+}
+
+window.createConversation=createConversation
 
 loadConversations()
