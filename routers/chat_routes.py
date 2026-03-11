@@ -5,8 +5,8 @@ from pydantic import BaseModel
 
 from db.connection import get_db
 from auth.tokens import decode_session_token
-
 from services.ai_service import generate_ai_stream
+
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
@@ -112,8 +112,11 @@ async def chat(request: Request, conn=Depends(get_db)):
 
     body = await request.json()
 
-    message = body["message"]
+    message = body.get("message")
     cid = body.get("conversation_id")
+
+    if not message:
+        raise HTTPException(status_code=400, detail="Message required")
 
 
     # --------------------------------------------------
@@ -158,25 +161,6 @@ async def chat(request: Request, conn=Depends(get_db)):
 
 
     # --------------------------------------------------
-    # LOAD CONVERSATION HISTORY
-    # --------------------------------------------------
-
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-
-        cur.execute(
-            """
-            SELECT role,message
-            FROM messages
-            WHERE conversation_id=%s
-            ORDER BY created_at
-            """,
-            (cid,)
-        )
-
-        history = cur.fetchall()
-
-
-    # --------------------------------------------------
     # STREAM AI RESPONSE
     # --------------------------------------------------
 
@@ -186,7 +170,7 @@ async def chat(request: Request, conn=Depends(get_db)):
 
         async for token in generate_ai_stream(
             message=message,
-            history=history
+            session_id=str(cid)
         ):
 
             ai += token
