@@ -1,28 +1,57 @@
-async function loadWorkspace(file){
+async function loadWorkspace(component){
 
-const res = await fetch("/components/" + file)
+const res = await fetch("/components/" + component)
 const html = await res.text()
 
 document.getElementById("workspace").innerHTML = html
 
 }
 
+
 function openAssistant(){
+
 loadWorkspace("assistant.html")
+
 }
 
 function openReflections(){
+
 loadWorkspace("reflections.html")
+
 }
 
-function openSupervision(){
-loadWorkspace("supervision.html")
+function openSupervisionNotes(){
+
+loadWorkspace("supervision_notes.html")
+
 }
 
-function openTemplates(){
-loadWorkspace("templates.html")
+function openCapturedReflections(){
+
+loadWorkspace("captured_reflections.html")
+
 }
 
-function openGuidance(){
-loadWorkspace("guidance.html")
+function openSupervisionTemplate(){
+
+loadWorkspace("supervision_template.html")
+
+}
+
+function openShiftReflection(){
+
+loadWorkspace("shift_reflection.html")
+
+}
+
+function openSafeguarding(){
+
+loadWorkspace("guidance_safeguarding.html")
+
+}
+
+function openOfsted(){
+
+loadWorkspace("guidance_ofsted.html")
+
 }
