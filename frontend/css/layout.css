@@ -90,3 +90,12 @@ background: #f8fafc;
 border-top: 1px solid var(--border);
 
 }
+.workspace-container{
+display:flex;
+height:100%;
+}
+
+#workspace{
+flex:1;
+display:flex;
+}
