@@ -1,19 +1,43 @@
-<div class="chat-container">
+<div class="chat-wrapper">
 
-<div id="messages" class="messages"></div>
+  <div id="messages" class="messages">
 
-</div>
+    <div id="welcome-panel" class="welcome-panel">
+      <h1>Hello, how can I help today?</h1>
+      <p>
+        You can use IndiCare to reflect on practice, explore supervision topics,
+        or ask about professional guidance.
+      </p>
 
-<div class="chat-input-area">
+      <div class="welcome-suggestions">
+        <button class="welcome-chip" onclick="fillPrompt('I would like to reflect on something that happened on shift')">
+          Reflect on a shift
+        </button>
 
-<input
-id="chat-input"
-placeholder="Ask IndiCare anything..."
-autocomplete="off"
-/>
+        <button class="welcome-chip" onclick="fillPrompt('Help me prepare for supervision')">
+          Prepare for supervision
+        </button>
 
-<button id="send-btn">
-Send
-</button>
+        <button class="welcome-chip" onclick="fillPrompt('What does the guidance say about safeguarding?')">
+          Ask about guidance
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="chat-input-bar">
+
+    <input
+      id="chat-input"
+      placeholder="Ask IndiCare anything..."
+      autocomplete="off"
+    />
+
+    <button id="send-btn">
+      Send
+    </button>
+
+  </div>
 
 </div>
