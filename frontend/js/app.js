@@ -1,22 +1,34 @@
-const API = "https://api.indicare.co.uk";
+document.addEventListener("DOMContentLoaded", () => {
 
-async function sendMessage(message, sessionId) {
-
-const response = await fetch(API + "/chat", {
-
-method: "POST",
-
-headers: {
-"Content-Type": "application/json"
-},
-
-body: JSON.stringify({
-message: message,
-session_id: sessionId
-})
+loadSidebar();
+loadWorkspace();
 
 });
 
-return response.body;
+async function loadSidebar(){
+
+const sidebar=document.getElementById("sidebar");
+
+if(!sidebar) return;
+
+const res=await fetch("/components/sidebar.html");
+
+const html=await res.text();
+
+sidebar.innerHTML=html;
+
+}
+
+async function loadWorkspace(){
+
+const workspace=document.getElementById("workspace");
+
+if(!workspace) return;
+
+const res=await fetch("/components/workspace.html");
+
+const html=await res.text();
+
+workspace.innerHTML=html;
 
 }
