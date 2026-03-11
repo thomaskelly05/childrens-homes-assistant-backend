@@ -2,9 +2,29 @@
 
 <h2>IndiCare</h2>
 
-<button onclick="createConversation()">
-+ New Reflection
+<button class="new-btn" onclick="openAssistant()">
++ New Chat
 </button>
+
+
+<!-- ASSISTANT -->
+
+<div class="sidebar-section">
+
+<div class="sidebar-title">
+Assistant
+</div>
+
+<button class="nav-btn" onclick="openAssistant()">
+AI Assistant
+</button>
+
+<div id="conversation-list"></div>
+
+</div>
+
+
+<!-- REFLECTIONS -->
 
 <div class="sidebar-section">
 
@@ -12,9 +32,14 @@
 Reflections
 </div>
 
-<div id="conversation-list"></div>
+<button class="nav-btn" onclick="openReflections()">
+Staff Reflections
+</button>
 
 </div>
+
+
+<!-- SUPERVISION -->
 
 <div class="sidebar-section">
 
@@ -22,10 +47,18 @@ Reflections
 Supervision
 </div>
 
-<a href="#">Supervision Notes</a>
-<a href="#">Captured Reflections</a>
+<button class="nav-btn" onclick="openSupervisionNotes()">
+Supervision Notes
+</button>
+
+<button class="nav-btn" onclick="openCapturedReflections()">
+Captured Reflections
+</button>
 
 </div>
+
+
+<!-- TEMPLATES -->
 
 <div class="sidebar-section">
 
@@ -33,10 +66,18 @@ Supervision
 Templates
 </div>
 
-<a href="#">Supervision Template</a>
-<a href="#">Shift Reflection</a>
+<button class="nav-btn" onclick="openSupervisionTemplate()">
+Supervision Template
+</button>
+
+<button class="nav-btn" onclick="openShiftReflection()">
+Shift Reflection
+</button>
 
 </div>
+
+
+<!-- GUIDANCE -->
 
 <div class="sidebar-section">
 
@@ -44,8 +85,13 @@ Templates
 Guidance
 </div>
 
-<a href="#">Safeguarding</a>
-<a href="#">Ofsted</a>
+<button class="nav-btn" onclick="openSafeguarding()">
+Safeguarding
+</button>
+
+<button class="nav-btn" onclick="openOfsted()">
+Ofsted
+</button>
 
 </div>
 
