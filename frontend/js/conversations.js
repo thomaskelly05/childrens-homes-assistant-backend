@@ -1,61 +1,141 @@
-async function loadConversations(){
+let conversationId = null;
 
-const list = document.getElementById("conversation-list")
+async function loadConversations() {
+  const list = document.getElementById("conversation-list");
+  if (!list) return;
 
-if(!list) return
+  const res = await fetch(API + "/chat/conversations", {
+    credentials: "include"
+  });
 
-const res = await fetch(API + "/chat/conversations",{
-credentials:"include"
-})
+  if (!res.ok) {
+    list.innerHTML = '<div class="sidebar-empty">Unable to load chats</div>';
+    return;
+  }
 
-const data = await res.json()
+  const data = await res.json();
 
-list.innerHTML = ""
+  list.innerHTML = "";
 
-data.forEach(c => {
+  if (!data.length) {
+    list.innerHTML = '<div class="sidebar-empty">No recent chats yet</div>';
+    return;
+  }
 
-const item = document.createElement("div")
+  data.forEach((c) => {
+    const row = document.createElement("div");
+    row.className = "conversation-row";
 
-item.className = "conversation-item"
+    const main = document.createElement("button");
+    main.className = "conversation-main";
+    main.innerText = c.title || "Untitled chat";
+    main.onclick = () => openConversation(c.id);
 
-item.innerText = c.title
+    const actions = document.createElement("div");
+    actions.className = "conversation-actions";
 
-item.onclick = () => openConversation(c.id)
+    const renameBtn = document.createElement("button");
+    renameBtn.className = "conversation-action-btn";
+    renameBtn.innerText = "✎";
+    renameBtn.title = "Rename chat";
+    renameBtn.onclick = (e) => {
+      e.stopPropagation();
+      renameConversation(c.id, c.title || "Untitled chat");
+    };
 
-list.appendChild(item)
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "conversation-action-btn danger";
+    deleteBtn.innerText = "×";
+    deleteBtn.title = "Delete chat";
+    deleteBtn.onclick = (e) => {
+      e.stopPropagation();
+      deleteConversation(c.id);
+    };
 
-})
+    actions.appendChild(renameBtn);
+    actions.appendChild(deleteBtn);
 
+    row.appendChild(main);
+    row.appendChild(actions);
+
+    list.appendChild(row);
+  });
 }
 
-async function openConversation(id){
+async function openConversation(id) {
+  conversationId = id;
 
-conversationId = id
+  const res = await fetch(API + "/chat/conversations/" + id, {
+    credentials: "include"
+  });
 
-const res = await fetch(API + "/chat/conversations/" + id,{
-credentials:"include"
-})
+  if (!res.ok) return;
 
-const data = await res.json()
+  const data = await res.json();
 
-const messages = document.getElementById("messages")
+  const messages = document.getElementById("messages");
+  if (!messages) return;
 
-messages.innerHTML = ""
+  messages.innerHTML = "";
 
-data.forEach(m => {
-
-appendMessage(m.role,m.message)
-
-})
-
+  data.forEach((m) => {
+    appendMessage(m.role, m.message);
+  });
 }
 
-function createConversation(){
+async function renameConversation(id, currentTitle) {
+  const nextTitle = prompt("Rename this chat", currentTitle || "Untitled chat");
 
-conversationId = null
+  if (!nextTitle || !nextTitle.trim()) return;
 
-const messages = document.getElementById("messages")
+  const res = await fetch(API + "/chat/conversations/" + id + "/rename", {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      title: nextTitle.trim()
+    })
+  });
 
-messages.innerHTML = ""
+  if (!res.ok) {
+    alert("Unable to rename chat");
+    return;
+  }
 
+  await loadConversations();
+}
+
+async function deleteConversation(id) {
+  const confirmed = confirm("Delete this chat?");
+  if (!confirmed) return;
+
+  const res = await fetch(API + "/chat/conversations/" + id, {
+    method: "DELETE",
+    credentials: "include"
+  });
+
+  if (!res.ok) {
+    alert("Unable to delete chat");
+    return;
+  }
+
+  if (conversationId === id) {
+    conversationId = null;
+    const messages = document.getElementById("messages");
+    if (messages) messages.innerHTML = "";
+  }
+
+  await loadConversations();
+}
+
+function createConversation() {
+  conversationId = null;
+
+  const messages = document.getElementById("messages");
+  if (messages) messages.innerHTML = "";
+
+  const input = document.getElementById("chat-input");
+  if (input) input.focus();
 }
