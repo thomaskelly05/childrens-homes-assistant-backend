@@ -9,11 +9,6 @@ async function loadSidebar() {
     newChatBtn.onclick = createConversation;
   }
 
-  const assistantBtn = document.getElementById("assistant-home-btn");
-  if (assistantBtn) {
-    assistantBtn.onclick = createConversation;
-  }
-
   await loadConversations();
 }
 
@@ -23,7 +18,13 @@ async function loadWorkspace() {
 
   document.getElementById("workspace").innerHTML = html;
 
-  initChat();
+  if (window.initChat) {
+    window.initChat();
+  }
+
+  if (window.createConversation) {
+    window.createConversation();
+  }
 }
 
 window.onload = async () => {
