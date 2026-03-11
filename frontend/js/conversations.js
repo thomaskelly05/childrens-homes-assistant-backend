@@ -1,42 +1,61 @@
-document.addEventListener("DOMContentLoaded", () => {
+async function loadConversations(){
 
-const list=document.getElementById("conversation-list");
+const list = document.getElementById("conversation-list")
 
-if(!list) return;
+if(!list) return
 
-const conversations=
-JSON.parse(localStorage.getItem("indicare_conversations")||"[]");
+const res = await fetch(API + "/chat/conversations",{
+credentials:"include"
+})
 
-list.innerHTML="";
+const data = await res.json()
 
-conversations.forEach(conv=>{
+list.innerHTML = ""
 
-const div=document.createElement("div");
+data.forEach(c => {
 
-div.className="conversation-item";
+const item = document.createElement("div")
 
-div.innerText=conv.title;
+item.className = "conversation-item"
 
-div.onclick=()=>{
+item.innerText = c.title
 
-localStorage.setItem("session_id",conv.id);
+item.onclick = () => openConversation(c.id)
 
-location.reload();
+list.appendChild(item)
 
-};
+})
 
-list.appendChild(div);
+}
 
-});
+async function openConversation(id){
 
-});
+conversationId = id
+
+const res = await fetch(API + "/chat/conversations/" + id,{
+credentials:"include"
+})
+
+const data = await res.json()
+
+const messages = document.getElementById("messages")
+
+messages.innerHTML = ""
+
+data.forEach(m => {
+
+appendMessage(m.role,m.message)
+
+})
+
+}
 
 function createConversation(){
 
-const id=crypto.randomUUID();
+conversationId = null
 
-localStorage.setItem("session_id",id);
+const messages = document.getElementById("messages")
 
-location.reload();
+messages.innerHTML = ""
 
 }
