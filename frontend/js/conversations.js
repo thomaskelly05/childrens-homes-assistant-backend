@@ -1,4 +1,4 @@
-let conversationId = null;
+window.conversationId = null;
 
 async function loadConversations() {
   const list = document.getElementById("conversation-list");
@@ -14,7 +14,6 @@ async function loadConversations() {
   }
 
   const data = await res.json();
-
   list.innerHTML = "";
 
   if (!data.length) {
@@ -62,8 +61,10 @@ async function loadConversations() {
   });
 }
 
+window.loadConversations = loadConversations;
+
 async function openConversation(id) {
-  conversationId = id;
+  window.conversationId = id;
 
   const res = await fetch(API + "/chat/conversations/" + id, {
     credentials: "include"
@@ -72,7 +73,6 @@ async function openConversation(id) {
   if (!res.ok) return;
 
   const data = await res.json();
-
   const messages = document.getElementById("messages");
   if (!messages) return;
 
@@ -83,9 +83,10 @@ async function openConversation(id) {
   });
 }
 
+window.openConversation = openConversation;
+
 async function renameConversation(id, currentTitle) {
   const nextTitle = prompt("Rename this chat", currentTitle || "Untitled chat");
-
   if (!nextTitle || !nextTitle.trim()) return;
 
   const res = await fetch(API + "/chat/conversations/" + id + "/rename", {
@@ -107,6 +108,8 @@ async function renameConversation(id, currentTitle) {
   await loadConversations();
 }
 
+window.renameConversation = renameConversation;
+
 async function deleteConversation(id) {
   const confirmed = confirm("Delete this chat?");
   if (!confirmed) return;
@@ -121,8 +124,8 @@ async function deleteConversation(id) {
     return;
   }
 
-  if (conversationId === id) {
-    conversationId = null;
+  if (window.conversationId === id) {
+    window.conversationId = null;
     const messages = document.getElementById("messages");
     if (messages) messages.innerHTML = "";
   }
@@ -130,12 +133,40 @@ async function deleteConversation(id) {
   await loadConversations();
 }
 
+window.deleteConversation = deleteConversation;
+
 function createConversation() {
-  conversationId = null;
+  window.conversationId = null;
 
   const messages = document.getElementById("messages");
-  if (messages) messages.innerHTML = "";
+  if (messages) {
+    messages.innerHTML = `
+      <div id="welcome-panel" class="welcome-panel">
+        <h1>Hello, how can I help today?</h1>
+        <p>
+          You can use IndiCare to reflect on practice, explore supervision topics,
+          or ask about professional guidance.
+        </p>
+
+        <div class="welcome-suggestions">
+          <button class="welcome-chip" onclick="fillPrompt('I would like to reflect on something that happened on shift')">
+            Reflect on a shift
+          </button>
+
+          <button class="welcome-chip" onclick="fillPrompt('Help me prepare for supervision')">
+            Prepare for supervision
+          </button>
+
+          <button class="welcome-chip" onclick="fillPrompt('What does the guidance say about safeguarding?')">
+            Ask about guidance
+          </button>
+        </div>
+      </div>
+    `;
+  }
 
   const input = document.getElementById("chat-input");
   if (input) input.focus();
 }
+
+window.createConversation = createConversation;
