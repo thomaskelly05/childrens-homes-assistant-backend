@@ -147,11 +147,24 @@
   padding: 28px 32px 20px;
 }
 
+.message-wrapper {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+
+.message-wrapper.user {
+  align-items: flex-end;
+}
+
+.message-wrapper.assistant {
+  align-items: flex-start;
+}
+
 .message {
   max-width: 720px;
   padding: 12px 16px;
   border-radius: 14px;
-  margin-bottom: 12px;
   font-size: 15px;
   line-height: 1.45;
   word-wrap: break-word;
@@ -166,6 +179,95 @@
 .message.assistant {
   background: #f1f5f9;
   color: #0f172a;
+}
+
+.message-actions {
+  margin-top: 6px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.copy-btn {
+  padding: 6px 10px;
+  background: #e2e8f0;
+  border: none;
+  border-radius: 8px;
+  color: #0f172a;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.copy-btn:hover {
+  background: #cbd5e1;
+}
+
+.message.assistant h1,
+.message.assistant h2,
+.message.assistant h3,
+.message.assistant h4 {
+  margin: 0 0 10px 0;
+  line-height: 1.25;
+  color: #0f172a;
+}
+
+.message.assistant h1 {
+  font-size: 24px;
+}
+
+.message.assistant h2 {
+  font-size: 20px;
+}
+
+.message.assistant h3 {
+  font-size: 17px;
+}
+
+.message.assistant p {
+  margin: 0 0 10px 0;
+}
+
+.message.assistant ul,
+.message.assistant ol {
+  margin: 0 0 10px 20px;
+  padding-left: 18px;
+}
+
+.message.assistant li {
+  margin-bottom: 4px;
+}
+
+.message.assistant strong {
+  font-weight: 600;
+}
+
+.message.assistant code {
+  background: #e2e8f0;
+  padding: 2px 5px;
+  border-radius: 6px;
+  font-size: 0.95em;
+}
+
+.message.assistant pre {
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 12px 14px;
+  border-radius: 10px;
+  overflow-x: auto;
+  margin: 0 0 10px 0;
+}
+
+.message.assistant pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+
+.message.assistant blockquote {
+  margin: 0 0 10px 0;
+  padding-left: 12px;
+  border-left: 4px solid #cbd5e1;
+  color: #475569;
 }
 
 .chat-input-bar {
@@ -202,44 +304,45 @@
 #send-btn:hover {
   background: #1d4ed8;
 }
-.welcome-panel{
-max-width:720px;
-margin:80px auto 20px;
-text-align:center;
-padding:20px;
+
+.welcome-panel {
+  max-width: 720px;
+  margin: 80px auto 20px;
+  text-align: center;
+  padding: 20px;
 }
 
-.welcome-panel h1{
-font-size:32px;
-margin-bottom:12px;
-color:#0f172a;
-font-weight:600;
+.welcome-panel h1 {
+  font-size: 32px;
+  margin-bottom: 12px;
+  color: #0f172a;
+  font-weight: 600;
 }
 
-.welcome-panel p{
-font-size:16px;
-line-height:1.5;
-color:#64748b;
-margin-bottom:24px;
+.welcome-panel p {
+  font-size: 16px;
+  line-height: 1.5;
+  color: #64748b;
+  margin-bottom: 24px;
 }
 
-.welcome-suggestions{
-display:flex;
-flex-wrap:wrap;
-justify-content:center;
-gap:10px;
+.welcome-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
 }
 
-.welcome-chip{
-background:#f1f5f9;
-border:1px solid #e2e8f0;
-border-radius:999px;
-padding:10px 16px;
-font-size:14px;
-cursor:pointer;
-color:#0f172a;
+.welcome-chip {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  color: #0f172a;
 }
 
-.welcome-chip:hover{
-background:#e2e8f0;
+.welcome-chip:hover {
+  background: #e2e8f0;
 }
