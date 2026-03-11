@@ -1,36 +1,32 @@
-async function loadSidebar(){
+async function loadSidebar() {
+  const res = await fetch("/components/sidebar.html");
+  const html = await res.text();
 
-const res = await fetch("/components/sidebar.html")
-const html = await res.text()
+  document.getElementById("sidebar").innerHTML = html;
 
-document.getElementById("sidebar").innerHTML = html
+  const newChatBtn = document.getElementById("new-chat-btn");
+  if (newChatBtn) {
+    newChatBtn.onclick = createConversation;
+  }
 
-const newChatBtn = document.getElementById("new-chat-btn")
+  const assistantBtn = document.getElementById("assistant-home-btn");
+  if (assistantBtn) {
+    assistantBtn.onclick = createConversation;
+  }
 
-if(newChatBtn){
-
-newChatBtn.onclick = createConversation
-
+  await loadConversations();
 }
 
-loadConversations()
+async function loadWorkspace() {
+  const res = await fetch("/components/workspace.html");
+  const html = await res.text();
 
-}
+  document.getElementById("workspace").innerHTML = html;
 
-async function loadWorkspace(){
-
-const res = await fetch("/components/workspace.html")
-const html = await res.text()
-
-document.getElementById("workspace").innerHTML = html
-
-initChat()
-
+  initChat();
 }
 
 window.onload = async () => {
-
-await loadSidebar()
-await loadWorkspace()
-
-}
+  await loadSidebar();
+  await loadWorkspace();
+};
