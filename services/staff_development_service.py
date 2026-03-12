@@ -1,47 +1,171 @@
-from providers.openai_provider import ask_llm
+from services.openai_service import ask_openai
+
+
+def _build_reflection_text(entries):
+    parts = []
+
+    for e in entries:
+        parts.append(
+            f"""
+Date: {e.get("created_at", "")}
+
+Overview:
+- Holding today: {e.get("holding_today", "")}
+- Practice today: {e.get("practice_today", "")}
+- Reflection today: {e.get("reflection_today", "")}
+
+Gibbs:
+- Description: {e.get("description", "")}
+- Feelings: {e.get("feelings", "")}
+- Evaluation: {e.get("evaluation", "")}
+- Analysis: {e.get("analysis", "")}
+- Conclusion: {e.get("conclusion", "")}
+- Action plan: {e.get("action_plan", "")}
+
+PACE:
+- Playfulness: {e.get("playfulness", "")}
+- Acceptance: {e.get("acceptance", "")}
+- Curiosity: {e.get("curiosity", "")}
+- Empathy: {e.get("empathy", "")}
+
+Leadership:
+- Leadership style: {e.get("leadership_style", "")}
+- Leadership reflection: {e.get("leadership_reflection", "")}
+
+Impact:
+- Child impact: {e.get("child_impact", "")}
+- Team impact: {e.get("team_impact", "")}
+- Safeguarding considerations: {e.get("safeguarding_considerations", "")}
+- Support needed: {e.get("support_needed", "")}
+"""
+        )
+
+    return "\n\n".join(parts)
 
 
 async def generate_staff_pdp(entries):
-
-    reflections = "\n\n".join([
-        f"""
-Date: {e.get('created_at')}
-
-Reflection:
-{e.get('reflection_today')}
-
-Analysis:
-{e.get('analysis')}
-
-Action Plan:
-{e.get('action_plan')}
-"""
-        for e in entries
-    ])
+    reflections = _build_reflection_text(entries)
 
     prompt = f"""
-You are a leadership coach for adults working in a UK children's home.
+You are an experienced supervisor supporting adults who work in a children's home in the UK.
 
-Below are reflective journal entries from a staff member.
+Use the reflective journal entries below to produce a Personal Development Plan for the staff member.
 
-Use them to create a Personal Development Plan.
+Write in clear professional British English.
 
 Focus on:
-
 1. Strengths in practice
 2. Areas for development
-3. Leadership growth
-4. Relationship practice (PACE)
-5. Emotional resilience
-6. Practical actions for the next 3 months
+3. PACE-informed relationship practice
+4. Leadership development
+5. Emotional resilience and self-awareness
+6. Three practical development goals for the next 3 months
+7. Specific actions the adult can take
+8. Support the manager/supervisor should provide
 
 Journal entries:
-
 {reflections}
 
-Create a structured development plan.
+Return the response in this exact structure:
+
+Personal Development Plan
+
+Summary
+[short paragraph]
+
+Strengths
+- ...
+- ...
+- ...
+
+Areas for Development
+- ...
+- ...
+- ...
+
+PACE Reflection Themes
+- ...
+- ...
+- ...
+
+Leadership Development Themes
+- ...
+- ...
+- ...
+
+Emotional Resilience / Self-Awareness
+- ...
+- ...
+- ...
+
+3-Month Development Goals
+1. ...
+2. ...
+3. ...
+
+Actions for the Adult
+- ...
+- ...
+- ...
+
+Support from Manager / Supervision
+- ...
+- ...
+- ...
 """
+    return await ask_openai(prompt)
 
-    result = await ask_llm(prompt)
 
-    return result
+async def generate_supervision_pack(entries):
+    reflections = _build_reflection_text(entries)
+
+    prompt = f"""
+You are an experienced supervisor for adults working in a UK children's home.
+
+Use the journal entries below to create a professional supervision pack.
+
+The tone should be supportive, reflective, strengths-based, and suitable for adult supervision in residential childcare in the UK.
+
+Journal entries:
+{reflections}
+
+Create the supervision pack using exactly these headings:
+
+Supervision Pack
+
+1. Overview of Reflection
+Write one short paragraph summarising the main themes across the entries.
+
+2. Strengths in Practice
+Provide 4-6 bullet points.
+
+3. Areas for Development
+Provide 4-6 bullet points.
+
+4. PACE Themes
+Provide 3-5 bullet points showing what stands out about playfulness, acceptance, curiosity and empathy.
+
+5. Leadership and Team Practice
+Provide 3-5 bullet points.
+
+6. Emotional Wellbeing and Resilience
+Provide 3-5 bullet points.
+
+7. Safeguarding / Risk / Professional Curiosity
+Provide 3-5 bullet points, but only include concerns if the entries actually suggest them.
+
+8. Recommended Supervision Discussion Questions
+Provide 6 reflective supervision questions.
+
+9. Suggested Training / Coaching Priorities
+Provide 3-5 bullet points.
+
+10. Agreed Actions for the Next 4-8 Weeks
+Provide 5 practical actions.
+
+11. Draft Development Goals for the Next 3 Months
+Provide 3 numbered goals.
+
+Keep it concise, useful, and grounded in the reflections provided.
+"""
+    return await ask_openai(prompt)
