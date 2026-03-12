@@ -152,3 +152,40 @@ async def update_staff_journal_route(
             status_code=500,
             detail=f"Could not update journal: {str(e)}"
         )
+# --------------------------------------------------
+# LIST STAFF JOURNAL ENTRIES
+# --------------------------------------------------
+
+@router.get("/staff/{staff_id}")
+async def list_staff_journals(
+    staff_id: int,
+    limit: int = 50,
+    conn=Depends(get_db)
+):
+    try:
+        ensure_staff_journal_table(conn)
+
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT *
+                FROM staff_journal
+                WHERE staff_id = %s
+                ORDER BY created_at DESC
+                LIMIT %s
+                """,
+                (staff_id, limit)
+            )
+
+            rows = cur.fetchall()
+
+        return {
+            "ok": True,
+            "entries": rows
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Could not load journal history: {str(e)}"
+        )
