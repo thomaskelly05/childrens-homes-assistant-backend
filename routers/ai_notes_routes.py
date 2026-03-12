@@ -6,7 +6,9 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 
 from services.ai_notes_service import (
     transcribe_audio,
-    generate_note
+    generate_note,
+    edit_note,
+    save_note
 )
 
 router = APIRouter(
@@ -19,7 +21,10 @@ router = APIRouter(
 # --------------------------------------------------
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+UPLOAD_DIR = os.path.join(BASE_DIR, "_tmp_uploads")
+
+if os.path.exists(UPLOAD_DIR) and not os.path.isdir(UPLOAD_DIR):
+    os.remove(UPLOAD_DIR)
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -34,19 +39,15 @@ async def transcribe_note_audio(file: UploadFile = File(...)):
     if not file:
         raise HTTPException(status_code=400, detail="No file uploaded")
 
-    if file.size == 0:
-        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+    filename = file.filename or ""
 
-    # Get real extension
-    extension = os.path.splitext(file.filename)[1]
-
+    extension = os.path.splitext(filename)[1].lower()
     if extension == "":
         extension = ".webm"
 
-    # Only allow safe audio formats
     allowed = [".webm", ".wav", ".mp3", ".m4a", ".ogg"]
 
-    if extension.lower() not in allowed:
+    if extension not in allowed:
         raise HTTPException(
             status_code=400,
             detail="Unsupported audio format"
@@ -56,9 +57,11 @@ async def transcribe_note_audio(file: UploadFile = File(...)):
     temp_path = os.path.join(UPLOAD_DIR, temp_filename)
 
     try:
-
         with open(temp_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
+
+        if not os.path.exists(temp_path) or os.path.getsize(temp_path) == 0:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
         transcript = await transcribe_audio(temp_path)
 
@@ -67,15 +70,16 @@ async def transcribe_note_audio(file: UploadFile = File(...)):
             "transcript": transcript
         }
 
-    except Exception as e:
+    except HTTPException:
+        raise
 
+    except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Transcription failed: {str(e)}"
         )
 
     finally:
-
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
@@ -96,7 +100,6 @@ async def generate_ai_note(transcript: str = Form(...)):
         )
 
     try:
-
         note = await generate_note(transcript)
 
         return {
@@ -105,10 +108,102 @@ async def generate_ai_note(transcript: str = Form(...)):
         }
 
     except Exception as e:
-
         raise HTTPException(
             status_code=500,
             detail=f"AI note generation failed: {str(e)}"
+        )
+
+
+# --------------------------------------------------
+# AI EDIT FINAL NOTE
+# --------------------------------------------------
+
+@router.post("/edit")
+async def edit_ai_note(
+    text: str = Form(...),
+    mode: str = Form(...)
+):
+
+    text = text.strip()
+    mode = mode.strip().lower()
+
+    if not text:
+        raise HTTPException(
+            status_code=400,
+            detail="Text required"
+        )
+
+    if not mode:
+        raise HTTPException(
+            status_code=400,
+            detail="Edit mode required"
+        )
+
+    try:
+        edited = await edit_note(text, mode)
+
+        return {
+            "ok": True,
+            "text": edited
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"AI edit failed: {str(e)}"
+        )
+
+
+# --------------------------------------------------
+# SAVE MEETING NOTE
+# --------------------------------------------------
+
+@router.post("/save")
+async def save_ai_note(
+    transcript: str = Form(...),
+    ai_draft: str = Form(...),
+    final_note: str = Form(...)
+):
+
+    transcript = transcript.strip()
+    ai_draft = ai_draft.strip()
+    final_note = final_note.strip()
+
+    if not transcript:
+        raise HTTPException(
+            status_code=400,
+            detail="Transcript required"
+        )
+
+    if not ai_draft:
+        raise HTTPException(
+            status_code=400,
+            detail="AI draft required"
+        )
+
+    if not final_note:
+        raise HTTPException(
+            status_code=400,
+            detail="Final note required"
+        )
+
+    try:
+        record = await save_note(
+            transcript=transcript,
+            ai_draft=ai_draft,
+            final_note=final_note
+        )
+
+        return {
+            "ok": True,
+            "message": "Meeting note saved",
+            "record": record
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Save failed: {str(e)}"
         )
 
 
