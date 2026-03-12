@@ -25,7 +25,6 @@ from routers.documents_routes import router as documents_router
 from routers.dashboard_routes import router as dashboard_router
 from routers.account_routes import router as account_router
 
-# NEW AI NOTES ROUTER
 from routers.ai_notes_routes import router as ai_notes_router
 
 
@@ -57,7 +56,6 @@ app = FastAPI(
 
 @app.middleware("http")
 async def security_headers(request, call_next):
-
     response = await call_next(request)
 
     response.headers["X-Frame-Options"] = "DENY"
@@ -73,7 +71,6 @@ async def security_headers(request, call_next):
 
 @app.middleware("http")
 async def disable_buffering(request, call_next):
-
     response = await call_next(request)
 
     response.headers["X-Accel-Buffering"] = "no"
@@ -86,12 +83,9 @@ async def disable_buffering(request, call_next):
 # --------------------------------------------------
 
 ALLOWED_ORIGINS = [
-
     "https://indicare.co.uk",
     "https://www.indicare.co.uk",
-
     "https://app.indicare.co.uk",
-
     "http://localhost:3000",
     "http://localhost:5173",
 ]
@@ -128,20 +122,14 @@ app.add_middleware(
 # --------------------------------------------------
 
 app.include_router(auth_router)
-
 app.include_router(chat_router)
-
 app.include_router(tasks_router)
 app.include_router(journal_router)
 app.include_router(handover_router)
-
 app.include_router(reports_router)
 app.include_router(documents_router)
-
 app.include_router(dashboard_router)
 app.include_router(account_router)
-
-# AI NOTE SYSTEM
 app.include_router(ai_notes_router)
 
 
@@ -176,11 +164,9 @@ def api_root():
 # --------------------------------------------------
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
 if os.path.isdir(FRONTEND_DIR):
-
     app.mount(
         "/",
         StaticFiles(directory=FRONTEND_DIR, html=True),
@@ -195,7 +181,6 @@ if os.path.isdir(FRONTEND_DIR):
 @app.get("/{full_path:path}")
 async def spa_fallback(request: Request, full_path: str):
 
-    # Do not override API routes
     if full_path.startswith("auth") \
     or full_path.startswith("chat") \
     or full_path.startswith("tasks") \
@@ -207,11 +192,9 @@ async def spa_fallback(request: Request, full_path: str):
     or full_path.startswith("health") \
     or full_path.startswith("docs") \
     or full_path.startswith("api"):
-
         return {"error": "Not found"}
 
     index_file = os.path.join(FRONTEND_DIR, "index.html")
-
     return FileResponse(index_file)
 
 
@@ -220,7 +203,6 @@ async def spa_fallback(request: Request, full_path: str):
 # --------------------------------------------------
 
 if __name__ == "__main__":
-
     uvicorn.run(
         "app:app",
         host="0.0.0.0",
