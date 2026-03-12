@@ -73,3 +73,41 @@ def list_ai_meeting_notes(conn, limit: int = 50) -> list[dict[str, Any]]:
 
         rows = cur.fetchall()
         return [dict(row) for row in rows]
+
+
+def get_ai_meeting_note(conn, note_id: int) -> dict[str, Any] | None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+                id,
+                transcript,
+                ai_draft,
+                final_note,
+                created_at,
+                updated_at
+            FROM ai_meeting_notes
+            WHERE id = %s
+            LIMIT 1;
+            """,
+            (note_id,)
+        )
+
+        row = cur.fetchone()
+        return dict(row) if row else None
+
+
+def delete_ai_meeting_note(conn, note_id: int) -> bool:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            DELETE FROM ai_meeting_notes
+            WHERE id = %s
+            RETURNING id;
+            """,
+            (note_id,)
+        )
+
+        row = cur.fetchone()
+        conn.commit()
+        return bool(row)
