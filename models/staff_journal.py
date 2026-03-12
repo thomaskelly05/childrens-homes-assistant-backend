@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, Text, DateTime, ForeignKey, func, String
 from db import Base
 
+
 class StaffJournal(Base):
     __tablename__ = "staff_journal"
 
@@ -37,4 +38,8 @@ class StaffJournal(Base):
     support_needed = Column(Text, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now()
+    )
