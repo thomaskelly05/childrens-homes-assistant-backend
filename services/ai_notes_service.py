@@ -101,7 +101,7 @@ Transcript:
 # EDIT FINAL NOTE WITH AI
 # --------------------------------------------------
 
-async def edit_note(text: str, mode: str) -> str:
+async def edit_note(text: str, mode: str, instruction: str = "") -> str:
     mode_map = {
         "improve": "Improve the wording while keeping the meaning the same.",
         "shorten": "Make the document shorter and clearer without losing important meaning.",
@@ -110,20 +110,26 @@ async def edit_note(text: str, mode: str) -> str:
         "grammar": "Correct grammar, spelling, punctuation, and readability."
     }
 
-    instruction = mode_map.get(mode.lower(), "Improve the wording while keeping the meaning the same.")
+    if instruction.strip():
+        final_instruction = instruction.strip()
+    else:
+        final_instruction = mode_map.get(
+            mode.lower(),
+            "Improve the wording while keeping the meaning the same."
+        )
 
     prompt = f"""
 Edit the following internal staff meeting document.
 
 Rules:
-- Keep the original meaning.
+- Keep the original meaning unless the instruction explicitly asks for restructuring.
 - Do not invent facts.
 - Do not add names, dates, actions, or decisions that are not already present.
 - Keep it suitable for an internal adult staff meeting record.
 - Return only the revised document text.
 
 Instruction:
-{instruction}
+{final_instruction}
 
 Document:
 {text}
