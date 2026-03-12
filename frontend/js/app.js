@@ -5,11 +5,13 @@ async function loadSidebar() {
   document.getElementById("sidebar").innerHTML = html;
 
   const newChatBtn = document.getElementById("new-chat-btn");
-  if (newChatBtn) {
+  if (newChatBtn && window.createConversation) {
     newChatBtn.onclick = createConversation;
   }
 
-  await loadConversations();
+  if (window.loadConversations) {
+    await loadConversations();
+  }
 }
 
 async function loadWorkspace() {
@@ -20,6 +22,12 @@ async function loadWorkspace() {
 
   if (window.initChat) {
     window.initChat();
+  }
+
+  if (window.initAssistantMeetingModal) {
+    window.initAssistantMeetingModal();
+  } else {
+    console.error("initAssistantMeetingModal is not available");
   }
 
   if (window.createConversation) {
