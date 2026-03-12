@@ -7,52 +7,128 @@
     <link rel="stylesheet" href="/ai-notes.css">
 </head>
 <body>
-    <div class="page">
-        <h1>AI Note Assistant</h1>
-        <p>Upload audio, generate a structured draft, review it, then save it to IndiCare.</p>
-
-        <div class="row">
-            <div class="field">
-                <label for="childId">Child ID</label>
-                <input id="childId" type="number" placeholder="e.g. 123">
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-badge">AI</div>
+                <div>
+                    <h2>AI Note Assistant</h2>
+                    <p>Meeting transcription and note drafting</p>
+                </div>
             </div>
 
-            <div class="field">
-                <label for="staffId">Staff ID</label>
-                <input id="staffId" type="number" placeholder="e.g. 45">
+            <div class="sidebar-card">
+                <h3>How it works</h3>
+                <ol>
+                    <li>Start recording the meeting</li>
+                    <li>Stop when finished</li>
+                    <li>Transcribe the recording</li>
+                    <li>Generate the AI note</li>
+                    <li>Review and save</li>
+                </ol>
             </div>
-        </div>
 
-        <div class="field">
-            <label for="audioFile">Audio file</label>
-            <input id="audioFile" type="file" accept="audio/*">
-        </div>
+            <div class="sidebar-card">
+                <h3>Recording status</h3>
+                <div id="recordingStatus" class="status-pill idle">Not recording</div>
+                <div id="recordingTimer" class="timer">00:00</div>
+            </div>
 
-        <div class="actions">
-            <button type="button" onclick="transcribeAudio()">Transcribe Audio</button>
-            <button type="button" onclick="generateNote()">Generate AI Note</button>
-            <button type="button" onclick="saveNote()">Save Note</button>
-        </div>
+            <div id="safeguardingBox" class="sidebar-card safeguarding-box" style="display:none;">
+                <h3>Safeguarding check</h3>
+                <p id="safeguardingText"></p>
+            </div>
+        </aside>
 
-        <div id="safeguardingBox" class="notice">
-            <strong>Safeguarding check:</strong>
-            <div id="safeguardingText"></div>
-        </div>
+        <main class="main-content">
+            <header class="page-header">
+                <div>
+                    <h1>Create AI Note</h1>
+                    <p>Record a conversation, generate a structured note, then check it before saving.</p>
+                </div>
+            </header>
 
-        <div class="field">
-            <label for="transcript">Transcript</label>
-            <textarea id="transcript" placeholder="Transcript appears here..."></textarea>
-        </div>
+            <section class="panel">
+                <div class="panel-header">
+                    <h2>1. Record meeting</h2>
+                    <p>Use your microphone to record the meeting or conversation.</p>
+                </div>
 
-        <div class="field">
-            <label for="aiDraft">AI Draft</label>
-            <textarea id="aiDraft" placeholder="AI draft appears here..."></textarea>
-        </div>
+                <div class="recording-panel">
+                    <div class="mic-circle" id="micCircle">
+                        <span class="mic-icon">🎤</span>
+                    </div>
 
-        <div class="field">
-            <label for="finalNote">Final Note</label>
-            <textarea id="finalNote" placeholder="Edit final note before saving..."></textarea>
-        </div>
+                    <div class="recording-actions">
+                        <button id="startRecordingBtn" class="btn btn-primary" type="button">
+                            Start recording
+                        </button>
+                        <button id="stopRecordingBtn" class="btn btn-secondary" type="button" disabled>
+                            Stop recording
+                        </button>
+                        <button id="transcribeBtn" class="btn btn-dark" type="button" disabled>
+                            Transcribe recording
+                        </button>
+                    </div>
+
+                    <p id="audioReadyText" class="helper-text">
+                        No recording yet.
+                    </p>
+
+                    <audio id="audioPlayback" controls style="display:none;"></audio>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-header">
+                    <h2>2. Transcript</h2>
+                    <p>Check the transcript before generating the note.</p>
+                </div>
+
+                <div class="field">
+                    <label for="transcript">Transcript</label>
+                    <textarea id="transcript" placeholder="The transcript will appear here after transcription..."></textarea>
+                </div>
+
+                <div class="panel-actions">
+                    <button id="generateBtn" class="btn btn-primary" type="button">
+                        Generate AI note
+                    </button>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-header">
+                    <h2>3. AI draft</h2>
+                    <p>This is the generated draft based on the transcript.</p>
+                </div>
+
+                <div class="field">
+                    <label for="aiDraft">AI Draft</label>
+                    <textarea id="aiDraft" placeholder="The AI draft will appear here..."></textarea>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-header">
+                    <h2>4. Final note</h2>
+                    <p>Edit the final note before saving it into IndiCare.</p>
+                </div>
+
+                <div class="field">
+                    <label for="finalNote">Final Note</label>
+                    <textarea id="finalNote" placeholder="Edit the final note here before saving..."></textarea>
+                </div>
+
+                <div class="panel-actions">
+                    <button id="saveBtn" class="btn btn-success" type="button">
+                        Save note
+                    </button>
+                </div>
+            </section>
+
+            <div id="toast" class="toast"></div>
+        </main>
     </div>
 
     <script src="/ai-notes.js"></script>
