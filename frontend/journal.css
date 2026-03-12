@@ -59,6 +59,75 @@ body {
   color: #6b7280;
 }
 
+.journal-history-section {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.history-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.history-header h2 {
+  margin: 0 0 6px;
+}
+
+.history-header p {
+  margin: 0;
+  color: #6b7280;
+}
+
+.history-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.journal-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.journal-history-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+  background: #f9fafb;
+}
+
+.journal-history-item h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.journal-history-item p {
+  margin: 0;
+  color: #374151;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.ai-output {
+  white-space: pre-wrap;
+  line-height: 1.6;
+  color: #1f2937;
+  min-height: 180px;
+}
+
 .journal-layout {
   display: grid;
   grid-template-columns: 1fr 320px;
@@ -157,7 +226,6 @@ body {
 .btn-secondary {
   background: #e5e7eb;
   color: #111827;
-  width: 100%;
 }
 
 .form-message {
@@ -194,6 +262,7 @@ body {
 }
 
 @media (max-width: 1100px) {
+  .journal-history-section,
   .journal-layout {
     grid-template-columns: 1fr;
   }
