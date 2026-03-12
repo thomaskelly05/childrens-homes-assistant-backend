@@ -1,100 +1,90 @@
-# assistant/web_search.py
-
 import os
 from tavily import TavilyClient
 
 client = TavilyClient(api_key=os.environ.get("TAVILY_API_KEY"))
 
 
-# Trusted UK safeguarding and residential care sources
-TRUSTED_SITES = [
-
-    # UK Government statutory guidance
+PRIMARY_SITES = [
     "gov.uk",
-
-    # Ofsted inspection frameworks and guidance
-    "ofsted.gov.uk",
-
-    # NSPCC safeguarding research and resources
-    "nspcc.org.uk",
-
-    # Research in Practice (major residential care practice resource)
-    "researchinpractice.org.uk",
-
-    # Social Care Institute for Excellence
-    "scie.org.uk",
-
-    # UK legislation
     "legislation.gov.uk",
-
-    # Department for Education publications
-    "education.gov.uk",
-
-    # Children's Commissioner reports
-    "childrenscommissioner.gov.uk",
-
-    # NICE guidance (relevant for mental health / care practice)
+    "ofsted.gov.uk",
     "nice.org.uk",
+]
 
-    # Youth Justice Board guidance
-    "yjboard.justice.gov.uk",
-
-    # Local safeguarding partnerships often publish procedures here
+SECONDARY_SITES = [
+    "nspcc.org.uk",
+    "researchinpractice.org.uk",
+    "scie.org.uk",
+    "childrenscommissioner.gov.uk",
     "proceduresonline.com",
-
-    # British Association of Social Workers
     "basw.co.uk",
-
-    # Community Care professional articles
     "communitycare.co.uk",
-
-    # Care Quality Commission research crossover
-    "cqc.org.uk",
-
-    # National Children's Bureau
     "ncb.org.uk",
-
-    # Anna Freud Centre (trauma & attachment research)
     "annafreud.org",
-
-    # Attachment / trauma research
     "beaconhouse.org.uk",
-
-    # Child safeguarding practice reviews
-    "childrenscommissioner.gov.uk"
+    "yjboard.justice.gov.uk",
+    "cqc.org.uk",
 ]
 
 
-def build_safe_query(query: str):
-
-    site_filters = " OR ".join([f"site:{site}" for site in TRUSTED_SITES])
-
+def build_site_query(query: str, sites: list[str]) -> str:
+    site_filters = " OR ".join(f"site:{site}" for site in sites)
     return f"{query} ({site_filters})"
 
 
-def web_search(query: str, limit: int = 4):
+def format_results(results: list[dict], authority_label: str) -> str:
+    snippets = []
 
-    safe_query = build_safe_query(query)
+    for i, r in enumerate(results, start=1):
+        title = (r.get("title") or "").strip()
+        content = (r.get("content") or "").strip()
+        url = (r.get("url") or "").strip()
+
+        if not title and not content:
+            continue
+
+        if len(content) > 500:
+            content = content[:500].rsplit(" ", 1)[0] + "..."
+
+        snippets.append(
+            f"[{authority_label} {i}] {title}\n"
+            f"Snippet: {content}\n"
+            f"Source: {url}"
+        )
+
+    return "\n\n".join(snippets)
+
+
+def search_sites(query: str, sites: list[str], limit: int) -> list[dict]:
+    safe_query = build_site_query(query, sites)
 
     results = client.search(
         query=safe_query,
         search_depth="advanced",
-        max_results=limit
+        max_results=limit,
     )
 
     if not results or "results" not in results:
-        return ""
+        return []
 
-    snippets = []
+    return results["results"]
 
-    for i, r in enumerate(results["results"]):
 
-        title = r.get("title", "")
-        content = r.get("content", "")
-        url = r.get("url", "")
+def web_search(query: str, primary_limit: int = 3, secondary_limit: int = 2) -> str:
+    primary_results = search_sites(query, PRIMARY_SITES, primary_limit)
 
-        snippets.append(
-            f"[{i+1}] {title}\n{content}\nSource: {url}"
-        )
+    # If primary sources already returned enough useful results, use those only
+    if len(primary_results) >= 2:
+        return format_results(primary_results, "Primary")
 
-    return "\n\n".join(snippets)
+    secondary_results = search_sites(query, SECONDARY_SITES, secondary_limit)
+
+    parts = []
+
+    if primary_results:
+        parts.append(format_results(primary_results, "Primary"))
+
+    if secondary_results:
+        parts.append(format_results(secondary_results, "Secondary"))
+
+    return "\n\n".join(part for part in parts if part)
