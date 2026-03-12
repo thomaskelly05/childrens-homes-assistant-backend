@@ -1,18 +1,4 @@
 <!DOCTYPE html>
-
-<div class="journal-history">
-
-  <h2>Your Journal Entries</h2>
-
-  <div id="journal-history-list"></div>
-
-  <button id="generate-pdp-btn">
-    Generate Personal Development Plan
-  </button>
-
-  <div id="pdp-result"></div>
-
-</div>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -30,8 +16,8 @@
 
       <nav class="sidebar-nav">
         <a href="/index.html" class="sidebar-link">Dashboard</a>
-        <a href="/ai-note.html" class="sidebar-link">AI Notes</a>
         <a href="/journal.html" class="sidebar-link active">Reflective Journal</a>
+        <a href="/ai-note.html" class="sidebar-link">AI Meeting Notes</a>
       </nav>
     </aside>
 
@@ -44,14 +30,46 @@
         </p>
       </div>
 
+      <!-- HISTORY + AI OUTPUT -->
+      <section class="journal-history-section">
+        <div class="history-card">
+          <div class="history-header">
+            <div>
+              <h2>Your Journal Entries</h2>
+              <p>Recent reflective entries for supervision and development.</p>
+            </div>
+
+            <div class="history-actions">
+              <button id="generatePdpBtn" class="btn-secondary" type="button">
+                Generate Development Plan
+              </button>
+
+              <button id="generateSupervisionPackBtn" class="btn-primary" type="button">
+                Generate Supervision Pack
+              </button>
+            </div>
+          </div>
+
+          <div id="journalHistoryMessage" class="form-message"></div>
+          <div id="journalHistoryList" class="journal-history-list"></div>
+        </div>
+
+        <div class="history-card">
+          <h2>AI Development Output</h2>
+          <div id="aiDevelopmentOutput" class="ai-output">
+            Select an option to generate a development plan or supervision pack from the journal history.
+          </div>
+        </div>
+      </section>
+
       <div class="journal-layout">
         <section class="journal-main">
           <div class="tabs" id="journalTabs">
-            <button class="tab-btn active" data-tab="overview">Overview</button>
-            <button class="tab-btn" data-tab="gibbs">Gibbs Cycle</button>
-            <button class="tab-btn" data-tab="pace">PACE</button>
-            <button class="tab-btn" data-tab="leadership">Leadership</button>
-            <button class="tab-btn" data-tab="impact">Impact & Safeguarding</button>
+            <button class="tab-btn active" data-tab="overview" type="button">Overview</button>
+            <button class="tab-btn" data-tab="gibbs" type="button">Gibbs Cycle</button>
+            <button class="tab-btn" data-tab="pace" type="button">PACE</button>
+            <button class="tab-btn" data-tab="leadership" type="button">Leadership</button>
+            <button class="tab-btn" data-tab="impact" type="button">Impact & Safeguarding</button>
           </div>
 
           <form id="journalForm" class="journal-form">
