@@ -189,3 +189,49 @@ async def list_staff_journals(
             status_code=500,
             detail=f"Could not load journal history: {str(e)}"
         )
+# --------------------------------------------------
+# GENERATE PERSONAL DEVELOPMENT PLAN
+# --------------------------------------------------
+
+@router.get("/staff/{staff_id}/development-plan")
+async def generate_development_plan(
+    staff_id: int,
+    conn=Depends(get_db)
+):
+    try:
+        ensure_staff_journal_table(conn)
+
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT *
+                FROM staff_journal
+                WHERE staff_id = %s
+                ORDER BY created_at DESC
+                LIMIT 20
+                """,
+                (staff_id,)
+            )
+
+            entries = cur.fetchall()
+
+        if not entries:
+            raise HTTPException(
+                status_code=404,
+                detail="No journal entries found"
+            )
+
+        from services.staff_development_service import generate_staff_pdp
+
+        pdp = await generate_staff_pdp(entries)
+
+        return {
+            "ok": True,
+            "development_plan": pdp
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"PDP generation failed: {str(e)}"
+        )
