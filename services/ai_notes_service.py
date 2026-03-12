@@ -13,10 +13,23 @@ client = OpenAI(
 # --------------------------------------------------
 
 async def transcribe_audio(file_path: str) -> str:
+    filename = os.path.basename(file_path).lower()
+
+    if filename.endswith(".m4a") or filename.endswith(".mp4"):
+        mime_type = "audio/mp4"
+    elif filename.endswith(".ogg"):
+        mime_type = "audio/ogg"
+    elif filename.endswith(".wav"):
+        mime_type = "audio/wav"
+    elif filename.endswith(".mp3"):
+        mime_type = "audio/mpeg"
+    else:
+        mime_type = "audio/webm"
+
     with open(file_path, "rb") as audio_file:
         transcript = client.audio.transcriptions.create(
             model="gpt-4o-mini-transcribe",
-            file=audio_file
+            file=(os.path.basename(file_path), audio_file, mime_type)
         )
 
     return transcript.text
