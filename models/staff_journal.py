@@ -1,19 +1,18 @@
 from sqlalchemy import Column, Integer, Text, DateTime, ForeignKey, func, String
 from db import Base
 
-
 class StaffJournal(Base):
     __tablename__ = "staff_journal"
 
     id = Column(Integer, primary_key=True, index=True)
-    staff_id = Column(Integer, ForeignKey("staff.id"), nullable=False, index=True)
+    staff_id = Column(Integer, ForeignKey("staff.id"), nullable=False)
 
     # Overview
     holding_today = Column(Text, nullable=True)
     practice_today = Column(Text, nullable=True)
     reflection_today = Column(Text, nullable=True)
 
-    # Gibbs Reflective Cycle
+    # Gibbs
     description = Column(Text, nullable=True)
     feelings = Column(Text, nullable=True)
     evaluation = Column(Text, nullable=True)
@@ -37,10 +36,5 @@ class StaffJournal(Base):
     safeguarding_considerations = Column(Text, nullable=True)
     support_needed = Column(Text, nullable=True)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False,
-    )
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
