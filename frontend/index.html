@@ -33,7 +33,6 @@
 © IndiCare
 </footer>
 
-
 <!-- Command Palette -->
 <div id="command-palette" class="command-palette hidden">
 
@@ -51,39 +50,32 @@ autocomplete="off"
 
 </div>
 
-
 <!-- JAVASCRIPT -->
-
 <script src="/js/api.js"></script>
 <script src="/js/workspace.js"></script>
 <script src="/js/conversations.js"></script>
 <script src="/js/chat.js"></script>
 <script src="/js/command.js"></script>
 <script src="/js/app.js"></script>
-
+<script src="/js/assistant.js"></script>
 
 <!-- AUTH CHECK -->
-
 <script>
+async function checkAuth() {
 
-async function checkAuth(){
+const res = await fetch("https://api.indicare.co.uk/auth/check", {
+credentials: "include"
+});
 
-const res = await fetch("https://api.indicare.co.uk/auth/check",{
-credentials:"include"
-})
+const data = await res.json();
 
-const data = await res.json()
-
-if(!data.authenticated){
-
-window.location="/login.html"
-
+if (!data.authenticated) {
+window.location = "/login.html";
 }
 
 }
 
-checkAuth()
-
+checkAuth();
 </script>
 
 </body>
