@@ -49,6 +49,7 @@ window.initAssistantMeetingModal = function () {
   let timerInterval = null;
   let recordingSeconds = 0;
   let currentSavedNoteId = null;
+  let isInitialised = false;
 
   function showToast(message) {
     if (!toastEl) return;
@@ -99,6 +100,13 @@ window.initAssistantMeetingModal = function () {
     }
   }
 
+  function stopStreamTracks() {
+    if (recordingStream) {
+      recordingStream.getTracks().forEach((track) => track.stop());
+      recordingStream = null;
+    }
+  }
+
   function setRecordingUI(isRecording) {
     if (!recordingStatusEl || !micCircleEl || !startRecordingBtn || !stopRecordingBtn || !transcribeBtn) return;
 
@@ -125,6 +133,12 @@ window.initAssistantMeetingModal = function () {
   }
 
   function closeModal() {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+    }
+    stopTimer();
+    stopStreamTracks();
+    setRecordingUI(false);
     modalOverlay.classList.add("hidden");
     document.body.style.overflow = "";
   }
@@ -135,19 +149,42 @@ window.initAssistantMeetingModal = function () {
     if (transcriptEl) transcriptEl.value = "";
     if (aiDraftEl) aiDraftEl.value = "";
     if (finalNoteEl) finalNoteEl.value = "";
+
     if (safeguardingBoxEl) safeguardingBoxEl.style.display = "none";
     if (safeguardingTextEl) safeguardingTextEl.textContent = "";
+
     if (audioPlaybackEl) {
-      audioPlaybackEl.src = "";
+      audioPlaybackEl.pause();
+      audioPlaybackEl.removeAttribute("src");
+      audioPlaybackEl.load();
       audioPlaybackEl.style.display = "none";
     }
+
     if (audioReadyTextEl) audioReadyTextEl.textContent = "No recording yet.";
+
     recordedBlob = null;
     recordedChunks = [];
     stopTimer();
+    stopStreamTracks();
     recordingSeconds = 0;
+
     if (recordingTimerEl) recordingTimerEl.textContent = "00:00";
     setRecordingUI(false);
+
+    if (transcribeBtn) {
+      transcribeBtn.disabled = true;
+      transcribeBtn.textContent = "Transcribe";
+    }
+
+    if (generateBtn) {
+      generateBtn.disabled = false;
+      generateBtn.textContent = "Generate template";
+    }
+
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Save meeting note";
+    }
   }
 
   async function safeJson(response) {
@@ -162,7 +199,9 @@ window.initAssistantMeetingModal = function () {
   function extractTitle(note) {
     const finalText = safeText(note.final_note);
     const match = finalText.match(/Meeting Title:\s*(.*)/i);
-    if (match && match[1]) return match[1].trim() || "Untitled meeting";
+    if (match && match[1]) {
+      return match[1].trim() || "Untitled meeting";
+    }
     return "Untitled meeting";
   }
 
@@ -253,6 +292,10 @@ window.initAssistantMeetingModal = function () {
         safeguardingTextEl.textContent = `Loaded saved meeting from ${formatDate(note.created_at)}.`;
       }
 
+      if (audioReadyTextEl) {
+        audioReadyTextEl.textContent = "Loaded saved meeting. Record again if you want to replace the transcript.";
+      }
+
       showToast("Saved meeting opened");
     } catch (error) {
       console.error("Open history item error:", error);
@@ -297,10 +340,13 @@ window.initAssistantMeetingModal = function () {
     try {
       recordedChunks = [];
       recordedBlob = null;
+      currentSavedNoteId = null;
 
       if (audioPlaybackEl) {
+        audioPlaybackEl.pause();
+        audioPlaybackEl.removeAttribute("src");
+        audioPlaybackEl.load();
         audioPlaybackEl.style.display = "none";
-        audioPlaybackEl.src = "";
       }
 
       if (audioReadyTextEl) {
@@ -337,9 +383,7 @@ window.initAssistantMeetingModal = function () {
           transcribeBtn.disabled = false;
         }
 
-        if (recordingStream) {
-          recordingStream.getTracks().forEach((track) => track.stop());
-        }
+        stopStreamTracks();
       };
 
       mediaRecorder.start();
@@ -394,6 +438,8 @@ window.initAssistantMeetingModal = function () {
       }
 
       showToast("Transcript created");
+
+      await generateTemplate();
     } catch (error) {
       console.error("Transcription error:", error);
       alert("Could not connect to the meeting assistant service.");
@@ -635,33 +681,37 @@ window.initAssistantMeetingModal = function () {
     showToast("Transcript cleared");
   }
 
-  openModalBtn.onclick = openModal;
-  if (closeModalBtn) closeModalBtn.onclick = closeModal;
+  if (!isInitialised) {
+    openModalBtn.onclick = openModal;
+    if (closeModalBtn) closeModalBtn.onclick = closeModal;
 
-  modalOverlay.onclick = (event) => {
-    if (event.target === modalOverlay) {
-      closeModal();
-    }
-  };
+    modalOverlay.onclick = (event) => {
+      if (event.target === modalOverlay) {
+        closeModal();
+      }
+    };
 
-  if (refreshHistoryBtn) refreshHistoryBtn.onclick = loadMeetingHistory;
+    if (refreshHistoryBtn) refreshHistoryBtn.onclick = loadMeetingHistory;
 
-  if (startRecordingBtn) startRecordingBtn.onclick = startRecording;
-  if (stopRecordingBtn) stopRecordingBtn.onclick = stopRecording;
-  if (transcribeBtn) transcribeBtn.onclick = transcribeAudio;
-  if (generateBtn) generateBtn.onclick = generateTemplate;
-  if (saveBtn) saveBtn.onclick = saveMeetingNote;
-  if (deleteMeetingBtn) deleteMeetingBtn.onclick = deleteMeeting;
-  if (copyBtn) copyBtn.onclick = copyFinalDocument;
-  if (printBtn) printBtn.onclick = printFinalDocument;
-  if (exportTxtBtn) exportTxtBtn.onclick = exportFinalDocumentTxt;
-  if (clearTranscriptBtn) clearTranscriptBtn.onclick = clearTranscript;
+    if (startRecordingBtn) startRecordingBtn.onclick = startRecording;
+    if (stopRecordingBtn) stopRecordingBtn.onclick = stopRecording;
+    if (transcribeBtn) transcribeBtn.onclick = transcribeAudio;
+    if (generateBtn) generateBtn.onclick = generateTemplate;
+    if (saveBtn) saveBtn.onclick = saveMeetingNote;
+    if (deleteMeetingBtn) deleteMeetingBtn.onclick = deleteMeeting;
+    if (copyBtn) copyBtn.onclick = copyFinalDocument;
+    if (printBtn) printBtn.onclick = printFinalDocument;
+    if (exportTxtBtn) exportTxtBtn.onclick = exportFinalDocumentTxt;
+    if (clearTranscriptBtn) clearTranscriptBtn.onclick = clearTranscript;
 
-  if (improveBtn) improveBtn.onclick = () => aiEdit("improve");
-  if (shortenBtn) shortenBtn.onclick = () => aiEdit("shorten");
-  if (formalBtn) formalBtn.onclick = () => aiEdit("formal");
-  if (bulletBtn) bulletBtn.onclick = () => aiEdit("bullet");
-  if (grammarBtn) grammarBtn.onclick = () => aiEdit("grammar");
+    if (improveBtn) improveBtn.onclick = () => aiEdit("improve");
+    if (shortenBtn) shortenBtn.onclick = () => aiEdit("shorten");
+    if (formalBtn) formalBtn.onclick = () => aiEdit("formal");
+    if (bulletBtn) bulletBtn.onclick = () => aiEdit("bullet");
+    if (grammarBtn) grammarBtn.onclick = () => aiEdit("grammar");
+
+    isInitialised = true;
+  }
 
   setRecordingUI(false);
   if (recordingTimerEl) recordingTimerEl.textContent = "00:00";
