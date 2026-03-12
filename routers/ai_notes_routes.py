@@ -52,8 +52,8 @@ async def transcribe_note_audio(file: UploadFile = File(...)):
 
     if extension == "":
         extension = ".webm"
-        
-allowed = [".webm", ".wav", ".mp3", ".m4a", ".mp4", ".ogg"]
+
+    allowed = [".webm", ".wav", ".mp3", ".m4a", ".mp4", ".ogg"]
 
     if extension not in allowed:
         raise HTTPException(
@@ -171,7 +171,7 @@ async def save_ai_note(
     transcript: str = Form(...),
     ai_draft: str = Form(...),
     final_note: str = Form(...),
-    conn = Depends(get_db)
+    conn=Depends(get_db)
 ):
 
     transcript = transcript.strip()
@@ -226,7 +226,7 @@ async def save_ai_note(
 @router.get("/history")
 async def list_saved_ai_notes(
     limit: int = Query(20, ge=1, le=100),
-    conn = Depends(get_db)
+    conn=Depends(get_db)
 ):
     try:
         ensure_ai_meetings_table(conn)
@@ -252,7 +252,7 @@ async def list_saved_ai_notes(
 @router.get("/history/{note_id}")
 async def get_saved_ai_note(
     note_id: int,
-    conn = Depends(get_db)
+    conn=Depends(get_db)
 ):
     try:
         ensure_ai_meetings_table(conn)
@@ -287,7 +287,7 @@ async def get_saved_ai_note(
 @router.post("/delete")
 async def delete_note(
     note_id: int | None = Form(None),
-    conn = Depends(get_db)
+    conn=Depends(get_db)
 ):
     if note_id is None:
         return {
