@@ -52,8 +52,8 @@ async def transcribe_note_audio(file: UploadFile = File(...)):
 
     if extension == "":
         extension = ".webm"
-
-    allowed = [".webm", ".wav", ".mp3", ".m4a", ".ogg"]
+        
+allowed = [".webm", ".wav", ".mp3", ".m4a", ".mp4", ".ogg"]
 
     if extension not in allowed:
         raise HTTPException(
