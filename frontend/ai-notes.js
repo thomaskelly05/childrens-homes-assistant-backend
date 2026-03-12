@@ -1,64 +1,111 @@
-async function transcribe(){
+const transcriptEl = document.getElementById("transcript");
+const aiDraftEl = document.getElementById("aiDraft");
+const finalNoteEl = document.getElementById("finalNote");
+const safeguardingBoxEl = document.getElementById("safeguardingBox");
+const safeguardingTextEl = document.getElementById("safeguardingText");
+const childIdEl = document.getElementById("childId");
+const staffIdEl = document.getElementById("staffId");
+const audioFileEl = document.getElementById("audioFile");
 
-const file = document.getElementById("audio").files[0]
+let latestSafeguardingFlag = false;
 
-const form = new FormData()
+async function transcribeAudio() {
+    const file = audioFileEl.files[0];
 
-form.append("file",file)
+    if (!file) {
+        alert("Please choose an audio file first.");
+        return;
+    }
 
-const res = await fetch("/ai-notes/transcribe",{
-method:"POST",
-body:form
-})
+    const form = new FormData();
+    form.append("file", file);
 
-const data = await res.json()
+    const response = await fetch("/ai-notes/transcribe", {
+        method: "POST",
+        body: form
+    });
 
-document.getElementById("transcript").value = data.transcript
+    const data = await response.json();
+
+    if (!response.ok) {
+        alert(data.detail || "Transcription failed.");
+        return;
+    }
+
+    transcriptEl.value = data.transcript || "";
 }
 
+async function generateNote() {
+    const transcript = transcriptEl.value.trim();
 
+    if (!transcript) {
+        alert("Please add or transcribe some text first.");
+        return;
+    }
 
-async function generate(){
+    const form = new FormData();
+    form.append("transcript", transcript);
 
-const transcript = document.getElementById("transcript").value
+    const response = await fetch("/ai-notes/generate", {
+        method: "POST",
+        body: form
+    });
 
-const form = new FormData()
+    const data = await response.json();
 
-form.append("transcript",transcript)
+    if (!response.ok) {
+        alert(data.detail || "Note generation failed.");
+        return;
+    }
 
-const res = await fetch("/ai-notes/generate",{
-method:"POST",
-body:form
-})
+    aiDraftEl.value = data.note || "";
+    finalNoteEl.value = data.note || "";
 
-const data = await res.json()
+    latestSafeguardingFlag = !!data.safeguarding_flag;
 
-document.getElementById("note").value = data.note
-
-if(data.safeguarding){
-alert("⚠ Safeguarding concern detected")
+    safeguardingBoxEl.style.display = "block";
+    safeguardingTextEl.textContent = latestSafeguardingFlag
+        ? `Possible safeguarding concern detected: ${data.safeguarding_reason || "Review required."}`
+        : `No safeguarding concern detected: ${data.safeguarding_reason || "None identified."}`;
 }
 
+async function saveNote() {
+    const transcript = transcriptEl.value.trim();
+    const aiDraft = aiDraftEl.value.trim();
+    const finalNote = finalNoteEl.value.trim();
+    const childId = childIdEl.value.trim();
+    const staffId = staffIdEl.value.trim();
+
+    if (!transcript || !aiDraft || !finalNote) {
+        alert("Transcript, AI draft and final note are required.");
+        return;
+    }
+
+    const form = new FormData();
+
+    if (childId !== "") form.append("child_id", childId);
+    if (staffId !== "") form.append("staff_id", staffId);
+
+    form.append("transcript", transcript);
+    form.append("ai_draft", aiDraft);
+    form.append("final_note", finalNote);
+    form.append("safeguarding_flag", String(latestSafeguardingFlag));
+
+    const response = await fetch("/ai-notes/save", {
+        method: "POST",
+        body: form
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        alert(data.detail || "Save failed.");
+        return;
+    }
+
+    alert("AI note saved successfully.");
 }
 
-
-
-async function save(){
-
-const transcript = document.getElementById("transcript").value
-const note = document.getElementById("note").value
-
-const form = new FormData()
-
-form.append("child_id",1)
-form.append("staff_id",1)
-form.append("transcript",transcript)
-form.append("note",note)
-
-await fetch("/ai-notes/save",{
-method:"POST",
-body:form
-})
-
-alert("Saved")
-}
+window.transcribeAudio = transcribeAudio;
+window.generateNote = generateNote;
+window.saveNote = saveNote;
