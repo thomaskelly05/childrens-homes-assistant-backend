@@ -47,22 +47,36 @@
 </div>
 
 <div id="aiMeetingModalOverlay" class="ai-modal-overlay hidden">
-  <div class="ai-modal" role="dialog" aria-modal="true" aria-labelledby="aiMeetingTitle">
+  <div class="ai-modal ai-modal-clean" role="dialog" aria-modal="true" aria-labelledby="aiMeetingTitle">
+
     <div class="ai-modal-header">
       <div>
         <h2 id="aiMeetingTitle">AI Meeting Assistant</h2>
         <p>
-          Record an internal adult staff meeting, generate a structured document,
-          refine it with AI, then save or export it.
+          Record an internal adult staff meeting and let AI generate the report automatically.
         </p>
       </div>
-      <button id="closeAiMeetingModal" class="icon-btn" type="button" aria-label="Close">
-        ✕
-      </button>
+      <button id="closeAiMeetingModal" class="icon-btn" type="button" aria-label="Close">✕</button>
     </div>
 
-    <div class="ai-modal-body ai-modal-body-wide">
-      <div class="ai-modal-history">
+    <div class="ai-toolbar">
+      <button id="startRecordingBtn" class="btn btn-primary" type="button">Start recording</button>
+      <button id="stopRecordingBtn" class="btn btn-secondary" type="button" disabled>Stop recording</button>
+      <button id="saveBtn" class="btn btn-success" type="button">Save</button>
+      <button id="copyBtn" class="btn btn-light" type="button">Copy</button>
+      <button id="printBtn" class="btn btn-light" type="button">Print</button>
+      <button id="exportTxtBtn" class="btn btn-light" type="button">Export .txt</button>
+      <button id="deleteMeetingBtn" class="btn btn-danger" type="button">Delete</button>
+
+      <div class="toolbar-status">
+        <span id="recordingStatus" class="status-pill idle">Not recording</span>
+        <span id="recordingTimer" class="timer-inline">00:00</span>
+      </div>
+    </div>
+
+    <div class="ai-modal-body ai-modal-body-3col">
+
+      <div class="ai-column ai-column-history">
         <div class="panel">
           <div class="section-head">
             <h3>Saved Meetings</h3>
@@ -77,101 +91,83 @@
         </div>
       </div>
 
-      <div class="ai-modal-left">
+      <div class="ai-column ai-column-document">
         <div class="panel">
           <div class="section-head">
-            <h3>Recording</h3>
-            <div id="recordingStatus" class="status-pill idle">Not recording</div>
-          </div>
-
-          <div class="recording-centre">
-            <div id="micCircle" class="mic-circle">
-              <span class="mic-icon">🎤</span>
-            </div>
-            <div id="recordingTimer" class="timer">00:00</div>
-          </div>
-
-          <div class="recording-actions">
-            <button id="startRecordingBtn" class="btn btn-primary" type="button">
-              Start recording
-            </button>
-            <button id="stopRecordingBtn" class="btn btn-secondary" type="button" disabled>
-              Stop recording
-            </button>
-            <button id="transcribeBtn" class="btn btn-dark" type="button" disabled>
-              Transcribe
-            </button>
-          </div>
-
-          <p id="audioReadyText" class="helper-text">No recording yet.</p>
-          <audio id="audioPlayback" controls style="display:none;"></audio>
-        </div>
-
-        <div class="panel">
-          <div class="section-head">
-            <h3>Transcript</h3>
-            <button id="clearTranscriptBtn" class="btn btn-light" type="button">
-              Clear transcript
-            </button>
-          </div>
-          <textarea
-            id="transcript"
-            placeholder="The transcript will appear here after recording and transcription..."
-          ></textarea>
-        </div>
-      </div>
-
-      <div class="ai-modal-right">
-        <div id="safeguardingBox" class="panel notice" style="display:none;">
-          <h3>AI check</h3>
-          <p id="safeguardingText"></p>
-        </div>
-
-        <div class="panel">
-          <div class="section-head">
-            <h3>Generated Meeting Template</h3>
-            <button id="generateBtn" class="btn btn-primary" type="button">
-              Generate template
-            </button>
-          </div>
-          <textarea
-            id="aiDraft"
-            placeholder="The AI meeting template will appear here..."
-          ></textarea>
-        </div>
-
-        <div class="panel">
-          <div class="section-head stack-mobile">
             <h3>Final Document</h3>
-            <div class="ai-edit-tools">
-              <button id="improveBtn" class="btn btn-light" type="button">Improve wording</button>
-              <button id="shortenBtn" class="btn btn-light" type="button">Make shorter</button>
-              <button id="formalBtn" class="btn btn-light" type="button">More formal</button>
-              <button id="bulletBtn" class="btn btn-light" type="button">Add bullets</button>
-              <button id="grammarBtn" class="btn btn-light" type="button">Fix grammar</button>
+            <div class="recording-inline">
+              <div id="micCircle" class="mic-circle">
+                <span class="mic-icon">🎤</span>
+              </div>
             </div>
           </div>
+
+          <p id="audioReadyText" class="helper-text">
+            Press start recording. When you stop, the transcript and report will be generated automatically.
+          </p>
+
+          <audio id="audioPlayback" controls style="display:none;"></audio>
+
           <textarea
             id="finalNote"
-            placeholder="Adults can review and edit the final document here. AI can also refine it for you."
+            placeholder="The final document will appear here automatically after recording stops..."
           ></textarea>
         </div>
-      </div>
-    </div>
 
-    <div class="ai-modal-footer">
-      <div class="footer-left">
-        <button id="copyBtn" class="btn btn-light" type="button">Copy</button>
-        <button id="printBtn" class="btn btn-light" type="button">Print</button>
-        <button id="exportTxtBtn" class="btn btn-light" type="button">Export .txt</button>
-        <button id="deleteMeetingBtn" class="btn btn-danger" type="button">Delete</button>
+        <div class="panel transcript-panel">
+          <div class="section-head">
+            <h3>Transcript</h3>
+            <button id="clearTranscriptBtn" class="btn btn-light" type="button">Clear transcript</button>
+          </div>
+
+          <textarea
+            id="transcript"
+            placeholder="Transcript appears here..."
+          ></textarea>
+        </div>
+
+        <textarea id="aiDraft" style="display:none;"></textarea>
+
+        <div id="safeguardingBox" class="panel notice" style="display:none;">
+          <h3>AI status</h3>
+          <p id="safeguardingText"></p>
+        </div>
       </div>
 
-      <div class="footer-right">
-        <button id="saveBtn" class="btn btn-success" type="button">
-          Save meeting note
-        </button>
+      <div class="ai-column ai-column-agent">
+        <div class="panel">
+          <h3>AI Editing Agent</h3>
+          <p class="helper-text">
+            Tell the AI how you want the document changed. The final document will be rewritten for you automatically.
+          </p>
+
+          <textarea
+            id="aiInstruction"
+            class="ai-instruction-box"
+            placeholder="Examples:
+Make this more professional
+Turn this into actions and next steps
+Make this shorter
+Rewrite this as supervision notes
+Convert this into a formal meeting record"
+          ></textarea>
+
+          <div class="agent-actions">
+            <button id="applyAiInstructionBtn" class="btn btn-primary" type="button">
+              Apply AI edit
+            </button>
+          </div>
+
+          <div class="agent-quick-actions">
+            <button id="improveBtn" class="btn btn-light" type="button">Improve wording</button>
+            <button id="shortenBtn" class="btn btn-light" type="button">Make shorter</button>
+            <button id="formalBtn" class="btn btn-light" type="button">More formal</button>
+            <button id="bulletBtn" class="btn btn-light" type="button">Add bullets</button>
+            <button id="grammarBtn" class="btn btn-light" type="button">Fix grammar</button>
+          </div>
+        </div>
       </div>
+
     </div>
 
     <div class="ai-disclaimer">
@@ -180,6 +176,7 @@
       people. Staff remain responsible for reviewing, editing, approving, and safely handling
       all generated content before saving or exporting.
     </div>
+
   </div>
 </div>
 
