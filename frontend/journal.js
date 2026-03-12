@@ -255,3 +255,17 @@ async function loadJournalHistory() {
   })
 
 }
+document
+  .getElementById("generate-pdp-btn")
+  .addEventListener("click", async () => {
+
+    const staffId = document.getElementById("staff_id").value
+
+    const res = await fetch(`/staff-journal/staff/${staffId}/development-plan`)
+
+    const data = await res.json()
+
+    document.getElementById("pdp-result").innerText =
+      data.development_plan
+
+})
