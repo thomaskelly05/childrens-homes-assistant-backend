@@ -1,3 +1,5 @@
+const API_BASE = "https://childrens-homes-assistant-backend-new.onrender.com";
+
 const transcriptEl = document.getElementById("transcript");
 const aiDraftEl = document.getElementById("aiDraft");
 const finalNoteEl = document.getElementById("finalNote");
@@ -20,9 +22,10 @@ async function transcribeAudio() {
     const form = new FormData();
     form.append("file", file);
 
-    const response = await fetch("/ai-notes/transcribe", {
+    const response = await fetch(`${API_BASE}/ai-notes/transcribe`, {
         method: "POST",
-        body: form
+        body: form,
+        credentials: "include"
     });
 
     const data = await response.json();
@@ -46,9 +49,10 @@ async function generateNote() {
     const form = new FormData();
     form.append("transcript", transcript);
 
-    const response = await fetch("/ai-notes/generate", {
+    const response = await fetch(`${API_BASE}/ai-notes/generate`, {
         method: "POST",
-        body: form
+        body: form,
+        credentials: "include"
     });
 
     const data = await response.json();
@@ -91,9 +95,10 @@ async function saveNote() {
     form.append("final_note", finalNote);
     form.append("safeguarding_flag", String(latestSafeguardingFlag));
 
-    const response = await fetch("/ai-notes/save", {
+    const response = await fetch(`${API_BASE}/ai-notes/save`, {
         method: "POST",
-        body: form
+        body: form,
+        credentials: "include"
     });
 
     const data = await response.json();
