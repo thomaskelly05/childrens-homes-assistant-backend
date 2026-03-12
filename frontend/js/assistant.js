@@ -46,6 +46,8 @@ window.initAssistantMeetingModal = function () {
   let recordingStream = null;
   let recordedChunks = [];
   let recordedBlob = null;
+  let recordedMimeType = "";
+  let recordedExtension = "webm";
   let timerInterval = null;
   let recordingSeconds = 0;
   let currentSavedNoteId = null;
@@ -164,6 +166,9 @@ window.initAssistantMeetingModal = function () {
 
     recordedBlob = null;
     recordedChunks = [];
+    recordedMimeType = "";
+    recordedExtension = "webm";
+
     stopTimer();
     stopStreamTracks();
     recordingSeconds = 0;
@@ -336,6 +341,32 @@ window.initAssistantMeetingModal = function () {
     }
   }
 
+  function pickBestMimeType() {
+    const candidates = [
+      "audio/mp4",
+      "audio/webm;codecs=opus",
+      "audio/webm",
+      "audio/ogg;codecs=opus",
+      "audio/ogg"
+    ];
+
+    for (const type of candidates) {
+      if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(type)) {
+        return type;
+      }
+    }
+
+    return "";
+  }
+
+  function extensionFromMimeType(mimeType) {
+    if (!mimeType) return "webm";
+    if (mimeType.includes("mp4")) return "m4a";
+    if (mimeType.includes("ogg")) return "ogg";
+    if (mimeType.includes("webm")) return "webm";
+    return "webm";
+  }
+
   async function startRecording() {
     try {
       recordedChunks = [];
@@ -358,7 +389,14 @@ window.initAssistantMeetingModal = function () {
       }
 
       recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(recordingStream);
+
+      const preferredMimeType = pickBestMimeType();
+      mediaRecorder = preferredMimeType
+        ? new MediaRecorder(recordingStream, { mimeType: preferredMimeType })
+        : new MediaRecorder(recordingStream);
+
+      recordedMimeType = mediaRecorder.mimeType || preferredMimeType || "audio/webm";
+      recordedExtension = extensionFromMimeType(recordedMimeType);
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
@@ -367,7 +405,7 @@ window.initAssistantMeetingModal = function () {
       };
 
       mediaRecorder.onstop = () => {
-        recordedBlob = new Blob(recordedChunks, { type: "audio/webm" });
+        recordedBlob = new Blob(recordedChunks, { type: recordedMimeType });
 
         if (audioPlaybackEl) {
           const audioUrl = URL.createObjectURL(recordedBlob);
@@ -376,7 +414,7 @@ window.initAssistantMeetingModal = function () {
         }
 
         if (audioReadyTextEl) {
-          audioReadyTextEl.textContent = "Recording ready. You can now transcribe it.";
+          audioReadyTextEl.textContent = `Recording ready (${recordedExtension.toUpperCase()}). You can now transcribe it.`;
         }
 
         if (transcribeBtn) {
@@ -411,8 +449,9 @@ window.initAssistantMeetingModal = function () {
       return;
     }
 
+    const filename = `meeting.${recordedExtension}`;
     const form = new FormData();
-    form.append("file", recordedBlob, "meeting.webm");
+    form.append("file", recordedBlob, filename);
 
     try {
       if (transcribeBtn) {
@@ -438,7 +477,6 @@ window.initAssistantMeetingModal = function () {
       }
 
       showToast("Transcript created");
-
       await generateTemplate();
     } catch (error) {
       console.error("Transcription error:", error);
