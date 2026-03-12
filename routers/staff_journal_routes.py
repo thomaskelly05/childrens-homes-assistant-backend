@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 
 from db.connection import get_db
 from db.staff_journal_db import (
@@ -7,10 +7,15 @@ from db.staff_journal_db import (
     get_staff_journal,
     get_latest_staff_journal,
     update_staff_journal,
+    list_staff_journals,
 )
 from schemas.staff_journal import (
     StaffJournalCreate,
     StaffJournalUpdate,
+)
+from services.staff_development_service import (
+    generate_staff_pdp,
+    generate_supervision_pack,
 )
 
 router = APIRouter(
@@ -19,10 +24,6 @@ router = APIRouter(
 )
 
 
-# --------------------------------------------------
-# CREATE JOURNAL
-# --------------------------------------------------
-
 @router.post("/")
 async def create_staff_journal_route(
     payload: StaffJournalCreate,
@@ -30,7 +31,6 @@ async def create_staff_journal_route(
 ):
     try:
         ensure_staff_journal_table(conn)
-
         journal = create_staff_journal(conn, payload.model_dump())
 
         return {
@@ -45,10 +45,6 @@ async def create_staff_journal_route(
         )
 
 
-# --------------------------------------------------
-# GET ONE JOURNAL
-# --------------------------------------------------
-
 @router.get("/{journal_id}")
 async def get_staff_journal_route(
     journal_id: int,
@@ -56,7 +52,6 @@ async def get_staff_journal_route(
 ):
     try:
         ensure_staff_journal_table(conn)
-
         journal = get_staff_journal(conn, journal_id)
 
         if not journal:
@@ -80,9 +75,27 @@ async def get_staff_journal_route(
         )
 
 
-# --------------------------------------------------
-# GET LATEST JOURNAL FOR STAFF
-# --------------------------------------------------
+@router.get("/staff/{staff_id}")
+async def list_staff_journal_entries_route(
+    staff_id: int,
+    limit: int = Query(50, ge=1, le=100),
+    conn=Depends(get_db)
+):
+    try:
+        ensure_staff_journal_table(conn)
+        entries = list_staff_journals(conn, staff_id, limit=limit)
+
+        return {
+            "ok": True,
+            "entries": entries
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Could not load journal entries: {str(e)}"
+        )
+
 
 @router.get("/staff/{staff_id}/latest")
 async def get_latest_staff_journal_route(
@@ -91,7 +104,6 @@ async def get_latest_staff_journal_route(
 ):
     try:
         ensure_staff_journal_table(conn)
-
         journal = get_latest_staff_journal(conn, staff_id)
 
         if not journal:
@@ -114,10 +126,6 @@ async def get_latest_staff_journal_route(
             detail=f"Could not load latest journal: {str(e)}"
         )
 
-
-# --------------------------------------------------
-# UPDATE JOURNAL
-# --------------------------------------------------
 
 @router.put("/{journal_id}")
 async def update_staff_journal_route(
@@ -152,68 +160,16 @@ async def update_staff_journal_route(
             status_code=500,
             detail=f"Could not update journal: {str(e)}"
         )
-# --------------------------------------------------
-# LIST STAFF JOURNAL ENTRIES
-# --------------------------------------------------
 
-@router.get("/staff/{staff_id}")
-async def list_staff_journals(
-    staff_id: int,
-    limit: int = 50,
-    conn=Depends(get_db)
-):
-    try:
-        ensure_staff_journal_table(conn)
-
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT *
-                FROM staff_journal
-                WHERE staff_id = %s
-                ORDER BY created_at DESC
-                LIMIT %s
-                """,
-                (staff_id, limit)
-            )
-
-            rows = cur.fetchall()
-
-        return {
-            "ok": True,
-            "entries": rows
-        }
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Could not load journal history: {str(e)}"
-        )
-# --------------------------------------------------
-# GENERATE PERSONAL DEVELOPMENT PLAN
-# --------------------------------------------------
 
 @router.get("/staff/{staff_id}/development-plan")
-async def generate_development_plan(
+async def generate_development_plan_route(
     staff_id: int,
     conn=Depends(get_db)
 ):
     try:
         ensure_staff_journal_table(conn)
-
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT *
-                FROM staff_journal
-                WHERE staff_id = %s
-                ORDER BY created_at DESC
-                LIMIT 20
-                """,
-                (staff_id,)
-            )
-
-            entries = cur.fetchall()
+        entries = list_staff_journals(conn, staff_id, limit=20)
 
         if not entries:
             raise HTTPException(
@@ -221,17 +177,50 @@ async def generate_development_plan(
                 detail="No journal entries found"
             )
 
-        from services.staff_development_service import generate_staff_pdp
-
-        pdp = await generate_staff_pdp(entries)
+        plan = await generate_staff_pdp(entries)
 
         return {
             "ok": True,
-            "development_plan": pdp
+            "development_plan": plan
         }
+
+    except HTTPException:
+        raise
 
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"PDP generation failed: {str(e)}"
+            detail=f"Could not generate development plan: {str(e)}"
+        )
+
+
+@router.get("/staff/{staff_id}/supervision-pack")
+async def generate_supervision_pack_route(
+    staff_id: int,
+    conn=Depends(get_db)
+):
+    try:
+        ensure_staff_journal_table(conn)
+        entries = list_staff_journals(conn, staff_id, limit=20)
+
+        if not entries:
+            raise HTTPException(
+                status_code=404,
+                detail="No journal entries found"
+            )
+
+        pack = await generate_supervision_pack(entries)
+
+        return {
+            "ok": True,
+            "supervision_pack": pack
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Could not generate supervision pack: {str(e)}"
         )
