@@ -1,511 +1,668 @@
-const API_BASE = "https://childrens-homes-assistant-backend-new.onrender.com";
+window.initAssistantMeetingModal = function () {
+  const API_BASE = "https://childrens-homes-assistant-backend-new.onrender.com";
 
-const modalOverlay = document.getElementById("aiMeetingModalOverlay");
-const openModalBtn = document.getElementById("openAiMeetingModal");
-const closeModalBtn = document.getElementById("closeAiMeetingModal");
+  const modalOverlay = document.getElementById("aiMeetingModalOverlay");
+  const openModalBtn = document.getElementById("openAiMeetingModal");
+  const closeModalBtn = document.getElementById("closeAiMeetingModal");
 
-const transcriptEl = document.getElementById("transcript");
-const aiDraftEl = document.getElementById("aiDraft");
-const finalNoteEl = document.getElementById("finalNote");
+  const transcriptEl = document.getElementById("transcript");
+  const aiDraftEl = document.getElementById("aiDraft");
+  const finalNoteEl = document.getElementById("finalNote");
 
-const safeguardingBoxEl = document.getElementById("safeguardingBox");
-const safeguardingTextEl = document.getElementById("safeguardingText");
+  const safeguardingBoxEl = document.getElementById("safeguardingBox");
+  const safeguardingTextEl = document.getElementById("safeguardingText");
 
-const recordingStatusEl = document.getElementById("recordingStatus");
-const recordingTimerEl = document.getElementById("recordingTimer");
-const audioReadyTextEl = document.getElementById("audioReadyText");
-const audioPlaybackEl = document.getElementById("audioPlayback");
-const micCircleEl = document.getElementById("micCircle");
-const toastEl = document.getElementById("toast");
+  const recordingStatusEl = document.getElementById("recordingStatus");
+  const recordingTimerEl = document.getElementById("recordingTimer");
+  const audioReadyTextEl = document.getElementById("audioReadyText");
+  const audioPlaybackEl = document.getElementById("audioPlayback");
+  const micCircleEl = document.getElementById("micCircle");
+  const toastEl = document.getElementById("toast");
 
-const startRecordingBtn = document.getElementById("startRecordingBtn");
-const stopRecordingBtn = document.getElementById("stopRecordingBtn");
-const transcribeBtn = document.getElementById("transcribeBtn");
-const generateBtn = document.getElementById("generateBtn");
-const saveBtn = document.getElementById("saveBtn");
-const deleteMeetingBtn = document.getElementById("deleteMeetingBtn");
-const copyBtn = document.getElementById("copyBtn");
-const printBtn = document.getElementById("printBtn");
-const exportTxtBtn = document.getElementById("exportTxtBtn");
-const clearTranscriptBtn = document.getElementById("clearTranscriptBtn");
+  const startRecordingBtn = document.getElementById("startRecordingBtn");
+  const stopRecordingBtn = document.getElementById("stopRecordingBtn");
+  const transcribeBtn = document.getElementById("transcribeBtn");
+  const generateBtn = document.getElementById("generateBtn");
+  const saveBtn = document.getElementById("saveBtn");
+  const deleteMeetingBtn = document.getElementById("deleteMeetingBtn");
+  const copyBtn = document.getElementById("copyBtn");
+  const printBtn = document.getElementById("printBtn");
+  const exportTxtBtn = document.getElementById("exportTxtBtn");
+  const clearTranscriptBtn = document.getElementById("clearTranscriptBtn");
 
-const improveBtn = document.getElementById("improveBtn");
-const shortenBtn = document.getElementById("shortenBtn");
-const formalBtn = document.getElementById("formalBtn");
-const bulletBtn = document.getElementById("bulletBtn");
-const grammarBtn = document.getElementById("grammarBtn");
+  const improveBtn = document.getElementById("improveBtn");
+  const shortenBtn = document.getElementById("shortenBtn");
+  const formalBtn = document.getElementById("formalBtn");
+  const bulletBtn = document.getElementById("bulletBtn");
+  const grammarBtn = document.getElementById("grammarBtn");
 
-let mediaRecorder = null;
-let recordingStream = null;
-let recordedChunks = [];
-let recordedBlob = null;
-let timerInterval = null;
-let recordingSeconds = 0;
+  const refreshHistoryBtn = document.getElementById("refreshHistoryBtn");
+  const historyEmptyEl = document.getElementById("historyEmpty");
+  const meetingHistoryListEl = document.getElementById("meetingHistoryList");
 
-function showToast(message) {
-  if (!toastEl) return;
-  toastEl.textContent = message;
-  toastEl.classList.add("show");
-  setTimeout(() => toastEl.classList.remove("show"), 2400);
-}
+  if (!modalOverlay || !openModalBtn) return;
 
-function safeText(value) {
-  return (value || "").trim();
-}
+  let mediaRecorder = null;
+  let recordingStream = null;
+  let recordedChunks = [];
+  let recordedBlob = null;
+  let timerInterval = null;
+  let recordingSeconds = 0;
+  let currentSavedNoteId = null;
 
-function formatTime(totalSeconds) {
-  const mins = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
-  const secs = String(totalSeconds % 60).padStart(2, "0");
-  return `${mins}:${secs}`;
-}
-
-function startTimer() {
-  stopTimer();
-  recordingSeconds = 0;
-  if (recordingTimerEl) recordingTimerEl.textContent = "00:00";
-
-  timerInterval = setInterval(() => {
-    recordingSeconds += 1;
-    if (recordingTimerEl) {
-      recordingTimerEl.textContent = formatTime(recordingSeconds);
-    }
-  }, 1000);
-}
-
-function stopTimer() {
-  if (timerInterval) {
-    clearInterval(timerInterval);
-    timerInterval = null;
+  function showToast(message) {
+    if (!toastEl) return;
+    toastEl.textContent = message;
+    toastEl.classList.add("show");
+    setTimeout(() => toastEl.classList.remove("show"), 2400);
   }
-}
 
-function setRecordingUI(isRecording) {
-  if (!recordingStatusEl || !micCircleEl || !startRecordingBtn || !stopRecordingBtn || !transcribeBtn) return;
-
-  if (isRecording) {
-    recordingStatusEl.textContent = "Recording live";
-    recordingStatusEl.className = "status-pill recording";
-    micCircleEl.classList.add("recording");
-    startRecordingBtn.disabled = true;
-    stopRecordingBtn.disabled = false;
-    transcribeBtn.disabled = true;
-  } else {
-    recordingStatusEl.textContent = "Not recording";
-    recordingStatusEl.className = "status-pill idle";
-    micCircleEl.classList.remove("recording");
-    startRecordingBtn.disabled = false;
-    stopRecordingBtn.disabled = true;
+  function safeText(value) {
+    return (value || "").trim();
   }
-}
 
-function openModal() {
-  if (!modalOverlay) return;
-  modalOverlay.classList.remove("hidden");
-  document.body.style.overflow = "hidden";
-}
-
-function closeModal() {
-  if (!modalOverlay) return;
-  modalOverlay.classList.add("hidden");
-  document.body.style.overflow = "";
-}
-
-function resetMeetingState() {
-  if (transcriptEl) transcriptEl.value = "";
-  if (aiDraftEl) aiDraftEl.value = "";
-  if (finalNoteEl) finalNoteEl.value = "";
-  if (safeguardingBoxEl) safeguardingBoxEl.style.display = "none";
-  if (safeguardingTextEl) safeguardingTextEl.textContent = "";
-  if (audioPlaybackEl) {
-    audioPlaybackEl.src = "";
-    audioPlaybackEl.style.display = "none";
+  function formatTime(totalSeconds) {
+    const mins = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+    const secs = String(totalSeconds % 60).padStart(2, "0");
+    return `${mins}:${secs}`;
   }
-  if (audioReadyTextEl) audioReadyTextEl.textContent = "No recording yet.";
-  recordedBlob = null;
-  recordedChunks = [];
-  stopTimer();
-  recordingSeconds = 0;
-  if (recordingTimerEl) recordingTimerEl.textContent = "00:00";
-  setRecordingUI(false);
-}
 
-async function safeJson(response) {
-  const text = await response.text();
-  try {
-    return text ? JSON.parse(text) : {};
-  } catch {
-    return { detail: text || "Invalid server response" };
+  function formatDate(value) {
+    if (!value) return "";
+    try {
+      return new Date(value).toLocaleString("en-GB", {
+        dateStyle: "medium",
+        timeStyle: "short"
+      });
+    } catch {
+      return value;
+    }
   }
-}
 
-async function startRecording() {
-  try {
-    recordedChunks = [];
-    recordedBlob = null;
+  function startTimer() {
+    stopTimer();
+    recordingSeconds = 0;
+    if (recordingTimerEl) recordingTimerEl.textContent = "00:00";
 
-    if (audioPlaybackEl) {
-      audioPlaybackEl.style.display = "none";
-      audioPlaybackEl.src = "";
-    }
-
-    if (audioReadyTextEl) {
-      audioReadyTextEl.textContent = "Recording in progress...";
-    }
-
-    if (transcribeBtn) {
-      transcribeBtn.disabled = true;
-    }
-
-    recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(recordingStream);
-
-    mediaRecorder.ondataavailable = (event) => {
-      if (event.data && event.data.size > 0) {
-        recordedChunks.push(event.data);
+    timerInterval = setInterval(() => {
+      recordingSeconds += 1;
+      if (recordingTimerEl) {
+        recordingTimerEl.textContent = formatTime(recordingSeconds);
       }
-    };
+    }, 1000);
+  }
 
-    mediaRecorder.onstop = () => {
-      recordedBlob = new Blob(recordedChunks, { type: "audio/webm" });
+  function stopTimer() {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+  }
+
+  function setRecordingUI(isRecording) {
+    if (!recordingStatusEl || !micCircleEl || !startRecordingBtn || !stopRecordingBtn || !transcribeBtn) return;
+
+    if (isRecording) {
+      recordingStatusEl.textContent = "Recording live";
+      recordingStatusEl.className = "status-pill recording";
+      micCircleEl.classList.add("recording");
+      startRecordingBtn.disabled = true;
+      stopRecordingBtn.disabled = false;
+      transcribeBtn.disabled = true;
+    } else {
+      recordingStatusEl.textContent = "Not recording";
+      recordingStatusEl.className = "status-pill idle";
+      micCircleEl.classList.remove("recording");
+      startRecordingBtn.disabled = false;
+      stopRecordingBtn.disabled = true;
+    }
+  }
+
+  function openModal() {
+    modalOverlay.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+    loadMeetingHistory();
+  }
+
+  function closeModal() {
+    modalOverlay.classList.add("hidden");
+    document.body.style.overflow = "";
+  }
+
+  function resetMeetingState() {
+    currentSavedNoteId = null;
+
+    if (transcriptEl) transcriptEl.value = "";
+    if (aiDraftEl) aiDraftEl.value = "";
+    if (finalNoteEl) finalNoteEl.value = "";
+    if (safeguardingBoxEl) safeguardingBoxEl.style.display = "none";
+    if (safeguardingTextEl) safeguardingTextEl.textContent = "";
+    if (audioPlaybackEl) {
+      audioPlaybackEl.src = "";
+      audioPlaybackEl.style.display = "none";
+    }
+    if (audioReadyTextEl) audioReadyTextEl.textContent = "No recording yet.";
+    recordedBlob = null;
+    recordedChunks = [];
+    stopTimer();
+    recordingSeconds = 0;
+    if (recordingTimerEl) recordingTimerEl.textContent = "00:00";
+    setRecordingUI(false);
+  }
+
+  async function safeJson(response) {
+    const text = await response.text();
+    try {
+      return text ? JSON.parse(text) : {};
+    } catch {
+      return { detail: text || "Invalid server response" };
+    }
+  }
+
+  function extractTitle(note) {
+    const finalText = safeText(note.final_note);
+    const match = finalText.match(/Meeting Title:\s*(.*)/i);
+    if (match && match[1]) return match[1].trim() || "Untitled meeting";
+    return "Untitled meeting";
+  }
+
+  function extractPreview(note) {
+    const text = safeText(note.final_note || note.ai_draft || "");
+    return text.length > 140 ? `${text.slice(0, 140)}...` : text;
+  }
+
+  function renderMeetingHistory(notes) {
+    if (!meetingHistoryListEl || !historyEmptyEl) return;
+
+    meetingHistoryListEl.innerHTML = "";
+
+    if (!notes || notes.length === 0) {
+      historyEmptyEl.style.display = "block";
+      return;
+    }
+
+    historyEmptyEl.style.display = "none";
+
+    notes.forEach((note) => {
+      const item = document.createElement("div");
+      item.className = "meeting-history-item";
+
+      item.innerHTML = `
+        <div class="meeting-history-title">${extractTitle(note)}</div>
+        <div class="meeting-history-meta">${formatDate(note.created_at)}</div>
+        <div class="meeting-history-preview">${extractPreview(note)}</div>
+        <div class="meeting-history-actions">
+          <button class="btn btn-light" data-action="open" data-id="${note.id}">Open</button>
+          <button class="btn btn-danger" data-action="delete" data-id="${note.id}">Delete</button>
+        </div>
+      `;
+
+      meetingHistoryListEl.appendChild(item);
+    });
+
+    meetingHistoryListEl.querySelectorAll('button[data-action="open"]').forEach((btn) => {
+      btn.onclick = () => openSavedMeeting(Number(btn.dataset.id));
+    });
+
+    meetingHistoryListEl.querySelectorAll('button[data-action="delete"]').forEach((btn) => {
+      btn.onclick = () => deleteSavedMeeting(Number(btn.dataset.id));
+    });
+  }
+
+  async function loadMeetingHistory() {
+    try {
+      const response = await fetch(`${API_BASE}/ai-notes/history?limit=30`, {
+        credentials: "include"
+      });
+
+      const data = await safeJson(response);
+
+      if (!response.ok) {
+        console.error(data.detail || "Could not load history");
+        return;
+      }
+
+      renderMeetingHistory(data.notes || []);
+    } catch (error) {
+      console.error("History load error:", error);
+    }
+  }
+
+  async function openSavedMeeting(noteId) {
+    try {
+      const response = await fetch(`${API_BASE}/ai-notes/history/${noteId}`, {
+        credentials: "include"
+      });
+
+      const data = await safeJson(response);
+
+      if (!response.ok) {
+        alert(data.detail || "Could not load saved meeting.");
+        return;
+      }
+
+      const note = data.note;
+      currentSavedNoteId = note.id;
+
+      if (transcriptEl) transcriptEl.value = note.transcript || "";
+      if (aiDraftEl) aiDraftEl.value = note.ai_draft || "";
+      if (finalNoteEl) finalNoteEl.value = note.final_note || "";
+
+      if (safeguardingBoxEl) safeguardingBoxEl.style.display = "block";
+      if (safeguardingTextEl) {
+        safeguardingTextEl.textContent = `Loaded saved meeting from ${formatDate(note.created_at)}.`;
+      }
+
+      showToast("Saved meeting opened");
+    } catch (error) {
+      console.error("Open history item error:", error);
+      alert("Could not load the saved meeting.");
+    }
+  }
+
+  async function deleteSavedMeeting(noteId) {
+    const confirmed = window.confirm("Delete this saved meeting note?");
+    if (!confirmed) return;
+
+    const form = new FormData();
+    form.append("note_id", String(noteId));
+
+    try {
+      const response = await fetch(`${API_BASE}/ai-notes/delete`, {
+        method: "POST",
+        body: form,
+        credentials: "include"
+      });
+
+      const data = await safeJson(response);
+
+      if (!response.ok) {
+        alert(data.detail || "Delete failed.");
+        return;
+      }
+
+      if (currentSavedNoteId === noteId) {
+        resetMeetingState();
+      }
+
+      showToast("Saved meeting deleted");
+      loadMeetingHistory();
+    } catch (error) {
+      console.error("Delete saved meeting error:", error);
+      alert("Could not delete the saved meeting.");
+    }
+  }
+
+  async function startRecording() {
+    try {
+      recordedChunks = [];
+      recordedBlob = null;
 
       if (audioPlaybackEl) {
-        const audioUrl = URL.createObjectURL(recordedBlob);
-        audioPlaybackEl.src = audioUrl;
-        audioPlaybackEl.style.display = "block";
+        audioPlaybackEl.style.display = "none";
+        audioPlaybackEl.src = "";
       }
 
       if (audioReadyTextEl) {
-        audioReadyTextEl.textContent = "Recording ready. You can now transcribe it.";
+        audioReadyTextEl.textContent = "Recording in progress...";
       }
 
       if (transcribeBtn) {
+        transcribeBtn.disabled = true;
+      }
+
+      recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(recordingStream);
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          recordedChunks.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        recordedBlob = new Blob(recordedChunks, { type: "audio/webm" });
+
+        if (audioPlaybackEl) {
+          const audioUrl = URL.createObjectURL(recordedBlob);
+          audioPlaybackEl.src = audioUrl;
+          audioPlaybackEl.style.display = "block";
+        }
+
+        if (audioReadyTextEl) {
+          audioReadyTextEl.textContent = "Recording ready. You can now transcribe it.";
+        }
+
+        if (transcribeBtn) {
+          transcribeBtn.disabled = false;
+        }
+
+        if (recordingStream) {
+          recordingStream.getTracks().forEach((track) => track.stop());
+        }
+      };
+
+      mediaRecorder.start();
+      startTimer();
+      setRecordingUI(true);
+      showToast("Recording started");
+    } catch (error) {
+      console.error("Microphone error:", error);
+      alert("Unable to access the microphone. Please allow microphone access in your browser.");
+    }
+  }
+
+  function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+    }
+    stopTimer();
+    setRecordingUI(false);
+    showToast("Recording stopped");
+  }
+
+  async function transcribeAudio() {
+    if (!recordedBlob) {
+      alert("Please record a meeting first.");
+      return;
+    }
+
+    const form = new FormData();
+    form.append("file", recordedBlob, "meeting.webm");
+
+    try {
+      if (transcribeBtn) {
+        transcribeBtn.disabled = true;
+        transcribeBtn.textContent = "Transcribing...";
+      }
+
+      const response = await fetch(`${API_BASE}/ai-notes/transcribe`, {
+        method: "POST",
+        body: form,
+        credentials: "include"
+      });
+
+      const data = await safeJson(response);
+
+      if (!response.ok) {
+        alert(data.detail || "Transcription failed.");
+        return;
+      }
+
+      if (transcriptEl) {
+        transcriptEl.value = data.transcript || "";
+      }
+
+      showToast("Transcript created");
+    } catch (error) {
+      console.error("Transcription error:", error);
+      alert("Could not connect to the meeting assistant service.");
+    } finally {
+      if (transcribeBtn) {
         transcribeBtn.disabled = false;
+        transcribeBtn.textContent = "Transcribe";
       }
-
-      if (recordingStream) {
-        recordingStream.getTracks().forEach((track) => track.stop());
-      }
-    };
-
-    mediaRecorder.start();
-    startTimer();
-    setRecordingUI(true);
-    showToast("Recording started");
-  } catch (error) {
-    console.error("Microphone error:", error);
-    alert("Unable to access the microphone. Please allow microphone access in your browser.");
-  }
-}
-
-function stopRecording() {
-  if (mediaRecorder && mediaRecorder.state !== "inactive") {
-    mediaRecorder.stop();
-  }
-  stopTimer();
-  setRecordingUI(false);
-  showToast("Recording stopped");
-}
-
-async function transcribeAudio() {
-  if (!recordedBlob) {
-    alert("Please record a meeting first.");
-    return;
-  }
-
-  const form = new FormData();
-  form.append("file", recordedBlob, "meeting.webm");
-
-  try {
-    if (transcribeBtn) {
-      transcribeBtn.disabled = true;
-      transcribeBtn.textContent = "Transcribing...";
     }
+  }
 
-    const response = await fetch(`${API_BASE}/ai-notes/transcribe`, {
-      method: "POST",
-      body: form,
-      credentials: "include"
-    });
+  async function generateTemplate() {
+    const transcript = safeText(transcriptEl?.value);
 
-    const data = await safeJson(response);
-
-    if (!response.ok) {
-      alert(data.detail || "Transcription failed.");
+    if (!transcript) {
+      alert("Please record and transcribe a meeting first, or paste a transcript.");
       return;
     }
 
+    const form = new FormData();
+    form.append("transcript", transcript);
+
+    try {
+      if (generateBtn) {
+        generateBtn.disabled = true;
+        generateBtn.textContent = "Generating...";
+      }
+
+      const response = await fetch(`${API_BASE}/ai-notes/generate`, {
+        method: "POST",
+        body: form,
+        credentials: "include"
+      });
+
+      const data = await safeJson(response);
+
+      if (!response.ok) {
+        alert(data.detail || "Template generation failed.");
+        return;
+      }
+
+      if (aiDraftEl) aiDraftEl.value = data.note || "";
+      if (finalNoteEl) finalNoteEl.value = data.note || "";
+
+      if (safeguardingBoxEl) safeguardingBoxEl.style.display = "block";
+      if (safeguardingTextEl) {
+        safeguardingTextEl.textContent =
+          "AI-generated meeting template created. Please review, refine and approve before saving.";
+      }
+
+      showToast("Meeting template generated");
+    } catch (error) {
+      console.error("Generate error:", error);
+      alert("Could not connect to the meeting assistant service.");
+    } finally {
+      if (generateBtn) {
+        generateBtn.disabled = false;
+        generateBtn.textContent = "Generate template";
+      }
+    }
+  }
+
+  async function aiEdit(mode) {
+    const text = safeText(finalNoteEl?.value);
+
+    if (!text) {
+      alert("There is no final document to edit.");
+      return;
+    }
+
+    const form = new FormData();
+    form.append("text", text);
+    form.append("mode", mode);
+
+    try {
+      const response = await fetch(`${API_BASE}/ai-notes/edit`, {
+        method: "POST",
+        body: form,
+        credentials: "include"
+      });
+
+      const data = await safeJson(response);
+
+      if (!response.ok) {
+        alert(data.detail || "AI edit failed.");
+        return;
+      }
+
+      if (finalNoteEl) {
+        finalNoteEl.value = data.text || text;
+      }
+
+      showToast("Document updated");
+    } catch (error) {
+      console.error("AI edit error:", error);
+      alert("Could not connect to the AI editing service.");
+    }
+  }
+
+  async function saveMeetingNote() {
+    const transcript = safeText(transcriptEl?.value);
+    const aiDraft = safeText(aiDraftEl?.value);
+    const finalNote = safeText(finalNoteEl?.value);
+
+    if (!transcript || !aiDraft || !finalNote) {
+      alert("Transcript, generated template and final document are all required before saving.");
+      return;
+    }
+
+    const form = new FormData();
+    form.append("transcript", transcript);
+    form.append("ai_draft", aiDraft);
+    form.append("final_note", finalNote);
+
+    try {
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Saving...";
+      }
+
+      const response = await fetch(`${API_BASE}/ai-notes/save`, {
+        method: "POST",
+        body: form,
+        credentials: "include"
+      });
+
+      const data = await safeJson(response);
+
+      if (!response.ok) {
+        alert(data.detail || "Save failed.");
+        return;
+      }
+
+      currentSavedNoteId = data.record?.id || null;
+      showToast("Meeting note saved");
+      loadMeetingHistory();
+    } catch (error) {
+      console.error("Save error:", error);
+      alert("Could not connect to the meeting assistant service.");
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save meeting note";
+      }
+    }
+  }
+
+  async function deleteMeeting() {
+    if (currentSavedNoteId) {
+      await deleteSavedMeeting(currentSavedNoteId);
+      return;
+    }
+
+    const confirmed = window.confirm("Delete this meeting draft from the screen?");
+    if (!confirmed) return;
+
+    try {
+      await fetch(`${API_BASE}/ai-notes/delete`, {
+        method: "POST",
+        credentials: "include"
+      });
+    } catch (error) {
+      console.error("Delete error:", error);
+    }
+
+    resetMeetingState();
+    showToast("Meeting cleared");
+  }
+
+  async function copyFinalDocument() {
+    const text = safeText(finalNoteEl?.value);
+    if (!text) {
+      alert("There is no final document to copy.");
+      return;
+    }
+
+    await navigator.clipboard.writeText(text);
+    showToast("Copied to clipboard");
+  }
+
+  function printFinalDocument() {
+    const text = safeText(finalNoteEl?.value);
+    if (!text) {
+      alert("There is no final document to print.");
+      return;
+    }
+
+    const escaped = text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\n/g, "<br>");
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Pop-up blocked. Please allow pop-ups to print.");
+      return;
+    }
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Meeting Note</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 24px; line-height: 1.6; }
+          </style>
+        </head>
+        <body>${escaped}</body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.print();
+  }
+
+  function exportFinalDocumentTxt() {
+    const text = safeText(finalNoteEl?.value);
+    if (!text) {
+      alert("There is no final document to export.");
+      return;
+    }
+
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "meeting-note.txt";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    showToast("Text file exported");
+  }
+
+  function clearTranscript() {
     if (transcriptEl) {
-      transcriptEl.value = data.transcript || "";
+      transcriptEl.value = "";
     }
-
-    showToast("Transcript created");
-  } catch (error) {
-    console.error("Transcription error:", error);
-    alert("Could not connect to the meeting assistant service.");
-  } finally {
-    if (transcribeBtn) {
-      transcribeBtn.disabled = false;
-      transcribeBtn.textContent = "Transcribe";
-    }
-  }
-}
-
-async function generateTemplate() {
-  const transcript = safeText(transcriptEl?.value);
-
-  if (!transcript) {
-    alert("Please record and transcribe a meeting first, or paste a transcript.");
-    return;
+    showToast("Transcript cleared");
   }
 
-  const form = new FormData();
-  form.append("transcript", transcript);
+  openModalBtn.onclick = openModal;
+  if (closeModalBtn) closeModalBtn.onclick = closeModal;
 
-  try {
-    if (generateBtn) {
-      generateBtn.disabled = true;
-      generateBtn.textContent = "Generating...";
-    }
-
-    const response = await fetch(`${API_BASE}/ai-notes/generate`, {
-      method: "POST",
-      body: form,
-      credentials: "include"
-    });
-
-    const data = await safeJson(response);
-
-    if (!response.ok) {
-      alert(data.detail || "Template generation failed.");
-      return;
-    }
-
-    if (aiDraftEl) aiDraftEl.value = data.note || "";
-    if (finalNoteEl) finalNoteEl.value = data.note || "";
-
-    if (safeguardingBoxEl) safeguardingBoxEl.style.display = "block";
-    if (safeguardingTextEl) {
-      safeguardingTextEl.textContent =
-        "AI-generated meeting template created. Please review, refine and approve before saving.";
-    }
-
-    showToast("Meeting template generated");
-  } catch (error) {
-    console.error("Generate error:", error);
-    alert("Could not connect to the meeting assistant service.");
-  } finally {
-    if (generateBtn) {
-      generateBtn.disabled = false;
-      generateBtn.textContent = "Generate template";
-    }
-  }
-}
-
-async function aiEdit(mode) {
-  const text = safeText(finalNoteEl?.value);
-
-  if (!text) {
-    alert("There is no final document to edit.");
-    return;
-  }
-
-  const form = new FormData();
-  form.append("text", text);
-  form.append("mode", mode);
-
-  try {
-    const response = await fetch(`${API_BASE}/ai-notes/edit`, {
-      method: "POST",
-      body: form,
-      credentials: "include"
-    });
-
-    const data = await safeJson(response);
-
-    if (!response.ok) {
-      alert(data.detail || "AI edit failed.");
-      return;
-    }
-
-    if (finalNoteEl) {
-      finalNoteEl.value = data.text || text;
-    }
-
-    showToast("Document updated");
-  } catch (error) {
-    console.error("AI edit error:", error);
-    alert("Could not connect to the AI editing service.");
-  }
-}
-
-async function saveMeetingNote() {
-  const transcript = safeText(transcriptEl?.value);
-  const aiDraft = safeText(aiDraftEl?.value);
-  const finalNote = safeText(finalNoteEl?.value);
-
-  if (!transcript || !aiDraft || !finalNote) {
-    alert("Transcript, generated template and final document are all required before saving.");
-    return;
-  }
-
-  const form = new FormData();
-  form.append("transcript", transcript);
-  form.append("ai_draft", aiDraft);
-  form.append("final_note", finalNote);
-
-  try {
-    if (saveBtn) {
-      saveBtn.disabled = true;
-      saveBtn.textContent = "Saving...";
-    }
-
-    const response = await fetch(`${API_BASE}/ai-notes/save`, {
-      method: "POST",
-      body: form,
-      credentials: "include"
-    });
-
-    const data = await safeJson(response);
-
-    if (!response.ok) {
-      alert(data.detail || "Save failed.");
-      return;
-    }
-
-    showToast("Meeting note saved");
-  } catch (error) {
-    console.error("Save error:", error);
-    alert("Could not connect to the meeting assistant service.");
-  } finally {
-    if (saveBtn) {
-      saveBtn.disabled = false;
-      saveBtn.textContent = "Save meeting note";
-    }
-  }
-}
-
-async function deleteMeeting() {
-  const confirmed = window.confirm("Delete this meeting draft from the screen?");
-  if (!confirmed) return;
-
-  try {
-    await fetch(`${API_BASE}/ai-notes/delete`, {
-      method: "POST",
-      credentials: "include"
-    });
-  } catch (error) {
-    console.error("Delete error:", error);
-  }
-
-  resetMeetingState();
-  showToast("Meeting cleared");
-}
-
-async function copyFinalDocument() {
-  const text = safeText(finalNoteEl?.value);
-
-  if (!text) {
-    alert("There is no final document to copy.");
-    return;
-  }
-
-  await navigator.clipboard.writeText(text);
-  showToast("Copied to clipboard");
-}
-
-function printFinalDocument() {
-  const text = safeText(finalNoteEl?.value);
-
-  if (!text) {
-    alert("There is no final document to print.");
-    return;
-  }
-
-  const escaped = text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\n/g, "<br>");
-
-  const printWindow = window.open("", "_blank");
-
-  if (!printWindow) {
-    alert("Pop-up blocked. Please allow pop-ups to print.");
-    return;
-  }
-
-  printWindow.document.write(`
-    <html>
-      <head>
-        <title>Meeting Note</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 24px; line-height: 1.6; }
-        </style>
-      </head>
-      <body>${escaped}</body>
-    </html>
-  `);
-
-  printWindow.document.close();
-  printWindow.print();
-}
-
-function exportFinalDocumentTxt() {
-  const text = safeText(finalNoteEl?.value);
-
-  if (!text) {
-    alert("There is no final document to export.");
-    return;
-  }
-
-  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-
-  link.href = url;
-  link.download = "meeting-note.txt";
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-
-  URL.revokeObjectURL(url);
-  showToast("Text file exported");
-}
-
-function clearTranscript() {
-  if (transcriptEl) {
-    transcriptEl.value = "";
-  }
-  showToast("Transcript cleared");
-}
-
-if (openModalBtn) openModalBtn.addEventListener("click", openModal);
-if (closeModalBtn) closeModalBtn.addEventListener("click", closeModal);
-
-if (modalOverlay) {
-  modalOverlay.addEventListener("click", (event) => {
+  modalOverlay.onclick = (event) => {
     if (event.target === modalOverlay) {
       closeModal();
     }
-  });
-}
+  };
 
-if (startRecordingBtn) startRecordingBtn.addEventListener("click", startRecording);
-if (stopRecordingBtn) stopRecordingBtn.addEventListener("click", stopRecording);
-if (transcribeBtn) transcribeBtn.addEventListener("click", transcribeAudio);
-if (generateBtn) generateBtn.addEventListener("click", generateTemplate);
-if (saveBtn) saveBtn.addEventListener("click", saveMeetingNote);
-if (deleteMeetingBtn) deleteMeetingBtn.addEventListener("click", deleteMeeting);
-if (copyBtn) copyBtn.addEventListener("click", copyFinalDocument);
-if (printBtn) printBtn.addEventListener("click", printFinalDocument);
-if (exportTxtBtn) exportTxtBtn.addEventListener("click", exportFinalDocumentTxt);
-if (clearTranscriptBtn) clearTranscriptBtn.addEventListener("click", clearTranscript);
+  if (refreshHistoryBtn) refreshHistoryBtn.onclick = loadMeetingHistory;
 
-if (improveBtn) improveBtn.addEventListener("click", () => aiEdit("improve"));
-if (shortenBtn) shortenBtn.addEventListener("click", () => aiEdit("shorten"));
-if (formalBtn) formalBtn.addEventListener("click", () => aiEdit("formal"));
-if (bulletBtn) bulletBtn.addEventListener("click", () => aiEdit("bullet"));
-if (grammarBtn) grammarBtn.addEventListener("click", () => aiEdit("grammar"));
+  if (startRecordingBtn) startRecordingBtn.onclick = startRecording;
+  if (stopRecordingBtn) stopRecordingBtn.onclick = stopRecording;
+  if (transcribeBtn) transcribeBtn.onclick = transcribeAudio;
+  if (generateBtn) generateBtn.onclick = generateTemplate;
+  if (saveBtn) saveBtn.onclick = saveMeetingNote;
+  if (deleteMeetingBtn) deleteMeetingBtn.onclick = deleteMeeting;
+  if (copyBtn) copyBtn.onclick = copyFinalDocument;
+  if (printBtn) printBtn.onclick = printFinalDocument;
+  if (exportTxtBtn) exportTxtBtn.onclick = exportFinalDocumentTxt;
+  if (clearTranscriptBtn) clearTranscriptBtn.onclick = clearTranscript;
 
-setRecordingUI(false);
-if (recordingTimerEl) recordingTimerEl.textContent = "00:00";
+  if (improveBtn) improveBtn.onclick = () => aiEdit("improve");
+  if (shortenBtn) shortenBtn.onclick = () => aiEdit("shorten");
+  if (formalBtn) formalBtn.onclick = () => aiEdit("formal");
+  if (bulletBtn) bulletBtn.onclick = () => aiEdit("bullet");
+  if (grammarBtn) grammarBtn.onclick = () => aiEdit("grammar");
+
+  setRecordingUI(false);
+  if (recordingTimerEl) recordingTimerEl.textContent = "00:00";
+};
