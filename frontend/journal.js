@@ -62,7 +62,9 @@ document.addEventListener("DOMContentLoaded", () => {
   renderPrompts(activeTab);
   setupForm();
   setupBackToTop();
+  setupAiButtons();
   loadLatestJournal();
+  loadJournalHistory();
 });
 
 function setupTabs() {
@@ -108,6 +110,23 @@ function setupBackToTop() {
   });
 }
 
+function setupAiButtons() {
+  const pdpBtn = document.getElementById("generatePdpBtn");
+  const packBtn = document.getElementById("generateSupervisionPackBtn");
+
+  if (pdpBtn) {
+    pdpBtn.addEventListener("click", async () => {
+      await generateAiOutput("development-plan");
+    });
+  }
+
+  if (packBtn) {
+    packBtn.addEventListener("click", async () => {
+      await generateAiOutput("supervision-pack");
+    });
+  }
+}
+
 function getPayload() {
   const payload = {
     staff_id: Number(document.getElementById("staff_id").value)
@@ -137,6 +156,14 @@ function fillForm(journal) {
 
 function setMessage(text, isError = false) {
   const el = document.getElementById("journalMessage");
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = isError ? "#b91c1c" : "#374151";
+}
+
+function setHistoryMessage(text, isError = false) {
+  const el = document.getElementById("journalHistoryMessage");
+  if (!el) return;
   el.textContent = text;
   el.style.color = isError ? "#b91c1c" : "#374151";
 }
@@ -192,6 +219,7 @@ function setupForm() {
       }
 
       setMessage("Journal saved successfully.");
+      await loadJournalHistory();
     } catch (error) {
       setMessage(error.message || "Failed to save journal.", true);
     } finally {
@@ -227,45 +255,112 @@ async function loadLatestJournal() {
     setMessage(error.message || "Failed to load journal.", true);
   }
 }
+
 async function loadJournalHistory() {
+  const staffId = document.getElementById("staff_id").value || "1";
+  const historyList = document.getElementById("journalHistoryList");
 
-  const staffId = document.getElementById("staff_id").value
+  if (!historyList) return;
 
-  const res = await fetch(`/staff-journal/staff/${staffId}`)
+  try {
+    setHistoryMessage("");
+    historyList.innerHTML = "Loading journal entries...";
 
-  const data = await res.json()
+    const response = await fetch(`${API_BASE}/staff-journal/staff/${staffId}?limit=20`, {
+      method: "GET",
+      credentials: "include"
+    });
 
-  const list = document.getElementById("journal-history-list")
+    const data = await response.json();
 
-  list.innerHTML = ""
+    if (!response.ok) {
+      throw new Error(data.detail || "Failed to load journal entries");
+    }
 
-  data.entries.forEach(entry => {
+    const entries = data.entries || [];
+    historyList.innerHTML = "";
 
-    const item = document.createElement("div")
+    if (!entries.length) {
+      historyList.innerHTML = "<div class='journal-history-item'><p>No journal entries yet.</p></div>";
+      return;
+    }
 
-    item.className = "journal-entry"
+    entries.forEach((entry) => {
+      const item = document.createElement("div");
+      item.className = "journal-history-item";
 
-    item.innerHTML = `
-      <strong>${new Date(entry.created_at).toLocaleDateString()}</strong>
-      <p>${entry.reflection_today || ""}</p>
-    `
+      const createdAt = entry.created_at
+        ? new Date(entry.created_at).toLocaleString()
+        : "Unknown date";
 
-    list.appendChild(item)
+      item.innerHTML = `
+        <h4>${createdAt}</h4>
+        <p>${escapeHtml(
+          entry.reflection_today ||
+          entry.practice_today ||
+          entry.description ||
+          "No summary available for this entry."
+        )}</p>
+      `;
 
-  })
-
+      historyList.appendChild(item);
+    });
+  } catch (error) {
+    historyList.innerHTML = "";
+    setHistoryMessage(error.message || "Failed to load journal history.", true);
+  }
 }
-document
-  .getElementById("generate-pdp-btn")
-  .addEventListener("click", async () => {
 
-    const staffId = document.getElementById("staff_id").value
+async function generateAiOutput(type) {
+  const staffId = document.getElementById("staff_id").value || "1";
+  const output = document.getElementById("aiDevelopmentOutput");
+  const pdpBtn = document.getElementById("generatePdpBtn");
+  const packBtn = document.getElementById("generateSupervisionPackBtn");
 
-    const res = await fetch(`/staff-journal/staff/${staffId}/development-plan`)
+  try {
+    if (output) {
+      output.textContent = "Generating...";
+    }
 
-    const data = await res.json()
+    if (pdpBtn) pdpBtn.disabled = true;
+    if (packBtn) packBtn.disabled = true;
 
-    document.getElementById("pdp-result").innerText =
-      data.development_plan
+    const endpoint = type === "supervision-pack"
+      ? `${API_BASE}/staff-journal/staff/${staffId}/supervision-pack`
+      : `${API_BASE}/staff-journal/staff/${staffId}/development-plan`;
 
-})
+    const response = await fetch(endpoint, {
+      method: "GET",
+      credentials: "include"
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.detail || "Failed to generate output");
+    }
+
+    if (output) {
+      output.textContent =
+        data.supervision_pack ||
+        data.development_plan ||
+        "No output generated.";
+    }
+  } catch (error) {
+    if (output) {
+      output.textContent = error.message || "Failed to generate output.";
+    }
+  } finally {
+    if (pdpBtn) pdpBtn.disabled = false;
+    if (packBtn) packBtn.disabled = false;
+  }
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
