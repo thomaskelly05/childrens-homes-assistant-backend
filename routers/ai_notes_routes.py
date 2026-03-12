@@ -129,11 +129,13 @@ async def generate_ai_note(transcript: str = Form(...)):
 @router.post("/edit")
 async def edit_ai_note(
     text: str = Form(...),
-    mode: str = Form(...)
+    mode: str = Form(...),
+    instruction: str | None = Form(None)
 ):
 
     text = text.strip()
     mode = mode.strip().lower()
+    instruction = (instruction or "").strip()
 
     if not text:
         raise HTTPException(
@@ -148,7 +150,11 @@ async def edit_ai_note(
         )
 
     try:
-        edited = await edit_note(text, mode)
+        edited = await edit_note(
+            text=text,
+            mode=mode,
+            instruction=instruction
+        )
 
         return {
             "ok": True,
