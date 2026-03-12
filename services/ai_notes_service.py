@@ -132,20 +132,3 @@ Document:
     )
 
     return (response.choices[0].message.content or "").strip()
-
-
-# --------------------------------------------------
-# SAVE NOTE
-# --------------------------------------------------
-
-async def save_note(transcript: str, ai_draft: str, final_note: str) -> dict:
-    now = datetime.now(timezone.utc).isoformat()
-
-    return {
-        "id": f"meeting-{int(datetime.now(timezone.utc).timestamp())}",
-        "transcript": transcript,
-        "ai_draft": ai_draft,
-        "final_note": final_note,
-        "created_at": now,
-        "status": "saved"
-    }
