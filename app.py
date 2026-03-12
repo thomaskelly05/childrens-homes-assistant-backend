@@ -25,6 +25,9 @@ from routers.documents_routes import router as documents_router
 from routers.dashboard_routes import router as dashboard_router
 from routers.account_routes import router as account_router
 
+# NEW AI NOTES ROUTER
+from routers.ai_notes_routes import router as ai_notes_router
+
 
 # --------------------------------------------------
 # APP INFO
@@ -138,6 +141,9 @@ app.include_router(documents_router)
 app.include_router(dashboard_router)
 app.include_router(account_router)
 
+# AI NOTE SYSTEM
+app.include_router(ai_notes_router)
+
 
 # --------------------------------------------------
 # HEALTH CHECK
@@ -197,9 +203,11 @@ async def spa_fallback(request: Request, full_path: str):
     or full_path.startswith("documents") \
     or full_path.startswith("dashboard") \
     or full_path.startswith("account") \
+    or full_path.startswith("ai-notes") \
     or full_path.startswith("health") \
     or full_path.startswith("docs") \
     or full_path.startswith("api"):
+
         return {"error": "Not found"}
 
     index_file = os.path.join(FRONTEND_DIR, "index.html")
@@ -219,4 +227,3 @@ if __name__ == "__main__":
         port=PORT,
         reload=True
     )
-
