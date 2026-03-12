@@ -1,11 +1,16 @@
 from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy.orm import Session
 
 from db.connection import get_db
-from models.staff_journal import StaffJournal
+from db.staff_journal_db import (
+    ensure_staff_journal_table,
+    create_staff_journal,
+    get_staff_journal,
+    get_latest_staff_journal,
+    update_staff_journal,
+)
 from schemas.staff_journal import (
     StaffJournalCreate,
-    StaffJournalUpdate
+    StaffJournalUpdate,
 )
 
 router = APIRouter(
@@ -19,16 +24,14 @@ router = APIRouter(
 # --------------------------------------------------
 
 @router.post("/")
-async def create_staff_journal(
+async def create_staff_journal_route(
     payload: StaffJournalCreate,
-    db: Session = Depends(get_db)
+    conn=Depends(get_db)
 ):
     try:
-        journal = StaffJournal(**payload.model_dump())
+        ensure_staff_journal_table(conn)
 
-        db.add(journal)
-        db.commit()
-        db.refresh(journal)
+        journal = create_staff_journal(conn, payload.model_dump())
 
         return {
             "ok": True,
@@ -36,7 +39,6 @@ async def create_staff_journal(
         }
 
     except Exception as e:
-        db.rollback()
         raise HTTPException(
             status_code=500,
             detail=f"Could not create journal: {str(e)}"
@@ -48,16 +50,14 @@ async def create_staff_journal(
 # --------------------------------------------------
 
 @router.get("/{journal_id}")
-async def get_staff_journal(
+async def get_staff_journal_route(
     journal_id: int,
-    db: Session = Depends(get_db)
+    conn=Depends(get_db)
 ):
     try:
-        journal = (
-            db.query(StaffJournal)
-            .filter(StaffJournal.id == journal_id)
-            .first()
-        )
+        ensure_staff_journal_table(conn)
+
+        journal = get_staff_journal(conn, journal_id)
 
         if not journal:
             raise HTTPException(
@@ -85,17 +85,14 @@ async def get_staff_journal(
 # --------------------------------------------------
 
 @router.get("/staff/{staff_id}/latest")
-async def get_latest_staff_journal(
+async def get_latest_staff_journal_route(
     staff_id: int,
-    db: Session = Depends(get_db)
+    conn=Depends(get_db)
 ):
     try:
-        journal = (
-            db.query(StaffJournal)
-            .filter(StaffJournal.staff_id == staff_id)
-            .order_by(StaffJournal.created_at.desc())
-            .first()
-        )
+        ensure_staff_journal_table(conn)
+
+        journal = get_latest_staff_journal(conn, staff_id)
 
         if not journal:
             raise HTTPException(
@@ -123,31 +120,24 @@ async def get_latest_staff_journal(
 # --------------------------------------------------
 
 @router.put("/{journal_id}")
-async def update_staff_journal(
+async def update_staff_journal_route(
     journal_id: int,
     payload: StaffJournalUpdate,
-    db: Session = Depends(get_db)
+    conn=Depends(get_db)
 ):
     try:
-        journal = (
-            db.query(StaffJournal)
-            .filter(StaffJournal.id == journal_id)
-            .first()
-        )
+        ensure_staff_journal_table(conn)
 
-        if not journal:
+        existing = get_staff_journal(conn, journal_id)
+
+        if not existing:
             raise HTTPException(
                 status_code=404,
                 detail="Journal not found"
             )
 
         update_data = payload.model_dump(exclude_unset=True)
-
-        for key, value in update_data.items():
-            setattr(journal, key, value)
-
-        db.commit()
-        db.refresh(journal)
+        journal = update_staff_journal(conn, journal_id, update_data)
 
         return {
             "ok": True,
@@ -158,7 +148,6 @@ async def update_staff_journal(
         raise
 
     except Exception as e:
-        db.rollback()
         raise HTTPException(
             status_code=500,
             detail=f"Could not update journal: {str(e)}"
