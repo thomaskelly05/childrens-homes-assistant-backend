@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Note Assistant</title>
+    <link rel="stylesheet" href="/ai-notes.css">
+</head>
+<body>
+    <div class="page">
+        <h1>AI Note Assistant</h1>
+        <p>Upload audio, generate a structured draft, review it, then save it to IndiCare.</p>
+
+        <div class="row">
+            <div class="field">
+                <label for="childId">Child ID</label>
+                <input id="childId" type="number" placeholder="e.g. 123">
+            </div>
+
+            <div class="field">
+                <label for="staffId">Staff ID</label>
+                <input id="staffId" type="number" placeholder="e.g. 45">
+            </div>
+        </div>
+
+        <div class="field">
+            <label for="audioFile">Audio file</label>
+            <input id="audioFile" type="file" accept="audio/*">
+        </div>
+
+        <div class="actions">
+            <button type="button" onclick="transcribeAudio()">Transcribe Audio</button>
+            <button type="button" onclick="generateNote()">Generate AI Note</button>
+            <button type="button" onclick="saveNote()">Save Note</button>
+        </div>
+
+        <div id="safeguardingBox" class="notice">
+            <strong>Safeguarding check:</strong>
+            <div id="safeguardingText"></div>
+        </div>
+
+        <div class="field">
+            <label for="transcript">Transcript</label>
+            <textarea id="transcript" placeholder="Transcript appears here..."></textarea>
+        </div>
+
+        <div class="field">
+            <label for="aiDraft">AI Draft</label>
+            <textarea id="aiDraft" placeholder="AI draft appears here..."></textarea>
+        </div>
+
+        <div class="field">
+            <label for="finalNote">Final Note</label>
+            <textarea id="finalNote" placeholder="Edit final note before saving..."></textarea>
+        </div>
+    </div>
+
+    <script src="/ai-notes.js"></script>
+</body>
+</html>
