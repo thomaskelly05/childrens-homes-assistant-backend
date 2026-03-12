@@ -227,3 +227,31 @@ async function loadLatestJournal() {
     setMessage(error.message || "Failed to load journal.", true);
   }
 }
+async function loadJournalHistory() {
+
+  const staffId = document.getElementById("staff_id").value
+
+  const res = await fetch(`/staff-journal/staff/${staffId}`)
+
+  const data = await res.json()
+
+  const list = document.getElementById("journal-history-list")
+
+  list.innerHTML = ""
+
+  data.entries.forEach(entry => {
+
+    const item = document.createElement("div")
+
+    item.className = "journal-entry"
+
+    item.innerHTML = `
+      <strong>${new Date(entry.created_at).toLocaleDateString()}</strong>
+      <p>${entry.reflection_today || ""}</p>
+    `
+
+    list.appendChild(item)
+
+  })
+
+}
