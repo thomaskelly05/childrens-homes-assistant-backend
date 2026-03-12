@@ -184,6 +184,7 @@ async def spa_fallback(request: Request, full_path: str):
     if full_path.startswith("auth") \
     or full_path.startswith("chat") \
     or full_path.startswith("tasks") \
+    or full_path.startswith("staff-journal") \
     or full_path.startswith("reports") \
     or full_path.startswith("documents") \
     or full_path.startswith("dashboard") \
@@ -197,7 +198,6 @@ async def spa_fallback(request: Request, full_path: str):
     index_file = os.path.join(FRONTEND_DIR, "index.html")
     return FileResponse(index_file)
 
-
 # --------------------------------------------------
 # LOCAL DEVELOPMENT
 # --------------------------------------------------
@@ -209,3 +209,4 @@ if __name__ == "__main__":
         port=PORT,
         reload=True
     )
+
