@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, Text, DateTime, ForeignKey, func, String
-from db import Base
+from db.connection import Base
 
 
 class StaffJournal(Base):
