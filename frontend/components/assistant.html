@@ -1,6 +1,6 @@
 <div id="chat"></div>
 
-<div id="chat-input-bar">
+<div id="chat-input-bar" class="chat-input-bar">
     <input id="chat-input" placeholder="Ask IndiCare anything..." />
     <button id="send-btn">Send</button>
     <button id="openAiMeetingModal" class="btn btn-primary" type="button">
@@ -23,7 +23,22 @@
             </button>
         </div>
 
-        <div class="ai-modal-body">
+        <div class="ai-modal-body ai-modal-body-wide">
+            <div class="ai-modal-history">
+                <div class="panel">
+                    <div class="section-head">
+                        <h3>Saved Meetings</h3>
+                        <button id="refreshHistoryBtn" class="btn btn-light" type="button">Refresh</button>
+                    </div>
+
+                    <div id="historyEmpty" class="history-empty">
+                        No saved meetings yet.
+                    </div>
+
+                    <div id="meetingHistoryList" class="meeting-history-list"></div>
+                </div>
+            </div>
+
             <div class="ai-modal-left">
                 <div class="panel">
                     <div class="section-head">
