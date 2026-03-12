@@ -1,7 +1,14 @@
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
-from psycopg2.extras import RealDictCursor
-from db.connection import get_db
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from db.session import get_db
+from models.staff_journal import StaffJournal
+from services.staff_journal_service import (
+    create_journal,
+    get_journal,
+    get_latest_for_staff,
+    update_journal,
+)
 
 router = APIRouter(
     prefix="/staff-journal",
@@ -9,42 +16,39 @@ router = APIRouter(
 )
 
 
-class Reflection(BaseModel):
-    reflection: str
+@router.post("/")
+def create_staff_journal(payload: dict, db: Session = Depends(get_db)):
+    return create_journal(db, payload)
 
 
-@router.get("/")
-def get_reflections(conn=Depends(get_db)):
+@router.get("/{journal_id}")
+def get_staff_journal(journal_id: int, db: Session = Depends(get_db)):
 
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+    journal = get_journal(db, journal_id)
 
-        cur.execute(
-            """
-            SELECT id, reflection, created_at
-            FROM staff_journal
-            ORDER BY created_at DESC
-            LIMIT 50
-            """
-        )
+    if not journal:
+        raise HTTPException(status_code=404, detail="Journal not found")
 
-        reflections = cur.fetchall()
-
-    return reflections
+    return journal
 
 
-@router.post("/save")
-def save_reflection(payload: Reflection, conn=Depends(get_db)):
+@router.get("/staff/{staff_id}/latest")
+def get_latest_journal(staff_id: int, db: Session = Depends(get_db)):
 
-    with conn.cursor() as cur:
+    journal = get_latest_for_staff(db, staff_id)
 
-        cur.execute(
-            """
-            INSERT INTO staff_journal (reflection)
-            VALUES (%s)
-            """,
-            (payload.reflection,)
-        )
+    if not journal:
+        raise HTTPException(status_code=404, detail="No journal found")
 
-        conn.commit()
+    return journal
 
-    return {"status": "saved"}
+
+@router.put("/{journal_id}")
+def update_staff_journal(journal_id: int, payload: dict, db: Session = Depends(get_db)):
+
+    journal = get_journal(db, journal_id)
+
+    if not journal:
+        raise HTTPException(status_code=404, detail="Journal not found")
+
+    return update_journal(db, journal, payload)
