@@ -1,1 +1,31 @@
+<!DOCTYPE html>
+<html>
 
+<head>
+<link rel="stylesheet" href="/frontend/ai-notes.css">
+</head>
+
+<body>
+
+<h2>AI Note Assistant</h2>
+
+<input type="file" id="audio">
+
+<button onclick="transcribe()">Transcribe</button>
+
+<h3>Transcript</h3>
+
+<textarea id="transcript"></textarea>
+
+<button onclick="generate()">Generate Note</button>
+
+<h3>AI Draft</h3>
+
+<textarea id="note"></textarea>
+
+<button onclick="save()">Save Note</button>
+
+<script src="/frontend/ai-notes.js"></script>
+
+</body>
+</html>
