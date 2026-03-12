@@ -8,6 +8,7 @@ window.initAssistantMeetingModal = function () {
   const transcriptEl = document.getElementById("transcript");
   const aiDraftEl = document.getElementById("aiDraft");
   const finalNoteEl = document.getElementById("finalNote");
+  const aiInstructionEl = document.getElementById("aiInstruction");
 
   const safeguardingBoxEl = document.getElementById("safeguardingBox");
   const safeguardingTextEl = document.getElementById("safeguardingText");
@@ -21,8 +22,6 @@ window.initAssistantMeetingModal = function () {
 
   const startRecordingBtn = document.getElementById("startRecordingBtn");
   const stopRecordingBtn = document.getElementById("stopRecordingBtn");
-  const transcribeBtn = document.getElementById("transcribeBtn");
-  const generateBtn = document.getElementById("generateBtn");
   const saveBtn = document.getElementById("saveBtn");
   const deleteMeetingBtn = document.getElementById("deleteMeetingBtn");
   const copyBtn = document.getElementById("copyBtn");
@@ -35,6 +34,7 @@ window.initAssistantMeetingModal = function () {
   const formalBtn = document.getElementById("formalBtn");
   const bulletBtn = document.getElementById("bulletBtn");
   const grammarBtn = document.getElementById("grammarBtn");
+  const applyAiInstructionBtn = document.getElementById("applyAiInstructionBtn");
 
   const refreshHistoryBtn = document.getElementById("refreshHistoryBtn");
   const historyEmptyEl = document.getElementById("historyEmpty");
@@ -51,7 +51,6 @@ window.initAssistantMeetingModal = function () {
   let timerInterval = null;
   let recordingSeconds = 0;
   let currentSavedNoteId = null;
-  let isInitialised = false;
 
   function showToast(message) {
     if (!toastEl) return;
@@ -110,7 +109,7 @@ window.initAssistantMeetingModal = function () {
   }
 
   function setRecordingUI(isRecording) {
-    if (!recordingStatusEl || !micCircleEl || !startRecordingBtn || !stopRecordingBtn || !transcribeBtn) return;
+    if (!recordingStatusEl || !micCircleEl || !startRecordingBtn || !stopRecordingBtn) return;
 
     if (isRecording) {
       recordingStatusEl.textContent = "Recording live";
@@ -118,13 +117,18 @@ window.initAssistantMeetingModal = function () {
       micCircleEl.classList.add("recording");
       startRecordingBtn.disabled = true;
       stopRecordingBtn.disabled = false;
-      transcribeBtn.disabled = true;
     } else {
       recordingStatusEl.textContent = "Not recording";
       recordingStatusEl.className = "status-pill idle";
       micCircleEl.classList.remove("recording");
       startRecordingBtn.disabled = false;
       stopRecordingBtn.disabled = true;
+    }
+  }
+
+  function setBusy(message) {
+    if (audioReadyTextEl) {
+      audioReadyTextEl.textContent = message;
     }
   }
 
@@ -151,6 +155,7 @@ window.initAssistantMeetingModal = function () {
     if (transcriptEl) transcriptEl.value = "";
     if (aiDraftEl) aiDraftEl.value = "";
     if (finalNoteEl) finalNoteEl.value = "";
+    if (aiInstructionEl) aiInstructionEl.value = "";
 
     if (safeguardingBoxEl) safeguardingBoxEl.style.display = "none";
     if (safeguardingTextEl) safeguardingTextEl.textContent = "";
@@ -162,7 +167,9 @@ window.initAssistantMeetingModal = function () {
       audioPlaybackEl.style.display = "none";
     }
 
-    if (audioReadyTextEl) audioReadyTextEl.textContent = "No recording yet.";
+    if (audioReadyTextEl) {
+      audioReadyTextEl.textContent = "Press start recording. When you stop, the transcript and report will be generated automatically.";
+    }
 
     recordedBlob = null;
     recordedChunks = [];
@@ -176,19 +183,9 @@ window.initAssistantMeetingModal = function () {
     if (recordingTimerEl) recordingTimerEl.textContent = "00:00";
     setRecordingUI(false);
 
-    if (transcribeBtn) {
-      transcribeBtn.disabled = true;
-      transcribeBtn.textContent = "Transcribe";
-    }
-
-    if (generateBtn) {
-      generateBtn.disabled = false;
-      generateBtn.textContent = "Generate template";
-    }
-
     if (saveBtn) {
       saveBtn.disabled = false;
-      saveBtn.textContent = "Save meeting note";
+      saveBtn.textContent = "Save";
     }
   }
 
@@ -204,9 +201,7 @@ window.initAssistantMeetingModal = function () {
   function extractTitle(note) {
     const finalText = safeText(note.final_note);
     const match = finalText.match(/Meeting Title:\s*(.*)/i);
-    if (match && match[1]) {
-      return match[1].trim() || "Untitled meeting";
-    }
+    if (match && match[1]) return match[1].trim() || "Untitled meeting";
     return "Untitled meeting";
   }
 
@@ -297,10 +292,7 @@ window.initAssistantMeetingModal = function () {
         safeguardingTextEl.textContent = `Loaded saved meeting from ${formatDate(note.created_at)}.`;
       }
 
-      if (audioReadyTextEl) {
-        audioReadyTextEl.textContent = "Loaded saved meeting. Record again if you want to replace the transcript.";
-      }
-
+      setBusy("Loaded saved meeting. You can edit the final document directly or ask the AI editing agent to refine it.");
       showToast("Saved meeting opened");
     } catch (error) {
       console.error("Open history item error:", error);
@@ -380,13 +372,7 @@ window.initAssistantMeetingModal = function () {
         audioPlaybackEl.style.display = "none";
       }
 
-      if (audioReadyTextEl) {
-        audioReadyTextEl.textContent = "Recording in progress...";
-      }
-
-      if (transcribeBtn) {
-        transcribeBtn.disabled = true;
-      }
+      setBusy("Recording in progress...");
 
       recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
@@ -404,7 +390,7 @@ window.initAssistantMeetingModal = function () {
         }
       };
 
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         recordedBlob = new Blob(recordedChunks, { type: recordedMimeType });
 
         if (audioPlaybackEl) {
@@ -413,15 +399,10 @@ window.initAssistantMeetingModal = function () {
           audioPlaybackEl.style.display = "block";
         }
 
-        if (audioReadyTextEl) {
-          audioReadyTextEl.textContent = `Recording ready (${recordedExtension.toUpperCase()}). You can now transcribe it.`;
-        }
-
-        if (transcribeBtn) {
-          transcribeBtn.disabled = false;
-        }
-
         stopStreamTracks();
+
+        setBusy(`Recording stopped. Generating transcript and report automatically...`);
+        await processRecordingAutomatically();
       };
 
       mediaRecorder.start();
@@ -443,104 +424,86 @@ window.initAssistantMeetingModal = function () {
     showToast("Recording stopped");
   }
 
-  async function transcribeAudio() {
+  async function transcribeAudioBlob() {
     if (!recordedBlob) {
-      alert("Please record a meeting first.");
-      return;
+      throw new Error("No recording available");
     }
 
     const filename = `meeting.${recordedExtension}`;
     const form = new FormData();
     form.append("file", recordedBlob, filename);
 
-    try {
-      if (transcribeBtn) {
-        transcribeBtn.disabled = true;
-        transcribeBtn.textContent = "Transcribing...";
-      }
+    const response = await fetch(`${API_BASE}/ai-notes/transcribe`, {
+      method: "POST",
+      body: form,
+      credentials: "include"
+    });
 
-      const response = await fetch(`${API_BASE}/ai-notes/transcribe`, {
-        method: "POST",
-        body: form,
-        credentials: "include"
-      });
+    const data = await safeJson(response);
 
-      const data = await safeJson(response);
-
-      if (!response.ok) {
-        alert(data.detail || "Transcription failed.");
-        return;
-      }
-
-      if (transcriptEl) {
-        transcriptEl.value = data.transcript || "";
-      }
-
-      showToast("Transcript created");
-      await generateTemplate();
-    } catch (error) {
-      console.error("Transcription error:", error);
-      alert("Could not connect to the meeting assistant service.");
-    } finally {
-      if (transcribeBtn) {
-        transcribeBtn.disabled = false;
-        transcribeBtn.textContent = "Transcribe";
-      }
+    if (!response.ok) {
+      throw new Error(data.detail || "Transcription failed.");
     }
+
+    if (transcriptEl) {
+      transcriptEl.value = data.transcript || "";
+    }
+
+    return data.transcript || "";
   }
 
-  async function generateTemplate() {
-    const transcript = safeText(transcriptEl?.value);
+  async function generateTemplateFromTranscript(transcript) {
+    const cleanTranscript = safeText(transcript || transcriptEl?.value);
 
-    if (!transcript) {
-      alert("Please record and transcribe a meeting first, or paste a transcript.");
-      return;
+    if (!cleanTranscript) {
+      throw new Error("Transcript required.");
     }
 
     const form = new FormData();
-    form.append("transcript", transcript);
+    form.append("transcript", cleanTranscript);
 
+    const response = await fetch(`${API_BASE}/ai-notes/generate`, {
+      method: "POST",
+      body: form,
+      credentials: "include"
+    });
+
+    const data = await safeJson(response);
+
+    if (!response.ok) {
+      throw new Error(data.detail || "Template generation failed.");
+    }
+
+    if (aiDraftEl) aiDraftEl.value = data.note || "";
+    if (finalNoteEl) finalNoteEl.value = data.note || "";
+
+    if (safeguardingBoxEl) safeguardingBoxEl.style.display = "block";
+    if (safeguardingTextEl) {
+      safeguardingTextEl.textContent = "Report generated automatically. Review or use the AI editing agent to refine it.";
+    }
+
+    return data.note || "";
+  }
+
+  async function processRecordingAutomatically() {
     try {
-      if (generateBtn) {
-        generateBtn.disabled = true;
-        generateBtn.textContent = "Generating...";
-      }
+      setBusy("Transcribing recording...");
+      const transcript = await transcribeAudioBlob();
+      showToast("Transcript created");
 
-      const response = await fetch(`${API_BASE}/ai-notes/generate`, {
-        method: "POST",
-        body: form,
-        credentials: "include"
-      });
+      setBusy("Generating report...");
+      await generateTemplateFromTranscript(transcript);
+      showToast("Report generated");
 
-      const data = await safeJson(response);
-
-      if (!response.ok) {
-        alert(data.detail || "Template generation failed.");
-        return;
-      }
-
-      if (aiDraftEl) aiDraftEl.value = data.note || "";
-      if (finalNoteEl) finalNoteEl.value = data.note || "";
-
-      if (safeguardingBoxEl) safeguardingBoxEl.style.display = "block";
-      if (safeguardingTextEl) {
-        safeguardingTextEl.textContent =
-          "AI-generated meeting template created. Please review, refine and approve before saving.";
-      }
-
-      showToast("Meeting template generated");
+      setBusy("Report ready. You can edit it directly or use the AI editing agent.");
     } catch (error) {
-      console.error("Generate error:", error);
-      alert("Could not connect to the meeting assistant service.");
-    } finally {
-      if (generateBtn) {
-        generateBtn.disabled = false;
-        generateBtn.textContent = "Generate template";
-      }
+      console.error("Automatic processing error:", error);
+      alert(error.message || "Could not process the recording.");
+      setBusy("Processing failed. Please try again.");
     }
   }
 
-  async function aiEdit(mode) {
+  async function aiEdit(mode, instructionOverride = "") {
     const text = safeText(finalNoteEl?.value);
 
     if (!text) {
@@ -548,11 +511,31 @@ window.initAssistantMeetingModal = function () {
       return;
     }
 
+    let modeToUse = mode;
+    let instruction = "";
+
+    if (mode === "custom") {
+      instruction = safeText(instructionOverride || aiInstructionEl?.value);
+      if (!instruction) {
+        alert("Please type an instruction for the AI editing agent.");
+        return;
+      }
+      modeToUse = "improve";
+    }
+
     const form = new FormData();
     form.append("text", text);
-    form.append("mode", mode);
+    form.append("mode", modeToUse);
+    if (instruction) {
+      form.append("instruction", instruction);
+    }
 
     try {
+      if (applyAiInstructionBtn && mode === "custom") {
+        applyAiInstructionBtn.disabled = true;
+        applyAiInstructionBtn.textContent = "Applying...";
+      }
+
       const response = await fetch(`${API_BASE}/ai-notes/edit`, {
         method: "POST",
         body: form,
@@ -574,16 +557,21 @@ window.initAssistantMeetingModal = function () {
     } catch (error) {
       console.error("AI edit error:", error);
       alert("Could not connect to the AI editing service.");
+    } finally {
+      if (applyAiInstructionBtn && mode === "custom") {
+        applyAiInstructionBtn.disabled = false;
+        applyAiInstructionBtn.textContent = "Apply AI edit";
+      }
     }
   }
 
   async function saveMeetingNote() {
     const transcript = safeText(transcriptEl?.value);
-    const aiDraft = safeText(aiDraftEl?.value);
+    const aiDraft = safeText(aiDraftEl?.value) || safeText(finalNoteEl?.value);
     const finalNote = safeText(finalNoteEl?.value);
 
-    if (!transcript || !aiDraft || !finalNote) {
-      alert("Transcript, generated template and final document are all required before saving.");
+    if (!transcript || !finalNote) {
+      alert("Transcript and final document are required before saving.");
       return;
     }
 
@@ -620,7 +608,7 @@ window.initAssistantMeetingModal = function () {
     } finally {
       if (saveBtn) {
         saveBtn.disabled = false;
-        saveBtn.textContent = "Save meeting note";
+        saveBtn.textContent = "Save";
       }
     }
   }
@@ -719,36 +707,33 @@ window.initAssistantMeetingModal = function () {
     showToast("Transcript cleared");
   }
 
-  if (!isInitialised) {
-    openModalBtn.onclick = openModal;
-    if (closeModalBtn) closeModalBtn.onclick = closeModal;
+  openModalBtn.onclick = openModal;
+  if (closeModalBtn) closeModalBtn.onclick = closeModal;
 
-    modalOverlay.onclick = (event) => {
-      if (event.target === modalOverlay) {
-        closeModal();
-      }
-    };
+  modalOverlay.onclick = (event) => {
+    if (event.target === modalOverlay) {
+      closeModal();
+    }
+  };
 
-    if (refreshHistoryBtn) refreshHistoryBtn.onclick = loadMeetingHistory;
+  if (refreshHistoryBtn) refreshHistoryBtn.onclick = loadMeetingHistory;
 
-    if (startRecordingBtn) startRecordingBtn.onclick = startRecording;
-    if (stopRecordingBtn) stopRecordingBtn.onclick = stopRecording;
-    if (transcribeBtn) transcribeBtn.onclick = transcribeAudio;
-    if (generateBtn) generateBtn.onclick = generateTemplate;
-    if (saveBtn) saveBtn.onclick = saveMeetingNote;
-    if (deleteMeetingBtn) deleteMeetingBtn.onclick = deleteMeeting;
-    if (copyBtn) copyBtn.onclick = copyFinalDocument;
-    if (printBtn) printBtn.onclick = printFinalDocument;
-    if (exportTxtBtn) exportTxtBtn.onclick = exportFinalDocumentTxt;
-    if (clearTranscriptBtn) clearTranscriptBtn.onclick = clearTranscript;
+  if (startRecordingBtn) startRecordingBtn.onclick = startRecording;
+  if (stopRecordingBtn) stopRecordingBtn.onclick = stopRecording;
+  if (saveBtn) saveBtn.onclick = saveMeetingNote;
+  if (deleteMeetingBtn) deleteMeetingBtn.onclick = deleteMeeting;
+  if (copyBtn) copyBtn.onclick = copyFinalDocument;
+  if (printBtn) printBtn.onclick = printFinalDocument;
+  if (exportTxtBtn) exportTxtBtn.onclick = exportFinalDocumentTxt;
+  if (clearTranscriptBtn) clearTranscriptBtn.onclick = clearTranscript;
 
-    if (improveBtn) improveBtn.onclick = () => aiEdit("improve");
-    if (shortenBtn) shortenBtn.onclick = () => aiEdit("shorten");
-    if (formalBtn) formalBtn.onclick = () => aiEdit("formal");
-    if (bulletBtn) bulletBtn.onclick = () => aiEdit("bullet");
-    if (grammarBtn) grammarBtn.onclick = () => aiEdit("grammar");
-
-    isInitialised = true;
+  if (improveBtn) improveBtn.onclick = () => aiEdit("improve");
+  if (shortenBtn) shortenBtn.onclick = () => aiEdit("shorten");
+  if (formalBtn) formalBtn.onclick = () => aiEdit("formal");
+  if (bulletBtn) bulletBtn.onclick = () => aiEdit("bullet");
+  if (grammarBtn) grammarBtn.onclick = () => aiEdit("grammar");
+  if (applyAiInstructionBtn) {
+    applyAiInstructionBtn.onclick = () => aiEdit("custom");
   }
 
   setRecordingUI(false);
