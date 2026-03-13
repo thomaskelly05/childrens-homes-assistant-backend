@@ -47,13 +47,21 @@ async function loadSupervisionSubmissions() {
         ? new Date(submission.submitted_at).toLocaleString()
         : "Unknown date";
 
-      const fullName = `${submission.first_name || "Unknown"} ${submission.last_name || ""}`.trim();
+      const reviewedAt = submission.reviewed_at
+        ? new Date(submission.reviewed_at).toLocaleString()
+        : "";
+
+      const firstName = (submission.first_name || "").trim();
+      const lastName = (submission.last_name || "").trim();
+      const fullName = `${firstName} ${lastName}`.trim();
+      const displayName = fullName || submission.email || `Staff member #${submission.staff_id}`;
 
       item.innerHTML = `
-        <h4>${escapeHtml(fullName)}</h4>
+        <h4>${escapeHtml(displayName)}</h4>
         <p>${escapeHtml(submission.role || "")}</p>
         <p><strong>Status:</strong> ${escapeHtml(submission.status || "submitted")}</p>
         <p><strong>Submitted:</strong> ${escapeHtml(submittedAt)}</p>
+        ${reviewedAt ? `<p><strong>Reviewed:</strong> ${escapeHtml(reviewedAt)}</p>` : ""}
       `;
 
       item.addEventListener("click", async () => {
@@ -87,7 +95,15 @@ async function loadSupervisionSubmissionDetail(submissionId) {
 
     const submission = data.submission;
 
+    const firstName = (submission.first_name || "").trim();
+    const lastName = (submission.last_name || "").trim();
+    const fullName = `${firstName} ${lastName}`.trim();
+    const displayName = fullName || submission.email || `Staff member #${submission.staff_id}`;
+
     detail.textContent = [
+      `Staff member: ${displayName}`,
+      submission.role ? `Role: ${submission.role}` : "",
+      "",
       "Journal Summary",
       "",
       submission.journal_summary || "",
@@ -103,7 +119,7 @@ async function loadSupervisionSubmissionDetail(submissionId) {
       "Supervision Pack",
       "",
       submission.supervision_pack || ""
-    ].join("\n");
+    ].filter(Boolean).join("\n");
   } catch (error) {
     detail.textContent = error.message || "Failed to load submission detail.";
   }
