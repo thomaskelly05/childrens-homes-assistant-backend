@@ -17,6 +17,11 @@
                 </div>
             </div>
 
+            <a href="/index.html" class="back-link">
+                <span class="back-link-icon">←</span>
+                <span>Back to dashboard</span>
+            </a>
+
             <nav class="sidebar-nav">
                 <button class="nav-item nav-item-active" type="button" data-stage-target="record">
                     <span class="nav-icon">●</span>
@@ -92,7 +97,7 @@
             <section class="stage-tabs">
                 <button class="stage-tab active" data-stage="record" type="button">1. Record</button>
                 <button class="stage-tab" data-stage="generate" type="button">2. Generate</button>
-                <button class="stage-tab" data-stage="edit" type="button">3. Edit & Save</button>
+                <button class="stage-tab" data-stage="edit" type="button">3. Edit &amp; Save</button>
             </section>
 
             <section id="stage-record" class="stage-panel active">
@@ -199,6 +204,9 @@
                             <div>
                                 <p class="panel-label">Final document</p>
                                 <h2>Editable note</h2>
+                                <div class="document-meta">
+                                    <span id="noteModeBadge" class="note-mode-badge is-new">New unsaved note</span>
+                                </div>
                             </div>
 
                             <div class="document-header-actions">
