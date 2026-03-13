@@ -19,14 +19,12 @@ from services.ai_notes_service import (
     edit_note
 )
 
+from auth.dependencies import get_current_user
+
 router = APIRouter(
     prefix="/ai-notes",
     tags=["AI Notes"]
 )
-
-# --------------------------------------------------
-# PATHS
-# --------------------------------------------------
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UPLOAD_DIR = os.path.join(BASE_DIR, "_tmp_uploads")
@@ -36,10 +34,6 @@ if os.path.exists(UPLOAD_DIR) and not os.path.isdir(UPLOAD_DIR):
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-
-# --------------------------------------------------
-# HELPERS
-# --------------------------------------------------
 
 def _to_bool(value: str | None) -> bool:
     if value is None:
@@ -61,12 +55,11 @@ def _derive_title(final_note: str) -> str | None:
     return first_line[:120]
 
 
-# --------------------------------------------------
-# TRANSCRIBE AUDIO
-# --------------------------------------------------
-
 @router.post("/transcribe")
-async def transcribe_note_audio(file: UploadFile = File(...)):
+async def transcribe_note_audio(
+    file: UploadFile = File(...),
+    current_user=Depends(get_current_user)
+):
     if not file:
         raise HTTPException(status_code=400, detail="No file uploaded")
 
@@ -79,10 +72,7 @@ async def transcribe_note_audio(file: UploadFile = File(...)):
     allowed = [".webm", ".wav", ".mp3", ".m4a", ".mp4", ".ogg"]
 
     if extension not in allowed:
-        raise HTTPException(
-            status_code=400,
-            detail="Unsupported audio format"
-        )
+        raise HTTPException(status_code=400, detail="Unsupported audio format")
 
     temp_filename = f"{uuid.uuid4()}{extension}"
     temp_path = os.path.join(UPLOAD_DIR, temp_filename)
@@ -115,19 +105,15 @@ async def transcribe_note_audio(file: UploadFile = File(...)):
             os.remove(temp_path)
 
 
-# --------------------------------------------------
-# GENERATE MEETING NOTE
-# --------------------------------------------------
-
 @router.post("/generate")
-async def generate_ai_note(transcript: str = Form(...)):
+async def generate_ai_note(
+    transcript: str = Form(...),
+    current_user=Depends(get_current_user)
+):
     transcript = transcript.strip()
 
     if not transcript:
-        raise HTTPException(
-            status_code=400,
-            detail="Transcript required"
-        )
+        raise HTTPException(status_code=400, detail="Transcript required")
 
     try:
         result = await generate_note(transcript)
@@ -154,31 +140,22 @@ async def generate_ai_note(transcript: str = Form(...)):
         )
 
 
-# --------------------------------------------------
-# AI EDIT NOTE
-# --------------------------------------------------
-
 @router.post("/edit")
 async def edit_ai_note(
     text: str = Form(...),
     mode: str = Form(...),
-    instruction: str | None = Form(None)
+    instruction: str | None = Form(None),
+    current_user=Depends(get_current_user)
 ):
     text = text.strip()
     mode = mode.strip().lower()
     instruction = (instruction or "").strip()
 
     if not text:
-        raise HTTPException(
-            status_code=400,
-            detail="Text required"
-        )
+        raise HTTPException(status_code=400, detail="Text required")
 
     if not mode:
-        raise HTTPException(
-            status_code=400,
-            detail="Edit mode required"
-        )
+        raise HTTPException(status_code=400, detail="Edit mode required")
 
     try:
         edited = await edit_note(
@@ -199,10 +176,6 @@ async def edit_ai_note(
         )
 
 
-# --------------------------------------------------
-# SAVE MEETING NOTE
-# --------------------------------------------------
-
 @router.post("/save")
 async def save_ai_note(
     transcript: str = Form(...),
@@ -211,7 +184,8 @@ async def save_ai_note(
     safeguarding_flag: str | None = Form(None),
     safeguarding_reason: str | None = Form(None),
     title: str | None = Form(None),
-    conn=Depends(get_db)
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user)
 ):
     transcript = transcript.strip()
     ai_draft = ai_draft.strip()
@@ -220,22 +194,13 @@ async def save_ai_note(
     title = (title or "").strip()
 
     if not transcript:
-        raise HTTPException(
-            status_code=400,
-            detail="Transcript required"
-        )
+        raise HTTPException(status_code=400, detail="Transcript required")
 
     if not ai_draft:
-        raise HTTPException(
-            status_code=400,
-            detail="AI draft required"
-        )
+        raise HTTPException(status_code=400, detail="AI draft required")
 
     if not final_note:
-        raise HTTPException(
-            status_code=400,
-            detail="Final note required"
-        )
+        raise HTTPException(status_code=400, detail="Final note required")
 
     try:
         ensure_ai_meetings_table(conn)
@@ -246,6 +211,7 @@ async def save_ai_note(
 
         record = insert_ai_meeting_note(
             conn=conn,
+            user_id=current_user["user_id"],
             transcript=transcript,
             ai_draft=ai_draft,
             final_note=final_note,
@@ -267,19 +233,20 @@ async def save_ai_note(
         )
 
 
-# --------------------------------------------------
-# LIST SAVED MEETING NOTES
-# --------------------------------------------------
-
 @router.get("/history")
 async def list_saved_ai_notes(
     limit: int = Query(20, ge=1, le=100),
-    conn=Depends(get_db)
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user)
 ):
     try:
         ensure_ai_meetings_table(conn)
 
-        notes = list_ai_meeting_notes(conn, limit=limit)
+        notes = list_ai_meeting_notes(
+            conn,
+            user_id=current_user["user_id"],
+            limit=limit
+        )
 
         return {
             "ok": True,
@@ -293,25 +260,23 @@ async def list_saved_ai_notes(
         )
 
 
-# --------------------------------------------------
-# GET ONE SAVED MEETING NOTE
-# --------------------------------------------------
-
 @router.get("/history/{note_id}")
 async def get_saved_ai_note(
     note_id: int,
-    conn=Depends(get_db)
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user)
 ):
     try:
         ensure_ai_meetings_table(conn)
 
-        note = get_ai_meeting_note(conn, note_id)
+        note = get_ai_meeting_note(
+            conn,
+            note_id=note_id,
+            user_id=current_user["user_id"]
+        )
 
         if not note:
-            raise HTTPException(
-                status_code=404,
-                detail="Meeting note not found"
-            )
+            raise HTTPException(status_code=404, detail="Meeting note not found")
 
         return {
             "ok": True,
@@ -328,14 +293,11 @@ async def get_saved_ai_note(
         )
 
 
-# --------------------------------------------------
-# DELETE MEETING NOTE
-# --------------------------------------------------
-
 @router.post("/delete")
 async def delete_note(
     note_id: int | None = Form(None),
-    conn=Depends(get_db)
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user)
 ):
     if note_id is None:
         return {
@@ -346,13 +308,14 @@ async def delete_note(
     try:
         ensure_ai_meetings_table(conn)
 
-        deleted = delete_ai_meeting_note(conn, note_id)
+        deleted = delete_ai_meeting_note(
+            conn,
+            note_id=note_id,
+            user_id=current_user["user_id"]
+        )
 
         if not deleted:
-            raise HTTPException(
-                status_code=404,
-                detail="Meeting note not found"
-            )
+            raise HTTPException(status_code=404, detail="Meeting note not found")
 
         return {
             "ok": True,
