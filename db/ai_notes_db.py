@@ -116,6 +116,60 @@ def insert_ai_meeting_note(
         return dict(row) if row else {}
 
 
+def update_ai_meeting_note(
+    conn,
+    note_id: int,
+    user_id: int,
+    transcript: str,
+    ai_draft: str,
+    final_note: str,
+    title: str | None = None,
+    safeguarding_flag: bool = False,
+    safeguarding_reason: str | None = None
+) -> dict[str, Any] | None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE ai_meeting_notes
+            SET
+                title = %s,
+                transcript = %s,
+                ai_draft = %s,
+                final_note = %s,
+                safeguarding_flag = %s,
+                safeguarding_reason = %s,
+                updated_at = NOW()
+            WHERE id = %s
+              AND user_id = %s
+            RETURNING
+                id,
+                user_id,
+                title,
+                transcript,
+                ai_draft,
+                final_note,
+                safeguarding_flag,
+                safeguarding_reason,
+                created_at,
+                updated_at;
+            """,
+            (
+                title,
+                transcript,
+                ai_draft,
+                final_note,
+                safeguarding_flag,
+                safeguarding_reason,
+                note_id,
+                user_id
+            )
+        )
+
+        row = cur.fetchone()
+        conn.commit()
+        return dict(row) if row else None
+
+
 def list_ai_meeting_notes(
     conn,
     user_id: int,
@@ -134,7 +188,7 @@ def list_ai_meeting_notes(
                 updated_at
             FROM ai_meeting_notes
             WHERE user_id = %s
-            ORDER BY created_at DESC
+            ORDER BY updated_at DESC, created_at DESC
             LIMIT %s;
             """,
             (user_id, limit)
