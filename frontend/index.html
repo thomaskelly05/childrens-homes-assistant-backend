@@ -1,82 +1,106 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IndiCare Assistant</title>
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
-<title>IndiCare Assistant</title>
-
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
-<link rel="stylesheet" href="/css/reset.css">
-<link rel="stylesheet" href="/css/theme.css">
-<link rel="stylesheet" href="/css/layout.css">
-<link rel="stylesheet" href="/css/components.css">
-
+    <link rel="stylesheet" href="/css/reset.css">
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/components.css">
 </head>
-
 <body>
+    <div id="app">
+        <aside id="sidebar" class="sidebar-shell">
+            <div class="sidebar-top">
+                <div class="brand-block">
+                    <div class="brand-mark">AI</div>
+                    <div class="brand-copy">
+                        <h1>IndiCare</h1>
+                        <p>Assistant for Children's Homes</p>
+                    </div>
+                </div>
 
-<div id="app">
+                <div class="sidebar-actions">
+                    <button id="new-chat-btn" type="button">New chat</button>
+                </div>
 
-<!-- LEFT SIDEBAR -->
-<div id="sidebar"></div>
+                <div id="conversation-list"></div>
+            </div>
+        </aside>
 
-<!-- MAIN CHAT WORKSPACE -->
-<div id="workspace"></div>
+        <main id="workspace" class="workspace-shell">
+            <div class="workspace-header">
+                <div>
+                    <h2>Assistant workspace</h2>
+                    <p>Chat, notes, supervision and meeting tools.</p>
+                </div>
+            </div>
 
-</div>
+            <div id="chat-root"></div>
+        </main>
+    </div>
 
-<footer id="footer">
-© IndiCare
-</footer>
+    <footer id="footer">
+        © IndiCare
+    </footer>
 
-<!-- Command Palette -->
-<div id="command-palette" class="command-palette hidden">
+    <div id="command-palette" class="command-palette hidden">
+        <div class="command-box">
+            <input
+                id="command-input"
+                placeholder="Type a command or search..."
+                autocomplete="off"
+            />
+            <div id="command-results"></div>
+        </div>
+    </div>
 
-<div class="command-box">
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/workspace.js"></script>
+    <script src="/js/conversations.js"></script>
+    <script src="/js/chat.js"></script>
+    <script src="/js/command.js"></script>
+    <script src="/js/assistant.js"></script>
 
-<input
-id="command-input"
-placeholder="Type a command or search..."
-autocomplete="off"
-/>
+    <script>
+        async function bootApp() {
+            const authenticated = await checkAuth();
 
-<div id="command-results"></div>
+            if (!authenticated) {
+                window.location = "/login.html";
+                return;
+            }
 
-</div>
+            if (window.loadConversations) {
+                await window.loadConversations();
+            }
 
-</div>
+            const newChatBtn = document.getElementById("new-chat-btn");
+            if (newChatBtn && window.createConversation) {
+                newChatBtn.onclick = window.createConversation;
+            }
 
-<!-- JAVASCRIPT -->
-<script src="/js/api.js"></script>
-<script src="/js/workspace.js"></script>
-<script src="/js/conversations.js"></script>
-<script src="/js/chat.js"></script>
-<script src="/js/command.js"></script>
-<script src="/js/app.js"></script>
-<script src="/js/assistant.js"></script>
+            if (window.initChat) {
+                window.initChat();
+            }
 
-<!-- AUTH CHECK -->
-<script>
-async function checkAuth() {
+            if (window.initAssistantMeetingModal) {
+                window.initAssistantMeetingModal();
+            }
 
-const res = await fetch("https://api.indicare.co.uk/auth/check", {
-credentials: "include"
-});
+            if (window.createConversation) {
+                window.createConversation();
+            }
+        }
 
-const data = await res.json();
-
-if (!data.authenticated) {
-window.location = "/login.html";
-}
-
-}
-
-checkAuth();
-</script>
-
+        bootApp().catch((error) => {
+            console.error("App boot error:", error);
+        });
+    </script>
 </body>
 </html>
