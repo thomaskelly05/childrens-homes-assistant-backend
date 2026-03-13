@@ -3,7 +3,6 @@ from typing import Optional
 
 
 class StaffJournalCreate(BaseModel):
-    staff_id: int
     holding_today: Optional[str] = None
     practice_today: Optional[str] = None
     reflection_today: Optional[str] = None
