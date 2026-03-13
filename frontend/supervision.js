@@ -34,13 +34,13 @@ async function loadSupervisionSubmissions() {
     list.innerHTML = "";
 
     if (!submissions.length) {
-      list.innerHTML = "<div class='journal-history-item'><p>No supervision submissions yet.</p></div>";
+      list.innerHTML = `<div class="history-item"><p>No supervision submissions yet.</p></div>`;
       return;
     }
 
     submissions.forEach((submission) => {
       const item = document.createElement("div");
-      item.className = "journal-history-item supervision-item";
+      item.className = "history-item supervision-item";
       item.style.cursor = "pointer";
 
       const submittedAt = submission.submitted_at
@@ -71,7 +71,7 @@ async function loadSupervisionSubmissions() {
       list.appendChild(item);
     });
   } catch (error) {
-    list.innerHTML = `<div class='journal-history-item'><p>${escapeHtml(error.message)}</p></div>`;
+    list.innerHTML = `<div class="history-item"><p>${escapeHtml(error.message)}</p></div>`;
   }
 }
 
