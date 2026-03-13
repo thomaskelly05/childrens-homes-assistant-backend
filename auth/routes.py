@@ -50,20 +50,12 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
     if not bcrypt.checkpw(payload.password.encode(), password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    # ---------------------------------------------------------
-    # CREATE SESSION TOKEN
-    # ---------------------------------------------------------
-
     token = create_session_token(
         user["id"],
         user["email"],
         user["role"],
         user["home_id"]
     )
-
-    # ---------------------------------------------------------
-    # SET AUTH COOKIE
-    # ---------------------------------------------------------
 
     response.set_cookie(
         key="access_token",
@@ -118,7 +110,6 @@ def check_auth(request: Request):
         return {"authenticated": False}
 
     try:
-
         payload = jwt.decode(
             token,
             JWT_SECRET,
@@ -148,7 +139,6 @@ def get_current_user(request: Request, conn=Depends(get_db)):
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     try:
-
         payload = jwt.decode(
             token,
             JWT_SECRET,
@@ -168,9 +158,21 @@ def get_current_user(request: Request, conn=Depends(get_db)):
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
-                SELECT id, email, role, home_id, first_name, last_name, archived, updated_at, created_at
-                FROM users
-                WHERE id = %s
+                SELECT
+                    u.id,
+                    u.email,
+                    u.role,
+                    u.home_id,
+                    u.first_name,
+                    u.last_name,
+                    u.archived,
+                    u.updated_at,
+                    u.created_at,
+                    h.name AS home_name
+                FROM users u
+                LEFT JOIN homes h
+                    ON h.id = u.home_id
+                WHERE u.id = %s
                 LIMIT 1
                 """,
                 (user_id,)
