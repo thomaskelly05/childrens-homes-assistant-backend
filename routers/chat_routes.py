@@ -5,7 +5,7 @@ from pydantic import BaseModel
 import logging
 
 from db.connection import get_db
-from auth.tokens import decode_session_token
+from auth.dependencies import get_current_user
 from services.ai_service import generate_ai_stream
 
 
@@ -14,39 +14,16 @@ logger = logging.getLogger(__name__)
 
 
 # --------------------------------------------------
-# AUTH HELPER
-# --------------------------------------------------
-
-def get_user_id(request: Request):
-    token = request.cookies.get("access_token")
-
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    payload = decode_session_token(token)
-
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid session")
-
-    user_id = payload.get("sub")
-
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid user")
-
-    return user_id
-
-
-# --------------------------------------------------
 # CONVERSATION ACCESS CHECK
 # --------------------------------------------------
 
-def ensure_conversation_owner(conn, conversation_id: int, user_id: str):
+def ensure_conversation_owner(conn, conversation_id: int, user_id: int):
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
             SELECT id
             FROM conversations
-            WHERE id=%s AND user_id=%s
+            WHERE id = %s AND user_id = %s
             """,
             (conversation_id, user_id)
         )
@@ -66,7 +43,7 @@ def get_conversation_history(conn, conversation_id: int):
             """
             SELECT role, message
             FROM messages
-            WHERE conversation_id=%s
+            WHERE conversation_id = %s
             ORDER BY created_at ASC, id ASC
             """,
             (conversation_id,)
@@ -92,15 +69,18 @@ def generate_title(message: str):
 # --------------------------------------------------
 
 @router.get("/conversations")
-def conversations(request: Request, conn=Depends(get_db)):
-    user_id = get_user_id(request)
+def conversations(
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    user_id = current_user["user_id"]
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
             SELECT id, title
             FROM conversations
-            WHERE user_id=%s
+            WHERE user_id = %s
             ORDER BY created_at DESC
             """,
             (user_id,)
@@ -115,8 +95,12 @@ def conversations(request: Request, conn=Depends(get_db)):
 # --------------------------------------------------
 
 @router.get("/conversations/{cid}")
-def load(cid: int, request: Request, conn=Depends(get_db)):
-    user_id = get_user_id(request)
+def load(
+    cid: int,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    user_id = current_user["user_id"]
     ensure_conversation_owner(conn, cid, user_id)
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -124,7 +108,7 @@ def load(cid: int, request: Request, conn=Depends(get_db)):
             """
             SELECT role, message
             FROM messages
-            WHERE conversation_id=%s
+            WHERE conversation_id = %s
             ORDER BY created_at ASC, id ASC
             """,
             (cid,)
@@ -139,8 +123,12 @@ def load(cid: int, request: Request, conn=Depends(get_db)):
 # --------------------------------------------------
 
 @router.post("/")
-async def chat(request: Request, conn=Depends(get_db)):
-    user_id = get_user_id(request)
+async def chat(
+    request: Request,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    user_id = current_user["user_id"]
     body = await request.json()
 
     message = (body.get("message") or "").strip()
@@ -159,8 +147,8 @@ async def chat(request: Request, conn=Depends(get_db)):
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
-                INSERT INTO conversations(user_id, title)
-                VALUES(%s, %s)
+                INSERT INTO conversations (user_id, title)
+                VALUES (%s, %s)
                 RETURNING id
                 """,
                 (user_id, title)
@@ -169,7 +157,8 @@ async def chat(request: Request, conn=Depends(get_db)):
 
         conn.commit()
     else:
-        ensure_conversation_owner(conn, int(cid), user_id)
+        cid = int(cid)
+        ensure_conversation_owner(conn, cid, user_id)
 
     # --------------------------------------------------
     # SAVE USER MESSAGE
@@ -178,14 +167,13 @@ async def chat(request: Request, conn=Depends(get_db)):
     with conn.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO messages(conversation_id, role, message)
-            VALUES(%s, 'user', %s)
+            INSERT INTO messages (conversation_id, role, message)
+            VALUES (%s, 'user', %s)
             """,
             (cid, message)
         )
     conn.commit()
 
-    # Load full history after saving the new user message
     history = get_conversation_history(conn, cid)
 
     # --------------------------------------------------
@@ -196,13 +184,12 @@ async def chat(request: Request, conn=Depends(get_db)):
         ai = ""
 
         try:
-            # Optional tiny initial yield so the client sees activity sooner
             yield ""
 
             async for token in generate_ai_stream(
                 message=message,
                 session_id=str(cid),
-                history=history,   # requires ai_service support
+                history=history,
             ):
                 if token:
                     ai += token
@@ -220,14 +207,13 @@ async def chat(request: Request, conn=Depends(get_db)):
             yield error_text
 
         finally:
-            # Save whatever was generated, even if partial or error text
             if ai.strip():
                 try:
                     with conn.cursor() as cur:
                         cur.execute(
                             """
-                            INSERT INTO messages(conversation_id, role, message)
-                            VALUES(%s, 'assistant', %s)
+                            INSERT INTO messages (conversation_id, role, message)
+                            VALUES (%s, 'assistant', %s)
                             """,
                             (cid, ai)
                         )
@@ -248,18 +234,28 @@ class RenameConversation(BaseModel):
 
 
 @router.post("/conversations/{conversation_id}/rename")
-def rename_conversation(conversation_id: int, payload: RenameConversation, request: Request, conn=Depends(get_db)):
-    user_id = get_user_id(request)
+def rename_conversation(
+    conversation_id: int,
+    payload: RenameConversation,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    user_id = current_user["user_id"]
     ensure_conversation_owner(conn, conversation_id, user_id)
+
+    title = payload.title.strip()
+
+    if not title:
+        raise HTTPException(status_code=400, detail="Title is required")
 
     with conn.cursor() as cur:
         cur.execute(
             """
             UPDATE conversations
-            SET title=%s
-            WHERE id=%s
+            SET title = %s
+            WHERE id = %s
             """,
-            (payload.title.strip(), conversation_id)
+            (title, conversation_id)
         )
         conn.commit()
 
@@ -271,15 +267,19 @@ def rename_conversation(conversation_id: int, payload: RenameConversation, reque
 # --------------------------------------------------
 
 @router.delete("/conversations/{conversation_id}")
-def delete_conversation(conversation_id: int, request: Request, conn=Depends(get_db)):
-    user_id = get_user_id(request)
+def delete_conversation(
+    conversation_id: int,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    user_id = current_user["user_id"]
     ensure_conversation_owner(conn, conversation_id, user_id)
 
     with conn.cursor() as cur:
         cur.execute(
             """
             DELETE FROM conversations
-            WHERE id=%s
+            WHERE id = %s
             """,
             (conversation_id,)
         )
