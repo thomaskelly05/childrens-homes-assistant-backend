@@ -1,9 +1,11 @@
 const API_BASE = "https://childrens-homes-assistant-backend-new.onrender.com";
+const TEMPLATE_STORAGE_KEY = "indicare_custom_note_templates";
 
 /* -----------------------------
    Core fields
 ----------------------------- */
 const transcriptEl = document.getElementById("transcript");
+const transcriptMirrorEl = document.getElementById("transcriptMirror");
 const aiDraftEl = document.getElementById("aiDraft");
 const finalNoteEl = document.getElementById("finalNote");
 
@@ -19,7 +21,14 @@ const micCircleEl = document.getElementById("micCircle");
 const toastEl = document.getElementById("toast");
 
 /* -----------------------------
-   Main section buttons
+   History
+----------------------------- */
+const historyListEl = document.getElementById("historyList");
+const historyEmptyStateEl = document.getElementById("historyEmptyState");
+const refreshHistoryBtn = document.getElementById("refreshHistoryBtn");
+
+/* -----------------------------
+   Buttons
 ----------------------------- */
 const startRecordingBtn = document.getElementById("startRecordingBtn");
 const stopRecordingBtn = document.getElementById("stopRecordingBtn");
@@ -27,22 +36,15 @@ const transcribeBtn = document.getElementById("transcribeBtn");
 const generateBtn = document.getElementById("generateBtn");
 const saveBtn = document.getElementById("saveBtn");
 
-/* -----------------------------
-   Toolbar buttons
------------------------------ */
-const toolbarStartBtn = document.getElementById("toolbarStartBtn");
-const toolbarStopBtn = document.getElementById("toolbarStopBtn");
-const toolbarTranscribeBtn = document.getElementById("toolbarTranscribeBtn");
-const toolbarGenerateBtn = document.getElementById("toolbarGenerateBtn");
-const saveBtnTop = document.getElementById("saveBtnTop");
+const toolbarGenerateBtn = document.getElementById("goToEditBtn");
 
-/* -----------------------------
-   Utility buttons
------------------------------ */
+const saveBtnTop = document.getElementById("saveBtnTop");
+const exportBtnTop = document.getElementById("exportBtnTop");
+const printBtnTop = document.getElementById("printBtnTop");
+
 const toggleTranscriptBtn = document.getElementById("toggleTranscriptBtn");
 const transcriptContentEl = document.getElementById("transcriptContent");
 
-const copyDraftToFinalBtn = document.getElementById("copyDraftToFinalBtn");
 const copyDraftBtn = document.getElementById("copyDraftBtn");
 const copyFinalBtn = document.getElementById("copyFinalBtn");
 const printBtn = document.getElementById("printBtn");
@@ -53,24 +55,56 @@ const applyAiEditBtn = document.getElementById("applyAiEditBtn");
 const undoAiEditBtn = document.getElementById("undoAiEditBtn");
 const aiInstructionEl = document.getElementById("aiInstruction");
 
-/* -----------------------------
-   Sections / progress / nav
------------------------------ */
-const progressSteps = document.querySelectorAll(".progress-step");
-const sectionTargets = document.querySelectorAll("[data-scroll-target]");
-const sidebarNavItems = document.querySelectorAll(".sidebar-nav .nav-item");
+const promptChips = document.querySelectorAll(".prompt-chip");
 
-const observedSections = [
-    { id: "workspaceTop", navLabel: "New note" },
-    { id: "recordPanel", navLabel: "Record" },
-    { id: "transcriptPanel", navLabel: "Transcript" },
-    { id: "draftPanel", navLabel: "AI draft" },
-    { id: "finalPanel", navLabel: "Final note" }
-];
+/* -----------------------------
+   Stage navigation
+----------------------------- */
+const stageTabs = document.querySelectorAll(".stage-tab");
+const stagePanels = document.querySelectorAll(".stage-panel");
+const stageNavItems = document.querySelectorAll("[data-stage-target]");
+
+/* -----------------------------
+   Templates
+----------------------------- */
+const templateSelectEl = document.getElementById("templateSelect");
+const openTemplateManagerBtn = document.getElementById("openTemplateManagerBtn");
+const templateModalEl = document.getElementById("templateModal");
+const closeTemplateManagerBtn = document.getElementById("closeTemplateManagerBtn");
+const templateNameInput = document.getElementById("templateNameInput");
+const newTemplateSectionInput = document.getElementById("newTemplateSectionInput");
+const addTemplateSectionBtn = document.getElementById("addTemplateSectionBtn");
+const templateSectionsListEl = document.getElementById("templateSectionsList");
+const saveTemplateBtn = document.getElementById("saveTemplateBtn");
+const savedTemplatesListEl = document.getElementById("savedTemplatesList");
 
 /* -----------------------------
    State
 ----------------------------- */
+const builtInTemplates = [
+    {
+        id: "general-meeting",
+        name: "General meeting",
+        sections: ["Meeting Title", "Date", "Attendees", "Summary", "Key Points Discussed", "Decisions Made", "Actions", "Next Steps"]
+    },
+    {
+        id: "supervision",
+        name: "Supervision",
+        sections: ["Session Overview", "Reflection on Practice", "Strengths", "Areas for Development", "Actions Agreed", "Review Date"]
+    },
+    {
+        id: "incident-review",
+        name: "Incident review",
+        sections: ["Incident Summary", "What Happened", "Immediate Response", "Discussion", "Learning", "Actions", "Follow-Up"]
+    },
+    {
+        id: "placement-planning",
+        name: "Placement planning",
+        sections: ["Meeting Overview", "Current Needs", "Risks", "Placement Planning Discussion", "Decisions", "Actions", "Review Date"]
+    }
+];
+
+let currentTemplateSections = [];
 let latestSafeguardingFlag = false;
 let latestSafeguardingReason = "";
 let mediaRecorder = null;
@@ -80,20 +114,17 @@ let recordingStream = null;
 let timerInterval = null;
 let recordingSeconds = 0;
 let transcriptVisible = true;
-let previousAiDraft = "";
+let previousFinalNote = "";
+let openedNoteId = null;
 
 /* -----------------------------
    Helpers
 ----------------------------- */
 function showToast(message) {
     if (!toastEl) return;
-
     toastEl.textContent = message;
     toastEl.classList.add("show");
-
-    setTimeout(() => {
-        toastEl.classList.remove("show");
-    }, 2600);
+    setTimeout(() => toastEl.classList.remove("show"), 2600);
 }
 
 function formatTime(totalSeconds) {
@@ -118,55 +149,7 @@ function safeSetValue(el, value) {
 function updateButtonState(button, disabled, text = null) {
     if (!button) return;
     button.disabled = disabled;
-    if (text !== null) {
-        button.textContent = text;
-    }
-}
-
-function syncRecordingButtons(isRecording) {
-    updateButtonState(startRecordingBtn, isRecording);
-    updateButtonState(stopRecordingBtn, !isRecording);
-    updateButtonState(toolbarStartBtn, isRecording);
-    updateButtonState(toolbarStopBtn, !isRecording);
-}
-
-function syncTranscribeButtons(disabled, mainText = null, toolbarText = null) {
-    updateButtonState(
-        transcribeBtn,
-        disabled,
-        mainText ?? "Transcribe recording"
-    );
-    updateButtonState(
-        toolbarTranscribeBtn,
-        disabled,
-        toolbarText ?? "Transcribe"
-    );
-}
-
-function syncGenerateButtons(disabled, mainText = null, toolbarText = null) {
-    updateButtonState(
-        generateBtn,
-        disabled,
-        mainText ?? "Generate AI note"
-    );
-    updateButtonState(
-        toolbarGenerateBtn,
-        disabled,
-        toolbarText ?? "Generate"
-    );
-}
-
-function syncSaveButtons(disabled, mainText = null, toolbarText = null) {
-    updateButtonState(
-        saveBtn,
-        disabled,
-        mainText ?? "Save note"
-    );
-    updateButtonState(
-        saveBtnTop,
-        disabled,
-        toolbarText ?? "Save"
-    );
+    if (text !== null) button.textContent = text;
 }
 
 function setStatus(type, text) {
@@ -179,12 +162,14 @@ function setRecordingUI(isRecording) {
     if (isRecording) {
         setStatus("recording", "Recording live");
         micCircleEl?.classList.add("recording");
-        syncRecordingButtons(true);
-        syncTranscribeButtons(true);
+        updateButtonState(startRecordingBtn, true);
+        updateButtonState(stopRecordingBtn, false);
+        updateButtonState(transcribeBtn, true);
     } else {
         setStatus("idle", "Not recording");
         micCircleEl?.classList.remove("recording");
-        syncRecordingButtons(false);
+        updateButtonState(startRecordingBtn, false);
+        updateButtonState(stopRecordingBtn, true);
     }
 }
 
@@ -218,45 +203,13 @@ function startTimer() {
     }, 1000);
 }
 
-function scrollToSection(id) {
-    const target = document.getElementById(id);
-    if (!target) return;
-
-    target.scrollIntoView({
-        behavior: "smooth",
-        block: "start"
-    });
-}
-
 async function safeJson(response) {
     const text = await response.text();
-
     try {
         return text ? JSON.parse(text) : {};
     } catch {
         return { detail: text || "Invalid server response" };
     }
-}
-
-function updateProgress(stepNumber) {
-    progressSteps.forEach((step, index) => {
-        if (index === stepNumber - 1) {
-            step.classList.add("active");
-        } else {
-            step.classList.remove("active");
-        }
-    });
-}
-
-function setActiveSidebarItemByTarget(targetId) {
-    sidebarNavItems.forEach(item => {
-        const itemTarget = item.getAttribute("data-scroll-target");
-        if (itemTarget === targetId) {
-            item.classList.add("nav-item-active");
-        } else {
-            item.classList.remove("nav-item-active");
-        }
-    });
 }
 
 function copyText(text, successMessage) {
@@ -274,11 +227,9 @@ function exportTextFile(filename, content) {
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-
     link.href = url;
     link.download = filename;
     link.click();
-
     URL.revokeObjectURL(url);
 }
 
@@ -289,7 +240,6 @@ function printText(title, content) {
     }
 
     const printWindow = window.open("", "_blank");
-
     if (!printWindow) {
         alert("Print window was blocked by the browser.");
         return;
@@ -305,22 +255,9 @@ function printText(title, content) {
             <head>
                 <title>${title}</title>
                 <style>
-                    body {
-                        font-family: Arial, sans-serif;
-                        padding: 24px;
-                        line-height: 1.5;
-                        color: #111827;
-                    }
-                    h1 {
-                        font-size: 22px;
-                        margin-bottom: 18px;
-                    }
-                    pre {
-                        white-space: pre-wrap;
-                        word-wrap: break-word;
-                        font-family: Arial, sans-serif;
-                        font-size: 14px;
-                    }
+                    body { font-family: Arial, sans-serif; padding: 24px; line-height: 1.5; color: #111827; }
+                    h1 { font-size: 22px; margin-bottom: 18px; }
+                    pre { white-space: pre-wrap; word-wrap: break-word; font-family: Arial, sans-serif; font-size: 14px; }
                 </style>
             </head>
             <body>
@@ -344,18 +281,51 @@ function deriveTitleFromNote(noteText) {
     if (!lines.length) return "";
 
     const titleLine = lines.find(line => line.toLowerCase().startsWith("meeting title:"));
-    if (titleLine) {
-        return titleLine.split(":").slice(1).join(":").trim();
-    }
+    if (titleLine) return titleLine.split(":").slice(1).join(":").trim();
 
     return lines[0].slice(0, 120);
 }
 
+function formatDateTime(value) {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+    });
+}
+
+function escapeHtml(text) {
+    return String(text || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+}
+
+function setStage(stageName) {
+    stageTabs.forEach(tab => {
+        tab.classList.toggle("active", tab.dataset.stage === stageName);
+    });
+
+    stagePanels.forEach(panel => {
+        panel.classList.toggle("active", panel.id === `stage-${stageName}`);
+    });
+
+    stageNavItems.forEach(item => {
+        item.classList.toggle("nav-item-active", item.dataset.stageTarget === stageName);
+    });
+}
+
 function clearAllFields() {
-    const confirmed = window.confirm("Clear the transcript, AI draft and final note?");
+    const confirmed = window.confirm("Clear the transcript, generated draft and final note?");
     if (!confirmed) return;
 
     safeSetValue(transcriptEl, "");
+    safeSetValue(transcriptMirrorEl, "");
     safeSetValue(aiDraftEl, "");
     safeSetValue(finalNoteEl, "");
     safeSetValue(aiInstructionEl, "");
@@ -366,25 +336,310 @@ function clearAllFields() {
         audioPlaybackEl.style.display = "none";
     }
 
-    if (safeguardingBoxEl) {
-        safeguardingBoxEl.style.display = "none";
-    }
-
-    if (safeguardingTextEl) {
-        safeguardingTextEl.textContent = "";
-    }
+    if (safeguardingBoxEl) safeguardingBoxEl.style.display = "none";
+    if (safeguardingTextEl) safeguardingTextEl.textContent = "";
 
     latestSafeguardingFlag = false;
     latestSafeguardingReason = "";
-    previousAiDraft = "";
+    previousFinalNote = "";
     recordedBlob = null;
     recordedChunks = [];
+    openedNoteId = null;
 
     resetTimer();
     setRecordingUI(false);
-    updateProgress(1);
-    setActiveSidebarItemByTarget("workspaceTop");
+    setStage("record");
     showToast("Cleared");
+}
+
+/* -----------------------------
+   Templates
+----------------------------- */
+function getCustomTemplates() {
+    try {
+        return JSON.parse(localStorage.getItem(TEMPLATE_STORAGE_KEY) || "[]");
+    } catch {
+        return [];
+    }
+}
+
+function saveCustomTemplates(templates) {
+    localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(templates));
+}
+
+function getAllTemplates() {
+    return [...builtInTemplates, ...getCustomTemplates()];
+}
+
+function renderTemplateOptions() {
+    const templates = getAllTemplates();
+    templateSelectEl.innerHTML = templates
+        .map(template => `<option value="${template.id}">${escapeHtml(template.name)}</option>`)
+        .join("");
+}
+
+function findTemplateById(templateId) {
+    return getAllTemplates().find(template => template.id === templateId) || builtInTemplates[0];
+}
+
+function renderCurrentTemplateSections() {
+    templateSectionsListEl.innerHTML = "";
+
+    currentTemplateSections.forEach((section, index) => {
+        const row = document.createElement("div");
+        row.className = "template-section-chip";
+        row.innerHTML = `
+            <span>${escapeHtml(section)}</span>
+            <button class="btn btn-danger btn-tiny" type="button" data-index="${index}">Remove</button>
+        `;
+        templateSectionsListEl.appendChild(row);
+    });
+
+    templateSectionsListEl.querySelectorAll("[data-index]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            currentTemplateSections.splice(Number(btn.dataset.index), 1);
+            renderCurrentTemplateSections();
+        });
+    });
+}
+
+function renderSavedTemplatesList() {
+    const templates = getCustomTemplates();
+
+    if (!templates.length) {
+        savedTemplatesListEl.innerHTML = `<div class="saved-template-item"><span>No custom templates yet.</span></div>`;
+        return;
+    }
+
+    savedTemplatesListEl.innerHTML = "";
+
+    templates.forEach(template => {
+        const item = document.createElement("div");
+        item.className = "saved-template-item";
+        item.innerHTML = `
+            <span>${escapeHtml(template.name)}</span>
+            <button class="btn btn-danger btn-tiny" type="button" data-id="${template.id}">Delete</button>
+        `;
+        savedTemplatesListEl.appendChild(item);
+    });
+
+    savedTemplatesListEl.querySelectorAll("[data-id]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const id = btn.dataset.id;
+            const filtered = getCustomTemplates().filter(template => template.id !== id);
+            saveCustomTemplates(filtered);
+            renderTemplateOptions();
+            renderSavedTemplatesList();
+            showToast("Template deleted");
+        });
+    });
+}
+
+function openTemplateModal() {
+    templateModalEl.classList.remove("hidden");
+    templateNameInput.value = "";
+    newTemplateSectionInput.value = "";
+    currentTemplateSections = [];
+    renderCurrentTemplateSections();
+    renderSavedTemplatesList();
+}
+
+function closeTemplateModal() {
+    templateModalEl.classList.add("hidden");
+}
+
+function addTemplateSection() {
+    const value = newTemplateSectionInput.value.trim();
+    if (!value) return;
+    currentTemplateSections.push(value);
+    newTemplateSectionInput.value = "";
+    renderCurrentTemplateSections();
+}
+
+function buildTemplateInstruction(template) {
+    const sectionLines = template.sections.map(section => `- ${section}`).join("\n");
+    return `Rewrite this meeting note using the following template structure exactly as section headings. Keep only the facts already present and do not invent information.\n\nTemplate sections:\n${sectionLines}`;
+}
+
+async function applySelectedTemplateToGeneratedNote(noteText) {
+    const selectedTemplate = findTemplateById(templateSelectEl.value);
+
+    if (!selectedTemplate || selectedTemplate.id === "general-meeting") {
+        return noteText;
+    }
+
+    const form = new FormData();
+    form.append("text", noteText);
+    form.append("mode", "custom");
+    form.append("instruction", buildTemplateInstruction(selectedTemplate));
+
+    const response = await fetch(`${API_BASE}/ai-notes/edit`, {
+        method: "POST",
+        body: form,
+        credentials: "include"
+    });
+
+    const data = await safeJson(response);
+
+    if (!response.ok) {
+        throw new Error(data.detail || "Template formatting failed.");
+    }
+
+    return data.text || noteText;
+}
+
+/* -----------------------------
+   History
+----------------------------- */
+function renderHistory(notes) {
+    if (!historyListEl || !historyEmptyStateEl) return;
+
+    historyListEl.innerHTML = "";
+
+    if (!notes || !notes.length) {
+        historyEmptyStateEl.style.display = "block";
+        return;
+    }
+
+    historyEmptyStateEl.style.display = "none";
+
+    notes.forEach(note => {
+        const item = document.createElement("div");
+        item.className = "history-item";
+
+        const title = escapeHtml(note.title || "Untitled note");
+        const created = formatDateTime(note.created_at);
+        const badge = note.safeguarding_flag
+            ? `<div class="history-badge warning">Safeguarding flagged</div>`
+            : "";
+
+        item.innerHTML = `
+            <div class="history-title">${title}</div>
+            <div class="history-meta">${escapeHtml(created)}</div>
+            ${badge}
+            <div class="history-actions">
+                <button class="btn btn-light btn-history" data-action="open" data-id="${note.id}" type="button">Open</button>
+                <button class="btn btn-danger btn-history" data-action="delete" data-id="${note.id}" type="button">Delete</button>
+            </div>
+        `;
+
+        historyListEl.appendChild(item);
+    });
+
+    historyListEl.querySelectorAll("[data-action='open']").forEach(btn => {
+        btn.addEventListener("click", () => openHistoryNote(btn.getAttribute("data-id")));
+    });
+
+    historyListEl.querySelectorAll("[data-action='delete']").forEach(btn => {
+        btn.addEventListener("click", () => deleteHistoryNote(btn.getAttribute("data-id")));
+    });
+}
+
+async function loadHistory() {
+    try {
+        if (refreshHistoryBtn) {
+            refreshHistoryBtn.disabled = true;
+            refreshHistoryBtn.textContent = "Loading...";
+        }
+
+        const response = await fetch(`${API_BASE}/ai-notes/history?limit=10`, {
+            method: "GET",
+            credentials: "include"
+        });
+
+        const data = await safeJson(response);
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Could not load history.");
+        }
+
+        renderHistory(data.notes || []);
+    } catch (error) {
+        console.error("History load error:", error);
+        if (historyEmptyStateEl) {
+            historyEmptyStateEl.style.display = "block";
+            historyEmptyStateEl.textContent = "Could not load saved notes.";
+        }
+    } finally {
+        if (refreshHistoryBtn) {
+            refreshHistoryBtn.disabled = false;
+            refreshHistoryBtn.textContent = "Refresh";
+        }
+    }
+}
+
+async function openHistoryNote(noteId) {
+    if (!noteId) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/ai-notes/history/${noteId}`, {
+            method: "GET",
+            credentials: "include"
+        });
+
+        const data = await safeJson(response);
+
+        if (!response.ok) {
+            alert(data.detail || "Could not load the saved note.");
+            return;
+        }
+
+        const note = data.note || {};
+        openedNoteId = note.id || null;
+
+        safeSetValue(transcriptEl, note.transcript || "");
+        safeSetValue(transcriptMirrorEl, note.transcript || "");
+        safeSetValue(aiDraftEl, note.ai_draft || "");
+        safeSetValue(finalNoteEl, note.final_note || "");
+
+        latestSafeguardingFlag = !!note.safeguarding_flag;
+        latestSafeguardingReason = note.safeguarding_reason || "";
+
+        if (safeguardingBoxEl && safeguardingTextEl) {
+            safeguardingBoxEl.style.display = "block";
+            safeguardingTextEl.textContent = latestSafeguardingFlag
+                ? `Possible safeguarding concern detected: ${latestSafeguardingReason || "Review required."}`
+                : `No safeguarding concern detected: ${latestSafeguardingReason || "None identified."}`;
+        }
+
+        setReadyUI("Saved note loaded");
+        setStage("edit");
+        showToast("Saved note opened");
+    } catch (error) {
+        console.error("Open note error:", error);
+        alert("Could not connect to the AI notes service.");
+    }
+}
+
+async function deleteHistoryNote(noteId) {
+    if (!noteId) return;
+
+    const confirmed = window.confirm("Delete this saved note?");
+    if (!confirmed) return;
+
+    try {
+        const form = new FormData();
+        form.append("note_id", noteId);
+
+        const response = await fetch(`${API_BASE}/ai-notes/delete`, {
+            method: "POST",
+            body: form,
+            credentials: "include"
+        });
+
+        const data = await safeJson(response);
+
+        if (!response.ok) {
+            alert(data.detail || "Delete failed.");
+            return;
+        }
+
+        showToast("Saved note deleted");
+        await loadHistory();
+    } catch (error) {
+        console.error("Delete note error:", error);
+        alert("Could not connect to the AI notes service.");
+    }
 }
 
 /* -----------------------------
@@ -401,15 +656,13 @@ async function startRecording() {
         }
 
         safeSetText(audioReadyTextEl, "Recording in progress...");
-        syncTranscribeButtons(true);
+        updateButtonState(transcribeBtn, true);
 
         recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaRecorder = new MediaRecorder(recordingStream);
 
         mediaRecorder.ondataavailable = (event) => {
-            if (event.data && event.data.size > 0) {
-                recordedChunks.push(event.data);
-            }
+            if (event.data && event.data.size > 0) recordedChunks.push(event.data);
         };
 
         mediaRecorder.onstop = () => {
@@ -422,7 +675,7 @@ async function startRecording() {
             }
 
             safeSetText(audioReadyTextEl, "Recording ready for transcription.");
-            syncTranscribeButtons(false);
+            updateButtonState(transcribeBtn, false);
             setReadyUI("Recording ready");
 
             if (recordingStream) {
@@ -432,8 +685,7 @@ async function startRecording() {
 
         mediaRecorder.start();
         setRecordingUI(true);
-        updateProgress(1);
-        setActiveSidebarItemByTarget("recordPanel");
+        setStage("record");
         startTimer();
         showToast("Recording started");
     } catch (error) {
@@ -443,13 +695,11 @@ async function startRecording() {
 }
 
 function stopRecording() {
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-        mediaRecorder.stop();
-    }
-
+    if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
     stopTimer();
     setProcessingUI("Finalising audio");
-    syncRecordingButtons(false);
+    updateButtonState(startRecordingBtn, false);
+    updateButtonState(stopRecordingBtn, true);
     showToast("Recording stopped");
 }
 
@@ -467,7 +717,7 @@ async function transcribeAudio() {
 
     try {
         setProcessingUI("Transcribing");
-        syncTranscribeButtons(true, "Transcribing...", "Transcribing...");
+        updateButtonState(transcribeBtn, true, "Transcribing...");
         safeSetText(audioReadyTextEl, "Uploading and transcribing audio...");
 
         const response = await fetch(`${API_BASE}/ai-notes/transcribe`, {
@@ -485,18 +735,17 @@ async function transcribeAudio() {
         }
 
         safeSetValue(transcriptEl, data.transcript || "");
+        safeSetValue(transcriptMirrorEl, data.transcript || "");
         safeSetText(audioReadyTextEl, "Transcript ready.");
-        updateProgress(2);
         setReadyUI("Transcript ready");
+        setStage("generate");
         showToast("Transcript created");
-        scrollToSection("transcriptPanel");
-        setActiveSidebarItemByTarget("transcriptPanel");
     } catch (error) {
         console.error("Transcribe error:", error);
         alert("Could not connect to the AI notes service.");
         setRecordingUI(false);
     } finally {
-        syncTranscribeButtons(false, "Transcribe recording", "Transcribe");
+        updateButtonState(transcribeBtn, false, "Transcribe recording");
     }
 }
 
@@ -516,7 +765,7 @@ async function generateNote() {
 
     try {
         setProcessingUI("Generating note");
-        syncGenerateButtons(true, "Generating...", "Generating...");
+        updateButtonState(generateBtn, true, "Generating...");
 
         const response = await fetch(`${API_BASE}/ai-notes/generate`, {
             method: "POST",
@@ -532,11 +781,13 @@ async function generateNote() {
             return;
         }
 
-        const note = data.note || "";
+        let note = data.note || "";
+        note = await applySelectedTemplateToGeneratedNote(note);
+
         safeSetValue(aiDraftEl, note);
         safeSetValue(finalNoteEl, note);
 
-        previousAiDraft = note;
+        previousFinalNote = note;
         latestSafeguardingFlag = !!data.safeguarding_flag;
         latestSafeguardingReason = data.safeguarding_reason || "";
 
@@ -547,17 +798,15 @@ async function generateNote() {
                 : `No safeguarding concern detected: ${latestSafeguardingReason || "None identified."}`;
         }
 
-        updateProgress(3);
         setReadyUI("Draft ready");
+        setStage("edit");
         showToast("AI draft generated");
-        scrollToSection("draftPanel");
-        setActiveSidebarItemByTarget("draftPanel");
     } catch (error) {
         console.error("Generate error:", error);
         alert("Could not connect to the AI notes service.");
         setRecordingUI(false);
     } finally {
-        syncGenerateButtons(false, "Generate AI note", "Generate");
+        updateButtonState(generateBtn, false, "Generate AI note");
     }
 }
 
@@ -566,18 +815,23 @@ async function generateNote() {
 ----------------------------- */
 async function applyAiEdit() {
     const instruction = aiInstructionEl.value.trim();
-    const currentDraft = aiDraftEl.value.trim();
+    const currentText = finalNoteEl.value.trim();
 
-    if (!currentDraft) {
-        alert("Generate a draft first.");
+    if (!currentText) {
+        alert("Generate or open a note first.");
         return;
     }
 
-    previousAiDraft = aiDraftEl.value;
+    if (!instruction) {
+        alert("Please type an instruction for the AI.");
+        return;
+    }
+
+    previousFinalNote = finalNoteEl.value;
 
     const form = new FormData();
-    form.append("text", currentDraft);
-    form.append("mode", instruction ? "custom" : "improve");
+    form.append("text", currentText);
+    form.append("mode", "custom");
     form.append("instruction", instruction);
 
     try {
@@ -597,25 +851,35 @@ async function applyAiEdit() {
             return;
         }
 
-        aiDraftEl.value = data.text || "";
+        finalNoteEl.value = data.text || "";
         showToast("AI edit applied");
     } catch (error) {
         console.error("AI edit error:", error);
         alert("Could not connect to the AI notes service.");
     } finally {
         updateButtonState(applyAiEditBtn, false, "Apply AI edit");
-        setReadyUI("Draft ready");
+        setReadyUI("Document updated");
     }
 }
 
 function undoAiEdit() {
-    if (!previousAiDraft) {
-        alert("There is no previous draft to restore.");
+    if (!previousFinalNote) {
+        alert("There is no previous version to restore.");
         return;
     }
 
-    aiDraftEl.value = previousAiDraft;
-    showToast("Last AI edit undone");
+    finalNoteEl.value = previousFinalNote;
+    showToast("Last edit undone");
+}
+
+function resetFromGeneratedDraft() {
+    if (!aiDraftEl.value.trim()) {
+        alert("There is no generated draft to restore.");
+        return;
+    }
+
+    finalNoteEl.value = aiDraftEl.value;
+    showToast("Document reset from generated draft");
 }
 
 /* -----------------------------
@@ -623,11 +887,11 @@ function undoAiEdit() {
 ----------------------------- */
 async function saveNote() {
     const transcript = transcriptEl.value.trim();
-    const aiDraft = aiDraftEl.value.trim();
+    const aiDraft = aiDraftEl.value.trim() || finalNoteEl.value.trim();
     const finalNote = finalNoteEl.value.trim();
 
     if (!transcript || !aiDraft || !finalNote) {
-        alert("Transcript, AI draft and final note are required.");
+        alert("Transcript, generated draft and final note are required.");
         return;
     }
 
@@ -647,7 +911,8 @@ async function saveNote() {
 
     try {
         setProcessingUI("Saving");
-        syncSaveButtons(true, "Saving...", "Saving...");
+        updateButtonState(saveBtn, true, "Saving...");
+        updateButtonState(saveBtnTop, true, "Saving...");
 
         const response = await fetch(`${API_BASE}/ai-notes/save`, {
             method: "POST",
@@ -663,106 +928,106 @@ async function saveNote() {
             return;
         }
 
-        updateProgress(5);
         setReadyUI("Saved");
         showToast("AI note saved successfully");
-        scrollToSection("finalPanel");
-        setActiveSidebarItemByTarget("finalPanel");
+        await loadHistory();
     } catch (error) {
         console.error("Save error:", error);
         alert("Could not connect to the AI notes service.");
         setRecordingUI(false);
     } finally {
-        syncSaveButtons(false, "Save note", "Save");
+        updateButtonState(saveBtn, false, "Save note");
+        updateButtonState(saveBtnTop, false, "Save");
     }
 }
 
 /* -----------------------------
-   Draft / final note helpers
+   Utility actions
 ----------------------------- */
-function copyDraftToFinal() {
-    const draft = aiDraftEl.value.trim();
-
-    if (!draft) {
-        alert("There is no AI draft to copy.");
-        return;
-    }
-
-    finalNoteEl.value = aiDraftEl.value;
-    updateProgress(4);
-    showToast("Draft copied to final note");
-    scrollToSection("finalPanel");
-    setActiveSidebarItemByTarget("finalPanel");
-}
-
 function toggleTranscript() {
     transcriptVisible = !transcriptVisible;
-
-    if (transcriptVisible) {
-        transcriptContentEl?.classList.remove("hidden");
-        toggleTranscriptBtn.textContent = "Show / hide";
-    } else {
-        transcriptContentEl?.classList.add("hidden");
-        toggleTranscriptBtn.textContent = "Show / hide";
-    }
+    transcriptContentEl.classList.toggle("hidden", !transcriptVisible);
+    toggleTranscriptBtn.textContent = "Show / hide";
 }
 
-/* -----------------------------
-   Navigation
------------------------------ */
-function bindScrollButtons() {
-    sectionTargets.forEach(button => {
-        button.addEventListener("click", () => {
-            const targetId = button.getAttribute("data-scroll-target");
-            if (targetId) {
-                setActiveSidebarItemByTarget(targetId);
-                scrollToSection(targetId);
-            }
+function bindStageNavigation() {
+    stageTabs.forEach(tab => {
+        tab.addEventListener("click", () => setStage(tab.dataset.stage));
+    });
+
+    stageNavItems.forEach(item => {
+        item.addEventListener("click", () => setStage(item.dataset.stageTarget));
+    });
+}
+
+function bindPromptChips() {
+    promptChips.forEach(chip => {
+        chip.addEventListener("click", () => {
+            aiInstructionEl.value = chip.dataset.prompt || "";
+            aiInstructionEl.focus();
         });
     });
 }
 
-function bindSectionObserver() {
-    const validSections = observedSections
-        .map(section => document.getElementById(section.id))
-        .filter(Boolean);
+function bindTemplateManager() {
+    openTemplateManagerBtn?.addEventListener("click", openTemplateModal);
+    closeTemplateManagerBtn?.addEventListener("click", closeTemplateModal);
 
-    if (!validSections.length) return;
-
-    const observer = new IntersectionObserver(
-        (entries) => {
-            const visibleEntries = entries
-                .filter(entry => entry.isIntersecting)
-                .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-
-            if (!visibleEntries.length) return;
-
-            const mostVisible = visibleEntries[0];
-            const id = mostVisible.target.id;
-            setActiveSidebarItemByTarget(id);
-        },
-        {
-            root: null,
-            rootMargin: "-20% 0px -55% 0px",
-            threshold: [0.2, 0.35, 0.5, 0.7]
+    templateModalEl?.addEventListener("click", (event) => {
+        if (event.target === templateModalEl) {
+            closeTemplateModal();
         }
-    );
+    });
 
-    validSections.forEach(section => observer.observe(section));
+    addTemplateSectionBtn?.addEventListener("click", addTemplateSection);
+
+    saveTemplateBtn?.addEventListener("click", () => {
+        const name = templateNameInput.value.trim();
+
+        if (!name) {
+            alert("Please enter a template name.");
+            return;
+        }
+
+        if (!currentTemplateSections.length) {
+            alert("Please add at least one section.");
+            return;
+        }
+
+        const customTemplates = getCustomTemplates();
+        customTemplates.push({
+            id: `custom-${Date.now()}`,
+            name,
+            sections: [...currentTemplateSections]
+        });
+
+        saveCustomTemplates(customTemplates);
+        renderTemplateOptions();
+        renderSavedTemplatesList();
+
+        templateNameInput.value = "";
+        newTemplateSectionInput.value = "";
+        currentTemplateSections = [];
+        renderCurrentTemplateSections();
+        showToast("Template saved");
+    });
 }
 
-/* -----------------------------
-   Utility button actions
------------------------------ */
-function bindUtilityButtons() {
-    copyDraftToFinalBtn?.addEventListener("click", copyDraftToFinal);
-    copyDraftBtn?.addEventListener("click", copyDraftToFinal);
+function bindButtons() {
+    startRecordingBtn?.addEventListener("click", startRecording);
+    stopRecordingBtn?.addEventListener("click", stopRecording);
+    transcribeBtn?.addEventListener("click", transcribeAudio);
+    generateBtn?.addEventListener("click", generateNote);
+    toolbarGenerateBtn?.addEventListener("click", () => setStage("edit"));
 
-    toggleTranscriptBtn?.addEventListener("click", toggleTranscript);
+    applyAiEditBtn?.addEventListener("click", applyAiEdit);
+    undoAiEditBtn?.addEventListener("click", undoAiEdit);
+    copyDraftBtn?.addEventListener("click", resetFromGeneratedDraft);
 
-    copyFinalBtn?.addEventListener("click", () => {
-        copyText(finalNoteEl.value, "Final note copied");
-    });
+    saveBtn?.addEventListener("click", saveNote);
+    saveBtnTop?.addEventListener("click", saveNote);
+
+    copyFinalBtn?.addEventListener("click", () => copyText(finalNoteEl.value, "Final note copied"));
 
     printBtn?.addEventListener("click", () => {
         const title = deriveTitleFromNote(finalNoteEl.value) || "AI Note";
@@ -771,63 +1036,62 @@ function bindUtilityButtons() {
 
     exportBtn?.addEventListener("click", () => {
         const content = finalNoteEl.value.trim();
-
         if (!content) {
             alert("There is nothing to export.");
             return;
         }
-
         const title = deriveTitleFromNote(content) || "ai-note";
         const filename = `${title.replace(/[^a-z0-9-_ ]/gi, "").trim() || "ai-note"}.txt`;
+        exportTextFile(filename, content);
+        showToast("Export started");
+    });
 
+    printBtnTop?.addEventListener("click", () => {
+        const title = deriveTitleFromNote(finalNoteEl.value) || "AI Note";
+        printText(title, finalNoteEl.value);
+    });
+
+    exportBtnTop?.addEventListener("click", () => {
+        const content = finalNoteEl.value.trim();
+        if (!content) {
+            alert("There is nothing to export.");
+            return;
+        }
+        const title = deriveTitleFromNote(content) || "ai-note";
+        const filename = `${title.replace(/[^a-z0-9-_ ]/gi, "").trim() || "ai-note"}.txt`;
         exportTextFile(filename, content);
         showToast("Export started");
     });
 
     clearBtn?.addEventListener("click", clearAllFields);
+    toggleTranscriptBtn?.addEventListener("click", toggleTranscript);
+    refreshHistoryBtn?.addEventListener("click", loadHistory);
 
-    applyAiEditBtn?.addEventListener("click", applyAiEdit);
-    undoAiEditBtn?.addEventListener("click", undoAiEdit);
-}
-
-/* -----------------------------
-   Main button bindings
------------------------------ */
-function bindMainButtons() {
-    startRecordingBtn?.addEventListener("click", startRecording);
-    stopRecordingBtn?.addEventListener("click", stopRecording);
-    transcribeBtn?.addEventListener("click", transcribeAudio);
-    generateBtn?.addEventListener("click", generateNote);
-    saveBtn?.addEventListener("click", saveNote);
-
-    toolbarStartBtn?.addEventListener("click", startRecording);
-    toolbarStopBtn?.addEventListener("click", stopRecording);
-    toolbarTranscribeBtn?.addEventListener("click", transcribeAudio);
-    toolbarGenerateBtn?.addEventListener("click", generateNote);
-    saveBtnTop?.addEventListener("click", saveNote);
+    transcriptEl?.addEventListener("input", () => {
+        transcriptMirrorEl.value = transcriptEl.value;
+    });
 }
 
 /* -----------------------------
    Init
 ----------------------------- */
 function init() {
-    bindMainButtons();
-    bindUtilityButtons();
-    bindScrollButtons();
-    bindSectionObserver();
+    bindButtons();
+    bindStageNavigation();
+    bindPromptChips();
+    bindTemplateManager();
 
+    renderTemplateOptions();
+    renderSavedTemplatesList();
     resetTimer();
     setRecordingUI(false);
-    updateProgress(1);
-    setActiveSidebarItemByTarget("workspaceTop");
-
-    syncGenerateButtons(false, "Generate AI note", "Generate");
-    syncSaveButtons(false, "Save note", "Save");
-    syncTranscribeButtons(true, "Transcribe recording", "Transcribe");
+    setStage("record");
 
     if (safeguardingBoxEl) {
         safeguardingBoxEl.style.display = "none";
     }
+
+    loadHistory();
 }
 
 init();
