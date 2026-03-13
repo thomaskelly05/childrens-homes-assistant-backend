@@ -62,8 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
   renderPrompts(activeTab);
   setupForm();
   setupBackToTop();
-  setupAiButtons();
-  loadLatestJournal();
+  setupActionButtons();
   loadJournalHistory();
 });
 
@@ -93,6 +92,8 @@ function setupTabs() {
 
 function renderPrompts(tab) {
   const promptList = document.getElementById("promptList");
+  if (!promptList) return;
+
   promptList.innerHTML = "";
 
   (promptsByTab[tab] || []).forEach((prompt) => {
@@ -105,14 +106,17 @@ function renderPrompts(tab) {
 
 function setupBackToTop() {
   const button = document.getElementById("backToTopBtn");
+  if (!button) return;
+
   button.addEventListener("click", () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 }
 
-function setupAiButtons() {
+function setupActionButtons() {
   const pdpBtn = document.getElementById("generatePdpBtn");
   const packBtn = document.getElementById("generateSupervisionPackBtn");
+  const submitBtn = document.getElementById("submitSupervisionBtn");
 
   if (pdpBtn) {
     pdpBtn.addEventListener("click", async () => {
@@ -125,11 +129,24 @@ function setupAiButtons() {
       await generateAiOutput("supervision-pack");
     });
   }
+
+  if (submitBtn) {
+    submitBtn.addEventListener("click", async () => {
+      const journalId = document.getElementById("journal_id").value;
+
+      if (!journalId) {
+        setMessage("Please save the journal first before submitting for supervision.", true);
+        return;
+      }
+
+      await submitToManagerDashboard(journalId);
+    });
+  }
 }
 
 function getPayload() {
   const payload = {
-    staff_id: Number(document.getElementById("staff_id").value)
+    staff_id: Number(document.getElementById("staff_id").value || "1")
   };
 
   fieldIds.forEach((id) => {
@@ -143,8 +160,11 @@ function getPayload() {
 function fillForm(journal) {
   if (!journal) return;
 
-  document.getElementById("journal_id").value = journal.id || "";
-  document.getElementById("staff_id").value = journal.staff_id || "1";
+  const journalIdEl = document.getElementById("journal_id");
+  const staffIdEl = document.getElementById("staff_id");
+
+  if (journalIdEl) journalIdEl.value = journal.id || "";
+  if (staffIdEl) staffIdEl.value = journal.staff_id || "1";
 
   fieldIds.forEach((id) => {
     const el = document.getElementById(id);
@@ -152,6 +172,32 @@ function fillForm(journal) {
       el.value = journal[id] || "";
     }
   });
+}
+
+function clearJournalForm() {
+  const journalIdEl = document.getElementById("journal_id");
+  if (journalIdEl) journalIdEl.value = "";
+
+  fieldIds.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+
+  // return to first tab after save
+  activeTab = "overview";
+
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.tab === "overview");
+  });
+
+  document.querySelectorAll(".tab-panel").forEach((panel) => {
+    panel.classList.remove("active");
+  });
+
+  const overviewPanel = document.getElementById("tab-overview");
+  if (overviewPanel) overviewPanel.classList.add("active");
+
+  renderPrompts(activeTab);
 }
 
 function setMessage(text, isError = false) {
@@ -170,6 +216,7 @@ function setHistoryMessage(text, isError = false) {
 
 function setupForm() {
   const form = document.getElementById("journalForm");
+  if (!form) return;
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -177,15 +224,19 @@ function setupForm() {
     const saveBtn = document.getElementById("saveJournalBtn");
     const journalId = document.getElementById("journal_id").value;
     const payload = getPayload();
+    const isEditing = Boolean(journalId);
 
     try {
-      saveBtn.disabled = true;
-      saveBtn.textContent = "Saving...";
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Saving...";
+      }
+
       setMessage("");
 
       let response;
 
-      if (journalId) {
+      if (isEditing) {
         const updatePayload = { ...payload };
         delete updatePayload.staff_id;
 
@@ -214,46 +265,26 @@ function setupForm() {
         throw new Error(data.detail || "Failed to save journal");
       }
 
-      if (data.journal) {
-        fillForm(data.journal);
+      if (isEditing) {
+        if (data.journal) {
+          fillForm(data.journal);
+        }
+        setMessage("Journal updated successfully.");
+      } else {
+        clearJournalForm();
+        setMessage("Journal saved successfully.");
       }
 
-      setMessage("Journal saved successfully.");
       await loadJournalHistory();
     } catch (error) {
       setMessage(error.message || "Failed to save journal.", true);
     } finally {
-      saveBtn.disabled = false;
-      saveBtn.textContent = "Save Journal";
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save Journal";
+      }
     }
   });
-}
-
-async function loadLatestJournal() {
-  const staffId = document.getElementById("staff_id").value || "1";
-
-  try {
-    const response = await fetch(`${API_BASE}/staff-journal/staff/${staffId}/latest`, {
-      method: "GET",
-      credentials: "include"
-    });
-
-    if (response.status === 404) {
-      return;
-    }
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.detail || "Failed to load journal");
-    }
-
-    if (data.journal) {
-      fillForm(data.journal);
-    }
-  } catch (error) {
-    setMessage(error.message || "Failed to load journal.", true);
-  }
 }
 
 async function loadJournalHistory() {
@@ -293,22 +324,98 @@ async function loadJournalHistory() {
         ? new Date(entry.created_at).toLocaleString()
         : "Unknown date";
 
+      const summary = entry.reflection_today
+        || entry.practice_today
+        || entry.description
+        || "No summary available.";
+
       item.innerHTML = `
-        <h4>${createdAt}</h4>
-        <p>${escapeHtml(
-          entry.reflection_today ||
-          entry.practice_today ||
-          entry.description ||
-          "No summary available for this entry."
-        )}</p>
+        <h4>${escapeHtml(createdAt)}</h4>
+        <p>${escapeHtml(summary)}</p>
+        <div class="journal-actions">
+          <button class="btn-secondary history-edit-btn" data-id="${entry.id}" type="button">
+            Edit
+          </button>
+          <button class="btn-danger history-delete-btn" data-id="${entry.id}" type="button">
+            Delete
+          </button>
+          <button class="btn-primary history-submit-btn" data-id="${entry.id}" type="button">
+            Submit for Supervision
+          </button>
+        </div>
       `;
 
       historyList.appendChild(item);
     });
+
+    wireHistoryButtons();
   } catch (error) {
     historyList.innerHTML = "";
     setHistoryMessage(error.message || "Failed to load journal history.", true);
   }
+}
+
+function wireHistoryButtons() {
+  document.querySelectorAll(".history-edit-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+
+      try {
+        const response = await fetch(`${API_BASE}/staff-journal/${id}`, {
+          method: "GET",
+          credentials: "include"
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || "Failed to load journal");
+        }
+
+        if (data.journal) {
+          fillForm(data.journal);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          setMessage("Journal loaded for editing.");
+        }
+      } catch (error) {
+        setMessage(error.message || "Failed to load journal.", true);
+      }
+    });
+  });
+
+  document.querySelectorAll(".history-delete-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+
+      const confirmed = window.confirm("Delete this journal entry?");
+      if (!confirmed) return;
+
+      try {
+        const response = await fetch(`${API_BASE}/staff-journal/${id}`, {
+          method: "DELETE",
+          credentials: "include"
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.detail || "Failed to delete journal");
+        }
+
+        setMessage("Journal deleted successfully.");
+        await loadJournalHistory();
+      } catch (error) {
+        setMessage(error.message || "Failed to delete journal.", true);
+      }
+    });
+  });
+
+  document.querySelectorAll(".history-submit-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      await submitToManagerDashboard(id);
+    });
+  });
 }
 
 async function generateAiOutput(type) {
@@ -353,6 +460,44 @@ async function generateAiOutput(type) {
   } finally {
     if (pdpBtn) pdpBtn.disabled = false;
     if (packBtn) packBtn.disabled = false;
+  }
+}
+
+async function submitToManagerDashboard(journalId) {
+  const output = document.getElementById("aiDevelopmentOutput");
+  const submitBtn = document.getElementById("submitSupervisionBtn");
+
+  try {
+    if (output) {
+      output.textContent = "Submitting to manager dashboard...";
+    }
+
+    if (submitBtn) submitBtn.disabled = true;
+
+    const response = await fetch(`${API_BASE}/staff-journal/${journalId}/submit-to-manager`, {
+      method: "POST",
+      credentials: "include"
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.detail || "Failed to submit to manager dashboard");
+    }
+
+    if (output) {
+      output.textContent = "Submitted to manager dashboard successfully.";
+    }
+
+    setMessage("Submitted for supervision successfully.");
+  } catch (error) {
+    if (output) {
+      output.textContent = error.message || "Failed to submit to manager dashboard.";
+    }
+
+    setMessage(error.message || "Failed to submit for supervision.", true);
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
   }
 }
 
