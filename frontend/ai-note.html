@@ -12,115 +12,131 @@
             <div class="brand">
                 <div class="brand-badge">AI</div>
                 <div>
-                    <h2>AI Note Assistant</h2>
-                    <p>Meeting transcription and note drafting</p>
+                    <h2>IndiCare Notes</h2>
+                    <p>Meeting notes and AI drafting</p>
                 </div>
             </div>
 
-            <div class="sidebar-card">
-                <h3>Quick actions</h3>
-                <div class="sidebar-actions">
-                    <button class="btn btn-sidebar" type="button" data-scroll-target="recordSection">Go to record</button>
-                    <button class="btn btn-sidebar" type="button" data-scroll-target="transcriptSection">Go to transcript</button>
-                    <button class="btn btn-sidebar" type="button" data-scroll-target="draftSection">Go to AI draft</button>
-                    <button class="btn btn-sidebar" type="button" data-scroll-target="finalSection">Go to final note</button>
+            <nav class="sidebar-nav">
+                <button class="nav-item nav-item-active" type="button" data-scroll-target="workspaceTop">
+                    <span class="nav-icon">⌂</span>
+                    <span>New note</span>
+                </button>
+
+                <button class="nav-item" type="button" data-scroll-target="recordPanel">
+                    <span class="nav-icon">●</span>
+                    <span>Record</span>
+                </button>
+
+                <button class="nav-item" type="button" data-scroll-target="transcriptPanel">
+                    <span class="nav-icon">≡</span>
+                    <span>Transcript</span>
+                </button>
+
+                <button class="nav-item" type="button" data-scroll-target="draftPanel">
+                    <span class="nav-icon">✦</span>
+                    <span>AI draft</span>
+                </button>
+
+                <button class="nav-item" type="button" data-scroll-target="finalPanel">
+                    <span class="nav-icon">✓</span>
+                    <span>Final note</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-section">
+                <div class="sidebar-card status-card">
+                    <div class="sidebar-card-header">
+                        <h3>Recording status</h3>
+                    </div>
+
+                    <div id="recordingStatus" class="status-pill idle">Not recording</div>
+                    <div id="recordingTimer" class="timer">00:00</div>
+                    <p class="sidebar-note">Use the recorder to capture a meeting, supervision, or discussion.</p>
                 </div>
-            </div>
 
-            <div class="sidebar-card">
-                <h3>Recording status</h3>
-                <div id="recordingStatus" class="status-pill idle">Not recording</div>
-                <div id="recordingTimer" class="timer">00:00</div>
-                <p class="sidebar-helper">The timer runs while recording is active.</p>
-            </div>
+                <div id="safeguardingBox" class="sidebar-card safeguarding-box" style="display:none;">
+                    <div class="sidebar-card-header">
+                        <h3>Safeguarding check</h3>
+                    </div>
+                    <p id="safeguardingText"></p>
+                </div>
 
-            <div class="sidebar-card">
-                <h3>Workflow</h3>
-                <ol class="workflow-list">
-                    <li>Record the meeting</li>
-                    <li>Transcribe the audio</li>
-                    <li>Generate the AI note</li>
-                    <li>Review and edit</li>
-                    <li>Save or export</li>
-                </ol>
-            </div>
-
-            <div id="safeguardingBox" class="sidebar-card safeguarding-box" style="display:none;">
-                <h3>Safeguarding check</h3>
-                <p id="safeguardingText"></p>
-            </div>
-
-            <div class="sidebar-card">
-                <h3>Coming next</h3>
-                <p class="sidebar-helper">This space can later be used for meeting history, recent notes, or templates.</p>
+                <div class="sidebar-card">
+                    <div class="sidebar-card-header">
+                        <h3>Quick guide</h3>
+                    </div>
+                    <ol class="mini-steps">
+                        <li>Record or paste a transcript</li>
+                        <li>Generate the AI draft</li>
+                        <li>Edit the final version</li>
+                        <li>Save, print, or export</li>
+                    </ol>
+                </div>
             </div>
         </aside>
 
-        <main class="main-content">
-            <header class="page-header">
+        <main class="workspace" id="workspaceTop">
+            <header class="workspace-header">
                 <div>
-                    <h1>Create AI Note</h1>
-                    <p>Record a conversation, generate a structured note, then review and save it into IndiCare.</p>
+                    <p class="eyebrow">AI Meeting Assistant</p>
+                    <h1>Create a professional note</h1>
+                    <p class="workspace-subtitle">
+                        Record a conversation, generate a structured note, then review and save it into IndiCare.
+                    </p>
+                </div>
+
+                <div class="header-actions">
+                    <button id="saveBtnTop" class="btn btn-success" type="button">Save</button>
                 </div>
             </header>
 
             <section class="top-toolbar">
-                <div class="toolbar-group">
-                    <button id="toolbarStartBtn" class="btn btn-primary" type="button">Start</button>
+                <div class="toolbar-left">
+                    <button id="toolbarStartBtn" class="btn btn-primary" type="button">Start recording</button>
                     <button id="toolbarStopBtn" class="btn btn-secondary" type="button" disabled>Stop</button>
                     <button id="toolbarTranscribeBtn" class="btn btn-dark" type="button" disabled>Transcribe</button>
-                    <button id="toolbarGenerateBtn" class="btn btn-primary" type="button">Generate</button>
+                    <button id="toolbarGenerateBtn" class="btn btn-primary" type="button">Generate note</button>
                 </div>
 
-                <div class="toolbar-group">
-                    <button class="btn btn-light" type="button" data-scroll-target="recordSection">Record</button>
-                    <button class="btn btn-light" type="button" data-scroll-target="transcriptSection">Transcript</button>
-                    <button class="btn btn-light" type="button" data-scroll-target="draftSection">Draft</button>
-                    <button class="btn btn-light" type="button" data-scroll-target="finalSection">Final</button>
-                </div>
-
-                <div class="toolbar-group">
-                    <button id="copyDraftToFinalBtn" class="btn btn-light" type="button">Use draft as final</button>
-                    <button id="saveBtnTop" class="btn btn-success" type="button">Save</button>
+                <div class="toolbar-right">
+                    <button class="btn btn-light" type="button" data-scroll-target="recordPanel">Record</button>
+                    <button class="btn btn-light" type="button" data-scroll-target="transcriptPanel">Transcript</button>
+                    <button class="btn btn-light" type="button" data-scroll-target="draftPanel">Draft</button>
+                    <button class="btn btn-light" type="button" data-scroll-target="finalPanel">Final</button>
                 </div>
             </section>
 
             <section class="progress-strip">
                 <div class="progress-step active">
-                    <span class="step-number">1</span>
-                    <span class="step-label">Record</span>
+                    <span class="step-dot">1</span>
+                    <span>Record</span>
                 </div>
                 <div class="progress-step">
-                    <span class="step-number">2</span>
-                    <span class="step-label">Transcript</span>
+                    <span class="step-dot">2</span>
+                    <span>Transcript</span>
                 </div>
                 <div class="progress-step">
-                    <span class="step-number">3</span>
-                    <span class="step-label">Generate</span>
+                    <span class="step-dot">3</span>
+                    <span>Draft</span>
                 </div>
                 <div class="progress-step">
-                    <span class="step-number">4</span>
-                    <span class="step-label">Review</span>
+                    <span class="step-dot">4</span>
+                    <span>Review</span>
                 </div>
                 <div class="progress-step">
-                    <span class="step-number">5</span>
-                    <span class="step-label">Save</span>
+                    <span class="step-dot">5</span>
+                    <span>Save</span>
                 </div>
             </section>
 
-            <section id="recordSection" class="panel">
-                <div class="panel-header">
-                    <div>
-                        <h2>1. Record meeting</h2>
-                        <p>Use your microphone to record the meeting or conversation.</p>
-                    </div>
-                    <span class="panel-badge">Step 1</span>
-                </div>
-
-                <div class="recording-panel">
-                    <div class="mic-circle" id="micCircle">
-                        <span class="mic-icon">🎤</span>
-                    </div>
+            <section id="recordPanel" class="hero-recorder-card">
+                <div class="hero-recorder-copy">
+                    <p class="panel-label">Step 1</p>
+                    <h2>Record the meeting</h2>
+                    <p>
+                        Capture the conversation first, then transcribe it and turn it into a structured professional note.
+                    </p>
 
                     <div class="recording-actions">
                         <button id="startRecordingBtn" class="btn btn-primary" type="button">
@@ -138,81 +154,129 @@
 
                     <audio id="audioPlayback" controls style="display:none;"></audio>
                 </div>
-            </section>
 
-            <section id="transcriptSection" class="panel">
-                <div class="panel-header">
-                    <div>
-                        <h2>2. Transcript</h2>
-                        <p>Check the transcript before generating the note.</p>
-                    </div>
-                    <div class="panel-header-actions">
-                        <button id="toggleTranscriptBtn" class="btn btn-light btn-small" type="button">
-                            Show / hide
-                        </button>
-                        <span class="panel-badge">Step 2</span>
-                    </div>
-                </div>
-
-                <div id="transcriptContent">
-                    <div class="field">
-                        <label for="transcript">Transcript</label>
-                        <textarea id="transcript" placeholder="The transcript will appear here after transcription..."></textarea>
+                <div class="hero-recorder-visual">
+                    <div class="mic-circle" id="micCircle">
+                        <span class="mic-icon">🎤</span>
                     </div>
 
-                    <div class="panel-actions">
-                        <button id="generateBtn" class="btn btn-primary" type="button">
-                            Generate AI note
-                        </button>
+                    <div class="live-status-card">
+                        <div class="live-status-row">
+                            <span class="live-dot"></span>
+                            <span>Recorder ready</span>
+                        </div>
+                        <div class="live-time" id="recordingTimerMirror">00:00</div>
+                        <p class="live-help">Once stopped, your recording can be transcribed and turned into a draft.</p>
                     </div>
                 </div>
             </section>
 
-            <section id="draftSection" class="panel">
-                <div class="panel-header">
-                    <div>
-                        <h2>3. AI draft</h2>
-                        <p>This is the generated draft based on the transcript.</p>
-                    </div>
-                    <span class="panel-badge">Step 3</span>
+            <section class="content-grid">
+                <div class="main-column">
+                    <section id="transcriptPanel" class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <p class="panel-label">Step 2</p>
+                                <h2>Transcript</h2>
+                                <p>Check the transcript before generating the draft.</p>
+                            </div>
+
+                            <div class="panel-header-actions">
+                                <button id="toggleTranscriptBtn" class="btn btn-light btn-small" type="button">
+                                    Show / hide
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="transcriptContent">
+                            <div class="field">
+                                <label for="transcript">Transcript</label>
+                                <textarea id="transcript" placeholder="The transcript will appear here after transcription..."></textarea>
+                            </div>
+
+                            <div class="panel-actions">
+                                <button id="generateBtn" class="btn btn-primary" type="button">
+                                    Generate AI note
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="draftPanel" class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <p class="panel-label">Step 3</p>
+                                <h2>AI draft</h2>
+                                <p>Use AI to generate and improve the first draft of the note.</p>
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label for="aiDraft">AI Draft</label>
+                            <textarea id="aiDraft" placeholder="The AI draft will appear here..."></textarea>
+                        </div>
+
+                        <div class="ai-edit-box">
+                            <div class="field">
+                                <label for="aiInstruction">AI editing instruction</label>
+                                <input
+                                    id="aiInstruction"
+                                    type="text"
+                                    placeholder="Example: make this more professional and concise"
+                                >
+                            </div>
+
+                            <div class="smart-actions">
+                                <button id="applyAiEditBtn" class="btn btn-dark" type="button">Apply AI edit</button>
+                                <button id="undoAiEditBtn" class="btn btn-light" type="button">Undo last edit</button>
+                                <button id="copyDraftBtn" class="btn btn-light" type="button">Copy draft to final</button>
+                            </div>
+                        </div>
+                    </section>
                 </div>
 
-                <div class="field">
-                    <label for="aiDraft">AI Draft</label>
-                    <textarea id="aiDraft" placeholder="The AI draft will appear here..."></textarea>
-                </div>
+                <aside class="side-column">
+                    <section class="panel utility-panel">
+                        <div class="panel-header">
+                            <div>
+                                <p class="panel-label">Workspace</p>
+                                <h2>Quick actions</h2>
+                            </div>
+                        </div>
 
-                <div class="ai-edit-box">
-                    <div class="field">
-                        <label for="aiInstruction">AI editing instruction</label>
-                        <input
-                            id="aiInstruction"
-                            type="text"
-                            placeholder="Example: make this more professional and concise"
-                        >
-                    </div>
+                        <div class="stack-actions">
+                            <button class="btn btn-light" type="button" data-scroll-target="recordPanel">Go to record</button>
+                            <button class="btn btn-light" type="button" data-scroll-target="transcriptPanel">Go to transcript</button>
+                            <button class="btn btn-light" type="button" data-scroll-target="draftPanel">Go to draft</button>
+                            <button class="btn btn-light" type="button" data-scroll-target="finalPanel">Go to final note</button>
+                            <button id="copyDraftToFinalBtn" class="btn btn-light" type="button">Use draft as final</button>
+                        </div>
+                    </section>
 
-                    <div class="panel-actions">
-                        <button id="applyAiEditBtn" class="btn btn-dark" type="button">
-                            Apply AI edit
-                        </button>
-                        <button id="undoAiEditBtn" class="btn btn-light" type="button">
-                            Undo last edit
-                        </button>
-                        <button id="copyDraftBtn" class="btn btn-light" type="button">
-                            Copy draft to final note
-                        </button>
-                    </div>
-                </div>
+                    <section class="panel utility-panel">
+                        <div class="panel-header">
+                            <div>
+                                <p class="panel-label">Tips</p>
+                                <h2>Good practice</h2>
+                            </div>
+                        </div>
+
+                        <ul class="tips-list">
+                            <li>Check names, dates, and actions before saving.</li>
+                            <li>Keep the final note factual and professional.</li>
+                            <li>Review any safeguarding warning carefully.</li>
+                        </ul>
+                    </section>
+                </aside>
             </section>
 
-            <section id="finalSection" class="panel">
+            <section id="finalPanel" class="panel final-panel">
                 <div class="panel-header">
                     <div>
-                        <h2>4. Final note</h2>
-                        <p>Edit the final note before saving it into IndiCare.</p>
+                        <p class="panel-label">Step 4</p>
+                        <h2>Final note</h2>
+                        <p>Review, edit, and save the finished version.</p>
                     </div>
-                    <span class="panel-badge">Step 4</span>
                 </div>
 
                 <div class="field">
@@ -221,27 +285,37 @@
                 </div>
 
                 <div class="panel-actions action-wrap">
-                    <button id="saveBtn" class="btn btn-success" type="button">
-                        Save note
-                    </button>
-                    <button id="copyFinalBtn" class="btn btn-light" type="button">
-                        Copy final note
-                    </button>
-                    <button id="printBtn" class="btn btn-light" type="button">
-                        Print
-                    </button>
-                    <button id="exportBtn" class="btn btn-light" type="button">
-                        Export
-                    </button>
-                    <button id="clearBtn" class="btn btn-danger" type="button">
-                        Clear
-                    </button>
+                    <button id="saveBtn" class="btn btn-success" type="button">Save note</button>
+                    <button id="copyFinalBtn" class="btn btn-light" type="button">Copy final note</button>
+                    <button id="printBtn" class="btn btn-light" type="button">Print</button>
+                    <button id="exportBtn" class="btn btn-light" type="button">Export</button>
+                    <button id="clearBtn" class="btn btn-danger" type="button">Clear</button>
                 </div>
             </section>
 
             <div id="toast" class="toast"></div>
         </main>
     </div>
+
+    <script>
+        const timerMirrorTarget = document.getElementById("recordingTimerMirror");
+        const timerSource = document.getElementById("recordingTimer");
+
+        if (timerMirrorTarget && timerSource) {
+            const syncTimerMirror = () => {
+                timerMirrorTarget.textContent = timerSource.textContent || "00:00";
+            };
+
+            syncTimerMirror();
+
+            const observer = new MutationObserver(syncTimerMirror);
+            observer.observe(timerSource, {
+                childList: true,
+                subtree: true,
+                characterData: true
+            });
+        }
+    </script>
 
     <script src="/ai-notes.js"></script>
 </body>
