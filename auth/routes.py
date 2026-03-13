@@ -24,6 +24,7 @@ def _get_bearer_payload(authorization: str | None):
         return None
 
     token = parts[1].strip()
+
     if not token:
         return None
 
@@ -48,6 +49,7 @@ def login(payload: LoginRequest, conn=Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     password_hash = user["password_hash"]
+
     if isinstance(password_hash, str):
         password_hash = password_hash.encode()
 
