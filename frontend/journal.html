@@ -17,6 +17,7 @@
       <nav class="sidebar-nav">
         <a href="/index.html" class="sidebar-link">Dashboard</a>
         <a href="/journal.html" class="sidebar-link active">Reflective Journal</a>
+        <a href="/supervision.html" class="sidebar-link">Supervision Dashboard</a>
         <a href="/ai-note.html" class="sidebar-link">AI Meeting Notes</a>
       </nav>
     </aside>
@@ -30,7 +31,6 @@
         </p>
       </div>
 
-      <!-- HISTORY + AI OUTPUT -->
       <section class="journal-history-section">
         <div class="history-card">
           <div class="history-header">
@@ -44,7 +44,7 @@
                 Generate Development Plan
               </button>
 
-              <button id="generateSupervisionPackBtn" class="btn-primary" type="button">
+              <button id="generateSupervisionPackBtn" class="btn-secondary" type="button">
                 Generate Supervision Pack
               </button>
             </div>
@@ -193,6 +193,11 @@
               <button type="submit" id="saveJournalBtn" class="btn-primary">
                 Save Journal
               </button>
+
+              <button type="button" id="submitSupervisionBtn" class="btn-secondary">
+                Submit for Supervision
+              </button>
+
               <span id="journalMessage" class="form-message"></span>
             </div>
           </form>
