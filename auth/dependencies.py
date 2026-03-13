@@ -3,7 +3,7 @@ from fastapi import Header, HTTPException
 from auth.tokens import decode_session_token
 
 
-def get_current_user(authorization: str | None = Header(default=None)):
+def get_bearer_token(authorization: str | None = Header(default=None)) -> str:
     if not authorization:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
@@ -16,6 +16,12 @@ def get_current_user(authorization: str | None = Header(default=None)):
 
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
+
+    return token
+
+
+def get_current_user(authorization: str | None = Header(default=None)):
+    token = get_bearer_token(authorization)
 
     payload = decode_session_token(token)
 
@@ -30,8 +36,13 @@ def get_current_user(authorization: str | None = Header(default=None)):
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token payload")
 
+    try:
+        user_id = int(user_id)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+
     return {
-        "user_id": int(user_id),
+        "user_id": user_id,
         "email": email,
         "role": role,
         "home_id": home_id
