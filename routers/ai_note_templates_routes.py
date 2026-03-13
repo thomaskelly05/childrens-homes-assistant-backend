@@ -6,7 +6,9 @@ from db.connection import get_db
 from db.ai_note_templates_db import (
     ensure_ai_note_templates_table,
     list_ai_note_templates,
+    get_ai_note_template,
     insert_ai_note_template,
+    update_ai_note_template,
     delete_ai_note_template
 )
 from auth.dependencies import get_current_user
@@ -15,6 +17,27 @@ router = APIRouter(
     prefix="/ai-note-templates",
     tags=["AI Note Templates"]
 )
+
+
+def _parse_sections(sections_json: str) -> list[str]:
+    try:
+        sections = json.loads(sections_json)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid sections format")
+
+    if not isinstance(sections, list) or not sections:
+        raise HTTPException(status_code=400, detail="At least one section is required")
+
+    cleaned_sections = [
+        str(section).strip()
+        for section in sections
+        if str(section).strip()
+    ]
+
+    if not cleaned_sections:
+        raise HTTPException(status_code=400, detail="At least one valid section is required")
+
+    return cleaned_sections
 
 
 @router.get("")
@@ -42,6 +65,39 @@ async def get_templates(
         )
 
 
+@router.get("/{template_id}")
+async def get_template(
+    template_id: int,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    try:
+        ensure_ai_note_templates_table(conn)
+
+        template = get_ai_note_template(
+            conn=conn,
+            template_id=template_id,
+            user_id=current_user["user_id"]
+        )
+
+        if not template:
+            raise HTTPException(status_code=404, detail="Template not found")
+
+        return {
+            "ok": True,
+            "template": template
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Could not load template: {str(e)}"
+        )
+
+
 @router.post("")
 async def create_template(
     name: str = Form(...),
@@ -54,18 +110,7 @@ async def create_template(
     if not name:
         raise HTTPException(status_code=400, detail="Template name is required")
 
-    try:
-        sections = json.loads(sections_json)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid sections format")
-
-    if not isinstance(sections, list) or not sections:
-        raise HTTPException(status_code=400, detail="At least one section is required")
-
-    cleaned_sections = [str(section).strip() for section in sections if str(section).strip()]
-
-    if not cleaned_sections:
-        raise HTTPException(status_code=400, detail="At least one valid section is required")
+    cleaned_sections = _parse_sections(sections_json)
 
     try:
         ensure_ai_note_templates_table(conn)
@@ -86,6 +131,50 @@ async def create_template(
         raise HTTPException(
             status_code=500,
             detail=f"Could not save template: {str(e)}"
+        )
+
+
+@router.post("/update")
+async def update_template(
+    template_id: int = Form(...),
+    name: str = Form(...),
+    sections_json: str = Form(...),
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    name = name.strip()
+
+    if not name:
+        raise HTTPException(status_code=400, detail="Template name is required")
+
+    cleaned_sections = _parse_sections(sections_json)
+
+    try:
+        ensure_ai_note_templates_table(conn)
+
+        template = update_ai_note_template(
+            conn=conn,
+            template_id=template_id,
+            user_id=current_user["user_id"],
+            name=name,
+            sections=cleaned_sections
+        )
+
+        if not template:
+            raise HTTPException(status_code=404, detail="Template not found")
+
+        return {
+            "ok": True,
+            "template": template
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Could not update template: {str(e)}"
         )
 
 
