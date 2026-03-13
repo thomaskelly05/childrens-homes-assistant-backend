@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import bcrypt
 import jwt
@@ -25,7 +26,7 @@ class LoginRequest(BaseModel):
 # ---------------------------------------------------------
 
 @router.post("/login")
-def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
+def login(payload: LoginRequest, conn=Depends(get_db)):
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
@@ -57,6 +58,18 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
         user["home_id"]
     )
 
+    response = JSONResponse({
+        "message": "Logged in",
+        "user": {
+            "id": user["id"],
+            "email": user["email"],
+            "role": user["role"],
+            "home_id": user["home_id"],
+            "first_name": user.get("first_name"),
+            "last_name": user.get("last_name")
+        }
+    })
+
     response.set_cookie(
         key="access_token",
         value=token,
@@ -67,17 +80,7 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
         max_age=86400
     )
 
-    return {
-        "message": "Logged in",
-        "user": {
-            "id": user["id"],
-            "email": user["email"],
-            "role": user["role"],
-            "home_id": user["home_id"],
-            "first_name": user.get("first_name"),
-            "last_name": user.get("last_name")
-        }
-    }
+    return response
 
 
 # ---------------------------------------------------------
@@ -85,14 +88,16 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
 # ---------------------------------------------------------
 
 @router.post("/logout")
-def logout(response: Response):
+def logout():
+
+    response = JSONResponse({"message": "Logged out"})
 
     response.delete_cookie(
         key="access_token",
         path="/"
     )
 
-    return {"message": "Logged out"}
+    return response
 
 
 # ---------------------------------------------------------
