@@ -40,16 +40,20 @@ async function loadSupervisionSubmissions() {
 
     submissions.forEach((submission) => {
       const item = document.createElement("div");
-      item.className = "journal-history-item";
+      item.className = "journal-history-item supervision-item";
       item.style.cursor = "pointer";
 
       const submittedAt = submission.submitted_at
         ? new Date(submission.submitted_at).toLocaleString()
         : "Unknown date";
 
+      const fullName = `${submission.first_name || "Unknown"} ${submission.last_name || ""}`.trim();
+
       item.innerHTML = `
-        <h4>Staff ID ${submission.staff_id} · ${submission.status}</h4>
-        <p>Submitted: ${submittedAt}</p>
+        <h4>${escapeHtml(fullName)}</h4>
+        <p>${escapeHtml(submission.role || "")}</p>
+        <p><strong>Status:</strong> ${escapeHtml(submission.status || "submitted")}</p>
+        <p><strong>Submitted:</strong> ${escapeHtml(submittedAt)}</p>
       `;
 
       item.addEventListener("click", async () => {
@@ -59,7 +63,7 @@ async function loadSupervisionSubmissions() {
       list.appendChild(item);
     });
   } catch (error) {
-    list.innerHTML = `<div class='journal-history-item'><p>${error.message}</p></div>`;
+    list.innerHTML = `<div class='journal-history-item'><p>${escapeHtml(error.message)}</p></div>`;
   }
 }
 
@@ -130,4 +134,13 @@ async function markSubmissionReviewed() {
   } catch (error) {
     detail.textContent = error.message || "Failed to mark as reviewed.";
   }
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
