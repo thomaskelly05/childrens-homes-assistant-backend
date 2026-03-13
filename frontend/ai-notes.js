@@ -12,6 +12,7 @@ const safeguardingTextEl = document.getElementById("safeguardingText");
 
 const recordingStatusEl = document.getElementById("recordingStatus");
 const recordingTimerEl = document.getElementById("recordingTimer");
+const recordingTimerMirrorEl = document.getElementById("recordingTimerMirror");
 const audioReadyTextEl = document.getElementById("audioReadyText");
 const audioPlaybackEl = document.getElementById("audioPlayback");
 const micCircleEl = document.getElementById("micCircle");
@@ -53,10 +54,19 @@ const undoAiEditBtn = document.getElementById("undoAiEditBtn");
 const aiInstructionEl = document.getElementById("aiInstruction");
 
 /* -----------------------------
-   Sections / progress
+   Sections / progress / nav
 ----------------------------- */
 const progressSteps = document.querySelectorAll(".progress-step");
 const sectionTargets = document.querySelectorAll("[data-scroll-target]");
+const sidebarNavItems = document.querySelectorAll(".sidebar-nav .nav-item");
+
+const observedSections = [
+    { id: "workspaceTop", navLabel: "New note" },
+    { id: "recordPanel", navLabel: "Record" },
+    { id: "transcriptPanel", navLabel: "Transcript" },
+    { id: "draftPanel", navLabel: "AI draft" },
+    { id: "finalPanel", navLabel: "Final note" }
+];
 
 /* -----------------------------
    State
@@ -90,6 +100,11 @@ function formatTime(totalSeconds) {
     const mins = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
     const secs = String(totalSeconds % 60).padStart(2, "0");
     return `${mins}:${secs}`;
+}
+
+function updateTimerDisplays(value) {
+    if (recordingTimerEl) recordingTimerEl.textContent = value;
+    if (recordingTimerMirrorEl) recordingTimerMirrorEl.textContent = value;
 }
 
 function safeSetText(el, text) {
@@ -192,18 +207,14 @@ function stopTimer() {
 
 function resetTimer() {
     recordingSeconds = 0;
-    if (recordingTimerEl) {
-        recordingTimerEl.textContent = "00:00";
-    }
+    updateTimerDisplays("00:00");
 }
 
 function startTimer() {
     resetTimer();
     timerInterval = setInterval(() => {
         recordingSeconds += 1;
-        if (recordingTimerEl) {
-            recordingTimerEl.textContent = formatTime(recordingSeconds);
-        }
+        updateTimerDisplays(formatTime(recordingSeconds));
     }, 1000);
 }
 
@@ -233,6 +244,17 @@ function updateProgress(stepNumber) {
             step.classList.add("active");
         } else {
             step.classList.remove("active");
+        }
+    });
+}
+
+function setActiveSidebarItemByTarget(targetId) {
+    sidebarNavItems.forEach(item => {
+        const itemTarget = item.getAttribute("data-scroll-target");
+        if (itemTarget === targetId) {
+            item.classList.add("nav-item-active");
+        } else {
+            item.classList.remove("nav-item-active");
         }
     });
 }
@@ -361,6 +383,7 @@ function clearAllFields() {
     resetTimer();
     setRecordingUI(false);
     updateProgress(1);
+    setActiveSidebarItemByTarget("workspaceTop");
     showToast("Cleared");
 }
 
@@ -410,6 +433,7 @@ async function startRecording() {
         mediaRecorder.start();
         setRecordingUI(true);
         updateProgress(1);
+        setActiveSidebarItemByTarget("recordPanel");
         startTimer();
         showToast("Recording started");
     } catch (error) {
@@ -465,7 +489,8 @@ async function transcribeAudio() {
         updateProgress(2);
         setReadyUI("Transcript ready");
         showToast("Transcript created");
-        scrollToSection("transcriptSection");
+        scrollToSection("transcriptPanel");
+        setActiveSidebarItemByTarget("transcriptPanel");
     } catch (error) {
         console.error("Transcribe error:", error);
         alert("Could not connect to the AI notes service.");
@@ -525,7 +550,8 @@ async function generateNote() {
         updateProgress(3);
         setReadyUI("Draft ready");
         showToast("AI draft generated");
-        scrollToSection("draftSection");
+        scrollToSection("draftPanel");
+        setActiveSidebarItemByTarget("draftPanel");
     } catch (error) {
         console.error("Generate error:", error);
         alert("Could not connect to the AI notes service.");
@@ -640,7 +666,8 @@ async function saveNote() {
         updateProgress(5);
         setReadyUI("Saved");
         showToast("AI note saved successfully");
-        scrollToSection("finalSection");
+        scrollToSection("finalPanel");
+        setActiveSidebarItemByTarget("finalPanel");
     } catch (error) {
         console.error("Save error:", error);
         alert("Could not connect to the AI notes service.");
@@ -664,7 +691,8 @@ function copyDraftToFinal() {
     finalNoteEl.value = aiDraftEl.value;
     updateProgress(4);
     showToast("Draft copied to final note");
-    scrollToSection("finalSection");
+    scrollToSection("finalPanel");
+    setActiveSidebarItemByTarget("finalPanel");
 }
 
 function toggleTranscript() {
@@ -687,10 +715,40 @@ function bindScrollButtons() {
         button.addEventListener("click", () => {
             const targetId = button.getAttribute("data-scroll-target");
             if (targetId) {
+                setActiveSidebarItemByTarget(targetId);
                 scrollToSection(targetId);
             }
         });
     });
+}
+
+function bindSectionObserver() {
+    const validSections = observedSections
+        .map(section => document.getElementById(section.id))
+        .filter(Boolean);
+
+    if (!validSections.length) return;
+
+    const observer = new IntersectionObserver(
+        (entries) => {
+            const visibleEntries = entries
+                .filter(entry => entry.isIntersecting)
+                .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+
+            if (!visibleEntries.length) return;
+
+            const mostVisible = visibleEntries[0];
+            const id = mostVisible.target.id;
+            setActiveSidebarItemByTarget(id);
+        },
+        {
+            root: null,
+            rootMargin: "-20% 0px -55% 0px",
+            threshold: [0.2, 0.35, 0.5, 0.7]
+        }
+    );
+
+    validSections.forEach(section => observer.observe(section));
 }
 
 /* -----------------------------
@@ -756,10 +814,12 @@ function init() {
     bindMainButtons();
     bindUtilityButtons();
     bindScrollButtons();
+    bindSectionObserver();
 
     resetTimer();
     setRecordingUI(false);
     updateProgress(1);
+    setActiveSidebarItemByTarget("workspaceTop");
 
     syncGenerateButtons(false, "Generate AI note", "Generate");
     syncSaveButtons(false, "Save note", "Save");
