@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/journal.css" />
 </head>
 <body>
-  <div class="app-layout">
+  <div class="app-shell">
     <aside class="sidebar">
       <div class="sidebar-brand">
         <h2>IndiCare</h2>
@@ -22,18 +22,37 @@
       </nav>
     </aside>
 
-    <main class="main-content">
-      <div class="page-header">
-        <h1>Reflective Journal</h1>
-        <p>
-          Use this journal to reflect on practice, relationships, leadership,
-          and the impact of your work during the shift.
-        </p>
-      </div>
+    <main class="page-shell">
+      <header class="page-hero">
+        <div>
+          <p class="eyebrow">Reflective Practice</p>
+          <h1>Reflective Journal</h1>
+          <p class="hero-copy">
+            Capture shift reflections, generate development insights, and submit entries for supervision.
+          </p>
+        </div>
 
-      <div class="journal-layout">
-        <section class="journal-main">
-          <div class="tabs" id="journalTabs">
+        <div class="hero-actions">
+          <button id="generatePdpBtn" class="btn btn-secondary" type="button">
+            Development Plan
+          </button>
+          <button id="generateSupervisionPackBtn" class="btn btn-secondary" type="button">
+            Supervision Pack
+          </button>
+        </div>
+      </header>
+
+      <section class="top-grid">
+        <section class="card journal-card">
+          <div class="card-header">
+            <div>
+              <h2>New Reflection</h2>
+              <p>Complete the journal below, then save or submit for supervision.</p>
+            </div>
+            <div class="status-pill" id="journalStatusPill">Draft</div>
+          </div>
+
+          <div class="section-tabs" id="journalTabs">
             <button class="tab-btn active" data-tab="overview" type="button">Overview</button>
             <button class="tab-btn" data-tab="gibbs" type="button">Gibbs Cycle</button>
             <button class="tab-btn" data-tab="pace" type="button">PACE</button>
@@ -46,78 +65,82 @@
             <input type="hidden" id="staff_id" value="1" />
 
             <div class="tab-panel active" id="tab-overview">
-              <div class="form-group">
+              <div class="field-group">
                 <label for="holding_today">What am I holding today?</label>
                 <textarea id="holding_today" rows="4"></textarea>
               </div>
 
-              <div class="form-group">
+              <div class="field-group">
                 <label for="practice_today">What has stood out in my practice today?</label>
                 <textarea id="practice_today" rows="4"></textarea>
               </div>
 
-              <div class="form-group">
+              <div class="field-group">
                 <label for="reflection_today">What do I most want to reflect on?</label>
                 <textarea id="reflection_today" rows="4"></textarea>
               </div>
             </div>
 
             <div class="tab-panel" id="tab-gibbs">
-              <div class="form-group">
-                <label for="description">Description</label>
-                <textarea id="description" rows="4"></textarea>
-              </div>
+              <div class="field-grid">
+                <div class="field-group">
+                  <label for="description">Description</label>
+                  <textarea id="description" rows="4"></textarea>
+                </div>
 
-              <div class="form-group">
-                <label for="feelings">Feelings</label>
-                <textarea id="feelings" rows="4"></textarea>
-              </div>
+                <div class="field-group">
+                  <label for="feelings">Feelings</label>
+                  <textarea id="feelings" rows="4"></textarea>
+                </div>
 
-              <div class="form-group">
-                <label for="evaluation">Evaluation</label>
-                <textarea id="evaluation" rows="4"></textarea>
-              </div>
+                <div class="field-group">
+                  <label for="evaluation">Evaluation</label>
+                  <textarea id="evaluation" rows="4"></textarea>
+                </div>
 
-              <div class="form-group">
-                <label for="analysis">Analysis</label>
-                <textarea id="analysis" rows="4"></textarea>
-              </div>
+                <div class="field-group">
+                  <label for="analysis">Analysis</label>
+                  <textarea id="analysis" rows="4"></textarea>
+                </div>
 
-              <div class="form-group">
-                <label for="conclusion">Conclusion</label>
-                <textarea id="conclusion" rows="4"></textarea>
-              </div>
+                <div class="field-group">
+                  <label for="conclusion">Conclusion</label>
+                  <textarea id="conclusion" rows="4"></textarea>
+                </div>
 
-              <div class="form-group">
-                <label for="action_plan">Action Plan</label>
-                <textarea id="action_plan" rows="4"></textarea>
+                <div class="field-group">
+                  <label for="action_plan">Action Plan</label>
+                  <textarea id="action_plan" rows="4"></textarea>
+                </div>
               </div>
             </div>
 
             <div class="tab-panel" id="tab-pace">
-              <div class="form-group">
-                <label for="playfulness">Playfulness</label>
-                <textarea id="playfulness" rows="4"></textarea>
-              </div>
+              <div class="field-grid">
+                <div class="field-group">
+                  <label for="playfulness">Playfulness</label>
+                  <textarea id="playfulness" rows="4"></textarea>
+                </div>
 
-              <div class="form-group">
-                <label for="acceptance">Acceptance</label>
-                <textarea id="acceptance" rows="4"></textarea>
-              </div>
+                <div class="field-group">
+                  <label for="acceptance">Acceptance</label>
+                  <textarea id="acceptance" rows="4"></textarea>
+                </div>
 
-              <div class="form-group">
-                <label for="curiosity">Curiosity</label>
-                <textarea id="curiosity" rows="4"></textarea>
-              </div>
+                <div class="field-group">
+                  <label for="curiosity">Curiosity</label>
+                  <textarea id="curiosity" rows="4"></textarea>
+                </div>
 
-              <div class="form-group">
-                <label for="empathy">Empathy</label>
-                <textarea id="empathy" rows="4"></textarea>
+                <div class="field-group">
+                  <label for="empathy">Empathy</label>
+                  <textarea id="empathy" rows="4"></textarea>
+                </div>
               </div>
             </div>
 
             <div class="tab-panel" id="tab-leadership">
-              <div class="form-group">
+              <div class="field-group">
                 <label for="leadership_style">Leadership Style</label>
                 <select id="leadership_style">
                   <option value="">Select a style</option>
@@ -130,97 +153,100 @@
                 </select>
               </div>
 
-              <div class="form-group">
+              <div class="field-group">
                 <label for="leadership_reflection">Leadership Reflection</label>
                 <textarea id="leadership_reflection" rows="5"></textarea>
               </div>
             </div>
 
             <div class="tab-panel" id="tab-impact">
-              <div class="form-group">
-                <label for="child_impact">Impact on Young Person</label>
-                <textarea id="child_impact" rows="4"></textarea>
-              </div>
+              <div class="field-grid">
+                <div class="field-group">
+                  <label for="child_impact">Impact on Young Person</label>
+                  <textarea id="child_impact" rows="4"></textarea>
+                </div>
 
-              <div class="form-group">
-                <label for="team_impact">Impact on Team</label>
-                <textarea id="team_impact" rows="4"></textarea>
-              </div>
+                <div class="field-group">
+                  <label for="team_impact">Impact on Team</label>
+                  <textarea id="team_impact" rows="4"></textarea>
+                </div>
 
-              <div class="form-group">
-                <label for="safeguarding_considerations">Safeguarding Considerations</label>
-                <textarea id="safeguarding_considerations" rows="4"></textarea>
-              </div>
+                <div class="field-group">
+                  <label for="safeguarding_considerations">Safeguarding Considerations</label>
+                  <textarea id="safeguarding_considerations" rows="4"></textarea>
+                </div>
 
-              <div class="form-group">
-                <label for="support_needed">Support Needed / Follow-Up</label>
-                <textarea id="support_needed" rows="4"></textarea>
+                <div class="field-group">
+                  <label for="support_needed">Support Needed / Follow-Up</label>
+                  <textarea id="support_needed" rows="4"></textarea>
+                </div>
               </div>
             </div>
 
-            <div class="form-actions">
-              <button type="submit" id="saveJournalBtn" class="btn-primary">
-                Save Journal
-              </button>
+            <div class="form-toolbar">
+              <div class="toolbar-left">
+                <button type="submit" id="saveJournalBtn" class="btn btn-primary">
+                  Save Journal
+                </button>
 
-              <button type="button" id="submitSupervisionBtn" class="btn-secondary">
-                Submit for Supervision
-              </button>
+                <button type="button" id="submitSupervisionBtn" class="btn btn-accent">
+                  Submit for Supervision
+                </button>
+              </div>
 
-              <span id="journalMessage" class="form-message"></span>
+              <div class="toolbar-right">
+                <span id="journalMessage" class="message-text"></span>
+              </div>
             </div>
           </form>
         </section>
 
-        <aside class="journal-sidebar">
-          <div class="prompt-card">
-            <div class="prompt-header">
-              <h3>Reflection Prompts</h3>
-              <button id="togglePromptsBtn" class="btn-secondary small-btn" type="button">
-                Hide
-              </button>
+        <aside class="card prompt-card">
+          <div class="card-header compact">
+            <div>
+              <h2>Reflection Prompts</h2>
+              <p>Use these while writing.</p>
             </div>
-
-            <div id="promptList" class="prompt-list"></div>
+            <button id="togglePromptsBtn" class="btn btn-secondary btn-small" type="button">
+              Hide
+            </button>
           </div>
 
-          <div class="prompt-card">
-            <button id="backToTopBtn" class="btn-secondary" type="button">
+          <div id="promptList" class="prompt-list"></div>
+
+          <div class="prompt-footer">
+            <button id="backToTopBtn" class="btn btn-secondary btn-full" type="button">
               Back to top
             </button>
           </div>
         </aside>
-      </div>
+      </section>
 
-      <section class="journal-history-section">
-        <div class="history-card">
-          <div class="history-header">
+      <section class="bottom-grid">
+        <section class="card history-card">
+          <div class="card-header">
             <div>
-              <h2>Your Journal Entries</h2>
-              <p>Recent reflective entries for supervision and development.</p>
-            </div>
-
-            <div class="history-actions">
-              <button id="generatePdpBtn" class="btn-secondary" type="button">
-                Generate Development Plan
-              </button>
-
-              <button id="generateSupervisionPackBtn" class="btn-secondary" type="button">
-                Generate Supervision Pack
-              </button>
+              <h2>Journal History</h2>
+              <p>Your recent saved reflections.</p>
             </div>
           </div>
 
-          <div id="journalHistoryMessage" class="form-message"></div>
-          <div id="journalHistoryList" class="journal-history-list"></div>
-        </div>
+          <div id="journalHistoryMessage" class="message-text history-message"></div>
+          <div id="journalHistoryList" class="history-list"></div>
+        </section>
 
-        <div class="history-card">
-          <h2>AI Development Output</h2>
-          <div id="aiDevelopmentOutput" class="ai-output">
-            Select an option to generate a development plan or supervision pack from the journal history.
+        <section class="card output-card">
+          <div class="card-header">
+            <div>
+              <h2>AI Development Output</h2>
+              <p>Generated plans and supervision packs appear here.</p>
+            </div>
           </div>
-        </div>
+
+          <div id="aiDevelopmentOutput" class="output-box">
+            Select an option above to generate a development plan or supervision pack.
+          </div>
+        </section>
       </section>
     </main>
   </div>
