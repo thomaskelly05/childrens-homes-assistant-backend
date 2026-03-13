@@ -19,7 +19,7 @@ def login(payload: LoginRequest, conn=Depends(get_db)):
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT id, email, password_hash, role
+            SELECT id, email, password_hash, role, home_id
             FROM users
             WHERE email = %s
             """,
@@ -31,15 +31,33 @@ def login(payload: LoginRequest, conn=Depends(get_db)):
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
+    password_hash = user["password_hash"]
+
+    if isinstance(password_hash, str):
+        password_hash = password_hash.encode()
+
     if not bcrypt.checkpw(
         payload.password.encode(),
-        user["password_hash"].encode()
+        password_hash
     ):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    token = create_session_token(user["id"], user["role"])
+    token = create_session_token(
+        user["id"],
+        user["email"],
+        user["role"],
+        user.get("home_id")
+    )
 
-    response = JSONResponse({"message": "Logged in"})
+    response = JSONResponse({
+        "message": "Logged in",
+        "user": {
+            "id": user["id"],
+            "email": user["email"],
+            "role": user["role"],
+            "home_id": user.get("home_id")
+        }
+    })
 
     response.set_cookie(
         key="access_token",
@@ -48,7 +66,7 @@ def login(payload: LoginRequest, conn=Depends(get_db)):
         secure=True,
         samesite="none",
         path="/",
-        domain=".indicare.co.uk"   # IMPORTANT
+        max_age=86400
     )
 
     return response
@@ -60,9 +78,8 @@ def logout():
     response = JSONResponse({"message": "Logged out"})
 
     response.delete_cookie(
-        "access_token",
-        path="/",
-        domain=".indicare.co.uk"
+        key="access_token",
+        path="/"
     )
 
     return response
