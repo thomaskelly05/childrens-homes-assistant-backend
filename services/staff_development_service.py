@@ -169,3 +169,39 @@ Provide 3 numbered goals.
 Keep it concise, useful, and grounded in the reflections provided.
 """
     return await ask_openai(prompt)
+
+def build_journal_summary(journal: dict) -> str:
+    """
+    Creates a readable summary of a journal entry
+    that can be used inside supervision submissions.
+    """
+
+    fields = [
+        ("Holding Today", journal.get("holding_today")),
+        ("Practice Today", journal.get("practice_today")),
+        ("Reflection Today", journal.get("reflection_today")),
+        ("Description", journal.get("description")),
+        ("Feelings", journal.get("feelings")),
+        ("Evaluation", journal.get("evaluation")),
+        ("Analysis", journal.get("analysis")),
+        ("Conclusion", journal.get("conclusion")),
+        ("Action Plan", journal.get("action_plan")),
+        ("Playfulness", journal.get("playfulness")),
+        ("Acceptance", journal.get("acceptance")),
+        ("Curiosity", journal.get("curiosity")),
+        ("Empathy", journal.get("empathy")),
+        ("Leadership Style", journal.get("leadership_style")),
+        ("Leadership Reflection", journal.get("leadership_reflection")),
+        ("Impact on Young Person", journal.get("child_impact")),
+        ("Impact on Team", journal.get("team_impact")),
+        ("Safeguarding Considerations", journal.get("safeguarding_considerations")),
+        ("Support Needed", journal.get("support_needed")),
+    ]
+
+    lines = []
+
+    for label, value in fields:
+        if value and str(value).strip():
+            lines.append(f"{label}:\n{value}\n")
+
+    return "\n".join(lines).strip()
