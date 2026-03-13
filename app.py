@@ -5,7 +5,6 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from starlette.middleware.sessions import SessionMiddleware
 
 
 # --------------------------------------------------
@@ -38,12 +37,6 @@ from routers.ai_note_export_routes import router as ai_note_export_router
 APP_NAME = "IndiCare Assistant API"
 VERSION = "2.0"
 PORT = int(os.environ.get("PORT", 10000))
-
-SESSION_SECRET = os.environ.get("SESSION_SECRET")
-if not SESSION_SECRET:
-    raise RuntimeError("SESSION_SECRET is not set")
-
-IS_PROD = os.environ.get("RENDER") is not None
 
 
 # --------------------------------------------------
@@ -93,20 +86,6 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-)
-
-
-# --------------------------------------------------
-# SESSION COOKIE
-# --------------------------------------------------
-
-app.add_middleware(
-    SessionMiddleware,
-    secret_key=SESSION_SECRET,
-    session_cookie="indicare_session",
-    same_site="none" if IS_PROD else "lax",
-    https_only=IS_PROD,
-    max_age=86400
 )
 
 
