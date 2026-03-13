@@ -56,14 +56,17 @@ def list_supervision_submissions(conn, limit=50):
             SELECT
                 s.id,
                 s.staff_id,
-                st.first_name,
-                st.last_name,
-                st.role,
+                s.journal_id,
                 s.status,
-                s.submitted_at
+                s.submitted_at,
+                s.reviewed_at,
+                u.first_name,
+                u.last_name,
+                u.email,
+                u.role
             FROM supervision_submissions s
-            LEFT JOIN staff st
-                ON st.id = s.staff_id
+            LEFT JOIN users u
+                ON u.id = s.staff_id
             ORDER BY s.submitted_at DESC
             LIMIT %s;
         """, (limit,))
@@ -74,9 +77,16 @@ def list_supervision_submissions(conn, limit=50):
 def get_supervision_submission(conn, submission_id):
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("""
-            SELECT *
-            FROM supervision_submissions
-            WHERE id = %s
+            SELECT
+                s.*,
+                u.first_name,
+                u.last_name,
+                u.email,
+                u.role
+            FROM supervision_submissions s
+            LEFT JOIN users u
+                ON u.id = s.staff_id
+            WHERE s.id = %s
             LIMIT 1;
         """, (submission_id,))
         row = cur.fetchone()
