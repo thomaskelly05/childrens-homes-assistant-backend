@@ -1,4 +1,35 @@
 const API_BASE = "https://childrens-homes-assistant-backend-new.onrender.com";
+const ACCESS_TOKEN_KEY = "indicare_access_token";
+
+/* -----------------------------
+   Auth helpers
+----------------------------- */
+function getAccessToken() {
+    return localStorage.getItem(ACCESS_TOKEN_KEY) || "";
+}
+
+function getAuthHeaders(extraHeaders = {}) {
+    const token = getAccessToken();
+
+    if (!token) {
+        return { ...extraHeaders };
+    }
+
+    return {
+        ...extraHeaders,
+        Authorization: `Bearer ${token}`
+    };
+}
+
+function handleUnauthorized(response, data = null) {
+    if (response.status === 401) {
+        localStorage.removeItem(ACCESS_TOKEN_KEY);
+        alert((data && data.detail) || "Your session has expired. Please log in again.");
+        window.location.href = "/login.html";
+        return true;
+    }
+    return false;
+}
 
 /* -----------------------------
    Elements
@@ -284,16 +315,6 @@ function copyText(text, successMessage) {
         .catch(() => alert("Copy failed."));
 }
 
-function exportTextFile(filename, content) {
-    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    link.click();
-    URL.revokeObjectURL(url);
-}
-
 function escapedTitle(text) {
     return String(text || "")
         .replace(/&/g, "&amp;")
@@ -480,12 +501,13 @@ async function downloadExportFile(format) {
 
         const response = await fetch(`${API_BASE}/ai-notes/export/${format}`, {
             method: "POST",
-            body: form,
-            credentials: "include"
+            headers: getAuthHeaders(),
+            body: form
         });
 
         if (!response.ok) {
             const data = await safeJson(response);
+            if (handleUnauthorized(response, data)) return;
             alert(data.detail || `Could not export ${format.toUpperCase()}.`);
             setSaveState("is-idle");
             return;
@@ -509,7 +531,7 @@ async function downloadExportFile(format) {
         showToast(`${format.toUpperCase()} export ready`);
     } catch (error) {
         console.error(`Export ${format} error:`, error);
-        alert(`Could not connect to the export service.`);
+        alert("Could not connect to the export service.");
         setSaveState("is-idle");
     }
 }
@@ -603,12 +625,13 @@ async function loadTemplates() {
     try {
         const response = await fetch(`${API_BASE}/ai-note-templates`, {
             method: "GET",
-            credentials: "include"
+            headers: getAuthHeaders()
         });
 
         const data = await safeJson(response);
 
         if (!response.ok) {
+            if (handleUnauthorized(response, data)) return;
             throw new Error(data.detail || "Could not load templates");
         }
 
@@ -652,23 +675,24 @@ async function loadTemplateIntoEditor(templateId) {
     try {
         const response = await fetch(`${API_BASE}/ai-note-templates/${templateId}`, {
             method: "GET",
-            credentials: "include"
+            headers: getAuthHeaders()
         });
 
         const data = await safeJson(response);
 
         if (!response.ok) {
+            if (handleUnauthorized(response, data)) return;
             alert(data.detail || "Could not load template.");
             return;
         }
 
         const template = data.template || {};
+        openTemplateModal();
         templateNameInput.value = template.name || "";
         currentTemplateSections = Array.isArray(template.sections) ? [...template.sections] : [];
         saveTemplateBtn.dataset.editingTemplateId = String(template.id);
         saveTemplateBtn.textContent = "Update template";
         renderCurrentTemplateSections();
-        openTemplateModal();
     } catch (error) {
         console.error("Load template error:", error);
         alert("Could not connect to the templates service.");
@@ -703,13 +727,14 @@ async function saveTemplateToDb() {
 
     const response = await fetch(url, {
         method: "POST",
-        body: form,
-        credentials: "include"
+        headers: getAuthHeaders(),
+        body: form
     });
 
     const data = await safeJson(response);
 
     if (!response.ok) {
+        if (handleUnauthorized(response, data)) return;
         alert(data.detail || "Could not save template.");
         return;
     }
@@ -731,13 +756,14 @@ async function deleteTemplate(templateId) {
 
     const response = await fetch(`${API_BASE}/ai-note-templates/delete`, {
         method: "POST",
-        body: form,
-        credentials: "include"
+        headers: getAuthHeaders(),
+        body: form
     });
 
     const data = await safeJson(response);
 
     if (!response.ok) {
+        if (handleUnauthorized(response, data)) return;
         alert(data.detail || "Could not delete template.");
         return;
     }
@@ -765,13 +791,16 @@ async function applySelectedTemplateToGeneratedNote(noteText) {
 
     const response = await fetch(`${API_BASE}/ai-notes/edit`, {
         method: "POST",
-        body: form,
-        credentials: "include"
+        headers: getAuthHeaders(),
+        body: form
     });
 
     const data = await safeJson(response);
 
     if (!response.ok) {
+        if (handleUnauthorized(response, data)) {
+            throw new Error("Not authenticated");
+        }
         throw new Error(data.detail || "Template formatting failed.");
     }
 
@@ -835,12 +864,13 @@ async function loadHistory() {
 
         const response = await fetch(`${API_BASE}/ai-notes/history?limit=10`, {
             method: "GET",
-            credentials: "include"
+            headers: getAuthHeaders()
         });
 
         const data = await safeJson(response);
 
         if (!response.ok) {
+            if (handleUnauthorized(response, data)) return;
             throw new Error(data.detail || "Could not load history.");
         }
 
@@ -865,12 +895,13 @@ async function openHistoryNote(noteId) {
     try {
         const response = await fetch(`${API_BASE}/ai-notes/history/${noteId}`, {
             method: "GET",
-            credentials: "include"
+            headers: getAuthHeaders()
         });
 
         const data = await safeJson(response);
 
         if (!response.ok) {
+            if (handleUnauthorized(response, data)) return;
             alert(data.detail || "Could not load the saved note.");
             return;
         }
@@ -918,13 +949,14 @@ async function deleteHistoryNote(noteId) {
 
         const response = await fetch(`${API_BASE}/ai-notes/delete`, {
             method: "POST",
-            body: form,
-            credentials: "include"
+            headers: getAuthHeaders(),
+            body: form
         });
 
         const data = await safeJson(response);
 
         if (!response.ok) {
+            if (handleUnauthorized(response, data)) return;
             alert(data.detail || "Delete failed.");
             return;
         }
@@ -1025,13 +1057,14 @@ async function transcribeAudio() {
 
         const response = await fetch(`${API_BASE}/ai-notes/transcribe`, {
             method: "POST",
-            body: form,
-            credentials: "include"
+            headers: getAuthHeaders(),
+            body: form
         });
 
         const data = await safeJson(response);
 
         if (!response.ok) {
+            if (handleUnauthorized(response, data)) return;
             alert(data.detail || "Transcription failed.");
             setRecordingUI(false);
             return;
@@ -1077,13 +1110,14 @@ async function generateNote() {
 
         const response = await fetch(`${API_BASE}/ai-notes/generate`, {
             method: "POST",
-            body: form,
-            credentials: "include"
+            headers: getAuthHeaders(),
+            body: form
         });
 
         const data = await safeJson(response);
 
         if (!response.ok) {
+            if (handleUnauthorized(response, data)) return;
             alert(data.detail || "Note generation failed.");
             setRecordingUI(false);
             return;
@@ -1155,13 +1189,14 @@ async function applyAiEdit() {
 
         const response = await fetch(`${API_BASE}/ai-notes/edit`, {
             method: "POST",
-            body: form,
-            credentials: "include"
+            headers: getAuthHeaders(),
+            body: form
         });
 
         const data = await safeJson(response);
 
         if (!response.ok) {
+            if (handleUnauthorized(response, data)) return;
             alert(data.detail || "AI edit failed.");
             return;
         }
@@ -1247,13 +1282,14 @@ async function saveNote(isAutosave = false) {
 
         const response = await fetch(`${API_BASE}/ai-notes/save`, {
             method: "POST",
-            body: form,
-            credentials: "include"
+            headers: getAuthHeaders(),
+            body: form
         });
 
         const data = await safeJson(response);
 
         if (!response.ok) {
+            if (handleUnauthorized(response, data)) return;
             if (!isAutosave) {
                 alert(data.detail || "Save failed.");
             }
@@ -1383,6 +1419,11 @@ function bindButtons() {
    Init
 ----------------------------- */
 async function init() {
+    if (!getAccessToken()) {
+        window.location.href = "/login.html";
+        return;
+    }
+
     bindButtons();
     bindStageNavigation();
     bindPromptChips();
