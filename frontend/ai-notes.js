@@ -114,24 +114,47 @@ function syncRecordingButtons(isRecording) {
     updateButtonState(toolbarStopBtn, !isRecording);
 }
 
-function syncTranscribeButtons(disabled, text = null) {
-    updateButtonState(transcribeBtn, disabled, text ?? transcribeBtn?.textContent ?? "Transcribe recording");
-    updateButtonState(toolbarTranscribeBtn, disabled, text ?? toolbarTranscribeBtn?.textContent ?? "Transcribe");
+function syncTranscribeButtons(disabled, mainText = null, toolbarText = null) {
+    updateButtonState(
+        transcribeBtn,
+        disabled,
+        mainText ?? "Transcribe recording"
+    );
+    updateButtonState(
+        toolbarTranscribeBtn,
+        disabled,
+        toolbarText ?? "Transcribe"
+    );
 }
 
-function syncGenerateButtons(disabled, text = null) {
-    updateButtonState(generateBtn, disabled, text ?? generateBtn?.textContent ?? "Generate AI note");
-    updateButtonState(toolbarGenerateBtn, disabled, text ?? toolbarGenerateBtn?.textContent ?? "Generate");
+function syncGenerateButtons(disabled, mainText = null, toolbarText = null) {
+    updateButtonState(
+        generateBtn,
+        disabled,
+        mainText ?? "Generate AI note"
+    );
+    updateButtonState(
+        toolbarGenerateBtn,
+        disabled,
+        toolbarText ?? "Generate"
+    );
 }
 
-function syncSaveButtons(disabled, text = null) {
-    updateButtonState(saveBtn, disabled, text ?? saveBtn?.textContent ?? "Save note");
-    updateButtonState(saveBtnTop, disabled, text ?? saveBtnTop?.textContent ?? "Save");
+function syncSaveButtons(disabled, mainText = null, toolbarText = null) {
+    updateButtonState(
+        saveBtn,
+        disabled,
+        mainText ?? "Save note"
+    );
+    updateButtonState(
+        saveBtnTop,
+        disabled,
+        toolbarText ?? "Save"
+    );
 }
 
 function setStatus(type, text) {
     if (!recordingStatusEl) return;
-
     recordingStatusEl.textContent = text;
     recordingStatusEl.className = `status-pill ${type}`;
 }
@@ -304,11 +327,15 @@ function clearAllFields() {
         audioPlaybackEl.style.display = "none";
     }
 
-    safeguardingBoxEl.style.display = "none";
-    safeguardingTextEl.textContent = "";
+    if (safeguardingBoxEl) {
+        safeguardingBoxEl.style.display = "none";
+    }
+    if (safeguardingTextEl) {
+        safeguardingTextEl.textContent = "";
+    }
+
     latestSafeguardingFlag = false;
     previousAiDraft = "";
-
     recordedBlob = null;
     recordedChunks = [];
 
@@ -397,7 +424,7 @@ async function transcribeAudio() {
 
     try {
         setProcessingUI("Transcribing");
-        syncTranscribeButtons(true, "Transcribing...");
+        syncTranscribeButtons(true, "Transcribing...", "Transcribing...");
         safeSetText(audioReadyTextEl, "Uploading and transcribing audio...");
 
         const response = await fetch(`${API_BASE}/ai-notes/transcribe`, {
@@ -425,8 +452,7 @@ async function transcribeAudio() {
         alert("Could not connect to the AI notes service.");
         setRecordingUI(false);
     } finally {
-        syncTranscribeButtons(false, "Transcribe recording");
-        if (toolbarTranscribeBtn) toolbarTranscribeBtn.textContent = "Transcribe";
+        syncTranscribeButtons(false, "Transcribe recording", "Transcribe");
     }
 }
 
@@ -446,7 +472,7 @@ async function generateNote() {
 
     try {
         setProcessingUI("Generating note");
-        syncGenerateButtons(true, "Generating...");
+        syncGenerateButtons(true, "Generating...", "Generating...");
 
         const response = await fetch(`${API_BASE}/ai-notes/generate`, {
             method: "POST",
@@ -485,9 +511,65 @@ async function generateNote() {
         alert("Could not connect to the AI notes service.");
         setRecordingUI(false);
     } finally {
-        syncGenerateButtons(false, "Generate AI note");
-        if (toolbarGenerateBtn) toolbarGenerateBtn.textContent = "Generate";
+        syncGenerateButtons(false, "Generate AI note", "Generate");
     }
+}
+
+/* -----------------------------
+   AI edit
+----------------------------- */
+async function applyAiEdit() {
+    const instruction = aiInstructionEl.value.trim();
+    const currentDraft = aiDraftEl.value.trim();
+
+    if (!currentDraft) {
+        alert("Generate a draft first.");
+        return;
+    }
+
+    previousAiDraft = aiDraftEl.value;
+
+    const form = new FormData();
+    form.append("text", currentDraft);
+    form.append("mode", instruction ? "custom" : "improve");
+    form.append("instruction", instruction);
+
+    try {
+        setProcessingUI("Applying AI edit");
+        updateButtonState(applyAiEditBtn, true, "Applying...");
+
+        const response = await fetch(`${API_BASE}/ai-notes/edit`, {
+            method: "POST",
+            body: form,
+            credentials: "include"
+        });
+
+        const data = await safeJson(response);
+
+        if (!response.ok) {
+            alert(data.detail || "AI edit failed.");
+            return;
+        }
+
+        aiDraftEl.value = data.text || "";
+        showToast("AI edit applied");
+    } catch (error) {
+        console.error("AI edit error:", error);
+        alert("Could not connect to the AI notes service.");
+    } finally {
+        updateButtonState(applyAiEditBtn, false, "Apply AI edit");
+        setReadyUI("Draft ready");
+    }
+}
+
+function undoAiEdit() {
+    if (!previousAiDraft) {
+        alert("There is no previous draft to restore.");
+        return;
+    }
+
+    aiDraftEl.value = previousAiDraft;
+    showToast("Last AI edit undone");
 }
 
 /* -----------------------------
@@ -511,7 +593,7 @@ async function saveNote() {
 
     try {
         setProcessingUI("Saving");
-        syncSaveButtons(true, "Saving...");
+        syncSaveButtons(true, "Saving...", "Saving...");
 
         const response = await fetch(`${API_BASE}/ai-notes/save`, {
             method: "POST",
@@ -536,8 +618,7 @@ async function saveNote() {
         alert("Could not connect to the AI notes service.");
         setRecordingUI(false);
     } finally {
-        syncSaveButtons(false, "Save note");
-        if (saveBtnTop) saveBtnTop.textContent = "Save";
+        syncSaveButtons(false, "Save note", "Save");
     }
 }
 
@@ -562,68 +643,12 @@ function toggleTranscript() {
     transcriptVisible = !transcriptVisible;
 
     if (transcriptVisible) {
-        transcriptContentEl.classList.remove("hidden");
+        transcriptContentEl?.classList.remove("hidden");
         toggleTranscriptBtn.textContent = "Show / hide";
     } else {
-        transcriptContentEl.classList.add("hidden");
+        transcriptContentEl?.classList.add("hidden");
         toggleTranscriptBtn.textContent = "Show / hide";
     }
-}
-
-function applyAiEdit() {
-    const instruction = aiInstructionEl.value.trim();
-    const currentDraft = aiDraftEl.value.trim();
-
-    if (!currentDraft) {
-        alert("Generate a draft first.");
-        return;
-    }
-
-    if (!instruction) {
-        alert("Please enter an AI editing instruction.");
-        return;
-    }
-
-    previousAiDraft = aiDraftEl.value;
-
-    const lowerInstruction = instruction.toLowerCase();
-    let updatedDraft = aiDraftEl.value;
-
-    if (lowerInstruction.includes("short") || lowerInstruction.includes("concise")) {
-        updatedDraft = updatedDraft
-            .split("\n")
-            .map(line => line.trim())
-            .filter(Boolean)
-            .join("\n");
-    } else if (lowerInstruction.includes("professional")) {
-        updatedDraft = `Professional version:\n\n${updatedDraft}`;
-    } else if (lowerInstruction.includes("bullet")) {
-        updatedDraft = updatedDraft
-            .split("\n")
-            .map(line => line.trim())
-            .filter(Boolean)
-            .map(line => line.startsWith("- ") ? line : `- ${line}`)
-            .join("\n");
-    } else {
-        updatedDraft = `${updatedDraft}\n\nEdit instruction applied: ${instruction}`;
-    }
-
-    aiDraftEl.value = updatedDraft;
-    showToast("AI edit applied");
-
-    if (!finalNoteEl.value.trim()) {
-        finalNoteEl.value = updatedDraft;
-    }
-}
-
-function undoAiEdit() {
-    if (!previousAiDraft) {
-        alert("There is no previous draft to restore.");
-        return;
-    }
-
-    aiDraftEl.value = previousAiDraft;
-    showToast("Last AI edit undone");
 }
 
 /* -----------------------------
@@ -641,72 +666,76 @@ function bindScrollButtons() {
 }
 
 /* -----------------------------
-   Button bindings
+   Utility button actions
 ----------------------------- */
-startRecordingBtn?.addEventListener("click", startRecording);
-stopRecordingBtn?.addEventListener("click", stopRecording);
-transcribeBtn?.addEventListener("click", transcribeAudio);
-generateBtn?.addEventListener("click", generateNote);
-saveBtn?.addEventListener("click", saveNote);
+function bindUtilityButtons() {
+    copyDraftToFinalBtn?.addEventListener("click", copyDraftToFinal);
+    copyDraftBtn?.addEventListener("click", copyDraftToFinal);
 
-toolbarStartBtn?.addEventListener("click", startRecording);
-toolbarStopBtn?.addEventListener("click", stopRecording);
-toolbarTranscribeBtn?.addEventListener("click", transcribeAudio);
-toolbarGenerateBtn?.addEventListener("click", generateNote);
-saveBtnTop?.addEventListener("click", saveNote);
+    toggleTranscriptBtn?.addEventListener("click", toggleTranscript);
 
-copyDraftToFinalBtn?.addEventListener("click", copyDraftToFinal);
-copyDraftBtn?.addEventListener("click", copyDraftToFinal);
+    copyFinalBtn?.addEventListener("click", () => {
+        copyText(finalNoteEl.value, "Final note copied");
+    });
 
-toggleTranscriptBtn?.addEventListener("click", toggleTranscript);
+    printBtn?.addEventListener("click", () => {
+        printText("AI Note", finalNoteEl.value);
+    });
 
-copyFinalBtn?.addEventListener("click", () => {
-    copyText(finalNoteEl.value, "Final note copied");
-});
+    exportBtn?.addEventListener("click", () => {
+        const content = finalNoteEl.value.trim();
 
-printBtn?.addEventListener("click", () => {
-    printText("AI Note", finalNoteEl.value);
-});
+        if (!content) {
+            alert("There is nothing to export.");
+            return;
+        }
 
-exportBtn?.addEventListener("click", () => {
-    const content = finalNoteEl.value.trim();
+        exportTextFile("ai-note.txt", content);
+        showToast("Export started");
+    });
 
-    if (!content) {
-        alert("There is nothing to export.");
-        return;
-    }
+    clearBtn?.addEventListener("click", clearAllFields);
 
-    exportTextFile("ai-note.txt", content);
-    showToast("Export started");
-});
+    applyAiEditBtn?.addEventListener("click", applyAiEdit);
+    undoAiEditBtn?.addEventListener("click", undoAiEdit);
+}
 
-clearBtn?.addEventListener("click", clearAllFields);
+/* -----------------------------
+   Main button bindings
+----------------------------- */
+function bindMainButtons() {
+    startRecordingBtn?.addEventListener("click", startRecording);
+    stopRecordingBtn?.addEventListener("click", stopRecording);
+    transcribeBtn?.addEventListener("click", transcribeAudio);
+    generateBtn?.addEventListener("click", generateNote);
+    saveBtn?.addEventListener("click", saveNote);
 
-applyAiEditBtn?.addEventListener("click", applyAiEdit);
-undoAiEditBtn?.addEventListener("click", undoAiEdit);
+    toolbarStartBtn?.addEventListener("click", startRecording);
+    toolbarStopBtn?.addEventListener("click", stopRecording);
+    toolbarTranscribeBtn?.addEventListener("click", transcribeAudio);
+    toolbarGenerateBtn?.addEventListener("click", generateNote);
+    saveBtnTop?.addEventListener("click", saveNote);
+}
 
 /* -----------------------------
    Init
 ----------------------------- */
-bindScrollButtons();
-resetTimer();
-setRecordingUI(false);
-syncGenerateButtons(false, "Generate AI note");
-syncSaveButtons(false, "Save note");
+function init() {
+    bindMainButtons();
+    bindUtilityButtons();
+    bindScrollButtons();
 
-if (toolbarTranscribeBtn) {
-    toolbarTranscribeBtn.disabled = true;
-    toolbarTranscribeBtn.textContent = "Transcribe";
+    resetTimer();
+    setRecordingUI(false);
+    updateProgress(1);
+
+    syncGenerateButtons(false, "Generate AI note", "Generate");
+    syncSaveButtons(false, "Save note", "Save");
+    syncTranscribeButtons(true, "Transcribe recording", "Transcribe");
+
+    if (safeguardingBoxEl) {
+        safeguardingBoxEl.style.display = "none";
+    }
 }
 
-if (toolbarGenerateBtn) {
-    toolbarGenerateBtn.textContent = "Generate";
-}
-
-if (saveBtnTop) {
-    saveBtnTop.textContent = "Save";
-}
-
-if (safeguardingBoxEl) {
-    safeguardingBoxEl.style.display = "none";
-}
+init();
