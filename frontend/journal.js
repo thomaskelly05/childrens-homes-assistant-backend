@@ -63,6 +63,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupForm();
   setupBackToTop();
   setupActionButtons();
+  setupPromptToggle();
   loadJournalHistory();
 });
 
@@ -87,6 +88,25 @@ function setupTabs() {
 
       renderPrompts(tab);
     });
+  });
+}
+
+function setupPromptToggle() {
+  const toggleBtn = document.getElementById("togglePromptsBtn");
+  const promptList = document.getElementById("promptList");
+
+  if (!toggleBtn || !promptList) return;
+
+  toggleBtn.addEventListener("click", () => {
+    const isHidden = promptList.style.display === "none";
+
+    if (isHidden) {
+      promptList.style.display = "block";
+      toggleBtn.textContent = "Hide";
+    } else {
+      promptList.style.display = "none";
+      toggleBtn.textContent = "Show";
+    }
   });
 }
 
@@ -183,7 +203,6 @@ function clearJournalForm() {
     if (el) el.value = "";
   });
 
-  // return to first tab after save
   activeTab = "overview";
 
   document.querySelectorAll(".tab-btn").forEach((btn) => {
@@ -386,8 +405,8 @@ function wireHistoryButtons() {
   document.querySelectorAll(".history-delete-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = btn.dataset.id;
-
       const confirmed = window.confirm("Delete this journal entry?");
+
       if (!confirmed) return;
 
       try {
@@ -425,10 +444,7 @@ async function generateAiOutput(type) {
   const packBtn = document.getElementById("generateSupervisionPackBtn");
 
   try {
-    if (output) {
-      output.textContent = "Generating...";
-    }
-
+    if (output) output.textContent = "Generating...";
     if (pdpBtn) pdpBtn.disabled = true;
     if (packBtn) packBtn.disabled = true;
 
@@ -468,10 +484,7 @@ async function submitToManagerDashboard(journalId) {
   const submitBtn = document.getElementById("submitSupervisionBtn");
 
   try {
-    if (output) {
-      output.textContent = "Submitting to manager dashboard...";
-    }
-
+    if (output) output.textContent = "Submitting to manager dashboard...";
     if (submitBtn) submitBtn.disabled = true;
 
     const response = await fetch(`${API_BASE}/staff-journal/${journalId}/submit-to-manager`, {
