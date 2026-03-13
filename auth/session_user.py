@@ -1,49 +1,57 @@
+import jwt
+
 from fastapi import Depends, HTTPException, Request
 from psycopg2.extras import RealDictCursor
 
 from db.connection import get_db
+from auth.tokens import JWT_SECRET, JWT_ALGORITHM
 
 
-SESSION_USER_KEYS = (
-    "user_id",
-    "account_id",
-    "staff_id",
-    "id",
-)
+def _get_token_payload(request: Request) -> dict:
+    token = request.cookies.get("access_token")
 
+    if not token:
+        raise HTTPException(
+            status_code=401,
+            detail="Not authenticated"
+        )
 
-def _extract_session_user_id(request: Request) -> int:
-    session = getattr(request, "session", {}) or {}
+    try:
+        payload = jwt.decode(
+            token,
+            JWT_SECRET,
+            algorithms=[JWT_ALGORITHM]
+        )
+        return payload
 
-    for key in SESSION_USER_KEYS:
-        value = session.get(key)
-        if value is not None:
-            try:
-                return int(value)
-            except (TypeError, ValueError):
-                pass
-
-    user_obj = session.get("user")
-    if isinstance(user_obj, dict):
-        for key in SESSION_USER_KEYS:
-            value = user_obj.get(key)
-            if value is not None:
-                try:
-                    return int(value)
-                except (TypeError, ValueError):
-                    pass
-
-    raise HTTPException(
-        status_code=401,
-        detail="Not authenticated"
-    )
+    except Exception:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid session"
+        )
 
 
 def get_current_user(
     request: Request,
     conn=Depends(get_db)
 ):
-    user_id = _extract_session_user_id(request)
+    payload = _get_token_payload(request)
+
+    user_id = payload.get("sub")
+
+    if user_id is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid session"
+        )
+
+    try:
+        user_id = int(user_id)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid session"
+        )
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("""
