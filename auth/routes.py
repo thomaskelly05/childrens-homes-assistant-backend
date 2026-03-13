@@ -63,7 +63,6 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
         httponly=True,
         secure=True,
         samesite="none",
-        domain=".indicare.co.uk",
         path="/",
         max_age=86400
     )
@@ -90,7 +89,6 @@ def logout(response: Response):
 
     response.delete_cookie(
         key="access_token",
-        domain=".indicare.co.uk",
         path="/"
     )
 
