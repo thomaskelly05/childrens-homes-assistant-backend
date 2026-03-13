@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, Depends, Form, HTTPException
 
 from db.connection import get_db
@@ -47,8 +49,6 @@ async def create_template(
     conn=Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    import json
-
     name = name.strip()
 
     if not name:
