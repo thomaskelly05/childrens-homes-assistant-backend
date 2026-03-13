@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/journal.css" />
 </head>
 <body>
-  <div class="app-layout">
+  <div class="app-shell">
     <aside class="sidebar">
       <div class="sidebar-brand">
         <h2>IndiCare</h2>
@@ -22,28 +22,43 @@
       </nav>
     </aside>
 
-    <main class="main-content">
-      <div class="page-header">
-        <h1>Supervision Dashboard</h1>
-        <p>Review reflective journal submissions sent to the manager dashboard.</p>
-      </div>
-
-      <section class="journal-history-section supervision-layout">
-        <div class="history-card">
-          <h2>Submitted Items</h2>
-          <div id="supervisionSubmissionList" class="journal-history-list"></div>
+    <main class="page-shell">
+      <header class="page-hero">
+        <div>
+          <p class="eyebrow">Manager Review</p>
+          <h1>Supervision Dashboard</h1>
+          <p class="hero-copy">
+            Review journal submissions, open development outputs, and mark items as reviewed.
+          </p>
         </div>
+      </header>
 
-        <div class="history-card">
-          <h2>Submission Detail</h2>
-          <div id="supervisionSubmissionDetail" class="ai-output">
-            Select a submission to view the summary, development plan, and supervision pack.
+      <section class="card">
+        <div class="journal-history-section supervision-layout">
+          <div class="history-card">
+            <div class="card-header">
+              <div>
+                <h2>Submitted Items</h2>
+                <p>Newest supervision submissions first.</p>
+              </div>
+            </div>
+            <div id="supervisionSubmissionList" class="history-list"></div>
           </div>
 
-          <div style="margin-top: 16px;">
-            <button id="markReviewedBtn" class="btn-primary" type="button">
-              Mark as Reviewed
-            </button>
+          <div class="output-card">
+            <div class="card-header">
+              <div>
+                <h2>Submission Detail</h2>
+                <p>Journal summary, development plan, and supervision pack.</p>
+              </div>
+              <button id="markReviewedBtn" class="btn btn-primary" type="button">
+                Mark as Reviewed
+              </button>
+            </div>
+
+            <div id="supervisionSubmissionDetail" class="output-box">
+              Select a submission to view the detail.
+            </div>
           </div>
         </div>
       </section>
