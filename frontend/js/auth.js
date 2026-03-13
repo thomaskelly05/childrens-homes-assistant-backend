@@ -1,30 +1,60 @@
-async function login(){
+async function login() {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
 
-const email=document.getElementById("email").value
-const password=document.getElementById("password").value
+    if (!email || !password) {
+        alert("Please enter your email and password");
+        return;
+    }
 
-const res=await fetch(API+"/auth/login",{
+    let res;
+    let data = {};
 
-method:"POST",
+    try {
+        res = await fetch(`${API}/auth/login`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            credentials: "include",
+            body: JSON.stringify({ email, password })
+        });
 
-headers:{
-"Content-Type":"application/json"
-},
+        try {
+            data = await res.json();
+        } catch {
+            data = {};
+        }
+    } catch (error) {
+        console.error("Login error:", error);
+        alert("Could not connect to the server");
+        return;
+    }
 
-credentials:"include",
-
-body:JSON.stringify({email,password})
-
-})
-
-if(res.ok){
-
-window.location="/"
-
-}else{
-
-alert("Login failed")
-
+    if (res.ok) {
+        window.location = "/";
+    } else {
+        alert(data.detail || data.message || "Login failed");
+    }
 }
 
-}
+document.addEventListener("DOMContentLoaded", () => {
+    const passwordInput = document.getElementById("password");
+    const emailInput = document.getElementById("email");
+
+    if (passwordInput) {
+        passwordInput.addEventListener("keydown", function (e) {
+            if (e.key === "Enter") {
+                login();
+            }
+        });
+    }
+
+    if (emailInput) {
+        emailInput.addEventListener("keydown", function (e) {
+            if (e.key === "Enter") {
+                login();
+            }
+        });
+    }
+});
