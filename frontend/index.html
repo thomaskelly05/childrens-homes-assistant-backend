@@ -24,23 +24,52 @@
                     </div>
                 </div>
 
-                <div class="sidebar-actions">
-                    <button id="new-chat-btn" type="button">New chat</button>
+                <div class="sidebar-toolbar">
+                    <button id="new-chat-btn" type="button" class="sidebar-primary-btn">
+                        New chat
+                    </button>
+
+                    <button id="open-ai-notes-btn" type="button" class="sidebar-secondary-btn">
+                        AI meeting notes
+                    </button>
                 </div>
 
-                <div id="conversation-list"></div>
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">Recent chats</div>
+                    <div id="conversation-list"></div>
+                </div>
             </div>
         </aside>
 
         <main id="workspace" class="workspace-shell">
-            <div class="workspace-header">
-                <div>
+            <header class="workspace-header">
+                <div class="workspace-header-copy">
                     <h2>Assistant workspace</h2>
-                    <p>Chat, notes, supervision and meeting tools.</p>
+                    <p id="workspace-user-text">Loading your workspace...</p>
                 </div>
-            </div>
 
-            <div id="chat-root"></div>
+                <div class="workspace-header-actions">
+                    <button id="logout-btn" type="button" class="ghost-btn">Log out</button>
+                </div>
+            </header>
+
+            <section class="chat-shell">
+                <div id="messages" class="messages"></div>
+
+                <div class="chat-compose">
+                    <textarea
+                        id="chat-input"
+                        placeholder="Type your message here..."
+                        rows="3"
+                    ></textarea>
+
+                    <div class="chat-compose-actions">
+                        <button id="send-btn" type="button" class="primary-btn">
+                            Send
+                        </button>
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
 
@@ -66,23 +95,49 @@
     <script src="/js/chat.js"></script>
     <script src="/js/command.js"></script>
     <script src="/js/assistant.js"></script>
+    <script src="/js/app.js"></script>
 
     <script>
-        async function bootApp() {
+        async function bootWorkspace() {
             const authenticated = await checkAuth();
 
             if (!authenticated) {
-                window.location = "/login.html";
+                window.location.href = "/login.html";
                 return;
             }
 
-            if (window.loadConversations) {
-                await window.loadConversations();
+            const currentUser = await loadCurrentUser();
+
+            const workspaceUserText = document.getElementById("workspace-user-text");
+            if (workspaceUserText) {
+                if (currentUser && currentUser.first_name) {
+                    workspaceUserText.textContent = `Welcome back, ${currentUser.first_name}.`;
+                } else if (currentUser && currentUser.email) {
+                    workspaceUserText.textContent = `Signed in as ${currentUser.email}.`;
+                } else {
+                    workspaceUserText.textContent = "Your workspace is ready.";
+                }
+            }
+
+            const logoutBtn = document.getElementById("logout-btn");
+            if (logoutBtn) {
+                logoutBtn.addEventListener("click", logout);
             }
 
             const newChatBtn = document.getElementById("new-chat-btn");
-            if (newChatBtn && window.createConversation) {
-                newChatBtn.onclick = window.createConversation;
+            if (newChatBtn) {
+                newChatBtn.addEventListener("click", () => {
+                    if (window.createConversation) {
+                        window.createConversation();
+                    }
+                });
+            }
+
+            const openAiNotesBtn = document.getElementById("open-ai-notes-btn");
+            if (openAiNotesBtn) {
+                openAiNotesBtn.addEventListener("click", () => {
+                    window.location.href = "/ai-note.html";
+                });
             }
 
             if (window.initChat) {
@@ -93,13 +148,17 @@
                 window.initAssistantMeetingModal();
             }
 
+            if (window.loadConversations) {
+                await window.loadConversations();
+            }
+
             if (window.createConversation) {
                 window.createConversation();
             }
         }
 
-        bootApp().catch((error) => {
-            console.error("App boot error:", error);
+        bootWorkspace().catch((error) => {
+            console.error("Workspace boot failed:", error);
         });
     </script>
 </body>
