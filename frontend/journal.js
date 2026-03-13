@@ -98,15 +98,9 @@ function setupPromptToggle() {
   if (!toggleBtn || !promptList) return;
 
   toggleBtn.addEventListener("click", () => {
-    const isHidden = promptList.style.display === "none";
-
-    if (isHidden) {
-      promptList.style.display = "block";
-      toggleBtn.textContent = "Hide";
-    } else {
-      promptList.style.display = "none";
-      toggleBtn.textContent = "Show";
-    }
+    const hidden = promptList.style.display === "none";
+    promptList.style.display = hidden ? "block" : "none";
+    toggleBtn.textContent = hidden ? "Hide" : "Show";
   });
 }
 
@@ -188,10 +182,10 @@ function fillForm(journal) {
 
   fieldIds.forEach((id) => {
     const el = document.getElementById(id);
-    if (el) {
-      el.value = journal[id] || "";
-    }
+    if (el) el.value = journal[id] || "";
   });
+
+  setDraftState("Editing");
 }
 
 function clearJournalForm() {
@@ -217,20 +211,26 @@ function clearJournalForm() {
   if (overviewPanel) overviewPanel.classList.add("active");
 
   renderPrompts(activeTab);
+  setDraftState("Draft");
+}
+
+function setDraftState(label) {
+  const pill = document.getElementById("journalStatusPill");
+  if (pill) pill.textContent = label;
 }
 
 function setMessage(text, isError = false) {
   const el = document.getElementById("journalMessage");
   if (!el) return;
   el.textContent = text;
-  el.style.color = isError ? "#b91c1c" : "#374151";
+  el.style.color = isError ? "#b91c1c" : "#475467";
 }
 
 function setHistoryMessage(text, isError = false) {
   const el = document.getElementById("journalHistoryMessage");
   if (!el) return;
   el.textContent = text;
-  el.style.color = isError ? "#b91c1c" : "#374151";
+  el.style.color = isError ? "#b91c1c" : "#475467";
 }
 
 function setupForm() {
@@ -285,9 +285,7 @@ function setupForm() {
       }
 
       if (isEditing) {
-        if (data.journal) {
-          fillForm(data.journal);
-        }
+        if (data.journal) fillForm(data.journal);
         setMessage("Journal updated successfully.");
       } else {
         clearJournalForm();
@@ -331,36 +329,31 @@ async function loadJournalHistory() {
     historyList.innerHTML = "";
 
     if (!entries.length) {
-      historyList.innerHTML = "<div class='journal-history-item'><p>No journal entries yet.</p></div>";
+      historyList.innerHTML = `<div class="history-item"><p>No journal entries yet.</p></div>`;
       return;
     }
 
     entries.forEach((entry) => {
       const item = document.createElement("div");
-      item.className = "journal-history-item";
+      item.className = "history-item";
 
       const createdAt = entry.created_at
         ? new Date(entry.created_at).toLocaleString()
         : "Unknown date";
 
-      const summary = entry.reflection_today
-        || entry.practice_today
-        || entry.description
-        || "No summary available.";
+      const summary =
+        entry.reflection_today ||
+        entry.practice_today ||
+        entry.description ||
+        "No summary available.";
 
       item.innerHTML = `
         <h4>${escapeHtml(createdAt)}</h4>
         <p>${escapeHtml(summary)}</p>
-        <div class="journal-actions">
-          <button class="btn-secondary history-edit-btn" data-id="${entry.id}" type="button">
-            Edit
-          </button>
-          <button class="btn-danger history-delete-btn" data-id="${entry.id}" type="button">
-            Delete
-          </button>
-          <button class="btn-primary history-submit-btn" data-id="${entry.id}" type="button">
-            Submit for Supervision
-          </button>
+        <div class="history-item-actions">
+          <button class="btn btn-secondary history-edit-btn" data-id="${entry.id}" type="button">Edit</button>
+          <button class="btn btn-danger history-delete-btn" data-id="${entry.id}" type="button">Delete</button>
+          <button class="btn btn-accent history-submit-btn" data-id="${entry.id}" type="button">Submit for Supervision</button>
         </div>
       `;
 
