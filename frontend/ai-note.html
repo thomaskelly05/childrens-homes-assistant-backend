@@ -18,25 +18,41 @@
             </div>
 
             <div class="sidebar-card">
-                <h3>How it works</h3>
-                <ol>
-                    <li>Start recording the meeting</li>
-                    <li>Stop when finished</li>
-                    <li>Transcribe the recording</li>
-                    <li>Generate the AI note</li>
-                    <li>Review and save</li>
-                </ol>
+                <h3>Quick actions</h3>
+                <div class="sidebar-actions">
+                    <button class="btn btn-sidebar" type="button" data-scroll-target="recordSection">Go to record</button>
+                    <button class="btn btn-sidebar" type="button" data-scroll-target="transcriptSection">Go to transcript</button>
+                    <button class="btn btn-sidebar" type="button" data-scroll-target="draftSection">Go to AI draft</button>
+                    <button class="btn btn-sidebar" type="button" data-scroll-target="finalSection">Go to final note</button>
+                </div>
             </div>
 
             <div class="sidebar-card">
                 <h3>Recording status</h3>
                 <div id="recordingStatus" class="status-pill idle">Not recording</div>
                 <div id="recordingTimer" class="timer">00:00</div>
+                <p class="sidebar-helper">The timer runs while recording is active.</p>
+            </div>
+
+            <div class="sidebar-card">
+                <h3>Workflow</h3>
+                <ol class="workflow-list">
+                    <li>Record the meeting</li>
+                    <li>Transcribe the audio</li>
+                    <li>Generate the AI note</li>
+                    <li>Review and edit</li>
+                    <li>Save or export</li>
+                </ol>
             </div>
 
             <div id="safeguardingBox" class="sidebar-card safeguarding-box" style="display:none;">
                 <h3>Safeguarding check</h3>
                 <p id="safeguardingText"></p>
+            </div>
+
+            <div class="sidebar-card">
+                <h3>Coming next</h3>
+                <p class="sidebar-helper">This space can later be used for meeting history, recent notes, or templates.</p>
             </div>
         </aside>
 
@@ -44,14 +60,61 @@
             <header class="page-header">
                 <div>
                     <h1>Create AI Note</h1>
-                    <p>Record a conversation, generate a structured note, then check it before saving.</p>
+                    <p>Record a conversation, generate a structured note, then review and save it into IndiCare.</p>
                 </div>
             </header>
 
-            <section class="panel">
+            <section class="top-toolbar">
+                <div class="toolbar-group">
+                    <button id="toolbarStartBtn" class="btn btn-primary" type="button">Start</button>
+                    <button id="toolbarStopBtn" class="btn btn-secondary" type="button" disabled>Stop</button>
+                    <button id="toolbarTranscribeBtn" class="btn btn-dark" type="button" disabled>Transcribe</button>
+                    <button id="toolbarGenerateBtn" class="btn btn-primary" type="button">Generate</button>
+                </div>
+
+                <div class="toolbar-group">
+                    <button class="btn btn-light" type="button" data-scroll-target="recordSection">Record</button>
+                    <button class="btn btn-light" type="button" data-scroll-target="transcriptSection">Transcript</button>
+                    <button class="btn btn-light" type="button" data-scroll-target="draftSection">Draft</button>
+                    <button class="btn btn-light" type="button" data-scroll-target="finalSection">Final</button>
+                </div>
+
+                <div class="toolbar-group">
+                    <button id="copyDraftToFinalBtn" class="btn btn-light" type="button">Use draft as final</button>
+                    <button id="saveBtnTop" class="btn btn-success" type="button">Save</button>
+                </div>
+            </section>
+
+            <section class="progress-strip">
+                <div class="progress-step active">
+                    <span class="step-number">1</span>
+                    <span class="step-label">Record</span>
+                </div>
+                <div class="progress-step">
+                    <span class="step-number">2</span>
+                    <span class="step-label">Transcript</span>
+                </div>
+                <div class="progress-step">
+                    <span class="step-number">3</span>
+                    <span class="step-label">Generate</span>
+                </div>
+                <div class="progress-step">
+                    <span class="step-number">4</span>
+                    <span class="step-label">Review</span>
+                </div>
+                <div class="progress-step">
+                    <span class="step-number">5</span>
+                    <span class="step-label">Save</span>
+                </div>
+            </section>
+
+            <section id="recordSection" class="panel">
                 <div class="panel-header">
-                    <h2>1. Record meeting</h2>
-                    <p>Use your microphone to record the meeting or conversation.</p>
+                    <div>
+                        <h2>1. Record meeting</h2>
+                        <p>Use your microphone to record the meeting or conversation.</p>
+                    </div>
+                    <span class="panel-badge">Step 1</span>
                 </div>
 
                 <div class="recording-panel">
@@ -71,48 +134,85 @@
                         </button>
                     </div>
 
-                    <p id="audioReadyText" class="helper-text">
-                        No recording yet.
-                    </p>
+                    <p id="audioReadyText" class="helper-text">No recording yet.</p>
 
                     <audio id="audioPlayback" controls style="display:none;"></audio>
                 </div>
             </section>
 
-            <section class="panel">
+            <section id="transcriptSection" class="panel">
                 <div class="panel-header">
-                    <h2>2. Transcript</h2>
-                    <p>Check the transcript before generating the note.</p>
+                    <div>
+                        <h2>2. Transcript</h2>
+                        <p>Check the transcript before generating the note.</p>
+                    </div>
+                    <div class="panel-header-actions">
+                        <button id="toggleTranscriptBtn" class="btn btn-light btn-small" type="button">
+                            Show / hide
+                        </button>
+                        <span class="panel-badge">Step 2</span>
+                    </div>
                 </div>
 
-                <div class="field">
-                    <label for="transcript">Transcript</label>
-                    <textarea id="transcript" placeholder="The transcript will appear here after transcription..."></textarea>
-                </div>
+                <div id="transcriptContent">
+                    <div class="field">
+                        <label for="transcript">Transcript</label>
+                        <textarea id="transcript" placeholder="The transcript will appear here after transcription..."></textarea>
+                    </div>
 
-                <div class="panel-actions">
-                    <button id="generateBtn" class="btn btn-primary" type="button">
-                        Generate AI note
-                    </button>
+                    <div class="panel-actions">
+                        <button id="generateBtn" class="btn btn-primary" type="button">
+                            Generate AI note
+                        </button>
+                    </div>
                 </div>
             </section>
 
-            <section class="panel">
+            <section id="draftSection" class="panel">
                 <div class="panel-header">
-                    <h2>3. AI draft</h2>
-                    <p>This is the generated draft based on the transcript.</p>
+                    <div>
+                        <h2>3. AI draft</h2>
+                        <p>This is the generated draft based on the transcript.</p>
+                    </div>
+                    <span class="panel-badge">Step 3</span>
                 </div>
 
                 <div class="field">
                     <label for="aiDraft">AI Draft</label>
                     <textarea id="aiDraft" placeholder="The AI draft will appear here..."></textarea>
                 </div>
+
+                <div class="ai-edit-box">
+                    <div class="field">
+                        <label for="aiInstruction">AI editing instruction</label>
+                        <input
+                            id="aiInstruction"
+                            type="text"
+                            placeholder="Example: make this more professional and concise"
+                        >
+                    </div>
+
+                    <div class="panel-actions">
+                        <button id="applyAiEditBtn" class="btn btn-dark" type="button">
+                            Apply AI edit
+                        </button>
+                        <button id="undoAiEditBtn" class="btn btn-light" type="button">
+                            Undo last edit
+                        </button>
+                        <button id="copyDraftBtn" class="btn btn-light" type="button">
+                            Copy draft to final note
+                        </button>
+                    </div>
+                </div>
             </section>
 
-            <section class="panel">
+            <section id="finalSection" class="panel">
                 <div class="panel-header">
-                    <h2>4. Final note</h2>
-                    <p>Edit the final note before saving it into IndiCare.</p>
+                    <div>
+                        <h2>4. Final note</h2>
+                        <p>Edit the final note before saving it into IndiCare.</p>
+                    </div>
+                    <span class="panel-badge">Step 4</span>
                 </div>
 
                 <div class="field">
@@ -120,9 +220,21 @@
                     <textarea id="finalNote" placeholder="Edit the final note here before saving..."></textarea>
                 </div>
 
-                <div class="panel-actions">
+                <div class="panel-actions action-wrap">
                     <button id="saveBtn" class="btn btn-success" type="button">
                         Save note
+                    </button>
+                    <button id="copyFinalBtn" class="btn btn-light" type="button">
+                        Copy final note
+                    </button>
+                    <button id="printBtn" class="btn btn-light" type="button">
+                        Print
+                    </button>
+                    <button id="exportBtn" class="btn btn-light" type="button">
+                        Export
+                    </button>
+                    <button id="clearBtn" class="btn btn-danger" type="button">
+                        Clear
                     </button>
                 </div>
             </section>
