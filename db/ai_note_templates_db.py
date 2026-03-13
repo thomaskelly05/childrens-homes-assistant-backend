@@ -27,6 +27,18 @@ def ensure_ai_note_templates_table(conn) -> None:
         conn.commit()
 
 
+def _row_to_template(row) -> dict[str, Any]:
+    item = dict(row) if row else {}
+
+    if item:
+        try:
+            item["sections"] = json.loads(item.pop("sections_json", "[]"))
+        except Exception:
+            item["sections"] = []
+
+    return item
+
+
 def list_ai_note_templates(conn, user_id: int) -> list[dict[str, Any]]:
     with conn.cursor() as cur:
         cur.execute(
@@ -47,19 +59,35 @@ def list_ai_note_templates(conn, user_id: int) -> list[dict[str, Any]]:
 
         rows = cur.fetchall()
 
-    templates: list[dict[str, Any]] = []
+    return [_row_to_template(row) for row in rows]
 
-    for row in rows:
-        item = dict(row)
 
-        try:
-            item["sections"] = json.loads(item.pop("sections_json", "[]"))
-        except Exception:
-            item["sections"] = []
+def get_ai_note_template(
+    conn,
+    template_id: int,
+    user_id: int
+) -> dict[str, Any] | None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+                id,
+                user_id,
+                name,
+                sections_json,
+                created_at,
+                updated_at
+            FROM ai_note_templates
+            WHERE id = %s
+              AND user_id = %s
+            LIMIT 1;
+            """,
+            (template_id, user_id)
+        )
 
-        templates.append(item)
+        row = cur.fetchone()
 
-    return templates
+    return _row_to_template(row) if row else None
 
 
 def insert_ai_note_template(
@@ -93,15 +121,43 @@ def insert_ai_note_template(
         row = cur.fetchone()
         conn.commit()
 
-    item = dict(row) if row else {}
+    return _row_to_template(row)
 
-    if item:
-        try:
-            item["sections"] = json.loads(item.pop("sections_json", "[]"))
-        except Exception:
-            item["sections"] = []
 
-    return item
+def update_ai_note_template(
+    conn,
+    template_id: int,
+    user_id: int,
+    name: str,
+    sections: list[str]
+) -> dict[str, Any] | None:
+    sections_json = json.dumps(sections)
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE ai_note_templates
+            SET
+                name = %s,
+                sections_json = %s,
+                updated_at = NOW()
+            WHERE id = %s
+              AND user_id = %s
+            RETURNING
+                id,
+                user_id,
+                name,
+                sections_json,
+                created_at,
+                updated_at;
+            """,
+            (name, sections_json, template_id, user_id)
+        )
+
+        row = cur.fetchone()
+        conn.commit()
+
+    return _row_to_template(row) if row else None
 
 
 def delete_ai_note_template(conn, template_id: int, user_id: int) -> bool:
@@ -119,4 +175,4 @@ def delete_ai_note_template(conn, template_id: int, user_id: int) -> bool:
         row = cur.fetchone()
         conn.commit()
 
-        return bool(row)
+    return bool(row)
