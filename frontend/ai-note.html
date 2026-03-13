@@ -200,12 +200,13 @@
                     </aside>
 
                     <section class="document-panel">
-                        <div class="document-header">
-                            <div>
+                        <div class="document-toolbar">
+                            <div class="document-toolbar-left">
                                 <p class="panel-label">Final document</p>
                                 <h2>Editable note</h2>
                                 <div class="document-meta">
                                     <span id="noteModeBadge" class="note-mode-badge is-new">New unsaved note</span>
+                                    <span id="saveStateBadge" class="save-state-badge is-idle">Ready</span>
                                 </div>
                             </div>
 
@@ -214,6 +215,11 @@
                                 <button id="printBtn" class="btn btn-light" type="button">Print</button>
                                 <button id="exportBtn" class="btn btn-light" type="button">Export</button>
                             </div>
+                        </div>
+
+                        <div class="field">
+                            <label for="noteTitle">Note title</label>
+                            <input id="noteTitle" type="text" placeholder="Example: Team meeting - March review">
                         </div>
 
                         <div class="field">
