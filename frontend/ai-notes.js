@@ -360,6 +360,11 @@ function getNoteTitleForSave() {
     return deriveTitleFromNote(finalNoteEl?.value || "");
 }
 
+function getSelectedTemplateName() {
+    const template = findTemplateById(templateSelectEl?.value);
+    return template?.name || "";
+}
+
 function formatDateTime(value) {
     if (!value) return "";
     const date = new Date(value);
@@ -436,6 +441,92 @@ function clearAllFields() {
 }
 
 /* -----------------------------
+   Backend file download
+----------------------------- */
+function getFilenameFromDisposition(disposition, fallback) {
+    if (!disposition) return fallback;
+
+    const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match && utf8Match[1]) {
+        return decodeURIComponent(utf8Match[1]);
+    }
+
+    const asciiMatch = disposition.match(/filename="?([^"]+)"?/i);
+    if (asciiMatch && asciiMatch[1]) {
+        return asciiMatch[1];
+    }
+
+    return fallback;
+}
+
+async function downloadExportFile(format) {
+    const finalNote = finalNoteEl.value.trim();
+
+    if (!finalNote) {
+        alert("There is nothing to export.");
+        return;
+    }
+
+    const title = getNoteTitleForSave() || "AI Note";
+    const templateName = getSelectedTemplateName();
+
+    const form = new FormData();
+    form.append("title", title);
+    form.append("final_note", finalNote);
+    form.append("template_name", templateName);
+
+    try {
+        setSaveState("is-saving", `Preparing ${format.toUpperCase()}...`);
+
+        const response = await fetch(`${API_BASE}/ai-notes/export/${format}`, {
+            method: "POST",
+            body: form,
+            credentials: "include"
+        });
+
+        if (!response.ok) {
+            const data = await safeJson(response);
+            alert(data.detail || `Could not export ${format.toUpperCase()}.`);
+            setSaveState("is-idle");
+            return;
+        }
+
+        const blob = await response.blob();
+        const disposition = response.headers.get("Content-Disposition");
+        const fallback = `${title.replace(/[^a-z0-9-_ ]/gi, "").trim() || "ai-note"}.${format}`;
+        const filename = getFilenameFromDisposition(disposition, fallback);
+
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+
+        setSaveState("is-saved");
+        showToast(`${format.toUpperCase()} export ready`);
+    } catch (error) {
+        console.error(`Export ${format} error:`, error);
+        alert(`Could not connect to the export service.`);
+        setSaveState("is-idle");
+    }
+}
+
+function askExportFormat() {
+    const usePdf = window.confirm(
+        "Press OK to export as PDF.\nPress Cancel to export as Word DOCX."
+    );
+
+    if (usePdf) {
+        downloadExportFile("pdf");
+    } else {
+        downloadExportFile("docx");
+    }
+}
+
+/* -----------------------------
    Templates
 ----------------------------- */
 function getAllTemplates() {
@@ -487,7 +578,10 @@ function renderSavedTemplatesList() {
         item.className = "saved-template-item";
         item.innerHTML = `
             <span>${escapeHtml(template.name)}</span>
-            <button class="btn btn-danger btn-tiny" type="button" data-id="${template.id}">Delete</button>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="btn btn-light btn-tiny" type="button" data-edit-id="${template.id}">Edit</button>
+                <button class="btn btn-danger btn-tiny" type="button" data-id="${template.id}">Delete</button>
+            </div>
         `;
         savedTemplatesListEl.appendChild(item);
     });
@@ -495,6 +589,12 @@ function renderSavedTemplatesList() {
     savedTemplatesListEl.querySelectorAll("[data-id]").forEach(btn => {
         btn.addEventListener("click", async () => {
             await deleteTemplate(btn.dataset.id);
+        });
+    });
+
+    savedTemplatesListEl.querySelectorAll("[data-edit-id]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+            await loadTemplateIntoEditor(btn.dataset.editId);
         });
     });
 }
@@ -528,12 +628,16 @@ function openTemplateModal() {
     templateNameInput.value = "";
     newTemplateSectionInput.value = "";
     currentTemplateSections = [];
+    saveTemplateBtn.dataset.editingTemplateId = "";
+    saveTemplateBtn.textContent = "Save template";
     renderCurrentTemplateSections();
     renderSavedTemplatesList();
 }
 
 function closeTemplateModal() {
     templateModalEl.classList.add("hidden");
+    saveTemplateBtn.dataset.editingTemplateId = "";
+    saveTemplateBtn.textContent = "Save template";
 }
 
 function addTemplateSection() {
@@ -542,6 +646,33 @@ function addTemplateSection() {
     currentTemplateSections.push(value);
     newTemplateSectionInput.value = "";
     renderCurrentTemplateSections();
+}
+
+async function loadTemplateIntoEditor(templateId) {
+    try {
+        const response = await fetch(`${API_BASE}/ai-note-templates/${templateId}`, {
+            method: "GET",
+            credentials: "include"
+        });
+
+        const data = await safeJson(response);
+
+        if (!response.ok) {
+            alert(data.detail || "Could not load template.");
+            return;
+        }
+
+        const template = data.template || {};
+        templateNameInput.value = template.name || "";
+        currentTemplateSections = Array.isArray(template.sections) ? [...template.sections] : [];
+        saveTemplateBtn.dataset.editingTemplateId = String(template.id);
+        saveTemplateBtn.textContent = "Update template";
+        renderCurrentTemplateSections();
+        openTemplateModal();
+    } catch (error) {
+        console.error("Load template error:", error);
+        alert("Could not connect to the templates service.");
+    }
 }
 
 async function saveTemplateToDb() {
@@ -557,11 +688,20 @@ async function saveTemplateToDb() {
         return;
     }
 
+    const editingId = saveTemplateBtn.dataset.editingTemplateId || "";
     const form = new FormData();
     form.append("name", name);
     form.append("sections_json", JSON.stringify(currentTemplateSections));
 
-    const response = await fetch(`${API_BASE}/ai-note-templates`, {
+    const url = editingId
+        ? `${API_BASE}/ai-note-templates/update`
+        : `${API_BASE}/ai-note-templates`;
+
+    if (editingId) {
+        form.append("template_id", editingId);
+    }
+
+    const response = await fetch(url, {
         method: "POST",
         body: form,
         credentials: "include"
@@ -577,10 +717,12 @@ async function saveTemplateToDb() {
     templateNameInput.value = "";
     newTemplateSectionInput.value = "";
     currentTemplateSections = [];
-    renderCurrentTemplateSections();
+    saveTemplateBtn.dataset.editingTemplateId = "";
+    saveTemplateBtn.textContent = "Save template";
 
+    renderCurrentTemplateSections();
     await loadTemplates();
-    showToast("Template saved");
+    showToast(editingId ? "Template updated" : "Template saved");
 }
 
 async function deleteTemplate(templateId) {
@@ -1224,34 +1366,13 @@ function bindButtons() {
         printText(title, finalNoteEl.value);
     });
 
-    exportBtn?.addEventListener("click", () => {
-        const content = finalNoteEl.value.trim();
-        if (!content) {
-            alert("There is nothing to export.");
-            return;
-        }
-        const title = getNoteTitleForSave() || "ai-note";
-        const filename = `${title.replace(/[^a-z0-9-_ ]/gi, "").trim() || "ai-note"}.txt`;
-        exportTextFile(filename, content);
-        showToast("Export started");
-    });
-
     printBtnTop?.addEventListener("click", () => {
         const title = getNoteTitleForSave() || "AI Note";
         printText(title, finalNoteEl.value);
     });
 
-    exportBtnTop?.addEventListener("click", () => {
-        const content = finalNoteEl.value.trim();
-        if (!content) {
-            alert("There is nothing to export.");
-            return;
-        }
-        const title = getNoteTitleForSave() || "ai-note";
-        const filename = `${title.replace(/[^a-z0-9-_ ]/gi, "").trim() || "ai-note"}.txt`;
-        exportTextFile(filename, content);
-        showToast("Export started");
-    });
+    exportBtn?.addEventListener("click", askExportFormat);
+    exportBtnTop?.addEventListener("click", askExportFormat);
 
     clearBtn?.addEventListener("click", clearAllFields);
     toggleTranscriptBtn?.addEventListener("click", toggleTranscript);
