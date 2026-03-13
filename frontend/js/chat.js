@@ -1,30 +1,3 @@
-function getAccessToken() {
-    return localStorage.getItem("indicare_access_token") || "";
-}
-
-function getAuthHeaders(extraHeaders = {}) {
-    const token = getAccessToken();
-
-    if (!token) {
-        return { ...extraHeaders };
-    }
-
-    return {
-        ...extraHeaders,
-        Authorization: `Bearer ${token}`
-    };
-}
-
-function handleUnauthorized(res) {
-    if (res.status === 401) {
-        localStorage.removeItem("indicare_access_token");
-        localStorage.removeItem("indicare_current_user");
-        window.location.href = "/login.html";
-        return true;
-    }
-    return false;
-}
-
 function initChat() {
     const sendBtn = document.getElementById("send-btn");
     const input = document.getElementById("chat-input");
@@ -51,6 +24,7 @@ async function sendMessage() {
     if (!input || !messages) return;
 
     const message = input.value.trim();
+
     if (!message) return;
 
     if (welcome) {
@@ -61,42 +35,53 @@ async function sendMessage() {
     input.value = "";
 
     try {
-        const res = await fetch(`${API}/chat/`, {
+        const response = await apiFetch("/chat/", {
             method: "POST",
-            headers: getAuthHeaders({
+            headers: {
                 "Content-Type": "application/json"
-            }),
+            },
             body: JSON.stringify({
                 message: message,
                 conversation_id: window.conversationId || null
             })
         });
 
-        if (!res.ok || !res.body) {
-            if (handleUnauthorized(res)) return;
-            appendMessage("assistant", "Sorry, something went wrong.");
+        if (!response.ok || !response.body) {
+            let data = {};
+            try {
+                data = await safeJson(response);
+            } catch {
+                data = {};
+            }
+
+            if (handleUnauthorizedResponse(response, data)) {
+                return;
+            }
+
+            appendMessage("assistant", data.detail || "Sorry, something went wrong.");
             return;
         }
 
-        const reader = res.body.getReader();
+        const reader = response.body.getReader();
         const decoder = new TextDecoder();
 
         let assistantMessage = "";
 
         while (true) {
             const { done, value } = await reader.read();
+
             if (done) break;
 
-            const chunk = decoder.decode(value);
+            const chunk = decoder.decode(value, { stream: true });
             assistantMessage += chunk;
             updateAssistantMessage(assistantMessage);
         }
 
         if (typeof loadConversations === "function") {
-            loadConversations();
+            await loadConversations();
         }
     } catch (error) {
-        console.error("Send message error:", error);
+        console.error("Send message failed:", error);
         appendMessage("assistant", "Sorry, something went wrong.");
     }
 }
@@ -126,6 +111,7 @@ function createMessageElement(role, text = "") {
             try {
                 await navigator.clipboard.writeText(wrapper._rawText || "");
                 copyBtn.textContent = "Copied";
+
                 setTimeout(() => {
                     copyBtn.textContent = "Copy";
                 }, 1500);
@@ -169,9 +155,11 @@ function updateAssistantMessage(text) {
         messages.appendChild(lastWrapper);
     } else {
         const msg = lastWrapper._messageEl || lastWrapper.querySelector(".message.assistant");
+
         if (msg) {
             msg.innerHTML = renderMarkdown(text);
         }
+
         lastWrapper._rawText = text;
     }
 
@@ -183,7 +171,7 @@ function renderMarkdown(text) {
         return window.marked.parse(text);
     }
 
-    return text
+    return String(text || "")
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
@@ -192,6 +180,7 @@ function renderMarkdown(text) {
 
 function fillPrompt(text) {
     const input = document.getElementById("chat-input");
+
     if (!input) return;
 
     input.value = text;
