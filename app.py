@@ -28,6 +28,7 @@ from routers.account_routes import router as account_router
 
 from routers.ai_notes_routes import router as ai_notes_router
 from routers.ai_note_templates_routes import router as ai_note_templates_router
+from routers.ai_note_export_routes import router as ai_note_export_router
 
 
 # --------------------------------------------------
@@ -125,6 +126,7 @@ app.include_router(dashboard_router)
 app.include_router(account_router)
 app.include_router(ai_notes_router)
 app.include_router(ai_note_templates_router)
+app.include_router(ai_note_export_router)
 
 
 # --------------------------------------------------
