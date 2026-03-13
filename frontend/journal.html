@@ -31,37 +31,6 @@
         </p>
       </div>
 
-      <section class="journal-history-section">
-        <div class="history-card">
-          <div class="history-header">
-            <div>
-              <h2>Your Journal Entries</h2>
-              <p>Recent reflective entries for supervision and development.</p>
-            </div>
-
-            <div class="history-actions">
-              <button id="generatePdpBtn" class="btn-secondary" type="button">
-                Generate Development Plan
-              </button>
-
-              <button id="generateSupervisionPackBtn" class="btn-secondary" type="button">
-                Generate Supervision Pack
-              </button>
-            </div>
-          </div>
-
-          <div id="journalHistoryMessage" class="form-message"></div>
-          <div id="journalHistoryList" class="journal-history-list"></div>
-        </div>
-
-        <div class="history-card">
-          <h2>AI Development Output</h2>
-          <div id="aiDevelopmentOutput" class="ai-output">
-            Select an option to generate a development plan or supervision pack from the journal history.
-          </div>
-        </div>
-      </section>
-
       <div class="journal-layout">
         <section class="journal-main">
           <div class="tabs" id="journalTabs">
@@ -205,7 +174,13 @@
 
         <aside class="journal-sidebar">
           <div class="prompt-card">
-            <h3>Reflection Prompts</h3>
+            <div class="prompt-header">
+              <h3>Reflection Prompts</h3>
+              <button id="togglePromptsBtn" class="btn-secondary small-btn" type="button">
+                Hide
+              </button>
+            </div>
+
             <div id="promptList" class="prompt-list"></div>
           </div>
 
@@ -216,6 +191,37 @@
           </div>
         </aside>
       </div>
+
+      <section class="journal-history-section">
+        <div class="history-card">
+          <div class="history-header">
+            <div>
+              <h2>Your Journal Entries</h2>
+              <p>Recent reflective entries for supervision and development.</p>
+            </div>
+
+            <div class="history-actions">
+              <button id="generatePdpBtn" class="btn-secondary" type="button">
+                Generate Development Plan
+              </button>
+
+              <button id="generateSupervisionPackBtn" class="btn-secondary" type="button">
+                Generate Supervision Pack
+              </button>
+            </div>
+          </div>
+
+          <div id="journalHistoryMessage" class="form-message"></div>
+          <div id="journalHistoryList" class="journal-history-list"></div>
+        </div>
+
+        <div class="history-card">
+          <h2>AI Development Output</h2>
+          <div id="aiDevelopmentOutput" class="ai-output">
+            Select an option to generate a development plan or supervision pack from the journal history.
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
