@@ -9,6 +9,10 @@ from db.staff_journal_db import (
     update_staff_journal,
     list_staff_journals,
 )
+from db.supervision_db import (
+    ensure_supervision_table,
+    create_supervision_submission,
+)
 from schemas.staff_journal import (
     StaffJournalCreate,
     StaffJournalUpdate,
@@ -16,6 +20,7 @@ from schemas.staff_journal import (
 from services.staff_development_service import (
     generate_staff_pdp,
     generate_supervision_pack,
+    build_journal_summary,
 )
 
 router = APIRouter(
@@ -162,6 +167,43 @@ async def update_staff_journal_route(
         )
 
 
+@router.delete("/{journal_id}")
+async def delete_staff_journal_route(
+    journal_id: int,
+    conn=Depends(get_db)
+):
+    try:
+        ensure_staff_journal_table(conn)
+
+        existing = get_staff_journal(conn, journal_id)
+        if not existing:
+            raise HTTPException(
+                status_code=404,
+                detail="Journal not found"
+            )
+
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM staff_journal WHERE id = %s",
+                (journal_id,)
+            )
+            conn.commit()
+
+        return {
+            "ok": True,
+            "message": "Journal deleted"
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Could not delete journal: {str(e)}"
+        )
+
+
 @router.get("/staff/{staff_id}/development-plan")
 async def generate_development_plan_route(
     staff_id: int,
@@ -223,4 +265,52 @@ async def generate_supervision_pack_route(
         raise HTTPException(
             status_code=500,
             detail=f"Could not generate supervision pack: {str(e)}"
+        )
+
+
+@router.post("/{journal_id}/submit-to-manager")
+async def submit_to_manager_dashboard_route(
+    journal_id: int,
+    conn=Depends(get_db)
+):
+    try:
+        ensure_staff_journal_table(conn)
+        ensure_supervision_table(conn)
+
+        journal = get_staff_journal(conn, journal_id)
+        if not journal:
+            raise HTTPException(
+                status_code=404,
+                detail="Journal not found"
+            )
+
+        staff_id = journal.get("staff_id")
+        entries = list_staff_journals(conn, staff_id, limit=20)
+
+        journal_summary = build_journal_summary(journal)
+        development_plan = await generate_staff_pdp(entries)
+        supervision_pack = await generate_supervision_pack(entries)
+
+        submission = create_supervision_submission(
+            conn=conn,
+            staff_id=staff_id,
+            journal_id=journal_id,
+            journal_summary=journal_summary,
+            development_plan=development_plan,
+            supervision_pack=supervision_pack
+        )
+
+        return {
+            "ok": True,
+            "message": "Submitted to manager dashboard",
+            "submission": submission
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Could not submit to manager dashboard: {str(e)}"
         )
