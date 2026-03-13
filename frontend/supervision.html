@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Supervision Dashboard | IndiCare</title>
+  <link rel="stylesheet" href="/css/components.css" />
+  <link rel="stylesheet" href="/journal.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <h2>IndiCare</h2>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="/index.html" class="sidebar-link">Dashboard</a>
+        <a href="/journal.html" class="sidebar-link">Reflective Journal</a>
+        <a href="/supervision.html" class="sidebar-link active">Supervision Dashboard</a>
+        <a href="/ai-note.html" class="sidebar-link">AI Meeting Notes</a>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1>Supervision Dashboard</h1>
+        <p>Review reflective journal submissions sent to the manager dashboard.</p>
+      </div>
+
+      <section class="journal-history-section">
+        <div class="history-card">
+          <h2>Submitted Items</h2>
+          <div id="supervisionSubmissionList" class="journal-history-list"></div>
+        </div>
+
+        <div class="history-card">
+          <h2>Submission Detail</h2>
+          <div id="supervisionSubmissionDetail" class="ai-output">
+            Select a submission to view the summary, development plan, and supervision pack.
+          </div>
+
+          <div style="margin-top: 16px;">
+            <button id="markReviewedBtn" class="btn-primary" type="button">
+              Mark as Reviewed
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/supervision.js"></script>
+</body>
+</html>
