@@ -33,20 +33,23 @@ def _get_bearer_payload(authorization: str | None):
 
 @router.post("/login")
 def login(payload: LoginRequest, conn=Depends(get_db)):
-
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
-            SELECT id, email, password_hash, role, home_id
+            SELECT id, email, password_hash, role, home_id, first_name, last_name, archived
             FROM users
             WHERE email = %s
+            LIMIT 1
             """,
-            (payload.email,),
+            (payload.email.strip(),)
         )
         user = cur.fetchone()
 
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    if user.get("archived") is True:
+        raise HTTPException(status_code=403, detail="User is archived")
 
     password_hash = user["password_hash"]
 
@@ -54,7 +57,7 @@ def login(payload: LoginRequest, conn=Depends(get_db)):
         password_hash = password_hash.encode()
 
     if not bcrypt.checkpw(payload.password.encode(), password_hash):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
     token = create_session_token(
         user["id"],
@@ -64,20 +67,26 @@ def login(payload: LoginRequest, conn=Depends(get_db)):
     )
 
     return {
+        "ok": True,
         "message": "Logged in",
         "access_token": token,
         "user": {
             "id": user["id"],
             "email": user["email"],
             "role": user["role"],
-            "home_id": user.get("home_id")
+            "home_id": user.get("home_id"),
+            "first_name": user.get("first_name"),
+            "last_name": user.get("last_name")
         }
     }
 
 
 @router.post("/logout")
 def logout():
-    return {"message": "Logged out"}
+    return {
+        "ok": True,
+        "message": "Logged out"
+    }
 
 
 @router.get("/check")
@@ -85,19 +94,21 @@ def check_auth(authorization: str | None = Header(default=None)):
     payload = _get_bearer_payload(authorization)
 
     if not payload:
-        return {"authenticated": False}
+        return {
+            "authenticated": False
+        }
 
     return {
         "authenticated": True,
         "user_id": payload.get("sub"),
-        "role": payload.get("role"),
         "email": payload.get("email"),
+        "role": payload.get("role"),
         "home_id": payload.get("home_id")
     }
 
 
 @router.get("/me")
-def get_current_user(
+def get_me(
     authorization: str | None = Header(default=None),
     conn=Depends(get_db)
 ):
@@ -146,4 +157,7 @@ def get_current_user(
     if user.get("archived") is True:
         raise HTTPException(status_code=403, detail="User is archived")
 
-    return dict(user)
+    return {
+        "ok": True,
+        "user": dict(user)
+    }
