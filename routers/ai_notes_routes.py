@@ -43,7 +43,6 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post("/transcribe")
 async def transcribe_note_audio(file: UploadFile = File(...)):
-
     if not file:
         raise HTTPException(status_code=400, detail="No file uploaded")
 
@@ -98,7 +97,6 @@ async def transcribe_note_audio(file: UploadFile = File(...)):
 
 @router.post("/generate")
 async def generate_ai_note(transcript: str = Form(...)):
-
     transcript = transcript.strip()
 
     if not transcript:
@@ -108,11 +106,21 @@ async def generate_ai_note(transcript: str = Form(...)):
         )
 
     try:
-        note = await generate_note(transcript)
+        result = await generate_note(transcript)
+
+        if isinstance(result, dict):
+            return {
+                "ok": True,
+                "note": result.get("note", ""),
+                "safeguarding_flag": result.get("safeguarding_flag", False),
+                "safeguarding_reason": result.get("safeguarding_reason", "")
+            }
 
         return {
             "ok": True,
-            "note": note
+            "note": result,
+            "safeguarding_flag": False,
+            "safeguarding_reason": ""
         }
 
     except Exception as e:
@@ -123,7 +131,7 @@ async def generate_ai_note(transcript: str = Form(...)):
 
 
 # --------------------------------------------------
-# AI EDIT FINAL NOTE
+# AI EDIT NOTE
 # --------------------------------------------------
 
 @router.post("/edit")
@@ -132,7 +140,6 @@ async def edit_ai_note(
     mode: str = Form(...),
     instruction: str | None = Form(None)
 ):
-
     text = text.strip()
     mode = mode.strip().lower()
     instruction = (instruction or "").strip()
@@ -177,9 +184,9 @@ async def save_ai_note(
     transcript: str = Form(...),
     ai_draft: str = Form(...),
     final_note: str = Form(...),
+    safeguarding_flag: str | None = Form(None),
     conn=Depends(get_db)
 ):
-
     transcript = transcript.strip()
     ai_draft = ai_draft.strip()
     final_note = final_note.strip()
@@ -215,7 +222,8 @@ async def save_ai_note(
         return {
             "ok": True,
             "message": "Meeting note saved",
-            "record": record
+            "record": record,
+            "safeguarding_flag": safeguarding_flag
         }
 
     except Exception as e:
