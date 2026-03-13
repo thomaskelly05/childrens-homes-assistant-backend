@@ -1,41 +1,84 @@
+async function fetchHtml(path) {
+    const res = await fetch(path, { cache: "no-store" });
+
+    if (!res.ok) {
+        throw new Error(`Failed to load ${path} (${res.status})`);
+    }
+
+    return await res.text();
+}
+
 async function loadSidebar() {
-  const res = await fetch("/components/sidebar.html");
-  const html = await res.text();
+    const sidebarEl = document.getElementById("sidebar");
 
-  document.getElementById("sidebar").innerHTML = html;
+    if (!sidebarEl) {
+        console.warn("Sidebar container not found");
+        return;
+    }
 
-  const newChatBtn = document.getElementById("new-chat-btn");
-  if (newChatBtn && window.createConversation) {
-    newChatBtn.onclick = createConversation;
-  }
+    try {
+        const html = await fetchHtml("/components/sidebar.html");
+        sidebarEl.innerHTML = html;
 
-  if (window.loadConversations) {
-    await loadConversations();
-  }
+        const newChatBtn = document.getElementById("new-chat-btn");
+
+        if (newChatBtn && window.createConversation) {
+            newChatBtn.onclick = window.createConversation;
+        }
+
+        if (window.loadConversations) {
+            await window.loadConversations();
+        }
+    } catch (error) {
+        console.error("Sidebar load error:", error);
+        sidebarEl.innerHTML = `
+            <div style="padding:16px; color:#b91c1c; font-family:Arial,sans-serif;">
+                Could not load the sidebar.
+            </div>
+        `;
+    }
 }
 
 async function loadWorkspace() {
-  const res = await fetch("/components/workspace.html");
-  const html = await res.text();
+    const workspaceEl = document.getElementById("workspace");
 
-  document.getElementById("workspace").innerHTML = html;
+    if (!workspaceEl) {
+        console.warn("Workspace container not found");
+        return;
+    }
 
-  if (window.initChat) {
-    window.initChat();
-  }
+    try {
+        const html = await fetchHtml("/components/workspace.html");
+        workspaceEl.innerHTML = html;
 
-  if (window.initAssistantMeetingModal) {
-    window.initAssistantMeetingModal();
-  } else {
-    console.error("initAssistantMeetingModal is not available");
-  }
+        if (window.initChat) {
+            window.initChat();
+        }
 
-  if (window.createConversation) {
-    window.createConversation();
-  }
+        if (window.initAssistantMeetingModal) {
+            window.initAssistantMeetingModal();
+        } else {
+            console.error("initAssistantMeetingModal is not available");
+        }
+
+        if (window.createConversation) {
+            window.createConversation();
+        }
+    } catch (error) {
+        console.error("Workspace load error:", error);
+        workspaceEl.innerHTML = `
+            <div style="padding:16px; color:#b91c1c; font-family:Arial,sans-serif;">
+                Could not load the workspace.
+            </div>
+        `;
+    }
 }
 
 window.onload = async () => {
-  await loadSidebar();
-  await loadWorkspace();
+    try {
+        await loadSidebar();
+        await loadWorkspace();
+    } catch (error) {
+        console.error("App initialisation error:", error);
+    }
 };
