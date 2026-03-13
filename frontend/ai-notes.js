@@ -634,6 +634,11 @@ async function deleteHistoryNote(noteId) {
             return;
         }
 
+        if (openedNoteId && String(openedNoteId) === String(noteId)) {
+            openedNoteId = null;
+            clearAllFields();
+        }
+
         showToast("Saved note deleted");
         await loadHistory();
     } catch (error) {
@@ -647,6 +652,7 @@ async function deleteHistoryNote(noteId) {
 ----------------------------- */
 async function startRecording() {
     try {
+        openedNoteId = null;
         recordedChunks = [];
         recordedBlob = null;
 
@@ -764,6 +770,7 @@ async function generateNote() {
     form.append("transcript", transcript);
 
     try {
+        openedNoteId = null;
         setProcessingUI("Generating note");
         updateButtonState(generateBtn, true, "Generating...");
 
@@ -909,6 +916,10 @@ async function saveNote() {
     form.append("safeguarding_reason", safeguardingReasonForSave);
     form.append("title", title);
 
+    if (openedNoteId) {
+        form.append("note_id", String(openedNoteId));
+    }
+
     try {
         setProcessingUI("Saving");
         updateButtonState(saveBtn, true, "Saving...");
@@ -928,8 +939,12 @@ async function saveNote() {
             return;
         }
 
-        setReadyUI("Saved");
-        showToast("AI note saved successfully");
+        if (data.record && data.record.id) {
+            openedNoteId = data.record.id;
+        }
+
+        setReadyUI(data.updated ? "Updated" : "Saved");
+        showToast(data.updated ? "AI note updated successfully" : "AI note saved successfully");
         await loadHistory();
     } catch (error) {
         console.error("Save error:", error);
