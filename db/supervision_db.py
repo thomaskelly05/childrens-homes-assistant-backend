@@ -53,9 +53,18 @@ def create_supervision_submission(
 def list_supervision_submissions(conn, limit=50):
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("""
-            SELECT *
-            FROM supervision_submissions
-            ORDER BY submitted_at DESC
+            SELECT
+                s.id,
+                s.staff_id,
+                st.first_name,
+                st.last_name,
+                st.role,
+                s.status,
+                s.submitted_at
+            FROM supervision_submissions s
+            LEFT JOIN staff st
+                ON st.id = s.staff_id
+            ORDER BY s.submitted_at DESC
             LIMIT %s;
         """, (limit,))
         rows = cur.fetchall()
