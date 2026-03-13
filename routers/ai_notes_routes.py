@@ -38,6 +38,30 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 # --------------------------------------------------
+# HELPERS
+# --------------------------------------------------
+
+def _to_bool(value: str | None) -> bool:
+    if value is None:
+        return False
+    return str(value).strip().lower() in {"true", "1", "yes", "y", "on"}
+
+
+def _derive_title(final_note: str) -> str | None:
+    lines = [line.strip() for line in final_note.splitlines() if line.strip()]
+    if not lines:
+        return None
+
+    first_line = lines[0]
+
+    if first_line.lower().startswith("meeting title:"):
+        title = first_line.split(":", 1)[1].strip()
+        return title or "AI Meeting Note"
+
+    return first_line[:120]
+
+
+# --------------------------------------------------
 # TRANSCRIBE AUDIO
 # --------------------------------------------------
 
@@ -118,9 +142,9 @@ async def generate_ai_note(transcript: str = Form(...)):
 
         return {
             "ok": True,
-            "note": result,
+            "note": str(result or "").strip(),
             "safeguarding_flag": False,
-            "safeguarding_reason": ""
+            "safeguarding_reason": "No safeguarding concern identified."
         }
 
     except Exception as e:
@@ -185,11 +209,15 @@ async def save_ai_note(
     ai_draft: str = Form(...),
     final_note: str = Form(...),
     safeguarding_flag: str | None = Form(None),
+    safeguarding_reason: str | None = Form(None),
+    title: str | None = Form(None),
     conn=Depends(get_db)
 ):
     transcript = transcript.strip()
     ai_draft = ai_draft.strip()
     final_note = final_note.strip()
+    safeguarding_reason = (safeguarding_reason or "").strip()
+    title = (title or "").strip()
 
     if not transcript:
         raise HTTPException(
@@ -212,18 +240,24 @@ async def save_ai_note(
     try:
         ensure_ai_meetings_table(conn)
 
+        final_title = title or _derive_title(final_note)
+        final_safeguarding_flag = _to_bool(safeguarding_flag)
+        final_safeguarding_reason = safeguarding_reason or None
+
         record = insert_ai_meeting_note(
             conn=conn,
             transcript=transcript,
             ai_draft=ai_draft,
-            final_note=final_note
+            final_note=final_note,
+            title=final_title,
+            safeguarding_flag=final_safeguarding_flag,
+            safeguarding_reason=final_safeguarding_reason
         )
 
         return {
             "ok": True,
             "message": "Meeting note saved",
-            "record": record,
-            "safeguarding_flag": safeguarding_flag
+            "record": record
         }
 
     except Exception as e:
