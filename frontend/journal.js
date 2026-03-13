@@ -93,10 +93,22 @@ async function loadMyContext() {
     const currentUserLabel = document.getElementById("currentUserLabel");
     if (currentUserLabel && currentUser) {
       const fullName = `${currentUser.first_name || ""} ${currentUser.last_name || ""}`.trim();
-      const displayName = fullName || currentUser.email || "";
-      currentUserLabel.textContent = displayName
-        ? `Signed in as ${displayName}${currentUser.role ? ` · ${currentUser.role}` : ""}`
-        : "";
+      const displayName = fullName || currentUser.email || "Unknown user";
+
+      const parts = [`Signed in as ${displayName}`];
+
+      if (currentUser.home_name) {
+        parts.push(currentUser.home_name);
+      }
+
+      if (currentUser.role) {
+        const prettyRole = String(currentUser.role)
+          .replaceAll("_", " ")
+          .replace(/\b\w/g, (char) => char.toUpperCase());
+        parts.push(prettyRole);
+      }
+
+      currentUserLabel.textContent = parts.join(" · ");
     }
   } catch (error) {
     setMessage(error.message || "Could not load current user.", true);
