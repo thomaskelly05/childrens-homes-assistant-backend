@@ -1,5 +1,4 @@
 const API_BASE = "https://childrens-homes-assistant-backend-new.onrender.com";
-const TEMPLATE_STORAGE_KEY = "indicare_custom_note_templates";
 
 /* -----------------------------
    Elements
@@ -96,6 +95,7 @@ const builtInTemplates = [
     }
 ];
 
+let dbTemplates = [];
 let currentTemplateSections = [];
 let latestSafeguardingFlag = false;
 let latestSafeguardingReason = "";
@@ -294,6 +294,13 @@ function exportTextFile(filename, content) {
     URL.revokeObjectURL(url);
 }
 
+function escapedTitle(text) {
+    return String(text || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+}
+
 function printText(title, content) {
     if (!content.trim()) {
         alert("There is nothing to print.");
@@ -333,13 +340,6 @@ function printText(title, content) {
     printWindow.print();
 }
 
-function escapedTitle(text) {
-    return String(text || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-}
-
 function deriveTitleFromNote(noteText) {
     const lines = (noteText || "")
         .split("\n")
@@ -357,7 +357,6 @@ function deriveTitleFromNote(noteText) {
 function getNoteTitleForSave() {
     const manualTitle = noteTitleEl?.value?.trim() || "";
     if (manualTitle) return manualTitle;
-
     return deriveTitleFromNote(finalNoteEl?.value || "");
 }
 
@@ -439,20 +438,8 @@ function clearAllFields() {
 /* -----------------------------
    Templates
 ----------------------------- */
-function getCustomTemplates() {
-    try {
-        return JSON.parse(localStorage.getItem(TEMPLATE_STORAGE_KEY) || "[]");
-    } catch {
-        return [];
-    }
-}
-
-function saveCustomTemplates(templates) {
-    localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(templates));
-}
-
 function getAllTemplates() {
-    return [...builtInTemplates, ...getCustomTemplates()];
+    return [...builtInTemplates, ...dbTemplates];
 }
 
 function renderTemplateOptions() {
@@ -463,7 +450,7 @@ function renderTemplateOptions() {
 }
 
 function findTemplateById(templateId) {
-    return getAllTemplates().find(template => template.id === templateId) || builtInTemplates[0];
+    return getAllTemplates().find(template => String(template.id) === String(templateId)) || builtInTemplates[0];
 }
 
 function renderCurrentTemplateSections() {
@@ -488,16 +475,14 @@ function renderCurrentTemplateSections() {
 }
 
 function renderSavedTemplatesList() {
-    const templates = getCustomTemplates();
-
-    if (!templates.length) {
+    if (!dbTemplates.length) {
         savedTemplatesListEl.innerHTML = `<div class="saved-template-item"><span>No custom templates yet.</span></div>`;
         return;
     }
 
     savedTemplatesListEl.innerHTML = "";
 
-    templates.forEach(template => {
+    dbTemplates.forEach(template => {
         const item = document.createElement("div");
         item.className = "saved-template-item";
         item.innerHTML = `
@@ -508,15 +493,34 @@ function renderSavedTemplatesList() {
     });
 
     savedTemplatesListEl.querySelectorAll("[data-id]").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const id = btn.dataset.id;
-            const filtered = getCustomTemplates().filter(template => template.id !== id);
-            saveCustomTemplates(filtered);
-            renderTemplateOptions();
-            renderSavedTemplatesList();
-            showToast("Template deleted");
+        btn.addEventListener("click", async () => {
+            await deleteTemplate(btn.dataset.id);
         });
     });
+}
+
+async function loadTemplates() {
+    try {
+        const response = await fetch(`${API_BASE}/ai-note-templates`, {
+            method: "GET",
+            credentials: "include"
+        });
+
+        const data = await safeJson(response);
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Could not load templates");
+        }
+
+        dbTemplates = data.templates || [];
+        renderTemplateOptions();
+        renderSavedTemplatesList();
+    } catch (error) {
+        console.error("Template load error:", error);
+        dbTemplates = [];
+        renderTemplateOptions();
+        renderSavedTemplatesList();
+    }
 }
 
 function openTemplateModal() {
@@ -538,6 +542,66 @@ function addTemplateSection() {
     currentTemplateSections.push(value);
     newTemplateSectionInput.value = "";
     renderCurrentTemplateSections();
+}
+
+async function saveTemplateToDb() {
+    const name = templateNameInput.value.trim();
+
+    if (!name) {
+        alert("Please enter a template name.");
+        return;
+    }
+
+    if (!currentTemplateSections.length) {
+        alert("Please add at least one section.");
+        return;
+    }
+
+    const form = new FormData();
+    form.append("name", name);
+    form.append("sections_json", JSON.stringify(currentTemplateSections));
+
+    const response = await fetch(`${API_BASE}/ai-note-templates`, {
+        method: "POST",
+        body: form,
+        credentials: "include"
+    });
+
+    const data = await safeJson(response);
+
+    if (!response.ok) {
+        alert(data.detail || "Could not save template.");
+        return;
+    }
+
+    templateNameInput.value = "";
+    newTemplateSectionInput.value = "";
+    currentTemplateSections = [];
+    renderCurrentTemplateSections();
+
+    await loadTemplates();
+    showToast("Template saved");
+}
+
+async function deleteTemplate(templateId) {
+    const form = new FormData();
+    form.append("template_id", templateId);
+
+    const response = await fetch(`${API_BASE}/ai-note-templates/delete`, {
+        method: "POST",
+        body: form,
+        credentials: "include"
+    });
+
+    const data = await safeJson(response);
+
+    if (!response.ok) {
+        alert(data.detail || "Could not delete template.");
+        return;
+    }
+
+    await loadTemplates();
+    showToast("Template deleted");
 }
 
 function buildTemplateInstruction(template) {
@@ -833,9 +897,9 @@ async function transcribeAudio() {
 
         safeSetValue(transcriptEl, data.transcript || "");
         safeSetValue(transcriptMirrorEl, data.transcript || "");
-        safeSetText(audioReadyTextEl, "Transcript ready.");
         rememberSavedSnapshot();
         setSaveState("is-idle");
+        safeSetText(audioReadyTextEl, "Transcript ready.");
         setReadyUI("Transcript ready");
         setStage("generate");
         showToast("Transcript created");
@@ -1086,7 +1150,7 @@ async function saveNote(isAutosave = false) {
 }
 
 /* -----------------------------
-   Utility actions
+   Utility
 ----------------------------- */
 function toggleTranscript() {
     transcriptVisible = !transcriptVisible;
@@ -1124,37 +1188,7 @@ function bindTemplateManager() {
     });
 
     addTemplateSectionBtn?.addEventListener("click", addTemplateSection);
-
-    saveTemplateBtn?.addEventListener("click", () => {
-        const name = templateNameInput.value.trim();
-
-        if (!name) {
-            alert("Please enter a template name.");
-            return;
-        }
-
-        if (!currentTemplateSections.length) {
-            alert("Please add at least one section.");
-            return;
-        }
-
-        const customTemplates = getCustomTemplates();
-        customTemplates.push({
-            id: `custom-${Date.now()}`,
-            name,
-            sections: [...currentTemplateSections]
-        });
-
-        saveCustomTemplates(customTemplates);
-        renderTemplateOptions();
-        renderSavedTemplatesList();
-
-        templateNameInput.value = "";
-        newTemplateSectionInput.value = "";
-        currentTemplateSections = [];
-        renderCurrentTemplateSections();
-        showToast("Template saved");
-    });
+    saveTemplateBtn?.addEventListener("click", saveTemplateToDb);
 }
 
 function bindDirtyTracking() {
@@ -1227,15 +1261,13 @@ function bindButtons() {
 /* -----------------------------
    Init
 ----------------------------- */
-function init() {
+async function init() {
     bindButtons();
     bindStageNavigation();
     bindPromptChips();
     bindTemplateManager();
     bindDirtyTracking();
 
-    renderTemplateOptions();
-    renderSavedTemplatesList();
     resetTimer();
     setRecordingUI(false);
     setStage("record");
@@ -1247,7 +1279,9 @@ function init() {
 
     rememberSavedSnapshot();
     setSaveState("is-idle");
-    loadHistory();
+
+    await loadTemplates();
+    await loadHistory();
 }
 
 init();
