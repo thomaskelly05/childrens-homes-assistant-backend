@@ -1,5 +1,5 @@
-from typing import Any
 import json
+from typing import Any
 
 
 def ensure_ai_note_templates_table(conn) -> None:
@@ -51,10 +51,12 @@ def list_ai_note_templates(conn, user_id: int) -> list[dict[str, Any]]:
 
     for row in rows:
         item = dict(row)
+
         try:
             item["sections"] = json.loads(item.pop("sections_json", "[]"))
         except Exception:
             item["sections"] = []
+
         templates.append(item)
 
     return templates
@@ -92,11 +94,13 @@ def insert_ai_note_template(
         conn.commit()
 
     item = dict(row) if row else {}
+
     if item:
         try:
             item["sections"] = json.loads(item.pop("sections_json", "[]"))
         except Exception:
             item["sections"] = []
+
     return item
 
 
@@ -114,4 +118,5 @@ def delete_ai_note_template(conn, template_id: int, user_id: int) -> bool:
 
         row = cur.fetchone()
         conn.commit()
+
         return bool(row)
