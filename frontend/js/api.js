@@ -1,24 +1,24 @@
-const API = "https://api.indicare.co.uk";
+const API = "https://childrens-homes-assistant-backend-new.onrender.com";
 
 async function sendMessage(message, sessionId) {
+    const token = localStorage.getItem("indicare_access_token") || "";
 
-const response = await fetch(API + "/chat/", {
+    const headers = {
+        "Content-Type": "application/json"
+    };
 
-method: "POST",
+    if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+    }
 
-headers: {
-"Content-Type": "application/json"
-},
+    const response = await fetch(`${API}/chat/`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+            message: message,
+            session_id: sessionId
+        })
+    });
 
-credentials: "include",
-
-body: JSON.stringify({
-message: message,
-session_id: sessionId
-})
-
-});
-
-return response;
-
+    return response;
 }
