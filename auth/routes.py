@@ -30,7 +30,7 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
-            SELECT id, email, password_hash, role, home_id
+            SELECT id, email, password_hash, role, home_id, first_name, last_name
             FROM users
             WHERE email = %s
             """,
@@ -82,7 +82,9 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
             "id": user["id"],
             "email": user["email"],
             "role": user["role"],
-            "home_id": user["home_id"]
+            "home_id": user["home_id"],
+            "first_name": user.get("first_name"),
+            "last_name": user.get("last_name")
         }
     }
 
@@ -138,7 +140,7 @@ def check_auth(request: Request):
 # ---------------------------------------------------------
 
 @router.get("/me")
-def get_current_user(request: Request):
+def get_current_user(request: Request, conn=Depends(get_db)):
 
     token = request.cookies.get("access_token")
 
@@ -153,12 +155,38 @@ def get_current_user(request: Request):
             algorithms=[JWT_ALGORITHM]
         )
 
-        return {
-            "id": payload.get("sub"),
-            "email": payload.get("email"),
-            "role": payload.get("role"),
-            "home_id": payload.get("home_id")
-        }
+        user_id = payload.get("sub")
+
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid session")
+
+        try:
+            user_id = int(user_id)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=401, detail="Invalid session")
+
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT id, email, role, home_id, first_name, last_name, archived, updated_at, created_at
+                FROM users
+                WHERE id = %s
+                LIMIT 1
+                """,
+                (user_id,)
+            )
+            user = cur.fetchone()
+
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+
+        if user.get("archived") is True:
+            raise HTTPException(status_code=403, detail="User is archived")
+
+        return dict(user)
+
+    except HTTPException:
+        raise
 
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid session")
