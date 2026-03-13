@@ -56,16 +56,52 @@ const fieldIds = [
 ];
 
 let activeTab = "overview";
+let currentUser = null;
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   setupTabs();
   renderPrompts(activeTab);
   setupForm();
   setupBackToTop();
   setupActionButtons();
   setupPromptToggle();
-  loadJournalHistory();
+
+  await loadMyContext();
+  await loadJournalHistory();
 });
+
+async function loadMyContext() {
+  try {
+    const response = await fetch(`${API_BASE}/staff-journal/me?limit=1`, {
+      method: "GET",
+      credentials: "include"
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.detail || "Could not load current user");
+    }
+
+    currentUser = data.user || null;
+
+    const staffIdEl = document.getElementById("staff_id");
+    if (staffIdEl && currentUser?.id) {
+      staffIdEl.value = currentUser.id;
+    }
+
+    const currentUserLabel = document.getElementById("currentUserLabel");
+    if (currentUserLabel && currentUser) {
+      const fullName = `${currentUser.first_name || ""} ${currentUser.last_name || ""}`.trim();
+      const displayName = fullName || currentUser.email || "";
+      currentUserLabel.textContent = displayName
+        ? `Signed in as ${displayName}${currentUser.role ? ` · ${currentUser.role}` : ""}`
+        : "";
+    }
+  } catch (error) {
+    setMessage(error.message || "Could not load current user.", true);
+  }
+}
 
 function setupTabs() {
   const buttons = document.querySelectorAll(".tab-btn");
@@ -159,9 +195,7 @@ function setupActionButtons() {
 }
 
 function getPayload() {
-  const payload = {
-    staff_id: Number(document.getElementById("staff_id").value || "1")
-  };
+  const payload = {};
 
   fieldIds.forEach((id) => {
     const el = document.getElementById(id);
@@ -175,10 +209,7 @@ function fillForm(journal) {
   if (!journal) return;
 
   const journalIdEl = document.getElementById("journal_id");
-  const staffIdEl = document.getElementById("staff_id");
-
   if (journalIdEl) journalIdEl.value = journal.id || "";
-  if (staffIdEl) staffIdEl.value = journal.staff_id || "1";
 
   fieldIds.forEach((id) => {
     const el = document.getElementById(id);
@@ -256,16 +287,13 @@ function setupForm() {
       let response;
 
       if (isEditing) {
-        const updatePayload = { ...payload };
-        delete updatePayload.staff_id;
-
         response = await fetch(`${API_BASE}/staff-journal/${journalId}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json"
           },
           credentials: "include",
-          body: JSON.stringify(updatePayload)
+          body: JSON.stringify(payload)
         });
       } else {
         response = await fetch(`${API_BASE}/staff-journal/`, {
@@ -305,7 +333,6 @@ function setupForm() {
 }
 
 async function loadJournalHistory() {
-  const staffId = document.getElementById("staff_id").value || "1";
   const historyList = document.getElementById("journalHistoryList");
 
   if (!historyList) return;
@@ -314,7 +341,7 @@ async function loadJournalHistory() {
     setHistoryMessage("");
     historyList.innerHTML = "Loading journal entries...";
 
-    const response = await fetch(`${API_BASE}/staff-journal/staff/${staffId}?limit=20`, {
+    const response = await fetch(`${API_BASE}/staff-journal/me?limit=20`, {
       method: "GET",
       credentials: "include"
     });
@@ -431,7 +458,6 @@ function wireHistoryButtons() {
 }
 
 async function generateAiOutput(type) {
-  const staffId = document.getElementById("staff_id").value || "1";
   const output = document.getElementById("aiDevelopmentOutput");
   const pdpBtn = document.getElementById("generatePdpBtn");
   const packBtn = document.getElementById("generateSupervisionPackBtn");
@@ -442,8 +468,8 @@ async function generateAiOutput(type) {
     if (packBtn) packBtn.disabled = true;
 
     const endpoint = type === "supervision-pack"
-      ? `${API_BASE}/staff-journal/staff/${staffId}/supervision-pack`
-      : `${API_BASE}/staff-journal/staff/${staffId}/development-plan`;
+      ? `${API_BASE}/staff-journal/me/supervision-pack`
+      : `${API_BASE}/staff-journal/me/development-plan`;
 
     const response = await fetch(endpoint, {
       method: "GET",
