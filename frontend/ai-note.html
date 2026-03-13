@@ -7,265 +7,261 @@
     <link rel="stylesheet" href="/ai-notes.css">
 </head>
 <body>
-    <div class="notes-app">
-        <aside class="app-sidebar">
-            <div class="app-brand">
-                <div class="app-brand-badge">AI</div>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-badge">AI</div>
                 <div>
                     <h2>IndiCare Notes</h2>
-                    <p>Meeting notes and templates</p>
+                    <p>Meeting notes and AI drafting</p>
                 </div>
             </div>
 
-            <div class="sidebar-nav">
-                <button class="sidebar-nav-btn active" data-view="captureView" type="button">New note</button>
-                <button class="sidebar-nav-btn" data-view="editorView" type="button">Editor</button>
-                <button class="sidebar-nav-btn" data-view="templatesView" type="button">Templates</button>
-            </div>
+            <nav class="sidebar-nav">
+                <button class="nav-item nav-item-active" type="button" data-stage-target="record">
+                    <span class="nav-icon">●</span>
+                    <span>New note</span>
+                </button>
+                <button class="nav-item" type="button" data-stage-target="generate">
+                    <span class="nav-icon">≡</span>
+                    <span>Generate</span>
+                </button>
+                <button class="nav-item" type="button" data-stage-target="edit">
+                    <span class="nav-icon">✦</span>
+                    <span>Edit</span>
+                </button>
+            </nav>
 
             <div class="sidebar-card">
-                <h3>Status</h3>
+                <div class="sidebar-card-header">
+                    <h3>Recording status</h3>
+                </div>
                 <div id="recordingStatus" class="status-pill idle">Not recording</div>
                 <div id="recordingTimer" class="timer">00:00</div>
-                <p class="sidebar-help">Capture a meeting, generate a note, then refine it with AI.</p>
+                <p class="sidebar-note">Record first, then generate and review the note.</p>
             </div>
 
             <div id="safeguardingBox" class="sidebar-card safeguarding-box" style="display:none;">
-                <h3>Safeguarding check</h3>
+                <div class="sidebar-card-header">
+                    <h3>Safeguarding check</h3>
+                </div>
                 <p id="safeguardingText"></p>
             </div>
 
-            <div class="sidebar-card">
-                <h3>Flow</h3>
-                <ol>
-                    <li>Record or paste transcript</li>
-                    <li>Generate note</li>
-                    <li>Edit and save</li>
-                </ol>
+            <div class="sidebar-card history-card">
+                <div class="sidebar-card-header">
+                    <h3>Recent notes</h3>
+                    <button id="refreshHistoryBtn" class="btn btn-light btn-tiny" type="button">Refresh</button>
+                </div>
+
+                <div id="historyEmptyState" class="history-empty">
+                    No saved notes yet.
+                </div>
+
+                <div id="historyList" class="history-list"></div>
             </div>
         </aside>
 
-        <main class="app-main">
-            <header class="app-header">
+        <main class="workspace">
+            <header class="workspace-header">
                 <div>
                     <p class="eyebrow">AI Meeting Assistant</p>
                     <h1>Create a professional note</h1>
-                    <p class="header-subtitle">A simpler workflow for staff notes, meetings, supervisions, and custom templates.</p>
+                    <p class="workspace-subtitle">
+                        Record, generate, then edit the final note with AI support.
+                    </p>
                 </div>
 
-                <div class="header-actions">
-                    <button id="saveBtnTop" class="btn btn-success" type="button">Save</button>
+                <div class="workspace-header-actions">
+                    <div class="template-picker">
+                        <label for="templateSelect">Template</label>
+                        <div class="template-picker-row">
+                            <select id="templateSelect"></select>
+                            <button id="openTemplateManagerBtn" class="btn btn-light" type="button">Manage templates</button>
+                        </div>
+                    </div>
+
+                    <div class="header-buttons">
+                        <button id="saveBtnTop" class="btn btn-success" type="button">Save</button>
+                        <button id="exportBtnTop" class="btn btn-light" type="button">Export</button>
+                        <button id="printBtnTop" class="btn btn-light" type="button">Print</button>
+                    </div>
                 </div>
             </header>
 
-            <section class="top-tabs">
-                <button class="top-tab active" data-view="captureView" type="button">1. Capture</button>
-                <button class="top-tab" data-view="editorView" type="button">2. Edit</button>
-                <button class="top-tab" data-view="templatesView" type="button">3. Templates</button>
+            <section class="stage-tabs">
+                <button class="stage-tab active" data-stage="record" type="button">1. Record</button>
+                <button class="stage-tab" data-stage="generate" type="button">2. Generate</button>
+                <button class="stage-tab" data-stage="edit" type="button">3. Edit & Save</button>
             </section>
 
-            <!-- CAPTURE VIEW -->
-            <section id="captureView" class="app-view active">
-                <div class="capture-grid">
-                    <section class="panel hero-panel">
-                        <div class="panel-copy">
-                            <p class="panel-label">Capture</p>
-                            <h2>Record or prepare the transcript</h2>
-                            <p>Record the meeting first, or paste a transcript manually if you already have one.</p>
+            <section id="stage-record" class="stage-panel active">
+                <div class="record-layout">
+                    <div class="record-card">
+                        <p class="panel-label">Step 1</p>
+                        <h2>Record the meeting</h2>
+                        <p class="panel-copy">
+                            Use the recorder to capture a meeting, supervision, or discussion. Once you stop recording, you can transcribe it and move straight into note generation.
+                        </p>
 
-                            <div class="recording-actions">
-                                <button id="startRecordingBtn" class="btn btn-primary" type="button">Start recording</button>
-                                <button id="stopRecordingBtn" class="btn btn-secondary" type="button" disabled>Stop recording</button>
-                                <button id="transcribeBtn" class="btn btn-dark" type="button" disabled>Transcribe</button>
-                            </div>
-
-                            <p id="audioReadyText" class="helper-text">No recording yet.</p>
-                            <audio id="audioPlayback" controls style="display:none;"></audio>
+                        <div class="record-actions">
+                            <button id="startRecordingBtn" class="btn btn-primary" type="button">Start recording</button>
+                            <button id="stopRecordingBtn" class="btn btn-secondary" type="button" disabled>Stop recording</button>
+                            <button id="transcribeBtn" class="btn btn-dark" type="button" disabled>Transcribe recording</button>
                         </div>
 
-                        <div class="hero-visual">
-                            <div class="mic-circle" id="micCircle">
-                                <span class="mic-icon">🎤</span>
-                            </div>
+                        <p id="audioReadyText" class="helper-text">No recording yet.</p>
 
-                            <div class="status-card-inline">
-                                <div class="status-card-row">
-                                    <span class="status-dot"></span>
-                                    <span>Recorder ready</span>
-                                </div>
-                                <div id="recordingTimerMirror" class="status-time">00:00</div>
-                                <p>After transcription, generate a note directly into the selected template.</p>
-                            </div>
+                        <audio id="audioPlayback" controls style="display:none;"></audio>
+                    </div>
+
+                    <div class="record-visual-card">
+                        <div class="mic-circle" id="micCircle">
+                            <span class="mic-icon">🎤</span>
                         </div>
-                    </section>
 
-                    <section class="panel">
+                        <div class="live-status-card">
+                            <div class="live-status-row">
+                                <span class="live-dot"></span>
+                                <span>Recorder ready</span>
+                            </div>
+                            <div id="recordingTimerMirror" class="live-time">00:00</div>
+                            <p class="live-help">After transcription, continue to the Generate stage.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="stage-generate" class="stage-panel">
+                <div class="generate-layout">
+                    <div class="panel">
                         <div class="panel-header">
                             <div>
-                                <p class="panel-label">Transcript</p>
+                                <p class="panel-label">Step 2</p>
                                 <h2>Transcript</h2>
-                                <p>Check the transcript before generating the note.</p>
+                                <p>Review the transcript before generating the note.</p>
                             </div>
                         </div>
 
                         <div class="field">
                             <label for="transcript">Transcript</label>
-                            <textarea id="transcript" placeholder="The transcript will appear here after transcription, or you can paste one here."></textarea>
-                        </div>
-
-                        <div class="capture-bottom-bar">
-                            <div class="template-picker">
-                                <label for="templateSelect">Template</label>
-                                <select id="templateSelect"></select>
-                            </div>
-
-                            <div class="capture-actions">
-                                <button id="generateBtn" class="btn btn-primary" type="button">Generate note</button>
-                                <button id="goToEditorBtn" class="btn btn-light" type="button">Open editor</button>
-                            </div>
-                        </div>
-                    </section>
-                </div>
-            </section>
-
-            <!-- EDITOR VIEW -->
-            <section id="editorView" class="app-view">
-                <div class="editor-shell">
-                    <aside class="editor-assistant">
-                        <section class="panel assistant-panel">
-                            <div class="panel-header">
-                                <div>
-                                    <p class="panel-label">AI Assistant</p>
-                                    <h2>Refine the note</h2>
-                                    <p>Tell the AI exactly what to change.</p>
-                                </div>
-                            </div>
-
-                            <div class="field">
-                                <label for="selectedTemplateName">Selected template</label>
-                                <input id="selectedTemplateName" type="text" readonly>
-                            </div>
-
-                            <div class="field">
-                                <label for="aiInstruction">Instruction for AI</label>
-                                <textarea id="aiInstruction" class="assistant-instruction" placeholder="Example: make this more professional, shorten it, extract the actions, or turn this into bullet points."></textarea>
-                            </div>
-
-                            <div class="assistant-action-list">
-                                <button class="btn btn-light preset-instruction" data-instruction="Make this more professional." type="button">More professional</button>
-                                <button class="btn btn-light preset-instruction" data-instruction="Make this shorter and clearer." type="button">Shorten</button>
-                                <button class="btn btn-light preset-instruction" data-instruction="Extract the actions and next steps only." type="button">Extract actions</button>
-                                <button class="btn btn-light preset-instruction" data-instruction="Rewrite this using bullet points where helpful." type="button">Bullet points</button>
-                            </div>
-
-                            <div class="assistant-actions">
-                                <button id="applyAiEditBtn" class="btn btn-dark" type="button">Apply AI edit</button>
-                                <button id="undoAiEditBtn" class="btn btn-light" type="button">Undo last edit</button>
-                                <button id="copyDraftBtn" class="btn btn-light" type="button">Use AI draft</button>
-                            </div>
-                        </section>
-
-                        <section class="panel history-panel">
-                            <div class="panel-header">
-                                <div>
-                                    <p class="panel-label">Saved notes</p>
-                                    <h2>Recent notes</h2>
-                                </div>
-                                <button id="refreshHistoryBtn" class="btn btn-light btn-small" type="button">Refresh</button>
-                            </div>
-
-                            <div id="historyEmptyState" class="history-empty">No saved notes yet.</div>
-                            <div id="historyList" class="history-list"></div>
-                        </section>
-                    </aside>
-
-                    <section class="editor-document">
-                        <section class="panel document-panel">
-                            <div class="panel-header document-header">
-                                <div>
-                                    <p class="panel-label">Document</p>
-                                    <h2>Final note</h2>
-                                    <p>Edit manually or use AI to rewrite the document.</p>
-                                </div>
-
-                                <div class="document-toolbar">
-                                    <button id="copyFinalBtn" class="btn btn-light" type="button">Copy</button>
-                                    <button id="printBtn" class="btn btn-light" type="button">Print</button>
-                                    <button id="exportBtn" class="btn btn-light" type="button">Export</button>
-                                    <button id="clearBtn" class="btn btn-danger" type="button">Clear</button>
-                                </div>
-                            </div>
-
-                            <div class="field">
-                                <label for="finalNote">Final Note</label>
-                                <textarea id="finalNote" class="document-editor" placeholder="Your final editable note will appear here."></textarea>
-                            </div>
-
-                            <div class="document-footer">
-                                <div class="draft-preview-block">
-                                    <label for="aiDraft">AI Draft</label>
-                                    <textarea id="aiDraft" class="draft-preview" placeholder="The AI draft will appear here..."></textarea>
-                                </div>
-
-                                <div class="document-save-actions">
-                                    <button id="saveBtn" class="btn btn-success" type="button">Save note</button>
-                                </div>
-                            </div>
-                        </section>
-                    </section>
-                </div>
-            </section>
-
-            <!-- TEMPLATES VIEW -->
-            <section id="templatesView" class="app-view">
-                <div class="templates-grid">
-                    <section class="panel template-builder-panel">
-                        <div class="panel-header">
-                            <div>
-                                <p class="panel-label">Template creator</p>
-                                <h2>Create a template</h2>
-                                <p>Adults can build their own note structure and then use it from the dropdown.</p>
-                            </div>
-                        </div>
-
-                        <div class="field">
-                            <label for="templateName">Template name</label>
-                            <input id="templateName" type="text" placeholder="Example: Staff supervision">
-                        </div>
-
-                        <div class="field">
-                            <label for="templateSections">Sections</label>
-                            <textarea id="templateSections" class="template-sections" placeholder="Enter one section per line&#10;Summary&#10;Discussion&#10;Actions&#10;Next steps"></textarea>
+                            <textarea id="transcript" placeholder="The transcript will appear here after transcription, or you can paste one manually."></textarea>
                         </div>
 
                         <div class="panel-actions">
-                            <button id="saveTemplateBtn" class="btn btn-primary" type="button">Save template</button>
-                            <button id="previewTemplateBtn" class="btn btn-light" type="button">Preview</button>
+                            <button id="generateBtn" class="btn btn-primary" type="button">Generate AI note</button>
+                            <button id="goToEditBtn" class="btn btn-light" type="button">Go to editor</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="stage-edit" class="stage-panel">
+                <div class="editor-shell">
+                    <aside class="ai-assistant-panel">
+                        <div class="assistant-header">
+                            <p class="panel-label">AI assistant</p>
+                            <h2>Refine the note</h2>
+                            <p>Tell the AI exactly what you want changed.</p>
                         </div>
 
-                        <div class="template-preview-box">
-                            <label>Preview</label>
-                            <pre id="templatePreview">No template preview yet.</pre>
+                        <div class="quick-prompts">
+                            <button class="prompt-chip" type="button" data-prompt="Make this more professional.">More professional</button>
+                            <button class="prompt-chip" type="button" data-prompt="Make this shorter and clearer.">Shorter</button>
+                            <button class="prompt-chip" type="button" data-prompt="Extract the key actions and next steps clearly.">Extract actions</button>
+                            <button class="prompt-chip" type="button" data-prompt="Rewrite this using bullet points where helpful.">Use bullet points</button>
                         </div>
-                    </section>
 
-                    <section class="panel template-library-panel">
-                        <div class="panel-header">
-                            <div>
-                                <p class="panel-label">Template library</p>
-                                <h2>Available templates</h2>
+                        <div class="field">
+                            <label for="aiInstruction">Instruction for AI</label>
+                            <textarea id="aiInstruction" class="instruction-box" placeholder="Example: rewrite this in a more professional tone and make the actions clearer."></textarea>
+                        </div>
+
+                        <div class="panel-actions stacked">
+                            <button id="applyAiEditBtn" class="btn btn-dark" type="button">Apply AI edit</button>
+                            <button id="undoAiEditBtn" class="btn btn-light" type="button">Undo last edit</button>
+                            <button id="copyDraftBtn" class="btn btn-light" type="button">Reset document from generated draft</button>
+                        </div>
+
+                        <div class="source-box">
+                            <div class="source-box-header">
+                                <h3>Source transcript</h3>
+                                <button id="toggleTranscriptBtn" class="btn btn-light btn-tiny" type="button">Show / hide</button>
                             </div>
-                            <button id="refreshTemplatesBtn" class="btn btn-light btn-small" type="button">Refresh</button>
+                            <div id="transcriptContent">
+                                <textarea id="transcriptMirror" class="source-transcript" readonly placeholder="Transcript will appear here."></textarea>
+                            </div>
+                        </div>
+                    </aside>
+
+                    <section class="document-panel">
+                        <div class="document-header">
+                            <div>
+                                <p class="panel-label">Final document</p>
+                                <h2>Editable note</h2>
+                            </div>
+
+                            <div class="document-header-actions">
+                                <button id="copyFinalBtn" class="btn btn-light" type="button">Copy</button>
+                                <button id="printBtn" class="btn btn-light" type="button">Print</button>
+                                <button id="exportBtn" class="btn btn-light" type="button">Export</button>
+                            </div>
                         </div>
 
-                        <div id="templatesEmptyState" class="history-empty">No templates yet.</div>
-                        <div id="templatesList" class="history-list"></div>
+                        <div class="field">
+                            <label for="finalNote">Final Note</label>
+                            <textarea id="finalNote" class="document-editor" placeholder="The final editable note will appear here..."></textarea>
+                        </div>
+
+                        <div class="document-footer">
+                            <button id="saveBtn" class="btn btn-success" type="button">Save note</button>
+                            <button id="clearBtn" class="btn btn-danger" type="button">Clear</button>
+                        </div>
                     </section>
                 </div>
             </section>
 
+            <textarea id="aiDraft" style="display:none;"></textarea>
+
             <div id="toast" class="toast"></div>
         </main>
+    </div>
+
+    <div id="templateModal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <p class="panel-label">Templates</p>
+                    <h2>Create and manage templates</h2>
+                </div>
+                <button id="closeTemplateManagerBtn" class="btn btn-light btn-tiny" type="button">Close</button>
+            </div>
+
+            <div class="template-builder">
+                <div class="field">
+                    <label for="templateNameInput">Template name</label>
+                    <input id="templateNameInput" type="text" placeholder="Example: Supervision note">
+                </div>
+
+                <div class="field">
+                    <label>Sections</label>
+                    <div id="templateSectionsList" class="template-sections-list"></div>
+                    <div class="template-add-row">
+                        <input id="newTemplateSectionInput" type="text" placeholder="Add section name">
+                        <button id="addTemplateSectionBtn" class="btn btn-light" type="button">Add section</button>
+                    </div>
+                </div>
+
+                <div class="panel-actions">
+                    <button id="saveTemplateBtn" class="btn btn-primary" type="button">Save template</button>
+                </div>
+            </div>
+
+            <div class="saved-templates-box">
+                <h3>Your custom templates</h3>
+                <div id="savedTemplatesList" class="saved-templates-list"></div>
+            </div>
+        </div>
     </div>
 
     <script src="/ai-notes.js"></script>
