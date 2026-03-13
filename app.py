@@ -1,7 +1,7 @@
 import os
 import uvicorn
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -35,8 +35,13 @@ from routers.ai_notes_routes import router as ai_notes_router
 
 APP_NAME = "IndiCare Assistant API"
 VERSION = "2.0"
-
 PORT = int(os.environ.get("PORT", 10000))
+
+SESSION_SECRET = os.environ.get("SESSION_SECRET")
+if not SESSION_SECRET:
+    raise RuntimeError("SESSION_SECRET is not set")
+
+IS_PROD = os.environ.get("RENDER") is not None
 
 
 # --------------------------------------------------
@@ -56,24 +61,13 @@ app = FastAPI(
 # --------------------------------------------------
 
 @app.middleware("http")
-async def security_headers(request, call_next):
+async def security_headers(request: Request, call_next):
     response = await call_next(request)
 
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "strict-origin"
-
-    return response
-
-
-# --------------------------------------------------
-# STREAM BUFFER FIX (Render)
-# --------------------------------------------------
-
-@app.middleware("http")
-async def disable_buffering(request, call_next):
-    response = await call_next(request)
-
+    response.headers["Permissions-Policy"] = "microphone=(self)"
     response.headers["X-Accel-Buffering"] = "no"
 
     return response
@@ -106,13 +100,10 @@ app.add_middleware(
 
 app.add_middleware(
     SessionMiddleware,
-    secret_key=os.environ.get(
-        "SESSION_SECRET",
-        "indicare-super-secret-key"
-    ),
+    secret_key=SESSION_SECRET,
     session_cookie="indicare_session",
-    same_site="none",
-    https_only=True,
+    same_site="none" if IS_PROD else "lax",
+    https_only=IS_PROD,
     max_age=86400
 )
 
@@ -176,29 +167,37 @@ if os.path.isdir(FRONTEND_DIR):
 
 
 # --------------------------------------------------
-# SPA ROUTING (FRONTEND FALLBACK)
+# SPA ROUTING (OPTIONAL FALLBACK)
 # --------------------------------------------------
 
 @app.get("/{full_path:path}")
 async def spa_fallback(request: Request, full_path: str):
+    api_prefixes = (
+        "auth",
+        "chat",
+        "tasks",
+        "staff-journal",
+        "supervision",
+        "handover",
+        "reports",
+        "documents",
+        "dashboard",
+        "account",
+        "ai-notes",
+        "health",
+        "docs",
+        "api",
+    )
 
-    if full_path.startswith("auth") \
-    or full_path.startswith("chat") \
-    or full_path.startswith("tasks") \
-    or full_path.startswith("staff-journal") \
-    or full_path.startswith("supervision") \
-    or full_path.startswith("reports") \
-    or full_path.startswith("documents") \
-    or full_path.startswith("dashboard") \
-    or full_path.startswith("account") \
-    or full_path.startswith("ai-notes") \
-    or full_path.startswith("health") \
-    or full_path.startswith("docs") \
-    or full_path.startswith("api"):
-        return {"error": "Not found"}
+    if full_path.startswith(api_prefixes):
+        raise HTTPException(status_code=404, detail="Not found")
 
     index_file = os.path.join(FRONTEND_DIR, "index.html")
-    return FileResponse(index_file)
+
+    if os.path.exists(index_file):
+        return FileResponse(index_file)
+
+    raise HTTPException(status_code=404, detail="Frontend not found")
 
 
 # --------------------------------------------------
