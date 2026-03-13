@@ -17,6 +17,7 @@ from auth.routes import router as auth_router
 from routers.chat_routes import router as chat_router
 from routers.tasks_routes import router as tasks_router
 from routers.staff_journal_routes import router as journal_router
+from routers.supervision_routes import router as supervision_router
 from routers.handover_routes import router as handover_router
 
 from routers.reports_routes import router as reports_router
@@ -90,7 +91,6 @@ ALLOWED_ORIGINS = [
     "http://localhost:5173",
 ]
 
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -125,6 +125,7 @@ app.include_router(auth_router)
 app.include_router(chat_router)
 app.include_router(tasks_router)
 app.include_router(journal_router)
+app.include_router(supervision_router)
 app.include_router(handover_router)
 app.include_router(reports_router)
 app.include_router(documents_router)
@@ -185,6 +186,7 @@ async def spa_fallback(request: Request, full_path: str):
     or full_path.startswith("chat") \
     or full_path.startswith("tasks") \
     or full_path.startswith("staff-journal") \
+    or full_path.startswith("supervision") \
     or full_path.startswith("reports") \
     or full_path.startswith("documents") \
     or full_path.startswith("dashboard") \
@@ -198,6 +200,7 @@ async def spa_fallback(request: Request, full_path: str):
     index_file = os.path.join(FRONTEND_DIR, "index.html")
     return FileResponse(index_file)
 
+
 # --------------------------------------------------
 # LOCAL DEVELOPMENT
 # --------------------------------------------------
@@ -209,4 +212,3 @@ if __name__ == "__main__":
         port=PORT,
         reload=True
     )
-
