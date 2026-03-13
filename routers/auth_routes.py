@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from db.connection import get_db
 from auth.tokens import create_session_token
@@ -49,37 +48,18 @@ def login(payload: LoginRequest, conn=Depends(get_db)):
         user.get("home_id")
     )
 
-    response = JSONResponse({
+    return {
         "message": "Logged in",
+        "access_token": token,
         "user": {
             "id": user["id"],
             "email": user["email"],
             "role": user["role"],
             "home_id": user.get("home_id")
         }
-    })
-
-    response.set_cookie(
-        key="access_token",
-        value=token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        path="/",
-        max_age=86400
-    )
-
-    return response
+    }
 
 
 @router.post("/logout")
 def logout():
-
-    response = JSONResponse({"message": "Logged out"})
-
-    response.delete_cookie(
-        key="access_token",
-        path="/"
-    )
-
-    return response
+    return {"message": "Logged out"}
