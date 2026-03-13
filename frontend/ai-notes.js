@@ -62,6 +62,7 @@ const sectionTargets = document.querySelectorAll("[data-scroll-target]");
    State
 ----------------------------- */
 let latestSafeguardingFlag = false;
+let latestSafeguardingReason = "";
 let mediaRecorder = null;
 let recordedChunks = [];
 let recordedBlob = null;
@@ -312,6 +313,22 @@ function printText(title, content) {
     printWindow.print();
 }
 
+function deriveTitleFromNote(noteText) {
+    const lines = (noteText || "")
+        .split("\n")
+        .map(line => line.trim())
+        .filter(Boolean);
+
+    if (!lines.length) return "";
+
+    const titleLine = lines.find(line => line.toLowerCase().startsWith("meeting title:"));
+    if (titleLine) {
+        return titleLine.split(":").slice(1).join(":").trim();
+    }
+
+    return lines[0].slice(0, 120);
+}
+
 function clearAllFields() {
     const confirmed = window.confirm("Clear the transcript, AI draft and final note?");
     if (!confirmed) return;
@@ -330,11 +347,13 @@ function clearAllFields() {
     if (safeguardingBoxEl) {
         safeguardingBoxEl.style.display = "none";
     }
+
     if (safeguardingTextEl) {
         safeguardingTextEl.textContent = "";
     }
 
     latestSafeguardingFlag = false;
+    latestSafeguardingReason = "";
     previousAiDraft = "";
     recordedBlob = null;
     recordedChunks = [];
@@ -494,12 +513,13 @@ async function generateNote() {
 
         previousAiDraft = note;
         latestSafeguardingFlag = !!data.safeguarding_flag;
+        latestSafeguardingReason = data.safeguarding_reason || "";
 
         if (safeguardingBoxEl && safeguardingTextEl) {
             safeguardingBoxEl.style.display = "block";
             safeguardingTextEl.textContent = latestSafeguardingFlag
-                ? `Possible safeguarding concern detected: ${data.safeguarding_reason || "Review required."}`
-                : `No safeguarding concern detected: ${data.safeguarding_reason || "None identified."}`;
+                ? `Possible safeguarding concern detected: ${latestSafeguardingReason || "Review required."}`
+                : `No safeguarding concern detected: ${latestSafeguardingReason || "None identified."}`;
         }
 
         updateProgress(3);
@@ -585,11 +605,19 @@ async function saveNote() {
         return;
     }
 
+    const title = deriveTitleFromNote(finalNote);
+    const safeguardingReasonForSave =
+        latestSafeguardingReason ||
+        safeguardingTextEl?.textContent ||
+        "";
+
     const form = new FormData();
     form.append("transcript", transcript);
     form.append("ai_draft", aiDraft);
     form.append("final_note", finalNote);
     form.append("safeguarding_flag", String(latestSafeguardingFlag));
+    form.append("safeguarding_reason", safeguardingReasonForSave);
+    form.append("title", title);
 
     try {
         setProcessingUI("Saving");
@@ -679,7 +707,8 @@ function bindUtilityButtons() {
     });
 
     printBtn?.addEventListener("click", () => {
-        printText("AI Note", finalNoteEl.value);
+        const title = deriveTitleFromNote(finalNoteEl.value) || "AI Note";
+        printText(title, finalNoteEl.value);
     });
 
     exportBtn?.addEventListener("click", () => {
@@ -690,7 +719,10 @@ function bindUtilityButtons() {
             return;
         }
 
-        exportTextFile("ai-note.txt", content);
+        const title = deriveTitleFromNote(content) || "ai-note";
+        const filename = `${title.replace(/[^a-z0-9-_ ]/gi, "").trim() || "ai-note"}.txt`;
+
+        exportTextFile(filename, content);
         showToast("Export started");
     });
 
