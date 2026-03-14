@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Young Person Panel | IndiCare</title>
+  <link rel="stylesheet" href="/css/young-people-shell.css" />
+</head>
+<body>
+  <div class="yp-shell-page">
+    <header class="yp-shell-header">
+      <div class="yp-shell-header-top">
+        <div>
+          <h1>Young Person Panel</h1>
+          <p>Residential care record workspace</p>
+        </div>
+
+        <div class="yp-shell-actions">
+          <button class="btn secondary" id="backToListBtn">Back to list</button>
+          <button class="btn" id="editYoungPersonBtn">Edit profile</button>
+        </div>
+      </div>
+
+      <div class="yp-selector-row">
+        <label for="youngPersonSelector">Select young person</label>
+        <select id="youngPersonSelector"></select>
+      </div>
+
+      <div id="ypSummaryCards" class="yp-summary-cards"></div>
+
+      <div class="yp-status-row">
+        <div>
+          <h3>Alerts</h3>
+          <div id="ypAlerts" class="badge-row">
+            <span class="badge muted">No alerts loaded</span>
+          </div>
+        </div>
+
+        <div>
+          <h3>Compliance</h3>
+          <div id="ypCompliance" class="badge-row">
+            <span class="badge muted">No compliance data yet</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <nav class="yp-tabs" id="ypTabs">
+      <button class="tab-btn active" data-tab="overview">Overview</button>
+      <button class="tab-btn" data-tab="profile">Profile</button>
+      <button class="tab-btn" data-tab="plans">Plans</button>
+      <button class="tab-btn" data-tab="risk">Risk</button>
+      <button class="tab-btn" data-tab="daily-notes">Daily Notes</button>
+      <button class="tab-btn" data-tab="incidents">Incidents</button>
+      <button class="tab-btn" data-tab="health">Health</button>
+      <button class="tab-btn" data-tab="education">Education</button>
+      <button class="tab-btn" data-tab="family">Family</button>
+      <button class="tab-btn" data-tab="key-work">Key Work</button>
+      <button class="tab-btn" data-tab="chronology">Chronology</button>
+      <button class="tab-btn" data-tab="compliance">Compliance</button>
+      <button class="tab-btn" data-tab="documents">Documents</button>
+    </nav>
+
+    <main class="yp-tab-content">
+      <section class="tab-panel active" id="tab-overview">
+        <div class="panel-grid">
+          <div class="panel-card">
+            <h2>Overview</h2>
+            <div id="overviewContent">Select a young person to load overview data.</div>
+          </div>
+
+          <div class="panel-card">
+            <h2>Recent activity</h2>
+            <div id="recentActivityContent">Chronology will appear here later.</div>
+          </div>
+
+          <div class="panel-card">
+            <h2>Open actions</h2>
+            <div id="openActionsContent">Tasks and compliance actions will appear here later.</div>
+          </div>
+
+          <div class="panel-card">
+            <h2>Current risks</h2>
+            <div id="currentRisksContent">Risk summary will appear here later.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-profile">
+        <div class="panel-card">
+          <h2>Profile</h2>
+          <div id="profileContent">Profile details will load here.</div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-plans">
+        <div class="panel-card">
+          <h2>Plans</h2>
+          <p>Support plans, placement plans, and SMART targets will live here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-risk">
+        <div class="panel-card">
+          <h2>Risk</h2>
+          <p>Risk assessments and reviews will live here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-daily-notes">
+        <div class="panel-card">
+          <h2>Daily Notes</h2>
+          <p>Daily note entries will live here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-incidents">
+        <div class="panel-card">
+          <h2>Incidents</h2>
+          <p>Incidents and safeguarding records will live here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-health">
+        <div class="panel-card">
+          <h2>Health</h2>
+          <p>Health and medication records will live here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-education">
+        <div class="panel-card">
+          <h2>Education</h2>
+          <p>Education records will live here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-family">
+        <div class="panel-card">
+          <h2>Family</h2>
+          <p>Family contact records will live here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-key-work">
+        <div class="panel-card">
+          <h2>Key Work</h2>
+          <p>Key work sessions will live here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-chronology">
+        <div class="panel-card">
+          <h2>Chronology</h2>
+          <p>Automated chronology timeline will live here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-compliance">
+        <div class="panel-card">
+          <h2>Compliance</h2>
+          <p>Due, overdue and missing records will live here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-documents">
+        <div class="panel-card">
+          <h2>Documents</h2>
+          <p>Young person documents will live here.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/js/young-people-shell.js"></script>
+</body>
+</html>
