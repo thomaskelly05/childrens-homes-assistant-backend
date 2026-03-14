@@ -61,7 +61,7 @@
         }
 
         .template-picker {
-            min-width: 280px;
+            min-width: 320px;
         }
 
         .template-picker label,
@@ -195,7 +195,7 @@
 
         .source-transcript,
         .document-editor {
-            min-height: 520px;
+            min-height: 560px;
             resize: vertical;
         }
 
@@ -609,7 +609,7 @@
                 </div>
                 <div id="recordingStatus" class="status-pill idle">Not recording</div>
                 <div id="recordingTimer" class="timer">00:00</div>
-                <p class="sidebar-note">Record first, then transcribe and edit the AI note side by side.</p>
+                <p class="sidebar-note">Record, transcribe, then review and edit the document using AI instructions where needed.</p>
             </div>
 
             <div id="safeguardingBox" class="sidebar-card safeguarding-box" style="display:none;">
@@ -642,9 +642,9 @@
                 <header class="workspace-header">
                     <div>
                         <p class="eyebrow">AI Meeting Assistant</p>
-                        <h1>Create a professional note</h1>
+                        <h1>Create and refine a document</h1>
                         <p class="workspace-subtitle">
-                            Record a meeting, transcribe it, then work in a split view with the original transcript on one side and the AI editor on the other.
+                            Record a meeting, transcribe it, then work in a split view with the original transcript on one side and an editable working document on the other.
                         </p>
                     </div>
 
@@ -670,7 +670,7 @@
                         <div>
                             <p class="panel-label">Step 1</p>
                             <h2>Record and transcribe</h2>
-                            <p>Record the meeting first. When transcription is complete, the split AI editor will open below.</p>
+                            <p>Record the meeting first. When transcription is complete, the split editor will open below.</p>
                         </div>
                     </div>
 
@@ -678,7 +678,7 @@
                         <button id="startRecordingBtn" class="btn btn-primary" type="button">Start recording</button>
                         <button id="stopRecordingBtn" class="btn btn-secondary" type="button" disabled>Stop recording</button>
                         <button id="transcribeBtn" class="btn btn-dark" type="button" disabled>Transcribe recording</button>
-                        <button id="generateBtn" class="btn btn-primary" type="button">Generate AI note</button>
+                        <button id="generateBtn" class="btn btn-primary" type="button">Generate working document</button>
                     </div>
 
                     <p id="audioReadyText" class="helper-text">No recording yet.</p>
@@ -691,14 +691,14 @@
                             <div>
                                 <p class="panel-label">Original source</p>
                                 <h2>Transcript</h2>
-                                <p>Review the original transcript on the left.</p>
+                                <p>This is the original transcript generated from the recording.</p>
                             </div>
                             <button id="toggleTranscriptBtn" class="btn btn-light btn-tiny" type="button">Show / hide</button>
                         </div>
 
                         <div id="transcriptContent" class="transcript-layout">
                             <div class="field">
-                                <label for="transcript">Transcript</label>
+                                <label for="transcript">Original transcript</label>
                                 <textarea id="transcript" class="source-transcript" placeholder="The transcript will appear here after transcription, or you can paste one manually."></textarea>
                             </div>
                         </div>
@@ -707,8 +707,8 @@
                     <div class="split-panel">
                         <div class="section-head">
                             <div>
-                                <p class="panel-label">AI editor</p>
-                                <h2>Editable note</h2>
+                                <p class="panel-label">Working document</p>
+                                <h2>Editable document</h2>
                                 <div class="document-meta">
                                     <span id="noteModeBadge" class="note-mode-badge is-new">New unsaved note</span>
                                     <span id="saveStateBadge" class="save-state-badge is-idle">Ready</span>
@@ -723,35 +723,35 @@
                         </div>
 
                         <div class="quick-prompts">
-                            <button class="prompt-chip" type="button" data-prompt="Make this more professional.">More professional</button>
-                            <button class="prompt-chip" type="button" data-prompt="Make this shorter and clearer.">Shorter</button>
-                            <button class="prompt-chip" type="button" data-prompt="Extract the key actions and next steps clearly.">Extract actions</button>
-                            <button class="prompt-chip" type="button" data-prompt="Rewrite this using bullet points where helpful.">Use bullet points</button>
+                            <button class="prompt-chip" type="button" data-prompt="Rewrite this into a professional children’s home meeting note.">Professional note</button>
+                            <button class="prompt-chip" type="button" data-prompt="Turn this into a concise handover-ready summary.">Handover summary</button>
+                            <button class="prompt-chip" type="button" data-prompt="Structure this under clear headings using the selected template.">Apply template structure</button>
+                            <button class="prompt-chip" type="button" data-prompt="Correct grammar, improve clarity, and keep the meaning the same.">Improve wording</button>
                         </div>
 
                         <div class="field">
-                            <label for="noteTitle">Note title</label>
+                            <label for="noteTitle">Document title</label>
                             <input id="noteTitle" type="text" placeholder="Example: Team meeting - March review">
                         </div>
 
                         <div class="field">
                             <label for="aiInstruction">Instruction for AI</label>
-                            <textarea id="aiInstruction" class="instruction-box" placeholder="Example: rewrite this in a more professional tone and make the actions clearer."></textarea>
+                            <textarea id="aiInstruction" class="instruction-box" placeholder="Example: rewrite this into a professional supervision summary using the selected template."></textarea>
                         </div>
 
                         <div class="panel-actions">
-                            <button id="applyAiEditBtn" class="btn btn-dark" type="button">Apply AI edit</button>
-                            <button id="undoAiEditBtn" class="btn btn-light" type="button">Undo last edit</button>
+                            <button id="applyAiEditBtn" class="btn btn-dark" type="button">Apply AI change</button>
+                            <button id="undoAiEditBtn" class="btn btn-light" type="button">Undo last change</button>
                             <button id="copyDraftBtn" class="btn btn-light" type="button">Reset from generated draft</button>
                         </div>
 
                         <div class="field">
-                            <label for="finalNote">Final note</label>
-                            <textarea id="finalNote" class="document-editor" placeholder="The AI-generated editable note will appear here..."></textarea>
+                            <label for="finalNote">Editable document</label>
+                            <textarea id="finalNote" class="document-editor" placeholder="The editable working document will appear here..."></textarea>
                         </div>
 
                         <div class="panel-actions">
-                            <button id="saveBtn" class="btn btn-success" type="button">Save note</button>
+                            <button id="saveBtn" class="btn btn-success" type="button">Save document</button>
                             <button id="clearBtn" class="btn btn-danger" type="button">Clear</button>
                         </div>
                     </div>
