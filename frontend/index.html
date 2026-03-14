@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en-GB">
 <head>
@@ -6,7 +7,7 @@
   <title>IndiCare</title>
   <meta
     name="description"
-    content="IndiCare staff workspace for children's home operations, journals, supervision, handover, reports, documents, and AI support."
+    content="IndiCare staff workspace for residential children's home practice, AI support, journals, supervision, handover, reports, documents, and operations."
   />
 
   <link rel="icon" type="image/svg+xml" href="/assets/logo.svg" />
@@ -34,7 +35,7 @@
 
     .hero-panel h3 {
       margin: 0 0 0.65rem;
-      font-size: 1.4rem;
+      font-size: 1.45rem;
       letter-spacing: -0.03em;
       color: var(--text);
     }
@@ -66,11 +67,7 @@
       background: var(--surface-muted);
       border: 1px solid var(--border);
       color: var(--text);
-    }
-
-    .section-intro {
-      margin-bottom: 1rem;
-      color: var(--text-soft);
+      line-height: 1.55;
     }
 
     .card h3 {
@@ -128,10 +125,6 @@
       line-height: 1.6;
     }
 
-    .wide-card {
-      margin-top: 1.25rem;
-    }
-
     .workspace-section-title {
       margin: 0 0 0.35rem;
       font-size: 1.05rem;
@@ -141,6 +134,25 @@
     .workspace-section-subtitle {
       margin: 0 0 1rem;
       color: var(--text-soft);
+    }
+
+    .assistant-highlight {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 16px;
+      background: #eef4ff;
+      border: 1px solid #d7e5ff;
+    }
+
+    .assistant-highlight strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      color: var(--text);
+    }
+
+    .assistant-highlight span {
+      color: var(--text-soft);
+      line-height: 1.55;
     }
 
     @media (max-width: 1100px) {
@@ -207,10 +219,12 @@
         <div id="dashboardView" class="view">
           <div class="dashboard-hero">
             <div class="hero-panel">
-              <h3>Welcome to IndiCare</h3>
+              <h3>Residential AI support for real children’s home practice</h3>
               <p>
-                Your central workspace for residential care operations, professional recording,
-                reflective practice, supervision support, and AI-assisted writing.
+                IndiCare brings together your operational workspace and a broad residential
+                AI assistant that can help adults think clearly, write well, organise
+                information, improve documentation, and support calm, practical,
+                professionally grounded care practice.
               </p>
 
               <div class="hero-actions">
@@ -219,14 +233,23 @@
                 <a class="button" href="/supervision">Open Supervision</a>
                 <a class="button" href="/ai-note.html">Open AI Notes</a>
               </div>
+
+              <div class="assistant-highlight">
+                <strong>The Assistant is your main AI workspace.</strong>
+                <span>
+                  Use it for general residential questions, drafting support, reflection,
+                  planning, wording, documentation review, support-plan thinking, handovers,
+                  summaries, and professional sense-checking.
+                </span>
+              </div>
             </div>
 
             <div class="hero-panel">
-              <h3>What you can do here</h3>
+              <h3>How the tools are separated</h3>
               <ul class="hero-points">
-                <li>Use the Assistant for residential care writing and practice support</li>
-                <li>Review tasks, handover notes, and your latest journal activity</li>
-                <li>Generate reports and downloadable documents quickly</li>
+                <li><strong>Assistant</strong> is the general residential AI brain for broad support and questions.</li>
+                <li><strong>AI Notes</strong> is a separate tool for meeting-note workflows and specialist note generation.</li>
+                <li><strong>Reports</strong> and <strong>Documents</strong> are structured production tools, not the whole assistant.</li>
               </ul>
             </div>
           </div>
@@ -234,29 +257,29 @@
           <div class="grid grid--2">
             <div class="card">
               <h3>
-                Quick links
+                Main workspaces
                 <span class="card-badge">Routes</span>
               </h3>
 
               <div class="quick-link-grid">
                 <a class="quick-link-card" href="/assistant">
                   <strong>Assistant</strong>
-                  <span>Open your residential AI assistant for drafting, reflection, and support.</span>
+                  <span>Ask general residential care questions, improve wording, build drafts, reflect on practice, and organise documentation.</span>
                 </a>
 
                 <a class="quick-link-card" href="/journal">
                   <strong>Staff Journal</strong>
-                  <span>Create and review reflective staff journal entries.</span>
+                  <span>Create and review reflective staff journal entries and development records.</span>
                 </a>
 
                 <a class="quick-link-card" href="/supervision">
                   <strong>Supervision</strong>
-                  <span>Open supervision records and staff development materials.</span>
+                  <span>Open supervision records, review submissions, and support staff development work.</span>
                 </a>
 
                 <a class="quick-link-card" href="/ai-note.html">
                   <strong>AI Notes</strong>
-                  <span>Use AI-assisted meeting notes, templates, and note generation tools.</span>
+                  <span>Use your separate AI note-taking workflow for meeting notes, templates, and structured saved outputs.</span>
                 </a>
               </div>
             </div>
@@ -390,3 +413,4 @@
   <script src="/js/app.js"></script>
 </body>
 </html>
+```
