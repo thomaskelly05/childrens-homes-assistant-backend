@@ -18,43 +18,47 @@ window.initChat = initChat;
 
 async function sendMessage() {
     const input = document.getElementById("chat-input");
-    const messages = document.getElementById("messages");
-    const welcome = document.getElementById("welcome-panel");
+    const chat = document.getElementById("chat");
 
-    if (!input || !messages) return;
+    if (!input || !chat) return;
 
     const message = input.value.trim();
 
     if (!message) return;
 
-    if (welcome) {
-        welcome.remove();
-    }
+    removeChatEmptyState();
 
     appendMessage("user", message);
     input.value = "";
 
     try {
-        const response = await apiFetch("/chat/", {
+        const token = localStorage.getItem("access_token");
+
+        const response = await fetch("/chat/", {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                ...(token ? { Authorization: `Bearer ${token}` } : {})
             },
             body: JSON.stringify({
                 message: message,
                 conversation_id: window.conversationId || null
-            })
+            }),
+            credentials: "include"
         });
 
         if (!response.ok || !response.body) {
             let data = {};
             try {
-                data = await safeJson(response);
+                data = await response.json();
             } catch {
                 data = {};
             }
 
-            if (handleUnauthorizedResponse(response, data)) {
+            if (response.status === 401) {
+                localStorage.removeItem("access_token");
+                localStorage.removeItem("current_user");
+                window.location.href = "/login";
                 return;
             }
 
@@ -134,25 +138,26 @@ function createMessageElement(role, text = "") {
 }
 
 function appendMessage(role, text) {
-    const messages = document.getElementById("messages");
-    if (!messages) return;
+    const chat = document.getElementById("chat");
+    if (!chat) return;
 
     const messageEl = createMessageElement(role, text);
-    messages.appendChild(messageEl);
-    messages.scrollTop = messages.scrollHeight;
+    chat.appendChild(messageEl);
+    chat.scrollTop = chat.scrollHeight;
 }
 
 window.appendMessage = appendMessage;
 
 function updateAssistantMessage(text) {
-    const messages = document.getElementById("messages");
-    if (!messages) return;
+    const chat = document.getElementById("chat");
+    if (!chat) return;
 
-    let lastWrapper = messages.querySelector(".message-wrapper.assistant:last-child");
+    const assistantWrappers = chat.querySelectorAll(".message-wrapper.assistant");
+    let lastWrapper = assistantWrappers[assistantWrappers.length - 1];
 
     if (!lastWrapper) {
         lastWrapper = createMessageElement("assistant", text);
-        messages.appendChild(lastWrapper);
+        chat.appendChild(lastWrapper);
     } else {
         const msg = lastWrapper._messageEl || lastWrapper.querySelector(".message.assistant");
 
@@ -163,7 +168,7 @@ function updateAssistantMessage(text) {
         lastWrapper._rawText = text;
     }
 
-    messages.scrollTop = messages.scrollHeight;
+    chat.scrollTop = chat.scrollHeight;
 }
 
 function renderMarkdown(text) {
@@ -188,3 +193,14 @@ function fillPrompt(text) {
 }
 
 window.fillPrompt = fillPrompt;
+
+function removeChatEmptyState() {
+    const emptyState = document.querySelector(".chat-empty");
+    if (emptyState) {
+        emptyState.remove();
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    initChat();
+});
