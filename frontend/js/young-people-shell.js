@@ -6,12 +6,14 @@ const overviewContent = document.getElementById("overviewContent");
 const profileContent = document.getElementById("profileContent");
 const plansPanel = document.getElementById("tab-plans");
 const riskPanel = document.getElementById("tab-risk");
+const dailyNotesPanel = document.getElementById("tab-daily-notes");
 
 let youngPeople = [];
 let selectedYoungPerson = null;
 let selectedProfile = null;
 let selectedPlans = [];
 let selectedRisks = [];
+let selectedDailyNotes = [];
 
 async function loadYoungPeople() {
   const res = await fetch("/young-people");
@@ -37,23 +39,26 @@ async function loadYoungPerson(id) {
     selectedProfile = null;
     selectedPlans = [];
     selectedRisks = [];
+    selectedDailyNotes = [];
     clearDisplay();
     return;
   }
 
-  const [personRes, profileRes, plansRes, risksRes] = await Promise.all([
+  const [personRes, profileRes, plansRes, risksRes, dailyNotesRes] = await Promise.all([
     fetch(`/young-people/${id}`),
     fetch(`/young-people/${id}/profile`),
     fetch(`/young-people/${id}/plans`),
-    fetch(`/young-people/${id}/risks`)
+    fetch(`/young-people/${id}/risks`),
+    fetch(`/young-people/${id}/daily-notes`)
   ]);
 
-  if (!personRes.ok || !profileRes.ok || !plansRes.ok || !risksRes.ok) return;
+  if (!personRes.ok || !profileRes.ok || !plansRes.ok || !risksRes.ok || !dailyNotesRes.ok) return;
 
   selectedYoungPerson = await personRes.json();
   selectedProfile = await profileRes.json();
   selectedPlans = await plansRes.json();
   selectedRisks = await risksRes.json();
+  selectedDailyNotes = await dailyNotesRes.json();
 
   renderYoungPerson();
 }
@@ -66,6 +71,7 @@ function clearDisplay() {
   profileContent.innerHTML = `Profile details will load here.`;
   plansPanel.innerHTML = `<div class="panel-card"><h2>Plans</h2><p>Select a young person to load plans.</p></div>`;
   riskPanel.innerHTML = `<div class="panel-card"><h2>Risk</h2><p>Select a young person to load risk assessments.</p></div>`;
+  dailyNotesPanel.innerHTML = `<div class="panel-card"><h2>Daily Notes</h2><p>Select a young person to load daily notes.</p></div>`;
 }
 
 function formatDate(value) {
@@ -147,6 +153,37 @@ function renderRisks() {
             <div class="profile-label">Current controls</div><div class="profile-value">${risk.current_controls || "—"}</div>
             <div class="profile-label">De-escalation</div><div class="profile-value">${risk.deescalation_strategies || "—"}</div>
             <div class="profile-label">Response actions</div><div class="profile-value">${risk.response_actions || "—"}</div>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderDailyNotes() {
+  if (!selectedDailyNotes.length) {
+    dailyNotesPanel.innerHTML = `<div class="panel-card"><h2>Daily Notes</h2><p>No daily notes recorded yet.</p></div>`;
+    return;
+  }
+
+  dailyNotesPanel.innerHTML = `
+    <div class="panel-grid">
+      ${selectedDailyNotes.map(note => `
+        <div class="panel-card">
+          <h2>${formatDate(note.note_date)} • ${note.shift_type || "Shift"}</h2>
+          <div class="profile-grid">
+            <div class="profile-label">Mood</div><div class="profile-value">${note.mood || "—"}</div>
+            <div class="profile-label">Presentation</div><div class="profile-value">${note.presentation || "—"}</div>
+            <div class="profile-label">Activities</div><div class="profile-value">${note.activities || "—"}</div>
+            <div class="profile-label">Education</div><div class="profile-value">${note.education_update || "—"}</div>
+            <div class="profile-label">Health</div><div class="profile-value">${note.health_update || "—"}</div>
+            <div class="profile-label">Family</div><div class="profile-value">${note.family_update || "—"}</div>
+            <div class="profile-label">Behaviour</div><div class="profile-value">${note.behaviour_update || "—"}</div>
+            <div class="profile-label">Young person voice</div><div class="profile-value">${note.young_person_voice || "—"}</div>
+            <div class="profile-label">Positives</div><div class="profile-value">${note.positives || "—"}</div>
+            <div class="profile-label">Actions required</div><div class="profile-value">${note.actions_required || "—"}</div>
+            <div class="profile-label">Significance</div><div class="profile-value">${note.significance || "—"}</div>
+            <div class="profile-label">Author</div><div class="profile-value">${note.author_first_name ? `${note.author_first_name} ${note.author_last_name || ""}` : "—"}</div>
           </div>
         </div>
       `).join("")}
@@ -262,6 +299,7 @@ function renderYoungPerson() {
 
   renderPlans();
   renderRisks();
+  renderDailyNotes();
 }
 
 function setupTabs() {
