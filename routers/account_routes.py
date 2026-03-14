@@ -1,26 +1,22 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from psycopg2.extras import RealDictCursor
 
+from auth.session_user import get_current_user
 from db.connection import get_db
-from auth.tokens import decode_session_token
 
-router = APIRouter(prefix="/account", tags=["Account"])
+router = APIRouter(
+    prefix="/account",
+    tags=["Account"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 @router.get("/me")
-def get_account(request: Request, conn=Depends(get_db)):
-
-    token = request.cookies.get("access_token")
-
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    payload = decode_session_token(token)
-
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-    user_id = payload["sub"]
+def get_account(
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    user_id = current_user["id"]
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
@@ -29,9 +25,8 @@ def get_account(request: Request, conn=Depends(get_db)):
             FROM users
             WHERE id = %s
             """,
-            (user_id,)
+            (user_id,),
         )
-
         user = cur.fetchone()
 
     if not user:
