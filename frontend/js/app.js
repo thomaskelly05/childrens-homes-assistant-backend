@@ -48,13 +48,14 @@ function bindLogout() {
   logoutBtn.addEventListener("click", async () => {
     try {
       localStorage.removeItem("access_token");
+      localStorage.removeItem("current_user");
 
       try {
         await apiRequest("/auth/logout", {
           method: "POST"
         });
       } catch (_) {
-        // ignore logout API failure and still redirect
+        // ignore logout API failure
       }
 
       window.location.href = "/login";
@@ -155,9 +156,15 @@ async function loadInitialWorkspace() {
     return;
   }
 
-  const account = await loadAccount();
-  setUserBadge(account);
-  renderAccount(account);
+  try {
+    const account = await loadAccount();
+    setUserBadge(account);
+    renderAccount(account);
+  } catch (error) {
+    setLoading(false);
+    showAppError(error.message || "Failed to load account");
+    return;
+  }
 
   await Promise.allSettled([
     loadTasks(),
@@ -215,7 +222,6 @@ async function loadTasks() {
 
   try {
     const tasks = await apiRequest("/tasks/");
-
     const safeTasks = Array.isArray(tasks) ? tasks : [];
 
     if (preview) {
@@ -226,8 +232,8 @@ async function loadTasks() {
       list.innerHTML = renderTasksList(safeTasks);
     }
   } catch (error) {
-    if (preview) preview.innerHTML = `<p class="error-text">${escapeHtml(error.message)}</p>`;
-    if (list) list.innerHTML = `<p class="error-text">${escapeHtml(error.message)}</p>`;
+    if (preview) preview.innerHTML = `<p class="error-text">Could not load tasks.</p>`;
+    if (list) list.innerHTML = `<p class="error-text">Could not load tasks.</p>`;
   }
 }
 
@@ -238,7 +244,6 @@ async function loadHandover() {
 
   try {
     const notes = await apiRequest("/handover/");
-
     const safeNotes = Array.isArray(notes) ? notes : [];
 
     if (preview) {
@@ -249,8 +254,13 @@ async function loadHandover() {
       list.innerHTML = renderHandoverList(safeNotes);
     }
   } catch (error) {
-    if (preview) preview.innerHTML = `<p class="error-text">${escapeHtml(error.message)}</p>`;
-    if (list) list.innerHTML = `<p class="error-text">${escapeHtml(error.message)}</p>`;
+    if (preview) {
+      preview.innerHTML = `<p class="error-text">Could not load handover notes.</p>`;
+    }
+
+    if (list) {
+      list.innerHTML = `<p class="error-text">Could not load handover notes.</p>`;
+    }
   }
 }
 
@@ -265,7 +275,7 @@ async function loadLatestJournal() {
     const journal = data.journal;
 
     if (!journal) {
-      preview.innerHTML = `<p>No journal entries found.</p>`;
+      preview.innerHTML = `<p>No journal entries yet.</p>`;
       return;
     }
 
@@ -277,7 +287,12 @@ async function loadLatestJournal() {
       </div>
     `;
   } catch (error) {
-    preview.innerHTML = `<p class="error-text">${escapeHtml(error.message)}</p>`;
+    if ((error.message || "").toLowerCase().includes("no journal")) {
+      preview.innerHTML = `<p>No journal entries yet.</p>`;
+      return;
+    }
+
+    preview.innerHTML = `<p class="error-text">Could not load journal preview.</p>`;
   }
 }
 
@@ -350,14 +365,9 @@ function activateView(viewName) {
 
 function setLoading(isLoading) {
   const loadingState = document.getElementById("loadingState");
-  const dashboardView = document.getElementById("dashboardView");
 
   if (loadingState) {
     loadingState.classList.toggle("hidden", !isLoading);
-  }
-
-  if (dashboardView && isLoading) {
-    dashboardView.classList.add("hidden");
   }
 }
 
