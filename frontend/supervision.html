@@ -1,70 +1,270 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Supervision Dashboard | IndiCare</title>
+
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg" />
+  <link rel="stylesheet" href="/css/reset.css" />
+  <link rel="stylesheet" href="/css/base.css" />
+  <link rel="stylesheet" href="/css/theme.css" />
+  <link rel="stylesheet" href="/css/layout.css" />
   <link rel="stylesheet" href="/css/components.css" />
   <link rel="stylesheet" href="/journal.css" />
+
+  <style>
+    .supervision-page {
+      min-height: 100vh;
+      background: var(--bg);
+    }
+
+    .supervision-workspace {
+      padding: 0 1.5rem 1.5rem;
+    }
+
+    .page-hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 1.25rem 0;
+    }
+
+    .eyebrow {
+      margin: 0 0 0.35rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--primary-hover);
+    }
+
+    .page-hero h1 {
+      margin: 0 0 0.45rem;
+      color: var(--text);
+      letter-spacing: -0.03em;
+    }
+
+    .hero-copy {
+      margin: 0.2rem 0;
+      color: var(--text-soft);
+      line-height: 1.6;
+      max-width: 760px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow-sm);
+      padding: 1rem;
+    }
+
+    .supervision-layout {
+      display: grid;
+      grid-template-columns: 380px minmax(0, 1fr);
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .history-card,
+    .output-card {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      padding: 0;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .card-header h2 {
+      margin: 0 0 0.3rem;
+      color: var(--text);
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+    }
+
+    .card-header p {
+      margin: 0;
+      color: var(--text-soft);
+      line-height: 1.5;
+    }
+
+    .history-list {
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .history-item {
+      border: 1px solid var(--border);
+      background: var(--surface-muted);
+      border-radius: 14px;
+      padding: 0.95rem;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .history-item:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(16, 24, 40, 0.06);
+    }
+
+    .history-item.active {
+      border-color: var(--primary);
+      background: #eef4ff;
+    }
+
+    .history-item h4 {
+      margin: 0 0 0.5rem;
+      font-size: 0.96rem;
+      color: var(--text);
+    }
+
+    .history-item p {
+      margin: 0;
+      color: var(--text-soft);
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    .output-box {
+      background: var(--surface-muted);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      min-height: 420px;
+      padding: 1rem;
+      white-space: pre-wrap;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    .btn {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.8rem 1rem;
+      cursor: pointer;
+      font-weight: 700;
+      background: #fff;
+      color: var(--text);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+      color: #fff;
+      border-color: transparent;
+    }
+
+    @media (max-width: 1100px) {
+      .supervision-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .supervision-workspace {
+        padding: 0 1rem 1rem;
+      }
+
+      .page-hero,
+      .card-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+  </style>
 </head>
-<body>
+<body class="supervision-page">
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="sidebar-brand">
-        <h2>IndiCare</h2>
+      <div class="sidebar__brand">
+        <img src="/assets/logo.svg" alt="IndiCare logo" class="sidebar__logo" />
+        <div class="sidebar__brand-text">
+          <h1>IndiCare</h1>
+          <p>Staff Workspace</p>
+        </div>
       </div>
 
-      <nav class="sidebar-nav">
-        <a href="/index.html" class="sidebar-link">Dashboard</a>
-        <a href="/journal.html" class="sidebar-link">Reflective Journal</a>
-        <a href="/supervision.html" class="sidebar-link active">Supervision Dashboard</a>
-        <a href="/ai-note.html" class="sidebar-link">AI Meeting Notes</a>
+      <nav class="sidebar__nav">
+        <a href="/" class="nav-link">Dashboard</a>
+        <a href="/assistant" class="nav-link">Assistant</a>
+        <a href="/journal" class="nav-link">Staff Journal</a>
+        <a href="/supervision" class="nav-link is-active">Supervision</a>
+        <a href="/ai-note.html" class="nav-link">AI Notes</a>
       </nav>
+
+      <div class="sidebar__footer">
+        <a href="/" class="button button--secondary">Back to dashboard</a>
+      </div>
     </aside>
 
-    <main class="page-shell">
-      <header class="page-hero">
+    <main class="main-layout">
+      <header class="topbar">
         <div>
-          <p class="eyebrow">Manager Review</p>
-          <h1>Supervision Dashboard</h1>
-          <p class="hero-copy">
-            Review journal submissions, open development outputs, and mark items as reviewed.
-          </p>
+          <h2>Supervision Dashboard</h2>
+          <p>Review submissions, open development outputs, and complete manager review.</p>
+        </div>
+
+        <div class="topbar__actions">
+          <span class="user-badge">Manager Review</span>
         </div>
       </header>
 
-      <section class="card">
-        <div class="journal-history-section supervision-layout">
-          <div class="history-card">
-            <div class="card-header">
-              <div>
-                <h2>Submitted Items</h2>
-                <p>Newest supervision submissions first.</p>
+      <section class="supervision-workspace">
+        <header class="page-hero">
+          <div>
+            <p class="eyebrow">Manager Review</p>
+            <h1>Supervision Dashboard</h1>
+            <p class="hero-copy">
+              Review journal submissions, open development outputs, and mark items as reviewed.
+            </p>
+          </div>
+        </header>
+
+        <section class="card">
+          <div class="supervision-layout">
+            <div class="history-card">
+              <div class="card-header">
+                <div>
+                  <h2>Submitted Items</h2>
+                  <p>Newest supervision submissions first.</p>
+                </div>
+              </div>
+
+              <div id="supervisionSubmissionList" class="history-list"></div>
+            </div>
+
+            <div class="output-card">
+              <div class="card-header">
+                <div>
+                  <h2>Submission Detail</h2>
+                  <p>Journal summary, development plan, and supervision pack.</p>
+                </div>
+
+                <button id="markReviewedBtn" class="btn btn-primary" type="button">
+                  Mark as Reviewed
+                </button>
+              </div>
+
+              <div id="supervisionSubmissionDetail" class="output-box">
+                Select a submission to view the detail.
               </div>
             </div>
-            <div id="supervisionSubmissionList" class="history-list"></div>
           </div>
-
-          <div class="output-card">
-            <div class="card-header">
-              <div>
-                <h2>Submission Detail</h2>
-                <p>Journal summary, development plan, and supervision pack.</p>
-              </div>
-              <button id="markReviewedBtn" class="btn btn-primary" type="button">
-                Mark as Reviewed
-              </button>
-            </div>
-
-            <div id="supervisionSubmissionDetail" class="output-box">
-              Select a submission to view the detail.
-            </div>
-          </div>
-        </div>
+        </section>
       </section>
     </main>
   </div>
 
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/ui.js"></script>
   <script src="/supervision.js"></script>
 </body>
 </html>
