@@ -55,7 +55,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const stopRecordingBtn = document.getElementById("stopRecordingBtn");
     const transcribeBtn = document.getElementById("transcribeBtn");
     const generateBtn = document.getElementById("generateBtn");
-    const goToEditBtn = document.getElementById("goToEditBtn");
 
     const saveBtn = document.getElementById("saveBtn");
     const saveBtnTop = document.getElementById("saveBtnTop");
@@ -78,10 +77,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const promptChips = document.querySelectorAll(".prompt-chip");
 
-    const stageTabs = document.querySelectorAll(".stage-tab");
-    const stagePanels = document.querySelectorAll(".stage-panel");
-    const stageNavItems = document.querySelectorAll("[data-stage-target]");
-
     const templateSelectEl = document.getElementById("templateSelect");
     const openTemplateManagerBtn = document.getElementById("openTemplateManagerBtn");
     const templateModalEl = document.getElementById("templateModal");
@@ -100,6 +95,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const pauseRecordingBtn = document.getElementById("pauseRecordingBtn");
     const resumeRecordingBtn = document.getElementById("resumeRecordingBtn");
     const stopRecordingModalBtn = document.getElementById("stopRecordingModalBtn");
+
+    const splitWorkspaceEl = document.getElementById("splitWorkspace");
 
     if (!startRecordingBtn || !transcribeBtn || !generateBtn) {
         console.error("AI Notes initialisation failed: required elements missing.");
@@ -158,6 +155,10 @@ document.addEventListener("DOMContentLoaded", () => {
         toastEl.textContent = message;
         toastEl.classList.add("show");
         setTimeout(() => toastEl.classList.remove("show"), 2600);
+    }
+
+    function showSplitWorkspace() {
+        splitWorkspaceEl?.classList.add("active");
     }
 
     function updateNoteModeBadge() {
@@ -416,20 +417,6 @@ document.addEventListener("DOMContentLoaded", () => {
             .replace(/>/g, "&gt;");
     }
 
-    function setStage(stageName) {
-        stageTabs.forEach(tab => {
-            tab.classList.toggle("active", tab.dataset.stage === stageName);
-        });
-
-        stagePanels.forEach(panel => {
-            panel.classList.toggle("active", panel.id === `stage-${stageName}`);
-        });
-
-        stageNavItems.forEach(item => {
-            item.classList.toggle("nav-item-active", item.dataset.stageTarget === stageName);
-        });
-    }
-
     function clearAllFields() {
         const confirmed = window.confirm("Clear the transcript, generated draft and final note?");
         if (!confirmed) return;
@@ -468,8 +455,6 @@ document.addEventListener("DOMContentLoaded", () => {
         stopTimer();
         resetTimer();
         closeRecordingModal();
-        setRecordingUI(false);
-        setStage("record");
         updateNoteModeBadge();
         rememberSavedSnapshot();
         setSaveState("is-idle");
@@ -1002,7 +987,7 @@ document.addEventListener("DOMContentLoaded", () => {
             rememberSavedSnapshot();
             setSaveState("is-idle");
             setReadyUI("Saved note loaded");
-            setStage("edit");
+            showSplitWorkspace();
             showToast("Saved note opened");
         } catch (error) {
             console.error("Open note error:", error);
@@ -1127,7 +1112,6 @@ document.addEventListener("DOMContentLoaded", () => {
             openRecordingModal();
             updateRecordingModalUI("recording");
             setRecordingUI(true);
-            setStage("record");
             startTimer(0);
             showToast("Recording started");
         } catch (error) {
@@ -1215,7 +1199,7 @@ document.addEventListener("DOMContentLoaded", () => {
             setSaveState("is-idle");
             safeSetText(audioReadyTextEl, "Transcript ready.");
             setReadyUI("Transcript ready");
-            setStage("generate");
+            showSplitWorkspace();
             showToast("Transcript created");
         } catch (error) {
             console.error("Transcribe error:", error);
@@ -1255,7 +1239,6 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!response.ok) {
                 if (handleUnauthorized(response, data)) return;
                 alert(data.detail || "Note generation failed.");
-                setRecordingUI(false);
                 return;
             }
 
@@ -1283,12 +1266,11 @@ document.addEventListener("DOMContentLoaded", () => {
             rememberSavedSnapshot();
             setSaveState("is-idle");
             setReadyUI("Draft ready");
-            setStage("edit");
+            showSplitWorkspace();
             showToast("AI draft generated");
         } catch (error) {
             console.error("Generate error:", error);
             alert("Could not connect to the AI notes service.");
-            setRecordingUI(false);
         } finally {
             updateButtonState(generateBtn, false, "Generate AI note");
         }
@@ -1424,7 +1406,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     alert(data.detail || "Save failed.");
                 }
                 setSaveState("is-dirty", "Save failed");
-                setRecordingUI(false);
                 return;
             }
 
@@ -1448,7 +1429,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 alert("Could not connect to the AI notes service.");
             }
             setSaveState("is-dirty", "Save failed");
-            setRecordingUI(false);
         } finally {
             if (!isAutosave) {
                 updateButtonState(saveBtn, false, "Save note");
@@ -1460,17 +1440,6 @@ document.addEventListener("DOMContentLoaded", () => {
     function toggleTranscript() {
         transcriptVisible = !transcriptVisible;
         transcriptContentEl?.classList.toggle("hidden", !transcriptVisible);
-        if (toggleTranscriptBtn) toggleTranscriptBtn.textContent = "Show / hide";
-    }
-
-    function bindStageNavigation() {
-        stageTabs.forEach(tab => {
-            tab.addEventListener("click", () => setStage(tab.dataset.stage));
-        });
-
-        stageNavItems.forEach(item => {
-            item.addEventListener("click", () => setStage(item.dataset.stageTarget));
-        });
     }
 
     function bindPromptChips() {
@@ -1519,7 +1488,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         transcribeBtn?.addEventListener("click", transcribeAudio);
         generateBtn?.addEventListener("click", generateNote);
-        goToEditBtn?.addEventListener("click", () => setStage("edit"));
 
         applyAiEditBtn?.addEventListener("click", applyAiEdit);
         undoAiEditBtn?.addEventListener("click", undoAiEdit);
@@ -1555,7 +1523,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         bindButtons();
-        bindStageNavigation();
         bindPromptChips();
         bindTemplateManager();
         bindDirtyTracking();
@@ -1563,7 +1530,6 @@ document.addEventListener("DOMContentLoaded", () => {
         resetTimer();
         closeRecordingModal();
         setRecordingUI(false);
-        setStage("record");
         updateNoteModeBadge();
 
         if (safeguardingBoxEl) {
