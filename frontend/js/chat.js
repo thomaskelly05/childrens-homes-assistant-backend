@@ -40,11 +40,11 @@ async function sendMessage() {
                 "Content-Type": "application/json",
                 ...(token ? { Authorization: `Bearer ${token}` } : {})
             },
+            credentials: "include",
             body: JSON.stringify({
                 message: message,
                 conversation_id: window.conversationId || null
-            }),
-            credentials: "include"
+            })
         });
 
         if (!response.ok || !response.body) {
