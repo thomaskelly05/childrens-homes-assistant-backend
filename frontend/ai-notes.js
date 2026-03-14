@@ -49,10 +49,8 @@ const safeguardingTextEl = document.getElementById("safeguardingText");
 
 const recordingStatusEl = document.getElementById("recordingStatus");
 const recordingTimerEl = document.getElementById("recordingTimer");
-const recordingTimerMirrorEl = document.getElementById("recordingTimerMirror");
 const audioReadyTextEl = document.getElementById("audioReadyText");
 const audioPlaybackEl = document.getElementById("audioPlayback");
-const micCircleEl = document.getElementById("micCircle");
 const toastEl = document.getElementById("toast");
 
 const historyListEl = document.getElementById("historyList");
@@ -101,6 +99,14 @@ const templateSectionsListEl = document.getElementById("templateSectionsList");
 const saveTemplateBtn = document.getElementById("saveTemplateBtn");
 const savedTemplatesListEl = document.getElementById("savedTemplatesList");
 
+const recordingModalEl = document.getElementById("recordingModal");
+const recordingModalMicEl = document.getElementById("recordingModalMic");
+const recordingModalTimerEl = document.getElementById("recordingModalTimer");
+const recordingModalStatusEl = document.getElementById("recordingModalStatus");
+const pauseRecordingBtn = document.getElementById("pauseRecordingBtn");
+const resumeRecordingBtn = document.getElementById("resumeRecordingBtn");
+const stopRecordingModalBtn = document.getElementById("stopRecordingModalBtn");
+
 /* -----------------------------
    State
 ----------------------------- */
@@ -138,6 +144,7 @@ let recordedBlob = null;
 let recordingStream = null;
 let timerInterval = null;
 let recordingSeconds = 0;
+let isRecordingPaused = false;
 
 let transcriptVisible = true;
 let previousFinalNote = "";
@@ -228,7 +235,7 @@ function formatTime(totalSeconds) {
 
 function updateTimerDisplays(value) {
     if (recordingTimerEl) recordingTimerEl.textContent = value;
-    if (recordingTimerMirrorEl) recordingTimerMirrorEl.textContent = value;
+    if (recordingModalTimerEl) recordingModalTimerEl.textContent = value;
 }
 
 function safeSetText(el, text) {
@@ -253,14 +260,12 @@ function setStatus(type, text) {
 
 function setRecordingUI(isRecording) {
     if (isRecording) {
-        setStatus("recording", "Recording live");
-        micCircleEl?.classList.add("recording");
+        setStatus("recording", isRecordingPaused ? "Recording paused" : "Recording live");
         updateButtonState(startRecordingBtn, true);
         updateButtonState(stopRecordingBtn, false);
         updateButtonState(transcribeBtn, true);
     } else {
         setStatus("idle", "Not recording");
-        micCircleEl?.classList.remove("recording");
         updateButtonState(startRecordingBtn, false);
         updateButtonState(stopRecordingBtn, true);
     }
@@ -268,12 +273,12 @@ function setRecordingUI(isRecording) {
 
 function setProcessingUI(text = "Processing") {
     setStatus("processing", text);
-    micCircleEl?.classList.remove("recording");
+    safeSetText(recordingModalStatusEl, text);
 }
 
 function setReadyUI(text = "Ready") {
     setStatus("success", text);
-    micCircleEl?.classList.remove("recording");
+    safeSetText(recordingModalStatusEl, text);
 }
 
 function stopTimer() {
@@ -289,7 +294,7 @@ function resetTimer() {
 }
 
 function startTimer() {
-    resetTimer();
+    stopTimer();
     timerInterval = setInterval(() => {
         recordingSeconds += 1;
         updateTimerDisplays(formatTime(recordingSeconds));
@@ -447,19 +452,62 @@ function clearAllFields() {
     recordedBlob = null;
     recordedChunks = [];
     openedNoteId = null;
+    isRecordingPaused = false;
 
     if (autosaveTimeout) {
         clearTimeout(autosaveTimeout);
         autosaveTimeout = null;
     }
 
+    stopTimer();
     resetTimer();
+    closeRecordingModal();
     setRecordingUI(false);
     setStage("record");
     updateNoteModeBadge();
     rememberSavedSnapshot();
     setSaveState("is-idle");
     showToast("Cleared");
+}
+
+/* -----------------------------
+   Recording modal helpers
+----------------------------- */
+function openRecordingModal() {
+    recordingModalEl?.classList.remove("hidden");
+}
+
+function closeRecordingModal() {
+    recordingModalEl?.classList.add("hidden");
+    recordingModalMicEl?.classList.remove("recording", "paused");
+    safeSetText(recordingModalStatusEl, "Recorder ready");
+    updateButtonState(pauseRecordingBtn, true, "Pause");
+    updateButtonState(resumeRecordingBtn, true, "Resume");
+    updateButtonState(stopRecordingModalBtn, true, "Stop");
+}
+
+function updateRecordingModalUI(state) {
+    if (state === "recording") {
+        recordingModalMicEl?.classList.add("recording");
+        recordingModalMicEl?.classList.remove("paused");
+        safeSetText(recordingModalStatusEl, "Recording live");
+        updateButtonState(pauseRecordingBtn, false, "Pause");
+        updateButtonState(resumeRecordingBtn, true, "Resume");
+        updateButtonState(stopRecordingModalBtn, false, "Stop");
+    } else if (state === "paused") {
+        recordingModalMicEl?.classList.remove("recording");
+        recordingModalMicEl?.classList.add("paused");
+        safeSetText(recordingModalStatusEl, "Recording paused");
+        updateButtonState(pauseRecordingBtn, true, "Pause");
+        updateButtonState(resumeRecordingBtn, false, "Resume");
+        updateButtonState(stopRecordingModalBtn, false, "Stop");
+    } else {
+        recordingModalMicEl?.classList.remove("recording", "paused");
+        safeSetText(recordingModalStatusEl, "Recorder ready");
+        updateButtonState(pauseRecordingBtn, true, "Pause");
+        updateButtonState(resumeRecordingBtn, true, "Resume");
+        updateButtonState(stopRecordingModalBtn, true, "Stop");
+    }
 }
 
 /* -----------------------------
@@ -984,6 +1032,7 @@ async function startRecording() {
 
         recordedChunks = [];
         recordedBlob = null;
+        isRecordingPaused = false;
 
         if (audioPlaybackEl) {
             audioPlaybackEl.style.display = "none";
@@ -997,7 +1046,9 @@ async function startRecording() {
         mediaRecorder = new MediaRecorder(recordingStream);
 
         mediaRecorder.ondataavailable = (event) => {
-            if (event.data && event.data.size > 0) recordedChunks.push(event.data);
+            if (event.data && event.data.size > 0) {
+                recordedChunks.push(event.data);
+            }
         };
 
         mediaRecorder.onstop = () => {
@@ -1012,6 +1063,7 @@ async function startRecording() {
             safeSetText(audioReadyTextEl, "Recording ready for transcription.");
             updateButtonState(transcribeBtn, false);
             setReadyUI("Recording ready");
+            closeRecordingModal();
 
             if (recordingStream) {
                 recordingStream.getTracks().forEach(track => track.stop());
@@ -1019,22 +1071,52 @@ async function startRecording() {
         };
 
         mediaRecorder.start();
+        openRecordingModal();
+        updateRecordingModalUI("recording");
         setRecordingUI(true);
         setStage("record");
+        resetTimer();
         startTimer();
         showToast("Recording started");
     } catch (error) {
         console.error("Microphone error:", error);
         alert("Unable to access microphone. Please allow microphone access in your browser.");
+        closeRecordingModal();
     }
 }
 
+function pauseRecording() {
+    if (!mediaRecorder || mediaRecorder.state !== "recording") return;
+
+    mediaRecorder.pause();
+    isRecordingPaused = true;
+    stopTimer();
+    setStatus("processing", "Recording paused");
+    updateRecordingModalUI("paused");
+    showToast("Recording paused");
+}
+
+function resumeRecording() {
+    if (!mediaRecorder || mediaRecorder.state !== "paused") return;
+
+    mediaRecorder.resume();
+    isRecordingPaused = false;
+    startTimer();
+    setStatus("recording", "Recording live");
+    updateRecordingModalUI("recording");
+    showToast("Recording resumed");
+}
+
 function stopRecording() {
-    if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+    }
+    isRecordingPaused = false;
     stopTimer();
     setProcessingUI("Finalising audio");
     updateButtonState(startRecordingBtn, false);
     updateButtonState(stopRecordingBtn, true);
+    updateRecordingModalUI("idle");
     showToast("Recording stopped");
 }
 
@@ -1384,6 +1466,10 @@ function bindDirtyTracking() {
 function bindButtons() {
     startRecordingBtn?.addEventListener("click", startRecording);
     stopRecordingBtn?.addEventListener("click", stopRecording);
+    stopRecordingModalBtn?.addEventListener("click", stopRecording);
+    pauseRecordingBtn?.addEventListener("click", pauseRecording);
+    resumeRecordingBtn?.addEventListener("click", resumeRecording);
+
     transcribeBtn?.addEventListener("click", transcribeAudio);
     generateBtn?.addEventListener("click", generateNote);
     goToEditBtn?.addEventListener("click", () => setStage("edit"));
@@ -1431,6 +1517,7 @@ async function init() {
     bindDirtyTracking();
 
     resetTimer();
+    closeRecordingModal();
     setRecordingUI(false);
     setStage("record");
     updateNoteModeBadge();
