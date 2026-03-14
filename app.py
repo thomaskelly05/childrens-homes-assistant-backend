@@ -23,6 +23,7 @@ from routers.supervision_routes import router as supervision_router
 from routers.tasks_routes import router as tasks_router
 from routers.young_people_routes import router as young_people_router
 from routers.young_people_profile_routes import router as young_people_profile_router
+from routers.young_people_plans_routes import router as young_people_plans_router
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
@@ -63,6 +64,7 @@ app.include_router(supervision_router)
 app.include_router(tasks_router)
 app.include_router(young_people_router)
 app.include_router(young_people_profile_router)
+app.include_router(young_people_plans_router)
 
 app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
 app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
