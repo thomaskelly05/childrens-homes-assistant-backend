@@ -26,7 +26,8 @@ from services.staff_development_service import (
 
 router = APIRouter(
     prefix="/staff-journal",
-    tags=["Staff Journal"]
+    tags=["Staff Journal"],
+    dependencies=[Depends(get_current_user)],
 )
 
 
@@ -38,7 +39,7 @@ router = APIRouter(
 async def create_staff_journal_route(
     payload: StaffJournalCreate,
     conn=Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
     try:
         ensure_staff_journal_table(conn)
@@ -50,13 +51,13 @@ async def create_staff_journal_route(
 
         return {
             "ok": True,
-            "journal": journal
+            "journal": journal,
         }
 
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Could not create journal: {str(e)}"
+            detail=f"Could not create journal: {str(e)}",
         )
 
 
@@ -68,7 +69,7 @@ async def create_staff_journal_route(
 async def list_my_journal_entries_route(
     limit: int = Query(50, ge=1, le=100),
     conn=Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
     try:
         ensure_staff_journal_table(conn)
@@ -77,13 +78,13 @@ async def list_my_journal_entries_route(
         return {
             "ok": True,
             "entries": entries,
-            "user": current_user
+            "user": current_user,
         }
 
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Could not load journal entries: {str(e)}"
+            detail=f"Could not load journal entries: {str(e)}",
         )
 
 
@@ -94,7 +95,7 @@ async def list_my_journal_entries_route(
 @router.get("/me/latest")
 async def get_my_latest_journal_route(
     conn=Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
     try:
         ensure_staff_journal_table(conn)
@@ -103,22 +104,21 @@ async def get_my_latest_journal_route(
         if not journal:
             raise HTTPException(
                 status_code=404,
-                detail="No journal found for this user"
+                detail="No journal found for this user",
             )
 
         return {
             "ok": True,
             "journal": journal,
-            "user": current_user
+            "user": current_user,
         }
 
     except HTTPException:
         raise
-
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Could not load latest journal: {str(e)}"
+            detail=f"Could not load latest journal: {str(e)}",
         )
 
 
@@ -129,7 +129,7 @@ async def get_my_latest_journal_route(
 @router.get("/me/development-plan")
 async def generate_my_development_plan_route(
     conn=Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
     try:
         ensure_staff_journal_table(conn)
@@ -138,7 +138,7 @@ async def generate_my_development_plan_route(
         if not entries:
             raise HTTPException(
                 status_code=404,
-                detail="No journal entries found"
+                detail="No journal entries found",
             )
 
         plan = await generate_staff_pdp(entries)
@@ -146,16 +146,15 @@ async def generate_my_development_plan_route(
         return {
             "ok": True,
             "development_plan": plan,
-            "user": current_user
+            "user": current_user,
         }
 
     except HTTPException:
         raise
-
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Could not generate development plan: {str(e)}"
+            detail=f"Could not generate development plan: {str(e)}",
         )
 
 
@@ -166,7 +165,7 @@ async def generate_my_development_plan_route(
 @router.get("/me/supervision-pack")
 async def generate_my_supervision_pack_route(
     conn=Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
     try:
         ensure_staff_journal_table(conn)
@@ -175,7 +174,7 @@ async def generate_my_supervision_pack_route(
         if not entries:
             raise HTTPException(
                 status_code=404,
-                detail="No journal entries found"
+                detail="No journal entries found",
             )
 
         pack = await generate_supervision_pack(entries)
@@ -183,16 +182,15 @@ async def generate_my_supervision_pack_route(
         return {
             "ok": True,
             "supervision_pack": pack,
-            "user": current_user
+            "user": current_user,
         }
 
     except HTTPException:
         raise
-
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Could not generate supervision pack: {str(e)}"
+            detail=f"Could not generate supervision pack: {str(e)}",
         )
 
 
@@ -203,7 +201,7 @@ async def generate_my_supervision_pack_route(
 @router.get("/{journal_id}")
 async def get_staff_journal_route(
     journal_id: int,
-    conn=Depends(get_db)
+    conn=Depends(get_db),
 ):
     try:
         ensure_staff_journal_table(conn)
@@ -212,21 +210,20 @@ async def get_staff_journal_route(
         if not journal:
             raise HTTPException(
                 status_code=404,
-                detail="Journal not found"
+                detail="Journal not found",
             )
 
         return {
             "ok": True,
-            "journal": journal
+            "journal": journal,
         }
 
     except HTTPException:
         raise
-
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Could not load journal: {str(e)}"
+            detail=f"Could not load journal: {str(e)}",
         )
 
 
@@ -239,7 +236,7 @@ async def update_staff_journal_route(
     journal_id: int,
     payload: StaffJournalUpdate,
     conn=Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
     try:
         ensure_staff_journal_table(conn)
@@ -249,13 +246,13 @@ async def update_staff_journal_route(
         if not existing:
             raise HTTPException(
                 status_code=404,
-                detail="Journal not found"
+                detail="Journal not found",
             )
 
         if int(existing["staff_id"]) != int(current_user["id"]):
             raise HTTPException(
                 status_code=403,
-                detail="You can only edit your own journal entries"
+                detail="You can only edit your own journal entries",
             )
 
         update_data = payload.model_dump(exclude_unset=True)
@@ -263,16 +260,15 @@ async def update_staff_journal_route(
 
         return {
             "ok": True,
-            "journal": journal
+            "journal": journal,
         }
 
     except HTTPException:
         raise
-
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Could not update journal: {str(e)}"
+            detail=f"Could not update journal: {str(e)}",
         )
 
 
@@ -284,7 +280,7 @@ async def update_staff_journal_route(
 async def delete_staff_journal_route(
     journal_id: int,
     conn=Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
     try:
         ensure_staff_journal_table(conn)
@@ -293,34 +289,33 @@ async def delete_staff_journal_route(
         if not existing:
             raise HTTPException(
                 status_code=404,
-                detail="Journal not found"
+                detail="Journal not found",
             )
 
         if int(existing["staff_id"]) != int(current_user["id"]):
             raise HTTPException(
                 status_code=403,
-                detail="You can only delete your own journal entries"
+                detail="You can only delete your own journal entries",
             )
 
         with conn.cursor() as cur:
             cur.execute(
                 "DELETE FROM staff_journal WHERE id = %s",
-                (journal_id,)
+                (journal_id,),
             )
             conn.commit()
 
         return {
             "ok": True,
-            "message": "Journal deleted"
+            "message": "Journal deleted",
         }
 
     except HTTPException:
         raise
-
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Could not delete journal: {str(e)}"
+            detail=f"Could not delete journal: {str(e)}",
         )
 
 
@@ -332,7 +327,7 @@ async def delete_staff_journal_route(
 async def submit_to_manager_dashboard_route(
     journal_id: int,
     conn=Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
     try:
         ensure_staff_journal_table(conn)
@@ -342,13 +337,13 @@ async def submit_to_manager_dashboard_route(
         if not journal:
             raise HTTPException(
                 status_code=404,
-                detail="Journal not found"
+                detail="Journal not found",
             )
 
         if int(journal["staff_id"]) != int(current_user["id"]):
             raise HTTPException(
                 status_code=403,
-                detail="You can only submit your own journal entries"
+                detail="You can only submit your own journal entries",
             )
 
         entries = list_staff_journals(conn, current_user["id"], limit=20)
@@ -363,23 +358,22 @@ async def submit_to_manager_dashboard_route(
             journal_id=journal_id,
             journal_summary=journal_summary,
             development_plan=development_plan,
-            supervision_pack=supervision_pack
+            supervision_pack=supervision_pack,
         )
 
         return {
             "ok": True,
             "message": "Submitted to manager dashboard",
             "submission": submission,
-            "user": current_user
+            "user": current_user,
         }
 
     except HTTPException:
         raise
-
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Could not submit to manager dashboard: {str(e)}"
+            detail=f"Could not submit to manager dashboard: {str(e)}",
         )
 
 
@@ -392,7 +386,7 @@ async def submit_to_manager_dashboard_route(
 async def list_staff_journal_entries_route(
     staff_id: int,
     limit: int = Query(50, ge=1, le=100),
-    conn=Depends(get_db)
+    conn=Depends(get_db),
 ):
     try:
         ensure_staff_journal_table(conn)
@@ -400,20 +394,20 @@ async def list_staff_journal_entries_route(
 
         return {
             "ok": True,
-            "entries": entries
+            "entries": entries,
         }
 
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Could not load journal entries: {str(e)}"
+            detail=f"Could not load journal entries: {str(e)}",
         )
 
 
 @router.get("/staff/{staff_id}/latest")
 async def get_latest_staff_journal_route(
     staff_id: int,
-    conn=Depends(get_db)
+    conn=Depends(get_db),
 ):
     try:
         ensure_staff_journal_table(conn)
@@ -422,19 +416,18 @@ async def get_latest_staff_journal_route(
         if not journal:
             raise HTTPException(
                 status_code=404,
-                detail="No journal found for this staff member"
+                detail="No journal found for this staff member",
             )
 
         return {
             "ok": True,
-            "journal": journal
+            "journal": journal,
         }
 
     except HTTPException:
         raise
-
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Could not load latest journal: {str(e)}"
+            detail=f"Could not load latest journal: {str(e)}",
         )
