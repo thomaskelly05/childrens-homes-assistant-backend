@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 
+from auth.session_user import get_current_user
 from db.connection import get_db
 from db.supervision_db import (
     ensure_supervision_table,
@@ -10,14 +11,15 @@ from db.supervision_db import (
 
 router = APIRouter(
     prefix="/supervision",
-    tags=["Supervision"]
+    tags=["Supervision"],
+    dependencies=[Depends(get_current_user)],
 )
 
 
 @router.get("/submissions")
 async def list_supervision_submissions_route(
     limit: int = Query(50, ge=1, le=100),
-    conn=Depends(get_db)
+    conn=Depends(get_db),
 ):
     try:
         ensure_supervision_table(conn)
@@ -25,20 +27,20 @@ async def list_supervision_submissions_route(
 
         return {
             "ok": True,
-            "submissions": submissions
+            "submissions": submissions,
         }
 
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Could not load supervision submissions: {str(e)}"
+            detail=f"Could not load supervision submissions: {str(e)}",
         )
 
 
 @router.get("/submissions/{submission_id}")
 async def get_supervision_submission_route(
     submission_id: int,
-    conn=Depends(get_db)
+    conn=Depends(get_db),
 ):
     try:
         ensure_supervision_table(conn)
@@ -47,28 +49,27 @@ async def get_supervision_submission_route(
         if not submission:
             raise HTTPException(
                 status_code=404,
-                detail="Supervision submission not found"
+                detail="Supervision submission not found",
             )
 
         return {
             "ok": True,
-            "submission": submission
+            "submission": submission,
         }
 
     except HTTPException:
         raise
-
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Could not load supervision submission: {str(e)}"
+            detail=f"Could not load supervision submission: {str(e)}",
         )
 
 
 @router.post("/submissions/{submission_id}/review")
 async def mark_submission_reviewed_route(
     submission_id: int,
-    conn=Depends(get_db)
+    conn=Depends(get_db),
 ):
     try:
         ensure_supervision_table(conn)
@@ -77,19 +78,18 @@ async def mark_submission_reviewed_route(
         if not submission:
             raise HTTPException(
                 status_code=404,
-                detail="Supervision submission not found"
+                detail="Supervision submission not found",
             )
 
         return {
             "ok": True,
-            "submission": submission
+            "submission": submission,
         }
 
     except HTTPException:
         raise
-
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Could not mark submission as reviewed: {str(e)}"
+            detail=f"Could not mark submission as reviewed: {str(e)}",
         )
