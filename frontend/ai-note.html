@@ -11,6 +11,141 @@
     <link rel="stylesheet" href="/css/layout.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/ai-notes.css">
+
+    <style>
+        .record-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .record-visual-card {
+            display: none;
+        }
+
+        .recording-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.58);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            z-index: 1000;
+        }
+
+        .recording-modal-overlay.hidden {
+            display: none;
+        }
+
+        .recording-modal {
+            width: min(560px, 100%);
+            background: #ffffff;
+            border-radius: 24px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: 0 30px 80px rgba(15, 23, 42, 0.24);
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .recording-modal-header {
+            margin-bottom: 1rem;
+        }
+
+        .recording-modal-header h2 {
+            margin: 0 0 0.4rem;
+            font-size: 1.4rem;
+            color: #0f172a;
+        }
+
+        .recording-modal-header p {
+            margin: 0;
+            color: #475467;
+            line-height: 1.5;
+        }
+
+        .recording-mic-wrap {
+            display: grid;
+            place-items: center;
+            gap: 1rem;
+            padding: 1.25rem 0 1rem;
+        }
+
+        .recording-modal-mic {
+            width: 140px;
+            height: 140px;
+            border-radius: 999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at 30% 30%, #60a5fa, #2563eb);
+            box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.45);
+            color: white;
+            font-size: 3rem;
+        }
+
+        .recording-modal-mic.recording {
+            animation: pulseBlue 1.6s infinite;
+        }
+
+        .recording-modal-mic.paused {
+            background: radial-gradient(circle at 30% 30%, #93c5fd, #3b82f6);
+            opacity: 0.78;
+            animation: none;
+        }
+
+        @keyframes pulseBlue {
+            0% {
+                box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.45);
+                transform: scale(1);
+            }
+            70% {
+                box-shadow: 0 0 0 26px rgba(37, 99, 235, 0);
+                transform: scale(1.03);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+                transform: scale(1);
+            }
+        }
+
+        .recording-modal-timer {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            color: #0f172a;
+        }
+
+        .recording-modal-status {
+            font-size: 0.95rem;
+            color: #475467;
+            min-height: 1.4rem;
+        }
+
+        .recording-modal-actions {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 720px) {
+            .recording-modal {
+                padding: 1.15rem;
+            }
+
+            .recording-modal-mic {
+                width: 118px;
+                height: 118px;
+                font-size: 2.4rem;
+            }
+
+            .recording-modal-timer {
+                font-size: 1.65rem;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="app-shell">
@@ -124,21 +259,6 @@
                         <p id="audioReadyText" class="helper-text">No recording yet.</p>
 
                         <audio id="audioPlayback" controls style="display:none;"></audio>
-                    </div>
-
-                    <div class="record-visual-card">
-                        <div class="mic-circle" id="micCircle">
-                            <span class="mic-icon">🎤</span>
-                        </div>
-
-                        <div class="live-status-card">
-                            <div class="live-status-row">
-                                <span class="live-dot"></span>
-                                <span>Recorder ready</span>
-                            </div>
-                            <div id="recordingTimerMirror" class="live-time">00:00</div>
-                            <p class="live-help">After transcription, continue to the Generate stage.</p>
-                        </div>
                     </div>
                 </div>
             </section>
@@ -280,6 +400,29 @@
             <div class="saved-templates-box">
                 <h3>Your custom templates</h3>
                 <div id="savedTemplatesList" class="saved-templates-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="recordingModal" class="recording-modal-overlay hidden">
+        <div class="recording-modal" role="dialog" aria-modal="true" aria-labelledby="recordingModalTitle">
+            <div class="recording-modal-header">
+                <h2 id="recordingModalTitle">Recording in progress</h2>
+                <p>Use pause, resume, or stop when you are ready to finish the recording.</p>
+            </div>
+
+            <div class="recording-mic-wrap">
+                <div id="recordingModalMic" class="recording-modal-mic">
+                    🎤
+                </div>
+                <div id="recordingModalTimer" class="recording-modal-timer">00:00</div>
+                <div id="recordingModalStatus" class="recording-modal-status">Recorder ready</div>
+            </div>
+
+            <div class="recording-modal-actions">
+                <button id="pauseRecordingBtn" class="btn btn-light" type="button" disabled>Pause</button>
+                <button id="resumeRecordingBtn" class="btn btn-light" type="button" disabled>Resume</button>
+                <button id="stopRecordingModalBtn" class="btn btn-danger" type="button" disabled>Stop</button>
             </div>
         </div>
     </div>
