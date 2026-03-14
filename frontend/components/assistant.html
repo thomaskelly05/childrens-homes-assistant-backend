@@ -29,7 +29,7 @@
             color: #fff;
             border-right: 1px solid rgba(255,255,255,0.08);
             display: grid;
-            grid-template-rows: auto auto auto 1fr auto;
+            grid-template-rows: auto auto 1fr auto;
             gap: 1rem;
             padding: 1rem;
             min-height: 0;
@@ -72,32 +72,6 @@
             font-size: 0.95rem;
             font-weight: 700;
             color: rgba(255,255,255,0.88);
-        }
-
-        .upload-panel {
-            display: grid;
-            gap: 0.65rem;
-            padding: 0.85rem;
-            border: 1px solid rgba(255,255,255,0.12);
-            background: rgba(255,255,255,0.06);
-            border-radius: 14px;
-        }
-
-        .upload-panel label {
-            color: #fff;
-            font-weight: 700;
-        }
-
-        .upload-panel input[type="file"] {
-            background: rgba(255,255,255,0.08);
-            color: #fff;
-            border: 1px solid rgba(255,255,255,0.16);
-        }
-
-        .upload-meta {
-            font-size: 0.86rem;
-            color: rgba(255,255,255,0.76);
-            line-height: 1.45;
         }
 
         .history-list {
@@ -283,14 +257,74 @@
             font-size: 0.82rem;
         }
 
+        .assistant-input-wrap {
+            border-top: 1px solid var(--border);
+            background: rgba(255,255,255,0.94);
+            padding: 0.85rem 1.5rem 1.1rem;
+            display: grid;
+            gap: 0.55rem;
+        }
+
+        .document-chip-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            min-height: 1.8rem;
+        }
+
+        .document-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            background: #eef4ff;
+            border: 1px solid #d7e5ff;
+            color: var(--text);
+            border-radius: 999px;
+            padding: 0.35rem 0.7rem;
+            font-size: 0.86rem;
+        }
+
+        .document-chip.hidden {
+            display: none !important;
+        }
+
+        .document-chip-remove {
+            border: none;
+            background: transparent;
+            color: var(--text-soft);
+            cursor: pointer;
+            font-size: 0.95rem;
+            line-height: 1;
+            padding: 0;
+        }
+
         .assistant-inputbar {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
+            grid-template-columns: auto minmax(0, 1fr) auto;
             gap: 0.75rem;
             align-items: center;
-            padding: 1rem 1.5rem 1.25rem;
-            border-top: 1px solid var(--border);
-            background: rgba(255,255,255,0.92);
+        }
+
+        .upload-icon-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: #fff;
+            color: var(--text);
+            cursor: pointer;
+            font-size: 1.35rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .upload-icon-btn:hover {
+            border-color: var(--primary);
+            background: #eef4ff;
         }
 
         #chat-input {
@@ -308,6 +342,12 @@
             box-shadow: 0 0 0 4px rgba(47,92,255,0.12);
         }
 
+        .upload-status {
+            font-size: 0.82rem;
+            color: var(--text-soft);
+            min-height: 1rem;
+        }
+
         @media (max-width: 980px) {
             .assistant-shell {
                 grid-template-columns: 1fr;
@@ -315,7 +355,7 @@
 
             .assistant-history {
                 min-height: auto;
-                grid-template-rows: auto auto auto auto auto;
+                grid-template-rows: auto auto 1fr auto;
             }
 
             .history-list {
@@ -326,13 +366,9 @@
         @media (max-width: 720px) {
             .assistant-topbar,
             .assistant-chat,
-            .assistant-inputbar {
+            .assistant-input-wrap {
                 padding-left: 1rem;
                 padding-right: 1rem;
-            }
-
-            .assistant-inputbar {
-                grid-template-columns: 1fr;
             }
 
             .message-block {
@@ -355,13 +391,6 @@
             <div class="assistant-history-top">
                 <button id="newConversationBtn" class="button" type="button">New chat</button>
                 <h3 class="history-title">Chat history</h3>
-            </div>
-
-            <div class="upload-panel">
-                <label for="documentUpload">Upload document</label>
-                <input id="documentUpload" type="file" accept=".txt,.docx,.pdf" />
-                <div id="uploadStatus" class="upload-meta">No document loaded.</div>
-                <button id="clearDocumentBtn" class="button button--secondary" type="button">Clear document</button>
             </div>
 
             <div id="conversationList" class="history-list">
@@ -392,9 +421,22 @@
                 </div>
             </section>
 
-            <div class="assistant-inputbar">
-                <input id="chat-input" type="text" placeholder="Message IndiCare..." />
-                <button id="send-btn" class="button" type="button">Send</button>
+            <div class="assistant-input-wrap">
+                <div class="document-chip-row">
+                    <div id="documentChip" class="document-chip hidden">
+                        <span id="documentChipText">No document</span>
+                        <button id="clearDocumentBtn" class="document-chip-remove" type="button">×</button>
+                    </div>
+                </div>
+
+                <div class="assistant-inputbar">
+                    <label for="documentUpload" class="upload-icon-btn" title="Upload document">+</label>
+                    <input id="documentUpload" type="file" accept=".txt,.docx,.pdf" hidden />
+                    <input id="chat-input" type="text" placeholder="Message IndiCare..." />
+                    <button id="send-btn" class="button" type="button">Send</button>
+                </div>
+
+                <div id="uploadStatus" class="upload-status"></div>
             </div>
         </main>
     </div>
