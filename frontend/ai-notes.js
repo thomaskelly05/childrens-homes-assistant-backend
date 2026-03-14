@@ -1,5 +1,5 @@
-const API_BASE = "https://childrens-homes-assistant-backend-new.onrender.com";
-const ACCESS_TOKEN_KEY = "indicare_access_token";
+const API_BASE = window.location.origin;
+const ACCESS_TOKEN_KEY = "access_token";
 
 /* -----------------------------
    Auth helpers
@@ -24,8 +24,9 @@ function getAuthHeaders(extraHeaders = {}) {
 function handleUnauthorized(response, data = null) {
     if (response.status === 401) {
         localStorage.removeItem(ACCESS_TOKEN_KEY);
+        localStorage.removeItem("current_user");
         alert((data && data.detail) || "Your session has expired. Please log in again.");
-        window.location.href = "/login.html";
+        window.location.href = "/login";
         return true;
     }
     return false;
@@ -556,8 +557,7 @@ function getAllTemplates() {
 }
 
 function renderTemplateOptions() {
-    const templates = getAllTemplates();
-    templateSelectEl.innerHTML = templates
+    templateSelectEl.innerHTML = getAllTemplates()
         .map(template => `<option value="${template.id}">${escapeHtml(template.name)}</option>`)
         .join("");
 }
@@ -1420,7 +1420,7 @@ function bindButtons() {
 ----------------------------- */
 async function init() {
     if (!getAccessToken()) {
-        window.location.href = "/login.html";
+        window.location.href = "/login";
         return;
     }
 
