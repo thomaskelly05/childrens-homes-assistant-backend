@@ -10,6 +10,7 @@ const dailyNotesPanel = document.getElementById("tab-daily-notes");
 const incidentsPanel = document.getElementById("tab-incidents");
 const healthPanel = document.getElementById("tab-health");
 const educationPanel = document.getElementById("tab-education");
+const familyPanel = document.getElementById("tab-family");
 
 let youngPeople = [];
 let selectedYoungPerson = null;
@@ -22,6 +23,7 @@ let selectedHealthRecords = [];
 let selectedMedicationProfiles = [];
 let selectedMedicationRecords = [];
 let selectedEducationRecords = [];
+let selectedFamilyRecords = [];
 
 async function loadYoungPeople() {
   const res = await fetch("/young-people");
@@ -53,6 +55,7 @@ async function loadYoungPerson(id) {
     selectedMedicationProfiles = [];
     selectedMedicationRecords = [];
     selectedEducationRecords = [];
+    selectedFamilyRecords = [];
     clearDisplay();
     return;
   }
@@ -67,7 +70,8 @@ async function loadYoungPerson(id) {
     healthRes,
     medicationProfilesRes,
     medicationRecordsRes,
-    educationRes
+    educationRes,
+    familyRes
   ] = await Promise.all([
     fetch(`/young-people/${id}`),
     fetch(`/young-people/${id}/profile`),
@@ -78,7 +82,8 @@ async function loadYoungPerson(id) {
     fetch(`/young-people/${id}/health`),
     fetch(`/young-people/${id}/medication-profiles`),
     fetch(`/young-people/${id}/medication-records`),
-    fetch(`/young-people/${id}/education`)
+    fetch(`/young-people/${id}/education`),
+    fetch(`/young-people/${id}/family`)
   ]);
 
   if (
@@ -91,7 +96,8 @@ async function loadYoungPerson(id) {
     !healthRes.ok ||
     !medicationProfilesRes.ok ||
     !medicationRecordsRes.ok ||
-    !educationRes.ok
+    !educationRes.ok ||
+    !familyRes.ok
   ) return;
 
   selectedYoungPerson = await personRes.json();
@@ -104,6 +110,7 @@ async function loadYoungPerson(id) {
   selectedMedicationProfiles = await medicationProfilesRes.json();
   selectedMedicationRecords = await medicationRecordsRes.json();
   selectedEducationRecords = await educationRes.json();
+  selectedFamilyRecords = await familyRes.json();
 
   renderYoungPerson();
 }
@@ -120,6 +127,7 @@ function clearDisplay() {
   incidentsPanel.innerHTML = `<div class="panel-card"><h2>Incidents</h2><p>Select a young person to load incidents.</p></div>`;
   healthPanel.innerHTML = `<div class="panel-card"><h2>Health</h2><p>Select a young person to load health records.</p></div>`;
   educationPanel.innerHTML = `<div class="panel-card"><h2>Education</h2><p>Select a young person to load education records.</p></div>`;
+  familyPanel.innerHTML = `<div class="panel-card"><h2>Family</h2><p>Select a young person to load family records.</p></div>`;
 }
 
 function formatDate(value) {
@@ -383,6 +391,35 @@ function renderEducation() {
   `;
 }
 
+function renderFamily() {
+  if (!selectedFamilyRecords.length) {
+    familyPanel.innerHTML = `<div class="panel-card"><h2>Family</h2><p>No family contact records recorded yet.</p></div>`;
+    return;
+  }
+
+  familyPanel.innerHTML = `
+    <div class="panel-grid">
+      ${selectedFamilyRecords.map(record => `
+        <div class="panel-card">
+          <h2>${record.contact_person}</h2>
+          <div class="profile-grid">
+            <div class="profile-label">Date/time</div><div class="profile-value">${formatDateTime(record.contact_datetime)}</div>
+            <div class="profile-label">Contact type</div><div class="profile-value">${record.contact_type || "—"}</div>
+            <div class="profile-label">Supervision</div><div class="profile-value">${record.supervision_level || "—"}</div>
+            <div class="profile-label">Location</div><div class="profile-value">${record.location || "—"}</div>
+            <div class="profile-label">Pre-contact presentation</div><div class="profile-value">${record.pre_contact_presentation || "—"}</div>
+            <div class="profile-label">Post-contact presentation</div><div class="profile-value">${record.post_contact_presentation || "—"}</div>
+            <div class="profile-label">Child voice</div><div class="profile-value">${record.child_voice || "—"}</div>
+            <div class="profile-label">Concerns</div><div class="profile-value">${record.concerns || "—"}</div>
+            <div class="profile-label">Follow-up required</div><div class="profile-value">${record.follow_up_required ? "Yes" : "No"}</div>
+            <div class="profile-label">Created by</div><div class="profile-value">${record.created_by_first_name ? `${record.created_by_first_name} ${record.created_by_last_name || ""}` : "—"}</div>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
 function renderYoungPerson() {
   if (!selectedYoungPerson) return;
 
@@ -495,6 +532,7 @@ function renderYoungPerson() {
   renderIncidents();
   renderHealth();
   renderEducation();
+  renderFamily();
 }
 
 function setupTabs() {
