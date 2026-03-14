@@ -81,6 +81,11 @@ def serve_login_html():
     return FileResponse(os.path.join(FRONTEND_DIR, "login.html"))
 
 
+@app.get("/assistant")
+def serve_assistant():
+    return FileResponse(os.path.join(COMPONENTS_DIR, "assistant.html"))
+
+
 @app.get("/journal")
 def serve_journal():
     return FileResponse(os.path.join(FRONTEND_DIR, "journal.html"))
