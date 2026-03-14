@@ -8,6 +8,7 @@ const plansPanel = document.getElementById("tab-plans");
 const riskPanel = document.getElementById("tab-risk");
 const dailyNotesPanel = document.getElementById("tab-daily-notes");
 const incidentsPanel = document.getElementById("tab-incidents");
+const healthPanel = document.getElementById("tab-health");
 
 let youngPeople = [];
 let selectedYoungPerson = null;
@@ -16,6 +17,9 @@ let selectedPlans = [];
 let selectedRisks = [];
 let selectedDailyNotes = [];
 let selectedIncidents = [];
+let selectedHealthRecords = [];
+let selectedMedicationProfiles = [];
+let selectedMedicationRecords = [];
 
 async function loadYoungPeople() {
   const res = await fetch("/young-people");
@@ -43,20 +47,46 @@ async function loadYoungPerson(id) {
     selectedRisks = [];
     selectedDailyNotes = [];
     selectedIncidents = [];
+    selectedHealthRecords = [];
+    selectedMedicationProfiles = [];
+    selectedMedicationRecords = [];
     clearDisplay();
     return;
   }
 
-  const [personRes, profileRes, plansRes, risksRes, dailyNotesRes, incidentsRes] = await Promise.all([
+  const [
+    personRes,
+    profileRes,
+    plansRes,
+    risksRes,
+    dailyNotesRes,
+    incidentsRes,
+    healthRes,
+    medicationProfilesRes,
+    medicationRecordsRes
+  ] = await Promise.all([
     fetch(`/young-people/${id}`),
     fetch(`/young-people/${id}/profile`),
     fetch(`/young-people/${id}/plans`),
     fetch(`/young-people/${id}/risks`),
     fetch(`/young-people/${id}/daily-notes`),
-    fetch(`/young-people/${id}/incidents`)
+    fetch(`/young-people/${id}/incidents`),
+    fetch(`/young-people/${id}/health`),
+    fetch(`/young-people/${id}/medication-profiles`),
+    fetch(`/young-people/${id}/medication-records`)
   ]);
 
-  if (!personRes.ok || !profileRes.ok || !plansRes.ok || !risksRes.ok || !dailyNotesRes.ok || !incidentsRes.ok) return;
+  if (
+    !personRes.ok ||
+    !profileRes.ok ||
+    !plansRes.ok ||
+    !risksRes.ok ||
+    !dailyNotesRes.ok ||
+    !incidentsRes.ok ||
+    !healthRes.ok ||
+    !medicationProfilesRes.ok ||
+    !medicationRecordsRes.ok
+  ) return;
 
   selectedYoungPerson = await personRes.json();
   selectedProfile = await profileRes.json();
@@ -64,6 +94,9 @@ async function loadYoungPerson(id) {
   selectedRisks = await risksRes.json();
   selectedDailyNotes = await dailyNotesRes.json();
   selectedIncidents = await incidentsRes.json();
+  selectedHealthRecords = await healthRes.json();
+  selectedMedicationProfiles = await medicationProfilesRes.json();
+  selectedMedicationRecords = await medicationRecordsRes.json();
 
   renderYoungPerson();
 }
@@ -78,6 +111,7 @@ function clearDisplay() {
   riskPanel.innerHTML = `<div class="panel-card"><h2>Risk</h2><p>Select a young person to load risk assessments.</p></div>`;
   dailyNotesPanel.innerHTML = `<div class="panel-card"><h2>Daily Notes</h2><p>Select a young person to load daily notes.</p></div>`;
   incidentsPanel.innerHTML = `<div class="panel-card"><h2>Incidents</h2><p>Select a young person to load incidents.</p></div>`;
+  healthPanel.innerHTML = `<div class="panel-card"><h2>Health</h2><p>Select a young person to load health records.</p></div>`;
 }
 
 function formatDate(value) {
@@ -238,6 +272,81 @@ function renderIncidents() {
   `;
 }
 
+function renderHealth() {
+  const healthCards = [];
+  const medicationCards = [];
+
+  if (selectedHealthRecords.length) {
+    healthCards.push(...selectedHealthRecords.map(record => `
+      <div class="panel-card">
+        <h2>${record.title}</h2>
+        <div class="profile-grid">
+          <div class="profile-label">Type</div><div class="profile-value">${record.record_type || "—"}</div>
+          <div class="profile-label">Event date/time</div><div class="profile-value">${formatDateTime(record.event_datetime)}</div>
+          <div class="profile-label">Summary</div><div class="profile-value">${record.summary || "—"}</div>
+          <div class="profile-label">Professional</div><div class="profile-value">${record.professional_name || "—"}</div>
+          <div class="profile-label">Outcome</div><div class="profile-value">${record.outcome || "—"}</div>
+          <div class="profile-label">Follow-up required</div><div class="profile-value">${record.follow_up_required ? "Yes" : "No"}</div>
+          <div class="profile-label">Next action date</div><div class="profile-value">${formatDate(record.next_action_date)}</div>
+          <div class="profile-label">Created by</div><div class="profile-value">${record.created_by_first_name ? `${record.created_by_first_name} ${record.created_by_last_name || ""}` : "—"}</div>
+        </div>
+      </div>
+    `));
+  }
+
+  if (selectedMedicationProfiles.length) {
+    medicationCards.push(...selectedMedicationProfiles.map(profile => `
+      <div class="panel-card">
+        <h2>${profile.medication_name}</h2>
+        <div class="profile-grid">
+          <div class="profile-label">Dosage</div><div class="profile-value">${profile.dosage || "—"}</div>
+          <div class="profile-label">Route</div><div class="profile-value">${profile.route || "—"}</div>
+          <div class="profile-label">Frequency</div><div class="profile-value">${profile.frequency || "—"}</div>
+          <div class="profile-label">PRN guidance</div><div class="profile-value">${profile.prn_guidance || "—"}</div>
+          <div class="profile-label">Prescribed by</div><div class="profile-value">${profile.prescribed_by || "—"}</div>
+          <div class="profile-label">Start date</div><div class="profile-value">${formatDate(profile.start_date)}</div>
+          <div class="profile-label">End date</div><div class="profile-value">${formatDate(profile.end_date)}</div>
+          <div class="profile-label">Active</div><div class="profile-value">${profile.is_active ? "Yes" : "No"}</div>
+          <div class="profile-label">Notes</div><div class="profile-value">${profile.notes || "—"}</div>
+        </div>
+      </div>
+    `));
+  }
+
+  if (selectedMedicationRecords.length) {
+    medicationCards.push(...selectedMedicationRecords.map(record => `
+      <div class="panel-card">
+        <h2>${record.medication_name}</h2>
+        <div class="profile-grid">
+          <div class="profile-label">Scheduled time</div><div class="profile-value">${formatDateTime(record.scheduled_time)}</div>
+          <div class="profile-label">Administered time</div><div class="profile-value">${formatDateTime(record.administered_time)}</div>
+          <div class="profile-label">Dose</div><div class="profile-value">${record.dose || "—"}</div>
+          <div class="profile-label">Route</div><div class="profile-value">${record.route || "—"}</div>
+          <div class="profile-label">Status</div><div class="profile-value">${record.status || "—"}</div>
+          <div class="profile-label">Refusal reason</div><div class="profile-value">${record.refusal_reason || "—"}</div>
+          <div class="profile-label">Omission reason</div><div class="profile-value">${record.omission_reason || "—"}</div>
+          <div class="profile-label">Error flag</div><div class="profile-value">${record.error_flag ? "Yes" : "No"}</div>
+          <div class="profile-label">Error details</div><div class="profile-value">${record.error_details || "—"}</div>
+          <div class="profile-label">Manager review</div><div class="profile-value">${record.manager_review_status || "—"}</div>
+          <div class="profile-label">Administered by</div><div class="profile-value">${record.administered_by_first_name ? `${record.administered_by_first_name} ${record.administered_by_last_name || ""}` : "—"}</div>
+        </div>
+      </div>
+    `));
+  }
+
+  if (!healthCards.length && !medicationCards.length) {
+    healthPanel.innerHTML = `<div class="panel-card"><h2>Health</h2><p>No health or medication records recorded yet.</p></div>`;
+    return;
+  }
+
+  healthPanel.innerHTML = `
+    <div class="panel-grid">
+      ${healthCards.join("")}
+      ${medicationCards.join("")}
+    </div>
+  `;
+}
+
 function renderYoungPerson() {
   if (!selectedYoungPerson) return;
 
@@ -348,6 +457,7 @@ function renderYoungPerson() {
   renderRisks();
   renderDailyNotes();
   renderIncidents();
+  renderHealth();
 }
 
 function setupTabs() {
