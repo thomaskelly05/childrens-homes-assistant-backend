@@ -22,6 +22,7 @@ from routers.staff_journal_routes import router as staff_journal_router
 from routers.supervision_routes import router as supervision_router
 from routers.tasks_routes import router as tasks_router
 from routers.young_people_routes import router as young_people_router
+from routers.young_people_profile_routes import router as young_people_profile_router
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
@@ -44,7 +45,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# API routers
 app.include_router(auth_router)
 app.include_router(account_router)
 app.include_router(admin_router)
@@ -62,8 +62,8 @@ app.include_router(staff_journal_router)
 app.include_router(supervision_router)
 app.include_router(tasks_router)
 app.include_router(young_people_router)
+app.include_router(young_people_profile_router)
 
-# Static mounts
 app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
 app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
 app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
@@ -145,7 +145,6 @@ def serve_ai_notes_js():
     return FileResponse(os.path.join(FRONTEND_DIR, "ai-notes.js"))
 
 
-# Young People basic page
 @app.get("/young-people-page")
 def serve_young_people():
     return FileResponse(os.path.join(FRONTEND_DIR, "young-people.html"))
@@ -156,7 +155,6 @@ def serve_young_people_html():
     return FileResponse(os.path.join(FRONTEND_DIR, "young-people.html"))
 
 
-# Young Person shell workspace page
 @app.get("/young-people-shell")
 def serve_young_people_shell():
     return FileResponse(os.path.join(FRONTEND_DIR, "young-people-shell.html"))
