@@ -29,15 +29,15 @@
       </div>
 
       <nav class="sidebar__nav">
-        <button class="nav-link is-active" data-view="dashboard">Dashboard</button>
-        <button class="nav-link" data-view="chat">Assistant</button>
-        <button class="nav-link" data-view="tasks">Tasks</button>
-        <button class="nav-link" data-view="handover">Handover</button>
-        <button class="nav-link" data-view="journal">Staff Journal</button>
-        <button class="nav-link" data-view="supervision">Supervision</button>
-        <button class="nav-link" data-view="reports">Reports</button>
-        <button class="nav-link" data-view="documents">Documents</button>
-        <button class="nav-link" data-view="account">My Account</button>
+        <button class="nav-link is-active" data-view="dashboard" type="button">Dashboard</button>
+        <button class="nav-link" data-view="chat" type="button">Assistant</button>
+        <button class="nav-link" data-view="tasks" type="button">Tasks</button>
+        <button class="nav-link" data-view="handover" type="button">Handover</button>
+        <button class="nav-link" data-view="journal" type="button">Staff Journal</button>
+        <button class="nav-link" data-view="supervision" type="button">Supervision</button>
+        <button class="nav-link" data-view="reports" type="button">Reports</button>
+        <button class="nav-link" data-view="documents" type="button">Documents</button>
+        <button class="nav-link" data-view="account" type="button">My Account</button>
       </nav>
 
       <div class="sidebar__footer">
@@ -51,16 +51,16 @@
       <header class="topbar">
         <div>
           <h2 id="pageTitle">Dashboard</h2>
-          <p id="pageSubtitle">Welcome to IndiCare</p>
+          <p id="pageSubtitle">Overview of your workspace</p>
         </div>
 
         <div class="topbar__actions">
-          <span id="userBadge" class="user-badge">Loading user...</span>
+          <span id="userBadge" class="user-badge">Loading account...</span>
         </div>
       </header>
 
       <section id="workspace" class="workspace">
-        <div id="loadingState" class="card">
+        <div id="loadingState" class="card hidden">
           <h3>Loading workspace...</h3>
           <p>Please wait while IndiCare connects.</p>
         </div>
@@ -83,24 +83,24 @@
 
             <div class="card">
               <h3>Account</h3>
-              <div id="accountSummary">Loading account details...</div>
+              <div id="accountSummary">Your account details will appear here.</div>
             </div>
           </div>
 
           <div class="grid grid--3">
             <div class="card">
               <h3>Tasks</h3>
-              <div id="tasksPreview">Loading tasks...</div>
+              <div id="tasksPreview">Your current tasks will appear here.</div>
             </div>
 
             <div class="card">
               <h3>Handover</h3>
-              <div id="handoverPreview">Loading handover...</div>
+              <div id="handoverPreview">Recent handover notes will appear here.</div>
             </div>
 
             <div class="card">
               <h3>Latest journal</h3>
-              <div id="journalPreview">Loading journal...</div>
+              <div id="journalPreview">Your latest journal entry will appear here.</div>
             </div>
           </div>
         </div>
@@ -108,7 +108,7 @@
         <div id="chatView" class="view hidden">
           <div class="card">
             <h3>Assistant</h3>
-            <p>Open the assistant workspace.</p>
+            <p>Open the assistant workspace for AI-supported guidance and writing support.</p>
             <a class="button" href="/components/assistant.html">Open assistant</a>
           </div>
         </div>
@@ -116,14 +116,14 @@
         <div id="tasksView" class="view hidden">
           <div class="card">
             <h3>Tasks</h3>
-            <div id="tasksList">Loading tasks...</div>
+            <div id="tasksList">Your task list will appear here.</div>
           </div>
         </div>
 
         <div id="handoverView" class="view hidden">
           <div class="card">
             <h3>Recent handover</h3>
-            <div id="handoverList">Loading handover...</div>
+            <div id="handoverList">Recent handover notes will appear here.</div>
           </div>
         </div>
 
@@ -138,7 +138,7 @@
         <div id="supervisionView" class="view hidden">
           <div class="card">
             <h3>Supervision</h3>
-            <p>Open the supervision page to review submissions.</p>
+            <p>Open the supervision page to review submissions and development records.</p>
             <a class="button" href="/supervision">Open supervision</a>
           </div>
         </div>
@@ -147,16 +147,20 @@
           <div class="card">
             <h3>Reports</h3>
             <form id="incidentReportForm" class="stack">
-              <label for="incidentDescription">Incident description</label>
-              <textarea
-                id="incidentDescription"
-                name="description"
-                rows="8"
-                placeholder="Enter the incident details here..."
-                required
-              ></textarea>
+              <div>
+                <label for="incidentDescription">Incident description</label>
+                <textarea
+                  id="incidentDescription"
+                  name="description"
+                  rows="8"
+                  placeholder="Enter the incident details here..."
+                  required
+                ></textarea>
+              </div>
+
               <button class="button" type="submit">Generate incident report</button>
             </form>
+
             <div id="incidentReportOutput" class="output"></div>
           </div>
         </div>
@@ -165,24 +169,28 @@
           <div class="card">
             <h3>Documents</h3>
             <form id="documentForm" class="stack">
-              <label for="documentType">Document type</label>
-              <select id="documentType" name="type" required>
-                <option value="incident">Incident Report</option>
-                <option value="risk">Risk Assessment</option>
-                <option value="daily-log">Daily Log</option>
-                <option value="handover">Shift Handover</option>
-                <option value="safeguarding">Safeguarding Record</option>
-                <option value="reflection">Reflective Practice</option>
-              </select>
+              <div>
+                <label for="documentType">Document type</label>
+                <select id="documentType" name="type" required>
+                  <option value="incident">Incident Report</option>
+                  <option value="risk">Risk Assessment</option>
+                  <option value="daily-log">Daily Log</option>
+                  <option value="handover">Shift Handover</option>
+                  <option value="safeguarding">Safeguarding Record</option>
+                  <option value="reflection">Reflective Practice</option>
+                </select>
+              </div>
 
-              <label for="documentDescription">Description</label>
-              <textarea
-                id="documentDescription"
-                name="description"
-                rows="8"
-                placeholder="Enter the information to build the document..."
-                required
-              ></textarea>
+              <div>
+                <label for="documentDescription">Description</label>
+                <textarea
+                  id="documentDescription"
+                  name="description"
+                  rows="8"
+                  placeholder="Enter the information to build the document..."
+                  required
+                ></textarea>
+              </div>
 
               <button class="button" type="submit">Generate document</button>
             </form>
@@ -194,7 +202,7 @@
         <div id="accountView" class="view hidden">
           <div class="card">
             <h3>My account</h3>
-            <div id="accountDetails">Loading account...</div>
+            <div id="accountDetails">Your account details will appear here.</div>
           </div>
         </div>
       </section>
