@@ -1,12 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from fastapi.responses import StreamingResponse
 from psycopg2.extras import RealDictCursor
 from pydantic import BaseModel
 import logging
+import io
 
 from db.connection import get_db
 from auth.dependencies import get_current_user
 from services.ai_service import generate_ai_stream
+
+try:
+    from docx import Document
+except Exception:
+    Document = None
+
+try:
+    from pypdf import PdfReader
+except Exception:
+    PdfReader = None
 
 
 router = APIRouter(
@@ -23,6 +34,8 @@ class RenameConversation(BaseModel):
 
 class EditMessagePayload(BaseModel):
     message: str
+    document_text: str | None = None
+    document_name: str | None = None
 
 
 def ensure_conversation_owner(conn, conversation_id: int, user_id: int) -> None:
@@ -64,6 +77,116 @@ def generate_title(message: str) -> str:
     if len(cleaned) > 60:
         cleaned = cleaned[:60]
     return cleaned or "New chat"
+
+
+def extract_text_from_txt(file_bytes: bytes) -> str:
+    try:
+        return file_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        return file_bytes.decode("latin-1", errors="ignore")
+
+
+def extract_text_from_docx(file_bytes: bytes) -> str:
+    if Document is None:
+        raise HTTPException(
+            status_code=500,
+            detail="DOCX support is not installed on the server"
+        )
+
+    document = Document(io.BytesIO(file_bytes))
+    parts = []
+
+    for paragraph in document.paragraphs:
+        text = (paragraph.text or "").strip()
+        if text:
+            parts.append(text)
+
+    for table in document.tables:
+        for row in table.rows:
+            cells = []
+            for cell in row.cells:
+                value = (cell.text or "").strip()
+                if value:
+                    cells.append(value)
+            if cells:
+                parts.append(" | ".join(cells))
+
+    return "\n".join(parts).strip()
+
+
+def extract_text_from_pdf(file_bytes: bytes) -> str:
+    if PdfReader is None:
+        raise HTTPException(
+            status_code=500,
+            detail="PDF support is not installed on the server"
+        )
+
+    reader = PdfReader(io.BytesIO(file_bytes))
+    parts = []
+
+    for page in reader.pages:
+        text = page.extract_text() or ""
+        text = text.strip()
+        if text:
+            parts.append(text)
+
+    return "\n\n".join(parts).strip()
+
+
+def extract_document_text(filename: str, file_bytes: bytes) -> str:
+    lower = (filename or "").lower()
+
+    if lower.endswith(".txt"):
+        return extract_text_from_txt(file_bytes)
+
+    if lower.endswith(".docx"):
+        return extract_text_from_docx(file_bytes)
+
+    if lower.endswith(".pdf"):
+        return extract_text_from_pdf(file_bytes)
+
+    raise HTTPException(
+        status_code=400,
+        detail="Unsupported file type. Please upload a .txt, .docx, or .pdf file."
+    )
+
+
+@router.post("/upload")
+async def upload_chat_document(
+    file: UploadFile = File(...),
+    current_user=Depends(get_current_user)
+):
+    filename = file.filename or "document"
+    contents = await file.read()
+
+    if not contents:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+
+    try:
+        extracted_text = extract_document_text(filename, contents)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Document extraction failed: %s", e)
+        raise HTTPException(
+            status_code=500,
+            detail="Could not read the uploaded document"
+        )
+
+    if not extracted_text.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="No readable text was found in the uploaded document"
+        )
+
+    preview = extracted_text[:1200]
+
+    return {
+        "ok": True,
+        "filename": filename,
+        "text": extracted_text,
+        "preview": preview
+    }
 
 
 @router.get("/conversations")
@@ -123,6 +246,8 @@ async def chat(
     body = await request.json()
     message = (body.get("message") or "").strip()
     conversation_id = body.get("conversation_id")
+    document_text = (body.get("document_text") or "").strip() or None
+    document_name = (body.get("document_name") or "").strip() or None
 
     if not message:
         raise HTTPException(status_code=400, detail="Message required")
@@ -175,6 +300,8 @@ async def chat(
                 message=message,
                 session_id=str(conversation_id),
                 history=history,
+                document_text=document_text,
+                document_name=document_name,
             ):
                 if token:
                     ai_text += token
@@ -286,6 +413,8 @@ async def edit_message_and_regenerate(
 ):
     user_id = current_user["user_id"]
     new_message = payload.message.strip()
+    document_text = (payload.document_text or "").strip() or None
+    document_name = (payload.document_name or "").strip() or None
 
     if not new_message:
         raise HTTPException(status_code=400, detail="Message is required")
@@ -346,6 +475,8 @@ async def edit_message_and_regenerate(
                 message=new_message,
                 session_id=str(conversation_id),
                 history=history,
+                document_text=document_text,
+                document_name=document_name,
             ):
                 if token:
                     ai_text += token
