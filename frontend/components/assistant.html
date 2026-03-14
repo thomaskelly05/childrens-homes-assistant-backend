@@ -1,3 +1,17 @@
+Here’s the corrected `assistant.html` next.
+
+This version makes **Assistant** the broad residential AI brain again:
+
+* general-purpose chat
+* suggested residential prompts
+* no recording / note-taking focus
+* AI Notes remains a separate tool
+
+Save it as:
+
+`frontend/components/assistant.html`
+
+```html
 <!DOCTYPE html>
 <html lang="en-GB">
 <head>
@@ -24,7 +38,7 @@
 
         .assistant-hero {
             display: grid;
-            grid-template-columns: 1.2fr 0.8fr;
+            grid-template-columns: 1.15fr 0.85fr;
             gap: 1.25rem;
             margin-bottom: 1.25rem;
         }
@@ -64,6 +78,18 @@
             border: 1px solid var(--border);
             background: var(--surface-muted);
             color: var(--text);
+            line-height: 1.55;
+        }
+
+        .assistant-status-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.55rem 0.85rem;
+            border-radius: 999px;
+            background: var(--primary-soft);
+            color: var(--primary-hover);
+            font-weight: 700;
+            width: fit-content;
         }
 
         .assistant-prompt-grid {
@@ -78,26 +104,36 @@
             border: 1px solid var(--border);
             background: var(--surface-muted);
             border-radius: 14px;
-            padding: 0.9rem 1rem;
+            padding: 0.95rem 1rem;
             color: var(--text);
             cursor: pointer;
             transition: 0.2s ease;
+            line-height: 1.5;
         }
 
         .assistant-prompt:hover {
             border-color: var(--primary);
             background: #eef4ff;
+            transform: translateY(-1px);
         }
 
-        .assistant-status-pill {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.55rem 0.85rem;
-            border-radius: 999px;
-            background: var(--primary-soft);
-            color: var(--primary-hover);
-            font-weight: 700;
-            width: fit-content;
+        .assistant-note {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 16px;
+            background: #eef4ff;
+            border: 1px solid #d7e5ff;
+        }
+
+        .assistant-note strong {
+            display: block;
+            margin-bottom: 0.35rem;
+            color: var(--text);
+        }
+
+        .assistant-note span {
+            color: var(--text-soft);
+            line-height: 1.55;
         }
 
         .chat-shell {
@@ -109,12 +145,11 @@
         }
 
         #chat {
-            min-height: 500px;
-            max-height: 68vh;
+            min-height: 520px;
+            max-height: 70vh;
             overflow-y: auto;
             padding: 1.25rem;
-            background:
-                linear-gradient(180deg, #fbfcff 0%, #f4f8fd 100%);
+            background: linear-gradient(180deg, #fbfcff 0%, #f4f8fd 100%);
         }
 
         .chat-empty {
@@ -155,11 +190,55 @@
             box-shadow: 0 0 0 4px rgba(47, 92, 255, 0.12);
         }
 
-        .assistant-footer-note {
-            margin-top: 1rem;
-            color: var(--text-soft);
-            font-size: 0.95rem;
+        .message-wrapper {
+            display: flex;
+            margin-bottom: 1rem;
+        }
+
+        .message-wrapper.user {
+            justify-content: flex-end;
+        }
+
+        .message-wrapper.assistant {
+            justify-content: flex-start;
+        }
+
+        .message {
+            max-width: min(760px, 85%);
+            padding: 0.95rem 1rem;
+            border-radius: 18px;
             line-height: 1.6;
+            word-break: break-word;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .message.user {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+            color: #fff;
+            border-bottom-right-radius: 6px;
+        }
+
+        .message.assistant {
+            background: #ffffff;
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 6px;
+        }
+
+        .message-actions {
+            margin-top: 0.45rem;
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        .copy-btn {
+            border: 1px solid var(--border);
+            background: var(--surface-muted);
+            color: var(--text-soft);
+            border-radius: 10px;
+            padding: 0.35rem 0.65rem;
+            cursor: pointer;
+            font-size: 0.85rem;
         }
 
         @media (max-width: 1100px) {
@@ -208,8 +287,8 @@
         <main class="main-layout">
             <header class="topbar">
                 <div>
-                    <h2>Residential AI Assistant</h2>
-                    <p>Ask for help with recording, reflection, planning, wording, and professional practice.</p>
+                    <h2>Assistant</h2>
+                    <p>Your residential children’s home AI brain for general questions, drafting, reflection, and practice support.</p>
                 </div>
 
                 <div class="topbar__actions">
@@ -220,41 +299,54 @@
             <section class="assistant-workspace">
                 <div class="assistant-hero">
                     <div class="assistant-card">
-                        <h3>Your AI support workspace</h3>
+                        <h3>Ask IndiCare anything about residential practice</h3>
                         <p>
-                            Use IndiCare Assistant like a professional residential care writing and thinking partner.
-                            It can help you draft, rewrite, structure, and reflect on practice-related work.
+                            Use the Assistant as your main general-purpose AI workspace. It can help
+                            with writing, reflection, professional wording, planning, handovers,
+                            supervision thinking, support-plan ideas, chronology structure,
+                            documentation review, and practice sense-checking.
                         </p>
 
                         <ul class="assistant-feature-list">
-                            <li>Draft incident reports, logs, handovers, and summaries</li>
-                            <li>Improve wording to make records more professional and neutral</li>
-                            <li>Support reflective practice and supervision preparation</li>
-                            <li>Help structure safeguarding and care-related documentation</li>
+                            <li>Draft and improve daily logs, summaries, handovers, manager updates, and incident wording</li>
+                            <li>Review documentation for clarity, neutrality, contradictions, and missing information</li>
+                            <li>Support reflective practice, supervision preparation, and staff thinking</li>
+                            <li>Help organise information into practical residential care outputs</li>
                         </ul>
+
+                        <div class="assistant-note">
+                            <strong>Separate tool reminder</strong>
+                            <span>
+                                AI Notes is still a separate specialist feature for meeting-note and
+                                note-taking workflows. This page is the broader residential AI assistant.
+                            </span>
+                        </div>
                     </div>
 
                     <div class="assistant-card">
                         <h4>Try one of these prompts</h4>
+
                         <div class="assistant-prompt-grid">
-                            <button class="assistant-prompt" type="button" data-prompt="Help me write a professional daily log entry from my notes.">
-                                Help me write a professional daily log entry from my notes.
+                            <button class="assistant-prompt" type="button" data-prompt="Help me turn these rough notes into a professional handover for the next shift.">
+                                Help me turn these rough notes into a professional handover for the next shift.
                             </button>
-                            <button class="assistant-prompt" type="button" data-prompt="Rewrite this incident record in a more neutral and professional tone.">
-                                Rewrite this incident record in a more neutral and professional tone.
+
+                            <button class="assistant-prompt" type="button" data-prompt="Rewrite this incident record in a more neutral and professionally defensible tone.">
+                                Rewrite this incident record in a more neutral and professionally defensible tone.
                             </button>
-                            <button class="assistant-prompt" type="button" data-prompt="Help me reflect on a difficult shift and identify key learning points.">
-                                Help me reflect on a difficult shift and identify key learning points.
+
+                            <button class="assistant-prompt" type="button" data-prompt="Help me reflect on a difficult shift and identify learning points for supervision.">
+                                Help me reflect on a difficult shift and identify learning points for supervision.
                             </button>
-                            <button class="assistant-prompt" type="button" data-prompt="Turn these rough notes into a clear handover for the next shift.">
-                                Turn these rough notes into a clear handover for the next shift.
+
+                            <button class="assistant-prompt" type="button" data-prompt="Create a practical support-plan structure for a child who struggles with transitions and school attendance.">
+                                Create a practical support-plan structure for a child who struggles with transitions and school attendance.
+                            </button>
+
+                            <button class="assistant-prompt" type="button" data-prompt="Review this documentation and tell me what is unclear, too vague, or missing.">
+                                Review this documentation and tell me what is unclear, too vague, or missing.
                             </button>
                         </div>
-
-                        <p class="assistant-footer-note">
-                            For recorded adult staff meetings and AI-generated meeting documentation,
-                            use the separate <strong>AI Notes</strong> tool.
-                        </p>
                     </div>
                 </div>
 
@@ -263,7 +355,7 @@
                         <div class="chat-empty">
                             <div>
                                 <h3>Start a conversation</h3>
-                                <p>Ask IndiCare anything about recording, reports, planning, reflection, or professional wording.</p>
+                                <p>Ask IndiCare about residential care writing, planning, reflection, documentation, or professional practice support.</p>
                             </div>
                         </div>
                     </div>
@@ -280,6 +372,7 @@
     <script src="/js/api.js"></script>
     <script src="/js/auth.js"></script>
     <script src="/js/ui.js"></script>
+    <script src="/js/chat.js"></script>
 
     <script>
         const logoutBtn = document.getElementById("logoutBtn");
@@ -308,6 +401,13 @@
                 input.focus();
             });
         });
+
+        if (window.initChat) {
+            window.initChat();
+        }
     </script>
 </body>
 </html>
+```
+
+Next I’d update `chat.js` so it matches this page cleanly, if you want to do that now.
