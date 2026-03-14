@@ -1,148 +1,313 @@
-<div id="chat"></div>
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IndiCare | Assistant</title>
 
-<div id="chat-input-bar" class="chat-input-bar">
-    <input id="chat-input" placeholder="Ask IndiCare anything..." />
-    <button id="send-btn">Send</button>
-    <button id="openAiMeetingModal" class="btn btn-primary" type="button">
-        AI Meeting Assistant
-    </button>
-</div>
+    <link rel="icon" type="image/svg+xml" href="/assets/logo.svg" />
+    <link rel="stylesheet" href="/css/reset.css" />
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/theme.css" />
+    <link rel="stylesheet" href="/css/layout.css" />
+    <link rel="stylesheet" href="/css/components.css" />
 
-<div id="aiMeetingModalOverlay" class="ai-modal-overlay hidden">
-    <div class="ai-modal" role="dialog" aria-modal="true" aria-labelledby="aiMeetingTitle">
-        <div class="ai-modal-header">
-            <div>
-                <h2 id="aiMeetingTitle">AI Meeting Assistant</h2>
-                <p>
-                    Record an internal adult staff meeting, generate a structured document,
-                    refine it with AI, then save or export it.
-                </p>
-            </div>
-            <button id="closeAiMeetingModal" class="icon-btn" type="button" aria-label="Close">
-                ✕
-            </button>
-        </div>
+    <style>
+        .assistant-page {
+            min-height: 100vh;
+            background: var(--bg);
+        }
 
-        <div class="ai-modal-body ai-modal-body-wide">
-            <div class="ai-modal-history">
-                <div class="panel">
-                    <div class="section-head">
-                        <h3>Saved Meetings</h3>
-                        <button id="refreshHistoryBtn" class="btn btn-light" type="button">Refresh</button>
-                    </div>
+        .assistant-workspace {
+            padding: 0 2rem 2rem;
+        }
 
-                    <div id="historyEmpty" class="history-empty">
-                        No saved meetings yet.
-                    </div>
+        .assistant-hero {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
 
-                    <div id="meetingHistoryList" class="meeting-history-list"></div>
+        .assistant-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .assistant-card h3,
+        .assistant-card h4 {
+            margin: 0 0 0.75rem;
+            color: var(--text);
+            letter-spacing: -0.02em;
+        }
+
+        .assistant-card p {
+            margin: 0;
+            color: var(--text-soft);
+            line-height: 1.6;
+        }
+
+        .assistant-feature-list {
+            list-style: none;
+            margin: 1rem 0 0;
+            padding: 0;
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .assistant-feature-list li {
+            padding: 0.9rem 1rem;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: var(--surface-muted);
+            color: var(--text);
+        }
+
+        .assistant-prompt-grid {
+            display: grid;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .assistant-prompt {
+            width: 100%;
+            text-align: left;
+            border: 1px solid var(--border);
+            background: var(--surface-muted);
+            border-radius: 14px;
+            padding: 0.9rem 1rem;
+            color: var(--text);
+            cursor: pointer;
+            transition: 0.2s ease;
+        }
+
+        .assistant-prompt:hover {
+            border-color: var(--primary);
+            background: #eef4ff;
+        }
+
+        .assistant-status-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.55rem 0.85rem;
+            border-radius: 999px;
+            background: var(--primary-soft);
+            color: var(--primary-hover);
+            font-weight: 700;
+            width: fit-content;
+        }
+
+        .chat-shell {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        #chat {
+            min-height: 500px;
+            max-height: 68vh;
+            overflow-y: auto;
+            padding: 1.25rem;
+            background:
+                linear-gradient(180deg, #fbfcff 0%, #f4f8fd 100%);
+        }
+
+        .chat-empty {
+            display: grid;
+            place-items: center;
+            min-height: 360px;
+            text-align: center;
+            color: var(--text-soft);
+        }
+
+        .chat-empty h3 {
+            margin: 0 0 0.5rem;
+            color: var(--text);
+        }
+
+        .chat-input-bar {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 0.75rem;
+            align-items: center;
+            padding: 1rem;
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+        }
+
+        #chat-input {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            background: #fff;
+            color: var(--text);
+            padding: 0.95rem 1rem;
+            outline: none;
+        }
+
+        #chat-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(47, 92, 255, 0.12);
+        }
+
+        .assistant-footer-note {
+            margin-top: 1rem;
+            color: var(--text-soft);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 1100px) {
+            .assistant-hero {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .assistant-workspace {
+                padding: 0 1rem 1rem;
+            }
+
+            .chat-input-bar {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body class="assistant-page">
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar__brand">
+                <img src="/assets/logo.svg" alt="IndiCare logo" class="sidebar__logo" />
+                <div class="sidebar__brand-text">
+                    <h1>IndiCare</h1>
+                    <p>Staff Workspace</p>
                 </div>
             </div>
 
-            <div class="ai-modal-left">
-                <div class="panel">
-                    <div class="section-head">
-                        <h3>Recording</h3>
-                        <div id="recordingStatus" class="status-pill idle">Not recording</div>
-                    </div>
+            <nav class="sidebar__nav">
+                <a class="nav-link" href="/">Dashboard</a>
+                <a class="nav-link is-active" href="/assistant">Assistant</a>
+                <a class="nav-link" href="/journal">Staff Journal</a>
+                <a class="nav-link" href="/supervision">Supervision</a>
+                <a class="nav-link" href="/ai-note.html">AI Notes</a>
+            </nav>
 
-                    <div class="recording-centre">
-                        <div id="micCircle" class="mic-circle">
-                            <span class="mic-icon">🎤</span>
-                        </div>
-                        <div id="recordingTimer" class="timer">00:00</div>
-                    </div>
-
-                    <div class="recording-actions">
-                        <button id="startRecordingBtn" class="btn btn-primary" type="button">
-                            Start recording
-                        </button>
-                        <button id="stopRecordingBtn" class="btn btn-secondary" type="button" disabled>
-                            Stop recording
-                        </button>
-                        <button id="transcribeBtn" class="btn btn-dark" type="button" disabled>
-                            Transcribe
-                        </button>
-                    </div>
-
-                    <p id="audioReadyText" class="helper-text">No recording yet.</p>
-                    <audio id="audioPlayback" controls style="display:none;"></audio>
-                </div>
-
-                <div class="panel">
-                    <div class="section-head">
-                        <h3>Transcript</h3>
-                        <button id="clearTranscriptBtn" class="btn btn-light" type="button">
-                            Clear transcript
-                        </button>
-                    </div>
-                    <textarea
-                        id="transcript"
-                        placeholder="The transcript will appear here after recording and transcription..."
-                    ></textarea>
-                </div>
-            </div>
-
-            <div class="ai-modal-right">
-                <div id="safeguardingBox" class="panel notice" style="display:none;">
-                    <h3>AI check</h3>
-                    <p id="safeguardingText"></p>
-                </div>
-
-                <div class="panel">
-                    <div class="section-head">
-                        <h3>Generated Meeting Template</h3>
-                        <button id="generateBtn" class="btn btn-primary" type="button">
-                            Generate template
-                        </button>
-                    </div>
-                    <textarea
-                        id="aiDraft"
-                        placeholder="The AI meeting template will appear here..."
-                    ></textarea>
-                </div>
-
-                <div class="panel">
-                    <div class="section-head stack-mobile">
-                        <h3>Final Document</h3>
-                        <div class="ai-edit-tools">
-                            <button id="improveBtn" class="btn btn-light" type="button">Improve wording</button>
-                            <button id="shortenBtn" class="btn btn-light" type="button">Make shorter</button>
-                            <button id="formalBtn" class="btn btn-light" type="button">More formal</button>
-                            <button id="bulletBtn" class="btn btn-light" type="button">Add bullets</button>
-                            <button id="grammarBtn" class="btn btn-light" type="button">Fix grammar</button>
-                        </div>
-                    </div>
-                    <textarea
-                        id="finalNote"
-                        placeholder="Adults can review and edit the final document here. AI can also refine it for you."
-                    ></textarea>
-                </div>
-            </div>
-        </div>
-
-        <div class="ai-modal-footer">
-            <div class="footer-left">
-                <button id="copyBtn" class="btn btn-light" type="button">Copy</button>
-                <button id="printBtn" class="btn btn-light" type="button">Print</button>
-                <button id="exportTxtBtn" class="btn btn-light" type="button">Export .txt</button>
-                <button id="deleteMeetingBtn" class="btn btn-danger" type="button">Delete</button>
-            </div>
-
-            <div class="footer-right">
-                <button id="saveBtn" class="btn btn-success" type="button">
-                    Save meeting note
+            <div class="sidebar__footer">
+                <button id="logoutBtn" class="button button--secondary" type="button">
+                    Log out
                 </button>
             </div>
-        </div>
+        </aside>
 
-        <div class="ai-disclaimer">
-            ⚠ This tool is for internal adult staff meetings, planning discussions, supervision,
-            and operational conversations only. It must not be used to record children or young
-            people. Staff remain responsible for reviewing, editing, approving, and safely handling
-            all generated content before saving or exporting.
-        </div>
+        <main class="main-layout">
+            <header class="topbar">
+                <div>
+                    <h2>Residential AI Assistant</h2>
+                    <p>Ask for help with recording, reflection, planning, wording, and professional practice.</p>
+                </div>
+
+                <div class="topbar__actions">
+                    <span class="user-badge">Assistant ready</span>
+                </div>
+            </header>
+
+            <section class="assistant-workspace">
+                <div class="assistant-hero">
+                    <div class="assistant-card">
+                        <h3>Your AI support workspace</h3>
+                        <p>
+                            Use IndiCare Assistant like a professional residential care writing and thinking partner.
+                            It can help you draft, rewrite, structure, and reflect on practice-related work.
+                        </p>
+
+                        <ul class="assistant-feature-list">
+                            <li>Draft incident reports, logs, handovers, and summaries</li>
+                            <li>Improve wording to make records more professional and neutral</li>
+                            <li>Support reflective practice and supervision preparation</li>
+                            <li>Help structure safeguarding and care-related documentation</li>
+                        </ul>
+                    </div>
+
+                    <div class="assistant-card">
+                        <h4>Try one of these prompts</h4>
+                        <div class="assistant-prompt-grid">
+                            <button class="assistant-prompt" type="button" data-prompt="Help me write a professional daily log entry from my notes.">
+                                Help me write a professional daily log entry from my notes.
+                            </button>
+                            <button class="assistant-prompt" type="button" data-prompt="Rewrite this incident record in a more neutral and professional tone.">
+                                Rewrite this incident record in a more neutral and professional tone.
+                            </button>
+                            <button class="assistant-prompt" type="button" data-prompt="Help me reflect on a difficult shift and identify key learning points.">
+                                Help me reflect on a difficult shift and identify key learning points.
+                            </button>
+                            <button class="assistant-prompt" type="button" data-prompt="Turn these rough notes into a clear handover for the next shift.">
+                                Turn these rough notes into a clear handover for the next shift.
+                            </button>
+                        </div>
+
+                        <p class="assistant-footer-note">
+                            For recorded adult staff meetings and AI-generated meeting documentation,
+                            use the separate <strong>AI Notes</strong> tool.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="chat-shell">
+                    <div id="chat">
+                        <div class="chat-empty">
+                            <div>
+                                <h3>Start a conversation</h3>
+                                <p>Ask IndiCare anything about recording, reports, planning, reflection, or professional wording.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="chat-input-bar" class="chat-input-bar">
+                        <input id="chat-input" placeholder="Ask IndiCare anything..." />
+                        <button id="send-btn" class="button" type="button">Send</button>
+                    </div>
+                </div>
+            </section>
+        </main>
     </div>
-</div>
 
-<div id="toast" class="toast"></div>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/ui.js"></script>
+
+    <script>
+        const logoutBtn = document.getElementById("logoutBtn");
+        if (logoutBtn) {
+            logoutBtn.addEventListener("click", async () => {
+                try {
+                    localStorage.removeItem("access_token");
+                    localStorage.removeItem("current_user");
+
+                    try {
+                        await apiRequest("/auth/logout", { method: "POST" });
+                    } catch (_) {}
+
+                    window.location.href = "/login";
+                } catch (_) {
+                    window.location.href = "/login";
+                }
+            });
+        }
+
+        document.querySelectorAll("[data-prompt]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const input = document.getElementById("chat-input");
+                if (!input) return;
+                input.value = button.dataset.prompt || "";
+                input.focus();
+            });
+        });
+    </script>
+</body>
+</html>
