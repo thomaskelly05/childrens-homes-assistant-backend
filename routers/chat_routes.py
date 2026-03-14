@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from psycopg2.extras import RealDictCursor
 from pydantic import BaseModel
@@ -70,6 +70,77 @@ def get_conversation_history(conn, conversation_id: int):
         rows = cur.fetchall()
 
     return rows
+
+
+def get_conversation_document(conn, conversation_id: int):
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT id, filename, document_text, created_at
+            FROM conversation_documents
+            WHERE conversation_id = %s
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1
+            """,
+            (conversation_id,)
+        )
+        row = cur.fetchone()
+
+    return row
+
+
+def upsert_conversation_document(conn, conversation_id: int, filename: str, document_text: str):
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT id
+            FROM conversation_documents
+            WHERE conversation_id = %s
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1
+            """,
+            (conversation_id,)
+        )
+        existing = cur.fetchone()
+
+        if existing:
+            cur.execute(
+                """
+                UPDATE conversation_documents
+                SET filename = %s,
+                    document_text = %s,
+                    created_at = NOW()
+                WHERE id = %s
+                RETURNING id, filename, document_text, created_at
+                """,
+                (filename, document_text, existing["id"])
+            )
+            row = cur.fetchone()
+        else:
+            cur.execute(
+                """
+                INSERT INTO conversation_documents (conversation_id, filename, document_text)
+                VALUES (%s, %s, %s)
+                RETURNING id, filename, document_text, created_at
+                """,
+                (conversation_id, filename, document_text)
+            )
+            row = cur.fetchone()
+
+    conn.commit()
+    return row
+
+
+def delete_conversation_document(conn, conversation_id: int):
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            DELETE FROM conversation_documents
+            WHERE conversation_id = %s
+            """,
+            (conversation_id,)
+        )
+    conn.commit()
 
 
 def generate_title(message: str) -> str:
@@ -154,6 +225,8 @@ def extract_document_text(filename: str, file_bytes: bytes) -> str:
 @router.post("/upload")
 async def upload_chat_document(
     file: UploadFile = File(...),
+    conversation_id: int | None = Form(default=None),
+    conn=Depends(get_db),
     current_user=Depends(get_current_user)
 ):
     filename = file.filename or "document"
@@ -179,13 +252,15 @@ async def upload_chat_document(
             detail="No readable text was found in the uploaded document"
         )
 
-    preview = extracted_text[:1200]
+    if conversation_id is not None:
+        ensure_conversation_owner(conn, conversation_id, current_user["user_id"])
+        upsert_conversation_document(conn, conversation_id, filename, extracted_text)
 
     return {
         "ok": True,
         "filename": filename,
         "text": extracted_text,
-        "preview": preview
+        "preview": extracted_text[:1200]
     }
 
 
@@ -232,7 +307,31 @@ def load_conversation(
         )
         rows = cur.fetchall()
 
-    return rows
+    document = get_conversation_document(conn, conversation_id)
+
+    return {
+        "messages": rows,
+        "document": {
+            "filename": document["filename"],
+            "text": document["document_text"],
+            "created_at": document["created_at"]
+        } if document else None
+    }
+
+
+@router.delete("/conversations/{conversation_id}/document")
+def remove_conversation_document(
+    conversation_id: int,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    ensure_conversation_owner(conn, conversation_id, current_user["user_id"])
+    delete_conversation_document(conn, conversation_id)
+
+    return {
+        "ok": True,
+        "message": "Document removed"
+    }
 
 
 @router.post("/")
@@ -277,6 +376,14 @@ async def chat(
             raise HTTPException(status_code=400, detail="Invalid conversation ID")
 
         ensure_conversation_owner(conn, conversation_id, user_id)
+
+    if document_text and document_name:
+        upsert_conversation_document(conn, conversation_id, document_name, document_text)
+
+    stored_document = get_conversation_document(conn, conversation_id)
+    if stored_document:
+        document_text = stored_document["document_text"]
+        document_name = stored_document["filename"]
 
     with conn.cursor() as cur:
         cur.execute(
@@ -354,11 +461,9 @@ def rename_conversation(
     conn=Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    user_id = current_user["user_id"]
-    ensure_conversation_owner(conn, conversation_id, user_id)
+    ensure_conversation_owner(conn, conversation_id, current_user["user_id"])
 
     title = payload.title.strip()
-
     if not title:
         raise HTTPException(status_code=400, detail="Title is required")
 
@@ -373,10 +478,7 @@ def rename_conversation(
         )
         conn.commit()
 
-    return {
-        "ok": True,
-        "message": "Conversation renamed"
-    }
+    return {"ok": True, "message": "Conversation renamed"}
 
 
 @router.delete("/conversations/{conversation_id}")
@@ -385,8 +487,7 @@ def delete_conversation(
     conn=Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    user_id = current_user["user_id"]
-    ensure_conversation_owner(conn, conversation_id, user_id)
+    ensure_conversation_owner(conn, conversation_id, current_user["user_id"])
 
     with conn.cursor() as cur:
         cur.execute(
@@ -398,10 +499,7 @@ def delete_conversation(
         )
         conn.commit()
 
-    return {
-        "ok": True,
-        "message": "Conversation deleted"
-    }
+    return {"ok": True, "message": "Conversation deleted"}
 
 
 @router.post("/messages/{message_id}/edit")
@@ -413,8 +511,6 @@ async def edit_message_and_regenerate(
 ):
     user_id = current_user["user_id"]
     new_message = payload.message.strip()
-    document_text = (payload.document_text or "").strip() or None
-    document_name = (payload.document_name or "").strip() or None
 
     if not new_message:
         raise HTTPException(status_code=400, detail="Message is required")
@@ -441,6 +537,18 @@ async def edit_message_and_regenerate(
 
     conversation_id = row["conversation_id"]
     ensure_conversation_owner(conn, conversation_id, user_id)
+
+    if payload.document_text and payload.document_name:
+        upsert_conversation_document(
+            conn,
+            conversation_id,
+            payload.document_name,
+            payload.document_text
+        )
+
+    stored_document = get_conversation_document(conn, conversation_id)
+    document_text = stored_document["document_text"] if stored_document else None
+    document_name = stored_document["filename"] if stored_document else None
 
     with conn.cursor() as cur:
         cur.execute(
