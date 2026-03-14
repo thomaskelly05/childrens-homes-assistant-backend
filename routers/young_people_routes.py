@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import text
 
-from db import engine
+from db.connection import engine
 
 router = APIRouter(prefix="/young-people", tags=["Young People"])
 
@@ -128,7 +128,7 @@ def get_young_person(young_person_id: int):
     with engine.connect() as conn:
         row = conn.execute(
             text(query),
-            {"young_person_id": young_person_id}
+            {"young_person_id": young_person_id},
         ).mappings().first()
 
     if not row:
@@ -217,7 +217,7 @@ def create_young_person(payload: YoungPersonCreate):
 
 @router.put("/{young_person_id}")
 def update_young_person(young_person_id: int, payload: YoungPersonUpdate):
-    update_data = payload.dict(exclude_unset=True)
+    update_data = payload.model_dump(exclude_unset=True)
 
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields provided for update")
