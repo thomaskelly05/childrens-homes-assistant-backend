@@ -1,13 +1,19 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from openai import OpenAI
 from docx import Document
 from docx.enum.section import WD_ORIENT
-from fastapi.responses import FileResponse
 import uuid
 import json
 
-router = APIRouter(prefix="/documents", tags=["Documents"])
+from auth.session_user import get_current_user
+
+router = APIRouter(
+    prefix="/documents",
+    tags=["Documents"],
+    dependencies=[Depends(get_current_user)],
+)
 
 client = OpenAI()
 
@@ -22,7 +28,6 @@ class DocumentRequest(BaseModel):
 
 @router.post("/incident")
 def generate_incident(payload: DocumentRequest):
-
     prompt = f"""
 Write a professional incident report for a UK residential children's home.
 
@@ -42,7 +47,7 @@ Situation:
 
     res = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}]
+        messages=[{"role": "user", "content": prompt}],
     )
 
     text = res.choices[0].message.content
@@ -63,7 +68,6 @@ Situation:
 
 @router.post("/risk")
 def generate_risk(payload: DocumentRequest):
-
     prompt = f"""
 Create a risk assessment for a residential children's home.
 
@@ -89,7 +93,7 @@ Situation:
 
     res = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}]
+        messages=[{"role": "user", "content": prompt}],
     )
 
     risks = json.loads(res.choices[0].message.content)
@@ -114,7 +118,7 @@ Situation:
         "Existing Controls",
         "Further Controls",
         "Responsible",
-        "Review Date"
+        "Review Date",
     ]
 
     for i, h in enumerate(headers):
@@ -145,7 +149,6 @@ Situation:
 
 @router.post("/daily-log")
 def generate_daily_log(payload: DocumentRequest):
-
     prompt = f"""
 Write a daily log entry for residential children's home staff.
 
@@ -165,7 +168,7 @@ Notes:
 
     res = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}]
+        messages=[{"role": "user", "content": prompt}],
     )
 
     text = res.choices[0].message.content
@@ -186,7 +189,6 @@ Notes:
 
 @router.post("/handover")
 def generate_handover(payload: DocumentRequest):
-
     prompt = f"""
 Write a shift handover for residential children's home staff.
 
@@ -206,7 +208,7 @@ Notes:
 
     res = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}]
+        messages=[{"role": "user", "content": prompt}],
     )
 
     text = res.choices[0].message.content
@@ -227,7 +229,6 @@ Notes:
 
 @router.post("/safeguarding")
 def generate_safeguarding(payload: DocumentRequest):
-
     prompt = f"""
 Write a safeguarding concern record for a children's home.
 
@@ -246,7 +247,7 @@ Concern:
 
     res = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}]
+        messages=[{"role": "user", "content": prompt}],
     )
 
     text = res.choices[0].message.content
@@ -267,7 +268,6 @@ Concern:
 
 @router.post("/reflection")
 def generate_reflection(payload: DocumentRequest):
-
     prompt = f"""
 Write a reflective practice record for children's home staff.
 
@@ -285,7 +285,7 @@ Reflection:
 
     res = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}]
+        messages=[{"role": "user", "content": prompt}],
     )
 
     text = res.choices[0].message.content
