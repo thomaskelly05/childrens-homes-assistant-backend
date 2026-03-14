@@ -1,160 +1,279 @@
-import os
+from datetime import datetime
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from sqlalchemy import text
 
-from routers.account_routes import router as account_router
-from routers.admin_routes import router as admin_router
-from routers.ai_note_export_routes import router as ai_note_export_router
-from routers.ai_note_templates_routes import router as ai_note_templates_router
-from routers.ai_notes_routes import router as ai_notes_router
-from routers.auth_routes import router as auth_router
-from routers.chat_routes import router as chat_router
-from routers.dashboard_routes import router as dashboard_router
-from routers.documents_routes import router as documents_router
-from routers.handover_routes import router as handover_router
-from routers.incident_routes import router as incident_router
-from routers.reports_routes import router as reports_router
-from routers.risk_routes import router as risk_router
-from routers.staff_journal_routes import router as staff_journal_router
-from routers.supervision_routes import router as supervision_router
-from routers.tasks_routes import router as tasks_router
-from routers.young_people_routes import router as young_people_router
+from db import engine
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
-CSS_DIR = os.path.join(FRONTEND_DIR, "css")
-JS_DIR = os.path.join(FRONTEND_DIR, "js")
-ASSETS_DIR = os.path.join(FRONTEND_DIR, "assets")
-COMPONENTS_DIR = os.path.join(FRONTEND_DIR, "components")
-
-app = FastAPI(title="IndiCare")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "https://app.indicare.co.uk",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# API routers
-app.include_router(auth_router)
-app.include_router(account_router)
-app.include_router(admin_router)
-app.include_router(ai_note_export_router)
-app.include_router(ai_note_templates_router)
-app.include_router(ai_notes_router)
-app.include_router(chat_router)
-app.include_router(dashboard_router)
-app.include_router(documents_router)
-app.include_router(handover_router)
-app.include_router(incident_router)
-app.include_router(reports_router)
-app.include_router(risk_router)
-app.include_router(staff_journal_router)
-app.include_router(supervision_router)
-app.include_router(tasks_router)
-app.include_router(young_people_router)
-
-# Static mounts
-app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
-app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
-app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
-app.mount("/components", StaticFiles(directory=COMPONENTS_DIR), name="components")
+router = APIRouter(prefix="/young-people", tags=["Young People"])
 
 
-@app.get("/")
-def serve_index():
-    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+class YoungPersonCreate(BaseModel):
+    home_id: int
+    first_name: str
+    last_name: str
+    preferred_name: str | None = None
+    date_of_birth: str
+    gender: str | None = None
+    ethnicity: str | None = None
+    nhs_number: str | None = None
+    local_id_number: str | None = None
+    admission_date: str
+    discharge_date: str | None = None
+    placement_status: str = "active"
+    primary_keyworker_id: int | None = None
+    summary_risk_level: str | None = None
+    photo_url: str | None = None
+    archived: bool = False
 
 
-@app.get("/login")
-def serve_login():
-    return FileResponse(os.path.join(FRONTEND_DIR, "login.html"))
+class YoungPersonUpdate(BaseModel):
+    home_id: int | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    preferred_name: str | None = None
+    date_of_birth: str | None = None
+    gender: str | None = None
+    ethnicity: str | None = None
+    nhs_number: str | None = None
+    local_id_number: str | None = None
+    admission_date: str | None = None
+    discharge_date: str | None = None
+    placement_status: str | None = None
+    primary_keyworker_id: int | None = None
+    summary_risk_level: str | None = None
+    photo_url: str | None = None
+    archived: bool | None = None
 
 
-@app.get("/login.html")
-def serve_login_html():
-    return FileResponse(os.path.join(FRONTEND_DIR, "login.html"))
+@router.get("")
+def list_young_people(home_id: int | None = None, archived: bool = False):
+    query = """
+        SELECT
+            yp.id,
+            yp.home_id,
+            yp.first_name,
+            yp.last_name,
+            yp.preferred_name,
+            yp.date_of_birth,
+            yp.gender,
+            yp.ethnicity,
+            yp.nhs_number,
+            yp.local_id_number,
+            yp.admission_date,
+            yp.discharge_date,
+            yp.placement_status,
+            yp.primary_keyworker_id,
+            yp.summary_risk_level,
+            yp.photo_url,
+            yp.archived,
+            yp.created_at,
+            yp.updated_at,
+            h.name AS home_name,
+            u.first_name AS keyworker_first_name,
+            u.last_name AS keyworker_last_name
+        FROM young_people yp
+        LEFT JOIN homes h ON yp.home_id = h.id
+        LEFT JOIN users u ON yp.primary_keyworker_id = u.id
+        WHERE yp.archived = :archived
+    """
+    params = {"archived": archived}
+
+    if home_id is not None:
+        query += " AND yp.home_id = :home_id"
+        params["home_id"] = home_id
+
+    query += " ORDER BY yp.first_name ASC, yp.last_name ASC"
+
+    with engine.connect() as conn:
+        rows = conn.execute(text(query), params).mappings().all()
+
+    return [dict(row) for row in rows]
 
 
-@app.get("/assistant")
-def serve_assistant():
-    return FileResponse(os.path.join(COMPONENTS_DIR, "assistant.html"))
+@router.get("/{young_person_id}")
+def get_young_person(young_person_id: int):
+    query = """
+        SELECT
+            yp.id,
+            yp.home_id,
+            yp.first_name,
+            yp.last_name,
+            yp.preferred_name,
+            yp.date_of_birth,
+            yp.gender,
+            yp.ethnicity,
+            yp.nhs_number,
+            yp.local_id_number,
+            yp.admission_date,
+            yp.discharge_date,
+            yp.placement_status,
+            yp.primary_keyworker_id,
+            yp.summary_risk_level,
+            yp.photo_url,
+            yp.archived,
+            yp.created_at,
+            yp.updated_at,
+            h.name AS home_name,
+            u.first_name AS keyworker_first_name,
+            u.last_name AS keyworker_last_name
+        FROM young_people yp
+        LEFT JOIN homes h ON yp.home_id = h.id
+        LEFT JOIN users u ON yp.primary_keyworker_id = u.id
+        WHERE yp.id = :young_person_id
+        LIMIT 1
+    """
+
+    with engine.connect() as conn:
+        row = conn.execute(
+            text(query),
+            {"young_person_id": young_person_id}
+        ).mappings().first()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Young person not found")
+
+    return dict(row)
 
 
-@app.get("/journal")
-def serve_journal():
-    return FileResponse(os.path.join(FRONTEND_DIR, "journal.html"))
+@router.post("")
+def create_young_person(payload: YoungPersonCreate):
+    now = datetime.utcnow()
+
+    query = text("""
+        INSERT INTO young_people (
+            home_id,
+            first_name,
+            last_name,
+            preferred_name,
+            date_of_birth,
+            gender,
+            ethnicity,
+            nhs_number,
+            local_id_number,
+            admission_date,
+            discharge_date,
+            placement_status,
+            primary_keyworker_id,
+            summary_risk_level,
+            photo_url,
+            archived,
+            created_at,
+            updated_at
+        )
+        VALUES (
+            :home_id,
+            :first_name,
+            :last_name,
+            :preferred_name,
+            :date_of_birth,
+            :gender,
+            :ethnicity,
+            :nhs_number,
+            :local_id_number,
+            :admission_date,
+            :discharge_date,
+            :placement_status,
+            :primary_keyworker_id,
+            :summary_risk_level,
+            :photo_url,
+            :archived,
+            :created_at,
+            :updated_at
+        )
+        RETURNING id
+    """)
+
+    values = {
+        "home_id": payload.home_id,
+        "first_name": payload.first_name,
+        "last_name": payload.last_name,
+        "preferred_name": payload.preferred_name,
+        "date_of_birth": payload.date_of_birth,
+        "gender": payload.gender,
+        "ethnicity": payload.ethnicity,
+        "nhs_number": payload.nhs_number,
+        "local_id_number": payload.local_id_number,
+        "admission_date": payload.admission_date,
+        "discharge_date": payload.discharge_date,
+        "placement_status": payload.placement_status,
+        "primary_keyworker_id": payload.primary_keyworker_id,
+        "summary_risk_level": payload.summary_risk_level,
+        "photo_url": payload.photo_url,
+        "archived": payload.archived,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    with engine.begin() as conn:
+        new_id = conn.execute(query, values).scalar()
+
+    return {
+        "message": "Young person created successfully",
+        "id": new_id,
+    }
 
 
-@app.get("/journal.html")
-def serve_journal_html():
-    return FileResponse(os.path.join(FRONTEND_DIR, "journal.html"))
+@router.put("/{young_person_id}")
+def update_young_person(young_person_id: int, payload: YoungPersonUpdate):
+    update_data = payload.dict(exclude_unset=True)
+
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields provided for update")
+
+    update_data["updated_at"] = datetime.utcnow()
+    update_data["young_person_id"] = young_person_id
+
+    set_parts = [
+        f"{field} = :{field}"
+        for field in update_data.keys()
+        if field != "young_person_id"
+    ]
+    set_clause = ", ".join(set_parts)
+
+    query = text(f"""
+        UPDATE young_people
+        SET {set_clause}
+        WHERE id = :young_person_id
+        RETURNING id
+    """)
+
+    with engine.begin() as conn:
+        updated = conn.execute(query, update_data).scalar()
+
+    if not updated:
+        raise HTTPException(status_code=404, detail="Young person not found")
+
+    return {
+        "message": "Young person updated successfully",
+        "id": young_person_id,
+    }
 
 
-@app.get("/journal.css")
-def serve_journal_css():
-    return FileResponse(os.path.join(FRONTEND_DIR, "journal.css"))
+@router.delete("/{young_person_id}")
+def archive_young_person(young_person_id: int):
+    query = text("""
+        UPDATE young_people
+        SET archived = TRUE,
+            updated_at = :updated_at
+        WHERE id = :young_person_id
+        RETURNING id
+    """)
 
+    with engine.begin() as conn:
+        updated = conn.execute(
+            query,
+            {
+                "young_person_id": young_person_id,
+                "updated_at": datetime.utcnow(),
+            },
+        ).scalar()
 
-@app.get("/journal.js")
-def serve_journal_js():
-    return FileResponse(os.path.join(FRONTEND_DIR, "journal.js"))
+    if not updated:
+        raise HTTPException(status_code=404, detail="Young person not found")
 
-
-@app.get("/supervision")
-def serve_supervision():
-    return FileResponse(os.path.join(FRONTEND_DIR, "supervision.html"))
-
-
-@app.get("/supervision.html")
-def serve_supervision_html():
-    return FileResponse(os.path.join(FRONTEND_DIR, "supervision.html"))
-
-
-@app.get("/supervision.js")
-def serve_supervision_js():
-    return FileResponse(os.path.join(FRONTEND_DIR, "supervision.js"))
-
-
-@app.get("/ai-notes")
-def serve_ai_notes():
-    return FileResponse(os.path.join(FRONTEND_DIR, "ai-note.html"))
-
-
-@app.get("/ai-note.html")
-def serve_ai_note_html():
-    return FileResponse(os.path.join(FRONTEND_DIR, "ai-note.html"))
-
-
-@app.get("/ai-notes.css")
-def serve_ai_notes_css():
-    return FileResponse(os.path.join(FRONTEND_DIR, "ai-notes.css"))
-
-
-@app.get("/ai-notes.js")
-def serve_ai_notes_js():
-    return FileResponse(os.path.join(FRONTEND_DIR, "ai-notes.js"))
-
-
-@app.get("/young-people")
-def serve_young_people():
-    return FileResponse(os.path.join(FRONTEND_DIR, "young-people.html"))
-
-
-@app.get("/young-people.html")
-def serve_young_people_html():
-    return FileResponse(os.path.join(FRONTEND_DIR, "young-people.html"))
-
-
-@app.get("/health")
-def health():
-    return {"ok": True}
+    return {
+        "message": "Young person archived successfully",
+        "id": young_person_id,
+    }
