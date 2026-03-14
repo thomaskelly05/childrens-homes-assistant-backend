@@ -27,6 +27,7 @@ from routers.young_people_plans_routes import router as young_people_plans_route
 from routers.young_people_risk_routes import router as young_people_risk_router
 from routers.young_people_daily_notes_routes import router as young_people_daily_notes_router
 from routers.young_people_incidents_routes import router as young_people_incidents_router
+from routers.young_people_health_routes import router as young_people_health_router
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
@@ -71,6 +72,7 @@ app.include_router(young_people_plans_router)
 app.include_router(young_people_risk_router)
 app.include_router(young_people_daily_notes_router)
 app.include_router(young_people_incidents_router)
+app.include_router(young_people_health_router)
 
 app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
 app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
