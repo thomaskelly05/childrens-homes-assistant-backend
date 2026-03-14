@@ -6,11 +6,18 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from routers.account_routes import router as account_router
+from routers.admin_routes import router as admin_router
+from routers.ai_note_export_routes import router as ai_note_export_router
+from routers.ai_note_templates_routes import router as ai_note_templates_router
+from routers.ai_notes_routes import router as ai_notes_router
 from routers.auth_routes import router as auth_router
 from routers.chat_routes import router as chat_router
+from routers.dashboard_routes import router as dashboard_router
 from routers.documents_routes import router as documents_router
 from routers.handover_routes import router as handover_router
+from routers.incident_routes import router as incident_router
 from routers.reports_routes import router as reports_router
+from routers.risk_routes import router as risk_router
 from routers.staff_journal_routes import router as staff_journal_router
 from routers.supervision_routes import router as supervision_router
 from routers.tasks_routes import router as tasks_router
@@ -24,7 +31,6 @@ COMPONENTS_DIR = os.path.join(FRONTEND_DIR, "components")
 
 app = FastAPI(title="IndiCare")
 
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -37,17 +43,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 app.include_router(auth_router)
 app.include_router(account_router)
+app.include_router(admin_router)
+app.include_router(ai_note_export_router)
+app.include_router(ai_note_templates_router)
+app.include_router(ai_notes_router)
 app.include_router(chat_router)
+app.include_router(dashboard_router)
 app.include_router(documents_router)
 app.include_router(handover_router)
+app.include_router(incident_router)
 app.include_router(reports_router)
+app.include_router(risk_router)
 app.include_router(staff_journal_router)
 app.include_router(supervision_router)
 app.include_router(tasks_router)
-
 
 app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
 app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
