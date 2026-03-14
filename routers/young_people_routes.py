@@ -126,7 +126,10 @@ def get_young_person(young_person_id: int):
     """
 
     with engine.connect() as conn:
-        row = conn.execute(text(query), {"young_person_id": young_person_id}).mappings().first()
+        row = conn.execute(
+            text(query),
+            {"young_person_id": young_person_id}
+        ).mappings().first()
 
     if not row:
         raise HTTPException(status_code=404, detail="Young person not found")
@@ -222,7 +225,11 @@ def update_young_person(young_person_id: int, payload: YoungPersonUpdate):
     update_data["updated_at"] = datetime.utcnow()
     update_data["young_person_id"] = young_person_id
 
-    set_parts = [f"{field} = :{field}" for field in update_data.keys() if field != "young_person_id"]
+    set_parts = [
+        f"{field} = :{field}"
+        for field in update_data.keys()
+        if field != "young_person_id"
+    ]
     set_clause = ", ".join(set_parts)
 
     query = text(f"""
