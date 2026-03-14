@@ -1,8 +1,14 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from openai import OpenAI
 
-router = APIRouter(prefix="/reports", tags=["Reports"])
+from auth.session_user import get_current_user
+
+router = APIRouter(
+    prefix="/reports",
+    tags=["Reports"],
+    dependencies=[Depends(get_current_user)],
+)
 
 client = OpenAI()
 
@@ -13,7 +19,6 @@ class IncidentRequest(BaseModel):
 
 @router.post("/incident")
 def generate_incident_report(payload: IncidentRequest):
-
     prompt = f"""
 You help residential children's home staff write structured incident reports.
 
@@ -37,7 +42,7 @@ Incident description:
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.3
+        temperature=0.3,
     )
 
     return {
