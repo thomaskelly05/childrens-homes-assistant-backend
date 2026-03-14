@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IndiCare | AI Note Assistant</title>
 
+    <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
     <link rel="stylesheet" href="/css/reset.css">
     <link rel="stylesheet" href="/css/base.css">
     <link rel="stylesheet" href="/css/theme.css">
@@ -13,14 +14,432 @@
     <link rel="stylesheet" href="/ai-notes.css">
 
     <style>
-        .record-layout {
+        .notes-page {
+            min-height: 100vh;
+            background: var(--bg);
+        }
+
+        .notes-workspace {
+            padding: 0 1.5rem 1.5rem;
+        }
+
+        .workspace-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1.25rem 0;
+        }
+
+        .eyebrow {
+            margin: 0 0 0.35rem;
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--primary-hover);
+        }
+
+        .workspace-header h1 {
+            margin: 0 0 0.45rem;
+            color: var(--text);
+            letter-spacing: -0.03em;
+        }
+
+        .workspace-subtitle {
+            margin: 0.2rem 0;
+            color: var(--text-soft);
+            line-height: 1.6;
+            max-width: 760px;
+        }
+
+        .workspace-header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .template-picker {
+            min-width: 280px;
+        }
+
+        .template-picker label {
+            display: block;
+            margin-bottom: 0.45rem;
+            font-weight: 700;
+            color: var(--text);
+            font-size: 0.92rem;
+        }
+
+        .template-picker-row {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+
+        .template-picker-row select,
+        .template-picker-row input,
+        .field input,
+        .field textarea,
+        .instruction-box {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            background: #fff;
+            color: var(--text);
+            padding: 0.9rem 1rem;
+            outline: none;
+        }
+
+        .template-picker-row select:focus,
+        .template-picker-row input:focus,
+        .field input:focus,
+        .field textarea:focus,
+        .instruction-box:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(47, 92, 255, 0.12);
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 0.65rem;
+            flex-wrap: wrap;
+        }
+
+        .stage-tabs {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .stage-tab {
+            border: 1px solid var(--border);
+            background: var(--surface-muted);
+            color: var(--text);
+            border-radius: 12px;
+            padding: 0.7rem 1rem;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .stage-tab.active {
+            background: #eef4ff;
+            border-color: var(--primary);
+            color: var(--primary-hover);
+        }
+
+        .stage-panel {
+            display: none;
+        }
+
+        .stage-panel.active {
+            display: block;
+        }
+
+        .record-layout,
+        .generate-layout {
             display: grid;
             grid-template-columns: 1fr;
             gap: 1rem;
         }
 
-        .record-visual-card {
-            display: none;
+        .record-card,
+        .panel,
+        .sidebar-card,
+        .document-panel,
+        .ai-assistant-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .record-card,
+        .panel,
+        .ai-assistant-panel,
+        .document-panel,
+        .sidebar-card {
+            padding: 1rem;
+        }
+
+        .panel-label {
+            margin: 0 0 0.35rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--primary-hover);
+        }
+
+        .record-card h2,
+        .panel h2,
+        .assistant-header h2,
+        .document-toolbar h2 {
+            margin: 0 0 0.4rem;
+            color: var(--text);
+            letter-spacing: -0.02em;
+        }
+
+        .panel-copy,
+        .assistant-header p,
+        .panel p {
+            color: var(--text-soft);
+            line-height: 1.6;
+        }
+
+        .record-actions,
+        .panel-actions,
+        .document-footer,
+        .document-header-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .helper-text {
+            color: var(--text-soft);
+            margin-top: 0.8rem;
+            margin-bottom: 0;
+        }
+
+        .field {
+            display: grid;
+            gap: 0.45rem;
+            margin-top: 1rem;
+        }
+
+        .field label {
+            color: var(--text);
+            font-weight: 700;
+            font-size: 0.92rem;
+        }
+
+        #transcript,
+        #finalNote {
+            min-height: 260px;
+            resize: vertical;
+        }
+
+        .editor-shell {
+            display: grid;
+            grid-template-columns: 360px minmax(0, 1fr);
+            gap: 1rem;
+            align-items: start;
+        }
+
+        .quick-prompts {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin: 1rem 0;
+        }
+
+        .prompt-chip {
+            border: 1px solid var(--border);
+            background: var(--surface-muted);
+            color: var(--text);
+            border-radius: 999px;
+            padding: 0.55rem 0.85rem;
+            cursor: pointer;
+            font-size: 0.86rem;
+            font-weight: 600;
+        }
+
+        .panel-actions.stacked {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .source-box {
+            margin-top: 1rem;
+            border-top: 1px solid var(--border);
+            padding-top: 1rem;
+        }
+
+        .source-box-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .source-box-header h3 {
+            margin: 0;
+            font-size: 1rem;
+            color: var(--text);
+        }
+
+        .source-transcript {
+            min-height: 180px;
+            resize: vertical;
+        }
+
+        .document-toolbar {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .document-meta {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.45rem;
+        }
+
+        .note-mode-badge,
+        .save-state-badge,
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.42rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
+        .note-mode-badge.is-new {
+            background: #eef4ff;
+            color: #1d4ed8;
+        }
+
+        .note-mode-badge.is-editing {
+            background: #ecfdf3;
+            color: #027a48;
+        }
+
+        .save-state-badge.is-idle {
+            background: #f2f4f7;
+            color: #475467;
+        }
+
+        .save-state-badge.is-dirty {
+            background: #fff7e6;
+            color: #b54708;
+        }
+
+        .save-state-badge.is-saving {
+            background: #eef4ff;
+            color: #1d4ed8;
+        }
+
+        .save-state-badge.is-saved {
+            background: #ecfdf3;
+            color: #027a48;
+        }
+
+        .status-pill.idle {
+            background: #f2f4f7;
+            color: #475467;
+        }
+
+        .status-pill.recording {
+            background: #eff8ff;
+            color: #175cd3;
+        }
+
+        .status-pill.processing {
+            background: #fff7e6;
+            color: #b54708;
+        }
+
+        .status-pill.success {
+            background: #ecfdf3;
+            color: #027a48;
+        }
+
+        .history-card .sidebar-card-header,
+        .sidebar-card-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+
+        .sidebar-card-header h3 {
+            margin: 0;
+            color: var(--text);
+        }
+
+        .sidebar-note {
+            color: var(--text-soft);
+            line-height: 1.55;
+            margin: 0.6rem 0 0;
+        }
+
+        .history-empty {
+            color: var(--text-soft);
+            font-size: 0.92rem;
+        }
+
+        .history-list {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .history-item {
+            border: 1px solid var(--border);
+            background: var(--surface-muted);
+            border-radius: 14px;
+            padding: 0.85rem;
+        }
+
+        .history-title {
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 0.35rem;
+        }
+
+        .history-meta {
+            color: var(--text-soft);
+            font-size: 0.86rem;
+            margin-bottom: 0.6rem;
+        }
+
+        .history-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .history-badge.warning {
+            display: inline-block;
+            background: #fff7e6;
+            color: #b54708;
+            padding: 0.3rem 0.55rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-bottom: 0.6rem;
+        }
+
+        .toast {
+            position: fixed;
+            right: 1.25rem;
+            bottom: 1.25rem;
+            background: #111827;
+            color: white;
+            padding: 0.8rem 1rem;
+            border-radius: 12px;
+            box-shadow: 0 16px 36px rgba(15, 23, 42, 0.22);
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(12px);
+            transition: 0.2s ease;
+            z-index: 2000;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
         }
 
         .recording-modal-overlay {
@@ -34,7 +453,8 @@
             z-index: 1000;
         }
 
-        .recording-modal-overlay.hidden {
+        .recording-modal-overlay.hidden,
+        .modal-overlay.hidden {
             display: none;
         }
 
@@ -130,7 +550,105 @@
             margin-top: 1rem;
         }
 
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            z-index: 1100;
+        }
+
+        .modal-card {
+            width: min(760px, 100%);
+            background: #fff;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 30px 80px rgba(15, 23, 42, 0.22);
+            padding: 1.25rem;
+            max-height: 88vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .modal-header h2 {
+            margin: 0.2rem 0 0;
+        }
+
+        .template-builder,
+        .saved-templates-box {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .template-add-row {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            margin-top: 0.6rem;
+        }
+
+        .template-sections-list,
+        .saved-templates-list {
+            display: grid;
+            gap: 0.65rem;
+        }
+
+        .template-section-chip,
+        .saved-template-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: center;
+            border: 1px solid var(--border);
+            background: var(--surface-muted);
+            border-radius: 12px;
+            padding: 0.7rem 0.85rem;
+        }
+
+        @media (max-width: 1180px) {
+            .editor-shell {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 920px) {
+            .workspace-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .workspace-header-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+
         @media (max-width: 720px) {
+            .notes-workspace {
+                padding: 0 1rem 1rem;
+            }
+
+            .document-toolbar,
+            .source-box-header,
+            .modal-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .template-picker {
+                min-width: 0;
+            }
+
             .recording-modal {
                 padding: 1.15rem;
             }
@@ -147,35 +665,23 @@
         }
     </style>
 </head>
-<body>
+<body class="notes-page">
     <div class="app-shell">
         <aside class="sidebar">
-            <div class="brand">
-                <div class="brand-badge">AI</div>
-                <div>
-                    <h2>IndiCare Notes</h2>
-                    <p>Meeting notes and AI drafting</p>
+            <div class="sidebar__brand">
+                <img src="/assets/logo.svg" alt="IndiCare logo" class="sidebar__logo">
+                <div class="sidebar__brand-text">
+                    <h1>IndiCare</h1>
+                    <p>AI Notes</p>
                 </div>
             </div>
 
-            <a href="/" class="back-link">
-                <span class="back-link-icon">←</span>
-                <span>Back to dashboard</span>
-            </a>
-
-            <nav class="sidebar-nav">
-                <button class="nav-item nav-item-active" type="button" data-stage-target="record">
-                    <span class="nav-icon">●</span>
-                    <span>New note</span>
-                </button>
-                <button class="nav-item" type="button" data-stage-target="generate">
-                    <span class="nav-icon">≡</span>
-                    <span>Generate</span>
-                </button>
-                <button class="nav-item" type="button" data-stage-target="edit">
-                    <span class="nav-icon">✦</span>
-                    <span>Edit</span>
-                </button>
+            <nav class="sidebar__nav">
+                <a href="/" class="nav-link">Dashboard</a>
+                <a href="/assistant" class="nav-link">Assistant</a>
+                <a href="/journal" class="nav-link">Staff Journal</a>
+                <a href="/supervision" class="nav-link">Supervision</a>
+                <a href="/ai-note.html" class="nav-link is-active">AI Notes</a>
             </nav>
 
             <div class="sidebar-card">
@@ -184,7 +690,7 @@
                 </div>
                 <div id="recordingStatus" class="status-pill idle">Not recording</div>
                 <div id="recordingTimer" class="timer">00:00</div>
-                <p class="sidebar-note">Record first, then generate and review the note.</p>
+                <p class="sidebar-note">Record first, then transcribe, generate and review the final note.</p>
             </div>
 
             <div id="safeguardingBox" class="sidebar-card safeguarding-box" style="display:none;">
@@ -206,164 +712,168 @@
 
                 <div id="historyList" class="history-list"></div>
             </div>
+
+            <div class="sidebar__footer">
+                <a href="/" class="button button--secondary">Back to dashboard</a>
+            </div>
         </aside>
 
-        <main class="workspace">
-            <header class="workspace-header">
-                <div>
-                    <p class="eyebrow">AI Meeting Assistant</p>
-                    <h1>Create a professional note</h1>
-                    <p class="workspace-subtitle">
-                        Record, generate, then edit the final note with AI support.
-                    </p>
-                </div>
-
-                <div class="workspace-header-actions">
-                    <div class="template-picker">
-                        <label for="templateSelect">Template</label>
-                        <div class="template-picker-row">
-                            <select id="templateSelect"></select>
-                            <button id="openTemplateManagerBtn" class="btn btn-light" type="button">Manage templates</button>
-                        </div>
-                    </div>
-
-                    <div class="header-buttons">
-                        <button id="saveBtnTop" class="btn btn-success" type="button">Save</button>
-                        <button id="exportBtnTop" class="btn btn-light" type="button">Export</button>
-                        <button id="printBtnTop" class="btn btn-light" type="button">Print</button>
-                    </div>
-                </div>
-            </header>
-
-            <section class="stage-tabs">
-                <button class="stage-tab active" data-stage="record" type="button">1. Record</button>
-                <button class="stage-tab" data-stage="generate" type="button">2. Generate</button>
-                <button class="stage-tab" data-stage="edit" type="button">3. Edit &amp; Save</button>
-            </section>
-
-            <section id="stage-record" class="stage-panel active">
-                <div class="record-layout">
-                    <div class="record-card">
-                        <p class="panel-label">Step 1</p>
-                        <h2>Record the meeting</h2>
-                        <p class="panel-copy">
-                            Use the recorder to capture a meeting, supervision, or discussion. Once you stop recording, you can transcribe it and move straight into note generation.
+        <main class="main-layout">
+            <section class="notes-workspace">
+                <header class="workspace-header">
+                    <div>
+                        <p class="eyebrow">AI Meeting Assistant</p>
+                        <h1>Create a professional note</h1>
+                        <p class="workspace-subtitle">
+                            Record, generate, then edit the final note with AI support.
                         </p>
-
-                        <div class="record-actions">
-                            <button id="startRecordingBtn" class="btn btn-primary" type="button">Start recording</button>
-                            <button id="stopRecordingBtn" class="btn btn-secondary" type="button" disabled>Stop recording</button>
-                            <button id="transcribeBtn" class="btn btn-dark" type="button" disabled>Transcribe recording</button>
-                        </div>
-
-                        <p id="audioReadyText" class="helper-text">No recording yet.</p>
-
-                        <audio id="audioPlayback" controls style="display:none;"></audio>
                     </div>
-                </div>
-            </section>
 
-            <section id="stage-generate" class="stage-panel">
-                <div class="generate-layout">
-                    <div class="panel">
-                        <div class="panel-header">
-                            <div>
-                                <p class="panel-label">Step 2</p>
-                                <h2>Transcript</h2>
-                                <p>Review the transcript before generating the note.</p>
+                    <div class="workspace-header-actions">
+                        <div class="template-picker">
+                            <label for="templateSelect">Template</label>
+                            <div class="template-picker-row">
+                                <select id="templateSelect"></select>
+                                <button id="openTemplateManagerBtn" class="btn btn-light" type="button">Manage templates</button>
                             </div>
                         </div>
 
-                        <div class="field">
-                            <label for="transcript">Transcript</label>
-                            <textarea id="transcript" placeholder="The transcript will appear here after transcription, or you can paste one manually."></textarea>
-                        </div>
-
-                        <div class="panel-actions">
-                            <button id="generateBtn" class="btn btn-primary" type="button">Generate AI note</button>
-                            <button id="goToEditBtn" class="btn btn-light" type="button">Go to editor</button>
+                        <div class="header-buttons">
+                            <button id="saveBtnTop" class="btn btn-success" type="button">Save</button>
+                            <button id="exportBtnTop" class="btn btn-light" type="button">Export</button>
+                            <button id="printBtnTop" class="btn btn-light" type="button">Print</button>
                         </div>
                     </div>
-                </div>
-            </section>
+                </header>
 
-            <section id="stage-edit" class="stage-panel">
-                <div class="editor-shell">
-                    <aside class="ai-assistant-panel">
-                        <div class="assistant-header">
-                            <p class="panel-label">AI assistant</p>
-                            <h2>Refine the note</h2>
-                            <p>Tell the AI exactly what you want changed.</p>
-                        </div>
+                <section class="stage-tabs">
+                    <button class="stage-tab active" data-stage="record" type="button">1. Record</button>
+                    <button class="stage-tab" data-stage="generate" type="button">2. Generate</button>
+                    <button class="stage-tab" data-stage="edit" type="button">3. Edit &amp; Save</button>
+                </section>
 
-                        <div class="quick-prompts">
-                            <button class="prompt-chip" type="button" data-prompt="Make this more professional.">More professional</button>
-                            <button class="prompt-chip" type="button" data-prompt="Make this shorter and clearer.">Shorter</button>
-                            <button class="prompt-chip" type="button" data-prompt="Extract the key actions and next steps clearly.">Extract actions</button>
-                            <button class="prompt-chip" type="button" data-prompt="Rewrite this using bullet points where helpful.">Use bullet points</button>
-                        </div>
+                <section id="stage-record" class="stage-panel active">
+                    <div class="record-layout">
+                        <div class="record-card">
+                            <p class="panel-label">Step 1</p>
+                            <h2>Record the meeting</h2>
+                            <p class="panel-copy">
+                                Capture a meeting, supervision, or professional discussion. Once you stop recording, you can transcribe it and move straight into note generation.
+                            </p>
 
-                        <div class="field">
-                            <label for="aiInstruction">Instruction for AI</label>
-                            <textarea id="aiInstruction" class="instruction-box" placeholder="Example: rewrite this in a more professional tone and make the actions clearer."></textarea>
-                        </div>
-
-                        <div class="panel-actions stacked">
-                            <button id="applyAiEditBtn" class="btn btn-dark" type="button">Apply AI edit</button>
-                            <button id="undoAiEditBtn" class="btn btn-light" type="button">Undo last edit</button>
-                            <button id="copyDraftBtn" class="btn btn-light" type="button">Reset document from generated draft</button>
-                        </div>
-
-                        <div class="source-box">
-                            <div class="source-box-header">
-                                <h3>Source transcript</h3>
-                                <button id="toggleTranscriptBtn" class="btn btn-light btn-tiny" type="button">Show / hide</button>
+                            <div class="record-actions">
+                                <button id="startRecordingBtn" class="btn btn-primary" type="button">Start recording</button>
+                                <button id="stopRecordingBtn" class="btn btn-secondary" type="button" disabled>Stop recording</button>
+                                <button id="transcribeBtn" class="btn btn-dark" type="button" disabled>Transcribe recording</button>
                             </div>
-                            <div id="transcriptContent">
-                                <textarea id="transcriptMirror" class="source-transcript" readonly placeholder="Transcript will appear here."></textarea>
-                            </div>
-                        </div>
-                    </aside>
 
-                    <section class="document-panel">
-                        <div class="document-toolbar">
-                            <div class="document-toolbar-left">
-                                <p class="panel-label">Final document</p>
-                                <h2>Editable note</h2>
-                                <div class="document-meta">
-                                    <span id="noteModeBadge" class="note-mode-badge is-new">New unsaved note</span>
-                                    <span id="saveStateBadge" class="save-state-badge is-idle">Ready</span>
+                            <p id="audioReadyText" class="helper-text">No recording yet.</p>
+                            <audio id="audioPlayback" controls style="display:none;"></audio>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="stage-generate" class="stage-panel">
+                    <div class="generate-layout">
+                        <div class="panel">
+                            <div class="panel-header">
+                                <div>
+                                    <p class="panel-label">Step 2</p>
+                                    <h2>Transcript</h2>
+                                    <p>Review the transcript before generating the note.</p>
                                 </div>
                             </div>
 
-                            <div class="document-header-actions">
-                                <button id="copyFinalBtn" class="btn btn-light" type="button">Copy</button>
-                                <button id="printBtn" class="btn btn-light" type="button">Print</button>
-                                <button id="exportBtn" class="btn btn-light" type="button">Export</button>
+                            <div class="field">
+                                <label for="transcript">Transcript</label>
+                                <textarea id="transcript" placeholder="The transcript will appear here after transcription, or you can paste one manually."></textarea>
+                            </div>
+
+                            <div class="panel-actions">
+                                <button id="generateBtn" class="btn btn-primary" type="button">Generate AI note</button>
+                                <button id="goToEditBtn" class="btn btn-light" type="button">Go to editor</button>
                             </div>
                         </div>
+                    </div>
+                </section>
 
-                        <div class="field">
-                            <label for="noteTitle">Note title</label>
-                            <input id="noteTitle" type="text" placeholder="Example: Team meeting - March review">
-                        </div>
+                <section id="stage-edit" class="stage-panel">
+                    <div class="editor-shell">
+                        <aside class="ai-assistant-panel">
+                            <div class="assistant-header">
+                                <p class="panel-label">AI assistant</p>
+                                <h2>Refine the note</h2>
+                                <p>Tell the AI exactly what you want changed.</p>
+                            </div>
 
-                        <div class="field">
-                            <label for="finalNote">Final Note</label>
-                            <textarea id="finalNote" class="document-editor" placeholder="The final editable note will appear here..."></textarea>
-                        </div>
+                            <div class="quick-prompts">
+                                <button class="prompt-chip" type="button" data-prompt="Make this more professional.">More professional</button>
+                                <button class="prompt-chip" type="button" data-prompt="Make this shorter and clearer.">Shorter</button>
+                                <button class="prompt-chip" type="button" data-prompt="Extract the key actions and next steps clearly.">Extract actions</button>
+                                <button class="prompt-chip" type="button" data-prompt="Rewrite this using bullet points where helpful.">Use bullet points</button>
+                            </div>
 
-                        <div class="document-footer">
-                            <button id="saveBtn" class="btn btn-success" type="button">Save note</button>
-                            <button id="clearBtn" class="btn btn-danger" type="button">Clear</button>
-                        </div>
-                    </section>
-                </div>
+                            <div class="field">
+                                <label for="aiInstruction">Instruction for AI</label>
+                                <textarea id="aiInstruction" class="instruction-box" placeholder="Example: rewrite this in a more professional tone and make the actions clearer."></textarea>
+                            </div>
+
+                            <div class="panel-actions stacked">
+                                <button id="applyAiEditBtn" class="btn btn-dark" type="button">Apply AI edit</button>
+                                <button id="undoAiEditBtn" class="btn btn-light" type="button">Undo last edit</button>
+                                <button id="copyDraftBtn" class="btn btn-light" type="button">Reset document from generated draft</button>
+                            </div>
+
+                            <div class="source-box">
+                                <div class="source-box-header">
+                                    <h3>Source transcript</h3>
+                                    <button id="toggleTranscriptBtn" class="btn btn-light btn-tiny" type="button">Show / hide</button>
+                                </div>
+                                <div id="transcriptContent">
+                                    <textarea id="transcriptMirror" class="source-transcript" readonly placeholder="Transcript will appear here."></textarea>
+                                </div>
+                            </div>
+                        </aside>
+
+                        <section class="document-panel">
+                            <div class="document-toolbar">
+                                <div class="document-toolbar-left">
+                                    <p class="panel-label">Final document</p>
+                                    <h2>Editable note</h2>
+                                    <div class="document-meta">
+                                        <span id="noteModeBadge" class="note-mode-badge is-new">New unsaved note</span>
+                                        <span id="saveStateBadge" class="save-state-badge is-idle">Ready</span>
+                                    </div>
+                                </div>
+
+                                <div class="document-header-actions">
+                                    <button id="copyFinalBtn" class="btn btn-light" type="button">Copy</button>
+                                    <button id="printBtn" class="btn btn-light" type="button">Print</button>
+                                    <button id="exportBtn" class="btn btn-light" type="button">Export</button>
+                                </div>
+                            </div>
+
+                            <div class="field">
+                                <label for="noteTitle">Note title</label>
+                                <input id="noteTitle" type="text" placeholder="Example: Team meeting - March review">
+                            </div>
+
+                            <div class="field">
+                                <label for="finalNote">Final Note</label>
+                                <textarea id="finalNote" class="document-editor" placeholder="The final editable note will appear here..."></textarea>
+                            </div>
+
+                            <div class="document-footer">
+                                <button id="saveBtn" class="btn btn-success" type="button">Save note</button>
+                                <button id="clearBtn" class="btn btn-danger" type="button">Clear</button>
+                            </div>
+                        </section>
+                    </div>
+                </section>
+
+                <textarea id="aiDraft" style="display:none;"></textarea>
+                <div id="toast" class="toast"></div>
             </section>
-
-            <textarea id="aiDraft" style="display:none;"></textarea>
-
-            <div id="toast" class="toast"></div>
         </main>
     </div>
 
@@ -412,9 +922,7 @@
             </div>
 
             <div class="recording-mic-wrap">
-                <div id="recordingModalMic" class="recording-modal-mic">
-                    🎤
-                </div>
+                <div id="recordingModalMic" class="recording-modal-mic">🎤</div>
                 <div id="recordingModalTimer" class="recording-modal-timer">00:00</div>
                 <div id="recordingModalStatus" class="recording-modal-status">Recorder ready</div>
             </div>
