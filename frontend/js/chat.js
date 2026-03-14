@@ -47,10 +47,11 @@ function bindDocumentUpload() {
         const formData = new FormData();
         formData.append("file", file);
 
-        const uploadStatus = document.getElementById("uploadStatus");
-        if (uploadStatus) {
-            uploadStatus.textContent = `Uploading ${file.name}...`;
+        if (window.conversationId) {
+            formData.append("conversation_id", String(window.conversationId));
         }
+
+        setUploadStatus(`Uploading ${file.name}...`);
 
         try {
             const token = localStorage.getItem("access_token");
@@ -74,41 +75,61 @@ function bindDocumentUpload() {
                     return;
                 }
 
-                if (uploadStatus) {
-                    uploadStatus.textContent = data.detail || "Upload failed.";
-                }
+                setUploadStatus(data.detail || "Upload failed.");
                 return;
             }
 
             window.currentDocumentText = data.text || "";
             window.currentDocumentName = data.filename || file.name;
-
             refreshUploadStatus();
         } catch (error) {
             console.error("Upload failed:", error);
-            if (uploadStatus) {
-                uploadStatus.textContent = "Could not upload the document.";
-            }
+            setUploadStatus("Could not upload the document.");
         } finally {
             uploadInput.value = "";
         }
     });
 
-    clearBtn?.addEventListener("click", () => {
+    clearBtn?.addEventListener("click", async () => {
+        if (window.conversationId) {
+            try {
+                await apiRequest(`/chat/conversations/${window.conversationId}/document`, {
+                    method: "DELETE"
+                });
+            } catch (error) {
+                console.error("Failed to clear stored document:", error);
+            }
+        }
+
         window.currentDocumentText = null;
         window.currentDocumentName = null;
         refreshUploadStatus();
     });
 }
 
-function refreshUploadStatus() {
+function setUploadStatus(text) {
     const uploadStatus = document.getElementById("uploadStatus");
-    if (!uploadStatus) return;
+    if (uploadStatus) {
+        uploadStatus.textContent = text || "";
+    }
+}
+
+function refreshUploadStatus() {
+    const chip = document.getElementById("documentChip");
+    const chipText = document.getElementById("documentChipText");
 
     if (window.currentDocumentName && window.currentDocumentText) {
-        uploadStatus.textContent = `Loaded: ${window.currentDocumentName}`;
+        chip?.classList.remove("hidden");
+        if (chipText) {
+            chipText.textContent = window.currentDocumentName;
+        }
+        setUploadStatus("Document attached to this chat.");
     } else {
-        uploadStatus.textContent = "No document loaded.";
+        chip?.classList.add("hidden");
+        if (chipText) {
+            chipText.textContent = "";
+        }
+        setUploadStatus("");
     }
 }
 
@@ -338,9 +359,12 @@ function clearChatWindow() {
 
 function startNewConversation() {
     window.conversationId = null;
+    window.currentDocumentText = null;
+    window.currentDocumentName = null;
     clearChatWindow();
     setConversationHeading("New conversation");
     renderConversationSelection();
+    refreshUploadStatus();
 }
 
 function setConversationHeading(text) {
@@ -419,15 +443,22 @@ function renderConversationSelection() {
 
 async function openConversation(conversationId, title = "Conversation", reloadList = true) {
     try {
-        const rows = await apiRequest(`/chat/conversations/${conversationId}`);
+        const payload = await apiRequest(`/chat/conversations/${conversationId}`);
         window.conversationId = conversationId;
+
+        const rows = Array.isArray(payload.messages) ? payload.messages : [];
+        const documentInfo = payload.document || null;
+
+        window.currentDocumentText = documentInfo?.text || null;
+        window.currentDocumentName = documentInfo?.filename || null;
+        refreshUploadStatus();
 
         const chat = document.getElementById("chat");
         if (!chat) return;
 
         chat.innerHTML = "";
 
-        if (!Array.isArray(rows) || !rows.length) {
+        if (!rows.length) {
             clearChatWindow();
         } else {
             rows.forEach((row) => {
