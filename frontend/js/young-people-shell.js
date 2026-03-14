@@ -7,6 +7,7 @@ const profileContent = document.getElementById("profileContent");
 const plansPanel = document.getElementById("tab-plans");
 const riskPanel = document.getElementById("tab-risk");
 const dailyNotesPanel = document.getElementById("tab-daily-notes");
+const incidentsPanel = document.getElementById("tab-incidents");
 
 let youngPeople = [];
 let selectedYoungPerson = null;
@@ -14,6 +15,7 @@ let selectedProfile = null;
 let selectedPlans = [];
 let selectedRisks = [];
 let selectedDailyNotes = [];
+let selectedIncidents = [];
 
 async function loadYoungPeople() {
   const res = await fetch("/young-people");
@@ -40,25 +42,28 @@ async function loadYoungPerson(id) {
     selectedPlans = [];
     selectedRisks = [];
     selectedDailyNotes = [];
+    selectedIncidents = [];
     clearDisplay();
     return;
   }
 
-  const [personRes, profileRes, plansRes, risksRes, dailyNotesRes] = await Promise.all([
+  const [personRes, profileRes, plansRes, risksRes, dailyNotesRes, incidentsRes] = await Promise.all([
     fetch(`/young-people/${id}`),
     fetch(`/young-people/${id}/profile`),
     fetch(`/young-people/${id}/plans`),
     fetch(`/young-people/${id}/risks`),
-    fetch(`/young-people/${id}/daily-notes`)
+    fetch(`/young-people/${id}/daily-notes`),
+    fetch(`/young-people/${id}/incidents`)
   ]);
 
-  if (!personRes.ok || !profileRes.ok || !plansRes.ok || !risksRes.ok || !dailyNotesRes.ok) return;
+  if (!personRes.ok || !profileRes.ok || !plansRes.ok || !risksRes.ok || !dailyNotesRes.ok || !incidentsRes.ok) return;
 
   selectedYoungPerson = await personRes.json();
   selectedProfile = await profileRes.json();
   selectedPlans = await plansRes.json();
   selectedRisks = await risksRes.json();
   selectedDailyNotes = await dailyNotesRes.json();
+  selectedIncidents = await incidentsRes.json();
 
   renderYoungPerson();
 }
@@ -72,6 +77,7 @@ function clearDisplay() {
   plansPanel.innerHTML = `<div class="panel-card"><h2>Plans</h2><p>Select a young person to load plans.</p></div>`;
   riskPanel.innerHTML = `<div class="panel-card"><h2>Risk</h2><p>Select a young person to load risk assessments.</p></div>`;
   dailyNotesPanel.innerHTML = `<div class="panel-card"><h2>Daily Notes</h2><p>Select a young person to load daily notes.</p></div>`;
+  incidentsPanel.innerHTML = `<div class="panel-card"><h2>Incidents</h2><p>Select a young person to load incidents.</p></div>`;
 }
 
 function formatDate(value) {
@@ -79,6 +85,13 @@ function formatDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString("en-GB");
+}
+
+function formatDateTime(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("en-GB");
 }
 
 function calculateAge(dateOfBirth) {
@@ -184,6 +197,40 @@ function renderDailyNotes() {
             <div class="profile-label">Actions required</div><div class="profile-value">${note.actions_required || "—"}</div>
             <div class="profile-label">Significance</div><div class="profile-value">${note.significance || "—"}</div>
             <div class="profile-label">Author</div><div class="profile-value">${note.author_first_name ? `${note.author_first_name} ${note.author_last_name || ""}` : "—"}</div>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderIncidents() {
+  if (!selectedIncidents.length) {
+    incidentsPanel.innerHTML = `<div class="panel-card"><h2>Incidents</h2><p>No incidents recorded yet.</p></div>`;
+    return;
+  }
+
+  incidentsPanel.innerHTML = `
+    <div class="panel-grid">
+      ${selectedIncidents.map(incident => `
+        <div class="panel-card">
+          <h2>${incident.incident_type || "Incident"}</h2>
+          <div class="profile-grid">
+            <div class="profile-label">Date/time</div><div class="profile-value">${formatDateTime(incident.incident_datetime || incident.created_at)}</div>
+            <div class="profile-label">Severity</div><div class="profile-value">${incident.severity || "—"}</div>
+            <div class="profile-label">Location</div><div class="profile-value">${incident.location || "—"}</div>
+            <div class="profile-label">Antecedent</div><div class="profile-value">${incident.antecedent || "—"}</div>
+            <div class="profile-label">Description</div><div class="profile-value">${incident.description || "—"}</div>
+            <div class="profile-label">Staff response</div><div class="profile-value">${incident.staff_response || "—"}</div>
+            <div class="profile-label">Child response</div><div class="profile-value">${incident.child_response || "—"}</div>
+            <div class="profile-label">Outcome</div><div class="profile-value">${incident.outcome || "—"}</div>
+            <div class="profile-label">Injury</div><div class="profile-value">${incident.injury_flag ? "Yes" : "No"}</div>
+            <div class="profile-label">Damage</div><div class="profile-value">${incident.property_damage_flag ? "Yes" : "No"}</div>
+            <div class="profile-label">Police involved</div><div class="profile-value">${incident.police_involved ? "Yes" : "No"}</div>
+            <div class="profile-label">Safeguarding</div><div class="profile-value">${incident.safeguarding_flag ? "Yes" : "No"}</div>
+            <div class="profile-label">Manager review</div><div class="profile-value">${incident.manager_review_status || "—"}</div>
+            <div class="profile-label">Follow-up required</div><div class="profile-value">${incident.follow_up_required ? "Yes" : "No"}</div>
+            <div class="profile-label">Staff</div><div class="profile-value">${incident.staff_first_name ? `${incident.staff_first_name} ${incident.staff_last_name || ""}` : "—"}</div>
           </div>
         </div>
       `).join("")}
@@ -300,6 +347,7 @@ function renderYoungPerson() {
   renderPlans();
   renderRisks();
   renderDailyNotes();
+  renderIncidents();
 }
 
 function setupTabs() {
