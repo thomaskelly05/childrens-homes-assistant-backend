@@ -4,10 +4,12 @@ const alertsContainer = document.getElementById("ypAlerts");
 const complianceContainer = document.getElementById("ypCompliance");
 const overviewContent = document.getElementById("overviewContent");
 const profileContent = document.getElementById("profileContent");
+const plansPanel = document.getElementById("tab-plans");
 
 let youngPeople = [];
 let selectedYoungPerson = null;
 let selectedProfile = null;
+let selectedPlans = [];
 
 async function loadYoungPeople() {
   const res = await fetch("/young-people");
@@ -17,7 +19,6 @@ async function loadYoungPeople() {
   }
 
   youngPeople = await res.json();
-
   selector.innerHTML = `<option value="">Select a young person</option>`;
 
   youngPeople.forEach(person => {
@@ -32,19 +33,22 @@ async function loadYoungPerson(id) {
   if (!id) {
     selectedYoungPerson = null;
     selectedProfile = null;
+    selectedPlans = [];
     clearDisplay();
     return;
   }
 
-  const [personRes, profileRes] = await Promise.all([
+  const [personRes, profileRes, plansRes] = await Promise.all([
     fetch(`/young-people/${id}`),
-    fetch(`/young-people/${id}/profile`)
+    fetch(`/young-people/${id}/profile`),
+    fetch(`/young-people/${id}/plans`)
   ]);
 
-  if (!personRes.ok || !profileRes.ok) return;
+  if (!personRes.ok || !profileRes.ok || !plansRes.ok) return;
 
   selectedYoungPerson = await personRes.json();
   selectedProfile = await profileRes.json();
+  selectedPlans = await plansRes.json();
 
   renderYoungPerson();
 }
@@ -55,6 +59,12 @@ function clearDisplay() {
   complianceContainer.innerHTML = `<span class="badge muted">No compliance data yet</span>`;
   overviewContent.innerHTML = `Select a young person to load overview data.`;
   profileContent.innerHTML = `Profile details will load here.`;
+  plansPanel.innerHTML = `
+    <div class="panel-card">
+      <h2>Plans</h2>
+      <p>Select a young person to load plans.</p>
+    </div>
+  `;
 }
 
 function formatDate(value) {
@@ -70,9 +80,7 @@ function calculateAge(dateOfBirth) {
   const today = new Date();
   let age = today.getFullYear() - dob.getFullYear();
   const monthDiff = today.getMonth() - dob.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-    age--;
-  }
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) age--;
   return age;
 }
 
@@ -83,74 +91,89 @@ function renderAlerts() {
     return;
   }
 
-  alertsContainer.innerHTML = alerts.map(alert => {
-    return `<span class="badge alert">${alert.title}</span>`;
-  }).join("");
+  alertsContainer.innerHTML = alerts.map(alert => `<span class="badge alert">${alert.title}</span>`).join("");
+}
+
+function renderPlans() {
+  if (!selectedPlans.length) {
+    plansPanel.innerHTML = `
+      <div class="panel-card">
+        <h2>Plans</h2>
+        <p>No support plans recorded yet.</p>
+      </div>
+    `;
+    return;
+  }
+
+  plansPanel.innerHTML = `
+    <div class="panel-grid">
+      ${selectedPlans.map(plan => `
+        <div class="panel-card">
+          <h2>${plan.title}</h2>
+          <div class="profile-grid">
+            <div class="profile-label">Type</div>
+            <div class="profile-value">${plan.plan_type || "—"}</div>
+
+            <div class="profile-label">Status</div>
+            <div class="profile-value">${plan.status || "—"}</div>
+
+            <div class="profile-label">Start date</div>
+            <div class="profile-value">${formatDate(plan.start_date)}</div>
+
+            <div class="profile-label">Review date</div>
+            <div class="profile-value">${formatDate(plan.review_date)}</div>
+
+            <div class="profile-label">Owner</div>
+            <div class="profile-value">${plan.owner_first_name ? `${plan.owner_first_name} ${plan.owner_last_name || ""}` : "—"}</div>
+
+            <div class="profile-label">Presenting need</div>
+            <div class="profile-value">${plan.presenting_need || "—"}</div>
+
+            <div class="profile-label">Summary</div>
+            <div class="profile-value">${plan.summary || "—"}</div>
+
+            <div class="profile-label">PACE guidance</div>
+            <div class="profile-value">${plan.pace_guidance || "—"}</div>
+
+            <div class="profile-label">Triggers</div>
+            <div class="profile-value">${plan.triggers || "—"}</div>
+
+            <div class="profile-label">Protective factors</div>
+            <div class="profile-value">${plan.protective_factors || "—"}</div>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
 }
 
 function renderYoungPerson() {
   if (!selectedYoungPerson) return;
 
   summaryCards.innerHTML = `
-    <div class="summary-card">
-      <div class="label">Preferred Name</div>
-      <div class="value">${selectedYoungPerson.preferred_name || selectedYoungPerson.first_name || "—"}</div>
-    </div>
-    <div class="summary-card">
-      <div class="label">Age</div>
-      <div class="value">${calculateAge(selectedYoungPerson.date_of_birth)}</div>
-    </div>
-    <div class="summary-card">
-      <div class="label">Home</div>
-      <div class="value">${selectedYoungPerson.home_name || "—"}</div>
-    </div>
-    <div class="summary-card">
-      <div class="label">Placement</div>
-      <div class="value">${selectedYoungPerson.placement_status || "—"}</div>
-    </div>
-    <div class="summary-card">
-      <div class="label">Risk</div>
-      <div class="value">${selectedYoungPerson.summary_risk_level || "—"}</div>
-    </div>
+    <div class="summary-card"><div class="label">Preferred Name</div><div class="value">${selectedYoungPerson.preferred_name || selectedYoungPerson.first_name || "—"}</div></div>
+    <div class="summary-card"><div class="label">Age</div><div class="value">${calculateAge(selectedYoungPerson.date_of_birth)}</div></div>
+    <div class="summary-card"><div class="label">Home</div><div class="value">${selectedYoungPerson.home_name || "—"}</div></div>
+    <div class="summary-card"><div class="label">Placement</div><div class="value">${selectedYoungPerson.placement_status || "—"}</div></div>
+    <div class="summary-card"><div class="label">Risk</div><div class="value">${selectedYoungPerson.summary_risk_level || "—"}</div></div>
   `;
 
   renderAlerts();
 
-  complianceContainer.innerHTML = `
-    <span class="badge warning">Compliance tracker next</span>
-  `;
+  complianceContainer.innerHTML = `<span class="badge warning">Compliance tracker next</span>`;
 
   overviewContent.innerHTML = `
     <div class="profile-grid">
-      <div class="profile-label">Full name</div>
-      <div class="profile-value">${selectedYoungPerson.first_name || ""} ${selectedYoungPerson.last_name || ""}</div>
-
-      <div class="profile-label">Preferred name</div>
-      <div class="profile-value">${selectedYoungPerson.preferred_name || "—"}</div>
-
-      <div class="profile-label">Date of birth</div>
-      <div class="profile-value">${formatDate(selectedYoungPerson.date_of_birth)}</div>
-
-      <div class="profile-label">Admission date</div>
-      <div class="profile-value">${formatDate(selectedYoungPerson.admission_date)}</div>
-
-      <div class="profile-label">Discharge date</div>
-      <div class="profile-value">${formatDate(selectedYoungPerson.discharge_date)}</div>
-
-      <div class="profile-label">Gender</div>
-      <div class="profile-value">${selectedYoungPerson.gender || "—"}</div>
-
-      <div class="profile-label">Ethnicity</div>
-      <div class="profile-value">${selectedYoungPerson.ethnicity || "—"}</div>
-
-      <div class="profile-label">NHS number</div>
-      <div class="profile-value">${selectedYoungPerson.nhs_number || "—"}</div>
-
-      <div class="profile-label">Local ID</div>
-      <div class="profile-value">${selectedYoungPerson.local_id_number || "—"}</div>
-
-      <div class="profile-label">Keyworker</div>
-      <div class="profile-value">${selectedYoungPerson.keyworker_first_name ? `${selectedYoungPerson.keyworker_first_name} ${selectedYoungPerson.keyworker_last_name || ""}` : "—"}</div>
+      <div class="profile-label">Full name</div><div class="profile-value">${selectedYoungPerson.first_name || ""} ${selectedYoungPerson.last_name || ""}</div>
+      <div class="profile-label">Preferred name</div><div class="profile-value">${selectedYoungPerson.preferred_name || "—"}</div>
+      <div class="profile-label">Date of birth</div><div class="profile-value">${formatDate(selectedYoungPerson.date_of_birth)}</div>
+      <div class="profile-label">Admission date</div><div class="profile-value">${formatDate(selectedYoungPerson.admission_date)}</div>
+      <div class="profile-label">Discharge date</div><div class="profile-value">${formatDate(selectedYoungPerson.discharge_date)}</div>
+      <div class="profile-label">Gender</div><div class="profile-value">${selectedYoungPerson.gender || "—"}</div>
+      <div class="profile-label">Ethnicity</div><div class="profile-value">${selectedYoungPerson.ethnicity || "—"}</div>
+      <div class="profile-label">NHS number</div><div class="profile-value">${selectedYoungPerson.nhs_number || "—"}</div>
+      <div class="profile-label">Local ID</div><div class="profile-value">${selectedYoungPerson.local_id_number || "—"}</div>
+      <div class="profile-label">Keyworker</div><div class="profile-value">${selectedYoungPerson.keyworker_first_name ? `${selectedYoungPerson.keyworker_first_name} ${selectedYoungPerson.keyworker_last_name || ""}` : "—"}</div>
     </div>
   `;
 
@@ -166,85 +189,50 @@ function renderYoungPerson() {
       <div class="panel-card">
         <h2>Legal Status</h2>
         <div class="profile-grid">
-          <div class="profile-label">Legal status</div>
-          <div class="profile-value">${legal?.legal_status || "—"}</div>
-
-          <div class="profile-label">Order type</div>
-          <div class="profile-value">${legal?.order_type || "—"}</div>
-
-          <div class="profile-label">Order details</div>
-          <div class="profile-value">${legal?.order_details || "—"}</div>
-
-          <div class="profile-label">Delegated authority</div>
-          <div class="profile-value">${legal?.delegated_authority_details || "—"}</div>
+          <div class="profile-label">Legal status</div><div class="profile-value">${legal?.legal_status || "—"}</div>
+          <div class="profile-label">Order type</div><div class="profile-value">${legal?.order_type || "—"}</div>
+          <div class="profile-label">Order details</div><div class="profile-value">${legal?.order_details || "—"}</div>
+          <div class="profile-label">Delegated authority</div><div class="profile-value">${legal?.delegated_authority_details || "—"}</div>
         </div>
       </div>
 
       <div class="panel-card">
         <h2>Education</h2>
         <div class="profile-grid">
-          <div class="profile-label">School</div>
-          <div class="profile-value">${education?.school_name || "—"}</div>
-
-          <div class="profile-label">Year group</div>
-          <div class="profile-value">${education?.year_group || "—"}</div>
-
-          <div class="profile-label">SEN status</div>
-          <div class="profile-value">${education?.sen_status || "—"}</div>
-
-          <div class="profile-label">PEP status</div>
-          <div class="profile-value">${education?.pep_status || "—"}</div>
+          <div class="profile-label">School</div><div class="profile-value">${education?.school_name || "—"}</div>
+          <div class="profile-label">Year group</div><div class="profile-value">${education?.year_group || "—"}</div>
+          <div class="profile-label">SEN status</div><div class="profile-value">${education?.sen_status || "—"}</div>
+          <div class="profile-label">PEP status</div><div class="profile-value">${education?.pep_status || "—"}</div>
         </div>
       </div>
 
       <div class="panel-card">
         <h2>Health</h2>
         <div class="profile-grid">
-          <div class="profile-label">GP</div>
-          <div class="profile-value">${health?.gp_name || "—"}</div>
-
-          <div class="profile-label">Allergies</div>
-          <div class="profile-value">${health?.allergies || "—"}</div>
-
-          <div class="profile-label">Diagnoses</div>
-          <div class="profile-value">${health?.diagnoses || "—"}</div>
-
-          <div class="profile-label">Mental health</div>
-          <div class="profile-value">${health?.mental_health_summary || "—"}</div>
+          <div class="profile-label">GP</div><div class="profile-value">${health?.gp_name || "—"}</div>
+          <div class="profile-label">Allergies</div><div class="profile-value">${health?.allergies || "—"}</div>
+          <div class="profile-label">Diagnoses</div><div class="profile-value">${health?.diagnoses || "—"}</div>
+          <div class="profile-label">Mental health</div><div class="profile-value">${health?.mental_health_summary || "—"}</div>
         </div>
       </div>
 
       <div class="panel-card">
         <h2>Communication</h2>
         <div class="profile-grid">
-          <div class="profile-label">Summary</div>
-          <div class="profile-value">${communication?.neurodiversity_summary || "—"}</div>
-
-          <div class="profile-label">Style</div>
-          <div class="profile-value">${communication?.communication_style || "—"}</div>
-
-          <div class="profile-label">What helps</div>
-          <div class="profile-value">${communication?.what_helps || "—"}</div>
-
-          <div class="profile-label">Avoid</div>
-          <div class="profile-value">${communication?.what_to_avoid || "—"}</div>
+          <div class="profile-label">Summary</div><div class="profile-value">${communication?.neurodiversity_summary || "—"}</div>
+          <div class="profile-label">Style</div><div class="profile-value">${communication?.communication_style || "—"}</div>
+          <div class="profile-label">What helps</div><div class="profile-value">${communication?.what_helps || "—"}</div>
+          <div class="profile-label">Avoid</div><div class="profile-value">${communication?.what_to_avoid || "—"}</div>
         </div>
       </div>
 
       <div class="panel-card">
         <h2>Identity</h2>
         <div class="profile-grid">
-          <div class="profile-label">Culture</div>
-          <div class="profile-value">${identity?.cultural_identity || "—"}</div>
-
-          <div class="profile-label">Language</div>
-          <div class="profile-value">${identity?.first_language || "—"}</div>
-
-          <div class="profile-label">Interests</div>
-          <div class="profile-value">${identity?.interests || "—"}</div>
-
-          <div class="profile-label">Strengths</div>
-          <div class="profile-value">${identity?.strengths_summary || "—"}</div>
+          <div class="profile-label">Culture</div><div class="profile-value">${identity?.cultural_identity || "—"}</div>
+          <div class="profile-label">Language</div><div class="profile-value">${identity?.first_language || "—"}</div>
+          <div class="profile-label">Interests</div><div class="profile-value">${identity?.interests || "—"}</div>
+          <div class="profile-label">Strengths</div><div class="profile-value">${identity?.strengths_summary || "—"}</div>
         </div>
       </div>
 
@@ -265,6 +253,8 @@ function renderYoungPerson() {
       </div>
     </div>
   `;
+
+  renderPlans();
 }
 
 function setupTabs() {
@@ -274,10 +264,8 @@ function setupTabs() {
   buttons.forEach(button => {
     button.addEventListener("click", () => {
       const tab = button.dataset.tab;
-
       buttons.forEach(btn => btn.classList.remove("active"));
       panels.forEach(panel => panel.classList.remove("active"));
-
       button.classList.add("active");
       document.getElementById(`tab-${tab}`).classList.add("active");
     });
