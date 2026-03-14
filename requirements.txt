@@ -20,6 +20,6 @@ python-docx
 reportlab
 itsdangerous
 sqlalchemy
-
+pypdf
 tavily-python
 typing_extensions
