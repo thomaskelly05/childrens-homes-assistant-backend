@@ -2,8 +2,8 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from routers.account_routes import router as account_router
 from routers.auth_routes import router as auth_router
@@ -20,8 +20,10 @@ FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 CSS_DIR = os.path.join(FRONTEND_DIR, "css")
 JS_DIR = os.path.join(FRONTEND_DIR, "js")
 ASSETS_DIR = os.path.join(FRONTEND_DIR, "assets")
+COMPONENTS_DIR = os.path.join(FRONTEND_DIR, "components")
 
 app = FastAPI(title="IndiCare")
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,6 +37,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 app.include_router(auth_router)
 app.include_router(account_router)
 app.include_router(chat_router)
@@ -45,9 +48,11 @@ app.include_router(staff_journal_router)
 app.include_router(supervision_router)
 app.include_router(tasks_router)
 
+
 app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
 app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
 app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
+app.mount("/components", StaticFiles(directory=COMPONENTS_DIR), name="components")
 
 
 @app.get("/")
@@ -58,6 +63,36 @@ def serve_index():
 @app.get("/login")
 def serve_login():
     return FileResponse(os.path.join(FRONTEND_DIR, "login.html"))
+
+
+@app.get("/journal")
+def serve_journal():
+    return FileResponse(os.path.join(FRONTEND_DIR, "journal.html"))
+
+
+@app.get("/journal.html")
+def serve_journal_html():
+    return FileResponse(os.path.join(FRONTEND_DIR, "journal.html"))
+
+
+@app.get("/supervision")
+def serve_supervision():
+    return FileResponse(os.path.join(FRONTEND_DIR, "supervision.html"))
+
+
+@app.get("/supervision.html")
+def serve_supervision_html():
+    return FileResponse(os.path.join(FRONTEND_DIR, "supervision.html"))
+
+
+@app.get("/ai-notes")
+def serve_ai_notes():
+    return FileResponse(os.path.join(FRONTEND_DIR, "ai-note.html"))
+
+
+@app.get("/ai-note.html")
+def serve_ai_note_html():
+    return FileResponse(os.path.join(FRONTEND_DIR, "ai-note.html"))
 
 
 @app.get("/health")
