@@ -80,7 +80,7 @@ async function login() {
   } finally {
     if (loginButton) {
       loginButton.disabled = false;
-      loginButton.textContent = "Log in";
+      loginButton.textContent = "Sign in";
     }
   }
 }
@@ -96,7 +96,7 @@ async function logoutUser() {
 
   clearAccessToken();
   clearStoredUser();
-  window.location.href = "/login";
+  window.location.replace("/login");
 }
 
 function logout() {
@@ -107,7 +107,7 @@ function requireAuth() {
   const token = getAccessToken();
 
   if (!token) {
-    window.location.href = "/login";
+    window.location.replace("/login");
     return false;
   }
 
