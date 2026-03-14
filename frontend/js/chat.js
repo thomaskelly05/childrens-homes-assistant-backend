@@ -1,10 +1,14 @@
 window.conversationId = null;
+window.currentDocumentText = null;
+window.currentDocumentName = null;
 
 function initChat() {
     bindChatInput();
     bindConversationButtons();
+    bindDocumentUpload();
     bindLogout();
     loadConversations(true);
+    refreshUploadStatus();
 }
 
 window.initChat = initChat;
@@ -29,6 +33,82 @@ function bindConversationButtons() {
     const newBtn = document.getElementById("newConversationBtn");
     if (newBtn) {
         newBtn.addEventListener("click", startNewConversation);
+    }
+}
+
+function bindDocumentUpload() {
+    const uploadInput = document.getElementById("documentUpload");
+    const clearBtn = document.getElementById("clearDocumentBtn");
+
+    uploadInput?.addEventListener("change", async () => {
+        const file = uploadInput.files?.[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const uploadStatus = document.getElementById("uploadStatus");
+        if (uploadStatus) {
+            uploadStatus.textContent = `Uploading ${file.name}...`;
+        }
+
+        try {
+            const token = localStorage.getItem("access_token");
+
+            const response = await fetch("/chat/upload", {
+                method: "POST",
+                headers: {
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                },
+                credentials: "include",
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    localStorage.removeItem("access_token");
+                    localStorage.removeItem("current_user");
+                    window.location.href = "/login";
+                    return;
+                }
+
+                if (uploadStatus) {
+                    uploadStatus.textContent = data.detail || "Upload failed.";
+                }
+                return;
+            }
+
+            window.currentDocumentText = data.text || "";
+            window.currentDocumentName = data.filename || file.name;
+
+            refreshUploadStatus();
+        } catch (error) {
+            console.error("Upload failed:", error);
+            if (uploadStatus) {
+                uploadStatus.textContent = "Could not upload the document.";
+            }
+        } finally {
+            uploadInput.value = "";
+        }
+    });
+
+    clearBtn?.addEventListener("click", () => {
+        window.currentDocumentText = null;
+        window.currentDocumentName = null;
+        refreshUploadStatus();
+    });
+}
+
+function refreshUploadStatus() {
+    const uploadStatus = document.getElementById("uploadStatus");
+    if (!uploadStatus) return;
+
+    if (window.currentDocumentName && window.currentDocumentText) {
+        uploadStatus.textContent = `Loaded: ${window.currentDocumentName}`;
+    } else {
+        uploadStatus.textContent = "No document loaded.";
     }
 }
 
@@ -67,7 +147,9 @@ async function sendMessage() {
 
     await streamAssistantResponse("/chat/", {
         message,
-        conversation_id: window.conversationId || null
+        conversation_id: window.conversationId || null,
+        document_text: window.currentDocumentText,
+        document_name: window.currentDocumentName
     });
 
     await loadConversations(true);
@@ -422,11 +504,17 @@ async function editUserMessage(messageId, currentText) {
     appendMessage("user", newText.trim(), messageId);
 
     await streamAssistantResponse(`/chat/messages/${messageId}/edit`, {
-        message: newText.trim()
+        message: newText.trim(),
+        document_text: window.currentDocumentText,
+        document_name: window.currentDocumentName
     });
 
     if (window.conversationId) {
-        await openConversation(window.conversationId, document.getElementById("conversationHeading")?.textContent || "Conversation", false);
+        await openConversation(
+            window.conversationId,
+            document.getElementById("conversationHeading")?.textContent || "Conversation",
+            false
+        );
     }
 
     await loadConversations(false);
