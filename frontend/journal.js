@@ -1,5 +1,3 @@
-const API_BASE = "";
-
 const promptsByTab = {
   overview: [
     "What am I holding today as I come into this shift?",
@@ -59,6 +57,10 @@ let activeTab = "overview";
 let currentUser = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
+  if (typeof requireAuth === "function" && !requireAuth()) {
+    return;
+  }
+
   setupTabs();
   renderPrompts(activeTab);
   setupForm();
@@ -72,18 +74,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 async function loadMyContext() {
   try {
-    const response = await fetch(`${API_BASE}/staff-journal/me?limit=1`, {
-      method: "GET",
-      credentials: "include"
-    });
+    const data = await apiRequest("/staff-journal/me?limit=1");
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.detail || "Could not load current user");
-    }
-
-    currentUser = data.user || null;
+    currentUser = data.user || getStoredUser?.() || null;
 
     const staffIdEl = document.getElementById("staff_id");
     if (staffIdEl && currentUser?.id) {
@@ -132,7 +125,7 @@ function setupTabs() {
       });
 
       button.classList.add("active");
-      document.getElementById(`tab-${tab}`).classList.add("active");
+      document.getElementById(`tab-${tab}`)?.classList.add("active");
 
       renderPrompts(tab);
     });
@@ -194,7 +187,7 @@ function setupActionButtons() {
 
   if (submitBtn) {
     submitBtn.addEventListener("click", async () => {
-      const journalId = document.getElementById("journal_id").value;
+      const journalId = document.getElementById("journal_id")?.value;
 
       if (!journalId) {
         setMessage("Please save the journal first before submitting for supervision.", true);
@@ -250,8 +243,7 @@ function clearJournalForm() {
     panel.classList.remove("active");
   });
 
-  const overviewPanel = document.getElementById("tab-overview");
-  if (overviewPanel) overviewPanel.classList.add("active");
+  document.getElementById("tab-overview")?.classList.add("active");
 
   renderPrompts(activeTab);
   setDraftState("Draft");
@@ -284,7 +276,7 @@ function setupForm() {
     event.preventDefault();
 
     const saveBtn = document.getElementById("saveJournalBtn");
-    const journalId = document.getElementById("journal_id").value;
+    const journalId = document.getElementById("journal_id")?.value;
     const payload = getPayload();
     const isEditing = Boolean(journalId);
 
@@ -296,39 +288,25 @@ function setupForm() {
 
       setMessage("");
 
-      let response;
-
-      if (isEditing) {
-        response = await fetch(`${API_BASE}/staff-journal/${journalId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          credentials: "include",
-          body: JSON.stringify(payload)
-        });
-      } else {
-        response = await fetch(`${API_BASE}/staff-journal/`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          credentials: "include",
-          body: JSON.stringify(payload)
-        });
-      }
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || "Failed to save journal");
-      }
+      const data = isEditing
+        ? await apiRequest(`/staff-journal/${journalId}`, {
+            method: "PUT",
+            body: JSON.stringify(payload)
+          })
+        : await apiRequest("/staff-journal/", {
+            method: "POST",
+            body: JSON.stringify(payload)
+          });
 
       if (isEditing) {
         if (data.journal) fillForm(data.journal);
         setMessage("Journal updated successfully.");
       } else {
-        clearJournalForm();
+        if (data.journal) {
+          fillForm(data.journal);
+        } else {
+          clearJournalForm();
+        }
         setMessage("Journal saved successfully.");
       }
 
@@ -346,25 +324,15 @@ function setupForm() {
 
 async function loadJournalHistory() {
   const historyList = document.getElementById("journalHistoryList");
-
   if (!historyList) return;
 
   try {
     setHistoryMessage("");
     historyList.innerHTML = "Loading journal entries...";
 
-    const response = await fetch(`${API_BASE}/staff-journal/me?limit=20`, {
-      method: "GET",
-      credentials: "include"
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.detail || "Failed to load journal entries");
-    }
-
+    const data = await apiRequest("/staff-journal/me?limit=20");
     const entries = data.entries || [];
+
     historyList.innerHTML = "";
 
     if (!entries.length) {
@@ -377,7 +345,7 @@ async function loadJournalHistory() {
       item.className = "history-item";
 
       const createdAt = entry.created_at
-        ? new Date(entry.created_at).toLocaleString()
+        ? new Date(entry.created_at).toLocaleString("en-GB")
         : "Unknown date";
 
       const summary =
@@ -412,16 +380,7 @@ function wireHistoryButtons() {
       const id = btn.dataset.id;
 
       try {
-        const response = await fetch(`${API_BASE}/staff-journal/${id}`, {
-          method: "GET",
-          credentials: "include"
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.detail || "Failed to load journal");
-        }
+        const data = await apiRequest(`/staff-journal/${id}`);
 
         if (data.journal) {
           fillForm(data.journal);
@@ -442,15 +401,13 @@ function wireHistoryButtons() {
       if (!confirmed) return;
 
       try {
-        const response = await fetch(`${API_BASE}/staff-journal/${id}`, {
-          method: "DELETE",
-          credentials: "include"
+        await apiRequest(`/staff-journal/${id}`, {
+          method: "DELETE"
         });
 
-        const data = await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-          throw new Error(data.detail || "Failed to delete journal");
+        const currentJournalId = document.getElementById("journal_id")?.value;
+        if (String(currentJournalId) === String(id)) {
+          clearJournalForm();
         }
 
         setMessage("Journal deleted successfully.");
@@ -480,19 +437,10 @@ async function generateAiOutput(type) {
     if (packBtn) packBtn.disabled = true;
 
     const endpoint = type === "supervision-pack"
-      ? `${API_BASE}/staff-journal/me/supervision-pack`
-      : `${API_BASE}/staff-journal/me/development-plan`;
+      ? "/staff-journal/me/supervision-pack"
+      : "/staff-journal/me/development-plan";
 
-    const response = await fetch(endpoint, {
-      method: "GET",
-      credentials: "include"
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.detail || "Failed to generate output");
-    }
+    const data = await apiRequest(endpoint);
 
     if (output) {
       output.textContent =
@@ -518,16 +466,9 @@ async function submitToManagerDashboard(journalId) {
     if (output) output.textContent = "Submitting to manager dashboard...";
     if (submitBtn) submitBtn.disabled = true;
 
-    const response = await fetch(`${API_BASE}/staff-journal/${journalId}/submit-to-manager`, {
-      method: "POST",
-      credentials: "include"
+    await apiRequest(`/staff-journal/${journalId}/submit-to-manager`, {
+      method: "POST"
     });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.detail || "Failed to submit to manager dashboard");
-    }
 
     if (output) {
       output.textContent = "Submitted to manager dashboard successfully.";
@@ -546,7 +487,7 @@ async function submitToManagerDashboard(journalId) {
 }
 
 function escapeHtml(value) {
-  return String(value)
+  return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
