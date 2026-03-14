@@ -1,156 +1,47 @@
-const API = "https://childrens-homes-assistant-backend-new.onrender.com";
-const ACCESS_TOKEN_KEY = "indicare_access_token";
-const CURRENT_USER_KEY = "indicare_current_user";
+const API_BASE = window.location.origin;
 
-function getAccessToken() {
-    return localStorage.getItem(ACCESS_TOKEN_KEY) || "";
-}
+async function apiRequest(path, options = {}) {
+  const token = localStorage.getItem("access_token");
 
-function setAccessToken(token) {
-    if (!token) return;
-    localStorage.setItem(ACCESS_TOKEN_KEY, token);
-}
+  const headers = {
+    ...(options.headers || {})
+  };
 
-function clearAccessToken() {
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-}
+  if (!(options.body instanceof FormData) && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
 
-function getStoredUser() {
-    const raw = localStorage.getItem(CURRENT_USER_KEY);
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
 
-    if (!raw) return null;
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers,
+    credentials: "include"
+  });
 
-    try {
-        return JSON.parse(raw);
-    } catch {
-        return null;
-    }
-}
-
-function setStoredUser(user) {
-    if (!user) return;
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
-}
-
-function clearStoredUser() {
-    localStorage.removeItem(CURRENT_USER_KEY);
-}
-
-function clearAuthState() {
-    clearAccessToken();
-    clearStoredUser();
-}
-
-function getAuthHeaders(extraHeaders = {}) {
-    const token = getAccessToken();
-
-    if (!token) {
-        return { ...extraHeaders };
-    }
-
-    return {
-        ...extraHeaders,
-        Authorization: `Bearer ${token}`
-    };
-}
-
-async function safeJson(response) {
-    const text = await response.text();
+  if (!response.ok) {
+    let message = "Request failed";
 
     try {
-        return text ? JSON.parse(text) : {};
-    } catch {
-        return { detail: text || "Invalid server response" };
-    }
-}
-
-function redirectToLogin() {
-    clearAuthState();
-    window.location.href = "/login.html";
-}
-
-function handleUnauthorizedResponse(response, data = null) {
-    if (response.status === 401) {
-        console.warn("Unauthorized response:", data);
-        redirectToLogin();
-        return true;
+      const data = await response.json();
+      message = data.detail || message;
+    } catch (err) {
+      // ignore parse failure
     }
 
-    return false;
-}
+    throw new Error(message);
+  }
 
-async function apiFetch(path, options = {}) {
-    const headers = getAuthHeaders(options.headers || {});
+  const contentType = response.headers.get("content-type") || "";
 
-    const response = await fetch(`${API}${path}`, {
-        ...options,
-        headers
-    });
+  if (
+    contentType.includes("application/json") ||
+    contentType.includes("application/problem+json")
+  ) {
+    return await response.json();
+  }
 
-    return response;
-}
-
-async function apiFetchJson(path, options = {}) {
-    const response = await apiFetch(path, options);
-    const data = await safeJson(response);
-
-    if (!response.ok) {
-        if (handleUnauthorizedResponse(response, data)) {
-            throw new Error("Unauthorized");
-        }
-
-        throw new Error(data.detail || data.message || "Request failed");
-    }
-
-    return data;
-}
-
-async function checkAuth() {
-    const token = getAccessToken();
-
-    if (!token) {
-        return false;
-    }
-
-    try {
-        const data = await apiFetchJson("/auth/check", {
-            method: "GET"
-        });
-
-        return !!data.authenticated;
-    } catch (error) {
-        console.error("Auth check failed:", error);
-        return false;
-    }
-}
-
-async function loadCurrentUser() {
-    try {
-        const data = await apiFetchJson("/auth/me", {
-            method: "GET"
-        });
-
-        if (data.user) {
-            setStoredUser(data.user);
-            return data.user;
-        }
-
-        return null;
-    } catch (error) {
-        console.error("Load current user failed:", error);
-        return null;
-    }
-}
-
-async function logoutUser() {
-    try {
-        await apiFetch("/auth/logout", {
-            method: "POST"
-        });
-    } catch (error) {
-        console.error("Logout request failed:", error);
-    } finally {
-        clearAuthState();
-        window.location.href = "/login.html";
-    }
+  return response;
 }
