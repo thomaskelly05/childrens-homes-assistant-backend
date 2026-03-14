@@ -5,11 +5,13 @@ const complianceContainer = document.getElementById("ypCompliance");
 const overviewContent = document.getElementById("overviewContent");
 const profileContent = document.getElementById("profileContent");
 const plansPanel = document.getElementById("tab-plans");
+const riskPanel = document.getElementById("tab-risk");
 
 let youngPeople = [];
 let selectedYoungPerson = null;
 let selectedProfile = null;
 let selectedPlans = [];
+let selectedRisks = [];
 
 async function loadYoungPeople() {
   const res = await fetch("/young-people");
@@ -34,21 +36,24 @@ async function loadYoungPerson(id) {
     selectedYoungPerson = null;
     selectedProfile = null;
     selectedPlans = [];
+    selectedRisks = [];
     clearDisplay();
     return;
   }
 
-  const [personRes, profileRes, plansRes] = await Promise.all([
+  const [personRes, profileRes, plansRes, risksRes] = await Promise.all([
     fetch(`/young-people/${id}`),
     fetch(`/young-people/${id}/profile`),
-    fetch(`/young-people/${id}/plans`)
+    fetch(`/young-people/${id}/plans`),
+    fetch(`/young-people/${id}/risks`)
   ]);
 
-  if (!personRes.ok || !profileRes.ok || !plansRes.ok) return;
+  if (!personRes.ok || !profileRes.ok || !plansRes.ok || !risksRes.ok) return;
 
   selectedYoungPerson = await personRes.json();
   selectedProfile = await profileRes.json();
   selectedPlans = await plansRes.json();
+  selectedRisks = await risksRes.json();
 
   renderYoungPerson();
 }
@@ -59,12 +64,8 @@ function clearDisplay() {
   complianceContainer.innerHTML = `<span class="badge muted">No compliance data yet</span>`;
   overviewContent.innerHTML = `Select a young person to load overview data.`;
   profileContent.innerHTML = `Profile details will load here.`;
-  plansPanel.innerHTML = `
-    <div class="panel-card">
-      <h2>Plans</h2>
-      <p>Select a young person to load plans.</p>
-    </div>
-  `;
+  plansPanel.innerHTML = `<div class="panel-card"><h2>Plans</h2><p>Select a young person to load plans.</p></div>`;
+  riskPanel.innerHTML = `<div class="panel-card"><h2>Risk</h2><p>Select a young person to load risk assessments.</p></div>`;
 }
 
 function formatDate(value) {
@@ -90,18 +91,12 @@ function renderAlerts() {
     alertsContainer.innerHTML = `<span class="badge muted">No active alerts</span>`;
     return;
   }
-
   alertsContainer.innerHTML = alerts.map(alert => `<span class="badge alert">${alert.title}</span>`).join("");
 }
 
 function renderPlans() {
   if (!selectedPlans.length) {
-    plansPanel.innerHTML = `
-      <div class="panel-card">
-        <h2>Plans</h2>
-        <p>No support plans recorded yet.</p>
-      </div>
-    `;
+    plansPanel.innerHTML = `<div class="panel-card"><h2>Plans</h2><p>No support plans recorded yet.</p></div>`;
     return;
   }
 
@@ -111,35 +106,47 @@ function renderPlans() {
         <div class="panel-card">
           <h2>${plan.title}</h2>
           <div class="profile-grid">
-            <div class="profile-label">Type</div>
-            <div class="profile-value">${plan.plan_type || "—"}</div>
+            <div class="profile-label">Type</div><div class="profile-value">${plan.plan_type || "—"}</div>
+            <div class="profile-label">Status</div><div class="profile-value">${plan.status || "—"}</div>
+            <div class="profile-label">Start date</div><div class="profile-value">${formatDate(plan.start_date)}</div>
+            <div class="profile-label">Review date</div><div class="profile-value">${formatDate(plan.review_date)}</div>
+            <div class="profile-label">Owner</div><div class="profile-value">${plan.owner_first_name ? `${plan.owner_first_name} ${plan.owner_last_name || ""}` : "—"}</div>
+            <div class="profile-label">Presenting need</div><div class="profile-value">${plan.presenting_need || "—"}</div>
+            <div class="profile-label">Summary</div><div class="profile-value">${plan.summary || "—"}</div>
+            <div class="profile-label">PACE guidance</div><div class="profile-value">${plan.pace_guidance || "—"}</div>
+            <div class="profile-label">Triggers</div><div class="profile-value">${plan.triggers || "—"}</div>
+            <div class="profile-label">Protective factors</div><div class="profile-value">${plan.protective_factors || "—"}</div>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
 
-            <div class="profile-label">Status</div>
-            <div class="profile-value">${plan.status || "—"}</div>
+function renderRisks() {
+  if (!selectedRisks.length) {
+    riskPanel.innerHTML = `<div class="panel-card"><h2>Risk</h2><p>No risk assessments recorded yet.</p></div>`;
+    return;
+  }
 
-            <div class="profile-label">Start date</div>
-            <div class="profile-value">${formatDate(plan.start_date)}</div>
-
-            <div class="profile-label">Review date</div>
-            <div class="profile-value">${formatDate(plan.review_date)}</div>
-
-            <div class="profile-label">Owner</div>
-            <div class="profile-value">${plan.owner_first_name ? `${plan.owner_first_name} ${plan.owner_last_name || ""}` : "—"}</div>
-
-            <div class="profile-label">Presenting need</div>
-            <div class="profile-value">${plan.presenting_need || "—"}</div>
-
-            <div class="profile-label">Summary</div>
-            <div class="profile-value">${plan.summary || "—"}</div>
-
-            <div class="profile-label">PACE guidance</div>
-            <div class="profile-value">${plan.pace_guidance || "—"}</div>
-
-            <div class="profile-label">Triggers</div>
-            <div class="profile-value">${plan.triggers || "—"}</div>
-
-            <div class="profile-label">Protective factors</div>
-            <div class="profile-value">${plan.protective_factors || "—"}</div>
+  riskPanel.innerHTML = `
+    <div class="panel-grid">
+      ${selectedRisks.map(risk => `
+        <div class="panel-card">
+          <h2>${risk.title}</h2>
+          <div class="profile-grid">
+            <div class="profile-label">Category</div><div class="profile-value">${risk.category || "—"}</div>
+            <div class="profile-label">Severity</div><div class="profile-value">${risk.severity || "—"}</div>
+            <div class="profile-label">Likelihood</div><div class="profile-value">${risk.likelihood || "—"}</div>
+            <div class="profile-label">Status</div><div class="profile-value">${risk.status || "—"}</div>
+            <div class="profile-label">Review date</div><div class="profile-value">${formatDate(risk.review_date)}</div>
+            <div class="profile-label">Owner</div><div class="profile-value">${risk.owner_first_name ? `${risk.owner_first_name} ${risk.owner_last_name || ""}` : "—"}</div>
+            <div class="profile-label">Concern summary</div><div class="profile-value">${risk.concern_summary || "—"}</div>
+            <div class="profile-label">Known triggers</div><div class="profile-value">${risk.known_triggers || "—"}</div>
+            <div class="profile-label">Early warning signs</div><div class="profile-value">${risk.early_warning_signs || "—"}</div>
+            <div class="profile-label">Current controls</div><div class="profile-value">${risk.current_controls || "—"}</div>
+            <div class="profile-label">De-escalation</div><div class="profile-value">${risk.deescalation_strategies || "—"}</div>
+            <div class="profile-label">Response actions</div><div class="profile-value">${risk.response_actions || "—"}</div>
           </div>
         </div>
       `).join("")}
@@ -159,7 +166,6 @@ function renderYoungPerson() {
   `;
 
   renderAlerts();
-
   complianceContainer.innerHTML = `<span class="badge warning">Compliance tracker next</span>`;
 
   overviewContent.innerHTML = `
@@ -255,6 +261,7 @@ function renderYoungPerson() {
   `;
 
   renderPlans();
+  renderRisks();
 }
 
 function setupTabs() {
