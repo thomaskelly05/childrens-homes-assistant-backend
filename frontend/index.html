@@ -6,7 +6,7 @@
   <title>IndiCare</title>
   <meta
     name="description"
-    content="IndiCare staff workspace for children's home operations, journals, supervision, handover, reports, documents, and AI tools."
+    content="IndiCare staff workspace for children's home operations, journals, supervision, handover, reports, documents, and AI support."
   />
 
   <link rel="icon" type="image/svg+xml" href="/assets/logo.svg" />
@@ -15,6 +15,140 @@
   <link rel="stylesheet" href="/css/theme.css" />
   <link rel="stylesheet" href="/css/layout.css" />
   <link rel="stylesheet" href="/css/components.css" />
+
+  <style>
+    .dashboard-hero {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero-panel {
+      background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1.4rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .hero-panel h3 {
+      margin: 0 0 0.65rem;
+      font-size: 1.4rem;
+      letter-spacing: -0.03em;
+      color: var(--text);
+    }
+
+    .hero-panel p {
+      margin: 0;
+      color: var(--text-soft);
+      line-height: 1.65;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .hero-points {
+      list-style: none;
+      margin: 1rem 0 0;
+      padding: 0;
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .hero-points li {
+      padding: 0.9rem 1rem;
+      border-radius: 14px;
+      background: var(--surface-muted);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .section-intro {
+      margin-bottom: 1rem;
+      color: var(--text-soft);
+    }
+
+    .card h3 {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .card-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.35rem 0.65rem;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: var(--primary-hover);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .quick-link-grid {
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .quick-link-card {
+      display: block;
+      padding: 1rem;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: var(--surface-muted);
+      transition: 0.2s ease;
+    }
+
+    .quick-link-card:hover {
+      border-color: var(--primary);
+      background: #eef4ff;
+      transform: translateY(-1px);
+    }
+
+    .quick-link-card strong {
+      display: block;
+      margin-bottom: 0.25rem;
+      color: var(--text);
+    }
+
+    .quick-link-card span {
+      color: var(--text-soft);
+      font-size: 0.94rem;
+      line-height: 1.5;
+    }
+
+    .placeholder-copy {
+      color: var(--text-soft);
+      line-height: 1.6;
+    }
+
+    .wide-card {
+      margin-top: 1.25rem;
+    }
+
+    .workspace-section-title {
+      margin: 0 0 0.35rem;
+      font-size: 1.05rem;
+      color: var(--text);
+    }
+
+    .workspace-section-subtitle {
+      margin: 0 0 1rem;
+      color: var(--text-soft);
+    }
+
+    @media (max-width: 1100px) {
+      .dashboard-hero {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -71,58 +205,119 @@
         </div>
 
         <div id="dashboardView" class="view">
+          <div class="dashboard-hero">
+            <div class="hero-panel">
+              <h3>Welcome to IndiCare</h3>
+              <p>
+                Your central workspace for residential care operations, professional recording,
+                reflective practice, supervision support, and AI-assisted writing.
+              </p>
+
+              <div class="hero-actions">
+                <a class="button" href="/assistant">Open Assistant</a>
+                <a class="button" href="/journal">Open Journal</a>
+                <a class="button" href="/supervision">Open Supervision</a>
+                <a class="button" href="/ai-note.html">Open AI Notes</a>
+              </div>
+            </div>
+
+            <div class="hero-panel">
+              <h3>What you can do here</h3>
+              <ul class="hero-points">
+                <li>Use the Assistant for residential care writing and practice support</li>
+                <li>Review tasks, handover notes, and your latest journal activity</li>
+                <li>Generate reports and downloadable documents quickly</li>
+              </ul>
+            </div>
+          </div>
+
           <div class="grid grid--2">
             <div class="card">
-              <h3>Quick actions</h3>
-              <div class="stack">
-                <a class="button" href="/assistant">Open assistant</a>
-                <a class="button" href="/journal">Open journal</a>
-                <a class="button" href="/supervision">Open supervision</a>
-                <a class="button" href="/ai-note.html">Open AI notes</a>
+              <h3>
+                Quick links
+                <span class="card-badge">Routes</span>
+              </h3>
+
+              <div class="quick-link-grid">
+                <a class="quick-link-card" href="/assistant">
+                  <strong>Assistant</strong>
+                  <span>Open your residential AI assistant for drafting, reflection, and support.</span>
+                </a>
+
+                <a class="quick-link-card" href="/journal">
+                  <strong>Staff Journal</strong>
+                  <span>Create and review reflective staff journal entries.</span>
+                </a>
+
+                <a class="quick-link-card" href="/supervision">
+                  <strong>Supervision</strong>
+                  <span>Open supervision records and staff development materials.</span>
+                </a>
+
+                <a class="quick-link-card" href="/ai-note.html">
+                  <strong>AI Notes</strong>
+                  <span>Use AI-assisted meeting notes, templates, and note generation tools.</span>
+                </a>
               </div>
             </div>
 
             <div class="card">
-              <h3>Account</h3>
-              <div id="accountSummary">Your account details will appear here.</div>
+              <h3>
+                Account
+                <span class="card-badge">Profile</span>
+              </h3>
+              <div id="accountSummary" class="placeholder-copy">Your account details will appear here.</div>
             </div>
           </div>
 
           <div class="grid grid--3">
             <div class="card">
-              <h3>Tasks</h3>
-              <div id="tasksPreview">Your current tasks will appear here.</div>
+              <h3>
+                Tasks
+                <span class="card-badge">Live</span>
+              </h3>
+              <div id="tasksPreview" class="placeholder-copy">Your current tasks will appear here.</div>
             </div>
 
             <div class="card">
-              <h3>Handover</h3>
-              <div id="handoverPreview">Recent handover notes will appear here.</div>
+              <h3>
+                Handover
+                <span class="card-badge">Live</span>
+              </h3>
+              <div id="handoverPreview" class="placeholder-copy">Recent handover notes will appear here.</div>
             </div>
 
             <div class="card">
-              <h3>Latest journal</h3>
-              <div id="journalPreview">Your latest journal entry will appear here.</div>
+              <h3>
+                Latest journal
+                <span class="card-badge">Live</span>
+              </h3>
+              <div id="journalPreview" class="placeholder-copy">Your latest journal entry will appear here.</div>
             </div>
           </div>
         </div>
 
         <div id="tasksView" class="view hidden">
           <div class="card">
-            <h3>Tasks</h3>
+            <h3 class="workspace-section-title">Tasks</h3>
+            <p class="workspace-section-subtitle">Review current tasks and recent activity.</p>
             <div id="tasksList">Your task list will appear here.</div>
           </div>
         </div>
 
         <div id="handoverView" class="view hidden">
           <div class="card">
-            <h3>Recent handover</h3>
+            <h3 class="workspace-section-title">Recent handover</h3>
+            <p class="workspace-section-subtitle">View recent handover notes for continuity across shifts.</p>
             <div id="handoverList">Recent handover notes will appear here.</div>
           </div>
         </div>
 
         <div id="reportsView" class="view hidden">
           <div class="card">
-            <h3>Reports</h3>
+            <h3 class="workspace-section-title">Reports</h3>
+            <p class="workspace-section-subtitle">Generate structured written reports from your notes.</p>
+
             <form id="incidentReportForm" class="stack">
               <div>
                 <label for="incidentDescription">Incident description</label>
@@ -144,7 +339,9 @@
 
         <div id="documentsView" class="view hidden">
           <div class="card">
-            <h3>Documents</h3>
+            <h3 class="workspace-section-title">Documents</h3>
+            <p class="workspace-section-subtitle">Create downloadable staff documents from a short description.</p>
+
             <form id="documentForm" class="stack">
               <div>
                 <label for="documentType">Document type</label>
@@ -178,7 +375,8 @@
 
         <div id="accountView" class="view hidden">
           <div class="card">
-            <h3>My account</h3>
+            <h3 class="workspace-section-title">My account</h3>
+            <p class="workspace-section-subtitle">Your signed-in account details and access information.</p>
             <div id="accountDetails">Your account details will appear here.</div>
           </div>
         </div>
