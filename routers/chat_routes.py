@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from psycopg2.extras import RealDictCursor
 from pydantic import BaseModel
@@ -9,21 +9,35 @@ from auth.dependencies import get_current_user
 from services.ai_service import generate_ai_stream
 
 
-router = APIRouter(prefix="/chat", tags=["Chat"])
+router = APIRouter(
+    prefix="/chat",
+    tags=["Chat"]
+)
+
 logger = logging.getLogger(__name__)
 
 
 # --------------------------------------------------
-# CONVERSATION ACCESS CHECK
+# MODELS
 # --------------------------------------------------
 
-def ensure_conversation_owner(conn, conversation_id: int, user_id: int):
+class RenameConversation(BaseModel):
+    title: str
+
+
+# --------------------------------------------------
+# HELPERS
+# --------------------------------------------------
+
+def ensure_conversation_owner(conn, conversation_id: int, user_id: int) -> None:
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
             SELECT id
             FROM conversations
-            WHERE id = %s AND user_id = %s
+            WHERE id = %s
+              AND user_id = %s
+            LIMIT 1
             """,
             (conversation_id, user_id)
         )
@@ -32,10 +46,6 @@ def ensure_conversation_owner(conn, conversation_id: int, user_id: int):
     if not row:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
-
-# --------------------------------------------------
-# LOAD CONVERSATION HISTORY
-# --------------------------------------------------
 
 def get_conversation_history(conn, conversation_id: int):
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -53,15 +63,11 @@ def get_conversation_history(conn, conversation_id: int):
     return rows
 
 
-# --------------------------------------------------
-# AUTO CONVERSATION TITLE
-# --------------------------------------------------
-
-def generate_title(message: str):
-    message = message.strip()
-    if len(message) > 60:
-        message = message[:60]
-    return message
+def generate_title(message: str) -> str:
+    cleaned = (message or "").strip()
+    if len(cleaned) > 60:
+        cleaned = cleaned[:60]
+    return cleaned or "New chat"
 
 
 # --------------------------------------------------
@@ -69,7 +75,7 @@ def generate_title(message: str):
 # --------------------------------------------------
 
 @router.get("/conversations")
-def conversations(
+def list_conversations(
     conn=Depends(get_db),
     current_user=Depends(get_current_user)
 ):
@@ -78,7 +84,7 @@ def conversations(
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
-            SELECT id, title
+            SELECT id, title, created_at
             FROM conversations
             WHERE user_id = %s
             ORDER BY created_at DESC
@@ -94,14 +100,14 @@ def conversations(
 # LOAD CONVERSATION
 # --------------------------------------------------
 
-@router.get("/conversations/{cid}")
-def load(
-    cid: int,
+@router.get("/conversations/{conversation_id}")
+def load_conversation(
+    conversation_id: int,
     conn=Depends(get_db),
     current_user=Depends(get_current_user)
 ):
     user_id = current_user["user_id"]
-    ensure_conversation_owner(conn, cid, user_id)
+    ensure_conversation_owner(conn, conversation_id, user_id)
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
@@ -111,7 +117,7 @@ def load(
             WHERE conversation_id = %s
             ORDER BY created_at ASC, id ASC
             """,
-            (cid,)
+            (conversation_id,)
         )
         rows = cur.fetchall()
 
@@ -129,19 +135,22 @@ async def chat(
     current_user=Depends(get_current_user)
 ):
     user_id = current_user["user_id"]
-    body = await request.json()
 
+    body = await request.json()
     message = (body.get("message") or "").strip()
-    cid = body.get("conversation_id")
+    conversation_id = body.get("conversation_id")
 
     if not message:
         raise HTTPException(status_code=400, detail="Message required")
 
-    # --------------------------------------------------
-    # CREATE OR VERIFY CONVERSATION
-    # --------------------------------------------------
+    if conversation_id in ("", None):
+        conversation_id = None
 
-    if not cid:
+    # ----------------------------------------------
+    # CREATE OR VERIFY CONVERSATION
+    # ----------------------------------------------
+
+    if conversation_id is None:
         title = generate_title(message)
 
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -153,16 +162,20 @@ async def chat(
                 """,
                 (user_id, title)
             )
-            cid = cur.fetchone()["id"]
+            conversation_id = cur.fetchone()["id"]
 
         conn.commit()
     else:
-        cid = int(cid)
-        ensure_conversation_owner(conn, cid, user_id)
+        try:
+            conversation_id = int(conversation_id)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="Invalid conversation ID")
 
-    # --------------------------------------------------
+        ensure_conversation_owner(conn, conversation_id, user_id)
+
+    # ----------------------------------------------
     # SAVE USER MESSAGE
-    # --------------------------------------------------
+    # ----------------------------------------------
 
     with conn.cursor() as cur:
         cur.execute(
@@ -170,44 +183,48 @@ async def chat(
             INSERT INTO messages (conversation_id, role, message)
             VALUES (%s, 'user', %s)
             """,
-            (cid, message)
+            (conversation_id, message)
         )
     conn.commit()
 
-    history = get_conversation_history(conn, cid)
+    history = get_conversation_history(conn, conversation_id)
 
-    # --------------------------------------------------
+    # ----------------------------------------------
     # STREAM AI RESPONSE
-    # --------------------------------------------------
+    # ----------------------------------------------
 
     async def stream():
-        ai = ""
+        ai_text = ""
 
         try:
             yield ""
 
             async for token in generate_ai_stream(
                 message=message,
-                session_id=str(cid),
+                session_id=str(conversation_id),
                 history=history,
             ):
                 if token:
-                    ai += token
+                    ai_text += token
                     yield token
 
         except Exception as e:
-            logger.exception("AI stream failed for conversation %s: %s", cid, e)
+            logger.exception(
+                "AI stream failed for conversation %s: %s",
+                conversation_id,
+                e
+            )
 
-            error_text = (
+            fallback = (
                 "\n\nSorry, something went wrong while generating the response. "
                 "Please try again."
             )
 
-            ai += error_text
-            yield error_text
+            ai_text += fallback
+            yield fallback
 
         finally:
-            if ai.strip():
+            if ai_text.strip():
                 try:
                     with conn.cursor() as cur:
                         cur.execute(
@@ -215,23 +232,25 @@ async def chat(
                             INSERT INTO messages (conversation_id, role, message)
                             VALUES (%s, 'assistant', %s)
                             """,
-                            (cid, ai)
+                            (conversation_id, ai_text)
                         )
                     conn.commit()
                 except Exception:
-                    logger.exception("Failed to save assistant message for conversation %s", cid)
                     conn.rollback()
+                    logger.exception(
+                        "Failed to save assistant message for conversation %s",
+                        conversation_id
+                    )
 
-    return StreamingResponse(stream(), media_type="text/plain; charset=utf-8")
+    return StreamingResponse(
+        stream(),
+        media_type="text/plain; charset=utf-8"
+    )
 
 
 # --------------------------------------------------
 # RENAME CONVERSATION
 # --------------------------------------------------
-
-class RenameConversation(BaseModel):
-    title: str
-
 
 @router.post("/conversations/{conversation_id}/rename")
 def rename_conversation(
@@ -259,7 +278,10 @@ def rename_conversation(
         )
         conn.commit()
 
-    return {"status": "ok"}
+    return {
+        "ok": True,
+        "message": "Conversation renamed"
+    }
 
 
 # --------------------------------------------------
@@ -285,4 +307,7 @@ def delete_conversation(
         )
         conn.commit()
 
-    return {"status": "deleted"}
+    return {
+        "ok": True,
+        "message": "Conversation deleted"
+    }
