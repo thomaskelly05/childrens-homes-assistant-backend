@@ -1,165 +1,209 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IndiCare Assistant</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IndiCare</title>
+  <meta
+    name="description"
+    content="IndiCare staff workspace for children's home operations, journals, supervision, handover, reports, and AI tools."
+  />
 
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg" />
 
-    <link rel="stylesheet" href="/css/reset.css">
-    <link rel="stylesheet" href="/css/theme.css">
-    <link rel="stylesheet" href="/css/layout.css">
-    <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/reset.css" />
+  <link rel="stylesheet" href="/css/base.css" />
+  <link rel="stylesheet" href="/css/theme.css" />
+  <link rel="stylesheet" href="/css/layout.css" />
+  <link rel="stylesheet" href="/css/components.css" />
 </head>
 <body>
-    <div id="app">
-        <aside id="sidebar" class="sidebar-shell">
-            <div class="sidebar-top">
-                <div class="brand-block">
-                    <div class="brand-mark">AI</div>
-                    <div class="brand-copy">
-                        <h1>IndiCare</h1>
-                        <p>Assistant for Children's Homes</p>
-                    </div>
-                </div>
-
-                <div class="sidebar-toolbar">
-                    <button id="new-chat-btn" type="button" class="sidebar-primary-btn">
-                        New chat
-                    </button>
-
-                    <button id="open-ai-notes-btn" type="button" class="sidebar-secondary-btn">
-                        AI meeting notes
-                    </button>
-                </div>
-
-                <div class="sidebar-section">
-                    <div class="sidebar-section-title">Recent chats</div>
-                    <div id="conversation-list"></div>
-                </div>
-            </div>
-        </aside>
-
-        <main id="workspace" class="workspace-shell">
-            <header class="workspace-header">
-                <div class="workspace-header-copy">
-                    <h2>Assistant workspace</h2>
-                    <p id="workspace-user-text">Loading your workspace...</p>
-                </div>
-
-                <div class="workspace-header-actions">
-                    <button id="logout-btn" type="button" class="ghost-btn">Log out</button>
-                </div>
-            </header>
-
-            <section class="chat-shell">
-                <div id="messages" class="messages"></div>
-
-                <div class="chat-compose">
-                    <textarea
-                        id="chat-input"
-                        placeholder="Type your message here..."
-                        rows="3"
-                    ></textarea>
-
-                    <div class="chat-compose-actions">
-                        <button id="send-btn" type="button" class="primary-btn">
-                            Send
-                        </button>
-                    </div>
-                </div>
-            </section>
-        </main>
-    </div>
-
-    <footer id="footer">
-        © IndiCare
-    </footer>
-
-    <div id="command-palette" class="command-palette hidden">
-        <div class="command-box">
-            <input
-                id="command-input"
-                placeholder="Type a command or search..."
-                autocomplete="off"
-            />
-            <div id="command-results"></div>
+  <div id="app" class="app-shell">
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar__brand">
+        <img src="/assets/logo.svg" alt="IndiCare logo" class="sidebar__logo" />
+        <div class="sidebar__brand-text">
+          <h1>IndiCare</h1>
+          <p>Staff Workspace</p>
         </div>
-    </div>
+      </div>
 
-    <script src="/js/api.js"></script>
-    <script src="/js/auth.js"></script>
-    <script src="/js/workspace.js"></script>
-    <script src="/js/conversations.js"></script>
-    <script src="/js/chat.js"></script>
-    <script src="/js/command.js"></script>
-    <script src="/js/assistant.js"></script>
-    <script src="/js/app.js"></script>
+      <nav class="sidebar__nav">
+        <button class="nav-link is-active" data-view="dashboard">Dashboard</button>
+        <button class="nav-link" data-view="chat">Assistant</button>
+        <button class="nav-link" data-view="tasks">Tasks</button>
+        <button class="nav-link" data-view="handover">Handover</button>
+        <button class="nav-link" data-view="journal">Staff Journal</button>
+        <button class="nav-link" data-view="supervision">Supervision</button>
+        <button class="nav-link" data-view="reports">Reports</button>
+        <button class="nav-link" data-view="documents">Documents</button>
+        <button class="nav-link" data-view="account">My Account</button>
+      </nav>
 
-    <script>
-        async function bootWorkspace() {
-            const authenticated = await checkAuth();
+      <div class="sidebar__footer">
+        <button id="logoutBtn" class="button button--secondary" type="button">
+          Log out
+        </button>
+      </div>
+    </aside>
 
-            if (!authenticated) {
-                window.location.href = "/login.html";
-                return;
-            }
+    <main class="main-layout">
+      <header class="topbar">
+        <div>
+          <h2 id="pageTitle">Dashboard</h2>
+          <p id="pageSubtitle">Welcome to IndiCare</p>
+        </div>
 
-            const currentUser = await loadCurrentUser();
+        <div class="topbar__actions">
+          <span id="userBadge" class="user-badge">Loading user...</span>
+        </div>
+      </header>
 
-            const workspaceUserText = document.getElementById("workspace-user-text");
-            if (workspaceUserText) {
-                if (currentUser && currentUser.first_name) {
-                    workspaceUserText.textContent = `Welcome back, ${currentUser.first_name}.`;
-                } else if (currentUser && currentUser.email) {
-                    workspaceUserText.textContent = `Signed in as ${currentUser.email}.`;
-                } else {
-                    workspaceUserText.textContent = "Your workspace is ready.";
-                }
-            }
+      <section id="workspace" class="workspace">
+        <div id="loadingState" class="card">
+          <h3>Loading workspace...</h3>
+          <p>Please wait while IndiCare connects.</p>
+        </div>
 
-            const logoutBtn = document.getElementById("logout-btn");
-            if (logoutBtn) {
-                logoutBtn.addEventListener("click", logout);
-            }
+        <div id="errorState" class="card hidden">
+          <h3>Something went wrong</h3>
+          <p id="errorMessage">Unable to load the workspace.</p>
+        </div>
 
-            const newChatBtn = document.getElementById("new-chat-btn");
-            if (newChatBtn) {
-                newChatBtn.addEventListener("click", () => {
-                    if (window.createConversation) {
-                        window.createConversation();
-                    }
-                });
-            }
+        <div id="dashboardView" class="view hidden">
+          <div class="grid grid--2">
+            <div class="card">
+              <h3>Quick actions</h3>
+              <div class="stack">
+                <a class="button" href="/journal">Open journal</a>
+                <a class="button" href="/supervision">Open supervision</a>
+                <a class="button" href="/ai-note.html">Open AI notes</a>
+              </div>
+            </div>
 
-            const openAiNotesBtn = document.getElementById("open-ai-notes-btn");
-            if (openAiNotesBtn) {
-                openAiNotesBtn.addEventListener("click", () => {
-                    window.location.href = "/ai-note.html";
-                });
-            }
+            <div class="card">
+              <h3>Account</h3>
+              <div id="accountSummary">Loading account details...</div>
+            </div>
+          </div>
 
-            if (window.initChat) {
-                window.initChat();
-            }
+          <div class="grid grid--3">
+            <div class="card">
+              <h3>Tasks</h3>
+              <div id="tasksPreview">Loading tasks...</div>
+            </div>
 
-            if (window.initAssistantMeetingModal) {
-                window.initAssistantMeetingModal();
-            }
+            <div class="card">
+              <h3>Handover</h3>
+              <div id="handoverPreview">Loading handover...</div>
+            </div>
 
-            if (window.loadConversations) {
-                await window.loadConversations();
-            }
+            <div class="card">
+              <h3>Latest journal</h3>
+              <div id="journalPreview">Loading journal...</div>
+            </div>
+          </div>
+        </div>
 
-            if (window.createConversation) {
-                window.createConversation();
-            }
-        }
+        <div id="chatView" class="view hidden">
+          <div class="card">
+            <h3>Assistant</h3>
+            <p>Open the assistant workspace.</p>
+            <a class="button" href="/components/assistant.html">Open assistant</a>
+          </div>
+        </div>
 
-        bootWorkspace().catch((error) => {
-            console.error("Workspace boot failed:", error);
-        });
-    </script>
+        <div id="tasksView" class="view hidden">
+          <div class="card">
+            <h3>Tasks</h3>
+            <div id="tasksList">Loading tasks...</div>
+          </div>
+        </div>
+
+        <div id="handoverView" class="view hidden">
+          <div class="card">
+            <h3>Recent handover</h3>
+            <div id="handoverList">Loading handover...</div>
+          </div>
+        </div>
+
+        <div id="journalView" class="view hidden">
+          <div class="card">
+            <h3>Staff journal</h3>
+            <p>Open the dedicated journal page to create and review entries.</p>
+            <a class="button" href="/journal">Open journal</a>
+          </div>
+        </div>
+
+        <div id="supervisionView" class="view hidden">
+          <div class="card">
+            <h3>Supervision</h3>
+            <p>Open the supervision page to review submissions.</p>
+            <a class="button" href="/supervision">Open supervision</a>
+          </div>
+        </div>
+
+        <div id="reportsView" class="view hidden">
+          <div class="card">
+            <h3>Reports</h3>
+            <form id="incidentReportForm" class="stack">
+              <label for="incidentDescription">Incident description</label>
+              <textarea
+                id="incidentDescription"
+                name="description"
+                rows="8"
+                placeholder="Enter the incident details here..."
+                required
+              ></textarea>
+              <button class="button" type="submit">Generate incident report</button>
+            </form>
+            <div id="incidentReportOutput" class="output"></div>
+          </div>
+        </div>
+
+        <div id="documentsView" class="view hidden">
+          <div class="card">
+            <h3>Documents</h3>
+            <form id="documentForm" class="stack">
+              <label for="documentType">Document type</label>
+              <select id="documentType" name="type" required>
+                <option value="incident">Incident Report</option>
+                <option value="risk">Risk Assessment</option>
+                <option value="daily-log">Daily Log</option>
+                <option value="handover">Shift Handover</option>
+                <option value="safeguarding">Safeguarding Record</option>
+                <option value="reflection">Reflective Practice</option>
+              </select>
+
+              <label for="documentDescription">Description</label>
+              <textarea
+                id="documentDescription"
+                name="description"
+                rows="8"
+                placeholder="Enter the information to build the document..."
+                required
+              ></textarea>
+
+              <button class="button" type="submit">Generate document</button>
+            </form>
+
+            <div id="documentOutput" class="output"></div>
+          </div>
+        </div>
+
+        <div id="accountView" class="view hidden">
+          <div class="card">
+            <h3>My account</h3>
+            <div id="accountDetails">Loading account...</div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/app.js"></script>
 </body>
 </html>
