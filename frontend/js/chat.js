@@ -65,20 +65,26 @@ async function sendMessage() {
     appendMessage("user", message);
     input.value = "";
 
+    await streamAssistantResponse("/chat/", {
+        message,
+        conversation_id: window.conversationId || null
+    });
+
+    await loadConversations(true);
+}
+
+async function streamAssistantResponse(url, bodyData) {
     try {
         const token = localStorage.getItem("access_token");
 
-        const response = await fetch("/chat/", {
+        const response = await fetch(url, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 ...(token ? { Authorization: `Bearer ${token}` } : {})
             },
             credentials: "include",
-            body: JSON.stringify({
-                message,
-                conversation_id: window.conversationId || null
-            })
+            body: JSON.stringify(bodyData)
         });
 
         if (!response.ok || !response.body) {
@@ -112,17 +118,16 @@ async function sendMessage() {
             assistantMessage += chunk;
             updateAssistantMessage(assistantMessage);
         }
-
-        await loadConversations(true);
     } catch (error) {
-        console.error("Send message failed:", error);
+        console.error("Stream failed:", error);
         appendMessage("assistant", "Sorry, something went wrong.");
     }
 }
 
-function createMessageElement(role, text = "") {
+function createMessageElement(role, text = "", messageId = null) {
     const wrapper = document.createElement("div");
     wrapper.className = `message-wrapper ${role}`;
+    if (messageId) wrapper.dataset.messageId = messageId;
 
     const block = document.createElement("div");
     block.className = "message-block";
@@ -132,6 +137,7 @@ function createMessageElement(role, text = "") {
 
     block._messageEl = msg;
     block._rawText = text;
+    block._messageId = messageId;
 
     if (role === "assistant") {
         msg.innerHTML = renderMarkdown(text);
@@ -161,18 +167,36 @@ function createMessageElement(role, text = "") {
         block.appendChild(actions);
     } else {
         msg.innerText = text;
+
+        const actions = document.createElement("div");
+        actions.className = "message-actions";
+
+        if (messageId) {
+            const editBtn = document.createElement("button");
+            editBtn.className = "copy-btn";
+            editBtn.type = "button";
+            editBtn.textContent = "Edit";
+
+            editBtn.addEventListener("click", async () => {
+                await editUserMessage(messageId, text);
+            });
+
+            actions.appendChild(editBtn);
+        }
+
         block.appendChild(msg);
+        if (messageId) block.appendChild(actions);
     }
 
     wrapper.appendChild(block);
     return wrapper;
 }
 
-function appendMessage(role, text) {
+function appendMessage(role, text, messageId = null) {
     const chat = document.getElementById("chat");
     if (!chat) return;
 
-    const el = createMessageElement(role, text);
+    const el = createMessageElement(role, text, messageId);
     chat.appendChild(el);
     chat.scrollTop = chat.scrollHeight;
 }
@@ -325,7 +349,7 @@ async function openConversation(conversationId, title = "Conversation", reloadLi
             clearChatWindow();
         } else {
             rows.forEach((row) => {
-                appendMessage(row.role, row.message || "");
+                appendMessage(row.role, row.message || "", row.id || null);
             });
         }
 
@@ -376,6 +400,36 @@ async function deleteConversation(conversationId) {
     } catch (error) {
         console.error("Failed to delete conversation:", error);
     }
+}
+
+async function editUserMessage(messageId, currentText) {
+    const newText = window.prompt("Edit your message", currentText);
+    if (!newText || !newText.trim() || newText.trim() === currentText.trim()) return;
+
+    const chat = document.getElementById("chat");
+    if (!chat) return;
+
+    const targetWrapper = document.querySelector(`.message-wrapper.user[data-message-id="${messageId}"]`);
+    if (!targetWrapper) return;
+
+    let current = targetWrapper;
+    while (current) {
+        const next = current.nextElementSibling;
+        current.remove();
+        current = next;
+    }
+
+    appendMessage("user", newText.trim(), messageId);
+
+    await streamAssistantResponse(`/chat/messages/${messageId}/edit`, {
+        message: newText.trim()
+    });
+
+    if (window.conversationId) {
+        await openConversation(window.conversationId, document.getElementById("conversationHeading")?.textContent || "Conversation", false);
+    }
+
+    await loadConversations(false);
 }
 
 function formatDate(value) {
