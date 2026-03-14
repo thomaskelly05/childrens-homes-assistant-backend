@@ -1,42 +1,45 @@
 window.addEventListener("load", async () => {
-  bindNavigation();
+  bindHomeNavigation();
   bindLogout();
   bindIncidentReportForm();
   bindDocumentForm();
+  highlightActiveSidebarLink();
 
   try {
     await loadInitialWorkspace();
   } catch (error) {
     showAppError(error.message || "Failed to load workspace");
   }
-
-  if (window.initChat) {
-    window.initChat();
-  }
-
-  if (window.initAssistantMeetingModal) {
-    window.initAssistantMeetingModal();
-  }
-
-  if (window.createConversation) {
-    window.createConversation();
-  }
-
-  if (window.loadConversations) {
-    window.loadConversations();
-  }
 });
 
 
-function bindNavigation() {
-  const navLinks = document.querySelectorAll(".nav-link");
+function bindHomeNavigation() {
+  const navButtons = document.querySelectorAll("button.nav-link[data-view]");
 
-  navLinks.forEach((button) => {
+  navButtons.forEach((button) => {
     button.addEventListener("click", () => {
       const view = button.dataset.view;
       activateView(view);
     });
   });
+}
+
+
+function highlightActiveSidebarLink() {
+  const currentPath = window.location.pathname;
+
+  const routeLinks = document.querySelectorAll(".sidebar__nav a.nav-link");
+  routeLinks.forEach((link) => {
+    const href = link.getAttribute("href");
+    link.classList.toggle("is-active", href === currentPath);
+  });
+
+  if (currentPath === "/") {
+    const dashboardButton = document.querySelector('button.nav-link[data-view="dashboard"]');
+    if (dashboardButton) {
+      dashboardButton.classList.add("is-active");
+    }
+  }
 }
 
 
@@ -306,10 +309,6 @@ function activateView(viewName) {
       title: "Dashboard",
       subtitle: "Overview of your workspace"
     },
-    chat: {
-      title: "Assistant",
-      subtitle: "AI support for staff workflows"
-    },
     tasks: {
       title: "Tasks",
       subtitle: "View current tasks"
@@ -317,14 +316,6 @@ function activateView(viewName) {
     handover: {
       title: "Handover",
       subtitle: "Recent handover notes"
-    },
-    journal: {
-      title: "Staff Journal",
-      subtitle: "Create and review journal entries"
-    },
-    supervision: {
-      title: "Supervision",
-      subtitle: "Review supervision submissions"
     },
     reports: {
       title: "Reports",
@@ -340,7 +331,7 @@ function activateView(viewName) {
     }
   };
 
-  document.querySelectorAll(".nav-link").forEach((button) => {
+  document.querySelectorAll("button.nav-link[data-view]").forEach((button) => {
     button.classList.toggle("is-active", button.dataset.view === viewName);
   });
 
