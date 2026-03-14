@@ -12,6 +12,7 @@ const healthPanel = document.getElementById("tab-health");
 const educationPanel = document.getElementById("tab-education");
 const familyPanel = document.getElementById("tab-family");
 const keyworkPanel = document.getElementById("tab-key-work");
+const chronologyPanel = document.getElementById("tab-chronology");
 
 let youngPeople = [];
 let selectedYoungPerson = null;
@@ -26,6 +27,7 @@ let selectedMedicationRecords = [];
 let selectedEducationRecords = [];
 let selectedFamilyRecords = [];
 let selectedKeyworkSessions = [];
+let selectedChronology = [];
 
 async function loadYoungPeople() {
   const res = await fetch("/young-people");
@@ -59,9 +61,12 @@ async function loadYoungPerson(id) {
     selectedEducationRecords = [];
     selectedFamilyRecords = [];
     selectedKeyworkSessions = [];
+    selectedChronology = [];
     clearDisplay();
     return;
   }
+
+  await fetch(`/young-people/${id}/chronology/rebuild`, { method: "POST" });
 
   const [
     personRes,
@@ -75,7 +80,8 @@ async function loadYoungPerson(id) {
     medicationRecordsRes,
     educationRes,
     familyRes,
-    keyworkRes
+    keyworkRes,
+    chronologyRes
   ] = await Promise.all([
     fetch(`/young-people/${id}`),
     fetch(`/young-people/${id}/profile`),
@@ -88,7 +94,8 @@ async function loadYoungPerson(id) {
     fetch(`/young-people/${id}/medication-records`),
     fetch(`/young-people/${id}/education`),
     fetch(`/young-people/${id}/family`),
-    fetch(`/young-people/${id}/keywork`)
+    fetch(`/young-people/${id}/keywork`),
+    fetch(`/young-people/${id}/chronology`)
   ]);
 
   if (
@@ -103,7 +110,8 @@ async function loadYoungPerson(id) {
     !medicationRecordsRes.ok ||
     !educationRes.ok ||
     !familyRes.ok ||
-    !keyworkRes.ok
+    !keyworkRes.ok ||
+    !chronologyRes.ok
   ) return;
 
   selectedYoungPerson = await personRes.json();
@@ -118,6 +126,7 @@ async function loadYoungPerson(id) {
   selectedEducationRecords = await educationRes.json();
   selectedFamilyRecords = await familyRes.json();
   selectedKeyworkSessions = await keyworkRes.json();
+  selectedChronology = await chronologyRes.json();
 
   renderYoungPerson();
 }
@@ -136,6 +145,7 @@ function clearDisplay() {
   educationPanel.innerHTML = `<div class="panel-card"><h2>Education</h2><p>Select a young person to load education records.</p></div>`;
   familyPanel.innerHTML = `<div class="panel-card"><h2>Family</h2><p>Select a young person to load family records.</p></div>`;
   keyworkPanel.innerHTML = `<div class="panel-card"><h2>Key Work</h2><p>Select a young person to load key work sessions.</p></div>`;
+  chronologyPanel.innerHTML = `<div class="panel-card"><h2>Chronology</h2><p>Select a young person to load chronology.</p></div>`;
 }
 
 function formatDate(value) {
@@ -171,130 +181,112 @@ function renderAlerts() {
   alertsContainer.innerHTML = alerts.map(alert => `<span class="badge alert">${alert.title}</span>`).join("");
 }
 
-/* keep existing renderPlans, renderRisks, renderDailyNotes, renderIncidents, renderHealth, renderEducation, renderFamily exactly as before */
-
-function renderPlans() {
+function renderPlans() { /* unchanged */ 
   if (!selectedPlans.length) {
     plansPanel.innerHTML = `<div class="panel-card"><h2>Plans</h2><p>No support plans recorded yet.</p></div>`;
     return;
   }
-  plansPanel.innerHTML = `
-    <div class="panel-grid">
-      ${selectedPlans.map(plan => `
-        <div class="panel-card">
-          <h2>${plan.title}</h2>
-          <div class="profile-grid">
-            <div class="profile-label">Type</div><div class="profile-value">${plan.plan_type || "—"}</div>
-            <div class="profile-label">Status</div><div class="profile-value">${plan.status || "—"}</div>
-            <div class="profile-label">Start date</div><div class="profile-value">${formatDate(plan.start_date)}</div>
-            <div class="profile-label">Review date</div><div class="profile-value">${formatDate(plan.review_date)}</div>
-            <div class="profile-label">Owner</div><div class="profile-value">${plan.owner_first_name ? `${plan.owner_first_name} ${plan.owner_last_name || ""}` : "—"}</div>
-            <div class="profile-label">Presenting need</div><div class="profile-value">${plan.presenting_need || "—"}</div>
-            <div class="profile-label">Summary</div><div class="profile-value">${plan.summary || "—"}</div>
-            <div class="profile-label">PACE guidance</div><div class="profile-value">${plan.pace_guidance || "—"}</div>
-            <div class="profile-label">Triggers</div><div class="profile-value">${plan.triggers || "—"}</div>
-            <div class="profile-label">Protective factors</div><div class="profile-value">${plan.protective_factors || "—"}</div>
-          </div>
-        </div>
-      `).join("")}
+  plansPanel.innerHTML = `<div class="panel-grid">${selectedPlans.map(plan => `
+    <div class="panel-card">
+      <h2>${plan.title}</h2>
+      <div class="profile-grid">
+        <div class="profile-label">Type</div><div class="profile-value">${plan.plan_type || "—"}</div>
+        <div class="profile-label">Status</div><div class="profile-value">${plan.status || "—"}</div>
+        <div class="profile-label">Start date</div><div class="profile-value">${formatDate(plan.start_date)}</div>
+        <div class="profile-label">Review date</div><div class="profile-value">${formatDate(plan.review_date)}</div>
+        <div class="profile-label">Owner</div><div class="profile-value">${plan.owner_first_name ? `${plan.owner_first_name} ${plan.owner_last_name || ""}` : "—"}</div>
+        <div class="profile-label">Presenting need</div><div class="profile-value">${plan.presenting_need || "—"}</div>
+        <div class="profile-label">Summary</div><div class="profile-value">${plan.summary || "—"}</div>
+        <div class="profile-label">PACE guidance</div><div class="profile-value">${plan.pace_guidance || "—"}</div>
+        <div class="profile-label">Triggers</div><div class="profile-value">${plan.triggers || "—"}</div>
+        <div class="profile-label">Protective factors</div><div class="profile-value">${plan.protective_factors || "—"}</div>
+      </div>
     </div>
-  `;
+  `).join("")}</div>`;
 }
 
-function renderRisks() {
+function renderRisks() { /* unchanged */
   if (!selectedRisks.length) {
     riskPanel.innerHTML = `<div class="panel-card"><h2>Risk</h2><p>No risk assessments recorded yet.</p></div>`;
     return;
   }
-  riskPanel.innerHTML = `
-    <div class="panel-grid">
-      ${selectedRisks.map(risk => `
-        <div class="panel-card">
-          <h2>${risk.title}</h2>
-          <div class="profile-grid">
-            <div class="profile-label">Category</div><div class="profile-value">${risk.category || "—"}</div>
-            <div class="profile-label">Severity</div><div class="profile-value">${risk.severity || "—"}</div>
-            <div class="profile-label">Likelihood</div><div class="profile-value">${risk.likelihood || "—"}</div>
-            <div class="profile-label">Status</div><div class="profile-value">${risk.status || "—"}</div>
-            <div class="profile-label">Review date</div><div class="profile-value">${formatDate(risk.review_date)}</div>
-            <div class="profile-label">Owner</div><div class="profile-value">${risk.owner_first_name ? `${risk.owner_first_name} ${risk.owner_last_name || ""}` : "—"}</div>
-            <div class="profile-label">Concern summary</div><div class="profile-value">${risk.concern_summary || "—"}</div>
-            <div class="profile-label">Known triggers</div><div class="profile-value">${risk.known_triggers || "—"}</div>
-            <div class="profile-label">Early warning signs</div><div class="profile-value">${risk.early_warning_signs || "—"}</div>
-            <div class="profile-label">Current controls</div><div class="profile-value">${risk.current_controls || "—"}</div>
-            <div class="profile-label">De-escalation</div><div class="profile-value">${risk.deescalation_strategies || "—"}</div>
-            <div class="profile-label">Response actions</div><div class="profile-value">${risk.response_actions || "—"}</div>
-          </div>
-        </div>
-      `).join("")}
+  riskPanel.innerHTML = `<div class="panel-grid">${selectedRisks.map(risk => `
+    <div class="panel-card">
+      <h2>${risk.title}</h2>
+      <div class="profile-grid">
+        <div class="profile-label">Category</div><div class="profile-value">${risk.category || "—"}</div>
+        <div class="profile-label">Severity</div><div class="profile-value">${risk.severity || "—"}</div>
+        <div class="profile-label">Likelihood</div><div class="profile-value">${risk.likelihood || "—"}</div>
+        <div class="profile-label">Status</div><div class="profile-value">${risk.status || "—"}</div>
+        <div class="profile-label">Review date</div><div class="profile-value">${formatDate(risk.review_date)}</div>
+        <div class="profile-label">Owner</div><div class="profile-value">${risk.owner_first_name ? `${risk.owner_first_name} ${risk.owner_last_name || ""}` : "—"}</div>
+        <div class="profile-label">Concern summary</div><div class="profile-value">${risk.concern_summary || "—"}</div>
+        <div class="profile-label">Known triggers</div><div class="profile-value">${risk.known_triggers || "—"}</div>
+        <div class="profile-label">Early warning signs</div><div class="profile-value">${risk.early_warning_signs || "—"}</div>
+        <div class="profile-label">Current controls</div><div class="profile-value">${risk.current_controls || "—"}</div>
+        <div class="profile-label">De-escalation</div><div class="profile-value">${risk.deescalation_strategies || "—"}</div>
+        <div class="profile-label">Response actions</div><div class="profile-value">${risk.response_actions || "—"}</div>
+      </div>
     </div>
-  `;
+  `).join("")}</div>`;
 }
 
-function renderDailyNotes() {
+function renderDailyNotes() { /* unchanged */
   if (!selectedDailyNotes.length) {
     dailyNotesPanel.innerHTML = `<div class="panel-card"><h2>Daily Notes</h2><p>No daily notes recorded yet.</p></div>`;
     return;
   }
-  dailyNotesPanel.innerHTML = `
-    <div class="panel-grid">
-      ${selectedDailyNotes.map(note => `
-        <div class="panel-card">
-          <h2>${formatDate(note.note_date)} • ${note.shift_type || "Shift"}</h2>
-          <div class="profile-grid">
-            <div class="profile-label">Mood</div><div class="profile-value">${note.mood || "—"}</div>
-            <div class="profile-label">Presentation</div><div class="profile-value">${note.presentation || "—"}</div>
-            <div class="profile-label">Activities</div><div class="profile-value">${note.activities || "—"}</div>
-            <div class="profile-label">Education</div><div class="profile-value">${note.education_update || "—"}</div>
-            <div class="profile-label">Health</div><div class="profile-value">${note.health_update || "—"}</div>
-            <div class="profile-label">Family</div><div class="profile-value">${note.family_update || "—"}</div>
-            <div class="profile-label">Behaviour</div><div class="profile-value">${note.behaviour_update || "—"}</div>
-            <div class="profile-label">Young person voice</div><div class="profile-value">${note.young_person_voice || "—"}</div>
-            <div class="profile-label">Positives</div><div class="profile-value">${note.positives || "—"}</div>
-            <div class="profile-label">Actions required</div><div class="profile-value">${note.actions_required || "—"}</div>
-            <div class="profile-label">Significance</div><div class="profile-value">${note.significance || "—"}</div>
-            <div class="profile-label">Author</div><div class="profile-value">${note.author_first_name ? `${note.author_first_name} ${note.author_last_name || ""}` : "—"}</div>
-          </div>
-        </div>
-      `).join("")}
+  dailyNotesPanel.innerHTML = `<div class="panel-grid">${selectedDailyNotes.map(note => `
+    <div class="panel-card">
+      <h2>${formatDate(note.note_date)} • ${note.shift_type || "Shift"}</h2>
+      <div class="profile-grid">
+        <div class="profile-label">Mood</div><div class="profile-value">${note.mood || "—"}</div>
+        <div class="profile-label">Presentation</div><div class="profile-value">${note.presentation || "—"}</div>
+        <div class="profile-label">Activities</div><div class="profile-value">${note.activities || "—"}</div>
+        <div class="profile-label">Education</div><div class="profile-value">${note.education_update || "—"}</div>
+        <div class="profile-label">Health</div><div class="profile-value">${note.health_update || "—"}</div>
+        <div class="profile-label">Family</div><div class="profile-value">${note.family_update || "—"}</div>
+        <div class="profile-label">Behaviour</div><div class="profile-value">${note.behaviour_update || "—"}</div>
+        <div class="profile-label">Young person voice</div><div class="profile-value">${note.young_person_voice || "—"}</div>
+        <div class="profile-label">Positives</div><div class="profile-value">${note.positives || "—"}</div>
+        <div class="profile-label">Actions required</div><div class="profile-value">${note.actions_required || "—"}</div>
+        <div class="profile-label">Significance</div><div class="profile-value">${note.significance || "—"}</div>
+        <div class="profile-label">Author</div><div class="profile-value">${note.author_first_name ? `${note.author_first_name} ${note.author_last_name || ""}` : "—"}</div>
+      </div>
     </div>
-  `;
+  `).join("")}</div>`;
 }
 
-function renderIncidents() {
+function renderIncidents() { /* unchanged */
   if (!selectedIncidents.length) {
     incidentsPanel.innerHTML = `<div class="panel-card"><h2>Incidents</h2><p>No incidents recorded yet.</p></div>`;
     return;
   }
-  incidentsPanel.innerHTML = `
-    <div class="panel-grid">
-      ${selectedIncidents.map(incident => `
-        <div class="panel-card">
-          <h2>${incident.incident_type || "Incident"}</h2>
-          <div class="profile-grid">
-            <div class="profile-label">Date/time</div><div class="profile-value">${formatDateTime(incident.incident_datetime || incident.created_at)}</div>
-            <div class="profile-label">Severity</div><div class="profile-value">${incident.severity || "—"}</div>
-            <div class="profile-label">Location</div><div class="profile-value">${incident.location || "—"}</div>
-            <div class="profile-label">Antecedent</div><div class="profile-value">${incident.antecedent || "—"}</div>
-            <div class="profile-label">Description</div><div class="profile-value">${incident.description || "—"}</div>
-            <div class="profile-label">Staff response</div><div class="profile-value">${incident.staff_response || "—"}</div>
-            <div class="profile-label">Child response</div><div class="profile-value">${incident.child_response || "—"}</div>
-            <div class="profile-label">Outcome</div><div class="profile-value">${incident.outcome || "—"}</div>
-            <div class="profile-label">Injury</div><div class="profile-value">${incident.injury_flag ? "Yes" : "No"}</div>
-            <div class="profile-label">Damage</div><div class="profile-value">${incident.property_damage_flag ? "Yes" : "No"}</div>
-            <div class="profile-label">Police involved</div><div class="profile-value">${incident.police_involved ? "Yes" : "No"}</div>
-            <div class="profile-label">Safeguarding</div><div class="profile-value">${incident.safeguarding_flag ? "Yes" : "No"}</div>
-            <div class="profile-label">Manager review</div><div class="profile-value">${incident.manager_review_status || "—"}</div>
-            <div class="profile-label">Follow-up required</div><div class="profile-value">${incident.follow_up_required ? "Yes" : "No"}</div>
-            <div class="profile-label">Staff</div><div class="profile-value">${incident.staff_first_name ? `${incident.staff_first_name} ${incident.staff_last_name || ""}` : "—"}</div>
-          </div>
-        </div>
-      `).join("")}
+  incidentsPanel.innerHTML = `<div class="panel-grid">${selectedIncidents.map(incident => `
+    <div class="panel-card">
+      <h2>${incident.incident_type || "Incident"}</h2>
+      <div class="profile-grid">
+        <div class="profile-label">Date/time</div><div class="profile-value">${formatDateTime(incident.incident_datetime || incident.created_at)}</div>
+        <div class="profile-label">Severity</div><div class="profile-value">${incident.severity || "—"}</div>
+        <div class="profile-label">Location</div><div class="profile-value">${incident.location || "—"}</div>
+        <div class="profile-label">Antecedent</div><div class="profile-value">${incident.antecedent || "—"}</div>
+        <div class="profile-label">Description</div><div class="profile-value">${incident.description || "—"}</div>
+        <div class="profile-label">Staff response</div><div class="profile-value">${incident.staff_response || "—"}</div>
+        <div class="profile-label">Child response</div><div class="profile-value">${incident.child_response || "—"}</div>
+        <div class="profile-label">Outcome</div><div class="profile-value">${incident.outcome || "—"}</div>
+        <div class="profile-label">Injury</div><div class="profile-value">${incident.injury_flag ? "Yes" : "No"}</div>
+        <div class="profile-label">Damage</div><div class="profile-value">${incident.property_damage_flag ? "Yes" : "No"}</div>
+        <div class="profile-label">Police involved</div><div class="profile-value">${incident.police_involved ? "Yes" : "No"}</div>
+        <div class="profile-label">Safeguarding</div><div class="profile-value">${incident.safeguarding_flag ? "Yes" : "No"}</div>
+        <div class="profile-label">Manager review</div><div class="profile-value">${incident.manager_review_status || "—"}</div>
+        <div class="profile-label">Follow-up required</div><div class="profile-value">${incident.follow_up_required ? "Yes" : "No"}</div>
+        <div class="profile-label">Staff</div><div class="profile-value">${incident.staff_first_name ? `${incident.staff_first_name} ${incident.staff_last_name || ""}` : "—"}</div>
+      </div>
     </div>
-  `;
+  `).join("")}</div>`;
 }
 
-function renderHealth() {
+function renderHealth() { /* unchanged compact */
   const healthCards = [];
   const medicationCards = [];
   if (selectedHealthRecords.length) {
@@ -359,59 +351,51 @@ function renderHealth() {
   healthPanel.innerHTML = `<div class="panel-grid">${healthCards.join("")}${medicationCards.join("")}</div>`;
 }
 
-function renderEducation() {
+function renderEducation() { /* unchanged */
   if (!selectedEducationRecords.length) {
     educationPanel.innerHTML = `<div class="panel-card"><h2>Education</h2><p>No education records recorded yet.</p></div>`;
     return;
   }
-  educationPanel.innerHTML = `
-    <div class="panel-grid">
-      ${selectedEducationRecords.map(record => `
-        <div class="panel-card">
-          <h2>${formatDate(record.record_date)} • ${record.provision_name || "Education record"}</h2>
-          <div class="profile-grid">
-            <div class="profile-label">Attendance</div><div class="profile-value">${record.attendance_status || "—"}</div>
-            <div class="profile-label">Provision</div><div class="profile-value">${record.provision_name || "—"}</div>
-            <div class="profile-label">Behaviour</div><div class="profile-value">${record.behaviour_summary || "—"}</div>
-            <div class="profile-label">Engagement</div><div class="profile-value">${record.learning_engagement || "—"}</div>
-            <div class="profile-label">Issue raised</div><div class="profile-value">${record.issue_raised || "—"}</div>
-            <div class="profile-label">Action taken</div><div class="profile-value">${record.action_taken || "—"}</div>
-            <div class="profile-label">Professional involved</div><div class="profile-value">${record.professional_involved || "—"}</div>
-            <div class="profile-label">Achievement</div><div class="profile-value">${record.achievement_note || "—"}</div>
-            <div class="profile-label">Created by</div><div class="profile-value">${record.created_by_first_name ? `${record.created_by_first_name} ${record.created_by_last_name || ""}` : "—"}</div>
-          </div>
-        </div>
-      `).join("")}
+  educationPanel.innerHTML = `<div class="panel-grid">${selectedEducationRecords.map(record => `
+    <div class="panel-card">
+      <h2>${formatDate(record.record_date)} • ${record.provision_name || "Education record"}</h2>
+      <div class="profile-grid">
+        <div class="profile-label">Attendance</div><div class="profile-value">${record.attendance_status || "—"}</div>
+        <div class="profile-label">Provision</div><div class="profile-value">${record.provision_name || "—"}</div>
+        <div class="profile-label">Behaviour</div><div class="profile-value">${record.behaviour_summary || "—"}</div>
+        <div class="profile-label">Engagement</div><div class="profile-value">${record.learning_engagement || "—"}</div>
+        <div class="profile-label">Issue raised</div><div class="profile-value">${record.issue_raised || "—"}</div>
+        <div class="profile-label">Action taken</div><div class="profile-value">${record.action_taken || "—"}</div>
+        <div class="profile-label">Professional involved</div><div class="profile-value">${record.professional_involved || "—"}</div>
+        <div class="profile-label">Achievement</div><div class="profile-value">${record.achievement_note || "—"}</div>
+        <div class="profile-label">Created by</div><div class="profile-value">${record.created_by_first_name ? `${record.created_by_first_name} ${record.created_by_last_name || ""}` : "—"}</div>
+      </div>
     </div>
-  `;
+  `).join("")}</div>`;
 }
 
-function renderFamily() {
+function renderFamily() { /* unchanged */
   if (!selectedFamilyRecords.length) {
     familyPanel.innerHTML = `<div class="panel-card"><h2>Family</h2><p>No family contact records recorded yet.</p></div>`;
     return;
   }
-  familyPanel.innerHTML = `
-    <div class="panel-grid">
-      ${selectedFamilyRecords.map(record => `
-        <div class="panel-card">
-          <h2>${record.contact_person}</h2>
-          <div class="profile-grid">
-            <div class="profile-label">Date/time</div><div class="profile-value">${formatDateTime(record.contact_datetime)}</div>
-            <div class="profile-label">Contact type</div><div class="profile-value">${record.contact_type || "—"}</div>
-            <div class="profile-label">Supervision</div><div class="profile-value">${record.supervision_level || "—"}</div>
-            <div class="profile-label">Location</div><div class="profile-value">${record.location || "—"}</div>
-            <div class="profile-label">Pre-contact presentation</div><div class="profile-value">${record.pre_contact_presentation || "—"}</div>
-            <div class="profile-label">Post-contact presentation</div><div class="profile-value">${record.post_contact_presentation || "—"}</div>
-            <div class="profile-label">Child voice</div><div class="profile-value">${record.child_voice || "—"}</div>
-            <div class="profile-label">Concerns</div><div class="profile-value">${record.concerns || "—"}</div>
-            <div class="profile-label">Follow-up required</div><div class="profile-value">${record.follow_up_required ? "Yes" : "No"}</div>
-            <div class="profile-label">Created by</div><div class="profile-value">${record.created_by_first_name ? `${record.created_by_first_name} ${record.created_by_last_name || ""}` : "—"}</div>
-          </div>
-        </div>
-      `).join("")}
+  familyPanel.innerHTML = `<div class="panel-grid">${selectedFamilyRecords.map(record => `
+    <div class="panel-card">
+      <h2>${record.contact_person}</h2>
+      <div class="profile-grid">
+        <div class="profile-label">Date/time</div><div class="profile-value">${formatDateTime(record.contact_datetime)}</div>
+        <div class="profile-label">Contact type</div><div class="profile-value">${record.contact_type || "—"}</div>
+        <div class="profile-label">Supervision</div><div class="profile-value">${record.supervision_level || "—"}</div>
+        <div class="profile-label">Location</div><div class="profile-value">${record.location || "—"}</div>
+        <div class="profile-label">Pre-contact presentation</div><div class="profile-value">${record.pre_contact_presentation || "—"}</div>
+        <div class="profile-label">Post-contact presentation</div><div class="profile-value">${record.post_contact_presentation || "—"}</div>
+        <div class="profile-label">Child voice</div><div class="profile-value">${record.child_voice || "—"}</div>
+        <div class="profile-label">Concerns</div><div class="profile-value">${record.concerns || "—"}</div>
+        <div class="profile-label">Follow-up required</div><div class="profile-value">${record.follow_up_required ? "Yes" : "No"}</div>
+        <div class="profile-label">Created by</div><div class="profile-value">${record.created_by_first_name ? `${record.created_by_first_name} ${record.created_by_last_name || ""}` : "—"}</div>
+      </div>
     </div>
-  `;
+  `).join("")}</div>`;
 }
 
 function renderKeywork() {
@@ -419,21 +403,43 @@ function renderKeywork() {
     keyworkPanel.innerHTML = `<div class="panel-card"><h2>Key Work</h2><p>No key work sessions recorded yet.</p></div>`;
     return;
   }
+  keyworkPanel.innerHTML = `<div class="panel-grid">${selectedKeyworkSessions.map(session => `
+    <div class="panel-card">
+      <h2>${session.topic}</h2>
+      <div class="profile-grid">
+        <div class="profile-label">Session date</div><div class="profile-value">${formatDate(session.session_date)}</div>
+        <div class="profile-label">Worker</div><div class="profile-value">${session.worker_first_name ? `${session.worker_first_name} ${session.worker_last_name || ""}` : "—"}</div>
+        <div class="profile-label">Purpose</div><div class="profile-value">${session.purpose || "—"}</div>
+        <div class="profile-label">Summary</div><div class="profile-value">${session.summary || "—"}</div>
+        <div class="profile-label">Child voice</div><div class="profile-value">${session.child_voice || "—"}</div>
+        <div class="profile-label">Reflective analysis</div><div class="profile-value">${session.reflective_analysis || "—"}</div>
+        <div class="profile-label">Actions agreed</div><div class="profile-value">${session.actions_agreed || "—"}</div>
+        <div class="profile-label">Next session date</div><div class="profile-value">${formatDate(session.next_session_date)}</div>
+      </div>
+    </div>
+  `).join("")}</div>`;
+}
 
-  keyworkPanel.innerHTML = `
-    <div class="panel-grid">
-      ${selectedKeyworkSessions.map(session => `
+function renderChronology() {
+  if (!selectedChronology.length) {
+    chronologyPanel.innerHTML = `<div class="panel-card"><h2>Chronology</h2><p>No chronology events recorded yet.</p></div>`;
+    return;
+  }
+
+  chronologyPanel.innerHTML = `
+    <div class="panel-grid" style="grid-template-columns:1fr;">
+      ${selectedChronology.map(event => `
         <div class="panel-card">
-          <h2>${session.topic}</h2>
+          <h2>${event.title}</h2>
           <div class="profile-grid">
-            <div class="profile-label">Session date</div><div class="profile-value">${formatDate(session.session_date)}</div>
-            <div class="profile-label">Worker</div><div class="profile-value">${session.worker_first_name ? `${session.worker_first_name} ${session.worker_last_name || ""}` : "—"}</div>
-            <div class="profile-label">Purpose</div><div class="profile-value">${session.purpose || "—"}</div>
-            <div class="profile-label">Summary</div><div class="profile-value">${session.summary || "—"}</div>
-            <div class="profile-label">Child voice</div><div class="profile-value">${session.child_voice || "—"}</div>
-            <div class="profile-label">Reflective analysis</div><div class="profile-value">${session.reflective_analysis || "—"}</div>
-            <div class="profile-label">Actions agreed</div><div class="profile-value">${session.actions_agreed || "—"}</div>
-            <div class="profile-label">Next session date</div><div class="profile-value">${formatDate(session.next_session_date)}</div>
+            <div class="profile-label">Date/time</div><div class="profile-value">${formatDateTime(event.event_datetime)}</div>
+            <div class="profile-label">Category</div><div class="profile-value">${event.category || "—"}</div>
+            <div class="profile-label">Subcategory</div><div class="profile-value">${event.subcategory || "—"}</div>
+            <div class="profile-label">Summary</div><div class="profile-value">${event.summary || "—"}</div>
+            <div class="profile-label">Significance</div><div class="profile-value">${event.significance || "—"}</div>
+            <div class="profile-label">Source table</div><div class="profile-value">${event.source_table || "—"}</div>
+            <div class="profile-label">Auto generated</div><div class="profile-value">${event.auto_generated ? "Yes" : "No"}</div>
+            <div class="profile-label">Created by</div><div class="profile-value">${event.created_by_first_name ? `${event.created_by_first_name} ${event.created_by_last_name || ""}` : "—"}</div>
           </div>
         </div>
       `).join("")}
@@ -555,6 +561,7 @@ function renderYoungPerson() {
   renderEducation();
   renderFamily();
   renderKeywork();
+  renderChronology();
 }
 
 function setupTabs() {
