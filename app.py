@@ -145,9 +145,7 @@ def serve_ai_notes_js():
     return FileResponse(os.path.join(FRONTEND_DIR, "ai-notes.js"))
 
 
-# IMPORTANT:
-# The API router uses /young-people
-# So the page route must use a different URL
+# Young People basic page
 @app.get("/young-people-page")
 def serve_young_people():
     return FileResponse(os.path.join(FRONTEND_DIR, "young-people.html"))
@@ -156,6 +154,17 @@ def serve_young_people():
 @app.get("/young-people-page.html")
 def serve_young_people_html():
     return FileResponse(os.path.join(FRONTEND_DIR, "young-people.html"))
+
+
+# Young Person shell workspace page
+@app.get("/young-people-shell")
+def serve_young_people_shell():
+    return FileResponse(os.path.join(FRONTEND_DIR, "young-people-shell.html"))
+
+
+@app.get("/young-people-shell.html")
+def serve_young_people_shell_html():
+    return FileResponse(os.path.join(FRONTEND_DIR, "young-people-shell.html"))
 
 
 @app.get("/health")
