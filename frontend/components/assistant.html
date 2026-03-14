@@ -29,7 +29,7 @@
             color: #fff;
             border-right: 1px solid rgba(255,255,255,0.08);
             display: grid;
-            grid-template-rows: auto auto 1fr auto;
+            grid-template-rows: auto auto auto 1fr auto;
             gap: 1rem;
             padding: 1rem;
             min-height: 0;
@@ -72,6 +72,32 @@
             font-size: 0.95rem;
             font-weight: 700;
             color: rgba(255,255,255,0.88);
+        }
+
+        .upload-panel {
+            display: grid;
+            gap: 0.65rem;
+            padding: 0.85rem;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.06);
+            border-radius: 14px;
+        }
+
+        .upload-panel label {
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .upload-panel input[type="file"] {
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.16);
+        }
+
+        .upload-meta {
+            font-size: 0.86rem;
+            color: rgba(255,255,255,0.76);
+            line-height: 1.45;
         }
 
         .history-list {
@@ -289,7 +315,7 @@
 
             .assistant-history {
                 min-height: auto;
-                grid-template-rows: auto auto auto auto;
+                grid-template-rows: auto auto auto auto auto;
             }
 
             .history-list {
@@ -329,6 +355,13 @@
             <div class="assistant-history-top">
                 <button id="newConversationBtn" class="button" type="button">New chat</button>
                 <h3 class="history-title">Chat history</h3>
+            </div>
+
+            <div class="upload-panel">
+                <label for="documentUpload">Upload document</label>
+                <input id="documentUpload" type="file" accept=".txt,.docx,.pdf" />
+                <div id="uploadStatus" class="upload-meta">No document loaded.</div>
+                <button id="clearDocumentBtn" class="button button--secondary" type="button">Clear document</button>
             </div>
 
             <div id="conversationList" class="history-list">
