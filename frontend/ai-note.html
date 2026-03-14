@@ -64,7 +64,8 @@
             min-width: 280px;
         }
 
-        .template-picker label {
+        .template-picker label,
+        .field label {
             display: block;
             margin-bottom: 0.45rem;
             font-weight: 700;
@@ -107,59 +108,17 @@
             flex-wrap: wrap;
         }
 
-        .stage-tabs {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-            margin-bottom: 1rem;
-        }
-
-        .stage-tab {
-            border: 1px solid var(--border);
-            background: var(--surface-muted);
-            color: var(--text);
-            border-radius: 12px;
-            padding: 0.7rem 1rem;
-            cursor: pointer;
-            font-weight: 700;
-        }
-
-        .stage-tab.active {
-            background: #eef4ff;
-            border-color: var(--primary);
-            color: var(--primary-hover);
-        }
-
-        .stage-panel {
-            display: none;
-        }
-
-        .stage-panel.active {
-            display: block;
-        }
-
-        .record-layout,
-        .generate-layout {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 1rem;
-        }
-
-        .record-card,
-        .panel,
+        .notes-section,
         .sidebar-card,
-        .document-panel,
-        .ai-assistant-panel {
+        .split-panel {
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 18px;
             box-shadow: var(--shadow-sm);
         }
 
-        .record-card,
-        .panel,
-        .ai-assistant-panel,
-        .document-panel,
+        .notes-section,
+        .split-panel,
         .sidebar-card {
             padding: 1rem;
         }
@@ -173,26 +132,32 @@
             color: var(--primary-hover);
         }
 
-        .record-card h2,
-        .panel h2,
-        .assistant-header h2,
-        .document-toolbar h2 {
-            margin: 0 0 0.4rem;
+        .section-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .section-head h2,
+        .split-panel h2 {
+            margin: 0 0 0.35rem;
             color: var(--text);
             letter-spacing: -0.02em;
         }
 
-        .panel-copy,
-        .assistant-header p,
-        .panel p {
+        .section-head p,
+        .split-panel p {
+            margin: 0;
             color: var(--text-soft);
             line-height: 1.6;
         }
 
         .record-actions,
         .panel-actions,
-        .document-footer,
-        .document-header-actions {
+        .document-actions,
+        .quick-prompts {
             display: flex;
             gap: 0.75rem;
             flex-wrap: wrap;
@@ -211,30 +176,27 @@
             margin-top: 1rem;
         }
 
-        .field label {
-            color: var(--text);
-            font-weight: 700;
-            font-size: 0.92rem;
-        }
-
-        #transcript,
-        #finalNote {
-            min-height: 260px;
-            resize: vertical;
-        }
-
-        .editor-shell {
+        .transcript-layout {
             display: grid;
-            grid-template-columns: 360px minmax(0, 1fr);
             gap: 1rem;
+        }
+
+        .workspace-split {
+            display: none;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
             align-items: start;
         }
 
-        .quick-prompts {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-            margin: 1rem 0;
+        .workspace-split.active {
+            display: grid;
+        }
+
+        .source-transcript,
+        .document-editor {
+            min-height: 520px;
+            resize: vertical;
         }
 
         .prompt-chip {
@@ -246,44 +208,6 @@
             cursor: pointer;
             font-size: 0.86rem;
             font-weight: 600;
-        }
-
-        .panel-actions.stacked {
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        .source-box {
-            margin-top: 1rem;
-            border-top: 1px solid var(--border);
-            padding-top: 1rem;
-        }
-
-        .source-box-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .source-box-header h3 {
-            margin: 0;
-            font-size: 1rem;
-            color: var(--text);
-        }
-
-        .source-transcript {
-            min-height: 180px;
-            resize: vertical;
-        }
-
-        .document-toolbar {
-            display: flex;
-            justify-content: space-between;
-            gap: 1rem;
-            align-items: flex-start;
-            margin-bottom: 1rem;
         }
 
         .document-meta {
@@ -355,7 +279,6 @@
             color: #027a48;
         }
 
-        .history-card .sidebar-card-header,
         .sidebar-card-header {
             display: flex;
             justify-content: space-between;
@@ -454,8 +377,9 @@
         }
 
         .recording-modal-overlay.hidden,
-        .modal-overlay.hidden {
-            display: none;
+        .modal-overlay.hidden,
+        .hidden {
+            display: none !important;
         }
 
         .recording-modal {
@@ -580,10 +504,6 @@
             margin-bottom: 1rem;
         }
 
-        .modal-header h2 {
-            margin: 0.2rem 0 0;
-        }
-
         .template-builder,
         .saved-templates-box {
             display: grid;
@@ -616,7 +536,7 @@
         }
 
         @media (max-width: 1180px) {
-            .editor-shell {
+            .workspace-split {
                 grid-template-columns: 1fr;
             }
         }
@@ -638,8 +558,7 @@
                 padding: 0 1rem 1rem;
             }
 
-            .document-toolbar,
-            .source-box-header,
+            .section-head,
             .modal-header {
                 flex-direction: column;
                 align-items: stretch;
@@ -690,7 +609,7 @@
                 </div>
                 <div id="recordingStatus" class="status-pill idle">Not recording</div>
                 <div id="recordingTimer" class="timer">00:00</div>
-                <p class="sidebar-note">Record first, then transcribe, generate and review the final note.</p>
+                <p class="sidebar-note">Record first, then transcribe and edit the AI note side by side.</p>
             </div>
 
             <div id="safeguardingBox" class="sidebar-card safeguarding-box" style="display:none;">
@@ -725,7 +644,7 @@
                         <p class="eyebrow">AI Meeting Assistant</p>
                         <h1>Create a professional note</h1>
                         <p class="workspace-subtitle">
-                            Record, generate, then edit the final note with AI support.
+                            Record a meeting, transcribe it, then work in a split view with the original transcript on one side and the AI editor on the other.
                         </p>
                     </div>
 
@@ -746,132 +665,100 @@
                     </div>
                 </header>
 
-                <section class="stage-tabs">
-                    <button class="stage-tab active" data-stage="record" type="button">1. Record</button>
-                    <button class="stage-tab" data-stage="generate" type="button">2. Generate</button>
-                    <button class="stage-tab" data-stage="edit" type="button">3. Edit &amp; Save</button>
-                </section>
-
-                <section id="stage-record" class="stage-panel active">
-                    <div class="record-layout">
-                        <div class="record-card">
+                <section class="notes-section">
+                    <div class="section-head">
+                        <div>
                             <p class="panel-label">Step 1</p>
-                            <h2>Record the meeting</h2>
-                            <p class="panel-copy">
-                                Capture a meeting, supervision, or professional discussion. Once you stop recording, you can transcribe it and move straight into note generation.
-                            </p>
-
-                            <div class="record-actions">
-                                <button id="startRecordingBtn" class="btn btn-primary" type="button">Start recording</button>
-                                <button id="stopRecordingBtn" class="btn btn-secondary" type="button" disabled>Stop recording</button>
-                                <button id="transcribeBtn" class="btn btn-dark" type="button" disabled>Transcribe recording</button>
-                            </div>
-
-                            <p id="audioReadyText" class="helper-text">No recording yet.</p>
-                            <audio id="audioPlayback" controls style="display:none;"></audio>
+                            <h2>Record and transcribe</h2>
+                            <p>Record the meeting first. When transcription is complete, the split AI editor will open below.</p>
                         </div>
                     </div>
+
+                    <div class="record-actions">
+                        <button id="startRecordingBtn" class="btn btn-primary" type="button">Start recording</button>
+                        <button id="stopRecordingBtn" class="btn btn-secondary" type="button" disabled>Stop recording</button>
+                        <button id="transcribeBtn" class="btn btn-dark" type="button" disabled>Transcribe recording</button>
+                        <button id="generateBtn" class="btn btn-primary" type="button">Generate AI note</button>
+                    </div>
+
+                    <p id="audioReadyText" class="helper-text">No recording yet.</p>
+                    <audio id="audioPlayback" controls style="display:none;"></audio>
                 </section>
 
-                <section id="stage-generate" class="stage-panel">
-                    <div class="generate-layout">
-                        <div class="panel">
-                            <div class="panel-header">
-                                <div>
-                                    <p class="panel-label">Step 2</p>
-                                    <h2>Transcript</h2>
-                                    <p>Review the transcript before generating the note.</p>
-                                </div>
+                <section id="splitWorkspace" class="workspace-split">
+                    <div class="split-panel">
+                        <div class="section-head">
+                            <div>
+                                <p class="panel-label">Original source</p>
+                                <h2>Transcript</h2>
+                                <p>Review the original transcript on the left.</p>
                             </div>
+                            <button id="toggleTranscriptBtn" class="btn btn-light btn-tiny" type="button">Show / hide</button>
+                        </div>
 
+                        <div id="transcriptContent" class="transcript-layout">
                             <div class="field">
                                 <label for="transcript">Transcript</label>
-                                <textarea id="transcript" placeholder="The transcript will appear here after transcription, or you can paste one manually."></textarea>
-                            </div>
-
-                            <div class="panel-actions">
-                                <button id="generateBtn" class="btn btn-primary" type="button">Generate AI note</button>
-                                <button id="goToEditBtn" class="btn btn-light" type="button">Go to editor</button>
+                                <textarea id="transcript" class="source-transcript" placeholder="The transcript will appear here after transcription, or you can paste one manually."></textarea>
                             </div>
                         </div>
                     </div>
-                </section>
 
-                <section id="stage-edit" class="stage-panel">
-                    <div class="editor-shell">
-                        <aside class="ai-assistant-panel">
-                            <div class="assistant-header">
-                                <p class="panel-label">AI assistant</p>
-                                <h2>Refine the note</h2>
-                                <p>Tell the AI exactly what you want changed.</p>
-                            </div>
-
-                            <div class="quick-prompts">
-                                <button class="prompt-chip" type="button" data-prompt="Make this more professional.">More professional</button>
-                                <button class="prompt-chip" type="button" data-prompt="Make this shorter and clearer.">Shorter</button>
-                                <button class="prompt-chip" type="button" data-prompt="Extract the key actions and next steps clearly.">Extract actions</button>
-                                <button class="prompt-chip" type="button" data-prompt="Rewrite this using bullet points where helpful.">Use bullet points</button>
-                            </div>
-
-                            <div class="field">
-                                <label for="aiInstruction">Instruction for AI</label>
-                                <textarea id="aiInstruction" class="instruction-box" placeholder="Example: rewrite this in a more professional tone and make the actions clearer."></textarea>
-                            </div>
-
-                            <div class="panel-actions stacked">
-                                <button id="applyAiEditBtn" class="btn btn-dark" type="button">Apply AI edit</button>
-                                <button id="undoAiEditBtn" class="btn btn-light" type="button">Undo last edit</button>
-                                <button id="copyDraftBtn" class="btn btn-light" type="button">Reset document from generated draft</button>
-                            </div>
-
-                            <div class="source-box">
-                                <div class="source-box-header">
-                                    <h3>Source transcript</h3>
-                                    <button id="toggleTranscriptBtn" class="btn btn-light btn-tiny" type="button">Show / hide</button>
-                                </div>
-                                <div id="transcriptContent">
-                                    <textarea id="transcriptMirror" class="source-transcript" readonly placeholder="Transcript will appear here."></textarea>
-                                </div>
-                            </div>
-                        </aside>
-
-                        <section class="document-panel">
-                            <div class="document-toolbar">
-                                <div class="document-toolbar-left">
-                                    <p class="panel-label">Final document</p>
-                                    <h2>Editable note</h2>
-                                    <div class="document-meta">
-                                        <span id="noteModeBadge" class="note-mode-badge is-new">New unsaved note</span>
-                                        <span id="saveStateBadge" class="save-state-badge is-idle">Ready</span>
-                                    </div>
-                                </div>
-
-                                <div class="document-header-actions">
-                                    <button id="copyFinalBtn" class="btn btn-light" type="button">Copy</button>
-                                    <button id="printBtn" class="btn btn-light" type="button">Print</button>
-                                    <button id="exportBtn" class="btn btn-light" type="button">Export</button>
+                    <div class="split-panel">
+                        <div class="section-head">
+                            <div>
+                                <p class="panel-label">AI editor</p>
+                                <h2>Editable note</h2>
+                                <div class="document-meta">
+                                    <span id="noteModeBadge" class="note-mode-badge is-new">New unsaved note</span>
+                                    <span id="saveStateBadge" class="save-state-badge is-idle">Ready</span>
                                 </div>
                             </div>
 
-                            <div class="field">
-                                <label for="noteTitle">Note title</label>
-                                <input id="noteTitle" type="text" placeholder="Example: Team meeting - March review">
+                            <div class="document-actions">
+                                <button id="copyFinalBtn" class="btn btn-light" type="button">Copy</button>
+                                <button id="printBtn" class="btn btn-light" type="button">Print</button>
+                                <button id="exportBtn" class="btn btn-light" type="button">Export</button>
                             </div>
+                        </div>
 
-                            <div class="field">
-                                <label for="finalNote">Final Note</label>
-                                <textarea id="finalNote" class="document-editor" placeholder="The final editable note will appear here..."></textarea>
-                            </div>
+                        <div class="quick-prompts">
+                            <button class="prompt-chip" type="button" data-prompt="Make this more professional.">More professional</button>
+                            <button class="prompt-chip" type="button" data-prompt="Make this shorter and clearer.">Shorter</button>
+                            <button class="prompt-chip" type="button" data-prompt="Extract the key actions and next steps clearly.">Extract actions</button>
+                            <button class="prompt-chip" type="button" data-prompt="Rewrite this using bullet points where helpful.">Use bullet points</button>
+                        </div>
 
-                            <div class="document-footer">
-                                <button id="saveBtn" class="btn btn-success" type="button">Save note</button>
-                                <button id="clearBtn" class="btn btn-danger" type="button">Clear</button>
-                            </div>
-                        </section>
+                        <div class="field">
+                            <label for="noteTitle">Note title</label>
+                            <input id="noteTitle" type="text" placeholder="Example: Team meeting - March review">
+                        </div>
+
+                        <div class="field">
+                            <label for="aiInstruction">Instruction for AI</label>
+                            <textarea id="aiInstruction" class="instruction-box" placeholder="Example: rewrite this in a more professional tone and make the actions clearer."></textarea>
+                        </div>
+
+                        <div class="panel-actions">
+                            <button id="applyAiEditBtn" class="btn btn-dark" type="button">Apply AI edit</button>
+                            <button id="undoAiEditBtn" class="btn btn-light" type="button">Undo last edit</button>
+                            <button id="copyDraftBtn" class="btn btn-light" type="button">Reset from generated draft</button>
+                        </div>
+
+                        <div class="field">
+                            <label for="finalNote">Final note</label>
+                            <textarea id="finalNote" class="document-editor" placeholder="The AI-generated editable note will appear here..."></textarea>
+                        </div>
+
+                        <div class="panel-actions">
+                            <button id="saveBtn" class="btn btn-success" type="button">Save note</button>
+                            <button id="clearBtn" class="btn btn-danger" type="button">Clear</button>
+                        </div>
                     </div>
                 </section>
 
                 <textarea id="aiDraft" style="display:none;"></textarea>
+                <textarea id="transcriptMirror" style="display:none;"></textarea>
                 <div id="toast" class="toast"></div>
             </section>
         </main>
