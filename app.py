@@ -75,6 +75,16 @@ def serve_journal_html():
     return FileResponse(os.path.join(FRONTEND_DIR, "journal.html"))
 
 
+@app.get("/journal.css")
+def serve_journal_css():
+    return FileResponse(os.path.join(FRONTEND_DIR, "journal.css"))
+
+
+@app.get("/journal.js")
+def serve_journal_js():
+    return FileResponse(os.path.join(FRONTEND_DIR, "journal.js"))
+
+
 @app.get("/supervision")
 def serve_supervision():
     return FileResponse(os.path.join(FRONTEND_DIR, "supervision.html"))
@@ -85,6 +95,11 @@ def serve_supervision_html():
     return FileResponse(os.path.join(FRONTEND_DIR, "supervision.html"))
 
 
+@app.get("/supervision.js")
+def serve_supervision_js():
+    return FileResponse(os.path.join(FRONTEND_DIR, "supervision.js"))
+
+
 @app.get("/ai-notes")
 def serve_ai_notes():
     return FileResponse(os.path.join(FRONTEND_DIR, "ai-note.html"))
@@ -93,6 +108,16 @@ def serve_ai_notes():
 @app.get("/ai-note.html")
 def serve_ai_note_html():
     return FileResponse(os.path.join(FRONTEND_DIR, "ai-note.html"))
+
+
+@app.get("/ai-notes.css")
+def serve_ai_notes_css():
+    return FileResponse(os.path.join(FRONTEND_DIR, "ai-notes.css"))
+
+
+@app.get("/ai-notes.js")
+def serve_ai_notes_js():
+    return FileResponse(os.path.join(FRONTEND_DIR, "ai-notes.js"))
 
 
 @app.get("/health")
