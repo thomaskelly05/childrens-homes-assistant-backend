@@ -1,10 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const API_BASE = window.location.origin;
     const ACCESS_TOKEN_KEY = "access_token";
 
-    /* -----------------------------
-       Auth helpers
-    ----------------------------- */
     function getAccessToken() {
         return localStorage.getItem(ACCESS_TOKEN_KEY) || "";
     }
@@ -33,9 +29,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return false;
     }
 
-    /* -----------------------------
-       Elements
-    ----------------------------- */
     const transcriptEl = document.getElementById("transcript");
     const transcriptMirrorEl = document.getElementById("transcriptMirror");
     const aiDraftEl = document.getElementById("aiDraft");
@@ -108,17 +101,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const resumeRecordingBtn = document.getElementById("resumeRecordingBtn");
     const stopRecordingModalBtn = document.getElementById("stopRecordingModalBtn");
 
-    /* -----------------------------
-       Guard
-    ----------------------------- */
     if (!startRecordingBtn || !transcribeBtn || !generateBtn) {
         console.error("AI Notes initialisation failed: required elements missing.");
         return;
     }
 
-    /* -----------------------------
-       State
-    ----------------------------- */
     const builtInTemplates = [
         {
             id: "general-meeting",
@@ -153,7 +140,10 @@ document.addEventListener("DOMContentLoaded", () => {
     let recordingStream = null;
     let timerInterval = null;
     let recordingSeconds = 0;
+    let recordingSecondsBeforePause = 0;
     let isRecordingPaused = false;
+    let recordingMimeType = "";
+    let recordingExtension = "webm";
 
     let transcriptVisible = true;
     let previousFinalNote = "";
@@ -163,9 +153,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let autosaveEnabled = true;
     let lastSavedSnapshot = "";
 
-    /* -----------------------------
-       Helpers
-    ----------------------------- */
     function showToast(message) {
         if (!toastEl) return;
         toastEl.textContent = message;
@@ -299,11 +286,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function resetTimer() {
         recordingSeconds = 0;
+        recordingSecondsBeforePause = 0;
         updateTimerDisplays("00:00");
     }
 
-    function startTimer() {
+    function startTimer(startFrom = null) {
         stopTimer();
+
+        if (typeof startFrom === "number") {
+            recordingSeconds = startFrom;
+        }
+
+        updateTimerDisplays(formatTime(recordingSeconds));
+
         timerInterval = setInterval(() => {
             recordingSeconds += 1;
             updateTimerDisplays(formatTime(recordingSeconds));
@@ -462,6 +457,8 @@ document.addEventListener("DOMContentLoaded", () => {
         recordedChunks = [];
         openedNoteId = null;
         isRecordingPaused = false;
+        recordingMimeType = "";
+        recordingExtension = "webm";
 
         if (autosaveTimeout) {
             clearTimeout(autosaveTimeout);
@@ -516,6 +513,23 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function getSupportedRecordingOptions() {
+        const candidates = [
+            { mimeType: "audio/webm;codecs=opus", extension: "webm" },
+            { mimeType: "audio/webm", extension: "webm" },
+            { mimeType: "audio/mp4", extension: "mp4" },
+            { mimeType: "audio/ogg;codecs=opus", extension: "ogg" }
+        ];
+
+        for (const option of candidates) {
+            if (window.MediaRecorder && MediaRecorder.isTypeSupported(option.mimeType)) {
+                return option;
+            }
+        }
+
+        return { mimeType: "", extension: "webm" };
+    }
+
     function getFilenameFromDisposition(disposition, fallback) {
         if (!disposition) return fallback;
 
@@ -551,7 +565,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             setSaveState("is-saving", `Preparing ${format.toUpperCase()}...`);
 
-            const response = await fetch(`${API_BASE}/ai-notes/export/${format}`, {
+            const response = await fetch(`/ai-notes/export/${format}`, {
                 method: "POST",
                 headers: getAuthHeaders(),
                 body: form
@@ -675,7 +689,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function loadTemplates() {
         try {
-            const response = await fetch(`${API_BASE}/ai-note-templates`, {
+            const response = await fetch(`/ai-note-templates`, {
                 method: "GET",
                 headers: getAuthHeaders()
             });
@@ -731,7 +745,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function loadTemplateIntoEditor(templateId) {
         try {
-            const response = await fetch(`${API_BASE}/ai-note-templates/${templateId}`, {
+            const response = await fetch(`/ai-note-templates/${templateId}`, {
                 method: "GET",
                 headers: getAuthHeaders()
             });
@@ -778,8 +792,8 @@ document.addEventListener("DOMContentLoaded", () => {
         form.append("sections_json", JSON.stringify(currentTemplateSections));
 
         const url = editingId
-            ? `${API_BASE}/ai-note-templates/update`
-            : `${API_BASE}/ai-note-templates`;
+            ? `/ai-note-templates/update`
+            : `/ai-note-templates`;
 
         if (editingId) {
             form.append("template_id", editingId);
@@ -816,7 +830,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const form = new FormData();
         form.append("template_id", templateId);
 
-        const response = await fetch(`${API_BASE}/ai-note-templates/delete`, {
+        const response = await fetch(`/ai-note-templates/delete`, {
             method: "POST",
             headers: getAuthHeaders(),
             body: form
@@ -851,7 +865,7 @@ document.addEventListener("DOMContentLoaded", () => {
         form.append("mode", "custom");
         form.append("instruction", buildTemplateInstruction(selectedTemplate));
 
-        const response = await fetch(`${API_BASE}/ai-notes/edit`, {
+        const response = await fetch(`/ai-notes/edit`, {
             method: "POST",
             headers: getAuthHeaders(),
             body: form
@@ -921,7 +935,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 refreshHistoryBtn.textContent = "Loading...";
             }
 
-            const response = await fetch(`${API_BASE}/ai-notes/history?limit=10`, {
+            const response = await fetch(`/ai-notes/history?limit=10`, {
                 method: "GET",
                 headers: getAuthHeaders()
             });
@@ -952,7 +966,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!noteId) return;
 
         try {
-            const response = await fetch(`${API_BASE}/ai-notes/history/${noteId}`, {
+            const response = await fetch(`/ai-notes/history/${noteId}`, {
                 method: "GET",
                 headers: getAuthHeaders()
             });
@@ -1006,7 +1020,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const form = new FormData();
             form.append("note_id", noteId);
 
-            const response = await fetch(`${API_BASE}/ai-notes/delete`, {
+            const response = await fetch(`/ai-notes/delete`, {
                 method: "POST",
                 headers: getAuthHeaders(),
                 body: form
@@ -1041,6 +1055,7 @@ document.addEventListener("DOMContentLoaded", () => {
             recordedChunks = [];
             recordedBlob = null;
             isRecordingPaused = false;
+            resetTimer();
 
             if (audioPlaybackEl) {
                 audioPlaybackEl.style.display = "none";
@@ -1050,8 +1065,15 @@ document.addEventListener("DOMContentLoaded", () => {
             safeSetText(audioReadyTextEl, "Recording in progress...");
             updateButtonState(transcribeBtn, true);
 
+            const recordingOption = getSupportedRecordingOptions();
+            recordingMimeType = recordingOption.mimeType;
+            recordingExtension = recordingOption.extension;
+
             recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(recordingStream);
+
+            mediaRecorder = recordingMimeType
+                ? new MediaRecorder(recordingStream, { mimeType: recordingMimeType })
+                : new MediaRecorder(recordingStream);
 
             mediaRecorder.ondataavailable = (event) => {
                 if (event.data && event.data.size > 0) {
@@ -1060,7 +1082,23 @@ document.addEventListener("DOMContentLoaded", () => {
             };
 
             mediaRecorder.onstop = () => {
-                recordedBlob = new Blob(recordedChunks, { type: "audio/webm" });
+                if (!recordedChunks.length) {
+                    recordedBlob = null;
+                    safeSetText(audioReadyTextEl, "No recording captured. Please try again.");
+                    closeRecordingModal();
+                    setRecordingUI(false);
+
+                    if (recordingStream) {
+                        recordingStream.getTracks().forEach(track => track.stop());
+                    }
+                    return;
+                }
+
+                recordedBlob = new Blob(
+                    recordedChunks,
+                    { type: recordingMimeType || "audio/webm" }
+                );
+
                 const audioUrl = URL.createObjectURL(recordedBlob);
 
                 if (audioPlaybackEl) {
@@ -1078,13 +1116,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             };
 
-            mediaRecorder.start();
+            mediaRecorder.onerror = (event) => {
+                console.error("MediaRecorder error:", event);
+                alert("Recording failed. Please try again.");
+                closeRecordingModal();
+                setRecordingUI(false);
+            };
+
+            mediaRecorder.start(1000);
             openRecordingModal();
             updateRecordingModalUI("recording");
             setRecordingUI(true);
             setStage("record");
-            resetTimer();
-            startTimer();
+            startTimer(0);
             showToast("Recording started");
         } catch (error) {
             console.error("Microphone error:", error);
@@ -1098,6 +1142,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         mediaRecorder.pause();
         isRecordingPaused = true;
+        recordingSecondsBeforePause = recordingSeconds;
         stopTimer();
         setStatus("processing", "Recording paused");
         updateRecordingModalUI("paused");
@@ -1109,7 +1154,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         mediaRecorder.resume();
         isRecordingPaused = false;
-        startTimer();
+        startTimer(recordingSecondsBeforePause);
         setStatus("recording", "Recording live");
         updateRecordingModalUI("recording");
         showToast("Recording resumed");
@@ -1134,15 +1179,21 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+        if (recordedBlob.size < 1000) {
+            alert("The recording appears to be empty or too short. Please record again.");
+            return;
+        }
+
+        const filename = `meeting.${recordingExtension || "webm"}`;
         const form = new FormData();
-        form.append("file", recordedBlob, "meeting.webm");
+        form.append("file", recordedBlob, filename);
 
         try {
             setProcessingUI("Transcribing");
             updateButtonState(transcribeBtn, true, "Transcribing...");
             safeSetText(audioReadyTextEl, "Uploading and transcribing audio...");
 
-            const response = await fetch(`${API_BASE}/ai-notes/transcribe`, {
+            const response = await fetch(`/ai-notes/transcribe`, {
                 method: "POST",
                 headers: getAuthHeaders(),
                 body: form
@@ -1151,6 +1202,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await safeJson(response);
 
             if (!response.ok) {
+                console.error("Transcription failed:", data);
                 if (handleUnauthorized(response, data)) return;
                 alert(data.detail || "Transcription failed.");
                 setRecordingUI(false);
@@ -1192,7 +1244,7 @@ document.addEventListener("DOMContentLoaded", () => {
             setProcessingUI("Generating note");
             updateButtonState(generateBtn, true, "Generating...");
 
-            const response = await fetch(`${API_BASE}/ai-notes/generate`, {
+            const response = await fetch(`/ai-notes/generate`, {
                 method: "POST",
                 headers: getAuthHeaders(),
                 body: form
@@ -1268,7 +1320,7 @@ document.addEventListener("DOMContentLoaded", () => {
             updateButtonState(applyAiEditBtn, true, "Applying...");
             setSaveState("is-saving", "Applying AI...");
 
-            const response = await fetch(`${API_BASE}/ai-notes/edit`, {
+            const response = await fetch(`/ai-notes/edit`, {
                 method: "POST",
                 headers: getAuthHeaders(),
                 body: form
@@ -1358,7 +1410,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 updateButtonState(saveBtnTop, true, "Saving...");
             }
 
-            const response = await fetch(`${API_BASE}/ai-notes/save`, {
+            const response = await fetch(`/ai-notes/save`, {
                 method: "POST",
                 headers: getAuthHeaders(),
                 body: form
