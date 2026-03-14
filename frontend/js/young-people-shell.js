@@ -11,6 +11,7 @@ const incidentsPanel = document.getElementById("tab-incidents");
 const healthPanel = document.getElementById("tab-health");
 const educationPanel = document.getElementById("tab-education");
 const familyPanel = document.getElementById("tab-family");
+const keyworkPanel = document.getElementById("tab-key-work");
 
 let youngPeople = [];
 let selectedYoungPerson = null;
@@ -24,6 +25,7 @@ let selectedMedicationProfiles = [];
 let selectedMedicationRecords = [];
 let selectedEducationRecords = [];
 let selectedFamilyRecords = [];
+let selectedKeyworkSessions = [];
 
 async function loadYoungPeople() {
   const res = await fetch("/young-people");
@@ -56,6 +58,7 @@ async function loadYoungPerson(id) {
     selectedMedicationRecords = [];
     selectedEducationRecords = [];
     selectedFamilyRecords = [];
+    selectedKeyworkSessions = [];
     clearDisplay();
     return;
   }
@@ -71,7 +74,8 @@ async function loadYoungPerson(id) {
     medicationProfilesRes,
     medicationRecordsRes,
     educationRes,
-    familyRes
+    familyRes,
+    keyworkRes
   ] = await Promise.all([
     fetch(`/young-people/${id}`),
     fetch(`/young-people/${id}/profile`),
@@ -83,7 +87,8 @@ async function loadYoungPerson(id) {
     fetch(`/young-people/${id}/medication-profiles`),
     fetch(`/young-people/${id}/medication-records`),
     fetch(`/young-people/${id}/education`),
-    fetch(`/young-people/${id}/family`)
+    fetch(`/young-people/${id}/family`),
+    fetch(`/young-people/${id}/keywork`)
   ]);
 
   if (
@@ -97,7 +102,8 @@ async function loadYoungPerson(id) {
     !medicationProfilesRes.ok ||
     !medicationRecordsRes.ok ||
     !educationRes.ok ||
-    !familyRes.ok
+    !familyRes.ok ||
+    !keyworkRes.ok
   ) return;
 
   selectedYoungPerson = await personRes.json();
@@ -111,6 +117,7 @@ async function loadYoungPerson(id) {
   selectedMedicationRecords = await medicationRecordsRes.json();
   selectedEducationRecords = await educationRes.json();
   selectedFamilyRecords = await familyRes.json();
+  selectedKeyworkSessions = await keyworkRes.json();
 
   renderYoungPerson();
 }
@@ -128,6 +135,7 @@ function clearDisplay() {
   healthPanel.innerHTML = `<div class="panel-card"><h2>Health</h2><p>Select a young person to load health records.</p></div>`;
   educationPanel.innerHTML = `<div class="panel-card"><h2>Education</h2><p>Select a young person to load education records.</p></div>`;
   familyPanel.innerHTML = `<div class="panel-card"><h2>Family</h2><p>Select a young person to load family records.</p></div>`;
+  keyworkPanel.innerHTML = `<div class="panel-card"><h2>Key Work</h2><p>Select a young person to load key work sessions.</p></div>`;
 }
 
 function formatDate(value) {
@@ -163,12 +171,13 @@ function renderAlerts() {
   alertsContainer.innerHTML = alerts.map(alert => `<span class="badge alert">${alert.title}</span>`).join("");
 }
 
+/* keep existing renderPlans, renderRisks, renderDailyNotes, renderIncidents, renderHealth, renderEducation, renderFamily exactly as before */
+
 function renderPlans() {
   if (!selectedPlans.length) {
     plansPanel.innerHTML = `<div class="panel-card"><h2>Plans</h2><p>No support plans recorded yet.</p></div>`;
     return;
   }
-
   plansPanel.innerHTML = `
     <div class="panel-grid">
       ${selectedPlans.map(plan => `
@@ -197,7 +206,6 @@ function renderRisks() {
     riskPanel.innerHTML = `<div class="panel-card"><h2>Risk</h2><p>No risk assessments recorded yet.</p></div>`;
     return;
   }
-
   riskPanel.innerHTML = `
     <div class="panel-grid">
       ${selectedRisks.map(risk => `
@@ -228,7 +236,6 @@ function renderDailyNotes() {
     dailyNotesPanel.innerHTML = `<div class="panel-card"><h2>Daily Notes</h2><p>No daily notes recorded yet.</p></div>`;
     return;
   }
-
   dailyNotesPanel.innerHTML = `
     <div class="panel-grid">
       ${selectedDailyNotes.map(note => `
@@ -259,7 +266,6 @@ function renderIncidents() {
     incidentsPanel.innerHTML = `<div class="panel-card"><h2>Incidents</h2><p>No incidents recorded yet.</p></div>`;
     return;
   }
-
   incidentsPanel.innerHTML = `
     <div class="panel-grid">
       ${selectedIncidents.map(incident => `
@@ -291,7 +297,6 @@ function renderIncidents() {
 function renderHealth() {
   const healthCards = [];
   const medicationCards = [];
-
   if (selectedHealthRecords.length) {
     healthCards.push(...selectedHealthRecords.map(record => `
       <div class="panel-card">
@@ -309,7 +314,6 @@ function renderHealth() {
       </div>
     `));
   }
-
   if (selectedMedicationProfiles.length) {
     medicationCards.push(...selectedMedicationProfiles.map(profile => `
       <div class="panel-card">
@@ -328,7 +332,6 @@ function renderHealth() {
       </div>
     `));
   }
-
   if (selectedMedicationRecords.length) {
     medicationCards.push(...selectedMedicationRecords.map(record => `
       <div class="panel-card">
@@ -349,18 +352,11 @@ function renderHealth() {
       </div>
     `));
   }
-
   if (!healthCards.length && !medicationCards.length) {
     healthPanel.innerHTML = `<div class="panel-card"><h2>Health</h2><p>No health or medication records recorded yet.</p></div>`;
     return;
   }
-
-  healthPanel.innerHTML = `
-    <div class="panel-grid">
-      ${healthCards.join("")}
-      ${medicationCards.join("")}
-    </div>
-  `;
+  healthPanel.innerHTML = `<div class="panel-grid">${healthCards.join("")}${medicationCards.join("")}</div>`;
 }
 
 function renderEducation() {
@@ -368,7 +364,6 @@ function renderEducation() {
     educationPanel.innerHTML = `<div class="panel-card"><h2>Education</h2><p>No education records recorded yet.</p></div>`;
     return;
   }
-
   educationPanel.innerHTML = `
     <div class="panel-grid">
       ${selectedEducationRecords.map(record => `
@@ -396,7 +391,6 @@ function renderFamily() {
     familyPanel.innerHTML = `<div class="panel-card"><h2>Family</h2><p>No family contact records recorded yet.</p></div>`;
     return;
   }
-
   familyPanel.innerHTML = `
     <div class="panel-grid">
       ${selectedFamilyRecords.map(record => `
@@ -413,6 +407,33 @@ function renderFamily() {
             <div class="profile-label">Concerns</div><div class="profile-value">${record.concerns || "—"}</div>
             <div class="profile-label">Follow-up required</div><div class="profile-value">${record.follow_up_required ? "Yes" : "No"}</div>
             <div class="profile-label">Created by</div><div class="profile-value">${record.created_by_first_name ? `${record.created_by_first_name} ${record.created_by_last_name || ""}` : "—"}</div>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderKeywork() {
+  if (!selectedKeyworkSessions.length) {
+    keyworkPanel.innerHTML = `<div class="panel-card"><h2>Key Work</h2><p>No key work sessions recorded yet.</p></div>`;
+    return;
+  }
+
+  keyworkPanel.innerHTML = `
+    <div class="panel-grid">
+      ${selectedKeyworkSessions.map(session => `
+        <div class="panel-card">
+          <h2>${session.topic}</h2>
+          <div class="profile-grid">
+            <div class="profile-label">Session date</div><div class="profile-value">${formatDate(session.session_date)}</div>
+            <div class="profile-label">Worker</div><div class="profile-value">${session.worker_first_name ? `${session.worker_first_name} ${session.worker_last_name || ""}` : "—"}</div>
+            <div class="profile-label">Purpose</div><div class="profile-value">${session.purpose || "—"}</div>
+            <div class="profile-label">Summary</div><div class="profile-value">${session.summary || "—"}</div>
+            <div class="profile-label">Child voice</div><div class="profile-value">${session.child_voice || "—"}</div>
+            <div class="profile-label">Reflective analysis</div><div class="profile-value">${session.reflective_analysis || "—"}</div>
+            <div class="profile-label">Actions agreed</div><div class="profile-value">${session.actions_agreed || "—"}</div>
+            <div class="profile-label">Next session date</div><div class="profile-value">${formatDate(session.next_session_date)}</div>
           </div>
         </div>
       `).join("")}
@@ -533,6 +554,7 @@ function renderYoungPerson() {
   renderHealth();
   renderEducation();
   renderFamily();
+  renderKeywork();
 }
 
 function setupTabs() {
