@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Young People Shell</title>
-  <link rel="stylesheet" href="/css/young-people-shell.css" />
+  <title>Young Person Panel | IndiCare</title>
+  <link rel="stylesheet" href="/css/young-people-shell.css?v=3" />
 </head>
 <body>
   <div class="shell-layout">
@@ -16,7 +16,7 @@
 
       <div class="sidebar-search">
         <label for="youngPersonSearch">Search young people</label>
-        <input id="youngPersonSearch" type="text" placeholder="Type a name..." />
+        <input id="youngPersonSearch" type="text" placeholder="Type a name..." autocomplete="off" />
       </div>
 
       <div class="sidebar-actions">
@@ -34,6 +34,7 @@
           <h2 id="selectedYoungPersonName">Select a young person</h2>
           <p id="selectedYoungPersonMeta">No record loaded</p>
         </div>
+
         <div class="page-header-actions">
           <button id="reloadCurrentBtn" class="btn btn-secondary" type="button">Reload Current Record</button>
         </div>
@@ -59,7 +60,9 @@
       <section class="tab-wrapper">
         <section id="tab-overview" class="tab-panel active">
           <div class="card">
-            <h3>Overview</h3>
+            <div class="card-header">
+              <h3>Overview</h3>
+            </div>
             <div id="overviewContent" class="content-area">
               <div class="empty-state">Select a young person to load overview.</div>
             </div>
@@ -68,7 +71,9 @@
 
         <section id="tab-profile" class="tab-panel">
           <div class="card">
-            <h3>Profile</h3>
+            <div class="card-header">
+              <h3>Profile</h3>
+            </div>
             <div id="profileContent" class="content-area">
               <div class="empty-state">Profile data will appear here.</div>
             </div>
@@ -77,7 +82,9 @@
 
         <section id="tab-plans" class="tab-panel">
           <div class="card">
-            <h3>Plans</h3>
+            <div class="card-header">
+              <h3>Plans</h3>
+            </div>
             <div id="plansContent" class="content-area">
               <div class="empty-state">Plans data will appear here.</div>
             </div>
@@ -86,7 +93,9 @@
 
         <section id="tab-risk" class="tab-panel">
           <div class="card">
-            <h3>Risk</h3>
+            <div class="card-header">
+              <h3>Risk</h3>
+            </div>
             <div id="riskContent" class="content-area">
               <div class="empty-state">Risk data will appear here.</div>
             </div>
@@ -95,45 +104,55 @@
 
         <section id="tab-daily_notes" class="tab-panel">
           <div class="card">
-            <h3>Daily Notes</h3>
+            <div class="card-header">
+              <h3>Daily Notes</h3>
+            </div>
             <div id="dailyNotesContent" class="content-area">
-              <div class="empty-state">Daily notes data will appear here.</div>
+              <div class="empty-state">Daily notes will appear here.</div>
             </div>
           </div>
         </section>
 
         <section id="tab-incidents" class="tab-panel">
           <div class="card">
-            <h3>Incidents</h3>
+            <div class="card-header">
+              <h3>Incidents</h3>
+            </div>
             <div id="incidentsContent" class="content-area">
-              <div class="empty-state">Incidents data will appear here.</div>
+              <div class="empty-state">Incident records will appear here.</div>
             </div>
           </div>
         </section>
 
         <section id="tab-health" class="tab-panel">
           <div class="card">
-            <h3>Health</h3>
+            <div class="card-header">
+              <h3>Health</h3>
+            </div>
             <div id="healthContent" class="content-area">
-              <div class="empty-state">Health data will appear here.</div>
+              <div class="empty-state">Health records will appear here.</div>
             </div>
           </div>
         </section>
 
         <section id="tab-education" class="tab-panel">
           <div class="card">
-            <h3>Education</h3>
+            <div class="card-header">
+              <h3>Education</h3>
+            </div>
             <div id="educationContent" class="content-area">
-              <div class="empty-state">Education data will appear here.</div>
+              <div class="empty-state">Education records will appear here.</div>
             </div>
           </div>
         </section>
 
         <section id="tab-family" class="tab-panel">
           <div class="card">
-            <h3>Family</h3>
+            <div class="card-header">
+              <h3>Family</h3>
+            </div>
             <div id="familyContent" class="content-area">
-              <div class="empty-state">Family data will appear here.</div>
+              <div class="empty-state">Family records will appear here.</div>
             </div>
           </div>
         </section>
@@ -145,6 +164,7 @@
                 <h3>Key Work Sessions</h3>
                 <button id="newKeyworkBtn" class="btn btn-primary" type="button">New Session</button>
               </div>
+
               <div id="keyworkList" class="record-list">
                 <div class="empty-state">Select a young person to load key work.</div>
               </div>
@@ -216,15 +236,18 @@
               <h3>Chronology</h3>
               <button id="rebuildChronologyBtn" class="btn btn-primary" type="button">Rebuild Chronology</button>
             </div>
+
             <div id="chronologyContent" class="content-area">
-              <div class="empty-state">Chronology data will appear here.</div>
+              <div class="empty-state">Chronology records will appear here.</div>
             </div>
           </div>
         </section>
 
         <section id="tab-compliance" class="tab-panel">
           <div class="card">
-            <h3>Compliance</h3>
+            <div class="card-header">
+              <h3>Compliance</h3>
+            </div>
             <div id="complianceContent" class="content-area">
               <div class="empty-state">Compliance data will appear here.</div>
             </div>
@@ -234,6 +257,6 @@
     </main>
   </div>
 
-  <script src="/js/young-people-shell.js"></script>
+  <script src="/js/young-people-shell.js?v=3"></script>
 </body>
 </html>
