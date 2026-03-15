@@ -4,186 +4,176 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Young People Shell</title>
-  <link rel="stylesheet" href="./young-people-shell.css" />
+  <link rel="stylesheet" href="/css/young-people-shell.css" />
 </head>
 <body>
-  <div class="app-shell">
+  <div class="shell-layout">
     <aside class="sidebar">
-      <div class="sidebar-header">
+      <div class="sidebar-top">
         <h1>IndiCare</h1>
-        <p>Young People</p>
+        <p>Young People Shell</p>
       </div>
 
-      <div class="search-block">
+      <div class="sidebar-search">
         <label for="youngPersonSearch">Search young people</label>
-        <input
-          id="youngPersonSearch"
-          type="text"
-          placeholder="Search by name..."
-          autocomplete="off"
-        />
+        <input id="youngPersonSearch" type="text" placeholder="Type a name..." />
       </div>
 
       <div class="sidebar-actions">
-        <button id="refreshYoungPeopleBtn" class="btn btn-secondary" type="button">
-          Refresh List
-        </button>
+        <button id="refreshYoungPeopleBtn" class="btn btn-secondary" type="button">Refresh</button>
       </div>
 
-      <div id="youngPeopleList" class="young-people-list"></div>
+      <div id="youngPeopleList" class="young-people-list">
+        <div class="empty-state">Loading young people...</div>
+      </div>
     </aside>
 
-    <main class="main-content">
+    <main class="main-panel">
       <header class="page-header">
         <div>
           <h2 id="selectedYoungPersonName">Select a young person</h2>
-          <p id="selectedYoungPersonMeta">No young person loaded</p>
+          <p id="selectedYoungPersonMeta">No record loaded</p>
         </div>
-        <div class="header-actions">
-          <button id="reloadCurrentYoungPersonBtn" class="btn btn-secondary" type="button">
-            Reload Current Record
-          </button>
+        <div class="page-header-actions">
+          <button id="reloadCurrentBtn" class="btn btn-secondary" type="button">Reload Current Record</button>
         </div>
       </header>
 
-      <section id="statusBar" class="status-bar hidden"></section>
+      <div id="statusBar" class="status-bar hidden"></div>
 
-      <nav class="tabs" id="tabsNav">
-        <button class="tab-btn active" data-tab="overview">Overview</button>
-        <button class="tab-btn" data-tab="profile">Profile</button>
-        <button class="tab-btn" data-tab="plans">Plans</button>
-        <button class="tab-btn" data-tab="risk">Risk</button>
-        <button class="tab-btn" data-tab="daily_notes">Daily Notes</button>
-        <button class="tab-btn" data-tab="incidents">Incidents</button>
-        <button class="tab-btn" data-tab="health">Health</button>
-        <button class="tab-btn" data-tab="education">Education</button>
-        <button class="tab-btn" data-tab="family">Family</button>
-        <button class="tab-btn" data-tab="keywork">Key Work</button>
-        <button class="tab-btn" data-tab="chronology">Chronology</button>
-        <button class="tab-btn" data-tab="compliance">Compliance</button>
+      <nav class="tabs">
+        <button class="tab-btn active" data-tab="overview" type="button">Overview</button>
+        <button class="tab-btn" data-tab="profile" type="button">Profile</button>
+        <button class="tab-btn" data-tab="plans" type="button">Plans</button>
+        <button class="tab-btn" data-tab="risk" type="button">Risk</button>
+        <button class="tab-btn" data-tab="daily_notes" type="button">Daily Notes</button>
+        <button class="tab-btn" data-tab="incidents" type="button">Incidents</button>
+        <button class="tab-btn" data-tab="health" type="button">Health</button>
+        <button class="tab-btn" data-tab="education" type="button">Education</button>
+        <button class="tab-btn" data-tab="family" type="button">Family</button>
+        <button class="tab-btn" data-tab="keywork" type="button">Key Work</button>
+        <button class="tab-btn" data-tab="chronology" type="button">Chronology</button>
+        <button class="tab-btn" data-tab="compliance" type="button">Compliance</button>
       </nav>
 
-      <section class="tab-panels">
-        <div class="tab-panel active" id="tab-overview">
-          <div class="panel-card">
+      <section class="tab-wrapper">
+        <section id="tab-overview" class="tab-panel active">
+          <div class="card">
             <h3>Overview</h3>
-            <div id="overviewContent" class="data-output">
-              <p class="muted">Select a young person to load overview data.</p>
+            <div id="overviewContent" class="content-area">
+              <div class="empty-state">Select a young person to load overview.</div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div class="tab-panel" id="tab-profile">
-          <div class="panel-card">
+        <section id="tab-profile" class="tab-panel">
+          <div class="card">
             <h3>Profile</h3>
-            <div id="profileContent" class="data-output">
-              <p class="muted">Profile data will appear here.</p>
+            <div id="profileContent" class="content-area">
+              <div class="empty-state">Profile data will appear here.</div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div class="tab-panel" id="tab-plans">
-          <div class="panel-card">
+        <section id="tab-plans" class="tab-panel">
+          <div class="card">
             <h3>Plans</h3>
-            <div id="plansContent" class="data-output">
-              <p class="muted">Plans data will appear here.</p>
+            <div id="plansContent" class="content-area">
+              <div class="empty-state">Plans data will appear here.</div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div class="tab-panel" id="tab-risk">
-          <div class="panel-card">
+        <section id="tab-risk" class="tab-panel">
+          <div class="card">
             <h3>Risk</h3>
-            <div id="riskContent" class="data-output">
-              <p class="muted">Risk data will appear here.</p>
+            <div id="riskContent" class="content-area">
+              <div class="empty-state">Risk data will appear here.</div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div class="tab-panel" id="tab-daily_notes">
-          <div class="panel-card">
+        <section id="tab-daily_notes" class="tab-panel">
+          <div class="card">
             <h3>Daily Notes</h3>
-            <div id="dailyNotesContent" class="data-output">
-              <p class="muted">Daily notes data will appear here.</p>
+            <div id="dailyNotesContent" class="content-area">
+              <div class="empty-state">Daily notes data will appear here.</div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div class="tab-panel" id="tab-incidents">
-          <div class="panel-card">
+        <section id="tab-incidents" class="tab-panel">
+          <div class="card">
             <h3>Incidents</h3>
-            <div id="incidentsContent" class="data-output">
-              <p class="muted">Incident data will appear here.</p>
+            <div id="incidentsContent" class="content-area">
+              <div class="empty-state">Incidents data will appear here.</div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div class="tab-panel" id="tab-health">
-          <div class="panel-card">
+        <section id="tab-health" class="tab-panel">
+          <div class="card">
             <h3>Health</h3>
-            <div id="healthContent" class="data-output">
-              <p class="muted">Health data will appear here.</p>
+            <div id="healthContent" class="content-area">
+              <div class="empty-state">Health data will appear here.</div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div class="tab-panel" id="tab-education">
-          <div class="panel-card">
+        <section id="tab-education" class="tab-panel">
+          <div class="card">
             <h3>Education</h3>
-            <div id="educationContent" class="data-output">
-              <p class="muted">Education data will appear here.</p>
+            <div id="educationContent" class="content-area">
+              <div class="empty-state">Education data will appear here.</div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div class="tab-panel" id="tab-family">
-          <div class="panel-card">
+        <section id="tab-family" class="tab-panel">
+          <div class="card">
             <h3>Family</h3>
-            <div id="familyContent" class="data-output">
-              <p class="muted">Family data will appear here.</p>
+            <div id="familyContent" class="content-area">
+              <div class="empty-state">Family data will appear here.</div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div class="tab-panel" id="tab-keywork">
-          <div class="panel-grid two-col">
-            <div class="panel-card">
-              <div class="panel-card-header">
+        <section id="tab-keywork" class="tab-panel">
+          <div class="two-column">
+            <div class="card">
+              <div class="card-header">
                 <h3>Key Work Sessions</h3>
-                <button id="newKeyworkBtn" class="btn btn-primary" type="button">
-                  New Session
-                </button>
+                <button id="newKeyworkBtn" class="btn btn-primary" type="button">New Session</button>
               </div>
-
               <div id="keyworkList" class="record-list">
-                <p class="muted">Select a young person to load key work sessions.</p>
+                <div class="empty-state">Select a young person to load key work.</div>
               </div>
             </div>
 
-            <div class="panel-card">
-              <h3 id="keyworkFormTitle">Create / Edit Session</h3>
+            <div class="card">
+              <h3 id="keyworkFormTitle">Create / Edit Key Work Session</h3>
 
               <form id="keyworkForm" class="form-grid">
                 <input type="hidden" id="keyworkSessionId" />
 
                 <div class="form-group">
                   <label for="sessionDate">Session Date</label>
-                  <input type="date" id="sessionDate" required />
+                  <input id="sessionDate" type="date" required />
                 </div>
 
                 <div class="form-group">
                   <label for="workerId">Worker ID</label>
-                  <input type="number" id="workerId" placeholder="Optional" />
+                  <input id="workerId" type="number" placeholder="Optional" />
                 </div>
 
                 <div class="form-group">
                   <label for="topic">Topic</label>
-                  <input type="text" id="topic" required />
+                  <input id="topic" type="text" required />
                 </div>
 
                 <div class="form-group">
                   <label for="purpose">Purpose</label>
-                  <textarea id="purpose" rows="2"></textarea>
+                  <textarea id="purpose" rows="3"></textarea>
                 </div>
 
                 <div class="form-group">
@@ -208,41 +198,42 @@
 
                 <div class="form-group">
                   <label for="nextSessionDate">Next Session Date</label>
-                  <input type="date" id="nextSessionDate" />
+                  <input id="nextSessionDate" type="date" />
                 </div>
 
                 <div class="form-actions">
                   <button class="btn btn-primary" type="submit">Save Session</button>
-                  <button class="btn btn-secondary" type="button" id="clearKeyworkFormBtn">
-                    Clear
-                  </button>
+                  <button id="clearKeyworkFormBtn" class="btn btn-secondary" type="button">Clear</button>
                 </div>
               </form>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div class="tab-panel" id="tab-chronology">
-          <div class="panel-card">
-            <h3>Chronology</h3>
-            <div id="chronologyContent" class="data-output">
-              <p class="muted">Chronology data will appear here.</p>
+        <section id="tab-chronology" class="tab-panel">
+          <div class="card">
+            <div class="card-header">
+              <h3>Chronology</h3>
+              <button id="rebuildChronologyBtn" class="btn btn-primary" type="button">Rebuild Chronology</button>
+            </div>
+            <div id="chronologyContent" class="content-area">
+              <div class="empty-state">Chronology data will appear here.</div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div class="tab-panel" id="tab-compliance">
-          <div class="panel-card">
+        <section id="tab-compliance" class="tab-panel">
+          <div class="card">
             <h3>Compliance</h3>
-            <div id="complianceContent" class="data-output">
-              <p class="muted">Compliance data will appear here.</p>
+            <div id="complianceContent" class="content-area">
+              <div class="empty-state">Compliance data will appear here.</div>
             </div>
           </div>
-        </div>
+        </section>
       </section>
     </main>
   </div>
 
-  <script src="./young-people-shell.js"></script>
+  <script src="/js/young-people-shell.js"></script>
 </body>
 </html>
