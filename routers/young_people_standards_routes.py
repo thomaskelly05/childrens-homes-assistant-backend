@@ -168,3 +168,262 @@ def update_standard_link(
         raise HTTPException(status_code=404, detail="Standards link not found")
 
     return {"message": "Standards link updated successfully", "id": row["id"]}
+
+@router.post("/{young_person_id}/standards/rebuild")
+def rebuild_standard_links(
+    young_person_id: int,
+    conn=Depends(get_db),
+):
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                DELETE FROM record_standard_links
+                WHERE young_person_id = %s
+                  AND COALESCE(auto_linked, TRUE) = TRUE
+                """,
+                (young_person_id,),
+            )
+
+            # daily notes
+            cur.execute(
+                """
+                INSERT INTO record_standard_links (
+                    young_person_id, source_table, source_id, standard_code,
+                    evidence_strength, rationale, linked_by, auto_linked, created_at, updated_at
+                )
+                SELECT young_person_id, 'daily_notes', id, 'QS2',
+                       'supporting', 'Child voice and daily lived experience', author_id, TRUE, NOW(), NOW()
+                FROM daily_notes
+                WHERE young_person_id = %s
+                """,
+                (young_person_id,),
+            )
+
+            cur.execute(
+                """
+                INSERT INTO record_standard_links (
+                    young_person_id, source_table, source_id, standard_code,
+                    evidence_strength, rationale, linked_by, auto_linked, created_at, updated_at
+                )
+                SELECT young_person_id, 'daily_notes', id, 'QS5',
+                       'supporting', 'Daily well-being, presentation and health context', author_id, TRUE, NOW(), NOW()
+                FROM daily_notes
+                WHERE young_person_id = %s
+                """,
+                (young_person_id,),
+            )
+
+            cur.execute(
+                """
+                INSERT INTO record_standard_links (
+                    young_person_id, source_table, source_id, standard_code,
+                    evidence_strength, rationale, linked_by, auto_linked, created_at, updated_at
+                )
+                SELECT young_person_id, 'daily_notes', id, 'QS6',
+                       'supporting', 'Relationship-based care reflected in day-to-day recording', author_id, TRUE, NOW(), NOW()
+                FROM daily_notes
+                WHERE young_person_id = %s
+                """,
+                (young_person_id,),
+            )
+
+            # plans
+            cur.execute(
+                """
+                INSERT INTO record_standard_links (
+                    young_person_id, source_table, source_id, standard_code,
+                    evidence_strength, rationale, linked_by, auto_linked, created_at, updated_at
+                )
+                SELECT young_person_id, 'support_plans', id, 'QS9',
+                       'primary', 'Support plans are core care planning evidence', created_by, TRUE, NOW(), NOW()
+                FROM support_plans
+                WHERE young_person_id = %s
+                  AND COALESCE(archived, FALSE) = FALSE
+                """,
+                (young_person_id,),
+            )
+
+            cur.execute(
+                """
+                INSERT INTO record_standard_links (
+                    young_person_id, source_table, source_id, standard_code,
+                    evidence_strength, rationale, linked_by, auto_linked, created_at, updated_at
+                )
+                SELECT young_person_id, 'support_plans', id, 'QS6',
+                       'supporting', 'Plans often evidence relational support strategies', created_by, TRUE, NOW(), NOW()
+                FROM support_plans
+                WHERE young_person_id = %s
+                  AND COALESCE(archived, FALSE) = FALSE
+                """,
+                (young_person_id,),
+            )
+
+            # risk
+            cur.execute(
+                """
+                INSERT INTO record_standard_links (
+                    young_person_id, source_table, source_id, standard_code,
+                    evidence_strength, rationale, linked_by, auto_linked, created_at, updated_at
+                )
+                SELECT young_person_id, 'risk_assessments', id, 'QS7',
+                       'primary', 'Risk assessments evidence protection and safeguarding', created_by, TRUE, NOW(), NOW()
+                FROM risk_assessments
+                WHERE young_person_id = %s
+                  AND COALESCE(archived, FALSE) = FALSE
+                """,
+                (young_person_id,),
+            )
+
+            cur.execute(
+                """
+                INSERT INTO record_standard_links (
+                    young_person_id, source_table, source_id, standard_code,
+                    evidence_strength, rationale, linked_by, auto_linked, created_at, updated_at
+                )
+                SELECT young_person_id, 'risk_assessments', id, 'QS9',
+                       'supporting', 'Risk planning contributes to care planning', created_by, TRUE, NOW(), NOW()
+                FROM risk_assessments
+                WHERE young_person_id = %s
+                  AND COALESCE(archived, FALSE) = FALSE
+                """,
+                (young_person_id,),
+            )
+
+            # education
+            cur.execute(
+                """
+                INSERT INTO record_standard_links (
+                    young_person_id, source_table, source_id, standard_code,
+                    evidence_strength, rationale, linked_by, auto_linked, created_at, updated_at
+                )
+                SELECT young_person_id, 'education_records', id, 'QS3',
+                       'primary', 'Education records evidence participation and support in education', created_by, TRUE, NOW(), NOW()
+                FROM education_records
+                WHERE young_person_id = %s
+                """,
+                (young_person_id,),
+            )
+
+            cur.execute(
+                """
+                INSERT INTO record_standard_links (
+                    young_person_id, source_table, source_id, standard_code,
+                    evidence_strength, rationale, linked_by, auto_linked, created_at, updated_at
+                )
+                SELECT young_person_id, 'education_records', id, 'QS4',
+                       'supporting', 'Education achievements support enjoyment and achievement', created_by, TRUE, NOW(), NOW()
+                FROM education_records
+                WHERE young_person_id = %s
+                """,
+                (young_person_id,),
+            )
+
+            # health
+            cur.execute(
+                """
+                INSERT INTO record_standard_links (
+                    young_person_id, source_table, source_id, standard_code,
+                    evidence_strength, rationale, linked_by, auto_linked, created_at, updated_at
+                )
+                SELECT young_person_id, 'health_records', id, 'QS5',
+                       'primary', 'Health records evidence health and well-being support', created_by, TRUE, NOW(), NOW()
+                FROM health_records
+                WHERE young_person_id = %s
+                """,
+                (young_person_id,),
+            )
+
+            # family
+            cur.execute(
+                """
+                INSERT INTO record_standard_links (
+                    young_person_id, source_table, source_id, standard_code,
+                    evidence_strength, rationale, linked_by, auto_linked, created_at, updated_at
+                )
+                SELECT young_person_id, 'family_contact_records', id, 'QS6',
+                       'primary', 'Family contact supports positive relationships', created_by, TRUE, NOW(), NOW()
+                FROM family_contact_records
+                WHERE young_person_id = %s
+                """,
+                (young_person_id,),
+            )
+
+            cur.execute(
+                """
+                INSERT INTO record_standard_links (
+                    young_person_id, source_table, source_id, standard_code,
+                    evidence_strength, rationale, linked_by, auto_linked, created_at, updated_at
+                )
+                SELECT young_person_id, 'family_contact_records', id, 'QS2',
+                       'supporting', 'Family contact records often contain the child''s views and wishes', created_by, TRUE, NOW(), NOW()
+                FROM family_contact_records
+                WHERE young_person_id = %s
+                """,
+                (young_person_id,),
+            )
+
+            # keywork
+            cur.execute(
+                """
+                INSERT INTO record_standard_links (
+                    young_person_id, source_table, source_id, standard_code,
+                    evidence_strength, rationale, linked_by, auto_linked, created_at, updated_at
+                )
+                SELECT young_person_id, 'keywork_sessions', id, 'QS2',
+                       'primary', 'Key work captures child voice and reflective direct work', worker_id, TRUE, NOW(), NOW()
+                FROM keywork_sessions
+                WHERE young_person_id = %s
+                """,
+                (young_person_id,),
+            )
+
+            cur.execute(
+                """
+                INSERT INTO record_standard_links (
+                    young_person_id, source_table, source_id, standard_code,
+                    evidence_strength, rationale, linked_by, auto_linked, created_at, updated_at
+                )
+                SELECT young_person_id, 'keywork_sessions', id, 'QS6',
+                       'supporting', 'Key work evidences positive direct relationships', worker_id, TRUE, NOW(), NOW()
+                FROM keywork_sessions
+                WHERE young_person_id = %s
+                """,
+                (young_person_id,),
+            )
+
+            # incidents
+            cur.execute(
+                """
+                INSERT INTO record_standard_links (
+                    young_person_id, source_table, source_id, standard_code,
+                    evidence_strength, rationale, linked_by, auto_linked, created_at, updated_at
+                )
+                SELECT young_person_id, 'incidents', id, 'QS7',
+                       'primary', 'Incidents evidence safeguarding and protective responses', staff_id, TRUE, NOW(), NOW()
+                FROM incidents
+                WHERE young_person_id = %s
+                """,
+                (young_person_id,),
+            )
+
+            cur.execute(
+                """
+                INSERT INTO record_standard_links (
+                    young_person_id, source_table, source_id, standard_code,
+                    evidence_strength, rationale, linked_by, auto_linked, created_at, updated_at
+                )
+                SELECT young_person_id, 'incidents', id, 'QS8',
+                       'supporting', 'Manager review and oversight contributes to leadership and management evidence', staff_id, TRUE, NOW(), NOW()
+                FROM incidents
+                WHERE young_person_id = %s
+                """,
+                (young_person_id,),
+            )
+
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to rebuild standards links: {str(e)}")
+
+    return {"message": "Standards links rebuilt successfully"}
