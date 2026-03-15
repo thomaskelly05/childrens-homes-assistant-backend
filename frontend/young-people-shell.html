@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Young Person Panel | IndiCare</title>
-  <link rel="stylesheet" href="/css/young-people-shell.css?v=3" />
+  <link rel="stylesheet" href="/css/young-people-shell.css?v=5" />
 </head>
 <body>
   <div class="shell-layout">
@@ -37,10 +37,43 @@
 
         <div class="page-header-actions">
           <button id="reloadCurrentBtn" class="btn btn-secondary" type="button">Reload Current Record</button>
+          <button id="inspectionPackBtn" class="btn btn-primary" type="button">OFSTED Inspection Pack</button>
         </div>
       </header>
 
       <div id="statusBar" class="status-bar hidden"></div>
+
+      <section class="action-bar">
+        <button class="action-chip chip-overdue" data-jump-tab="compliance" data-filter="overdue">
+          <span class="chip-label">Overdue</span>
+          <span id="actionOverdueCount" class="chip-count">0</span>
+        </button>
+
+        <button class="action-chip chip-due-soon" data-jump-tab="compliance" data-filter="due_soon">
+          <span class="chip-label">Due Soon</span>
+          <span id="actionDueSoonCount" class="chip-count">0</span>
+        </button>
+
+        <button class="action-chip chip-alerts" data-jump-tab="profile">
+          <span class="chip-label">Alerts</span>
+          <span id="actionAlertsCount" class="chip-count">0</span>
+        </button>
+
+        <button class="action-chip chip-plans" data-jump-tab="plans">
+          <span class="chip-label">Plans</span>
+          <span id="actionPlansCount" class="chip-count">0</span>
+        </button>
+
+        <button class="action-chip chip-risk" data-jump-tab="risk">
+          <span class="chip-label">Risk</span>
+          <span id="actionRiskCount" class="chip-count">0</span>
+        </button>
+
+        <button class="action-chip chip-incidents" data-jump-tab="incidents">
+          <span class="chip-label">Incidents</span>
+          <span id="actionIncidentsCount" class="chip-count">0</span>
+        </button>
+      </section>
 
       <nav class="tabs">
         <button class="tab-btn active" data-tab="overview" type="button">Overview</button>
@@ -59,10 +92,7 @@
 
       <section class="tab-wrapper">
         <section id="tab-overview" class="tab-panel active">
-          <div class="card">
-            <div class="card-header">
-              <h3>Overview</h3>
-            </div>
+          <div class="panel-shell">
             <div id="overviewContent" class="content-area">
               <div class="empty-state">Select a young person to load overview.</div>
             </div>
@@ -70,10 +100,7 @@
         </section>
 
         <section id="tab-profile" class="tab-panel">
-          <div class="card">
-            <div class="card-header">
-              <h3>Profile</h3>
-            </div>
+          <div class="panel-shell">
             <div id="profileContent" class="content-area">
               <div class="empty-state">Profile data will appear here.</div>
             </div>
@@ -81,10 +108,7 @@
         </section>
 
         <section id="tab-plans" class="tab-panel">
-          <div class="card">
-            <div class="card-header">
-              <h3>Plans</h3>
-            </div>
+          <div class="panel-shell">
             <div id="plansContent" class="content-area">
               <div class="empty-state">Plans data will appear here.</div>
             </div>
@@ -92,10 +116,7 @@
         </section>
 
         <section id="tab-risk" class="tab-panel">
-          <div class="card">
-            <div class="card-header">
-              <h3>Risk</h3>
-            </div>
+          <div class="panel-shell">
             <div id="riskContent" class="content-area">
               <div class="empty-state">Risk data will appear here.</div>
             </div>
@@ -103,10 +124,7 @@
         </section>
 
         <section id="tab-daily_notes" class="tab-panel">
-          <div class="card">
-            <div class="card-header">
-              <h3>Daily Notes</h3>
-            </div>
+          <div class="panel-shell">
             <div id="dailyNotesContent" class="content-area">
               <div class="empty-state">Daily notes will appear here.</div>
             </div>
@@ -114,10 +132,7 @@
         </section>
 
         <section id="tab-incidents" class="tab-panel">
-          <div class="card">
-            <div class="card-header">
-              <h3>Incidents</h3>
-            </div>
+          <div class="panel-shell">
             <div id="incidentsContent" class="content-area">
               <div class="empty-state">Incident records will appear here.</div>
             </div>
@@ -125,10 +140,7 @@
         </section>
 
         <section id="tab-health" class="tab-panel">
-          <div class="card">
-            <div class="card-header">
-              <h3>Health</h3>
-            </div>
+          <div class="panel-shell">
             <div id="healthContent" class="content-area">
               <div class="empty-state">Health records will appear here.</div>
             </div>
@@ -136,10 +148,7 @@
         </section>
 
         <section id="tab-education" class="tab-panel">
-          <div class="card">
-            <div class="card-header">
-              <h3>Education</h3>
-            </div>
+          <div class="panel-shell">
             <div id="educationContent" class="content-area">
               <div class="empty-state">Education records will appear here.</div>
             </div>
@@ -147,10 +156,7 @@
         </section>
 
         <section id="tab-family" class="tab-panel">
-          <div class="card">
-            <div class="card-header">
-              <h3>Family</h3>
-            </div>
+          <div class="panel-shell">
             <div id="familyContent" class="content-area">
               <div class="empty-state">Family records will appear here.</div>
             </div>
@@ -158,20 +164,21 @@
         </section>
 
         <section id="tab-keywork" class="tab-panel">
-          <div class="two-column">
-            <div class="card">
-              <div class="card-header">
+          <div class="tab-grid keywork-grid">
+            <div class="panel-shell">
+              <div class="panel-header-row">
                 <h3>Key Work Sessions</h3>
                 <button id="newKeyworkBtn" class="btn btn-primary" type="button">New Session</button>
               </div>
-
-              <div id="keyworkList" class="record-list">
+              <div id="keyworkList" class="content-area">
                 <div class="empty-state">Select a young person to load key work.</div>
               </div>
             </div>
 
-            <div class="card">
-              <h3 id="keyworkFormTitle">Create / Edit Key Work Session</h3>
+            <div class="panel-shell">
+              <div class="panel-header-row">
+                <h3 id="keyworkFormTitle">Create / Edit Key Work Session</h3>
+              </div>
 
               <form id="keyworkForm" class="form-grid">
                 <input type="hidden" id="keyworkSessionId" />
@@ -231,12 +238,11 @@
         </section>
 
         <section id="tab-chronology" class="tab-panel">
-          <div class="card">
-            <div class="card-header">
+          <div class="panel-shell">
+            <div class="panel-header-row">
               <h3>Chronology</h3>
               <button id="rebuildChronologyBtn" class="btn btn-primary" type="button">Rebuild Chronology</button>
             </div>
-
             <div id="chronologyContent" class="content-area">
               <div class="empty-state">Chronology records will appear here.</div>
             </div>
@@ -244,19 +250,46 @@
         </section>
 
         <section id="tab-compliance" class="tab-panel">
-          <div class="card">
-            <div class="card-header">
+          <div class="panel-shell">
+            <div class="panel-header-row">
               <h3>Compliance</h3>
             </div>
+
+            <div class="filter-toolbar">
+              <label class="filter-label" for="complianceStatusFilter">Status</label>
+              <select id="complianceStatusFilter">
+                <option value="all">All</option>
+                <option value="overdue">Overdue</option>
+                <option value="due_soon">Due Soon</option>
+                <option value="ok">Current</option>
+              </select>
+
+              <label class="filter-label" for="complianceCategoryFilter">Category</label>
+              <select id="complianceCategoryFilter">
+                <option value="all">All</option>
+                <option value="support_plan_review">Plans</option>
+                <option value="risk_review">Risk</option>
+                <option value="keywork_follow_up">Key Work</option>
+              </select>
+            </div>
+
             <div id="complianceContent" class="content-area">
               <div class="empty-state">Compliance data will appear here.</div>
             </div>
           </div>
         </section>
       </section>
+
+      <section id="recordDetailDrawer" class="record-drawer hidden">
+        <div class="drawer-header">
+          <h3>Record Detail</h3>
+          <button id="closeDrawerBtn" class="btn btn-secondary" type="button">Close</button>
+        </div>
+        <div id="recordDetailContent" class="drawer-content"></div>
+      </section>
     </main>
   </div>
 
-  <script src="/js/young-people-shell.js?v=3"></script>
+  <script src="/js/young-people-shell.js?v=5"></script>
 </body>
 </html>
