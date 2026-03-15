@@ -13,12 +13,6 @@
   --success-text: #067647;
   --error-bg: #fef3f2;
   --error-text: #b42318;
-  --warning-bg: #fff7ed;
-  --warning-text: #b54708;
-  --info-bg: #eff8ff;
-  --info-text: #175cd3;
-  --neutral-bg: #f2f4f7;
-  --neutral-text: #475467;
   --radius: 14px;
   --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
@@ -265,10 +259,11 @@ select {
 
 .tab-panel {
   display: none;
+  gap: 16px;
 }
 
 .tab-panel.active {
-  display: block;
+  display: grid;
 }
 
 .panel-shell {
@@ -288,7 +283,7 @@ select {
 }
 
 .panel-header-row h3,
-.section-title {
+.group-title {
   margin: 0;
 }
 
@@ -339,13 +334,6 @@ select {
   font-size: 15px;
   font-weight: 700;
   color: var(--text);
-  margin: 0;
-}
-
-.group-subtitle {
-  color: var(--muted);
-  font-size: 13px;
-  margin: 0;
 }
 
 .data-table {
@@ -551,10 +539,6 @@ select {
 .drawer-content {
   max-height: 320px;
   overflow-y: auto;
-}
-
-.muted {
-  color: var(--muted);
 }
 
 @media (max-width: 1250px) {
