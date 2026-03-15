@@ -93,6 +93,10 @@ const els = {
   chronologyContent: document.getElementById("chronologyContent"),
   complianceContent: document.getElementById("complianceContent"),
 
+  standardsSummary: document.getElementById("standardsSummary"),
+  standardsEvidenceList: document.getElementById("standardsEvidenceList"),
+  rebuildStandardsBtn: document.getElementById("rebuildStandardsBtn"),
+
   complianceStatusFilter: document.getElementById("complianceStatusFilter"),
   complianceCategoryFilter: document.getElementById("complianceCategoryFilter"),
 
@@ -177,6 +181,10 @@ function bindEvents() {
         showStatus(`Could not create inspection pack job: ${error.message}`, true);
       }
     });
+  }
+
+  if (els.rebuildStandardsBtn) {
+    els.rebuildStandardsBtn.addEventListener("click", rebuildStandardsLinks);
   }
 
   if (els.complianceStatusFilter) {
@@ -480,14 +488,17 @@ async function loadActiveTabData() {
       case "family":
         await loadFamily(id);
         break;
+      case "chronology":
+        await loadChronology(id);
+        break;
+      case "standards":
+        await loadStandards(id);
+        break;
       case "compliance":
         await loadCompliance(id);
         break;
       case "keywork":
         await loadKeyworkSessions(id);
-        break;
-      case "chronology":
-        await loadChronology(id);
         break;
       default:
         break;
@@ -786,6 +797,134 @@ async function loadFamily(youngPersonId) {
   }
 }
 
+async function loadChronology(youngPersonId) {
+  if (!els.chronologyContent) return;
+
+  els.chronologyContent.innerHTML = `<div class="empty-state">Loading chronology...</div>`;
+
+  try {
+    const data = await fetchJson(endpoints.chronologyList(youngPersonId));
+    const rows = normaliseArrayResponse(data);
+
+    els.chronologyContent.innerHTML = renderTableSection("Chronology", rows, [
+      "event_datetime",
+      "category",
+      "subcategory",
+      "title",
+      "summary",
+      "significance",
+      "source_table"
+    ], true);
+
+    bindOpenRecordButtons();
+  } catch (error) {
+    console.error(error);
+    els.chronologyContent.innerHTML = `
+      <div class="empty-state">
+        Could not load chronology.
+        <br />
+        <small>${escapeHtml(error.message)}</small>
+      </div>
+    `;
+  }
+}
+
+async function loadStandards(youngPersonId) {
+  if (!els.standardsSummary || !els.standardsEvidenceList) return;
+
+  els.standardsSummary.innerHTML = `<div class="empty-state">Loading standards...</div>`;
+  els.standardsEvidenceList.innerHTML = `<div class="empty-state">Loading evidence...</div>`;
+
+  try {
+    const summary = await fetchFromCandidates(endpoints.standardsSummary(youngPersonId));
+    const evidence = await fetchFromCandidates(endpoints.standardsEvidence(youngPersonId));
+
+    renderStandardsSummary(summary);
+    renderStandardsEvidence(evidence);
+  } catch (error) {
+    els.standardsSummary.innerHTML = `
+      <div class="empty-state">
+        Could not load standards evidence.
+        <br />
+        <small>${escapeHtml(error.message)}</small>
+      </div>
+    `;
+    els.standardsEvidenceList.innerHTML = `<div class="empty-state">No evidence loaded.</div>`;
+  }
+}
+
+function renderStandardsSummary(rows) {
+  if (!rows || !rows.length) {
+    els.standardsSummary.innerHTML = `<div class="empty-state">No standards data found.</div>`;
+    return;
+  }
+
+  els.standardsSummary.innerHTML = `
+    <div class="section-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Standard</th>
+            <th>Title</th>
+            <th>Evidence Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => {
+            let statusClass = "status-green";
+            if (Number(row.linked_record_count) < 3) statusClass = "status-amber";
+            if (Number(row.linked_record_count) === 0) statusClass = "status-red";
+
+            return `
+              <tr>
+                <td><strong>${escapeHtml(row.code)}</strong></td>
+                <td>${escapeHtml(row.short_label)}</td>
+                <td><span class="status-pill ${statusClass}">${escapeHtml(String(row.linked_record_count))}</span></td>
+              </tr>
+            `;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderStandardsEvidence(rows) {
+  if (!rows || !rows.length) {
+    els.standardsEvidenceList.innerHTML = `<div class="empty-state">No evidence linked yet.</div>`;
+    return;
+  }
+
+  els.standardsEvidenceList.innerHTML = `
+    <div class="section-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Standard</th>
+            <th>Source</th>
+            <th>Source ID</th>
+            <th>Evidence Strength</th>
+            <th>Rationale</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `
+            <tr>
+              <td>${escapeHtml(row.standard_code)}</td>
+              <td>${escapeHtml(row.source_table)}</td>
+              <td>${escapeHtml(String(row.source_id))}</td>
+              <td>${escapeHtml(stringifyValue(row.evidence_strength))}</td>
+              <td>${escapeHtml(stringifyValue(row.rationale))}</td>
+              <td>${escapeHtml(formatDate(row.created_at))}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 async function loadCompliance(youngPersonId) {
   if (!els.complianceContent) return;
 
@@ -1067,38 +1206,6 @@ async function saveKeyworkSession(event) {
   }
 }
 
-async function loadChronology(youngPersonId) {
-  if (!els.chronologyContent) return;
-
-  els.chronologyContent.innerHTML = `<div class="empty-state">Loading chronology...</div>`;
-
-  try {
-    const data = await fetchJson(endpoints.chronologyList(youngPersonId));
-    const rows = normaliseArrayResponse(data);
-
-    els.chronologyContent.innerHTML = renderTableSection("Chronology", rows, [
-      "event_datetime",
-      "category",
-      "subcategory",
-      "title",
-      "summary",
-      "significance",
-      "source_table"
-    ], true);
-
-    bindOpenRecordButtons();
-  } catch (error) {
-    console.error(error);
-    els.chronologyContent.innerHTML = `
-      <div class="empty-state">
-        Could not load chronology.
-        <br />
-        <small>${escapeHtml(error.message)}</small>
-      </div>
-    `;
-  }
-}
-
 async function rebuildChronology() {
   if (!state.selectedYoungPerson) {
     showStatus("Please select a young person first.", true);
@@ -1130,6 +1237,7 @@ async function rebuildStandardsLinks() {
     });
 
     showStatus("Standards links rebuilt successfully.");
+    await loadStandards(state.selectedYoungPerson.id);
   } catch (error) {
     console.error(error);
     showStatus(`Could not rebuild standards links: ${error.message}`, true);
@@ -1381,7 +1489,7 @@ function parseNullableInt(value) {
 }
 
 function trimForTable(value, key) {
-  const max = ["summary", "description", "presenting_need", "concern_summary", "positives", "actions_required", "what_matters_to_me"].includes(key)
+  const max = ["summary", "description", "presenting_need", "concern_summary", "positives", "actions_required", "what_matters_to_me", "rationale"].includes(key)
     ? 80
     : 48;
 
