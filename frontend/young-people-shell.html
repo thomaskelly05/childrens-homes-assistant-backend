@@ -4,37 +4,33 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Young Person Panel | IndiCare</title>
-  <link rel="stylesheet" href="/css/young-people-shell-v2.css" />
+  <link rel="stylesheet" href="/css/young-people-shell.css" />
 </head>
 <body>
   <div class="yp-app-shell">
     <!-- LEFT SIDEBAR -->
     <aside class="yp-sidebar">
-      <div class="sidebar-section yp-person-card">
-        <div class="sidebar-section-header">
-          <div>
-            <h2>Young Person</h2>
-            <p class="muted-text">Current live workspace</p>
-          </div>
-        </div>
+      <div class="sidebar-brand">
+        <h1>IndiCare</h1>
+        <p>Young Person Workspace</p>
+      </div>
 
-        <div class="form-group">
-          <label for="youngPersonSelector">Select young person</label>
-          <select id="youngPersonSelector">
-            <option value="">Select a young person</option>
-          </select>
-        </div>
+      <div class="sidebar-section">
+        <label for="youngPersonSelector">Select young person</label>
+        <select id="youngPersonSelector">
+          <option value="">Select a young person</option>
+        </select>
+      </div>
 
-        <div id="ypMiniSummary" class="mini-summary">
-          <p class="sidebar-empty">No young person selected.</p>
+      <div class="sidebar-section">
+        <h3>Current Young Person</h3>
+        <div id="ypMiniSummary" class="sidebar-card">
+          <p class="empty-state">No young person selected.</p>
         </div>
       </div>
 
       <div class="sidebar-section">
-        <div class="sidebar-section-header">
-          <h3>Quick Actions</h3>
-        </div>
-
+        <h3>Quick Actions</h3>
         <div class="quick-action-list">
           <button class="btn full-width" id="quickDailyNoteBtn">Continue Today’s Note</button>
           <button class="btn secondary full-width" id="quickIncidentBtn">New Incident</button>
@@ -46,36 +42,28 @@
       </div>
 
       <div class="sidebar-section">
-        <div class="sidebar-section-header">
-          <h3>Today</h3>
-        </div>
-        <div id="todayWorkflowPanel">
-          <p class="sidebar-empty">No live workflow loaded.</p>
+        <h3>Today</h3>
+        <div id="todayWorkflowPanel" class="sidebar-card">
+          <p class="empty-state">No active workflow yet.</p>
         </div>
       </div>
 
       <div class="sidebar-section">
-        <div class="sidebar-section-header">
-          <h3>Alerts</h3>
-        </div>
+        <h3>Alerts</h3>
         <div id="ypAlerts" class="badge-row">
           <span class="badge muted">No alerts loaded</span>
         </div>
       </div>
 
       <div class="sidebar-section">
-        <div class="sidebar-section-header">
-          <h3>Compliance</h3>
-        </div>
+        <h3>Compliance</h3>
         <div id="ypCompliance" class="badge-row">
           <span class="badge muted">No compliance data yet</span>
         </div>
       </div>
 
       <div class="sidebar-section">
-        <div class="sidebar-section-header">
-          <h3>Archive</h3>
-        </div>
+        <h3>Archive</h3>
         <div class="archive-links">
           <button class="archive-link-btn" data-archive="daily-notes">Daily Notes Archive</button>
           <button class="archive-link-btn" data-archive="incidents">Incidents Archive</button>
@@ -89,11 +77,11 @@
     </aside>
 
     <!-- MAIN WORKSPACE -->
-    <main class="yp-main-workspace">
+    <main class="yp-main">
       <header class="workspace-header">
         <div>
-          <h1>Young Person Panel</h1>
-          <p class="workspace-subtitle">Clean live workspace for current care records</p>
+          <h2>Young Person Panel</h2>
+          <p class="workspace-subtitle">Clean live workspace for current records only</p>
         </div>
 
         <div class="workspace-actions">
@@ -110,12 +98,12 @@
         <button class="tab-btn" data-tab="compliance">Compliance</button>
       </nav>
 
-      <section class="workspace-body">
+      <section class="workspace-panels">
         <!-- OVERVIEW -->
         <section class="tab-panel active" id="tab-overview">
           <div class="panel-grid">
             <div class="panel-card">
-              <h2>Overview</h2>
+              <h3>Overview</h3>
               <div id="overviewContent">Select a young person to load overview data.</div>
             </div>
           </div>
@@ -125,17 +113,17 @@
         <section class="tab-panel" id="tab-care">
           <div class="panel-grid">
             <div class="panel-card">
-              <h2>Profile</h2>
+              <h3>Profile</h3>
               <div id="profileContent">Profile details will load here.</div>
             </div>
 
             <div class="panel-card">
-              <h2>Plans</h2>
+              <h3>Plans</h3>
               <div id="plansContent">Support plans will load here.</div>
             </div>
 
             <div class="panel-card">
-              <h2>Risk</h2>
+              <h3>Risk</h3>
               <div id="riskContent">Risk assessments will load here.</div>
             </div>
           </div>
@@ -143,33 +131,30 @@
 
         <!-- DAILY NOTES -->
         <section class="tab-panel" id="tab-daily-notes">
-          <div class="workspace-section-header">
+          <div class="section-header">
             <div>
-              <h2>Daily Notes</h2>
-              <p class="tab-subtitle">
-                Current note first. Archived records are hidden until opened.
-              </p>
+              <h3>Daily Notes</h3>
+              <p class="muted-text">Current note first. Archived records stay hidden until opened.</p>
             </div>
-
-            <div class="workspace-section-actions">
+            <div class="section-actions">
               <button class="btn secondary" id="openDailyNotesArchiveBtn">Open Archive</button>
               <button class="btn" id="openDailyNoteModalBtn">Continue Today’s Note</button>
             </div>
           </div>
 
-          <div class="daily-notes-workspace">
-            <div class="main-record-column">
+          <div class="daily-notes-layout">
+            <div class="main-column">
               <div id="dailyNotesCurrentCard" class="panel-card">
                 <h3>Current Working Note</h3>
                 <p>No current draft loaded.</p>
               </div>
 
               <div id="dailyNoteAiSuggestionsCard" class="panel-card hidden">
-                <div class="card-header-row">
+                <div class="card-row">
                   <div>
                     <h3>AI Follow-on Suggestions</h3>
                     <p class="muted-text">
-                      Draft suggestions generated from this Daily Note. Staff review is required before anything is saved.
+                      Draft suggestions from this Daily Note. Staff review is required before saving.
                     </p>
                   </div>
                   <span id="dailyNoteAiStatusBadge" class="badge muted">Not analysed</span>
@@ -177,37 +162,37 @@
 
                 <div id="dailyNoteAiSummary" class="ai-summary-grid"></div>
 
-                <div class="ai-suggestions-actions">
+                <div class="card-actions">
                   <button type="button" class="btn secondary" id="regenerateAiSuggestionsBtn">
                     Regenerate Suggestions
                   </button>
                 </div>
 
                 <div id="dailyNoteAiSuggestionsList" class="ai-suggestions-list">
-                  <p class="sidebar-empty">No AI suggestions yet.</p>
+                  <p class="empty-state">No AI suggestions yet.</p>
                 </div>
               </div>
             </div>
 
-            <aside class="record-support-column">
+            <aside class="support-column">
               <div class="panel-card">
                 <h3>Current Status</h3>
                 <div id="dailyNoteStatusPanel">
-                  <p class="sidebar-empty">No active note.</p>
+                  <p class="empty-state">No active note.</p>
                 </div>
               </div>
 
               <div id="dailyNoteLinkedRecordsCard" class="panel-card hidden">
                 <h3>Linked Records</h3>
                 <div id="dailyNoteLinkedRecordsList">
-                  <p class="sidebar-empty">No linked records yet.</p>
+                  <p class="empty-state">No linked records yet.</p>
                 </div>
               </div>
 
               <div class="panel-card">
                 <h3>Manager Comments</h3>
                 <div id="dailyNoteManagerComments">
-                  <p class="sidebar-empty">No manager comments.</p>
+                  <p class="empty-state">No manager comments.</p>
                 </div>
               </div>
             </aside>
@@ -218,27 +203,27 @@
         <section class="tab-panel" id="tab-development">
           <div class="panel-grid">
             <div class="panel-card">
-              <h2>Health</h2>
+              <h3>Health</h3>
               <div id="healthContent">Health records will load here.</div>
             </div>
 
             <div class="panel-card">
-              <h2>Education</h2>
+              <h3>Education</h3>
               <div id="educationContent">Education records will load here.</div>
             </div>
 
             <div class="panel-card">
-              <h2>Family</h2>
+              <h3>Family</h3>
               <div id="familyContent">Family records will load here.</div>
             </div>
 
             <div class="panel-card">
-              <h2>Key Work</h2>
+              <h3>Key Work</h3>
               <div id="keyWorkContent">Key work sessions will load here.</div>
             </div>
 
             <div class="panel-card">
-              <h2>Chronology</h2>
+              <h3>Chronology</h3>
               <div id="chronologyContent">Chronology will load here.</div>
             </div>
           </div>
@@ -248,7 +233,7 @@
         <section class="tab-panel" id="tab-compliance">
           <div class="panel-grid">
             <div class="panel-card">
-              <h2>Compliance</h2>
+              <h3>Compliance</h3>
               <div id="complianceContent">Compliance items will load here.</div>
             </div>
           </div>
@@ -257,25 +242,25 @@
     </main>
 
     <!-- RIGHT CONTEXT PANEL -->
-    <aside class="yp-context-panel">
+    <aside class="yp-context">
       <div class="context-card">
         <h3>Linked Records</h3>
         <div id="linkedRecordsSummary">
-          <p class="sidebar-empty">No linked records loaded.</p>
+          <p class="empty-state">No linked records loaded.</p>
         </div>
       </div>
 
       <div class="context-card">
         <h3>Manager Review</h3>
         <div id="managerReviewSummary">
-          <p class="sidebar-empty">No manager review items.</p>
+          <p class="empty-state">No manager review items.</p>
         </div>
       </div>
 
       <div class="context-card">
         <h3>Recent Timeline</h3>
         <div id="recentTimelineSummary">
-          <p class="sidebar-empty">No recent timeline items.</p>
+          <p class="empty-state">No recent timeline items.</p>
         </div>
       </div>
     </aside>
@@ -317,7 +302,7 @@
 
             <div class="form-group">
               <label for="dnMood">Presentation / Mood</label>
-              <input type="text" id="dnMood" name="mood" spellcheck="true" />
+              <input type="text" id="dnMood" name="mood" />
             </div>
 
             <div class="form-group">
@@ -334,7 +319,6 @@
 
         <div class="form-section">
           <h3>1. Views, Wishes and Feelings</h3>
-          <p class="section-guidance">What did the young person express today?</p>
           <textarea id="dnYoungPersonVoice" name="young_person_voice" rows="5"></textarea>
         </div>
 
@@ -386,7 +370,7 @@
             <button type="button" class="btn secondary ai-full-review-btn" data-ai-review="quality-standards">Check Quality Standards coverage</button>
             <button type="button" class="btn secondary ai-full-review-btn" data-ai-review="child-voice">Check child voice and strengths</button>
           </div>
-          <div id="dailyNoteAiFeedback" class="ai-feedback-box">
+          <div id="dailyNoteAiFeedback" class="info-box">
             AI review output will appear here once connected.
           </div>
         </div>
@@ -438,7 +422,7 @@
       <div class="modal-header">
         <div>
           <h2 id="linkedDraftModalTitle">Review AI Draft</h2>
-          <p>This draft has been generated from a Daily Note. It must be reviewed and amended by staff before saving.</p>
+          <p>This draft has been generated from a Daily Note and must be reviewed before saving.</p>
         </div>
         <button class="icon-btn" id="closeLinkedDraftModalBtn" type="button">✕</button>
       </div>
@@ -506,11 +490,11 @@
       </div>
 
       <div id="archiveResultsList" class="archive-results-list">
-        <p class="sidebar-empty">No archive loaded.</p>
+        <p class="empty-state">No archive loaded.</p>
       </div>
     </div>
   </div>
 
-  <script src="/js/young-people-shell-v2.js"></script>
+  <script src="/js/young-people-shell.js"></script>
 </body>
 </html>
