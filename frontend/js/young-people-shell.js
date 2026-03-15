@@ -1,65 +1,3 @@
-const API_BASE = ""; 
-// Leave as "" if frontend is served from same FastAPI origin.
-// Example if needed: const API_BASE = "http://127.0.0.1:8000";
-
-const ENDPOINTS = {
-  youngPeopleList: [
-    "/young-people",
-    "/api/young-people"
-  ],
-  youngPersonById: (id) => [
-    `/young-people/${id}`,
-    `/api/young-people/${id}`
-  ],
-  overview: (id) => [
-    `/young-people/${id}/overview`,
-    `/api/young-people/${id}/overview`
-  ],
-  profile: (id) => [
-    `/young-people/${id}/profile`,
-    `/api/young-people/${id}/profile`
-  ],
-  plans: (id) => [
-    `/young-people/${id}/plans`,
-    `/api/young-people/${id}/plans`
-  ],
-  risk: (id) => [
-    `/young-people/${id}/risk`,
-    `/api/young-people/${id}/risk`
-  ],
-  daily_notes: (id) => [
-    `/young-people/${id}/daily-notes`,
-    `/api/young-people/${id}/daily-notes`
-  ],
-  incidents: (id) => [
-    `/young-people/${id}/incidents`,
-    `/api/young-people/${id}/incidents`
-  ],
-  health: (id) => [
-    `/young-people/${id}/health`,
-    `/api/young-people/${id}/health`
-  ],
-  education: (id) => [
-    `/young-people/${id}/education`,
-    `/api/young-people/${id}/education`
-  ],
-  family: (id) => [
-    `/young-people/${id}/family`,
-    `/api/young-people/${id}/family`
-  ],
-  chronology: (id) => [
-    `/young-people/${id}/chronology`,
-    `/api/young-people/${id}/chronology`
-  ],
-  compliance: (id) => [
-    `/young-people/${id}/compliance`,
-    `/api/young-people/${id}/compliance`
-  ],
-  keyworkList: (id) => `${API_BASE}/young-people/${id}/keywork`,
-  keyworkById: (id) => `${API_BASE}/young-people/keywork/${id}`,
-  keyworkCreate: `${API_BASE}/young-people/keywork`
-};
-
 const state = {
   youngPeople: [],
   filteredYoungPeople: [],
@@ -69,15 +7,60 @@ const state = {
   activeKeyworkSessionId: null
 };
 
+const endpoints = {
+  youngPeopleList: [
+    "/young-people",
+    "/young-people/list",
+    "/api/young-people"
+  ],
+  overview: (id) => [
+    `/young-people/${id}`,
+    `/api/young-people/${id}`
+  ],
+  profile: (id) => [
+    `/young-people/${id}/profile`
+  ],
+  plans: (id) => [
+    `/young-people/${id}/plans`
+  ],
+  risk: (id) => [
+    `/young-people/${id}/risk`
+  ],
+  daily_notes: (id) => [
+    `/young-people/${id}/daily-notes`
+  ],
+  incidents: (id) => [
+    `/young-people/${id}/incidents`
+  ],
+  health: (id) => [
+    `/young-people/${id}/health`
+  ],
+  education: (id) => [
+    `/young-people/${id}/education`
+  ],
+  family: (id) => [
+    `/young-people/${id}/family`
+  ],
+  compliance: (id) => [
+    `/young-people/${id}/compliance`
+  ],
+  keyworkList: (id) => `/young-people/${id}/keywork`,
+  keyworkById: (id) => `/young-people/keywork/${id}`,
+  keyworkCreate: "/young-people/keywork",
+  keyworkUpdate: (id) => `/young-people/keywork/${id}`,
+  chronologyList: (id) => `/young-people/${id}/chronology`,
+  chronologyRebuild: (id) => `/young-people/${id}/chronology/rebuild`
+};
+
 const els = {
   youngPeopleList: document.getElementById("youngPeopleList"),
   youngPersonSearch: document.getElementById("youngPersonSearch"),
   refreshYoungPeopleBtn: document.getElementById("refreshYoungPeopleBtn"),
-  reloadCurrentYoungPersonBtn: document.getElementById("reloadCurrentYoungPersonBtn"),
+  reloadCurrentBtn: document.getElementById("reloadCurrentBtn"),
   selectedYoungPersonName: document.getElementById("selectedYoungPersonName"),
   selectedYoungPersonMeta: document.getElementById("selectedYoungPersonMeta"),
   statusBar: document.getElementById("statusBar"),
-  tabsNav: document.getElementById("tabsNav"),
+
   overviewContent: document.getElementById("overviewContent"),
   profileContent: document.getElementById("profileContent"),
   plansContent: document.getElementById("plansContent"),
@@ -89,6 +72,7 @@ const els = {
   familyContent: document.getElementById("familyContent"),
   chronologyContent: document.getElementById("chronologyContent"),
   complianceContent: document.getElementById("complianceContent"),
+
   keyworkList: document.getElementById("keyworkList"),
   keyworkForm: document.getElementById("keyworkForm"),
   keyworkFormTitle: document.getElementById("keyworkFormTitle"),
@@ -103,7 +87,8 @@ const els = {
   actionsAgreed: document.getElementById("actionsAgreed"),
   nextSessionDate: document.getElementById("nextSessionDate"),
   newKeyworkBtn: document.getElementById("newKeyworkBtn"),
-  clearKeyworkFormBtn: document.getElementById("clearKeyworkFormBtn")
+  clearKeyworkFormBtn: document.getElementById("clearKeyworkFormBtn"),
+  rebuildChronologyBtn: document.getElementById("rebuildChronologyBtn")
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -112,17 +97,21 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function bindEvents() {
-  els.youngPersonSearch.addEventListener("input", handleYoungPersonSearch);
-  els.refreshYoungPeopleBtn.addEventListener("click", loadYoungPeople);
-  els.reloadCurrentYoungPersonBtn.addEventListener("click", reloadCurrentYoungPerson);
-
-  document.querySelectorAll(".tab-btn").forEach(btn => {
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
     btn.addEventListener("click", () => setActiveTab(btn.dataset.tab));
   });
 
-  els.keyworkForm.addEventListener("submit", handleKeyworkSubmit);
+  els.youngPersonSearch.addEventListener("input", handleSearch);
+  els.refreshYoungPeopleBtn.addEventListener("click", loadYoungPeople);
+  els.reloadCurrentBtn.addEventListener("click", reloadCurrentRecord);
+
+  els.keyworkForm.addEventListener("submit", saveKeyworkSession);
   els.newKeyworkBtn.addEventListener("click", resetKeyworkForm);
   els.clearKeyworkFormBtn.addEventListener("click", resetKeyworkForm);
+
+  if (els.rebuildChronologyBtn) {
+    els.rebuildChronologyBtn.addEventListener("click", rebuildChronology);
+  }
 }
 
 function showStatus(message, isError = false) {
@@ -131,82 +120,84 @@ function showStatus(message, isError = false) {
   if (isError) {
     els.statusBar.classList.add("error");
   }
-  window.clearTimeout(showStatus._timer);
-  showStatus._timer = window.setTimeout(() => {
+
+  clearTimeout(showStatus.timer);
+  showStatus.timer = setTimeout(() => {
     els.statusBar.classList.add("hidden");
   }, 4000);
 }
 
-async function fetchFromCandidates(candidates, options = {}) {
-  let lastError = null;
-
-  for (const path of candidates) {
-    try {
-      const response = await fetch(`${API_BASE}${path}`, {
-        headers: { "Content-Type": "application/json" },
-        ...options
-      });
-
-      if (!response.ok) {
-        lastError = new Error(`HTTP ${response.status} on ${path}`);
-        continue;
-      }
-
-      return await response.json();
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  throw lastError || new Error("No valid endpoint response");
-}
-
 async function fetchJson(url, options = {}) {
   const response = await fetch(url, {
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json"
+    },
+    credentials: "include",
     ...options
   });
 
   if (!response.ok) {
-    let errorMessage = `Request failed with status ${response.status}`;
+    let message = `Request failed (${response.status})`;
     try {
-      const errorData = await response.json();
-      if (errorData?.detail) errorMessage = errorData.detail;
-    } catch (_) {}
-    throw new Error(errorMessage);
+      const data = await response.json();
+      if (data && data.detail) {
+        message = data.detail;
+      }
+    } catch (_err) {}
+    throw new Error(message);
   }
 
   return response.json();
 }
 
+async function fetchFromCandidates(candidateUrls) {
+  let lastError = null;
+
+  for (const url of candidateUrls) {
+    try {
+      return await fetchJson(url);
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error("No endpoint returned data");
+}
+
 async function loadYoungPeople() {
   try {
     showStatus("Loading young people...");
-    const data = await fetchFromCandidates(ENDPOINTS.youngPeopleList);
+    const data = await fetchFromCandidates(endpoints.youngPeopleList);
 
-    state.youngPeople = Array.isArray(data) ? data : (data.items || []);
-    state.filteredYoungPeople = [...state.youngPeople];
+    const rows = normaliseArrayResponse(data);
+    state.youngPeople = rows;
+    state.filteredYoungPeople = [...rows];
+
     renderYoungPeopleList();
 
-    if (state.youngPeople.length > 0 && !state.selectedYoungPerson) {
-      selectYoungPerson(state.youngPeople[0]);
-    } else if (state.youngPeople.length === 0) {
-      els.selectedYoungPersonName.textContent = "No young people found";
-      els.selectedYoungPersonMeta.textContent = "No records available";
+    if (!state.selectedYoungPerson && rows.length > 0) {
+      await selectYoungPerson(rows[0]);
+    } else if (state.selectedYoungPerson) {
+      const refreshed = rows.find((p) => Number(p.id) === Number(state.selectedYoungPerson.id));
+      if (refreshed) {
+        state.selectedYoungPerson = refreshed;
+        renderYoungPeopleList();
+        updateSelectedPersonHeader();
+      }
     }
 
-    showStatus("Young people loaded successfully.");
+    showStatus("Young people loaded.");
   } catch (error) {
-    console.error("Failed to load young people:", error);
-    renderYoungPeopleList();
+    console.error(error);
+    els.youngPeopleList.innerHTML = `<div class="empty-state">Could not load young people.<br><small>${escapeHtml(error.message)}</small></div>`;
     showStatus(`Could not load young people: ${error.message}`, true);
   }
 }
 
-function handleYoungPersonSearch(event) {
+function handleSearch(event) {
   const term = event.target.value.trim().toLowerCase();
 
-  state.filteredYoungPeople = state.youngPeople.filter(person => {
+  state.filteredYoungPeople = state.youngPeople.filter((person) => {
     const name = `${person.first_name || ""} ${person.last_name || ""}`.toLowerCase();
     return name.includes(term);
   });
@@ -220,260 +211,157 @@ function renderYoungPeopleList() {
     return;
   }
 
-  els.youngPeopleList.innerHTML = state.filteredYoungPeople
-    .map(person => {
-      const fullName = getFullName(person);
-      const isActive = state.selectedYoungPerson?.id === person.id ? "active" : "";
-      const roomText = person.room ? `Room: ${escapeHtml(person.room)}` : `ID: ${person.id}`;
+  els.youngPeopleList.innerHTML = state.filteredYoungPeople.map((person) => {
+    const name = getFullName(person);
+    const active = Number(state.selectedYoungPerson?.id) === Number(person.id) ? "active" : "";
+    const sub = person.room ? `Room: ${escapeHtml(person.room)}` : `ID: ${person.id}`;
 
-      return `
-        <div class="young-person-card ${isActive}" data-id="${person.id}">
-          <h4>${escapeHtml(fullName)}</h4>
-          <p>${escapeHtml(roomText)}</p>
-        </div>
-      `;
-    })
-    .join("");
+    return `
+      <div class="young-person-card ${active}" data-id="${person.id}">
+        <h4>${escapeHtml(name)}</h4>
+        <p>${escapeHtml(sub)}</p>
+      </div>
+    `;
+  }).join("");
 
-  els.youngPeopleList.querySelectorAll(".young-person-card").forEach(card => {
-    card.addEventListener("click", () => {
-      const id = Number(card.dataset.id);
-      const person = state.youngPeople.find(p => p.id === id);
-      if (person) selectYoungPerson(person);
+  els.youngPeopleList.querySelectorAll(".young-person-card").forEach((card) => {
+    card.addEventListener("click", async () => {
+      const personId = Number(card.dataset.id);
+      const person = state.youngPeople.find((row) => Number(row.id) === personId);
+      if (person) {
+        await selectYoungPerson(person);
+      }
     });
   });
 }
 
 async function selectYoungPerson(person) {
   state.selectedYoungPerson = person;
+  state.activeKeyworkSessionId = null;
+  state.keyworkSessions = [];
   renderYoungPeopleList();
-  updateSelectedYoungPersonHeader();
+  updateSelectedPersonHeader();
   resetKeyworkForm();
-  await loadCurrentTabData();
+  await loadActiveTabData();
 }
 
-function updateSelectedYoungPersonHeader() {
+function updateSelectedPersonHeader() {
   if (!state.selectedYoungPerson) {
     els.selectedYoungPersonName.textContent = "Select a young person";
-    els.selectedYoungPersonMeta.textContent = "No young person loaded";
+    els.selectedYoungPersonMeta.textContent = "No record loaded";
     return;
   }
 
   const person = state.selectedYoungPerson;
-  const fullName = getFullName(person);
-  els.selectedYoungPersonName.textContent = fullName;
-
   const bits = [`ID: ${person.id}`];
-  if (person.dob) bits.push(`DOB: ${formatDate(person.dob)}`);
-  if (person.placement_status) bits.push(`Status: ${person.placement_status}`);
-  if (person.room) bits.push(`Room: ${person.room}`);
 
+  if (person.dob) bits.push(`DOB: ${formatDate(person.dob)}`);
+  if (person.room) bits.push(`Room: ${person.room}`);
+  if (person.placement_status) bits.push(`Status: ${person.placement_status}`);
+
+  els.selectedYoungPersonName.textContent = getFullName(person);
   els.selectedYoungPersonMeta.textContent = bits.join(" | ");
 }
 
 function setActiveTab(tabName) {
   state.activeTab = tabName;
 
-  document.querySelectorAll(".tab-btn").forEach(btn => {
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.tab === tabName);
   });
 
-  document.querySelectorAll(".tab-panel").forEach(panel => {
+  document.querySelectorAll(".tab-panel").forEach((panel) => {
     panel.classList.toggle("active", panel.id === `tab-${tabName}`);
   });
 
-  loadCurrentTabData();
+  loadActiveTabData();
 }
 
-async function reloadCurrentYoungPerson() {
+async function reloadCurrentRecord() {
   if (!state.selectedYoungPerson) {
     showStatus("Please select a young person first.", true);
     return;
   }
-  await loadCurrentTabData(true);
+
+  await loadActiveTabData();
 }
 
-async function loadCurrentTabData(forceReload = false) {
+async function loadActiveTabData() {
   if (!state.selectedYoungPerson) return;
 
-  const personId = state.selectedYoungPerson.id;
+  const id = state.selectedYoungPerson.id;
 
   try {
     switch (state.activeTab) {
       case "overview":
-        await loadGenericSection("overview", personId, els.overviewContent, forceReload);
+        await loadGenericSection(endpoints.overview(id), els.overviewContent);
         break;
       case "profile":
-        await loadGenericSection("profile", personId, els.profileContent, forceReload);
+        await loadGenericSection(endpoints.profile(id), els.profileContent);
         break;
       case "plans":
-        await loadGenericSection("plans", personId, els.plansContent, forceReload);
+        await loadGenericSection(endpoints.plans(id), els.plansContent);
         break;
       case "risk":
-        await loadGenericSection("risk", personId, els.riskContent, forceReload);
+        await loadGenericSection(endpoints.risk(id), els.riskContent);
         break;
       case "daily_notes":
-        await loadGenericSection("daily_notes", personId, els.dailyNotesContent, forceReload);
+        await loadGenericSection(endpoints.daily_notes(id), els.dailyNotesContent);
         break;
       case "incidents":
-        await loadGenericSection("incidents", personId, els.incidentsContent, forceReload);
+        await loadGenericSection(endpoints.incidents(id), els.incidentsContent);
         break;
       case "health":
-        await loadGenericSection("health", personId, els.healthContent, forceReload);
+        await loadGenericSection(endpoints.health(id), els.healthContent);
         break;
       case "education":
-        await loadGenericSection("education", personId, els.educationContent, forceReload);
+        await loadGenericSection(endpoints.education(id), els.educationContent);
         break;
       case "family":
-        await loadGenericSection("family", personId, els.familyContent, forceReload);
-        break;
-      case "chronology":
-        await loadGenericSection("chronology", personId, els.chronologyContent, forceReload);
+        await loadGenericSection(endpoints.family(id), els.familyContent);
         break;
       case "compliance":
-        await loadGenericSection("compliance", personId, els.complianceContent, forceReload);
+        await loadGenericSection(endpoints.compliance(id), els.complianceContent);
         break;
       case "keywork":
-        await loadKeyworkSessions(personId);
+        await loadKeyworkSessions(id);
+        break;
+      case "chronology":
+        await loadChronology(id);
         break;
       default:
         break;
     }
   } catch (error) {
-    console.error(`Failed loading tab ${state.activeTab}:`, error);
-    showStatus(`Could not load ${state.activeTab.replace("_", " ")}: ${error.message}`, true);
+    console.error(error);
+    showStatus(error.message, true);
   }
 }
 
-async function loadGenericSection(sectionKey, personId, containerEl) {
-  containerEl.innerHTML = `<p class="muted">Loading...</p>`;
+async function loadGenericSection(candidateUrls, container) {
+  container.innerHTML = `<div class="empty-state">Loading...</div>`;
 
   try {
-    const data = await fetchFromCandidates(ENDPOINTS[sectionKey](personId));
+    const data = Array.isArray(candidateUrls)
+      ? await fetchFromCandidates(candidateUrls)
+      : await fetchJson(candidateUrls);
 
-    if (sectionKey === "overview") {
-      containerEl.innerHTML = renderOverviewData(data);
-      return;
-    }
-
-    containerEl.innerHTML = renderGenericData(data);
+    container.innerHTML = renderObjectOrArray(data);
   } catch (error) {
-    containerEl.innerHTML = `
-      <div class="empty-state">
-        Could not load ${sectionKey.replace("_", " ")}.
-        <br />
-        <small>${escapeHtml(error.message)}</small>
-      </div>
-    `;
+    container.innerHTML = `<div class="empty-state">Could not load this section.<br><small>${escapeHtml(error.message)}</small></div>`;
   }
-}
-
-function renderOverviewData(data) {
-  if (!data || (Array.isArray(data) && data.length === 0)) {
-    return `<div class="empty-state">No overview data found.</div>`;
-  }
-
-  if (Array.isArray(data)) {
-    return data.map(item => `<div class="data-box">${renderGenericData(item)}</div>`).join("");
-  }
-
-  const priorityKeys = [
-    "legal_status",
-    "placement_type",
-    "social_worker",
-    "local_authority",
-    "school",
-    "registered_gp",
-    "allergies",
-    "missing_risk",
-    "room"
-  ];
-
-  const gridItems = priorityKeys
-    .filter(key => data[key] !== undefined && data[key] !== null && data[key] !== "")
-    .map(key => {
-      return `
-        <div class="data-item">
-          <strong>${formatLabel(key)}</strong>
-          <span>${escapeHtml(String(data[key]))}</span>
-        </div>
-      `;
-    })
-    .join("");
-
-  const jsonFallback = `
-    <div class="data-box">
-      <h4>Raw Record</h4>
-      <div class="json-box">${escapeHtml(JSON.stringify(data, null, 2))}</div>
-    </div>
-  `;
-
-  return `
-    ${gridItems ? `<div class="data-grid">${gridItems}</div>` : ""}
-    ${jsonFallback}
-  `;
-}
-
-function renderGenericData(data) {
-  if (data === null || data === undefined) {
-    return `<div class="empty-state">No data found.</div>`;
-  }
-
-  if (Array.isArray(data)) {
-    if (!data.length) {
-      return `<div class="empty-state">No records found.</div>`;
-    }
-
-    return data.map(item => {
-      if (typeof item === "object" && item !== null) {
-        const fields = Object.entries(item)
-          .map(([key, value]) => `
-            <div class="data-item">
-              <strong>${formatLabel(key)}</strong>
-              <span>${escapeHtml(stringifyValue(value))}</span>
-            </div>
-          `)
-          .join("");
-
-        return `<div class="data-box"><div class="data-grid">${fields}</div></div>`;
-      }
-
-      return `<div class="data-box">${escapeHtml(String(item))}</div>`;
-    }).join("");
-  }
-
-  if (typeof data === "object") {
-    const fields = Object.entries(data)
-      .map(([key, value]) => `
-        <div class="data-item">
-          <strong>${formatLabel(key)}</strong>
-          <span>${escapeHtml(stringifyValue(value))}</span>
-        </div>
-      `)
-      .join("");
-
-    return `<div class="data-grid">${fields}</div>`;
-  }
-
-  return `<div class="data-box">${escapeHtml(String(data))}</div>`;
 }
 
 async function loadKeyworkSessions(youngPersonId) {
-  els.keyworkList.innerHTML = `<p class="muted">Loading key work sessions...</p>`;
+  els.keyworkList.innerHTML = `<div class="empty-state">Loading key work sessions...</div>`;
 
   try {
-    const data = await fetchJson(ENDPOINTS.keyworkList(youngPersonId));
-    state.keyworkSessions = Array.isArray(data) ? data : [];
+    const data = await fetchJson(endpoints.keyworkList(youngPersonId));
+    state.keyworkSessions = normaliseArrayResponse(data);
     renderKeyworkList();
   } catch (error) {
-    console.error("Failed to load keywork sessions:", error);
-    els.keyworkList.innerHTML = `
-      <div class="empty-state">
-        Could not load key work sessions.
-        <br />
-        <small>${escapeHtml(error.message)}</small>
-      </div>
-    `;
+    console.error(error);
+    els.keyworkList.innerHTML = `<div class="empty-state">Could not load key work sessions.<br><small>${escapeHtml(error.message)}</small></div>`;
   }
 }
 
@@ -483,43 +371,42 @@ function renderKeyworkList() {
     return;
   }
 
-  els.keyworkList.innerHTML = state.keyworkSessions
-    .map(session => {
-      const activeClass = state.activeKeyworkSessionId === session.id ? "active" : "";
-      const workerName = [session.worker_first_name, session.worker_last_name].filter(Boolean).join(" ");
-      return `
-        <div class="record-card ${activeClass}" data-id="${session.id}">
-          <h4>${escapeHtml(session.topic || "Untitled Session")}</h4>
-          <p><span class="badge">${escapeHtml(formatDate(session.session_date))}</span></p>
-          <p><strong>Worker:</strong> ${escapeHtml(workerName || "Not assigned")}</p>
-          <p><strong>Summary:</strong> ${escapeHtml(trimText(session.summary || "No summary", 140))}</p>
-        </div>
-      `;
-    })
-    .join("");
+  els.keyworkList.innerHTML = state.keyworkSessions.map((session) => {
+    const active = Number(state.activeKeyworkSessionId) === Number(session.id) ? "active" : "";
+    const workerName = [session.worker_first_name, session.worker_last_name].filter(Boolean).join(" ") || "Not assigned";
 
-  els.keyworkList.querySelectorAll(".record-card").forEach(card => {
+    return `
+      <div class="record-card ${active}" data-id="${session.id}">
+        <h4>${escapeHtml(session.topic || "Key work session")}</h4>
+        <p><span class="badge">${escapeHtml(formatDate(session.session_date))}</span></p>
+        <p><strong>Worker:</strong> ${escapeHtml(workerName)}</p>
+        <p><strong>Summary:</strong> ${escapeHtml(trimText(session.summary || "No summary recorded", 140))}</p>
+      </div>
+    `;
+  }).join("");
+
+  els.keyworkList.querySelectorAll(".record-card").forEach((card) => {
     card.addEventListener("click", async () => {
       const sessionId = Number(card.dataset.id);
-      await loadKeyworkSession(sessionId);
+      await loadSingleKeyworkSession(sessionId);
     });
   });
 }
 
-async function loadKeyworkSession(sessionId) {
+async function loadSingleKeyworkSession(sessionId) {
   try {
-    const session = await fetchJson(ENDPOINTS.keyworkById(sessionId));
+    const session = await fetchJson(endpoints.keyworkById(sessionId));
     state.activeKeyworkSessionId = session.id;
-    populateKeyworkForm(session);
+    fillKeyworkForm(session);
     renderKeyworkList();
   } catch (error) {
-    console.error("Failed to load session:", error);
-    showStatus(`Could not load session: ${error.message}`, true);
+    console.error(error);
+    showStatus(`Could not load key work session: ${error.message}`, true);
   }
 }
 
-function populateKeyworkForm(session) {
-  els.keyworkFormTitle.textContent = `Edit Session #${session.id}`;
+function fillKeyworkForm(session) {
+  els.keyworkFormTitle.textContent = `Edit Key Work Session #${session.id}`;
   els.keyworkSessionId.value = session.id || "";
   els.sessionDate.value = toDateInputValue(session.session_date);
   els.workerId.value = session.worker_id ?? "";
@@ -534,13 +421,13 @@ function populateKeyworkForm(session) {
 
 function resetKeyworkForm() {
   state.activeKeyworkSessionId = null;
-  els.keyworkFormTitle.textContent = "Create / Edit Session";
-  els.keyworkSessionId.value = "";
   els.keyworkForm.reset();
+  els.keyworkSessionId.value = "";
+  els.keyworkFormTitle.textContent = "Create / Edit Key Work Session";
   renderKeyworkList();
 }
 
-async function handleKeyworkSubmit(event) {
+async function saveKeyworkSession(event) {
   event.preventDefault();
 
   if (!state.selectedYoungPerson) {
@@ -549,17 +436,18 @@ async function handleKeyworkSubmit(event) {
   }
 
   const sessionId = els.keyworkSessionId.value.trim();
+
   const payload = {
-    young_person_id: state.selectedYoungPerson.id,
+    young_person_id: Number(state.selectedYoungPerson.id),
     session_date: els.sessionDate.value || null,
     worker_id: parseNullableInt(els.workerId.value),
-    topic: els.topic.value.trim(),
-    purpose: emptyToNull(els.purpose.value),
-    summary: emptyToNull(els.summary.value),
-    child_voice: emptyToNull(els.childVoice.value),
-    reflective_analysis: emptyToNull(els.reflectiveAnalysis.value),
-    actions_agreed: emptyToNull(els.actionsAgreed.value),
-    next_session_date: emptyToNull(els.nextSessionDate.value)
+    topic: cleanValue(els.topic.value),
+    purpose: cleanValue(els.purpose.value),
+    summary: cleanValue(els.summary.value),
+    child_voice: cleanValue(els.childVoice.value),
+    reflective_analysis: cleanValue(els.reflectiveAnalysis.value),
+    actions_agreed: cleanValue(els.actionsAgreed.value),
+    next_session_date: cleanValue(els.nextSessionDate.value)
   };
 
   if (!payload.session_date || !payload.topic) {
@@ -581,14 +469,14 @@ async function handleKeyworkSubmit(event) {
         next_session_date: payload.next_session_date
       };
 
-      await fetchJson(`${API_BASE}/young-people/keywork/${sessionId}`, {
+      await fetchJson(endpoints.keyworkUpdate(sessionId), {
         method: "PUT",
         body: JSON.stringify(updatePayload)
       });
 
       showStatus("Key work session updated successfully.");
     } else {
-      await fetchJson(ENDPOINTS.keyworkCreate, {
+      await fetchJson(endpoints.keyworkCreate, {
         method: "POST",
         body: JSON.stringify(payload)
       });
@@ -599,20 +487,147 @@ async function handleKeyworkSubmit(event) {
     resetKeyworkForm();
     await loadKeyworkSessions(state.selectedYoungPerson.id);
   } catch (error) {
-    console.error("Failed to save session:", error);
-    showStatus(`Could not save session: ${error.message}`, true);
+    console.error(error);
+    showStatus(`Could not save key work session: ${error.message}`, true);
   }
 }
 
-function getFullName(person) {
-  const fullName = [person.first_name, person.last_name].filter(Boolean).join(" ").trim();
-  return fullName || `Young Person #${person.id}`;
+async function loadChronology(youngPersonId) {
+  els.chronologyContent.innerHTML = `<div class="empty-state">Loading chronology...</div>`;
+
+  try {
+    const data = await fetchJson(endpoints.chronologyList(youngPersonId));
+    const rows = normaliseArrayResponse(data);
+
+    if (!rows.length) {
+      els.chronologyContent.innerHTML = `<div class="empty-state">No chronology events found.</div>`;
+      return;
+    }
+
+    els.chronologyContent.innerHTML = `
+      <div class="timeline">
+        ${rows.map((item) => `
+          <div class="timeline-item">
+            <h4>${escapeHtml(item.title || "Chronology event")}</h4>
+            <p class="timeline-meta">
+              ${escapeHtml(formatDateTime(item.event_datetime))}
+              ${item.category ? ` | ${escapeHtml(item.category)}` : ""}
+              ${item.subcategory ? ` | ${escapeHtml(item.subcategory)}` : ""}
+            </p>
+            <p>${escapeHtml(item.summary || "No summary recorded.")}</p>
+            <p class="timeline-meta">
+              ${item.significance ? `Significance: ${escapeHtml(item.significance)}` : ""}
+              ${item.source_table ? ` | Source: ${escapeHtml(item.source_table)}` : ""}
+            </p>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  } catch (error) {
+    console.error(error);
+    els.chronologyContent.innerHTML = `<div class="empty-state">Could not load chronology.<br><small>${escapeHtml(error.message)}</small></div>`;
+  }
 }
 
-function formatLabel(key) {
-  return key
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, char => char.toUpperCase());
+async function rebuildChronology() {
+  if (!state.selectedYoungPerson) {
+    showStatus("Please select a young person first.", true);
+    return;
+  }
+
+  try {
+    await fetchJson(endpoints.chronologyRebuild(state.selectedYoungPerson.id), {
+      method: "POST"
+    });
+
+    showStatus("Chronology rebuilt successfully.");
+    await loadChronology(state.selectedYoungPerson.id);
+  } catch (error) {
+    console.error(error);
+    showStatus(`Could not rebuild chronology: ${error.message}`, true);
+  }
+}
+
+function renderObjectOrArray(data) {
+  if (data === null || data === undefined) {
+    return `<div class="empty-state">No data found.</div>`;
+  }
+
+  if (Array.isArray(data)) {
+    if (!data.length) {
+      return `<div class="empty-state">No records found.</div>`;
+    }
+
+    return data.map((item) => {
+      if (typeof item === "object" && item !== null) {
+        return `
+          <div class="data-box">
+            <div class="data-grid">
+              ${Object.entries(item).map(([key, value]) => `
+                <div class="data-item">
+                  <strong>${escapeHtml(formatLabel(key))}</strong>
+                  <span>${escapeHtml(stringifyValue(value))}</span>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        `;
+      }
+
+      return `<div class="data-box">${escapeHtml(String(item))}</div>`;
+    }).join("");
+  }
+
+  if (typeof data === "object") {
+    return `
+      <div class="data-grid">
+        ${Object.entries(data).map(([key, value]) => `
+          <div class="data-item">
+            <strong>${escapeHtml(formatLabel(key))}</strong>
+            <span>${escapeHtml(stringifyValue(value))}</span>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  return `<div class="data-box">${escapeHtml(String(data))}</div>`;
+}
+
+function normaliseArrayResponse(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.rows)) return data.rows;
+  if (Array.isArray(data?.data)) return data.data;
+  return [];
+}
+
+function getFullName(person) {
+  const name = `${person.first_name || ""} ${person.last_name || ""}`.trim();
+  return name || `Young Person #${person.id}`;
+}
+
+function cleanValue(value) {
+  const cleaned = typeof value === "string" ? value.trim() : value;
+  return cleaned === "" ? null : cleaned;
+}
+
+function parseNullableInt(value) {
+  const cleaned = String(value || "").trim();
+  if (!cleaned) return null;
+  const parsed = Number(cleaned);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function trimText(text, maxLength) {
+  if (!text) return "";
+  return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+}
+
+function formatLabel(value) {
+  return String(value)
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function stringifyValue(value) {
@@ -621,29 +636,21 @@ function stringifyValue(value) {
   return String(value);
 }
 
-function emptyToNull(value) {
-  const cleaned = value?.trim?.() ?? value;
-  return cleaned === "" ? null : cleaned;
-}
-
-function parseNullableInt(value) {
-  const cleaned = value?.trim?.();
-  if (!cleaned) return null;
-  const parsed = Number(cleaned);
-  return Number.isNaN(parsed) ? null : parsed;
-}
-
-function trimText(text, maxLength) {
-  if (!text) return "";
-  if (text.length <= maxLength) return text;
-  return `${text.slice(0, maxLength)}...`;
-}
-
 function formatDate(value) {
   if (!value) return "—";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
+  if (Number.isNaN(date.getTime())) return String(value);
   return date.toLocaleDateString("en-GB");
+}
+
+function formatDateTime(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return `${date.toLocaleDateString("en-GB")} ${date.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit"
+  })}`;
 }
 
 function toDateInputValue(value) {
