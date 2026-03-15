@@ -16,23 +16,25 @@ from routers.dashboard_routes import router as dashboard_router
 from routers.documents_routes import router as documents_router
 from routers.handover_routes import router as handover_router
 from routers.incident_routes import router as incident_router
+from routers.ofsted_pack_routes import router as ofsted_pack_router
 from routers.reports_routes import router as reports_router
 from routers.risk_routes import router as risk_router
 from routers.staff_journal_routes import router as staff_journal_router
 from routers.supervision_routes import router as supervision_router
 from routers.tasks_routes import router as tasks_router
 from routers.young_people_routes import router as young_people_router
-from routers.young_people_profile_routes import router as young_people_profile_router
-from routers.young_people_plans_routes import router as young_people_plans_router
-from routers.young_people_risk_routes import router as young_people_risk_router
-from routers.young_people_daily_notes_routes import router as young_people_daily_notes_router
-from routers.young_people_incidents_routes import router as young_people_incidents_router
-from routers.young_people_health_routes import router as young_people_health_router
-from routers.young_people_education_routes import router as young_people_education_router
-from routers.young_people_family_routes import router as young_people_family_router
-from routers.young_people_keywork_routes import router as young_people_keywork_router
 from routers.young_people_chronology_routes import router as young_people_chronology_router
 from routers.young_people_compliance_routes import router as young_people_compliance_router
+from routers.young_people_daily_notes_routes import router as young_people_daily_notes_router
+from routers.young_people_education_routes import router as young_people_education_router
+from routers.young_people_family_routes import router as young_people_family_router
+from routers.young_people_health_routes import router as young_people_health_router
+from routers.young_people_incidents_routes import router as young_people_incidents_router
+from routers.young_people_keywork_routes import router as young_people_keywork_router
+from routers.young_people_plans_routes import router as young_people_plans_router
+from routers.young_people_profile_routes import router as young_people_profile_router
+from routers.young_people_risk_routes import router as young_people_risk_router
+from routers.young_people_standards_routes import router as young_people_standards_router
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
@@ -66,6 +68,7 @@ app.include_router(dashboard_router)
 app.include_router(documents_router)
 app.include_router(handover_router)
 app.include_router(incident_router)
+app.include_router(ofsted_pack_router)
 app.include_router(reports_router)
 app.include_router(risk_router)
 app.include_router(staff_journal_router)
@@ -83,6 +86,7 @@ app.include_router(young_people_family_router)
 app.include_router(young_people_keywork_router)
 app.include_router(young_people_chronology_router)
 app.include_router(young_people_compliance_router)
+app.include_router(young_people_standards_router)
 
 app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
 app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
