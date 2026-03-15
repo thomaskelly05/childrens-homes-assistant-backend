@@ -31,12 +31,10 @@
       <div class="sidebar-section">
         <h3>Quick Actions</h3>
         <div class="quick-action-list">
-          <button class="btn full-width" id="quickDailyNoteBtn">Continue Today’s Note</button>
-          <button class="btn secondary full-width" id="quickIncidentBtn">New Incident</button>
-          <button class="btn secondary full-width" id="quickHealthBtn">Add Health Record</button>
-          <button class="btn secondary full-width" id="quickEducationBtn">Add Education Record</button>
-          <button class="btn secondary full-width" id="quickFamilyBtn">Add Family Record</button>
-          <button class="btn secondary full-width" id="quickKeyWorkBtn">Start Key Work</button>
+          <button class="btn full-width" id="quickDailyNoteBtn">Open Today’s Daily Record</button>
+          <button class="btn secondary full-width" id="quickDailyTabBtn">Go to Daily Record</button>
+          <button class="btn secondary full-width" id="quickRecordsTabBtn">Go to Other Records</button>
+          <button class="btn secondary full-width" id="quickComplianceTabBtn">Go to Compliance</button>
         </div>
       </div>
 
@@ -55,22 +53,9 @@
       </div>
 
       <div class="sidebar-section">
-        <h3>Compliance</h3>
-        <div id="ypCompliance" class="badge-row">
-          <span class="badge muted">No compliance data yet</span>
-        </div>
-      </div>
-
-      <div class="sidebar-section">
         <h3>Archive</h3>
         <div class="archive-links">
-          <button class="archive-link-btn" data-archive="daily-notes">Daily Notes Archive</button>
-          <button class="archive-link-btn" data-archive="incidents">Incidents Archive</button>
-          <button class="archive-link-btn" data-archive="health">Health Archive</button>
-          <button class="archive-link-btn" data-archive="education">Education Archive</button>
-          <button class="archive-link-btn" data-archive="family">Family Archive</button>
-          <button class="archive-link-btn" data-archive="key-work">Key Work Archive</button>
-          <button class="archive-link-btn" data-archive="chronology">Chronology Archive</button>
+          <button class="archive-link-btn" data-archive="daily-notes">Daily Records Archive</button>
         </div>
       </div>
     </aside>
@@ -79,7 +64,9 @@
       <header class="workspace-header">
         <div>
           <h2>Young Person Panel</h2>
-          <p class="workspace-subtitle">Clean live workspace for current records only</p>
+          <p class="workspace-subtitle">
+            One shared daily record for the whole day. Current work first, archive hidden until needed.
+          </p>
         </div>
 
         <div class="workspace-actions">
@@ -90,9 +77,8 @@
 
       <nav class="workspace-tabs" id="ypTabs">
         <button class="tab-btn active" data-tab="overview">Overview</button>
-        <button class="tab-btn" data-tab="care">Care</button>
-        <button class="tab-btn" data-tab="daily-notes">Daily Notes</button>
-        <button class="tab-btn" data-tab="development">Development</button>
+        <button class="tab-btn" data-tab="daily-record">Daily Record</button>
+        <button class="tab-btn" data-tab="records">Records</button>
         <button class="tab-btn" data-tab="compliance">Compliance</button>
       </nav>
 
@@ -103,53 +89,41 @@
               <h3>Overview</h3>
               <div id="overviewContent">Select a young person to load overview data.</div>
             </div>
-          </div>
-        </section>
-
-        <section class="tab-panel" id="tab-care">
-          <div class="panel-grid">
-            <div class="panel-card">
-              <h3>Profile</h3>
-              <div id="profileContent">Profile details will load here.</div>
-            </div>
 
             <div class="panel-card">
-              <h3>Plans</h3>
-              <div id="plansContent">Support plans will load here.</div>
-            </div>
-
-            <div class="panel-card">
-              <h3>Risk</h3>
-              <div id="riskContent">Risk assessments will load here.</div>
+              <h3>Current Status</h3>
+              <div id="overviewStatusContent">No current status loaded.</div>
             </div>
           </div>
         </section>
 
-        <section class="tab-panel" id="tab-daily-notes">
+        <section class="tab-panel" id="tab-daily-record">
           <div class="section-header">
             <div>
-              <h3>Daily Notes</h3>
-              <p class="muted-text">Current note first. Archived records stay hidden until opened.</p>
+              <h3>Daily Record</h3>
+              <p class="muted-text">
+                A single shared daily entry for the whole day, aligned to Quality Standards and inspection expectations.
+              </p>
             </div>
             <div class="section-actions">
               <button class="btn secondary" id="openDailyNotesArchiveBtn">Open Archive</button>
-              <button class="btn" id="openDailyNoteModalBtn">Continue Today’s Note</button>
+              <button class="btn" id="openDailyNoteModalBtn">Open Today’s Daily Record</button>
             </div>
           </div>
 
           <div class="daily-notes-layout">
             <div class="main-column">
               <div id="dailyNotesCurrentCard" class="panel-card">
-                <h3>Current Working Note</h3>
-                <p>No current draft loaded.</p>
+                <h3>Today’s Shared Daily Record</h3>
+                <p>No current record loaded.</p>
               </div>
 
-              <div id="dailyNoteAiSuggestionsCard" class="panel-card hidden">
+              <div id="dailyNoteAssistantCard" class="panel-card hidden">
                 <div class="card-row">
                   <div>
-                    <h3>Assistant Follow-on Suggestions</h3>
+                    <h3>Assistant Linked Suggestions</h3>
                     <p class="muted-text">
-                      Draft suggestions from this Daily Note. Staff review is required before saving.
+                      Draft-only follow-on records suggested from today’s daily record. Staff review is required before saving.
                     </p>
                   </div>
                   <span id="dailyNoteAiStatusBadge" class="badge muted">Not analysed</span>
@@ -171,9 +145,9 @@
 
             <aside class="support-column">
               <div class="panel-card">
-                <h3>Current Status</h3>
+                <h3>Record Status</h3>
                 <div id="dailyNoteStatusPanel">
-                  <p class="empty-state">No active note.</p>
+                  <p class="empty-state">No active record.</p>
                 </div>
               </div>
 
@@ -194,31 +168,36 @@
           </div>
         </section>
 
-        <section class="tab-panel" id="tab-development">
+        <section class="tab-panel" id="tab-records">
           <div class="panel-grid">
             <div class="panel-card">
               <h3>Health</h3>
-              <div id="healthContent">Health records will load here.</div>
+              <div id="healthContent">Health records summary will load here.</div>
             </div>
 
             <div class="panel-card">
               <h3>Education</h3>
-              <div id="educationContent">Education records will load here.</div>
+              <div id="educationContent">Education records summary will load here.</div>
             </div>
 
             <div class="panel-card">
               <h3>Family</h3>
-              <div id="familyContent">Family records will load here.</div>
+              <div id="familyContent">Family records summary will load here.</div>
             </div>
 
             <div class="panel-card">
               <h3>Key Work</h3>
-              <div id="keyWorkContent">Key work sessions will load here.</div>
+              <div id="keyWorkContent">Key work summary will load here.</div>
             </div>
 
             <div class="panel-card">
               <h3>Chronology</h3>
-              <div id="chronologyContent">Chronology will load here.</div>
+              <div id="chronologyContent">Chronology summary will load here.</div>
+            </div>
+
+            <div class="panel-card">
+              <h3>Risk</h3>
+              <div id="riskContent">Risk summary will load here.</div>
             </div>
           </div>
         </section>
@@ -262,8 +241,10 @@
     <div class="modal-panel modal-xl">
       <div class="modal-header">
         <div>
-          <h2 id="dailyNoteModalTitle">Add Daily Note</h2>
-          <p>Create a therapeutic, child-centred daily record aligned to the Quality Standards.</p>
+          <h2 id="dailyNoteModalTitle">Today’s Daily Record</h2>
+          <p>
+            One shared daily entry for the whole day. Adults can continue the same record already started by colleagues.
+          </p>
         </div>
         <button class="icon-btn" id="closeDailyNoteModalBtn" type="button">✕</button>
       </div>
@@ -275,29 +256,12 @@
           <h3>Record Details</h3>
           <div class="form-grid two-col">
             <div class="form-group">
-              <label for="dnNoteDate">Note Date</label>
+              <label for="dnNoteDate">Record Date</label>
               <input type="date" id="dnNoteDate" name="note_date" required />
             </div>
 
             <div class="form-group">
-              <label for="dnShiftType">Shift Type</label>
-              <select id="dnShiftType" name="shift_type" required>
-                <option value="">Select shift</option>
-                <option value="Day">Day</option>
-                <option value="Evening">Evening</option>
-                <option value="Night">Night</option>
-                <option value="Waking Night">Waking Night</option>
-                <option value="Full Day">Full Day</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="dnMood">Presentation / Mood</label>
-              <input type="text" id="dnMood" name="mood" />
-            </div>
-
-            <div class="form-group">
-              <label for="dnSignificance">Significance</label>
+              <label for="dnSignificance">Overall Significance</label>
               <select id="dnSignificance" name="significance">
                 <option value="standard">Standard</option>
                 <option value="important">Important</option>
@@ -305,59 +269,65 @@
                 <option value="critical">Critical</option>
               </select>
             </div>
+
+            <div class="form-group two-col-span">
+              <label for="dnMood">Overall Presentation / Mood</label>
+              <input type="text" id="dnMood" name="mood" placeholder="Overall presentation through the day" />
+            </div>
           </div>
         </div>
 
         <div class="form-section">
           <h3>1. Views, Wishes and Feelings</h3>
-          <textarea id="dnYoungPersonVoice" name="young_person_voice" rows="5"></textarea>
+          <p class="muted-text">Child voice across the day, wishes, worries, requests, goals and meaningful conversations.</p>
+          <textarea id="dnYoungPersonVoice" name="young_person_voice" rows="6"></textarea>
         </div>
 
         <div class="form-section">
           <h3>2. Relationships and Emotional Safety</h3>
-          <textarea id="dnPresentation" name="presentation" rows="5"></textarea>
+          <textarea id="dnPresentation" name="presentation" rows="6"></textarea>
         </div>
 
         <div class="form-section">
           <h3>3. Education</h3>
-          <textarea id="dnEducationUpdate" name="education_update" rows="4"></textarea>
+          <textarea id="dnEducationUpdate" name="education_update" rows="5"></textarea>
         </div>
 
         <div class="form-section">
           <h3>4. Enjoyment and Achievement</h3>
-          <textarea id="dnPositives" name="positives" rows="4"></textarea>
+          <textarea id="dnPositives" name="positives" rows="5"></textarea>
         </div>
 
         <div class="form-section">
           <h3>5. Health and Well-being</h3>
-          <textarea id="dnHealthUpdate" name="health_update" rows="4"></textarea>
+          <textarea id="dnHealthUpdate" name="health_update" rows="5"></textarea>
         </div>
 
         <div class="form-section">
           <h3>6. Family, Identity and Important Relationships</h3>
-          <textarea id="dnFamilyUpdate" name="family_update" rows="4"></textarea>
+          <textarea id="dnFamilyUpdate" name="family_update" rows="5"></textarea>
         </div>
 
         <div class="form-section">
           <h3>7. Positive Behaviour Support and Regulation</h3>
-          <textarea id="dnBehaviourUpdate" name="behaviour_update" rows="5"></textarea>
+          <textarea id="dnBehaviourUpdate" name="behaviour_update" rows="6"></textarea>
         </div>
 
         <div class="form-section">
           <h3>8. Activities, Routines and Care Planning</h3>
-          <textarea id="dnActivities" name="activities" rows="4"></textarea>
+          <textarea id="dnActivities" name="activities" rows="5"></textarea>
         </div>
 
         <div class="form-section">
           <h3>9. Reflection and Actions</h3>
-          <textarea id="dnActionsRequired" name="actions_required" rows="4"></textarea>
+          <textarea id="dnActionsRequired" name="actions_required" rows="5"></textarea>
         </div>
 
         <div class="form-section">
           <h3>Assistant Review</h3>
           <div class="final-ai-actions">
-            <button type="button" class="btn secondary ai-full-review-btn" data-ai-review="spellcheck">Spell check full note</button>
-            <button type="button" class="btn secondary ai-full-review-btn" data-ai-review="therapeutic">Make full note therapeutic</button>
+            <button type="button" class="btn secondary ai-full-review-btn" data-ai-review="spellcheck">Spell check full record</button>
+            <button type="button" class="btn secondary ai-full-review-btn" data-ai-review="therapeutic">Make record therapeutic</button>
             <button type="button" class="btn secondary ai-full-review-btn" data-ai-review="quality-standards">Check Quality Standards coverage</button>
             <button type="button" class="btn secondary ai-full-review-btn" data-ai-review="child-voice">Check child voice and strengths</button>
           </div>
@@ -367,11 +337,11 @@
         </div>
 
         <div class="form-section">
-          <h3>Note Workflow</h3>
+          <h3>Workflow</h3>
           <div class="form-grid two-col">
             <div class="form-group">
               <label for="dnManagerReviewComment">Manager / amendment comment</label>
-              <textarea id="dnManagerReviewComment" rows="3" placeholder="Used when a manager sends the note back for edits."></textarea>
+              <textarea id="dnManagerReviewComment" rows="3" placeholder="Used when a manager sends the record back for edits."></textarea>
             </div>
 
             <div class="form-group">
@@ -408,7 +378,7 @@
       <div class="modal-header">
         <div>
           <h2 id="linkedDraftModalTitle">Review Assistant Draft</h2>
-          <p>This draft has been generated from a Daily Note and must be reviewed before saving.</p>
+          <p>This draft was generated from the shared daily record and must be reviewed before saving.</p>
         </div>
         <button class="icon-btn" id="closeLinkedDraftModalBtn" type="button">✕</button>
       </div>
@@ -452,7 +422,7 @@
 
       <div class="drawer-filters">
         <div class="form-group">
-          <label for="archiveSearchInput">Search archived records</label>
+          <label for="archiveSearchInput">Search archive</label>
           <input type="text" id="archiveSearchInput" placeholder="Search archived records..." />
         </div>
 
