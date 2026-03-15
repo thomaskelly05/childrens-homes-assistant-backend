@@ -62,7 +62,8 @@ def get_young_person_standard_evidence(
         SELECT
             rsl.*,
             qs.title AS standard_title,
-            qs.short_label AS standard_short_label
+            qs.short_label AS standard_short_label,
+            qs.display_order
         FROM record_standard_links rsl
         JOIN quality_standards qs
             ON rsl.standard_code = qs.code
@@ -169,6 +170,7 @@ def update_standard_link(
 
     return {"message": "Standards link updated successfully", "id": row["id"]}
 
+
 @router.post("/{young_person_id}/standards/rebuild")
 def rebuild_standard_links(
     young_person_id: int,
@@ -185,7 +187,7 @@ def rebuild_standard_links(
                 (young_person_id,),
             )
 
-            # daily notes
+            # Daily notes -> QS2, QS5, QS6
             cur.execute(
                 """
                 INSERT INTO record_standard_links (
@@ -228,7 +230,7 @@ def rebuild_standard_links(
                 (young_person_id,),
             )
 
-            # plans
+            # Support plans -> QS9, QS6
             cur.execute(
                 """
                 INSERT INTO record_standard_links (
@@ -259,7 +261,7 @@ def rebuild_standard_links(
                 (young_person_id,),
             )
 
-            # risk
+            # Risk assessments -> QS7, QS9
             cur.execute(
                 """
                 INSERT INTO record_standard_links (
@@ -290,7 +292,7 @@ def rebuild_standard_links(
                 (young_person_id,),
             )
 
-            # education
+            # Education records -> QS3, QS4
             cur.execute(
                 """
                 INSERT INTO record_standard_links (
@@ -319,7 +321,7 @@ def rebuild_standard_links(
                 (young_person_id,),
             )
 
-            # health
+            # Health records -> QS5
             cur.execute(
                 """
                 INSERT INTO record_standard_links (
@@ -334,7 +336,7 @@ def rebuild_standard_links(
                 (young_person_id,),
             )
 
-            # family
+            # Family contact -> QS6, QS2
             cur.execute(
                 """
                 INSERT INTO record_standard_links (
@@ -363,7 +365,7 @@ def rebuild_standard_links(
                 (young_person_id,),
             )
 
-            # keywork
+            # Keywork -> QS2, QS6
             cur.execute(
                 """
                 INSERT INTO record_standard_links (
@@ -392,7 +394,7 @@ def rebuild_standard_links(
                 (young_person_id,),
             )
 
-            # incidents
+            # Incidents -> QS7, QS8
             cur.execute(
                 """
                 INSERT INTO record_standard_links (
