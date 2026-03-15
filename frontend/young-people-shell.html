@@ -79,7 +79,7 @@
       <header class="workspace-header">
         <div>
           <h2>Young Person Panel</h2>
-          <p class="workspace-subtitle">Current records first. Archive only when opened.</p>
+          <p class="workspace-subtitle">Clean live workspace for current records only</p>
         </div>
 
         <div class="workspace-actions">
@@ -129,7 +129,7 @@
           <div class="section-header">
             <div>
               <h3>Daily Notes</h3>
-              <p class="muted-text">The current note is shown first. Archived notes stay hidden until opened.</p>
+              <p class="muted-text">Current note first. Archived records stay hidden until opened.</p>
             </div>
             <div class="section-actions">
               <button class="btn secondary" id="openDailyNotesArchiveBtn">Open Archive</button>
@@ -147,9 +147,9 @@
               <div id="dailyNoteAiSuggestionsCard" class="panel-card hidden">
                 <div class="card-row">
                   <div>
-                    <h3>AI Follow-on Suggestions</h3>
+                    <h3>Assistant Follow-on Suggestions</h3>
                     <p class="muted-text">
-                      Draft suggestions created from this Daily Note. Staff review is required before anything is saved.
+                      Draft suggestions from this Daily Note. Staff review is required before saving.
                     </p>
                   </div>
                   <span id="dailyNoteAiStatusBadge" class="badge muted">Not analysed</span>
@@ -164,7 +164,7 @@
                 </div>
 
                 <div id="dailyNoteAiSuggestionsList" class="ai-suggestions-list">
-                  <p class="empty-state">No AI suggestions yet.</p>
+                  <p class="empty-state">No assistant suggestions yet.</p>
                 </div>
               </div>
             </div>
@@ -308,18 +308,53 @@
           </div>
         </div>
 
-        <div class="form-section"><h3>1. Views, Wishes and Feelings</h3><textarea id="dnYoungPersonVoice" name="young_person_voice" rows="5"></textarea></div>
-        <div class="form-section"><h3>2. Relationships and Emotional Safety</h3><textarea id="dnPresentation" name="presentation" rows="5"></textarea></div>
-        <div class="form-section"><h3>3. Education</h3><textarea id="dnEducationUpdate" name="education_update" rows="4"></textarea></div>
-        <div class="form-section"><h3>4. Enjoyment and Achievement</h3><textarea id="dnPositives" name="positives" rows="4"></textarea></div>
-        <div class="form-section"><h3>5. Health and Well-being</h3><textarea id="dnHealthUpdate" name="health_update" rows="4"></textarea></div>
-        <div class="form-section"><h3>6. Family, Identity and Important Relationships</h3><textarea id="dnFamilyUpdate" name="family_update" rows="4"></textarea></div>
-        <div class="form-section"><h3>7. Positive Behaviour Support and Regulation</h3><textarea id="dnBehaviourUpdate" name="behaviour_update" rows="5"></textarea></div>
-        <div class="form-section"><h3>8. Activities, Routines and Care Planning</h3><textarea id="dnActivities" name="activities" rows="4"></textarea></div>
-        <div class="form-section"><h3>9. Reflection and Actions</h3><textarea id="dnActionsRequired" name="actions_required" rows="4"></textarea></div>
+        <div class="form-section">
+          <h3>1. Views, Wishes and Feelings</h3>
+          <textarea id="dnYoungPersonVoice" name="young_person_voice" rows="5"></textarea>
+        </div>
 
         <div class="form-section">
-          <h3>Final AI Review</h3>
+          <h3>2. Relationships and Emotional Safety</h3>
+          <textarea id="dnPresentation" name="presentation" rows="5"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>3. Education</h3>
+          <textarea id="dnEducationUpdate" name="education_update" rows="4"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>4. Enjoyment and Achievement</h3>
+          <textarea id="dnPositives" name="positives" rows="4"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>5. Health and Well-being</h3>
+          <textarea id="dnHealthUpdate" name="health_update" rows="4"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>6. Family, Identity and Important Relationships</h3>
+          <textarea id="dnFamilyUpdate" name="family_update" rows="4"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>7. Positive Behaviour Support and Regulation</h3>
+          <textarea id="dnBehaviourUpdate" name="behaviour_update" rows="5"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>8. Activities, Routines and Care Planning</h3>
+          <textarea id="dnActivities" name="activities" rows="4"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>9. Reflection and Actions</h3>
+          <textarea id="dnActionsRequired" name="actions_required" rows="4"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>Assistant Review</h3>
           <div class="final-ai-actions">
             <button type="button" class="btn secondary ai-full-review-btn" data-ai-review="spellcheck">Spell check full note</button>
             <button type="button" class="btn secondary ai-full-review-btn" data-ai-review="therapeutic">Make full note therapeutic</button>
@@ -336,7 +371,7 @@
           <div class="form-grid two-col">
             <div class="form-group">
               <label for="dnManagerReviewComment">Manager / amendment comment</label>
-              <textarea id="dnManagerReviewComment" rows="3"></textarea>
+              <textarea id="dnManagerReviewComment" rows="3" placeholder="Used when a manager sends the note back for edits."></textarea>
             </div>
 
             <div class="form-group">
@@ -372,7 +407,7 @@
     <div class="modal-panel modal-xl">
       <div class="modal-header">
         <div>
-          <h2 id="linkedDraftModalTitle">Review AI Draft</h2>
+          <h2 id="linkedDraftModalTitle">Review Assistant Draft</h2>
           <p>This draft has been generated from a Daily Note and must be reviewed before saving.</p>
         </div>
         <button class="icon-btn" id="closeLinkedDraftModalBtn" type="button">✕</button>
