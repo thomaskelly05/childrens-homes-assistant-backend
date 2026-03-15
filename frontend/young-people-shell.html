@@ -3,453 +3,590 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Young Person Panel | IndiCare</title>
-  <link rel="stylesheet" href="/css/young-people-shell.css" />
+  <title>Young Person Shell</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --line: #d9e2ec;
+      --text: #243b53;
+      --muted: #6b7c93;
+      --primary: #2563eb;
+      --primary-soft: #eff6ff;
+      --success: #15803d;
+      --danger: #b91c1c;
+      --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+      --radius: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      background: var(--panel);
+      border-right: 1px solid var(--line);
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .sidebar h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+    }
+
+    .sidebar p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .search-box {
+      margin-bottom: 16px;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .search-box input:focus {
+      border-color: var(--primary);
+    }
+
+    .young-people-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .yp-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      background: #fff;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .yp-card:hover {
+      border-color: var(--primary);
+      background: #fafcff;
+    }
+
+    .yp-card.active {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .yp-name {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .yp-meta {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .main {
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    .shell-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .shell-header h2 {
+      margin: 0 0 6px;
+      font-size: 28px;
+    }
+
+    .shell-header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid #cde7d4;
+      background: #edf9f0;
+      color: var(--success);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+
+    .empty-state,
+    .loading-state,
+    .error-state {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px;
+    }
+
+    .error-state {
+      color: var(--danger);
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .tab-btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .tab-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .section-title {
+      margin-top: 0;
+      margin-bottom: 18px;
+      font-size: 22px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .info-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      background: #fff;
+    }
+
+    .info-card h4 {
+      margin: 0 0 10px;
+      font-size: 15px;
+    }
+
+    .info-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      white-space: pre-wrap;
+    }
+
+    .full-width {
+      grid-column: 1 / -1;
+    }
+
+    .placeholder-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .placeholder-item {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      background: #fff;
+    }
+
+    .placeholder-item strong {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    code {
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+
+    @media (max-width: 980px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        border-right: none;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="yp-app-shell">
-    <aside class="yp-sidebar">
-      <div class="sidebar-brand">
-        <h1>IndiCare</h1>
-        <p>Young Person Workspace</p>
+  <div class="layout">
+    <aside class="sidebar">
+      <h1>Young People</h1>
+      <p>Select a young person to open their shell.</p>
+
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search by name..." />
       </div>
 
-      <div class="sidebar-section">
-        <label for="youngPersonSelector">Select young person</label>
-        <select id="youngPersonSelector">
-          <option value="">Select a young person</option>
-        </select>
-      </div>
-
-      <div class="sidebar-section">
-        <h3>Current Young Person</h3>
-        <div id="ypMiniSummary" class="sidebar-card">
-          <p class="empty-state">No young person selected.</p>
-        </div>
-      </div>
-
-      <div class="sidebar-section">
-        <h3>Quick Actions</h3>
-        <div class="quick-action-list">
-          <button class="btn full-width" id="quickDailyNoteBtn">Open Today’s Daily Record</button>
-          <button class="btn secondary full-width" id="quickDailyTabBtn">Go to Daily Record</button>
-          <button class="btn secondary full-width" id="quickRecordsTabBtn">Go to Other Records</button>
-          <button class="btn secondary full-width" id="quickComplianceTabBtn">Go to Compliance</button>
-        </div>
-      </div>
-
-      <div class="sidebar-section">
-        <h3>Today</h3>
-        <div id="todayWorkflowPanel" class="sidebar-card">
-          <p class="empty-state">No active workflow yet.</p>
-        </div>
-      </div>
-
-      <div class="sidebar-section">
-        <h3>Alerts</h3>
-        <div id="ypAlerts" class="badge-row">
-          <span class="badge muted">No alerts loaded</span>
-        </div>
-      </div>
-
-      <div class="sidebar-section">
-        <h3>Archive</h3>
-        <div class="archive-links">
-          <button class="archive-link-btn" data-archive="daily-notes">Daily Records Archive</button>
-        </div>
+      <div id="youngPeopleList" class="young-people-list">
+        <div class="loading-state">Loading young people...</div>
       </div>
     </aside>
 
-    <main class="yp-main">
-      <header class="workspace-header">
-        <div>
-          <h2>Young Person Panel</h2>
-          <p class="workspace-subtitle">
-            One shared daily record for the whole day. Current work first, archive hidden until needed.
-          </p>
+    <main class="main">
+      <div id="mainContent">
+        <div class="empty-state">
+          <h2 style="margin-top: 0;">Young Person Shell</h2>
+          <p class="muted">Select a young person from the left to load their record.</p>
         </div>
-
-        <div class="workspace-actions">
-          <button class="btn secondary" id="backToListBtn">Back to list</button>
-          <button class="btn" id="editYoungPersonBtn">Edit profile</button>
-        </div>
-      </header>
-
-      <nav class="workspace-tabs" id="ypTabs">
-        <button class="tab-btn active" data-tab="overview">Overview</button>
-        <button class="tab-btn" data-tab="daily-record">Daily Record</button>
-        <button class="tab-btn" data-tab="records">Records</button>
-        <button class="tab-btn" data-tab="compliance">Compliance</button>
-      </nav>
-
-      <section class="workspace-panels">
-        <section class="tab-panel active" id="tab-overview">
-          <div class="panel-grid">
-            <div class="panel-card">
-              <h3>Overview</h3>
-              <div id="overviewContent">Select a young person to load overview data.</div>
-            </div>
-
-            <div class="panel-card">
-              <h3>Current Status</h3>
-              <div id="overviewStatusContent">No current status loaded.</div>
-            </div>
-          </div>
-        </section>
-
-        <section class="tab-panel" id="tab-daily-record">
-          <div class="section-header">
-            <div>
-              <h3>Daily Record</h3>
-              <p class="muted-text">
-                A single shared daily entry for the whole day, aligned to Quality Standards and inspection expectations.
-              </p>
-            </div>
-            <div class="section-actions">
-              <button class="btn secondary" id="openDailyNotesArchiveBtn">Open Archive</button>
-              <button class="btn" id="openDailyNoteModalBtn">Open Today’s Daily Record</button>
-            </div>
-          </div>
-
-          <div class="daily-notes-layout">
-            <div class="main-column">
-              <div id="dailyNotesCurrentCard" class="panel-card">
-                <h3>Today’s Shared Daily Record</h3>
-                <p>No current record loaded.</p>
-              </div>
-
-              <div id="dailyNoteAssistantCard" class="panel-card hidden">
-                <div class="card-row">
-                  <div>
-                    <h3>Assistant Linked Suggestions</h3>
-                    <p class="muted-text">
-                      Draft-only follow-on records suggested from today’s daily record. Staff review is required before saving.
-                    </p>
-                  </div>
-                  <span id="dailyNoteAiStatusBadge" class="badge muted">Not analysed</span>
-                </div>
-
-                <div id="dailyNoteAiSummary" class="ai-summary-grid"></div>
-
-                <div class="card-actions">
-                  <button type="button" class="btn secondary" id="regenerateAiSuggestionsBtn">
-                    Regenerate Suggestions
-                  </button>
-                </div>
-
-                <div id="dailyNoteAiSuggestionsList" class="ai-suggestions-list">
-                  <p class="empty-state">No assistant suggestions yet.</p>
-                </div>
-              </div>
-            </div>
-
-            <aside class="support-column">
-              <div class="panel-card">
-                <h3>Record Status</h3>
-                <div id="dailyNoteStatusPanel">
-                  <p class="empty-state">No active record.</p>
-                </div>
-              </div>
-
-              <div id="dailyNoteLinkedRecordsCard" class="panel-card hidden">
-                <h3>Linked Records</h3>
-                <div id="dailyNoteLinkedRecordsList">
-                  <p class="empty-state">No linked records yet.</p>
-                </div>
-              </div>
-
-              <div class="panel-card">
-                <h3>Manager Comments</h3>
-                <div id="dailyNoteManagerComments">
-                  <p class="empty-state">No manager comments.</p>
-                </div>
-              </div>
-            </aside>
-          </div>
-        </section>
-
-        <section class="tab-panel" id="tab-records">
-          <div class="panel-grid">
-            <div class="panel-card">
-              <h3>Health</h3>
-              <div id="healthContent">Health records summary will load here.</div>
-            </div>
-
-            <div class="panel-card">
-              <h3>Education</h3>
-              <div id="educationContent">Education records summary will load here.</div>
-            </div>
-
-            <div class="panel-card">
-              <h3>Family</h3>
-              <div id="familyContent">Family records summary will load here.</div>
-            </div>
-
-            <div class="panel-card">
-              <h3>Key Work</h3>
-              <div id="keyWorkContent">Key work summary will load here.</div>
-            </div>
-
-            <div class="panel-card">
-              <h3>Chronology</h3>
-              <div id="chronologyContent">Chronology summary will load here.</div>
-            </div>
-
-            <div class="panel-card">
-              <h3>Risk</h3>
-              <div id="riskContent">Risk summary will load here.</div>
-            </div>
-          </div>
-        </section>
-
-        <section class="tab-panel" id="tab-compliance">
-          <div class="panel-grid">
-            <div class="panel-card">
-              <h3>Compliance</h3>
-              <div id="complianceContent">Compliance items will load here.</div>
-            </div>
-          </div>
-        </section>
-      </section>
+      </div>
     </main>
-
-    <aside class="yp-context">
-      <div class="context-card">
-        <h3>Linked Records</h3>
-        <div id="linkedRecordsSummary">
-          <p class="empty-state">No linked records loaded.</p>
-        </div>
-      </div>
-
-      <div class="context-card">
-        <h3>Manager Review</h3>
-        <div id="managerReviewSummary">
-          <p class="empty-state">No manager review items.</p>
-        </div>
-      </div>
-
-      <div class="context-card">
-        <h3>Recent Timeline</h3>
-        <div id="recentTimelineSummary">
-          <p class="empty-state">No recent timeline items.</p>
-        </div>
-      </div>
-    </aside>
   </div>
 
-  <div class="modal-overlay hidden" id="dailyNoteModal">
-    <div class="modal-panel modal-xl">
-      <div class="modal-header">
-        <div>
-          <h2 id="dailyNoteModalTitle">Today’s Daily Record</h2>
-          <p>
-            One shared daily entry for the whole day. Adults can continue the same record already started by colleagues.
-          </p>
-        </div>
-        <button class="icon-btn" id="closeDailyNoteModalBtn" type="button">✕</button>
-      </div>
+  <script>
+    const tabs = [
+      "overview",
+      "profile",
+      "plans",
+      "risk",
+      "daily-notes",
+      "incidents",
+      "health",
+      "education",
+      "family",
+      "key-work",
+      "chronology",
+      "compliance"
+    ];
 
-      <form id="dailyNoteForm" class="modal-form">
-        <input type="hidden" id="dailyNoteId" />
+    let youngPeople = [];
+    let selectedYoungPerson = null;
+    let activeTab = "overview";
 
-        <div class="form-section">
-          <h3>Record Details</h3>
-          <div class="form-grid two-col">
-            <div class="form-group">
-              <label for="dnNoteDate">Record Date</label>
-              <input type="date" id="dnNoteDate" name="note_date" required />
+    const youngPeopleListEl = document.getElementById("youngPeopleList");
+    const mainContentEl = document.getElementById("mainContent");
+    const searchInputEl = document.getElementById("searchInput");
+
+    async function fetchJson(url, options = {}) {
+      const response = await fetch(url, {
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        ...options
+      });
+
+      if (!response.ok) {
+        let message = `Request failed: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          if (errorData.detail) {
+            message = errorData.detail;
+          }
+        } catch (e) {}
+        throw new Error(message);
+      }
+
+      return response.json();
+    }
+
+    async function loadYoungPeople() {
+      youngPeopleListEl.innerHTML = `<div class="loading-state">Loading young people...</div>`;
+
+      try {
+        const data = await fetchJson("/young-people");
+        youngPeople = Array.isArray(data) ? data : [];
+        renderYoungPeopleList(filterYoungPeople(searchInputEl.value.trim()));
+
+        if (youngPeople.length > 0) {
+          await selectYoungPerson(youngPeople[0].id);
+        } else {
+          mainContentEl.innerHTML = `
+            <div class="empty-state">
+              <h2 style="margin-top: 0;">No young people found</h2>
+              <p class="muted">There are currently no young people to display.</p>
             </div>
-
-            <div class="form-group">
-              <label for="dnSignificance">Overall Significance</label>
-              <select id="dnSignificance" name="significance">
-                <option value="standard">Standard</option>
-                <option value="important">Important</option>
-                <option value="significant">Significant</option>
-                <option value="critical">Critical</option>
-              </select>
-            </div>
-
-            <div class="form-group two-col-span">
-              <label for="dnMood">Overall Presentation / Mood</label>
-              <input type="text" id="dnMood" name="mood" placeholder="Overall presentation through the day" />
-            </div>
+          `;
+        }
+      } catch (error) {
+        youngPeopleListEl.innerHTML = `
+          <div class="error-state">
+            Failed to load young people.<br />
+            <span class="muted">${escapeHtml(error.message)}</span>
           </div>
-        </div>
+        `;
+      }
+    }
 
-        <div class="form-section">
-          <h3>1. Views, Wishes and Feelings</h3>
-          <p class="muted-text">Child voice across the day, wishes, worries, requests, goals and meaningful conversations.</p>
-          <textarea id="dnYoungPersonVoice" name="young_person_voice" rows="6"></textarea>
-        </div>
-
-        <div class="form-section">
-          <h3>2. Relationships and Emotional Safety</h3>
-          <textarea id="dnPresentation" name="presentation" rows="6"></textarea>
-        </div>
-
-        <div class="form-section">
-          <h3>3. Education</h3>
-          <textarea id="dnEducationUpdate" name="education_update" rows="5"></textarea>
-        </div>
-
-        <div class="form-section">
-          <h3>4. Enjoyment and Achievement</h3>
-          <textarea id="dnPositives" name="positives" rows="5"></textarea>
-        </div>
-
-        <div class="form-section">
-          <h3>5. Health and Well-being</h3>
-          <textarea id="dnHealthUpdate" name="health_update" rows="5"></textarea>
-        </div>
-
-        <div class="form-section">
-          <h3>6. Family, Identity and Important Relationships</h3>
-          <textarea id="dnFamilyUpdate" name="family_update" rows="5"></textarea>
-        </div>
-
-        <div class="form-section">
-          <h3>7. Positive Behaviour Support and Regulation</h3>
-          <textarea id="dnBehaviourUpdate" name="behaviour_update" rows="6"></textarea>
-        </div>
-
-        <div class="form-section">
-          <h3>8. Activities, Routines and Care Planning</h3>
-          <textarea id="dnActivities" name="activities" rows="5"></textarea>
-        </div>
-
-        <div class="form-section">
-          <h3>9. Reflection and Actions</h3>
-          <textarea id="dnActionsRequired" name="actions_required" rows="5"></textarea>
-        </div>
-
-        <div class="form-section">
-          <h3>Assistant Review</h3>
-          <div class="final-ai-actions">
-            <button type="button" class="btn secondary ai-full-review-btn" data-ai-review="spellcheck">Spell check full record</button>
-            <button type="button" class="btn secondary ai-full-review-btn" data-ai-review="therapeutic">Make record therapeutic</button>
-            <button type="button" class="btn secondary ai-full-review-btn" data-ai-review="quality-standards">Check Quality Standards coverage</button>
-            <button type="button" class="btn secondary ai-full-review-btn" data-ai-review="child-voice">Check child voice and strengths</button>
+    function renderYoungPeopleList(items) {
+      if (!items.length) {
+        youngPeopleListEl.innerHTML = `
+          <div class="empty-state">
+            No matching young people found.
           </div>
-          <div id="dailyNoteAiFeedback" class="info-box">
-            Assistant review output will appear here once connected.
-          </div>
-        </div>
+        `;
+        return;
+      }
 
-        <div class="form-section">
-          <h3>Workflow</h3>
-          <div class="form-grid two-col">
-            <div class="form-group">
-              <label for="dnManagerReviewComment">Manager / amendment comment</label>
-              <textarea id="dnManagerReviewComment" rows="3" placeholder="Used when a manager sends the record back for edits."></textarea>
-            </div>
+      youngPeopleListEl.innerHTML = items.map(person => {
+        const fullName = `${person.first_name || ""} ${person.last_name || ""}`.trim() || "Unnamed young person";
+        const dob = person.date_of_birth || person.dob || "Not recorded";
+        const placement = person.placement_name || person.home_name || "Not recorded";
+        const isActive = selectedYoungPerson && selectedYoungPerson.id === person.id;
 
-            <div class="form-group">
-              <label for="dnWorkflowStatus">Workflow status</label>
-              <select id="dnWorkflowStatus">
-                <option value="draft">Draft</option>
-                <option value="submitted">Submitted for review</option>
-                <option value="approved">Approved</option>
-                <option value="returned">Returned for amendments</option>
-              </select>
+        return `
+          <div class="yp-card ${isActive ? "active" : ""}" data-id="${person.id}">
+            <div class="yp-name">${escapeHtml(fullName)}</div>
+            <div class="yp-meta">
+              DOB: ${escapeHtml(String(dob))}<br>
+              Placement: ${escapeHtml(String(placement))}
             </div>
           </div>
-        </div>
+        `;
+      }).join("");
 
-        <div class="modal-footer modal-footer-split">
-          <div class="modal-footer-left">
-            <button type="button" class="btn secondary" id="saveDraftDailyNoteBtn">Save Draft</button>
-            <button type="button" class="btn secondary" id="submitDailyNoteBtn">Submit for Review</button>
+      document.querySelectorAll(".yp-card").forEach(card => {
+        card.addEventListener("click", async () => {
+          const id = Number(card.dataset.id);
+          await selectYoungPerson(id);
+        });
+      });
+    }
+
+    async function selectYoungPerson(id) {
+      mainContentEl.innerHTML = `<div class="loading-state">Loading young person shell...</div>`;
+
+      try {
+        const person = await fetchJson(`/young-people/${id}`);
+        selectedYoungPerson = person;
+        activeTab = "overview";
+        renderYoungPeopleList(filterYoungPeople(searchInputEl.value.trim()));
+        renderShell();
+      } catch (error) {
+        mainContentEl.innerHTML = `
+          <div class="error-state">
+            Failed to load young person.<br />
+            <span class="muted">${escapeHtml(error.message)}</span>
           </div>
+        `;
+      }
+    }
 
-          <div class="modal-footer-right">
-            <button type="button" class="btn secondary" id="returnDailyNoteBtn">Send Back for Edits</button>
-            <button type="button" class="btn secondary" id="approveDailyNoteBtn">Approve</button>
-            <button type="button" class="btn secondary" id="cancelDailyNoteBtn">Cancel</button>
-            <button type="submit" class="btn" id="saveDailyNoteBtn">Save Changes</button>
+    function renderShell() {
+      if (!selectedYoungPerson) return;
+
+      const fullName = `${selectedYoungPerson.first_name || ""} ${selectedYoungPerson.last_name || ""}`.trim() || "Young Person";
+
+      mainContentEl.innerHTML = `
+        <div class="shell-header">
+          <div>
+            <h2>${escapeHtml(fullName)}</h2>
+            <p>ID: ${escapeHtml(String(selectedYoungPerson.id || ""))}</p>
           </div>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <div class="modal-overlay hidden" id="linkedDraftModal">
-    <div class="modal-panel modal-xl">
-      <div class="modal-header">
-        <div>
-          <h2 id="linkedDraftModalTitle">Review Assistant Draft</h2>
-          <p>This draft was generated from the shared daily record and must be reviewed before saving.</p>
-        </div>
-        <button class="icon-btn" id="closeLinkedDraftModalBtn" type="button">✕</button>
-      </div>
-
-      <form id="linkedDraftForm" class="modal-form">
-        <input type="hidden" id="linkedDraftId" />
-        <input type="hidden" id="linkedDraftType" />
-
-        <div class="form-section">
-          <h3>Source Record</h3>
-          <div id="linkedDraftSourceInfo" class="info-box"></div>
+          <div class="status-badge">${escapeHtml(selectedYoungPerson.status || "Current")}</div>
         </div>
 
-        <div class="form-section">
-          <h3>Draft Content</h3>
-          <div id="linkedDraftDynamicFields"></div>
+        <div class="tabs">
+          ${tabs.map(tab => `
+            <button class="tab-btn ${activeTab === tab ? "active" : ""}" data-tab="${tab}">
+              ${formatTabLabel(tab)}
+            </button>
+          `).join("")}
         </div>
 
-        <div class="modal-footer modal-footer-split">
-          <div class="modal-footer-left">
-            <button type="button" class="btn secondary" id="discardLinkedDraftBtn">Discard</button>
-          </div>
-          <div class="modal-footer-right">
-            <button type="button" class="btn secondary" id="cancelLinkedDraftBtn">Cancel</button>
-            <button type="submit" class="btn" id="saveLinkedDraftBtn">Save Draft</button>
-          </div>
+        <div class="panel">
+          ${renderTabContent(activeTab, selectedYoungPerson)}
         </div>
-      </form>
-    </div>
-  </div>
+      `;
 
-  <div class="drawer-overlay hidden" id="archiveDrawer">
-    <div class="drawer-panel">
-      <div class="drawer-header">
-        <div>
-          <h2 id="archiveDrawerTitle">Archive</h2>
-          <p>Archived records are hidden by default and shown only when needed.</p>
-        </div>
-        <button class="icon-btn" id="closeArchiveDrawerBtn" type="button">✕</button>
-      </div>
+      document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          activeTab = btn.dataset.tab;
+          renderShell();
+        });
+      });
+    }
 
-      <div class="drawer-filters">
-        <div class="form-group">
-          <label for="archiveSearchInput">Search archive</label>
-          <input type="text" id="archiveSearchInput" placeholder="Search archived records..." />
-        </div>
+    function renderTabContent(tab, person) {
+      switch (tab) {
+        case "overview":
+          return `
+            <h3 class="section-title">Overview</h3>
+            <div class="grid">
+              <div class="info-card">
+                <h4>Full Name</h4>
+                <p>${escapeHtml(`${person.first_name || ""} ${person.last_name || ""}`.trim() || "Not recorded")}</p>
+              </div>
+              <div class="info-card">
+                <h4>Date of Birth</h4>
+                <p>${escapeHtml(String(person.date_of_birth || person.dob || "Not recorded"))}</p>
+              </div>
+              <div class="info-card">
+                <h4>Placement</h4>
+                <p>${escapeHtml(String(person.placement_name || person.home_name || "Not recorded"))}</p>
+              </div>
+              <div class="info-card">
+                <h4>Status</h4>
+                <p>${escapeHtml(String(person.status || "Current"))}</p>
+              </div>
+              <div class="info-card full-width">
+                <h4>Summary</h4>
+                <p>${escapeHtml(String(person.summary || person.overview || "No overview added yet."))}</p>
+              </div>
+            </div>
+          `;
 
-        <div class="form-group">
-          <label for="archiveDateFilter">Date</label>
-          <input type="date" id="archiveDateFilter" />
-        </div>
+        case "profile":
+          return `
+            <h3 class="section-title">Profile</h3>
+            <div class="grid">
+              <div class="info-card">
+                <h4>Preferred Name</h4>
+                <p>${escapeHtml(String(person.preferred_name || "Not recorded"))}</p>
+              </div>
+              <div class="info-card">
+                <h4>Gender</h4>
+                <p>${escapeHtml(String(person.gender || "Not recorded"))}</p>
+              </div>
+              <div class="info-card">
+                <h4>Ethnicity</h4>
+                <p>${escapeHtml(String(person.ethnicity || "Not recorded"))}</p>
+              </div>
+              <div class="info-card">
+                <h4>Legal Status</h4>
+                <p>${escapeHtml(String(person.legal_status || "Not recorded"))}</p>
+              </div>
+              <div class="info-card full-width">
+                <h4>About Me</h4>
+                <p>${escapeHtml(String(person.about_me || "No profile details added yet."))}</p>
+              </div>
+            </div>
+          `;
 
-        <div class="form-group">
-          <label for="archiveMonthFilter">Month</label>
-          <input type="month" id="archiveMonthFilter" />
-        </div>
+        case "key-work":
+          return `
+            <h3 class="section-title">Key Work</h3>
+            <div class="placeholder-list">
+              <div class="placeholder-item">
+                <strong>Key work route connected</strong>
+                <span class="muted">This shell can use <code>GET /young-people/${person.id}/keywork</code>.</span>
+              </div>
+              <div class="placeholder-item">
+                <strong>Create key work session</strong>
+                <span class="muted">Use <code>POST /young-people/keywork</code>.</span>
+              </div>
+              <div class="placeholder-item">
+                <strong>Edit key work session</strong>
+                <span class="muted">Use <code>PUT /young-people/keywork/{keywork_session_id}</code>.</span>
+              </div>
+            </div>
+          `;
 
-        <div class="form-group">
-          <label for="archiveYearFilter">Year</label>
-          <select id="archiveYearFilter">
-            <option value="">All years</option>
-          </select>
-        </div>
-      </div>
+        default:
+          return `
+            <h3 class="section-title">${escapeHtml(formatTabLabel(tab))}</h3>
+            <div class="placeholder-list">
+              <div class="placeholder-item">
+                <strong>${escapeHtml(formatTabLabel(tab))}</strong>
+                <span class="muted">This is the reset shell placeholder for this section.</span>
+              </div>
+              <div class="placeholder-item">
+                <strong>Young person</strong>
+                <span class="muted">${escapeHtml(`${person.first_name || ""} ${person.last_name || ""}`.trim())}</span>
+              </div>
+            </div>
+          `;
+      }
+    }
 
-      <div id="archiveResultsList" class="archive-results-list">
-        <p class="empty-state">No archive loaded.</p>
-      </div>
-    </div>
-  </div>
+    function formatTabLabel(tab) {
+      return tab
+        .split("-")
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+    }
 
-  <script src="/js/young-people-shell.js"></script>
+    function filterYoungPeople(query) {
+      if (!query) return youngPeople;
+
+      const q = query.toLowerCase();
+      return youngPeople.filter(person => {
+        const fullName = `${person.first_name || ""} ${person.last_name || ""}`.trim().toLowerCase();
+        return fullName.includes(q);
+      });
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    searchInputEl.addEventListener("input", () => {
+      renderYoungPeopleList(filterYoungPeople(searchInputEl.value.trim()));
+    });
+
+    loadYoungPeople();
+  </script>
 </body>
 </html>
