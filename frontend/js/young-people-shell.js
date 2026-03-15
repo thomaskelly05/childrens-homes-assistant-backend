@@ -7,7 +7,6 @@ const profileContent = document.getElementById("profileContent");
 
 const plansPanel = document.getElementById("tab-plans");
 const riskPanel = document.getElementById("tab-risk");
-const dailyNotesPanel = document.getElementById("tab-daily-notes");
 const incidentsPanel = document.getElementById("tab-incidents");
 const healthPanel = document.getElementById("tab-health");
 const educationPanel = document.getElementById("tab-education");
@@ -17,17 +16,25 @@ const chronologyPanel = document.getElementById("tab-chronology");
 const compliancePanel = document.getElementById("tab-compliance");
 
 const dailyNotesContent = document.getElementById("dailyNotesContent");
+const dailyNotesCurrentCard = document.getElementById("dailyNotesCurrentCard");
 const dailyNotesSearch = document.getElementById("dailyNotesSearch");
 const dailyNotesDateFilter = document.getElementById("dailyNotesDateFilter");
 const dailyNotesMonthFilter = document.getElementById("dailyNotesMonthFilter");
 const dailyNotesYearFilter = document.getElementById("dailyNotesYearFilter");
 const clearDailyNotesFiltersBtn = document.getElementById("clearDailyNotesFiltersBtn");
 const dailyNotesCalendarSidebar = document.getElementById("dailyNotesCalendarSidebar");
+const toggleDailyNotesHistoryBtn = document.getElementById("toggleDailyNotesHistoryBtn");
+const dailyNotesHistoryWrapper = document.getElementById("dailyNotesHistoryWrapper");
 
 const openDailyNoteModalBtn = document.getElementById("openDailyNoteModalBtn");
 const dailyNoteModal = document.getElementById("dailyNoteModal");
 const closeDailyNoteModalBtn = document.getElementById("closeDailyNoteModalBtn");
 const cancelDailyNoteBtn = document.getElementById("cancelDailyNoteBtn");
+const saveDraftDailyNoteBtn = document.getElementById("saveDraftDailyNoteBtn");
+const submitDailyNoteBtn = document.getElementById("submitDailyNoteBtn");
+const returnDailyNoteBtn = document.getElementById("returnDailyNoteBtn");
+const approveDailyNoteBtn = document.getElementById("approveDailyNoteBtn");
+
 const dailyNoteForm = document.getElementById("dailyNoteForm");
 const dailyNoteModalTitle = document.getElementById("dailyNoteModalTitle");
 const dailyNoteAiFeedback = document.getElementById("dailyNoteAiFeedback");
@@ -46,6 +53,8 @@ const dnFamilyUpdate = document.getElementById("dnFamilyUpdate");
 const dnBehaviourUpdate = document.getElementById("dnBehaviourUpdate");
 const dnActivities = document.getElementById("dnActivities");
 const dnActionsRequired = document.getElementById("dnActionsRequired");
+const dnWorkflowStatus = document.getElementById("dnWorkflowStatus");
+const dnManagerReviewComment = document.getElementById("dnManagerReviewComment");
 
 let youngPeople = [];
 let selectedYoungPerson = null;
@@ -62,6 +71,7 @@ let selectedFamilyRecords = [];
 let selectedKeyworkSessions = [];
 let selectedChronology = [];
 let selectedCompliance = null;
+let historyOpen = false;
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -238,7 +248,6 @@ function clearDisplay() {
 
   plansPanel.innerHTML = `<div class="panel-card"><h2>Plans</h2><p>Select a young person to load plans.</p></div>`;
   riskPanel.innerHTML = `<div class="panel-card"><h2>Risk</h2><p>Select a young person to load risk assessments.</p></div>`;
-  dailyNotesContent.innerHTML = `<div class="panel-card"><h2>Daily Notes</h2><p>Select a young person to load daily notes.</p></div>`;
   incidentsPanel.innerHTML = `<div class="panel-card"><h2>Incidents</h2><p>Select a young person to load incidents.</p></div>`;
   healthPanel.innerHTML = `<div class="panel-card"><h2>Health</h2><p>Select a young person to load health records.</p></div>`;
   educationPanel.innerHTML = `<div class="panel-card"><h2>Education</h2><p>Select a young person to load education records.</p></div>`;
@@ -247,6 +256,14 @@ function clearDisplay() {
   chronologyPanel.innerHTML = `<div class="panel-card"><h2>Chronology</h2><p>Select a young person to load chronology.</p></div>`;
   compliancePanel.innerHTML = `<div class="panel-card"><h2>Compliance</h2><p>Select a young person to load compliance.</p></div>`;
 
+  if (dailyNotesCurrentCard) {
+    dailyNotesCurrentCard.innerHTML = `<h3>Today’s Working Note</h3><p>No current draft loaded.</p>`;
+  }
+
+  if (dailyNotesContent) {
+    dailyNotesContent.innerHTML = `<div class="panel-card"><p>Previous daily notes will appear here when opened or searched.</p></div>`;
+  }
+
   if (dailyNotesSearch) dailyNotesSearch.value = "";
   if (dailyNotesDateFilter) dailyNotesDateFilter.value = "";
   if (dailyNotesMonthFilter) dailyNotesMonthFilter.value = "";
@@ -254,6 +271,9 @@ function clearDisplay() {
   if (dailyNotesCalendarSidebar) {
     dailyNotesCalendarSidebar.innerHTML = `<p class="sidebar-empty">Select a young person to load dates.</p>`;
   }
+  if (dailyNotesHistoryWrapper) dailyNotesHistoryWrapper.classList.remove("open");
+  if (toggleDailyNotesHistoryBtn) toggleDailyNotesHistoryBtn.textContent = "View Previous Notes";
+  historyOpen = false;
 }
 
 function renderAlerts() {
@@ -346,6 +366,82 @@ function renderRisks() {
   `;
 }
 
+function getDailyNoteStatusBadgeClass(status) {
+  const value = (status || "").toLowerCase();
+  if (value === "approved") return "badge success";
+  if (value === "submitted") return "badge warning";
+  if (value === "returned") return "badge alert";
+  return "badge muted";
+}
+
+function getCurrentDraftNote() {
+  const today = new Date().toISOString().split("T")[0];
+
+  const todaysDraft = selectedDailyNotes.find((note) => {
+    const noteDate = note.note_date ? note.note_date.split("T")[0] : "";
+    return noteDate === today && (note.workflow_status || "draft") === "draft";
+  });
+
+  if (todaysDraft) return todaysDraft;
+
+  return selectedDailyNotes.find((note) => (note.workflow_status || "draft") === "draft") || null;
+}
+
+function renderCurrentDraftCard() {
+  if (!dailyNotesCurrentCard) return;
+
+  const draft = getCurrentDraftNote();
+
+  if (!draft) {
+    dailyNotesCurrentCard.innerHTML = `
+      <h3>Today’s Working Note</h3>
+      <p>No draft note is currently open.</p>
+      <div class="current-note-actions">
+        <button class="btn" id="startDraftFromCardBtn">Start Today’s Note</button>
+      </div>
+    `;
+
+    document.getElementById("startDraftFromCardBtn")?.addEventListener("click", () => {
+      openDailyNoteModal();
+    });
+    return;
+  }
+
+  dailyNotesCurrentCard.innerHTML = `
+    <h3>Today’s Working Note</h3>
+    <p><strong>${escapeHtml(draft.shift_type || "Shift note")}</strong> — ${formatDate(draft.note_date)}</p>
+
+    <div class="current-note-status-row">
+      <span class="${getDailyNoteStatusBadgeClass(draft.workflow_status || "draft")}">${escapeHtml(draft.workflow_status || "draft")}</span>
+      <span class="badge muted">${escapeHtml(draft.significance || "standard")}</span>
+    </div>
+
+    <div class="daily-note-summary-grid" style="margin-top: 14px;">
+      ${renderDailyNoteSummaryItem("Views, wishes and feelings", draft.young_person_voice)}
+      ${renderDailyNoteSummaryItem("Behaviour and regulation", draft.behaviour_update)}
+      ${renderDailyNoteSummaryItem("Actions / follow-up", draft.actions_required)}
+      ${draft.manager_review_comment ? renderDailyNoteSummaryItem("Manager comment", draft.manager_review_comment) : ""}
+    </div>
+
+    <div class="current-note-actions">
+      <button class="btn" id="continueDraftBtn">Continue Draft</button>
+      <button class="btn secondary" id="submitDraftFromCardBtn">Submit for Review</button>
+    </div>
+  `;
+
+  document.getElementById("continueDraftBtn")?.addEventListener("click", () => {
+    openDailyNoteModal(draft);
+  });
+
+  document.getElementById("submitDraftFromCardBtn")?.addEventListener("click", async () => {
+    await updateDailyNoteWorkflow(draft, "submitted");
+  });
+}
+
+function getHistoricalNotes() {
+  return selectedDailyNotes.filter((note) => (note.workflow_status || "draft") !== "draft");
+}
+
 function groupDailyNotesByYearMonthDay(notes) {
   const grouped = {};
 
@@ -407,6 +503,7 @@ function renderDailyNoteCard(note) {
         </div>
 
         <div class="badge-row">
+          <span class="${getDailyNoteStatusBadgeClass(note.workflow_status || "draft")}">${escapeHtml(note.workflow_status || "draft")}</span>
           <span class="badge muted">${escapeHtml(note.significance || "standard")}</span>
         </div>
       </div>
@@ -421,10 +518,13 @@ function renderDailyNoteCard(note) {
         ${renderDailyNoteSummaryItem("Behaviour and regulation", note.behaviour_update)}
         ${renderDailyNoteSummaryItem("Activities / routines", note.activities)}
         ${renderDailyNoteSummaryItem("Actions / follow-up", note.actions_required)}
+        ${note.manager_review_comment ? renderDailyNoteSummaryItem("Manager comment", note.manager_review_comment) : ""}
       </div>
 
       <div class="daily-note-actions">
-        <button class="btn secondary edit-daily-note-btn" data-id="${note.id}">Edit</button>
+        <button class="btn secondary edit-daily-note-btn" data-id="${note.id}">Open</button>
+        ${note.workflow_status === "submitted" ? `<button class="btn secondary approve-daily-note-btn" data-id="${note.id}">Approve</button>` : ""}
+        ${note.workflow_status === "submitted" ? `<button class="btn secondary return-daily-note-btn" data-id="${note.id}">Send Back</button>` : ""}
       </div>
     </div>
   `;
@@ -475,6 +575,9 @@ function renderCalendarSidebar(notes) {
     button.addEventListener("click", () => {
       if (dailyNotesDateFilter) {
         dailyNotesDateFilter.value = button.dataset.date || "";
+        if (dailyNotesHistoryWrapper) dailyNotesHistoryWrapper.classList.add("open");
+        if (toggleDailyNotesHistoryBtn) toggleDailyNotesHistoryBtn.textContent = "Hide Previous Notes";
+        historyOpen = true;
         renderDailyNotes();
       }
     });
@@ -490,17 +593,40 @@ function wireDailyNoteButtons() {
       openDailyNoteModal(note);
     });
   });
+
+  document.querySelectorAll(".approve-daily-note-btn").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const id = Number(button.dataset.id);
+      const note = selectedDailyNotes.find((item) => item.id === id);
+      if (!note) return;
+      await updateDailyNoteWorkflow(note, "approved");
+    });
+  });
+
+  document.querySelectorAll(".return-daily-note-btn").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const id = Number(button.dataset.id);
+      const note = selectedDailyNotes.find((item) => item.id === id);
+      if (!note) return;
+      openDailyNoteModal(note);
+      if (dnWorkflowStatus) dnWorkflowStatus.value = "returned";
+    });
+  });
 }
 
 function renderDailyNotes() {
-  if (!selectedDailyNotes.length) {
-    dailyNotesContent.innerHTML = `<div class="panel-card"><h2>Daily Notes</h2><p>No daily notes recorded yet.</p></div>`;
+  renderCurrentDraftCard();
+
+  const historicalNotes = getHistoricalNotes();
+
+  if (!historicalNotes.length) {
+    dailyNotesContent.innerHTML = `<div class="panel-card"><p>No previous daily notes recorded yet.</p></div>`;
     populateDailyNotesYearFilter([]);
-    renderCalendarSidebar([]);
+    renderCalendarSidebar(selectedDailyNotes);
     return;
   }
 
-  populateDailyNotesYearFilter(selectedDailyNotes);
+  populateDailyNotesYearFilter(historicalNotes);
   renderCalendarSidebar(selectedDailyNotes);
 
   const searchTerm = (dailyNotesSearch?.value || "").trim().toLowerCase();
@@ -508,7 +634,7 @@ function renderDailyNotes() {
   const selectedMonth = dailyNotesMonthFilter?.value || "";
   const selectedYear = dailyNotesYearFilter?.value || "";
 
-  const filteredNotes = selectedDailyNotes.filter((note) => {
+  const filteredNotes = historicalNotes.filter((note) => {
     const noteDateRaw = note.note_date || "";
     const noteDate = noteDateRaw ? noteDateRaw.split("T")[0] : "";
     const noteMonth = noteDate ? noteDate.slice(0, 7) : "";
@@ -529,6 +655,8 @@ function renderDailyNotes() {
       note.significance,
       note.author_first_name,
       note.author_last_name,
+      note.manager_review_comment,
+      note.workflow_status,
     ].join(" ").toLowerCase();
 
     const matchesSearch = !searchTerm || searchableText.includes(searchTerm);
@@ -540,7 +668,7 @@ function renderDailyNotes() {
   });
 
   if (!filteredNotes.length) {
-    dailyNotesContent.innerHTML = `<div class="panel-card"><p>No daily notes match the selected filters.</p></div>`;
+    dailyNotesContent.innerHTML = `<div class="panel-card"><p>No previous daily notes match the selected filters.</p></div>`;
     return;
   }
 
@@ -1009,6 +1137,7 @@ function resetDailyNoteForm() {
   dailyNoteForm?.reset();
   if (dailyNoteIdInput) dailyNoteIdInput.value = "";
   if (dnSignificance) dnSignificance.value = "standard";
+  if (dnWorkflowStatus) dnWorkflowStatus.value = "draft";
   if (dailyNoteModalTitle) dailyNoteModalTitle.textContent = "Add Daily Note";
   if (dailyNoteAiFeedback) {
     dailyNoteAiFeedback.textContent = "AI review output will appear here once connected.";
@@ -1036,6 +1165,8 @@ function openDailyNoteModal(note = null) {
     if (dnBehaviourUpdate) dnBehaviourUpdate.value = note.behaviour_update || "";
     if (dnActivities) dnActivities.value = note.activities || "";
     if (dnActionsRequired) dnActionsRequired.value = note.actions_required || "";
+    if (dnWorkflowStatus) dnWorkflowStatus.value = note.workflow_status || "draft";
+    if (dnManagerReviewComment) dnManagerReviewComment.value = note.manager_review_comment || "";
   } else if (dnNoteDate) {
     dnNoteDate.value = new Date().toISOString().split("T")[0];
   }
@@ -1049,7 +1180,7 @@ function closeDailyNoteModal() {
   resetDailyNoteForm();
 }
 
-function buildDailyNotePayload() {
+function buildDailyNotePayload(statusOverride = null) {
   return {
     young_person_id: selectedYoungPerson?.id,
     home_id: selectedYoungPerson?.home_id ?? null,
@@ -1066,41 +1197,74 @@ function buildDailyNotePayload() {
     positives: dnPositives?.value?.trim() || null,
     actions_required: dnActionsRequired?.value?.trim() || null,
     significance: dnSignificance?.value || "standard",
+    workflow_status: statusOverride || dnWorkflowStatus?.value || "draft",
+    manager_review_comment: dnManagerReviewComment?.value?.trim() || null,
     author_id: null,
   };
 }
 
-async function saveDailyNote(event) {
-  event.preventDefault();
-
+async function persistDailyNote(statusOverride = null) {
   if (!selectedYoungPerson) {
     alert("Please select a young person first.");
     return;
   }
 
   const existingId = dailyNoteIdInput?.value?.trim();
-  const payload = buildDailyNotePayload();
+  const payload = buildDailyNotePayload(statusOverride);
 
   const url = existingId ? `/young-people/daily-notes/${existingId}` : "/young-people/daily-notes";
   const method = existingId ? "PUT" : "POST";
 
+  const response = await fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Failed to save daily note");
+  }
+
+  closeDailyNoteModal();
+  await loadYoungPerson(selectedYoungPerson.id);
+}
+
+async function saveDailyNote(event) {
+  event.preventDefault();
+
   try {
-    const response = await fetch(url, {
-      method,
+    await persistDailyNote();
+  } catch (error) {
+    console.error("Failed to save daily note:", error);
+    alert("Unable to save daily note. Please check your backend and try again.");
+  }
+}
+
+async function updateDailyNoteWorkflow(note, newStatus) {
+  try {
+    const payload = {
+      workflow_status: newStatus,
+      manager_review_comment: newStatus === "returned"
+        ? "Please review and update this note."
+        : note.manager_review_comment || null,
+    };
+
+    const response = await fetch(`/young-people/daily-notes/${note.id}`, {
+      method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(errorText || "Failed to save daily note");
+      throw new Error(errorText || "Failed to update note workflow");
     }
 
-    closeDailyNoteModal();
     await loadYoungPerson(selectedYoungPerson.id);
   } catch (error) {
-    console.error("Failed to save daily note:", error);
-    alert("Unable to save daily note. Please check your backend and try again.");
+    console.error(error);
+    alert("Unable to update note workflow.");
   }
 }
 
@@ -1149,10 +1313,50 @@ document.getElementById("editYoungPersonBtn")?.addEventListener("click", () => {
   window.location.href = "/young-people-page";
 });
 
-openDailyNoteModalBtn?.addEventListener("click", () => openDailyNoteModal());
+openDailyNoteModalBtn?.addEventListener("click", () => {
+  const currentDraft = getCurrentDraftNote();
+  openDailyNoteModal(currentDraft || null);
+});
+
 closeDailyNoteModalBtn?.addEventListener("click", closeDailyNoteModal);
 cancelDailyNoteBtn?.addEventListener("click", closeDailyNoteModal);
 dailyNoteForm?.addEventListener("submit", saveDailyNote);
+
+saveDraftDailyNoteBtn?.addEventListener("click", async () => {
+  try {
+    await persistDailyNote("draft");
+  } catch (error) {
+    console.error(error);
+    alert("Unable to save draft.");
+  }
+});
+
+submitDailyNoteBtn?.addEventListener("click", async () => {
+  try {
+    await persistDailyNote("submitted");
+  } catch (error) {
+    console.error(error);
+    alert("Unable to submit note for review.");
+  }
+});
+
+approveDailyNoteBtn?.addEventListener("click", async () => {
+  try {
+    await persistDailyNote("approved");
+  } catch (error) {
+    console.error(error);
+    alert("Unable to approve note.");
+  }
+});
+
+returnDailyNoteBtn?.addEventListener("click", async () => {
+  try {
+    await persistDailyNote("returned");
+  } catch (error) {
+    console.error(error);
+    alert("Unable to return note for amendments.");
+  }
+});
 
 dailyNoteModal?.addEventListener("click", (event) => {
   if (event.target === dailyNoteModal) {
@@ -1160,10 +1364,33 @@ dailyNoteModal?.addEventListener("click", (event) => {
   }
 });
 
-dailyNotesSearch?.addEventListener("input", renderDailyNotes);
-dailyNotesDateFilter?.addEventListener("change", renderDailyNotes);
-dailyNotesMonthFilter?.addEventListener("change", renderDailyNotes);
-dailyNotesYearFilter?.addEventListener("change", renderDailyNotes);
+dailyNotesSearch?.addEventListener("input", () => {
+  if (dailyNotesHistoryWrapper) dailyNotesHistoryWrapper.classList.add("open");
+  if (toggleDailyNotesHistoryBtn) toggleDailyNotesHistoryBtn.textContent = "Hide Previous Notes";
+  historyOpen = true;
+  renderDailyNotes();
+});
+
+dailyNotesDateFilter?.addEventListener("change", () => {
+  if (dailyNotesHistoryWrapper) dailyNotesHistoryWrapper.classList.add("open");
+  if (toggleDailyNotesHistoryBtn) toggleDailyNotesHistoryBtn.textContent = "Hide Previous Notes";
+  historyOpen = true;
+  renderDailyNotes();
+});
+
+dailyNotesMonthFilter?.addEventListener("change", () => {
+  if (dailyNotesHistoryWrapper) dailyNotesHistoryWrapper.classList.add("open");
+  if (toggleDailyNotesHistoryBtn) toggleDailyNotesHistoryBtn.textContent = "Hide Previous Notes";
+  historyOpen = true;
+  renderDailyNotes();
+});
+
+dailyNotesYearFilter?.addEventListener("change", () => {
+  if (dailyNotesHistoryWrapper) dailyNotesHistoryWrapper.classList.add("open");
+  if (toggleDailyNotesHistoryBtn) toggleDailyNotesHistoryBtn.textContent = "Hide Previous Notes";
+  historyOpen = true;
+  renderDailyNotes();
+});
 
 clearDailyNotesFiltersBtn?.addEventListener("click", () => {
   if (dailyNotesSearch) dailyNotesSearch.value = "";
@@ -1171,6 +1398,17 @@ clearDailyNotesFiltersBtn?.addEventListener("click", () => {
   if (dailyNotesMonthFilter) dailyNotesMonthFilter.value = "";
   if (dailyNotesYearFilter) dailyNotesYearFilter.value = "";
   renderDailyNotes();
+});
+
+toggleDailyNotesHistoryBtn?.addEventListener("click", () => {
+  historyOpen = !historyOpen;
+  if (historyOpen) {
+    dailyNotesHistoryWrapper?.classList.add("open");
+    toggleDailyNotesHistoryBtn.textContent = "Hide Previous Notes";
+  } else {
+    dailyNotesHistoryWrapper?.classList.remove("open");
+    toggleDailyNotesHistoryBtn.textContent = "View Previous Notes";
+  }
 });
 
 async function init() {
