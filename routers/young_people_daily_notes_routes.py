@@ -10,7 +10,7 @@ router = APIRouter(prefix="/young-people", tags=["Young People Daily Notes"])
 
 class DailyNoteCreate(BaseModel):
     young_person_id: int
-    home_id: int
+    home_id: int | None = None
     note_date: str
     shift_type: str
     mood: str | None = None
@@ -25,6 +25,9 @@ class DailyNoteCreate(BaseModel):
     actions_required: str | None = None
     significance: str = "standard"
     author_id: int | None = None
+    workflow_status: str = "draft"
+    manager_review_comment: str | None = None
+    approved_by: int | None = None
 
 
 class DailyNoteUpdate(BaseModel):
@@ -42,6 +45,23 @@ class DailyNoteUpdate(BaseModel):
     actions_required: str | None = None
     significance: str | None = None
     author_id: int | None = None
+    workflow_status: str | None = None
+    manager_review_comment: str | None = None
+    approved_by: int | None = None
+
+
+def apply_workflow_timestamps(update_data: dict, now: datetime) -> dict:
+    workflow_status = update_data.get("workflow_status")
+
+    if workflow_status == "submitted":
+        update_data["submitted_at"] = now
+    elif workflow_status == "approved":
+        update_data["approved_at"] = now
+    elif workflow_status == "returned":
+        update_data["returned_at"] = now
+
+    update_data["last_edited_at"] = now
+    return update_data
 
 
 @router.get("/{young_person_id}/daily-notes")
@@ -53,9 +73,12 @@ def list_daily_notes(
         SELECT
             dn.*,
             u.first_name AS author_first_name,
-            u.last_name AS author_last_name
+            u.last_name AS author_last_name,
+            approver.first_name AS approved_by_first_name,
+            approver.last_name AS approved_by_last_name
         FROM daily_notes dn
         LEFT JOIN users u ON dn.author_id = u.id
+        LEFT JOIN users approver ON dn.approved_by = approver.id
         WHERE dn.young_person_id = %s
         ORDER BY dn.note_date DESC, dn.id DESC
     """
@@ -76,9 +99,12 @@ def get_daily_note(
         SELECT
             dn.*,
             u.first_name AS author_first_name,
-            u.last_name AS author_last_name
+            u.last_name AS author_last_name,
+            approver.first_name AS approved_by_first_name,
+            approver.last_name AS approved_by_last_name
         FROM daily_notes dn
         LEFT JOIN users u ON dn.author_id = u.id
+        LEFT JOIN users approver ON dn.approved_by = approver.id
         WHERE dn.id = %s
         LIMIT 1
     """
@@ -100,6 +126,12 @@ def create_daily_note(
 ):
     now = datetime.utcnow()
 
+    workflow_status = payload.workflow_status or "draft"
+
+    submitted_at = now if workflow_status == "submitted" else None
+    approved_at = now if workflow_status == "approved" else None
+    returned_at = now if workflow_status == "returned" else None
+
     query = """
         INSERT INTO daily_notes (
             young_person_id,
@@ -118,10 +150,21 @@ def create_daily_note(
             actions_required,
             significance,
             author_id,
+            workflow_status,
+            manager_review_comment,
+            approved_by,
+            approved_at,
+            returned_at,
+            submitted_at,
+            last_edited_at,
             created_at,
             updated_at
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+            %s, %s, %s, %s, %s
+        )
         RETURNING id
     """
 
@@ -142,6 +185,13 @@ def create_daily_note(
         payload.actions_required,
         payload.significance,
         payload.author_id,
+        workflow_status,
+        payload.manager_review_comment,
+        payload.approved_by,
+        approved_at,
+        returned_at,
+        submitted_at,
+        now,
         now,
         now,
     )
@@ -169,14 +219,16 @@ def update_daily_note(
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields provided for update")
 
-    update_data["updated_at"] = datetime.utcnow()
+    now = datetime.utcnow()
+    update_data["updated_at"] = now
+    update_data = apply_workflow_timestamps(update_data, now)
 
     set_parts = []
     values = []
 
     for field, value in update_data.items():
-        set_parts.append(f"{field} = %s")
-        values.append(value)
+      set_parts.append(f"{field} = %s")
+      values.append(value)
 
     values.append(daily_note_id)
 
