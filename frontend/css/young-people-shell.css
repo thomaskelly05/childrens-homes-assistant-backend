@@ -298,7 +298,35 @@ body {
 }
 
 .daily-notes-main {
-  min-width: 0;
+  display: grid;
+  gap: 16px;
+}
+
+.history-toggle-row {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.hidden-history {
+  display: none;
+}
+
+.hidden-history.open {
+  display: block;
+}
+
+.current-note-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.current-note-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  flex-wrap: wrap;
 }
 
 .daily-notes-year-block {
@@ -367,6 +395,7 @@ body {
   display: flex;
   gap: 8px;
   margin-top: 14px;
+  flex-wrap: wrap;
 }
 
 .daily-note-summary-grid {
@@ -527,6 +556,20 @@ textarea {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.modal-footer-split {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.modal-footer-left,
+.modal-footer-right {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 @media (max-width: 1100px) {
