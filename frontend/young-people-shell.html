@@ -1,80 +1,423 @@
-<section class="tab-panel" id="tab-daily-notes">
-  <div class="tab-toolbar">
-    <div>
-      <h2>Daily Notes</h2>
-      <p class="tab-subtitle">Therapeutic daily recording aligned to the Quality Standards.</p>
-    </div>
-
-    <div class="tab-toolbar-actions">
-      <button class="btn" id="openDailyNoteModalBtn">Start / Continue Today’s Note</button>
-    </div>
-  </div>
-
-  <div class="daily-notes-layout">
-    <aside class="calendar-sidebar">
-      <div class="calendar-sidebar-card">
-        <h3>Find Notes</h3>
-        <p class="sidebar-text">Search or jump to previous notes when needed.</p>
-
-        <div class="form-group">
-          <label for="dailyNotesSearch">Search notes</label>
-          <input
-            type="text"
-            id="dailyNotesSearch"
-            placeholder="Search by keyword..."
-            spellcheck="false"
-          />
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Young Person Panel | IndiCare</title>
+  <link rel="stylesheet" href="/css/young-people-shell.css" />
+</head>
+<body>
+  <div class="yp-shell-page">
+    <header class="yp-shell-header">
+      <div class="yp-shell-header-top">
+        <div>
+          <h1>Young Person Panel</h1>
+          <p>Residential care record workspace</p>
         </div>
 
-        <div class="form-group">
-          <label for="dailyNotesDateFilter">Jump to date</label>
-          <input type="date" id="dailyNotesDateFilter" />
-        </div>
-
-        <div class="form-group">
-          <label for="dailyNotesMonthFilter">Filter by month</label>
-          <input type="month" id="dailyNotesMonthFilter" />
-        </div>
-
-        <div class="form-group">
-          <label for="dailyNotesYearFilter">Filter by year</label>
-          <select id="dailyNotesYearFilter">
-            <option value="">All years</option>
-          </select>
-        </div>
-
-        <button type="button" class="btn secondary full-width" id="clearDailyNotesFiltersBtn">
-          Clear Filters
-        </button>
-      </div>
-
-      <div class="calendar-sidebar-card">
-        <h3>Dates with Notes</h3>
-        <div id="dailyNotesCalendarSidebar" class="calendar-date-list">
-          <p class="sidebar-empty">Select a young person to load dates.</p>
+        <div class="yp-shell-actions">
+          <button class="btn secondary" id="backToListBtn">Back to list</button>
+          <button class="btn" id="editYoungPersonBtn">Edit profile</button>
         </div>
       </div>
-    </aside>
 
-    <div class="daily-notes-main">
-      <div id="dailyNotesCurrentCard" class="panel-card">
-        <h3>Today’s Working Note</h3>
-        <p>No current draft loaded.</p>
+      <div class="yp-selector-row">
+        <label for="youngPersonSelector">Select young person</label>
+        <select id="youngPersonSelector">
+          <option value="">Select a young person</option>
+        </select>
       </div>
 
-      <div class="history-toggle-row">
-        <button type="button" class="btn secondary" id="toggleDailyNotesHistoryBtn">
-          View Previous Notes
-        </button>
-      </div>
+      <div id="ypSummaryCards" class="yp-summary-cards"></div>
 
-      <div id="dailyNotesHistoryWrapper" class="hidden-history">
-        <div id="dailyNotesContent">
-          <div class="panel-card">
-            <p>Previous daily notes will appear here when opened or searched.</p>
+      <div class="yp-status-row">
+        <div>
+          <h3>Alerts</h3>
+          <div id="ypAlerts" class="badge-row">
+            <span class="badge muted">No alerts loaded</span>
+          </div>
+        </div>
+
+        <div>
+          <h3>Compliance</h3>
+          <div id="ypCompliance" class="badge-row">
+            <span class="badge muted">No compliance data yet</span>
           </div>
         </div>
       </div>
+    </header>
+
+    <nav class="yp-tabs" id="ypTabs">
+      <button class="tab-btn active" data-tab="overview">Overview</button>
+      <button class="tab-btn" data-tab="profile">Profile</button>
+      <button class="tab-btn" data-tab="plans">Plans</button>
+      <button class="tab-btn" data-tab="risk">Risk</button>
+      <button class="tab-btn" data-tab="daily-notes">Daily Notes</button>
+      <button class="tab-btn" data-tab="incidents">Incidents</button>
+      <button class="tab-btn" data-tab="health">Health</button>
+      <button class="tab-btn" data-tab="education">Education</button>
+      <button class="tab-btn" data-tab="family">Family</button>
+      <button class="tab-btn" data-tab="key-work">Key Work</button>
+      <button class="tab-btn" data-tab="chronology">Chronology</button>
+      <button class="tab-btn" data-tab="compliance">Compliance</button>
+    </nav>
+
+    <main class="yp-tab-content">
+      <section class="tab-panel active" id="tab-overview">
+        <div class="panel-grid">
+          <div class="panel-card">
+            <h2>Overview</h2>
+            <div id="overviewContent">Select a young person to load overview data.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-profile">
+        <div class="panel-card">
+          <h2>Profile</h2>
+          <div id="profileContent">Profile details will load here.</div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-plans">
+        <div class="panel-card">
+          <h2>Plans</h2>
+          <p>Support plans will load here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-risk">
+        <div class="panel-card">
+          <h2>Risk</h2>
+          <p>Risk assessments will load here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-daily-notes">
+        <div class="tab-toolbar">
+          <div>
+            <h2>Daily Notes</h2>
+            <p class="tab-subtitle">Therapeutic daily recording aligned to the Quality Standards.</p>
+          </div>
+
+          <div class="tab-toolbar-actions">
+            <button class="btn" id="openDailyNoteModalBtn">Start / Continue Today’s Note</button>
+          </div>
+        </div>
+
+        <div class="daily-notes-layout">
+          <aside class="calendar-sidebar">
+            <div class="calendar-sidebar-card">
+              <h3>Find Notes</h3>
+              <p class="sidebar-text">Search or jump to previous notes when needed.</p>
+
+              <div class="form-group">
+                <label for="dailyNotesSearch">Search notes</label>
+                <input
+                  type="text"
+                  id="dailyNotesSearch"
+                  placeholder="Search by keyword..."
+                  spellcheck="false"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="dailyNotesDateFilter">Jump to date</label>
+                <input type="date" id="dailyNotesDateFilter" />
+              </div>
+
+              <div class="form-group">
+                <label for="dailyNotesMonthFilter">Filter by month</label>
+                <input type="month" id="dailyNotesMonthFilter" />
+              </div>
+
+              <div class="form-group">
+                <label for="dailyNotesYearFilter">Filter by year</label>
+                <select id="dailyNotesYearFilter">
+                  <option value="">All years</option>
+                </select>
+              </div>
+
+              <button type="button" class="btn secondary full-width" id="clearDailyNotesFiltersBtn">
+                Clear Filters
+              </button>
+            </div>
+
+            <div class="calendar-sidebar-card">
+              <h3>Dates with Notes</h3>
+              <div id="dailyNotesCalendarSidebar" class="calendar-date-list">
+                <p class="sidebar-empty">Select a young person to load dates.</p>
+              </div>
+            </div>
+          </aside>
+
+          <div class="daily-notes-main">
+            <div id="dailyNotesCurrentCard" class="panel-card">
+              <h3>Today’s Working Note</h3>
+              <p>No current draft loaded.</p>
+            </div>
+
+            <div class="history-toggle-row">
+              <button type="button" class="btn secondary" id="toggleDailyNotesHistoryBtn">
+                View Previous Notes
+              </button>
+            </div>
+
+            <div id="dailyNotesHistoryWrapper" class="hidden-history">
+              <div id="dailyNotesContent">
+                <div class="panel-card">
+                  <p>Previous daily notes will appear here when opened or searched.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-incidents">
+        <div class="panel-card">
+          <h2>Incidents</h2>
+          <p>Incidents will load here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-health">
+        <div class="panel-card">
+          <h2>Health</h2>
+          <p>Health records will load here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-education">
+        <div class="panel-card">
+          <h2>Education</h2>
+          <p>Education records will load here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-family">
+        <div class="panel-card">
+          <h2>Family</h2>
+          <p>Family records will load here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-key-work">
+        <div class="panel-card">
+          <h2>Key Work</h2>
+          <p>Key work sessions will load here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-chronology">
+        <div class="panel-card">
+          <h2>Chronology</h2>
+          <p>Chronology will load here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-compliance">
+        <div class="panel-card">
+          <h2>Compliance</h2>
+          <p>Compliance items will load here.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-overlay hidden" id="dailyNoteModal">
+    <div class="modal-panel modal-xl">
+      <div class="modal-header">
+        <div>
+          <h2 id="dailyNoteModalTitle">Add Daily Note</h2>
+          <p>Create a therapeutic, child-centred daily record aligned to the Quality Standards.</p>
+        </div>
+        <button class="icon-btn" id="closeDailyNoteModalBtn" type="button">✕</button>
+      </div>
+
+      <form id="dailyNoteForm" class="modal-form">
+        <input type="hidden" id="dailyNoteId" />
+
+        <div class="form-section">
+          <h3>Record Details</h3>
+          <div class="form-grid two-col">
+            <div class="form-group">
+              <label for="dnNoteDate">Note Date</label>
+              <input type="date" id="dnNoteDate" name="note_date" required />
+            </div>
+
+            <div class="form-group">
+              <label for="dnShiftType">Shift Type</label>
+              <select id="dnShiftType" name="shift_type" required>
+                <option value="">Select shift</option>
+                <option value="Day">Day</option>
+                <option value="Evening">Evening</option>
+                <option value="Night">Night</option>
+                <option value="Waking Night">Waking Night</option>
+                <option value="Full Day">Full Day</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="dnMood">Presentation / Mood</label>
+              <input type="text" id="dnMood" name="mood" spellcheck="true" />
+            </div>
+
+            <div class="form-group">
+              <label for="dnSignificance">Significance</label>
+              <select id="dnSignificance" name="significance">
+                <option value="standard">Standard</option>
+                <option value="important">Important</option>
+                <option value="significant">Significant</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>1. Views, Wishes and Feelings</h3>
+          <p class="section-guidance">What did the young person express today?</p>
+          <div class="ai-field-tools">
+            <button type="button" class="ai-tool-btn" data-ai-action="spell-grammar" data-target="dnYoungPersonVoice">Check spelling and grammar</button>
+            <button type="button" class="ai-tool-btn" data-ai-action="child-centred" data-target="dnYoungPersonVoice">Make more child-centred</button>
+            <button type="button" class="ai-tool-btn" data-ai-action="therapeutic" data-target="dnYoungPersonVoice">Make therapeutic</button>
+          </div>
+          <textarea id="dnYoungPersonVoice" name="young_person_voice" rows="5" spellcheck="true"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>2. Relationships and Emotional Safety</h3>
+          <p class="section-guidance">How did the young person present emotionally and relationally today?</p>
+          <div class="ai-field-tools">
+            <button type="button" class="ai-tool-btn" data-ai-action="therapeutic" data-target="dnPresentation">Improve therapeutically</button>
+            <button type="button" class="ai-tool-btn" data-ai-action="reflective" data-target="dnPresentation">Make reflective</button>
+          </div>
+          <textarea id="dnPresentation" name="presentation" rows="5" spellcheck="true"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>3. Education</h3>
+          <div class="ai-field-tools">
+            <button type="button" class="ai-tool-btn" data-ai-action="professional" data-target="dnEducationUpdate">Make more professional</button>
+            <button type="button" class="ai-tool-btn" data-ai-action="concise" data-target="dnEducationUpdate">Make concise</button>
+          </div>
+          <textarea id="dnEducationUpdate" name="education_update" rows="4" spellcheck="true"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>4. Enjoyment and Achievement</h3>
+          <div class="ai-field-tools">
+            <button type="button" class="ai-tool-btn" data-ai-action="strengths-based" data-target="dnPositives">Make strengths-based</button>
+            <button type="button" class="ai-tool-btn" data-ai-action="expand" data-target="dnPositives">Expand professionally</button>
+          </div>
+          <textarea id="dnPositives" name="positives" rows="4" spellcheck="true"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>5. Health and Well-being</h3>
+          <div class="ai-field-tools">
+            <button type="button" class="ai-tool-btn" data-ai-action="spell-grammar" data-target="dnHealthUpdate">Check spelling and grammar</button>
+            <button type="button" class="ai-tool-btn" data-ai-action="professional" data-target="dnHealthUpdate">Improve writing</button>
+          </div>
+          <textarea id="dnHealthUpdate" name="health_update" rows="4" spellcheck="true"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>6. Family, Identity and Important Relationships</h3>
+          <div class="ai-field-tools">
+            <button type="button" class="ai-tool-btn" data-ai-action="child-centred" data-target="dnFamilyUpdate">Make child-centred</button>
+            <button type="button" class="ai-tool-btn" data-ai-action="therapeutic" data-target="dnFamilyUpdate">Make therapeutic</button>
+          </div>
+          <textarea id="dnFamilyUpdate" name="family_update" rows="4" spellcheck="true"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>7. Positive Behaviour Support and Regulation</h3>
+          <div class="ai-field-tools">
+            <button type="button" class="ai-tool-btn" data-ai-action="therapeutic" data-target="dnBehaviourUpdate">Reframe therapeutically</button>
+            <button type="button" class="ai-tool-btn" data-ai-action="pbs" data-target="dnBehaviourUpdate">Make PBS aligned</button>
+          </div>
+          <textarea id="dnBehaviourUpdate" name="behaviour_update" rows="5" spellcheck="true"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>8. Activities, Routines and Care Planning</h3>
+          <div class="ai-field-tools">
+            <button type="button" class="ai-tool-btn" data-ai-action="concise" data-target="dnActivities">Make concise</button>
+            <button type="button" class="ai-tool-btn" data-ai-action="expand" data-target="dnActivities">Expand professionally</button>
+          </div>
+          <textarea id="dnActivities" name="activities" rows="4" spellcheck="true"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>9. Reflection and Actions</h3>
+          <div class="ai-field-tools">
+            <button type="button" class="ai-tool-btn" data-ai-action="clear-actions" data-target="dnActionsRequired">Make actions clearer</button>
+            <button type="button" class="ai-tool-btn" data-ai-action="professional" data-target="dnActionsRequired">Improve writing</button>
+          </div>
+          <textarea id="dnActionsRequired" name="actions_required" rows="4" spellcheck="true"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>Final AI Review</h3>
+          <div class="final-ai-actions">
+            <button type="button" class="btn secondary ai-full-review-btn" data-ai-review="spellcheck">Spell check full note</button>
+            <button type="button" class="btn secondary ai-full-review-btn" data-ai-review="therapeutic">Make full note therapeutic</button>
+            <button type="button" class="btn secondary ai-full-review-btn" data-ai-review="quality-standards">Check Quality Standards coverage</button>
+            <button type="button" class="btn secondary ai-full-review-btn" data-ai-review="child-voice">Check child voice and strengths</button>
+          </div>
+          <div id="dailyNoteAiFeedback" class="ai-feedback-box">
+            AI review output will appear here once connected.
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>Note Workflow</h3>
+          <p class="section-guidance">
+            Save as a draft during the shift, then submit for manager review when complete.
+          </p>
+
+          <div class="form-grid two-col">
+            <div class="form-group">
+              <label for="dnManagerReviewComment">Manager / amendment comment</label>
+              <textarea
+                id="dnManagerReviewComment"
+                rows="3"
+                spellcheck="true"
+                placeholder="Used when a manager sends the note back for edits."
+              ></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="dnWorkflowStatus">Workflow status</label>
+              <select id="dnWorkflowStatus">
+                <option value="draft">Draft</option>
+                <option value="submitted">Submitted for review</option>
+                <option value="approved">Approved</option>
+                <option value="returned">Returned for amendments</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer modal-footer-split">
+          <div class="modal-footer-left">
+            <button type="button" class="btn secondary" id="saveDraftDailyNoteBtn">Save Draft</button>
+            <button type="button" class="btn secondary" id="submitDailyNoteBtn">Submit for Review</button>
+          </div>
+
+          <div class="modal-footer-right">
+            <button type="button" class="btn secondary" id="returnDailyNoteBtn">Send Back for Edits</button>
+            <button type="button" class="btn secondary" id="approveDailyNoteBtn">Approve</button>
+            <button type="button" class="btn secondary" id="cancelDailyNoteBtn">Cancel</button>
+            <button type="submit" class="btn" id="saveDailyNoteBtn">Save Changes</button>
+          </div>
+        </div>
+      </form>
     </div>
   </div>
-</section>
+
+  <script src="/js/young-people-shell.js"></script>
+</body>
+</html>
