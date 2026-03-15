@@ -3,982 +3,376 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Young People | IndiCare</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      font-family: Arial, sans-serif;
-    }
-
-    body {
-      margin: 0;
-      background: #f5f7fb;
-      color: #1f2937;
-    }
-
-    .page {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 24px;
-    }
-
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-
-    .title-wrap h1 {
-      margin: 0;
-      font-size: 28px;
-    }
-
-    .title-wrap p {
-      margin: 6px 0 0;
-      color: #6b7280;
-    }
-
-    .toolbar {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-
-    .input,
-    .select,
-    .button {
-      border: 1px solid #d1d5db;
-      border-radius: 10px;
-      padding: 10px 12px;
-      font-size: 14px;
-      background: #fff;
-    }
-
-    .input,
-    .select {
-      min-width: 200px;
-    }
-
-    .button {
-      cursor: pointer;
-      border: none;
-      background: #2563eb;
-      color: white;
-      font-weight: 600;
-      padding: 10px 16px;
-    }
-
-    .button.secondary {
-      background: #e5e7eb;
-      color: #111827;
-    }
-
-    .button.danger {
-      background: #dc2626;
-    }
-
-    .layout {
-      display: grid;
-      grid-template-columns: 340px 1fr;
-      gap: 20px;
-    }
-
-    .panel {
-      background: white;
-      border-radius: 16px;
-      padding: 18px;
-      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
-    }
-
-    .panel h2 {
-      margin: 0 0 14px;
-      font-size: 18px;
-    }
-
-    .list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      max-height: 72vh;
-      overflow-y: auto;
-    }
-
-    .yp-card {
-      border: 1px solid #e5e7eb;
-      border-radius: 14px;
-      padding: 14px;
-      cursor: pointer;
-      transition: 0.15s ease;
-      background: #fff;
-    }
-
-    .yp-card:hover {
-      border-color: #93c5fd;
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
-    }
-
-    .yp-card.active {
-      border-color: #2563eb;
-      background: #eff6ff;
-    }
-
-    .yp-top {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      align-items: center;
-    }
-
-    .yp-name {
-      font-size: 16px;
-      font-weight: 700;
-      margin: 0;
-    }
-
-    .badge {
-      display: inline-block;
-      border-radius: 999px;
-      padding: 5px 10px;
-      font-size: 12px;
-      font-weight: 700;
-      background: #e5e7eb;
-      color: #374151;
-      white-space: nowrap;
-    }
-
-    .badge.active {
-      background: #dcfce7;
-      color: #166534;
-    }
-
-    .badge.planned {
-      background: #fef3c7;
-      color: #92400e;
-    }
-
-    .badge.discharged {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
-    .badge.on_hold {
-      background: #e0e7ff;
-      color: #3730a3;
-    }
-
-    .badge.risk-low {
-      background: #dcfce7;
-      color: #166534;
-    }
-
-    .badge.risk-medium {
-      background: #fef3c7;
-      color: #92400e;
-    }
-
-    .badge.risk-high,
-    .badge.risk-critical {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
-    .muted {
-      color: #6b7280;
-      font-size: 13px;
-    }
-
-    .detail-header {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      align-items: flex-start;
-      flex-wrap: wrap;
-      margin-bottom: 18px;
-    }
-
-    .detail-title h2 {
-      margin: 0 0 8px;
-      font-size: 26px;
-    }
-
-    .detail-actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-      margin-bottom: 18px;
-    }
-
-    .summary-card {
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 14px;
-      padding: 14px;
-    }
-
-    .summary-card .label {
-      font-size: 12px;
-      color: #6b7280;
-      margin-bottom: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-    }
-
-    .summary-card .value {
-      font-size: 16px;
-      font-weight: 700;
-    }
-
-    .section-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
-    }
-
-    .section {
-      border: 1px solid #e5e7eb;
-      border-radius: 14px;
-      padding: 16px;
-      background: #fff;
-    }
-
-    .section h3 {
-      margin: 0 0 12px;
-      font-size: 16px;
-    }
-
-    .field-grid {
-      display: grid;
-      grid-template-columns: 180px 1fr;
-      gap: 10px 14px;
-    }
-
-    .field-label {
-      color: #6b7280;
-      font-size: 13px;
-      font-weight: 600;
-    }
-
-    .field-value {
-      font-size: 14px;
-      color: #111827;
-      word-break: break-word;
-    }
-
-    .empty-state {
-      padding: 40px 20px;
-      text-align: center;
-      color: #6b7280;
-      border: 2px dashed #d1d5db;
-      border-radius: 16px;
-      background: #fafafa;
-    }
-
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.5);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      z-index: 1000;
-    }
-
-    .modal-backdrop.open {
-      display: flex;
-    }
-
-    .modal {
-      background: white;
-      width: 100%;
-      max-width: 900px;
-      border-radius: 18px;
-      padding: 24px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
-      max-height: 92vh;
-      overflow-y: auto;
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: center;
-      margin-bottom: 16px;
-    }
-
-    .modal-header h2 {
-      margin: 0;
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .form-group.full {
-      grid-column: 1 / -1;
-    }
-
-    label {
-      font-size: 13px;
-      font-weight: 600;
-      color: #374151;
-    }
-
-    .modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      margin-top: 20px;
-      flex-wrap: wrap;
-    }
-
-    .status-row {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 8px;
-    }
-
-    .loading,
-    .error,
-    .success {
-      padding: 12px 14px;
-      border-radius: 12px;
-      margin-bottom: 12px;
-      font-size: 14px;
-    }
-
-    .loading {
-      background: #eff6ff;
-      color: #1d4ed8;
-    }
-
-    .error {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
-    .success {
-      background: #dcfce7;
-      color: #166534;
-    }
-
-    @media (max-width: 1100px) {
-      .layout {
-        grid-template-columns: 1fr;
-      }
-
-      .summary-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
-      .section-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (max-width: 700px) {
-      .summary-grid,
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .field-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .page {
-        padding: 16px;
-      }
-    }
-  </style>
+  <title>Young Person Panel | IndiCare</title>
+  <link rel="stylesheet" href="/css/young-people-shell.css" />
 </head>
 <body>
-  <div class="page">
-    <div class="topbar">
-      <div class="title-wrap">
-        <h1>Young People</h1>
-        <p>Manage profiles, placements, and core care details.</p>
+  <div class="yp-shell-page">
+    <header class="yp-shell-header">
+      <div class="yp-shell-header-top">
+        <div>
+          <h1>Young Person Panel</h1>
+          <p>Residential care record workspace</p>
+        </div>
+
+        <div class="yp-shell-actions">
+          <button class="btn secondary" id="backToListBtn">Back to list</button>
+          <button class="btn" id="editYoungPersonBtn">Edit profile</button>
+        </div>
       </div>
 
-      <div class="toolbar">
-        <input id="searchInput" class="input" type="text" placeholder="Search young people..." />
-        <input id="homeFilter" class="input" type="number" placeholder="Filter by home ID" />
-        <select id="archivedFilter" class="select">
-          <option value="false">Active only</option>
-          <option value="true">Archived only</option>
-        </select>
-        <button id="addYoungPersonBtn" class="button">+ Add young person</button>
-      </div>
-    </div>
-
-    <div id="messageArea"></div>
-
-    <div class="layout">
-      <div class="panel">
-        <h2>Young person list</h2>
-        <div id="youngPeopleList" class="list"></div>
+      <div class="yp-selector-row">
+        <label for="youngPersonSelector">Select young person</label>
+        <select id="youngPersonSelector"></select>
       </div>
 
-      <div class="panel">
-        <div id="youngPersonDetail">
-          <div class="empty-state">
-            Select a young person from the list to view their profile.
+      <div id="ypSummaryCards" class="yp-summary-cards"></div>
+
+      <div class="yp-status-row">
+        <div>
+          <h3>Alerts</h3>
+          <div id="ypAlerts" class="badge-row">
+            <span class="badge muted">No alerts loaded</span>
+          </div>
+        </div>
+
+        <div>
+          <h3>Compliance</h3>
+          <div id="ypCompliance" class="badge-row">
+            <span class="badge muted">No compliance data yet</span>
           </div>
         </div>
       </div>
-    </div>
+    </header>
+
+    <nav class="yp-tabs" id="ypTabs">
+      <button class="tab-btn active" data-tab="overview">Overview</button>
+      <button class="tab-btn" data-tab="profile">Profile</button>
+      <button class="tab-btn" data-tab="plans">Plans</button>
+      <button class="tab-btn" data-tab="risk">Risk</button>
+      <button class="tab-btn" data-tab="daily-notes">Daily Notes</button>
+      <button class="tab-btn" data-tab="incidents">Incidents</button>
+      <button class="tab-btn" data-tab="health">Health</button>
+      <button class="tab-btn" data-tab="education">Education</button>
+      <button class="tab-btn" data-tab="family">Family</button>
+      <button class="tab-btn" data-tab="key-work">Key Work</button>
+      <button class="tab-btn" data-tab="chronology">Chronology</button>
+      <button class="tab-btn" data-tab="compliance">Compliance</button>
+      <button class="tab-btn" data-tab="documents">Documents</button>
+    </nav>
+
+    <main class="yp-tab-content">
+      <section class="tab-panel active" id="tab-overview">
+        <div class="panel-grid">
+          <div class="panel-card">
+            <h2>Overview</h2>
+            <div id="overviewContent">Select a young person to load overview data.</div>
+          </div>
+
+          <div class="panel-card">
+            <h2>Recent activity</h2>
+            <div id="recentActivityContent">Chronology will appear here later.</div>
+          </div>
+
+          <div class="panel-card">
+            <h2>Open actions</h2>
+            <div id="openActionsContent">Tasks and compliance actions will appear here later.</div>
+          </div>
+
+          <div class="panel-card">
+            <h2>Current risks</h2>
+            <div id="currentRisksContent">Risk summary will appear here later.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-profile">
+        <div class="panel-card">
+          <h2>Profile</h2>
+          <div id="profileContent">Profile details will load here.</div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-plans">
+        <div class="panel-card">
+          <h2>Plans</h2>
+          <p>Support plans, placement plans, and SMART targets will live here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-risk">
+        <div class="panel-card">
+          <h2>Risk</h2>
+          <p>Risk assessments and reviews will live here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-daily-notes">
+        <div class="tab-toolbar">
+          <div>
+            <h2>Daily Notes</h2>
+            <p class="tab-subtitle">Therapeutic daily recording aligned to the Quality Standards.</p>
+          </div>
+
+          <div class="tab-toolbar-actions">
+            <button class="btn" id="openDailyNoteModalBtn">Add Daily Note</button>
+          </div>
+        </div>
+
+        <div id="dailyNotesContent">
+          <div class="panel-card">
+            <p>Daily note entries will live here.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-incidents">
+        <div class="panel-card">
+          <h2>Incidents</h2>
+          <p>Incidents and safeguarding records will live here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-health">
+        <div class="panel-card">
+          <h2>Health</h2>
+          <p>Health and medication records will live here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-education">
+        <div class="panel-card">
+          <h2>Education</h2>
+          <p>Education records will live here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-family">
+        <div class="panel-card">
+          <h2>Family</h2>
+          <p>Family contact records will live here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-key-work">
+        <div class="panel-card">
+          <h2>Key Work</h2>
+          <p>Key work sessions will live here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-chronology">
+        <div class="panel-card">
+          <h2>Chronology</h2>
+          <p>Automated chronology timeline will live here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-compliance">
+        <div class="panel-card">
+          <h2>Compliance</h2>
+          <p>Due, overdue and missing records will live here.</p>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-documents">
+        <div class="panel-card">
+          <h2>Documents</h2>
+          <p>Young person documents will live here.</p>
+        </div>
+      </section>
+    </main>
   </div>
 
-  <div id="youngPersonModalBackdrop" class="modal-backdrop">
-    <div class="modal">
+  <!-- DAILY NOTE MODAL -->
+  <div class="modal-overlay hidden" id="dailyNoteModal">
+    <div class="modal-panel modal-xl">
       <div class="modal-header">
-        <h2 id="modalTitle">Add young person</h2>
-        <button id="closeModalBtn" class="button secondary" type="button">Close</button>
+        <div>
+          <h2 id="dailyNoteModalTitle">Add Daily Note</h2>
+          <p>Create a therapeutic, child-centred daily record aligned to the Quality Standards.</p>
+        </div>
+        <button class="icon-btn" id="closeDailyNoteModalBtn" type="button">✕</button>
       </div>
 
-      <form id="youngPersonForm">
-        <div class="form-grid">
-          <div class="form-group">
-            <label for="home_id">Home ID</label>
-            <input id="home_id" name="home_id" class="input" type="number" required />
-          </div>
+      <form id="dailyNoteForm" class="modal-form">
+        <input type="hidden" id="dailyNoteId" />
 
-          <div class="form-group">
-            <label for="primary_keyworker_id">Primary keyworker ID</label>
-            <input id="primary_keyworker_id" name="primary_keyworker_id" class="input" type="number" />
-          </div>
+        <div class="form-section">
+          <h3>Record Details</h3>
+          <div class="form-grid two-col">
+            <div class="form-group">
+              <label for="dnNoteDate">Note Date</label>
+              <input type="date" id="dnNoteDate" name="note_date" required />
+            </div>
 
-          <div class="form-group">
-            <label for="first_name">First name</label>
-            <input id="first_name" name="first_name" class="input" type="text" required />
-          </div>
+            <div class="form-group">
+              <label for="dnShiftType">Shift Type</label>
+              <select id="dnShiftType" name="shift_type" required>
+                <option value="">Select shift</option>
+                <option value="Day">Day</option>
+                <option value="Evening">Evening</option>
+                <option value="Night">Night</option>
+                <option value="Waking Night">Waking Night</option>
+                <option value="Full Day">Full Day</option>
+              </select>
+            </div>
 
-          <div class="form-group">
-            <label for="last_name">Last name</label>
-            <input id="last_name" name="last_name" class="input" type="text" required />
-          </div>
+            <div class="form-group">
+              <label for="dnMood">Presentation / Mood</label>
+              <input type="text" id="dnMood" name="mood" spellcheck="true" placeholder="e.g. calm, anxious, unsettled, engaged" />
+            </div>
 
-          <div class="form-group">
-            <label for="preferred_name">Preferred name</label>
-            <input id="preferred_name" name="preferred_name" class="input" type="text" />
-          </div>
-
-          <div class="form-group">
-            <label for="date_of_birth">Date of birth</label>
-            <input id="date_of_birth" name="date_of_birth" class="input" type="date" required />
-          </div>
-
-          <div class="form-group">
-            <label for="gender">Gender</label>
-            <input id="gender" name="gender" class="input" type="text" />
-          </div>
-
-          <div class="form-group">
-            <label for="ethnicity">Ethnicity</label>
-            <input id="ethnicity" name="ethnicity" class="input" type="text" />
-          </div>
-
-          <div class="form-group">
-            <label for="nhs_number">NHS number</label>
-            <input id="nhs_number" name="nhs_number" class="input" type="text" />
-          </div>
-
-          <div class="form-group">
-            <label for="local_id_number">Local ID number</label>
-            <input id="local_id_number" name="local_id_number" class="input" type="text" />
-          </div>
-
-          <div class="form-group">
-            <label for="admission_date">Admission date</label>
-            <input id="admission_date" name="admission_date" class="input" type="date" required />
-          </div>
-
-          <div class="form-group">
-            <label for="discharge_date">Discharge date</label>
-            <input id="discharge_date" name="discharge_date" class="input" type="date" />
-          </div>
-
-          <div class="form-group">
-            <label for="placement_status">Placement status</label>
-            <select id="placement_status" name="placement_status" class="select">
-              <option value="active">Active</option>
-              <option value="planned">Planned</option>
-              <option value="discharged">Discharged</option>
-              <option value="on_hold">On hold</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="summary_risk_level">Summary risk level</label>
-            <select id="summary_risk_level" name="summary_risk_level" class="select">
-              <option value="">Select risk level</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
-            </select>
-          </div>
-
-          <div class="form-group full">
-            <label for="photo_url">Photo URL</label>
-            <input id="photo_url" name="photo_url" class="input" type="text" />
+            <div class="form-group">
+              <label for="dnSignificance">Significance</label>
+              <select id="dnSignificance" name="significance">
+                <option value="standard">Standard</option>
+                <option value="important">Important</option>
+                <option value="significant">Significant</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div class="modal-actions">
-          <button id="archiveBtn" class="button danger" type="button" style="display:none;">
-            Archive
-          </button>
-          <button class="button secondary" type="button" id="cancelBtn">Cancel</button>
-          <button class="button" type="submit" id="saveBtn">Save</button>
+        <div class="form-section">
+          <h3>1. Views, Wishes and Feelings</h3>
+          <p class="section-guidance">
+            Record the young person’s voice clearly. What did they say, communicate, request, avoid, or appear to feel today?
+          </p>
+          <div class="ai-field-tools">
+            <button type="button" class="ai-tool-btn" data-ai-action="spell-grammar" data-target="dnYoungPersonVoice">Check spelling and grammar</button>
+            <button type="button" class="ai-tool-btn" data-ai-action="child-centred" data-target="dnYoungPersonVoice">Make more child-centred</button>
+            <button type="button" class="ai-tool-btn" data-ai-action="therapeutic" data-target="dnYoungPersonVoice">Make therapeutic</button>
+          </div>
+          <textarea id="dnYoungPersonVoice" name="young_person_voice" rows="5" spellcheck="true" placeholder="What did the young person express in their own words, behaviour or communication today?"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>2. Relationships and Emotional Safety</h3>
+          <p class="section-guidance">
+            Reflect on interactions with staff, peers and others. Note moments of connection, co-regulation, trust, conflict or repair.
+          </p>
+          <div class="ai-field-tools">
+            <button type="button" class="ai-tool-btn" data-ai-action="therapeutic" data-target="dnPresentation">Improve therapeutically</button>
+            <button type="button" class="ai-tool-btn" data-ai-action="reflective" data-target="dnPresentation">Make reflective</button>
+          </div>
+          <textarea id="dnPresentation" name="presentation" rows="5" spellcheck="true" placeholder="How did the young person present emotionally and relationally today?"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>3. Education</h3>
+          <p class="section-guidance">
+            Record learning engagement, attendance, barriers, support offered and any educational achievements.
+          </p>
+          <div class="ai-field-tools">
+            <button type="button" class="ai-tool-btn" data-ai-action="professional" data-target="dnEducationUpdate">Make more professional</button>
+            <button type="button" class="ai-tool-btn" data-ai-action="concise" data-target="dnEducationUpdate">Make concise</button>
+          </div>
+          <textarea id="dnEducationUpdate" name="education_update" rows="4" spellcheck="true" placeholder="How did the young person engage with education or learning today?"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>4. Enjoyment and Achievement</h3>
+          <p class="section-guidance">
+            Capture positives, strengths, interests, successes and enjoyable moments from the day.
+          </p>
+          <div class="ai-field-tools">
+            <button type="button" class="ai-tool-btn" data-ai-action="strengths-based" data-target="dnPositives">Make strengths-based</button>
+            <button type="button" class="ai-tool-btn" data-ai-action="expand" data-target="dnPositives">Expand professionally</button>
+          </div>
+          <textarea id="dnPositives" name="positives" rows="4" spellcheck="true" placeholder="What went well? What strengths, achievements or enjoyable experiences were observed?"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>5. Health and Well-being</h3>
+          <p class="section-guidance">
+            Note physical health, sleep, food, medication impact, emotional wellbeing or any health concerns.
+          </p>
+          <div class="ai-field-tools">
+            <button type="button" class="ai-tool-btn" data-ai-action="spell-grammar" data-target="dnHealthUpdate">Check spelling and grammar</button>
+            <button type="button" class="ai-tool-btn" data-ai-action="professional" data-target="dnHealthUpdate">Improve writing</button>
+          </div>
+          <textarea id="dnHealthUpdate" name="health_update" rows="4" spellcheck="true" placeholder="Any updates about physical health, emotional wellbeing, sleep, appetite or medication?"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>6. Family, Identity and Important Relationships</h3>
+          <p class="section-guidance">
+            Record family time, significant contact, identity-related matters and their emotional impact.
+          </p>
+          <div class="ai-field-tools">
+            <button type="button" class="ai-tool-btn" data-ai-action="child-centred" data-target="dnFamilyUpdate">Make child-centred</button>
+            <button type="button" class="ai-tool-btn" data-ai-action="therapeutic" data-target="dnFamilyUpdate">Make therapeutic</button>
+          </div>
+          <textarea id="dnFamilyUpdate" name="family_update" rows="4" spellcheck="true" placeholder="Any family contact, identity issues, or significant relationship updates today?"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>7. Positive Behaviour Support and Regulation</h3>
+          <p class="section-guidance">
+            Describe behaviour support using therapeutic, non-judgemental language. Include triggers, regulation needs and what helped.
+          </p>
+          <div class="ai-field-tools">
+            <button type="button" class="ai-tool-btn" data-ai-action="therapeutic" data-target="dnBehaviourUpdate">Reframe therapeutically</button>
+            <button type="button" class="ai-tool-btn" data-ai-action="pbs" data-target="dnBehaviourUpdate">Make PBS aligned</button>
+          </div>
+          <textarea id="dnBehaviourUpdate" name="behaviour_update" rows="5" spellcheck="true" placeholder="What behaviours needed support today? What may have triggered them, and what helped the young person regulate?"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>8. Activities, Routines and Care Planning</h3>
+          <p class="section-guidance">
+            Record participation, routines, structure, transitions and how care planning was reflected in the day.
+          </p>
+          <div class="ai-field-tools">
+            <button type="button" class="ai-tool-btn" data-ai-action="concise" data-target="dnActivities">Make concise</button>
+            <button type="button" class="ai-tool-btn" data-ai-action="expand" data-target="dnActivities">Expand professionally</button>
+          </div>
+          <textarea id="dnActivities" name="activities" rows="4" spellcheck="true" placeholder="What activities, routines or planned supports took place today?"></textarea>
+        </div>
+
+        <div class="form-section">
+          <h3>9. Safeguarding, Reflection and Next Steps</h3>
+          <p class="section-guidance">
+            Record any concerns, reflection on support provided, and clear next actions for the team.
+          </p>
+          <div class="form-grid one-col">
+            <div class="form-group">
+              <label for="dnActionsRequired">Actions / Follow-up</label>
+              <div class="ai-field-tools">
+                <button type="button" class="ai-tool-btn" data-ai-action="clear-actions" data-target="dnActionsRequired">Make actions clearer</button>
+                <button type="button" class="ai-tool-btn" data-ai-action="professional" data-target="dnActionsRequired">Improve writing</button>
+              </div>
+              <textarea id="dnActionsRequired" name="actions_required" rows="4" spellcheck="true" placeholder="What needs to happen next? Any safeguarding follow-up, communication, review or support required?"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>Final AI Review</h3>
+          <p class="section-guidance">
+            Use AI to review the full note for therapeutic language, spelling, child voice, strengths-based wording and Quality Standards coverage.
+          </p>
+          <div class="final-ai-actions">
+            <button type="button" class="btn secondary ai-full-review-btn" data-ai-review="spellcheck">Spell check full note</button>
+            <button type="button" class="btn secondary ai-full-review-btn" data-ai-review="therapeutic">Make full note therapeutic</button>
+            <button type="button" class="btn secondary ai-full-review-btn" data-ai-review="quality-standards">Check Quality Standards coverage</button>
+            <button type="button" class="btn secondary ai-full-review-btn" data-ai-review="child-voice">Check child voice and strengths</button>
+          </div>
+          <div id="dailyNoteAiFeedback" class="ai-feedback-box">
+            AI review output will appear here once connected.
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn secondary" id="cancelDailyNoteBtn">Cancel</button>
+          <button type="submit" class="btn" id="saveDailyNoteBtn">Save Daily Note</button>
         </div>
       </form>
     </div>
   </div>
 
-  <script>
-    const apiBase = "/young-people";
-
-    let youngPeople = [];
-    let selectedYoungPersonId = null;
-    let editingYoungPersonId = null;
-
-    const listEl = document.getElementById("youngPeopleList");
-    const detailEl = document.getElementById("youngPersonDetail");
-    const searchInput = document.getElementById("searchInput");
-    const homeFilter = document.getElementById("homeFilter");
-    const archivedFilter = document.getElementById("archivedFilter");
-    const messageArea = document.getElementById("messageArea");
-
-    const modalBackdrop = document.getElementById("youngPersonModalBackdrop");
-    const modalTitle = document.getElementById("modalTitle");
-    const form = document.getElementById("youngPersonForm");
-    const archiveBtn = document.getElementById("archiveBtn");
-
-    document.getElementById("addYoungPersonBtn").addEventListener("click", openCreateModal);
-    document.getElementById("closeModalBtn").addEventListener("click", closeModal);
-    document.getElementById("cancelBtn").addEventListener("click", closeModal);
-    archiveBtn.addEventListener("click", archiveSelectedYoungPerson);
-
-    searchInput.addEventListener("input", renderList);
-    homeFilter.addEventListener("input", loadYoungPeople);
-    archivedFilter.addEventListener("change", loadYoungPeople);
-
-    form.addEventListener("submit", handleFormSubmit);
-
-    function showMessage(type, text) {
-      messageArea.innerHTML = `<div class="${type}">${text}</div>`;
-      setTimeout(() => {
-        messageArea.innerHTML = "";
-      }, 4000);
-    }
-
-    function calcAge(dateString) {
-      if (!dateString) return "";
-      const dob = new Date(dateString);
-      const today = new Date();
-      let age = today.getFullYear() - dob.getFullYear();
-      const m = today.getMonth() - dob.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
-      return age;
-    }
-
-    function formatDate(value) {
-      if (!value) return "—";
-      const date = new Date(value);
-      if (Number.isNaN(date.getTime())) return value;
-      return date.toLocaleDateString("en-GB");
-    }
-
-    function statusBadgeClass(status) {
-      if (!status) return "badge";
-      return `badge ${status}`;
-    }
-
-    function riskBadgeClass(risk) {
-      if (!risk) return "badge";
-      return `badge risk-${risk}`;
-    }
-
-    async function loadYoungPeople() {
-      listEl.innerHTML = `<div class="loading">Loading young people...</div>`;
-
-      try {
-        const params = new URLSearchParams();
-        if (homeFilter.value) params.append("home_id", homeFilter.value);
-        params.append("archived", archivedFilter.value);
-
-        const res = await fetch(`${apiBase}?${params.toString()}`);
-        if (!res.ok) throw new Error("Failed to load young people");
-
-        youngPeople = await res.json();
-        renderList();
-
-        if (selectedYoungPersonId) {
-          const stillExists = youngPeople.find(p => p.id === selectedYoungPersonId);
-          if (stillExists) {
-            renderDetail(stillExists);
-          } else {
-            selectedYoungPersonId = null;
-            detailEl.innerHTML = `
-              <div class="empty-state">
-                Select a young person from the list to view their profile.
-              </div>
-            `;
-          }
-        }
-      } catch (err) {
-        console.error(err);
-        listEl.innerHTML = `<div class="error">Could not load young people.</div>`;
-      }
-    }
-
-    function renderList() {
-      const search = searchInput.value.trim().toLowerCase();
-
-      const filtered = youngPeople.filter(person => {
-        const fullName = `${person.first_name || ""} ${person.last_name || ""}`.toLowerCase();
-        const preferred = (person.preferred_name || "").toLowerCase();
-        const homeName = (person.home_name || "").toLowerCase();
-
-        return (
-          fullName.includes(search) ||
-          preferred.includes(search) ||
-          homeName.includes(search)
-        );
-      });
-
-      if (!filtered.length) {
-        listEl.innerHTML = `<div class="empty-state">No young people found.</div>`;
-        return;
-      }
-
-      listEl.innerHTML = filtered.map(person => {
-        const isActive = person.id === selectedYoungPersonId ? "active" : "";
-        const age = calcAge(person.date_of_birth);
-
-        return `
-          <div class="yp-card ${isActive}" data-id="${person.id}">
-            <div class="yp-top">
-              <div>
-                <p class="yp-name">${person.preferred_name || person.first_name} ${person.last_name || ""}</p>
-                <div class="muted">${person.home_name || "Unknown home"}</div>
-              </div>
-              <span class="${statusBadgeClass(person.placement_status)}">${person.placement_status || "unknown"}</span>
-            </div>
-
-            <div class="status-row">
-              ${age !== "" ? `<span class="badge">${age} yrs</span>` : ""}
-              ${person.summary_risk_level ? `<span class="${riskBadgeClass(person.summary_risk_level)}">${person.summary_risk_level} risk</span>` : ""}
-            </div>
-
-            <div class="muted" style="margin-top:10px;">
-              DOB: ${formatDate(person.date_of_birth)}
-            </div>
-          </div>
-        `;
-      }).join("");
-
-      document.querySelectorAll(".yp-card").forEach(card => {
-        card.addEventListener("click", () => {
-          const id = Number(card.dataset.id);
-          const person = youngPeople.find(p => p.id === id);
-          if (!person) return;
-
-          selectedYoungPersonId = id;
-          renderList();
-          renderDetail(person);
-        });
-      });
-    }
-
-    function renderDetail(person) {
-      const age = calcAge(person.date_of_birth);
-
-      detailEl.innerHTML = `
-        <div class="detail-header">
-          <div class="detail-title">
-            <h2>${person.preferred_name || person.first_name} ${person.last_name || ""}</h2>
-            <div class="status-row">
-              <span class="${statusBadgeClass(person.placement_status)}">${person.placement_status || "unknown"}</span>
-              ${person.summary_risk_level ? `<span class="${riskBadgeClass(person.summary_risk_level)}">${person.summary_risk_level} risk</span>` : ""}
-              ${age !== "" ? `<span class="badge">${age} years old</span>` : ""}
-            </div>
-          </div>
-
-          <div class="detail-actions">
-            <button class="button secondary" onclick="openEditModal(${person.id})">Edit profile</button>
-          </div>
-        </div>
-
-        <div class="summary-grid">
-          <div class="summary-card">
-            <div class="label">Home</div>
-            <div class="value">${person.home_name || "—"}</div>
-          </div>
-          <div class="summary-card">
-            <div class="label">DOB</div>
-            <div class="value">${formatDate(person.date_of_birth)}</div>
-          </div>
-          <div class="summary-card">
-            <div class="label">Admission</div>
-            <div class="value">${formatDate(person.admission_date)}</div>
-          </div>
-          <div class="summary-card">
-            <div class="label">Keyworker</div>
-            <div class="value">${person.keyworker_first_name ? `${person.keyworker_first_name} ${person.keyworker_last_name || ""}` : "—"}</div>
-          </div>
-        </div>
-
-        <div class="section-grid">
-          <div class="section">
-            <h3>Basic details</h3>
-            <div class="field-grid">
-              <div class="field-label">First name</div>
-              <div class="field-value">${person.first_name || "—"}</div>
-
-              <div class="field-label">Last name</div>
-              <div class="field-value">${person.last_name || "—"}</div>
-
-              <div class="field-label">Preferred name</div>
-              <div class="field-value">${person.preferred_name || "—"}</div>
-
-              <div class="field-label">Gender</div>
-              <div class="field-value">${person.gender || "—"}</div>
-
-              <div class="field-label">Ethnicity</div>
-              <div class="field-value">${person.ethnicity || "—"}</div>
-
-              <div class="field-label">NHS number</div>
-              <div class="field-value">${person.nhs_number || "—"}</div>
-
-              <div class="field-label">Local ID</div>
-              <div class="field-value">${person.local_id_number || "—"}</div>
-            </div>
-          </div>
-
-          <div class="section">
-            <h3>Placement details</h3>
-            <div class="field-grid">
-              <div class="field-label">Placement status</div>
-              <div class="field-value">${person.placement_status || "—"}</div>
-
-              <div class="field-label">Admission date</div>
-              <div class="field-value">${formatDate(person.admission_date)}</div>
-
-              <div class="field-label">Discharge date</div>
-              <div class="field-value">${formatDate(person.discharge_date)}</div>
-
-              <div class="field-label">Summary risk level</div>
-              <div class="field-value">${person.summary_risk_level || "—"}</div>
-
-              <div class="field-label">Home</div>
-              <div class="field-value">${person.home_name || "—"}</div>
-
-              <div class="field-label">Keyworker</div>
-              <div class="field-value">${person.keyworker_first_name ? `${person.keyworker_first_name} ${person.keyworker_last_name || ""}` : "—"}</div>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    function openCreateModal() {
-      editingYoungPersonId = null;
-      modalTitle.textContent = "Add young person";
-      archiveBtn.style.display = "none";
-      form.reset();
-      document.getElementById("placement_status").value = "active";
-      document.getElementById("summary_risk_level").value = "";
-      modalBackdrop.classList.add("open");
-    }
-
-    window.openEditModal = async function (id) {
-      try {
-        const res = await fetch(`${apiBase}/${id}`);
-        if (!res.ok) throw new Error("Failed to load young person");
-
-        const person = await res.json();
-        editingYoungPersonId = id;
-        modalTitle.textContent = "Edit young person";
-        archiveBtn.style.display = "inline-block";
-
-        setFormValue("home_id", person.home_id);
-        setFormValue("first_name", person.first_name);
-        setFormValue("last_name", person.last_name);
-        setFormValue("preferred_name", person.preferred_name);
-        setFormValue("date_of_birth", normaliseDateInput(person.date_of_birth));
-        setFormValue("gender", person.gender);
-        setFormValue("ethnicity", person.ethnicity);
-        setFormValue("nhs_number", person.nhs_number);
-        setFormValue("local_id_number", person.local_id_number);
-        setFormValue("admission_date", normaliseDateInput(person.admission_date));
-        setFormValue("discharge_date", normaliseDateInput(person.discharge_date));
-        setFormValue("placement_status", person.placement_status || "active");
-        setFormValue("primary_keyworker_id", person.primary_keyworker_id);
-        setFormValue("summary_risk_level", person.summary_risk_level || "");
-        setFormValue("photo_url", person.photo_url);
-
-        modalBackdrop.classList.add("open");
-      } catch (err) {
-        console.error(err);
-        showMessage("error", "Could not load young person details.");
-      }
-    };
-
-    function setFormValue(id, value) {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.value = value ?? "";
-    }
-
-    function normaliseDateInput(value) {
-      if (!value) return "";
-      const date = new Date(value);
-      if (Number.isNaN(date.getTime())) return value;
-      return date.toISOString().slice(0, 10);
-    }
-
-    function closeModal() {
-      modalBackdrop.classList.remove("open");
-      form.reset();
-      editingYoungPersonId = null;
-    }
-
-    async function handleFormSubmit(event) {
-      event.preventDefault();
-
-      const payload = {
-        home_id: Number(document.getElementById("home_id").value),
-        first_name: document.getElementById("first_name").value.trim(),
-        last_name: document.getElementById("last_name").value.trim(),
-        preferred_name: emptyToNull(document.getElementById("preferred_name").value),
-        date_of_birth: document.getElementById("date_of_birth").value,
-        gender: emptyToNull(document.getElementById("gender").value),
-        ethnicity: emptyToNull(document.getElementById("ethnicity").value),
-        nhs_number: emptyToNull(document.getElementById("nhs_number").value),
-        local_id_number: emptyToNull(document.getElementById("local_id_number").value),
-        admission_date: document.getElementById("admission_date").value,
-        discharge_date: emptyToNull(document.getElementById("discharge_date").value),
-        placement_status: document.getElementById("placement_status").value,
-        primary_keyworker_id: numberOrNull(document.getElementById("primary_keyworker_id").value),
-        summary_risk_level: emptyToNull(document.getElementById("summary_risk_level").value),
-        photo_url: emptyToNull(document.getElementById("photo_url").value),
-        archived: false
-      };
-
-      try {
-        let res;
-        let activeEditId = editingYoungPersonId;
-
-        if (editingYoungPersonId) {
-          res = await fetch(`${apiBase}/${editingYoungPersonId}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          });
-        } else {
-          res = await fetch(apiBase, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          });
-        }
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.detail || "Failed to save young person");
-        }
-
-        closeModal();
-        await loadYoungPeople();
-
-        if (activeEditId) {
-          selectedYoungPersonId = activeEditId;
-          const updated = youngPeople.find(p => p.id === activeEditId);
-          if (updated) renderDetail(updated);
-          showMessage("success", "Young person updated successfully.");
-        } else {
-          selectedYoungPersonId = data.id;
-          const created = youngPeople.find(p => p.id === data.id);
-          if (created) renderDetail(created);
-          showMessage("success", "Young person created successfully.");
-        }
-      } catch (err) {
-        console.error(err);
-        showMessage("error", err.message || "Could not save young person.");
-      }
-    }
-
-    async function archiveSelectedYoungPerson() {
-      if (!editingYoungPersonId) return;
-
-      const confirmed = window.confirm("Archive this young person?");
-      if (!confirmed) return;
-
-      try {
-        const res = await fetch(`${apiBase}/${editingYoungPersonId}`, {
-          method: "DELETE"
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.detail || "Failed to archive young person");
-        }
-
-        closeModal();
-        selectedYoungPersonId = null;
-        await loadYoungPeople();
-        detailEl.innerHTML = `
-          <div class="empty-state">
-            Select a young person from the list to view their profile.
-          </div>
-        `;
-        showMessage("success", "Young person archived successfully.");
-      } catch (err) {
-        console.error(err);
-        showMessage("error", err.message || "Could not archive young person.");
-      }
-    }
-
-    function emptyToNull(value) {
-      const clean = value.trim();
-      return clean === "" ? null : clean;
-    }
-
-    function numberOrNull(value) {
-      if (value === "" || value === null || value === undefined) return null;
-      const num = Number(value);
-      return Number.isNaN(num) ? null : num;
-    }
-
-    async function init() {
-      await loadYoungPeople();
-    }
-
-    init();
-  </script>
+  <script src="/js/young-people-shell.js"></script>
 </body>
 </html>
