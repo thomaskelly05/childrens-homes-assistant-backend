@@ -4,6 +4,7 @@ const alertsContainer = document.getElementById("ypAlerts");
 const complianceContainer = document.getElementById("ypCompliance");
 const overviewContent = document.getElementById("overviewContent");
 const profileContent = document.getElementById("profileContent");
+
 const plansPanel = document.getElementById("tab-plans");
 const riskPanel = document.getElementById("tab-risk");
 const dailyNotesPanel = document.getElementById("tab-daily-notes");
@@ -14,6 +15,37 @@ const familyPanel = document.getElementById("tab-family");
 const keyworkPanel = document.getElementById("tab-key-work");
 const chronologyPanel = document.getElementById("tab-chronology");
 const compliancePanel = document.getElementById("tab-compliance");
+
+const dailyNotesContent = document.getElementById("dailyNotesContent");
+const dailyNotesSearch = document.getElementById("dailyNotesSearch");
+const dailyNotesDateFilter = document.getElementById("dailyNotesDateFilter");
+const dailyNotesMonthFilter = document.getElementById("dailyNotesMonthFilter");
+const dailyNotesYearFilter = document.getElementById("dailyNotesYearFilter");
+const clearDailyNotesFiltersBtn = document.getElementById("clearDailyNotesFiltersBtn");
+const dailyNotesCalendarSidebar = document.getElementById("dailyNotesCalendarSidebar");
+
+const openDailyNoteModalBtn = document.getElementById("openDailyNoteModalBtn");
+const dailyNoteModal = document.getElementById("dailyNoteModal");
+const closeDailyNoteModalBtn = document.getElementById("closeDailyNoteModalBtn");
+const cancelDailyNoteBtn = document.getElementById("cancelDailyNoteBtn");
+const dailyNoteForm = document.getElementById("dailyNoteForm");
+const dailyNoteModalTitle = document.getElementById("dailyNoteModalTitle");
+const dailyNoteAiFeedback = document.getElementById("dailyNoteAiFeedback");
+
+const dailyNoteIdInput = document.getElementById("dailyNoteId");
+const dnNoteDate = document.getElementById("dnNoteDate");
+const dnShiftType = document.getElementById("dnShiftType");
+const dnMood = document.getElementById("dnMood");
+const dnSignificance = document.getElementById("dnSignificance");
+const dnYoungPersonVoice = document.getElementById("dnYoungPersonVoice");
+const dnPresentation = document.getElementById("dnPresentation");
+const dnEducationUpdate = document.getElementById("dnEducationUpdate");
+const dnPositives = document.getElementById("dnPositives");
+const dnHealthUpdate = document.getElementById("dnHealthUpdate");
+const dnFamilyUpdate = document.getElementById("dnFamilyUpdate");
+const dnBehaviourUpdate = document.getElementById("dnBehaviourUpdate");
+const dnActivities = document.getElementById("dnActivities");
+const dnActionsRequired = document.getElementById("dnActionsRequired");
 
 let youngPeople = [];
 let selectedYoungPerson = null;
@@ -30,6 +62,45 @@ let selectedFamilyRecords = [];
 let selectedKeyworkSessions = [];
 let selectedChronology = [];
 let selectedCompliance = null;
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-GB");
+}
+
+function formatDateTime(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("en-GB");
+}
+
+function calculateAge(dateOfBirth) {
+  if (!dateOfBirth) return "—";
+  const dob = new Date(dateOfBirth);
+  if (Number.isNaN(dob.getTime())) return "—";
+
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+    age--;
+  }
+
+  return age;
+}
 
 async function loadYoungPeople() {
   const res = await fetch("/young-people");
@@ -48,6 +119,14 @@ async function loadYoungPeople() {
     option.textContent = `${person.preferred_name || person.first_name} ${person.last_name || ""}`;
     selector.appendChild(option);
   });
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const selectedId = urlParams.get("young_person_id");
+
+  if (selectedId) {
+    selector.value = selectedId;
+    await loadYoungPerson(selectedId);
+  }
 }
 
 async function loadYoungPerson(id) {
@@ -58,9 +137,7 @@ async function loadYoungPerson(id) {
   }
 
   try {
-    await fetch(`/young-people/${id}/chronology/rebuild`, {
-      method: "POST",
-    });
+    await fetch(`/young-people/${id}/chronology/rebuild`, { method: "POST" });
 
     const [
       personRes,
@@ -110,7 +187,7 @@ async function loadYoungPerson(id) {
       !chronologyRes.ok ||
       !complianceRes.ok
     ) {
-      console.error("One or more young person requests failed.");
+      console.error("One or more shell requests failed.");
       return;
     }
 
@@ -158,9 +235,10 @@ function clearDisplay() {
   complianceContainer.innerHTML = `<span class="badge muted">No compliance data yet</span>`;
   overviewContent.innerHTML = `Select a young person to load overview data.`;
   profileContent.innerHTML = `Profile details will load here.`;
+
   plansPanel.innerHTML = `<div class="panel-card"><h2>Plans</h2><p>Select a young person to load plans.</p></div>`;
   riskPanel.innerHTML = `<div class="panel-card"><h2>Risk</h2><p>Select a young person to load risk assessments.</p></div>`;
-  dailyNotesPanel.innerHTML = `<div class="panel-card"><h2>Daily Notes</h2><p>Select a young person to load daily notes.</p></div>`;
+  dailyNotesContent.innerHTML = `<div class="panel-card"><h2>Daily Notes</h2><p>Select a young person to load daily notes.</p></div>`;
   incidentsPanel.innerHTML = `<div class="panel-card"><h2>Incidents</h2><p>Select a young person to load incidents.</p></div>`;
   healthPanel.innerHTML = `<div class="panel-card"><h2>Health</h2><p>Select a young person to load health records.</p></div>`;
   educationPanel.innerHTML = `<div class="panel-card"><h2>Education</h2><p>Select a young person to load education records.</p></div>`;
@@ -168,34 +246,14 @@ function clearDisplay() {
   keyworkPanel.innerHTML = `<div class="panel-card"><h2>Key Work</h2><p>Select a young person to load key work sessions.</p></div>`;
   chronologyPanel.innerHTML = `<div class="panel-card"><h2>Chronology</h2><p>Select a young person to load chronology.</p></div>`;
   compliancePanel.innerHTML = `<div class="panel-card"><h2>Compliance</h2><p>Select a young person to load compliance.</p></div>`;
-}
 
-function formatDate(value) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("en-GB");
-}
-
-function formatDateTime(value) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString("en-GB");
-}
-
-function calculateAge(dateOfBirth) {
-  if (!dateOfBirth) return "—";
-  const dob = new Date(dateOfBirth);
-  const today = new Date();
-  let age = today.getFullYear() - dob.getFullYear();
-  const monthDiff = today.getMonth() - dob.getMonth();
-
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-    age--;
+  if (dailyNotesSearch) dailyNotesSearch.value = "";
+  if (dailyNotesDateFilter) dailyNotesDateFilter.value = "";
+  if (dailyNotesMonthFilter) dailyNotesMonthFilter.value = "";
+  if (dailyNotesYearFilter) dailyNotesYearFilter.innerHTML = `<option value="">All years</option>`;
+  if (dailyNotesCalendarSidebar) {
+    dailyNotesCalendarSidebar.innerHTML = `<p class="sidebar-empty">Select a young person to load dates.</p>`;
   }
-
-  return age;
 }
 
 function renderAlerts() {
@@ -220,19 +278,10 @@ function renderComplianceHeader() {
   }
 
   const badges = [];
-
-  if (summary.overdue > 0) {
-    badges.push(`<span class="badge alert">${summary.overdue} overdue</span>`);
-  }
-  if (summary.due_today > 0) {
-    badges.push(`<span class="badge warning">${summary.due_today} due today</span>`);
-  }
-  if (summary.due_soon > 0) {
-    badges.push(`<span class="badge warning">${summary.due_soon} due soon</span>`);
-  }
-  if (summary.total === 0) {
-    badges.push(`<span class="badge success">No compliance issues</span>`);
-  }
+  if (summary.overdue > 0) badges.push(`<span class="badge alert">${summary.overdue} overdue</span>`);
+  if (summary.due_today > 0) badges.push(`<span class="badge warning">${summary.due_today} due today</span>`);
+  if (summary.due_soon > 0) badges.push(`<span class="badge warning">${summary.due_soon} due soon</span>`);
+  if (summary.total === 0) badges.push(`<span class="badge success">No compliance issues</span>`);
 
   complianceContainer.innerHTML = badges.join("") || `<span class="badge muted">No compliance items</span>`;
 }
@@ -297,35 +346,251 @@ function renderRisks() {
   `;
 }
 
-function renderDailyNotes() {
-  if (!selectedDailyNotes.length) {
-    dailyNotesPanel.innerHTML = `<div class="panel-card"><h2>Daily Notes</h2><p>No daily notes recorded yet.</p></div>`;
+function groupDailyNotesByYearMonthDay(notes) {
+  const grouped = {};
+
+  notes.forEach((note) => {
+    const rawDate = note.note_date || "";
+    const dateOnly = rawDate ? rawDate.split("T")[0] : "Unknown";
+    const year = dateOnly !== "Unknown" ? dateOnly.slice(0, 4) : "Unknown";
+    const month = dateOnly !== "Unknown" ? dateOnly.slice(0, 7) : "Unknown";
+    const day = dateOnly;
+
+    if (!grouped[year]) grouped[year] = {};
+    if (!grouped[year][month]) grouped[year][month] = {};
+    if (!grouped[year][month][day]) grouped[year][month][day] = [];
+
+    grouped[year][month][day].push(note);
+  });
+
+  return grouped;
+}
+
+function formatMonthLabel(monthKey) {
+  if (!monthKey || monthKey === "Unknown") return "Unknown month";
+  const date = new Date(`${monthKey}-01`);
+  if (Number.isNaN(date.getTime())) return monthKey;
+  return date.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+}
+
+function formatDayLabel(dayKey) {
+  if (!dayKey || dayKey === "Unknown") return "Unknown date";
+  const date = new Date(dayKey);
+  if (Number.isNaN(date.getTime())) return dayKey;
+  return date.toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function renderDailyNoteSummaryItem(label, value) {
+  if (!value) return "";
+  return `
+    <div class="daily-note-summary-item">
+      <strong>${escapeHtml(label)}</strong>
+      <span>${escapeHtml(value)}</span>
+    </div>
+  `;
+}
+
+function renderDailyNoteCard(note) {
+  return `
+    <div class="daily-note-card">
+      <div class="daily-note-card-top">
+        <div>
+          <h4>${escapeHtml(note.shift_type || "Shift note")}</h4>
+          <div class="daily-note-meta">
+            ${escapeHtml(note.author_first_name ? `${note.author_first_name} ${note.author_last_name || ""}`.trim() : "Unknown author")}
+          </div>
+        </div>
+
+        <div class="badge-row">
+          <span class="badge muted">${escapeHtml(note.significance || "standard")}</span>
+        </div>
+      </div>
+
+      <div class="daily-note-summary-grid">
+        ${renderDailyNoteSummaryItem("Views, wishes and feelings", note.young_person_voice)}
+        ${renderDailyNoteSummaryItem("Relationships / presentation", note.presentation)}
+        ${renderDailyNoteSummaryItem("Education", note.education_update)}
+        ${renderDailyNoteSummaryItem("Enjoyment and achievement", note.positives)}
+        ${renderDailyNoteSummaryItem("Health and wellbeing", note.health_update)}
+        ${renderDailyNoteSummaryItem("Family / identity", note.family_update)}
+        ${renderDailyNoteSummaryItem("Behaviour and regulation", note.behaviour_update)}
+        ${renderDailyNoteSummaryItem("Activities / routines", note.activities)}
+        ${renderDailyNoteSummaryItem("Actions / follow-up", note.actions_required)}
+      </div>
+
+      <div class="daily-note-actions">
+        <button class="btn secondary edit-daily-note-btn" data-id="${note.id}">Edit</button>
+      </div>
+    </div>
+  `;
+}
+
+function populateDailyNotesYearFilter(notes) {
+  if (!dailyNotesYearFilter) return;
+
+  const currentValue = dailyNotesYearFilter.value;
+  const years = [...new Set(
+    notes
+      .map((note) => (note.note_date ? note.note_date.split("T")[0].slice(0, 4) : ""))
+      .filter(Boolean)
+  )].sort((a, b) => Number(b) - Number(a));
+
+  dailyNotesYearFilter.innerHTML =
+    `<option value="">All years</option>` +
+    years.map((year) => `<option value="${year}">${year}</option>`).join("");
+
+  if (years.includes(currentValue)) {
+    dailyNotesYearFilter.value = currentValue;
+  }
+}
+
+function renderCalendarSidebar(notes) {
+  if (!dailyNotesCalendarSidebar) return;
+
+  if (!notes.length) {
+    dailyNotesCalendarSidebar.innerHTML = `<p class="sidebar-empty">No dates available.</p>`;
     return;
   }
 
-  dailyNotesPanel.innerHTML = `
-    <div class="panel-grid">
-      ${selectedDailyNotes.map((note) => `
-        <div class="panel-card">
-          <h2>${formatDate(note.note_date)} • ${escapeHtml(note.shift_type || "Shift")}</h2>
-          <div class="profile-grid">
-            <div class="profile-label">Mood</div><div class="profile-value">${escapeHtml(note.mood || "—")}</div>
-            <div class="profile-label">Presentation</div><div class="profile-value">${escapeHtml(note.presentation || "—")}</div>
-            <div class="profile-label">Activities</div><div class="profile-value">${escapeHtml(note.activities || "—")}</div>
-            <div class="profile-label">Education</div><div class="profile-value">${escapeHtml(note.education_update || "—")}</div>
-            <div class="profile-label">Health</div><div class="profile-value">${escapeHtml(note.health_update || "—")}</div>
-            <div class="profile-label">Family</div><div class="profile-value">${escapeHtml(note.family_update || "—")}</div>
-            <div class="profile-label">Behaviour</div><div class="profile-value">${escapeHtml(note.behaviour_update || "—")}</div>
-            <div class="profile-label">Young person voice</div><div class="profile-value">${escapeHtml(note.young_person_voice || "—")}</div>
-            <div class="profile-label">Positives</div><div class="profile-value">${escapeHtml(note.positives || "—")}</div>
-            <div class="profile-label">Actions required</div><div class="profile-value">${escapeHtml(note.actions_required || "—")}</div>
-            <div class="profile-label">Significance</div><div class="profile-value">${escapeHtml(note.significance || "—")}</div>
-            <div class="profile-label">Author</div><div class="profile-value">${note.author_first_name ? escapeHtml(`${note.author_first_name} ${note.author_last_name || ""}`.trim()) : "—"}</div>
-          </div>
+  const uniqueDates = [...new Set(
+    notes
+      .map((note) => (note.note_date ? note.note_date.split("T")[0] : ""))
+      .filter(Boolean)
+  )].sort((a, b) => new Date(b) - new Date(a));
+
+  dailyNotesCalendarSidebar.innerHTML = uniqueDates
+    .map((dateValue) => `
+      <button type="button" class="calendar-date-item" data-date="${dateValue}">
+        ${escapeHtml(formatDayLabel(dateValue))}
+      </button>
+    `)
+    .join("");
+
+  document.querySelectorAll(".calendar-date-item").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (dailyNotesDateFilter) {
+        dailyNotesDateFilter.value = button.dataset.date || "";
+        renderDailyNotes();
+      }
+    });
+  });
+}
+
+function wireDailyNoteButtons() {
+  document.querySelectorAll(".edit-daily-note-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = Number(button.dataset.id);
+      const note = selectedDailyNotes.find((item) => item.id === id);
+      if (!note) return;
+      openDailyNoteModal(note);
+    });
+  });
+}
+
+function renderDailyNotes() {
+  if (!selectedDailyNotes.length) {
+    dailyNotesContent.innerHTML = `<div class="panel-card"><h2>Daily Notes</h2><p>No daily notes recorded yet.</p></div>`;
+    populateDailyNotesYearFilter([]);
+    renderCalendarSidebar([]);
+    return;
+  }
+
+  populateDailyNotesYearFilter(selectedDailyNotes);
+  renderCalendarSidebar(selectedDailyNotes);
+
+  const searchTerm = (dailyNotesSearch?.value || "").trim().toLowerCase();
+  const selectedDate = dailyNotesDateFilter?.value || "";
+  const selectedMonth = dailyNotesMonthFilter?.value || "";
+  const selectedYear = dailyNotesYearFilter?.value || "";
+
+  const filteredNotes = selectedDailyNotes.filter((note) => {
+    const noteDateRaw = note.note_date || "";
+    const noteDate = noteDateRaw ? noteDateRaw.split("T")[0] : "";
+    const noteMonth = noteDate ? noteDate.slice(0, 7) : "";
+    const noteYear = noteDate ? noteDate.slice(0, 4) : "";
+
+    const searchableText = [
+      note.shift_type,
+      note.mood,
+      note.presentation,
+      note.activities,
+      note.education_update,
+      note.health_update,
+      note.family_update,
+      note.behaviour_update,
+      note.young_person_voice,
+      note.positives,
+      note.actions_required,
+      note.significance,
+      note.author_first_name,
+      note.author_last_name,
+    ].join(" ").toLowerCase();
+
+    const matchesSearch = !searchTerm || searchableText.includes(searchTerm);
+    const matchesDate = !selectedDate || noteDate === selectedDate;
+    const matchesMonth = !selectedMonth || noteMonth === selectedMonth;
+    const matchesYear = !selectedYear || noteYear === selectedYear;
+
+    return matchesSearch && matchesDate && matchesMonth && matchesYear;
+  });
+
+  if (!filteredNotes.length) {
+    dailyNotesContent.innerHTML = `<div class="panel-card"><p>No daily notes match the selected filters.</p></div>`;
+    return;
+  }
+
+  const grouped = groupDailyNotesByYearMonthDay(filteredNotes);
+
+  dailyNotesContent.innerHTML = Object.keys(grouped)
+    .sort((a, b) => Number(b) - Number(a))
+    .map((year) => {
+      const months = grouped[year];
+
+      return `
+        <div class="daily-notes-year-block">
+          <h3 class="daily-notes-group-title">${escapeHtml(year)}</h3>
+
+          ${Object.keys(months)
+            .sort((a, b) => new Date(`${b}-01`) - new Date(`${a}-01`))
+            .map((monthKey) => {
+              const days = months[monthKey];
+              const monthLabel = formatMonthLabel(monthKey);
+
+              return `
+                <div class="daily-notes-month-block">
+                  <h4 class="daily-notes-month-title">${escapeHtml(monthLabel)}</h4>
+
+                  ${Object.keys(days)
+                    .sort((a, b) => new Date(b) - new Date(a))
+                    .map((dayKey) => {
+                      const notesForDay = days[dayKey];
+                      const dayLabel = formatDayLabel(dayKey);
+
+                      return `
+                        <div class="daily-notes-day-block">
+                          <h5 class="daily-notes-day-title">${escapeHtml(dayLabel)}</h5>
+                          <div class="daily-note-list">
+                            ${notesForDay.map((note) => renderDailyNoteCard(note)).join("")}
+                          </div>
+                        </div>
+                      `;
+                    })
+                    .join("")}
+                </div>
+              `;
+            })
+            .join("")}
         </div>
-      `).join("")}
-    </div>
-  `;
+      `;
+    })
+    .join("");
+
+  wireDailyNoteButtons();
 }
 
 function renderIncidents() {
@@ -734,35 +999,184 @@ function setupTabs() {
       panels.forEach((panel) => panel.classList.remove("active"));
 
       button.classList.add("active");
-      document.getElementById(`tab-${tab}`).classList.add("active");
+      const targetPanel = document.getElementById(`tab-${tab}`);
+      if (targetPanel) targetPanel.classList.add("active");
     });
   });
 }
 
-selector.addEventListener("change", async (e) => {
+function resetDailyNoteForm() {
+  dailyNoteForm?.reset();
+  if (dailyNoteIdInput) dailyNoteIdInput.value = "";
+  if (dnSignificance) dnSignificance.value = "standard";
+  if (dailyNoteModalTitle) dailyNoteModalTitle.textContent = "Add Daily Note";
+  if (dailyNoteAiFeedback) {
+    dailyNoteAiFeedback.textContent = "AI review output will appear here once connected.";
+  }
+}
+
+function openDailyNoteModal(note = null) {
+  if (!dailyNoteModal) return;
+
+  resetDailyNoteForm();
+
+  if (note) {
+    if (dailyNoteModalTitle) dailyNoteModalTitle.textContent = "Edit Daily Note";
+    if (dailyNoteIdInput) dailyNoteIdInput.value = note.id || "";
+    if (dnNoteDate) dnNoteDate.value = note.note_date ? note.note_date.split("T")[0] : "";
+    if (dnShiftType) dnShiftType.value = note.shift_type || "";
+    if (dnMood) dnMood.value = note.mood || "";
+    if (dnSignificance) dnSignificance.value = note.significance || "standard";
+    if (dnYoungPersonVoice) dnYoungPersonVoice.value = note.young_person_voice || "";
+    if (dnPresentation) dnPresentation.value = note.presentation || "";
+    if (dnEducationUpdate) dnEducationUpdate.value = note.education_update || "";
+    if (dnPositives) dnPositives.value = note.positives || "";
+    if (dnHealthUpdate) dnHealthUpdate.value = note.health_update || "";
+    if (dnFamilyUpdate) dnFamilyUpdate.value = note.family_update || "";
+    if (dnBehaviourUpdate) dnBehaviourUpdate.value = note.behaviour_update || "";
+    if (dnActivities) dnActivities.value = note.activities || "";
+    if (dnActionsRequired) dnActionsRequired.value = note.actions_required || "";
+  } else if (dnNoteDate) {
+    dnNoteDate.value = new Date().toISOString().split("T")[0];
+  }
+
+  dailyNoteModal.classList.remove("hidden");
+}
+
+function closeDailyNoteModal() {
+  if (!dailyNoteModal) return;
+  dailyNoteModal.classList.add("hidden");
+  resetDailyNoteForm();
+}
+
+function buildDailyNotePayload() {
+  return {
+    young_person_id: selectedYoungPerson?.id,
+    home_id: selectedYoungPerson?.home_id ?? null,
+    note_date: dnNoteDate?.value || null,
+    shift_type: dnShiftType?.value || null,
+    mood: dnMood?.value?.trim() || null,
+    presentation: dnPresentation?.value?.trim() || null,
+    activities: dnActivities?.value?.trim() || null,
+    education_update: dnEducationUpdate?.value?.trim() || null,
+    health_update: dnHealthUpdate?.value?.trim() || null,
+    family_update: dnFamilyUpdate?.value?.trim() || null,
+    behaviour_update: dnBehaviourUpdate?.value?.trim() || null,
+    young_person_voice: dnYoungPersonVoice?.value?.trim() || null,
+    positives: dnPositives?.value?.trim() || null,
+    actions_required: dnActionsRequired?.value?.trim() || null,
+    significance: dnSignificance?.value || "standard",
+    author_id: null,
+  };
+}
+
+async function saveDailyNote(event) {
+  event.preventDefault();
+
+  if (!selectedYoungPerson) {
+    alert("Please select a young person first.");
+    return;
+  }
+
+  const existingId = dailyNoteIdInput?.value?.trim();
+  const payload = buildDailyNotePayload();
+
+  const url = existingId ? `/young-people/daily-notes/${existingId}` : "/young-people/daily-notes";
+  const method = existingId ? "PUT" : "POST";
+
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || "Failed to save daily note");
+    }
+
+    closeDailyNoteModal();
+    await loadYoungPerson(selectedYoungPerson.id);
+  } catch (error) {
+    console.error("Failed to save daily note:", error);
+    alert("Unable to save daily note. Please check your backend and try again.");
+  }
+}
+
+function setupAiHelperButtons() {
+  document.querySelectorAll(".ai-tool-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      const action = button.dataset.aiAction || "improve";
+      const targetId = button.dataset.target;
+      const target = targetId ? document.getElementById(targetId) : null;
+
+      if (!target) return;
+
+      const original = target.value?.trim();
+      if (!original) {
+        if (dailyNoteAiFeedback) {
+          dailyNoteAiFeedback.textContent = "Write something in the field first, then use AI support.";
+        }
+        return;
+      }
+
+      if (dailyNoteAiFeedback) {
+        dailyNoteAiFeedback.textContent = `AI "${action}" support will connect here. This is ready to link to your IndiCare assistant.`;
+      }
+    });
+  });
+
+  document.querySelectorAll(".ai-full-review-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      const reviewType = button.dataset.aiReview || "review";
+      if (dailyNoteAiFeedback) {
+        dailyNoteAiFeedback.textContent = `Full-note AI review "${reviewType}" will appear here once connected to your assistant.`;
+      }
+    });
+  });
+}
+
+selector?.addEventListener("change", async (e) => {
   await loadYoungPerson(e.target.value);
 });
 
-document.getElementById("backToListBtn").addEventListener("click", () => {
+document.getElementById("backToListBtn")?.addEventListener("click", () => {
   window.location.href = "/young-people-page";
 });
 
-document.getElementById("editYoungPersonBtn").addEventListener("click", () => {
-  if (!selectedYoungPerson) return;
+document.getElementById("editYoungPersonBtn")?.addEventListener("click", () => {
   window.location.href = "/young-people-page";
 });
 
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
+openDailyNoteModalBtn?.addEventListener("click", () => openDailyNoteModal());
+closeDailyNoteModalBtn?.addEventListener("click", closeDailyNoteModal);
+cancelDailyNoteBtn?.addEventListener("click", closeDailyNoteModal);
+dailyNoteForm?.addEventListener("submit", saveDailyNote);
+
+dailyNoteModal?.addEventListener("click", (event) => {
+  if (event.target === dailyNoteModal) {
+    closeDailyNoteModal();
+  }
+});
+
+dailyNotesSearch?.addEventListener("input", renderDailyNotes);
+dailyNotesDateFilter?.addEventListener("change", renderDailyNotes);
+dailyNotesMonthFilter?.addEventListener("change", renderDailyNotes);
+dailyNotesYearFilter?.addEventListener("change", renderDailyNotes);
+
+clearDailyNotesFiltersBtn?.addEventListener("click", () => {
+  if (dailyNotesSearch) dailyNotesSearch.value = "";
+  if (dailyNotesDateFilter) dailyNotesDateFilter.value = "";
+  if (dailyNotesMonthFilter) dailyNotesMonthFilter.value = "";
+  if (dailyNotesYearFilter) dailyNotesYearFilter.value = "";
+  renderDailyNotes();
+});
 
 async function init() {
   setupTabs();
+  setupAiHelperButtons();
+  clearDisplay();
   await loadYoungPeople();
 }
 
