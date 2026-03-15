@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Young Person Panel | IndiCare</title>
-  <link rel="stylesheet" href="/css/young-people-shell.css?v=5" />
+  <link rel="stylesheet" href="/css/young-people-shell.css?v=6" />
 </head>
 <body>
   <div class="shell-layout">
@@ -87,6 +87,7 @@
         <button class="tab-btn" data-tab="family" type="button">Family</button>
         <button class="tab-btn" data-tab="keywork" type="button">Key Work</button>
         <button class="tab-btn" data-tab="chronology" type="button">Chronology</button>
+        <button class="tab-btn" data-tab="standards" type="button">Standards & Evidence</button>
         <button class="tab-btn" data-tab="compliance" type="button">Compliance</button>
       </nav>
 
@@ -249,6 +250,29 @@
           </div>
         </section>
 
+        <section id="tab-standards" class="tab-panel">
+          <div class="panel-shell">
+            <div class="panel-header-row">
+              <h3>Quality Standards Evidence</h3>
+              <button id="rebuildStandardsBtn" class="btn btn-secondary" type="button">Rebuild Evidence Links</button>
+            </div>
+
+            <div id="standardsSummary" class="content-area">
+              <div class="empty-state">Select a young person to load standards evidence.</div>
+            </div>
+          </div>
+
+          <div class="panel-shell">
+            <div class="panel-header-row">
+              <h3>Evidence Records</h3>
+            </div>
+
+            <div id="standardsEvidenceList" class="content-area">
+              <div class="empty-state">No evidence loaded.</div>
+            </div>
+          </div>
+        </section>
+
         <section id="tab-compliance" class="tab-panel">
           <div class="panel-shell">
             <div class="panel-header-row">
@@ -290,6 +314,6 @@
     </main>
   </div>
 
-  <script src="/js/young-people-shell.js?v=5"></script>
+  <script src="/js/young-people-shell.js?v=6"></script>
 </body>
 </html>
