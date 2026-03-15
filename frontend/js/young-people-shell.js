@@ -54,12 +54,12 @@ const els = {
   dnWorkflowStatus: document.getElementById("dnWorkflowStatus"),
   dailyNoteAiFeedback: document.getElementById("dailyNoteAiFeedback"),
   openDailyNoteModalBtn: document.getElementById("openDailyNoteModalBtn"),
+  openDailyNotesArchiveBtn: document.getElementById("openDailyNotesArchiveBtn"),
   quickDailyNoteBtn: document.getElementById("quickDailyNoteBtn"),
   saveDraftDailyNoteBtn: document.getElementById("saveDraftDailyNoteBtn"),
   submitDailyNoteBtn: document.getElementById("submitDailyNoteBtn"),
   approveDailyNoteBtn: document.getElementById("approveDailyNoteBtn"),
   returnDailyNoteBtn: document.getElementById("returnDailyNoteBtn"),
-  saveDailyNoteBtn: document.getElementById("saveDailyNoteBtn"),
   closeDailyNoteModalBtn: document.getElementById("closeDailyNoteModalBtn"),
   cancelDailyNoteBtn: document.getElementById("cancelDailyNoteBtn"),
   linkedDraftModal: document.getElementById("linkedDraftModal"),
@@ -79,8 +79,7 @@ const els = {
   archiveMonthFilter: document.getElementById("archiveMonthFilter"),
   archiveYearFilter: document.getElementById("archiveYearFilter"),
   archiveResultsList: document.getElementById("archiveResultsList"),
-  closeArchiveDrawerBtn: document.getElementById("closeArchiveDrawerBtn"),
-  openDailyNotesArchiveBtn: document.getElementById("openDailyNotesArchiveBtn")
+  closeArchiveDrawerBtn: document.getElementById("closeArchiveDrawerBtn")
 };
 
 function escapeHtml(value) {
@@ -93,22 +92,8 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function formatRecordTypeLabel(type) {
-  const map = {
-    key_worker_session_draft: "Key Worker Session Draft",
-    risk_assessment_update: "Risk Assessment Update Draft",
-    health_record_draft: "Health Record Draft",
-    education_record_draft: "Education Record Draft",
-    family_contact_record_draft: "Family Contact Record Draft",
-    chronology_entry: "Chronology Entry Draft",
-    manager_alert: "Manager Alert Draft",
-    support_plan_update: "Support Plan Update Draft"
-  };
-  return map[type] || type.replaceAll("_", " ");
-}
-
 function getBadgeClass(status) {
-  switch (status) {
+  switch ((status || "").toLowerCase()) {
     case "approved":
     case "saved":
     case "completed":
@@ -129,6 +114,33 @@ function getConfidenceLabel(score) {
   if (score >= 0.85) return "High confidence";
   if (score >= 0.7) return "Medium confidence";
   return "Low confidence";
+}
+
+function formatArchiveType(type) {
+  const map = {
+    "daily-notes": "Daily Notes",
+    incidents: "Incidents",
+    health: "Health",
+    education: "Education",
+    family: "Family",
+    "key-work": "Key Work",
+    chronology: "Chronology"
+  };
+  return map[type] || type;
+}
+
+function formatRecordTypeLabel(type) {
+  const map = {
+    key_worker_session_draft: "Key Worker Session Draft",
+    risk_assessment_update: "Risk Assessment Update Draft",
+    health_record_draft: "Health Record Draft",
+    education_record_draft: "Education Record Draft",
+    family_contact_record_draft: "Family Contact Record Draft",
+    chronology_entry: "Chronology Entry Draft",
+    manager_alert: "Manager Alert Draft",
+    support_plan_update: "Support Plan Update Draft"
+  };
+  return map[type] || (type || "").replaceAll("_", " ");
 }
 
 async function api(url, options = {}) {
@@ -163,85 +175,25 @@ function switchTab(tabName) {
   });
 }
 
-async function loadYoungPeople() {
-  const data = await api("/api/young-people");
-  els.youngPersonSelector.innerHTML = `
-    <option value="">Select a young person</option>
-    ${(data.items || []).map(item => `
-      <option value="${item.id}">${escapeHtml(item.full_name)}</option>
-    `).join("")}
-  `;
+function openModal(modal) {
+  modal.classList.remove("hidden");
 }
 
-async function loadYoungPersonSummary(youngPersonId) {
-  const data = await api(`/api/young-people/${youngPersonId}/workspace-summary`);
-
-  els.ypMiniSummary.innerHTML = `
-    <div class="linked-record-card">
-      <p><strong>${escapeHtml(data.full_name)}</strong></p>
-      <p>Age: ${escapeHtml(data.age || "-")}</p>
-      <p>Placement: ${escapeHtml(data.placement_status || "-")}</p>
-      <p>House / Room: ${escapeHtml(data.house_room || "-")}</p>
-      <p>Key staff: ${escapeHtml((data.key_staff || []).join(", ") || "-")}</p>
-    </div>
-  `;
-
-  els.overviewContent.innerHTML = `
-    <p><strong>Current placement summary:</strong> ${escapeHtml(data.overview_summary || "No overview available.")}</p>
-  `;
-
-  els.profileContent.innerHTML = `
-    <p>${escapeHtml(data.profile_summary || "No profile summary available.")}</p>
-  `;
-
-  els.plansContent.innerHTML = `
-    <p>${escapeHtml(data.plan_summary || "No current plans loaded.")}</p>
-  `;
-
-  els.riskContent.innerHTML = `
-    <p>${escapeHtml(data.risk_summary || "No risk summary loaded.")}</p>
-  `;
-
-  els.healthContent.innerHTML = `
-    <p>${escapeHtml(data.health_summary || "No health summary loaded.")}</p>
-  `;
-
-  els.educationContent.innerHTML = `
-    <p>${escapeHtml(data.education_summary || "No education summary loaded.")}</p>
-  `;
-
-  els.familyContent.innerHTML = `
-    <p>${escapeHtml(data.family_summary || "No family summary loaded.")}</p>
-  `;
-
-  els.keyWorkContent.innerHTML = `
-    <p>${escapeHtml(data.key_work_summary || "No key work summary loaded.")}</p>
-  `;
-
-  els.chronologyContent.innerHTML = `
-    <p>${escapeHtml(data.chronology_summary || "No chronology summary loaded.")}</p>
-  `;
-
-  els.complianceContent.innerHTML = `
-    <p>${escapeHtml(data.compliance_summary || "No compliance summary loaded.")}</p>
-  `;
-
-  renderBadges(els.ypAlerts, data.alerts || [], "No alerts loaded");
-  renderBadges(els.ypCompliance, data.compliance_flags || [], "No compliance data yet");
-  renderTodayWorkflow(data.today || {});
-  renderManagerSummary(data.manager_review || {});
-  renderTimelineSummary(data.recent_timeline || []);
+function closeModal(modal) {
+  modal.classList.add("hidden");
 }
 
 function renderBadges(container, items, emptyText) {
-  if (!items.length) {
+  if (!items || !items.length) {
     container.innerHTML = `<span class="badge muted">${escapeHtml(emptyText)}</span>`;
     return;
   }
 
   container.innerHTML = items.map(item => {
-    if (typeof item === "string") return `<span class="badge">${escapeHtml(item)}</span>`;
-    return `<span class="${getBadgeClass(item.level || "")}">${escapeHtml(item.label || "")}</span>`;
+    if (typeof item === "string") {
+      return `<span class="badge">${escapeHtml(item)}</span>`;
+    }
+    return `<span class="${getBadgeClass(item.level)}">${escapeHtml(item.label)}</span>`;
   }).join("");
 }
 
@@ -267,8 +219,8 @@ function renderManagerSummary(data) {
 }
 
 function renderTimelineSummary(items) {
-  if (!items.length) {
-    els.recentTimelineSummary.innerHTML = `<p class="sidebar-empty">No recent timeline items.</p>`;
+  if (!items || !items.length) {
+    els.recentTimelineSummary.innerHTML = `<p class="empty-state">No recent timeline items.</p>`;
     return;
   }
 
@@ -280,6 +232,53 @@ function renderTimelineSummary(items) {
   `).join("");
 }
 
+async function loadYoungPeople() {
+  try {
+    const data = await api("/api/young-people");
+    els.youngPersonSelector.innerHTML = `
+      <option value="">Select a young person</option>
+      ${(data.items || []).map(item => `
+        <option value="${item.id}">${escapeHtml(item.full_name || item.name || "Unnamed")}</option>
+      `).join("")}
+    `;
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function loadYoungPersonWorkspace(youngPersonId) {
+  try {
+    const data = await api(`/api/young-people/${youngPersonId}/workspace-summary`);
+
+    els.ypMiniSummary.innerHTML = `
+      <p><strong>${escapeHtml(data.full_name || "-")}</strong></p>
+      <p>Age: ${escapeHtml(data.age || "-")}</p>
+      <p>Placement: ${escapeHtml(data.placement_status || "-")}</p>
+      <p>House / Room: ${escapeHtml(data.house_room || "-")}</p>
+      <p>Key staff: ${escapeHtml((data.key_staff || []).join(", ") || "-")}</p>
+    `;
+
+    els.overviewContent.innerHTML = `<p>${escapeHtml(data.overview_summary || "No overview available.")}</p>`;
+    els.profileContent.innerHTML = `<p>${escapeHtml(data.profile_summary || "No profile details available.")}</p>`;
+    els.plansContent.innerHTML = `<p>${escapeHtml(data.plan_summary || "No plans available.")}</p>`;
+    els.riskContent.innerHTML = `<p>${escapeHtml(data.risk_summary || "No risk data available.")}</p>`;
+    els.healthContent.innerHTML = `<p>${escapeHtml(data.health_summary || "No health data available.")}</p>`;
+    els.educationContent.innerHTML = `<p>${escapeHtml(data.education_summary || "No education data available.")}</p>`;
+    els.familyContent.innerHTML = `<p>${escapeHtml(data.family_summary || "No family data available.")}</p>`;
+    els.keyWorkContent.innerHTML = `<p>${escapeHtml(data.key_work_summary || "No key work data available.")}</p>`;
+    els.chronologyContent.innerHTML = `<p>${escapeHtml(data.chronology_summary || "No chronology available.")}</p>`;
+    els.complianceContent.innerHTML = `<p>${escapeHtml(data.compliance_summary || "No compliance data available.")}</p>`;
+
+    renderBadges(els.ypAlerts, data.alerts || [], "No alerts loaded");
+    renderBadges(els.ypCompliance, data.compliance_flags || [], "No compliance data yet");
+    renderTodayWorkflow(data.today || {});
+    renderManagerSummary(data.manager_review || {});
+    renderTimelineSummary(data.recent_timeline || []);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 function resetDailyNoteForm() {
   els.dailyNoteForm.reset();
   els.dailyNoteId.value = "";
@@ -287,7 +286,7 @@ function resetDailyNoteForm() {
   els.dailyNoteAiFeedback.textContent = "AI review output will appear here once connected.";
 }
 
-function populateDailyNoteForm(note) {
+function fillDailyNoteForm(note) {
   els.dailyNoteId.value = note.id || "";
   els.dnNoteDate.value = note.note_date || "";
   els.dnShiftType.value = note.shift_type || "";
@@ -304,88 +303,6 @@ function populateDailyNoteForm(note) {
   els.dnActionsRequired.value = note.actions_required || "";
   els.dnManagerReviewComment.value = note.manager_review_comment || "";
   els.dnWorkflowStatus.value = note.workflow_status || "draft";
-}
-
-function openDailyNoteModal() {
-  els.dailyNoteModal.classList.remove("hidden");
-}
-
-function closeDailyNoteModal() {
-  els.dailyNoteModal.classList.add("hidden");
-}
-
-function openLinkedDraftModal() {
-  els.linkedDraftModal.classList.remove("hidden");
-}
-
-function closeLinkedDraftModal() {
-  els.linkedDraftModal.classList.add("hidden");
-}
-
-function openArchiveDrawer() {
-  els.archiveDrawer.classList.remove("hidden");
-}
-
-function closeArchiveDrawer() {
-  els.archiveDrawer.classList.add("hidden");
-}
-
-async function loadCurrentDailyNote() {
-  if (!state.currentYoungPersonId) return;
-
-  const data = await api(`/api/young-people/${state.currentYoungPersonId}/daily-notes/current`);
-  if (!data || !data.id) {
-    state.currentDailyNoteId = null;
-    state.currentDailyNoteStatus = null;
-
-    els.dailyNotesCurrentCard.innerHTML = `
-      <h3>Current Working Note</h3>
-      <p>No current draft loaded.</p>
-    `;
-    els.dailyNoteStatusPanel.innerHTML = `<p class="sidebar-empty">No active note.</p>`;
-    els.dailyNoteManagerComments.innerHTML = `<p class="sidebar-empty">No manager comments.</p>`;
-    els.dailyNoteAiSuggestionsCard.classList.add("hidden");
-    els.dailyNoteLinkedRecordsCard.classList.add("hidden");
-    return;
-  }
-
-  state.currentDailyNoteId = data.id;
-  state.currentDailyNoteStatus = data.workflow_status || "draft";
-
-  els.dailyNotesCurrentCard.innerHTML = `
-    <div class="card-header-row">
-      <div>
-        <h3>Current Working Note</h3>
-        <p class="muted-text">${escapeHtml(data.note_date)} · ${escapeHtml(data.shift_type || "")}</p>
-      </div>
-      <span class="${getBadgeClass(data.workflow_status)}">${escapeHtml(data.workflow_status || "draft")}</span>
-    </div>
-
-    <div class="linked-record-card">
-      <p><strong>Presentation / Mood:</strong> ${escapeHtml(data.mood || "-")}</p>
-      <p><strong>Child voice:</strong> ${escapeHtml(data.young_person_voice || "-")}</p>
-      <p><strong>Reflection / Actions:</strong> ${escapeHtml(data.actions_required || "-")}</p>
-    </div>
-  `;
-
-  els.dailyNoteStatusPanel.innerHTML = `
-    <div class="linked-record-card">
-      <p><strong>Status:</strong> ${escapeHtml(data.workflow_status || "draft")}</p>
-      <p><strong>Last updated:</strong> ${escapeHtml(data.updated_at || "-")}</p>
-      <p><strong>Author:</strong> ${escapeHtml(data.author_name || "-")}</p>
-    </div>
-  `;
-
-  els.dailyNoteManagerComments.innerHTML = data.manager_review_comment
-    ? `<div class="linked-record-card"><p>${escapeHtml(data.manager_review_comment)}</p></div>`
-    : `<p class="sidebar-empty">No manager comments.</p>`;
-
-  if (["submitted", "approved", "returned"].includes(data.workflow_status)) {
-    await loadDailyNoteAiData(data.id);
-  } else {
-    els.dailyNoteAiSuggestionsCard.classList.add("hidden");
-    els.dailyNoteLinkedRecordsCard.classList.add("hidden");
-  }
 }
 
 function getDailyNotePayload() {
@@ -409,6 +326,69 @@ function getDailyNotePayload() {
   };
 }
 
+async function loadCurrentDailyNote() {
+  if (!state.currentYoungPersonId) return;
+
+  try {
+    const data = await api(`/api/young-people/${state.currentYoungPersonId}/daily-notes/current`);
+
+    if (!data || !data.id) {
+      state.currentDailyNoteId = null;
+      state.currentDailyNoteStatus = null;
+
+      els.dailyNotesCurrentCard.innerHTML = `
+        <h3>Current Working Note</h3>
+        <p>No current draft loaded.</p>
+      `;
+      els.dailyNoteStatusPanel.innerHTML = `<p class="empty-state">No active note.</p>`;
+      els.dailyNoteManagerComments.innerHTML = `<p class="empty-state">No manager comments.</p>`;
+      els.dailyNoteAiSuggestionsCard.classList.add("hidden");
+      els.dailyNoteLinkedRecordsCard.classList.add("hidden");
+      return;
+    }
+
+    state.currentDailyNoteId = data.id;
+    state.currentDailyNoteStatus = data.workflow_status || "draft";
+
+    els.dailyNotesCurrentCard.innerHTML = `
+      <div class="card-row">
+        <div>
+          <h3>Current Working Note</h3>
+          <p class="muted-text">${escapeHtml(data.note_date || "")} · ${escapeHtml(data.shift_type || "")}</p>
+        </div>
+        <span class="${getBadgeClass(data.workflow_status)}">${escapeHtml(data.workflow_status || "draft")}</span>
+      </div>
+
+      <div class="linked-record-card">
+        <p><strong>Presentation / Mood:</strong> ${escapeHtml(data.mood || "-")}</p>
+        <p><strong>Child voice:</strong> ${escapeHtml(data.young_person_voice || "-")}</p>
+        <p><strong>Reflection / Actions:</strong> ${escapeHtml(data.actions_required || "-")}</p>
+      </div>
+    `;
+
+    els.dailyNoteStatusPanel.innerHTML = `
+      <div class="linked-record-card">
+        <p><strong>Status:</strong> ${escapeHtml(data.workflow_status || "draft")}</p>
+        <p><strong>Last updated:</strong> ${escapeHtml(data.updated_at || "-")}</p>
+        <p><strong>Author:</strong> ${escapeHtml(data.author_name || "-")}</p>
+      </div>
+    `;
+
+    els.dailyNoteManagerComments.innerHTML = data.manager_review_comment
+      ? `<div class="linked-record-card"><p>${escapeHtml(data.manager_review_comment)}</p></div>`
+      : `<p class="empty-state">No manager comments.</p>`;
+
+    if (["submitted", "approved", "returned"].includes(data.workflow_status)) {
+      await loadDailyNoteAiData(data.id);
+    } else {
+      els.dailyNoteAiSuggestionsCard.classList.add("hidden");
+      els.dailyNoteLinkedRecordsCard.classList.add("hidden");
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 async function saveDailyNote(statusOverride = null) {
   if (!state.currentYoungPersonId) {
     alert("Please select a young person first.");
@@ -418,58 +398,28 @@ async function saveDailyNote(statusOverride = null) {
   const payload = getDailyNotePayload();
   if (statusOverride) payload.workflow_status = statusOverride;
 
-  const noteId = els.dailyNoteId.value;
-  let result;
+  try {
+    let result;
+    if (els.dailyNoteId.value) {
+      result = await api(`/api/daily-notes/${els.dailyNoteId.value}`, {
+        method: "PUT",
+        body: JSON.stringify(payload)
+      });
+    } else {
+      result = await api(`/api/young-people/${state.currentYoungPersonId}/daily-notes`, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+    }
 
-  if (noteId) {
-    result = await api(`/api/daily-notes/${noteId}`, {
-      method: "PUT",
-      body: JSON.stringify(payload)
-    });
-  } else {
-    result = await api(`/api/young-people/${state.currentYoungPersonId}/daily-notes`, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    });
+    els.dailyNoteId.value = result.id;
+    state.currentDailyNoteId = result.id;
+    state.currentDailyNoteStatus = result.workflow_status;
+    return result;
+  } catch (error) {
+    alert(error.message);
+    return null;
   }
-
-  els.dailyNoteId.value = result.id;
-  state.currentDailyNoteId = result.id;
-  state.currentDailyNoteStatus = result.workflow_status;
-  return result;
-}
-
-async function submitCurrentDailyNote() {
-  const noteId = state.currentDailyNoteId || els.dailyNoteId.value;
-  if (!noteId) return;
-
-  await api(`/api/daily-notes/${noteId}/submit`, { method: "POST" });
-  state.currentDailyNoteStatus = "submitted";
-  showAiSuggestionsLoading();
-  await loadCurrentDailyNote();
-}
-
-async function approveCurrentDailyNote() {
-  const noteId = state.currentDailyNoteId || els.dailyNoteId.value;
-  if (!noteId) return;
-
-  await api(`/api/daily-notes/${noteId}/approve`, { method: "POST" });
-  state.currentDailyNoteStatus = "approved";
-  await loadCurrentDailyNote();
-}
-
-async function returnCurrentDailyNote() {
-  const noteId = state.currentDailyNoteId || els.dailyNoteId.value;
-  if (!noteId) return;
-
-  await api(`/api/daily-notes/${noteId}/return`, {
-    method: "POST",
-    body: JSON.stringify({
-      manager_review_comment: els.dnManagerReviewComment.value
-    })
-  });
-  state.currentDailyNoteStatus = "returned";
-  await loadCurrentDailyNote();
 }
 
 function showAiSuggestionsLoading() {
@@ -477,29 +427,7 @@ function showAiSuggestionsLoading() {
   els.dailyNoteAiStatusBadge.textContent = "Analysing...";
   els.dailyNoteAiStatusBadge.className = "badge warning";
   els.dailyNoteAiSummary.innerHTML = "";
-  els.dailyNoteAiSuggestionsList.innerHTML = `<p class="sidebar-text">Analysing Daily Note and preparing follow-on suggestions...</p>`;
-}
-
-async function loadDailyNoteAiData(noteId) {
-  try {
-    els.dailyNoteAiSuggestionsCard.classList.remove("hidden");
-    els.dailyNoteLinkedRecordsCard.classList.remove("hidden");
-
-    const [analysis, suggestions, linked] = await Promise.all([
-      api(`/api/daily-notes/${noteId}/analysis`),
-      api(`/api/daily-notes/${noteId}/suggestions`),
-      api(`/api/daily-notes/${noteId}/linked-records`)
-    ]);
-
-    renderAiAnalysisSummary(analysis);
-    renderAiSuggestions(suggestions.items || []);
-    renderLinkedRecords(linked.items || []);
-  } catch (error) {
-    console.error(error);
-    els.dailyNoteAiStatusBadge.textContent = "Error";
-    els.dailyNoteAiStatusBadge.className = "badge danger";
-    els.dailyNoteAiSuggestionsList.innerHTML = `<p class="sidebar-empty">Unable to load AI suggestions.</p>`;
-  }
+  els.dailyNoteAiSuggestionsList.innerHTML = `<p class="empty-state">Analysing Daily Note and preparing follow-on suggestions...</p>`;
 }
 
 function renderAiAnalysisSummary(analysis) {
@@ -534,8 +462,8 @@ function renderAiAnalysisSummary(analysis) {
 }
 
 function renderAiSuggestions(items) {
-  if (!items.length) {
-    els.dailyNoteAiSuggestionsList.innerHTML = `<p class="sidebar-empty">No follow-on suggestions were generated for this note.</p>`;
+  if (!items || !items.length) {
+    els.dailyNoteAiSuggestionsList.innerHTML = `<p class="empty-state">No follow-on suggestions were generated for this note.</p>`;
     return;
   }
 
@@ -555,7 +483,7 @@ function renderAiSuggestions(items) {
         <div class="ai-suggestion-header">
           <div>
             <h4>${escapeHtml(item.title)}</h4>
-            <p class="sidebar-text">${escapeHtml(item.rationale || "")}</p>
+            <p class="muted-text">${escapeHtml(item.rationale || "")}</p>
           </div>
           <span class="badge">${escapeHtml(confidenceLabel)}</span>
         </div>
@@ -576,33 +504,44 @@ function renderAiSuggestions(items) {
 
   document.querySelectorAll(".dismiss-ai-suggestion-btn").forEach(btn => {
     btn.addEventListener("click", async () => {
-      await dismissAiSuggestion(btn.dataset.id);
+      try {
+        await api(`/api/daily-notes/${state.currentDailyNoteId}/suggestions/${btn.dataset.id}/dismiss`, {
+          method: "POST"
+        });
+        await loadDailyNoteAiData(state.currentDailyNoteId);
+      } catch (error) {
+        alert(error.message);
+      }
     });
   });
 
   document.querySelectorAll(".review-ai-suggestion-btn").forEach(btn => {
     btn.addEventListener("click", async () => {
-      await reviewAiSuggestion(btn.dataset.id);
+      try {
+        const data = await api(`/api/daily-notes/${state.currentDailyNoteId}/suggestions/${btn.dataset.id}/accept`, {
+          method: "POST"
+        });
+        await openLinkedDraft(data.draft_id);
+        await loadDailyNoteAiData(state.currentDailyNoteId);
+      } catch (error) {
+        alert(error.message);
+      }
     });
   });
 }
 
 function renderLinkedRecords(items) {
-  if (!items.length) {
-    els.dailyNoteLinkedRecordsList.innerHTML = `<p class="sidebar-empty">No linked records yet.</p>`;
-    els.linkedRecordsSummary.innerHTML = `<p class="sidebar-empty">No linked records loaded.</p>`;
+  if (!items || !items.length) {
+    els.dailyNoteLinkedRecordsList.innerHTML = `<p class="empty-state">No linked records yet.</p>`;
+    els.linkedRecordsSummary.innerHTML = `<p class="empty-state">No linked records loaded.</p>`;
     return;
   }
 
   const html = items.map(item => `
     <div class="linked-record-card">
-      <div class="linked-record-header">
-        <div>
-          <p><strong>${escapeHtml(formatRecordTypeLabel(item.record_type))}</strong></p>
-          <p class="muted-text">${escapeHtml(item.created_at || "")}</p>
-        </div>
-        <span class="${getBadgeClass(item.draft_status || "draft")}">${escapeHtml(item.draft_status || "draft")}</span>
-      </div>
+      <p><strong>${escapeHtml(formatRecordTypeLabel(item.record_type || ""))}</strong></p>
+      <p>${escapeHtml(item.created_at || "")}</p>
+      <span class="${getBadgeClass(item.draft_status || "draft")}">${escapeHtml(item.draft_status || "draft")}</span>
     </div>
   `).join("");
 
@@ -610,19 +549,26 @@ function renderLinkedRecords(items) {
   els.linkedRecordsSummary.innerHTML = html;
 }
 
-async function dismissAiSuggestion(suggestionId) {
-  await api(`/api/daily-notes/${state.currentDailyNoteId}/suggestions/${suggestionId}/dismiss`, {
-    method: "POST"
-  });
-  await loadDailyNoteAiData(state.currentDailyNoteId);
-}
+async function loadDailyNoteAiData(noteId) {
+  try {
+    els.dailyNoteAiSuggestionsCard.classList.remove("hidden");
+    els.dailyNoteLinkedRecordsCard.classList.remove("hidden");
 
-async function reviewAiSuggestion(suggestionId) {
-  const data = await api(`/api/daily-notes/${state.currentDailyNoteId}/suggestions/${suggestionId}/accept`, {
-    method: "POST"
-  });
-  await openLinkedDraft(data.draft_id);
-  await loadDailyNoteAiData(state.currentDailyNoteId);
+    const [analysis, suggestions, linked] = await Promise.all([
+      api(`/api/daily-notes/${noteId}/analysis`),
+      api(`/api/daily-notes/${noteId}/suggestions`),
+      api(`/api/daily-notes/${noteId}/linked-records`)
+    ]);
+
+    renderAiAnalysisSummary(analysis);
+    renderAiSuggestions(suggestions.items || []);
+    renderLinkedRecords(linked.items || []);
+  } catch (error) {
+    console.error(error);
+    els.dailyNoteAiStatusBadge.textContent = "Error";
+    els.dailyNoteAiStatusBadge.className = "badge danger";
+    els.dailyNoteAiSuggestionsList.innerHTML = `<p class="empty-state">Unable to load AI suggestions.</p>`;
+  }
 }
 
 async function openLinkedDraft(draftId) {
@@ -637,11 +583,6 @@ async function openLinkedDraft(draftId) {
     <p><strong>Reminder:</strong> Staff must review and amend before saving.</p>
   `;
 
-  renderLinkedDraftFields(draft);
-  openLinkedDraftModal();
-}
-
-function renderLinkedDraftFields(draft) {
   const data = draft.form_data || {};
   const entries = Object.entries(data).filter(([key]) => ![
     "young_person_id",
@@ -661,100 +602,49 @@ function renderLinkedDraftFields(draft) {
       </div>
     `;
   }).join("");
-}
 
-async function saveLinkedDraftForm(e) {
-  e.preventDefault();
-  const draftId = els.linkedDraftId.value;
-  const formData = {};
-
-  els.linkedDraftDynamicFields.querySelectorAll("[data-field]").forEach(el => {
-    formData[el.dataset.field] = el.value;
-  });
-
-  await api(`/api/linked-record-drafts/${draftId}`, {
-    method: "PUT",
-    body: JSON.stringify({ form_data: formData })
-  });
-
-  closeLinkedDraftModal();
-  if (state.currentDailyNoteId) {
-    await loadDailyNoteAiData(state.currentDailyNoteId);
-  }
-}
-
-async function discardLinkedDraft() {
-  const draftId = els.linkedDraftId.value;
-  if (!draftId) return;
-
-  await api(`/api/linked-record-drafts/${draftId}/discard`, { method: "POST" });
-  closeLinkedDraftModal();
-
-  if (state.currentDailyNoteId) {
-    await loadDailyNoteAiData(state.currentDailyNoteId);
-  }
-}
-
-async function openArchive(type) {
-  if (!state.currentYoungPersonId) {
-    alert("Please select a young person first.");
-    return;
-  }
-
-  state.currentArchiveType = type;
-  els.archiveDrawerTitle.textContent = `${formatArchiveType(type)} Archive`;
-  openArchiveDrawer();
-  await loadArchiveItems();
-}
-
-function formatArchiveType(type) {
-  const map = {
-    "daily-notes": "Daily Notes",
-    incidents: "Incidents",
-    health: "Health",
-    education: "Education",
-    family: "Family",
-    "key-work": "Key Work",
-    chronology: "Chronology"
-  };
-  return map[type] || type;
+  openModal(els.linkedDraftModal);
 }
 
 async function loadArchiveItems() {
   if (!state.currentYoungPersonId || !state.currentArchiveType) return;
 
-  const params = new URLSearchParams();
-  if (els.archiveSearchInput.value) params.set("search", els.archiveSearchInput.value);
-  if (els.archiveDateFilter.value) params.set("date", els.archiveDateFilter.value);
-  if (els.archiveMonthFilter.value) params.set("month", els.archiveMonthFilter.value);
-  if (els.archiveYearFilter.value) params.set("year", els.archiveYearFilter.value);
+  try {
+    const params = new URLSearchParams();
+    if (els.archiveSearchInput.value) params.set("search", els.archiveSearchInput.value);
+    if (els.archiveDateFilter.value) params.set("date", els.archiveDateFilter.value);
+    if (els.archiveMonthFilter.value) params.set("month", els.archiveMonthFilter.value);
+    if (els.archiveYearFilter.value) params.set("year", els.archiveYearFilter.value);
 
-  const data = await api(
-    `/api/young-people/${state.currentYoungPersonId}/archive/${state.currentArchiveType}?${params.toString()}`
-  );
+    const data = await api(`/api/young-people/${state.currentYoungPersonId}/archive/${state.currentArchiveType}?${params.toString()}`);
 
-  if (!(data.items || []).length) {
-    els.archiveResultsList.innerHTML = `<p class="sidebar-empty">No archived records found.</p>`;
-    return;
+    if (!data.items || !data.items.length) {
+      els.archiveResultsList.innerHTML = `<p class="empty-state">No archived records found.</p>`;
+      return;
+    }
+
+    els.archiveResultsList.innerHTML = data.items.map(item => `
+      <div class="archive-result-card">
+        <p><strong>${escapeHtml(item.title || item.record_title || "Archived record")}</strong></p>
+        <p class="muted-text">${escapeHtml(item.record_date || "")}</p>
+        <p>${escapeHtml(item.summary || "")}</p>
+        <button class="btn secondary archive-open-item-btn" data-id="${item.id}">Open</button>
+      </div>
+    `).join("");
+
+    document.querySelectorAll(".archive-open-item-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        try {
+          const record = await api(`/api/archive/${state.currentArchiveType}/${btn.dataset.id}`);
+          alert(`${record.title || "Record"}\n\n${record.summary || "Record loaded."}`);
+        } catch (error) {
+          alert(error.message);
+        }
+      });
+    });
+  } catch (error) {
+    console.error(error);
   }
-
-  els.archiveResultsList.innerHTML = (data.items || []).map(item => `
-    <div class="archive-result-card">
-      <p><strong>${escapeHtml(item.title || item.record_title || "Archived record")}</strong></p>
-      <p class="muted-text">${escapeHtml(item.record_date || "")}</p>
-      <p>${escapeHtml(item.summary || "")}</p>
-      <button class="btn secondary archive-open-item-btn" data-id="${item.id}">Open</button>
-    </div>
-  `).join("");
-
-  document.querySelectorAll(".archive-open-item-btn").forEach(btn => {
-    btn.addEventListener("click", () => openArchiveItem(btn.dataset.id));
-  });
-}
-
-async function openArchiveItem(recordId) {
-  const data = await api(`/api/archive/${state.currentArchiveType}/${recordId}`);
-  alert(`${data.title || "Record"}\n\n${data.summary || "Record loaded."}`);
 }
 
 function bindEvents() {
@@ -766,7 +656,7 @@ function bindEvents() {
     state.currentYoungPersonId = els.youngPersonSelector.value || null;
     if (!state.currentYoungPersonId) return;
 
-    await loadYoungPersonSummary(state.currentYoungPersonId);
+    await loadYoungPersonWorkspace(state.currentYoungPersonId);
     await loadCurrentDailyNote();
   });
 
@@ -778,78 +668,193 @@ function bindEvents() {
       }
 
       if (state.currentDailyNoteId) {
-        const note = await api(`/api/daily-notes/${state.currentDailyNoteId}`);
-        populateDailyNoteForm(note);
+        try {
+          const note = await api(`/api/daily-notes/${state.currentDailyNoteId}`);
+          fillDailyNoteForm(note);
+        } catch {
+          resetDailyNoteForm();
+        }
       } else {
         resetDailyNoteForm();
         els.dnNoteDate.value = new Date().toISOString().slice(0, 10);
       }
 
-      openDailyNoteModal();
+      openModal(els.dailyNoteModal);
     });
   });
 
-  els.closeDailyNoteModalBtn.addEventListener("click", closeDailyNoteModal);
-  els.cancelDailyNoteBtn.addEventListener("click", closeDailyNoteModal);
+  els.closeDailyNoteModalBtn.addEventListener("click", () => closeModal(els.dailyNoteModal));
+  els.cancelDailyNoteBtn.addEventListener("click", () => closeModal(els.dailyNoteModal));
 
   els.dailyNoteForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    await saveDailyNote();
+    const result = await saveDailyNote();
+    if (!result) return;
     await loadCurrentDailyNote();
-    closeDailyNoteModal();
+    closeModal(els.dailyNoteModal);
   });
 
   els.saveDraftDailyNoteBtn.addEventListener("click", async () => {
-    await saveDailyNote("draft");
+    const result = await saveDailyNote("draft");
+    if (!result) return;
     await loadCurrentDailyNote();
-    closeDailyNoteModal();
+    closeModal(els.dailyNoteModal);
   });
 
   els.submitDailyNoteBtn.addEventListener("click", async () => {
     const note = await saveDailyNote("submitted");
+    if (!note) return;
+
     state.currentDailyNoteId = note.id;
-    closeDailyNoteModal();
-    showAiSuggestionsLoading();
-    await submitCurrentDailyNote();
+    closeModal(els.dailyNoteModal);
+
+    try {
+      showAiSuggestionsLoading();
+      await api(`/api/daily-notes/${note.id}/submit`, { method: "POST" });
+      await loadCurrentDailyNote();
+    } catch (error) {
+      alert(error.message);
+    }
   });
 
   els.approveDailyNoteBtn.addEventListener("click", async () => {
     const note = await saveDailyNote("approved");
+    if (!note) return;
+
     state.currentDailyNoteId = note.id;
-    closeDailyNoteModal();
-    await approveCurrentDailyNote();
+    closeModal(els.dailyNoteModal);
+
+    try {
+      await api(`/api/daily-notes/${note.id}/approve`, { method: "POST" });
+      await loadCurrentDailyNote();
+    } catch (error) {
+      alert(error.message);
+    }
   });
 
   els.returnDailyNoteBtn.addEventListener("click", async () => {
     const note = await saveDailyNote("returned");
+    if (!note) return;
+
     state.currentDailyNoteId = note.id;
-    closeDailyNoteModal();
-    await returnCurrentDailyNote();
+    closeModal(els.dailyNoteModal);
+
+    try {
+      await api(`/api/daily-notes/${note.id}/return`, {
+        method: "POST",
+        body: JSON.stringify({
+          manager_review_comment: els.dnManagerReviewComment.value
+        })
+      });
+      await loadCurrentDailyNote();
+    } catch (error) {
+      alert(error.message);
+    }
   });
 
   els.regenerateAiSuggestionsBtn.addEventListener("click", async () => {
     if (!state.currentDailyNoteId) return;
-    showAiSuggestionsLoading();
-    await api(`/api/daily-notes/${state.currentDailyNoteId}/suggestions/regenerate`, {
-      method: "POST"
-    });
-    await loadDailyNoteAiData(state.currentDailyNoteId);
+    try {
+      showAiSuggestionsLoading();
+      await api(`/api/daily-notes/${state.currentDailyNoteId}/suggestions/regenerate`, {
+        method: "POST"
+      });
+      await loadDailyNoteAiData(state.currentDailyNoteId);
+    } catch (error) {
+      alert(error.message);
+    }
   });
 
-  els.linkedDraftForm.addEventListener("submit", saveLinkedDraftForm);
-  els.closeLinkedDraftModalBtn.addEventListener("click", closeLinkedDraftModal);
-  els.cancelLinkedDraftBtn.addEventListener("click", closeLinkedDraftModal);
-  els.discardLinkedDraftBtn.addEventListener("click", discardLinkedDraft);
+  els.linkedDraftForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-  els.openDailyNotesArchiveBtn.addEventListener("click", () => openArchive("daily-notes"));
-  els.closeArchiveDrawerBtn.addEventListener("click", closeArchiveDrawer);
+    const formData = {};
+    els.linkedDraftDynamicFields.querySelectorAll("[data-field]").forEach(el => {
+      formData[el.dataset.field] = el.value;
+    });
+
+    try {
+      await api(`/api/linked-record-drafts/${els.linkedDraftId.value}`, {
+        method: "PUT",
+        body: JSON.stringify({ form_data: formData })
+      });
+      closeModal(els.linkedDraftModal);
+      if (state.currentDailyNoteId) {
+        await loadDailyNoteAiData(state.currentDailyNoteId);
+      }
+    } catch (error) {
+      alert(error.message);
+    }
+  });
+
+  els.closeLinkedDraftModalBtn.addEventListener("click", () => closeModal(els.linkedDraftModal));
+  els.cancelLinkedDraftBtn.addEventListener("click", () => closeModal(els.linkedDraftModal));
+
+  els.discardLinkedDraftBtn.addEventListener("click", async () => {
+    try {
+      await api(`/api/linked-record-drafts/${els.linkedDraftId.value}/discard`, {
+        method: "POST"
+      });
+      closeModal(els.linkedDraftModal);
+      if (state.currentDailyNoteId) {
+        await loadDailyNoteAiData(state.currentDailyNoteId);
+      }
+    } catch (error) {
+      alert(error.message);
+    }
+  });
+
+  els.openDailyNotesArchiveBtn.addEventListener("click", async () => {
+    if (!state.currentYoungPersonId) {
+      alert("Please select a young person first.");
+      return;
+    }
+    state.currentArchiveType = "daily-notes";
+    els.archiveDrawerTitle.textContent = "Daily Notes Archive";
+    openModal(els.archiveDrawer);
+    await loadArchiveItems();
+  });
 
   document.querySelectorAll(".archive-link-btn").forEach(btn => {
-    btn.addEventListener("click", () => openArchive(btn.dataset.archive));
+    btn.addEventListener("click", async () => {
+      if (!state.currentYoungPersonId) {
+        alert("Please select a young person first.");
+        return;
+      }
+      state.currentArchiveType = btn.dataset.archive;
+      els.archiveDrawerTitle.textContent = `${formatArchiveType(btn.dataset.archive)} Archive`;
+      openModal(els.archiveDrawer);
+      await loadArchiveItems();
+    });
   });
+
+  els.closeArchiveDrawerBtn.addEventListener("click", () => closeModal(els.archiveDrawer));
 
   [els.archiveSearchInput, els.archiveDateFilter, els.archiveMonthFilter, els.archiveYearFilter].forEach(el => {
     el.addEventListener("change", loadArchiveItems);
+    el.addEventListener("input", () => {
+      if (el === els.archiveSearchInput) loadArchiveItems();
+    });
+  });
+
+  document.getElementById("quickIncidentBtn")?.addEventListener("click", () => {
+    alert("Hook this button to your incident creation flow.");
+  });
+
+  document.getElementById("quickHealthBtn")?.addEventListener("click", () => {
+    alert("Hook this button to your health record flow.");
+  });
+
+  document.getElementById("quickEducationBtn")?.addEventListener("click", () => {
+    alert("Hook this button to your education record flow.");
+  });
+
+  document.getElementById("quickFamilyBtn")?.addEventListener("click", () => {
+    alert("Hook this button to your family record flow.");
+  });
+
+  document.getElementById("quickKeyWorkBtn")?.addEventListener("click", () => {
+    alert("Hook this button to your key work flow.");
   });
 }
 
@@ -858,7 +863,7 @@ async function init() {
   await loadYoungPeople();
 }
 
-init().catch(err => {
-  console.error(err);
+init().catch(error => {
+  console.error(error);
   alert("Unable to load the Young Person workspace.");
 });
