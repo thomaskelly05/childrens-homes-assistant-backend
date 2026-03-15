@@ -10,12 +10,10 @@ const state = {
 const endpoints = {
   youngPeopleList: [
     "/young-people",
-    "/young-people/list",
-    "/api/young-people"
+    "/young-people/list"
   ],
   overview: (id) => [
-    `/young-people/${id}`,
-    `/api/young-people/${id}`
+    `/young-people/${id}`
   ],
   profile: (id) => [
     `/young-people/${id}/profile`
@@ -132,9 +130,13 @@ function bindEvents() {
 
 function showStatus(message, isError = false) {
   if (!els.statusBar) return;
+
   els.statusBar.textContent = message;
   els.statusBar.classList.remove("hidden", "error");
-  if (isError) els.statusBar.classList.add("error");
+
+  if (isError) {
+    els.statusBar.classList.add("error");
+  }
 
   clearTimeout(showStatus.timer);
   showStatus.timer = setTimeout(() => {
@@ -153,10 +155,14 @@ async function fetchJson(url, options = {}) {
 
   if (!response.ok) {
     let message = `Request failed (${response.status})`;
+
     try {
       const data = await response.json();
-      if (data && data.detail) message = data.detail;
+      if (data && data.detail) {
+        message = data.detail;
+      }
     } catch (_err) {}
+
     throw new Error(message);
   }
 
@@ -221,7 +227,7 @@ function handleSearch(event) {
   const term = event.target.value.trim().toLowerCase();
 
   state.filteredYoungPeople = state.youngPeople.filter((person) => {
-    const name = `${person.first_name || ""} ${person.last_name || ""}`.toLowerCase();
+    const name = `${person.first_name || ""} ${person.last_name || ""} ${person.preferred_name || ""}`.toLowerCase();
     return name.includes(term);
   });
 
@@ -239,12 +245,14 @@ function renderYoungPeopleList() {
   els.youngPeopleList.innerHTML = state.filteredYoungPeople.map((person) => {
     const name = getFullName(person);
     const active = Number(state.selectedYoungPerson?.id) === Number(person.id) ? "active" : "";
-    const sub = person.room ? `Room: ${escapeHtml(person.room)}` : `ID: ${person.id}`;
+    const subtitle = person.placement_status
+      ? `Status: ${escapeHtml(person.placement_status)}`
+      : `ID: ${person.id}`;
 
     return `
       <div class="young-person-card ${active}" data-id="${person.id}">
         <h4>${escapeHtml(name)}</h4>
-        <p>${sub}</p>
+        <p>${subtitle}</p>
       </div>
     `;
   }).join("");
@@ -253,7 +261,9 @@ function renderYoungPeopleList() {
     card.addEventListener("click", async () => {
       const personId = Number(card.dataset.id);
       const person = state.youngPeople.find((row) => Number(row.id) === personId);
-      if (person) await selectYoungPerson(person);
+      if (person) {
+        await selectYoungPerson(person);
+      }
     });
   });
 }
@@ -280,9 +290,12 @@ function updateSelectedPersonHeader() {
   const person = state.selectedYoungPerson;
   const bits = [`ID: ${person.id}`];
 
-  if (person.dob) bits.push(`DOB: ${formatDate(person.dob)}`);
-  if (person.room) bits.push(`Room: ${person.room}`);
+  if (person.date_of_birth) bits.push(`DOB: ${formatDate(person.date_of_birth)}`);
   if (person.placement_status) bits.push(`Status: ${person.placement_status}`);
+  if (person.summary_risk_level) bits.push(`Risk: ${person.summary_risk_level}`);
+  if (person.keyworker_first_name || person.keyworker_last_name) {
+    bits.push(`Keyworker: ${[person.keyworker_first_name, person.keyworker_last_name].filter(Boolean).join(" ")}`);
+  }
 
   els.selectedYoungPersonName.textContent = getFullName(person);
   els.selectedYoungPersonMeta.textContent = bits.join(" | ");
@@ -380,20 +393,27 @@ async function loadOverview(youngPersonId) {
       "first_name",
       "last_name",
       "preferred_name",
-      "dob",
+      "date_of_birth",
       "gender",
       "ethnicity",
-      "legal_status",
+      "local_id_number",
+      "admission_date",
+      "discharge_date",
       "placement_status",
-      "placement_type",
-      "local_authority",
-      "social_worker",
-      "room",
-      "school",
-      "registered_gp",
-      "nhs_number",
-      "mobile_number",
-      "email"
+      "summary_risk_level",
+      "legal_status",
+      "order_type",
+      "school_name",
+      "year_group",
+      "education_status",
+      "gp_name",
+      "allergies",
+      "diagnoses",
+      "communication_style",
+      "sensory_profile",
+      "interests",
+      "strengths_summary",
+      "what_matters_to_me"
     ];
 
     const availableKeys = overviewKeys.filter((key) => hasValue(data[key]));
@@ -704,12 +724,20 @@ function renderStructuredData(data) {
   }
 
   if (typeof data === "object") {
-    const fields = Object.entries(data).map(([key, value]) => `
-      <div class="data-item">
-        <strong>${escapeHtml(formatLabel(key))}</strong>
-        <span>${escapeHtml(stringifyValue(value))}</span>
-      </div>
-    `).join("");
+    const fields = Object.entries(data).map(([key, value]) => {
+      const printableValue = Array.isArray(value)
+        ? `${value.length} record(s)`
+        : (typeof value === "object" && value !== null)
+          ? JSON.stringify(value)
+          : stringifyValue(value);
+
+      return `
+        <div class="data-item">
+          <strong>${escapeHtml(formatLabel(key))}</strong>
+          <span>${escapeHtml(printableValue)}</span>
+        </div>
+      `;
+    }).join("");
 
     return `<div class="data-grid">${fields}</div>`;
   }
@@ -722,12 +750,15 @@ function buildRecordTitle(item, index) {
     "title",
     "topic",
     "name",
+    "full_name",
     "record_type",
     "plan_type",
     "incident_type",
     "contact_type",
     "attendance_status",
-    "category"
+    "category",
+    "school_name",
+    "medication_name"
   ];
 
   for (const key of possibleKeys) {
@@ -739,6 +770,9 @@ function buildRecordTitle(item, index) {
   if (hasValue(item.created_at)) return `Record ${index + 1} — ${formatDateTime(item.created_at)}`;
   if (hasValue(item.event_datetime)) return `Record ${index + 1} — ${formatDateTime(item.event_datetime)}`;
   if (hasValue(item.session_date)) return `Record ${index + 1} — ${formatDate(item.session_date)}`;
+  if (hasValue(item.note_date)) return `Record ${index + 1} — ${formatDate(item.note_date)}`;
+  if (hasValue(item.record_date)) return `Record ${index + 1} — ${formatDate(item.record_date)}`;
+  if (hasValue(item.contact_datetime)) return `Record ${index + 1} — ${formatDateTime(item.contact_datetime)}`;
 
   return `Record ${index + 1}`;
 }
@@ -752,8 +786,9 @@ function normaliseArrayResponse(data) {
 }
 
 function getFullName(person) {
+  const preferred = person.preferred_name ? ` (${person.preferred_name})` : "";
   const name = `${person.first_name || ""} ${person.last_name || ""}`.trim();
-  return name || `Young Person #${person.id}`;
+  return name ? `${name}${preferred}` : `Young Person #${person.id}`;
 }
 
 function cleanValue(value) {
@@ -781,18 +816,52 @@ function formatLabel(value) {
 
 function stringifyValue(value) {
   if (value === null || value === undefined || value === "") return "—";
-  if (typeof value === "object") return JSON.stringify(value);
   if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "object") return JSON.stringify(value);
   return String(value);
 }
 
 function formatFieldValue(key, value) {
   if (!hasValue(value)) return "—";
-  const dateKeys = ["dob", "created_at", "updated_at", "event_datetime", "session_date"];
+
+  const dateKeys = [
+    "date_of_birth",
+    "created_at",
+    "updated_at",
+    "event_datetime",
+    "session_date",
+    "note_date",
+    "record_date",
+    "admission_date",
+    "discharge_date",
+    "review_date",
+    "start_date",
+    "next_session_date",
+    "contact_datetime",
+    "effective_from",
+    "effective_to"
+  ];
+
   if (dateKeys.includes(key)) {
-    if (key === "dob" || key === "session_date") return formatDate(value);
+    if (
+      key === "date_of_birth" ||
+      key === "session_date" ||
+      key === "note_date" ||
+      key === "record_date" ||
+      key === "admission_date" ||
+      key === "discharge_date" ||
+      key === "review_date" ||
+      key === "start_date" ||
+      key === "next_session_date" ||
+      key === "effective_from" ||
+      key === "effective_to"
+    ) {
+      return formatDate(value);
+    }
+
     return formatDateTime(value);
   }
+
   return stringifyValue(value);
 }
 
