@@ -53,7 +53,15 @@ const endpoints = {
   keyworkCreate: "/young-people/keywork",
   keyworkUpdate: (id) => `/young-people/keywork/${id}`,
   chronologyList: (id) => `/young-people/${id}/chronology`,
-  chronologyRebuild: (id) => `/young-people/${id}/chronology/rebuild`
+  chronologyRebuild: (id) => `/young-people/${id}/chronology/rebuild`,
+  standardsSummary: (id) => [
+    `/young-people/${id}/standards`
+  ],
+  standardsEvidence: (id) => [
+    `/young-people/${id}/standards/evidence`
+  ],
+  standardsRebuild: (id) => `/young-people/${id}/standards/rebuild`,
+  inspectionPackCreate: "/inspection-pack"
 };
 
 const els = {
@@ -146,8 +154,28 @@ function bindEvents() {
   }
 
   if (els.inspectionPackBtn) {
-    els.inspectionPackBtn.addEventListener("click", () => {
-      showStatus("OFSTED inspection pack generator to be connected next.", false);
+    els.inspectionPackBtn.addEventListener("click", async () => {
+      if (!state.selectedYoungPerson) {
+        showStatus("Please select a young person first.", true);
+        return;
+      }
+
+      try {
+        await fetchJson(endpoints.inspectionPackCreate, {
+          method: "POST",
+          body: JSON.stringify({
+            scope_type: "young_person",
+            scope_id: state.selectedYoungPerson.id,
+            pack_type: "ofsted",
+            requested_by: 1
+          })
+        });
+
+        showStatus("Inspection pack job created. PDF generator is the next step.");
+      } catch (error) {
+        console.error(error);
+        showStatus(`Could not create inspection pack job: ${error.message}`, true);
+      }
     });
   }
 
@@ -817,6 +845,8 @@ function rerenderComplianceFromState() {
     }
     ${renderArraySection("Active Alerts", activeAlerts, ["alert_type", "title", "description", "severity", "review_date"])}
   `;
+
+  bindOpenRecordButtons();
 }
 
 function renderComplianceSummaryStrip(items, alerts) {
@@ -1085,6 +1115,24 @@ async function rebuildChronology() {
   } catch (error) {
     console.error(error);
     showStatus(`Could not rebuild chronology: ${error.message}`, true);
+  }
+}
+
+async function rebuildStandardsLinks() {
+  if (!state.selectedYoungPerson) {
+    showStatus("Please select a young person first.", true);
+    return;
+  }
+
+  try {
+    await fetchJson(endpoints.standardsRebuild(state.selectedYoungPerson.id), {
+      method: "POST"
+    });
+
+    showStatus("Standards links rebuilt successfully.");
+  } catch (error) {
+    console.error(error);
+    showStatus(`Could not rebuild standards links: ${error.message}`, true);
   }
 }
 
