@@ -4,17 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IndiCare | Young People</title>
-  <link rel="stylesheet" href="/css/young-people-shell.css?v=40" />
+  <link rel="stylesheet" href="/css/young-people-shell.css?v=50" />
 </head>
 <body>
   <div class="app-shell">
-    <!-- Sidebar -->
     <aside class="app-sidebar">
       <div class="sidebar-brand">
         <div class="brand-mark">I</div>
         <div class="brand-copy">
           <h1>IndiCare</h1>
-          <p>Children’s Home Operating System</p>
+          <p>Children’s Home OS</p>
         </div>
       </div>
 
@@ -23,8 +22,13 @@
         <input id="youngPersonSearch" type="text" placeholder="Search by name..." autocomplete="off" />
       </div>
 
-      <div class="sidebar-actions">
+      <div class="sidebar-quick-actions">
         <button id="refreshYoungPeopleBtn" class="btn btn-secondary" type="button">Refresh</button>
+        <button id="globalNewDailyNoteBtn" class="btn btn-primary" type="button">+ Daily Note</button>
+        <button id="globalNewIncidentBtn" class="btn btn-secondary" type="button">+ Incident</button>
+        <button id="globalNewKeyworkBtn" class="btn btn-secondary" type="button">+ Key Work</button>
+        <button id="globalNewPlanBtn" class="btn btn-secondary" type="button">+ Plan</button>
+        <button id="globalNewRiskBtn" class="btn btn-secondary" type="button">+ Risk</button>
       </div>
 
       <section class="sidebar-section">
@@ -49,9 +53,7 @@
       </section>
     </aside>
 
-    <!-- Main -->
     <main class="app-main">
-      <!-- Top header -->
       <header class="top-header">
         <div class="top-header-left">
           <h2 id="selectedYoungPersonName">Select a young person</h2>
@@ -65,14 +67,13 @@
         </div>
       </header>
 
-      <!-- Sticky person strip -->
       <section class="person-strip" id="stickyYoungPersonBar">
         <div class="person-strip-main">
           <div class="person-avatar" id="stickyPersonAvatar">YP</div>
 
           <div class="person-strip-copy">
             <h3 id="stickyYoungPersonName">No young person selected</h3>
-            <p id="stickyYoungPersonSummary">Select a record to load the workspace</p>
+            <p id="stickyYoungPersonSummary">Select a young person to load the workspace</p>
 
             <div class="person-meta-row">
               <span class="meta-chip" id="stickyDobChip">DOB: —</span>
@@ -89,18 +90,11 @@
             <span class="alert-chip alert-warning" id="stickyPlanReview">Plan review: —</span>
             <span class="alert-chip alert-info" id="stickyTodayInfo">Today I need to know: —</span>
           </div>
-
-          <div class="person-quick-actions">
-            <button id="quickAddDailyNoteBtn" class="btn btn-primary" type="button">+ Daily Note</button>
-            <button id="quickAddIncidentBtn" class="btn btn-secondary" type="button">+ Incident</button>
-            <button id="quickAddKeyworkBtn" class="btn btn-secondary" type="button">+ Key Work</button>
-          </div>
         </div>
       </section>
 
       <div id="statusBar" class="status-bar hidden"></div>
 
-      <!-- Top workspace tabs -->
       <nav class="workspace-tabs">
         <button class="tab-btn active" data-tab="overview" type="button">Overview</button>
         <button class="tab-btn" data-tab="profile" type="button">Profile</button>
@@ -120,9 +114,7 @@
         <button class="tab-btn" data-tab="supervision" type="button">Supervision</button>
       </nav>
 
-      <!-- Pages -->
       <section class="workspace-panels">
-        <!-- Overview -->
         <section id="tab-overview" class="tab-panel active">
           <div class="overview-layout">
             <div class="overview-main">
@@ -143,15 +135,6 @@
                   <div class="empty-state">Recent activity will appear here.</div>
                 </div>
               </div>
-
-              <div class="panel-card">
-                <div class="panel-card-header">
-                  <h3>Voice, Identity and Strengths</h3>
-                </div>
-                <div id="overviewVoiceContent" class="panel-card-body">
-                  <div class="empty-state">Voice and strengths will appear here.</div>
-                </div>
-              </div>
             </div>
 
             <div class="overview-side">
@@ -166,26 +149,16 @@
 
               <div class="panel-card">
                 <div class="panel-card-header">
-                  <h3>Alerts and Risk Snapshot</h3>
+                  <h3>Alerts and Readiness</h3>
                 </div>
                 <div id="overviewAlertsContent" class="panel-card-body">
-                  <div class="empty-state">Alerts will appear here.</div>
-                </div>
-              </div>
-
-              <div class="panel-card">
-                <div class="panel-card-header">
-                  <h3>Inspection Readiness</h3>
-                </div>
-                <div id="overviewReadinessContent" class="panel-card-body">
-                  <div class="empty-state">Readiness will appear here.</div>
+                  <div class="empty-state">Alerts and readiness will appear here.</div>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        <!-- Profile -->
         <section id="tab-profile" class="tab-panel">
           <div class="panel-card">
             <div id="profileContent" class="panel-card-body">
@@ -194,942 +167,203 @@
           </div>
         </section>
 
-        <!-- Plans -->
         <section id="tab-plans" class="tab-panel">
-          <div class="record-workspace">
-            <div class="record-list-column">
-              <div class="panel-card">
-                <div class="panel-card-header with-actions">
-                  <h3>Support Plans</h3>
-                  <button id="newPlanBtn" class="btn btn-primary" type="button">New Plan</button>
-                </div>
-                <div id="plansContent" class="panel-card-body">
-                  <div class="empty-state">Plans will appear here.</div>
-                </div>
-              </div>
+          <div class="records-page">
+            <div class="records-page-header">
+              <h3>Support Plans</h3>
+              <button id="newPlanBtn" class="btn btn-primary" type="button">New Plan</button>
             </div>
-
-            <div class="record-editor-column">
-              <div class="panel-card">
-                <div class="panel-card-header">
-                  <h3 id="planFormTitle">Create / Edit Support Plan</h3>
-                </div>
-
-                <form id="planForm" class="form-grid">
-                  <input type="hidden" id="planId" />
-
-                  <div class="section-block">
-                    <h4>Plan Basics</h4>
-
-                    <div class="form-group">
-                      <label for="planType">Plan Type</label>
-                      <input id="planType" type="text" placeholder="e.g. Support Plan" required />
-                    </div>
-
-                    <div class="form-group">
-                      <label for="planTitle">Title</label>
-                      <input id="planTitle" type="text" placeholder="Plan title" required />
-                    </div>
-
-                    <div class="form-group">
-                      <label for="planPresentingNeed">What is this plan responding to?</label>
-                      <textarea id="planPresentingNeed" rows="4" placeholder="Describe the need in clear, respectful language"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="planSummary">Plan Summary</label>
-                      <textarea id="planSummary" rows="4" placeholder="Explain the plan and what good support looks like"></textarea>
-                    </div>
-                  </div>
-
-                  <div class="section-block">
-                    <h4>Young Person and Support Guidance</h4>
-
-                    <div class="form-group">
-                      <label for="planChildVoice">Young Person’s Voice</label>
-                      <textarea id="planChildVoice" rows="4" placeholder="What has the young person said, wanted, preferred, or asked for?"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="planProactiveStrategies">What helps proactively?</label>
-                      <textarea id="planProactiveStrategies" rows="4" placeholder="What adults should do in advance to support success"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="planPaceGuidance">PACE / Relational Guidance</label>
-                      <textarea id="planPaceGuidance" rows="4" placeholder="How staff should respond in a warm, curious, accepting and empathic way"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="planTriggers">Triggers / Stressors</label>
-                      <textarea id="planTriggers" rows="4" placeholder="What tends to make things harder?"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="planProtectiveFactors">Protective Factors / Strengths</label>
-                      <textarea id="planProtectiveFactors" rows="4" placeholder="What strengths, relationships, routines or activities help?"></textarea>
-                    </div>
-                  </div>
-
-                  <div class="section-block">
-                    <h4>Workflow</h4>
-
-                    <div class="form-row">
-                      <div class="form-group">
-                        <label for="planStartDate">Start Date</label>
-                        <input id="planStartDate" type="date" />
-                      </div>
-
-                      <div class="form-group">
-                        <label for="planReviewDate">Review Date</label>
-                        <input id="planReviewDate" type="date" />
-                      </div>
-
-                      <div class="form-group">
-                        <label for="planStatus">Status</label>
-                        <select id="planStatus">
-                          <option value="active">Active</option>
-                          <option value="draft">Draft</option>
-                          <option value="completed">Completed</option>
-                          <option value="archived">Archived</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div class="form-row">
-                      <div class="form-group">
-                        <label for="planOwnerId">Owner ID</label>
-                        <input id="planOwnerId" type="number" placeholder="Optional" />
-                      </div>
-
-                      <div class="form-group">
-                        <label for="planApprovalStatus">Approval Status</label>
-                        <select id="planApprovalStatus">
-                          <option value="not_required">Not Required</option>
-                          <option value="draft">Draft</option>
-                          <option value="submitted">Submitted</option>
-                          <option value="approved">Approved</option>
-                          <option value="returned">Returned</option>
-                        </select>
-                      </div>
-
-                      <div class="form-group">
-                        <label for="planCreatedBy">Created By (User ID)</label>
-                        <input id="planCreatedBy" type="number" placeholder="Optional" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="form-actions sticky-form-actions">
-                    <button class="btn btn-primary" type="submit">Save Plan</button>
-                    <button id="clearPlanFormBtn" class="btn btn-secondary" type="button">Clear</button>
-                  </div>
-                </form>
-              </div>
-            </div>
-
-            <div class="record-context-column">
-              <div class="panel-card">
-                <div class="panel-card-header">
-                  <h3>Context</h3>
-                </div>
-                <div id="plansContextContent" class="panel-card-body">
-                  <div class="empty-state">Context will appear here.</div>
-                </div>
-              </div>
+            <div id="plansContent" class="records-list">
+              <div class="empty-state">Plans will appear here.</div>
             </div>
           </div>
         </section>
 
-        <!-- Risk -->
         <section id="tab-risk" class="tab-panel">
-          <div class="record-workspace">
-            <div class="record-list-column">
-              <div class="panel-card">
-                <div class="panel-card-header with-actions">
-                  <h3>Risk Assessments</h3>
-                  <button id="newRiskBtn" class="btn btn-primary" type="button">New Risk</button>
-                </div>
-                <div id="riskContent" class="panel-card-body">
-                  <div class="empty-state">Risk assessments will appear here.</div>
-                </div>
-              </div>
+          <div class="records-page">
+            <div class="records-page-header">
+              <h3>Risk Assessments</h3>
+              <button id="newRiskBtn" class="btn btn-primary" type="button">New Risk</button>
             </div>
-
-            <div class="record-editor-column">
-              <div class="panel-card">
-                <div class="panel-card-header">
-                  <h3 id="riskFormTitle">Create / Edit Risk Assessment</h3>
-                </div>
-
-                <form id="riskForm" class="form-grid">
-                  <input type="hidden" id="riskId" />
-
-                  <div class="section-block">
-                    <h4>Risk Summary</h4>
-
-                    <div class="form-group">
-                      <label for="riskCategory">Category</label>
-                      <input id="riskCategory" type="text" placeholder="e.g. Emotional Regulation" required />
-                    </div>
-
-                    <div class="form-group">
-                      <label for="riskTitle">Title</label>
-                      <input id="riskTitle" type="text" placeholder="Risk title" required />
-                    </div>
-
-                    <div class="form-group">
-                      <label for="riskConcernSummary">What is the concern and what is the actual risk?</label>
-                      <textarea id="riskConcernSummary" rows="4" placeholder="Describe the risk clearly and respectfully"></textarea>
-                    </div>
-                  </div>
-
-                  <div class="section-block">
-                    <h4>Understanding the Young Person</h4>
-
-                    <div class="form-group">
-                      <label for="riskKnownTriggers">Known Triggers</label>
-                      <textarea id="riskKnownTriggers" rows="4" placeholder="What tends to increase stress or risk?"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="riskEarlyWarningSigns">Early Warning Signs</label>
-                      <textarea id="riskEarlyWarningSigns" rows="4" placeholder="What signs show that support needs to increase?"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="riskContextualFactors">Contextual Factors</label>
-                      <textarea id="riskContextualFactors" rows="4" placeholder="What environmental, relational or situational factors matter?"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="riskChildViews">Young Person’s Views</label>
-                      <textarea id="riskChildViews" rows="4" placeholder="What does the young person say helps, worries them, or matters to them?"></textarea>
-                    </div>
-                  </div>
-
-                  <div class="section-block">
-                    <h4>What Staff Should Do</h4>
-
-                    <div class="form-group">
-                      <label for="riskCurrentControls">Current Controls</label>
-                      <textarea id="riskCurrentControls" rows="4" placeholder="What support, plans or routines are already in place?"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="riskDeescalationStrategies">De-escalation / Relational Strategies</label>
-                      <textarea id="riskDeescalationStrategies" rows="4" placeholder="How should adults respond to help the young person feel safer and more regulated?"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="riskResponseActions">Response Actions</label>
-                      <textarea id="riskResponseActions" rows="4" placeholder="What should staff do if risk escalates or occurs?"></textarea>
-                    </div>
-                  </div>
-
-                  <div class="section-block">
-                    <h4>Workflow</h4>
-
-                    <div class="form-row">
-                      <div class="form-group">
-                        <label for="riskSeverity">Severity</label>
-                        <select id="riskSeverity">
-                          <option value="low">Low</option>
-                          <option value="medium" selected>Medium</option>
-                          <option value="high">High</option>
-                        </select>
-                      </div>
-
-                      <div class="form-group">
-                        <label for="riskLikelihood">Likelihood</label>
-                        <select id="riskLikelihood">
-                          <option value="low">Low</option>
-                          <option value="medium" selected>Medium</option>
-                          <option value="high">High</option>
-                        </select>
-                      </div>
-
-                      <div class="form-group">
-                        <label for="riskReviewDate">Review Date</label>
-                        <input id="riskReviewDate" type="date" />
-                      </div>
-                    </div>
-
-                    <div class="form-row">
-                      <div class="form-group">
-                        <label for="riskStatus">Status</label>
-                        <select id="riskStatus">
-                          <option value="active">Active</option>
-                          <option value="draft">Draft</option>
-                          <option value="completed">Completed</option>
-                          <option value="archived">Archived</option>
-                        </select>
-                      </div>
-
-                      <div class="form-group">
-                        <label for="riskOwnerId">Owner ID</label>
-                        <input id="riskOwnerId" type="number" placeholder="Optional" />
-                      </div>
-
-                      <div class="form-group">
-                        <label for="riskApprovalStatus">Approval Status</label>
-                        <select id="riskApprovalStatus">
-                          <option value="not_required">Not Required</option>
-                          <option value="draft">Draft</option>
-                          <option value="submitted">Submitted</option>
-                          <option value="approved">Approved</option>
-                          <option value="returned">Returned</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="riskCreatedBy">Created By (User ID)</label>
-                      <input id="riskCreatedBy" type="number" placeholder="Optional" />
-                    </div>
-                  </div>
-
-                  <div class="form-actions sticky-form-actions">
-                    <button class="btn btn-primary" type="submit">Save Risk</button>
-                    <button id="clearRiskFormBtn" class="btn btn-secondary" type="button">Clear</button>
-                  </div>
-                </form>
-              </div>
-            </div>
-
-            <div class="record-context-column">
-              <div class="panel-card">
-                <div class="panel-card-header">
-                  <h3>Context</h3>
-                </div>
-                <div id="riskContextContent" class="panel-card-body">
-                  <div class="empty-state">Context will appear here.</div>
-                </div>
-              </div>
+            <div id="riskContent" class="records-list">
+              <div class="empty-state">Risk assessments will appear here.</div>
             </div>
           </div>
         </section>
 
-        <!-- Daily notes -->
         <section id="tab-daily_notes" class="tab-panel">
-          <div class="record-workspace record-workspace-wide">
-            <div class="record-list-column">
-              <div class="panel-card">
-                <div class="panel-card-header with-actions">
-                  <h3>Daily Notes</h3>
-                  <div class="header-actions">
-                    <button id="newDailyNoteBtn" class="btn btn-primary" type="button">New Daily Note</button>
-                    <button id="refreshDailyNotesBtn" class="btn btn-secondary" type="button">Refresh</button>
-                  </div>
-                </div>
-
-                <div class="filter-toolbar">
-                  <div class="filter-group">
-                    <label for="dailyNoteStatusFilter">Status</label>
-                    <select id="dailyNoteStatusFilter">
-                      <option value="all">All</option>
-                      <option value="draft">Draft</option>
-                      <option value="completed">Completed</option>
-                      <option value="reviewed">Reviewed</option>
-                      <option value="amended">Amended</option>
-                      <option value="returned">Returned</option>
-                    </select>
-                  </div>
-
-                  <div class="filter-group">
-                    <label for="dailyNoteShiftFilter">Shift</label>
-                    <select id="dailyNoteShiftFilter">
-                      <option value="all">All</option>
-                      <option value="day">Day</option>
-                      <option value="evening">Evening</option>
-                      <option value="night">Night</option>
-                      <option value="waking_night">Waking Night</option>
-                      <option value="school">School</option>
-                      <option value="custom">Custom</option>
-                    </select>
-                  </div>
-
-                  <div class="filter-group filter-group-grow">
-                    <label for="dailyNoteSearch">Search</label>
-                    <input id="dailyNoteSearch" type="text" placeholder="Search notes..." />
-                  </div>
-                </div>
-
-                <div id="dailyNotesContent" class="panel-card-body">
-                  <div class="empty-state">Daily notes will appear here.</div>
-                </div>
+          <div class="records-page">
+            <div class="records-page-header">
+              <h3>Daily Notes</h3>
+              <div class="header-actions">
+                <button id="newDailyNoteBtn" class="btn btn-primary" type="button">New Daily Note</button>
+                <button id="refreshDailyNotesBtn" class="btn btn-secondary" type="button">Refresh</button>
               </div>
             </div>
 
-            <div class="record-editor-column">
-              <div class="panel-card">
-                <div class="panel-card-header">
-                  <h3 id="dailyNoteFormTitle">Create / Edit Daily Note</h3>
-                  <div class="header-status-pills">
-                    <span id="dailyNoteSaveIndicator" class="header-pill">Not saved yet</span>
-                    <span id="dailyNoteWorkflowIndicator" class="header-pill">Draft</span>
-                  </div>
-                </div>
+            <div class="records-toolbar">
+              <div class="filter-group">
+                <label for="dailyNoteStatusFilter">Status</label>
+                <select id="dailyNoteStatusFilter">
+                  <option value="all">All</option>
+                  <option value="draft">Draft</option>
+                  <option value="completed">Completed</option>
+                  <option value="reviewed">Reviewed</option>
+                  <option value="amended">Amended</option>
+                  <option value="returned">Returned</option>
+                </select>
+              </div>
 
-                <form id="dailyNoteForm" class="form-grid">
-                  <input type="hidden" id="dailyNoteId" />
-                  <input type="hidden" id="dailyNoteVersionNumber" />
-                  <input type="hidden" id="dailyNoteCurrentStatus" value="draft" />
+              <div class="filter-group">
+                <label for="dailyNoteShiftFilter">Shift</label>
+                <select id="dailyNoteShiftFilter">
+                  <option value="all">All</option>
+                  <option value="day">Day</option>
+                  <option value="evening">Evening</option>
+                  <option value="night">Night</option>
+                  <option value="waking_night">Waking Night</option>
+                  <option value="school">School</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </div>
 
-                  <div class="section-block">
-                    <h4>Basic Context</h4>
-
-                    <div class="form-row">
-                      <div class="form-group">
-                        <label for="dailyNoteDate">Date</label>
-                        <input id="dailyNoteDate" type="date" required />
-                      </div>
-
-                      <div class="form-group">
-                        <label for="dailyNoteShiftType">Shift</label>
-                        <select id="dailyNoteShiftType" required>
-                          <option value="day">Day</option>
-                          <option value="evening">Evening</option>
-                          <option value="night">Night</option>
-                          <option value="waking_night">Waking Night</option>
-                          <option value="school">School</option>
-                          <option value="custom">Custom</option>
-                        </select>
-                      </div>
-
-                      <div class="form-group">
-                        <label for="dailyNoteCustomShift">Custom Shift Label</label>
-                        <input id="dailyNoteCustomShift" type="text" placeholder="Optional" />
-                      </div>
-                    </div>
-
-                    <div class="form-row">
-                      <div class="form-group">
-                        <label for="dailyNoteStaffOnShift">Staff on Shift</label>
-                        <input id="dailyNoteStaffOnShift" type="text" placeholder="e.g. Sarah, James" />
-                      </div>
-
-                      <div class="form-group">
-                        <label for="dailyNoteLocation">Location</label>
-                        <input id="dailyNoteLocation" type="text" placeholder="e.g. Home, school, community" />
-                      </div>
-
-                      <div class="form-group">
-                        <label for="dailyNoteTags">Tags</label>
-                        <input id="dailyNoteTags" type="text" placeholder="e.g. emotional wellbeing, education" />
-                      </div>
-                    </div>
-
-                    <div class="checkbox-row">
-                      <label class="checkbox-pill">
-                        <input id="dailyNoteSignificantEvent" type="checkbox" />
-                        <span>Significant event on this shift</span>
-                      </label>
-
-                      <label class="checkbox-pill">
-                        <input id="dailyNoteManagerReviewRequired" type="checkbox" />
-                        <span>Manager review required</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div class="section-block">
-                    <h4>What Happened Today?</h4>
-
-                    <div class="form-group">
-                      <label for="dailyNotePresentation">Presentation at the start of the shift</label>
-                      <textarea id="dailyNotePresentation" rows="3" placeholder="How did the young person appear at the start of the shift?"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="dailyNoteMainEvents">Main events of the shift</label>
-                      <textarea id="dailyNoteMainEvents" rows="4" placeholder="What happened during the shift?"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="dailyNoteRoutineEngagement">Routine and engagement</label>
-                      <textarea id="dailyNoteRoutineEngagement" rows="3" placeholder="How did they manage routines, self-care, activities and engagement?"></textarea>
-                    </div>
-
-                    <div class="form-row">
-                      <div class="form-group">
-                        <label for="dailyNoteEducationUpdate">Education / appointments / activities</label>
-                        <textarea id="dailyNoteEducationUpdate" rows="3" placeholder="Attendance, participation, barriers or achievements"></textarea>
-                      </div>
-
-                      <div class="form-group">
-                        <label for="dailyNoteHealthUpdate">Health / medication / sleep / food</label>
-                        <textarea id="dailyNoteHealthUpdate" rows="3" placeholder="Anything important about health or wellbeing"></textarea>
-                      </div>
-
-                      <div class="form-group">
-                        <label for="dailyNoteFamilyUpdate">Family / relationships / contact</label>
-                        <textarea id="dailyNoteFamilyUpdate" rows="3" placeholder="Any contact, family updates or relationship-based events"></textarea>
-                      </div>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="dailyNoteWorries">Worries or unsettled moments</label>
-                      <textarea id="dailyNoteWorries" rows="3" placeholder="Any signs of dysregulation, upset, anxiety or distress"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="dailyNotePositives">Positive moments and achievements</label>
-                      <textarea id="dailyNotePositives" rows="3" placeholder="What went well? What strengths or progress did you notice?"></textarea>
-                    </div>
-                  </div>
-
-                  <div class="section-block">
-                    <h4>PACE Reflection</h4>
-
-                    <div class="pace-grid">
-                      <div class="pace-card">
-                        <h5>P — Playfulness</h5>
-
-                        <div class="form-group">
-                          <label for="dailyNotePacePlayfulnessStatus">How relevant was this?</label>
-                          <select id="dailyNotePacePlayfulnessStatus">
-                            <option value="not_used">Not used</option>
-                            <option value="used">Used</option>
-                            <option value="not_appropriate">Not appropriate</option>
-                          </select>
-                        </div>
-
-                        <div class="form-group">
-                          <label for="dailyNotePacePlayfulness">Was there any lightness, humour or playful connection that helped?</label>
-                          <textarea id="dailyNotePacePlayfulness" rows="3"></textarea>
-                        </div>
-                      </div>
-
-                      <div class="pace-card">
-                        <h5>A — Acceptance</h5>
-
-                        <div class="form-group">
-                          <label for="dailyNotePaceAcceptanceStatus">How evident was this?</label>
-                          <select id="dailyNotePaceAcceptanceStatus">
-                            <option value="not_evident">Not evident</option>
-                            <option value="partly_evident">Partly evident</option>
-                            <option value="evident">Evident</option>
-                          </select>
-                        </div>
-
-                        <div class="form-group">
-                          <label for="dailyNotePaceAcceptance">How did staff show the young person they were accepted?</label>
-                          <textarea id="dailyNotePaceAcceptance" rows="3"></textarea>
-                        </div>
-                      </div>
-
-                      <div class="pace-card">
-                        <h5>C — Curiosity</h5>
-
-                        <div class="form-group">
-                          <label for="dailyNotePaceCuriosityTags">Possible underlying factors</label>
-                          <input id="dailyNotePaceCuriosityTags" type="text" placeholder="e.g. tiredness, anxiety, family worries" />
-                        </div>
-
-                        <div class="form-group">
-                          <label for="dailyNotePaceCuriosity">What might have been going on underneath the behaviour or presentation?</label>
-                          <textarea id="dailyNotePaceCuriosity" rows="3"></textarea>
-                        </div>
-                      </div>
-
-                      <div class="pace-card">
-                        <h5>E — Empathy</h5>
-
-                        <div class="form-group">
-                          <label for="dailyNotePaceEmpathyTags">Empathic responses used</label>
-                          <input id="dailyNotePaceEmpathyTags" type="text" placeholder="e.g. reassurance, calm tone, gave space" />
-                        </div>
-
-                        <div class="form-group">
-                          <label for="dailyNotePaceEmpathy">How did staff show understanding?</label>
-                          <textarea id="dailyNotePaceEmpathy" rows="3"></textarea>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="section-block">
-                    <h4>Young Person’s Voice</h4>
-
-                    <div class="form-group">
-                      <label for="dailyNoteYoungPersonVoice">What did the young person say or communicate?</label>
-                      <textarea id="dailyNoteYoungPersonVoice" rows="4"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="dailyNoteCommunicationStyle">How was this communicated?</label>
-                      <textarea id="dailyNoteCommunicationStyle" rows="3"></textarea>
-                    </div>
-                  </div>
-
-                  <div class="section-block">
-                    <h4>Staff Response and Impact</h4>
-
-                    <div class="form-group">
-                      <label for="dailyNoteStaffResponse">What did staff do?</label>
-                      <textarea id="dailyNoteStaffResponse" rows="4"></textarea>
-                    </div>
-
-                    <div class="form-row">
-                      <div class="form-group">
-                        <label for="dailyNoteWhatHelped">What helped?</label>
-                        <textarea id="dailyNoteWhatHelped" rows="3"></textarea>
-                      </div>
-
-                      <div class="form-group">
-                        <label for="dailyNoteWhatDidNotHelp">What did not help?</label>
-                        <textarea id="dailyNoteWhatDidNotHelp" rows="3"></textarea>
-                      </div>
-
-                      <div class="form-group">
-                        <label for="dailyNoteImpact">How did the young person respond / what was the impact?</label>
-                        <textarea id="dailyNoteImpact" rows="3"></textarea>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="section-block">
-                    <h4>Follow-up and Linked Actions</h4>
-
-                    <div class="form-group">
-                      <label for="dailyNoteActionsRequired">Actions required</label>
-                      <textarea id="dailyNoteActionsRequired" rows="3"></textarea>
-                    </div>
-
-                    <div class="checkbox-row">
-                      <label class="checkbox-pill">
-                        <input id="dailyNoteDiscussInHandover" type="checkbox" />
-                        <span>Discuss in handover</span>
-                      </label>
-
-                      <label class="checkbox-pill">
-                        <input id="dailyNoteUpdateRiskAssessment" type="checkbox" />
-                        <span>Update risk assessment</span>
-                      </label>
-
-                      <label class="checkbox-pill">
-                        <input id="dailyNoteLinkMonthlyReview" type="checkbox" />
-                        <span>Include in monthly review</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div class="section-block">
-                    <h4>Standards and Evidence</h4>
-
-                    <div class="form-group">
-                      <label for="dailyNoteLinkedStandards">Quality Standards</label>
-                      <input id="dailyNoteLinkedStandards" type="text" placeholder="e.g. views_wishes_feelings, health_wellbeing" />
-                    </div>
-
-                    <div class="form-group">
-                      <label for="dailyNoteLinkedRisks">Linked risks</label>
-                      <input id="dailyNoteLinkedRisks" type="text" placeholder="Comma-separated risk IDs or labels" />
-                    </div>
-
-                    <div class="form-group">
-                      <label for="dailyNoteLinkedPlans">Linked plans</label>
-                      <input id="dailyNoteLinkedPlans" type="text" placeholder="Comma-separated plan IDs or labels" />
-                    </div>
-
-                    <div class="form-group">
-                      <label for="dailyNoteEvidenceImpactStatement">Impact statement</label>
-                      <textarea id="dailyNoteEvidenceImpactStatement" rows="3"></textarea>
-                    </div>
-                  </div>
-
-                  <div class="section-block">
-                    <h4>Amendment / Review Details</h4>
-
-                    <div class="form-group">
-                      <label for="dailyNoteChangeReason">Reason for update</label>
-                      <select id="dailyNoteChangeReason">
-                        <option value="">Select if editing a completed note</option>
-                        <option value="spelling_correction">Spelling correction</option>
-                        <option value="additional_information">Additional information</option>
-                        <option value="manager_feedback">Manager feedback</option>
-                        <option value="safeguarding_clarification">Safeguarding clarification</option>
-                        <option value="professional_update">Professional update</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="dailyNoteManagerReviewComment">Manager review comment</label>
-                      <textarea id="dailyNoteManagerReviewComment" rows="3"></textarea>
-                    </div>
-                  </div>
-
-                  <div class="form-actions sticky-form-actions">
-                    <button id="saveDailyNoteDraftBtn" class="btn btn-secondary" type="submit">Save Draft</button>
-                    <button id="completeDailyNoteBtn" class="btn btn-primary" type="button">Complete Note</button>
-                    <button id="reviewDailyNoteBtn" class="btn btn-secondary" type="button">Mark Reviewed</button>
-                    <button id="clearDailyNoteFormBtn" class="btn btn-secondary" type="button">Clear</button>
-                  </div>
-                </form>
+              <div class="filter-group filter-group-grow">
+                <label for="dailyNoteSearch">Search</label>
+                <input id="dailyNoteSearch" type="text" placeholder="Search notes..." />
               </div>
             </div>
 
-            <div class="record-context-column">
-              <div class="panel-card context-stack">
-                <div class="context-panel">
-                  <div class="panel-card-header">
-                    <h3>Today I Need to Know</h3>
-                  </div>
-                  <div id="dailyNoteSidebarTodayInfo" class="panel-card-body">
-                    <div class="empty-state">No live context loaded.</div>
-                  </div>
-                </div>
-
-                <div class="context-panel">
-                  <div class="panel-card-header">
-                    <h3>Current Risks</h3>
-                  </div>
-                  <div id="dailyNoteSidebarRisks" class="panel-card-body">
-                    <div class="empty-state">No current risks loaded.</div>
-                  </div>
-                </div>
-
-                <div class="context-panel">
-                  <div class="panel-card-header">
-                    <h3>Active Actions</h3>
-                  </div>
-                  <div id="dailyNoteSidebarActions" class="panel-card-body">
-                    <div class="empty-state">No active actions loaded.</div>
-                  </div>
-                </div>
-
-                <div class="context-panel">
-                  <div class="panel-card-header">
-                    <h3>Therapeutic Language Helper</h3>
-                  </div>
-                  <div id="therapeuticLanguageHints" class="panel-card-body">
-                    <div class="empty-state">Language guidance will appear here.</div>
-                  </div>
-                </div>
-
-                <div class="context-panel">
-                  <div class="panel-card-header">
-                    <h3>Version History</h3>
-                  </div>
-                  <div id="dailyNoteVersionHistory" class="panel-card-body">
-                    <div class="empty-state">Version history will appear here.</div>
-                  </div>
-                </div>
-              </div>
+            <div id="dailyNotesContent" class="records-list">
+              <div class="empty-state">Daily notes will appear here.</div>
             </div>
           </div>
         </section>
 
-        <!-- Incidents -->
         <section id="tab-incidents" class="tab-panel">
-          <div class="panel-card">
-            <div id="incidentsContent" class="panel-card-body">
+          <div class="records-page">
+            <div class="records-page-header">
+              <h3>Incidents</h3>
+              <button id="newIncidentBtn" class="btn btn-primary" type="button">New Incident</button>
+            </div>
+            <div id="incidentsContent" class="records-list">
               <div class="empty-state">Incident records will appear here.</div>
             </div>
           </div>
         </section>
 
-        <!-- Health -->
         <section id="tab-health" class="tab-panel">
-          <div class="panel-card">
-            <div id="healthContent" class="panel-card-body">
+          <div class="records-page">
+            <div class="records-page-header">
+              <h3>Health</h3>
+              <button id="newHealthRecordBtn" class="btn btn-primary" type="button">New Health Record</button>
+            </div>
+            <div id="healthContent" class="records-list">
               <div class="empty-state">Health records will appear here.</div>
             </div>
           </div>
         </section>
 
-        <!-- Education -->
         <section id="tab-education" class="tab-panel">
-          <div class="panel-card">
-            <div id="educationContent" class="panel-card-body">
+          <div class="records-page">
+            <div class="records-page-header">
+              <h3>Education</h3>
+              <button id="newEducationRecordBtn" class="btn btn-primary" type="button">New Education Record</button>
+            </div>
+            <div id="educationContent" class="records-list">
               <div class="empty-state">Education records will appear here.</div>
             </div>
           </div>
         </section>
 
-        <!-- Family -->
         <section id="tab-family" class="tab-panel">
-          <div class="panel-card">
-            <div id="familyContent" class="panel-card-body">
+          <div class="records-page">
+            <div class="records-page-header">
+              <h3>Family</h3>
+              <button id="newFamilyRecordBtn" class="btn btn-primary" type="button">New Family Record</button>
+            </div>
+            <div id="familyContent" class="records-list">
               <div class="empty-state">Family records will appear here.</div>
             </div>
           </div>
         </section>
 
-        <!-- Key work -->
         <section id="tab-keywork" class="tab-panel">
-          <div class="record-workspace">
-            <div class="record-list-column">
-              <div class="panel-card">
-                <div class="panel-card-header with-actions">
-                  <h3>Key Work Sessions</h3>
-                  <button id="newKeyworkBtn" class="btn btn-primary" type="button">New Session</button>
-                </div>
-
-                <div id="keyworkList" class="panel-card-body">
-                  <div class="empty-state">Select a young person to load key work.</div>
-                </div>
-              </div>
+          <div class="records-page">
+            <div class="records-page-header">
+              <h3>Key Work</h3>
+              <button id="newKeyworkBtn" class="btn btn-primary" type="button">New Session</button>
             </div>
-
-            <div class="record-editor-column">
-              <div class="panel-card">
-                <div class="panel-card-header">
-                  <h3 id="keyworkFormTitle">Create / Edit Key Work Session</h3>
-                </div>
-
-                <form id="keyworkForm" class="form-grid">
-                  <input type="hidden" id="keyworkSessionId" />
-
-                  <div class="section-block">
-                    <div class="form-group">
-                      <label for="sessionDate">Session Date</label>
-                      <input id="sessionDate" type="date" required />
-                    </div>
-
-                    <div class="form-group">
-                      <label for="workerId">Worker ID</label>
-                      <input id="workerId" type="number" placeholder="Optional" />
-                    </div>
-
-                    <div class="form-group">
-                      <label for="topic">Topic</label>
-                      <input id="topic" type="text" required />
-                    </div>
-
-                    <div class="form-group">
-                      <label for="purpose">Purpose</label>
-                      <textarea id="purpose" rows="3"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="summary">Summary</label>
-                      <textarea id="summary" rows="4"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="childVoice">Young Person’s Voice</label>
-                      <textarea id="childVoice" rows="4"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="reflectiveAnalysis">Reflective Analysis</label>
-                      <textarea id="reflectiveAnalysis" rows="4"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="actionsAgreed">Actions Agreed</label>
-                      <textarea id="actionsAgreed" rows="3"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="nextSessionDate">Next Session Date</label>
-                      <input id="nextSessionDate" type="date" />
-                    </div>
-                  </div>
-
-                  <div class="form-actions sticky-form-actions">
-                    <button class="btn btn-primary" type="submit">Save Session</button>
-                    <button id="clearKeyworkFormBtn" class="btn btn-secondary" type="button">Clear</button>
-                  </div>
-                </form>
-              </div>
-            </div>
-
-            <div class="record-context-column">
-              <div class="panel-card">
-                <div class="panel-card-header">
-                  <h3>Context</h3>
-                </div>
-                <div id="keyworkContextContent" class="panel-card-body">
-                  <div class="empty-state">Context will appear here.</div>
-                </div>
-              </div>
+            <div id="keyworkList" class="records-list">
+              <div class="empty-state">Key work sessions will appear here.</div>
             </div>
           </div>
         </section>
 
-        <!-- Chronology -->
         <section id="tab-chronology" class="tab-panel">
           <div class="panel-card">
-            <div class="panel-card-header with-actions">
+            <div class="panel-card-header">
               <h3>Chronology</h3>
-              <button id="rebuildChronologyBtn" class="btn btn-primary" type="button">Rebuild Chronology</button>
+              <button id="rebuildChronologyBtn" class="btn btn-secondary" type="button">Rebuild</button>
             </div>
-
             <div id="chronologyContent" class="panel-card-body">
               <div class="empty-state">Chronology records will appear here.</div>
             </div>
           </div>
         </section>
 
-        <!-- Monthly reviews -->
         <section id="tab-monthly_reviews" class="tab-panel">
-          <div class="split-layout">
-            <div class="panel-card">
-              <div class="panel-card-header with-actions">
-                <h3>Monthly Reviews</h3>
-
-                <div class="header-actions">
-                  <input id="monthlyReviewMonth" type="month" />
-                  <button id="generateMonthlyReviewBtn" class="btn btn-primary" type="button">Generate Review</button>
-                  <button id="monthlyOfstedAiBtn" class="btn btn-secondary" type="button">AI OFSTED Report</button>
-                </div>
-              </div>
-
-              <div id="monthlyReviewsList" class="panel-card-body">
-                <div class="empty-state">Select a young person to load monthly reviews.</div>
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <h3>Monthly Reviews</h3>
+              <div class="header-actions">
+                <input id="monthlyReviewMonth" type="month" />
+                <button id="generateMonthlyReviewBtn" class="btn btn-primary" type="button">Generate Review</button>
+                <button id="monthlyOfstedAiBtn" class="btn btn-secondary" type="button">AI OFSTED Report</button>
               </div>
             </div>
+            <div id="monthlyReviewsList" class="panel-card-body">
+              <div class="empty-state">Monthly reviews will appear here.</div>
+            </div>
+          </div>
 
-            <div class="panel-card">
-              <div class="panel-card-header">
-                <h3>Monthly Review Detail</h3>
-              </div>
-
-              <div id="monthlyReviewDetail" class="panel-card-body">
-                <div class="empty-state">Select a review to view details.</div>
-              </div>
+          <div class="panel-card mt-16">
+            <div class="panel-card-header">
+              <h3>Monthly Review Detail</h3>
+            </div>
+            <div id="monthlyReviewDetail" class="panel-card-body">
+              <div class="empty-state">Select a review to view details.</div>
             </div>
           </div>
         </section>
 
-        <!-- Standards -->
         <section id="tab-standards" class="tab-panel">
-          <div class="split-layout">
-            <div class="panel-card">
-              <div class="panel-card-header with-actions">
-                <h3>Quality Standards Evidence</h3>
-                <button id="rebuildStandardsBtn" class="btn btn-secondary" type="button">Rebuild Evidence Links</button>
-              </div>
-
-              <div id="standardsSummary" class="panel-card-body">
-                <div class="empty-state">Select a young person to load standards evidence.</div>
-              </div>
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <h3>Quality Standards Evidence</h3>
+              <button id="rebuildStandardsBtn" class="btn btn-secondary" type="button">Rebuild Evidence Links</button>
             </div>
+            <div id="standardsSummary" class="panel-card-body">
+              <div class="empty-state">Standards evidence will appear here.</div>
+            </div>
+          </div>
 
-            <div class="panel-card">
-              <div class="panel-card-header">
-                <h3>Evidence Records</h3>
-              </div>
-
-              <div id="standardsEvidenceList" class="panel-card-body">
-                <div class="empty-state">No evidence loaded.</div>
-              </div>
+          <div class="panel-card mt-16">
+            <div class="panel-card-header">
+              <h3>Evidence Records</h3>
+            </div>
+            <div id="standardsEvidenceList" class="panel-card-body">
+              <div class="empty-state">No evidence loaded.</div>
             </div>
           </div>
         </section>
 
-        <!-- Compliance -->
         <section id="tab-compliance" class="tab-panel">
           <div class="panel-card">
             <div class="panel-card-header">
               <h3>Compliance</h3>
             </div>
 
-            <div class="filter-toolbar">
+            <div class="records-toolbar">
               <div class="filter-group">
                 <label for="complianceStatusFilter">Status</label>
                 <select id="complianceStatusFilter">
@@ -1160,54 +394,26 @@
           </div>
         </section>
 
-        <!-- Handovers -->
         <section id="tab-handover" class="tab-panel">
-          <div class="split-layout">
-            <div class="panel-card">
-              <div class="panel-card-header with-actions">
-                <h3>Handovers</h3>
-                <button id="newHandoverBtn" class="btn btn-primary" type="button">New Handover</button>
-              </div>
-
-              <div id="handoverListContent" class="panel-card-body">
-                <div class="empty-state">Handovers will appear here.</div>
-              </div>
+          <div class="records-page">
+            <div class="records-page-header">
+              <h3>Handovers</h3>
+              <button id="newHandoverBtn" class="btn btn-primary" type="button">New Handover</button>
             </div>
-
-            <div class="panel-card">
-              <div class="panel-card-header">
-                <h3>Handover Workspace</h3>
-              </div>
-
-              <div id="handoverWorkspaceContent" class="panel-card-body">
-                <div class="empty-state">Handover workspace will appear here.</div>
-              </div>
+            <div id="handoverListContent" class="records-list">
+              <div class="empty-state">Handovers will appear here.</div>
             </div>
           </div>
         </section>
 
-        <!-- Supervision -->
         <section id="tab-supervision" class="tab-panel">
-          <div class="split-layout">
-            <div class="panel-card">
-              <div class="panel-card-header with-actions">
-                <h3>Supervision</h3>
-                <button id="newSupervisionBtn" class="btn btn-primary" type="button">New Supervision</button>
-              </div>
-
-              <div id="supervisionListContent" class="panel-card-body">
-                <div class="empty-state">Supervision records will appear here.</div>
-              </div>
+          <div class="records-page">
+            <div class="records-page-header">
+              <h3>Supervision</h3>
+              <button id="newSupervisionBtn" class="btn btn-primary" type="button">New Supervision</button>
             </div>
-
-            <div class="panel-card">
-              <div class="panel-card-header">
-                <h3>Supervision Workspace</h3>
-              </div>
-
-              <div id="supervisionWorkspaceContent" class="panel-card-body">
-                <div class="empty-state">Supervision workspace will appear here.</div>
-              </div>
+            <div id="supervisionListContent" class="records-list">
+              <div class="empty-state">Supervision records will appear here.</div>
             </div>
           </div>
         </section>
@@ -1215,13 +421,13 @@
     </main>
   </div>
 
-  <!-- Full screen record workspace modal -->
+  <!-- Full-page document modal -->
   <section id="recordWorkspaceModal" class="workspace-modal hidden" aria-hidden="true">
     <div class="workspace-modal-shell">
       <header class="workspace-modal-header">
         <div class="workspace-modal-header-left">
-          <h2 id="workspaceModalTitle">Record Workspace</h2>
-          <p id="workspaceModalMeta">Record details will appear here</p>
+          <h2 id="workspaceModalTitle">Document Workspace</h2>
+          <p id="workspaceModalMeta">Create, edit, review and complete documents here</p>
         </div>
 
         <div class="workspace-modal-header-right">
@@ -1232,11 +438,11 @@
       </header>
 
       <div class="workspace-modal-body">
-        <div class="workspace-modal-main">
-          <div id="workspaceModalContent" class="workspace-modal-content">
-            <div class="empty-state">Record content will appear here.</div>
+        <main class="workspace-modal-main">
+          <div id="workspaceModalContent" class="workspace-document">
+            <div class="empty-state">Document content will appear here.</div>
           </div>
-        </div>
+        </main>
 
         <aside class="workspace-modal-side">
           <div class="panel-card">
@@ -1270,7 +476,7 @@
     </div>
   </section>
 
-  <!-- Existing drawer can be retired later, keep for compatibility -->
+  <!-- Keep old drawer for fallback only -->
   <section id="recordDetailDrawer" class="record-drawer hidden">
     <div class="drawer-header">
       <h3>Record Detail</h3>
@@ -1279,6 +485,6 @@
     <div id="recordDetailContent" class="drawer-content"></div>
   </section>
 
-  <script src="/js/young-people-shell.js?v=40"></script>
+  <script src="/js/young-people-shell.js?v=50"></script>
 </body>
 </html>
