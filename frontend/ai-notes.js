@@ -1,8 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
     const ACCESS_TOKEN_KEY = "access_token";
-    const LOCAL_TEMPLATE_KEY = "indicare_custom_templates_v4";
-    const LOCAL_DRAFT_KEY = "indicare_ai_notes_draft_v4";
-    const LOCAL_HISTORY_KEY = "indicare_ai_notes_history_v4";
+    const LOCAL_TEMPLATE_KEY = "indicare_custom_templates_v5";
+    const LOCAL_DRAFT_KEY = "indicare_ai_notes_draft_v5";
+    const LOCAL_HISTORY_KEY = "indicare_ai_notes_history_v5";
+    const LOCAL_VERSIONS_KEY = "indicare_ai_notes_versions_v1";
 
     const builtInTemplates = [
         {
@@ -144,11 +145,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const personCentredKeywords = [
         "wishes", "feelings", "views", "choices", "voice", "presentation",
-        "supported", "encouraged", "offered", "agreed", "explained", "consent"
+        "supported", "encouraged", "offered", "agreed", "explained", "consent",
+        "preferred", "wanted", "asked for", "decided", "chose"
     ];
 
     const vagueLanguageKeywords = [
-        "seemed", "appeared", "probably", "maybe", "possibly", "might have", "perhaps"
+        "seemed", "appeared", "probably", "maybe", "possibly", "might have", "perhaps",
+        "i think", "i feel", "sort of", "kind of"
+    ];
+
+    const chronologyKeywords = [
+        "before", "after", "then", "later", "earlier", "at ", "around ", "today", "yesterday",
+        "this morning", "this afternoon", "this evening", "tonight"
     ];
 
     const els = {
@@ -245,7 +253,22 @@ document.addEventListener("DOMContentLoaded", () => {
         stepRefineEl: document.getElementById("stepRefine"),
 
         actionsEmptyStateEl: document.getElementById("actionsEmptyState"),
-        actionsListEl: document.getElementById("actionsList")
+        actionsListEl: document.getElementById("actionsList"),
+
+        reviewSafeguardingCountEl: document.getElementById("reviewSafeguardingCount"),
+        reviewSafeguardingTextEl: document.getElementById("reviewSafeguardingText"),
+        reviewVagueCountEl: document.getElementById("reviewVagueCount"),
+        reviewVagueTextEl: document.getElementById("reviewVagueText"),
+        reviewPersonCentredScoreEl: document.getElementById("reviewPersonCentredScore"),
+        reviewPersonCentredTextEl: document.getElementById("reviewPersonCentredText"),
+        reviewChronologyScoreEl: document.getElementById("reviewChronologyScore"),
+        reviewChronologyTextEl: document.getElementById("reviewChronologyText"),
+
+        openVersionsDrawerBtn: document.getElementById("openVersionsDrawerBtn"),
+        versionsDrawerEl: document.getElementById("versionsDrawer"),
+        closeVersionsDrawerBtn: document.getElementById("closeVersionsDrawerBtn"),
+        versionsEmptyStateEl: document.getElementById("versionsEmptyState"),
+        versionsListEl: document.getElementById("versionsList")
     };
 
     const state = {
@@ -268,7 +291,7 @@ document.addEventListener("DOMContentLoaded", () => {
         isTranscriptVisible: true,
         extractedActions: [],
         hasUnsavedChanges: false,
-        isBusy: false
+        versions: []
     };
 
     function getAccessToken() {
@@ -318,7 +341,7 @@ document.addEventListener("DOMContentLoaded", () => {
         clearTimeout(showToast._timer);
         showToast._timer = setTimeout(() => {
             els.toastEl.classList.remove("show");
-        }, 2600);
+        }, 2200);
     }
 
     function setButtonLoading(button, isLoading, loadingText, defaultText) {
@@ -401,13 +424,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function openRecordingModal() {
         openModal(els.recordingModalEl);
-        if (els.recordingModalMicEl) {
-            els.recordingModalMicEl.classList.add("recording");
-            els.recordingModalMicEl.classList.remove("paused");
-        }
-        if (els.recordingModalStatusEl) {
-            els.recordingModalStatusEl.textContent = "Recording live";
-        }
+        els.recordingModalMicEl?.classList.add("recording");
+        els.recordingModalMicEl?.classList.remove("paused");
+        if (els.recordingModalStatusEl) els.recordingModalStatusEl.textContent = "Recording live";
         if (els.pauseRecordingBtn) els.pauseRecordingBtn.disabled = false;
         if (els.resumeRecordingBtn) els.resumeRecordingBtn.disabled = true;
         if (els.stopRecordingBtn) els.stopRecordingBtn.disabled = false;
@@ -415,9 +434,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function closeRecordingModal() {
         closeModal(els.recordingModalEl);
-        if (els.recordingModalMicEl) {
-            els.recordingModalMicEl.classList.remove("recording", "paused");
-        }
+        els.recordingModalMicEl?.classList.remove("recording", "paused");
         if (els.pauseRecordingBtn) els.pauseRecordingBtn.disabled = true;
         if (els.resumeRecordingBtn) els.resumeRecordingBtn.disabled = true;
         if (els.stopRecordingBtn) els.stopRecordingBtn.disabled = true;
@@ -433,6 +450,14 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!confirmed) return;
         }
         closeModal(els.workflowModalEl);
+    }
+
+    function openVersionsDrawer() {
+        openModal(els.versionsDrawerEl);
+    }
+
+    function closeVersionsDrawer() {
+        closeModal(els.versionsDrawerEl);
     }
 
     function getSupportedRecordingOptions() {
@@ -594,23 +619,96 @@ document.addEventListener("DOMContentLoaded", () => {
             steps.record?.classList.add("is-complete");
             steps.transcribe?.classList.add("is-active");
         }
-
         if (step === "transcribe") {
             steps.record?.classList.add("is-complete");
             steps.transcribe?.classList.add("is-complete");
             steps.generate?.classList.add("is-active");
         }
-
         if (step === "generate") {
             steps.record?.classList.add("is-complete");
             steps.transcribe?.classList.add("is-complete");
             steps.generate?.classList.add("is-complete");
             steps.refine?.classList.add("is-active");
         }
-
         if (step === "refine") {
             Object.values(steps).forEach(el => el?.classList.add("is-complete"));
         }
+    }
+
+    function setReviewCardState(elementId, stateName) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        el.classList.remove("is-good", "is-warning", "is-alert");
+        if (stateName) el.classList.add(stateName);
+    }
+
+    function scoreReviewStrip(text) {
+        const lower = text.toLowerCase();
+
+        const safeguardingMatches = [...new Set(
+            safeguardingKeywords.filter(keyword => lower.includes(keyword))
+        )];
+        const vagueMatches = [...new Set(
+            vagueLanguageKeywords.filter(keyword => lower.includes(keyword))
+        )];
+        const personCentredMatches = [...new Set(
+            personCentredKeywords.filter(keyword => lower.includes(keyword))
+        )];
+        const chronologyMatches = [...new Set(
+            chronologyKeywords.filter(keyword => lower.includes(keyword))
+        )];
+
+        if (els.reviewSafeguardingCountEl) {
+            els.reviewSafeguardingCountEl.textContent = String(safeguardingMatches.length);
+        }
+        if (els.reviewSafeguardingTextEl) {
+            els.reviewSafeguardingTextEl.textContent = safeguardingMatches.length
+                ? `${safeguardingMatches[0]}${safeguardingMatches.length > 1 ? " and others detected" : " detected"}`
+                : "No markers detected";
+        }
+        setReviewCardState("reviewSafeguardingCount", safeguardingMatches.length ? "is-alert" : "is-good");
+        setReviewCardState("reviewSafeguardingText", safeguardingMatches.length ? "is-alert" : "is-good");
+
+        if (els.reviewVagueCountEl) {
+            els.reviewVagueCountEl.textContent = String(vagueMatches.length);
+        }
+        if (els.reviewVagueTextEl) {
+            els.reviewVagueTextEl.textContent = vagueMatches.length
+                ? "Consider making wording more factual"
+                : "Writing appears factual";
+        }
+        setReviewCardState("reviewVagueCount", vagueMatches.length > 2 ? "is-warning" : vagueMatches.length ? "is-warning" : "is-good");
+        setReviewCardState("reviewVagueText", vagueMatches.length ? "is-warning" : "is-good");
+
+        if (els.reviewPersonCentredScoreEl) {
+            els.reviewPersonCentredScoreEl.textContent =
+                personCentredMatches.length >= 4 ? "Strong" :
+                personCentredMatches.length >= 2 ? "Good" : "Basic";
+        }
+        if (els.reviewPersonCentredTextEl) {
+            els.reviewPersonCentredTextEl.textContent =
+                personCentredMatches.length >= 4 ? "Good person-centred language detected" :
+                personCentredMatches.length >= 2 ? "Can still be strengthened" :
+                "Add more wishes, feelings and choices";
+        }
+        setReviewCardState("reviewPersonCentredScore", personCentredMatches.length >= 4 ? "is-good" : personCentredMatches.length >= 2 ? "is-warning" : "is-alert");
+        setReviewCardState("reviewPersonCentredText", personCentredMatches.length >= 4 ? "is-good" : personCentredMatches.length >= 2 ? "is-warning" : "is-alert");
+
+        if (els.reviewChronologyScoreEl) {
+            els.reviewChronologyScoreEl.textContent =
+                chronologyMatches.length >= 4 ? "Strong" :
+                chronologyMatches.length >= 2 ? "Moderate" : "Low";
+        }
+        if (els.reviewChronologyTextEl) {
+            els.reviewChronologyTextEl.textContent =
+                chronologyMatches.length >= 4 ? "Order of events looks clear" :
+                chronologyMatches.length >= 2 ? "Some sequencing detected" :
+                "Consider clarifying timings";
+        }
+        setReviewCardState("reviewChronologyScore", chronologyMatches.length >= 4 ? "is-good" : chronologyMatches.length >= 2 ? "is-warning" : "is-alert");
+        setReviewCardState("reviewChronologyText", chronologyMatches.length >= 4 ? "is-good" : chronologyMatches.length >= 2 ? "is-warning" : "is-alert");
+
+        return { safeguardingMatches, vagueMatches, personCentredMatches, chronologyMatches };
     }
 
     function analyseDocument() {
@@ -633,10 +731,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const personCentredCount = personCentredKeywords.filter(keyword => lower.includes(keyword)).length;
-        const vagueCount = vagueLanguageKeywords.filter(keyword => lower.includes(keyword.toLowerCase())).length;
+        const vagueCount = vagueLanguageKeywords.filter(keyword => lower.includes(keyword)).length;
 
         if (els.documentQualityBadgeEl) {
-            if (personCentredCount >= 3 && vagueCount === 0) {
+            if (personCentredCount >= 4 && vagueCount === 0) {
                 els.documentQualityBadgeEl.textContent = "Strong care draft";
             } else if (vagueCount > 0) {
                 els.documentQualityBadgeEl.textContent = "Needs factual review";
@@ -645,8 +743,83 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
+        scoreReviewStrip(text);
         updateWorkflowWordCount();
         syncMirrors();
+    }
+
+    function getVersions() {
+        try {
+            return JSON.parse(localStorage.getItem(LOCAL_VERSIONS_KEY) || "[]");
+        } catch {
+            return [];
+        }
+    }
+
+    function saveVersions(versions) {
+        localStorage.setItem(LOCAL_VERSIONS_KEY, JSON.stringify(versions));
+    }
+
+    function snapshotVersion(label = "Draft snapshot") {
+        const content = els.finalNoteEl?.value?.trim();
+        if (!content) return;
+
+        const version = {
+            id: `version-${Date.now()}`,
+            label,
+            title: els.noteTitleEl?.value?.trim() || "Untitled draft",
+            content,
+            createdAt: new Date().toISOString()
+        };
+
+        const next = [version, ...getVersions()].slice(0, 20);
+        state.versions = next;
+        saveVersions(next);
+        renderVersions();
+    }
+
+    function renderVersions() {
+        if (!els.versionsListEl || !els.versionsEmptyStateEl) return;
+
+        const versions = getVersions();
+        state.versions = versions;
+        els.versionsListEl.innerHTML = "";
+
+        if (!versions.length) {
+            els.versionsEmptyStateEl.style.display = "block";
+            return;
+        }
+
+        els.versionsEmptyStateEl.style.display = "none";
+
+        versions.forEach(version => {
+            const card = document.createElement("div");
+            card.className = "version-item";
+            card.innerHTML = `
+                <div class="version-item-title">${escapeHtml(version.label || "Version")}</div>
+                <div class="version-item-meta">${new Date(version.createdAt).toLocaleString("en-GB")}</div>
+                <div class="version-item-preview">${escapeHtml((version.content || "").slice(0, 220))}${(version.content || "").length > 220 ? "…" : ""}</div>
+                <div class="version-item-actions">
+                    <button class="btn btn-light btn-tiny" type="button" data-version-restore="${version.id}">Restore</button>
+                    <button class="btn btn-light btn-tiny" type="button" data-version-copy="${version.id}">Copy</button>
+                </div>
+            `;
+            els.versionsListEl.appendChild(card);
+        });
+    }
+
+    function restoreVersion(id) {
+        const version = getVersions().find(v => v.id === id);
+        if (!version) return;
+
+        state.previousFinalNote = els.finalNoteEl?.value || "";
+        if (els.finalNoteEl) els.finalNoteEl.value = version.content || "";
+
+        analyseDocument();
+        markDirty();
+        setWorkflowStep("refine");
+        closeVersionsDrawer();
+        showToast("Previous version restored.");
     }
 
     function markDirty() {
@@ -655,7 +828,6 @@ document.addEventListener("DOMContentLoaded", () => {
         clearTimeout(state.autosaveTimeout);
         state.autosaveTimeout = setTimeout(() => {
             persistDraftLocally();
-            showToast("Draft saved locally.");
         }, 900);
     }
 
@@ -953,6 +1125,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 openWorkflowModal();
                 setStatus("success", "Recording complete");
                 setWorkflowStep("record");
+                snapshotVersion("Recording captured");
                 showToast("Recording complete. AI workspace opened.");
             };
 
@@ -979,13 +1152,9 @@ document.addEventListener("DOMContentLoaded", () => {
         state.mediaRecorder.pause();
         state.pausedAt = Date.now();
 
-        if (els.recordingModalMicEl) {
-            els.recordingModalMicEl.classList.remove("recording");
-            els.recordingModalMicEl.classList.add("paused");
-        }
-        if (els.recordingModalStatusEl) {
-            els.recordingModalStatusEl.textContent = "Recording paused";
-        }
+        els.recordingModalMicEl?.classList.remove("recording");
+        els.recordingModalMicEl?.classList.add("paused");
+        if (els.recordingModalStatusEl) els.recordingModalStatusEl.textContent = "Recording paused";
         if (els.pauseRecordingBtn) els.pauseRecordingBtn.disabled = true;
         if (els.resumeRecordingBtn) els.resumeRecordingBtn.disabled = false;
     }
@@ -999,13 +1168,9 @@ document.addEventListener("DOMContentLoaded", () => {
             state.pausedAt = null;
         }
 
-        if (els.recordingModalMicEl) {
-            els.recordingModalMicEl.classList.remove("paused");
-            els.recordingModalMicEl.classList.add("recording");
-        }
-        if (els.recordingModalStatusEl) {
-            els.recordingModalStatusEl.textContent = "Recording live";
-        }
+        els.recordingModalMicEl?.classList.remove("paused");
+        els.recordingModalMicEl?.classList.add("recording");
+        if (els.recordingModalStatusEl) els.recordingModalStatusEl.textContent = "Recording live";
         if (els.pauseRecordingBtn) els.pauseRecordingBtn.disabled = false;
         if (els.resumeRecordingBtn) els.resumeRecordingBtn.disabled = true;
     }
@@ -1069,6 +1234,7 @@ document.addEventListener("DOMContentLoaded", () => {
             markDirty();
             setStatus("success", "Transcript ready");
             setWorkflowStep("transcribe");
+            snapshotVersion("Transcript created");
             showToast("Transcription complete.");
         } catch (error) {
             console.error("Transcription error:", error);
@@ -1126,6 +1292,7 @@ document.addEventListener("DOMContentLoaded", () => {
             markDirty();
             setStatus("success", "Document generated");
             setWorkflowStep("generate");
+            snapshotVersion("Document generated");
             showToast("Care document generated.");
         } catch (error) {
             console.error("Generate document error:", error);
@@ -1152,6 +1319,7 @@ document.addEventListener("DOMContentLoaded", () => {
         analyseDocument();
         markDirty();
         setWorkflowStep("refine");
+        snapshotVersion("Blank template inserted");
         showToast("Blank template inserted.");
     }
 
@@ -1170,6 +1338,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         state.previousFinalNote = els.finalNoteEl.value;
+        snapshotVersion("Before AI edit");
 
         const form = new FormData();
         form.append("text", currentText);
@@ -1202,6 +1371,7 @@ document.addEventListener("DOMContentLoaded", () => {
             markDirty();
             setStatus("success", "AI update applied");
             setWorkflowStep("refine");
+            snapshotVersion("After AI edit");
             showToast("AI change applied.");
         } catch (error) {
             console.error("Apply AI change error:", error);
@@ -1222,6 +1392,7 @@ document.addEventListener("DOMContentLoaded", () => {
         analyseDocument();
         markDirty();
         setWorkflowStep("refine");
+        snapshotVersion("Undo applied");
         showToast("Last change undone.");
     }
 
@@ -1237,6 +1408,7 @@ document.addEventListener("DOMContentLoaded", () => {
         analyseDocument();
         markDirty();
         setWorkflowStep("refine");
+        snapshotVersion("Generated draft restored");
         showToast("Draft restored.");
     }
 
@@ -1257,7 +1429,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .map((line, index) => ({
                 title: line.replace(/^[-•]\s*/, ""),
                 owner: index % 2 === 0 ? "Staff team" : "Key worker",
-                deadline: "To be confirmed",
+                deadline: "Not specified",
                 status: "Open"
             }));
     }
@@ -1275,21 +1447,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const form = new FormData();
             form.append("text", text);
+            form.append("mode", "custom");
             form.append(
                 "instruction",
                 [
                     "Extract the action points from this care record.",
-                    "Return them in a concise structured way.",
-                    "For each action identify:",
-                    "- title",
-                    "- owner",
-                    "- deadline",
-                    "- status",
-                    "Do not invent information. If owner or deadline is unclear, say 'Not specified'.",
-                    "Format the response as a simple list using one action per line."
+                    "Return them as simple lines.",
+                    "For each action identify: title, owner, deadline, status.",
+                    "Do not invent information. If unclear, use 'Not specified'."
                 ].join("\n")
             );
-            form.append("mode", "custom");
 
             const response = await fetch("/ai-notes/edit", {
                 method: "POST",
@@ -1308,21 +1475,21 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const resultText = data.text || "";
-            const lines = resultText
-                .split("\n")
-                .map(line => line.trim())
-                .filter(Boolean);
+            const lines = resultText.split("\n").map(line => line.trim()).filter(Boolean);
 
-            const parsed = lines.slice(0, 10).map(line => {
-                return {
+            state.extractedActions = (lines.length ? lines : [])
+                .slice(0, 10)
+                .map(line => ({
                     title: line.replace(/^[-•\d.]\s*/, ""),
                     owner: "Not specified",
                     deadline: "Not specified",
                     status: "Open"
-                };
-            });
+                }));
 
-            state.extractedActions = parsed.length ? parsed : localActionFallback(text);
+            if (!state.extractedActions.length) {
+                state.extractedActions = localActionFallback(text);
+            }
+
             renderExtractedActions();
             persistDraftLocally();
             setStatus("success", "Actions extracted");
@@ -1364,12 +1531,14 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    async function createDerivedDocumentInstruction(instructionText, successMessage) {
+    async function createDerivedDocumentInstruction(instructionText, successMessage, snapshotLabel) {
         const currentText = els.finalNoteEl?.value.trim();
         if (!currentText) {
             alert("There is no document to transform yet.");
             return;
         }
+
+        snapshotVersion(snapshotLabel || "Before derived version");
 
         const form = new FormData();
         form.append("text", currentText);
@@ -1400,6 +1569,7 @@ document.addEventListener("DOMContentLoaded", () => {
             markDirty();
             setWorkflowStep("refine");
             setStatus("success", "Derived version ready");
+            snapshotVersion(successMessage);
             showToast(successMessage);
         } catch (error) {
             console.error("Derived document error:", error);
@@ -1411,14 +1581,16 @@ document.addEventListener("DOMContentLoaded", () => {
     async function createHandoverVersion() {
         await createDerivedDocumentInstruction(
             "Turn this into a concise handover-ready summary with immediate risks, health, appointments, medication, professional contact and priorities for the next shift.",
-            "Handover version created."
+            "Handover version created.",
+            "Before handover version"
         );
     }
 
     async function createManagerSummary() {
         await createDerivedDocumentInstruction(
             "Rewrite this into a concise manager update. Focus on key issues, risks, actions taken, decisions required and next steps.",
-            "Manager summary created."
+            "Manager summary created.",
+            "Before manager summary"
         );
     }
 
@@ -1482,6 +1654,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 transcript
             });
 
+            snapshotVersion("Saved version");
             showToast("Document saved successfully.");
         } catch (error) {
             console.error("Save error:", error);
@@ -1790,6 +1963,33 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    function bindVersionEvents() {
+        els.openVersionsDrawerBtn?.addEventListener("click", openVersionsDrawer);
+        els.closeVersionsDrawerBtn?.addEventListener("click", closeVersionsDrawer);
+
+        els.versionsListEl?.addEventListener("click", async event => {
+            const restoreId = event.target.getAttribute("data-version-restore");
+            const copyId = event.target.getAttribute("data-version-copy");
+
+            if (restoreId) {
+                restoreVersion(restoreId);
+            }
+
+            if (copyId) {
+                const version = getVersions().find(v => v.id === copyId);
+                if (version) {
+                    await copyTextToClipboard(version.content || "");
+                }
+            }
+        });
+
+        els.versionsDrawerEl?.addEventListener("click", event => {
+            if (event.target === els.versionsDrawerEl) {
+                closeVersionsDrawer();
+            }
+        });
+    }
+
     function bindPromptEvents() {
         document.querySelectorAll(".prompt-chip[data-prompt]").forEach(btn => {
             btn.addEventListener("click", handlePromptChipClick);
@@ -1836,6 +2036,7 @@ document.addEventListener("DOMContentLoaded", () => {
         bindTextInputs();
         bindTemplateEvents();
         bindHistoryEvents();
+        bindVersionEvents();
         bindPromptEvents();
 
         window.addEventListener("beforeunload", event => {
@@ -1864,6 +2065,10 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             if (event.key === "Escape") {
+                if (!els.versionsDrawerEl?.classList.contains("hidden")) {
+                    closeVersionsDrawer();
+                    return;
+                }
                 if (!els.recordingModalEl?.classList.contains("hidden")) {
                     return;
                 }
@@ -1890,6 +2095,7 @@ document.addEventListener("DOMContentLoaded", () => {
         renderSavedTemplates();
         renderHistory();
         renderExtractedActions();
+        renderVersions();
         restoreLocalDraft();
 
         if (els.transcribeBtn) els.transcribeBtn.disabled = true;
