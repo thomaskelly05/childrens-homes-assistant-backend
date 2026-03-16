@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IndiCare | Young People</title>
-  <link rel="stylesheet" href="/css/young-people-shell.css?v=60" />
+  <link rel="stylesheet" href="/css/young-people-shell.css?v=61" />
 </head>
 <body>
   <div class="app">
@@ -44,14 +44,6 @@
 
       <div id="statusBar" class="status-bar hidden"></div>
 
-      <section class="quick-actions">
-        <button id="newDailyNoteBtn" class="btn btn-primary" type="button">New Daily Note</button>
-        <button id="newIncidentBtn" class="btn btn-secondary" type="button">New Incident</button>
-        <button id="newKeyworkBtn" class="btn btn-secondary" type="button">New Key Work</button>
-        <button id="newPlanBtn" class="btn btn-secondary" type="button">New Plan</button>
-        <button id="newRiskBtn" class="btn btn-secondary" type="button">New Risk</button>
-      </section>
-
       <nav class="tabs">
         <button class="tab-btn active" data-tab="overview" type="button">Overview</button>
         <button class="tab-btn" data-tab="profile" type="button">Profile</button>
@@ -82,99 +74,636 @@
           </div>
         </section>
 
+        <!-- Plans -->
         <section id="tab-plans" class="tab-panel">
           <div class="panel">
             <div class="panel-header">
               <h3>Plans</h3>
-              <button id="tabNewPlanBtn" class="btn btn-primary" type="button">New Plan</button>
             </div>
-            <div id="plansContent">
-              <div class="empty-state">Plans will appear here.</div>
-            </div>
+
+            <nav class="section-tabs" data-section="plans">
+              <button class="section-tab-btn active" data-section="plans" data-section-tab="records" type="button">Records</button>
+              <button class="section-tab-btn" data-section="plans" data-section-tab="form" type="button">Create / Edit</button>
+              <button class="section-tab-btn" data-section="plans" data-section-tab="archive" type="button">Archive</button>
+            </nav>
+
+            <section class="section-subpanel active" id="plans-subpanel-records">
+              <div class="panel-header">
+                <h4>Current Plans</h4>
+                <button id="plansOpenCreateBtn" class="btn btn-primary" type="button">New Plan</button>
+              </div>
+              <div id="plansContent">
+                <div class="empty-state">Plans will appear here.</div>
+              </div>
+            </section>
+
+            <section class="section-subpanel" id="plans-subpanel-form">
+              <form id="planForm" class="form-grid">
+                <input type="hidden" id="planId" />
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="planType">Plan Type</label>
+                    <input id="planType" type="text" placeholder="e.g. Support Plan" />
+                  </div>
+                  <div class="form-group">
+                    <label for="planTitle">Title</label>
+                    <input id="planTitle" type="text" placeholder="Plan title" />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="planPresentingNeed">Presenting Need</label>
+                  <textarea id="planPresentingNeed" placeholder="What is this plan responding to?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="planSummary">Summary</label>
+                  <textarea id="planSummary" placeholder="What support is needed and what good support looks like"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="planChildVoice">Young Person's Voice</label>
+                  <textarea id="planChildVoice" placeholder="What has the young person said, asked for, or preferred?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="planProactiveStrategies">Proactive Strategies</label>
+                  <textarea id="planProactiveStrategies" placeholder="What should staff do to help proactively?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="planPaceGuidance">PACE / Relational Guidance</label>
+                  <textarea id="planPaceGuidance" placeholder="How should adults respond in a therapeutic, child-centred way?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="planTriggers">Triggers / Stressors</label>
+                  <textarea id="planTriggers" placeholder="What tends to make things harder?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="planProtectiveFactors">Protective Factors / Strengths</label>
+                  <textarea id="planProtectiveFactors" placeholder="What strengths, routines or relationships help?"></textarea>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="planStartDate">Start Date</label>
+                    <input id="planStartDate" type="date" />
+                  </div>
+                  <div class="form-group">
+                    <label for="planReviewDate">Review Date</label>
+                    <input id="planReviewDate" type="date" />
+                  </div>
+                  <div class="form-group">
+                    <label for="planStatus">Status</label>
+                    <select id="planStatus">
+                      <option value="active">Active</option>
+                      <option value="draft">Draft</option>
+                      <option value="completed">Completed</option>
+                      <option value="archived">Archived</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="planOwnerId">Owner ID</label>
+                    <input id="planOwnerId" type="number" />
+                  </div>
+                  <div class="form-group">
+                    <label for="planApprovalStatus">Approval Status</label>
+                    <select id="planApprovalStatus">
+                      <option value="not_required">Not Required</option>
+                      <option value="draft">Draft</option>
+                      <option value="submitted">Submitted</option>
+                      <option value="approved">Approved</option>
+                      <option value="returned">Returned</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="planCreatedBy">Created By</label>
+                    <input id="planCreatedBy" type="number" />
+                  </div>
+                </div>
+
+                <div class="form-actions">
+                  <button class="btn btn-primary" type="submit">Save Plan</button>
+                  <button id="clearPlanFormBtn" class="btn btn-secondary" type="button">Clear</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="section-subpanel" id="plans-subpanel-archive">
+              <div id="plansArchiveContent">
+                <div class="empty-state">Archived plans will appear here.</div>
+              </div>
+            </section>
           </div>
         </section>
 
+        <!-- Risk -->
         <section id="tab-risk" class="tab-panel">
           <div class="panel">
             <div class="panel-header">
-              <h3>Risk Assessments</h3>
-              <button id="tabNewRiskBtn" class="btn btn-primary" type="button">New Risk</button>
+              <h3>Risk</h3>
             </div>
-            <div id="riskContent">
-              <div class="empty-state">Risk assessments will appear here.</div>
-            </div>
+
+            <nav class="section-tabs" data-section="risk">
+              <button class="section-tab-btn active" data-section="risk" data-section-tab="records" type="button">Records</button>
+              <button class="section-tab-btn" data-section="risk" data-section-tab="form" type="button">Create / Edit</button>
+              <button class="section-tab-btn" data-section="risk" data-section-tab="archive" type="button">Archive</button>
+            </nav>
+
+            <section class="section-subpanel active" id="risk-subpanel-records">
+              <div class="panel-header">
+                <h4>Current Risk Assessments</h4>
+                <button id="riskOpenCreateBtn" class="btn btn-primary" type="button">New Risk</button>
+              </div>
+              <div id="riskContent">
+                <div class="empty-state">Risk assessments will appear here.</div>
+              </div>
+            </section>
+
+            <section class="section-subpanel" id="risk-subpanel-form">
+              <form id="riskForm" class="form-grid">
+                <input type="hidden" id="riskId" />
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="riskCategory">Category</label>
+                    <input id="riskCategory" type="text" placeholder="e.g. Emotional Regulation" />
+                  </div>
+                  <div class="form-group">
+                    <label for="riskTitle">Title</label>
+                    <input id="riskTitle" type="text" placeholder="Risk title" />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="riskConcernSummary">Concern Summary</label>
+                  <textarea id="riskConcernSummary" placeholder="What is the concern and actual risk?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="riskKnownTriggers">Known Triggers</label>
+                  <textarea id="riskKnownTriggers" placeholder="What tends to increase the risk?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="riskEarlyWarningSigns">Early Warning Signs</label>
+                  <textarea id="riskEarlyWarningSigns" placeholder="What signs show support needs to increase?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="riskContextualFactors">Contextual Factors</label>
+                  <textarea id="riskContextualFactors" placeholder="What environmental, relational, or situational factors matter?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="riskCurrentControls">Current Controls</label>
+                  <textarea id="riskCurrentControls" placeholder="What support is already in place?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="riskDeescalationStrategies">De-escalation Strategies</label>
+                  <textarea id="riskDeescalationStrategies" placeholder="How should adults respond to reduce risk?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="riskResponseActions">Response Actions</label>
+                  <textarea id="riskResponseActions" placeholder="What should staff do if risk escalates or occurs?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="riskChildViews">Young Person's Views</label>
+                  <textarea id="riskChildViews" placeholder="What does the young person say helps, worries them, or matters to them?"></textarea>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="riskSeverity">Severity</label>
+                    <select id="riskSeverity">
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="riskLikelihood">Likelihood</label>
+                    <select id="riskLikelihood">
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="riskReviewDate">Review Date</label>
+                    <input id="riskReviewDate" type="date" />
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="riskStatus">Status</label>
+                    <select id="riskStatus">
+                      <option value="active">Active</option>
+                      <option value="draft">Draft</option>
+                      <option value="completed">Completed</option>
+                      <option value="archived">Archived</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="riskOwnerId">Owner ID</label>
+                    <input id="riskOwnerId" type="number" />
+                  </div>
+                  <div class="form-group">
+                    <label for="riskApprovalStatus">Approval Status</label>
+                    <select id="riskApprovalStatus">
+                      <option value="not_required">Not Required</option>
+                      <option value="draft">Draft</option>
+                      <option value="submitted">Submitted</option>
+                      <option value="approved">Approved</option>
+                      <option value="returned">Returned</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="riskCreatedBy">Created By</label>
+                  <input id="riskCreatedBy" type="number" />
+                </div>
+
+                <div class="form-actions">
+                  <button class="btn btn-primary" type="submit">Save Risk</button>
+                  <button id="clearRiskFormBtn" class="btn btn-secondary" type="button">Clear</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="section-subpanel" id="risk-subpanel-archive">
+              <div id="riskArchiveContent">
+                <div class="empty-state">Archived risks will appear here.</div>
+              </div>
+            </section>
           </div>
         </section>
 
+        <!-- Daily Notes -->
         <section id="tab-daily_notes" class="tab-panel">
           <div class="panel">
             <div class="panel-header">
               <h3>Daily Notes</h3>
-              <div class="panel-header-actions">
-                <button id="tabNewDailyNoteBtn" class="btn btn-primary" type="button">New Daily Note</button>
-                <button id="refreshDailyNotesBtn" class="btn btn-secondary" type="button">Refresh</button>
+            </div>
+
+            <nav class="section-tabs" data-section="daily_notes">
+              <button class="section-tab-btn active" data-section="daily_notes" data-section-tab="records" type="button">Records</button>
+              <button class="section-tab-btn" data-section="daily_notes" data-section-tab="form" type="button">Create / Edit</button>
+              <button class="section-tab-btn" data-section="daily_notes" data-section-tab="archive" type="button">Archive</button>
+            </nav>
+
+            <section class="section-subpanel active" id="daily_notes-subpanel-records">
+              <div class="panel-header">
+                <h4>Current Daily Notes</h4>
+                <div class="panel-header-actions">
+                  <button id="dailyNotesOpenCreateBtn" class="btn btn-primary" type="button">New Daily Note</button>
+                  <button id="refreshDailyNotesBtn" class="btn btn-secondary" type="button">Refresh</button>
+                </div>
               </div>
-            </div>
-            <div id="dailyNotesContent">
-              <div class="empty-state">Daily notes will appear here.</div>
-            </div>
+
+              <div class="filters">
+                <div>
+                  <label for="dailyNoteStatusFilter">Status</label>
+                  <select id="dailyNoteStatusFilter">
+                    <option value="all">All</option>
+                    <option value="draft">Draft</option>
+                    <option value="completed">Completed</option>
+                    <option value="reviewed">Reviewed</option>
+                    <option value="amended">Amended</option>
+                    <option value="returned">Returned</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label for="dailyNoteShiftFilter">Shift</label>
+                  <select id="dailyNoteShiftFilter">
+                    <option value="all">All</option>
+                    <option value="day">Day</option>
+                    <option value="evening">Evening</option>
+                    <option value="night">Night</option>
+                    <option value="waking_night">Waking Night</option>
+                    <option value="school">School</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label for="dailyNoteSearch">Search</label>
+                  <input id="dailyNoteSearch" type="text" placeholder="Search notes..." />
+                </div>
+              </div>
+
+              <div id="dailyNotesContent">
+                <div class="empty-state">Daily notes will appear here.</div>
+              </div>
+            </section>
+
+            <section class="section-subpanel" id="daily_notes-subpanel-form">
+              <form id="dailyNoteForm" class="form-grid">
+                <input type="hidden" id="dailyNoteId" />
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="dailyNoteDate">Date</label>
+                    <input id="dailyNoteDate" type="date" />
+                  </div>
+                  <div class="form-group">
+                    <label for="dailyNoteShiftType">Shift Type</label>
+                    <select id="dailyNoteShiftType">
+                      <option value="day">Day</option>
+                      <option value="evening">Evening</option>
+                      <option value="night">Night</option>
+                      <option value="waking_night">Waking Night</option>
+                      <option value="school">School</option>
+                      <option value="custom">Custom</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="dailyNoteWorkflowStatus">Workflow Status</label>
+                    <select id="dailyNoteWorkflowStatus">
+                      <option value="draft">Draft</option>
+                      <option value="completed">Completed</option>
+                      <option value="reviewed">Reviewed</option>
+                      <option value="returned">Returned</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="dailyNoteMood">Mood / Presentation</label>
+                  <textarea id="dailyNoteMood" placeholder="How did the young person present?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="dailyNoteActivities">Activities / Daily Life</label>
+                  <textarea id="dailyNoteActivities" placeholder="What happened through the shift?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="dailyNoteEducationUpdate">Education Update</label>
+                  <textarea id="dailyNoteEducationUpdate" placeholder="Any education update?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="dailyNoteHealthUpdate">Health Update</label>
+                  <textarea id="dailyNoteHealthUpdate" placeholder="Any health update?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="dailyNoteFamilyUpdate">Family Update</label>
+                  <textarea id="dailyNoteFamilyUpdate" placeholder="Any family or contact update?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="dailyNoteBehaviourUpdate">Behaviour / Regulation</label>
+                  <textarea id="dailyNoteBehaviourUpdate" placeholder="How did the young person regulate through the shift?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="dailyNoteYoungPersonVoice">Young Person's Voice</label>
+                  <textarea id="dailyNoteYoungPersonVoice" placeholder="What did the young person say or communicate?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="dailyNotePositives">Positives</label>
+                  <textarea id="dailyNotePositives" placeholder="What went well?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="dailyNoteActionsRequired">Actions Required</label>
+                  <textarea id="dailyNoteActionsRequired" placeholder="Any follow-up actions?"></textarea>
+                </div>
+
+                <div class="form-actions">
+                  <button class="btn btn-primary" type="submit">Save Daily Note</button>
+                  <button id="clearDailyNoteFormBtn" class="btn btn-secondary" type="button">Clear</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="section-subpanel" id="daily_notes-subpanel-archive">
+              <div id="dailyNotesArchiveContent">
+                <div class="empty-state">Archived daily notes will appear here.</div>
+              </div>
+            </section>
           </div>
         </section>
 
+        <!-- Incidents -->
         <section id="tab-incidents" class="tab-panel">
           <div class="panel">
             <div class="panel-header">
               <h3>Incidents</h3>
-              <button id="tabNewIncidentBtn" class="btn btn-primary" type="button">New Incident</button>
             </div>
-            <div id="incidentsContent">
-              <div class="empty-state">Incidents will appear here.</div>
-            </div>
+
+            <nav class="section-tabs" data-section="incidents">
+              <button class="section-tab-btn active" data-section="incidents" data-section-tab="records" type="button">Records</button>
+              <button class="section-tab-btn" data-section="incidents" data-section-tab="form" type="button">Create / Edit</button>
+              <button class="section-tab-btn" data-section="incidents" data-section-tab="archive" type="button">Archive</button>
+            </nav>
+
+            <section class="section-subpanel active" id="incidents-subpanel-records">
+              <div class="panel-header">
+                <h4>Current Incidents</h4>
+                <button id="incidentsOpenCreateBtn" class="btn btn-primary" type="button">New Incident</button>
+              </div>
+              <div id="incidentsContent">
+                <div class="empty-state">Incidents will appear here.</div>
+              </div>
+            </section>
+
+            <section class="section-subpanel" id="incidents-subpanel-form">
+              <form id="incidentForm" class="form-grid">
+                <input type="hidden" id="incidentId" />
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="incidentDatetime">Incident Date / Time</label>
+                    <input id="incidentDatetime" type="datetime-local" />
+                  </div>
+                  <div class="form-group">
+                    <label for="incidentType">Incident Type</label>
+                    <input id="incidentType" type="text" placeholder="Incident type" />
+                  </div>
+                  <div class="form-group">
+                    <label for="incidentSeverity">Severity</label>
+                    <select id="incidentSeverity">
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="incidentLocation">Location</label>
+                  <input id="incidentLocation" type="text" placeholder="Location" />
+                </div>
+
+                <div class="form-group">
+                  <label for="incidentDescription">Description</label>
+                  <textarea id="incidentDescription" placeholder="What happened?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="incidentResponse">Staff Response</label>
+                  <textarea id="incidentResponse" placeholder="What did staff do?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="incidentFollowUp">Follow-up Required</label>
+                  <textarea id="incidentFollowUp" placeholder="What needs to happen next?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="incidentManagerReviewStatus">Manager Review Status</label>
+                  <select id="incidentManagerReviewStatus">
+                    <option value="pending">Pending</option>
+                    <option value="reviewed">Reviewed</option>
+                    <option value="returned">Returned</option>
+                  </select>
+                </div>
+
+                <div class="form-actions">
+                  <button class="btn btn-primary" type="submit">Save Incident</button>
+                  <button id="clearIncidentFormBtn" class="btn btn-secondary" type="button">Clear</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="section-subpanel" id="incidents-subpanel-archive">
+              <div id="incidentsArchiveContent">
+                <div class="empty-state">Archived incidents will appear here.</div>
+              </div>
+            </section>
           </div>
         </section>
 
+        <!-- Health -->
         <section id="tab-health" class="tab-panel">
           <div class="panel">
-            <div class="panel-header">
-              <h3>Health</h3>
-            </div>
+            <div class="panel-header"><h3>Health</h3></div>
             <div id="healthContent">
               <div class="empty-state">Health will appear here.</div>
             </div>
           </div>
         </section>
 
+        <!-- Education -->
         <section id="tab-education" class="tab-panel">
           <div class="panel">
-            <div class="panel-header">
-              <h3>Education</h3>
-            </div>
+            <div class="panel-header"><h3>Education</h3></div>
             <div id="educationContent">
               <div class="empty-state">Education will appear here.</div>
             </div>
           </div>
         </section>
 
+        <!-- Family -->
         <section id="tab-family" class="tab-panel">
           <div class="panel">
-            <div class="panel-header">
-              <h3>Family</h3>
-            </div>
+            <div class="panel-header"><h3>Family</h3></div>
             <div id="familyContent">
               <div class="empty-state">Family will appear here.</div>
             </div>
           </div>
         </section>
 
+        <!-- Keywork -->
         <section id="tab-keywork" class="tab-panel">
           <div class="panel">
             <div class="panel-header">
               <h3>Key Work</h3>
-              <button id="tabNewKeyworkBtn" class="btn btn-primary" type="button">New Key Work</button>
             </div>
-            <div id="keyworkContent">
-              <div class="empty-state">Key work will appear here.</div>
-            </div>
+
+            <nav class="section-tabs" data-section="keywork">
+              <button class="section-tab-btn active" data-section="keywork" data-section-tab="records" type="button">Records</button>
+              <button class="section-tab-btn" data-section="keywork" data-section-tab="form" type="button">Create / Edit</button>
+              <button class="section-tab-btn" data-section="keywork" data-section-tab="archive" type="button">Archive</button>
+            </nav>
+
+            <section class="section-subpanel active" id="keywork-subpanel-records">
+              <div class="panel-header">
+                <h4>Current Key Work Sessions</h4>
+                <button id="keyworkOpenCreateBtn" class="btn btn-primary" type="button">New Key Work</button>
+              </div>
+              <div id="keyworkContent">
+                <div class="empty-state">Key work will appear here.</div>
+              </div>
+            </section>
+
+            <section class="section-subpanel" id="keywork-subpanel-form">
+              <form id="keyworkForm" class="form-grid">
+                <input type="hidden" id="keyworkId" />
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="keyworkSessionDate">Session Date</label>
+                    <input id="keyworkSessionDate" type="date" />
+                  </div>
+                  <div class="form-group">
+                    <label for="keyworkWorkerId">Worker ID</label>
+                    <input id="keyworkWorkerId" type="number" />
+                  </div>
+                  <div class="form-group">
+                    <label for="keyworkTopic">Topic</label>
+                    <input id="keyworkTopic" type="text" placeholder="Topic" />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="keyworkPurpose">Purpose</label>
+                  <textarea id="keyworkPurpose" placeholder="Purpose of the session"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="keyworkSummary">Summary</label>
+                  <textarea id="keyworkSummary" placeholder="Session summary"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="keyworkChildVoice">Young Person's Voice</label>
+                  <textarea id="keyworkChildVoice" placeholder="What did the young person say or communicate?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="keyworkReflectiveAnalysis">Reflective Analysis</label>
+                  <textarea id="keyworkReflectiveAnalysis" placeholder="Reflection on the session"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="keyworkActionsAgreed">Actions Agreed</label>
+                  <textarea id="keyworkActionsAgreed" placeholder="What was agreed?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="keyworkNextSessionDate">Next Session Date</label>
+                  <input id="keyworkNextSessionDate" type="date" />
+                </div>
+
+                <div class="form-actions">
+                  <button class="btn btn-primary" type="submit">Save Key Work</button>
+                  <button id="clearKeyworkFormBtn" class="btn btn-secondary" type="button">Clear</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="section-subpanel" id="keywork-subpanel-archive">
+              <div id="keyworkArchiveContent">
+                <div class="empty-state">Archived key work will appear here.</div>
+              </div>
+            </section>
           </div>
         </section>
 
@@ -206,9 +735,7 @@
           </div>
 
           <div class="panel mt-12">
-            <div class="panel-header">
-              <h3>Review Detail</h3>
-            </div>
+            <div class="panel-header"><h3>Review Detail</h3></div>
             <div id="monthlyReviewDetail">
               <div class="empty-state">Select a review to view details.</div>
             </div>
@@ -227,9 +754,7 @@
           </div>
 
           <div class="panel mt-12">
-            <div class="panel-header">
-              <h3>Evidence</h3>
-            </div>
+            <div class="panel-header"><h3>Evidence</h3></div>
             <div id="standardsEvidenceList">
               <div class="empty-state">Evidence will appear here.</div>
             </div>
@@ -238,9 +763,8 @@
 
         <section id="tab-compliance" class="tab-panel">
           <div class="panel">
-            <div class="panel-header">
-              <h3>Compliance</h3>
-            </div>
+            <div class="panel-header"><h3>Compliance</h3></div>
+
             <div class="filters">
               <div>
                 <label for="complianceStatusFilter">Status</label>
@@ -251,6 +775,7 @@
                   <option value="ok">Current</option>
                 </select>
               </div>
+
               <div>
                 <label for="complianceCategoryFilter">Category</label>
                 <select id="complianceCategoryFilter">
@@ -263,6 +788,7 @@
                 </select>
               </div>
             </div>
+
             <div id="complianceContent">
               <div class="empty-state">Compliance will appear here.</div>
             </div>
@@ -272,57 +798,6 @@
     </main>
   </div>
 
-  <section id="recordWorkspaceModal" class="modal hidden">
-    <div class="modal-shell">
-      <header class="modal-header">
-        <div>
-          <h2 id="workspaceModalTitle">Document</h2>
-          <p id="workspaceModalMeta">Document workspace</p>
-        </div>
-        <div class="modal-header-actions">
-          <button id="workspaceModalSaveBtn" class="btn btn-secondary" type="button">Save</button>
-          <button id="workspaceModalCompleteBtn" class="btn btn-primary" type="button">Complete</button>
-          <button id="workspaceModalCloseBtn" class="btn btn-secondary" type="button">Close</button>
-        </div>
-      </header>
-
-      <div class="modal-body">
-        <main id="workspaceModalContent" class="modal-main">
-          <div class="empty-state">Document content will appear here.</div>
-        </main>
-
-        <aside class="modal-side">
-          <div class="panel">
-            <div class="panel-header">
-              <h3>Context</h3>
-            </div>
-            <div id="workspaceModalContext">
-              <div class="empty-state">Context will appear here.</div>
-            </div>
-          </div>
-
-          <div class="panel mt-12">
-            <div class="panel-header">
-              <h3>Versions</h3>
-            </div>
-            <div id="workspaceModalVersions">
-              <div class="empty-state">Versions will appear here.</div>
-            </div>
-          </div>
-
-          <div class="panel mt-12">
-            <div class="panel-header">
-              <h3>AI</h3>
-            </div>
-            <div id="workspaceModalAiPanel">
-              <div class="empty-state">AI actions will appear here.</div>
-            </div>
-          </div>
-        </aside>
-      </div>
-    </div>
-  </section>
-
-  <script src="/js/young-people-shell.js?v=60"></script>
+  <script src="/js/young-people-shell.js?v=61"></script>
 </body>
 </html>
