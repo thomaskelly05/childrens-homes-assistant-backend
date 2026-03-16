@@ -302,6 +302,10 @@ select {
   grid-template-columns: 1.15fr 0.85fr;
 }
 
+.monthly-review-grid {
+  grid-template-columns: 0.9fr 1.1fr;
+}
+
 .filter-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -492,26 +496,11 @@ select {
   margin-top: 6px;
 }
 
-.btn {
-  border: none;
-  border-radius: 10px;
-  padding: 10px 14px;
-  cursor: pointer;
-}
-
-.btn-primary {
-  background: var(--primary);
-  color: #fff;
-}
-
-.btn-primary:hover {
-  background: var(--primary-dark);
-}
-
-.btn-secondary {
-  background: var(--secondary);
-  color: var(--text);
-  border: 1px solid var(--line);
+.action-inline-form {
+  display: grid;
+  grid-template-columns: 1fr 170px auto;
+  gap: 10px;
+  align-items: center;
 }
 
 .record-drawer {
@@ -541,12 +530,35 @@ select {
   overflow-y: auto;
 }
 
+.btn {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+.btn-secondary {
+  background: var(--secondary);
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+
 @media (max-width: 1250px) {
   .shell-layout {
     grid-template-columns: 1fr;
   }
 
-  .keywork-grid {
+  .keywork-grid,
+  .monthly-review-grid {
     grid-template-columns: 1fr;
   }
 
@@ -562,5 +574,9 @@ select {
 
   .page-header {
     flex-direction: column;
+  }
+
+  .action-inline-form {
+    grid-template-columns: 1fr;
   }
 }
