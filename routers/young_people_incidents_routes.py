@@ -15,9 +15,8 @@ class IncidentCreate(BaseModel):
     severity: str | None = "medium"
     location: str | None = None
     description: str | None = None
-    staff_response: str | None = None
-    follow_up_required: str | None = None
     manager_review_status: str | None = "pending"
+    follow_up_required: str | None = None
     staff_id: int | None = None
     archived: bool | None = False
 
@@ -28,38 +27,59 @@ class IncidentUpdate(BaseModel):
     severity: str | None = None
     location: str | None = None
     description: str | None = None
-    staff_response: str | None = None
-    follow_up_required: str | None = None
     manager_review_status: str | None = None
+    follow_up_required: str | None = None
     staff_id: int | None = None
     archived: bool | None = None
+
+
+def ensure_young_person_exists(cur, young_person_id: int):
+    cur.execute("SELECT id FROM young_people WHERE id = %s LIMIT 1", (young_person_id,))
+    if not cur.fetchone():
+        raise HTTPException(status_code=404, detail="Young person not found")
+
+
+def fetch_incident_select_sql(where_sql: str):
+    return f"""
+        SELECT
+            i.id,
+            i.young_person_id,
+            i.incident_datetime,
+            i.incident_type,
+            i.severity,
+            i.location,
+            i.description,
+            i.manager_review_status,
+            i.follow_up_required,
+            i.staff_id,
+            i.archived,
+            i.created_at,
+            i.updated_at,
+            s.first_name AS staff_first_name,
+            s.last_name AS staff_last_name
+        FROM incidents i
+        LEFT JOIN users s ON i.staff_id = s.id
+        {where_sql}
+    """
 
 
 @router.get("/{young_person_id}/incidents")
 def get_young_person_incidents(young_person_id: int, conn=Depends(get_db)):
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT id FROM young_people WHERE id = %s LIMIT 1", (young_person_id,))
-            if not cur.fetchone():
-                raise HTTPException(status_code=404, detail="Young person not found")
-
+            ensure_young_person_exists(cur, young_person_id)
             cur.execute(
-                """
-                SELECT
-                    i.*,
-                    u.first_name AS staff_first_name,
-                    u.last_name AS staff_last_name
-                FROM incidents i
-                LEFT JOIN users u ON i.staff_id = u.id
-                WHERE i.young_person_id = %s
-                  AND COALESCE(i.archived, FALSE) = FALSE
-                  AND LOWER(COALESCE(i.manager_review_status, 'pending')) <> 'reviewed'
-                ORDER BY i.incident_datetime DESC, i.id DESC
-                """,
+                fetch_incident_select_sql(
+                    """
+                    WHERE i.young_person_id = %s
+                      AND COALESCE(i.archived, FALSE) = FALSE
+                      AND LOWER(COALESCE(i.manager_review_status, 'pending')) NOT IN ('reviewed', 'closed', 'archived', 'completed')
+                    ORDER BY i.incident_datetime DESC, i.created_at DESC, i.id DESC
+                    """
+                ),
                 (young_person_id,),
             )
             return cur.fetchall()
-
     except HTTPException:
         raise
     except Exception as e:
@@ -67,32 +87,24 @@ def get_young_person_incidents(young_person_id: int, conn=Depends(get_db)):
 
 
 @router.get("/{young_person_id}/incidents/archive")
-def get_young_person_incidents_archive(young_person_id: int, conn=Depends(get_db)):
+def get_young_person_archived_incidents(young_person_id: int, conn=Depends(get_db)):
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT id FROM young_people WHERE id = %s LIMIT 1", (young_person_id,))
-            if not cur.fetchone():
-                raise HTTPException(status_code=404, detail="Young person not found")
-
+            ensure_young_person_exists(cur, young_person_id)
             cur.execute(
-                """
-                SELECT
-                    i.*,
-                    u.first_name AS staff_first_name,
-                    u.last_name AS staff_last_name
-                FROM incidents i
-                LEFT JOIN users u ON i.staff_id = u.id
-                WHERE i.young_person_id = %s
-                  AND (
-                    COALESCE(i.archived, FALSE) = TRUE
-                    OR LOWER(COALESCE(i.manager_review_status, '')) = 'reviewed'
-                  )
-                ORDER BY i.incident_datetime DESC, i.id DESC
-                """,
+                fetch_incident_select_sql(
+                    """
+                    WHERE i.young_person_id = %s
+                      AND (
+                        COALESCE(i.archived, FALSE) = TRUE
+                        OR LOWER(COALESCE(i.manager_review_status, '')) IN ('reviewed', 'closed', 'archived', 'completed')
+                      )
+                    ORDER BY i.incident_datetime DESC, i.created_at DESC, i.id DESC
+                    """
+                ),
                 (young_person_id,),
             )
             return cur.fetchall()
-
     except HTTPException:
         raise
     except Exception as e:
@@ -104,24 +116,15 @@ def get_incident(incident_id: int, conn=Depends(get_db)):
     try:
         with conn.cursor() as cur:
             cur.execute(
-                """
-                SELECT
-                    i.*,
-                    u.first_name AS staff_first_name,
-                    u.last_name AS staff_last_name
-                FROM incidents i
-                LEFT JOIN users u ON i.staff_id = u.id
-                WHERE i.id = %s
-                LIMIT 1
-                """,
+                fetch_incident_select_sql("WHERE i.id = %s LIMIT 1"),
                 (incident_id,),
             )
             row = cur.fetchone()
 
         if not row:
             raise HTTPException(status_code=404, detail="Incident not found")
-        return row
 
+        return row
     except HTTPException:
         raise
     except Exception as e:
@@ -131,46 +134,44 @@ def get_incident(incident_id: int, conn=Depends(get_db)):
 @router.post("/incidents")
 def create_incident(payload: IncidentCreate, conn=Depends(get_db)):
     now = datetime.utcnow()
+
+    query = """
+        INSERT INTO incidents (
+            young_person_id,
+            incident_datetime,
+            incident_type,
+            severity,
+            location,
+            description,
+            manager_review_status,
+            follow_up_required,
+            staff_id,
+            archived,
+            created_at,
+            updated_at
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id
+    """
+
+    values = (
+        payload.young_person_id,
+        payload.incident_datetime,
+        payload.incident_type,
+        payload.severity,
+        payload.location,
+        payload.description,
+        payload.manager_review_status,
+        payload.follow_up_required,
+        payload.staff_id,
+        payload.archived,
+        now,
+        now,
+    )
+
     try:
         with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO incidents (
-                    young_person_id,
-                    incident_datetime,
-                    incident_type,
-                    severity,
-                    location,
-                    description,
-                    staff_response,
-                    follow_up_required,
-                    manager_review_status,
-                    staff_id,
-                    archived,
-                    created_at,
-                    updated_at
-                )
-                VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-                )
-                RETURNING id
-                """,
-                (
-                    payload.young_person_id,
-                    payload.incident_datetime,
-                    payload.incident_type,
-                    payload.severity,
-                    payload.location,
-                    payload.description,
-                    payload.staff_response,
-                    payload.follow_up_required,
-                    payload.manager_review_status,
-                    payload.staff_id,
-                    payload.archived,
-                    now,
-                    now,
-                ),
-            )
+            cur.execute(query, values)
             row = cur.fetchone()
         conn.commit()
         return {"message": "Incident created successfully", "id": row["id"]}
@@ -194,17 +195,16 @@ def update_incident(incident_id: int, payload: IncidentUpdate, conn=Depends(get_
         values.append(value)
     values.append(incident_id)
 
+    query = f"""
+        UPDATE incidents
+        SET {", ".join(set_parts)}
+        WHERE id = %s
+        RETURNING id
+    """
+
     try:
         with conn.cursor() as cur:
-            cur.execute(
-                f"""
-                UPDATE incidents
-                SET {", ".join(set_parts)}
-                WHERE id = %s
-                RETURNING id
-                """,
-                values,
-            )
+            cur.execute(query, values)
             row = cur.fetchone()
         conn.commit()
 
