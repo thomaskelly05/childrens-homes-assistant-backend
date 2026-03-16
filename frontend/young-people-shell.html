@@ -87,8 +87,8 @@
         <button class="tab-btn" data-tab="family" type="button">Family</button>
         <button class="tab-btn" data-tab="keywork" type="button">Key Work</button>
         <button class="tab-btn" data-tab="chronology" type="button">Chronology</button>
-        <button class="tab-btn" data-tab="standards" type="button">Standards & Evidence</button>
         <button class="tab-btn" data-tab="monthly_reviews" type="button">Monthly Reviews</button>
+        <button class="tab-btn" data-tab="standards" type="button">Standards &amp; Evidence</button>
         <button class="tab-btn" data-tab="compliance" type="button">Compliance</button>
       </nav>
 
@@ -251,6 +251,32 @@
           </div>
         </section>
 
+        <section id="tab-monthly_reviews" class="tab-panel">
+          <div class="panel-shell">
+            <div class="panel-header-row">
+              <h3>Monthly Reviews</h3>
+              <div class="monthly-review-toolbar">
+                <input id="monthlyReviewMonth" type="month" />
+                <button id="generateMonthlyReviewBtn" class="btn btn-primary" type="button">Generate Review</button>
+              </div>
+            </div>
+
+            <div id="monthlyReviewsList" class="content-area">
+              <div class="empty-state">Select a young person to load monthly reviews.</div>
+            </div>
+          </div>
+
+          <div class="panel-shell">
+            <div class="panel-header-row">
+              <h3>Monthly Review Detail</h3>
+            </div>
+
+            <div id="monthlyReviewDetail" class="content-area">
+              <div class="empty-state">Select a review to view details.</div>
+            </div>
+          </div>
+        </section>
+
         <section id="tab-standards" class="tab-panel">
           <div class="panel-shell">
             <div class="panel-header-row">
@@ -270,142 +296,6 @@
 
             <div id="standardsEvidenceList" class="content-area">
               <div class="empty-state">No evidence loaded.</div>
-            </div>
-          </div>
-        </section>
-
-        <section id="tab-monthly_reviews" class="tab-panel">
-          <div class="tab-grid monthly-review-grid">
-            <div class="panel-shell">
-              <div class="panel-header-row">
-                <h3>Monthly Reviews</h3>
-              </div>
-
-              <div class="filter-toolbar">
-                <label class="filter-label" for="monthlyReviewMonth">Review Month</label>
-                <input id="monthlyReviewMonth" type="month" />
-
-                <button id="generateMonthlyReviewBtn" class="btn btn-primary" type="button">Generate Review</button>
-                <button id="newMonthlyReviewBtn" class="btn btn-secondary" type="button">New Blank Review</button>
-              </div>
-
-              <div id="monthlyReviewsList" class="content-area">
-                <div class="empty-state">Monthly reviews will appear here.</div>
-              </div>
-            </div>
-
-            <div class="panel-shell">
-              <div class="panel-header-row">
-                <h3 id="monthlyReviewFormTitle">Monthly Review Detail</h3>
-              </div>
-
-              <form id="monthlyReviewForm" class="form-grid">
-                <input type="hidden" id="monthlyReviewId" />
-
-                <div class="form-group">
-                  <label for="monthlyReviewStatus">Status</label>
-                  <select id="monthlyReviewStatus">
-                    <option value="draft">Draft</option>
-                    <option value="in_review">In Review</option>
-                    <option value="approved">Approved</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="monthlyReviewTitle">Review Title</label>
-                  <input id="monthlyReviewTitle" type="text" />
-                </div>
-
-                <div class="form-group">
-                  <label for="summaryOfMonth">Summary of Month</label>
-                  <textarea id="summaryOfMonth" rows="4"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="progressSummary">Progress Summary</label>
-                  <textarea id="progressSummary" rows="4"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="childVoiceSummary">Child Voice Summary</label>
-                  <textarea id="childVoiceSummary" rows="4"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="concernsAndRisks">Concerns and Risks</label>
-                  <textarea id="concernsAndRisks" rows="4"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="educationSummary">Education Summary</label>
-                  <textarea id="educationSummary" rows="4"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="healthSummary">Health Summary</label>
-                  <textarea id="healthSummary" rows="4"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="familySummary">Family Summary</label>
-                  <textarea id="familySummary" rows="4"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="keyworkSummary">Key Work Summary</label>
-                  <textarea id="keyworkSummary" rows="4"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="behaviourSummary">Behaviour Summary</label>
-                  <textarea id="behaviourSummary" rows="4"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="achievementsSummary">Achievements Summary</label>
-                  <textarea id="achievementsSummary" rows="4"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="actionsForNextMonth">Actions for Next Month</label>
-                  <textarea id="actionsForNextMonth" rows="4"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="managerAnalysis">Manager Analysis</label>
-                  <textarea id="managerAnalysis" rows="4"></textarea>
-                </div>
-
-                <div class="form-actions">
-                  <button class="btn btn-primary" type="submit">Save Review</button>
-                  <button id="clearMonthlyReviewFormBtn" class="btn btn-secondary" type="button">Clear</button>
-                </div>
-              </form>
-            </div>
-          </div>
-
-          <div class="panel-shell">
-            <div class="panel-header-row">
-              <h3>Monthly Review Evidence</h3>
-            </div>
-            <div id="monthlyReviewEvidenceContent" class="content-area">
-              <div class="empty-state">Open a monthly review to view linked evidence.</div>
-            </div>
-          </div>
-
-          <div class="panel-shell">
-            <div class="panel-header-row">
-              <h3>Monthly Review Actions</h3>
-            </div>
-
-            <form id="monthlyReviewActionForm" class="action-inline-form">
-              <input type="text" id="monthlyReviewActionText" placeholder="Add next action..." />
-              <input type="date" id="monthlyReviewActionDueDate" />
-              <button id="addMonthlyReviewActionBtn" class="btn btn-primary" type="submit">Add Action</button>
-            </form>
-
-            <div id="monthlyReviewActionsContent" class="content-area">
-              <div class="empty-state">Open a monthly review to view actions.</div>
             </div>
           </div>
         </section>
