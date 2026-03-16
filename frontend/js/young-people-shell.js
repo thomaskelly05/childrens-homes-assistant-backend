@@ -3,1594 +3,705 @@ const state = {
   filteredYoungPeople: [],
   selectedYoungPerson: null,
   activeTab: "overview",
-  activeSectionTabs: {
-    plans: "records",
-    risk: "records",
-    daily_notes: "records",
-    incidents: "records",
-    keywork: "records"
-  },
+  sectionTabs: { plans: "records", risk: "records", daily_notes: "records", incidents: "records", keywork: "records" },
   latest: {
-    overview: null,
-    profile: null,
-    plans: [],
-    plansArchive: [],
-    risk: [],
-    riskArchive: [],
-    dailyNotes: [],
-    dailyNotesArchive: [],
-    incidents: [],
-    incidentsArchive: [],
-    health: null,
-    education: null,
-    family: null,
-    chronology: [],
-    monthlyReviews: [],
-    standardsSummary: [],
-    standardsEvidence: [],
-    compliance: null,
-    keywork: [],
-    keyworkArchive: []
+    overview: null, profile: null, plans: [], plansArchive: [],
+    risk: [], riskArchive: [], dailyNotes: [], dailyNotesArchive: [],
+    incidents: [], incidentsArchive: [], keywork: [], keyworkArchive: [],
+    health: null, education: null, family: null, chronology: [],
+    monthlyReviews: [], compliance: null
   }
 };
 
-const endpoints = {
-  youngPeopleList: ["/young-people", "/young-people/list"],
-  overview: (id) => [`/young-people/${id}`],
-  profile: (id) => [`/young-people/${id}/profile`],
+const ep = {
+  youngPeople: ["/young-people", "/young-people/list"],
+  overview: id => [`/young-people/${id}`],
+  profile: id => [`/young-people/${id}/profile`],
 
-  plans: (id) => [`/young-people/${id}/plans`],
-  plansArchive: (id) => `/young-people/${id}/plans/archive`,
-  planById: (id) => `/young-people/plans/${id}`,
+  plans: id => [`/young-people/${id}/plans`],
+  plansArchive: id => [`/young-people/${id}/plans/archive`],
+  planById: id => `/young-people/plans/${id}`,
   planCreate: "/young-people/plans",
-  planUpdate: (id) => `/young-people/plans/${id}`,
+  planUpdate: id => `/young-people/plans/${id}`,
 
-  risk: (id) => [`/young-people/${id}/risk`],
-  riskArchive: (id) => `/young-people/${id}/risk/archive`,
-  riskById: (id) => `/young-people/risk/${id}`,
+  risk: id => [`/young-people/${id}/risk`],
+  riskArchive: id => [`/young-people/${id}/risk/archive`],
+  riskById: id => `/young-people/risk/${id}`,
   riskCreate: "/young-people/risk",
-  riskUpdate: (id) => `/young-people/risk/${id}`,
+  riskUpdate: id => `/young-people/risk/${id}`,
 
-  dailyNotes: (id) => [`/young-people/${id}/daily-notes`],
-  dailyNotesArchive: (id) => `/young-people/${id}/daily-notes/archive`,
-  dailyNoteById: (id) => `/young-people/daily-notes/${id}`,
-  dailyNoteCreate: "/young-people/daily-notes",
-  dailyNoteUpdate: (id) => `/young-people/daily-notes/${id}`,
+  daily: id => [`/young-people/${id}/daily-notes`],
+  dailyArchive: id => [`/young-people/${id}/daily-notes/archive`],
+  dailyById: id => `/young-people/daily-notes/${id}`,
+  dailyCreate: "/young-people/daily-notes",
+  dailyUpdate: id => `/young-people/daily-notes/${id}`,
 
-  incidents: (id) => [`/young-people/${id}/incidents`],
-  incidentsArchive: (id) => `/young-people/${id}/incidents/archive`,
-  incidentById: (id) => `/young-people/incidents/${id}`,
+  incidents: id => [`/young-people/${id}/incidents`],
+  incidentsArchive: id => [`/young-people/${id}/incidents/archive`],
+  incidentById: id => `/young-people/incidents/${id}`,
   incidentCreate: "/young-people/incidents",
-  incidentUpdate: (id) => `/young-people/incidents/${id}`,
+  incidentUpdate: id => `/young-people/incidents/${id}`,
 
-  keywork: (id) => `/young-people/${id}/keywork`,
-  keyworkArchive: (id) => `/young-people/${id}/keywork/archive`,
-  keyworkById: (id) => `/young-people/keywork/${id}`,
+  keywork: id => `/young-people/${id}/keywork`,
+  keyworkArchive: id => `/young-people/${id}/keywork/archive`,
+  keyworkById: id => `/young-people/keywork/${id}`,
   keyworkCreate: "/young-people/keywork",
-  keyworkUpdate: (id) => `/young-people/keywork/${id}`,
+  keyworkUpdate: id => `/young-people/keywork/${id}`,
 
-  chronology: (id) => `/young-people/${id}/chronology`,
-  chronologyRebuild: (id) => `/young-people/${id}/chronology/rebuild`,
-
-  monthlyReviews: (id) => `/monthly-reviews/young-person/${id}`,
-  monthlyReviewDetail: (id) => `/monthly-reviews/${id}`,
-  monthlyReviewGenerate: (id, month) =>
-    `/monthly-reviews/young-person/${id}/generate?review_month=${month}`,
-
-  standardsSummary: (id) => [`/young-people/${id}/standards`],
-  standardsEvidence: (id) => [`/young-people/${id}/standards/evidence`],
-  standardsRebuild: (id) => `/young-people/${id}/standards/rebuild`,
-
-  compliance: (id) => [`/young-people/${id}/compliance`],
-
-  inspectionPackCreate: "/inspection-pack",
-  ofstedAiReport: (id, m = "") =>
-    m
-      ? `/ofsted-ai/young-person/${id}/report?review_month=${encodeURIComponent(m)}`
-      : `/ofsted-ai/young-person/${id}/report`
+  health: id => [`/young-people/${id}/health`],
+  education: id => [`/young-people/${id}/education`],
+  family: id => [`/young-people/${id}/family`],
+  chronology: id => `/young-people/${id}/chronology`,
+  chronologyRebuild: id => `/young-people/${id}/chronology/rebuild`,
+  monthly: id => `/monthly-reviews/young-person/${id}`,
+  monthlyDetail: id => `/monthly-reviews/${id}`,
+  monthlyGenerate: (id, m) => `/monthly-reviews/young-person/${id}/generate?review_month=${m}`,
+  standards: id => [`/young-people/${id}/standards`],
+  evidence: id => [`/young-people/${id}/standards/evidence`],
+  standardsRebuild: id => `/young-people/${id}/standards/rebuild`,
+  compliance: id => [`/young-people/${id}/compliance`],
+  pack: "/inspection-pack",
+  ofsted: (id, m = "") => m ? `/ofsted-ai/young-person/${id}/report?review_month=${encodeURIComponent(m)}` : `/ofsted-ai/young-person/${id}/report`
 };
 
-const $ = (id) => document.getElementById(id);
-const $$ = (sel) => [...document.querySelectorAll(sel)];
+const $ = id => document.getElementById(id);
+const $$ = s => [...document.querySelectorAll(s)];
+const v = (el, val) => { if (el) el.value = val ?? ""; };
+const t = (el, val) => { if (el) el.textContent = String(val ?? ""); };
+const on = (el, ev, fn) => el && el.addEventListener(ev, fn);
+const clean = x => (typeof x === "string" ? x.trim() : x) || null;
+const nint = x => { const n = Number(String(x || "").trim()); return Number.isNaN(n) ? null : n || null; };
+const arr = d => Array.isArray(d) ? d : Array.isArray(d?.items) ? d.items : Array.isArray(d?.rows) ? d.rows : Array.isArray(d?.data) ? d.data : [];
+const esc = s => String(s ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+const fmtLabel = s => String(s).replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase());
+const has = x => x !== null && x !== undefined && x !== "";
+const sVal = x => !has(x) ? "—" : typeof x === "boolean" ? (x ? "Yes" : "No") : typeof x === "object" ? JSON.stringify(x) : String(x);
+const trim = (s, n = 180) => { s = String(s ?? ""); return s.length > n ? `${s.slice(0, n)}...` : s; };
+const dtOnly = ["date_of_birth","session_date","note_date","record_date","admission_date","discharge_date","review_date","review_month","start_date","next_session_date","effective_from","effective_to","next_action_date","due_date"];
+const dateKeys = [...dtOnly, "created_at","updated_at","event_datetime","incident_datetime","contact_datetime","scheduled_time","administered_time","approved_at","returned_at","submitted_at","generated_at"];
+const fDate = x => { const d = new Date(x); return !x || Number.isNaN(d.getTime()) ? sVal(x) : d.toLocaleDateString("en-GB"); };
+const fDateTime = x => { const d = new Date(x); return !x || Number.isNaN(d.getTime()) ? sVal(x) : `${d.toLocaleDateString("en-GB")} ${d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}`; };
+const dInput = x => { const d = new Date(x); return !x || Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0,10); };
+const dtInput = x => { const d = new Date(x); return !x || Number.isNaN(d.getTime()) ? "" : new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16); };
+const fVal = (k, v) => !has(v) ? "—" : dateKeys.includes(k) ? (dtOnly.includes(k) ? fDate(v) : fDateTime(v)) : sVal(v);
+const sCls = v => {
+  v = String(v || "").toLowerCase();
+  if (["overdue","high","returned"].includes(v)) return "status-red";
+  if (["due_soon","medium","pending"].includes(v)) return "status-amber";
+  if (["ok","active","approved","reviewed","open","complete"].includes(v)) return "status-green";
+  if (["submitted","completed","amended","info"].includes(v)) return "status-blue";
+  return "status-grey";
+};
+const pill = v => `<span class="status-pill ${sCls(v)}">${esc(sVal(v))}</span>`;
 
 const els = {
-  youngPeopleList: $("youngPeopleList"),
-  youngPersonSearch: $("youngPersonSearch"),
-  refreshYoungPeopleBtn: $("refreshYoungPeopleBtn"),
+  youngPeopleList: $("youngPeopleList"), youngPersonSearch: $("youngPersonSearch"), refreshYoungPeopleBtn: $("refreshYoungPeopleBtn"),
+  selectedYoungPersonName: $("selectedYoungPersonName"), selectedYoungPersonMeta: $("selectedYoungPersonMeta"), statusBar: $("statusBar"),
+  reloadCurrentBtn: $("reloadCurrentBtn"), inspectionPackBtn: $("inspectionPackBtn"), headerOfstedAiBtn: $("headerOfstedAiBtn"), monthlyOfstedAiBtn: $("monthlyOfstedAiBtn"),
+  overviewContent: $("overviewContent"), profileContent: $("profileContent"),
+  plansContent: $("plansContent"), plansArchiveContent: $("plansArchiveContent"),
+  riskContent: $("riskContent"), riskArchiveContent: $("riskArchiveContent"),
+  dailyNotesContent: $("dailyNotesContent"), dailyNotesArchiveContent: $("dailyNotesArchiveContent"),
+  incidentsContent: $("incidentsContent"), incidentsArchiveContent: $("incidentsArchiveContent"),
+  keyworkContent: $("keyworkContent"), keyworkArchiveContent: $("keyworkArchiveContent"),
+  healthContent: $("healthContent"), educationContent: $("educationContent"), familyContent: $("familyContent"),
+  chronologyContent: $("chronologyContent"), monthlyReviewsList: $("monthlyReviewsList"), monthlyReviewDetail: $("monthlyReviewDetail"),
+  standardsSummary: $("standardsSummary"), standardsEvidenceList: $("standardsEvidenceList"), complianceContent: $("complianceContent"),
+  refreshDailyNotesBtn: $("refreshDailyNotesBtn"), dailyNoteStatusFilter: $("dailyNoteStatusFilter"), dailyNoteShiftFilter: $("dailyNoteShiftFilter"), dailyNoteSearch: $("dailyNoteSearch"),
+  rebuildChronologyBtn: $("rebuildChronologyBtn"), monthlyReviewMonth: $("monthlyReviewMonth"), generateMonthlyReviewBtn: $("generateMonthlyReviewBtn"),
+  rebuildStandardsBtn: $("rebuildStandardsBtn"), complianceStatusFilter: $("complianceStatusFilter"), complianceCategoryFilter: $("complianceCategoryFilter"),
+  plansOpenCreateBtn: $("plansOpenCreateBtn"), riskOpenCreateBtn: $("riskOpenCreateBtn"), dailyNotesOpenCreateBtn: $("dailyNotesOpenCreateBtn"), incidentsOpenCreateBtn: $("incidentsOpenCreateBtn"), keyworkOpenCreateBtn: $("keyworkOpenCreateBtn"),
 
-  selectedYoungPersonName: $("selectedYoungPersonName"),
-  selectedYoungPersonMeta: $("selectedYoungPersonMeta"),
-  statusBar: $("statusBar"),
+  planForm: $("planForm"), planId: $("planId"), planType: $("planType"), planTitle: $("planTitle"), planPresentingNeed: $("planPresentingNeed"),
+  planSummary: $("planSummary"), planChildVoice: $("planChildVoice"), planProactiveStrategies: $("planProactiveStrategies"),
+  planPaceGuidance: $("planPaceGuidance"), planTriggers: $("planTriggers"), planProtectiveFactors: $("planProtectiveFactors"),
+  planStartDate: $("planStartDate"), planReviewDate: $("planReviewDate"), planStatus: $("planStatus"), planOwnerId: $("planOwnerId"),
+  planApprovalStatus: $("planApprovalStatus"), planCreatedBy: $("planCreatedBy"), clearPlanFormBtn: $("clearPlanFormBtn"),
 
-  reloadCurrentBtn: $("reloadCurrentBtn"),
-  inspectionPackBtn: $("inspectionPackBtn"),
-  headerOfstedAiBtn: $("headerOfstedAiBtn"),
-  monthlyOfstedAiBtn: $("monthlyOfstedAiBtn"),
+  riskForm: $("riskForm"), riskId: $("riskId"), riskCategory: $("riskCategory"), riskTitle: $("riskTitle"), riskConcernSummary: $("riskConcernSummary"),
+  riskKnownTriggers: $("riskKnownTriggers"), riskEarlyWarningSigns: $("riskEarlyWarningSigns"), riskContextualFactors: $("riskContextualFactors"),
+  riskCurrentControls: $("riskCurrentControls"), riskDeescalationStrategies: $("riskDeescalationStrategies"), riskResponseActions: $("riskResponseActions"),
+  riskChildViews: $("riskChildViews"), riskSeverity: $("riskSeverity"), riskLikelihood: $("riskLikelihood"), riskReviewDate: $("riskReviewDate"),
+  riskStatus: $("riskStatus"), riskOwnerId: $("riskOwnerId"), riskApprovalStatus: $("riskApprovalStatus"), riskCreatedBy: $("riskCreatedBy"), clearRiskFormBtn: $("clearRiskFormBtn"),
 
-  plansContent: $("plansContent"),
-  plansArchiveContent: $("plansArchiveContent"),
-  riskContent: $("riskContent"),
-  riskArchiveContent: $("riskArchiveContent"),
-  dailyNotesContent: $("dailyNotesContent"),
-  dailyNotesArchiveContent: $("dailyNotesArchiveContent"),
-  incidentsContent: $("incidentsContent"),
-  incidentsArchiveContent: $("incidentsArchiveContent"),
-  keyworkContent: $("keyworkContent"),
-  keyworkArchiveContent: $("keyworkArchiveContent"),
+  dailyNoteForm: $("dailyNoteForm"), dailyNoteId: $("dailyNoteId"), dailyNoteDate: $("dailyNoteDate"), dailyNoteShiftType: $("dailyNoteShiftType"),
+  dailyNoteWorkflowStatus: $("dailyNoteWorkflowStatus"), dailyNoteMood: $("dailyNoteMood"), dailyNoteActivities: $("dailyNoteActivities"),
+  dailyNoteEducationUpdate: $("dailyNoteEducationUpdate"), dailyNoteHealthUpdate: $("dailyNoteHealthUpdate"), dailyNoteFamilyUpdate: $("dailyNoteFamilyUpdate"),
+  dailyNoteBehaviourUpdate: $("dailyNoteBehaviourUpdate"), dailyNoteYoungPersonVoice: $("dailyNoteYoungPersonVoice"), dailyNotePositives: $("dailyNotePositives"),
+  dailyNoteActionsRequired: $("dailyNoteActionsRequired"), clearDailyNoteFormBtn: $("clearDailyNoteFormBtn"),
 
-  overviewContent: $("overviewContent"),
-  profileContent: $("profileContent"),
-  healthContent: $("healthContent"),
-  educationContent: $("educationContent"),
-  familyContent: $("familyContent"),
-  chronologyContent: $("chronologyContent"),
-  monthlyReviewsList: $("monthlyReviewsList"),
-  monthlyReviewDetail: $("monthlyReviewDetail"),
-  standardsSummary: $("standardsSummary"),
-  standardsEvidenceList: $("standardsEvidenceList"),
-  complianceContent: $("complianceContent"),
+  incidentForm: $("incidentForm"), incidentId: $("incidentId"), incidentDatetime: $("incidentDatetime"), incidentType: $("incidentType"),
+  incidentSeverity: $("incidentSeverity"), incidentLocation: $("incidentLocation"), incidentDescription: $("incidentDescription"),
+  incidentResponse: $("incidentResponse"), incidentFollowUp: $("incidentFollowUp"), incidentManagerReviewStatus: $("incidentManagerReviewStatus"), clearIncidentFormBtn: $("clearIncidentFormBtn"),
 
-  plansOpenCreateBtn: $("plansOpenCreateBtn"),
-  riskOpenCreateBtn: $("riskOpenCreateBtn"),
-  dailyNotesOpenCreateBtn: $("dailyNotesOpenCreateBtn"),
-  incidentsOpenCreateBtn: $("incidentsOpenCreateBtn"),
-  keyworkOpenCreateBtn: $("keyworkOpenCreateBtn"),
-
-  refreshDailyNotesBtn: $("refreshDailyNotesBtn"),
-  dailyNoteStatusFilter: $("dailyNoteStatusFilter"),
-  dailyNoteShiftFilter: $("dailyNoteShiftFilter"),
-  dailyNoteSearch: $("dailyNoteSearch"),
-
-  rebuildChronologyBtn: $("rebuildChronologyBtn"),
-  monthlyReviewMonth: $("monthlyReviewMonth"),
-  generateMonthlyReviewBtn: $("generateMonthlyReviewBtn"),
-  rebuildStandardsBtn: $("rebuildStandardsBtn"),
-  complianceStatusFilter: $("complianceStatusFilter"),
-  complianceCategoryFilter: $("complianceCategoryFilter"),
-
-  planForm: $("planForm"),
-  planId: $("planId"),
-  planType: $("planType"),
-  planTitle: $("planTitle"),
-  planPresentingNeed: $("planPresentingNeed"),
-  planSummary: $("planSummary"),
-  planChildVoice: $("planChildVoice"),
-  planProactiveStrategies: $("planProactiveStrategies"),
-  planPaceGuidance: $("planPaceGuidance"),
-  planTriggers: $("planTriggers"),
-  planProtectiveFactors: $("planProtectiveFactors"),
-  planStartDate: $("planStartDate"),
-  planReviewDate: $("planReviewDate"),
-  planStatus: $("planStatus"),
-  planOwnerId: $("planOwnerId"),
-  planApprovalStatus: $("planApprovalStatus"),
-  planCreatedBy: $("planCreatedBy"),
-  clearPlanFormBtn: $("clearPlanFormBtn"),
-
-  riskForm: $("riskForm"),
-  riskId: $("riskId"),
-  riskCategory: $("riskCategory"),
-  riskTitle: $("riskTitle"),
-  riskConcernSummary: $("riskConcernSummary"),
-  riskKnownTriggers: $("riskKnownTriggers"),
-  riskEarlyWarningSigns: $("riskEarlyWarningSigns"),
-  riskContextualFactors: $("riskContextualFactors"),
-  riskCurrentControls: $("riskCurrentControls"),
-  riskDeescalationStrategies: $("riskDeescalationStrategies"),
-  riskResponseActions: $("riskResponseActions"),
-  riskChildViews: $("riskChildViews"),
-  riskSeverity: $("riskSeverity"),
-  riskLikelihood: $("riskLikelihood"),
-  riskReviewDate: $("riskReviewDate"),
-  riskStatus: $("riskStatus"),
-  riskOwnerId: $("riskOwnerId"),
-  riskApprovalStatus: $("riskApprovalStatus"),
-  riskCreatedBy: $("riskCreatedBy"),
-  clearRiskFormBtn: $("clearRiskFormBtn"),
-
-  dailyNoteForm: $("dailyNoteForm"),
-  dailyNoteId: $("dailyNoteId"),
-  dailyNoteDate: $("dailyNoteDate"),
-  dailyNoteShiftType: $("dailyNoteShiftType"),
-  dailyNoteWorkflowStatus: $("dailyNoteWorkflowStatus"),
-  dailyNoteMood: $("dailyNoteMood"),
-  dailyNoteActivities: $("dailyNoteActivities"),
-  dailyNoteEducationUpdate: $("dailyNoteEducationUpdate"),
-  dailyNoteHealthUpdate: $("dailyNoteHealthUpdate"),
-  dailyNoteFamilyUpdate: $("dailyNoteFamilyUpdate"),
-  dailyNoteBehaviourUpdate: $("dailyNoteBehaviourUpdate"),
-  dailyNoteYoungPersonVoice: $("dailyNoteYoungPersonVoice"),
-  dailyNotePositives: $("dailyNotePositives"),
-  dailyNoteActionsRequired: $("dailyNoteActionsRequired"),
-  clearDailyNoteFormBtn: $("clearDailyNoteFormBtn"),
-
-  incidentForm: $("incidentForm"),
-  incidentId: $("incidentId"),
-  incidentDatetime: $("incidentDatetime"),
-  incidentType: $("incidentType"),
-  incidentSeverity: $("incidentSeverity"),
-  incidentLocation: $("incidentLocation"),
-  incidentDescription: $("incidentDescription"),
-  incidentResponse: $("incidentResponse"),
-  incidentFollowUp: $("incidentFollowUp"),
-  incidentManagerReviewStatus: $("incidentManagerReviewStatus"),
-  clearIncidentFormBtn: $("clearIncidentFormBtn"),
-
-  keyworkForm: $("keyworkForm"),
-  keyworkId: $("keyworkId"),
-  keyworkSessionDate: $("keyworkSessionDate"),
-  keyworkWorkerId: $("keyworkWorkerId"),
-  keyworkTopic: $("keyworkTopic"),
-  keyworkPurpose: $("keyworkPurpose"),
-  keyworkSummary: $("keyworkSummary"),
-  keyworkChildVoice: $("keyworkChildVoice"),
-  keyworkReflectiveAnalysis: $("keyworkReflectiveAnalysis"),
-  keyworkActionsAgreed: $("keyworkActionsAgreed"),
-  keyworkNextSessionDate: $("keyworkNextSessionDate"),
-  clearKeyworkFormBtn: $("clearKeyworkFormBtn")
+  keyworkForm: $("keyworkForm"), keyworkId: $("keyworkId"), keyworkSessionDate: $("keyworkSessionDate"), keyworkWorkerId: $("keyworkWorkerId"),
+  keyworkTopic: $("keyworkTopic"), keyworkPurpose: $("keyworkPurpose"), keyworkSummary: $("keyworkSummary"), keyworkChildVoice: $("keyworkChildVoice"),
+  keyworkReflectiveAnalysis: $("keyworkReflectiveAnalysis"), keyworkActionsAgreed: $("keyworkActionsAgreed"), keyworkNextSessionDate: $("keyworkNextSessionDate"), clearKeyworkFormBtn: $("clearKeyworkFormBtn")
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-  setDefaultMonthlyReviewMonth();
-  bindEvents();
-  loadYoungPeople();
-});
+  const d = new Date();
+  if (els.monthlyReviewMonth) els.monthlyReviewMonth.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
-function bindEvents() {
-  $$(".tab-btn").forEach((btn) =>
-    btn.addEventListener("click", () => setActiveTab(btn.dataset.tab))
-  );
+  $$(".tab-btn").forEach(b => on(b, "click", () => setTab(b.dataset.tab)));
+  $$(".section-tab-btn").forEach(b => on(b, "click", () => setSectionTab(b.dataset.section, b.dataset.sectionTab)));
 
-  $$(".section-tab-btn").forEach((btn) =>
-    btn.addEventListener("click", () =>
-      setSectionTab(btn.dataset.section, btn.dataset.sectionTab)
-    )
-  );
-
-  on(els.youngPersonSearch, "input", handleSearch);
+  on(els.youngPersonSearch, "input", searchPeople);
   on(els.refreshYoungPeopleBtn, "click", loadYoungPeople);
-  on(els.reloadCurrentBtn, "click", reloadCurrentRecord);
-  on(els.inspectionPackBtn, "click", createInspectionPackJob);
-  on(els.headerOfstedAiBtn, "click", () => loadOfstedAiReport(getSelectedReviewMonthParam()));
-  on(els.monthlyOfstedAiBtn, "click", () => loadOfstedAiReport(getSelectedReviewMonthParam()));
+  on(els.reloadCurrentBtn, "click", reloadCurrent);
+  on(els.inspectionPackBtn, "click", createPack);
+  on(els.headerOfstedAiBtn, "click", () => loadOfsted());
+  on(els.monthlyOfstedAiBtn, "click", () => loadOfsted(monthParam()));
 
-  on(els.plansOpenCreateBtn, "click", () => { resetPlanForm(); setSectionTab("plans", "form"); });
-  on(els.riskOpenCreateBtn, "click", () => { resetRiskForm(); setSectionTab("risk", "form"); });
-  on(els.dailyNotesOpenCreateBtn, "click", () => { resetDailyNoteForm(); setSectionTab("daily_notes", "form"); });
-  on(els.incidentsOpenCreateBtn, "click", () => { resetIncidentForm(); setSectionTab("incidents", "form"); });
-  on(els.keyworkOpenCreateBtn, "click", () => { resetKeyworkForm(); setSectionTab("keywork", "form"); });
-
-  on(els.refreshDailyNotesBtn, "click", () => state.selectedYoungPerson && loadDailyNotes(state.selectedYoungPerson.id));
-  on(els.dailyNoteStatusFilter, "change", renderDailyNotesListFromState);
-  on(els.dailyNoteShiftFilter, "change", renderDailyNotesListFromState);
-  on(els.dailyNoteSearch, "input", renderDailyNotesListFromState);
+  on(els.refreshDailyNotesBtn, "click", () => state.selectedYoungPerson && loadDaily(state.selectedYoungPerson.id));
+  on(els.dailyNoteStatusFilter, "change", renderDailyLists);
+  on(els.dailyNoteShiftFilter, "change", renderDailyLists);
+  on(els.dailyNoteSearch, "input", renderDailyLists);
 
   on(els.rebuildChronologyBtn, "click", rebuildChronology);
-  on(els.generateMonthlyReviewBtn, "click", generateMonthlyReview);
-  on(els.rebuildStandardsBtn, "click", rebuildStandardsLinks);
-  on(els.complianceStatusFilter, "change", rerenderComplianceFromState);
-  on(els.complianceCategoryFilter, "change", rerenderComplianceFromState);
+  on(els.generateMonthlyReviewBtn, "click", generateMonthly);
+  on(els.rebuildStandardsBtn, "click", rebuildStandards);
+  on(els.complianceStatusFilter, "change", renderCompliance);
+  on(els.complianceCategoryFilter, "change", renderCompliance);
 
-  on(els.clearPlanFormBtn, "click", resetPlanForm);
-  on(els.clearRiskFormBtn, "click", resetRiskForm);
-  on(els.clearDailyNoteFormBtn, "click", resetDailyNoteForm);
-  on(els.clearIncidentFormBtn, "click", resetIncidentForm);
-  on(els.clearKeyworkFormBtn, "click", resetKeyworkForm);
+  on(els.plansOpenCreateBtn, "click", () => (resetPlan(), setSectionTab("plans","form")));
+  on(els.riskOpenCreateBtn, "click", () => (resetRisk(), setSectionTab("risk","form")));
+  on(els.dailyNotesOpenCreateBtn, "click", () => (resetDaily(), setSectionTab("daily_notes","form")));
+  on(els.incidentsOpenCreateBtn, "click", () => (resetIncident(), setSectionTab("incidents","form")));
+  on(els.keyworkOpenCreateBtn, "click", () => (resetKeywork(), setSectionTab("keywork","form")));
+
+  on(els.clearPlanFormBtn, "click", resetPlan);
+  on(els.clearRiskFormBtn, "click", resetRisk);
+  on(els.clearDailyNoteFormBtn, "click", resetDaily);
+  on(els.clearIncidentFormBtn, "click", resetIncident);
+  on(els.clearKeyworkFormBtn, "click", resetKeywork);
 
   on(els.planForm, "submit", savePlan);
   on(els.riskForm, "submit", saveRisk);
-  on(els.dailyNoteForm, "submit", saveDailyNote);
+  on(els.dailyNoteForm, "submit", saveDaily);
   on(els.incidentForm, "submit", saveIncident);
-  on(els.keyworkForm, "submit", saveKeyworkSession);
+  on(els.keyworkForm, "submit", saveKeywork);
+
+  loadYoungPeople();
+});
+
+function monthParam() { return els.monthlyReviewMonth?.value ? `${els.monthlyReviewMonth.value}-01` : ""; }
+function msg(text, err = false) {
+  if (!els.statusBar) return;
+  t(els.statusBar, text);
+  els.statusBar.classList.remove("hidden", "error");
+  if (err) els.statusBar.classList.add("error");
+  clearTimeout(msg._t);
+  msg._t = setTimeout(() => els.statusBar.classList.add("hidden"), 4000);
 }
-
-function on(el, event, handler) {
-  if (el) el.addEventListener(event, handler);
-}
-
-function setDefaultMonthlyReviewMonth() {
-  if (!els.monthlyReviewMonth) return;
-  const now = new Date();
-  els.monthlyReviewMonth.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function getSelectedReviewMonthParam() {
-  return els.monthlyReviewMonth?.value ? `${els.monthlyReviewMonth.value}-01` : "";
-}
-
-async function fetchJson(url, options = {}) {
-  const response = await fetch(url, {
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    ...options
-  });
-
-  if (!response.ok) {
-    let message = `Request failed (${response.status})`;
-    try {
-      const data = await response.json();
-      if (data?.detail) message = data.detail;
-    } catch {}
-    throw new Error(message);
+async function j(url, options = {}) {
+  const r = await fetch(url, { headers: { "Content-Type": "application/json" }, credentials: "include", ...options });
+  if (!r.ok) {
+    let m = `Request failed (${r.status})`;
+    try { const d = await r.json(); if (d?.detail) m = d.detail; } catch {}
+    throw new Error(m);
   }
-
-  const contentType = response.headers.get("content-type") || "";
-  return contentType.includes("application/json") ? response.json() : null;
+  return (r.headers.get("content-type") || "").includes("application/json") ? r.json() : null;
+}
+async function jc(urls) {
+  let e = null;
+  for (const u of urls) try { return await j(u); } catch (x) { e = x; }
+  throw e || new Error("No endpoint returned data");
 }
 
-async function fetchFromCandidates(urls) {
-  let lastError = null;
-  for (const url of urls) {
-    try {
-      return await fetchJson(url);
-    } catch (e) {
-      lastError = e;
-    }
-  }
-  throw lastError || new Error("No endpoint returned data");
+function setTab(tab) {
+  state.activeTab = tab;
+  $$(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+  $$(".tab-panel").forEach(p => p.classList.toggle("active", p.id === `tab-${tab}`));
+  loadTab();
 }
-
+function setSectionTab(section, tab) {
+  state.sectionTabs[section] = tab;
+  $$(`.section-tab-btn[data-section="${section}"]`).forEach(b => b.classList.toggle("active", b.dataset.sectionTab === tab));
+  $$(`#tab-${section} .section-subpanel`).forEach(p => p.classList.toggle("active", p.id === `${section}-subpanel-${tab}`));
+}
+function searchPeople(e) {
+  const q = e.target.value.trim().toLowerCase();
+  state.filteredYoungPeople = state.youngPeople.filter(p => `${p.first_name||""} ${p.last_name||""} ${p.preferred_name||""}`.toLowerCase().includes(q));
+  renderPeople();
+}
+function fullName(p) {
+  const pref = p.preferred_name ? ` (${p.preferred_name})` : "";
+  const n = `${p.first_name || ""} ${p.last_name || ""}`.trim();
+  return n ? `${n}${pref}` : `Young Person #${p.id}`;
+}
+function renderPeople() {
+  els.youngPeopleList.innerHTML = !state.filteredYoungPeople.length
+    ? `<div class="empty-state">No young people found.</div>`
+    : state.filteredYoungPeople.map(p => `
+      <div class="young-person-card ${Number(state.selectedYoungPerson?.id) === Number(p.id) ? "active" : ""}" data-id="${p.id}">
+        <h4>${esc(fullName(p))}</h4>
+        <p>${esc(p.placement_status ? `Status: ${p.placement_status}` : `ID: ${p.id}`)}</p>
+      </div>`).join("");
+  $$(".young-person-card").forEach(c => on(c, "click", async () => {
+    const p = state.youngPeople.find(x => Number(x.id) === Number(c.dataset.id));
+    if (p) await selectPerson(p);
+  }));
+}
 async function loadYoungPeople() {
   try {
-    showStatus("Loading young people...");
-    const rows = normaliseArrayResponse(await fetchFromCandidates(endpoints.youngPeopleList));
+    msg("Loading young people...");
+    const rows = arr(await jc(ep.youngPeople));
     state.youngPeople = rows;
     state.filteredYoungPeople = [...rows];
-    renderYoungPeopleList();
-
-    if (!state.selectedYoungPerson && rows.length) {
-      await selectYoungPerson(rows[0]);
-    } else if (state.selectedYoungPerson) {
-      const refreshed = rows.find((r) => Number(r.id) === Number(state.selectedYoungPerson.id));
-      if (refreshed) {
-        state.selectedYoungPerson = refreshed;
-        renderYoungPeopleList();
-        updateSelectedPersonHeader();
-      }
+    renderPeople();
+    if (!state.selectedYoungPerson && rows.length) await selectPerson(rows[0]);
+    else if (state.selectedYoungPerson) {
+      const p = rows.find(x => Number(x.id) === Number(state.selectedYoungPerson.id));
+      if (p) { state.selectedYoungPerson = p; renderPeople(); renderHeader(); }
     }
-
-    showStatus("Young people loaded.");
-  } catch (error) {
-    els.youngPeopleList.innerHTML = `<div class="empty-state">Could not load young people.<br /><small>${escapeHtml(error.message)}</small></div>`;
-    showStatus(`Could not load young people: ${error.message}`, true);
+    msg("Young people loaded.");
+  } catch (e) {
+    els.youngPeopleList.innerHTML = `<div class="empty-state">Could not load young people.<br><small>${esc(e.message)}</small></div>`;
+    msg(`Could not load young people: ${e.message}`, true);
   }
 }
-
-function renderYoungPeopleList() {
-  if (!els.youngPeopleList) return;
-
-  if (!state.filteredYoungPeople.length) {
-    els.youngPeopleList.innerHTML = `<div class="empty-state">No young people found.</div>`;
-    return;
-  }
-
-  els.youngPeopleList.innerHTML = state.filteredYoungPeople.map((person) => {
-    const active = Number(state.selectedYoungPerson?.id) === Number(person.id) ? "active" : "";
-    return `
-      <div class="young-person-card ${active}" data-id="${person.id}">
-        <h4>${escapeHtml(getFullName(person))}</h4>
-        <p>${escapeHtml(person.placement_status ? `Status: ${person.placement_status}` : `ID: ${person.id}`)}</p>
-      </div>
-    `;
-  }).join("");
-
-  $$(".young-person-card").forEach((card) => {
-    card.onclick = async () => {
-      const id = Number(card.dataset.id);
-      const person = state.youngPeople.find((r) => Number(r.id) === id);
-      if (person) await selectYoungPerson(person);
-    };
+async function selectPerson(p) {
+  state.selectedYoungPerson = p;
+  Object.assign(state.latest, {
+    overview: null, profile: null, plans: [], plansArchive: [], risk: [], riskArchive: [],
+    dailyNotes: [], dailyNotesArchive: [], incidents: [], incidentsArchive: [], keywork: [], keyworkArchive: [],
+    health: null, education: null, family: null, chronology: [], monthlyReviews: [], compliance: null
   });
+  resetAll();
+  renderPeople();
+  renderHeader();
+  await preload();
+  await loadTab();
 }
-
-function handleSearch(event) {
-  const term = event.target.value.trim().toLowerCase();
-  state.filteredYoungPeople = state.youngPeople.filter((p) =>
-    `${p.first_name || ""} ${p.last_name || ""} ${p.preferred_name || ""}`.toLowerCase().includes(term)
-  );
-  renderYoungPeopleList();
-}
-
-async function selectYoungPerson(person) {
-  state.selectedYoungPerson = person;
-  resetAllForms();
-  renderYoungPeopleList();
-  updateSelectedPersonHeader();
-  await loadActiveTabData();
-}
-
-function updateSelectedPersonHeader() {
-  if (!state.selectedYoungPerson) {
-    setText(els.selectedYoungPersonName, "Select a young person");
-    setText(els.selectedYoungPersonMeta, "No record loaded");
-    return;
-  }
-
+function renderHeader() {
   const p = state.selectedYoungPerson;
+  if (!p) return t(els.selectedYoungPersonName, "Select a young person"), t(els.selectedYoungPersonMeta, "No record loaded");
   const bits = [`ID: ${p.id}`];
-  if (p.date_of_birth) bits.push(`DOB: ${formatDate(p.date_of_birth)}`);
+  if (p.date_of_birth) bits.push(`DOB: ${fDate(p.date_of_birth)}`);
   if (p.placement_status) bits.push(`Status: ${p.placement_status}`);
   if (p.summary_risk_level) bits.push(`Risk: ${p.summary_risk_level}`);
-
-  setText(els.selectedYoungPersonName, getFullName(p));
-  setText(els.selectedYoungPersonMeta, bits.join(" | "));
+  t(els.selectedYoungPersonName, fullName(p));
+  t(els.selectedYoungPersonMeta, bits.join(" | "));
 }
-
-const tabLoaders = {
-  overview: loadOverview,
-  profile: loadProfile,
-  plans: loadPlans,
-  risk: loadRisk,
-  daily_notes: loadDailyNotes,
-  incidents: loadIncidents,
-  health: loadHealth,
-  education: loadEducation,
-  family: loadFamily,
-  keywork: loadKeywork,
-  chronology: loadChronology,
-  monthly_reviews: loadMonthlyReviews,
-  standards: loadStandards,
-  compliance: loadCompliance
-};
-
-function setActiveTab(tabName) {
-  state.activeTab = tabName;
-
-  $$(".tab-btn").forEach((btn) =>
-    btn.classList.toggle("active", btn.dataset.tab === tabName)
-  );
-  $$(".tab-panel").forEach((panel) =>
-    panel.classList.toggle("active", panel.id === `tab-${tabName}`)
-  );
-
-  loadActiveTabData();
-}
-
-function setSectionTab(section, tab) {
-  state.activeSectionTabs[section] = tab;
-
-  $$(`.section-tab-btn[data-section="${section}"]`).forEach((btn) =>
-    btn.classList.toggle("active", btn.dataset.sectionTab === tab)
-  );
-
-  $$(`#tab-${section} .section-subpanel`).forEach((panel) =>
-    panel.classList.toggle("active", panel.id === `${section}-subpanel-${tab}`)
-  );
-}
-
-async function reloadCurrentRecord() {
-  if (!state.selectedYoungPerson) {
-    showStatus("Please select a young person first.", true);
-    return;
-  }
-  await loadActiveTabData();
-}
-
-async function loadActiveTabData() {
+async function preload() {
   if (!state.selectedYoungPerson) return;
-  const loader = tabLoaders[state.activeTab];
-  if (loader) {
-    try {
-      await loader(state.selectedYoungPerson.id);
-    } catch (e) {
-      showStatus(e.message, true);
-    }
-  }
+  const id = state.selectedYoungPerson.id;
+  try {
+    const [profile, plans, risk, daily, incidents] = await Promise.all([
+      jc(ep.profile(id)).catch(() => null),
+      jc(ep.plans(id)).then(arr).catch(() => []),
+      jc(ep.risk(id)).then(arr).catch(() => []),
+      jc(ep.daily(id)).then(arr).catch(() => []),
+      jc(ep.incidents(id)).then(arr).catch(() => [])
+    ]);
+    state.latest.profile = profile;
+    state.latest.plans = plans;
+    state.latest.risk = risk;
+    state.latest.dailyNotes = daily;
+    state.latest.incidents = incidents;
+  } catch {}
+}
+async function reloadCurrent() {
+  if (!state.selectedYoungPerson) return msg("Please select a young person first.", true);
+  await preload();
+  await loadTab();
+}
+async function loadTab() {
+  if (!state.selectedYoungPerson) return;
+  const id = state.selectedYoungPerson.id;
+  const m = {
+    overview: () => loadOverview(id),
+    profile: () => loadProfile(id),
+    plans: () => loadPlans(id),
+    risk: () => loadRisk(id),
+    daily_notes: () => loadDaily(id),
+    incidents: () => loadIncidents(id),
+    keywork: () => loadKeywork(id),
+    health: () => loadHealth(id),
+    education: () => loadEducation(id),
+    family: () => loadFamily(id),
+    chronology: () => loadChronology(id),
+    monthly_reviews: () => loadMonthly(id),
+    standards: () => loadStandards(id),
+    compliance: () => loadCompliance(id)
+  }[state.activeTab];
+  if (m) try { await m(); } catch (e) { msg(e.message, true); }
+}
+
+const empty = txt => `<div class="empty-state">${esc(txt)}</div>`;
+const cards = (rows, type, cfg) => !rows?.length ? empty("No records found.") : `<div class="record-list">${
+  rows.map(r => `<button class="record-card js-open-record" type="button" data-type="${type}" data-record='${esc(JSON.stringify(r))}'>
+    <h4>${esc(cfg.title(r))}</h4><div class="record-meta">${esc(cfg.meta(r))}</div><div class="record-summary">${esc(trim(cfg.summary(r)))}</div>
+  </button>`).join("")
+}</div>`;
+const kvCards = rows => !rows.length ? empty("No information.") : `<div class="record-list">${
+  rows.map(([k,v]) => `<div class="record-card"><h4>${esc(k)}</h4><div class="record-summary">${esc(sVal(v))}</div></div>`).join("")
+}</div>`;
+const table = (rows, cols) => !rows?.length ? empty("No records found.") : `<table class="data-table"><thead><tr>${
+  cols.filter(c => rows.some(r => c in r)).map(c => `<th>${esc(fmtLabel(c))}</th>`).join("")
+}</tr></thead><tbody>${
+  rows.map(r => `<tr>${cols.filter(c => rows.some(x => c in x)).map(c => `<td>${
+    ["status","workflow_status","compliance_status"].includes(c) ? pill(r[c]) : c === "severity" ? pill(r[c]) : esc(fVal(c, r[c]))
+  }</td>`).join("")}</tr>`).join("")
+}</tbody></table>`;
+const objSec = (title, row, cols) => {
+  const keys = (cols || Object.keys(row || {})).filter(k => row && has(row[k]));
+  return `<div class="panel"><div class="panel-header"><h3>${esc(title)}</h3></div>${
+    !keys.length ? empty("No data found.") : `<table class="data-table key-value"><tbody>${keys.map(k => `<tr><th>${esc(fmtLabel(k))}</th><td>${esc(fVal(k, row[k]))}</td></tr>`).join("")}</tbody></table>`
+  }</div>`;
+};
+const arrSec = (title, rows, cols) => `<div class="panel"><div class="panel-header"><h3>${esc(title)}</h3></div>${table(arr(rows), cols)}</div>`;
+
+function bindRecordButtons() {
+  $$(".js-open-record").forEach(b => b.onclick = async () => {
+    let r; try { r = JSON.parse(b.dataset.record); } catch { return; }
+    const map = {
+      plan: editPlan,
+      risk: editRisk,
+      daily_note: editDaily,
+      incident: editIncident,
+      keywork: editKeywork,
+      monthly_review: x => x.id && openMonthlyDetail(x.id)
+    };
+    if (map[b.dataset.type]) await map[b.dataset.type](r);
+  });
 }
 
 async function loadOverview(id) {
-  renderLoading(els.overviewContent, "Loading overview...");
-  const data = await fetchFromCandidates(endpoints.overview(id));
-  state.latest.overview = data;
-  els.overviewContent.innerHTML = renderKeyValueCards([
-    ["Placement Status", data?.placement_status],
-    ["Risk Level", data?.summary_risk_level],
-    ["Legal Status", data?.legal_status],
-    ["School", data?.school_name],
-    ["GP", data?.gp_name],
-    ["What Matters", data?.what_matters_to_me]
-  ]);
+  els.overviewContent.innerHTML = empty("Loading overview...");
+  const d = await jc(ep.overview(id));
+  state.latest.overview = d;
+  els.overviewContent.innerHTML = kvCards([
+    ["Placement Status", d?.placement_status], ["Risk Level", d?.summary_risk_level], ["Legal Status", d?.legal_status],
+    ["School", d?.school_name], ["GP", d?.gp_name], ["What Matters", d?.what_matters_to_me]
+  ].filter(([,x]) => has(x)));
 }
-
 async function loadProfile(id) {
-  renderLoading(els.profileContent, "Loading profile...");
-  const data = await fetchFromCandidates(endpoints.profile(id));
-  state.latest.profile = data;
+  els.profileContent.innerHTML = empty("Loading profile...");
+  const d = await jc(ep.profile(id));
+  state.latest.profile = d;
   els.profileContent.innerHTML = [
-    renderObjectSection("Young Person", data?.young_person || {}, [
-      "id", "first_name", "last_name", "preferred_name", "date_of_birth",
-      "gender", "ethnicity", "local_id_number", "placement_status", "summary_risk_level"
-    ]),
-    renderArraySection("Legal Status", data?.legal_status || [], [
-      "legal_status", "order_type", "order_details", "effective_from", "effective_to", "is_current"
-    ]),
-    renderArraySection("Communication Profile", data?.communication_profile || [], [
-      "neurodiversity_summary", "communication_style", "sensory_profile", "processing_needs", "what_helps"
-    ]),
-    renderArraySection("Identity Profile", data?.identity_profile || [], [
-      "interests", "strengths_summary", "what_matters_to_me"
-    ]),
-    renderArraySection("Alerts", data?.alerts || [], [
-      "alert_type", "title", "description", "severity", "review_date"
-    ])
+    objSec("Young Person", d?.young_person || {}, ["id","first_name","last_name","preferred_name","date_of_birth","gender","ethnicity","local_id_number","placement_status","summary_risk_level"]),
+    arrSec("Legal Status", d?.legal_status || [], ["legal_status","order_type","order_details","effective_from","effective_to","is_current"]),
+    arrSec("Communication Profile", d?.communication_profile || [], ["neurodiversity_summary","communication_style","sensory_profile","processing_needs","what_helps"]),
+    arrSec("Identity Profile", d?.identity_profile || [], ["interests","strengths_summary","what_matters_to_me"]),
+    arrSec("Alerts", d?.alerts || [], ["alert_type","title","description","severity","review_date"])
   ].join("");
 }
-
 async function loadPlans(id) {
-  renderLoading(els.plansContent, "Loading plans...");
-  renderLoading(els.plansArchiveContent, "Loading archived plans...");
-
-  const [rows, archiveRows] = await Promise.all([
-    fetchFromCandidates(endpoints.plans(id)),
-    fetchJson(endpoints.plansArchive(id)).catch(() => [])
-  ]);
-
-  state.latest.plans = normaliseArrayResponse(rows);
-  state.latest.plansArchive = normaliseArrayResponse(archiveRows);
-
-  const cfg = {
-    title: (r) => r.title || r.plan_type || "Plan",
-    meta: (r) => `${stringifyValue(r.status)} • ${r.review_date ? formatDate(r.review_date) : "No review date"}`,
-    summary: (r) => r.presenting_need || r.summary || "No summary"
-  };
-
-  els.plansContent.innerHTML = renderDocumentCards(state.latest.plans, "plan", cfg);
-  els.plansArchiveContent.innerHTML = renderDocumentCards(state.latest.plansArchive, "plan", cfg);
+  els.plansContent.innerHTML = empty("Loading plans...");
+  els.plansArchiveContent.innerHTML = empty("Loading archived plans...");
+  const [cur, arc] = await Promise.all([jc(ep.plans(id)).then(arr), jc(ep.plansArchive(id)).then(arr).catch(() => [])]);
+  state.latest.plans = cur; state.latest.plansArchive = arc;
+  const cfg = { title:r=>r.title||r.plan_type||"Plan", meta:r=>`${sVal(r.status)} • ${r.review_date?fDate(r.review_date):"No review date"}`, summary:r=>r.presenting_need||r.summary||"No summary" };
+  els.plansContent.innerHTML = cards(cur, "plan", cfg);
+  els.plansArchiveContent.innerHTML = cards(arc, "plan", cfg);
+  bindRecordButtons();
 }
-
 async function loadRisk(id) {
-  renderLoading(els.riskContent, "Loading risk...");
-  renderLoading(els.riskArchiveContent, "Loading archived risk...");
-
-  const [rows, archiveRows] = await Promise.all([
-    fetchFromCandidates(endpoints.risk(id)),
-    fetchJson(endpoints.riskArchive(id)).catch(() => [])
-  ]);
-
-  state.latest.risk = normaliseArrayResponse(rows);
-  state.latest.riskArchive = normaliseArrayResponse(archiveRows);
-
-  const cfg = {
-    title: (r) => r.title || r.category || "Risk assessment",
-    meta: (r) => `${stringifyValue(r.severity)} • ${r.review_date ? formatDate(r.review_date) : "No review date"}`,
-    summary: (r) => r.concern_summary || "No summary"
-  };
-
-  els.riskContent.innerHTML = renderDocumentCards(state.latest.risk, "risk", cfg);
-  els.riskArchiveContent.innerHTML = renderDocumentCards(state.latest.riskArchive, "risk", cfg);
+  els.riskContent.innerHTML = empty("Loading risk...");
+  els.riskArchiveContent.innerHTML = empty("Loading archived risk...");
+  const [cur, arc] = await Promise.all([jc(ep.risk(id)).then(arr), jc(ep.riskArchive(id)).then(arr).catch(() => [])]);
+  state.latest.risk = cur; state.latest.riskArchive = arc;
+  const cfg = { title:r=>r.title||r.category||"Risk assessment", meta:r=>`${sVal(r.severity)} • ${r.review_date?fDate(r.review_date):"No review date"}`, summary:r=>r.concern_summary||"No summary" };
+  els.riskContent.innerHTML = cards(cur, "risk", cfg);
+  els.riskArchiveContent.innerHTML = cards(arc, "risk", cfg);
+  bindRecordButtons();
 }
-
-async function loadDailyNotes(id) {
-  renderLoading(els.dailyNotesContent, "Loading daily notes...");
-  renderLoading(els.dailyNotesArchiveContent, "Loading archived daily notes...");
-
-  const [rows, archiveRows] = await Promise.all([
-    fetchFromCandidates(endpoints.dailyNotes(id)),
-    fetchJson(endpoints.dailyNotesArchive(id)).catch(() => [])
-  ]);
-
-  state.latest.dailyNotes = normaliseArrayResponse(rows);
-  state.latest.dailyNotesArchive = normaliseArrayResponse(archiveRows);
-
-  renderDailyNotesListFromState();
+async function loadDaily(id) {
+  els.dailyNotesContent.innerHTML = empty("Loading daily notes...");
+  els.dailyNotesArchiveContent.innerHTML = empty("Loading archived daily notes...");
+  const [cur, arc] = await Promise.all([jc(ep.daily(id)).then(arr), jc(ep.dailyArchive(id)).then(arr).catch(() => [])]);
+  state.latest.dailyNotes = cur; state.latest.dailyNotesArchive = arc;
+  renderDailyLists();
 }
-
-function renderDailyNotesListFromState() {
-  let rows = [...state.latest.dailyNotes];
+function renderDailyLists() {
+  const cfg = { title:r=>`${fDate(r.note_date)} • ${sVal(r.shift_type)}`, meta:r=>`${sVal(r.workflow_status)} • ${r.author_first_name||""}`.trim(), summary:r=>r.activities||r.presentation||r.young_person_voice||"No summary" };
+  let cur = [...state.latest.dailyNotes], arc = [...state.latest.dailyNotesArchive];
   const status = els.dailyNoteStatusFilter?.value || "all";
   const shift = els.dailyNoteShiftFilter?.value || "all";
-  const term = (els.dailyNoteSearch?.value || "").trim().toLowerCase();
-
-  if (status !== "all") rows = rows.filter((r) => String(r.workflow_status || "").toLowerCase() === status);
-  if (shift !== "all") rows = rows.filter((r) => String(r.shift_type || "").toLowerCase() === shift);
-  if (term) {
-    rows = rows.filter((r) =>
-      [
-        r.note_date,
-        r.shift_type,
-        r.workflow_status,
-        r.presentation,
-        r.activities,
-        r.young_person_voice
-      ].join(" ").toLowerCase().includes(term)
-    );
-  }
-
-  const cfg = {
-    title: (r) => `${formatDate(r.note_date)} • ${stringifyValue(r.shift_type)}`,
-    meta: (r) => `${stringifyValue(r.workflow_status)} • ${r.author_first_name || ""}`.trim(),
-    summary: (r) => r.activities || r.presentation || r.young_person_voice || "No summary"
-  };
-
-  els.dailyNotesContent.innerHTML = renderDocumentCards(rows, "daily_note", cfg);
-  els.dailyNotesArchiveContent.innerHTML = renderDocumentCards(state.latest.dailyNotesArchive, "daily_note", cfg);
+  const q = (els.dailyNoteSearch?.value || "").trim().toLowerCase();
+  const filt = rows => rows.filter(r =>
+    (status === "all" || String(r.workflow_status || "").toLowerCase() === status) &&
+    (shift === "all" || String(r.shift_type || "").toLowerCase() === shift) &&
+    (!q || [r.note_date,r.shift_type,r.workflow_status,r.activities,r.presentation,r.young_person_voice].join(" ").toLowerCase().includes(q))
+  );
+  cur = filt(cur); arc = filt(arc);
+  els.dailyNotesContent.innerHTML = cards(cur, "daily_note", cfg);
+  els.dailyNotesArchiveContent.innerHTML = cards(arc, "daily_note", cfg);
+  bindRecordButtons();
 }
-
 async function loadIncidents(id) {
-  renderLoading(els.incidentsContent, "Loading incidents...");
-  renderLoading(els.incidentsArchiveContent, "Loading archived incidents...");
-
-  const [rows, archiveRows] = await Promise.all([
-    fetchFromCandidates(endpoints.incidents(id)),
-    fetchJson(endpoints.incidentsArchive(id)).catch(() => [])
-  ]);
-
-  state.latest.incidents = normaliseArrayResponse(rows);
-  state.latest.incidentsArchive = normaliseArrayResponse(archiveRows);
-
-  const cfg = {
-    title: (r) => r.incident_type || "Incident",
-    meta: (r) => `${r.incident_datetime ? formatDateTime(r.incident_datetime) : "No date"} • ${stringifyValue(r.severity)}`,
-    summary: (r) => r.description || "No summary"
-  };
-
-  els.incidentsContent.innerHTML = renderDocumentCards(state.latest.incidents, "incident", cfg);
-  els.incidentsArchiveContent.innerHTML = renderDocumentCards(state.latest.incidentsArchive, "incident", cfg);
+  els.incidentsContent.innerHTML = empty("Loading incidents...");
+  els.incidentsArchiveContent.innerHTML = empty("Loading archived incidents...");
+  const [cur, arc] = await Promise.all([jc(ep.incidents(id)).then(arr), jc(ep.incidentsArchive(id)).then(arr).catch(() => [])]);
+  state.latest.incidents = cur; state.latest.incidentsArchive = arc;
+  const cfg = { title:r=>r.incident_type||"Incident", meta:r=>`${r.incident_datetime?fDateTime(r.incident_datetime):"No date"} • ${sVal(r.severity)}`, summary:r=>r.description||"No summary" };
+  els.incidentsContent.innerHTML = cards(cur, "incident", cfg);
+  els.incidentsArchiveContent.innerHTML = cards(arc, "incident", cfg);
+  bindRecordButtons();
 }
-
 async function loadKeywork(id) {
-  renderLoading(els.keyworkContent, "Loading keywork...");
-  renderLoading(els.keyworkArchiveContent, "Loading archived keywork...");
-
-  const [rows, archiveRows] = await Promise.all([
-    fetchJson(endpoints.keywork(id)),
-    fetchJson(endpoints.keyworkArchive(id)).catch(() => [])
-  ]);
-
-  state.latest.keywork = normaliseArrayResponse(rows);
-  state.latest.keyworkArchive = normaliseArrayResponse(archiveRows);
-
-  const cfg = {
-    title: (r) => r.topic || "Keywork session",
-    meta: (r) => `${r.session_date ? formatDate(r.session_date) : "No date"} • ${r.worker_first_name || ""}`.trim(),
-    summary: (r) => r.summary || r.purpose || "No summary"
-  };
-
-  els.keyworkContent.innerHTML = renderDocumentCards(state.latest.keywork, "keywork", cfg);
-  els.keyworkArchiveContent.innerHTML = renderDocumentCards(state.latest.keyworkArchive, "keywork", cfg);
+  els.keyworkContent.innerHTML = empty("Loading keywork...");
+  els.keyworkArchiveContent.innerHTML = empty("Loading archived keywork...");
+  const [cur, arc] = await Promise.all([j(ep.keywork(id)).then(arr), j(ep.keyworkArchive(id)).then(arr).catch(() => [])]);
+  state.latest.keywork = cur; state.latest.keyworkArchive = arc;
+  const cfg = { title:r=>r.topic||"Keywork session", meta:r=>`${r.session_date?fDate(r.session_date):"No date"} • ${r.worker_first_name||""}`.trim(), summary:r=>r.summary||r.purpose||"No summary" };
+  els.keyworkContent.innerHTML = cards(cur, "keywork", cfg);
+  els.keyworkArchiveContent.innerHTML = cards(arc, "keywork", cfg);
+  bindRecordButtons();
 }
-
 async function loadHealth(id) {
-  renderLoading(els.healthContent, "Loading health...");
-  const data = await fetchFromCandidates(endpoints.health(id));
-  state.latest.health = data;
-  const records = [...(data?.health_records || []), ...(data?.medication_records || [])];
-  els.healthContent.innerHTML = renderDocumentCards(records, "health", {
-    title: (r) => r.title || r.record_type || r.medication_name || "Health record",
-    meta: (r) => r.event_datetime ? formatDateTime(r.event_datetime) : r.scheduled_time ? formatDateTime(r.scheduled_time) : "No date",
-    summary: (r) => r.summary || r.outcome || r.status || "No summary"
-  });
+  els.healthContent.innerHTML = empty("Loading health...");
+  const d = await jc(ep.health(id));
+  state.latest.health = d;
+  const rows = [...(d?.health_records || []), ...(d?.medication_records || [])];
+  els.healthContent.innerHTML = cards(rows, "health", { title:r=>r.title||r.record_type||r.medication_name||"Health record", meta:r=>r.event_datetime?fDateTime(r.event_datetime):r.scheduled_time?fDateTime(r.scheduled_time):"No date", summary:r=>r.summary||r.outcome||r.status||"No summary" });
 }
-
 async function loadEducation(id) {
-  renderLoading(els.educationContent, "Loading education...");
-  const data = await fetchFromCandidates(endpoints.education(id));
-  state.latest.education = data;
-  els.educationContent.innerHTML = renderDocumentCards(data?.education_records || [], "education", {
-    title: (r) => r.provision_name || "Education record",
-    meta: (r) => `${r.record_date ? formatDate(r.record_date) : "No date"} • ${stringifyValue(r.attendance_status)}`,
-    summary: (r) => r.behaviour_summary || r.learning_engagement || r.achievement_note || "No summary"
-  });
+  els.educationContent.innerHTML = empty("Loading education...");
+  const d = await jc(ep.education(id));
+  state.latest.education = d;
+  els.educationContent.innerHTML = cards(d?.education_records || [], "education", { title:r=>r.provision_name||"Education record", meta:r=>`${r.record_date?fDate(r.record_date):"No date"} • ${sVal(r.attendance_status)}`, summary:r=>r.behaviour_summary||r.learning_engagement||r.achievement_note||"No summary" });
 }
-
 async function loadFamily(id) {
-  renderLoading(els.familyContent, "Loading family...");
-  const data = await fetchFromCandidates(endpoints.family(id));
-  state.latest.family = data;
-  els.familyContent.innerHTML = renderDocumentCards(data?.family_contact_records || [], "family", {
-    title: (r) => r.contact_person || "Family record",
-    meta: (r) => `${r.contact_datetime ? formatDateTime(r.contact_datetime) : "No date"} • ${stringifyValue(r.contact_type)}`,
-    summary: (r) => r.child_voice || r.concerns || r.post_contact_presentation || "No summary"
-  });
+  els.familyContent.innerHTML = empty("Loading family...");
+  const d = await jc(ep.family(id));
+  state.latest.family = d;
+  els.familyContent.innerHTML = cards(d?.family_contact_records || [], "family", { title:r=>r.contact_person||"Family record", meta:r=>`${r.contact_datetime?fDateTime(r.contact_datetime):"No date"} • ${sVal(r.contact_type)}`, summary:r=>r.child_voice||r.concerns||r.post_contact_presentation||"No summary" });
 }
-
 async function loadChronology(id) {
-  renderLoading(els.chronologyContent, "Loading chronology...");
-  const rows = normaliseArrayResponse(await fetchJson(endpoints.chronology(id)));
+  els.chronologyContent.innerHTML = empty("Loading chronology...");
+  const rows = arr(await j(ep.chronology(id)));
   state.latest.chronology = rows;
-  els.chronologyContent.innerHTML = renderTableSection(rows, [
-    "event_datetime", "category", "subcategory", "title", "summary", "significance", "source_table"
-  ]);
+  els.chronologyContent.innerHTML = table(rows, ["event_datetime","category","subcategory","title","summary","significance","source_table"]);
 }
-
-async function loadMonthlyReviews(id) {
-  renderLoading(els.monthlyReviewsList, "Loading monthly reviews...");
-  const rows = await fetchJson(endpoints.monthlyReviews(id));
+async function loadMonthly(id) {
+  els.monthlyReviewsList.innerHTML = empty("Loading monthly reviews...");
+  const rows = await j(ep.monthly(id));
   state.latest.monthlyReviews = rows || [];
-
   if (!rows?.length) {
-    els.monthlyReviewsList.innerHTML = `<div class="empty-state">No monthly reviews yet.</div>`;
-    els.monthlyReviewDetail.innerHTML = `<div class="empty-state">Select a review to view details.</div>`;
+    els.monthlyReviewsList.innerHTML = empty("No monthly reviews yet.");
+    els.monthlyReviewDetail.innerHTML = empty("Select a review to view details.");
     return;
   }
-
-  els.monthlyReviewsList.innerHTML = renderDocumentCards(rows, "monthly_review", {
-    title: (r) => r.review_title || "Monthly review",
-    meta: (r) => `${r.review_month ? formatDate(r.review_month) : "No month"} • ${stringifyValue(r.status)}`,
-    summary: (r) => r.summary_of_month || r.progress_summary || "Open to view detail"
-  });
+  els.monthlyReviewsList.innerHTML = cards(rows, "monthly_review", { title:r=>r.review_title||"Monthly review", meta:r=>`${r.review_month?fDate(r.review_month):"No month"} • ${sVal(r.status)}`, summary:r=>r.summary_of_month||r.progress_summary||"Open to view detail" });
+  bindRecordButtons();
 }
-
+async function openMonthlyDetail(id) {
+  els.monthlyReviewDetail.innerHTML = empty("Loading review...");
+  const d = await j(ep.monthlyDetail(id));
+  els.monthlyReviewDetail.innerHTML = [
+    objSec("Review Summary", d?.review || {}, ["review_title","review_month","status","summary_of_month","progress_summary","child_voice_summary","concerns_and_risks","education_summary","health_summary","family_summary","keywork_summary","behaviour_summary","achievements_summary","actions_for_next_month","manager_analysis"]),
+    arrSec("Linked Evidence", d?.record_links || [], ["source_table","source_id","link_reason","created_at"]),
+    arrSec("Standards Summary", d?.standards || [], ["standard_code","standard_short_label","evidence_count","narrative_summary"]),
+    arrSec("Actions", d?.actions || [], ["action_text","action_owner_id","due_date","status"])
+  ].join("");
+}
 async function loadStandards(id) {
-  renderLoading(els.standardsSummary, "Loading standards...");
-  renderLoading(els.standardsEvidenceList, "Loading evidence...");
-
-  const [summary, evidence] = await Promise.all([
-    fetchFromCandidates(endpoints.standardsSummary(id)),
-    fetchFromCandidates(endpoints.standardsEvidence(id))
-  ]);
-
-  renderStandardsSummary(summary);
-  renderStandardsEvidence(evidence);
+  els.standardsSummary.innerHTML = empty("Loading standards...");
+  els.standardsEvidenceList.innerHTML = empty("Loading evidence...");
+  const [s, e] = await Promise.all([jc(ep.standards(id)), jc(ep.evidence(id))]);
+  els.standardsSummary.innerHTML = !s?.length ? empty("No standards data found.") : table(s, ["code","short_label","linked_record_count"]);
+  els.standardsEvidenceList.innerHTML = !e?.length ? empty("No evidence linked yet.") : table(e, ["standard_code","source_table","source_id","evidence_strength","rationale","created_at"]);
 }
-
-function renderStandardsSummary(rows) {
-  if (!rows?.length) return els.standardsSummary.innerHTML = `<div class="empty-state">No standards data found.</div>`;
-  els.standardsSummary.innerHTML = renderTableSection(rows, ["code", "short_label", "linked_record_count"]);
-}
-
-function renderStandardsEvidence(rows) {
-  if (!rows?.length) return els.standardsEvidenceList.innerHTML = `<div class="empty-state">No evidence linked yet.</div>`;
-  els.standardsEvidenceList.innerHTML = renderTableSection(rows, [
-    "standard_code", "source_table", "source_id", "evidence_strength", "rationale", "created_at"
-  ]);
-}
-
 async function loadCompliance(id) {
-  renderLoading(els.complianceContent, "Loading compliance...");
-  const data = await fetchFromCandidates(endpoints.compliance(id));
-  state.latest.compliance = data;
-  rerenderComplianceFromState();
+  els.complianceContent.innerHTML = empty("Loading compliance...");
+  state.latest.compliance = await jc(ep.compliance(id));
+  renderCompliance();
+}
+function renderCompliance() {
+  const d = state.latest.compliance;
+  if (!d) return els.complianceContent.innerHTML = empty("No compliance data found.");
+  let rows = Array.isArray(d.compliance_items) ? d.compliance_items : [];
+  const s = els.complianceStatusFilter?.value || "all";
+  const c = els.complianceCategoryFilter?.value || "all";
+  if (s !== "all") rows = rows.filter(r => r.compliance_status === s);
+  if (c !== "all") rows = rows.filter(r => r.compliance_type === c);
+  els.complianceContent.innerHTML = table(rows, ["compliance_status","title","due_date","status","approval_status","created_at"]);
 }
 
-function rerenderComplianceFromState() {
-  const data = state.latest.compliance;
-  if (!data) return els.complianceContent.innerHTML = `<div class="empty-state">No compliance data found.</div>`;
-
-  let items = Array.isArray(data.compliance_items) ? data.compliance_items : [];
-  const status = els.complianceStatusFilter?.value || "all";
-  const category = els.complianceCategoryFilter?.value || "all";
-
-  if (status !== "all") items = items.filter((i) => i.compliance_status === status);
-  if (category !== "all") items = items.filter((i) => i.compliance_type === category);
-
-  els.complianceContent.innerHTML = renderTableSection(items, [
-    "compliance_status", "title", "due_date", "status", "approval_status", "created_at"
-  ]);
+async function editPlan(r) {
+  r = r?.id ? await j(ep.planById(r.id)) : r;
+  v(els.planId, r.id); v(els.planType, r.plan_type); v(els.planTitle, r.title); v(els.planPresentingNeed, r.presenting_need);
+  v(els.planSummary, r.summary); v(els.planChildVoice, r.child_voice); v(els.planProactiveStrategies, r.proactive_strategies);
+  v(els.planPaceGuidance, r.pace_guidance); v(els.planTriggers, r.triggers); v(els.planProtectiveFactors, r.protective_factors);
+  v(els.planStartDate, dInput(r.start_date)); v(els.planReviewDate, dInput(r.review_date)); v(els.planStatus, r.status || "active");
+  v(els.planOwnerId, r.owner_id); v(els.planApprovalStatus, r.approval_status || "not_required"); v(els.planCreatedBy, r.created_by);
+  setSectionTab("plans", "form");
+}
+async function editRisk(r) {
+  r = r?.id ? await j(ep.riskById(r.id)) : r;
+  v(els.riskId, r.id); v(els.riskCategory, r.category); v(els.riskTitle, r.title); v(els.riskConcernSummary, r.concern_summary);
+  v(els.riskKnownTriggers, r.known_triggers); v(els.riskEarlyWarningSigns, r.early_warning_signs); v(els.riskContextualFactors, r.contextual_factors);
+  v(els.riskCurrentControls, r.current_controls); v(els.riskDeescalationStrategies, r.deescalation_strategies); v(els.riskResponseActions, r.response_actions);
+  v(els.riskChildViews, r.child_views); v(els.riskSeverity, r.severity || "medium"); v(els.riskLikelihood, r.likelihood || "medium");
+  v(els.riskReviewDate, dInput(r.review_date)); v(els.riskStatus, r.status || "active"); v(els.riskOwnerId, r.owner_id);
+  v(els.riskApprovalStatus, r.approval_status || "not_required"); v(els.riskCreatedBy, r.created_by);
+  setSectionTab("risk", "form");
+}
+async function editDaily(r) {
+  r = r?.id ? await j(ep.dailyById(r.id)) : r;
+  v(els.dailyNoteId, r.id); v(els.dailyNoteDate, dInput(r.note_date)); v(els.dailyNoteShiftType, r.shift_type || "day");
+  v(els.dailyNoteWorkflowStatus, r.workflow_status || "draft"); v(els.dailyNoteMood, r.mood || r.presentation); v(els.dailyNoteActivities, r.activities);
+  v(els.dailyNoteEducationUpdate, r.education_update); v(els.dailyNoteHealthUpdate, r.health_update); v(els.dailyNoteFamilyUpdate, r.family_update);
+  v(els.dailyNoteBehaviourUpdate, r.behaviour_update); v(els.dailyNoteYoungPersonVoice, r.young_person_voice); v(els.dailyNotePositives, r.positives);
+  v(els.dailyNoteActionsRequired, r.actions_required);
+  setSectionTab("daily_notes", "form");
+}
+async function editIncident(r) {
+  r = r?.id ? await j(ep.incidentById(r.id)) : r;
+  v(els.incidentId, r.id); v(els.incidentDatetime, dtInput(r.incident_datetime)); v(els.incidentType, r.incident_type); v(els.incidentSeverity, r.severity || "medium");
+  v(els.incidentLocation, r.location); v(els.incidentDescription, r.description); v(els.incidentResponse, r.staff_response || r.response);
+  v(els.incidentFollowUp, r.follow_up_required); v(els.incidentManagerReviewStatus, r.manager_review_status || "pending");
+  setSectionTab("incidents", "form");
+}
+async function editKeywork(r) {
+  r = r?.id ? await j(ep.keyworkById(r.id)) : r;
+  v(els.keyworkId, r.id); v(els.keyworkSessionDate, dInput(r.session_date)); v(els.keyworkWorkerId, r.worker_id); v(els.keyworkTopic, r.topic);
+  v(els.keyworkPurpose, r.purpose); v(els.keyworkSummary, r.summary); v(els.keyworkChildVoice, r.child_voice);
+  v(els.keyworkReflectiveAnalysis, r.reflective_analysis); v(els.keyworkActionsAgreed, r.actions_agreed); v(els.keyworkNextSessionDate, dInput(r.next_session_date));
+  setSectionTab("keywork", "form");
 }
 
-function renderDocumentCards(rows, type, cfg) {
-  if (!rows?.length) return `<div class="empty-state">No records found.</div>`;
-
-  const html = `
-    <div class="record-list">
-      ${rows.map((r) => `
-        <button
-          class="record-card js-open-record"
-          type="button"
-          data-type="${type}"
-          data-record='${escapeHtml(JSON.stringify(r))}'
-        >
-          <h4>${escapeHtml(cfg.title(r))}</h4>
-          <div class="record-meta">${escapeHtml(cfg.meta(r))}</div>
-          <div class="record-summary">${escapeHtml(trimText(cfg.summary(r), 180))}</div>
-        </button>
-      `).join("")}
-    </div>
-  `;
-
-  queueMicrotask(bindRecordButtons);
-  return html;
-}
-
-function bindRecordButtons() {
-  $$(".js-open-record").forEach((btn) => {
-    btn.onclick = async () => {
-      const type = btn.dataset.type;
-      const record = parseRecord(btn.dataset.record);
-      if (!record) return;
-
-      if (type === "monthly_review") return record.id && openMonthlyReviewDetail(record.id);
-      if (type === "plan") return editPlan(record);
-      if (type === "risk") return editRisk(record);
-      if (type === "daily_note") return editDailyNote(record);
-      if (type === "incident") return editIncident(record);
-      if (type === "keywork") return editKeywork(record);
-    };
-  });
-}
-
-async function editPlan(record) {
-  try {
-    const r = await fetchJson(endpoints.planById(record.id));
-    setValue(els.planId, r.id);
-    setValue(els.planType, r.plan_type);
-    setValue(els.planTitle, r.title);
-    setValue(els.planPresentingNeed, r.presenting_need);
-    setValue(els.planSummary, r.summary);
-    setValue(els.planChildVoice, r.child_voice);
-    setValue(els.planProactiveStrategies, r.proactive_strategies);
-    setValue(els.planPaceGuidance, r.pace_guidance);
-    setValue(els.planTriggers, r.triggers);
-    setValue(els.planProtectiveFactors, r.protective_factors);
-    setValue(els.planStartDate, toDateInputValue(r.start_date));
-    setValue(els.planReviewDate, toDateInputValue(r.review_date));
-    setValue(els.planStatus, r.status || "active");
-    setValue(els.planOwnerId, r.owner_id);
-    setValue(els.planApprovalStatus, r.approval_status || "not_required");
-    setValue(els.planCreatedBy, r.created_by);
-    setSectionTab("plans", "form");
-  } catch (e) {
-    showStatus(`Could not load plan: ${e.message}`, true);
-  }
-}
-
-async function editRisk(record) {
-  try {
-    const r = await fetchJson(endpoints.riskById(record.id));
-    setValue(els.riskId, r.id);
-    setValue(els.riskCategory, r.category);
-    setValue(els.riskTitle, r.title);
-    setValue(els.riskConcernSummary, r.concern_summary);
-    setValue(els.riskKnownTriggers, r.known_triggers);
-    setValue(els.riskEarlyWarningSigns, r.early_warning_signs);
-    setValue(els.riskContextualFactors, r.contextual_factors);
-    setValue(els.riskCurrentControls, r.current_controls);
-    setValue(els.riskDeescalationStrategies, r.deescalation_strategies);
-    setValue(els.riskResponseActions, r.response_actions);
-    setValue(els.riskChildViews, r.child_views);
-    setValue(els.riskSeverity, r.severity || "medium");
-    setValue(els.riskLikelihood, r.likelihood || "medium");
-    setValue(els.riskReviewDate, toDateInputValue(r.review_date));
-    setValue(els.riskStatus, r.status || "active");
-    setValue(els.riskOwnerId, r.owner_id);
-    setValue(els.riskApprovalStatus, r.approval_status || "not_required");
-    setValue(els.riskCreatedBy, r.created_by);
-    setSectionTab("risk", "form");
-  } catch (e) {
-    showStatus(`Could not load risk: ${e.message}`, true);
-  }
-}
-
-async function editDailyNote(record) {
-  try {
-    const r = await fetchJson(endpoints.dailyNoteById(record.id));
-    setValue(els.dailyNoteId, r.id);
-    setValue(els.dailyNoteDate, toDateInputValue(r.note_date));
-    setValue(els.dailyNoteShiftType, r.shift_type || "day");
-    setValue(els.dailyNoteWorkflowStatus, r.workflow_status || "draft");
-    setValue(els.dailyNoteMood, r.mood);
-    setValue(els.dailyNoteActivities, r.activities);
-    setValue(els.dailyNoteEducationUpdate, r.education_update);
-    setValue(els.dailyNoteHealthUpdate, r.health_update);
-    setValue(els.dailyNoteFamilyUpdate, r.family_update);
-    setValue(els.dailyNoteBehaviourUpdate, r.behaviour_update);
-    setValue(els.dailyNoteYoungPersonVoice, r.young_person_voice);
-    setValue(els.dailyNotePositives, r.positives);
-    setValue(els.dailyNoteActionsRequired, r.actions_required);
-    setSectionTab("daily_notes", "form");
-  } catch (e) {
-    showStatus(`Could not load daily note: ${e.message}`, true);
-  }
-}
-
-async function editIncident(record) {
-  try {
-    const r = await fetchJson(endpoints.incidentById(record.id));
-    setValue(els.incidentId, r.id);
-    setValue(els.incidentDatetime, toDateTimeLocalValue(r.incident_datetime));
-    setValue(els.incidentType, r.incident_type);
-    setValue(els.incidentSeverity, r.severity || "medium");
-    setValue(els.incidentLocation, r.location);
-    setValue(els.incidentDescription, r.description);
-    setValue(els.incidentResponse, r.staff_response);
-    setValue(els.incidentFollowUp, r.follow_up_required);
-    setValue(els.incidentManagerReviewStatus, r.manager_review_status || "pending");
-    setSectionTab("incidents", "form");
-  } catch (e) {
-    showStatus(`Could not load incident: ${e.message}`, true);
-  }
-}
-
-async function editKeywork(record) {
-  try {
-    const r = await fetchJson(endpoints.keyworkById(record.id));
-    setValue(els.keyworkId, r.id);
-    setValue(els.keyworkSessionDate, toDateInputValue(r.session_date));
-    setValue(els.keyworkWorkerId, r.worker_id);
-    setValue(els.keyworkTopic, r.topic);
-    setValue(els.keyworkPurpose, r.purpose);
-    setValue(els.keyworkSummary, r.summary);
-    setValue(els.keyworkChildVoice, r.child_voice);
-    setValue(els.keyworkReflectiveAnalysis, r.reflective_analysis);
-    setValue(els.keyworkActionsAgreed, r.actions_agreed);
-    setValue(els.keyworkNextSessionDate, toDateInputValue(r.next_session_date));
-    setSectionTab("keywork", "form");
-  } catch (e) {
-    showStatus(`Could not load keywork: ${e.message}`, true);
-  }
-}
+function resetPlan() { els.planForm?.reset(); v(els.planId, ""); }
+function resetRisk() { els.riskForm?.reset(); v(els.riskId, ""); }
+function resetDaily() { els.dailyNoteForm?.reset(); v(els.dailyNoteId, ""); }
+function resetIncident() { els.incidentForm?.reset(); v(els.incidentId, ""); }
+function resetKeywork() { els.keyworkForm?.reset(); v(els.keyworkId, ""); }
+function resetAll() { resetPlan(); resetRisk(); resetDaily(); resetIncident(); resetKeywork(); }
 
 async function savePlan(e) {
   e.preventDefault();
-  if (!state.selectedYoungPerson) return showStatus("Please select a young person first.", true);
-
+  if (!state.selectedYoungPerson) return msg("Please select a young person first.", true);
   const id = clean(els.planId?.value);
-  const payload = {
+  const p = {
     young_person_id: Number(state.selectedYoungPerson.id),
-    plan_type: clean(els.planType?.value),
-    title: clean(els.planTitle?.value),
-    presenting_need: clean(els.planPresentingNeed?.value),
-    summary: clean(els.planSummary?.value),
-    child_voice: clean(els.planChildVoice?.value),
-    proactive_strategies: clean(els.planProactiveStrategies?.value),
-    pace_guidance: clean(els.planPaceGuidance?.value),
-    triggers: clean(els.planTriggers?.value),
-    protective_factors: clean(els.planProtectiveFactors?.value),
-    start_date: clean(els.planStartDate?.value),
-    review_date: clean(els.planReviewDate?.value),
-    status: clean(els.planStatus?.value) || "active",
-    owner_id: parseNullableInt(els.planOwnerId?.value),
-    approval_status: clean(els.planApprovalStatus?.value) || "not_required",
-    created_by: parseNullableInt(els.planCreatedBy?.value),
-    archived: String(clean(els.planStatus?.value) || "").toLowerCase() === "archived"
+    plan_type: clean(els.planType?.value), title: clean(els.planTitle?.value),
+    presenting_need: clean(els.planPresentingNeed?.value), summary: clean(els.planSummary?.value),
+    child_voice: clean(els.planChildVoice?.value), proactive_strategies: clean(els.planProactiveStrategies?.value),
+    pace_guidance: clean(els.planPaceGuidance?.value), triggers: clean(els.planTriggers?.value),
+    protective_factors: clean(els.planProtectiveFactors?.value), start_date: clean(els.planStartDate?.value),
+    review_date: clean(els.planReviewDate?.value), status: clean(els.planStatus?.value) || "active",
+    owner_id: nint(els.planOwnerId?.value), approval_status: clean(els.planApprovalStatus?.value) || "not_required",
+    created_by: nint(els.planCreatedBy?.value), archived: String(clean(els.planStatus?.value) || "").toLowerCase() === "archived"
   };
-
-  if (!payload.plan_type || !payload.title) {
-    return showStatus("Plan type and title are required.", true);
-  }
-
+  if (!p.plan_type || !p.title) return msg("Plan type and title are required.", true);
   try {
-    if (id) {
-      await fetchJson(endpoints.planUpdate(id), {
-        method: "PUT",
-        body: JSON.stringify({
-          plan_type: payload.plan_type,
-          title: payload.title,
-          presenting_need: payload.presenting_need,
-          summary: payload.summary,
-          child_voice: payload.child_voice,
-          proactive_strategies: payload.proactive_strategies,
-          pace_guidance: payload.pace_guidance,
-          triggers: payload.triggers,
-          protective_factors: payload.protective_factors,
-          start_date: payload.start_date,
-          review_date: payload.review_date,
-          status: payload.status,
-          owner_id: payload.owner_id,
-          approval_status: payload.approval_status,
-          created_by: payload.created_by,
-          archived: payload.archived
-        })
-      });
-      showStatus("Plan updated.");
-    } else {
-      await fetchJson(endpoints.planCreate, {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
-      showStatus("Plan created.");
-    }
-
-    resetPlanForm();
-    setSectionTab("plans", "records");
-    await loadPlans(state.selectedYoungPerson.id);
-  } catch (e) {
-    showStatus(`Could not save plan: ${e.message}`, true);
-  }
+    await j(id ? ep.planUpdate(id) : ep.planCreate, { method: id ? "PUT" : "POST", body: JSON.stringify(id ? { ...p, young_person_id: undefined } : p) });
+    msg(`Plan ${id ? "updated" : "created"}.`);
+    resetPlan(); setSectionTab("plans", "records"); await loadPlans(state.selectedYoungPerson.id); await preload();
+  } catch (e2) { msg(`Could not save plan: ${e2.message}`, true); }
 }
-
 async function saveRisk(e) {
   e.preventDefault();
-  if (!state.selectedYoungPerson) return showStatus("Please select a young person first.", true);
-
+  if (!state.selectedYoungPerson) return msg("Please select a young person first.", true);
   const id = clean(els.riskId?.value);
-  const payload = {
+  const p = {
     young_person_id: Number(state.selectedYoungPerson.id),
-    category: clean(els.riskCategory?.value),
-    title: clean(els.riskTitle?.value),
-    concern_summary: clean(els.riskConcernSummary?.value),
-    known_triggers: clean(els.riskKnownTriggers?.value),
-    early_warning_signs: clean(els.riskEarlyWarningSigns?.value),
-    contextual_factors: clean(els.riskContextualFactors?.value),
-    current_controls: clean(els.riskCurrentControls?.value),
-    deescalation_strategies: clean(els.riskDeescalationStrategies?.value),
-    response_actions: clean(els.riskResponseActions?.value),
-    child_views: clean(els.riskChildViews?.value),
-    severity: clean(els.riskSeverity?.value) || "medium",
-    likelihood: clean(els.riskLikelihood?.value) || "medium",
-    review_date: clean(els.riskReviewDate?.value),
-    status: clean(els.riskStatus?.value) || "active",
-    owner_id: parseNullableInt(els.riskOwnerId?.value),
-    approval_status: clean(els.riskApprovalStatus?.value) || "not_required",
-    created_by: parseNullableInt(els.riskCreatedBy?.value),
+    category: clean(els.riskCategory?.value), title: clean(els.riskTitle?.value), concern_summary: clean(els.riskConcernSummary?.value),
+    known_triggers: clean(els.riskKnownTriggers?.value), early_warning_signs: clean(els.riskEarlyWarningSigns?.value),
+    contextual_factors: clean(els.riskContextualFactors?.value), current_controls: clean(els.riskCurrentControls?.value),
+    deescalation_strategies: clean(els.riskDeescalationStrategies?.value), response_actions: clean(els.riskResponseActions?.value),
+    child_views: clean(els.riskChildViews?.value), severity: clean(els.riskSeverity?.value) || "medium", likelihood: clean(els.riskLikelihood?.value) || "medium",
+    review_date: clean(els.riskReviewDate?.value), status: clean(els.riskStatus?.value) || "active", owner_id: nint(els.riskOwnerId?.value),
+    approval_status: clean(els.riskApprovalStatus?.value) || "not_required", created_by: nint(els.riskCreatedBy?.value),
     archived: String(clean(els.riskStatus?.value) || "").toLowerCase() === "archived"
   };
-
-  if (!payload.category || !payload.title) {
-    return showStatus("Risk category and title are required.", true);
-  }
-
+  if (!p.category || !p.title) return msg("Category and title are required.", true);
   try {
-    if (id) {
-      await fetchJson(endpoints.riskUpdate(id), {
-        method: "PUT",
-        body: JSON.stringify({
-          category: payload.category,
-          title: payload.title,
-          concern_summary: payload.concern_summary,
-          known_triggers: payload.known_triggers,
-          early_warning_signs: payload.early_warning_signs,
-          contextual_factors: payload.contextual_factors,
-          current_controls: payload.current_controls,
-          deescalation_strategies: payload.deescalation_strategies,
-          response_actions: payload.response_actions,
-          child_views: payload.child_views,
-          severity: payload.severity,
-          likelihood: payload.likelihood,
-          review_date: payload.review_date,
-          status: payload.status,
-          owner_id: payload.owner_id,
-          approval_status: payload.approval_status,
-          created_by: payload.created_by,
-          archived: payload.archived
-        })
-      });
-      showStatus("Risk updated.");
-    } else {
-      await fetchJson(endpoints.riskCreate, {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
-      showStatus("Risk created.");
-    }
-
-    resetRiskForm();
-    setSectionTab("risk", "records");
-    await loadRisk(state.selectedYoungPerson.id);
-  } catch (e) {
-    showStatus(`Could not save risk: ${e.message}`, true);
-  }
+    await j(id ? ep.riskUpdate(id) : ep.riskCreate, { method: id ? "PUT" : "POST", body: JSON.stringify(id ? { ...p, young_person_id: undefined } : p) });
+    msg(`Risk ${id ? "updated" : "created"}.`);
+    resetRisk(); setSectionTab("risk", "records"); await loadRisk(state.selectedYoungPerson.id); await preload();
+  } catch (e2) { msg(`Could not save risk: ${e2.message}`, true); }
 }
-
-async function saveDailyNote(e) {
+async function saveDaily(e) {
   e.preventDefault();
-  if (!state.selectedYoungPerson) return showStatus("Please select a young person first.", true);
-
+  if (!state.selectedYoungPerson) return msg("Please select a young person first.", true);
   const id = clean(els.dailyNoteId?.value);
-  const payload = {
+  const p = {
     young_person_id: Number(state.selectedYoungPerson.id),
-    note_date: clean(els.dailyNoteDate?.value),
-    shift_type: clean(els.dailyNoteShiftType?.value),
-    mood: clean(els.dailyNoteMood?.value),
-    presentation: clean(els.dailyNoteMood?.value),
-    activities: clean(els.dailyNoteActivities?.value),
-    education_update: clean(els.dailyNoteEducationUpdate?.value),
-    health_update: clean(els.dailyNoteHealthUpdate?.value),
-    family_update: clean(els.dailyNoteFamilyUpdate?.value),
-    behaviour_update: clean(els.dailyNoteBehaviourUpdate?.value),
-    young_person_voice: clean(els.dailyNoteYoungPersonVoice?.value),
-    positives: clean(els.dailyNotePositives?.value),
-    actions_required: clean(els.dailyNoteActionsRequired?.value),
-    workflow_status: clean(els.dailyNoteWorkflowStatus?.value) || "draft",
-    author_id: null,
-    archived: String(clean(els.dailyNoteWorkflowStatus?.value) || "").toLowerCase() === "archived"
+    note_date: clean(els.dailyNoteDate?.value), shift_type: clean(els.dailyNoteShiftType?.value), workflow_status: clean(els.dailyNoteWorkflowStatus?.value) || "draft",
+    mood: clean(els.dailyNoteMood?.value), presentation: clean(els.dailyNoteMood?.value), activities: clean(els.dailyNoteActivities?.value),
+    education_update: clean(els.dailyNoteEducationUpdate?.value), health_update: clean(els.dailyNoteHealthUpdate?.value),
+    family_update: clean(els.dailyNoteFamilyUpdate?.value), behaviour_update: clean(els.dailyNoteBehaviourUpdate?.value),
+    young_person_voice: clean(els.dailyNoteYoungPersonVoice?.value), positives: clean(els.dailyNotePositives?.value), actions_required: clean(els.dailyNoteActionsRequired?.value)
   };
-
-  if (!payload.note_date || !payload.shift_type) {
-    return showStatus("Daily note date and shift type are required.", true);
-  }
-
+  if (!p.note_date || !p.shift_type) return msg("Date and shift type are required.", true);
   try {
-    if (id) {
-      await fetchJson(endpoints.dailyNoteUpdate(id), {
-        method: "PUT",
-        body: JSON.stringify({
-          note_date: payload.note_date,
-          shift_type: payload.shift_type,
-          mood: payload.mood,
-          presentation: payload.presentation,
-          activities: payload.activities,
-          education_update: payload.education_update,
-          health_update: payload.health_update,
-          family_update: payload.family_update,
-          behaviour_update: payload.behaviour_update,
-          young_person_voice: payload.young_person_voice,
-          positives: payload.positives,
-          actions_required: payload.actions_required,
-          workflow_status: payload.workflow_status,
-          author_id: payload.author_id,
-          archived: payload.archived
-        })
-      });
-      showStatus("Daily note updated.");
-    } else {
-      await fetchJson(endpoints.dailyNoteCreate, {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
-      showStatus("Daily note created.");
-    }
-
-    resetDailyNoteForm();
-    setSectionTab("daily_notes", "records");
-    await loadDailyNotes(state.selectedYoungPerson.id);
-  } catch (e) {
-    showStatus(`Could not save daily note: ${e.message}`, true);
-  }
+    await j(id ? ep.dailyUpdate(id) : ep.dailyCreate, { method: id ? "PUT" : "POST", body: JSON.stringify(id ? { ...p, young_person_id: undefined } : p) });
+    msg(`Daily note ${id ? "updated" : "created"}.`);
+    resetDaily(); setSectionTab("daily_notes", "records"); await loadDaily(state.selectedYoungPerson.id); await preload();
+  } catch (e2) { msg(`Could not save daily note: ${e2.message}`, true); }
 }
-
 async function saveIncident(e) {
   e.preventDefault();
-  if (!state.selectedYoungPerson) return showStatus("Please select a young person first.", true);
-
+  if (!state.selectedYoungPerson) return msg("Please select a young person first.", true);
   const id = clean(els.incidentId?.value);
-  const payload = {
+  const st = clean(els.incidentManagerReviewStatus?.value) || "pending";
+  const p = {
     young_person_id: Number(state.selectedYoungPerson.id),
-    incident_datetime: clean(els.incidentDatetime?.value),
-    incident_type: clean(els.incidentType?.value),
-    severity: clean(els.incidentSeverity?.value) || "medium",
-    location: clean(els.incidentLocation?.value),
-    description: clean(els.incidentDescription?.value),
-    staff_response: clean(els.incidentResponse?.value),
-    follow_up_required: clean(els.incidentFollowUp?.value),
-    manager_review_status: clean(els.incidentManagerReviewStatus?.value) || "pending",
-    staff_id: null,
-    archived: String(clean(els.incidentManagerReviewStatus?.value) || "").toLowerCase() === "reviewed"
+    incident_datetime: clean(els.incidentDatetime?.value), incident_type: clean(els.incidentType?.value), severity: clean(els.incidentSeverity?.value) || "medium",
+    location: clean(els.incidentLocation?.value), description: clean(els.incidentDescription?.value),
+    follow_up_required: clean(els.incidentFollowUp?.value), manager_review_status: st,
+    archived: ["reviewed","closed","archived","completed"].includes(String(st).toLowerCase())
   };
-
-  if (!payload.incident_datetime || !payload.incident_type) {
-    return showStatus("Incident date/time and type are required.", true);
-  }
-
+  if (!p.incident_datetime || !p.incident_type) return msg("Incident date/time and type are required.", true);
   try {
-    if (id) {
-      await fetchJson(endpoints.incidentUpdate(id), {
-        method: "PUT",
-        body: JSON.stringify({
-          incident_datetime: payload.incident_datetime,
-          incident_type: payload.incident_type,
-          severity: payload.severity,
-          location: payload.location,
-          description: payload.description,
-          staff_response: payload.staff_response,
-          follow_up_required: payload.follow_up_required,
-          manager_review_status: payload.manager_review_status,
-          staff_id: payload.staff_id,
-          archived: payload.archived
-        })
-      });
-      showStatus("Incident updated.");
-    } else {
-      await fetchJson(endpoints.incidentCreate, {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
-      showStatus("Incident created.");
-    }
-
-    resetIncidentForm();
-    setSectionTab("incidents", "records");
-    await loadIncidents(state.selectedYoungPerson.id);
-  } catch (e) {
-    showStatus(`Could not save incident: ${e.message}`, true);
-  }
+    await j(id ? ep.incidentUpdate(id) : ep.incidentCreate, { method: id ? "PUT" : "POST", body: JSON.stringify(id ? { ...p, young_person_id: undefined } : p) });
+    msg(`Incident ${id ? "updated" : "created"}.`);
+    resetIncident(); setSectionTab("incidents", "records"); await loadIncidents(state.selectedYoungPerson.id); await preload();
+  } catch (e2) { msg(`Could not save incident: ${e2.message}`, true); }
 }
-
-async function saveKeyworkSession(e) {
+async function saveKeywork(e) {
   e.preventDefault();
-  if (!state.selectedYoungPerson) return showStatus("Please select a young person first.", true);
-
+  if (!state.selectedYoungPerson) return msg("Please select a young person first.", true);
   const id = clean(els.keyworkId?.value);
-  const payload = {
+  const p = {
     young_person_id: Number(state.selectedYoungPerson.id),
-    session_date: clean(els.keyworkSessionDate?.value),
-    worker_id: parseNullableInt(els.keyworkWorkerId?.value),
-    topic: clean(els.keyworkTopic?.value),
-    purpose: clean(els.keyworkPurpose?.value),
-    summary: clean(els.keyworkSummary?.value),
-    child_voice: clean(els.keyworkChildVoice?.value),
-    reflective_analysis: clean(els.keyworkReflectiveAnalysis?.value),
-    actions_agreed: clean(els.keyworkActionsAgreed?.value),
-    next_session_date: clean(els.keyworkNextSessionDate?.value),
-    status: "active",
-    archived: false
+    session_date: clean(els.keyworkSessionDate?.value), worker_id: nint(els.keyworkWorkerId?.value), topic: clean(els.keyworkTopic?.value),
+    purpose: clean(els.keyworkPurpose?.value), summary: clean(els.keyworkSummary?.value), child_voice: clean(els.keyworkChildVoice?.value),
+    reflective_analysis: clean(els.keyworkReflectiveAnalysis?.value), actions_agreed: clean(els.keyworkActionsAgreed?.value),
+    next_session_date: clean(els.keyworkNextSessionDate?.value), status: "active", archived: false
   };
-
-  if (!payload.session_date || !payload.topic) {
-    return showStatus("Keywork session date and topic are required.", true);
-  }
-
+  if (!p.session_date || !p.topic) return msg("Session date and topic are required.", true);
   try {
-    if (id) {
-      await fetchJson(endpoints.keyworkUpdate(id), {
-        method: "PUT",
-        body: JSON.stringify({
-          session_date: payload.session_date,
-          worker_id: payload.worker_id,
-          topic: payload.topic,
-          purpose: payload.purpose,
-          summary: payload.summary,
-          child_voice: payload.child_voice,
-          reflective_analysis: payload.reflective_analysis,
-          actions_agreed: payload.actions_agreed,
-          next_session_date: payload.next_session_date,
-          status: payload.status,
-          archived: payload.archived
-        })
-      });
-      showStatus("Keywork updated.");
-    } else {
-      await fetchJson(endpoints.keyworkCreate, {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
-      showStatus("Keywork created.");
-    }
-
-    resetKeyworkForm();
-    setSectionTab("keywork", "records");
-    await loadKeywork(state.selectedYoungPerson.id);
-  } catch (e) {
-    showStatus(`Could not save keywork: ${e.message}`, true);
-  }
-}
-
-function resetAllForms() {
-  resetPlanForm();
-  resetRiskForm();
-  resetDailyNoteForm();
-  resetIncidentForm();
-  resetKeyworkForm();
-}
-
-function resetPlanForm() {
-  els.planForm?.reset();
-  setValue(els.planId, "");
-}
-
-function resetRiskForm() {
-  els.riskForm?.reset();
-  setValue(els.riskId, "");
-}
-
-function resetDailyNoteForm() {
-  els.dailyNoteForm?.reset();
-  setValue(els.dailyNoteId, "");
-}
-
-function resetIncidentForm() {
-  els.incidentForm?.reset();
-  setValue(els.incidentId, "");
-}
-
-function resetKeyworkForm() {
-  els.keyworkForm?.reset();
-  setValue(els.keyworkId, "");
+    await j(id ? ep.keyworkUpdate(id) : ep.keyworkCreate, { method: id ? "PUT" : "POST", body: JSON.stringify(id ? { ...p, young_person_id: undefined } : p) });
+    msg(`Keywork ${id ? "updated" : "created"}.`);
+    resetKeywork(); setSectionTab("keywork", "records"); await loadKeywork(state.selectedYoungPerson.id); await preload();
+  } catch (e2) { msg(`Could not save keywork: ${e2.message}`, true); }
 }
 
 async function rebuildChronology() {
-  if (!state.selectedYoungPerson) return showStatus("Please select a young person first.", true);
+  if (!state.selectedYoungPerson) return msg("Please select a young person first.", true);
+  try { await j(ep.chronologyRebuild(state.selectedYoungPerson.id), { method: "POST" }); msg("Chronology rebuilt successfully."); await loadChronology(state.selectedYoungPerson.id); }
+  catch (e) { msg(`Could not rebuild chronology: ${e.message}`, true); }
+}
+async function generateMonthly() {
+  if (!state.selectedYoungPerson) return msg("Please select a young person first.", true);
+  if (!monthParam()) return msg("Please choose a month first.", true);
   try {
-    await fetchJson(endpoints.chronologyRebuild(state.selectedYoungPerson.id), { method: "POST" });
-    showStatus("Chronology rebuilt successfully.");
-    await loadChronology(state.selectedYoungPerson.id);
-  } catch (e) {
-    showStatus(`Could not rebuild chronology: ${e.message}`, true);
-  }
+    const r = await j(ep.monthlyGenerate(state.selectedYoungPerson.id, monthParam()), { method: "POST" });
+    msg("Monthly review generated successfully.");
+    await loadMonthly(state.selectedYoungPerson.id);
+    if (r?.monthly_review_id) await openMonthlyDetail(r.monthly_review_id);
+  } catch (e) { msg(`Could not generate monthly review: ${e.message}`, true); }
 }
-
-async function generateMonthlyReview() {
-  if (!state.selectedYoungPerson) return showStatus("Please select a young person first.", true);
-  if (!els.monthlyReviewMonth?.value) return showStatus("Please choose a month first.", true);
-
-  const month = `${els.monthlyReviewMonth.value}-01`;
+async function rebuildStandards() {
+  if (!state.selectedYoungPerson) return msg("Please select a young person first.", true);
+  try { await j(ep.standardsRebuild(state.selectedYoungPerson.id), { method: "POST" }); msg("Standards links rebuilt successfully."); await loadStandards(state.selectedYoungPerson.id); }
+  catch (e) { msg(`Could not rebuild standards links: ${e.message}`, true); }
+}
+async function createPack() {
+  if (!state.selectedYoungPerson) return msg("Please select a young person first.", true);
   try {
-    const result = await fetchJson(endpoints.monthlyReviewGenerate(state.selectedYoungPerson.id, month), {
-      method: "POST"
-    });
-    showStatus("Monthly review generated successfully.");
-    await loadMonthlyReviews(state.selectedYoungPerson.id);
-    if (result?.monthly_review_id) await openMonthlyReviewDetail(result.monthly_review_id);
-  } catch (e) {
-    showStatus(`Could not generate monthly review: ${e.message}`, true);
-  }
+    const r = await j(ep.pack, { method: "POST", body: JSON.stringify({ scope_type: "young_person", scope_id: state.selectedYoungPerson.id, pack_type: "ofsted", requested_by: 1 }) });
+    msg(`Inspection pack job created${r?.id ? ` (#${r.id})` : ""}.`);
+  } catch (e) { msg(`Could not create inspection pack job: ${e.message}`, true); }
 }
-
-async function openMonthlyReviewDetail(reviewId) {
-  renderLoading(els.monthlyReviewDetail, "Loading review...");
-  const data = await fetchJson(endpoints.monthlyReviewDetail(reviewId));
-  els.monthlyReviewDetail.innerHTML = [
-    renderObjectSection("Review Summary", data?.review || {}, [
-      "review_title", "review_month", "status", "summary_of_month", "progress_summary",
-      "child_voice_summary", "concerns_and_risks", "education_summary", "health_summary",
-      "family_summary", "keywork_summary", "behaviour_summary", "achievements_summary",
-      "actions_for_next_month", "manager_analysis"
-    ]),
-    renderArraySection("Linked Evidence", data?.record_links || [], [
-      "source_table", "source_id", "link_reason", "created_at"
-    ]),
-    renderArraySection("Standards Summary", data?.standards || [], [
-      "standard_code", "standard_short_label", "evidence_count", "narrative_summary"
-    ]),
-    renderArraySection("Actions", data?.actions || [], [
-      "action_text", "action_owner_id", "due_date", "status"
-    ])
-  ].join("");
-}
-
-async function rebuildStandardsLinks() {
-  if (!state.selectedYoungPerson) return showStatus("Please select a young person first.", true);
-  try {
-    await fetchJson(endpoints.standardsRebuild(state.selectedYoungPerson.id), { method: "POST" });
-    showStatus("Standards links rebuilt successfully.");
-    await loadStandards(state.selectedYoungPerson.id);
-  } catch (e) {
-    showStatus(`Could not rebuild standards links: ${e.message}`, true);
-  }
-}
-
-async function loadOfstedAiReport(reviewMonth = "") {
-  if (!state.selectedYoungPerson) return showStatus("Please select a young person first.", true);
-  try {
-    await fetchJson(endpoints.ofstedAiReport(state.selectedYoungPerson.id, reviewMonth));
-    showStatus("AI OFSTED report route loaded.");
-  } catch (e) {
-    showStatus(`Could not load AI OFSTED report: ${e.message}`, true);
-  }
-}
-
-async function createInspectionPackJob() {
-  if (!state.selectedYoungPerson) return showStatus("Please select a young person first.", true);
-  try {
-    const result = await fetchJson(endpoints.inspectionPackCreate, {
-      method: "POST",
-      body: JSON.stringify({
-        scope_type: "young_person",
-        scope_id: state.selectedYoungPerson.id,
-        pack_type: "ofsted",
-        requested_by: 1
-      })
-    });
-    showStatus(`Inspection pack job created${result?.id ? ` (#${result.id})` : ""}.`);
-  } catch (e) {
-    showStatus(`Could not create inspection pack job: ${e.message}`, true);
-  }
-}
-
-function renderLoading(el, text) {
-  if (el) el.innerHTML = `<div class="empty-state">${escapeHtml(text)}</div>`;
-}
-
-function renderKeyValueCards(entries) {
-  const rows = entries.filter(([, value]) => hasValue(value));
-  if (!rows.length) return `<div class="empty-state">No information.</div>`;
-  return `
-    <div class="record-list">
-      ${rows.map(([label, value]) => `
-        <div class="record-card">
-          <h4>${escapeHtml(label)}</h4>
-          <div class="record-summary">${escapeHtml(stringifyValue(value))}</div>
-        </div>
-      `).join("")}
-    </div>
-  `;
-}
-
-function renderObjectSection(title, record, keys) {
-  if (!record || typeof record !== "object" || !Object.keys(record).length) {
-    return `<div class="panel"><div class="panel-header"><h3>${escapeHtml(title)}</h3></div><div class="empty-state">No data found.</div></div>`;
-  }
-
-  const picked = (keys || Object.keys(record)).filter((k) => k in record && hasValue(record[k]));
-  if (!picked.length) {
-    return `<div class="panel"><div class="panel-header"><h3>${escapeHtml(title)}</h3></div><div class="empty-state">No data found.</div></div>`;
-  }
-
-  return `
-    <div class="panel">
-      <div class="panel-header"><h3>${escapeHtml(title)}</h3></div>
-      <table class="data-table key-value">
-        <tbody>
-          ${picked.map((k) => `
-            <tr>
-              <th>${escapeHtml(formatLabel(k))}</th>
-              <td>${escapeHtml(formatFieldValue(k, record[k]))}</td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
-function renderArraySection(title, rows, columns) {
-  return `
-    <div class="panel">
-      <div class="panel-header"><h3>${escapeHtml(title)}</h3></div>
-      ${renderTableSection(normaliseArrayResponse(rows), columns)}
-    </div>
-  `;
-}
-
-function renderTableSection(rows, columns) {
-  if (!rows?.length) return `<div class="empty-state">No records found.</div>`;
-  const cols = columns?.length ? columns.filter((c) => rows.some((r) => c in r)) : Object.keys(rows[0]).slice(0, 8);
-
-  return `
-    <table class="data-table">
-      <thead>
-        <tr>${cols.map((c) => `<th>${escapeHtml(formatLabel(c))}</th>`).join("")}</tr>
-      </thead>
-      <tbody>
-        ${rows.map((r) => `
-          <tr>${cols.map((c) => `<td>${renderTableCell(c, r[c])}</td>`).join("")}</tr>
-        `).join("")}
-      </tbody>
-    </table>
-  `;
-}
-
-function renderTableCell(key, value) {
-  if (key === "compliance_status" || key === "workflow_status" || key === "status") return renderStatusPill(value);
-  if (key === "severity") return renderSeverityPill(value);
-  return escapeHtml(formatFieldValue(key, value));
-}
-
-function renderStatusPill(value) {
-  return `<span class="status-pill ${statusClass(value)}">${escapeHtml(stringifyValue(value))}</span>`;
-}
-
-function renderSeverityPill(value) {
-  const lower = String(value || "").toLowerCase();
-  let cls = "status-grey";
-  if (lower === "high") cls = "status-red";
-  else if (lower === "medium") cls = "status-amber";
-  else if (lower === "low") cls = "status-green";
-  return `<span class="status-pill ${cls}">${escapeHtml(stringifyValue(value))}</span>`;
-}
-
-function normaliseArrayResponse(data) {
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data?.items)) return data.items;
-  if (Array.isArray(data?.rows)) return data.rows;
-  if (Array.isArray(data?.data)) return data.data;
-  return [];
-}
-
-function getFullName(p) {
-  const pref = p.preferred_name ? ` (${p.preferred_name})` : "";
-  const name = `${p.first_name || ""} ${p.last_name || ""}`.trim();
-  return name ? `${name}${pref}` : `Young Person #${p.id}`;
-}
-
-function setText(el, value) {
-  if (el) el.textContent = String(value);
-}
-
-function setValue(el, value) {
-  if (el) el.value = value ?? "";
-}
-
-function clean(v) {
-  const x = typeof v === "string" ? v.trim() : v;
-  return x === "" ? null : x;
-}
-
-function parseNullableInt(v) {
-  const x = String(v || "").trim();
-  if (!x) return null;
-  const n = Number(x);
-  return Number.isNaN(n) ? null : n;
-}
-
-function parseRecord(v) {
-  try {
-    return JSON.parse(unescapeHtml(v));
-  } catch {
-    return null;
-  }
-}
-
-function formatLabel(v) {
-  return String(v).replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function stringifyValue(v) {
-  if (v === null || v === undefined || v === "") return "—";
-  if (typeof v === "boolean") return v ? "Yes" : "No";
-  if (typeof v === "object") return JSON.stringify(v);
-  return String(v);
-}
-
-function formatFieldValue(key, value) {
-  if (!hasValue(value)) return "—";
-  const dateKeys = [
-    "date_of_birth", "created_at", "updated_at", "event_datetime", "incident_datetime",
-    "session_date", "note_date", "record_date", "admission_date", "discharge_date",
-    "review_date", "review_month", "start_date", "next_session_date", "contact_datetime",
-    "effective_from", "effective_to", "scheduled_time", "administered_time",
-    "approved_at", "returned_at", "submitted_at", "next_action_date", "due_date", "generated_at"
-  ];
-  if (dateKeys.includes(key)) {
-    const dateOnly = [
-      "date_of_birth", "session_date", "note_date", "record_date", "admission_date",
-      "discharge_date", "review_date", "review_month", "start_date", "next_session_date",
-      "effective_from", "effective_to", "next_action_date", "due_date"
-    ];
-    return dateOnly.includes(key) ? formatDate(value) : formatDateTime(value);
-  }
-  return typeof value === "boolean" ? (value ? "Yes" : "No") : stringifyValue(value);
-}
-
-function formatDate(v) {
-  if (!v) return "—";
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleDateString("en-GB");
-}
-
-function formatDateTime(v) {
-  if (!v) return "—";
-  const d = new Date(v);
-  return Number.isNaN(d.getTime())
-    ? String(v)
-    : `${d.toLocaleDateString("en-GB")} ${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
-}
-
-function toDateInputValue(v) {
-  if (!v) return "";
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
-}
-
-function toDateTimeLocalValue(v) {
-  if (!v) return "";
-  const d = new Date(v);
-  if (Number.isNaN(d.getTime())) return "";
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-}
-
-function trimText(v, max = 180) {
-  const t = String(v || "");
-  return t.length > max ? `${t.slice(0, max)}...` : t;
-}
-
-function hasValue(v) {
-  return v !== null && v !== undefined && v !== "";
-}
-
-function statusClass(v) {
-  const lower = String(v || "").toLowerCase();
-  if (["overdue", "high", "returned"].includes(lower)) return "status-red";
-  if (["due_soon", "medium", "pending"].includes(lower)) return "status-amber";
-  if (["ok", "active", "approved", "reviewed", "complete", "open"].includes(lower)) return "status-green";
-  if (["submitted", "completed", "amended", "info"].includes(lower)) return "status-blue";
-  return "status-grey";
-}
-
-function unescapeHtml(v) {
-  const t = document.createElement("textarea");
-  t.innerHTML = v;
-  return t.value;
-}
-
-function escapeHtml(v) {
-  return String(v)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function showStatus(message, isError = false) {
-  if (!els.statusBar) return;
-  els.statusBar.textContent = message;
-  els.statusBar.classList.remove("hidden", "error");
-  if (isError) els.statusBar.classList.add("error");
-
-  clearTimeout(showStatus.timer);
-  showStatus.timer = setTimeout(() => {
-    els.statusBar.classList.add("hidden");
-  }, 4000);
+async function loadOfsted(reviewMonth = "") {
+  if (!state.selectedYoungPerson) return msg("Please select a young person first.", true);
+  try { msg("Generating AI OFSTED report..."); await j(ep.ofsted(state.selectedYoungPerson.id, reviewMonth)); msg("AI OFSTED report route loaded."); }
+  catch (e) { msg(`Could not load AI OFSTED report: ${e.message}`, true); }
 }
