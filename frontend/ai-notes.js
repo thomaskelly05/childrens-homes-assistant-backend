@@ -1,87 +1,8 @@
 document.addEventListener("DOMContentLoaded", () => {
     const ACCESS_TOKEN_KEY = "access_token";
-    const LOCAL_TEMPLATE_KEY = "indicare_custom_templates_v2";
-    const LOCAL_DRAFT_KEY = "indicare_ai_notes_draft_v2";
-    const LOCAL_HISTORY_KEY = "indicare_ai_notes_history_v2";
-
-    const startRecordingBtn = document.getElementById("startRecordingBtn");
-    const stopRecordingBtn = document.getElementById("stopRecordingBtn");
-    const transcribeBtn = document.getElementById("transcribeBtn");
-    const generateBtn = document.getElementById("generateBtn");
-
-    const saveBtn = document.getElementById("saveBtn");
-    const exportBtn = document.getElementById("exportBtn");
-    const printBtn = document.getElementById("printBtn");
-    const clearBtn = document.getElementById("clearBtn");
-
-    const saveBtnTop = document.getElementById("saveBtnTop");
-    const exportBtnTop = document.getElementById("exportBtnTop");
-    const printBtnTop = document.getElementById("printBtnTop");
-
-    const applyAiEditBtn = document.getElementById("applyAiEditBtn");
-    const undoAiEditBtn = document.getElementById("undoAiEditBtn");
-    const copyFinalBtn = document.getElementById("copyFinalBtn");
-    const copyDraftBtn = document.getElementById("copyDraftBtn");
-    const insertTemplateBtn = document.getElementById("insertTemplateBtn");
-
-    const audioPlaybackEl = document.getElementById("audioPlayback");
-    const transcriptEl = document.getElementById("transcript");
-    const finalNoteEl = document.getElementById("finalNote");
-    const noteTitleEl = document.getElementById("noteTitle");
-    const aiInstructionEl = document.getElementById("aiInstruction");
-    const templateSelectEl = document.getElementById("templateSelect");
-    const aiDraftEl = document.getElementById("aiDraft");
-    const transcriptMirrorEl = document.getElementById("transcriptMirror");
-
-    const serviceTypeEl = document.getElementById("serviceType");
-    const shiftTypeEl = document.getElementById("shiftType");
-    const recordAuthorEl = document.getElementById("recordAuthor");
-    const youngPersonNameEl = document.getElementById("youngPersonName");
-    const meetingDateEl = document.getElementById("meetingDate");
-
-    const recordingStatusEl = document.getElementById("recordingStatus");
-    const recordingTimerEl = document.getElementById("recordingTimer");
-    const statusIndicatorDotEl = document.getElementById("statusIndicatorDot");
-    const audioReadyTextEl = document.getElementById("audioReadyText");
-
-    const noteModeBadgeEl = document.getElementById("noteModeBadge");
-    const saveStateBadgeEl = document.getElementById("saveStateBadge");
-    const documentQualityBadgeEl = document.getElementById("documentQualityBadge");
-
-    const safeguardingBoxEl = document.getElementById("safeguardingBox");
-    const safeguardingTextEl = document.getElementById("safeguardingText");
-
-    const historyListEl = document.getElementById("historyList");
-    const historyEmptyStateEl = document.getElementById("historyEmptyState");
-    const refreshHistoryBtn = document.getElementById("refreshHistoryBtn");
-
-    const toastEl = document.getElementById("toast");
-
-    const toggleTranscriptBtn = document.getElementById("toggleTranscriptBtn");
-    const transcriptContentEl = document.getElementById("transcriptContent");
-
-    const templateModalEl = document.getElementById("templateModal");
-    const openTemplateManagerBtn = document.getElementById("openTemplateManagerBtn");
-    const closeTemplateManagerBtn = document.getElementById("closeTemplateManagerBtn");
-    const templateNameInputEl = document.getElementById("templateNameInput");
-    const templateSectionsListEl = document.getElementById("templateSectionsList");
-    const newTemplateSectionInputEl = document.getElementById("newTemplateSectionInput");
-    const addTemplateSectionBtn = document.getElementById("addTemplateSectionBtn");
-    const saveTemplateBtn = document.getElementById("saveTemplateBtn");
-    const savedTemplatesListEl = document.getElementById("savedTemplatesList");
-
-    const recordingModalEl = document.getElementById("recordingModal");
-    const recordingModalMicEl = document.getElementById("recordingModalMic");
-    const recordingModalTimerEl = document.getElementById("recordingModalTimer");
-    const recordingModalStatusEl = document.getElementById("recordingModalStatus");
-    const pauseRecordingBtn = document.getElementById("pauseRecordingBtn");
-    const resumeRecordingBtn = document.getElementById("resumeRecordingBtn");
-
-    const workflowModalEl = document.getElementById("workflowModal");
-    const closeWorkflowModalBtn = document.getElementById("closeWorkflowModalBtn");
-    const workflowTemplateTextEl = document.getElementById("workflowTemplateText");
-    const workflowStatusTextEl = document.getElementById("workflowStatusText");
-    const workflowSaveTextEl = document.getElementById("workflowSaveText");
+    const LOCAL_TEMPLATE_KEY = "indicare_custom_templates_v3";
+    const LOCAL_DRAFT_KEY = "indicare_ai_notes_draft_v3";
+    const LOCAL_HISTORY_KEY = "indicare_ai_notes_history_v3";
 
     const builtInTemplates = [
         {
@@ -195,37 +116,159 @@ document.addEventListener("DOMContentLoaded", () => {
                 "Next Steps",
                 "Management Oversight"
             ]
+        },
+        {
+            id: "professionals-meeting",
+            name: "Professionals meeting note",
+            sections: [
+                "Meeting Title",
+                "Date",
+                "Attendees",
+                "Purpose",
+                "Updates Shared",
+                "Discussion Summary",
+                "Agreed Decisions",
+                "Actions",
+                "Timescales",
+                "Review Arrangements"
+            ]
         }
     ];
 
     const safeguardingKeywords = [
         "safeguarding", "assault", "self-harm", "self harm", "suicide", "sexual",
         "neglect", "abuse", "missing", "police", "injury", "restraint", "physical intervention",
-        "knife", "weapon", "overdose", "exploitation", "violence", "threat", "bruise", "disclosure"
+        "knife", "weapon", "overdose", "exploitation", "violence", "threat", "bruise",
+        "cut", "disclosure", "allegation", "abscond", "missing from home", "missing from placement"
     ];
 
     const personCentredKeywords = [
-        "wishes", "feelings", "views", "choices", "voice", "presentation", "consent",
-        "engagement", "supported", "encouraged", "offered", "agreed"
+        "wishes", "feelings", "views", "choices", "voice", "presentation",
+        "supported", "encouraged", "offered", "agreed", "explained", "consent"
     ];
 
-    let mediaRecorder = null;
-    let recordingStream = null;
-    let recordedChunks = [];
-    let recordedBlob = null;
-    let recordingMimeType = "";
-    let recordingExtension = "webm";
-    let previousFinalNote = "";
-    let previousAiDraft = "";
-    let currentTimerInterval = null;
-    let recordingStartTime = null;
-    let pausedAt = null;
-    let totalPausedMs = 0;
-    let customTemplates = [];
-    let templateBuilderSections = [];
-    let autosaveTimeout = null;
-    let currentNoteId = null;
-    let isTranscriptVisible = true;
+    const vagueLanguageKeywords = [
+        "seemed", "appeared", "probably", "maybe", "possibly", "might have", "I think", "perhaps"
+    ];
+
+    const els = {
+        startRecordingBtn: document.getElementById("startRecordingBtn"),
+        stopRecordingBtn: document.getElementById("stopRecordingBtn"),
+        pauseRecordingBtn: document.getElementById("pauseRecordingBtn"),
+        resumeRecordingBtn: document.getElementById("resumeRecordingBtn"),
+        transcribeBtn: document.getElementById("transcribeBtn"),
+        generateBtn: document.getElementById("generateBtn"),
+        insertTemplateBtn: document.getElementById("insertTemplateBtn"),
+
+        saveBtn: document.getElementById("saveBtn"),
+        exportBtn: document.getElementById("exportBtn"),
+        printBtn: document.getElementById("printBtn"),
+        clearBtn: document.getElementById("clearBtn"),
+        saveBtnTop: document.getElementById("saveBtnTop"),
+        exportBtnTop: document.getElementById("exportBtnTop"),
+        printBtnTop: document.getElementById("printBtnTop"),
+
+        applyAiEditBtn: document.getElementById("applyAiEditBtn"),
+        undoAiEditBtn: document.getElementById("undoAiEditBtn"),
+        copyFinalBtn: document.getElementById("copyFinalBtn"),
+        copyDraftBtn: document.getElementById("copyDraftBtn"),
+
+        extractActionsBtn: document.getElementById("extractActionsBtn"),
+        createHandoverBtn: document.getElementById("createHandoverBtn"),
+        createManagerSummaryBtn: document.getElementById("createManagerSummaryBtn"),
+
+        audioPlaybackEl: document.getElementById("audioPlayback"),
+        transcriptEl: document.getElementById("transcript"),
+        finalNoteEl: document.getElementById("finalNote"),
+        noteTitleEl: document.getElementById("noteTitle"),
+        aiInstructionEl: document.getElementById("aiInstruction"),
+        templateSelectEl: document.getElementById("templateSelect"),
+        aiDraftEl: document.getElementById("aiDraft"),
+        transcriptMirrorEl: document.getElementById("transcriptMirror"),
+
+        serviceTypeEl: document.getElementById("serviceType"),
+        shiftTypeEl: document.getElementById("shiftType"),
+        recordAuthorEl: document.getElementById("recordAuthor"),
+        youngPersonNameEl: document.getElementById("youngPersonName"),
+        meetingDateEl: document.getElementById("meetingDate"),
+        locationContextEl: document.getElementById("locationContext"),
+
+        recordingStatusEl: document.getElementById("recordingStatus"),
+        recordingTimerEl: document.getElementById("recordingTimer"),
+        statusIndicatorDotEl: document.getElementById("statusIndicatorDot"),
+        audioReadyTextEl: document.getElementById("audioReadyText"),
+
+        noteModeBadgeEl: document.getElementById("noteModeBadge"),
+        saveStateBadgeEl: document.getElementById("saveStateBadge"),
+        documentQualityBadgeEl: document.getElementById("documentQualityBadge"),
+
+        safeguardingBoxEl: document.getElementById("safeguardingBox"),
+        safeguardingTextEl: document.getElementById("safeguardingText"),
+
+        sidebarTemplateTextEl: document.getElementById("sidebarTemplateText"),
+        sidebarSaveTextEl: document.getElementById("sidebarSaveText"),
+
+        historyListEl: document.getElementById("historyList"),
+        historyEmptyStateEl: document.getElementById("historyEmptyState"),
+        refreshHistoryBtn: document.getElementById("refreshHistoryBtn"),
+
+        toastEl: document.getElementById("toast"),
+
+        toggleTranscriptBtn: document.getElementById("toggleTranscriptBtn"),
+        transcriptContentEl: document.getElementById("transcriptContent"),
+
+        templateModalEl: document.getElementById("templateModal"),
+        openTemplateManagerBtn: document.getElementById("openTemplateManagerBtn"),
+        closeTemplateManagerBtn: document.getElementById("closeTemplateManagerBtn"),
+        templateNameInputEl: document.getElementById("templateNameInput"),
+        templateSectionsListEl: document.getElementById("templateSectionsList"),
+        newTemplateSectionInputEl: document.getElementById("newTemplateSectionInput"),
+        addTemplateSectionBtn: document.getElementById("addTemplateSectionBtn"),
+        saveTemplateBtn: document.getElementById("saveTemplateBtn"),
+        savedTemplatesListEl: document.getElementById("savedTemplatesList"),
+
+        recordingModalEl: document.getElementById("recordingModal"),
+        recordingModalMicEl: document.getElementById("recordingModalMic"),
+        recordingModalTimerEl: document.getElementById("recordingModalTimer"),
+        recordingModalStatusEl: document.getElementById("recordingModalStatus"),
+
+        workflowModalEl: document.getElementById("workflowModal"),
+        closeWorkflowModalBtn: document.getElementById("closeWorkflowModalBtn"),
+        workflowTemplateTextEl: document.getElementById("workflowTemplateText"),
+        workflowStatusTextEl: document.getElementById("workflowStatusText"),
+        workflowSaveTextEl: document.getElementById("workflowSaveText"),
+        workflowWordCountEl: document.getElementById("workflowWordCount"),
+
+        stepRecordEl: document.getElementById("stepRecord"),
+        stepTranscribeEl: document.getElementById("stepTranscribe"),
+        stepGenerateEl: document.getElementById("stepGenerate"),
+        stepRefineEl: document.getElementById("stepRefine"),
+
+        actionsEmptyStateEl: document.getElementById("actionsEmptyState"),
+        actionsListEl: document.getElementById("actionsList")
+    };
+
+    const state = {
+        mediaRecorder: null,
+        recordingStream: null,
+        recordedChunks: [],
+        recordedBlob: null,
+        recordingMimeType: "",
+        recordingExtension: "webm",
+        previousFinalNote: "",
+        previousAiDraft: "",
+        currentTimerInterval: null,
+        recordingStartTime: null,
+        pausedAt: null,
+        totalPausedMs: 0,
+        customTemplates: [],
+        templateBuilderSections: [],
+        autosaveTimeout: null,
+        currentNoteId: null,
+        isTranscriptVisible: true,
+        extractedActions: [],
+        hasUnsavedChanges: false
+    };
 
     function getAccessToken() {
         return localStorage.getItem(ACCESS_TOKEN_KEY) || "";
@@ -260,30 +303,27 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function escapeHtml(value) {
+        return String(value || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+    }
+
     function showToast(message) {
-        toastEl.textContent = message;
-        toastEl.classList.add("show");
+        if (!els.toastEl) return;
+        els.toastEl.textContent = message;
+        els.toastEl.classList.add("show");
         clearTimeout(showToast._timer);
-        showToast._timer = setTimeout(() => toastEl.classList.remove("show"), 2600);
+        showToast._timer = setTimeout(() => {
+            els.toastEl.classList.remove("show");
+        }, 2600);
     }
 
-    function setStatus(mode, label) {
-        recordingStatusEl.textContent = label;
-        recordingStatusEl.className = `status-pill ${mode}`;
-        statusIndicatorDotEl.className = `live-dot ${mode}`;
-        if (workflowStatusTextEl) workflowStatusTextEl.textContent = label;
-    }
-
-    function setSaveState(state, label) {
-        if (!saveStateBadgeEl) return;
-        saveStateBadgeEl.className = `save-state-badge ${state}`;
-        saveStateBadgeEl.textContent = label;
-        if (workflowSaveTextEl) workflowSaveTextEl.textContent = label;
-    }
-
-    function setNoteMode(isEditing) {
-        noteModeBadgeEl.className = isEditing ? "note-mode-badge is-editing" : "note-mode-badge is-new";
-        noteModeBadgeEl.textContent = isEditing ? "Editing saved note" : "New unsaved note";
+    function setButtonLoading(button, isLoading, loadingText, defaultText) {
+        if (!button) return;
+        button.disabled = isLoading;
+        button.textContent = isLoading ? loadingText : defaultText;
     }
 
     function formatTime(totalSeconds) {
@@ -293,55 +333,105 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function getElapsedRecordingSeconds() {
-        if (!recordingStartTime) return 0;
-        const now = pausedAt || Date.now();
-        return Math.max(0, Math.floor((now - recordingStartTime - totalPausedMs) / 1000));
+        if (!state.recordingStartTime) return 0;
+        const now = state.pausedAt || Date.now();
+        return Math.max(0, Math.floor((now - state.recordingStartTime - state.totalPausedMs) / 1000));
     }
 
     function startRecordingTimer() {
         stopRecordingTimer();
-        recordingStartTime = Date.now();
-        totalPausedMs = 0;
-        pausedAt = null;
+        state.recordingStartTime = Date.now();
+        state.totalPausedMs = 0;
+        state.pausedAt = null;
 
-        currentTimerInterval = setInterval(() => {
+        state.currentTimerInterval = setInterval(() => {
             const formatted = formatTime(getElapsedRecordingSeconds());
-            recordingTimerEl.textContent = formatted;
-            recordingModalTimerEl.textContent = formatted;
+            if (els.recordingTimerEl) els.recordingTimerEl.textContent = formatted;
+            if (els.recordingModalTimerEl) els.recordingModalTimerEl.textContent = formatted;
         }, 250);
     }
 
     function stopRecordingTimer() {
-        if (currentTimerInterval) {
-            clearInterval(currentTimerInterval);
-            currentTimerInterval = null;
+        if (state.currentTimerInterval) {
+            clearInterval(state.currentTimerInterval);
+            state.currentTimerInterval = null;
         }
     }
 
+    function setStatus(mode, label) {
+        if (els.recordingStatusEl) {
+            els.recordingStatusEl.textContent = label;
+            els.recordingStatusEl.className = `status-pill ${mode}`;
+        }
+        if (els.statusIndicatorDotEl) {
+            els.statusIndicatorDotEl.className = `live-dot ${mode}`;
+        }
+        if (els.workflowStatusTextEl) {
+            els.workflowStatusTextEl.textContent = label;
+        }
+    }
+
+    function setSaveState(stateName, label) {
+        if (els.saveStateBadgeEl) {
+            els.saveStateBadgeEl.className = `save-state-badge ${stateName}`;
+            els.saveStateBadgeEl.textContent = label;
+        }
+        if (els.workflowSaveTextEl) {
+            els.workflowSaveTextEl.textContent = label;
+        }
+        if (els.sidebarSaveTextEl) {
+            els.sidebarSaveTextEl.textContent = label;
+        }
+    }
+
+    function setNoteMode(isEditing) {
+        if (!els.noteModeBadgeEl) return;
+        els.noteModeBadgeEl.className = isEditing ? "note-mode-badge is-editing" : "note-mode-badge is-new";
+        els.noteModeBadgeEl.textContent = isEditing ? "Editing saved note" : "New unsaved note";
+    }
+
+    function openModal(modalEl) {
+        modalEl?.classList.remove("hidden");
+    }
+
+    function closeModal(modalEl) {
+        modalEl?.classList.add("hidden");
+    }
+
     function openRecordingModal() {
-        recordingModalEl.classList.remove("hidden");
-        recordingModalMicEl.classList.add("recording");
-        recordingModalMicEl.classList.remove("paused");
-        recordingModalStatusEl.textContent = "Recording live";
-        pauseRecordingBtn.disabled = false;
-        resumeRecordingBtn.disabled = true;
-        stopRecordingBtn.disabled = false;
+        openModal(els.recordingModalEl);
+        if (els.recordingModalMicEl) {
+            els.recordingModalMicEl.classList.add("recording");
+            els.recordingModalMicEl.classList.remove("paused");
+        }
+        if (els.recordingModalStatusEl) {
+            els.recordingModalStatusEl.textContent = "Recording live";
+        }
+        if (els.pauseRecordingBtn) els.pauseRecordingBtn.disabled = false;
+        if (els.resumeRecordingBtn) els.resumeRecordingBtn.disabled = true;
+        if (els.stopRecordingBtn) els.stopRecordingBtn.disabled = false;
     }
 
     function closeRecordingModal() {
-        recordingModalEl.classList.add("hidden");
-        recordingModalMicEl.classList.remove("recording", "paused");
-        pauseRecordingBtn.disabled = true;
-        resumeRecordingBtn.disabled = true;
-        stopRecordingBtn.disabled = true;
+        closeModal(els.recordingModalEl);
+        if (els.recordingModalMicEl) {
+            els.recordingModalMicEl.classList.remove("recording", "paused");
+        }
+        if (els.pauseRecordingBtn) els.pauseRecordingBtn.disabled = true;
+        if (els.resumeRecordingBtn) els.resumeRecordingBtn.disabled = true;
+        if (els.stopRecordingBtn) els.stopRecordingBtn.disabled = true;
     }
 
     function openWorkflowModal() {
-        workflowModalEl.classList.remove("hidden");
+        openModal(els.workflowModalEl);
     }
 
-    function closeWorkflowModal() {
-        workflowModalEl.classList.add("hidden");
+    function closeWorkflowModal(force = false) {
+        if (!force && state.hasUnsavedChanges) {
+            const confirmed = window.confirm("You have unsaved changes. Close the workspace anyway?");
+            if (!confirmed) return;
+        }
+        closeModal(els.workflowModalEl);
     }
 
     function getSupportedRecordingOptions() {
@@ -353,7 +443,9 @@ document.addEventListener("DOMContentLoaded", () => {
         ];
 
         for (const option of candidates) {
-            if (window.MediaRecorder && MediaRecorder.isTypeSupported(option.mimeType)) return option;
+            if (window.MediaRecorder && MediaRecorder.isTypeSupported(option.mimeType)) {
+                return option;
+            }
         }
 
         return { mimeType: "", extension: "webm" };
@@ -372,47 +464,72 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function getAllTemplates() {
-        return [...builtInTemplates, ...customTemplates];
+        return [...builtInTemplates, ...state.customTemplates];
     }
 
     function populateTemplates() {
+        if (!els.templateSelectEl) return;
         const allTemplates = getAllTemplates();
-        templateSelectEl.innerHTML = allTemplates.map(t => `<option value="${t.id}">${t.name}</option>`).join("");
+        els.templateSelectEl.innerHTML = allTemplates
+            .map(template => `<option value="${template.id}">${template.name}</option>`)
+            .join("");
         updateSelectedTemplateUI();
     }
 
     function getSelectedTemplate() {
-        const selectedId = templateSelectEl.value;
+        const selectedId = els.templateSelectEl?.value;
         return getAllTemplates().find(t => t.id === selectedId) || getAllTemplates()[0];
     }
 
     function updateSelectedTemplateUI() {
         const template = getSelectedTemplate();
-        if (workflowTemplateTextEl) workflowTemplateTextEl.textContent = template?.name || "—";
+        const name = template?.name || "—";
+        if (els.workflowTemplateTextEl) els.workflowTemplateTextEl.textContent = name;
+        if (els.sidebarTemplateTextEl) els.sidebarTemplateTextEl.textContent = name;
     }
 
     function deriveTitleFromText(text) {
-        const firstLine = String(text || "").split("\n").map(line => line.trim()).find(Boolean);
+        const firstLine = String(text || "")
+            .split("\n")
+            .map(line => line.trim())
+            .find(Boolean);
         return firstLine ? firstLine.replace(/[:#*-]/g, "").slice(0, 120) : "Care record";
     }
 
     function buildCareContextBlock() {
         return [
-            `Service type: ${serviceTypeEl.value || "Not specified"}`,
-            `Shift or context: ${shiftTypeEl.value || "Not specified"}`,
-            `Recorded by: ${recordAuthorEl.value.trim() || "Not specified"}`,
-            `Person supported / young person: ${youngPersonNameEl.value.trim() || "Not specified"}`,
-            `Record date: ${meetingDateEl.value || "Not specified"}`
+            `Service type: ${els.serviceTypeEl?.value || "Not specified"}`,
+            `Shift or context: ${els.shiftTypeEl?.value || "Not specified"}`,
+            `Recorded by: ${els.recordAuthorEl?.value.trim() || "Not specified"}`,
+            `Person supported / young person: ${els.youngPersonNameEl?.value.trim() || "Not specified"}`,
+            `Record date: ${els.meetingDateEl?.value || "Not specified"}`,
+            `Location / home / service: ${els.locationContextEl?.value.trim() || "Not specified"}`
         ].join("\n");
     }
 
     function buildTemplateInstruction(template) {
+        const lowerTemplateName = String(template?.name || "").toLowerCase();
+        let templateModeGuidance = "Rewrite this into a high-quality professional care sector document.";
+
+        if (lowerTemplateName.includes("handover")) {
+            templateModeGuidance = "Rewrite this into a concise, shift-ready handover with clear risks, priorities and next actions.";
+        } else if (lowerTemplateName.includes("incident")) {
+            templateModeGuidance = "Rewrite this into a factual incident record, keeping chronology precise and separating facts from interpretation.";
+        } else if (lowerTemplateName.includes("supervision")) {
+            templateModeGuidance = "Rewrite this into a professional supervision record with reflective discussion, agreed actions and review points.";
+        } else if (lowerTemplateName.includes("safeguarding")) {
+            templateModeGuidance = "Rewrite this into a safeguarding-conscious record, clearly separating concern, immediate actions, notifications and next steps.";
+        } else if (lowerTemplateName.includes("key-work") || lowerTemplateName.includes("keywork")) {
+            templateModeGuidance = "Rewrite this into a person-centred key-work record that reflects the young person's voice, wishes and feelings.";
+        }
+
         return [
-            "Rewrite this into a high-quality professional care sector document.",
+            templateModeGuidance,
             "Use clear, factual, respectful, person-centred language.",
             "Do not invent facts.",
             "Keep chronology clear.",
             "Separate observed facts, reported information, actions taken, and next steps where possible.",
+            "Retain important names, dates, risks, timescales and decisions.",
             "",
             "Care context:",
             buildCareContextBlock(),
@@ -430,56 +547,126 @@ document.addEventListener("DOMContentLoaded", () => {
             "- Keep the content factual and professional.",
             "- Do not add information that was not provided.",
             "- Use care-sector language suitable for records, supervision, handover, or safeguarding review as relevant.",
-            "- Preserve important details, names, dates, risks, actions, and professional decisions."
+            "- Preserve important details, names, dates, risks, actions and professional decisions.",
+            "- Avoid vague language where a factual wording is possible.",
+            "- Distinguish observation from interpretation."
         ].join("\n");
     }
 
+    function updateWorkflowWordCount() {
+        const text = els.finalNoteEl?.value || "";
+        const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
+        if (els.workflowWordCountEl) {
+            els.workflowWordCountEl.textContent = String(wordCount);
+        }
+    }
+
     function syncMirrors() {
-        aiDraftEl.value = finalNoteEl.value || "";
-        transcriptMirrorEl.value = transcriptEl.value || "";
+        if (els.aiDraftEl) els.aiDraftEl.value = els.finalNoteEl?.value || "";
+        if (els.transcriptMirrorEl) els.transcriptMirrorEl.value = els.transcriptEl?.value || "";
+    }
+
+    function setWorkflowStep(step) {
+        const steps = {
+            record: els.stepRecordEl,
+            transcribe: els.stepTranscribeEl,
+            generate: els.stepGenerateEl,
+            refine: els.stepRefineEl
+        };
+
+        Object.values(steps).forEach(el => {
+            if (!el) return;
+            el.classList.remove("is-active", "is-complete");
+        });
+
+        if (step === "record") {
+            steps.record?.classList.add("is-complete");
+            steps.transcribe?.classList.add("is-active");
+        }
+
+        if (step === "transcribe") {
+            steps.record?.classList.add("is-complete");
+            steps.transcribe?.classList.add("is-complete");
+            steps.generate?.classList.add("is-active");
+        }
+
+        if (step === "generate") {
+            steps.record?.classList.add("is-complete");
+            steps.transcribe?.classList.add("is-complete");
+            steps.generate?.classList.add("is-complete");
+            steps.refine?.classList.add("is-active");
+        }
+
+        if (step === "refine") {
+            Object.values(steps).forEach(el => el?.classList.add("is-complete"));
+        }
     }
 
     function analyseDocument() {
-        const text = finalNoteEl.value || "";
+        const text = els.finalNoteEl?.value || "";
         const lower = text.toLowerCase();
 
-        const safeguardingMatches = safeguardingKeywords.filter(k => lower.includes(k));
+        const safeguardingMatches = [...new Set(
+            safeguardingKeywords.filter(keyword => lower.includes(keyword))
+        )];
+
         if (safeguardingMatches.length) {
-            safeguardingBoxEl.classList.remove("hidden");
-            safeguardingTextEl.textContent =
-                `Potential safeguarding or risk-related language found: ${[...new Set(safeguardingMatches)].join(", ")}. Review the final note carefully before saving.`;
+            els.safeguardingBoxEl?.classList.remove("hidden");
+            if (els.safeguardingTextEl) {
+                els.safeguardingTextEl.textContent =
+                    `Potential safeguarding or risk-related language found: ${safeguardingMatches.join(", ")}. Review the final note carefully before saving.`;
+            }
         } else {
-            safeguardingBoxEl.classList.add("hidden");
-            safeguardingTextEl.textContent = "";
+            els.safeguardingBoxEl?.classList.add("hidden");
+            if (els.safeguardingTextEl) els.safeguardingTextEl.textContent = "";
         }
 
-        const hasPersonCentred = personCentredKeywords.some(k => lower.includes(k));
-        documentQualityBadgeEl.textContent = hasPersonCentred ? "Person-centred draft" : "Care draft";
+        const personCentredCount = personCentredKeywords.filter(keyword => lower.includes(keyword)).length;
+        const vagueCount = vagueLanguageKeywords.filter(keyword => lower.includes(keyword.toLowerCase())).length;
 
+        if (els.documentQualityBadgeEl) {
+            if (personCentredCount >= 3 && vagueCount === 0) {
+                els.documentQualityBadgeEl.textContent = "Strong care draft";
+            } else if (vagueCount > 0) {
+                els.documentQualityBadgeEl.textContent = "Needs factual review";
+            } else {
+                els.documentQualityBadgeEl.textContent = "Care draft";
+            }
+        }
+
+        updateWorkflowWordCount();
         syncMirrors();
     }
 
-    function setDirtyState() {
+    function markDirty() {
+        state.hasUnsavedChanges = true;
         setSaveState("is-dirty", "Unsaved changes");
-        clearTimeout(autosaveTimeout);
-        autosaveTimeout = setTimeout(() => {
+        clearTimeout(state.autosaveTimeout);
+        state.autosaveTimeout = setTimeout(() => {
             persistDraftLocally();
         }, 500);
     }
 
+    function markSaved() {
+        state.hasUnsavedChanges = false;
+        setSaveState("is-saved", "Saved");
+    }
+
     function persistDraftLocally() {
         const payload = {
-            transcript: transcriptEl.value || "",
-            finalNote: finalNoteEl.value || "",
-            aiDraft: aiDraftEl.value || "",
-            noteTitle: noteTitleEl.value || "",
-            aiInstruction: aiInstructionEl.value || "",
-            templateId: templateSelectEl.value || "",
-            serviceType: serviceTypeEl.value || "",
-            shiftType: shiftTypeEl.value || "",
-            recordAuthor: recordAuthorEl.value || "",
-            youngPersonName: youngPersonNameEl.value || "",
-            meetingDate: meetingDateEl.value || "",
+            transcript: els.transcriptEl?.value || "",
+            finalNote: els.finalNoteEl?.value || "",
+            aiDraft: els.aiDraftEl?.value || "",
+            noteTitle: els.noteTitleEl?.value || "",
+            aiInstruction: els.aiInstructionEl?.value || "",
+            templateId: els.templateSelectEl?.value || "",
+            serviceType: els.serviceTypeEl?.value || "",
+            shiftType: els.shiftTypeEl?.value || "",
+            recordAuthor: els.recordAuthorEl?.value || "",
+            youngPersonName: els.youngPersonNameEl?.value || "",
+            meetingDate: els.meetingDateEl?.value || "",
+            locationContext: els.locationContextEl?.value || "",
+            extractedActions: state.extractedActions || [],
             timestamp: new Date().toISOString()
         };
         localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify(payload));
@@ -491,20 +678,24 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!raw) return;
             const draft = JSON.parse(raw);
 
-            transcriptEl.value = draft.transcript || "";
-            finalNoteEl.value = draft.finalNote || "";
-            aiDraftEl.value = draft.aiDraft || draft.finalNote || "";
-            noteTitleEl.value = draft.noteTitle || "";
-            aiInstructionEl.value = draft.aiInstruction || "";
-            recordAuthorEl.value = draft.recordAuthor || "";
-            youngPersonNameEl.value = draft.youngPersonName || "";
-            meetingDateEl.value = draft.meetingDate || "";
-            serviceTypeEl.value = draft.serviceType || serviceTypeEl.value;
-            shiftTypeEl.value = draft.shiftType || shiftTypeEl.value;
-            if (draft.templateId && templateSelectEl.querySelector(`option[value="${draft.templateId}"]`)) {
-                templateSelectEl.value = draft.templateId;
+            if (els.transcriptEl) els.transcriptEl.value = draft.transcript || "";
+            if (els.finalNoteEl) els.finalNoteEl.value = draft.finalNote || "";
+            if (els.aiDraftEl) els.aiDraftEl.value = draft.aiDraft || draft.finalNote || "";
+            if (els.noteTitleEl) els.noteTitleEl.value = draft.noteTitle || "";
+            if (els.aiInstructionEl) els.aiInstructionEl.value = draft.aiInstruction || "";
+            if (els.recordAuthorEl) els.recordAuthorEl.value = draft.recordAuthor || "";
+            if (els.youngPersonNameEl) els.youngPersonNameEl.value = draft.youngPersonName || "";
+            if (els.meetingDateEl) els.meetingDateEl.value = draft.meetingDate || "";
+            if (els.locationContextEl) els.locationContextEl.value = draft.locationContext || "";
+            if (els.serviceTypeEl) els.serviceTypeEl.value = draft.serviceType || els.serviceTypeEl.value;
+            if (els.shiftTypeEl) els.shiftTypeEl.value = draft.shiftType || els.shiftTypeEl.value;
+
+            if (draft.templateId && els.templateSelectEl?.querySelector(`option[value="${draft.templateId}"]`)) {
+                els.templateSelectEl.value = draft.templateId;
             }
 
+            state.extractedActions = Array.isArray(draft.extractedActions) ? draft.extractedActions : [];
+            renderExtractedActions();
             updateSelectedTemplateUI();
             analyseDocument();
         } catch (error) {
@@ -543,15 +734,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function renderHistory() {
+        if (!els.historyListEl || !els.historyEmptyStateEl) return;
+
         const items = getLocalHistory();
-        historyListEl.innerHTML = "";
+        els.historyListEl.innerHTML = "";
 
         if (!items.length) {
-            historyEmptyStateEl.style.display = "block";
+            els.historyEmptyStateEl.style.display = "block";
             return;
         }
 
-        historyEmptyStateEl.style.display = "none";
+        els.historyEmptyStateEl.style.display = "none";
 
         items.forEach(item => {
             const card = document.createElement("div");
@@ -565,7 +758,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <button class="btn btn-light btn-tiny" type="button" data-history-copy="${item.id}">Copy</button>
                 </div>
             `;
-            historyListEl.appendChild(card);
+            els.historyListEl.appendChild(card);
         });
     }
 
@@ -573,22 +766,17 @@ document.addEventListener("DOMContentLoaded", () => {
         const item = getLocalHistory().find(x => x.id === id);
         if (!item) return;
 
-        currentNoteId = item.id;
-        noteTitleEl.value = item.title || "";
-        transcriptEl.value = item.transcript || "";
-        finalNoteEl.value = item.finalNote || "";
-        aiDraftEl.value = item.finalNote || "";
+        state.currentNoteId = item.id;
+        if (els.noteTitleEl) els.noteTitleEl.value = item.title || "";
+        if (els.transcriptEl) els.transcriptEl.value = item.transcript || "";
+        if (els.finalNoteEl) els.finalNoteEl.value = item.finalNote || "";
+        if (els.aiDraftEl) els.aiDraftEl.value = item.finalNote || "";
+
         setNoteMode(true);
         analyseDocument();
         openWorkflowModal();
+        setWorkflowStep("refine");
         showToast("Recent note opened.");
-    }
-
-    function escapeHtml(value) {
-        return String(value || "")
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;");
     }
 
     async function copyTextToClipboard(text) {
@@ -600,21 +788,112 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function renderTemplateBuilderSections() {
+        if (!els.templateSectionsListEl) return;
+
+        els.templateSectionsListEl.innerHTML = "";
+        state.templateBuilderSections.forEach((section, index) => {
+            const item = document.createElement("div");
+            item.className = "template-section-chip";
+            item.innerHTML = `
+                <span>${escapeHtml(section)}</span>
+                <button class="btn btn-light btn-tiny" type="button" data-remove-template-section="${index}">Remove</button>
+            `;
+            els.templateSectionsListEl.appendChild(item);
+        });
+    }
+
+    function renderSavedTemplates() {
+        if (!els.savedTemplatesListEl) return;
+
+        els.savedTemplatesListEl.innerHTML = "";
+
+        if (!state.customTemplates.length) {
+            els.savedTemplatesListEl.innerHTML = `<div class="history-empty" style="color:#64748b;">No custom templates saved yet.</div>`;
+            return;
+        }
+
+        state.customTemplates.forEach(template => {
+            const item = document.createElement("div");
+            item.className = "saved-template-item";
+            item.innerHTML = `
+                <div>
+                    <strong>${escapeHtml(template.name)}</strong>
+                    <div class="history-meta" style="color:#64748b;">${template.sections.length} sections</div>
+                </div>
+                <div class="history-actions">
+                    <button class="btn btn-light btn-tiny" type="button" data-use-template="${template.id}">Use</button>
+                    <button class="btn btn-danger btn-tiny" type="button" data-delete-template="${template.id}">Delete</button>
+                </div>
+            `;
+            els.savedTemplatesListEl.appendChild(item);
+        });
+    }
+
+    function addTemplateSection() {
+        const value = els.newTemplateSectionInputEl?.value.trim();
+        if (!value) return;
+        state.templateBuilderSections.push(value);
+        if (els.newTemplateSectionInputEl) els.newTemplateSectionInputEl.value = "";
+        renderTemplateBuilderSections();
+    }
+
+    function saveCustomTemplate() {
+        const name = els.templateNameInputEl?.value.trim();
+
+        if (!name) {
+            alert("Please add a template name.");
+            return;
+        }
+
+        if (!state.templateBuilderSections.length) {
+            alert("Please add at least one section.");
+            return;
+        }
+
+        state.customTemplates.push({
+            id: `custom-${Date.now()}`,
+            name,
+            sections: [...state.templateBuilderSections]
+        });
+
+        saveLocalTemplates(state.customTemplates);
+        populateTemplates();
+        renderSavedTemplates();
+
+        if (els.templateNameInputEl) els.templateNameInputEl.value = "";
+        state.templateBuilderSections = [];
+        renderTemplateBuilderSections();
+        showToast("Custom template saved.");
+    }
+
+    function loadLocalTemplates() {
+        state.customTemplates = getLocalTemplates();
+    }
+
+    function resetRecordingUi() {
+        stopRecordingTimer();
+        closeRecordingModal();
+        if (els.startRecordingBtn) els.startRecordingBtn.disabled = false;
+        if (els.recordingTimerEl) els.recordingTimerEl.textContent = "00:00";
+        if (els.recordingModalTimerEl) els.recordingModalTimerEl.textContent = "00:00";
+    }
+
     async function startRecording() {
         try {
-            recordedChunks = [];
-            recordedBlob = null;
+            state.recordedChunks = [];
+            state.recordedBlob = null;
 
-            if (audioPlaybackEl) {
-                audioPlaybackEl.src = "";
-                audioPlaybackEl.style.display = "none";
+            if (els.audioPlaybackEl) {
+                els.audioPlaybackEl.src = "";
+                els.audioPlaybackEl.style.display = "none";
             }
 
             const option = getSupportedRecordingOptions();
-            recordingMimeType = option.mimeType;
-            recordingExtension = option.extension;
+            state.recordingMimeType = option.mimeType;
+            state.recordingExtension = option.extension;
 
-            recordingStream = await navigator.mediaDevices.getUserMedia({
+            state.recordingStream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     echoCancellation: true,
                     noiseSuppression: true,
@@ -622,50 +901,57 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
 
-            mediaRecorder = recordingMimeType
-                ? new MediaRecorder(recordingStream, { mimeType: recordingMimeType })
-                : new MediaRecorder(recordingStream);
+            state.mediaRecorder = state.recordingMimeType
+                ? new MediaRecorder(state.recordingStream, { mimeType: state.recordingMimeType })
+                : new MediaRecorder(state.recordingStream);
 
-            mediaRecorder.ondataavailable = event => {
+            state.mediaRecorder.ondataavailable = event => {
                 if (event.data && event.data.size > 0) {
-                    recordedChunks.push(event.data);
+                    state.recordedChunks.push(event.data);
                 }
             };
 
-            mediaRecorder.onstop = () => {
-                if (!recordedChunks.length) {
+            state.mediaRecorder.onstop = () => {
+                if (!state.recordedChunks.length) {
                     alert("No recording captured. Please try again.");
                     resetRecordingUi();
                     return;
                 }
 
-                recordedBlob = new Blob(recordedChunks, { type: recordingMimeType || "audio/webm" });
+                state.recordedBlob = new Blob(state.recordedChunks, {
+                    type: state.recordingMimeType || "audio/webm"
+                });
 
-                audioPlaybackEl.src = URL.createObjectURL(recordedBlob);
-                audioPlaybackEl.style.display = "block";
-
-                if (audioReadyTextEl) {
-                    audioReadyTextEl.textContent = `Recording ready (${formatTime(getElapsedRecordingSeconds())}).`;
+                if (els.audioPlaybackEl) {
+                    els.audioPlaybackEl.src = URL.createObjectURL(state.recordedBlob);
+                    els.audioPlaybackEl.style.display = "block";
                 }
 
-                if (recordingStream) {
-                    recordingStream.getTracks().forEach(track => track.stop());
+                if (els.audioReadyTextEl) {
+                    els.audioReadyTextEl.textContent = `Recording ready (${formatTime(getElapsedRecordingSeconds())}).`;
                 }
 
-                transcribeBtn.disabled = false;
+                if (state.recordingStream) {
+                    state.recordingStream.getTracks().forEach(track => track.stop());
+                }
+
+                if (els.transcribeBtn) els.transcribeBtn.disabled = false;
+
                 resetRecordingUi();
                 openWorkflowModal();
                 setStatus("success", "Recording complete");
+                setWorkflowStep("record");
                 showToast("Recording complete. AI workspace opened.");
             };
 
-            mediaRecorder.onerror = () => {
+            state.mediaRecorder.onerror = () => {
                 alert("Recording failed. Please try again.");
                 resetRecordingUi();
             };
 
-            mediaRecorder.start(1000);
-            startRecordingBtn.disabled = true;
+            state.mediaRecorder.start(1000);
+
+            if (els.startRecordingBtn) els.startRecordingBtn.disabled = true;
             setStatus("recording", "Recording live");
             startRecordingTimer();
             openRecordingModal();
@@ -677,66 +963,68 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function pauseRecording() {
-        if (!mediaRecorder || mediaRecorder.state !== "recording") return;
-        mediaRecorder.pause();
-        pausedAt = Date.now();
-        recordingModalMicEl.classList.remove("recording");
-        recordingModalMicEl.classList.add("paused");
-        recordingModalStatusEl.textContent = "Recording paused";
-        pauseRecordingBtn.disabled = true;
-        resumeRecordingBtn.disabled = false;
+        if (!state.mediaRecorder || state.mediaRecorder.state !== "recording") return;
+        state.mediaRecorder.pause();
+        state.pausedAt = Date.now();
+
+        if (els.recordingModalMicEl) {
+            els.recordingModalMicEl.classList.remove("recording");
+            els.recordingModalMicEl.classList.add("paused");
+        }
+        if (els.recordingModalStatusEl) {
+            els.recordingModalStatusEl.textContent = "Recording paused";
+        }
+        if (els.pauseRecordingBtn) els.pauseRecordingBtn.disabled = true;
+        if (els.resumeRecordingBtn) els.resumeRecordingBtn.disabled = false;
     }
 
     function resumeRecording() {
-        if (!mediaRecorder || mediaRecorder.state !== "paused") return;
-        mediaRecorder.resume();
-        if (pausedAt) {
-            totalPausedMs += Date.now() - pausedAt;
-            pausedAt = null;
+        if (!state.mediaRecorder || state.mediaRecorder.state !== "paused") return;
+        state.mediaRecorder.resume();
+
+        if (state.pausedAt) {
+            state.totalPausedMs += Date.now() - state.pausedAt;
+            state.pausedAt = null;
         }
-        recordingModalMicEl.classList.remove("paused");
-        recordingModalMicEl.classList.add("recording");
-        recordingModalStatusEl.textContent = "Recording live";
-        pauseRecordingBtn.disabled = false;
-        resumeRecordingBtn.disabled = true;
+
+        if (els.recordingModalMicEl) {
+            els.recordingModalMicEl.classList.remove("paused");
+            els.recordingModalMicEl.classList.add("recording");
+        }
+        if (els.recordingModalStatusEl) {
+            els.recordingModalStatusEl.textContent = "Recording live";
+        }
+        if (els.pauseRecordingBtn) els.pauseRecordingBtn.disabled = false;
+        if (els.resumeRecordingBtn) els.resumeRecordingBtn.disabled = true;
     }
 
     function stopRecording() {
-        if (mediaRecorder && mediaRecorder.state !== "inactive") {
-            if (pausedAt) {
-                totalPausedMs += Date.now() - pausedAt;
-                pausedAt = null;
+        if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
+            if (state.pausedAt) {
+                state.totalPausedMs += Date.now() - state.pausedAt;
+                state.pausedAt = null;
             }
-            mediaRecorder.stop();
+            state.mediaRecorder.stop();
         }
     }
 
-    function resetRecordingUi() {
-        stopRecordingTimer();
-        closeRecordingModal();
-        startRecordingBtn.disabled = false;
-        recordingTimerEl.textContent = "00:00";
-        recordingModalTimerEl.textContent = "00:00";
-    }
-
     async function transcribeAudio() {
-        if (!recordedBlob) {
+        if (!state.recordedBlob) {
             alert("Please record audio first.");
             return;
         }
 
-        if (recordedBlob.size < 1000) {
+        if (state.recordedBlob.size < 1000) {
             alert("The recording appears too short or empty. Please record again.");
             return;
         }
 
-        const filename = `care-note.${recordingExtension || "webm"}`;
+        const filename = `care-note.${state.recordingExtension || "webm"}`;
         const form = new FormData();
-        form.append("file", recordedBlob, filename);
+        form.append("file", state.recordedBlob, filename);
 
         try {
-            transcribeBtn.disabled = true;
-            transcribeBtn.textContent = "Transcribing...";
+            setButtonLoading(els.transcribeBtn, true, "Transcribing...", "Transcribe recording");
             setStatus("processing", "Transcribing recording");
 
             const response = await fetch("/ai-notes/transcribe", {
@@ -754,32 +1042,34 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const transcript = data.transcript || "";
-            transcriptEl.value = transcript;
-            finalNoteEl.value = transcript;
-            aiDraftEl.value = transcript;
-            previousFinalNote = transcript;
-            previousAiDraft = transcript;
+            if (els.transcriptEl) els.transcriptEl.value = transcript;
+            if (els.finalNoteEl) els.finalNoteEl.value = transcript;
+            if (els.aiDraftEl) els.aiDraftEl.value = transcript;
 
-            if (!noteTitleEl.value.trim()) {
-                noteTitleEl.value = `Care note - ${new Date().toLocaleDateString("en-GB")}`;
+            state.previousFinalNote = transcript;
+            state.previousAiDraft = transcript;
+
+            if (els.noteTitleEl && !els.noteTitleEl.value.trim()) {
+                els.noteTitleEl.value = `Care note - ${new Date().toLocaleDateString("en-GB")}`;
             }
 
             analyseDocument();
+            markDirty();
             setStatus("success", "Transcript ready");
-            setDirtyState();
+            setWorkflowStep("transcribe");
             showToast("Transcription complete.");
         } catch (error) {
             console.error("Transcription error:", error);
             alert("Could not connect to the transcription service.");
             setStatus("idle", "Ready");
         } finally {
-            transcribeBtn.disabled = false;
-            transcribeBtn.textContent = "Transcribe recording";
+            setButtonLoading(els.transcribeBtn, false, "Transcribing...", "Transcribe recording");
         }
     }
 
     async function generateWorkingDocument() {
-        const transcript = transcriptEl.value.trim();
+        const transcript = els.transcriptEl?.value.trim();
+
         if (!transcript) {
             alert("Please transcribe audio first or paste a transcript.");
             return;
@@ -792,8 +1082,7 @@ document.addEventListener("DOMContentLoaded", () => {
         form.append("instruction", buildTemplateInstruction(template));
 
         try {
-            generateBtn.disabled = true;
-            generateBtn.textContent = "Generating...";
+            setButtonLoading(els.generateBtn, true, "Generating...", "Generate care document");
             setStatus("processing", "Generating document");
 
             const response = await fetch("/ai-notes/edit", {
@@ -811,40 +1100,48 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const generated = data.text || transcript;
-            previousFinalNote = finalNoteEl.value || transcript;
-            previousAiDraft = generated;
-            finalNoteEl.value = generated;
-            aiDraftEl.value = generated;
+            state.previousFinalNote = els.finalNoteEl?.value || transcript;
+            state.previousAiDraft = generated;
 
-            if (!noteTitleEl.value.trim()) {
-                noteTitleEl.value = deriveTitleFromText(generated);
+            if (els.finalNoteEl) els.finalNoteEl.value = generated;
+            if (els.aiDraftEl) els.aiDraftEl.value = generated;
+
+            if (els.noteTitleEl && !els.noteTitleEl.value.trim()) {
+                els.noteTitleEl.value = deriveTitleFromText(generated);
             }
 
             analyseDocument();
+            markDirty();
             setStatus("success", "Document generated");
-            setDirtyState();
+            setWorkflowStep("generate");
             showToast("Care document generated.");
         } catch (error) {
             console.error("Generate document error:", error);
             alert("Could not connect to the AI service.");
             setStatus("idle", "Ready");
         } finally {
-            generateBtn.disabled = false;
-            generateBtn.textContent = "Generate care document";
+            setButtonLoading(els.generateBtn, false, "Generating...", "Generate care document");
         }
     }
 
     function insertBlankTemplate() {
         const template = getSelectedTemplate();
-        finalNoteEl.value = template.sections.map(section => `${section}\n`).join("\n").trim();
+        if (!template || !els.finalNoteEl) return;
+
+        els.finalNoteEl.value = template.sections
+            .map(section => `${section}\n`)
+            .join("\n")
+            .trim();
+
         analyseDocument();
-        setDirtyState();
+        markDirty();
+        setWorkflowStep("refine");
         showToast("Blank template inserted.");
     }
 
     async function applyAiChange() {
-        const instruction = aiInstructionEl.value.trim();
-        const currentText = finalNoteEl.value.trim();
+        const instruction = els.aiInstructionEl?.value.trim();
+        const currentText = els.finalNoteEl?.value.trim();
 
         if (!currentText) {
             alert("There is no document to edit yet.");
@@ -856,7 +1153,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        previousFinalNote = finalNoteEl.value;
+        state.previousFinalNote = els.finalNoteEl.value;
 
         const form = new FormData();
         form.append("text", currentText);
@@ -864,8 +1161,7 @@ document.addEventListener("DOMContentLoaded", () => {
         form.append("instruction", buildAiInstruction(instruction));
 
         try {
-            applyAiEditBtn.disabled = true;
-            applyAiEditBtn.textContent = "Applying...";
+            setButtonLoading(els.applyAiEditBtn, true, "Applying...", "Apply AI change");
             setStatus("processing", "Applying AI changes");
 
             const response = await fetch("/ai-notes/edit", {
@@ -882,53 +1178,174 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            finalNoteEl.value = data.text || currentText;
+            if (els.finalNoteEl) {
+                els.finalNoteEl.value = data.text || currentText;
+            }
+
             analyseDocument();
-            setDirtyState();
+            markDirty();
             setStatus("success", "AI update applied");
+            setWorkflowStep("refine");
             showToast("AI change applied.");
         } catch (error) {
             console.error("Apply AI change error:", error);
             alert("Could not connect to the AI service.");
             setStatus("idle", "Ready");
         } finally {
-            applyAiEditBtn.disabled = false;
-            applyAiEditBtn.textContent = "Apply AI change";
+            setButtonLoading(els.applyAiEditBtn, false, "Applying...", "Apply AI change");
         }
     }
 
     function undoLastChange() {
-        if (!previousFinalNote) {
+        if (!state.previousFinalNote) {
             alert("There is no previous version to restore.");
             return;
         }
-        finalNoteEl.value = previousFinalNote;
+
+        if (els.finalNoteEl) els.finalNoteEl.value = state.previousFinalNote;
         analyseDocument();
-        setDirtyState();
+        markDirty();
+        setWorkflowStep("refine");
         showToast("Last change undone.");
     }
 
     function resetFromGeneratedDraft() {
-        if (!aiDraftEl.value.trim()) {
+        if (!els.aiDraftEl?.value.trim()) {
             alert("There is no generated draft to restore.");
             return;
         }
-        previousFinalNote = finalNoteEl.value;
-        finalNoteEl.value = aiDraftEl.value;
+
+        state.previousFinalNote = els.finalNoteEl?.value || "";
+        if (els.finalNoteEl) els.finalNoteEl.value = els.aiDraftEl.value;
+
         analyseDocument();
-        setDirtyState();
+        markDirty();
+        setWorkflowStep("refine");
         showToast("Draft restored.");
     }
 
+    function renderExtractedActions() {
+        if (!els.actionsListEl || !els.actionsEmptyStateEl) return;
+
+        els.actionsListEl.innerHTML = "";
+
+        if (!state.extractedActions.length) {
+            els.actionsEmptyStateEl.style.display = "block";
+            return;
+        }
+
+        els.actionsEmptyStateEl.style.display = "none";
+
+        state.extractedActions.forEach(action => {
+            const card = document.createElement("div");
+            card.className = "action-item";
+            card.innerHTML = `
+                <div class="action-item-title">${escapeHtml(action.title || "Action item")}</div>
+                <div class="action-item-meta">
+                    <span class="action-pill">Owner: ${escapeHtml(action.owner || "Not specified")}</span>
+                    <span class="action-pill">Deadline: ${escapeHtml(action.deadline || "Not specified")}</span>
+                    <span class="action-pill">Status: ${escapeHtml(action.status || "Open")}</span>
+                </div>
+            `;
+            els.actionsListEl.appendChild(card);
+        });
+    }
+
+    function extractActionsLocally() {
+        const text = els.finalNoteEl?.value || "";
+        const lines = text
+            .split("\n")
+            .map(line => line.trim())
+            .filter(Boolean);
+
+        const actionIndicators = [
+            "action", "actions", "agreed", "follow-up", "follow up",
+            "next step", "next steps", "task", "tasks", "review date", "deadline"
+        ];
+
+        const matchedLines = lines.filter(line =>
+            actionIndicators.some(indicator => line.toLowerCase().includes(indicator))
+        );
+
+        state.extractedActions = matchedLines.slice(0, 8).map((line, index) => ({
+            title: line.replace(/^[-•]\s*/, ""),
+            owner: index % 2 === 0 ? "Staff team" : "Key worker",
+            deadline: "To be confirmed",
+            status: "Open"
+        }));
+
+        renderExtractedActions();
+        showToast(state.extractedActions.length ? "Actions extracted." : "No obvious actions found.");
+        persistDraftLocally();
+    }
+
+    async function createDerivedDocumentInstruction(instructionText) {
+        const currentText = els.finalNoteEl?.value.trim();
+        if (!currentText) {
+            alert("There is no document to transform yet.");
+            return;
+        }
+
+        const form = new FormData();
+        form.append("text", currentText);
+        form.append("mode", "custom");
+        form.append("instruction", buildAiInstruction(instructionText));
+
+        try {
+            setStatus("processing", "Generating derived version");
+
+            const response = await fetch("/ai-notes/edit", {
+                method: "POST",
+                headers: getAuthHeaders(),
+                body: form
+            });
+
+            const data = await safeJson(response);
+
+            if (!response.ok) {
+                if (handleUnauthorized(response, data)) return;
+                alert(data.detail || "AI transformation failed.");
+                return;
+            }
+
+            state.previousFinalNote = currentText;
+            if (els.finalNoteEl) els.finalNoteEl.value = data.text || currentText;
+
+            analyseDocument();
+            markDirty();
+            setWorkflowStep("refine");
+            setStatus("success", "Derived version ready");
+        } catch (error) {
+            console.error("Derived document error:", error);
+            alert("Could not connect to the AI service.");
+            setStatus("idle", "Ready");
+        }
+    }
+
+    async function createHandoverVersion() {
+        await createDerivedDocumentInstruction(
+            "Turn this into a concise handover-ready summary with immediate risks, health, appointments, medication, professional contact and priorities for the next shift."
+        );
+        showToast("Handover version created.");
+    }
+
+    async function createManagerSummary() {
+        await createDerivedDocumentInstruction(
+            "Rewrite this into a concise manager update. Focus on key issues, risks, actions taken, decisions required and next steps."
+        );
+        showToast("Manager summary created.");
+    }
+
     async function saveDocument() {
-        const transcript = transcriptEl.value.trim();
-        const finalNote = finalNoteEl.value.trim();
-        const title = noteTitleEl.value.trim() || deriveTitleFromText(finalNote);
+        const transcript = els.transcriptEl?.value.trim();
+        const finalNote = els.finalNoteEl?.value.trim();
+        const title = els.noteTitleEl?.value.trim() || deriveTitleFromText(finalNote);
 
         if (!transcript) {
             alert("Transcript is required.");
             return;
         }
+
         if (!finalNote) {
             alert("Editable document is required.");
             return;
@@ -936,19 +1353,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const form = new FormData();
         form.append("transcript", transcript);
-        form.append("ai_draft", aiDraftEl.value.trim() || finalNote);
+        form.append("ai_draft", els.aiDraftEl?.value.trim() || finalNote);
         form.append("final_note", finalNote);
         form.append("title", title);
         form.append("template_name", getSelectedTemplate()?.name || "");
-        form.append("service_type", serviceTypeEl.value || "");
-        form.append("shift_type", shiftTypeEl.value || "");
-        form.append("record_author", recordAuthorEl.value || "");
-        form.append("young_person_name", youngPersonNameEl.value || "");
-        form.append("record_date", meetingDateEl.value || "");
+        form.append("service_type", els.serviceTypeEl?.value || "");
+        form.append("shift_type", els.shiftTypeEl?.value || "");
+        form.append("record_author", els.recordAuthorEl?.value || "");
+        form.append("young_person_name", els.youngPersonNameEl?.value || "");
+        form.append("record_date", els.meetingDateEl?.value || "");
+        form.append("location_context", els.locationContextEl?.value || "");
 
         try {
-            saveBtn.disabled = true;
-            saveBtnTop.disabled = true;
+            if (els.saveBtn) els.saveBtn.disabled = true;
+            if (els.saveBtnTop) els.saveBtnTop.disabled = true;
             setSaveState("is-saving", "Saving...");
 
             const response = await fetch("/ai-notes/save", {
@@ -966,11 +1384,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            currentNoteId = data.id || currentNoteId || `note-${Date.now()}`;
+            state.currentNoteId = data.id || state.currentNoteId || `note-${Date.now()}`;
             setNoteMode(true);
-            setSaveState("is-saved", "Saved");
+            markSaved();
+
             addToLocalHistory({
-                id: currentNoteId,
+                id: state.currentNoteId,
                 title,
                 templateName: getSelectedTemplate()?.name || "",
                 finalNote,
@@ -983,14 +1402,14 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("Could not connect to the save service.");
             setSaveState("is-dirty", "Unsaved changes");
         } finally {
-            saveBtn.disabled = false;
-            saveBtnTop.disabled = false;
+            if (els.saveBtn) els.saveBtn.disabled = false;
+            if (els.saveBtnTop) els.saveBtnTop.disabled = false;
         }
     }
 
     async function exportDocument() {
-        const finalNote = finalNoteEl.value.trim();
-        const title = noteTitleEl.value.trim() || "Care Note";
+        const finalNote = els.finalNoteEl?.value.trim();
+        const title = els.noteTitleEl?.value.trim() || "Care Note";
 
         if (!finalNote) {
             alert("There is nothing to export.");
@@ -1006,10 +1425,14 @@ document.addEventListener("DOMContentLoaded", () => {
         form.append("template_name", getSelectedTemplate()?.name || "");
 
         try {
-            exportBtn.disabled = true;
-            exportBtnTop.disabled = true;
-            exportBtn.textContent = "Exporting...";
-            exportBtnTop.textContent = "Exporting...";
+            if (els.exportBtn) {
+                els.exportBtn.disabled = true;
+                els.exportBtn.textContent = "Exporting...";
+            }
+            if (els.exportBtnTop) {
+                els.exportBtnTop.disabled = true;
+                els.exportBtnTop.textContent = "Exporting...";
+            }
 
             const response = await fetch(`/ai-notes/export/${format}`, {
                 method: "POST",
@@ -1033,21 +1456,26 @@ document.addEventListener("DOMContentLoaded", () => {
             link.click();
             link.remove();
             window.URL.revokeObjectURL(url);
+
             showToast(`Exported as ${format.toUpperCase()}.`);
         } catch (error) {
             console.error("Export error:", error);
             alert("Could not connect to the export service.");
         } finally {
-            exportBtn.disabled = false;
-            exportBtnTop.disabled = false;
-            exportBtn.textContent = "Export";
-            exportBtnTop.textContent = "Export";
+            if (els.exportBtn) {
+                els.exportBtn.disabled = false;
+                els.exportBtn.textContent = "Export";
+            }
+            if (els.exportBtnTop) {
+                els.exportBtnTop.disabled = false;
+                els.exportBtnTop.textContent = "Export";
+            }
         }
     }
 
     function printDocument() {
-        const title = noteTitleEl.value.trim() || "Care Note";
-        const content = finalNoteEl.value.trim();
+        const title = els.noteTitleEl?.value.trim() || "Care Note";
+        const content = els.finalNoteEl?.value.trim();
 
         if (!content) {
             alert("There is nothing to print.");
@@ -1075,10 +1503,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     <h1>${escapeHtml(title)}</h1>
                     <div class="meta">
                         Template: ${escapeHtml(getSelectedTemplate()?.name || "")}<br>
-                        Service: ${escapeHtml(serviceTypeEl.value || "")}<br>
-                        Shift / Context: ${escapeHtml(shiftTypeEl.value || "")}<br>
-                        Recorded by: ${escapeHtml(recordAuthorEl.value || "")}<br>
-                        Record date: ${escapeHtml(meetingDateEl.value || "")}
+                        Service: ${escapeHtml(els.serviceTypeEl?.value || "")}<br>
+                        Shift / Context: ${escapeHtml(els.shiftTypeEl?.value || "")}<br>
+                        Recorded by: ${escapeHtml(els.recordAuthorEl?.value || "")}<br>
+                        Record date: ${escapeHtml(els.meetingDateEl?.value || "")}<br>
+                        Location: ${escapeHtml(els.locationContextEl?.value || "")}
                     </div>
                     <pre>${escapeHtml(content)}</pre>
                 </body>
@@ -1094,41 +1523,58 @@ document.addEventListener("DOMContentLoaded", () => {
         const confirmed = window.confirm("Clear the transcript, working draft and current note details?");
         if (!confirmed) return;
 
-        transcriptEl.value = "";
-        finalNoteEl.value = "";
-        aiDraftEl.value = "";
-        aiInstructionEl.value = "";
-        noteTitleEl.value = "";
-        previousFinalNote = "";
-        previousAiDraft = "";
-        currentNoteId = null;
+        if (els.transcriptEl) els.transcriptEl.value = "";
+        if (els.finalNoteEl) els.finalNoteEl.value = "";
+        if (els.aiDraftEl) els.aiDraftEl.value = "";
+        if (els.aiInstructionEl) els.aiInstructionEl.value = "";
+        if (els.noteTitleEl) els.noteTitleEl.value = "";
 
-        if (audioPlaybackEl) {
-            audioPlaybackEl.src = "";
-            audioPlaybackEl.style.display = "none";
+        state.previousFinalNote = "";
+        state.previousAiDraft = "";
+        state.currentNoteId = null;
+        state.extractedActions = [];
+
+        if (els.audioPlaybackEl) {
+            els.audioPlaybackEl.src = "";
+            els.audioPlaybackEl.style.display = "none";
         }
 
-        recordedBlob = null;
-        recordedChunks = [];
-        transcribeBtn.disabled = true;
+        state.recordedBlob = null;
+        state.recordedChunks = [];
+        if (els.transcribeBtn) els.transcribeBtn.disabled = true;
+
         setNoteMode(false);
         setSaveState("is-idle", "Ready");
         analyseDocument();
+        renderExtractedActions();
         localStorage.removeItem(LOCAL_DRAFT_KEY);
+        state.hasUnsavedChanges = false;
+        setWorkflowStep("record");
         showToast("Workspace cleared.");
+    }
+
+    function toggleTranscriptVisibility() {
+        state.isTranscriptVisible = !state.isTranscriptVisible;
+        if (els.transcriptContentEl) {
+            els.transcriptContentEl.style.display = state.isTranscriptVisible ? "" : "none";
+        }
+        if (els.toggleTranscriptBtn) {
+            els.toggleTranscriptBtn.textContent = state.isTranscriptVisible ? "Show / hide" : "Show transcript";
+        }
     }
 
     function handlePromptChipClick(event) {
         const prompt = event.target.getAttribute("data-prompt");
-        if (!prompt) return;
-        aiInstructionEl.value = prompt;
-        aiInstructionEl.focus();
+        if (!prompt || !els.aiInstructionEl) return;
+        els.aiInstructionEl.value = prompt;
+        els.aiInstructionEl.focus();
+        markDirty();
         showToast("AI instruction inserted.");
     }
 
     function handleTranscriptToolClick(event) {
         const action = event.target.getAttribute("data-transcript-action");
-        if (!action) return;
+        if (!action || !els.aiInstructionEl) return;
 
         const map = {
             clean: "Clean this transcript only. Improve punctuation, readability and speaker flow without changing meaning or turning it into a formal note.",
@@ -1136,90 +1582,9 @@ document.addEventListener("DOMContentLoaded", () => {
             summarise: "Summarise this transcript into a concise factual overview suitable for care staff review."
         };
 
-        aiInstructionEl.value = map[action] || "";
+        els.aiInstructionEl.value = map[action] || "";
+        markDirty();
         showToast("Transcript action added.");
-    }
-
-    function toggleTranscriptVisibility() {
-        isTranscriptVisible = !isTranscriptVisible;
-        transcriptContentEl.style.display = isTranscriptVisible ? "" : "none";
-        toggleTranscriptBtn.textContent = isTranscriptVisible ? "Show / hide" : "Show transcript";
-    }
-
-    function renderTemplateBuilderSections() {
-        templateSectionsListEl.innerHTML = "";
-        templateBuilderSections.forEach((section, index) => {
-            const item = document.createElement("div");
-            item.className = "template-section-chip";
-            item.innerHTML = `
-                <span>${escapeHtml(section)}</span>
-                <button class="btn btn-light btn-tiny" type="button" data-remove-template-section="${index}">Remove</button>
-            `;
-            templateSectionsListEl.appendChild(item);
-        });
-    }
-
-    function renderSavedTemplates() {
-        savedTemplatesListEl.innerHTML = "";
-        if (!customTemplates.length) {
-            savedTemplatesListEl.innerHTML = `<div class="history-empty" style="color:#64748b;">No custom templates saved yet.</div>`;
-            return;
-        }
-
-        customTemplates.forEach(template => {
-            const item = document.createElement("div");
-            item.className = "saved-template-item";
-            item.innerHTML = `
-                <div>
-                    <strong>${escapeHtml(template.name)}</strong>
-                    <div class="history-meta" style="color:#64748b;">${template.sections.length} sections</div>
-                </div>
-                <div class="history-actions">
-                    <button class="btn btn-light btn-tiny" type="button" data-use-template="${template.id}">Use</button>
-                    <button class="btn btn-danger btn-tiny" type="button" data-delete-template="${template.id}">Delete</button>
-                </div>
-            `;
-            savedTemplatesListEl.appendChild(item);
-        });
-    }
-
-    function addTemplateSection() {
-        const value = newTemplateSectionInputEl.value.trim();
-        if (!value) return;
-        templateBuilderSections.push(value);
-        newTemplateSectionInputEl.value = "";
-        renderTemplateBuilderSections();
-    }
-
-    function saveCustomTemplate() {
-        const name = templateNameInputEl.value.trim();
-        if (!name) {
-            alert("Please add a template name.");
-            return;
-        }
-
-        if (!templateBuilderSections.length) {
-            alert("Please add at least one section.");
-            return;
-        }
-
-        customTemplates.push({
-            id: `custom-${Date.now()}`,
-            name,
-            sections: [...templateBuilderSections]
-        });
-
-        saveLocalTemplates(customTemplates);
-        populateTemplates();
-        renderSavedTemplates();
-        templateNameInputEl.value = "";
-        templateBuilderSections = [];
-        renderTemplateBuilderSections();
-        showToast("Custom template saved.");
-    }
-
-    function loadLocalTemplates() {
-        customTemplates = getLocalTemplates();
     }
 
     async function loadSavedHistoryFromServer() {
@@ -1238,16 +1603,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const data = await safeJson(response);
             const items = Array.isArray(data.notes) ? data.notes : [];
+
             if (items.length) {
-                setLocalHistory(items.slice(0, 12).map(item => ({
-                    id: item.id || `server-${Date.now()}-${Math.random()}`,
-                    title: item.title || "Untitled care note",
-                    templateName: item.template_name || "Saved note",
-                    updatedAt: item.updated_at || new Date().toISOString(),
-                    excerpt: (item.final_note || item.ai_draft || "").slice(0, 180),
-                    finalNote: item.final_note || item.ai_draft || "",
-                    transcript: item.transcript || ""
-                })));
+                setLocalHistory(
+                    items.slice(0, 12).map(item => ({
+                        id: item.id || `server-${Date.now()}-${Math.random()}`,
+                        title: item.title || "Untitled care note",
+                        templateName: item.template_name || "Saved note",
+                        updatedAt: item.updated_at || new Date().toISOString(),
+                        excerpt: (item.final_note || item.ai_draft || "").slice(0, 180),
+                        finalNote: item.final_note || item.ai_draft || "",
+                        transcript: item.transcript || ""
+                    }))
+                );
             }
 
             renderHistory();
@@ -1256,42 +1624,87 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    function bindEvents() {
-        startRecordingBtn?.addEventListener("click", startRecording);
-        stopRecordingBtn?.addEventListener("click", stopRecording);
-        pauseRecordingBtn?.addEventListener("click", pauseRecording);
-        resumeRecordingBtn?.addEventListener("click", resumeRecording);
+    function bindTextInputs() {
+        const trackedInputs = [
+            els.templateSelectEl,
+            els.serviceTypeEl,
+            els.shiftTypeEl,
+            els.recordAuthorEl,
+            els.youngPersonNameEl,
+            els.meetingDateEl,
+            els.locationContextEl,
+            els.transcriptEl,
+            els.finalNoteEl,
+            els.noteTitleEl,
+            els.aiInstructionEl
+        ];
 
-        closeWorkflowModalBtn?.addEventListener("click", closeWorkflowModal);
+        trackedInputs.forEach(el => {
+            el?.addEventListener("input", () => {
+                updateSelectedTemplateUI();
+                analyseDocument();
+                markDirty();
+            });
+            el?.addEventListener("change", () => {
+                updateSelectedTemplateUI();
+                analyseDocument();
+                markDirty();
+            });
+        });
+    }
 
-        transcribeBtn?.addEventListener("click", transcribeAudio);
-        generateBtn?.addEventListener("click", generateWorkingDocument);
-        insertTemplateBtn?.addEventListener("click", insertBlankTemplate);
+    function bindTemplateEvents() {
+        els.openTemplateManagerBtn?.addEventListener("click", () => openModal(els.templateModalEl));
+        els.closeTemplateManagerBtn?.addEventListener("click", () => closeModal(els.templateModalEl));
+        els.addTemplateSectionBtn?.addEventListener("click", addTemplateSection);
+        els.saveTemplateBtn?.addEventListener("click", saveCustomTemplate);
 
-        applyAiEditBtn?.addEventListener("click", applyAiChange);
-        undoAiEditBtn?.addEventListener("click", undoLastChange);
-        copyDraftBtn?.addEventListener("click", resetFromGeneratedDraft);
+        els.templateSectionsListEl?.addEventListener("click", event => {
+            const index = event.target.getAttribute("data-remove-template-section");
+            if (index === null) return;
+            state.templateBuilderSections.splice(Number(index), 1);
+            renderTemplateBuilderSections();
+        });
 
-        saveBtn?.addEventListener("click", saveDocument);
-        saveBtnTop?.addEventListener("click", saveDocument);
+        els.savedTemplatesListEl?.addEventListener("click", event => {
+            const useId = event.target.getAttribute("data-use-template");
+            const deleteId = event.target.getAttribute("data-delete-template");
 
-        exportBtn?.addEventListener("click", exportDocument);
-        exportBtnTop?.addEventListener("click", exportDocument);
+            if (useId && els.templateSelectEl) {
+                els.templateSelectEl.value = useId;
+                updateSelectedTemplateUI();
+                closeModal(els.templateModalEl);
+                markDirty();
+                showToast("Template selected.");
+            }
 
-        printBtn?.addEventListener("click", printDocument);
-        printBtnTop?.addEventListener("click", printDocument);
+            if (deleteId) {
+                state.customTemplates = state.customTemplates.filter(t => t.id !== deleteId);
+                saveLocalTemplates(state.customTemplates);
+                populateTemplates();
+                renderSavedTemplates();
+                showToast("Template deleted.");
+            }
+        });
+    }
 
-        clearBtn?.addEventListener("click", clearAll);
-        copyFinalBtn?.addEventListener("click", () => copyTextToClipboard(finalNoteEl.value.trim()));
-        refreshHistoryBtn?.addEventListener("click", loadSavedHistoryFromServer);
+    function bindHistoryEvents() {
+        els.historyListEl?.addEventListener("click", async event => {
+            const openId = event.target.getAttribute("data-history-open");
+            const copyId = event.target.getAttribute("data-history-copy");
 
-        toggleTranscriptBtn?.addEventListener("click", toggleTranscriptVisibility);
+            if (openId) {
+                openHistoryItem(openId);
+            }
 
-        openTemplateManagerBtn?.addEventListener("click", () => templateModalEl.classList.remove("hidden"));
-        closeTemplateManagerBtn?.addEventListener("click", () => templateModalEl.classList.add("hidden"));
-        addTemplateSectionBtn?.addEventListener("click", addTemplateSection);
-        saveTemplateBtn?.addEventListener("click", saveCustomTemplate);
+            if (copyId) {
+                const item = getLocalHistory().find(x => x.id === copyId);
+                if (item) await copyTextToClipboard(item.finalNote || "");
+            }
+        });
+    }
 
+    function bindPromptEvents() {
         document.querySelectorAll(".prompt-chip[data-prompt]").forEach(btn => {
             btn.addEventListener("click", handlePromptChipClick);
         });
@@ -1299,64 +1712,67 @@ document.addEventListener("DOMContentLoaded", () => {
         document.querySelectorAll(".prompt-chip[data-transcript-action]").forEach(btn => {
             btn.addEventListener("click", handleTranscriptToolClick);
         });
+    }
 
-        [templateSelectEl, serviceTypeEl, shiftTypeEl, recordAuthorEl, youngPersonNameEl, meetingDateEl, transcriptEl, finalNoteEl, noteTitleEl, aiInstructionEl].forEach(el => {
-            el?.addEventListener("input", () => {
-                updateSelectedTemplateUI();
-                analyseDocument();
-                setDirtyState();
-            });
-            el?.addEventListener("change", () => {
-                updateSelectedTemplateUI();
-                analyseDocument();
-                setDirtyState();
-            });
-        });
+    function bindEvents() {
+        els.startRecordingBtn?.addEventListener("click", startRecording);
+        els.stopRecordingBtn?.addEventListener("click", stopRecording);
+        els.pauseRecordingBtn?.addEventListener("click", pauseRecording);
+        els.resumeRecordingBtn?.addEventListener("click", resumeRecording);
 
-        templateSectionsListEl?.addEventListener("click", event => {
-            const index = event.target.getAttribute("data-remove-template-section");
-            if (index === null) return;
-            templateBuilderSections.splice(Number(index), 1);
-            renderTemplateBuilderSections();
-        });
+        els.closeWorkflowModalBtn?.addEventListener("click", () => closeWorkflowModal(false));
+        els.transcribeBtn?.addEventListener("click", transcribeAudio);
+        els.generateBtn?.addEventListener("click", generateWorkingDocument);
+        els.insertTemplateBtn?.addEventListener("click", insertBlankTemplate);
 
-        savedTemplatesListEl?.addEventListener("click", event => {
-            const useId = event.target.getAttribute("data-use-template");
-            const deleteId = event.target.getAttribute("data-delete-template");
+        els.applyAiEditBtn?.addEventListener("click", applyAiChange);
+        els.undoAiEditBtn?.addEventListener("click", undoLastChange);
+        els.copyDraftBtn?.addEventListener("click", resetFromGeneratedDraft);
+        els.copyFinalBtn?.addEventListener("click", () => copyTextToClipboard(els.finalNoteEl?.value.trim() || ""));
 
-            if (useId) {
-                templateSelectEl.value = useId;
-                updateSelectedTemplateUI();
-                templateModalEl.classList.add("hidden");
-                showToast("Template selected.");
-            }
+        els.extractActionsBtn?.addEventListener("click", extractActionsLocally);
+        els.createHandoverBtn?.addEventListener("click", createHandoverVersion);
+        els.createManagerSummaryBtn?.addEventListener("click", createManagerSummary);
 
-            if (deleteId) {
-                customTemplates = customTemplates.filter(t => t.id !== deleteId);
-                saveLocalTemplates(customTemplates);
-                populateTemplates();
-                renderSavedTemplates();
-                showToast("Template deleted.");
-            }
-        });
+        els.saveBtn?.addEventListener("click", saveDocument);
+        els.saveBtnTop?.addEventListener("click", saveDocument);
 
-        historyListEl?.addEventListener("click", async event => {
-            const openId = event.target.getAttribute("data-history-open");
-            const copyId = event.target.getAttribute("data-history-copy");
+        els.exportBtn?.addEventListener("click", exportDocument);
+        els.exportBtnTop?.addEventListener("click", exportDocument);
 
-            if (openId) openHistoryItem(openId);
+        els.printBtn?.addEventListener("click", printDocument);
+        els.printBtnTop?.addEventListener("click", printDocument);
 
-            if (copyId) {
-                const item = getLocalHistory().find(x => x.id === copyId);
-                if (item) await copyTextToClipboard(item.finalNote || "");
-            }
-        });
+        els.clearBtn?.addEventListener("click", clearAll);
+        els.refreshHistoryBtn?.addEventListener("click", loadSavedHistoryFromServer);
+        els.toggleTranscriptBtn?.addEventListener("click", toggleTranscriptVisibility);
+
+        bindTextInputs();
+        bindTemplateEvents();
+        bindHistoryEvents();
+        bindPromptEvents();
 
         document.addEventListener("keydown", event => {
-            const mod = navigator.platform.toUpperCase().includes("MAC") ? event.metaKey : event.ctrlKey;
+            const isMac = navigator.platform.toUpperCase().includes("MAC");
+            const mod = isMac ? event.metaKey : event.ctrlKey;
+
             if (mod && event.key.toLowerCase() === "s") {
                 event.preventDefault();
                 saveDocument();
+            }
+
+            if (mod && event.key.toLowerCase() === "p") {
+                event.preventDefault();
+                printDocument();
+            }
+
+            if (event.key === "Escape") {
+                if (!els.recordingModalEl?.classList.contains("hidden")) {
+                    return;
+                }
+                if (!els.workflowModalEl?.classList.contains("hidden")) {
+                    closeWorkflowModal(false);
+                }
             }
         });
     }
@@ -1367,19 +1783,25 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        meetingDateEl.value = new Date().toISOString().slice(0, 10);
+        if (els.meetingDateEl && !els.meetingDateEl.value) {
+            els.meetingDateEl.value = new Date().toISOString().slice(0, 10);
+        }
+
         loadLocalTemplates();
         populateTemplates();
         renderTemplateBuilderSections();
         renderSavedTemplates();
         renderHistory();
+        renderExtractedActions();
         restoreLocalDraft();
 
-        transcribeBtn.disabled = true;
+        if (els.transcribeBtn) els.transcribeBtn.disabled = true;
         setStatus("idle", "Ready");
         setSaveState("is-idle", "Ready");
         setNoteMode(false);
+        setWorkflowStep("record");
         analyseDocument();
+
         bindEvents();
         loadSavedHistoryFromServer();
     }
