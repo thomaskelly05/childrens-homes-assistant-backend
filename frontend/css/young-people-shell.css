@@ -443,6 +443,7 @@ button {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .text-link-btn {
@@ -620,8 +621,70 @@ button {
 }
 
 .drawer-content {
-  max-height: 320px;
+  max-height: 420px;
   overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Drawer nested report layout */
+
+.drawer-content .section-group {
+  margin-bottom: 16px;
+}
+
+.drawer-content .group-title {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #eef4ff;
+  color: #123b8d;
+  font-size: 14px;
+}
+
+.drawer-content .section-table-wrap {
+  margin-top: 8px;
+}
+
+.drawer-nested-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.drawer-nested-item {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.drawer-nested-item > strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.drawer-content .data-table.key-value th {
+  width: 260px;
+}
+
+.drawer-content .data-table td {
+  line-height: 1.45;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.drawer-content ul,
+.drawer-content ol {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.drawer-content p {
+  margin: 0;
+}
+
+.drawer-content .empty-state {
+  background: #fcfcfd;
 }
 
 /* Timeline */
@@ -701,5 +764,9 @@ button {
 
   .sidebar {
     padding: 16px;
+  }
+
+  .drawer-content .data-table.key-value th {
+    width: 160px;
   }
 }
