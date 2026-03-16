@@ -65,7 +65,8 @@ const endpoints = {
   monthlyReviewDetail: (id) => `/monthly-reviews/${id}`,
   monthlyReviewGenerate: (id, month) =>
     `/monthly-reviews/young-person/${id}/generate?review_month=${month}`,
-  inspectionPackCreate: "/inspection-pack"
+  inspectionPackCreate: "/inspection-pack",
+  inspectionPackData: (id) => `/inspection-pack/young-person/${id}`
 };
 
 const els = {
@@ -175,29 +176,7 @@ function bindEvents() {
   }
 
   if (els.inspectionPackBtn) {
-    els.inspectionPackBtn.addEventListener("click", async () => {
-      if (!state.selectedYoungPerson) {
-        showStatus("Please select a young person first.", true);
-        return;
-      }
-
-      try {
-        await fetchJson(endpoints.inspectionPackCreate, {
-          method: "POST",
-          body: JSON.stringify({
-            scope_type: "young_person",
-            scope_id: state.selectedYoungPerson.id,
-            pack_type: "ofsted",
-            requested_by: 1
-          })
-        });
-
-        showStatus("Inspection pack job created.");
-      } catch (error) {
-        console.error(error);
-        showStatus(`Could not create inspection pack job: ${error.message}`, true);
-      }
-    });
+    els.inspectionPackBtn.addEventListener("click", createInspectionPackJob);
   }
 
   if (els.rebuildStandardsBtn) {
@@ -1003,13 +982,17 @@ async function generateMonthlyReview() {
   const reviewMonth = `${els.monthlyReviewMonth.value}-01`;
 
   try {
-    await fetchJson(
+    const result = await fetchJson(
       endpoints.monthlyReviewGenerate(state.selectedYoungPerson.id, reviewMonth),
       { method: "POST" }
     );
 
     showStatus("Monthly review generated successfully.");
     await loadMonthlyReviews(state.selectedYoungPerson.id);
+
+    if (result?.monthly_review_id) {
+      await loadMonthlyReviewDetail(result.monthly_review_id);
+    }
   } catch (error) {
     console.error(error);
     showStatus(`Could not generate monthly review: ${error.message}`, true);
@@ -1428,6 +1411,30 @@ async function rebuildStandardsLinks() {
   } catch (error) {
     console.error(error);
     showStatus(`Could not rebuild standards links: ${error.message}`, true);
+  }
+}
+
+async function createInspectionPackJob() {
+  if (!state.selectedYoungPerson) {
+    showStatus("Please select a young person first.", true);
+    return;
+  }
+
+  try {
+    const result = await fetchJson(endpoints.inspectionPackCreate, {
+      method: "POST",
+      body: JSON.stringify({
+        scope_type: "young_person",
+        scope_id: state.selectedYoungPerson.id,
+        pack_type: "ofsted",
+        requested_by: 1
+      })
+    });
+
+    showStatus(`Inspection pack job created${result?.id ? ` (#${result.id})` : ""}.`);
+  } catch (error) {
+    console.error(error);
+    showStatus(`Could not create inspection pack job: ${error.message}`, true);
   }
 }
 
