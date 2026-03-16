@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Young Person Panel | IndiCare</title>
-  <link rel="stylesheet" href="/css/young-people-shell.css?v=11" />
+  <link rel="stylesheet" href="/css/young-people-shell.css?v=20" />
 </head>
 <body>
   <div class="shell-layout">
@@ -29,6 +29,7 @@
     </aside>
 
     <main class="main-panel">
+      <!-- Primary page header -->
       <header class="page-header">
         <div>
           <h2 id="selectedYoungPersonName">Select a young person</h2>
@@ -41,6 +42,39 @@
           <button id="headerOfstedAiBtn" class="btn btn-primary" type="button">AI OFSTED Report</button>
         </div>
       </header>
+
+      <!-- Sticky young person context bar -->
+      <section class="sticky-young-person-bar" id="stickyYoungPersonBar">
+        <div class="sticky-person-left">
+          <div class="person-avatar" id="stickyPersonAvatar">YP</div>
+
+          <div class="sticky-person-meta">
+            <h3 id="stickyYoungPersonName">No young person selected</h3>
+            <p id="stickyYoungPersonSummary">Select a record to view the full shell</p>
+
+            <div class="meta-chip-row">
+              <span class="meta-chip" id="stickyDobChip">DOB: —</span>
+              <span class="meta-chip" id="stickyPlacementChip">Placement: —</span>
+              <span class="meta-chip" id="stickySocialWorkerChip">SW: —</span>
+              <span class="meta-chip" id="stickyEducationChip">Education: —</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sticky-person-right">
+          <div class="sticky-alert-group">
+            <span class="alert-pill alert-red" id="stickyRiskLevel">Risk: —</span>
+            <span class="alert-pill alert-amber" id="stickyPlanReview">Plan review: —</span>
+            <span class="alert-pill alert-blue" id="stickyTodayInfo">Today I need to know: —</span>
+          </div>
+
+          <div class="sticky-actions">
+            <button id="quickAddDailyNoteBtn" class="btn btn-primary" type="button">+ Daily Note</button>
+            <button id="quickAddIncidentBtn" class="btn btn-secondary" type="button">+ Incident</button>
+            <button id="quickAddKeyworkBtn" class="btn btn-secondary" type="button">+ Key Work</button>
+          </div>
+        </div>
+      </section>
 
       <div id="statusBar" class="status-bar hidden"></div>
 
@@ -94,14 +128,30 @@
       </nav>
 
       <section class="tab-wrapper">
+        <!-- OVERVIEW -->
         <section id="tab-overview" class="tab-panel active">
-          <div class="panel-shell">
-            <div id="overviewContent" class="content-area">
-              <div class="empty-state">Select a young person to load overview.</div>
+          <div class="overview-grid">
+            <div class="panel-shell">
+              <div class="panel-header-row">
+                <h3>Current Picture</h3>
+              </div>
+              <div id="overviewContent" class="content-area">
+                <div class="empty-state">Select a young person to load overview.</div>
+              </div>
+            </div>
+
+            <div class="panel-shell">
+              <div class="panel-header-row">
+                <h3>Live Actions</h3>
+              </div>
+              <div id="overviewActionsContent" class="content-area">
+                <div class="empty-state">Actions will appear here.</div>
+              </div>
             </div>
           </div>
         </section>
 
+        <!-- PROFILE -->
         <section id="tab-profile" class="tab-panel">
           <div class="panel-shell">
             <div id="profileContent" class="content-area">
@@ -110,6 +160,7 @@
           </div>
         </section>
 
+        <!-- PLANS -->
         <section id="tab-plans" class="tab-panel">
           <div class="tab-grid keywork-grid">
             <div class="panel-shell">
@@ -123,101 +174,117 @@
               </div>
             </div>
 
-            <div class="panel-shell">
+            <div class="panel-shell editable-form-shell">
               <div class="panel-header-row">
                 <h3 id="planFormTitle">Create / Edit Support Plan</h3>
+                <div class="form-toolbar-status">
+                  <span class="form-status-pill">Editable</span>
+                  <span class="form-status-pill">Therapeutic language</span>
+                </div>
               </div>
 
               <form id="planForm" class="form-grid">
                 <input type="hidden" id="planId" />
 
-                <div class="form-group">
-                  <label for="planType">Plan Type</label>
-                  <input id="planType" type="text" placeholder="e.g. Support Plan" required />
+                <div class="section-block">
+                  <h4>Plan basics</h4>
+
+                  <div class="form-group">
+                    <label for="planType">Plan Type</label>
+                    <input id="planType" type="text" placeholder="e.g. Support Plan" required />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="planTitle">Title</label>
+                    <input id="planTitle" type="text" placeholder="Plan title" required />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="planPresentingNeed">What need or difficulty is this plan responding to?</label>
+                    <textarea id="planPresentingNeed" rows="4" placeholder="Describe the current need in clear, respectful language"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="planSummary">Plan Summary</label>
+                    <textarea id="planSummary" rows="4" placeholder="Briefly explain the plan and what good support looks like"></textarea>
+                  </div>
                 </div>
 
-                <div class="form-group">
-                  <label for="planTitle">Title</label>
-                  <input id="planTitle" type="text" placeholder="Plan title" required />
+                <div class="section-block">
+                  <h4>Young person and therapeutic support</h4>
+
+                  <div class="form-group">
+                    <label for="planChildVoice">Young Person’s Voice</label>
+                    <textarea id="planChildVoice" rows="4" placeholder="What has the young person said, wanted, preferred, or asked for?"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="planProactiveStrategies">What helps proactively?</label>
+                    <textarea id="planProactiveStrategies" rows="4" placeholder="What adults should do in advance to support success and stability"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="planPaceGuidance">PACE / Relational Guidance</label>
+                    <textarea id="planPaceGuidance" rows="4" placeholder="How staff should respond in a warm, curious, accepting and empathic way"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="planTriggers">Triggers / Stressors</label>
+                    <textarea id="planTriggers" rows="4" placeholder="What tends to make things harder for the young person?"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="planProtectiveFactors">Protective Factors / Strengths</label>
+                    <textarea id="planProtectiveFactors" rows="4" placeholder="What strengths, relationships, routines or activities help?"></textarea>
+                  </div>
                 </div>
 
-                <div class="form-group">
-                  <label for="planPresentingNeed">Presenting Need</label>
-                  <textarea id="planPresentingNeed" rows="4" placeholder="What need or difficulty is this plan responding to?"></textarea>
+                <div class="section-block">
+                  <h4>Workflow</h4>
+
+                  <div class="form-group">
+                    <label for="planStartDate">Start Date</label>
+                    <input id="planStartDate" type="date" />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="planReviewDate">Review Date</label>
+                    <input id="planReviewDate" type="date" />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="planStatus">Status</label>
+                    <select id="planStatus">
+                      <option value="active">Active</option>
+                      <option value="draft">Draft</option>
+                      <option value="completed">Completed</option>
+                      <option value="archived">Archived</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="planOwnerId">Owner ID</label>
+                    <input id="planOwnerId" type="number" placeholder="Optional" />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="planApprovalStatus">Approval Status</label>
+                    <select id="planApprovalStatus">
+                      <option value="not_required">Not Required</option>
+                      <option value="draft">Draft</option>
+                      <option value="submitted">Submitted</option>
+                      <option value="approved">Approved</option>
+                      <option value="returned">Returned</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="planCreatedBy">Created By (User ID)</label>
+                    <input id="planCreatedBy" type="number" placeholder="Optional" />
+                  </div>
                 </div>
 
-                <div class="form-group">
-                  <label for="planSummary">Summary</label>
-                  <textarea id="planSummary" rows="4" placeholder="Brief overview of the plan and intended outcome"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="planChildVoice">Child Voice</label>
-                  <textarea id="planChildVoice" rows="4" placeholder="What has the young person said, wanted, preferred, or asked for?"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="planProactiveStrategies">Proactive Strategies</label>
-                  <textarea id="planProactiveStrategies" rows="4" placeholder="What adults should do proactively to help this young person succeed"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="planPaceGuidance">PACE / Relational Guidance</label>
-                  <textarea id="planPaceGuidance" rows="4" placeholder="How staff should respond in a relational, therapeutic, child-centred way"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="planTriggers">Triggers / Stressors</label>
-                  <textarea id="planTriggers" rows="4" placeholder="What tends to make things harder for the young person?"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="planProtectiveFactors">Protective Factors / Strengths</label>
-                  <textarea id="planProtectiveFactors" rows="4" placeholder="What helps, what strengths exist, what protective relationships or routines matter?"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="planStartDate">Start Date</label>
-                  <input id="planStartDate" type="date" />
-                </div>
-
-                <div class="form-group">
-                  <label for="planReviewDate">Review Date</label>
-                  <input id="planReviewDate" type="date" />
-                </div>
-
-                <div class="form-group">
-                  <label for="planStatus">Status</label>
-                  <select id="planStatus">
-                    <option value="active">Active</option>
-                    <option value="draft">Draft</option>
-                    <option value="completed">Completed</option>
-                    <option value="archived">Archived</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="planOwnerId">Owner ID</label>
-                  <input id="planOwnerId" type="number" placeholder="Optional" />
-                </div>
-
-                <div class="form-group">
-                  <label for="planApprovalStatus">Approval Status</label>
-                  <select id="planApprovalStatus">
-                    <option value="not_required">Not Required</option>
-                    <option value="draft">Draft</option>
-                    <option value="submitted">Submitted</option>
-                    <option value="approved">Approved</option>
-                    <option value="returned">Returned</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="planCreatedBy">Created By (User ID)</label>
-                  <input id="planCreatedBy" type="number" placeholder="Optional" />
-                </div>
-
-                <div class="form-actions">
+                <div class="form-actions sticky-form-actions">
                   <button class="btn btn-primary" type="submit">Save Plan</button>
                   <button id="clearPlanFormBtn" class="btn btn-secondary" type="button">Clear</button>
                 </div>
@@ -226,6 +293,7 @@
           </div>
         </section>
 
+        <!-- RISK -->
         <section id="tab-risk" class="tab-panel">
           <div class="tab-grid keywork-grid">
             <div class="panel-shell">
@@ -239,119 +307,139 @@
               </div>
             </div>
 
-            <div class="panel-shell">
+            <div class="panel-shell editable-form-shell">
               <div class="panel-header-row">
                 <h3 id="riskFormTitle">Create / Edit Risk Assessment</h3>
+                <div class="form-toolbar-status">
+                  <span class="form-status-pill">Editable</span>
+                  <span class="form-status-pill">PACE informed</span>
+                </div>
               </div>
 
               <form id="riskForm" class="form-grid">
                 <input type="hidden" id="riskId" />
 
-                <div class="form-group">
-                  <label for="riskCategory">Category</label>
-                  <input id="riskCategory" type="text" placeholder="e.g. Emotional Regulation" required />
+                <div class="section-block">
+                  <h4>Risk summary</h4>
+
+                  <div class="form-group">
+                    <label for="riskCategory">Category</label>
+                    <input id="riskCategory" type="text" placeholder="e.g. Emotional Regulation" required />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="riskTitle">Title</label>
+                    <input id="riskTitle" type="text" placeholder="Risk title" required />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="riskConcernSummary">What is the concern and what is the actual risk?</label>
+                    <textarea id="riskConcernSummary" rows="4" placeholder="Describe the risk clearly and respectfully"></textarea>
+                  </div>
                 </div>
 
-                <div class="form-group">
-                  <label for="riskTitle">Title</label>
-                  <input id="riskTitle" type="text" placeholder="Risk title" required />
+                <div class="section-block">
+                  <h4>Understanding the young person</h4>
+
+                  <div class="form-group">
+                    <label for="riskKnownTriggers">Known Triggers</label>
+                    <textarea id="riskKnownTriggers" rows="4" placeholder="What tends to increase stress or risk?"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="riskEarlyWarningSigns">Early Warning Signs</label>
+                    <textarea id="riskEarlyWarningSigns" rows="4" placeholder="What signs show that support needs to increase?"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="riskContextualFactors">Contextual Factors</label>
+                    <textarea id="riskContextualFactors" rows="4" placeholder="What environmental, relational or situational factors matter?"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="riskChildViews">Young Person’s Views</label>
+                    <textarea id="riskChildViews" rows="4" placeholder="What does the young person say helps, worries them, or matters to them?"></textarea>
+                  </div>
                 </div>
 
-                <div class="form-group">
-                  <label for="riskConcernSummary">Concern Summary</label>
-                  <textarea id="riskConcernSummary" rows="4" placeholder="What is the concern and what is the actual risk?"></textarea>
+                <div class="section-block">
+                  <h4>What staff should do</h4>
+
+                  <div class="form-group">
+                    <label for="riskCurrentControls">Current Controls</label>
+                    <textarea id="riskCurrentControls" rows="4" placeholder="What support, plans or routines are already in place?"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="riskDeescalationStrategies">De-escalation / Relational Strategies</label>
+                    <textarea id="riskDeescalationStrategies" rows="4" placeholder="How should adults respond to help the young person feel safer and more regulated?"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="riskResponseActions">Response Actions</label>
+                    <textarea id="riskResponseActions" rows="4" placeholder="What should staff do if risk escalates or occurs?"></textarea>
+                  </div>
                 </div>
 
-                <div class="form-group">
-                  <label for="riskKnownTriggers">Known Triggers</label>
-                  <textarea id="riskKnownTriggers" rows="4" placeholder="What tends to trigger or increase this risk?"></textarea>
+                <div class="section-block">
+                  <h4>Workflow</h4>
+
+                  <div class="form-group">
+                    <label for="riskSeverity">Severity</label>
+                    <select id="riskSeverity">
+                      <option value="low">Low</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="riskLikelihood">Likelihood</label>
+                    <select id="riskLikelihood">
+                      <option value="low">Low</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="riskReviewDate">Review Date</label>
+                    <input id="riskReviewDate" type="date" />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="riskStatus">Status</label>
+                    <select id="riskStatus">
+                      <option value="active">Active</option>
+                      <option value="draft">Draft</option>
+                      <option value="completed">Completed</option>
+                      <option value="archived">Archived</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="riskOwnerId">Owner ID</label>
+                    <input id="riskOwnerId" type="number" placeholder="Optional" />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="riskApprovalStatus">Approval Status</label>
+                    <select id="riskApprovalStatus">
+                      <option value="not_required">Not Required</option>
+                      <option value="draft">Draft</option>
+                      <option value="submitted">Submitted</option>
+                      <option value="approved">Approved</option>
+                      <option value="returned">Returned</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="riskCreatedBy">Created By (User ID)</label>
+                    <input id="riskCreatedBy" type="number" placeholder="Optional" />
+                  </div>
                 </div>
 
-                <div class="form-group">
-                  <label for="riskEarlyWarningSigns">Early Warning Signs</label>
-                  <textarea id="riskEarlyWarningSigns" rows="4" placeholder="What signs show the young person is becoming dysregulated or less safe?"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="riskContextualFactors">Contextual Factors</label>
-                  <textarea id="riskContextualFactors" rows="4" placeholder="What environmental, relational, or situational factors matter?"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="riskCurrentControls">Current Controls</label>
-                  <textarea id="riskCurrentControls" rows="4" placeholder="What plans, routines, or existing controls are in place already?"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="riskDeescalationStrategies">De-escalation Strategies</label>
-                  <textarea id="riskDeescalationStrategies" rows="4" placeholder="How should adults respond to reduce risk and support safety?"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="riskResponseActions">Response Actions</label>
-                  <textarea id="riskResponseActions" rows="4" placeholder="What actions should staff take if the risk escalates or occurs?"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="riskChildViews">Child Views</label>
-                  <textarea id="riskChildViews" rows="4" placeholder="What does the young person say helps, worries them, or matters to them?"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="riskSeverity">Severity</label>
-                  <select id="riskSeverity">
-                    <option value="low">Low</option>
-                    <option value="medium" selected>Medium</option>
-                    <option value="high">High</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="riskLikelihood">Likelihood</label>
-                  <select id="riskLikelihood">
-                    <option value="low">Low</option>
-                    <option value="medium" selected>Medium</option>
-                    <option value="high">High</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="riskReviewDate">Review Date</label>
-                  <input id="riskReviewDate" type="date" />
-                </div>
-
-                <div class="form-group">
-                  <label for="riskStatus">Status</label>
-                  <select id="riskStatus">
-                    <option value="active">Active</option>
-                    <option value="draft">Draft</option>
-                    <option value="completed">Completed</option>
-                    <option value="archived">Archived</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="riskOwnerId">Owner ID</label>
-                  <input id="riskOwnerId" type="number" placeholder="Optional" />
-                </div>
-
-                <div class="form-group">
-                  <label for="riskApprovalStatus">Approval Status</label>
-                  <select id="riskApprovalStatus">
-                    <option value="not_required">Not Required</option>
-                    <option value="draft">Draft</option>
-                    <option value="submitted">Submitted</option>
-                    <option value="approved">Approved</option>
-                    <option value="returned">Returned</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="riskCreatedBy">Created By (User ID)</label>
-                  <input id="riskCreatedBy" type="number" placeholder="Optional" />
-                </div>
-
-                <div class="form-actions">
+                <div class="form-actions sticky-form-actions">
                   <button class="btn btn-primary" type="submit">Save Risk</button>
                   <button id="clearRiskFormBtn" class="btn btn-secondary" type="button">Clear</button>
                 </div>
@@ -360,14 +448,450 @@
           </div>
         </section>
 
+        <!-- DAILY NOTES -->
         <section id="tab-daily_notes" class="tab-panel">
-          <div class="panel-shell">
-            <div id="dailyNotesContent" class="content-area">
-              <div class="empty-state">Daily notes will appear here.</div>
+          <div class="tab-grid daily-note-grid">
+            <!-- Left: notes list -->
+            <div class="panel-shell">
+              <div class="panel-header-row">
+                <h3>Daily Notes</h3>
+                <div class="panel-header-actions">
+                  <button id="newDailyNoteBtn" class="btn btn-primary" type="button">New Daily Note</button>
+                  <button id="refreshDailyNotesBtn" class="btn btn-secondary" type="button">Refresh</button>
+                </div>
+              </div>
+
+              <div class="filter-toolbar">
+                <label class="filter-label" for="dailyNoteStatusFilter">Status</label>
+                <select id="dailyNoteStatusFilter">
+                  <option value="all">All</option>
+                  <option value="draft">Draft</option>
+                  <option value="completed">Completed</option>
+                  <option value="reviewed">Reviewed</option>
+                  <option value="amended">Amended</option>
+                  <option value="returned">Returned</option>
+                </select>
+
+                <label class="filter-label" for="dailyNoteShiftFilter">Shift</label>
+                <select id="dailyNoteShiftFilter">
+                  <option value="all">All</option>
+                  <option value="day">Day</option>
+                  <option value="evening">Evening</option>
+                  <option value="night">Night</option>
+                  <option value="waking_night">Waking Night</option>
+                  <option value="school">School</option>
+                  <option value="custom">Custom</option>
+                </select>
+
+                <label class="filter-label" for="dailyNoteSearch">Search</label>
+                <input id="dailyNoteSearch" type="text" placeholder="Search notes..." />
+              </div>
+
+              <div id="dailyNotesContent" class="content-area">
+                <div class="empty-state">Daily notes will appear here.</div>
+              </div>
+            </div>
+
+            <!-- Centre: editable note form -->
+            <div class="panel-shell editable-form-shell">
+              <div class="panel-header-row">
+                <h3 id="dailyNoteFormTitle">Create / Edit Daily Note</h3>
+
+                <div class="form-toolbar-status">
+                  <span id="dailyNoteSaveIndicator" class="form-status-pill">Not saved yet</span>
+                  <span id="dailyNoteWorkflowIndicator" class="form-status-pill">Draft</span>
+                </div>
+              </div>
+
+              <form id="dailyNoteForm" class="form-grid daily-note-form">
+                <input type="hidden" id="dailyNoteId" />
+                <input type="hidden" id="dailyNoteVersionNumber" />
+                <input type="hidden" id="dailyNoteCurrentStatus" value="draft" />
+
+                <div class="section-block">
+                  <div class="section-header-line">
+                    <h4>Basic context</h4>
+                    <button class="help-toggle" type="button" data-help-target="help-basic-context">Why this matters</button>
+                  </div>
+                  <p id="help-basic-context" class="help-copy hidden">
+                    A clear context helps staff, managers and inspectors understand the record quickly.
+                  </p>
+
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="dailyNoteDate">Date</label>
+                      <input id="dailyNoteDate" type="date" required />
+                    </div>
+
+                    <div class="form-group">
+                      <label for="dailyNoteShiftType">Shift</label>
+                      <select id="dailyNoteShiftType" required>
+                        <option value="day">Day</option>
+                        <option value="evening">Evening</option>
+                        <option value="night">Night</option>
+                        <option value="waking_night">Waking Night</option>
+                        <option value="school">School</option>
+                        <option value="custom">Custom</option>
+                      </select>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="dailyNoteCustomShift">Custom Shift Label</label>
+                      <input id="dailyNoteCustomShift" type="text" placeholder="Optional" />
+                    </div>
+                  </div>
+
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="dailyNoteStaffOnShift">Staff on Shift</label>
+                      <input id="dailyNoteStaffOnShift" type="text" placeholder="e.g. Sarah, James" />
+                    </div>
+
+                    <div class="form-group">
+                      <label for="dailyNoteLocation">Location</label>
+                      <input id="dailyNoteLocation" type="text" placeholder="e.g. Home, school, community" />
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="dailyNoteTags">Tags</label>
+                    <input id="dailyNoteTags" type="text" placeholder="e.g. home life, emotional wellbeing, education" />
+                  </div>
+
+                  <div class="checkbox-row">
+                    <label class="checkbox-pill">
+                      <input id="dailyNoteSignificantEvent" type="checkbox" />
+                      <span>Significant event on this shift</span>
+                    </label>
+
+                    <label class="checkbox-pill">
+                      <input id="dailyNoteManagerReviewRequired" type="checkbox" />
+                      <span>Manager review required</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="section-block">
+                  <div class="section-header-line">
+                    <h4>What happened today?</h4>
+                    <button class="help-toggle" type="button" data-help-target="help-what-happened">Why this matters</button>
+                  </div>
+                  <p id="help-what-happened" class="help-copy hidden">
+                    Record what the day was like in a way that is factual, clear and helpful for the next person reading it.
+                  </p>
+
+                  <div class="form-group">
+                    <label for="dailyNotePresentation">Presentation at the start of the shift</label>
+                    <textarea id="dailyNotePresentation" rows="3" placeholder="How did the young person appear at the start of the shift?"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="dailyNoteMainEvents">Main events of the shift</label>
+                    <textarea id="dailyNoteMainEvents" rows="4" placeholder="What happened during the shift?"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="dailyNoteRoutineEngagement">Routine and engagement</label>
+                    <textarea id="dailyNoteRoutineEngagement" rows="3" placeholder="How did they manage routines, self-care, activities, and engagement with staff or peers?"></textarea>
+                  </div>
+
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="dailyNoteEducationUpdate">Education / appointments / activities</label>
+                      <textarea id="dailyNoteEducationUpdate" rows="3" placeholder="Attendance, participation, barriers or achievements"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="dailyNoteHealthUpdate">Health / medication / sleep / food</label>
+                      <textarea id="dailyNoteHealthUpdate" rows="3" placeholder="Anything important about health, medication, sleep, meals or emotional wellbeing"></textarea>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="dailyNoteFamilyUpdate">Family / relationships / contact</label>
+                    <textarea id="dailyNoteFamilyUpdate" rows="3" placeholder="Any contact, family updates or relationship-based events"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="dailyNoteWorries">Worries or unsettled moments</label>
+                    <textarea id="dailyNoteWorries" rows="3" placeholder="Any signs of dysregulation, upset, anxiety or distress"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="dailyNotePositives">Positive moments and achievements</label>
+                    <textarea id="dailyNotePositives" rows="3" placeholder="What went well? What strengths or progress did you notice?"></textarea>
+                  </div>
+                </div>
+
+                <div class="section-block">
+                  <div class="section-header-line">
+                    <h4>PACE reflection</h4>
+                    <button class="help-toggle" type="button" data-help-target="help-pace">Why this matters</button>
+                  </div>
+                  <p id="help-pace" class="help-copy hidden">
+                    PACE helps staff think about connection, curiosity and regulation in a simple therapeutic way.
+                  </p>
+
+                  <div class="pace-grid">
+                    <div class="pace-card">
+                      <h5>P — Playfulness</h5>
+                      <div class="form-group">
+                        <label for="dailyNotePacePlayfulnessStatus">How relevant was this?</label>
+                        <select id="dailyNotePacePlayfulnessStatus">
+                          <option value="not_used">Not used</option>
+                          <option value="used">Used</option>
+                          <option value="not_appropriate">Not appropriate</option>
+                        </select>
+                      </div>
+                      <div class="form-group">
+                        <label for="dailyNotePacePlayfulness">Was there any lightness, humour or playful connection that helped?</label>
+                        <textarea id="dailyNotePacePlayfulness" rows="3" placeholder="A warm or light moment that helped connection"></textarea>
+                      </div>
+                    </div>
+
+                    <div class="pace-card">
+                      <h5>A — Acceptance</h5>
+                      <div class="form-group">
+                        <label for="dailyNotePaceAcceptanceStatus">How evident was this?</label>
+                        <select id="dailyNotePaceAcceptanceStatus">
+                          <option value="not_evident">Not evident</option>
+                          <option value="partly_evident">Partly evident</option>
+                          <option value="evident">Evident</option>
+                        </select>
+                      </div>
+                      <div class="form-group">
+                        <label for="dailyNotePaceAcceptance">How did staff show the young person they were accepted, even if behaviour was difficult?</label>
+                        <textarea id="dailyNotePaceAcceptance" rows="3" placeholder="How did staff separate the young person from the behaviour?"></textarea>
+                      </div>
+                    </div>
+
+                    <div class="pace-card">
+                      <h5>C — Curiosity</h5>
+                      <div class="form-group">
+                        <label for="dailyNotePaceCuriosityTags">Possible underlying factors</label>
+                        <input id="dailyNotePaceCuriosityTags" type="text" placeholder="e.g. tiredness, anxiety, family worries, school stress" />
+                      </div>
+                      <div class="form-group">
+                        <label for="dailyNotePaceCuriosity">What might have been going on underneath the behaviour or presentation?</label>
+                        <textarea id="dailyNotePaceCuriosity" rows="3" placeholder="What may have been going on for the young person?"></textarea>
+                      </div>
+                    </div>
+
+                    <div class="pace-card">
+                      <h5>E — Empathy</h5>
+                      <div class="form-group">
+                        <label for="dailyNotePaceEmpathyTags">Empathic responses used</label>
+                        <input id="dailyNotePaceEmpathyTags" type="text" placeholder="e.g. reassurance, calm tone, gave space, listened, validated feelings" />
+                      </div>
+                      <div class="form-group">
+                        <label for="dailyNotePaceEmpathy">How did staff show understanding of the young person’s feelings?</label>
+                        <textarea id="dailyNotePaceEmpathy" rows="3" placeholder="How did staff help the young person feel understood?"></textarea>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="section-block">
+                  <div class="section-header-line">
+                    <h4>Young person’s voice</h4>
+                    <button class="help-toggle" type="button" data-help-target="help-voice">Why this matters</button>
+                  </div>
+                  <p id="help-voice" class="help-copy hidden">
+                    The young person’s voice should be visible throughout the system and not lost inside adult summaries.
+                  </p>
+
+                  <div class="form-group">
+                    <label for="dailyNoteYoungPersonVoice">What did the young person say or communicate?</label>
+                    <textarea id="dailyNoteYoungPersonVoice" rows="4" placeholder="Include direct quotes where possible, and describe how feelings were communicated"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="dailyNoteCommunicationStyle">How was this communicated?</label>
+                    <textarea id="dailyNoteCommunicationStyle" rows="3" placeholder="Spoken words, tone, body language, withdrawal, asking for contact, asking for space, etc."></textarea>
+                  </div>
+                </div>
+
+                <div class="section-block">
+                  <div class="section-header-line">
+                    <h4>Staff response and impact</h4>
+                    <button class="help-toggle" type="button" data-help-target="help-response">Why this matters</button>
+                  </div>
+                  <p id="help-response" class="help-copy hidden">
+                    This should show not only what staff did, but whether it helped and what was learned.
+                  </p>
+
+                  <div class="form-group">
+                    <label for="dailyNoteStaffResponse">What did staff do?</label>
+                    <textarea id="dailyNoteStaffResponse" rows="4" placeholder="Describe the support offered by staff"></textarea>
+                  </div>
+
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="dailyNoteWhatHelped">What helped?</label>
+                      <textarea id="dailyNoteWhatHelped" rows="3" placeholder="What seemed to help regulation, connection or safety?"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="dailyNoteWhatDidNotHelp">What did not help?</label>
+                      <textarea id="dailyNoteWhatDidNotHelp" rows="3" placeholder="What did not seem to help, or made things harder?"></textarea>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="dailyNoteImpact">How did the young person respond / what was the impact?</label>
+                    <textarea id="dailyNoteImpact" rows="3" placeholder="Did they settle, re-engage, remain distressed, need more support, or show progress?"></textarea>
+                  </div>
+                </div>
+
+                <div class="section-block">
+                  <div class="section-header-line">
+                    <h4>Follow-up and linked actions</h4>
+                    <button class="help-toggle" type="button" data-help-target="help-actions">Why this matters</button>
+                  </div>
+                  <p id="help-actions" class="help-copy hidden">
+                    A good daily note should help the next shift, inform planning, and create clear follow-up where needed.
+                  </p>
+
+                  <div class="form-group">
+                    <label for="dailyNoteActionsRequired">Actions required</label>
+                    <textarea id="dailyNoteActionsRequired" rows="3" placeholder="What follow-up is needed after this note?"></textarea>
+                  </div>
+
+                  <div class="checkbox-row">
+                    <label class="checkbox-pill">
+                      <input id="dailyNoteDiscussInHandover" type="checkbox" />
+                      <span>Discuss in handover</span>
+                    </label>
+
+                    <label class="checkbox-pill">
+                      <input id="dailyNoteUpdateRiskAssessment" type="checkbox" />
+                      <span>Update risk assessment</span>
+                    </label>
+
+                    <label class="checkbox-pill">
+                      <input id="dailyNoteLinkMonthlyReview" type="checkbox" />
+                      <span>Include in monthly review</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="section-block">
+                  <div class="section-header-line">
+                    <h4>Standards and evidence</h4>
+                    <button class="help-toggle" type="button" data-help-target="help-evidence">Why this matters</button>
+                  </div>
+                  <p id="help-evidence" class="help-copy hidden">
+                    This helps IndiCare turn daily practice into visible evidence for leadership and inspection readiness.
+                  </p>
+
+                  <div class="form-group">
+                    <label for="dailyNoteLinkedStandards">Quality Standards</label>
+                    <input id="dailyNoteLinkedStandards" type="text" placeholder="e.g. views_wishes_feelings, health_wellbeing, positive_relationships" />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="dailyNoteLinkedRisks">Linked risks</label>
+                    <input id="dailyNoteLinkedRisks" type="text" placeholder="Comma-separated risk IDs or labels" />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="dailyNoteLinkedPlans">Linked plans</label>
+                    <input id="dailyNoteLinkedPlans" type="text" placeholder="Comma-separated plan IDs or labels" />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="dailyNoteEvidenceImpactStatement">Impact statement</label>
+                    <textarea id="dailyNoteEvidenceImpactStatement" rows="3" placeholder="What does this note show about the young person’s experience, progress or safety?"></textarea>
+                  </div>
+                </div>
+
+                <div class="section-block">
+                  <div class="section-header-line">
+                    <h4>Amendment / review details</h4>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="dailyNoteChangeReason">Reason for update</label>
+                    <select id="dailyNoteChangeReason">
+                      <option value="">Select if editing a completed note</option>
+                      <option value="spelling_correction">Spelling correction</option>
+                      <option value="additional_information">Additional information</option>
+                      <option value="manager_feedback">Manager feedback</option>
+                      <option value="safeguarding_clarification">Safeguarding clarification</option>
+                      <option value="professional_update">Professional update</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="dailyNoteManagerReviewComment">Manager review comment</label>
+                    <textarea id="dailyNoteManagerReviewComment" rows="3" placeholder="Optional manager comment"></textarea>
+                  </div>
+                </div>
+
+                <div class="form-actions sticky-form-actions">
+                  <button id="saveDailyNoteDraftBtn" class="btn btn-secondary" type="submit">Save Draft</button>
+                  <button id="completeDailyNoteBtn" class="btn btn-primary" type="button">Complete Note</button>
+                  <button id="reviewDailyNoteBtn" class="btn btn-secondary" type="button">Mark Reviewed</button>
+                  <button id="clearDailyNoteFormBtn" class="btn btn-secondary" type="button">Clear</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Right: support + version history -->
+            <div class="panel-shell">
+              <div class="panel-header-row">
+                <h3>Context and History</h3>
+              </div>
+
+              <div class="support-stack">
+                <section class="support-card">
+                  <h4>Today I need to know</h4>
+                  <div id="dailyNoteSidebarTodayInfo" class="support-card-body">
+                    <div class="empty-state">No live context loaded.</div>
+                  </div>
+                </section>
+
+                <section class="support-card">
+                  <h4>Current risks</h4>
+                  <div id="dailyNoteSidebarRisks" class="support-card-body">
+                    <div class="empty-state">No current risks loaded.</div>
+                  </div>
+                </section>
+
+                <section class="support-card">
+                  <h4>Active actions</h4>
+                  <div id="dailyNoteSidebarActions" class="support-card-body">
+                    <div class="empty-state">No active actions loaded.</div>
+                  </div>
+                </section>
+
+                <section class="support-card">
+                  <h4>Therapeutic language helper</h4>
+                  <div id="therapeuticLanguageHints" class="support-card-body">
+                    <p class="muted-copy">
+                      IndiCare will suggest softer, clearer and more therapeutic wording as notes are edited.
+                    </p>
+                    <ul class="support-list">
+                      <li><strong>Avoid:</strong> “attention seeking” → <strong>Try:</strong> “seeking reassurance or connection”</li>
+                      <li><strong>Avoid:</strong> “refused” → <strong>Try:</strong> “was not able to engage”</li>
+                      <li><strong>Avoid:</strong> “challenging behaviour” → <strong>Try:</strong> “distress-related behaviour”</li>
+                    </ul>
+                  </div>
+                </section>
+
+                <section class="support-card">
+                  <h4>Version history</h4>
+                  <div id="dailyNoteVersionHistory" class="support-card-body">
+                    <div class="empty-state">Version history will appear here.</div>
+                  </div>
+                </section>
+              </div>
             </div>
           </div>
         </section>
 
+        <!-- INCIDENTS -->
         <section id="tab-incidents" class="tab-panel">
           <div class="panel-shell">
             <div id="incidentsContent" class="content-area">
@@ -376,6 +900,7 @@
           </div>
         </section>
 
+        <!-- HEALTH -->
         <section id="tab-health" class="tab-panel">
           <div class="panel-shell">
             <div id="healthContent" class="content-area">
@@ -384,6 +909,7 @@
           </div>
         </section>
 
+        <!-- EDUCATION -->
         <section id="tab-education" class="tab-panel">
           <div class="panel-shell">
             <div id="educationContent" class="content-area">
@@ -392,6 +918,7 @@
           </div>
         </section>
 
+        <!-- FAMILY -->
         <section id="tab-family" class="tab-panel">
           <div class="panel-shell">
             <div id="familyContent" class="content-area">
@@ -400,6 +927,7 @@
           </div>
         </section>
 
+        <!-- KEYWORK -->
         <section id="tab-keywork" class="tab-panel">
           <div class="tab-grid keywork-grid">
             <div class="panel-shell">
@@ -413,7 +941,7 @@
               </div>
             </div>
 
-            <div class="panel-shell">
+            <div class="panel-shell editable-form-shell">
               <div class="panel-header-row">
                 <h3 id="keyworkFormTitle">Create / Edit Key Work Session</h3>
               </div>
@@ -421,52 +949,54 @@
               <form id="keyworkForm" class="form-grid">
                 <input type="hidden" id="keyworkSessionId" />
 
-                <div class="form-group">
-                  <label for="sessionDate">Session Date</label>
-                  <input id="sessionDate" type="date" required />
+                <div class="section-block">
+                  <div class="form-group">
+                    <label for="sessionDate">Session Date</label>
+                    <input id="sessionDate" type="date" required />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="workerId">Worker ID</label>
+                    <input id="workerId" type="number" placeholder="Optional" />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="topic">Topic</label>
+                    <input id="topic" type="text" required />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="purpose">Purpose</label>
+                    <textarea id="purpose" rows="3" placeholder="Why is this topic important now?"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="summary">Summary</label>
+                    <textarea id="summary" rows="4" placeholder="What happened in the session?"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="childVoice">Young Person’s Voice</label>
+                    <textarea id="childVoice" rows="4" placeholder="What did they say, communicate, or show?"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="reflectiveAnalysis">Reflective Analysis</label>
+                    <textarea id="reflectiveAnalysis" rows="4" placeholder="What did we learn and what might this mean?"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="actionsAgreed">Actions Agreed</label>
+                    <textarea id="actionsAgreed" rows="3" placeholder="What follow-up was agreed?"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="nextSessionDate">Next Session Date</label>
+                    <input id="nextSessionDate" type="date" />
+                  </div>
                 </div>
 
-                <div class="form-group">
-                  <label for="workerId">Worker ID</label>
-                  <input id="workerId" type="number" placeholder="Optional" />
-                </div>
-
-                <div class="form-group">
-                  <label for="topic">Topic</label>
-                  <input id="topic" type="text" required />
-                </div>
-
-                <div class="form-group">
-                  <label for="purpose">Purpose</label>
-                  <textarea id="purpose" rows="3"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="summary">Summary</label>
-                  <textarea id="summary" rows="4"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="childVoice">Child Voice</label>
-                  <textarea id="childVoice" rows="4"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="reflectiveAnalysis">Reflective Analysis</label>
-                  <textarea id="reflectiveAnalysis" rows="4"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="actionsAgreed">Actions Agreed</label>
-                  <textarea id="actionsAgreed" rows="3"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="nextSessionDate">Next Session Date</label>
-                  <input id="nextSessionDate" type="date" />
-                </div>
-
-                <div class="form-actions">
+                <div class="form-actions sticky-form-actions">
                   <button class="btn btn-primary" type="submit">Save Session</button>
                   <button id="clearKeyworkFormBtn" class="btn btn-secondary" type="button">Clear</button>
                 </div>
@@ -475,6 +1005,7 @@
           </div>
         </section>
 
+        <!-- CHRONOLOGY -->
         <section id="tab-chronology" class="tab-panel">
           <div class="panel-shell">
             <div class="panel-header-row">
@@ -488,6 +1019,7 @@
           </div>
         </section>
 
+        <!-- MONTHLY REVIEWS -->
         <section id="tab-monthly_reviews" class="tab-panel">
           <div class="panel-shell">
             <div class="panel-header-row">
@@ -516,6 +1048,7 @@
           </div>
         </section>
 
+        <!-- STANDARDS -->
         <section id="tab-standards" class="tab-panel">
           <div class="panel-shell">
             <div class="panel-header-row">
@@ -539,6 +1072,7 @@
           </div>
         </section>
 
+        <!-- COMPLIANCE -->
         <section id="tab-compliance" class="tab-panel">
           <div class="panel-shell">
             <div class="panel-header-row">
@@ -562,6 +1096,7 @@
                 <option value="keywork_follow_up">Key Work</option>
                 <option value="health_follow_up">Health</option>
                 <option value="family_follow_up">Family</option>
+                <option value="daily_note_follow_up">Daily Notes</option>
               </select>
             </div>
 
@@ -582,6 +1117,6 @@
     </main>
   </div>
 
-  <script src="/js/young-people-shell.js?v=11"></script>
+  <script src="/js/young-people-shell.js?v=20"></script>
 </body>
 </html>
