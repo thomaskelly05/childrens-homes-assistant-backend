@@ -14,6 +14,15 @@ def ensure_ai_meetings_table(conn) -> None:
                 final_note TEXT NOT NULL,
                 safeguarding_flag BOOLEAN NOT NULL DEFAULT FALSE,
                 safeguarding_reason TEXT,
+
+                template_name TEXT,
+                service_type TEXT,
+                shift_type TEXT,
+                record_author TEXT,
+                young_person_name TEXT,
+                record_date TEXT,
+                location_context TEXT,
+
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
@@ -50,6 +59,55 @@ def ensure_ai_meetings_table(conn) -> None:
 
         cur.execute(
             """
+            ALTER TABLE ai_meeting_notes
+            ADD COLUMN IF NOT EXISTS template_name TEXT;
+            """
+        )
+
+        cur.execute(
+            """
+            ALTER TABLE ai_meeting_notes
+            ADD COLUMN IF NOT EXISTS service_type TEXT;
+            """
+        )
+
+        cur.execute(
+            """
+            ALTER TABLE ai_meeting_notes
+            ADD COLUMN IF NOT EXISTS shift_type TEXT;
+            """
+        )
+
+        cur.execute(
+            """
+            ALTER TABLE ai_meeting_notes
+            ADD COLUMN IF NOT EXISTS record_author TEXT;
+            """
+        )
+
+        cur.execute(
+            """
+            ALTER TABLE ai_meeting_notes
+            ADD COLUMN IF NOT EXISTS young_person_name TEXT;
+            """
+        )
+
+        cur.execute(
+            """
+            ALTER TABLE ai_meeting_notes
+            ADD COLUMN IF NOT EXISTS record_date TEXT;
+            """
+        )
+
+        cur.execute(
+            """
+            ALTER TABLE ai_meeting_notes
+            ADD COLUMN IF NOT EXISTS location_context TEXT;
+            """
+        )
+
+        cur.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_ai_meeting_notes_user_id
             ON ai_meeting_notes (user_id);
             """
@@ -73,7 +131,14 @@ def insert_ai_meeting_note(
     final_note: str,
     title: str | None = None,
     safeguarding_flag: bool = False,
-    safeguarding_reason: str | None = None
+    safeguarding_reason: str | None = None,
+    template_name: str | None = None,
+    service_type: str | None = None,
+    shift_type: str | None = None,
+    record_author: str | None = None,
+    young_person_name: str | None = None,
+    record_date: str | None = None,
+    location_context: str | None = None
 ) -> dict[str, Any]:
     with conn.cursor() as cur:
         cur.execute(
@@ -85,9 +150,16 @@ def insert_ai_meeting_note(
                 ai_draft,
                 final_note,
                 safeguarding_flag,
-                safeguarding_reason
+                safeguarding_reason,
+                template_name,
+                service_type,
+                shift_type,
+                record_author,
+                young_person_name,
+                record_date,
+                location_context
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING
                 id,
                 user_id,
@@ -97,6 +169,13 @@ def insert_ai_meeting_note(
                 final_note,
                 safeguarding_flag,
                 safeguarding_reason,
+                template_name,
+                service_type,
+                shift_type,
+                record_author,
+                young_person_name,
+                record_date,
+                location_context,
                 created_at,
                 updated_at;
             """,
@@ -107,7 +186,14 @@ def insert_ai_meeting_note(
                 ai_draft,
                 final_note,
                 safeguarding_flag,
-                safeguarding_reason
+                safeguarding_reason,
+                template_name,
+                service_type,
+                shift_type,
+                record_author,
+                young_person_name,
+                record_date,
+                location_context
             )
         )
 
@@ -125,7 +211,14 @@ def update_ai_meeting_note(
     final_note: str,
     title: str | None = None,
     safeguarding_flag: bool = False,
-    safeguarding_reason: str | None = None
+    safeguarding_reason: str | None = None,
+    template_name: str | None = None,
+    service_type: str | None = None,
+    shift_type: str | None = None,
+    record_author: str | None = None,
+    young_person_name: str | None = None,
+    record_date: str | None = None,
+    location_context: str | None = None
 ) -> dict[str, Any] | None:
     with conn.cursor() as cur:
         cur.execute(
@@ -138,6 +231,13 @@ def update_ai_meeting_note(
                 final_note = %s,
                 safeguarding_flag = %s,
                 safeguarding_reason = %s,
+                template_name = %s,
+                service_type = %s,
+                shift_type = %s,
+                record_author = %s,
+                young_person_name = %s,
+                record_date = %s,
+                location_context = %s,
                 updated_at = NOW()
             WHERE id = %s
               AND user_id = %s
@@ -150,6 +250,13 @@ def update_ai_meeting_note(
                 final_note,
                 safeguarding_flag,
                 safeguarding_reason,
+                template_name,
+                service_type,
+                shift_type,
+                record_author,
+                young_person_name,
+                record_date,
+                location_context,
                 created_at,
                 updated_at;
             """,
@@ -160,6 +267,13 @@ def update_ai_meeting_note(
                 final_note,
                 safeguarding_flag,
                 safeguarding_reason,
+                template_name,
+                service_type,
+                shift_type,
+                record_author,
+                young_person_name,
+                record_date,
+                location_context,
                 note_id,
                 user_id
             )
@@ -180,10 +294,20 @@ def list_ai_meeting_notes(
             """
             SELECT
                 id,
+                user_id,
                 title,
+                transcript,
+                ai_draft,
                 final_note,
                 safeguarding_flag,
                 safeguarding_reason,
+                template_name,
+                service_type,
+                shift_type,
+                record_author,
+                young_person_name,
+                record_date,
+                location_context,
                 created_at,
                 updated_at
             FROM ai_meeting_notes
@@ -215,6 +339,13 @@ def get_ai_meeting_note(
                 final_note,
                 safeguarding_flag,
                 safeguarding_reason,
+                template_name,
+                service_type,
+                shift_type,
+                record_author,
+                young_person_name,
+                record_date,
+                location_context,
                 created_at,
                 updated_at
             FROM ai_meeting_notes
