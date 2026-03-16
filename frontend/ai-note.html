@@ -14,9 +14,6 @@
     <link rel="stylesheet" href="/ai-notes.css">
 </head>
 <body class="notes-page">
-    <div class="ambient-glow ambient-glow-a"></div>
-    <div class="ambient-glow ambient-glow-b"></div>
-
     <div class="app-shell">
         <aside class="sidebar">
             <div class="sidebar__brand">
@@ -25,7 +22,7 @@
                 </div>
                 <div class="sidebar__brand-text">
                     <h1>IndiCare</h1>
-                    <p>AI Care Notes Studio</p>
+                    <p>AI Care Notes</p>
                 </div>
             </div>
 
@@ -37,65 +34,24 @@
                 <a href="/ai-note.html" class="nav-link is-active">AI Notes</a>
             </nav>
 
-            <div class="sidebar-card status-card">
+            <div class="sidebar-card">
                 <div class="sidebar-card-header">
-                    <h3>Recording status</h3>
+                    <h3>Session status</h3>
                     <span id="statusIndicatorDot" class="live-dot idle"></span>
                 </div>
-
-                <div id="recordingStatus" class="status-pill idle">Not recording</div>
+                <div id="recordingStatus" class="status-pill idle">Ready</div>
                 <div id="recordingTimer" class="timer">00:00</div>
-
-                <div class="mini-metrics">
-                    <div class="mini-metric">
-                        <span class="mini-metric-label">Words</span>
-                        <strong id="wordCountStat">0</strong>
-                    </div>
-                    <div class="mini-metric">
-                        <span class="mini-metric-label">Characters</span>
-                        <strong id="charCountStat">0</strong>
-                    </div>
-                    <div class="mini-metric">
-                        <span class="mini-metric-label">Template</span>
-                        <strong id="templateMiniStat">—</strong>
-                    </div>
-                </div>
-
                 <p class="sidebar-note">
-                    Record conversations, handovers, meetings or reflective discussions, then convert them into structured, professional care records.
+                    Record first. When you stop, the AI workspace will open automatically for transcription and drafting.
                 </p>
             </div>
 
             <div id="safeguardingBox" class="sidebar-card safeguarding-box hidden">
                 <div class="sidebar-card-header">
                     <h3>Safeguarding review</h3>
-                    <span class="risk-chip risk-high">Attention needed</span>
+                    <span class="risk-chip">Attention</span>
                 </div>
                 <p id="safeguardingText"></p>
-            </div>
-
-            <div class="sidebar-card insight-card">
-                <div class="sidebar-card-header">
-                    <h3>Document insights</h3>
-                </div>
-                <div class="insight-list">
-                    <div class="insight-item">
-                        <span>Readiness</span>
-                        <strong id="readinessStat">Draft</strong>
-                    </div>
-                    <div class="insight-item">
-                        <span>Care language</span>
-                        <strong id="careLanguageStat">Checking</strong>
-                    </div>
-                    <div class="insight-item">
-                        <span>Risk markers</span>
-                        <strong id="riskMarkerStat">None</strong>
-                    </div>
-                    <div class="insight-item">
-                        <span>Last save</span>
-                        <strong id="lastSaveStat">Not saved</strong>
-                    </div>
-                </div>
             </div>
 
             <div class="sidebar-card history-card">
@@ -103,11 +59,7 @@
                     <h3>Recent notes</h3>
                     <button id="refreshHistoryBtn" class="btn btn-light btn-tiny" type="button">Refresh</button>
                 </div>
-
-                <div id="historyEmptyState" class="history-empty">
-                    No saved notes yet.
-                </div>
-
+                <div id="historyEmptyState" class="history-empty">No saved notes yet.</div>
                 <div id="historyList" class="history-list"></div>
             </div>
 
@@ -118,223 +70,92 @@
 
         <main class="main-layout">
             <section class="notes-workspace">
-                <header class="workspace-header glass-card">
-                    <div>
-                        <p class="eyebrow">Premium AI documentation</p>
-                        <h1>Care notes transcription and drafting</h1>
+                <header class="workspace-hero">
+                    <div class="hero-copy">
+                        <p class="eyebrow">AI documentation for care</p>
+                        <h1>Record once. Turn it into a professional care note.</h1>
                         <p class="workspace-subtitle">
-                            Built for the care sector. Capture spoken discussion, generate professional records, apply care-specific templates, and prepare notes that are clearer, safer, and ready for review.
+                            Built for children’s homes, supported living, residential care, supervision, safeguarding, handovers, incidents, and professional meetings.
                         </p>
                     </div>
 
-                    <div class="workspace-header-actions">
-                        <div class="template-picker">
+                    <div class="hero-actions">
+                        <button id="startRecordingBtn" class="btn btn-primary btn-hero" type="button">Start recording</button>
+                    </div>
+                </header>
+
+                <section class="minimal-entry-grid">
+                    <div class="premium-panel">
+                        <div class="section-head">
+                            <div>
+                                <p class="panel-label">Template</p>
+                                <h2>Choose your note structure</h2>
+                                <p>Select the format you want AI to use after transcription.</p>
+                            </div>
+                        </div>
+
+                        <div class="field">
                             <label for="templateSelect">Template</label>
                             <div class="template-picker-row">
                                 <select id="templateSelect"></select>
                                 <button id="openTemplateManagerBtn" class="btn btn-light" type="button">Manage templates</button>
                             </div>
                         </div>
-
-                        <div class="header-buttons">
-                            <button id="saveBtnTop" class="btn btn-success" type="button">Save</button>
-                            <button id="exportBtnTop" class="btn btn-light" type="button">Export</button>
-                            <button id="printBtnTop" class="btn btn-light" type="button">Print</button>
-                        </div>
-                    </div>
-                </header>
-
-                <section class="hero-strip">
-                    <div class="hero-kpi">
-                        <span class="hero-kpi-label">Mode</span>
-                        <strong id="heroModeText">Voice to care record</strong>
-                    </div>
-                    <div class="hero-kpi">
-                        <span class="hero-kpi-label">Selected template</span>
-                        <strong id="heroTemplateText">—</strong>
-                    </div>
-                    <div class="hero-kpi">
-                        <span class="hero-kpi-label">Safeguarding watch</span>
-                        <strong id="heroRiskText">Monitoring</strong>
-                    </div>
-                    <div class="hero-kpi">
-                        <span class="hero-kpi-label">Autosave</span>
-                        <strong id="heroAutosaveText">Active locally</strong>
-                    </div>
-                </section>
-
-                <section class="notes-section premium-panel">
-                    <div class="section-head">
-                        <div>
-                            <p class="panel-label">Step 1</p>
-                            <h2>Capture conversation or dictation</h2>
-                            <p>
-                                Record a shift handover, supervision, placement planning discussion, incident debrief, key-work session, professionals meeting, medication conversation, or reflective record.
-                            </p>
-                        </div>
                     </div>
 
-                    <div class="care-meta-grid">
-                        <div class="field">
-                            <label for="serviceType">Service type</label>
-                            <select id="serviceType">
-                                <option value="Residential Children's Home">Residential Children's Home</option>
-                                <option value="Supported Living">Supported Living</option>
-                                <option value="Domiciliary Care">Domiciliary Care</option>
-                                <option value="Residential Adult Care">Residential Adult Care</option>
-                                <option value="Family Support">Family Support</option>
-                                <option value="Education / Therapeutic Setting">Education / Therapeutic Setting</option>
-                            </select>
-                        </div>
-
-                        <div class="field">
-                            <label for="shiftType">Shift / context</label>
-                            <select id="shiftType">
-                                <option value="Day Shift">Day Shift</option>
-                                <option value="Night Shift">Night Shift</option>
-                                <option value="Handover">Handover</option>
-                                <option value="Meeting">Meeting</option>
-                                <option value="Supervision">Supervision</option>
-                                <option value="Incident Review">Incident Review</option>
-                                <option value="Key-work Session">Key-work Session</option>
-                            </select>
-                        </div>
-
-                        <div class="field">
-                            <label for="recordAuthor">Recorded by</label>
-                            <input id="recordAuthor" type="text" placeholder="Name of staff member">
-                        </div>
-
-                        <div class="field">
-                            <label for="youngPersonName">Young person / person supported</label>
-                            <input id="youngPersonName" type="text" placeholder="Optional">
-                        </div>
-                    </div>
-
-                    <div class="record-actions">
-                        <button id="startRecordingBtn" class="btn btn-primary" type="button">Start recording</button>
-                        <button id="stopRecordingBtn" class="btn btn-secondary" type="button" disabled>Stop recording</button>
-                        <button id="transcribeBtn" class="btn btn-dark" type="button" disabled>Transcribe recording</button>
-                        <button id="generateBtn" class="btn btn-primary" type="button">Generate working document</button>
-                    </div>
-
-                    <div class="recording-surface">
-                        <div class="recording-surface-card">
-                            <div class="recording-visual">
-                                <div id="recordVisualCore" class="record-visual-core">
-                                    <span>🎙️</span>
-                                </div>
-                                <div>
-                                    <h3>Studio recorder</h3>
-                                    <p id="audioReadyText" class="helper-text">No recording yet.</p>
-                                </div>
-                            </div>
-
-                            <div class="recording-tips">
-                                <span class="tip-chip">Use clear speaker turns</span>
-                                <span class="tip-chip">State names and roles</span>
-                                <span class="tip-chip">Mention actions and timescales</span>
-                                <span class="tip-chip">Avoid background noise</span>
-                            </div>
-
-                            <audio id="audioPlayback" controls style="display:none;"></audio>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="splitWorkspace" class="workspace-split">
-                    <div class="split-panel premium-panel">
+                    <div class="premium-panel">
                         <div class="section-head">
                             <div>
-                                <p class="panel-label">Original source</p>
-                                <h2>Transcript</h2>
-                                <p>
-                                    This is the raw transcript source. Keep it as your reference point before refining the final care record.
-                                </p>
+                                <p class="panel-label">Record details</p>
+                                <h2>Capture essential context</h2>
+                                <p>These details help the generated note feel accurate and structured.</p>
                             </div>
-                            <button id="toggleTranscriptBtn" class="btn btn-light btn-tiny" type="button">Show / hide</button>
                         </div>
 
-                        <div id="transcriptContent" class="transcript-layout">
-                            <div class="quick-prompts transcript-tools">
-                                <button class="prompt-chip prompt-chip-secondary" type="button" data-transcript-action="clean">Clean transcript only</button>
-                                <button class="prompt-chip prompt-chip-secondary" type="button" data-transcript-action="speakerize">Format into speaker turns</button>
-                                <button class="prompt-chip prompt-chip-secondary" type="button" data-transcript-action="summarise">Summarise transcript</button>
+                        <div class="care-meta-grid">
+                            <div class="field">
+                                <label for="serviceType">Service type</label>
+                                <select id="serviceType">
+                                    <option value="Residential Children's Home">Residential Children's Home</option>
+                                    <option value="Supported Living">Supported Living</option>
+                                    <option value="Domiciliary Care">Domiciliary Care</option>
+                                    <option value="Residential Adult Care">Residential Adult Care</option>
+                                    <option value="Family Support">Family Support</option>
+                                    <option value="Education / Therapeutic Setting">Education / Therapeutic Setting</option>
+                                </select>
                             </div>
 
                             <div class="field">
-                                <label for="transcript">Original transcript</label>
-                                <textarea id="transcript" class="source-transcript" placeholder="The transcript will appear here after transcription, or you can paste one manually."></textarea>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="split-panel premium-panel">
-                        <div class="section-head">
-                            <div>
-                                <p class="panel-label">Working document</p>
-                                <h2>Editable care record</h2>
-                                <div class="document-meta">
-                                    <span id="noteModeBadge" class="note-mode-badge is-new">New unsaved note</span>
-                                    <span id="saveStateBadge" class="save-state-badge is-idle">Ready</span>
-                                    <span id="documentQualityBadge" class="quality-badge">Care draft</span>
-                                </div>
-                            </div>
-
-                            <div class="document-actions">
-                                <button id="copyFinalBtn" class="btn btn-light" type="button">Copy</button>
-                                <button id="printBtn" class="btn btn-light" type="button">Print</button>
-                                <button id="exportBtn" class="btn btn-light" type="button">Export</button>
-                            </div>
-                        </div>
-
-                        <div class="quick-prompts">
-                            <button class="prompt-chip" type="button" data-prompt="Rewrite this into a professional care sector record using clear, factual, respectful language and the selected template.">Professional care note</button>
-                            <button class="prompt-chip" type="button" data-prompt="Turn this into a concise handover-ready summary with risks, actions, health, appointments, and priorities for the next shift.">Handover summary</button>
-                            <button class="prompt-chip" type="button" data-prompt="Structure this under the selected template headings and remove repetition without inventing information.">Apply template structure</button>
-                            <button class="prompt-chip" type="button" data-prompt="Improve grammar, spelling, factual clarity, chronology, and professional tone while keeping the meaning the same.">Improve wording</button>
-                            <button class="prompt-chip" type="button" data-prompt="Rewrite this as a safeguarding-conscious record and clearly separate facts, observations, actions taken, and next steps.">Safeguarding format</button>
-                            <button class="prompt-chip" type="button" data-prompt="Rewrite this in a person-centred way that reflects the voice, wishes, feelings, choices, and presentation of the person discussed.">Person-centred language</button>
-                        </div>
-
-                        <div class="editor-grid">
-                            <div class="field">
-                                <label for="noteTitle">Document title</label>
-                                <input id="noteTitle" type="text" placeholder="Example: Team meeting - March review">
+                                <label for="shiftType">Shift / context</label>
+                                <select id="shiftType">
+                                    <option value="Day Shift">Day Shift</option>
+                                    <option value="Night Shift">Night Shift</option>
+                                    <option value="Handover">Handover</option>
+                                    <option value="Meeting">Meeting</option>
+                                    <option value="Supervision">Supervision</option>
+                                    <option value="Incident Review">Incident Review</option>
+                                    <option value="Key-work Session">Key-work Session</option>
+                                </select>
                             </div>
 
                             <div class="field">
+                                <label for="recordAuthor">Recorded by</label>
+                                <input id="recordAuthor" type="text" placeholder="Staff member name">
+                            </div>
+
+                            <div class="field">
+                                <label for="youngPersonName">Young person / person supported</label>
+                                <input id="youngPersonName" type="text" placeholder="Optional">
+                            </div>
+
+                            <div class="field field-span-2">
                                 <label for="meetingDate">Record date</label>
                                 <input id="meetingDate" type="date">
                             </div>
                         </div>
-
-                        <div class="field">
-                            <label for="aiInstruction">Instruction for AI</label>
-                            <textarea id="aiInstruction" class="instruction-box" placeholder="Example: rewrite this into a professional supervision summary using the selected template, keep it factual, separate actions clearly, and include a review date section."></textarea>
-                        </div>
-
-                        <div class="panel-actions">
-                            <button id="applyAiEditBtn" class="btn btn-dark" type="button">Apply AI change</button>
-                            <button id="undoAiEditBtn" class="btn btn-light" type="button">Undo last change</button>
-                            <button id="copyDraftBtn" class="btn btn-light" type="button">Reset from generated draft</button>
-                            <button id="insertTemplateBtn" class="btn btn-light" type="button">Insert blank template</button>
-                        </div>
-
-                        <div class="field">
-                            <label for="finalNote">Editable document</label>
-                            <textarea id="finalNote" class="document-editor" placeholder="The editable working document will appear here..."></textarea>
-                        </div>
-
-                        <div class="panel-actions final-actions">
-                            <button id="saveBtn" class="btn btn-success" type="button">Save document</button>
-                            <button id="clearBtn" class="btn btn-danger" type="button">Clear</button>
-                        </div>
                     </div>
                 </section>
 
-                <textarea id="aiDraft" style="display:none;"></textarea>
-                <textarea id="transcriptMirror" style="display:none;"></textarea>
                 <div id="toast" class="toast"></div>
             </section>
         </main>
@@ -346,9 +167,7 @@
                 <div>
                     <p class="panel-label">Templates</p>
                     <h2>Create and manage templates</h2>
-                    <p class="modal-copy">
-                        Build templates for your service, your home, your team meetings, or your organisation’s preferred recording structure.
-                    </p>
+                    <p class="modal-copy">Build templates for handovers, supervision, incidents, daily logs, safeguarding records, and internal meetings.</p>
                 </div>
                 <button id="closeTemplateManagerBtn" class="btn btn-light btn-tiny" type="button">Close</button>
             </div>
@@ -381,10 +200,11 @@
     </div>
 
     <div id="recordingModal" class="recording-modal-overlay hidden">
-        <div class="recording-modal" role="dialog" aria-modal="true" aria-labelledby="recordingModalTitle">
+        <div class="recording-modal">
             <div class="recording-modal-header">
-                <h2 id="recordingModalTitle">Recording in progress</h2>
-                <p>Capture high-quality audio for handovers, meetings, safeguarding discussions, reflective sessions, and professional records.</p>
+                <p class="panel-label">Recording live</p>
+                <h2>Capture conversation or dictation</h2>
+                <p>When you stop recording, the full AI documentation workspace will open automatically.</p>
             </div>
 
             <div class="recording-mic-wrap">
@@ -396,8 +216,147 @@
             <div class="recording-modal-actions">
                 <button id="pauseRecordingBtn" class="btn btn-light" type="button" disabled>Pause</button>
                 <button id="resumeRecordingBtn" class="btn btn-light" type="button" disabled>Resume</button>
-                <button id="stopRecordingModalBtn" class="btn btn-danger" type="button" disabled>Stop</button>
+                <button id="stopRecordingBtn" class="btn btn-danger" type="button" disabled>Stop recording</button>
             </div>
+        </div>
+    </div>
+
+    <div id="workflowModal" class="workflow-modal-overlay hidden">
+        <div class="workflow-modal">
+            <div class="workflow-topbar">
+                <div>
+                    <p class="panel-label">AI workspace</p>
+                    <h2>Transcribe, generate and refine</h2>
+                </div>
+                <div class="workflow-topbar-actions">
+                    <button id="closeWorkflowModalBtn" class="btn btn-light" type="button">Close</button>
+                </div>
+            </div>
+
+            <div class="workflow-banner">
+                <div class="workflow-banner-item">
+                    <span class="workflow-banner-label">Template</span>
+                    <strong id="workflowTemplateText">—</strong>
+                </div>
+                <div class="workflow-banner-item">
+                    <span class="workflow-banner-label">Status</span>
+                    <strong id="workflowStatusText">Ready</strong>
+                </div>
+                <div class="workflow-banner-item">
+                    <span class="workflow-banner-label">Save state</span>
+                    <strong id="workflowSaveText">Not saved</strong>
+                </div>
+            </div>
+
+            <div class="workflow-stage-actions">
+                <button id="transcribeBtn" class="btn btn-dark" type="button" disabled>Transcribe recording</button>
+                <button id="generateBtn" class="btn btn-primary" type="button">Generate care document</button>
+                <button id="insertTemplateBtn" class="btn btn-light" type="button">Insert blank template</button>
+            </div>
+
+            <div class="workflow-body">
+                <div class="workflow-column">
+                    <div class="split-panel">
+                        <div class="section-head">
+                            <div>
+                                <p class="panel-label">Audio</p>
+                                <h3>Recording</h3>
+                                <p id="audioReadyText">No recording yet.</p>
+                            </div>
+                        </div>
+                        <audio id="audioPlayback" controls style="display:none;"></audio>
+                    </div>
+
+                    <div class="split-panel">
+                        <div class="section-head">
+                            <div>
+                                <p class="panel-label">Transcript</p>
+                                <h3>Source text</h3>
+                                <p>Paste, review or transcribe audio here.</p>
+                            </div>
+                            <button id="toggleTranscriptBtn" class="btn btn-light btn-tiny" type="button">Show / hide</button>
+                        </div>
+
+                        <div id="transcriptContent">
+                            <div class="quick-prompts">
+                                <button class="prompt-chip prompt-chip-secondary" type="button" data-transcript-action="clean">Clean transcript only</button>
+                                <button class="prompt-chip prompt-chip-secondary" type="button" data-transcript-action="speakerize">Format speaker turns</button>
+                                <button class="prompt-chip prompt-chip-secondary" type="button" data-transcript-action="summarise">Summarise transcript</button>
+                            </div>
+
+                            <div class="field">
+                                <label for="transcript">Original transcript</label>
+                                <textarea id="transcript" class="source-transcript" placeholder="The transcript will appear here after transcription, or you can paste one manually."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="workflow-column">
+                    <div class="split-panel document-panel">
+                        <div class="section-head">
+                            <div>
+                                <p class="panel-label">Final document</p>
+                                <h3>Editable care record</h3>
+                                <div class="document-meta">
+                                    <span id="noteModeBadge" class="note-mode-badge is-new">New unsaved note</span>
+                                    <span id="saveStateBadge" class="save-state-badge is-idle">Ready</span>
+                                    <span id="documentQualityBadge" class="quality-badge">Care draft</span>
+                                </div>
+                            </div>
+
+                            <div class="document-actions">
+                                <button id="copyFinalBtn" class="btn btn-light" type="button">Copy</button>
+                                <button id="saveBtnTop" class="btn btn-success" type="button">Save</button>
+                                <button id="exportBtnTop" class="btn btn-light" type="button">Export</button>
+                                <button id="printBtnTop" class="btn btn-light" type="button">Print</button>
+                            </div>
+                        </div>
+
+                        <div class="quick-prompts">
+                            <button class="prompt-chip" type="button" data-prompt="Rewrite this into a professional care sector record using clear, factual, respectful language and the selected template.">Professional care note</button>
+                            <button class="prompt-chip" type="button" data-prompt="Turn this into a concise handover-ready summary with risks, actions, health, appointments, and priorities for the next shift.">Handover summary</button>
+                            <button class="prompt-chip" type="button" data-prompt="Structure this under the selected template headings and remove repetition without inventing information.">Apply template structure</button>
+                            <button class="prompt-chip" type="button" data-prompt="Improve grammar, spelling, factual clarity, chronology, and professional tone while keeping the meaning the same.">Improve wording</button>
+                            <button class="prompt-chip" type="button" data-prompt="Rewrite this as a safeguarding-conscious record and clearly separate facts, observations, actions taken, and next steps.">Safeguarding format</button>
+                            <button class="prompt-chip" type="button" data-prompt="Rewrite this in a person-centred way that reflects the voice, wishes, feelings, choices, and presentation of the person discussed.">Person-centred language</button>
+                        </div>
+
+                        <div class="editor-grid">
+                            <div class="field">
+                                <label for="noteTitle">Document title</label>
+                                <input id="noteTitle" type="text" placeholder="Example: Team meeting - March review">
+                            </div>
+
+                            <div class="field">
+                                <label for="aiInstruction">Instruction for AI</label>
+                                <textarea id="aiInstruction" class="instruction-box" placeholder="Example: rewrite this into a professional supervision summary using the selected template."></textarea>
+                            </div>
+                        </div>
+
+                        <div class="panel-actions">
+                            <button id="applyAiEditBtn" class="btn btn-dark" type="button">Apply AI change</button>
+                            <button id="undoAiEditBtn" class="btn btn-light" type="button">Undo last change</button>
+                            <button id="copyDraftBtn" class="btn btn-light" type="button">Reset from generated draft</button>
+                        </div>
+
+                        <div class="field">
+                            <label for="finalNote">Editable document</label>
+                            <textarea id="finalNote" class="document-editor" placeholder="The editable working document will appear here..."></textarea>
+                        </div>
+
+                        <div class="panel-actions final-actions">
+                            <button id="saveBtn" class="btn btn-success" type="button">Save document</button>
+                            <button id="exportBtn" class="btn btn-light" type="button">Export</button>
+                            <button id="printBtn" class="btn btn-light" type="button">Print</button>
+                            <button id="clearBtn" class="btn btn-danger" type="button">Clear</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <textarea id="aiDraft" style="display:none;"></textarea>
+            <textarea id="transcriptMirror" style="display:none;"></textarea>
         </div>
     </div>
 
