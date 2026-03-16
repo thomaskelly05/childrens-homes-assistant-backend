@@ -79,6 +79,8 @@ const els = {
   refreshYoungPeopleBtn: document.getElementById("refreshYoungPeopleBtn"),
   reloadCurrentBtn: document.getElementById("reloadCurrentBtn"),
   inspectionPackBtn: document.getElementById("inspectionPackBtn"),
+  headerOfstedAiBtn: document.getElementById("headerOfstedAiBtn"),
+  monthlyOfstedAiBtn: document.getElementById("monthlyOfstedAiBtn"),
   selectedYoungPersonName: document.getElementById("selectedYoungPersonName"),
   selectedYoungPersonMeta: document.getElementById("selectedYoungPersonMeta"),
   statusBar: document.getElementById("statusBar"),
@@ -183,6 +185,18 @@ function bindEvents() {
     els.inspectionPackBtn.addEventListener("click", createInspectionPackJob);
   }
 
+  if (els.headerOfstedAiBtn) {
+    els.headerOfstedAiBtn.addEventListener("click", async () => {
+      await loadOfstedAiReport(getSelectedReviewMonthParam());
+    });
+  }
+
+  if (els.monthlyOfstedAiBtn) {
+    els.monthlyOfstedAiBtn.addEventListener("click", async () => {
+      await loadOfstedAiReport(getSelectedReviewMonthParam());
+    });
+  }
+
   if (els.rebuildStandardsBtn) {
     els.rebuildStandardsBtn.addEventListener("click", rebuildStandardsLinks);
   }
@@ -218,6 +232,11 @@ function bindEvents() {
   if (els.closeDrawerBtn) {
     els.closeDrawerBtn.addEventListener("click", closeRecordDrawer);
   }
+}
+
+function getSelectedReviewMonthParam() {
+  if (!els.monthlyReviewMonth || !els.monthlyReviewMonth.value) return "";
+  return `${els.monthlyReviewMonth.value}-01`;
 }
 
 function showStatus(message, isError = false) {
