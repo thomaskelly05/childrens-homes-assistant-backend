@@ -50,7 +50,8 @@ def list_chronology_events(
             u.first_name AS created_by_first_name,
             u.last_name AS created_by_last_name
         FROM chronology_events ce
-        LEFT JOIN users u ON ce.created_by = u.id
+        LEFT JOIN users u
+            ON ce.created_by = u.id
         WHERE ce.young_person_id = %s
           AND COALESCE(ce.is_visible, TRUE) = TRUE
         ORDER BY ce.event_datetime DESC, ce.id DESC
@@ -74,7 +75,8 @@ def get_chronology_event(
             u.first_name AS created_by_first_name,
             u.last_name AS created_by_last_name
         FROM chronology_events ce
-        LEFT JOIN users u ON ce.created_by = u.id
+        LEFT JOIN users u
+            ON ce.created_by = u.id
         WHERE ce.id = %s
         LIMIT 1
     """
@@ -203,7 +205,6 @@ def rebuild_chronology(
 ):
     try:
         with conn.cursor() as cur:
-            # remove only auto-generated events
             cur.execute(
                 """
                 DELETE FROM chronology_events
@@ -213,7 +214,7 @@ def rebuild_chronology(
                 (young_person_id,),
             )
 
-            # daily notes
+            # Daily notes
             cur.execute(
                 """
                 INSERT INTO chronology_events (
@@ -223,7 +224,7 @@ def rebuild_chronology(
                 )
                 SELECT
                     dn.young_person_id,
-                    dn.created_at,
+                    COALESCE(dn.note_date::timestamp, dn.created_at),
                     'daily_note',
                     dn.shift_type,
                     'Daily note recorded',
@@ -242,7 +243,7 @@ def rebuild_chronology(
                 (young_person_id,),
             )
 
-            # incidents
+            # Incidents
             cur.execute(
                 """
                 INSERT INTO chronology_events (
@@ -271,7 +272,7 @@ def rebuild_chronology(
                 (young_person_id,),
             )
 
-            # health records
+            # Health records
             cur.execute(
                 """
                 INSERT INTO chronology_events (
@@ -300,7 +301,7 @@ def rebuild_chronology(
                 (young_person_id,),
             )
 
-            # education records
+            # Education records
             cur.execute(
                 """
                 INSERT INTO chronology_events (
@@ -310,7 +311,7 @@ def rebuild_chronology(
                 )
                 SELECT
                     er.young_person_id,
-                    er.created_at,
+                    COALESCE(er.record_date::timestamp, er.created_at),
                     'education',
                     er.attendance_status,
                     COALESCE(er.provision_name, 'Education record'),
@@ -329,7 +330,7 @@ def rebuild_chronology(
                 (young_person_id,),
             )
 
-            # family records
+            # Family records
             cur.execute(
                 """
                 INSERT INTO chronology_events (
@@ -358,7 +359,7 @@ def rebuild_chronology(
                 (young_person_id,),
             )
 
-            # keywork sessions
+            # Keywork sessions
             cur.execute(
                 """
                 INSERT INTO chronology_events (
@@ -368,7 +369,7 @@ def rebuild_chronology(
                 )
                 SELECT
                     ks.young_person_id,
-                    ks.created_at,
+                    COALESCE(ks.session_date::timestamp, ks.created_at),
                     'keywork',
                     ks.topic,
                     COALESCE(ks.topic, 'Key work session'),
@@ -387,7 +388,7 @@ def rebuild_chronology(
                 (young_person_id,),
             )
 
-            # support plans
+            # Support plans
             cur.execute(
                 """
                 INSERT INTO chronology_events (
@@ -412,11 +413,12 @@ def rebuild_chronology(
                     NOW()
                 FROM support_plans sp
                 WHERE sp.young_person_id = %s
+                  AND COALESCE(sp.archived, FALSE) = FALSE
                 """,
                 (young_person_id,),
             )
 
-            # risk assessments
+            # Risk assessments
             cur.execute(
                 """
                 INSERT INTO chronology_events (
@@ -441,6 +443,7 @@ def rebuild_chronology(
                     NOW()
                 FROM risk_assessments ra
                 WHERE ra.young_person_id = %s
+                  AND COALESCE(ra.archived, FALSE) = FALSE
                 """,
                 (young_person_id,),
             )
