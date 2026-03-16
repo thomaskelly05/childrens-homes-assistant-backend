@@ -259,6 +259,7 @@
                 </div>
 
                 <div class="workflow-topbar-actions">
+                    <button id="openVersionsDrawerBtn" class="btn btn-light" type="button">Version history</button>
                     <button id="closeWorkflowModalBtn" class="btn btn-light" type="button">Close</button>
                 </div>
             </div>
@@ -313,6 +314,33 @@
                 <div class="workflow-insight-card">
                     <span>Word count</span>
                     <strong id="workflowWordCount">0</strong>
+                </div>
+            </div>
+
+            <!-- REVIEW INTELLIGENCE STRIP -->
+            <div class="review-strip">
+                <div class="review-card">
+                    <span class="review-card-label">Safeguarding markers</span>
+                    <strong id="reviewSafeguardingCount">0</strong>
+                    <small id="reviewSafeguardingText">No markers detected</small>
+                </div>
+
+                <div class="review-card">
+                    <span class="review-card-label">Vague language</span>
+                    <strong id="reviewVagueCount">0</strong>
+                    <small id="reviewVagueText">Writing appears factual</small>
+                </div>
+
+                <div class="review-card">
+                    <span class="review-card-label">Person-centred language</span>
+                    <strong id="reviewPersonCentredScore">Basic</strong>
+                    <small id="reviewPersonCentredText">Can be strengthened</small>
+                </div>
+
+                <div class="review-card">
+                    <span class="review-card-label">Chronology confidence</span>
+                    <strong id="reviewChronologyScore">Checking</strong>
+                    <small id="reviewChronologyText">Awaiting review</small>
                 </div>
             </div>
 
@@ -450,6 +478,23 @@
 
             <textarea id="aiDraft" style="display:none;"></textarea>
             <textarea id="transcriptMirror" style="display:none;"></textarea>
+        </div>
+    </div>
+
+    <!-- VERSION HISTORY DRAWER -->
+    <div id="versionsDrawer" class="versions-drawer hidden">
+        <div class="versions-drawer-panel">
+            <div class="modal-header">
+                <div>
+                    <p class="panel-label">Version history</p>
+                    <h2>Previous versions</h2>
+                    <p class="modal-copy">Restore an earlier draft if needed.</p>
+                </div>
+                <button id="closeVersionsDrawerBtn" class="btn btn-light btn-tiny" type="button">Close</button>
+            </div>
+
+            <div id="versionsEmptyState" class="history-empty">No saved versions yet.</div>
+            <div id="versionsList" class="versions-list"></div>
         </div>
     </div>
 
