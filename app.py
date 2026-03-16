@@ -17,6 +17,7 @@ from routers.documents_routes import router as documents_router
 from routers.handover_routes import router as handover_router
 from routers.incident_routes import router as incident_router
 from routers.monthly_reviews_routes import router as monthly_reviews_router
+from routers.ofsted_ai_report_routes import router as ofsted_ai_report_router
 from routers.ofsted_pack_routes import router as ofsted_pack_router
 from routers.reports_routes import router as reports_router
 from routers.risk_routes import router as risk_router
@@ -70,6 +71,7 @@ app.include_router(documents_router)
 app.include_router(handover_router)
 app.include_router(incident_router)
 app.include_router(monthly_reviews_router)
+app.include_router(ofsted_ai_report_router)
 app.include_router(ofsted_pack_router)
 app.include_router(reports_router)
 app.include_router(risk_router)
