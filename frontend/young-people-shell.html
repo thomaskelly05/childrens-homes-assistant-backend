@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Young Person Panel | IndiCare</title>
-  <link rel="stylesheet" href="/css/young-people-shell.css?v=7" />
+  <link rel="stylesheet" href="/css/young-people-shell.css?v=10" />
 </head>
 <body>
   <div class="shell-layout">
@@ -37,39 +37,40 @@
 
         <div class="page-header-actions">
           <button id="reloadCurrentBtn" class="btn btn-secondary" type="button">Reload Current Record</button>
-          <button id="inspectionPackBtn" class="btn btn-primary" type="button">OFSTED Inspection Pack</button>
+          <button id="inspectionPackBtn" class="btn btn-secondary" type="button">OFSTED Inspection Pack</button>
+          <button id="headerOfstedAiBtn" class="btn btn-primary" type="button">AI OFSTED Report</button>
         </div>
       </header>
 
       <div id="statusBar" class="status-bar hidden"></div>
 
       <section class="action-bar">
-        <button class="action-chip chip-overdue" data-jump-tab="compliance" data-filter="overdue">
+        <button class="action-chip chip-overdue" data-jump-tab="compliance" data-filter="overdue" type="button">
           <span class="chip-label">Overdue</span>
           <span id="actionOverdueCount" class="chip-count">0</span>
         </button>
 
-        <button class="action-chip chip-due-soon" data-jump-tab="compliance" data-filter="due_soon">
+        <button class="action-chip chip-due-soon" data-jump-tab="compliance" data-filter="due_soon" type="button">
           <span class="chip-label">Due Soon</span>
           <span id="actionDueSoonCount" class="chip-count">0</span>
         </button>
 
-        <button class="action-chip chip-alerts" data-jump-tab="profile">
+        <button class="action-chip chip-alerts" data-jump-tab="profile" type="button">
           <span class="chip-label">Alerts</span>
           <span id="actionAlertsCount" class="chip-count">0</span>
         </button>
 
-        <button class="action-chip chip-plans" data-jump-tab="plans">
+        <button class="action-chip chip-plans" data-jump-tab="plans" type="button">
           <span class="chip-label">Plans</span>
           <span id="actionPlansCount" class="chip-count">0</span>
         </button>
 
-        <button class="action-chip chip-risk" data-jump-tab="risk">
+        <button class="action-chip chip-risk" data-jump-tab="risk" type="button">
           <span class="chip-label">Risk</span>
           <span id="actionRiskCount" class="chip-count">0</span>
         </button>
 
-        <button class="action-chip chip-incidents" data-jump-tab="incidents">
+        <button class="action-chip chip-incidents" data-jump-tab="incidents" type="button">
           <span class="chip-label">Incidents</span>
           <span id="actionIncidentsCount" class="chip-count">0</span>
         </button>
@@ -172,6 +173,7 @@
                 <h3>Key Work Sessions</h3>
                 <button id="newKeyworkBtn" class="btn btn-primary" type="button">New Session</button>
               </div>
+
               <div id="keyworkList" class="content-area">
                 <div class="empty-state">Select a young person to load key work.</div>
               </div>
@@ -245,6 +247,7 @@
               <h3>Chronology</h3>
               <button id="rebuildChronologyBtn" class="btn btn-primary" type="button">Rebuild Chronology</button>
             </div>
+
             <div id="chronologyContent" class="content-area">
               <div class="empty-state">Chronology records will appear here.</div>
             </div>
@@ -255,9 +258,11 @@
           <div class="panel-shell">
             <div class="panel-header-row">
               <h3>Monthly Reviews</h3>
+
               <div class="monthly-review-toolbar">
                 <input id="monthlyReviewMonth" type="month" />
                 <button id="generateMonthlyReviewBtn" class="btn btn-primary" type="button">Generate Review</button>
+                <button id="monthlyOfstedAiBtn" class="btn btn-secondary" type="button">AI OFSTED Report</button>
               </div>
             </div>
 
@@ -321,6 +326,8 @@
                 <option value="support_plan_review">Plans</option>
                 <option value="risk_review">Risk</option>
                 <option value="keywork_follow_up">Key Work</option>
+                <option value="health_follow_up">Health</option>
+                <option value="family_follow_up">Family</option>
               </select>
             </div>
 
@@ -341,6 +348,6 @@
     </main>
   </div>
 
-  <script src="/js/young-people-shell.js?v=7"></script>
+  <script src="/js/young-people-shell.js?v=10"></script>
 </body>
 </html>
