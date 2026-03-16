@@ -478,7 +478,7 @@ def generate_monthly_review(
                 (review_id, young_person_id, month_start, month_end),
             )
 
-            # Plans
+            # Support plans
             cur.execute(
                 """
                 INSERT INTO monthly_review_record_links (monthly_review_id, source_table, source_id, link_reason)
@@ -490,7 +490,7 @@ def generate_monthly_review(
                 (review_id, young_person_id),
             )
 
-            # Risks
+            # Risk assessments
             cur.execute(
                 """
                 INSERT INTO monthly_review_record_links (monthly_review_id, source_table, source_id, link_reason)
