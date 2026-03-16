@@ -478,7 +478,7 @@ def generate_monthly_review(
                 (review_id, young_person_id, month_start, month_end),
             )
 
-            # Plans active in period
+            # Plans
             cur.execute(
                 """
                 INSERT INTO monthly_review_record_links (monthly_review_id, source_table, source_id, link_reason)
@@ -490,7 +490,7 @@ def generate_monthly_review(
                 (review_id, young_person_id),
             )
 
-            # Risk active in period
+            # Risks
             cur.execute(
                 """
                 INSERT INTO monthly_review_record_links (monthly_review_id, source_table, source_id, link_reason)
@@ -534,7 +534,6 @@ def generate_monthly_review(
                 (review_id, young_person_id),
             )
 
-            # Lightweight generated text placeholders from available source data
             cur.execute(
                 """
                 UPDATE monthly_reviews
