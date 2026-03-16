@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Young Person Panel | IndiCare</title>
-  <link rel="stylesheet" href="/css/young-people-shell.css?v=10" />
+  <link rel="stylesheet" href="/css/young-people-shell.css?v=11" />
 </head>
 <body>
   <div class="shell-layout">
@@ -111,17 +111,251 @@
         </section>
 
         <section id="tab-plans" class="tab-panel">
-          <div class="panel-shell">
-            <div id="plansContent" class="content-area">
-              <div class="empty-state">Plans data will appear here.</div>
+          <div class="tab-grid keywork-grid">
+            <div class="panel-shell">
+              <div class="panel-header-row">
+                <h3>Support Plans</h3>
+                <button id="newPlanBtn" class="btn btn-primary" type="button">New Plan</button>
+              </div>
+
+              <div id="plansContent" class="content-area">
+                <div class="empty-state">Plans will appear here.</div>
+              </div>
+            </div>
+
+            <div class="panel-shell">
+              <div class="panel-header-row">
+                <h3 id="planFormTitle">Create / Edit Support Plan</h3>
+              </div>
+
+              <form id="planForm" class="form-grid">
+                <input type="hidden" id="planId" />
+
+                <div class="form-group">
+                  <label for="planType">Plan Type</label>
+                  <input id="planType" type="text" placeholder="e.g. Support Plan" required />
+                </div>
+
+                <div class="form-group">
+                  <label for="planTitle">Title</label>
+                  <input id="planTitle" type="text" placeholder="Plan title" required />
+                </div>
+
+                <div class="form-group">
+                  <label for="planPresentingNeed">Presenting Need</label>
+                  <textarea id="planPresentingNeed" rows="4" placeholder="What need or difficulty is this plan responding to?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="planSummary">Summary</label>
+                  <textarea id="planSummary" rows="4" placeholder="Brief overview of the plan and intended outcome"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="planChildVoice">Child Voice</label>
+                  <textarea id="planChildVoice" rows="4" placeholder="What has the young person said, wanted, preferred, or asked for?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="planProactiveStrategies">Proactive Strategies</label>
+                  <textarea id="planProactiveStrategies" rows="4" placeholder="What adults should do proactively to help this young person succeed"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="planPaceGuidance">PACE / Relational Guidance</label>
+                  <textarea id="planPaceGuidance" rows="4" placeholder="How staff should respond in a relational, therapeutic, child-centred way"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="planTriggers">Triggers / Stressors</label>
+                  <textarea id="planTriggers" rows="4" placeholder="What tends to make things harder for the young person?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="planProtectiveFactors">Protective Factors / Strengths</label>
+                  <textarea id="planProtectiveFactors" rows="4" placeholder="What helps, what strengths exist, what protective relationships or routines matter?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="planStartDate">Start Date</label>
+                  <input id="planStartDate" type="date" />
+                </div>
+
+                <div class="form-group">
+                  <label for="planReviewDate">Review Date</label>
+                  <input id="planReviewDate" type="date" />
+                </div>
+
+                <div class="form-group">
+                  <label for="planStatus">Status</label>
+                  <select id="planStatus">
+                    <option value="active">Active</option>
+                    <option value="draft">Draft</option>
+                    <option value="completed">Completed</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="planOwnerId">Owner ID</label>
+                  <input id="planOwnerId" type="number" placeholder="Optional" />
+                </div>
+
+                <div class="form-group">
+                  <label for="planApprovalStatus">Approval Status</label>
+                  <select id="planApprovalStatus">
+                    <option value="not_required">Not Required</option>
+                    <option value="draft">Draft</option>
+                    <option value="submitted">Submitted</option>
+                    <option value="approved">Approved</option>
+                    <option value="returned">Returned</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="planCreatedBy">Created By (User ID)</label>
+                  <input id="planCreatedBy" type="number" placeholder="Optional" />
+                </div>
+
+                <div class="form-actions">
+                  <button class="btn btn-primary" type="submit">Save Plan</button>
+                  <button id="clearPlanFormBtn" class="btn btn-secondary" type="button">Clear</button>
+                </div>
+              </form>
             </div>
           </div>
         </section>
 
         <section id="tab-risk" class="tab-panel">
-          <div class="panel-shell">
-            <div id="riskContent" class="content-area">
-              <div class="empty-state">Risk data will appear here.</div>
+          <div class="tab-grid keywork-grid">
+            <div class="panel-shell">
+              <div class="panel-header-row">
+                <h3>Risk Assessments</h3>
+                <button id="newRiskBtn" class="btn btn-primary" type="button">New Risk</button>
+              </div>
+
+              <div id="riskContent" class="content-area">
+                <div class="empty-state">Risk assessments will appear here.</div>
+              </div>
+            </div>
+
+            <div class="panel-shell">
+              <div class="panel-header-row">
+                <h3 id="riskFormTitle">Create / Edit Risk Assessment</h3>
+              </div>
+
+              <form id="riskForm" class="form-grid">
+                <input type="hidden" id="riskId" />
+
+                <div class="form-group">
+                  <label for="riskCategory">Category</label>
+                  <input id="riskCategory" type="text" placeholder="e.g. Emotional Regulation" required />
+                </div>
+
+                <div class="form-group">
+                  <label for="riskTitle">Title</label>
+                  <input id="riskTitle" type="text" placeholder="Risk title" required />
+                </div>
+
+                <div class="form-group">
+                  <label for="riskConcernSummary">Concern Summary</label>
+                  <textarea id="riskConcernSummary" rows="4" placeholder="What is the concern and what is the actual risk?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="riskKnownTriggers">Known Triggers</label>
+                  <textarea id="riskKnownTriggers" rows="4" placeholder="What tends to trigger or increase this risk?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="riskEarlyWarningSigns">Early Warning Signs</label>
+                  <textarea id="riskEarlyWarningSigns" rows="4" placeholder="What signs show the young person is becoming dysregulated or less safe?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="riskContextualFactors">Contextual Factors</label>
+                  <textarea id="riskContextualFactors" rows="4" placeholder="What environmental, relational, or situational factors matter?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="riskCurrentControls">Current Controls</label>
+                  <textarea id="riskCurrentControls" rows="4" placeholder="What plans, routines, or existing controls are in place already?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="riskDeescalationStrategies">De-escalation Strategies</label>
+                  <textarea id="riskDeescalationStrategies" rows="4" placeholder="How should adults respond to reduce risk and support safety?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="riskResponseActions">Response Actions</label>
+                  <textarea id="riskResponseActions" rows="4" placeholder="What actions should staff take if the risk escalates or occurs?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="riskChildViews">Child Views</label>
+                  <textarea id="riskChildViews" rows="4" placeholder="What does the young person say helps, worries them, or matters to them?"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="riskSeverity">Severity</label>
+                  <select id="riskSeverity">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="riskLikelihood">Likelihood</label>
+                  <select id="riskLikelihood">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="riskReviewDate">Review Date</label>
+                  <input id="riskReviewDate" type="date" />
+                </div>
+
+                <div class="form-group">
+                  <label for="riskStatus">Status</label>
+                  <select id="riskStatus">
+                    <option value="active">Active</option>
+                    <option value="draft">Draft</option>
+                    <option value="completed">Completed</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="riskOwnerId">Owner ID</label>
+                  <input id="riskOwnerId" type="number" placeholder="Optional" />
+                </div>
+
+                <div class="form-group">
+                  <label for="riskApprovalStatus">Approval Status</label>
+                  <select id="riskApprovalStatus">
+                    <option value="not_required">Not Required</option>
+                    <option value="draft">Draft</option>
+                    <option value="submitted">Submitted</option>
+                    <option value="approved">Approved</option>
+                    <option value="returned">Returned</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="riskCreatedBy">Created By (User ID)</label>
+                  <input id="riskCreatedBy" type="number" placeholder="Optional" />
+                </div>
+
+                <div class="form-actions">
+                  <button class="btn btn-primary" type="submit">Save Risk</button>
+                  <button id="clearRiskFormBtn" class="btn btn-secondary" type="button">Clear</button>
+                </div>
+              </form>
             </div>
           </div>
         </section>
@@ -348,6 +582,6 @@
     </main>
   </div>
 
-  <script src="/js/young-people-shell.js?v=10"></script>
+  <script src="/js/young-people-shell.js?v=11"></script>
 </body>
 </html>
