@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Young Person Panel | IndiCare</title>
-  <link rel="stylesheet" href="/css/young-people-shell.css?v=20" />
+  <link rel="stylesheet" href="/css/young-people-shell.css?v=30" />
 </head>
 <body>
   <div class="shell-layout">
@@ -29,9 +29,9 @@
     </aside>
 
     <main class="main-panel">
-      <!-- Primary page header -->
-      <header class="page-header">
-        <div>
+      <!-- Slim page header -->
+      <header class="page-header page-header-premium">
+        <div class="page-header-main">
           <h2 id="selectedYoungPersonName">Select a young person</h2>
           <p id="selectedYoungPersonMeta">No record loaded</p>
         </div>
@@ -43,8 +43,8 @@
         </div>
       </header>
 
-      <!-- Sticky young person context bar -->
-      <section class="sticky-young-person-bar" id="stickyYoungPersonBar">
+      <!-- Compact sticky person strip -->
+      <section class="sticky-young-person-bar sticky-young-person-bar-premium" id="stickyYoungPersonBar">
         <div class="sticky-person-left">
           <div class="person-avatar" id="stickyPersonAvatar">YP</div>
 
@@ -78,6 +78,7 @@
 
       <div id="statusBar" class="status-bar hidden"></div>
 
+      <!-- Keep for JS compatibility; CSS can hide -->
       <section class="action-bar">
         <button class="action-chip chip-overdue" data-jump-tab="compliance" data-filter="overdue" type="button">
           <span class="chip-label">Overdue</span>
@@ -110,7 +111,7 @@
         </button>
       </section>
 
-      <nav class="tabs">
+      <nav class="tabs tabs-premium">
         <button class="tab-btn active" data-tab="overview" type="button">Overview</button>
         <button class="tab-btn" data-tab="profile" type="button">Profile</button>
         <button class="tab-btn" data-tab="plans" type="button">Plans</button>
@@ -130,22 +131,62 @@
       <section class="tab-wrapper">
         <!-- OVERVIEW -->
         <section id="tab-overview" class="tab-panel active">
-          <div class="overview-grid">
-            <div class="panel-shell">
-              <div class="panel-header-row">
-                <h3>Current Picture</h3>
+          <div class="overview-workspace">
+            <div class="overview-main-column">
+              <div class="panel-shell">
+                <div class="panel-header-row">
+                  <h3>Current Picture</h3>
+                </div>
+                <div id="overviewContent" class="content-area">
+                  <div class="empty-state">Select a young person to load overview.</div>
+                </div>
               </div>
-              <div id="overviewContent" class="content-area">
-                <div class="empty-state">Select a young person to load overview.</div>
+
+              <div class="panel-shell">
+                <div class="panel-header-row">
+                  <h3>Recent Activity</h3>
+                </div>
+                <div id="overviewRecentActivityContent" class="content-area">
+                  <div class="empty-state">Recent activity will appear here.</div>
+                </div>
+              </div>
+
+              <div class="panel-shell">
+                <div class="panel-header-row">
+                  <h3>Child Voice and What Matters</h3>
+                </div>
+                <div id="overviewVoiceContent" class="content-area">
+                  <div class="empty-state">Child voice and strengths will appear here.</div>
+                </div>
               </div>
             </div>
 
-            <div class="panel-shell">
-              <div class="panel-header-row">
-                <h3>Live Actions</h3>
+            <div class="overview-side-column">
+              <div class="panel-shell">
+                <div class="panel-header-row">
+                  <h3>Live Actions</h3>
+                </div>
+                <div id="overviewActionsContent" class="content-area">
+                  <div class="empty-state">Actions will appear here.</div>
+                </div>
               </div>
-              <div id="overviewActionsContent" class="content-area">
-                <div class="empty-state">Actions will appear here.</div>
+
+              <div class="panel-shell">
+                <div class="panel-header-row">
+                  <h3>Alerts and Risk Snapshot</h3>
+                </div>
+                <div id="overviewAlertsContent" class="content-area">
+                  <div class="empty-state">Alerts will appear here.</div>
+                </div>
+              </div>
+
+              <div class="panel-shell">
+                <div class="panel-header-row">
+                  <h3>Inspection Readiness</h3>
+                </div>
+                <div id="overviewReadinessContent" class="content-area">
+                  <div class="empty-state">Inspection readiness will appear here.</div>
+                </div>
               </div>
             </div>
           </div>
@@ -187,7 +228,7 @@
                 <input type="hidden" id="planId" />
 
                 <div class="section-block">
-                  <h4>Plan basics</h4>
+                  <h4>Plan Basics</h4>
 
                   <div class="form-group">
                     <label for="planType">Plan Type</label>
@@ -200,18 +241,18 @@
                   </div>
 
                   <div class="form-group">
-                    <label for="planPresentingNeed">What need or difficulty is this plan responding to?</label>
-                    <textarea id="planPresentingNeed" rows="4" placeholder="Describe the current need in clear, respectful language"></textarea>
+                    <label for="planPresentingNeed">What is this plan responding to?</label>
+                    <textarea id="planPresentingNeed" rows="4" placeholder="Describe the need in clear, respectful language"></textarea>
                   </div>
 
                   <div class="form-group">
                     <label for="planSummary">Plan Summary</label>
-                    <textarea id="planSummary" rows="4" placeholder="Briefly explain the plan and what good support looks like"></textarea>
+                    <textarea id="planSummary" rows="4" placeholder="Explain the plan and what good support looks like"></textarea>
                   </div>
                 </div>
 
                 <div class="section-block">
-                  <h4>Young person and therapeutic support</h4>
+                  <h4>Young Person and Support Guidance</h4>
 
                   <div class="form-group">
                     <label for="planChildVoice">Young Person’s Voice</label>
@@ -220,7 +261,7 @@
 
                   <div class="form-group">
                     <label for="planProactiveStrategies">What helps proactively?</label>
-                    <textarea id="planProactiveStrategies" rows="4" placeholder="What adults should do in advance to support success and stability"></textarea>
+                    <textarea id="planProactiveStrategies" rows="4" placeholder="What adults should do in advance to support success"></textarea>
                   </div>
 
                   <div class="form-group">
@@ -230,7 +271,7 @@
 
                   <div class="form-group">
                     <label for="planTriggers">Triggers / Stressors</label>
-                    <textarea id="planTriggers" rows="4" placeholder="What tends to make things harder for the young person?"></textarea>
+                    <textarea id="planTriggers" rows="4" placeholder="What tends to make things harder?"></textarea>
                   </div>
 
                   <div class="form-group">
@@ -320,7 +361,7 @@
                 <input type="hidden" id="riskId" />
 
                 <div class="section-block">
-                  <h4>Risk summary</h4>
+                  <h4>Risk Summary</h4>
 
                   <div class="form-group">
                     <label for="riskCategory">Category</label>
@@ -339,7 +380,7 @@
                 </div>
 
                 <div class="section-block">
-                  <h4>Understanding the young person</h4>
+                  <h4>Understanding the Young Person</h4>
 
                   <div class="form-group">
                     <label for="riskKnownTriggers">Known Triggers</label>
@@ -363,7 +404,7 @@
                 </div>
 
                 <div class="section-block">
-                  <h4>What staff should do</h4>
+                  <h4>What Staff Should Do</h4>
 
                   <div class="form-group">
                     <label for="riskCurrentControls">Current Controls</label>
@@ -451,7 +492,6 @@
         <!-- DAILY NOTES -->
         <section id="tab-daily_notes" class="tab-panel">
           <div class="tab-grid daily-note-grid">
-            <!-- Left: notes list -->
             <div class="panel-shell">
               <div class="panel-header-row">
                 <h3>Daily Notes</h3>
@@ -462,29 +502,35 @@
               </div>
 
               <div class="filter-toolbar">
-                <label class="filter-label" for="dailyNoteStatusFilter">Status</label>
-                <select id="dailyNoteStatusFilter">
-                  <option value="all">All</option>
-                  <option value="draft">Draft</option>
-                  <option value="completed">Completed</option>
-                  <option value="reviewed">Reviewed</option>
-                  <option value="amended">Amended</option>
-                  <option value="returned">Returned</option>
-                </select>
+                <div>
+                  <label class="filter-label" for="dailyNoteStatusFilter">Status</label>
+                  <select id="dailyNoteStatusFilter">
+                    <option value="all">All</option>
+                    <option value="draft">Draft</option>
+                    <option value="completed">Completed</option>
+                    <option value="reviewed">Reviewed</option>
+                    <option value="amended">Amended</option>
+                    <option value="returned">Returned</option>
+                  </select>
+                </div>
 
-                <label class="filter-label" for="dailyNoteShiftFilter">Shift</label>
-                <select id="dailyNoteShiftFilter">
-                  <option value="all">All</option>
-                  <option value="day">Day</option>
-                  <option value="evening">Evening</option>
-                  <option value="night">Night</option>
-                  <option value="waking_night">Waking Night</option>
-                  <option value="school">School</option>
-                  <option value="custom">Custom</option>
-                </select>
+                <div>
+                  <label class="filter-label" for="dailyNoteShiftFilter">Shift</label>
+                  <select id="dailyNoteShiftFilter">
+                    <option value="all">All</option>
+                    <option value="day">Day</option>
+                    <option value="evening">Evening</option>
+                    <option value="night">Night</option>
+                    <option value="waking_night">Waking Night</option>
+                    <option value="school">School</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </div>
 
-                <label class="filter-label" for="dailyNoteSearch">Search</label>
-                <input id="dailyNoteSearch" type="text" placeholder="Search notes..." />
+                <div>
+                  <label class="filter-label" for="dailyNoteSearch">Search</label>
+                  <input id="dailyNoteSearch" type="text" placeholder="Search notes..." />
+                </div>
               </div>
 
               <div id="dailyNotesContent" class="content-area">
@@ -492,7 +538,6 @@
               </div>
             </div>
 
-            <!-- Centre: editable note form -->
             <div class="panel-shell editable-form-shell">
               <div class="panel-header-row">
                 <h3 id="dailyNoteFormTitle">Create / Edit Daily Note</h3>
@@ -510,7 +555,7 @@
 
                 <div class="section-block">
                   <div class="section-header-line">
-                    <h4>Basic context</h4>
+                    <h4>Basic Context</h4>
                     <button class="help-toggle" type="button" data-help-target="help-basic-context">Why this matters</button>
                   </div>
                   <p id="help-basic-context" class="help-copy hidden">
@@ -551,11 +596,11 @@
                       <label for="dailyNoteLocation">Location</label>
                       <input id="dailyNoteLocation" type="text" placeholder="e.g. Home, school, community" />
                     </div>
-                  </div>
 
-                  <div class="form-group">
-                    <label for="dailyNoteTags">Tags</label>
-                    <input id="dailyNoteTags" type="text" placeholder="e.g. home life, emotional wellbeing, education" />
+                    <div class="form-group">
+                      <label for="dailyNoteTags">Tags</label>
+                      <input id="dailyNoteTags" type="text" placeholder="e.g. home life, emotional wellbeing, education" />
+                    </div>
                   </div>
 
                   <div class="checkbox-row">
@@ -573,7 +618,7 @@
 
                 <div class="section-block">
                   <div class="section-header-line">
-                    <h4>What happened today?</h4>
+                    <h4>What Happened Today?</h4>
                     <button class="help-toggle" type="button" data-help-target="help-what-happened">Why this matters</button>
                   </div>
                   <p id="help-what-happened" class="help-copy hidden">
@@ -592,7 +637,7 @@
 
                   <div class="form-group">
                     <label for="dailyNoteRoutineEngagement">Routine and engagement</label>
-                    <textarea id="dailyNoteRoutineEngagement" rows="3" placeholder="How did they manage routines, self-care, activities, and engagement with staff or peers?"></textarea>
+                    <textarea id="dailyNoteRoutineEngagement" rows="3" placeholder="How did they manage routines, self-care, activities, and engagement?"></textarea>
                   </div>
 
                   <div class="form-row">
@@ -603,13 +648,13 @@
 
                     <div class="form-group">
                       <label for="dailyNoteHealthUpdate">Health / medication / sleep / food</label>
-                      <textarea id="dailyNoteHealthUpdate" rows="3" placeholder="Anything important about health, medication, sleep, meals or emotional wellbeing"></textarea>
+                      <textarea id="dailyNoteHealthUpdate" rows="3" placeholder="Anything important about health, medication, sleep, meals or wellbeing"></textarea>
                     </div>
-                  </div>
 
-                  <div class="form-group">
-                    <label for="dailyNoteFamilyUpdate">Family / relationships / contact</label>
-                    <textarea id="dailyNoteFamilyUpdate" rows="3" placeholder="Any contact, family updates or relationship-based events"></textarea>
+                    <div class="form-group">
+                      <label for="dailyNoteFamilyUpdate">Family / relationships / contact</label>
+                      <textarea id="dailyNoteFamilyUpdate" rows="3" placeholder="Any contact, family updates or relationship-based events"></textarea>
+                    </div>
                   </div>
 
                   <div class="form-group">
@@ -625,7 +670,7 @@
 
                 <div class="section-block">
                   <div class="section-header-line">
-                    <h4>PACE reflection</h4>
+                    <h4>PACE Reflection</h4>
                     <button class="help-toggle" type="button" data-help-target="help-pace">Why this matters</button>
                   </div>
                   <p id="help-pace" class="help-copy hidden">
@@ -693,7 +738,7 @@
 
                 <div class="section-block">
                   <div class="section-header-line">
-                    <h4>Young person’s voice</h4>
+                    <h4>Young Person’s Voice</h4>
                     <button class="help-toggle" type="button" data-help-target="help-voice">Why this matters</button>
                   </div>
                   <p id="help-voice" class="help-copy hidden">
@@ -702,7 +747,7 @@
 
                   <div class="form-group">
                     <label for="dailyNoteYoungPersonVoice">What did the young person say or communicate?</label>
-                    <textarea id="dailyNoteYoungPersonVoice" rows="4" placeholder="Include direct quotes where possible, and describe how feelings were communicated"></textarea>
+                    <textarea id="dailyNoteYoungPersonVoice" rows="4" placeholder="Include direct quotes where possible"></textarea>
                   </div>
 
                   <div class="form-group">
@@ -713,7 +758,7 @@
 
                 <div class="section-block">
                   <div class="section-header-line">
-                    <h4>Staff response and impact</h4>
+                    <h4>Staff Response and Impact</h4>
                     <button class="help-toggle" type="button" data-help-target="help-response">Why this matters</button>
                   </div>
                   <p id="help-response" class="help-copy hidden">
@@ -735,17 +780,17 @@
                       <label for="dailyNoteWhatDidNotHelp">What did not help?</label>
                       <textarea id="dailyNoteWhatDidNotHelp" rows="3" placeholder="What did not seem to help, or made things harder?"></textarea>
                     </div>
-                  </div>
 
-                  <div class="form-group">
-                    <label for="dailyNoteImpact">How did the young person respond / what was the impact?</label>
-                    <textarea id="dailyNoteImpact" rows="3" placeholder="Did they settle, re-engage, remain distressed, need more support, or show progress?"></textarea>
+                    <div class="form-group">
+                      <label for="dailyNoteImpact">How did the young person respond / what was the impact?</label>
+                      <textarea id="dailyNoteImpact" rows="3" placeholder="Did they settle, re-engage, remain distressed, need more support, or show progress?"></textarea>
+                    </div>
                   </div>
                 </div>
 
                 <div class="section-block">
                   <div class="section-header-line">
-                    <h4>Follow-up and linked actions</h4>
+                    <h4>Follow-up and Linked Actions</h4>
                     <button class="help-toggle" type="button" data-help-target="help-actions">Why this matters</button>
                   </div>
                   <p id="help-actions" class="help-copy hidden">
@@ -777,7 +822,7 @@
 
                 <div class="section-block">
                   <div class="section-header-line">
-                    <h4>Standards and evidence</h4>
+                    <h4>Standards and Evidence</h4>
                     <button class="help-toggle" type="button" data-help-target="help-evidence">Why this matters</button>
                   </div>
                   <p id="help-evidence" class="help-copy hidden">
@@ -806,9 +851,7 @@
                 </div>
 
                 <div class="section-block">
-                  <div class="section-header-line">
-                    <h4>Amendment / review details</h4>
-                  </div>
+                  <h4>Amendment / Review Details</h4>
 
                   <div class="form-group">
                     <label for="dailyNoteChangeReason">Reason for update</label>
@@ -838,7 +881,6 @@
               </form>
             </div>
 
-            <!-- Right: support + version history -->
             <div class="panel-shell">
               <div class="panel-header-row">
                 <h3>Context and History</h3>
@@ -846,42 +888,37 @@
 
               <div class="support-stack">
                 <section class="support-card">
-                  <h4>Today I need to know</h4>
+                  <h4>Today I Need to Know</h4>
                   <div id="dailyNoteSidebarTodayInfo" class="support-card-body">
                     <div class="empty-state">No live context loaded.</div>
                   </div>
                 </section>
 
                 <section class="support-card">
-                  <h4>Current risks</h4>
+                  <h4>Current Risks</h4>
                   <div id="dailyNoteSidebarRisks" class="support-card-body">
                     <div class="empty-state">No current risks loaded.</div>
                   </div>
                 </section>
 
                 <section class="support-card">
-                  <h4>Active actions</h4>
+                  <h4>Active Actions</h4>
                   <div id="dailyNoteSidebarActions" class="support-card-body">
                     <div class="empty-state">No active actions loaded.</div>
                   </div>
                 </section>
 
                 <section class="support-card">
-                  <h4>Therapeutic language helper</h4>
+                  <h4>Therapeutic Language Helper</h4>
                   <div id="therapeuticLanguageHints" class="support-card-body">
                     <p class="muted-copy">
                       IndiCare will suggest softer, clearer and more therapeutic wording as notes are edited.
                     </p>
-                    <ul class="support-list">
-                      <li><strong>Avoid:</strong> “attention seeking” → <strong>Try:</strong> “seeking reassurance or connection”</li>
-                      <li><strong>Avoid:</strong> “refused” → <strong>Try:</strong> “was not able to engage”</li>
-                      <li><strong>Avoid:</strong> “challenging behaviour” → <strong>Try:</strong> “distress-related behaviour”</li>
-                    </ul>
                   </div>
                 </section>
 
                 <section class="support-card">
-                  <h4>Version history</h4>
+                  <h4>Version History</h4>
                   <div id="dailyNoteVersionHistory" class="support-card-body">
                     <div class="empty-state">Version history will appear here.</div>
                   </div>
@@ -1021,53 +1058,57 @@
 
         <!-- MONTHLY REVIEWS -->
         <section id="tab-monthly_reviews" class="tab-panel">
-          <div class="panel-shell">
-            <div class="panel-header-row">
-              <h3>Monthly Reviews</h3>
+          <div class="tab-grid monthly-review-grid">
+            <div class="panel-shell">
+              <div class="panel-header-row">
+                <h3>Monthly Reviews</h3>
 
-              <div class="monthly-review-toolbar">
-                <input id="monthlyReviewMonth" type="month" />
-                <button id="generateMonthlyReviewBtn" class="btn btn-primary" type="button">Generate Review</button>
-                <button id="monthlyOfstedAiBtn" class="btn btn-secondary" type="button">AI OFSTED Report</button>
+                <div class="monthly-review-toolbar">
+                  <input id="monthlyReviewMonth" type="month" />
+                  <button id="generateMonthlyReviewBtn" class="btn btn-primary" type="button">Generate Review</button>
+                  <button id="monthlyOfstedAiBtn" class="btn btn-secondary" type="button">AI OFSTED Report</button>
+                </div>
+              </div>
+
+              <div id="monthlyReviewsList" class="content-area">
+                <div class="empty-state">Select a young person to load monthly reviews.</div>
               </div>
             </div>
 
-            <div id="monthlyReviewsList" class="content-area">
-              <div class="empty-state">Select a young person to load monthly reviews.</div>
-            </div>
-          </div>
+            <div class="panel-shell">
+              <div class="panel-header-row">
+                <h3>Monthly Review Detail</h3>
+              </div>
 
-          <div class="panel-shell">
-            <div class="panel-header-row">
-              <h3>Monthly Review Detail</h3>
-            </div>
-
-            <div id="monthlyReviewDetail" class="content-area">
-              <div class="empty-state">Select a review to view details.</div>
+              <div id="monthlyReviewDetail" class="content-area">
+                <div class="empty-state">Select a review to view details.</div>
+              </div>
             </div>
           </div>
         </section>
 
         <!-- STANDARDS -->
         <section id="tab-standards" class="tab-panel">
-          <div class="panel-shell">
-            <div class="panel-header-row">
-              <h3>Quality Standards Evidence</h3>
-              <button id="rebuildStandardsBtn" class="btn btn-secondary" type="button">Rebuild Evidence Links</button>
+          <div class="tab-grid standards-grid">
+            <div class="panel-shell">
+              <div class="panel-header-row">
+                <h3>Quality Standards Evidence</h3>
+                <button id="rebuildStandardsBtn" class="btn btn-secondary" type="button">Rebuild Evidence Links</button>
+              </div>
+
+              <div id="standardsSummary" class="content-area">
+                <div class="empty-state">Select a young person to load standards evidence.</div>
+              </div>
             </div>
 
-            <div id="standardsSummary" class="content-area">
-              <div class="empty-state">Select a young person to load standards evidence.</div>
-            </div>
-          </div>
+            <div class="panel-shell">
+              <div class="panel-header-row">
+                <h3>Evidence Records</h3>
+              </div>
 
-          <div class="panel-shell">
-            <div class="panel-header-row">
-              <h3>Evidence Records</h3>
-            </div>
-
-            <div id="standardsEvidenceList" class="content-area">
-              <div class="empty-state">No evidence loaded.</div>
+              <div id="standardsEvidenceList" class="content-area">
+                <div class="empty-state">No evidence loaded.</div>
+              </div>
             </div>
           </div>
         </section>
@@ -1080,24 +1121,28 @@
             </div>
 
             <div class="filter-toolbar">
-              <label class="filter-label" for="complianceStatusFilter">Status</label>
-              <select id="complianceStatusFilter">
-                <option value="all">All</option>
-                <option value="overdue">Overdue</option>
-                <option value="due_soon">Due Soon</option>
-                <option value="ok">Current</option>
-              </select>
+              <div>
+                <label class="filter-label" for="complianceStatusFilter">Status</label>
+                <select id="complianceStatusFilter">
+                  <option value="all">All</option>
+                  <option value="overdue">Overdue</option>
+                  <option value="due_soon">Due Soon</option>
+                  <option value="ok">Current</option>
+                </select>
+              </div>
 
-              <label class="filter-label" for="complianceCategoryFilter">Category</label>
-              <select id="complianceCategoryFilter">
-                <option value="all">All</option>
-                <option value="support_plan_review">Plans</option>
-                <option value="risk_review">Risk</option>
-                <option value="keywork_follow_up">Key Work</option>
-                <option value="health_follow_up">Health</option>
-                <option value="family_follow_up">Family</option>
-                <option value="daily_note_follow_up">Daily Notes</option>
-              </select>
+              <div>
+                <label class="filter-label" for="complianceCategoryFilter">Category</label>
+                <select id="complianceCategoryFilter">
+                  <option value="all">All</option>
+                  <option value="support_plan_review">Plans</option>
+                  <option value="risk_review">Risk</option>
+                  <option value="keywork_follow_up">Key Work</option>
+                  <option value="health_follow_up">Health</option>
+                  <option value="family_follow_up">Family</option>
+                  <option value="daily_note_follow_up">Daily Notes</option>
+                </select>
+              </div>
             </div>
 
             <div id="complianceContent" class="content-area">
@@ -1117,6 +1162,6 @@
     </main>
   </div>
 
-  <script src="/js/young-people-shell.js?v=20"></script>
+  <script src="/js/young-people-shell.js?v=30"></script>
 </body>
 </html>
