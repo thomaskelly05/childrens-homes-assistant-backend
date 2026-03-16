@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IndiCare | AI Note Assistant</title>
+    <title>IndiCare | AI Care Notes Studio</title>
 
     <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
     <link rel="stylesheet" href="/css/reset.css">
@@ -12,586 +12,20 @@
     <link rel="stylesheet" href="/css/layout.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/ai-notes.css">
-
-    <style>
-        .notes-page {
-            min-height: 100vh;
-            background: var(--bg);
-        }
-
-        .notes-workspace {
-            padding: 0 1.5rem 1.5rem;
-        }
-
-        .workspace-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 1rem;
-            padding: 1.25rem 0;
-        }
-
-        .eyebrow {
-            margin: 0 0 0.35rem;
-            font-size: 0.82rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--primary-hover);
-        }
-
-        .workspace-header h1 {
-            margin: 0 0 0.45rem;
-            color: var(--text);
-            letter-spacing: -0.03em;
-        }
-
-        .workspace-subtitle {
-            margin: 0.2rem 0;
-            color: var(--text-soft);
-            line-height: 1.6;
-            max-width: 760px;
-        }
-
-        .workspace-header-actions {
-            display: flex;
-            gap: 1rem;
-            align-items: flex-start;
-            flex-wrap: wrap;
-        }
-
-        .template-picker {
-            min-width: 320px;
-        }
-
-        .template-picker label,
-        .field label {
-            display: block;
-            margin-bottom: 0.45rem;
-            font-weight: 700;
-            color: var(--text);
-            font-size: 0.92rem;
-        }
-
-        .template-picker-row {
-            display: flex;
-            gap: 0.6rem;
-            flex-wrap: wrap;
-        }
-
-        .template-picker-row select,
-        .template-picker-row input,
-        .field input,
-        .field textarea,
-        .instruction-box {
-            width: 100%;
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            background: #fff;
-            color: var(--text);
-            padding: 0.9rem 1rem;
-            outline: none;
-        }
-
-        .template-picker-row select:focus,
-        .template-picker-row input:focus,
-        .field input:focus,
-        .field textarea:focus,
-        .instruction-box:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(47, 92, 255, 0.12);
-        }
-
-        .header-buttons {
-            display: flex;
-            gap: 0.65rem;
-            flex-wrap: wrap;
-        }
-
-        .notes-section,
-        .sidebar-card,
-        .split-panel {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 18px;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .notes-section,
-        .split-panel,
-        .sidebar-card {
-            padding: 1rem;
-        }
-
-        .panel-label {
-            margin: 0 0 0.35rem;
-            font-size: 0.78rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--primary-hover);
-        }
-
-        .section-head {
-            display: flex;
-            justify-content: space-between;
-            gap: 1rem;
-            align-items: flex-start;
-            margin-bottom: 1rem;
-        }
-
-        .section-head h2,
-        .split-panel h2 {
-            margin: 0 0 0.35rem;
-            color: var(--text);
-            letter-spacing: -0.02em;
-        }
-
-        .section-head p,
-        .split-panel p {
-            margin: 0;
-            color: var(--text-soft);
-            line-height: 1.6;
-        }
-
-        .record-actions,
-        .panel-actions,
-        .document-actions,
-        .quick-prompts {
-            display: flex;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .helper-text {
-            color: var(--text-soft);
-            margin-top: 0.8rem;
-            margin-bottom: 0;
-        }
-
-        .field {
-            display: grid;
-            gap: 0.45rem;
-            margin-top: 1rem;
-        }
-
-        .transcript-layout {
-            display: grid;
-            gap: 1rem;
-        }
-
-        .workspace-split {
-            display: none;
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-            gap: 1rem;
-            margin-top: 1rem;
-            align-items: start;
-        }
-
-        .workspace-split.active {
-            display: grid;
-        }
-
-        .source-transcript,
-        .document-editor {
-            min-height: 560px;
-            resize: vertical;
-        }
-
-        .prompt-chip {
-            border: 1px solid var(--border);
-            background: var(--surface-muted);
-            color: var(--text);
-            border-radius: 999px;
-            padding: 0.55rem 0.85rem;
-            cursor: pointer;
-            font-size: 0.86rem;
-            font-weight: 600;
-        }
-
-        .document-meta {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-            margin-top: 0.45rem;
-        }
-
-        .note-mode-badge,
-        .save-state-badge,
-        .status-pill {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0.42rem 0.75rem;
-            border-radius: 999px;
-            font-size: 0.82rem;
-            font-weight: 700;
-        }
-
-        .note-mode-badge.is-new {
-            background: #eef4ff;
-            color: #1d4ed8;
-        }
-
-        .note-mode-badge.is-editing {
-            background: #ecfdf3;
-            color: #027a48;
-        }
-
-        .save-state-badge.is-idle {
-            background: #f2f4f7;
-            color: #475467;
-        }
-
-        .save-state-badge.is-dirty {
-            background: #fff7e6;
-            color: #b54708;
-        }
-
-        .save-state-badge.is-saving {
-            background: #eef4ff;
-            color: #1d4ed8;
-        }
-
-        .save-state-badge.is-saved {
-            background: #ecfdf3;
-            color: #027a48;
-        }
-
-        .status-pill.idle {
-            background: #f2f4f7;
-            color: #475467;
-        }
-
-        .status-pill.recording {
-            background: #eff8ff;
-            color: #175cd3;
-        }
-
-        .status-pill.processing {
-            background: #fff7e6;
-            color: #b54708;
-        }
-
-        .status-pill.success {
-            background: #ecfdf3;
-            color: #027a48;
-        }
-
-        .sidebar-card-header {
-            display: flex;
-            justify-content: space-between;
-            gap: 1rem;
-            align-items: center;
-            margin-bottom: 0.8rem;
-        }
-
-        .sidebar-card-header h3 {
-            margin: 0;
-            color: var(--text);
-        }
-
-        .sidebar-note {
-            color: var(--text-soft);
-            line-height: 1.55;
-            margin: 0.6rem 0 0;
-        }
-
-        .history-empty {
-            color: var(--text-soft);
-            font-size: 0.92rem;
-        }
-
-        .history-list {
-            display: grid;
-            gap: 0.75rem;
-        }
-
-        .history-item {
-            border: 1px solid var(--border);
-            background: var(--surface-muted);
-            border-radius: 14px;
-            padding: 0.85rem;
-        }
-
-        .history-title {
-            font-weight: 700;
-            color: var(--text);
-            margin-bottom: 0.35rem;
-        }
-
-        .history-meta {
-            color: var(--text-soft);
-            font-size: 0.86rem;
-            margin-bottom: 0.6rem;
-        }
-
-        .history-actions {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-
-        .history-badge.warning {
-            display: inline-block;
-            background: #fff7e6;
-            color: #b54708;
-            padding: 0.3rem 0.55rem;
-            border-radius: 999px;
-            font-size: 0.78rem;
-            font-weight: 700;
-            margin-bottom: 0.6rem;
-        }
-
-        .toast {
-            position: fixed;
-            right: 1.25rem;
-            bottom: 1.25rem;
-            background: #111827;
-            color: white;
-            padding: 0.8rem 1rem;
-            border-radius: 12px;
-            box-shadow: 0 16px 36px rgba(15, 23, 42, 0.22);
-            opacity: 0;
-            pointer-events: none;
-            transform: translateY(12px);
-            transition: 0.2s ease;
-            z-index: 2000;
-        }
-
-        .toast.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .recording-modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.58);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-            z-index: 1000;
-        }
-
-        .recording-modal-overlay.hidden,
-        .modal-overlay.hidden,
-        .hidden {
-            display: none !important;
-        }
-
-        .recording-modal {
-            width: min(560px, 100%);
-            background: #ffffff;
-            border-radius: 24px;
-            border: 1px solid rgba(15, 23, 42, 0.08);
-            box-shadow: 0 30px 80px rgba(15, 23, 42, 0.24);
-            padding: 1.5rem;
-            text-align: center;
-        }
-
-        .recording-modal-header {
-            margin-bottom: 1rem;
-        }
-
-        .recording-modal-header h2 {
-            margin: 0 0 0.4rem;
-            font-size: 1.4rem;
-            color: #0f172a;
-        }
-
-        .recording-modal-header p {
-            margin: 0;
-            color: #475467;
-            line-height: 1.5;
-        }
-
-        .recording-mic-wrap {
-            display: grid;
-            place-items: center;
-            gap: 1rem;
-            padding: 1.25rem 0 1rem;
-        }
-
-        .recording-modal-mic {
-            width: 140px;
-            height: 140px;
-            border-radius: 999px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: radial-gradient(circle at 30% 30%, #60a5fa, #2563eb);
-            box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.45);
-            color: white;
-            font-size: 3rem;
-        }
-
-        .recording-modal-mic.recording {
-            animation: pulseBlue 1.6s infinite;
-        }
-
-        .recording-modal-mic.paused {
-            background: radial-gradient(circle at 30% 30%, #93c5fd, #3b82f6);
-            opacity: 0.78;
-            animation: none;
-        }
-
-        @keyframes pulseBlue {
-            0% {
-                box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.45);
-                transform: scale(1);
-            }
-            70% {
-                box-shadow: 0 0 0 26px rgba(37, 99, 235, 0);
-                transform: scale(1.03);
-            }
-            100% {
-                box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
-                transform: scale(1);
-            }
-        }
-
-        .recording-modal-timer {
-            font-size: 2rem;
-            font-weight: 800;
-            letter-spacing: 0.04em;
-            color: #0f172a;
-        }
-
-        .recording-modal-status {
-            font-size: 0.95rem;
-            color: #475467;
-            min-height: 1.4rem;
-        }
-
-        .recording-modal-actions {
-            display: flex;
-            justify-content: center;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-            margin-top: 1rem;
-        }
-
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.55);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-            z-index: 1100;
-        }
-
-        .modal-card {
-            width: min(760px, 100%);
-            background: #fff;
-            border-radius: 24px;
-            border: 1px solid var(--border);
-            box-shadow: 0 30px 80px rgba(15, 23, 42, 0.22);
-            padding: 1.25rem;
-            max-height: 88vh;
-            overflow-y: auto;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            gap: 1rem;
-            align-items: flex-start;
-            margin-bottom: 1rem;
-        }
-
-        .template-builder,
-        .saved-templates-box {
-            display: grid;
-            gap: 1rem;
-        }
-
-        .template-add-row {
-            display: flex;
-            gap: 0.6rem;
-            flex-wrap: wrap;
-            margin-top: 0.6rem;
-        }
-
-        .template-sections-list,
-        .saved-templates-list {
-            display: grid;
-            gap: 0.65rem;
-        }
-
-        .template-section-chip,
-        .saved-template-item {
-            display: flex;
-            justify-content: space-between;
-            gap: 1rem;
-            align-items: center;
-            border: 1px solid var(--border);
-            background: var(--surface-muted);
-            border-radius: 12px;
-            padding: 0.7rem 0.85rem;
-        }
-
-        @media (max-width: 1180px) {
-            .workspace-split {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 920px) {
-            .workspace-header {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .workspace-header-actions {
-                flex-direction: column;
-                align-items: stretch;
-            }
-        }
-
-        @media (max-width: 720px) {
-            .notes-workspace {
-                padding: 0 1rem 1rem;
-            }
-
-            .section-head,
-            .modal-header {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .template-picker {
-                min-width: 0;
-            }
-
-            .recording-modal {
-                padding: 1.15rem;
-            }
-
-            .recording-modal-mic {
-                width: 118px;
-                height: 118px;
-                font-size: 2.4rem;
-            }
-
-            .recording-modal-timer {
-                font-size: 1.65rem;
-            }
-        }
-    </style>
 </head>
 <body class="notes-page">
+    <div class="ambient-glow ambient-glow-a"></div>
+    <div class="ambient-glow ambient-glow-b"></div>
+
     <div class="app-shell">
         <aside class="sidebar">
             <div class="sidebar__brand">
-                <img src="/assets/logo.svg" alt="IndiCare logo" class="sidebar__logo">
+                <div class="brand-mark">
+                    <img src="/assets/logo.svg" alt="IndiCare logo" class="sidebar__logo">
+                </div>
                 <div class="sidebar__brand-text">
                     <h1>IndiCare</h1>
-                    <p>AI Notes</p>
+                    <p>AI Care Notes Studio</p>
                 </div>
             </div>
 
@@ -603,20 +37,65 @@
                 <a href="/ai-note.html" class="nav-link is-active">AI Notes</a>
             </nav>
 
-            <div class="sidebar-card">
+            <div class="sidebar-card status-card">
                 <div class="sidebar-card-header">
                     <h3>Recording status</h3>
+                    <span id="statusIndicatorDot" class="live-dot idle"></span>
                 </div>
+
                 <div id="recordingStatus" class="status-pill idle">Not recording</div>
                 <div id="recordingTimer" class="timer">00:00</div>
-                <p class="sidebar-note">Record, transcribe, then review and edit the document using AI instructions where needed.</p>
+
+                <div class="mini-metrics">
+                    <div class="mini-metric">
+                        <span class="mini-metric-label">Words</span>
+                        <strong id="wordCountStat">0</strong>
+                    </div>
+                    <div class="mini-metric">
+                        <span class="mini-metric-label">Characters</span>
+                        <strong id="charCountStat">0</strong>
+                    </div>
+                    <div class="mini-metric">
+                        <span class="mini-metric-label">Template</span>
+                        <strong id="templateMiniStat">—</strong>
+                    </div>
+                </div>
+
+                <p class="sidebar-note">
+                    Record conversations, handovers, meetings or reflective discussions, then convert them into structured, professional care records.
+                </p>
             </div>
 
-            <div id="safeguardingBox" class="sidebar-card safeguarding-box" style="display:none;">
+            <div id="safeguardingBox" class="sidebar-card safeguarding-box hidden">
                 <div class="sidebar-card-header">
-                    <h3>Safeguarding check</h3>
+                    <h3>Safeguarding review</h3>
+                    <span class="risk-chip risk-high">Attention needed</span>
                 </div>
                 <p id="safeguardingText"></p>
+            </div>
+
+            <div class="sidebar-card insight-card">
+                <div class="sidebar-card-header">
+                    <h3>Document insights</h3>
+                </div>
+                <div class="insight-list">
+                    <div class="insight-item">
+                        <span>Readiness</span>
+                        <strong id="readinessStat">Draft</strong>
+                    </div>
+                    <div class="insight-item">
+                        <span>Care language</span>
+                        <strong id="careLanguageStat">Checking</strong>
+                    </div>
+                    <div class="insight-item">
+                        <span>Risk markers</span>
+                        <strong id="riskMarkerStat">None</strong>
+                    </div>
+                    <div class="insight-item">
+                        <span>Last save</span>
+                        <strong id="lastSaveStat">Not saved</strong>
+                    </div>
+                </div>
             </div>
 
             <div class="sidebar-card history-card">
@@ -633,18 +112,18 @@
             </div>
 
             <div class="sidebar__footer">
-                <a href="/" class="button button--secondary">Back to dashboard</a>
+                <a href="/" class="button button--secondary sidebar-back-button">Back to dashboard</a>
             </div>
         </aside>
 
         <main class="main-layout">
             <section class="notes-workspace">
-                <header class="workspace-header">
+                <header class="workspace-header glass-card">
                     <div>
-                        <p class="eyebrow">AI Meeting Assistant</p>
-                        <h1>Create and refine a document</h1>
+                        <p class="eyebrow">Premium AI documentation</p>
+                        <h1>Care notes transcription and drafting</h1>
                         <p class="workspace-subtitle">
-                            Record a meeting, transcribe it, then work in a split view with the original transcript on one side and an editable working document on the other.
+                            Built for the care sector. Capture spoken discussion, generate professional records, apply care-specific templates, and prepare notes that are clearer, safer, and ready for review.
                         </p>
                     </div>
 
@@ -665,12 +144,70 @@
                     </div>
                 </header>
 
-                <section class="notes-section">
+                <section class="hero-strip">
+                    <div class="hero-kpi">
+                        <span class="hero-kpi-label">Mode</span>
+                        <strong id="heroModeText">Voice to care record</strong>
+                    </div>
+                    <div class="hero-kpi">
+                        <span class="hero-kpi-label">Selected template</span>
+                        <strong id="heroTemplateText">—</strong>
+                    </div>
+                    <div class="hero-kpi">
+                        <span class="hero-kpi-label">Safeguarding watch</span>
+                        <strong id="heroRiskText">Monitoring</strong>
+                    </div>
+                    <div class="hero-kpi">
+                        <span class="hero-kpi-label">Autosave</span>
+                        <strong id="heroAutosaveText">Active locally</strong>
+                    </div>
+                </section>
+
+                <section class="notes-section premium-panel">
                     <div class="section-head">
                         <div>
                             <p class="panel-label">Step 1</p>
-                            <h2>Record and transcribe</h2>
-                            <p>Record the meeting first. When transcription is complete, the split editor will open below.</p>
+                            <h2>Capture conversation or dictation</h2>
+                            <p>
+                                Record a shift handover, supervision, placement planning discussion, incident debrief, key-work session, professionals meeting, medication conversation, or reflective record.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="care-meta-grid">
+                        <div class="field">
+                            <label for="serviceType">Service type</label>
+                            <select id="serviceType">
+                                <option value="Residential Children's Home">Residential Children's Home</option>
+                                <option value="Supported Living">Supported Living</option>
+                                <option value="Domiciliary Care">Domiciliary Care</option>
+                                <option value="Residential Adult Care">Residential Adult Care</option>
+                                <option value="Family Support">Family Support</option>
+                                <option value="Education / Therapeutic Setting">Education / Therapeutic Setting</option>
+                            </select>
+                        </div>
+
+                        <div class="field">
+                            <label for="shiftType">Shift / context</label>
+                            <select id="shiftType">
+                                <option value="Day Shift">Day Shift</option>
+                                <option value="Night Shift">Night Shift</option>
+                                <option value="Handover">Handover</option>
+                                <option value="Meeting">Meeting</option>
+                                <option value="Supervision">Supervision</option>
+                                <option value="Incident Review">Incident Review</option>
+                                <option value="Key-work Session">Key-work Session</option>
+                            </select>
+                        </div>
+
+                        <div class="field">
+                            <label for="recordAuthor">Recorded by</label>
+                            <input id="recordAuthor" type="text" placeholder="Name of staff member">
+                        </div>
+
+                        <div class="field">
+                            <label for="youngPersonName">Young person / person supported</label>
+                            <input id="youngPersonName" type="text" placeholder="Optional">
                         </div>
                     </div>
 
@@ -681,22 +218,50 @@
                         <button id="generateBtn" class="btn btn-primary" type="button">Generate working document</button>
                     </div>
 
-                    <p id="audioReadyText" class="helper-text">No recording yet.</p>
-                    <audio id="audioPlayback" controls style="display:none;"></audio>
+                    <div class="recording-surface">
+                        <div class="recording-surface-card">
+                            <div class="recording-visual">
+                                <div id="recordVisualCore" class="record-visual-core">
+                                    <span>🎙️</span>
+                                </div>
+                                <div>
+                                    <h3>Studio recorder</h3>
+                                    <p id="audioReadyText" class="helper-text">No recording yet.</p>
+                                </div>
+                            </div>
+
+                            <div class="recording-tips">
+                                <span class="tip-chip">Use clear speaker turns</span>
+                                <span class="tip-chip">State names and roles</span>
+                                <span class="tip-chip">Mention actions and timescales</span>
+                                <span class="tip-chip">Avoid background noise</span>
+                            </div>
+
+                            <audio id="audioPlayback" controls style="display:none;"></audio>
+                        </div>
+                    </div>
                 </section>
 
                 <section id="splitWorkspace" class="workspace-split">
-                    <div class="split-panel">
+                    <div class="split-panel premium-panel">
                         <div class="section-head">
                             <div>
                                 <p class="panel-label">Original source</p>
                                 <h2>Transcript</h2>
-                                <p>This is the original transcript generated from the recording.</p>
+                                <p>
+                                    This is the raw transcript source. Keep it as your reference point before refining the final care record.
+                                </p>
                             </div>
                             <button id="toggleTranscriptBtn" class="btn btn-light btn-tiny" type="button">Show / hide</button>
                         </div>
 
                         <div id="transcriptContent" class="transcript-layout">
+                            <div class="quick-prompts transcript-tools">
+                                <button class="prompt-chip prompt-chip-secondary" type="button" data-transcript-action="clean">Clean transcript only</button>
+                                <button class="prompt-chip prompt-chip-secondary" type="button" data-transcript-action="speakerize">Format into speaker turns</button>
+                                <button class="prompt-chip prompt-chip-secondary" type="button" data-transcript-action="summarise">Summarise transcript</button>
+                            </div>
+
                             <div class="field">
                                 <label for="transcript">Original transcript</label>
                                 <textarea id="transcript" class="source-transcript" placeholder="The transcript will appear here after transcription, or you can paste one manually."></textarea>
@@ -704,14 +269,15 @@
                         </div>
                     </div>
 
-                    <div class="split-panel">
+                    <div class="split-panel premium-panel">
                         <div class="section-head">
                             <div>
                                 <p class="panel-label">Working document</p>
-                                <h2>Editable document</h2>
+                                <h2>Editable care record</h2>
                                 <div class="document-meta">
                                     <span id="noteModeBadge" class="note-mode-badge is-new">New unsaved note</span>
                                     <span id="saveStateBadge" class="save-state-badge is-idle">Ready</span>
+                                    <span id="documentQualityBadge" class="quality-badge">Care draft</span>
                                 </div>
                             </div>
 
@@ -723,26 +289,36 @@
                         </div>
 
                         <div class="quick-prompts">
-                            <button class="prompt-chip" type="button" data-prompt="Rewrite this into a professional children’s home meeting note.">Professional note</button>
-                            <button class="prompt-chip" type="button" data-prompt="Turn this into a concise handover-ready summary.">Handover summary</button>
-                            <button class="prompt-chip" type="button" data-prompt="Structure this under clear headings using the selected template.">Apply template structure</button>
-                            <button class="prompt-chip" type="button" data-prompt="Correct grammar, improve clarity, and keep the meaning the same.">Improve wording</button>
+                            <button class="prompt-chip" type="button" data-prompt="Rewrite this into a professional care sector record using clear, factual, respectful language and the selected template.">Professional care note</button>
+                            <button class="prompt-chip" type="button" data-prompt="Turn this into a concise handover-ready summary with risks, actions, health, appointments, and priorities for the next shift.">Handover summary</button>
+                            <button class="prompt-chip" type="button" data-prompt="Structure this under the selected template headings and remove repetition without inventing information.">Apply template structure</button>
+                            <button class="prompt-chip" type="button" data-prompt="Improve grammar, spelling, factual clarity, chronology, and professional tone while keeping the meaning the same.">Improve wording</button>
+                            <button class="prompt-chip" type="button" data-prompt="Rewrite this as a safeguarding-conscious record and clearly separate facts, observations, actions taken, and next steps.">Safeguarding format</button>
+                            <button class="prompt-chip" type="button" data-prompt="Rewrite this in a person-centred way that reflects the voice, wishes, feelings, choices, and presentation of the person discussed.">Person-centred language</button>
                         </div>
 
-                        <div class="field">
-                            <label for="noteTitle">Document title</label>
-                            <input id="noteTitle" type="text" placeholder="Example: Team meeting - March review">
+                        <div class="editor-grid">
+                            <div class="field">
+                                <label for="noteTitle">Document title</label>
+                                <input id="noteTitle" type="text" placeholder="Example: Team meeting - March review">
+                            </div>
+
+                            <div class="field">
+                                <label for="meetingDate">Record date</label>
+                                <input id="meetingDate" type="date">
+                            </div>
                         </div>
 
                         <div class="field">
                             <label for="aiInstruction">Instruction for AI</label>
-                            <textarea id="aiInstruction" class="instruction-box" placeholder="Example: rewrite this into a professional supervision summary using the selected template."></textarea>
+                            <textarea id="aiInstruction" class="instruction-box" placeholder="Example: rewrite this into a professional supervision summary using the selected template, keep it factual, separate actions clearly, and include a review date section."></textarea>
                         </div>
 
                         <div class="panel-actions">
                             <button id="applyAiEditBtn" class="btn btn-dark" type="button">Apply AI change</button>
                             <button id="undoAiEditBtn" class="btn btn-light" type="button">Undo last change</button>
                             <button id="copyDraftBtn" class="btn btn-light" type="button">Reset from generated draft</button>
+                            <button id="insertTemplateBtn" class="btn btn-light" type="button">Insert blank template</button>
                         </div>
 
                         <div class="field">
@@ -750,7 +326,7 @@
                             <textarea id="finalNote" class="document-editor" placeholder="The editable working document will appear here..."></textarea>
                         </div>
 
-                        <div class="panel-actions">
+                        <div class="panel-actions final-actions">
                             <button id="saveBtn" class="btn btn-success" type="button">Save document</button>
                             <button id="clearBtn" class="btn btn-danger" type="button">Clear</button>
                         </div>
@@ -770,6 +346,9 @@
                 <div>
                     <p class="panel-label">Templates</p>
                     <h2>Create and manage templates</h2>
+                    <p class="modal-copy">
+                        Build templates for your service, your home, your team meetings, or your organisation’s preferred recording structure.
+                    </p>
                 </div>
                 <button id="closeTemplateManagerBtn" class="btn btn-light btn-tiny" type="button">Close</button>
             </div>
@@ -777,7 +356,7 @@
             <div class="template-builder">
                 <div class="field">
                     <label for="templateNameInput">Template name</label>
-                    <input id="templateNameInput" type="text" placeholder="Example: Supervision note">
+                    <input id="templateNameInput" type="text" placeholder="Example: Daily care note">
                 </div>
 
                 <div class="field">
@@ -805,7 +384,7 @@
         <div class="recording-modal" role="dialog" aria-modal="true" aria-labelledby="recordingModalTitle">
             <div class="recording-modal-header">
                 <h2 id="recordingModalTitle">Recording in progress</h2>
-                <p>Use pause, resume, or stop when you are ready to finish the recording.</p>
+                <p>Capture high-quality audio for handovers, meetings, safeguarding discussions, reflective sessions, and professional records.</p>
             </div>
 
             <div class="recording-mic-wrap">
