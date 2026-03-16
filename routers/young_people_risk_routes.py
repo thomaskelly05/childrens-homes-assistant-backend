@@ -5,182 +5,242 @@ from pydantic import BaseModel
 
 from db.connection import get_db
 
-router = APIRouter(prefix="/young-people", tags=["Young People Keywork"])
+router = APIRouter(prefix="/young-people", tags=["Young People Risk"])
 
 
-class KeyworkCreate(BaseModel):
+class RiskAssessmentCreate(BaseModel):
     young_person_id: int
-    session_date: str
-    worker_id: int | None = None
-    topic: str
-    purpose: str | None = None
-    summary: str | None = None
-    child_voice: str | None = None
-    reflective_analysis: str | None = None
-    actions_agreed: str | None = None
-    next_session_date: str | None = None
+    category: str
+    title: str
+    concern_summary: str | None = None
+    known_triggers: str | None = None
+    early_warning_signs: str | None = None
+    contextual_factors: str | None = None
+    current_controls: str | None = None
+    deescalation_strategies: str | None = None
+    response_actions: str | None = None
+    child_views: str | None = None
+    severity: str | None = "medium"
+    likelihood: str | None = "medium"
+    review_date: str | None = None
     status: str | None = "active"
+    owner_id: int | None = None
+    approval_status: str | None = "not_required"
+    created_by: int | None = None
     archived: bool | None = False
 
 
-class KeyworkUpdate(BaseModel):
-    session_date: str | None = None
-    worker_id: int | None = None
-    topic: str | None = None
-    purpose: str | None = None
-    summary: str | None = None
-    child_voice: str | None = None
-    reflective_analysis: str | None = None
-    actions_agreed: str | None = None
-    next_session_date: str | None = None
+class RiskAssessmentUpdate(BaseModel):
+    category: str | None = None
+    title: str | None = None
+    concern_summary: str | None = None
+    known_triggers: str | None = None
+    early_warning_signs: str | None = None
+    contextual_factors: str | None = None
+    current_controls: str | None = None
+    deescalation_strategies: str | None = None
+    response_actions: str | None = None
+    child_views: str | None = None
+    severity: str | None = None
+    likelihood: str | None = None
+    review_date: str | None = None
     status: str | None = None
+    owner_id: int | None = None
+    approval_status: str | None = None
+    created_by: int | None = None
     archived: bool | None = None
 
 
-@router.get("/{young_person_id}/keywork")
-def get_young_person_keywork(young_person_id: int, conn=Depends(get_db)):
+def ensure_young_person_exists(cur, young_person_id: int):
+    cur.execute("SELECT id FROM young_people WHERE id = %s LIMIT 1", (young_person_id,))
+    if not cur.fetchone():
+        raise HTTPException(status_code=404, detail="Young person not found")
+
+
+def fetch_risk_select_sql(where_sql: str):
+    return f"""
+        SELECT
+            ra.id,
+            ra.young_person_id,
+            ra.category,
+            ra.title,
+            ra.concern_summary,
+            ra.known_triggers,
+            ra.early_warning_signs,
+            ra.contextual_factors,
+            ra.current_controls,
+            ra.deescalation_strategies,
+            ra.response_actions,
+            ra.child_views,
+            ra.severity,
+            ra.likelihood,
+            ra.review_date,
+            ra.status,
+            ra.owner_id,
+            ra.approval_status,
+            ra.created_by,
+            ra.archived,
+            ra.created_at,
+            ra.updated_at,
+            ou.first_name AS owner_first_name,
+            ou.last_name AS owner_last_name,
+            cu.first_name AS created_by_first_name,
+            cu.last_name AS created_by_last_name
+        FROM risk_assessments ra
+        LEFT JOIN users ou ON ra.owner_id = ou.id
+        LEFT JOIN users cu ON ra.created_by = cu.id
+        {where_sql}
+    """
+
+
+@router.get("/{young_person_id}/risk")
+def get_young_person_risk(young_person_id: int, conn=Depends(get_db)):
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT id FROM young_people WHERE id = %s LIMIT 1", (young_person_id,))
-            if not cur.fetchone():
-                raise HTTPException(status_code=404, detail="Young person not found")
-
+            ensure_young_person_exists(cur, young_person_id)
             cur.execute(
-                """
-                SELECT
-                    ks.*,
-                    u.first_name AS worker_first_name,
-                    u.last_name AS worker_last_name
-                FROM keywork_sessions ks
-                LEFT JOIN users u ON ks.worker_id = u.id
-                WHERE ks.young_person_id = %s
-                  AND COALESCE(ks.archived, FALSE) = FALSE
-                ORDER BY ks.session_date DESC, ks.id DESC
-                """,
+                fetch_risk_select_sql(
+                    """
+                    WHERE ra.young_person_id = %s
+                      AND COALESCE(ra.archived, FALSE) = FALSE
+                      AND LOWER(COALESCE(ra.status, 'active')) NOT IN ('archived', 'completed')
+                    ORDER BY
+                        CASE
+                            WHEN LOWER(COALESCE(ra.severity, '')) = 'high' THEN 1
+                            WHEN LOWER(COALESCE(ra.severity, '')) = 'medium' THEN 2
+                            ELSE 3
+                        END,
+                        ra.review_date ASC NULLS LAST,
+                        ra.created_at DESC,
+                        ra.id DESC
+                    """
+                ),
                 (young_person_id,),
             )
             return cur.fetchall()
-
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load keywork sessions: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to load risk: {str(e)}")
 
 
-@router.get("/{young_person_id}/keywork/archive")
-def get_young_person_keywork_archive(young_person_id: int, conn=Depends(get_db)):
+@router.get("/{young_person_id}/risk/archive")
+def get_young_person_archived_risk(young_person_id: int, conn=Depends(get_db)):
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT id FROM young_people WHERE id = %s LIMIT 1", (young_person_id,))
-            if not cur.fetchone():
-                raise HTTPException(status_code=404, detail="Young person not found")
-
+            ensure_young_person_exists(cur, young_person_id)
             cur.execute(
-                """
-                SELECT
-                    ks.*,
-                    u.first_name AS worker_first_name,
-                    u.last_name AS worker_last_name
-                FROM keywork_sessions ks
-                LEFT JOIN users u ON ks.worker_id = u.id
-                WHERE ks.young_person_id = %s
-                  AND COALESCE(ks.archived, FALSE) = TRUE
-                ORDER BY ks.session_date DESC, ks.id DESC
-                """,
+                fetch_risk_select_sql(
+                    """
+                    WHERE ra.young_person_id = %s
+                      AND (
+                        COALESCE(ra.archived, FALSE) = TRUE
+                        OR LOWER(COALESCE(ra.status, '')) IN ('archived', 'completed')
+                      )
+                    ORDER BY ra.updated_at DESC, ra.id DESC
+                    """
+                ),
                 (young_person_id,),
             )
             return cur.fetchall()
-
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load archived keywork sessions: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to load archived risk: {str(e)}")
 
 
-@router.get("/keywork/{session_id}")
-def get_keywork_session(session_id: int, conn=Depends(get_db)):
+@router.get("/risk/{risk_id}")
+def get_risk_assessment(risk_id: int, conn=Depends(get_db)):
     try:
         with conn.cursor() as cur:
             cur.execute(
-                """
-                SELECT
-                    ks.*,
-                    u.first_name AS worker_first_name,
-                    u.last_name AS worker_last_name
-                FROM keywork_sessions ks
-                LEFT JOIN users u ON ks.worker_id = u.id
-                WHERE ks.id = %s
-                LIMIT 1
-                """,
-                (session_id,),
+                fetch_risk_select_sql("WHERE ra.id = %s LIMIT 1"),
+                (risk_id,),
             )
             row = cur.fetchone()
 
         if not row:
-            raise HTTPException(status_code=404, detail="Keywork session not found")
-        return row
+            raise HTTPException(status_code=404, detail="Risk assessment not found")
 
+        return row
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load keywork session: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to load risk assessment: {str(e)}")
 
 
-@router.post("/keywork")
-def create_keywork_session(payload: KeyworkCreate, conn=Depends(get_db)):
+@router.post("/risk")
+def create_risk_assessment(payload: RiskAssessmentCreate, conn=Depends(get_db)):
     now = datetime.utcnow()
+
+    query = """
+        INSERT INTO risk_assessments (
+            young_person_id,
+            category,
+            title,
+            concern_summary,
+            known_triggers,
+            early_warning_signs,
+            contextual_factors,
+            current_controls,
+            deescalation_strategies,
+            response_actions,
+            child_views,
+            severity,
+            likelihood,
+            review_date,
+            status,
+            owner_id,
+            approval_status,
+            created_by,
+            archived,
+            created_at,
+            updated_at
+        )
+        VALUES (
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+        )
+        RETURNING id
+    """
+
+    values = (
+        payload.young_person_id,
+        payload.category,
+        payload.title,
+        payload.concern_summary,
+        payload.known_triggers,
+        payload.early_warning_signs,
+        payload.contextual_factors,
+        payload.current_controls,
+        payload.deescalation_strategies,
+        payload.response_actions,
+        payload.child_views,
+        payload.severity,
+        payload.likelihood,
+        payload.review_date,
+        payload.status,
+        payload.owner_id,
+        payload.approval_status,
+        payload.created_by,
+        payload.archived,
+        now,
+        now,
+    )
+
     try:
         with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO keywork_sessions (
-                    young_person_id,
-                    session_date,
-                    worker_id,
-                    topic,
-                    purpose,
-                    summary,
-                    child_voice,
-                    reflective_analysis,
-                    actions_agreed,
-                    next_session_date,
-                    status,
-                    archived,
-                    created_at,
-                    updated_at
-                )
-                VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-                )
-                RETURNING id
-                """,
-                (
-                    payload.young_person_id,
-                    payload.session_date,
-                    payload.worker_id,
-                    payload.topic,
-                    payload.purpose,
-                    payload.summary,
-                    payload.child_voice,
-                    payload.reflective_analysis,
-                    payload.actions_agreed,
-                    payload.next_session_date,
-                    payload.status,
-                    payload.archived,
-                    now,
-                    now,
-                ),
-            )
+            cur.execute(query, values)
             row = cur.fetchone()
         conn.commit()
-        return {"message": "Keywork session created successfully", "id": row["id"]}
+        return {"message": "Risk assessment created successfully", "id": row["id"]}
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to create keywork session: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to create risk assessment: {str(e)}")
 
 
-@router.put("/keywork/{session_id}")
-def update_keywork_session(session_id: int, payload: KeyworkUpdate, conn=Depends(get_db)):
+@router.put("/risk/{risk_id}")
+def update_risk_assessment(risk_id: int, payload: RiskAssessmentUpdate, conn=Depends(get_db)):
     update_data = payload.model_dump(exclude_unset=True)
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields provided for update")
@@ -192,28 +252,27 @@ def update_keywork_session(session_id: int, payload: KeyworkUpdate, conn=Depends
     for field, value in update_data.items():
         set_parts.append(f"{field} = %s")
         values.append(value)
-    values.append(session_id)
+    values.append(risk_id)
+
+    query = f"""
+        UPDATE risk_assessments
+        SET {", ".join(set_parts)}
+        WHERE id = %s
+        RETURNING id
+    """
 
     try:
         with conn.cursor() as cur:
-            cur.execute(
-                f"""
-                UPDATE keywork_sessions
-                SET {", ".join(set_parts)}
-                WHERE id = %s
-                RETURNING id
-                """,
-                values,
-            )
+            cur.execute(query, values)
             row = cur.fetchone()
         conn.commit()
 
         if not row:
-            raise HTTPException(status_code=404, detail="Keywork session not found")
+            raise HTTPException(status_code=404, detail="Risk assessment not found")
 
-        return {"message": "Keywork session updated successfully", "id": row["id"]}
+        return {"message": "Risk assessment updated successfully", "id": row["id"]}
     except HTTPException:
         raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to update keywork session: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update risk assessment: {str(e)}")
