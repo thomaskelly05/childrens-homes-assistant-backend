@@ -66,7 +66,11 @@ const endpoints = {
   monthlyReviewGenerate: (id, month) =>
     `/monthly-reviews/young-person/${id}/generate?review_month=${month}`,
   inspectionPackCreate: "/inspection-pack",
-  inspectionPackData: (id) => `/inspection-pack/young-person/${id}`
+  inspectionPackData: (id) => `/inspection-pack/young-person/${id}`,
+  ofstedAiReport: (id, reviewMonth = "") =>
+    reviewMonth
+      ? `/ofsted-ai/young-person/${id}/report?review_month=${encodeURIComponent(reviewMonth)}`
+      : `/ofsted-ai/young-person/${id}/report`
 };
 
 const els = {
@@ -864,6 +868,7 @@ async function loadMonthlyReviews(youngPersonId) {
               <th>Status</th>
               <th>Title</th>
               <th>Open</th>
+              <th>AI Report</th>
             </tr>
           </thead>
           <tbody>
@@ -874,6 +879,14 @@ async function loadMonthlyReviews(youngPersonId) {
                 <td>${escapeHtml(r.review_title || "")}</td>
                 <td>
                   <button class="text-link-btn js-open-monthly-review" data-review-id="${r.id}">Open</button>
+                </td>
+                <td>
+                  <button
+                    class="text-link-btn js-open-ofsted-ai-report"
+                    data-review-month="${escapeHtml(formatMonthApiValue(r.review_month))}"
+                  >
+                    View AI Report
+                  </button>
                 </td>
               </tr>
             `).join("")}
@@ -900,6 +913,13 @@ function bindMonthlyReviewButtons() {
     btn.addEventListener("click", async () => {
       const reviewId = Number(btn.dataset.reviewId);
       await loadMonthlyReviewDetail(reviewId);
+    });
+  });
+
+  document.querySelectorAll(".js-open-ofsted-ai-report").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const reviewMonth = btn.dataset.reviewMonth || "";
+      await loadOfstedAiReport(reviewMonth);
     });
   });
 }
@@ -992,10 +1012,31 @@ async function generateMonthlyReview() {
 
     if (result?.monthly_review_id) {
       await loadMonthlyReviewDetail(result.monthly_review_id);
+      await loadOfstedAiReport(reviewMonth);
     }
   } catch (error) {
     console.error(error);
     showStatus(`Could not generate monthly review: ${error.message}`, true);
+  }
+}
+
+async function loadOfstedAiReport(reviewMonth = "") {
+  if (!state.selectedYoungPerson) {
+    showStatus("Please select a young person first.", true);
+    return;
+  }
+
+  try {
+    showStatus("Generating AI OFSTED report...");
+    const report = await fetchJson(
+      endpoints.ofstedAiReport(state.selectedYoungPerson.id, reviewMonth)
+    );
+
+    openRecordDrawer("AI OFSTED Inspection Report", report);
+    showStatus("AI OFSTED report loaded.");
+  } catch (error) {
+    console.error(error);
+    showStatus(`Could not load AI OFSTED report: ${error.message}`, true);
   }
 }
 
@@ -1613,23 +1654,72 @@ function openRecordDrawer(title, record) {
   if (!els.recordDetailDrawer || !els.recordDetailContent) return;
 
   els.recordDetailDrawer.classList.remove("hidden");
-  els.recordDetailContent.innerHTML = `
+  els.recordDetailContent.innerHTML = renderDrawerContent(title, record);
+}
+
+function renderDrawerContent(title, record) {
+  return `
     <section class="section-group">
       <h3 class="group-title">${escapeHtml(title)}</h3>
+      ${renderDrawerValue(record)}
+    </section>
+  `;
+}
+
+function renderDrawerValue(value) {
+  if (Array.isArray(value)) {
+    if (!value.length) {
+      return `<div class="empty-state">No data found.</div>`;
+    }
+
+    return value.map((item, index) => `
+      <section class="section-group">
+        <h3 class="group-title">Item ${index + 1}</h3>
+        ${renderDrawerValue(item)}
+      </section>
+    `).join("");
+  }
+
+  if (value && typeof value === "object") {
+    return `
       <div class="section-table-wrap">
         <table class="data-table key-value compact">
           <tbody>
-            ${Object.entries(record || {}).map(([key, value]) => `
+            ${Object.entries(value).map(([key, itemValue]) => `
               <tr>
                 <th>${escapeHtml(formatLabel(key))}</th>
-                <td>${escapeHtml(formatFieldValue(key, value))}</td>
+                <td>${renderDrawerCellValue(itemValue)}</td>
               </tr>
             `).join("")}
           </tbody>
         </table>
       </div>
-    </section>
-  `;
+    `;
+  }
+
+  return `<div class="empty-state">${escapeHtml(stringifyValue(value))}</div>`;
+}
+
+function renderDrawerCellValue(value) {
+  if (Array.isArray(value)) {
+    if (!value.length) return "—";
+    return `
+      <div class="drawer-nested-list">
+        ${value.map((item, index) => `
+          <div class="drawer-nested-item">
+            <strong>Item ${index + 1}</strong>
+            ${renderDrawerValue(item)}
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  if (value && typeof value === "object") {
+    return renderDrawerValue(value);
+  }
+
+  return escapeHtml(stringifyValue(value));
 }
 
 function closeRecordDrawer() {
@@ -1659,7 +1749,9 @@ function formatComplianceGroupTitle(value) {
   const map = {
     support_plan_review: "Support Plan Reviews",
     risk_review: "Risk Reviews",
-    keywork_follow_up: "Key Work Follow-up"
+    keywork_follow_up: "Key Work Follow-up",
+    health_follow_up: "Health Follow-up",
+    family_follow_up: "Family Follow-up"
   };
   return map[value] || formatLabel(value);
 }
@@ -1733,7 +1825,8 @@ function formatFieldValue(key, value) {
     "returned_at",
     "submitted_at",
     "next_action_date",
-    "due_date"
+    "due_date",
+    "generated_at"
   ];
 
   if (dateKeys.includes(key)) {
@@ -1781,6 +1874,15 @@ function formatDateTime(value) {
     hour: "2-digit",
     minute: "2-digit"
   })}`;
+}
+
+function formatMonthApiValue(value) {
+  if (!value) return "";
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
 }
 
 function toDateInputValue(value) {
