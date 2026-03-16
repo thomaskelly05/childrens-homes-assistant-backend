@@ -52,68 +52,32 @@ class RiskAssessmentUpdate(BaseModel):
 
 
 @router.get("/{young_person_id}/risk")
-def get_young_person_risk(
-    young_person_id: int,
-    conn=Depends(get_db),
-):
+def get_young_person_risk(young_person_id: int, conn=Depends(get_db)):
     try:
         with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT id
-                FROM young_people
-                WHERE id = %s
-                LIMIT 1
-                """,
-                (young_person_id,),
-            )
-            yp = cur.fetchone()
-
-            if not yp:
+            cur.execute("SELECT id FROM young_people WHERE id = %s LIMIT 1", (young_person_id,))
+            if not cur.fetchone():
                 raise HTTPException(status_code=404, detail="Young person not found")
 
             cur.execute(
                 """
                 SELECT
-                    ra.id,
-                    ra.young_person_id,
-                    ra.category,
-                    ra.title,
-                    ra.concern_summary,
-                    ra.known_triggers,
-                    ra.early_warning_signs,
-                    ra.contextual_factors,
-                    ra.current_controls,
-                    ra.deescalation_strategies,
-                    ra.response_actions,
-                    ra.child_views,
-                    ra.severity,
-                    ra.likelihood,
-                    ra.review_date,
-                    ra.status,
-                    ra.owner_id,
-                    ra.approval_status,
-                    ra.created_by,
-                    ra.archived,
-                    ra.created_at,
-                    ra.updated_at,
+                    ra.*,
                     ou.first_name AS owner_first_name,
                     ou.last_name AS owner_last_name,
                     cu.first_name AS created_by_first_name,
                     cu.last_name AS created_by_last_name
                 FROM risk_assessments ra
-                LEFT JOIN users ou
-                    ON ra.owner_id = ou.id
-                LEFT JOIN users cu
-                    ON ra.created_by = cu.id
+                LEFT JOIN users ou ON ra.owner_id = ou.id
+                LEFT JOIN users cu ON ra.created_by = cu.id
                 WHERE ra.young_person_id = %s
                   AND COALESCE(ra.archived, FALSE) = FALSE
+                  AND LOWER(COALESCE(ra.status, 'active')) NOT IN ('archived', 'completed')
                 ORDER BY
                     CASE
                         WHEN LOWER(COALESCE(ra.severity, '')) = 'high' THEN 1
                         WHEN LOWER(COALESCE(ra.severity, '')) = 'medium' THEN 2
-                        WHEN LOWER(COALESCE(ra.severity, '')) = 'low' THEN 3
-                        ELSE 4
+                        ELSE 3
                     END,
                     ra.review_date ASC NULLS LAST,
                     ra.created_at DESC,
@@ -121,24 +85,52 @@ def get_young_person_risk(
                 """,
                 (young_person_id,),
             )
-            rows = cur.fetchall()
-
-        return rows
+            return cur.fetchall()
 
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to load risk assessments: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to load risk assessments: {str(e)}")
+
+
+@router.get("/{young_person_id}/risk/archive")
+def get_young_person_archived_risk(young_person_id: int, conn=Depends(get_db)):
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id FROM young_people WHERE id = %s LIMIT 1", (young_person_id,))
+            if not cur.fetchone():
+                raise HTTPException(status_code=404, detail="Young person not found")
+
+            cur.execute(
+                """
+                SELECT
+                    ra.*,
+                    ou.first_name AS owner_first_name,
+                    ou.last_name AS owner_last_name,
+                    cu.first_name AS created_by_first_name,
+                    cu.last_name AS created_by_last_name
+                FROM risk_assessments ra
+                LEFT JOIN users ou ON ra.owner_id = ou.id
+                LEFT JOIN users cu ON ra.created_by = cu.id
+                WHERE ra.young_person_id = %s
+                  AND (
+                    COALESCE(ra.archived, FALSE) = TRUE
+                    OR LOWER(COALESCE(ra.status, '')) IN ('archived', 'completed')
+                  )
+                ORDER BY ra.updated_at DESC NULLS LAST, ra.id DESC
+                """,
+                (young_person_id,),
+            )
+            return cur.fetchall()
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load archived risk assessments: {str(e)}")
 
 
 @router.get("/risk/{risk_id}")
-def get_risk_assessment(
-    risk_id: int,
-    conn=Depends(get_db),
-):
+def get_risk_assessment(risk_id: int, conn=Depends(get_db)):
     try:
         with conn.cursor() as cur:
             cur.execute(
@@ -150,10 +142,8 @@ def get_risk_assessment(
                     cu.first_name AS created_by_first_name,
                     cu.last_name AS created_by_last_name
                 FROM risk_assessments ra
-                LEFT JOIN users ou
-                    ON ra.owner_id = ou.id
-                LEFT JOIN users cu
-                    ON ra.created_by = cu.id
+                LEFT JOIN users ou ON ra.owner_id = ou.id
+                LEFT JOIN users cu ON ra.created_by = cu.id
                 WHERE ra.id = %s
                 LIMIT 1
                 """,
@@ -163,103 +153,85 @@ def get_risk_assessment(
 
         if not row:
             raise HTTPException(status_code=404, detail="Risk assessment not found")
-
         return row
 
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to load risk assessment: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to load risk assessment: {str(e)}")
 
 
 @router.post("/risk")
-def create_risk_assessment(
-    payload: RiskAssessmentCreate,
-    conn=Depends(get_db),
-):
+def create_risk_assessment(payload: RiskAssessmentCreate, conn=Depends(get_db)):
     now = datetime.utcnow()
-
-    query = """
-        INSERT INTO risk_assessments (
-            young_person_id,
-            category,
-            title,
-            concern_summary,
-            known_triggers,
-            early_warning_signs,
-            contextual_factors,
-            current_controls,
-            deescalation_strategies,
-            response_actions,
-            child_views,
-            severity,
-            likelihood,
-            review_date,
-            status,
-            owner_id,
-            approval_status,
-            created_by,
-            archived,
-            created_at,
-            updated_at
-        )
-        VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-        )
-        RETURNING id
-    """
-
-    values = (
-        payload.young_person_id,
-        payload.category,
-        payload.title,
-        payload.concern_summary,
-        payload.known_triggers,
-        payload.early_warning_signs,
-        payload.contextual_factors,
-        payload.current_controls,
-        payload.deescalation_strategies,
-        payload.response_actions,
-        payload.child_views,
-        payload.severity,
-        payload.likelihood,
-        payload.review_date,
-        payload.status,
-        payload.owner_id,
-        payload.approval_status,
-        payload.created_by,
-        payload.archived,
-        now,
-        now,
-    )
-
     try:
         with conn.cursor() as cur:
-            cur.execute(query, values)
+            cur.execute(
+                """
+                INSERT INTO risk_assessments (
+                    young_person_id,
+                    category,
+                    title,
+                    concern_summary,
+                    known_triggers,
+                    early_warning_signs,
+                    contextual_factors,
+                    current_controls,
+                    deescalation_strategies,
+                    response_actions,
+                    child_views,
+                    severity,
+                    likelihood,
+                    review_date,
+                    status,
+                    owner_id,
+                    approval_status,
+                    created_by,
+                    archived,
+                    created_at,
+                    updated_at
+                )
+                VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                )
+                RETURNING id
+                """,
+                (
+                    payload.young_person_id,
+                    payload.category,
+                    payload.title,
+                    payload.concern_summary,
+                    payload.known_triggers,
+                    payload.early_warning_signs,
+                    payload.contextual_factors,
+                    payload.current_controls,
+                    payload.deescalation_strategies,
+                    payload.response_actions,
+                    payload.child_views,
+                    payload.severity,
+                    payload.likelihood,
+                    payload.review_date,
+                    payload.status,
+                    payload.owner_id,
+                    payload.approval_status,
+                    payload.created_by,
+                    payload.archived,
+                    now,
+                    now,
+                ),
+            )
             row = cur.fetchone()
         conn.commit()
+        return {"message": "Risk assessment created successfully", "id": row["id"]}
     except Exception as e:
         conn.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to create risk assessment: {str(e)}"
-        )
-
-    return {"message": "Risk assessment created successfully", "id": row["id"]}
+        raise HTTPException(status_code=500, detail=f"Failed to create risk assessment: {str(e)}")
 
 
 @router.put("/risk/{risk_id}")
-def update_risk_assessment(
-    risk_id: int,
-    payload: RiskAssessmentUpdate,
-    conn=Depends(get_db),
-):
+def update_risk_assessment(risk_id: int, payload: RiskAssessmentUpdate, conn=Depends(get_db)):
     update_data = payload.model_dump(exclude_unset=True)
-
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields provided for update")
 
@@ -267,33 +239,31 @@ def update_risk_assessment(
 
     set_parts = []
     values = []
-
     for field, value in update_data.items():
         set_parts.append(f"{field} = %s")
         values.append(value)
-
     values.append(risk_id)
-
-    query = f"""
-        UPDATE risk_assessments
-        SET {", ".join(set_parts)}
-        WHERE id = %s
-        RETURNING id
-    """
 
     try:
         with conn.cursor() as cur:
-            cur.execute(query, values)
+            cur.execute(
+                f"""
+                UPDATE risk_assessments
+                SET {", ".join(set_parts)}
+                WHERE id = %s
+                RETURNING id
+                """,
+                values,
+            )
             row = cur.fetchone()
         conn.commit()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="Risk assessment not found")
+
+        return {"message": "Risk assessment updated successfully", "id": row["id"]}
+    except HTTPException:
+        raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to update risk assessment: {str(e)}"
-        )
-
-    if not row:
-        raise HTTPException(status_code=404, detail="Risk assessment not found")
-
-    return {"message": "Risk assessment updated successfully", "id": row["id"]}
+        raise HTTPException(status_code=500, detail=f"Failed to update risk assessment: {str(e)}")
