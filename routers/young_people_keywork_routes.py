@@ -1,11 +1,9 @@
-from datetime import datetime
-
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from db.connection import get_db
 
-router = APIRouter(prefix="/young-people", tags=["Young People Key Work"])
+router = APIRouter(prefix="/young-people", tags=["Young People Keywork"])
 
 
 class KeyworkSessionCreate(BaseModel):
@@ -34,19 +32,32 @@ class KeyworkSessionUpdate(BaseModel):
 
 
 @router.get("/{young_person_id}/keywork")
-def list_keywork_sessions(
+def get_keywork_sessions(
     young_person_id: int,
     conn=Depends(get_db),
 ):
     query = """
         SELECT
-            ks.*,
+            ks.id,
+            ks.young_person_id,
+            ks.session_date,
+            ks.worker_id,
+            ks.topic,
+            ks.purpose,
+            ks.summary,
+            ks.child_voice,
+            ks.reflective_analysis,
+            ks.actions_agreed,
+            ks.next_session_date,
+            ks.created_at,
+            ks.updated_at,
             u.first_name AS worker_first_name,
             u.last_name AS worker_last_name
         FROM keywork_sessions ks
-        LEFT JOIN users u ON ks.worker_id = u.id
+        LEFT JOIN users u
+            ON ks.worker_id = u.id
         WHERE ks.young_person_id = %s
-        ORDER BY ks.session_date DESC, ks.id DESC
+        ORDER BY ks.session_date DESC NULLS LAST, ks.created_at DESC, ks.id DESC
     """
 
     with conn.cursor() as cur:
@@ -56,9 +67,9 @@ def list_keywork_sessions(
     return rows
 
 
-@router.get("/keywork/{keywork_session_id}")
+@router.get("/keywork/{session_id}")
 def get_keywork_session(
-    keywork_session_id: int,
+    session_id: int,
     conn=Depends(get_db),
 ):
     query = """
@@ -67,13 +78,14 @@ def get_keywork_session(
             u.first_name AS worker_first_name,
             u.last_name AS worker_last_name
         FROM keywork_sessions ks
-        LEFT JOIN users u ON ks.worker_id = u.id
+        LEFT JOIN users u
+            ON ks.worker_id = u.id
         WHERE ks.id = %s
         LIMIT 1
     """
 
     with conn.cursor() as cur:
-        cur.execute(query, (keywork_session_id,))
+        cur.execute(query, (session_id,))
         row = cur.fetchone()
 
     if not row:
@@ -87,8 +99,6 @@ def create_keywork_session(
     payload: KeyworkSessionCreate,
     conn=Depends(get_db),
 ):
-    now = datetime.utcnow()
-
     query = """
         INSERT INTO keywork_sessions (
             young_person_id,
@@ -101,10 +111,9 @@ def create_keywork_session(
             reflective_analysis,
             actions_agreed,
             next_session_date,
-            created_at,
-            updated_at
+            created_at
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())
         RETURNING id
     """
 
@@ -119,47 +128,44 @@ def create_keywork_session(
         payload.reflective_analysis,
         payload.actions_agreed,
         payload.next_session_date,
-        now,
-        now,
     )
 
     try:
         with conn.cursor() as cur:
             cur.execute(query, values)
-            new_row = cur.fetchone()
+            row = cur.fetchone()
         conn.commit()
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to create keywork session: {str(e)}")
 
-    return {"message": "Keywork session created successfully", "id": new_row["id"]}
+    return {"message": "Keywork session created", "id": row["id"]}
 
 
-@router.put("/keywork/{keywork_session_id}")
+@router.put("/keywork/{session_id}")
 def update_keywork_session(
-    keywork_session_id: int,
+    session_id: int,
     payload: KeyworkSessionUpdate,
     conn=Depends(get_db),
 ):
-    update_data = payload.model_dump(exclude_unset=True)
+    data = payload.model_dump(exclude_unset=True)
 
-    if not update_data:
-        raise HTTPException(status_code=400, detail="No fields provided for update")
+    if not data:
+        raise HTTPException(status_code=400, detail="No update fields provided")
 
-    update_data["updated_at"] = datetime.utcnow()
-
-    set_parts = []
+    fields = []
     values = []
 
-    for field, value in update_data.items():
-        set_parts.append(f"{field} = %s")
-        values.append(value)
+    for k, v in data.items():
+        fields.append(f"{k}=%s")
+        values.append(v)
 
-    values.append(keywork_session_id)
+    values.append(session_id)
 
     query = f"""
         UPDATE keywork_sessions
-        SET {", ".join(set_parts)}
+        SET {", ".join(fields)},
+            updated_at = NOW()
         WHERE id = %s
         RETURNING id
     """
@@ -167,13 +173,13 @@ def update_keywork_session(
     try:
         with conn.cursor() as cur:
             cur.execute(query, values)
-            updated_row = cur.fetchone()
+            row = cur.fetchone()
         conn.commit()
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to update keywork session: {str(e)}")
 
-    if not updated_row:
+    if not row:
         raise HTTPException(status_code=404, detail="Keywork session not found")
 
-    return {"message": "Keywork session updated successfully", "id": updated_row["id"]}
+    return {"message": "Keywork session updated", "id": row["id"]}
