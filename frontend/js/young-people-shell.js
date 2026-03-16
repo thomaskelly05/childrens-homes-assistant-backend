@@ -14,24 +14,15 @@ const state = {
     health: null,
     education: null,
     family: null,
-    compliance: null
-  },
-
-  keyworkSessions: [],
-  activeKeyworkSessionId: null,
-
-  dailyNote: {
-    activeId: null,
-    activeRecord: null,
-    versions: [],
-    isDirty: false,
-    autosaveTimer: null,
-    languageHints: []
+    compliance: null,
+    chronology: [],
+    monthlyReviews: []
   },
 
   modal: {
     open: false,
     type: null,
+    mode: "view",
     record: null
   },
 
@@ -51,30 +42,9 @@ const endpoints = {
   education: (id) => [`/young-people/${id}/education`],
   family: (id) => [`/young-people/${id}/family`],
   compliance: (id) => [`/young-people/${id}/compliance`],
-
-  dailyNoteSingle: (ypId, noteId) => `/young-people/${ypId}/daily-notes/${noteId}`,
-  dailyNoteCreate: (ypId) => `/young-people/${ypId}/daily-notes`,
-  dailyNoteUpdate: (ypId, noteId) => `/young-people/${ypId}/daily-notes/${noteId}`,
-  dailyNoteReview: (ypId, noteId) => `/young-people/${ypId}/daily-notes/${noteId}/review`,
-  dailyNoteVersions: (ypId, noteId) => `/young-people/${ypId}/daily-notes/${noteId}/versions`,
-  dailyNoteLanguageCheck: "/young-people/daily-notes/therapeutic-language-check",
-
-  keyworkList: (id) => `/young-people/${id}/keywork`,
-  keyworkById: (id) => `/young-people/keywork/${id}`,
-  keyworkCreate: "/young-people/keywork",
-  keyworkUpdate: (id) => `/young-people/keywork/${id}`,
-
-  chronologyList: (id) => `/young-people/${id}/chronology`,
-  chronologyRebuild: (id) => `/young-people/${id}/chronology/rebuild`,
-
-  standardsSummary: (id) => [`/young-people/${id}/standards`],
-  standardsEvidence: (id) => [`/young-people/${id}/standards/evidence`],
-  standardsRebuild: (id) => `/young-people/${id}/standards/rebuild`,
-
-  monthlyReviewsList: (id) => `/monthly-reviews/young-person/${id}`,
+  chronology: (id) => `/young-people/${id}/chronology`,
+  monthlyReviews: (id) => `/monthly-reviews/young-person/${id}`,
   monthlyReviewDetail: (id) => `/monthly-reviews/${id}`,
-  monthlyReviewGenerate: (id, month) =>
-    `/monthly-reviews/young-person/${id}/generate?review_month=${month}`,
 
   inspectionPackCreate: "/inspection-pack",
   ofstedAiReport: (id, reviewMonth = "") =>
@@ -90,6 +60,13 @@ const els = {
   youngPeopleList: $("youngPeopleList"),
   youngPersonSearch: $("youngPersonSearch"),
   refreshYoungPeopleBtn: $("refreshYoungPeopleBtn"),
+
+  globalNewDailyNoteBtn: $("globalNewDailyNoteBtn"),
+  globalNewIncidentBtn: $("globalNewIncidentBtn"),
+  globalNewKeyworkBtn: $("globalNewKeyworkBtn"),
+  globalNewPlanBtn: $("globalNewPlanBtn"),
+  globalNewRiskBtn: $("globalNewRiskBtn"),
+
   reloadCurrentBtn: $("reloadCurrentBtn"),
   inspectionPackBtn: $("inspectionPackBtn"),
   headerOfstedAiBtn: $("headerOfstedAiBtn"),
@@ -99,7 +76,6 @@ const els = {
   selectedYoungPersonMeta: $("selectedYoungPersonMeta"),
   statusBar: $("statusBar"),
 
-  stickyYoungPersonBar: $("stickyYoungPersonBar"),
   stickyPersonAvatar: $("stickyPersonAvatar"),
   stickyYoungPersonName: $("stickyYoungPersonName"),
   stickyYoungPersonSummary: $("stickyYoungPersonSummary"),
@@ -111,152 +87,51 @@ const els = {
   stickyPlanReview: $("stickyPlanReview"),
   stickyTodayInfo: $("stickyTodayInfo"),
 
-  quickAddDailyNoteBtn: $("quickAddDailyNoteBtn"),
-  quickAddIncidentBtn: $("quickAddIncidentBtn"),
-  quickAddKeyworkBtn: $("quickAddKeyworkBtn"),
-
-  actionOverdueCount: $("actionOverdueCount"),
-  actionDueSoonCount: $("actionDueSoonCount"),
-  actionAlertsCount: $("actionAlertsCount"),
-  actionPlansCount: $("actionPlansCount"),
-  actionRiskCount: $("actionRiskCount"),
-  actionIncidentsCount: $("actionIncidentsCount"),
-
   overviewContent: $("overviewContent"),
-  overviewActionsContent: $("overviewActionsContent"),
   overviewRecentActivityContent: $("overviewRecentActivityContent"),
-  overviewVoiceContent: $("overviewVoiceContent"),
+  overviewActionsContent: $("overviewActionsContent"),
   overviewAlertsContent: $("overviewAlertsContent"),
-  overviewReadinessContent: $("overviewReadinessContent"),
 
   profileContent: $("profileContent"),
   plansContent: $("plansContent"),
   riskContent: $("riskContent"),
+  dailyNotesContent: $("dailyNotesContent"),
   incidentsContent: $("incidentsContent"),
   healthContent: $("healthContent"),
   educationContent: $("educationContent"),
   familyContent: $("familyContent"),
   chronologyContent: $("chronologyContent"),
-  complianceContent: $("complianceContent"),
-
-  plansContextContent: $("plansContextContent"),
-  riskContextContent: $("riskContextContent"),
-  keyworkContextContent: $("keyworkContextContent"),
-
-  standardsSummary: $("standardsSummary"),
-  standardsEvidenceList: $("standardsEvidenceList"),
-  rebuildStandardsBtn: $("rebuildStandardsBtn"),
-
-  complianceStatusFilter: $("complianceStatusFilter"),
-  complianceCategoryFilter: $("complianceCategoryFilter"),
-
   monthlyReviewsList: $("monthlyReviewsList"),
   monthlyReviewDetail: $("monthlyReviewDetail"),
-  generateMonthlyReviewBtn: $("generateMonthlyReviewBtn"),
-  monthlyReviewMonth: $("monthlyReviewMonth"),
-
+  standardsSummary: $("standardsSummary"),
+  standardsEvidenceList: $("standardsEvidenceList"),
+  complianceContent: $("complianceContent"),
+  handoverListContent: $("handoverListContent"),
+  supervisionListContent: $("supervisionListContent"),
   keyworkList: $("keyworkList"),
-  keyworkForm: $("keyworkForm"),
-  keyworkFormTitle: $("keyworkFormTitle"),
-  keyworkSessionId: $("keyworkSessionId"),
-  sessionDate: $("sessionDate"),
-  workerId: $("workerId"),
-  topic: $("topic"),
-  purpose: $("purpose"),
-  summary: $("summary"),
-  childVoice: $("childVoice"),
-  reflectiveAnalysis: $("reflectiveAnalysis"),
-  actionsAgreed: $("actionsAgreed"),
-  nextSessionDate: $("nextSessionDate"),
-  newKeyworkBtn: $("newKeyworkBtn"),
-  clearKeyworkFormBtn: $("clearKeyworkFormBtn"),
-  rebuildChronologyBtn: $("rebuildChronologyBtn"),
 
-  dailyNotesContent: $("dailyNotesContent"),
+  newPlanBtn: $("newPlanBtn"),
+  newRiskBtn: $("newRiskBtn"),
+  newDailyNoteBtn: $("newDailyNoteBtn"),
+  refreshDailyNotesBtn: $("refreshDailyNotesBtn"),
+  newIncidentBtn: $("newIncidentBtn"),
+  newHealthRecordBtn: $("newHealthRecordBtn"),
+  newEducationRecordBtn: $("newEducationRecordBtn"),
+  newFamilyRecordBtn: $("newFamilyRecordBtn"),
+  newKeyworkBtn: $("newKeyworkBtn"),
+  newHandoverBtn: $("newHandoverBtn"),
+  newSupervisionBtn: $("newSupervisionBtn"),
+
   dailyNoteStatusFilter: $("dailyNoteStatusFilter"),
   dailyNoteShiftFilter: $("dailyNoteShiftFilter"),
   dailyNoteSearch: $("dailyNoteSearch"),
-  newDailyNoteBtn: $("newDailyNoteBtn"),
-  refreshDailyNotesBtn: $("refreshDailyNotesBtn"),
 
-  dailyNoteForm: $("dailyNoteForm"),
-  dailyNoteFormTitle: $("dailyNoteFormTitle"),
-  dailyNoteId: $("dailyNoteId"),
-  dailyNoteVersionNumber: $("dailyNoteVersionNumber"),
-  dailyNoteCurrentStatus: $("dailyNoteCurrentStatus"),
-  dailyNoteSaveIndicator: $("dailyNoteSaveIndicator"),
-  dailyNoteWorkflowIndicator: $("dailyNoteWorkflowIndicator"),
-
-  dailyNoteDate: $("dailyNoteDate"),
-  dailyNoteShiftType: $("dailyNoteShiftType"),
-  dailyNoteCustomShift: $("dailyNoteCustomShift"),
-  dailyNoteStaffOnShift: $("dailyNoteStaffOnShift"),
-  dailyNoteLocation: $("dailyNoteLocation"),
-  dailyNoteTags: $("dailyNoteTags"),
-  dailyNoteSignificantEvent: $("dailyNoteSignificantEvent"),
-  dailyNoteManagerReviewRequired: $("dailyNoteManagerReviewRequired"),
-
-  dailyNotePresentation: $("dailyNotePresentation"),
-  dailyNoteMainEvents: $("dailyNoteMainEvents"),
-  dailyNoteRoutineEngagement: $("dailyNoteRoutineEngagement"),
-  dailyNoteEducationUpdate: $("dailyNoteEducationUpdate"),
-  dailyNoteHealthUpdate: $("dailyNoteHealthUpdate"),
-  dailyNoteFamilyUpdate: $("dailyNoteFamilyUpdate"),
-  dailyNoteWorries: $("dailyNoteWorries"),
-  dailyNotePositives: $("dailyNotePositives"),
-
-  dailyNotePacePlayfulnessStatus: $("dailyNotePacePlayfulnessStatus"),
-  dailyNotePacePlayfulness: $("dailyNotePacePlayfulness"),
-  dailyNotePaceAcceptanceStatus: $("dailyNotePaceAcceptanceStatus"),
-  dailyNotePaceAcceptance: $("dailyNotePaceAcceptance"),
-  dailyNotePaceCuriosityTags: $("dailyNotePaceCuriosityTags"),
-  dailyNotePaceCuriosity: $("dailyNotePaceCuriosity"),
-  dailyNotePaceEmpathyTags: $("dailyNotePaceEmpathyTags"),
-  dailyNotePaceEmpathy: $("dailyNotePaceEmpathy"),
-
-  dailyNoteYoungPersonVoice: $("dailyNoteYoungPersonVoice"),
-  dailyNoteCommunicationStyle: $("dailyNoteCommunicationStyle"),
-
-  dailyNoteStaffResponse: $("dailyNoteStaffResponse"),
-  dailyNoteWhatHelped: $("dailyNoteWhatHelped"),
-  dailyNoteWhatDidNotHelp: $("dailyNoteWhatDidNotHelp"),
-  dailyNoteImpact: $("dailyNoteImpact"),
-
-  dailyNoteActionsRequired: $("dailyNoteActionsRequired"),
-  dailyNoteDiscussInHandover: $("dailyNoteDiscussInHandover"),
-  dailyNoteUpdateRiskAssessment: $("dailyNoteUpdateRiskAssessment"),
-  dailyNoteLinkMonthlyReview: $("dailyNoteLinkMonthlyReview"),
-
-  dailyNoteLinkedStandards: $("dailyNoteLinkedStandards"),
-  dailyNoteLinkedRisks: $("dailyNoteLinkedRisks"),
-  dailyNoteLinkedPlans: $("dailyNoteLinkedPlans"),
-  dailyNoteEvidenceImpactStatement: $("dailyNoteEvidenceImpactStatement"),
-
-  dailyNoteChangeReason: $("dailyNoteChangeReason"),
-  dailyNoteManagerReviewComment: $("dailyNoteManagerReviewComment"),
-
-  saveDailyNoteDraftBtn: $("saveDailyNoteDraftBtn"),
-  completeDailyNoteBtn: $("completeDailyNoteBtn"),
-  reviewDailyNoteBtn: $("reviewDailyNoteBtn"),
-  clearDailyNoteFormBtn: $("clearDailyNoteFormBtn"),
-
-  dailyNoteSidebarTodayInfo: $("dailyNoteSidebarTodayInfo"),
-  dailyNoteSidebarRisks: $("dailyNoteSidebarRisks"),
-  dailyNoteSidebarActions: $("dailyNoteSidebarActions"),
-  therapeuticLanguageHints: $("therapeuticLanguageHints"),
-  dailyNoteVersionHistory: $("dailyNoteVersionHistory"),
-
-  handoverListContent: $("handoverListContent"),
-  handoverWorkspaceContent: $("handoverWorkspaceContent"),
-  newHandoverBtn: $("newHandoverBtn"),
-
-  supervisionListContent: $("supervisionListContent"),
-  supervisionWorkspaceContent: $("supervisionWorkspaceContent"),
-  newSupervisionBtn: $("newSupervisionBtn"),
-
-  recordDetailDrawer: $("recordDetailDrawer"),
-  recordDetailContent: $("recordDetailContent"),
-  closeDrawerBtn: $("closeDrawerBtn"),
+  rebuildChronologyBtn: $("rebuildChronologyBtn"),
+  monthlyReviewMonth: $("monthlyReviewMonth"),
+  generateMonthlyReviewBtn: $("generateMonthlyReviewBtn"),
+  rebuildStandardsBtn: $("rebuildStandardsBtn"),
+  complianceStatusFilter: $("complianceStatusFilter"),
+  complianceCategoryFilter: $("complianceCategoryFilter"),
 
   recordWorkspaceModal: $("recordWorkspaceModal"),
   workspaceModalTitle: $("workspaceModalTitle"),
@@ -267,51 +142,12 @@ const els = {
   workspaceModalAiPanel: $("workspaceModalAiPanel"),
   workspaceModalSaveBtn: $("workspaceModalSaveBtn"),
   workspaceModalCompleteBtn: $("workspaceModalCompleteBtn"),
-  workspaceModalCloseBtn: $("workspaceModalCloseBtn")
-};
+  workspaceModalCloseBtn: $("workspaceModalCloseBtn"),
 
-const dailyNoteFields = [
-  "dailyNoteDate",
-  "dailyNoteShiftType",
-  "dailyNoteCustomShift",
-  "dailyNoteStaffOnShift",
-  "dailyNoteLocation",
-  "dailyNoteTags",
-  "dailyNoteSignificantEvent",
-  "dailyNoteManagerReviewRequired",
-  "dailyNotePresentation",
-  "dailyNoteMainEvents",
-  "dailyNoteRoutineEngagement",
-  "dailyNoteEducationUpdate",
-  "dailyNoteHealthUpdate",
-  "dailyNoteFamilyUpdate",
-  "dailyNoteWorries",
-  "dailyNotePositives",
-  "dailyNotePacePlayfulnessStatus",
-  "dailyNotePacePlayfulness",
-  "dailyNotePaceAcceptanceStatus",
-  "dailyNotePaceAcceptance",
-  "dailyNotePaceCuriosityTags",
-  "dailyNotePaceCuriosity",
-  "dailyNotePaceEmpathyTags",
-  "dailyNotePaceEmpathy",
-  "dailyNoteYoungPersonVoice",
-  "dailyNoteCommunicationStyle",
-  "dailyNoteStaffResponse",
-  "dailyNoteWhatHelped",
-  "dailyNoteWhatDidNotHelp",
-  "dailyNoteImpact",
-  "dailyNoteActionsRequired",
-  "dailyNoteDiscussInHandover",
-  "dailyNoteUpdateRiskAssessment",
-  "dailyNoteLinkMonthlyReview",
-  "dailyNoteLinkedStandards",
-  "dailyNoteLinkedRisks",
-  "dailyNoteLinkedPlans",
-  "dailyNoteEvidenceImpactStatement",
-  "dailyNoteChangeReason",
-  "dailyNoteManagerReviewComment"
-];
+  recordDetailDrawer: $("recordDetailDrawer"),
+  recordDetailContent: $("recordDetailContent"),
+  closeDrawerBtn: $("closeDrawerBtn")
+};
 
 document.addEventListener("DOMContentLoaded", () => {
   setDefaultMonthlyReviewMonth();
@@ -334,59 +170,44 @@ function bindEvents() {
   on(els.youngPersonSearch, "input", handleSearch);
   on(els.refreshYoungPeopleBtn, "click", loadYoungPeople);
   on(els.reloadCurrentBtn, "click", reloadCurrentRecord);
+
   on(els.inspectionPackBtn, "click", createInspectionPackJob);
   on(els.headerOfstedAiBtn, "click", () => loadOfstedAiReport(getSelectedReviewMonthParam()));
   on(els.monthlyOfstedAiBtn, "click", () => loadOfstedAiReport(getSelectedReviewMonthParam()));
 
-  on(els.rebuildStandardsBtn, "click", rebuildStandardsLinks);
-  on(els.generateMonthlyReviewBtn, "click", generateMonthlyReview);
+  on(els.globalNewDailyNoteBtn, "click", () => openNewDocument("daily_note"));
+  on(els.globalNewIncidentBtn, "click", () => openNewDocument("incident"));
+  on(els.globalNewKeyworkBtn, "click", () => openNewDocument("keywork"));
+  on(els.globalNewPlanBtn, "click", () => openNewDocument("plan"));
+  on(els.globalNewRiskBtn, "click", () => openNewDocument("risk"));
 
-  on(els.complianceStatusFilter, "change", rerenderComplianceFromState);
-  on(els.complianceCategoryFilter, "change", rerenderComplianceFromState);
+  on(els.newPlanBtn, "click", () => openNewDocument("plan"));
+  on(els.newRiskBtn, "click", () => openNewDocument("risk"));
+  on(els.newDailyNoteBtn, "click", () => openNewDocument("daily_note"));
+  on(els.refreshDailyNotesBtn, "click", () => state.selectedYoungPerson && loadDailyNotes(state.selectedYoungPerson.id));
+  on(els.newIncidentBtn, "click", () => openNewDocument("incident"));
+  on(els.newHealthRecordBtn, "click", () => openNewDocument("health"));
+  on(els.newEducationRecordBtn, "click", () => openNewDocument("education"));
+  on(els.newFamilyRecordBtn, "click", () => openNewDocument("family"));
+  on(els.newKeyworkBtn, "click", () => openNewDocument("keywork"));
+  on(els.newHandoverBtn, "click", () => openNewDocument("handover"));
+  on(els.newSupervisionBtn, "click", () => openNewDocument("supervision"));
 
-  on(els.newKeyworkBtn, "click", resetKeyworkForm);
-  on(els.clearKeyworkFormBtn, "click", resetKeyworkForm);
-  on(els.keyworkForm, "submit", saveKeyworkSession);
-  on(els.rebuildChronologyBtn, "click", rebuildChronology);
-
-  on(els.quickAddDailyNoteBtn, "click", () => {
-    setActiveTab("daily_notes");
-    createNewDailyNote();
-  });
-  on(els.quickAddIncidentBtn, "click", () => setActiveTab("incidents"));
-  on(els.quickAddKeyworkBtn, "click", () => {
-    setActiveTab("keywork");
-    resetKeyworkForm();
-  });
-
-  on(els.newDailyNoteBtn, "click", createNewDailyNote);
-  on(els.refreshDailyNotesBtn, "click", () => {
-    if (state.selectedYoungPerson) loadDailyNotes(state.selectedYoungPerson.id);
-  });
   on(els.dailyNoteStatusFilter, "change", renderDailyNotesListFromState);
   on(els.dailyNoteShiftFilter, "change", renderDailyNotesListFromState);
   on(els.dailyNoteSearch, "input", renderDailyNotesListFromState);
 
-  on(els.dailyNoteForm, "submit", (event) => {
-    event.preventDefault();
-    saveDailyNote("draft");
-  });
-  on(els.completeDailyNoteBtn, "click", () => saveDailyNote("completed"));
-  on(els.reviewDailyNoteBtn, "click", markDailyNoteReviewed);
-  on(els.clearDailyNoteFormBtn, "click", clearDailyNoteFormWithPrompt);
-
-  on(els.newHandoverBtn, "click", renderHandoverPlaceholder);
-  on(els.newSupervisionBtn, "click", renderSupervisionPlaceholder);
-
-  on(els.closeDrawerBtn, "click", closeRecordDrawer);
+  on(els.rebuildChronologyBtn, "click", rebuildChronology);
+  on(els.generateMonthlyReviewBtn, "click", generateMonthlyReview);
+  on(els.rebuildStandardsBtn, "click", rebuildStandardsLinks);
+  on(els.complianceStatusFilter, "change", rerenderComplianceFromState);
+  on(els.complianceCategoryFilter, "change", rerenderComplianceFromState);
 
   on(els.workspaceModalCloseBtn, "click", closeWorkspaceModal);
-  on(els.workspaceModalSaveBtn, "click", () => {
-    showStatus("Save action for modal workspace can now be wired module by module.");
-  });
-  on(els.workspaceModalCompleteBtn, "click", () => {
-    showStatus("Complete action for modal workspace can now be wired module by module.");
-  });
+  on(els.workspaceModalSaveBtn, "click", handleWorkspaceSave);
+  on(els.workspaceModalCompleteBtn, "click", handleWorkspaceComplete);
+
+  on(els.closeDrawerBtn, "click", closeRecordDrawer);
 
   if (els.recordWorkspaceModal) {
     els.recordWorkspaceModal.addEventListener("click", (event) => {
@@ -399,14 +220,6 @@ function bindEvents() {
       if (state.modal.open) closeWorkspaceModal();
       else closeRecordDrawer();
     }
-  });
-
-  bindDailyNoteDirtyTracking();
-
-  window.addEventListener("beforeunload", (event) => {
-    if (!state.dailyNote.isDirty) return;
-    event.preventDefault();
-    event.returnValue = "";
   });
 }
 
@@ -472,13 +285,12 @@ function showStatus(message, isError = false) {
   }, 4000);
 }
 
-/* -------------------- Young people -------------------- */
+/* -------------------- People -------------------- */
 
 async function loadYoungPeople() {
   try {
     showStatus("Loading young people...");
     const rows = normaliseArrayResponse(await fetchFromCandidates(endpoints.youngPeopleList));
-
     state.youngPeople = rows;
     state.filteredYoungPeople = [...rows];
 
@@ -511,12 +323,10 @@ async function loadYoungPeople() {
 
 function handleSearch(event) {
   const term = event.target.value.trim().toLowerCase();
-
   state.filteredYoungPeople = state.youngPeople.filter((person) => {
     const haystack = `${person.first_name || ""} ${person.last_name || ""} ${person.preferred_name || ""}`.toLowerCase();
     return haystack.includes(term);
   });
-
   renderYoungPeopleList();
 }
 
@@ -559,12 +369,11 @@ async function selectYoungPerson(person) {
     health: null,
     education: null,
     family: null,
-    compliance: null
+    compliance: null,
+    chronology: [],
+    monthlyReviews: []
   };
-  state.keyworkSessions = [];
-  state.activeKeyworkSessionId = null;
-  resetDailyNoteForm();
-  resetKeyworkForm();
+
   closeWorkspaceModal();
   closeRecordDrawer();
 
@@ -595,10 +404,11 @@ function updateSelectedPersonHeader() {
 
 function updateStickyYoungPersonBar() {
   const person = state.selectedYoungPerson;
+
   if (!person) {
     setText(els.stickyPersonAvatar, "YP");
     setText(els.stickyYoungPersonName, "No young person selected");
-    setText(els.stickyYoungPersonSummary, "Select a record to load the workspace");
+    setText(els.stickyYoungPersonSummary, "Select a young person to load the workspace");
     setText(els.stickyDobChip, "DOB: —");
     setText(els.stickyPlacementChip, "Placement: —");
     setText(els.stickySocialWorkerChip, "SW: —");
@@ -644,7 +454,7 @@ const tabLoaders = {
   health: loadHealth,
   education: loadEducation,
   family: loadFamily,
-  keywork: loadKeyworkSessions,
+  keywork: loadKeywork,
   chronology: loadChronology,
   monthly_reviews: loadMonthlyReviews,
   standards: loadStandards,
@@ -669,7 +479,11 @@ function setActiveTab(tabName) {
 }
 
 async function reloadCurrentRecord() {
-  if (!state.selectedYoungPerson) return showStatus("Please select a young person first.", true);
+  if (!state.selectedYoungPerson) {
+    showStatus("Please select a young person first.", true);
+    return;
+  }
+
   await loadActionBarData();
   await loadActiveTabData();
 }
@@ -697,14 +511,6 @@ async function loadActionBarData() {
     state.latest.dailyNotes = normaliseArrayResponse(dailyNotes);
     state.latest.education = education;
 
-    const items = Array.isArray(compliance?.compliance_items) ? compliance.compliance_items : [];
-    setText(els.actionOverdueCount, items.filter((item) => item.compliance_status === "overdue").length);
-    setText(els.actionDueSoonCount, items.filter((item) => item.compliance_status === "due_soon").length);
-    setText(els.actionAlertsCount, Array.isArray(profile?.alerts) ? profile.alerts.length : 0);
-    setText(els.actionPlansCount, state.latest.plans.length);
-    setText(els.actionRiskCount, state.latest.risk.length);
-    setText(els.actionIncidentsCount, state.latest.incidents.length);
-
     updateStickyYoungPersonBar();
   } catch (error) {
     console.error("Action bar load failed:", error);
@@ -728,11 +534,9 @@ async function loadActiveTabData() {
 
 async function loadOverview(id) {
   renderLoading(els.overviewContent, "Loading overview...");
-  renderLoading(els.overviewActionsContent, "Loading actions...");
   renderLoading(els.overviewRecentActivityContent, "Loading activity...");
-  renderLoading(els.overviewVoiceContent, "Loading voice...");
+  renderLoading(els.overviewActionsContent, "Loading actions...");
   renderLoading(els.overviewAlertsContent, "Loading alerts...");
-  renderLoading(els.overviewReadinessContent, "Loading readiness...");
 
   const data = await fetchFromCandidates(endpoints.overview(id));
   state.latest.overview = data;
@@ -741,8 +545,7 @@ async function loadOverview(id) {
   const activeRisks = state.latest.risk.filter((row) => String(row.status || "").toLowerCase() === "active");
   const alerts = Array.isArray(state.latest.profile?.alerts) ? state.latest.profile.alerts : [];
   const complianceItems = Array.isArray(state.latest.compliance?.compliance_items) ? state.latest.compliance.compliance_items : [];
-  const recentNotes = state.latest.dailyNotes.slice(0, 5);
-  const recentIncidents = state.latest.incidents.slice(0, 5);
+  const dueItems = complianceItems.filter((item) => item.compliance_status !== "ok");
 
   els.overviewContent.innerHTML = `
     ${renderTiles([
@@ -759,91 +562,29 @@ async function loadOverview(id) {
       activePlans.length ? `${activePlans.length} active support plan${activePlans.length === 1 ? "" : "s"}` : "No active support plans shown",
       activeRisks.length ? `${activeRisks.length} active risk assessment${activeRisks.length === 1 ? "" : "s"}` : "No active risks shown"
     ])}
-    ${renderArraySection("Current plans", activePlans, ["status", "plan_type", "title", "review_date"])}
-    ${renderArraySection("Live risks", activeRisks, ["severity", "category", "title", "review_date"])}
   `;
 
   els.overviewRecentActivityContent.innerHTML = `
-    ${renderArraySection("Recent daily notes", recentNotes, ["note_date", "shift_type", "workflow_status"])}
-    ${renderArraySection("Recent incidents", recentIncidents, ["incident_datetime", "incident_type", "severity"])}
+    ${renderCompactRecordCards("Recent daily notes", state.latest.dailyNotes.slice(0, 5), "daily_note")}
+    ${renderCompactRecordCards("Recent incidents", state.latest.incidents.slice(0, 5), "incident")}
   `;
 
-  els.overviewVoiceContent.innerHTML = `
-    ${renderSimpleListSection("What matters and strengths", [
-      data?.what_matters_to_me && `What matters: ${data.what_matters_to_me}`,
-      data?.strengths_summary && `Strengths: ${data.strengths_summary}`,
-      data?.interests && `Interests: ${data.interests}`
-    ])}
-    ${renderRecentVoiceQuotes(recentNotes)}
-  `;
-
-  const liveActions = complianceItems.filter((item) => item.compliance_status !== "ok");
   els.overviewActionsContent.innerHTML = `
-    ${renderComplianceSummaryStrip(liveActions, alerts)}
-    ${renderArraySection("Due actions", liveActions.slice(0, 8), ["compliance_status", "title", "due_date", "compliance_type"])}
+    ${renderTiles([
+      ["Overdue", dueItems.filter((item) => item.compliance_status === "overdue").length],
+      ["Due Soon", dueItems.filter((item) => item.compliance_status === "due_soon").length],
+      ["Active Plans", activePlans.length],
+      ["Active Risks", activeRisks.length]
+    ])}
+    ${renderArraySection("Due actions", dueItems.slice(0, 8), ["compliance_status", "title", "due_date", "compliance_type"])}
   `;
 
   els.overviewAlertsContent.innerHTML = `
     ${renderArraySection("Alerts", alerts, ["alert_type", "title", "description", "severity", "review_date"])}
   `;
-
-  els.overviewReadinessContent.innerHTML = `
-    ${renderTiles([
-      ["Active alerts", alerts.length],
-      ["Active plans", activePlans.length],
-      ["Active risks", activeRisks.length],
-      ["Daily notes", state.latest.dailyNotes.length]
-    ])}
-  `;
 }
 
-function renderTiles(entries) {
-  const items = entries.filter(([, value]) => hasValue(value));
-  if (!items.length) return `<div class="empty-state">No overview summary available.</div>`;
-
-  return `
-    <div class="overview-grid">
-      ${items.map(([title, value]) => `
-        <div class="overview-tile">
-          <h4>${escapeHtml(title)}</h4>
-          <p>${escapeHtml(trimForTable(stringifyValue(value), title.toLowerCase()))}</p>
-        </div>
-      `).join("")}
-    </div>
-  `;
-}
-
-function renderSimpleListSection(title, items) {
-  const rows = items.filter(Boolean);
-  return `
-    <section class="section-group">
-      <h3 class="group-title">${escapeHtml(title)}</h3>
-      ${rows.length
-        ? `<div class="info-card-list">${rows.map((item) => `<div class="info-card-item">${escapeHtml(item)}</div>`).join("")}</div>`
-        : `<div class="empty-state">No data found.</div>`
-      }
-    </section>
-  `;
-}
-
-function renderRecentVoiceQuotes(notes) {
-  const quotes = notes
-    .map((note) => getDailyNoteField(note, ["young_person_voice", "voice"]))
-    .filter(Boolean)
-    .slice(0, 5);
-
-  return `
-    <section class="section-group">
-      <h3 class="group-title">Recent child voice</h3>
-      ${quotes.length
-        ? `<div class="info-card-list">${quotes.map((quote) => `<div class="info-card-item">${escapeHtml(trimForTable(quote, "young_person_voice"))}</div>`).join("")}</div>`
-        : `<div class="empty-state">No recent voice entries found.</div>`
-      }
-    </section>
-  `;
-}
-
-/* -------------------- Generic data tabs -------------------- */
+/* -------------------- Tabs content -------------------- */
 
 async function loadProfile(id) {
   renderLoading(els.profileContent, "Loading profile...");
@@ -910,15 +651,11 @@ async function loadPlans(id) {
   state.latest.plans = rows;
   updateStickyYoungPersonBar();
 
-  els.plansContent.innerHTML = renderPlanRiskCards(rows, "plan");
-  els.plansContextContent.innerHTML = renderModuleContextSummary(
-    "Plans context",
-    rows,
-    ["Active plans", rows.filter((row) => String(row.status || "").toLowerCase() === "active").length],
-    ["Due for review", rows.filter((row) => row.review_date).length]
-  );
-
-  bindPlanRiskCards("plan");
+  els.plansContent.innerHTML = renderDocumentCards(rows, "plan", {
+    title: (row) => row.title || row.plan_type || "Plan",
+    subtitle: (row) => `${stringifyValue(row.plan_type)} • ${row.review_date ? formatDate(row.review_date) : "No review date"}`,
+    summary: (row) => row.presenting_need || row.summary || "No summary"
+  });
 }
 
 async function loadRisk(id) {
@@ -927,210 +664,11 @@ async function loadRisk(id) {
   state.latest.risk = rows;
   updateStickyYoungPersonBar();
 
-  els.riskContent.innerHTML = renderPlanRiskCards(rows, "risk");
-  els.riskContextContent.innerHTML = renderModuleContextSummary(
-    "Risk context",
-    rows,
-    ["Active risks", rows.filter((row) => String(row.status || "").toLowerCase() === "active").length],
-    ["High severity", rows.filter((row) => String(row.severity || "").toLowerCase() === "high").length]
-  );
-
-  bindPlanRiskCards("risk");
-}
-
-function renderPlanRiskCards(rows, type) {
-  if (!rows.length) return `<div class="empty-state">No records found.</div>`;
-
-  return `
-    <div class="daily-note-list">
-      ${rows.map((row) => `
-        <button class="record-card js-open-workspace" type="button" data-workspace-type="${type}" data-record='${escapeHtml(JSON.stringify(row))}'>
-          <div class="record-card-top">
-            <h4>${escapeHtml(stringifyValue(row.title || row.plan_type || row.category || `${formatLabel(type)} Record`))}</h4>
-            <div>${type === "risk" ? renderSeverityPill(row.severity) : renderStatusPill(row.status)}</div>
-          </div>
-          <div class="record-card-meta">
-            ${type === "plan" ? `<span>${escapeHtml(stringifyValue(row.plan_type))}</span>` : `<span>${escapeHtml(stringifyValue(row.category))}</span>`}
-            <span>${escapeHtml(row.review_date ? formatDate(row.review_date) : "No review date")}</span>
-          </div>
-          <div class="record-card-section">
-            <strong>${type === "plan" ? "Presenting need" : "Concern summary"}</strong>
-            <p>${escapeHtml(trimForTable(stringifyValue(type === "plan" ? row.presenting_need : row.concern_summary), type === "plan" ? "presenting_need" : "concern_summary"))}</p>
-          </div>
-        </button>
-      `).join("")}
-    </div>
-  `;
-}
-
-function bindPlanRiskCards(type) {
-  $$(`.js-open-workspace[data-workspace-type="${type}"]`).forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const record = parseRecordDataset(btn.dataset.record);
-      if (record) openWorkspaceModal(type, record);
-    });
+  els.riskContent.innerHTML = renderDocumentCards(rows, "risk", {
+    title: (row) => row.title || row.category || "Risk assessment",
+    subtitle: (row) => `${stringifyValue(row.severity)} • ${row.review_date ? formatDate(row.review_date) : "No review date"}`,
+    summary: (row) => row.concern_summary || row.category || "No summary"
   });
-}
-
-function renderModuleContextSummary(title, rows, ...pairs) {
-  return `
-    <section class="section-group">
-      <h3 class="group-title">${escapeHtml(title)}</h3>
-      ${renderTiles(pairs)}
-      ${renderArraySection("Recent records", rows.slice(0, 5), Object.keys(rows[0] || {}).slice(0, 4))}
-    </section>
-  `;
-}
-
-async function loadIncidents(id) {
-  renderLoading(els.incidentsContent, "Loading incidents...");
-  const rows = normaliseArrayResponse(await fetchFromCandidates(endpoints.incidents(id)));
-  state.latest.incidents = rows;
-
-  els.incidentsContent.innerHTML = renderArraySection("Incidents", rows, [
-    "incident_datetime",
-    "incident_type",
-    "severity",
-    "location",
-    "description",
-    "manager_review_status",
-    "follow_up_required",
-    "staff_first_name"
-  ]);
-}
-
-async function loadHealth(id) {
-  renderLoading(els.healthContent, "Loading health...");
-  const data = await fetchFromCandidates(endpoints.health(id));
-  state.latest.health = data;
-
-  els.healthContent.innerHTML = [
-    renderArraySection("Health Profile", data?.health_profile || [], [
-      "gp_name",
-      "gp_contact",
-      "dentist_name",
-      "dentist_contact",
-      "optician_name",
-      "optician_contact",
-      "allergies",
-      "diagnoses",
-      "mental_health_summary",
-      "medication_summary",
-      "consent_notes"
-    ]),
-    renderArraySection("Health Records", data?.health_records || [], [
-      "event_datetime",
-      "record_type",
-      "title",
-      "summary",
-      "professional_name",
-      "outcome",
-      "follow_up_required",
-      "next_action_date"
-    ]),
-    renderArraySection("Medication Profiles", data?.medication_profiles || [], [
-      "medication_name",
-      "dosage",
-      "route",
-      "frequency",
-      "prescribed_by",
-      "start_date",
-      "end_date",
-      "is_active",
-      "notes"
-    ]),
-    renderArraySection("Medication Records", data?.medication_records || [], [
-      "scheduled_time",
-      "administered_time",
-      "medication_name",
-      "dose",
-      "route",
-      "status",
-      "error_flag",
-      "administered_by_first_name"
-    ])
-  ].join("");
-}
-
-async function loadEducation(id) {
-  renderLoading(els.educationContent, "Loading education...");
-  const data = await fetchFromCandidates(endpoints.education(id));
-  state.latest.education = data;
-  updateStickyYoungPersonBar();
-
-  els.educationContent.innerHTML = [
-    renderArraySection("Education Profile", data?.education_profile || [], [
-      "school_name",
-      "year_group",
-      "education_status",
-      "sen_status",
-      "ehcp_details",
-      "designated_teacher",
-      "attendance_baseline",
-      "pep_status",
-      "support_summary"
-    ]),
-    renderArraySection("Education Records", data?.education_records || [], [
-      "record_date",
-      "attendance_status",
-      "provision_name",
-      "behaviour_summary",
-      "learning_engagement",
-      "issue_raised",
-      "action_taken",
-      "professional_involved",
-      "achievement_note"
-    ])
-  ].join("");
-}
-
-async function loadFamily(id) {
-  renderLoading(els.familyContent, "Loading family...");
-  const data = await fetchFromCandidates(endpoints.family(id));
-  state.latest.family = data;
-
-  els.familyContent.innerHTML = [
-    renderArraySection("Contacts", data?.contacts || [], [
-      "contact_type",
-      "full_name",
-      "relationship_to_young_person",
-      "phone",
-      "email",
-      "is_parental_responsibility_holder",
-      "is_approved_contact",
-      "is_restricted_contact",
-      "supervision_level"
-    ]),
-    renderArraySection("Family Contact Records", data?.family_contact_records || [], [
-      "contact_datetime",
-      "contact_type",
-      "contact_person",
-      "supervision_level",
-      "location",
-      "pre_contact_presentation",
-      "post_contact_presentation",
-      "child_voice",
-      "concerns",
-      "follow_up_required"
-    ])
-  ].join("");
-}
-
-/* -------------------- Daily notes -------------------- */
-
-function bindDailyNoteDirtyTracking() {
-  dailyNoteFields
-    .map((id) => els[id])
-    .filter(Boolean)
-    .forEach((field) => {
-      const eventName = field.type === "checkbox" ? "change" : "input";
-      field.addEventListener(eventName, () => {
-        state.dailyNote.isDirty = true;
-        setDailyNoteSaveIndicator("Unsaved changes");
-        scheduleDailyNoteAutosave();
-        maybeRunTherapeuticLanguageCheck();
-      });
-    });
 }
 
 async function loadDailyNotes(id) {
@@ -1138,9 +676,6 @@ async function loadDailyNotes(id) {
   const rows = normaliseArrayResponse(await fetchFromCandidates(endpoints.daily_notes(id)));
   state.latest.dailyNotes = rows;
   renderDailyNotesListFromState();
-  renderDailyNoteSidebarContext();
-
-  if (!state.dailyNote.activeId) createNewDailyNote({ quiet: true });
 }
 
 function renderDailyNotesListFromState() {
@@ -1162,613 +697,98 @@ function renderDailyNotesListFromState() {
 
   if (term) {
     rows = rows.filter((row) => {
-      const haystack = [
+      const text = [
         row.note_date,
         row.shift_type,
         row.workflow_status,
         getDailyNoteField(row, ["what_happened", "presentation"]),
         getDailyNoteField(row, ["what_happened", "main_events"]),
         getDailyNoteField(row, ["what_happened", "positives"]),
-        getDailyNoteField(row, ["young_person_voice", "voice"]),
-        getDailyNoteField(row, ["follow_up", "actions_required"])
+        getDailyNoteField(row, ["young_person_voice", "voice"])
       ].join(" ").toLowerCase();
-
-      return haystack.includes(term);
+      return text.includes(term);
     });
   }
 
-  if (!rows.length) {
-    els.dailyNotesContent.innerHTML = `<div class="empty-state">No daily notes match the selected filters.</div>`;
-    return;
-  }
-
-  els.dailyNotesContent.innerHTML = `
-    <div class="daily-note-list">
-      ${rows.map((row) => `
-        <button class="record-card ${Number(state.dailyNote.activeId) === Number(row.id) ? "active" : ""}" type="button" data-note-id="${row.id}">
-          <div class="record-card-top">
-            <h4>${escapeHtml(formatDate(row.note_date))} • ${escapeHtml(stringifyValue(row.shift_type))}</h4>
-            <div>${renderWorkflowPill(row.workflow_status)}</div>
-          </div>
-          <div class="record-card-meta">
-            <span>Version ${escapeHtml(String(row.version_number || 1))}</span>
-            <span>${escapeHtml(row.author_name || "Unknown author")}</span>
-          </div>
-          <div class="record-card-section">
-            <strong>Presentation</strong>
-            <p>${escapeHtml(trimForTable(getDailyNoteField(row, ["what_happened", "presentation"]) || "—", "presentation"))}</p>
-          </div>
-          <div class="record-card-section">
-            <strong>Positive moments</strong>
-            <p>${escapeHtml(trimForTable(getDailyNoteField(row, ["what_happened", "positives"]) || "—", "positives"))}</p>
-          </div>
-        </button>
-      `).join("")}
-    </div>
-  `;
-
-  $$("[data-note-id]").forEach((btn) => {
-    btn.addEventListener("click", () => loadSingleDailyNote(Number(btn.dataset.noteId)));
+  els.dailyNotesContent.innerHTML = renderDocumentCards(rows, "daily_note", {
+    title: (row) => `${formatDate(row.note_date)} • ${stringifyValue(row.shift_type)}`,
+    subtitle: (row) => `${stringifyValue(row.workflow_status)} • ${row.author_name || "Unknown author"}`,
+    summary: (row) =>
+      getDailyNoteField(row, ["what_happened", "main_events"]) ||
+      getDailyNoteField(row, ["what_happened", "presentation"]) ||
+      "No summary"
   });
 }
 
-function createNewDailyNote(options = {}) {
-  if (!state.selectedYoungPerson) return showStatus("Please select a young person first.", true);
+async function loadIncidents(id) {
+  renderLoading(els.incidentsContent, "Loading incidents...");
+  const rows = normaliseArrayResponse(await fetchFromCandidates(endpoints.incidents(id)));
+  state.latest.incidents = rows;
 
-  if (state.dailyNote.isDirty && !options.quiet) {
-    const proceed = window.confirm("You have unsaved changes. Start a new daily note anyway?");
-    if (!proceed) return;
-  }
-
-  resetDailyNoteForm();
-  setValue(els.dailyNoteDate, toDateInputValue(new Date()));
-  setValue(els.dailyNoteShiftType, "day");
-  renderDailyNoteSidebarContext();
-
-  if (!options.quiet) showStatus("New daily note ready.");
-}
-
-function resetDailyNoteForm() {
-  state.dailyNote = {
-    activeId: null,
-    activeRecord: null,
-    versions: [],
-    isDirty: false,
-    autosaveTimer: null,
-    languageHints: []
-  };
-
-  els.dailyNoteForm?.reset();
-  setValue(els.dailyNoteId, "");
-  setValue(els.dailyNoteVersionNumber, "");
-  setValue(els.dailyNoteCurrentStatus, "draft");
-  setText(els.dailyNoteFormTitle, "Create / Edit Daily Note");
-  setDailyNoteSaveIndicator("Not saved yet");
-  setDailyNoteWorkflowIndicator("Draft");
-
-  if (els.dailyNoteVersionHistory) {
-    els.dailyNoteVersionHistory.innerHTML = `<div class="empty-state">Version history will appear here.</div>`;
-  }
-
-  renderTherapeuticLanguageHints([]);
-}
-
-async function clearDailyNoteFormWithPrompt() {
-  if (state.dailyNote.isDirty) {
-    const proceed = window.confirm("You have unsaved changes. Clear this form?");
-    if (!proceed) return;
-  }
-  createNewDailyNote();
-}
-
-async function loadSingleDailyNote(noteId) {
-  if (!state.selectedYoungPerson) return;
-
-  if (state.dailyNote.isDirty && Number(state.dailyNote.activeId) !== Number(noteId)) {
-    const proceed = window.confirm("You have unsaved changes. Open another daily note anyway?");
-    if (!proceed) return;
-  }
-
-  setDailyNoteSaveIndicator("Loading...");
-  const record = await fetchJson(endpoints.dailyNoteSingle(state.selectedYoungPerson.id, noteId));
-  state.dailyNote.activeId = noteId;
-  state.dailyNote.activeRecord = record;
-  fillDailyNoteForm(record);
-  await loadDailyNoteVersions(noteId);
-  renderDailyNotesListFromState();
-  renderDailyNoteSidebarContext();
-  setDailyNoteSaveIndicator("Loaded");
-}
-
-function fillDailyNoteForm(record) {
-  const content = record?.content_json || {};
-  const basic = content.basic_context || {};
-  const what = content.what_happened || {};
-  const pace = content.pace || {};
-  const voice = content.young_person_voice || {};
-  const response = content.staff_response || {};
-  const follow = content.follow_up || {};
-  const evidence = content.evidence || {};
-  const review = content.review_meta || {};
-
-  state.dailyNote.isDirty = false;
-
-  setText(els.dailyNoteFormTitle, `Edit Daily Note #${record.id}`);
-  setValue(els.dailyNoteId, record.id || "");
-  setValue(els.dailyNoteVersionNumber, record.version_number || "");
-  setValue(els.dailyNoteCurrentStatus, record.workflow_status || "draft");
-
-  setValue(els.dailyNoteDate, toDateInputValue(basic.note_date || record.note_date));
-  setValue(els.dailyNoteShiftType, basic.shift_type || record.shift_type || "day");
-  setValue(els.dailyNoteCustomShift, basic.custom_shift_label || "");
-  setValue(els.dailyNoteStaffOnShift, basic.staff_on_shift || "");
-  setValue(els.dailyNoteLocation, basic.location || "");
-  setValue(els.dailyNoteTags, basic.tags || "");
-  setChecked(els.dailyNoteSignificantEvent, Boolean(basic.significant_event || record.significant_event));
-  setChecked(els.dailyNoteManagerReviewRequired, Boolean(basic.manager_review_required || record.manager_review_required));
-
-  setValue(els.dailyNotePresentation, what.presentation || "");
-  setValue(els.dailyNoteMainEvents, what.main_events || "");
-  setValue(els.dailyNoteRoutineEngagement, what.routine_engagement || "");
-  setValue(els.dailyNoteEducationUpdate, what.education_update || "");
-  setValue(els.dailyNoteHealthUpdate, what.health_update || "");
-  setValue(els.dailyNoteFamilyUpdate, what.family_update || "");
-  setValue(els.dailyNoteWorries, what.worries || "");
-  setValue(els.dailyNotePositives, what.positives || "");
-
-  setValue(els.dailyNotePacePlayfulnessStatus, pace?.playfulness?.status || "not_used");
-  setValue(els.dailyNotePacePlayfulness, pace?.playfulness?.reflection || "");
-  setValue(els.dailyNotePaceAcceptanceStatus, pace?.acceptance?.status || "not_evident");
-  setValue(els.dailyNotePaceAcceptance, pace?.acceptance?.reflection || "");
-  setValue(els.dailyNotePaceCuriosityTags, Array.isArray(pace?.curiosity?.tags) ? pace.curiosity.tags.join(", ") : "");
-  setValue(els.dailyNotePaceCuriosity, pace?.curiosity?.reflection || "");
-  setValue(els.dailyNotePaceEmpathyTags, Array.isArray(pace?.empathy?.tags) ? pace.empathy.tags.join(", ") : "");
-  setValue(els.dailyNotePaceEmpathy, pace?.empathy?.reflection || "");
-
-  setValue(els.dailyNoteYoungPersonVoice, voice.voice || "");
-  setValue(els.dailyNoteCommunicationStyle, voice.communication_style || "");
-
-  setValue(els.dailyNoteStaffResponse, response.staff_response || "");
-  setValue(els.dailyNoteWhatHelped, response.what_helped || "");
-  setValue(els.dailyNoteWhatDidNotHelp, response.what_did_not_help || "");
-  setValue(els.dailyNoteImpact, response.impact || "");
-
-  setValue(els.dailyNoteActionsRequired, follow.actions_required || "");
-  setChecked(els.dailyNoteDiscussInHandover, Boolean(follow.discuss_in_handover));
-  setChecked(els.dailyNoteUpdateRiskAssessment, Boolean(follow.update_risk_assessment));
-  setChecked(els.dailyNoteLinkMonthlyReview, Boolean(follow.link_monthly_review));
-
-  setValue(els.dailyNoteLinkedStandards, Array.isArray(evidence.linked_standards) ? evidence.linked_standards.join(", ") : "");
-  setValue(els.dailyNoteLinkedRisks, Array.isArray(evidence.linked_risks) ? evidence.linked_risks.join(", ") : "");
-  setValue(els.dailyNoteLinkedPlans, Array.isArray(evidence.linked_plans) ? evidence.linked_plans.join(", ") : "");
-  setValue(els.dailyNoteEvidenceImpactStatement, evidence.impact_statement || "");
-
-  setValue(els.dailyNoteChangeReason, review.change_reason || record.change_reason || "");
-  setValue(els.dailyNoteManagerReviewComment, review.manager_review_comment || record.manager_review_comment || "");
-
-  setDailyNoteWorkflowIndicator(record.workflow_status || "draft");
-  maybeRunTherapeuticLanguageCheck();
-}
-
-function collectDailyNotePayload() {
-  return {
-    home_id: state.selectedYoungPerson?.home_id || null,
-    note_date: cleanValue(els.dailyNoteDate?.value),
-    shift_type: cleanValue(els.dailyNoteShiftType?.value) || "day",
-    custom_shift_label: cleanValue(els.dailyNoteCustomShift?.value),
-    staff_on_shift: cleanValue(els.dailyNoteStaffOnShift?.value),
-    location: cleanValue(els.dailyNoteLocation?.value),
-    tags: cleanValue(els.dailyNoteTags?.value),
-    significant_event: Boolean(els.dailyNoteSignificantEvent?.checked),
-    manager_review_required: Boolean(els.dailyNoteManagerReviewRequired?.checked),
-
-    presentation: cleanValue(els.dailyNotePresentation?.value),
-    main_events: cleanValue(els.dailyNoteMainEvents?.value),
-    routine_engagement: cleanValue(els.dailyNoteRoutineEngagement?.value),
-    education_update: cleanValue(els.dailyNoteEducationUpdate?.value),
-    health_update: cleanValue(els.dailyNoteHealthUpdate?.value),
-    family_update: cleanValue(els.dailyNoteFamilyUpdate?.value),
-    worries: cleanValue(els.dailyNoteWorries?.value),
-    positives: cleanValue(els.dailyNotePositives?.value),
-
-    pace_playfulness_status: cleanValue(els.dailyNotePacePlayfulnessStatus?.value) || "not_used",
-    pace_playfulness: cleanValue(els.dailyNotePacePlayfulness?.value),
-    pace_acceptance_status: cleanValue(els.dailyNotePaceAcceptanceStatus?.value) || "not_evident",
-    pace_acceptance: cleanValue(els.dailyNotePaceAcceptance?.value),
-    pace_curiosity_tags: cleanValue(els.dailyNotePaceCuriosityTags?.value),
-    pace_curiosity: cleanValue(els.dailyNotePaceCuriosity?.value),
-    pace_empathy_tags: cleanValue(els.dailyNotePaceEmpathyTags?.value),
-    pace_empathy: cleanValue(els.dailyNotePaceEmpathy?.value),
-
-    young_person_voice: cleanValue(els.dailyNoteYoungPersonVoice?.value),
-    communication_style: cleanValue(els.dailyNoteCommunicationStyle?.value),
-
-    staff_response: cleanValue(els.dailyNoteStaffResponse?.value),
-    what_helped: cleanValue(els.dailyNoteWhatHelped?.value),
-    what_did_not_help: cleanValue(els.dailyNoteWhatDidNotHelp?.value),
-    impact: cleanValue(els.dailyNoteImpact?.value),
-
-    actions_required: cleanValue(els.dailyNoteActionsRequired?.value),
-    discuss_in_handover: Boolean(els.dailyNoteDiscussInHandover?.checked),
-    update_risk_assessment: Boolean(els.dailyNoteUpdateRiskAssessment?.checked),
-    link_monthly_review: Boolean(els.dailyNoteLinkMonthlyReview?.checked),
-
-    linked_standards: cleanValue(els.dailyNoteLinkedStandards?.value),
-    linked_risks: cleanValue(els.dailyNoteLinkedRisks?.value),
-    linked_plans: cleanValue(els.dailyNoteLinkedPlans?.value),
-    evidence_impact_statement: cleanValue(els.dailyNoteEvidenceImpactStatement?.value),
-
-    change_reason: cleanValue(els.dailyNoteChangeReason?.value),
-    manager_review_comment: cleanValue(els.dailyNoteManagerReviewComment?.value),
-    author_id: 1
-  };
-}
-
-async function saveDailyNote(saveAs = "draft", options = {}) {
-  if (!state.selectedYoungPerson) return showStatus("Please select a young person first.", true);
-
-  const payload = collectDailyNotePayload();
-  if (!payload.note_date) return showStatus("Daily note date is required.", true);
-  if (!payload.shift_type) return showStatus("Shift type is required.", true);
-
-  setDailyNoteSaveIndicator(options.autosave ? "Autosaving..." : "Saving...");
-
-  try {
-    const noteId = cleanValue(els.dailyNoteId?.value);
-    const url = noteId
-      ? endpoints.dailyNoteUpdate(state.selectedYoungPerson.id, noteId)
-      : endpoints.dailyNoteCreate(state.selectedYoungPerson.id);
-
-    const method = noteId ? "PUT" : "POST";
-
-    const result = await fetchJson(url, {
-      method,
-      body: JSON.stringify({
-        ...payload,
-        edited_by: 1,
-        save_as: saveAs === "completed" ? "completed" : "draft"
-      })
-    });
-
-    state.dailyNote.isDirty = false;
-    setDailyNoteSaveIndicator(`${options.autosave ? "Autosaved" : "Saved"} ${formatTimeOnly(new Date())}`);
-
-    if (result?.therapeutic_language_suggestions) {
-      renderTherapeuticLanguageHints(result.therapeutic_language_suggestions);
-    }
-
-    if (!options.silent) {
-      showStatus(saveAs === "completed" ? "Daily note completed." : "Daily note saved.");
-    }
-
-    await loadDailyNotes(state.selectedYoungPerson.id);
-    if (result?.daily_note_id) await loadSingleDailyNote(result.daily_note_id);
-    await loadActionBarData();
-  } catch (error) {
-    setDailyNoteSaveIndicator("Save failed");
-    if (!options.silent) showStatus(`Could not save daily note: ${error.message}`, true);
-    throw error;
-  }
-}
-
-async function markDailyNoteReviewed() {
-  if (!state.selectedYoungPerson) return showStatus("Please select a young person first.", true);
-  const noteId = cleanValue(els.dailyNoteId?.value);
-  if (!noteId) return showStatus("Please open or save a daily note before marking it reviewed.", true);
-
-  try {
-    await fetchJson(endpoints.dailyNoteReview(state.selectedYoungPerson.id, noteId), {
-      method: "POST",
-      body: JSON.stringify({
-        reviewed_by: 1,
-        manager_review_comment: cleanValue(els.dailyNoteManagerReviewComment?.value),
-        mark_as: "reviewed"
-      })
-    });
-
-    showStatus("Daily note marked as reviewed.");
-    await loadDailyNotes(state.selectedYoungPerson.id);
-    await loadSingleDailyNote(Number(noteId));
-    await loadActionBarData();
-  } catch (error) {
-    showStatus(`Could not mark daily note reviewed: ${error.message}`, true);
-  }
-}
-
-async function loadDailyNoteVersions(noteId) {
-  const versions = normaliseArrayResponse(
-    await fetchJson(endpoints.dailyNoteVersions(state.selectedYoungPerson.id, noteId))
-  );
-  state.dailyNote.versions = versions;
-  renderDailyNoteVersionHistory();
-}
-
-function renderDailyNoteVersionHistory() {
-  if (!els.dailyNoteVersionHistory) return;
-
-  const rows = state.dailyNote.versions;
-  if (!rows.length) {
-    els.dailyNoteVersionHistory.innerHTML = `<div class="empty-state">Version history will appear here.</div>`;
-    return;
-  }
-
-  els.dailyNoteVersionHistory.innerHTML = `
-    <div class="daily-note-list">
-      ${rows.map((row) => `
-        <button type="button" class="record-card js-open-version-detail" data-version-id="${row.id}">
-          <div class="record-card-top">
-            <h4>Version ${escapeHtml(String(row.version_number || 1))}</h4>
-            <div>${renderWorkflowPill(row.workflow_status)}</div>
-          </div>
-          <div class="record-card-meta">
-            <span>${escapeHtml(row.edited_by_name || "Unknown user")}</span>
-            <span>${escapeHtml(formatDateTime(row.edited_at))}</span>
-          </div>
-          <div class="record-card-section">
-            <strong>Reason</strong>
-            <p>${escapeHtml(stringifyValue(row.change_reason || "No reason recorded"))}</p>
-          </div>
-        </button>
-      `).join("")}
-    </div>
-  `;
-
-  $$(".js-open-version-detail").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const version = rows.find((row) => Number(row.id) === Number(btn.dataset.versionId));
-      if (version) openWorkspaceModal("daily_note_version", version);
-    });
+  els.incidentsContent.innerHTML = renderDocumentCards(rows, "incident", {
+    title: (row) => row.incident_type || "Incident",
+    subtitle: (row) => `${row.incident_datetime ? formatDateTime(row.incident_datetime) : "No date"} • ${stringifyValue(row.severity)}`,
+    summary: (row) => row.description || "No description"
   });
 }
 
-function renderDailyNoteSidebarContext() {
-  const profile = state.latest.profile || {};
-  const alerts = Array.isArray(profile.alerts) ? profile.alerts : [];
-  const activePlans = state.latest.plans.filter((row) => String(row.status || "").toLowerCase() === "active");
-  const risks = state.latest.risk || [];
-  const dueItems = (state.latest.compliance?.compliance_items || []).filter((item) => item.compliance_status !== "ok");
+async function loadHealth(id) {
+  renderLoading(els.healthContent, "Loading health...");
+  const data = await fetchFromCandidates(endpoints.health(id));
+  state.latest.health = data;
 
-  els.dailyNoteSidebarTodayInfo.innerHTML = `
-    <div class="info-card-list">
-      <div class="info-card-item"><strong>Alerts:</strong> ${escapeHtml(alerts.length ? alerts.map((a) => a.title || a.description).slice(0, 3).join(" • ") : "None recorded")}</div>
-      <div class="info-card-item"><strong>Active plans:</strong> ${activePlans.length}</div>
-      <div class="info-card-item"><strong>Placement status:</strong> ${escapeHtml(stringifyValue(state.selectedYoungPerson?.placement_status))}</div>
-      <div class="info-card-item"><strong>Risk level:</strong> ${escapeHtml(stringifyValue(state.selectedYoungPerson?.summary_risk_level))}</div>
-    </div>
-  `;
+  const records = [
+    ...(data?.health_records || []).map((row) => ({ ...row, _doc_type: "health_record" })),
+    ...(data?.medication_records || []).map((row) => ({ ...row, _doc_type: "medication_record" }))
+  ];
 
-  els.dailyNoteSidebarRisks.innerHTML = risks.length
-    ? `<div class="info-card-list">${risks.slice(0, 6).map((risk) => `
-        <div class="info-card-item">
-          <strong>${escapeHtml(stringifyValue(risk.title || risk.category))}</strong>
-          <div>${escapeHtml(stringifyValue(risk.concern_summary || risk.category))}</div>
-        </div>
-      `).join("")}</div>`
-    : `<div class="empty-state">No current risks loaded.</div>`;
-
-  els.dailyNoteSidebarActions.innerHTML = dueItems.length
-    ? `<div class="info-card-list">${dueItems.slice(0, 6).map((item) => `
-        <div class="info-card-item">
-          <strong>${escapeHtml(stringifyValue(item.title))}</strong>
-          <div>${escapeHtml(formatComplianceGroupTitle(item.compliance_type))} • ${escapeHtml(formatDate(item.due_date))}</div>
-        </div>
-      `).join("")}</div>`
-    : `<div class="empty-state">No active actions loaded.</div>`;
-}
-
-function scheduleDailyNoteAutosave() {
-  clearTimeout(state.dailyNote.autosaveTimer);
-
-  if (!state.selectedYoungPerson || state.activeTab !== "daily_notes" || !state.dailyNote.isDirty) return;
-
-  state.dailyNote.autosaveTimer = setTimeout(() => {
-    saveDailyNote("draft", { silent: true, autosave: true }).catch(() => {});
-  }, 2500);
-}
-
-async function maybeRunTherapeuticLanguageCheck() {
-  const textFields = [
-    els.dailyNotePresentation?.value,
-    els.dailyNoteMainEvents?.value,
-    els.dailyNoteRoutineEngagement?.value,
-    els.dailyNoteEducationUpdate?.value,
-    els.dailyNoteHealthUpdate?.value,
-    els.dailyNoteFamilyUpdate?.value,
-    els.dailyNoteWorries?.value,
-    els.dailyNotePositives?.value,
-    els.dailyNotePacePlayfulness?.value,
-    els.dailyNotePaceAcceptance?.value,
-    els.dailyNotePaceCuriosity?.value,
-    els.dailyNotePaceEmpathy?.value,
-    els.dailyNoteYoungPersonVoice?.value,
-    els.dailyNoteCommunicationStyle?.value,
-    els.dailyNoteStaffResponse?.value,
-    els.dailyNoteWhatHelped?.value,
-    els.dailyNoteWhatDidNotHelp?.value,
-    els.dailyNoteImpact?.value,
-    els.dailyNoteActionsRequired?.value,
-    els.dailyNoteEvidenceImpactStatement?.value
-  ].filter(Boolean);
-
-  clearTimeout(maybeRunTherapeuticLanguageCheck.timer);
-  maybeRunTherapeuticLanguageCheck.timer = setTimeout(async () => {
-    try {
-      const result = await fetchJson(endpoints.dailyNoteLanguageCheck, {
-        method: "POST",
-        body: JSON.stringify({ text_fields: textFields })
-      });
-      renderTherapeuticLanguageHints(result?.suggestions || []);
-    } catch (_error) {}
-  }, 500);
-}
-
-function renderTherapeuticLanguageHints(suggestions = []) {
-  state.dailyNote.languageHints = suggestions;
-
-  els.therapeuticLanguageHints.innerHTML = suggestions.length
-    ? `
-      <div class="info-card-list">
-        ${suggestions.map((item) => `
-          <div class="info-card-item">
-            <strong>Try:</strong> ${escapeHtml(item.suggestion)}
-            <div>${escapeHtml(item.reason || "")}</div>
-          </div>
-        `).join("")}
-      </div>
-    `
-    : `
-      <div class="info-card-list">
-        <div class="info-card-item"><strong>Try:</strong> clear, kind, factual recording</div>
-        <div class="info-card-item"><strong>Use:</strong> curiosity, empathy and child-centred language</div>
-      </div>
-    `;
-}
-
-function getDailyNoteField(row, path) {
-  let current = row?.content_json || row || {};
-  for (const key of path) {
-    if (!current || typeof current !== "object") return null;
-    current = current[key];
-  }
-  return current ?? null;
-}
-
-function setDailyNoteSaveIndicator(text) {
-  setText(els.dailyNoteSaveIndicator, text);
-}
-
-function setDailyNoteWorkflowIndicator(text) {
-  setText(els.dailyNoteWorkflowIndicator, text || "Draft");
-}
-
-/* -------------------- Key work -------------------- */
-
-async function loadKeyworkSessions(id) {
-  renderLoading(els.keyworkList, "Loading key work sessions...");
-  const rows = normaliseArrayResponse(await fetchJson(endpoints.keyworkList(id)));
-  state.keyworkSessions = rows;
-  renderKeyworkList();
-
-  els.keyworkContextContent.innerHTML = renderModuleContextSummary(
-    "Key work context",
-    rows,
-    ["Sessions", rows.length],
-    ["Next planned", rows.filter((row) => row.next_session_date).length]
-  );
-}
-
-function renderKeyworkList() {
-  const rows = state.keyworkSessions;
-
-  if (!rows.length) {
-    els.keyworkList.innerHTML = `<div class="empty-state">No key work sessions found.</div>`;
-    return;
-  }
-
-  els.keyworkList.innerHTML = renderTableSection("Key Work Sessions", rows, [
-    "session_date",
-    "topic",
-    "worker_first_name",
-    "summary",
-    "next_session_date"
-  ], true);
-
-  bindOpenRecordButtons();
-  $$(".js-keywork-row").forEach((btn) => {
-    btn.addEventListener("click", () => loadSingleKeyworkSession(Number(btn.dataset.sessionId)));
+  els.healthContent.innerHTML = renderDocumentCards(records, "health", {
+    title: (row) => row.title || row.record_type || row.medication_name || "Health record",
+    subtitle: (row) =>
+      `${row.event_datetime ? formatDateTime(row.event_datetime) : row.scheduled_time ? formatDateTime(row.scheduled_time) : "No date"}`,
+    summary: (row) => row.summary || row.outcome || row.status || "No summary"
   });
 }
 
-async function loadSingleKeyworkSession(sessionId) {
-  const session = await fetchJson(endpoints.keyworkById(sessionId));
-  state.activeKeyworkSessionId = session.id;
-  fillKeyworkForm(session);
-  openWorkspaceModal("keywork", session);
-  renderKeyworkList();
+async function loadEducation(id) {
+  renderLoading(els.educationContent, "Loading education...");
+  const data = await fetchFromCandidates(endpoints.education(id));
+  state.latest.education = data;
+  updateStickyYoungPersonBar();
+
+  els.educationContent.innerHTML = renderDocumentCards(data?.education_records || [], "education", {
+    title: (row) => row.provision_name || "Education record",
+    subtitle: (row) => `${row.record_date ? formatDate(row.record_date) : "No date"} • ${stringifyValue(row.attendance_status)}`,
+    summary: (row) => row.behaviour_summary || row.learning_engagement || row.achievement_note || "No summary"
+  });
 }
 
-function fillKeyworkForm(session) {
-  setText(els.keyworkFormTitle, `Edit Key Work Session #${session.id}`);
-  setValue(els.keyworkSessionId, session.id || "");
-  setValue(els.sessionDate, toDateInputValue(session.session_date));
-  setValue(els.workerId, session.worker_id ?? "");
-  setValue(els.topic, session.topic ?? "");
-  setValue(els.purpose, session.purpose ?? "");
-  setValue(els.summary, session.summary ?? "");
-  setValue(els.childVoice, session.child_voice ?? "");
-  setValue(els.reflectiveAnalysis, session.reflective_analysis ?? "");
-  setValue(els.actionsAgreed, session.actions_agreed ?? "");
-  setValue(els.nextSessionDate, toDateInputValue(session.next_session_date));
+async function loadFamily(id) {
+  renderLoading(els.familyContent, "Loading family...");
+  const data = await fetchFromCandidates(endpoints.family(id));
+  state.latest.family = data;
+
+  els.familyContent.innerHTML = renderDocumentCards(data?.family_contact_records || [], "family", {
+    title: (row) => row.contact_person || "Family contact record",
+    subtitle: (row) => `${row.contact_datetime ? formatDateTime(row.contact_datetime) : "No date"} • ${stringifyValue(row.contact_type)}`,
+    summary: (row) => row.child_voice || row.concerns || row.post_contact_presentation || "No summary"
+  });
 }
 
-function resetKeyworkForm() {
-  state.activeKeyworkSessionId = null;
-  els.keyworkForm?.reset();
-  setValue(els.keyworkSessionId, "");
-  setText(els.keyworkFormTitle, "Create / Edit Key Work Session");
+async function loadKeywork(id) {
+  renderLoading(els.keyworkList, "Loading key work...");
+  const rows = normaliseArrayResponse(await fetchJson(`/young-people/${id}/keywork`));
+  els.keyworkList.innerHTML = renderDocumentCards(rows, "keywork", {
+    title: (row) => row.topic || "Key work session",
+    subtitle: (row) => `${row.session_date ? formatDate(row.session_date) : "No date"} • ${row.worker_first_name || "Unknown worker"}`,
+    summary: (row) => row.summary || row.purpose || "No summary"
+  });
 }
-
-async function saveKeyworkSession(event) {
-  event.preventDefault();
-
-  if (!state.selectedYoungPerson) return showStatus("Please select a young person first.", true);
-
-  const sessionId = cleanValue(els.keyworkSessionId?.value);
-  const payload = {
-    young_person_id: Number(state.selectedYoungPerson.id),
-    session_date: cleanValue(els.sessionDate?.value),
-    worker_id: parseNullableInt(els.workerId?.value),
-    topic: cleanValue(els.topic?.value),
-    purpose: cleanValue(els.purpose?.value),
-    summary: cleanValue(els.summary?.value),
-    child_voice: cleanValue(els.childVoice?.value),
-    reflective_analysis: cleanValue(els.reflectiveAnalysis?.value),
-    actions_agreed: cleanValue(els.actionsAgreed?.value),
-    next_session_date: cleanValue(els.nextSessionDate?.value)
-  };
-
-  if (!payload.session_date || !payload.topic) {
-    return showStatus("Session date and topic are required.", true);
-  }
-
-  try {
-    if (sessionId) {
-      await fetchJson(endpoints.keyworkUpdate(sessionId), {
-        method: "PUT",
-        body: JSON.stringify({
-          session_date: payload.session_date,
-          worker_id: payload.worker_id,
-          topic: payload.topic,
-          purpose: payload.purpose,
-          summary: payload.summary,
-          child_voice: payload.child_voice,
-          reflective_analysis: payload.reflective_analysis,
-          actions_agreed: payload.actions_agreed,
-          next_session_date: payload.next_session_date
-        })
-      });
-      showStatus("Key work session updated successfully.");
-    } else {
-      await fetchJson(endpoints.keyworkCreate, {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
-      showStatus("Key work session created successfully.");
-    }
-
-    resetKeyworkForm();
-    await loadKeyworkSessions(state.selectedYoungPerson.id);
-    await loadActionBarData();
-  } catch (error) {
-    showStatus(`Could not save key work session: ${error.message}`, true);
-  }
-}
-
-/* -------------------- Chronology / standards / compliance -------------------- */
 
 async function loadChronology(id) {
   renderLoading(els.chronologyContent, "Loading chronology...");
-  const rows = normaliseArrayResponse(await fetchJson(endpoints.chronologyList(id)));
+  const rows = normaliseArrayResponse(await fetchJson(endpoints.chronology(id)));
+  state.latest.chronology = rows;
 
   els.chronologyContent.innerHTML = renderTableSection("Chronology", rows, [
     "event_datetime",
@@ -1780,21 +800,29 @@ async function loadChronology(id) {
     "source_table"
   ], true);
 
-  bindOpenRecordButtons();
+  bindDrawerRecordButtons();
 }
 
-async function rebuildChronology() {
-  if (!state.selectedYoungPerson) return showStatus("Please select a young person first.", true);
+async function loadMonthlyReviews(id) {
+  renderLoading(els.monthlyReviewsList, "Loading monthly reviews...");
+  const rows = await fetchJson(endpoints.monthlyReviews(id));
+  state.latest.monthlyReviews = rows || [];
 
-  try {
-    await fetchJson(endpoints.chronologyRebuild(state.selectedYoungPerson.id), {
-      method: "POST"
-    });
-    showStatus("Chronology rebuilt successfully.");
-    await loadChronology(state.selectedYoungPerson.id);
-  } catch (error) {
-    showStatus(`Could not rebuild chronology: ${error.message}`, true);
+  if (!rows?.length) {
+    els.monthlyReviewsList.innerHTML = `<div class="empty-state">No monthly reviews yet.</div>`;
+    if (els.monthlyReviewDetail) {
+      els.monthlyReviewDetail.innerHTML = `<div class="empty-state">Select a review to view details.</div>`;
+    }
+    return;
   }
+
+  els.monthlyReviewsList.innerHTML = renderDocumentCards(rows, "monthly_review", {
+    title: (row) => row.review_title || "Monthly review",
+    subtitle: (row) => `${row.review_month ? formatDate(row.review_month) : "No month"} • ${stringifyValue(row.status)}`,
+    summary: (row) => row.summary_of_month || row.progress_summary || "Open to view detail"
+  });
+
+  bindDocumentCards();
 }
 
 async function loadStandards(id) {
@@ -1802,27 +830,42 @@ async function loadStandards(id) {
   renderLoading(els.standardsEvidenceList, "Loading evidence...");
 
   const [summary, evidence] = await Promise.all([
-    fetchFromCandidates(endpoints.standardsSummary(id)),
-    fetchFromCandidates(endpoints.standardsEvidence(id))
+    fetchFromCandidates([`/young-people/${id}/standards`]),
+    fetchFromCandidates([`/young-people/${id}/standards/evidence`])
   ]);
 
   renderStandardsSummary(summary);
   renderStandardsEvidence(evidence);
 }
 
-async function rebuildStandardsLinks() {
-  if (!state.selectedYoungPerson) return showStatus("Please select a young person first.", true);
+async function loadCompliance(id) {
+  renderLoading(els.complianceContent, "Loading compliance...");
+  const data = await fetchFromCandidates(endpoints.compliance(id));
+  state.latest.compliance = data;
 
-  try {
-    await fetchJson(endpoints.standardsRebuild(state.selectedYoungPerson.id), {
-      method: "POST"
-    });
-    showStatus("Standards links rebuilt successfully.");
-    await loadStandards(state.selectedYoungPerson.id);
-  } catch (error) {
-    showStatus(`Could not rebuild standards links: ${error.message}`, true);
+  if (state.jumpComplianceFilter !== "all" && els.complianceStatusFilter) {
+    els.complianceStatusFilter.value = state.jumpComplianceFilter;
+    state.jumpComplianceFilter = "all";
   }
+
+  rerenderComplianceFromState();
 }
+
+async function loadHandovers() {
+  els.handoverListContent.innerHTML = renderPlaceholderCards(
+    "Handovers",
+    "This should list handover records and open each one in the full-page modal."
+  );
+}
+
+async function loadSupervision() {
+  els.supervisionListContent.innerHTML = renderPlaceholderCards(
+    "Supervision",
+    "This should list supervision records and open each one in the full-page modal."
+  );
+}
+
+/* -------------------- Standards / compliance rendering -------------------- */
 
 function renderStandardsSummary(rows) {
   if (!rows?.length) {
@@ -1845,6 +888,7 @@ function renderStandardsSummary(rows) {
             let cls = "status-green";
             if (Number(row.linked_record_count) < 3) cls = "status-amber";
             if (Number(row.linked_record_count) === 0) cls = "status-red";
+
             return `
               <tr>
                 <td><strong>${escapeHtml(row.code)}</strong></td>
@@ -1895,19 +939,6 @@ function renderStandardsEvidence(rows) {
   `;
 }
 
-async function loadCompliance(id) {
-  renderLoading(els.complianceContent, "Loading compliance...");
-  const data = await fetchFromCandidates(endpoints.compliance(id));
-  state.latest.compliance = data;
-
-  if (state.jumpComplianceFilter !== "all" && els.complianceStatusFilter) {
-    els.complianceStatusFilter.value = state.jumpComplianceFilter;
-    state.jumpComplianceFilter = "all";
-  }
-
-  rerenderComplianceFromState();
-}
-
 function rerenderComplianceFromState() {
   const data = state.latest.compliance;
   if (!data) {
@@ -1921,21 +952,26 @@ function rerenderComplianceFromState() {
   let items = Array.isArray(data.compliance_items) ? data.compliance_items : [];
   const alerts = Array.isArray(data.active_alerts) ? data.active_alerts : [];
 
-  if (statusFilter !== "all") items = items.filter((item) => item.compliance_status === statusFilter);
-  if (categoryFilter !== "all") items = items.filter((item) => item.compliance_type === categoryFilter);
+  if (statusFilter !== "all") {
+    items = items.filter((item) => item.compliance_status === statusFilter);
+  }
+
+  if (categoryFilter !== "all") {
+    items = items.filter((item) => item.compliance_type === categoryFilter);
+  }
 
   const grouped = groupBy(items, "compliance_type");
 
   els.complianceContent.innerHTML = `
     ${renderComplianceSummaryStrip(items, alerts)}
     ${Object.keys(grouped).length
-      ? Object.entries(grouped).map(([name, rows]) => renderComplianceGroup(name, rows)).join("")
+      ? Object.entries(grouped).map(([groupName, rows]) => renderComplianceGroup(groupName, rows)).join("")
       : `<div class="empty-state">No compliance items match the selected filters.</div>`
     }
     ${renderArraySection("Active Alerts", alerts, ["alert_type", "title", "description", "severity", "review_date"])}
   `;
 
-  bindOpenRecordButtons();
+  bindDrawerRecordButtons();
 }
 
 function renderComplianceSummaryStrip(items, alerts) {
@@ -1965,7 +1001,7 @@ function renderComplianceGroup(groupName, rows) {
             ${rows.map((row) => `
               <tr>
                 ${columns.map((col) => `<td>${renderTableCell(col, row[col])}</td>`).join("")}
-                <td><button class="text-link-btn js-open-record" data-record='${escapeHtml(JSON.stringify(row))}'>View</button></td>
+                <td><button class="text-link-btn js-open-drawer-record" data-record='${escapeHtml(JSON.stringify(row))}'>View</button></td>
               </tr>
             `).join("")}
           </tbody>
@@ -1975,55 +1011,405 @@ function renderComplianceGroup(groupName, rows) {
   `;
 }
 
-/* -------------------- Monthly reviews / AI -------------------- */
+/* -------------------- Actions -------------------- */
 
-async function loadMonthlyReviews(id) {
-  renderLoading(els.monthlyReviewsList, "Loading monthly reviews...");
-  const rows = await fetchJson(endpoints.monthlyReviewsList(id));
-
-  if (!rows?.length) {
-    els.monthlyReviewsList.innerHTML = `<div class="empty-state">No monthly reviews yet.</div>`;
-    els.monthlyReviewDetail.innerHTML = `<div class="empty-state">Select a review to view details.</div>`;
+async function rebuildChronology() {
+  if (!state.selectedYoungPerson) {
+    showStatus("Please select a young person first.", true);
     return;
   }
 
-  els.monthlyReviewsList.innerHTML = `
-    <div class="section-table-wrap">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Month</th>
-            <th>Status</th>
-            <th>Title</th>
-            <th>Open</th>
-            <th>AI Report</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows.map((row) => `
-            <tr>
-              <td>${escapeHtml(formatDate(row.review_month))}</td>
-              <td>${renderStatusPill(row.status)}</td>
-              <td>${escapeHtml(row.review_title || "")}</td>
-              <td><button class="text-link-btn js-open-monthly-review" data-review-id="${row.id}">Open</button></td>
-              <td><button class="text-link-btn js-open-ofsted-ai-report" data-review-month="${escapeHtml(formatMonthApiValue(row.review_month))}">View AI Report</button></td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
+  try {
+    await fetchJson(`/young-people/${state.selectedYoungPerson.id}/chronology/rebuild`, {
+      method: "POST"
+    });
+    showStatus("Chronology rebuilt successfully.");
+    await loadChronology(state.selectedYoungPerson.id);
+  } catch (error) {
+    showStatus(`Could not rebuild chronology: ${error.message}`, true);
+  }
+}
 
-  $$(".js-open-monthly-review").forEach((btn) => {
-    btn.addEventListener("click", () => loadMonthlyReviewDetail(Number(btn.dataset.reviewId)));
-  });
+async function rebuildStandardsLinks() {
+  if (!state.selectedYoungPerson) {
+    showStatus("Please select a young person first.", true);
+    return;
+  }
 
-  $$(".js-open-ofsted-ai-report").forEach((btn) => {
-    btn.addEventListener("click", () => loadOfstedAiReport(btn.dataset.reviewMonth || ""));
+  try {
+    await fetchJson(`/young-people/${state.selectedYoungPerson.id}/standards/rebuild`, {
+      method: "POST"
+    });
+    showStatus("Standards links rebuilt successfully.");
+    await loadStandards(state.selectedYoungPerson.id);
+  } catch (error) {
+    showStatus(`Could not rebuild standards links: ${error.message}`, true);
+  }
+}
+
+async function generateMonthlyReview() {
+  if (!state.selectedYoungPerson) {
+    showStatus("Please select a young person first.", true);
+    return;
+  }
+
+  if (!els.monthlyReviewMonth?.value) {
+    showStatus("Please choose a month first.", true);
+    return;
+  }
+
+  const reviewMonth = `${els.monthlyReviewMonth.value}-01`;
+
+  try {
+    const result = await fetchJson(
+      `/monthly-reviews/young-person/${state.selectedYoungPerson.id}/generate?review_month=${reviewMonth}`,
+      { method: "POST" }
+    );
+
+    showStatus("Monthly review generated successfully.");
+    await loadMonthlyReviews(state.selectedYoungPerson.id);
+
+    if (result?.monthly_review_id) {
+      await openMonthlyReviewDetail(result.monthly_review_id);
+    }
+  } catch (error) {
+    showStatus(`Could not generate monthly review: ${error.message}`, true);
+  }
+}
+
+async function loadOfstedAiReport(reviewMonth = "") {
+  if (!state.selectedYoungPerson) {
+    showStatus("Please select a young person first.", true);
+    return;
+  }
+
+  try {
+    showStatus("Generating AI OFSTED report...");
+    const report = await fetchJson(endpoints.ofstedAiReport(state.selectedYoungPerson.id, reviewMonth));
+    openWorkspaceModal({
+      type: "ofsted_ai_report",
+      mode: "view",
+      title: "AI OFSTED Inspection Report",
+      meta: getFullName(state.selectedYoungPerson),
+      record: report
+    });
+    showStatus("AI OFSTED report loaded.");
+  } catch (error) {
+    showStatus(`Could not load AI OFSTED report: ${error.message}`, true);
+  }
+}
+
+async function createInspectionPackJob() {
+  if (!state.selectedYoungPerson) {
+    showStatus("Please select a young person first.", true);
+    return;
+  }
+
+  try {
+    const result = await fetchJson(endpoints.inspectionPackCreate, {
+      method: "POST",
+      body: JSON.stringify({
+        scope_type: "young_person",
+        scope_id: state.selectedYoungPerson.id,
+        pack_type: "ofsted",
+        requested_by: 1
+      })
+    });
+
+    showStatus(`Inspection pack job created${result?.id ? ` (#${result.id})` : ""}.`);
+  } catch (error) {
+    showStatus(`Could not create inspection pack job: ${error.message}`, true);
+  }
+}
+
+/* -------------------- Full-page modal workflow -------------------- */
+
+function openNewDocument(type) {
+  if (!state.selectedYoungPerson) {
+    showStatus("Please select a young person first.", true);
+    return;
+  }
+
+  const titleMap = {
+    daily_note: "New Daily Note",
+    incident: "New Incident",
+    keywork: "New Key Work Session",
+    plan: "New Support Plan",
+    risk: "New Risk Assessment",
+    health: "New Health Record",
+    education: "New Education Record",
+    family: "New Family Record",
+    handover: "New Handover",
+    supervision: "New Supervision"
+  };
+
+  openWorkspaceModal({
+    type,
+    mode: "create",
+    title: titleMap[type] || "New Document",
+    meta: getFullName(state.selectedYoungPerson),
+    record: null
   });
 }
 
-async function loadMonthlyReviewDetail(reviewId) {
+function openWorkspaceModal({ type, mode = "view", title, meta, record }) {
+  state.modal.open = true;
+  state.modal.type = type;
+  state.modal.mode = mode;
+  state.modal.record = record;
+
+  if (!els.recordWorkspaceModal) return;
+
+  els.recordWorkspaceModal.classList.remove("hidden");
+  els.recordWorkspaceModal.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+
+  setText(els.workspaceModalTitle, title || formatLabel(type));
+  setText(els.workspaceModalMeta, meta || getFullName(state.selectedYoungPerson || { id: "—" }));
+
+  els.workspaceModalContent.innerHTML = renderWorkspaceMain(type, mode, record);
+  els.workspaceModalContext.innerHTML = renderWorkspaceContext(type, record);
+  els.workspaceModalVersions.innerHTML = renderWorkspaceVersions(type, record);
+  els.workspaceModalAiPanel.innerHTML = renderWorkspaceAiPanel(type, record);
+
+  setText(els.workspaceModalSaveBtn, mode === "create" ? "Create Draft" : "Save");
+  setText(els.workspaceModalCompleteBtn, mode === "create" ? "Create & Complete" : "Complete");
+}
+
+function closeWorkspaceModal() {
+  state.modal.open = false;
+  state.modal.type = null;
+  state.modal.mode = "view";
+  state.modal.record = null;
+
+  if (!els.recordWorkspaceModal) return;
+  els.recordWorkspaceModal.classList.add("hidden");
+  els.recordWorkspaceModal.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+}
+
+function handleWorkspaceSave() {
+  const type = state.modal.type;
+  if (!type) return;
+
+  showStatus(`${formatLabel(type)} save wiring comes next.`);
+}
+
+function handleWorkspaceComplete() {
+  const type = state.modal.type;
+  if (!type) return;
+
+  showStatus(`${formatLabel(type)} complete wiring comes next.`);
+}
+
+function renderWorkspaceMain(type, mode, record) {
+  if (type === "ofsted_ai_report") {
+    return renderDrawerValue(record);
+  }
+
+  if (mode === "create") {
+    return renderDocumentTemplate(type);
+  }
+
+  return renderDocumentRecord(type, record);
+}
+
+function renderDocumentTemplate(type) {
+  const templates = {
+    daily_note: `
+      <section class="section-group">
+        <h3 class="group-title">Basic Context</h3>
+        <div class="info-card-list">
+          <div class="info-card-item">Date, shift, staff on shift, location and tags should go here.</div>
+          <div class="info-card-item">This will become the full editable daily note form in the modal.</div>
+        </div>
+      </section>
+      <section class="section-group">
+        <h3 class="group-title">What Happened Today?</h3>
+        <div class="info-card-list">
+          <div class="info-card-item">Presentation, events, positives, worries, family, health and education updates.</div>
+        </div>
+      </section>
+      <section class="section-group">
+        <h3 class="group-title">PACE Reflection</h3>
+        <div class="info-card-list">
+          <div class="info-card-item">Playfulness, Acceptance, Curiosity and Empathy sections belong here.</div>
+        </div>
+      </section>
+    `,
+    plan: `
+      <section class="section-group">
+        <h3 class="group-title">Support Plan</h3>
+        <div class="info-card-list">
+          <div class="info-card-item">Title, presenting need, summary, child voice and proactive strategies belong here.</div>
+        </div>
+      </section>
+    `,
+    risk: `
+      <section class="section-group">
+        <h3 class="group-title">Risk Assessment</h3>
+        <div class="info-card-list">
+          <div class="info-card-item">Category, concern summary, triggers, early warning signs and de-escalation guidance belong here.</div>
+        </div>
+      </section>
+    `,
+    incident: `
+      <section class="section-group">
+        <h3 class="group-title">Incident Record</h3>
+        <div class="info-card-list">
+          <div class="info-card-item">Incident overview, what happened before, what happened during, staff response and learning should be captured here.</div>
+        </div>
+      </section>
+    `,
+    keywork: `
+      <section class="section-group">
+        <h3 class="group-title">Key Work Session</h3>
+        <div class="info-card-list">
+          <div class="info-card-item">Topic, purpose, summary, child voice, reflection and actions agreed should go here.</div>
+        </div>
+      </section>
+    `,
+    health: `
+      <section class="section-group">
+        <h3 class="group-title">Health Record</h3>
+        <div class="info-card-list">
+          <div class="info-card-item">Health event details, treatment, professional advice and follow-up should go here.</div>
+        </div>
+      </section>
+    `,
+    education: `
+      <section class="section-group">
+        <h3 class="group-title">Education Record</h3>
+        <div class="info-card-list">
+          <div class="info-card-item">Attendance, participation, barriers, school contact and next steps should go here.</div>
+        </div>
+      </section>
+    `,
+    family: `
+      <section class="section-group">
+        <h3 class="group-title">Family Record</h3>
+        <div class="info-card-list">
+          <div class="info-card-item">Contact details, pre and post presentation, child voice and follow-up should go here.</div>
+        </div>
+      </section>
+    `,
+    handover: `
+      <section class="section-group">
+        <h3 class="group-title">Handover</h3>
+        <div class="info-card-list">
+          <div class="info-card-item">Shift summary, priorities, medication issues, due tasks and escalation points should go here.</div>
+        </div>
+      </section>
+    `,
+    supervision: `
+      <section class="section-group">
+        <h3 class="group-title">Supervision</h3>
+        <div class="info-card-list">
+          <div class="info-card-item">Reflection, practice review, wellbeing, safeguarding discussion and actions agreed should go here.</div>
+        </div>
+      </section>
+    `
+  };
+
+  return templates[type] || `
+    <section class="section-group">
+      <h3 class="group-title">${escapeHtml(formatLabel(type))}</h3>
+      <div class="info-card-list">
+        <div class="info-card-item">This new document workspace is ready for the full form.</div>
+      </div>
+    </section>
+  `;
+}
+
+function renderDocumentRecord(type, record) {
+  return `
+    <section class="section-group">
+      <h3 class="group-title">${escapeHtml(formatLabel(type))}</h3>
+      ${renderDrawerValue(record)}
+    </section>
+  `;
+}
+
+function renderWorkspaceContext(type, record) {
+  const blocks = [];
+
+  if (state.selectedYoungPerson) {
+    blocks.push(`Young person: ${getFullName(state.selectedYoungPerson)}`);
+    blocks.push(`Placement: ${stringifyValue(state.selectedYoungPerson.placement_status)}`);
+    blocks.push(`Risk level: ${stringifyValue(state.selectedYoungPerson.summary_risk_level)}`);
+  }
+
+  if (record?.review_date) blocks.push(`Review date: ${formatDate(record.review_date)}`);
+  if (record?.status) blocks.push(`Status: ${record.status}`);
+  if (record?.severity) blocks.push(`Severity: ${record.severity}`);
+  if (record?.workflow_status) blocks.push(`Workflow: ${record.workflow_status}`);
+  if (record?.session_date) blocks.push(`Session date: ${formatDate(record.session_date)}`);
+  if (record?.note_date) blocks.push(`Note date: ${formatDate(record.note_date)}`);
+
+  return blocks.length
+    ? `<div class="info-card-list">${blocks.map((text) => `<div class="info-card-item">${escapeHtml(text)}</div>`).join("")}</div>`
+    : `<div class="empty-state">No extra context available.</div>`;
+}
+
+function renderWorkspaceVersions(type, record) {
+  if (type === "daily_note" && record?.version_number) {
+    return `
+      <div class="info-card-list">
+        <div class="info-card-item">Current version: ${escapeHtml(String(record.version_number))}</div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="info-card-list">
+      <div class="info-card-item">Version history should appear here.</div>
+      <div class="info-card-item">Use this panel for amendments, manager review trail and audit history.</div>
+    </div>
+  `;
+}
+
+function renderWorkspaceAiPanel(type, record) {
+  const map = {
+    daily_note: [
+      "Rewrite in more therapeutic language",
+      "Extract child voice",
+      "Suggest standards links"
+    ],
+    plan: [
+      "Suggest clearer support strategies",
+      "Summarise child voice",
+      "Suggest linked standards"
+    ],
+    risk: [
+      "Summarise concern in plain language",
+      "Suggest relational de-escalation wording",
+      "Highlight review focus"
+    ],
+    incident: [
+      "Summarise incident clearly",
+      "Identify learning points",
+      "Suggest follow-up"
+    ],
+    keywork: [
+      "Summarise session",
+      "Extract actions agreed",
+      "Highlight themes"
+    ],
+    ofsted_ai_report: [
+      "Summarise strengths",
+      "Highlight concerns",
+      "Prepare export version"
+    ]
+  };
+
+  const items = map[type] || ["AI support options will appear here."];
+
+  return `<div class="info-card-list">${items.map((item) => `<div class="info-card-item">${escapeHtml(item)}</div>`).join("")}</div>`;
+}
+
+/* -------------------- Monthly review detail -------------------- */
+
+async function openMonthlyReviewDetail(reviewId) {
   renderLoading(els.monthlyReviewDetail, "Loading review...");
   const data = await fetchJson(endpoints.monthlyReviewDetail(reviewId));
 
@@ -2066,263 +1452,137 @@ async function loadMonthlyReviewDetail(reviewId) {
   ].join("");
 }
 
-async function generateMonthlyReview() {
-  if (!state.selectedYoungPerson) return showStatus("Please select a young person first.", true);
-  if (!els.monthlyReviewMonth?.value) return showStatus("Please choose a month first.", true);
+/* -------------------- Record cards -------------------- */
 
-  const reviewMonth = `${els.monthlyReviewMonth.value}-01`;
-
-  try {
-    const result = await fetchJson(
-      endpoints.monthlyReviewGenerate(state.selectedYoungPerson.id, reviewMonth),
-      { method: "POST" }
-    );
-
-    showStatus("Monthly review generated successfully.");
-    await loadMonthlyReviews(state.selectedYoungPerson.id);
-
-    if (result?.monthly_review_id) {
-      await loadMonthlyReviewDetail(result.monthly_review_id);
-      await loadOfstedAiReport(reviewMonth);
-    }
-  } catch (error) {
-    showStatus(`Could not generate monthly review: ${error.message}`, true);
-  }
-}
-
-async function loadOfstedAiReport(reviewMonth = "") {
-  if (!state.selectedYoungPerson) return showStatus("Please select a young person first.", true);
-
-  try {
-    showStatus("Generating AI OFSTED report...");
-    const report = await fetchJson(endpoints.ofstedAiReport(state.selectedYoungPerson.id, reviewMonth));
-    openWorkspaceModal("ofsted_ai_report", report);
-    showStatus("AI OFSTED report loaded.");
-  } catch (error) {
-    showStatus(`Could not load AI OFSTED report: ${error.message}`, true);
-  }
-}
-
-async function createInspectionPackJob() {
-  if (!state.selectedYoungPerson) return showStatus("Please select a young person first.", true);
-
-  try {
-    const result = await fetchJson(endpoints.inspectionPackCreate, {
-      method: "POST",
-      body: JSON.stringify({
-        scope_type: "young_person",
-        scope_id: state.selectedYoungPerson.id,
-        pack_type: "ofsted",
-        requested_by: 1
-      })
-    });
-
-    showStatus(`Inspection pack job created${result?.id ? ` (#${result.id})` : ""}.`);
-  } catch (error) {
-    showStatus(`Could not create inspection pack job: ${error.message}`, true);
-  }
-}
-
-/* -------------------- Handovers / supervision placeholders -------------------- */
-
-async function loadHandovers() {
-  renderHandoverPlaceholder();
-}
-
-async function loadSupervision() {
-  renderSupervisionPlaceholder();
-}
-
-function renderHandoverPlaceholder() {
-  if (els.handoverListContent) {
-    els.handoverListContent.innerHTML = `
-      <div class="info-card-list">
-        <div class="info-card-item"><strong>Planned module:</strong> Shift handovers</div>
-        <div class="info-card-item">This area will bring together shift summary, child-by-child priorities, medication issues, due tasks and escalation flags.</div>
-      </div>
-    `;
+function renderDocumentCards(rows, type, config) {
+  if (!rows?.length) {
+    return `<div class="empty-state">No records found.</div>`;
   }
 
-  if (els.handoverWorkspaceContent) {
-    els.handoverWorkspaceContent.innerHTML = `
-      <div class="info-card-list">
-        <div class="info-card-item"><strong>Next build:</strong> editable handover workspace</div>
-        <div class="info-card-item">It should support AI-generated handover summary, accepted handover sign-off, and live action carry-forward.</div>
-      </div>
-    `;
-  }
+  const html = `
+    <div class="daily-note-list">
+      ${rows.map((row) => `
+        <button
+          class="record-card js-open-document"
+          type="button"
+          data-doc-type="${escapeHtml(type)}"
+          data-record='${escapeHtml(JSON.stringify(row))}'
+        >
+          <div class="record-card-top">
+            <h4>${escapeHtml(config.title(row))}</h4>
+            <div>${renderCardPill(type, row)}</div>
+          </div>
+
+          <div class="record-card-meta">
+            <span>${escapeHtml(config.subtitle(row))}</span>
+          </div>
+
+          <div class="record-card-section">
+            <strong>Summary</strong>
+            <p>${escapeHtml(trimForTable(config.summary(row), "summary"))}</p>
+          </div>
+        </button>
+      `).join("")}
+    </div>
+  `;
+
+  queueMicrotask(bindDocumentCards);
+  return html;
 }
 
-function renderSupervisionPlaceholder() {
-  if (els.supervisionListContent) {
-    els.supervisionListContent.innerHTML = `
-      <div class="info-card-list">
-        <div class="info-card-item"><strong>Planned module:</strong> Staff supervision</div>
-        <div class="info-card-item">This area will support reflective supervision, safeguarding discussion, practice quality and agreed actions.</div>
-      </div>
-    `;
-  }
-
-  if (els.supervisionWorkspaceContent) {
-    els.supervisionWorkspaceContent.innerHTML = `
-      <div class="info-card-list">
-        <div class="info-card-item"><strong>Next build:</strong> supervision workspace</div>
-        <div class="info-card-item">It should support AI transcription, reflective summary, linked incidents and practice actions.</div>
-      </div>
-    `;
-  }
-}
-
-/* -------------------- Workspace modal -------------------- */
-
-function openWorkspaceModal(type, record) {
-  state.modal.open = true;
-  state.modal.type = type;
-  state.modal.record = record;
-
-  if (!els.recordWorkspaceModal) return;
-
-  els.recordWorkspaceModal.classList.remove("hidden");
-  els.recordWorkspaceModal.setAttribute("aria-hidden", "false");
-  document.body.style.overflow = "hidden";
-
-  const titleMap = {
-    plan: "Support Plan Workspace",
-    risk: "Risk Assessment Workspace",
-    keywork: "Key Work Workspace",
-    daily_note_version: "Daily Note Version",
-    ofsted_ai_report: "AI OFSTED Inspection Report"
-  };
-
-  setText(els.workspaceModalTitle, titleMap[type] || "Record Workspace");
-  setText(
-    els.workspaceModalMeta,
-    record?.title
-      ? String(record.title)
-      : record?.topic
-        ? String(record.topic)
-        : record?.review_title
-          ? String(record.review_title)
-          : `Record type: ${formatLabel(type)}`
-  );
-
-  els.workspaceModalContent.innerHTML = renderWorkspaceMainContent(type, record);
-  els.workspaceModalContext.innerHTML = renderWorkspaceContext(type, record);
-  els.workspaceModalVersions.innerHTML = renderWorkspaceVersions(type, record);
-  els.workspaceModalAiPanel.innerHTML = renderWorkspaceAiPanel(type, record);
-}
-
-function closeWorkspaceModal() {
-  state.modal.open = false;
-  state.modal.type = null;
-  state.modal.record = null;
-
-  if (!els.recordWorkspaceModal) return;
-  els.recordWorkspaceModal.classList.add("hidden");
-  els.recordWorkspaceModal.setAttribute("aria-hidden", "true");
-  document.body.style.overflow = "";
-}
-
-function renderWorkspaceMainContent(type, record) {
-  if (type === "ofsted_ai_report") {
-    return renderDrawerValue(record);
-  }
-
+function renderCompactRecordCards(title, rows, type) {
   return `
     <section class="section-group">
-      <h3 class="group-title">${escapeHtml(formatLabel(type))}</h3>
-      ${renderDrawerValue(record)}
+      <h3 class="group-title">${escapeHtml(title)}</h3>
+      ${renderDocumentCards(rows, type, {
+        title: (row) =>
+          type === "daily_note"
+            ? `${formatDate(row.note_date)} • ${stringifyValue(row.shift_type)}`
+            : row.incident_type || "Incident",
+        subtitle: (row) =>
+          type === "daily_note"
+            ? stringifyValue(row.workflow_status)
+            : `${row.incident_datetime ? formatDateTime(row.incident_datetime) : "No date"} • ${stringifyValue(row.severity)}`,
+        summary: (row) =>
+          type === "daily_note"
+            ? getDailyNoteField(row, ["what_happened", "main_events"]) ||
+              getDailyNoteField(row, ["what_happened", "presentation"]) ||
+              "No summary"
+            : row.description || "No summary"
+      })}
     </section>
   `;
 }
 
-function renderWorkspaceContext(type, record) {
-  const blocks = [];
+function bindDocumentCards() {
+  $$(".js-open-document").forEach((btn) => {
+    btn.onclick = () => {
+      const type = btn.dataset.docType;
+      const record = parseRecordDataset(btn.dataset.record);
 
-  if (type === "plan") {
-    if (record.review_date) blocks.push(`Review date: ${formatDate(record.review_date)}`);
-    if (record.status) blocks.push(`Status: ${record.status}`);
-    if (record.approval_status) blocks.push(`Approval: ${record.approval_status}`);
-  }
+      if (type === "monthly_review") {
+        if (record?.id) openMonthlyReviewDetail(record.id);
+        return;
+      }
 
-  if (type === "risk") {
-    if (record.severity) blocks.push(`Severity: ${record.severity}`);
-    if (record.likelihood) blocks.push(`Likelihood: ${record.likelihood}`);
-    if (record.review_date) blocks.push(`Review date: ${formatDate(record.review_date)}`);
-  }
-
-  if (type === "keywork") {
-    if (record.session_date) blocks.push(`Session date: ${formatDate(record.session_date)}`);
-    if (record.next_session_date) blocks.push(`Next session: ${formatDate(record.next_session_date)}`);
-  }
-
-  if (type === "daily_note_version") {
-    if (record.edited_at) blocks.push(`Edited: ${formatDateTime(record.edited_at)}`);
-    if (record.edited_by_name) blocks.push(`Edited by: ${record.edited_by_name}`);
-  }
-
-  return blocks.length
-    ? `<div class="info-card-list">${blocks.map((block) => `<div class="info-card-item">${escapeHtml(block)}</div>`).join("")}</div>`
-    : `<div class="empty-state">No extra context available.</div>`;
+      openWorkspaceModal({
+        type,
+        mode: "edit",
+        title: modalTitleForType(type, "edit"),
+        meta: getFullName(state.selectedYoungPerson),
+        record
+      });
+    };
+  });
 }
 
-function renderWorkspaceVersions(type, record) {
-  if (type === "daily_note_version") {
-    return `<div class="info-card-item">This is a single saved version record.</div>`;
-  }
+function modalTitleForType(type, mode) {
+  const create = {
+    daily_note: "New Daily Note",
+    incident: "New Incident",
+    keywork: "New Key Work Session",
+    plan: "New Support Plan",
+    risk: "New Risk Assessment",
+    health: "New Health Record",
+    education: "New Education Record",
+    family: "New Family Record",
+    handover: "New Handover",
+    supervision: "New Supervision"
+  };
 
-  if (type === "plan" || type === "risk" || type === "keywork") {
-    return `
-      <div class="info-card-list">
-        <div class="info-card-item">Version history can be linked here next.</div>
-        <div class="info-card-item">This is where amended records, author trail and review history should sit.</div>
-      </div>
-    `;
-  }
+  const edit = {
+    daily_note: "Daily Note",
+    incident: "Incident Record",
+    keywork: "Key Work Session",
+    plan: "Support Plan",
+    risk: "Risk Assessment",
+    health: "Health Record",
+    education: "Education Record",
+    family: "Family Record",
+    handover: "Handover",
+    supervision: "Supervision"
+  };
 
-  return `<div class="empty-state">No versions loaded.</div>`;
+  return mode === "create" ? create[type] || "New Document" : edit[type] || "Document";
 }
 
-function renderWorkspaceAiPanel(type, record) {
-  const suggestions = [];
-
-  if (type === "plan") {
-    suggestions.push("Suggest more therapeutic wording");
-    suggestions.push("Summarise child voice");
-    suggestions.push("Suggest linked standards");
-  }
-
-  if (type === "risk") {
-    suggestions.push("Summarise risk in plain language");
-    suggestions.push("Suggest relational de-escalation wording");
-    suggestions.push("Suggest review focus points");
-  }
-
-  if (type === "keywork") {
-    suggestions.push("Summarise learning from session");
-    suggestions.push("Extract child voice");
-    suggestions.push("Draft actions agreed");
-  }
-
-  if (type === "ofsted_ai_report") {
-    suggestions.push("Export report");
-    suggestions.push("Summarise key strengths");
-    suggestions.push("Highlight improvement themes");
-  }
-
-  return suggestions.length
-    ? `<div class="info-card-list">${suggestions.map((item) => `<div class="info-card-item">${escapeHtml(item)}</div>`).join("")}</div>`
-    : `<div class="empty-state">AI actions will appear here.</div>`;
+function renderCardPill(type, row) {
+  if (type === "risk") return renderSeverityPill(row.severity);
+  if (type === "incident") return renderSeverityPill(row.severity);
+  if (type === "daily_note") return renderWorkflowPill(row.workflow_status);
+  if (type === "plan") return renderStatusPill(row.status);
+  if (type === "monthly_review") return renderStatusPill(row.status);
+  return renderStatusPill(row.status || row.workflow_status || "open");
 }
 
 /* -------------------- Drawer fallback -------------------- */
 
-function bindOpenRecordButtons() {
-  $$(".js-open-record").forEach((btn) => {
-    btn.addEventListener("click", () => {
+function bindDrawerRecordButtons() {
+  $$(".js-open-drawer-record").forEach((btn) => {
+    btn.onclick = () => {
       const record = parseRecordDataset(btn.dataset.record);
       if (record) openRecordDrawer("Record Detail", record);
-    });
+    };
   });
 }
 
@@ -2396,10 +1656,40 @@ function renderDrawerCellValue(value) {
   return escapeHtml(stringifyValue(value));
 }
 
-/* -------------------- Render helpers -------------------- */
+/* -------------------- Shared render helpers -------------------- */
 
 function renderLoading(el, text) {
   if (el) el.innerHTML = `<div class="empty-state">${escapeHtml(text)}</div>`;
+}
+
+function renderTiles(entries) {
+  const items = entries.filter(([, value]) => hasValue(value));
+  if (!items.length) return `<div class="empty-state">No summary available.</div>`;
+
+  return `
+    <div class="overview-grid">
+      ${items.map(([title, value]) => `
+        <div class="overview-tile">
+          <h4>${escapeHtml(title)}</h4>
+          <p>${escapeHtml(trimForTable(stringifyValue(value), title.toLowerCase()))}</p>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderSimpleListSection(title, items) {
+  const rows = items.filter(Boolean);
+
+  return `
+    <section class="section-group">
+      <h3 class="group-title">${escapeHtml(title)}</h3>
+      ${rows.length
+        ? `<div class="info-card-list">${rows.map((item) => `<div class="info-card-item">${escapeHtml(item)}</div>`).join("")}</div>`
+        : `<div class="empty-state">No data found.</div>`
+      }
+    </section>
+  `;
 }
 
 function renderObjectSection(title, record, keys) {
@@ -2473,8 +1763,7 @@ function renderTableSection(_title, rows, preferredColumns = null, addViewButton
               ${columns.map((col) => `<td>${renderTableCell(col, row[col])}</td>`).join("")}
               ${addViewButton ? `
                 <td class="table-actions">
-                  <button class="text-link-btn js-open-record" data-record='${escapeHtml(JSON.stringify(row))}'>View</button>
-                  ${state.activeTab === "keywork" && row.id ? `<button class="text-link-btn js-keywork-row" data-session-id="${row.id}">Edit</button>` : ""}
+                  <button class="text-link-btn js-open-drawer-record" data-record='${escapeHtml(JSON.stringify(row))}'>View</button>
                 </td>
               ` : ""}
             </tr>
@@ -2504,7 +1793,6 @@ function renderSeverityPill(value) {
     lower === "medium" ? "status-amber" :
     lower === "low" ? "status-green" :
     "status-grey";
-
   return `<span class="status-pill ${cls}">${escapeHtml(stringifyValue(value))}</span>`;
 }
 
@@ -2515,11 +1803,28 @@ function renderWorkflowPill(value) {
     lower === "submitted" || lower === "completed" || lower === "amended" ? "status-blue" :
     lower === "returned" ? "status-red" :
     "status-grey";
-
   return `<span class="status-pill ${cls}">${escapeHtml(stringifyValue(value))}</span>`;
 }
 
+function renderPlaceholderCards(title, text) {
+  return `
+    <div class="info-card-list">
+      <div class="info-card-item"><strong>${escapeHtml(title)}</strong></div>
+      <div class="info-card-item">${escapeHtml(text)}</div>
+    </div>
+  `;
+}
+
 /* -------------------- Utilities -------------------- */
+
+function getDailyNoteField(row, path) {
+  let current = row?.content_json || row || {};
+  for (const key of path) {
+    if (!current || typeof current !== "object") return null;
+    current = current[key];
+  }
+  return current ?? null;
+}
 
 function parseRecordDataset(value) {
   try {
@@ -2572,45 +1877,6 @@ function setText(el, value) {
   if (el) el.textContent = String(value);
 }
 
-function setValue(el, value) {
-  if (el) el.value = value ?? "";
-}
-
-function setChecked(el, checked) {
-  if (el) el.checked = Boolean(checked);
-}
-
-function cleanValue(value) {
-  const cleaned = typeof value === "string" ? value.trim() : value;
-  return cleaned === "" ? null : cleaned;
-}
-
-function parseNullableInt(value) {
-  const cleaned = String(value || "").trim();
-  if (!cleaned) return null;
-  const parsed = Number(cleaned);
-  return Number.isNaN(parsed) ? null : parsed;
-}
-
-function trimForTable(value, key) {
-  const max = [
-    "summary",
-    "description",
-    "presenting_need",
-    "concern_summary",
-    "positives",
-    "actions_required",
-    "what_matters_to_me",
-    "rationale",
-    "presentation",
-    "young_person_voice"
-  ].includes(key)
-    ? 80
-    : 48;
-
-  return String(value).length > max ? `${String(value).slice(0, max)}...` : String(value);
-}
-
 function formatLabel(value) {
   return String(value)
     .replaceAll("_", " ")
@@ -2622,6 +1888,14 @@ function stringifyValue(value) {
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (typeof value === "object") return JSON.stringify(value);
   return String(value);
+}
+
+function trimForTable(value, key) {
+  const max = ["summary", "description", "presenting_need", "concern_summary", "positives", "actions_required"].includes(key)
+    ? 100
+    : 56;
+
+  return String(value).length > max ? `${String(value).slice(0, max)}...` : String(value);
 }
 
 function formatFieldValue(key, value) {
@@ -2652,9 +1926,7 @@ function formatFieldValue(key, value) {
     "submitted_at",
     "next_action_date",
     "due_date",
-    "generated_at",
-    "last_edited_at",
-    "edited_at"
+    "generated_at"
   ];
 
   if (dateKeys.includes(key)) {
@@ -2696,29 +1968,6 @@ function formatDateTime(value) {
         hour: "2-digit",
         minute: "2-digit"
       })}`;
-}
-
-function formatTimeOnly(value) {
-  const date = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(date.getTime())
-    ? "—"
-    : date.toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit"
-      });
-}
-
-function formatMonthApiValue(value) {
-  if (!value) return "";
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "" : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
-}
-
-function toDateInputValue(value) {
-  if (!value) return "";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
 }
 
 function hasValue(value) {
