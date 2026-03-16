@@ -1,8 +1,8 @@
 document.addEventListener("DOMContentLoaded", () => {
     const ACCESS_TOKEN_KEY = "access_token";
-    const LOCAL_TEMPLATE_KEY = "indicare_custom_templates_v3";
-    const LOCAL_DRAFT_KEY = "indicare_ai_notes_draft_v3";
-    const LOCAL_HISTORY_KEY = "indicare_ai_notes_history_v3";
+    const LOCAL_TEMPLATE_KEY = "indicare_custom_templates_v4";
+    const LOCAL_DRAFT_KEY = "indicare_ai_notes_draft_v4";
+    const LOCAL_HISTORY_KEY = "indicare_ai_notes_history_v4";
 
     const builtInTemplates = [
         {
@@ -148,7 +148,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ];
 
     const vagueLanguageKeywords = [
-        "seemed", "appeared", "probably", "maybe", "possibly", "might have", "I think", "perhaps"
+        "seemed", "appeared", "probably", "maybe", "possibly", "might have", "perhaps"
     ];
 
     const els = {
@@ -267,7 +267,8 @@ document.addEventListener("DOMContentLoaded", () => {
         currentNoteId: null,
         isTranscriptVisible: true,
         extractedActions: [],
-        hasUnsavedChanges: false
+        hasUnsavedChanges: false,
+        isBusy: false
     };
 
     function getAccessToken() {
@@ -496,6 +497,16 @@ document.addEventListener("DOMContentLoaded", () => {
         return firstLine ? firstLine.replace(/[:#*-]/g, "").slice(0, 120) : "Care record";
     }
 
+    function smartDefaultTitle() {
+        const parts = [
+            els.shiftTypeEl?.value || "Care record",
+            els.youngPersonNameEl?.value?.trim() || "",
+            els.meetingDateEl?.value || new Date().toISOString().slice(0, 10)
+        ].filter(Boolean);
+
+        return parts.join(" - ");
+    }
+
     function buildCareContextBlock() {
         return [
             `Service type: ${els.serviceTypeEl?.value || "Not specified"}`,
@@ -644,7 +655,8 @@ document.addEventListener("DOMContentLoaded", () => {
         clearTimeout(state.autosaveTimeout);
         state.autosaveTimeout = setTimeout(() => {
             persistDraftLocally();
-        }, 500);
+            showToast("Draft saved locally.");
+        }, 900);
     }
 
     function markSaved() {
@@ -1050,7 +1062,7 @@ document.addEventListener("DOMContentLoaded", () => {
             state.previousAiDraft = transcript;
 
             if (els.noteTitleEl && !els.noteTitleEl.value.trim()) {
-                els.noteTitleEl.value = `Care note - ${new Date().toLocaleDateString("en-GB")}`;
+                els.noteTitleEl.value = smartDefaultTitle();
             }
 
             analyseDocument();
@@ -1107,7 +1119,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (els.aiDraftEl) els.aiDraftEl.value = generated;
 
             if (els.noteTitleEl && !els.noteTitleEl.value.trim()) {
-                els.noteTitleEl.value = deriveTitleFromText(generated);
+                els.noteTitleEl.value = deriveTitleFromText(generated) || smartDefaultTitle();
             }
 
             analyseDocument();
@@ -1132,6 +1144,10 @@ document.addEventListener("DOMContentLoaded", () => {
             .map(section => `${section}\n`)
             .join("\n")
             .trim();
+
+        if (els.noteTitleEl && !els.noteTitleEl.value.trim()) {
+            els.noteTitleEl.value = smartDefaultTitle();
+        }
 
         analyseDocument();
         markDirty();
@@ -1224,6 +1240,103 @@ document.addEventListener("DOMContentLoaded", () => {
         showToast("Draft restored.");
     }
 
+    function localActionFallback(text) {
+        const lines = text
+            .split("\n")
+            .map(line => line.trim())
+            .filter(Boolean);
+
+        const actionIndicators = [
+            "action", "actions", "agreed", "follow-up", "follow up",
+            "next step", "next steps", "task", "tasks", "review date", "deadline"
+        ];
+
+        return lines
+            .filter(line => actionIndicators.some(indicator => line.toLowerCase().includes(indicator)))
+            .slice(0, 8)
+            .map((line, index) => ({
+                title: line.replace(/^[-•]\s*/, ""),
+                owner: index % 2 === 0 ? "Staff team" : "Key worker",
+                deadline: "To be confirmed",
+                status: "Open"
+            }));
+    }
+
+    async function extractActionsAiFirst() {
+        const text = els.finalNoteEl?.value.trim();
+        if (!text) {
+            alert("There is no document to extract actions from.");
+            return;
+        }
+
+        try {
+            setButtonLoading(els.extractActionsBtn, true, "Extracting...", "Extract actions");
+            setStatus("processing", "Extracting actions");
+
+            const form = new FormData();
+            form.append("text", text);
+            form.append(
+                "instruction",
+                [
+                    "Extract the action points from this care record.",
+                    "Return them in a concise structured way.",
+                    "For each action identify:",
+                    "- title",
+                    "- owner",
+                    "- deadline",
+                    "- status",
+                    "Do not invent information. If owner or deadline is unclear, say 'Not specified'.",
+                    "Format the response as a simple list using one action per line."
+                ].join("\n")
+            );
+            form.append("mode", "custom");
+
+            const response = await fetch("/ai-notes/edit", {
+                method: "POST",
+                headers: getAuthHeaders(),
+                body: form
+            });
+
+            const data = await safeJson(response);
+
+            if (!response.ok) {
+                if (handleUnauthorized(response, data)) return;
+                state.extractedActions = localActionFallback(text);
+                renderExtractedActions();
+                showToast(state.extractedActions.length ? "Actions extracted with fallback." : "No obvious actions found.");
+                return;
+            }
+
+            const resultText = data.text || "";
+            const lines = resultText
+                .split("\n")
+                .map(line => line.trim())
+                .filter(Boolean);
+
+            const parsed = lines.slice(0, 10).map(line => {
+                return {
+                    title: line.replace(/^[-•\d.]\s*/, ""),
+                    owner: "Not specified",
+                    deadline: "Not specified",
+                    status: "Open"
+                };
+            });
+
+            state.extractedActions = parsed.length ? parsed : localActionFallback(text);
+            renderExtractedActions();
+            persistDraftLocally();
+            setStatus("success", "Actions extracted");
+            showToast(state.extractedActions.length ? "Actions extracted." : "No obvious actions found.");
+        } catch (error) {
+            console.error("Extract actions error:", error);
+            state.extractedActions = localActionFallback(text);
+            renderExtractedActions();
+            showToast(state.extractedActions.length ? "Actions extracted with fallback." : "No obvious actions found.");
+        } finally {
+            setButtonLoading(els.extractActionsBtn, false, "Extracting...", "Extract actions");
+        }
+    }
+
     function renderExtractedActions() {
         if (!els.actionsListEl || !els.actionsEmptyStateEl) return;
 
@@ -1251,35 +1364,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function extractActionsLocally() {
-        const text = els.finalNoteEl?.value || "";
-        const lines = text
-            .split("\n")
-            .map(line => line.trim())
-            .filter(Boolean);
-
-        const actionIndicators = [
-            "action", "actions", "agreed", "follow-up", "follow up",
-            "next step", "next steps", "task", "tasks", "review date", "deadline"
-        ];
-
-        const matchedLines = lines.filter(line =>
-            actionIndicators.some(indicator => line.toLowerCase().includes(indicator))
-        );
-
-        state.extractedActions = matchedLines.slice(0, 8).map((line, index) => ({
-            title: line.replace(/^[-•]\s*/, ""),
-            owner: index % 2 === 0 ? "Staff team" : "Key worker",
-            deadline: "To be confirmed",
-            status: "Open"
-        }));
-
-        renderExtractedActions();
-        showToast(state.extractedActions.length ? "Actions extracted." : "No obvious actions found.");
-        persistDraftLocally();
-    }
-
-    async function createDerivedDocumentInstruction(instructionText) {
+    async function createDerivedDocumentInstruction(instructionText, successMessage) {
         const currentText = els.finalNoteEl?.value.trim();
         if (!currentText) {
             alert("There is no document to transform yet.");
@@ -1315,6 +1400,7 @@ document.addEventListener("DOMContentLoaded", () => {
             markDirty();
             setWorkflowStep("refine");
             setStatus("success", "Derived version ready");
+            showToast(successMessage);
         } catch (error) {
             console.error("Derived document error:", error);
             alert("Could not connect to the AI service.");
@@ -1324,22 +1410,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function createHandoverVersion() {
         await createDerivedDocumentInstruction(
-            "Turn this into a concise handover-ready summary with immediate risks, health, appointments, medication, professional contact and priorities for the next shift."
+            "Turn this into a concise handover-ready summary with immediate risks, health, appointments, medication, professional contact and priorities for the next shift.",
+            "Handover version created."
         );
-        showToast("Handover version created.");
     }
 
     async function createManagerSummary() {
         await createDerivedDocumentInstruction(
-            "Rewrite this into a concise manager update. Focus on key issues, risks, actions taken, decisions required and next steps."
+            "Rewrite this into a concise manager update. Focus on key issues, risks, actions taken, decisions required and next steps.",
+            "Manager summary created."
         );
-        showToast("Manager summary created.");
     }
 
     async function saveDocument() {
         const transcript = els.transcriptEl?.value.trim();
         const finalNote = els.finalNoteEl?.value.trim();
-        const title = els.noteTitleEl?.value.trim() || deriveTitleFromText(finalNote);
+        const title = els.noteTitleEl?.value.trim() || deriveTitleFromText(finalNote) || smartDefaultTitle();
 
         if (!transcript) {
             alert("Transcript is required.");
@@ -1730,7 +1816,7 @@ document.addEventListener("DOMContentLoaded", () => {
         els.copyDraftBtn?.addEventListener("click", resetFromGeneratedDraft);
         els.copyFinalBtn?.addEventListener("click", () => copyTextToClipboard(els.finalNoteEl?.value.trim() || ""));
 
-        els.extractActionsBtn?.addEventListener("click", extractActionsLocally);
+        els.extractActionsBtn?.addEventListener("click", extractActionsAiFirst);
         els.createHandoverBtn?.addEventListener("click", createHandoverVersion);
         els.createManagerSummaryBtn?.addEventListener("click", createManagerSummary);
 
@@ -1752,6 +1838,12 @@ document.addEventListener("DOMContentLoaded", () => {
         bindHistoryEvents();
         bindPromptEvents();
 
+        window.addEventListener("beforeunload", event => {
+            if (!state.hasUnsavedChanges) return;
+            event.preventDefault();
+            event.returnValue = "";
+        });
+
         document.addEventListener("keydown", event => {
             const isMac = navigator.platform.toUpperCase().includes("MAC");
             const mod = isMac ? event.metaKey : event.ctrlKey;
@@ -1764,6 +1856,11 @@ document.addEventListener("DOMContentLoaded", () => {
             if (mod && event.key.toLowerCase() === "p") {
                 event.preventDefault();
                 printDocument();
+            }
+
+            if (mod && event.key.toLowerCase() === "e") {
+                event.preventDefault();
+                exportDocument();
             }
 
             if (event.key === "Escape") {
