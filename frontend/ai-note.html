@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en-GB">
 <head>
@@ -63,16 +64,6 @@
                     </div>
                     <p id="safeguardingText"></p>
                 </div>
-
-                <div class="sidebar-card history-card">
-                    <div class="sidebar-card-header">
-                        <h3>Saved notes</h3>
-                        <button id="refreshHistoryBtn" class="btn btn-light btn-tiny" type="button">Refresh</button>
-                    </div>
-
-                    <div id="historyEmptyState" class="history-empty">No saved notes yet.</div>
-                    <div id="historyList" class="history-list"></div>
-                </div>
             </div>
 
             <div class="sidebar__footer">
@@ -98,82 +89,152 @@
                     </div>
                 </header>
 
-                <section class="minimal-entry-grid compact-grid">
-                    <div class="premium-panel">
-                        <div class="section-head">
-                            <div>
-                                <p class="panel-label">Template</p>
-                                <h2>Choose your document structure</h2>
-                                <p>Select the format you want the AI to use after transcription.</p>
+                <div class="page-tabs">
+                    <button id="openCreateTabBtn" class="page-tab is-active" type="button" data-tab="create">
+                        Create note
+                    </button>
+                    <button id="openSavedTabBtn" class="page-tab" type="button" data-tab="saved">
+                        Saved notes
+                    </button>
+                </div>
+
+                <section id="createTabPanel" class="tab-panel is-active">
+                    <div class="minimal-entry-grid compact-grid">
+                        <div class="premium-panel">
+                            <div class="section-head">
+                                <div>
+                                    <p class="panel-label">Template</p>
+                                    <h2>Choose your document structure</h2>
+                                    <p>Select the format you want the AI to use after transcription.</p>
+                                </div>
+                            </div>
+
+                            <div class="field">
+                                <label for="templateSelect">Template</label>
+                                <div class="template-picker-row">
+                                    <select id="templateSelect"></select>
+                                    <button id="openTemplateManagerBtn" class="btn btn-light" type="button">Manage templates</button>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="field">
-                            <label for="templateSelect">Template</label>
-                            <div class="template-picker-row">
-                                <select id="templateSelect"></select>
-                                <button id="openTemplateManagerBtn" class="btn btn-light" type="button">Manage templates</button>
+                        <div class="premium-panel">
+                            <div class="section-head">
+                                <div>
+                                    <p class="panel-label">Record details</p>
+                                    <h2>Capture essential context</h2>
+                                    <p>These details help generate a more accurate and better-structured note.</p>
+                                </div>
+                            </div>
+
+                            <div class="care-meta-grid">
+                                <div class="field">
+                                    <label for="serviceType">Service type</label>
+                                    <select id="serviceType">
+                                        <option value="Residential Children's Home">Residential Children's Home</option>
+                                        <option value="Supported Living">Supported Living</option>
+                                        <option value="Domiciliary Care">Domiciliary Care</option>
+                                        <option value="Residential Adult Care">Residential Adult Care</option>
+                                        <option value="Family Support">Family Support</option>
+                                        <option value="Education / Therapeutic Setting">Education / Therapeutic Setting</option>
+                                    </select>
+                                </div>
+
+                                <div class="field">
+                                    <label for="shiftType">Shift / context</label>
+                                    <select id="shiftType">
+                                        <option value="Day Shift">Day Shift</option>
+                                        <option value="Night Shift">Night Shift</option>
+                                        <option value="Handover">Handover</option>
+                                        <option value="Meeting">Meeting</option>
+                                        <option value="Supervision">Supervision</option>
+                                        <option value="Incident Review">Incident Review</option>
+                                        <option value="Key-work Session">Key-work Session</option>
+                                        <option value="Daily Record">Daily Record</option>
+                                        <option value="Professionals Meeting">Professionals Meeting</option>
+                                        <option value="Safeguarding Discussion">Safeguarding Discussion</option>
+                                    </select>
+                                </div>
+
+                                <div class="field">
+                                    <label for="recordAuthor">Recorded by</label>
+                                    <input id="recordAuthor" type="text" placeholder="Staff member name">
+                                </div>
+
+                                <div class="field">
+                                    <label for="youngPersonName">Young person / person supported</label>
+                                    <input id="youngPersonName" type="text" placeholder="Optional">
+                                </div>
+
+                                <div class="field">
+                                    <label for="meetingDate">Record date</label>
+                                    <input id="meetingDate" type="date">
+                                </div>
+
+                                <div class="field">
+                                    <label for="locationContext">Location / home / service</label>
+                                    <input id="locationContext" type="text" placeholder="Optional">
+                                </div>
                             </div>
                         </div>
                     </div>
+                </section>
 
-                    <div class="premium-panel">
-                        <div class="section-head">
+                <section id="savedTabPanel" class="tab-panel">
+                    <div class="premium-panel saved-notes-panel">
+                        <div class="section-head saved-notes-header">
                             <div>
-                                <p class="panel-label">Record details</p>
-                                <h2>Capture essential context</h2>
-                                <p>These details help generate a more accurate and better-structured note.</p>
+                                <p class="panel-label">Saved notes</p>
+                                <h2>Manage saved records</h2>
+                                <p>Open, edit, duplicate, export, print or delete saved care records from one place.</p>
+                            </div>
+
+                            <div class="document-actions">
+                                <button id="refreshHistoryBtn" class="btn btn-light" type="button">Refresh</button>
                             </div>
                         </div>
 
-                        <div class="care-meta-grid">
-                            <div class="field">
-                                <label for="serviceType">Service type</label>
-                                <select id="serviceType">
-                                    <option value="Residential Children's Home">Residential Children's Home</option>
-                                    <option value="Supported Living">Supported Living</option>
-                                    <option value="Domiciliary Care">Domiciliary Care</option>
-                                    <option value="Residential Adult Care">Residential Adult Care</option>
-                                    <option value="Family Support">Family Support</option>
-                                    <option value="Education / Therapeutic Setting">Education / Therapeutic Setting</option>
+                        <div class="saved-notes-toolbar">
+                            <div class="field saved-notes-search-field">
+                                <label for="savedNotesSearch">Search saved notes</label>
+                                <input id="savedNotesSearch" type="text" placeholder="Search by title, template, person or date">
+                            </div>
+
+                            <div class="field saved-notes-filter-field">
+                                <label for="savedNotesFilter">Filter</label>
+                                <select id="savedNotesFilter">
+                                    <option value="all">All notes</option>
+                                    <option value="daily">Daily care note</option>
+                                    <option value="handover">Shift handover</option>
+                                    <option value="incident">Incident record</option>
+                                    <option value="supervision">Supervision note</option>
+                                    <option value="keywork">Key-work session</option>
+                                    <option value="safeguarding">Safeguarding discussion</option>
+                                    <option value="meeting">Professionals meeting</option>
                                 </select>
                             </div>
+                        </div>
 
-                            <div class="field">
-                                <label for="shiftType">Shift / context</label>
-                                <select id="shiftType">
-                                    <option value="Day Shift">Day Shift</option>
-                                    <option value="Night Shift">Night Shift</option>
-                                    <option value="Handover">Handover</option>
-                                    <option value="Meeting">Meeting</option>
-                                    <option value="Supervision">Supervision</option>
-                                    <option value="Incident Review">Incident Review</option>
-                                    <option value="Key-work Session">Key-work Session</option>
-                                    <option value="Daily Record">Daily Record</option>
-                                    <option value="Professionals Meeting">Professionals Meeting</option>
-                                    <option value="Safeguarding Discussion">Safeguarding Discussion</option>
-                                </select>
-                            </div>
+                        <div id="historyEmptyState" class="history-empty saved-notes-empty">
+                            No saved notes yet.
+                        </div>
 
-                            <div class="field">
-                                <label for="recordAuthor">Recorded by</label>
-                                <input id="recordAuthor" type="text" placeholder="Staff member name">
-                            </div>
-
-                            <div class="field">
-                                <label for="youngPersonName">Young person / person supported</label>
-                                <input id="youngPersonName" type="text" placeholder="Optional">
-                            </div>
-
-                            <div class="field">
-                                <label for="meetingDate">Record date</label>
-                                <input id="meetingDate" type="date">
-                            </div>
-
-                            <div class="field">
-                                <label for="locationContext">Location / home / service</label>
-                                <input id="locationContext" type="text" placeholder="Optional">
-                            </div>
+                        <div class="saved-notes-table-wrap">
+                            <table class="saved-notes-table">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Title</th>
+                                        <th scope="col">Template</th>
+                                        <th scope="col">Person / young person</th>
+                                        <th scope="col">Updated</th>
+                                        <th scope="col">Status</th>
+                                        <th scope="col" class="saved-notes-actions-col">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyList">
+                                    <!-- JS renders saved notes rows here -->
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </section>
@@ -358,16 +419,49 @@
                                     <h3>Source text</h3>
                                     <p id="audioReadyText">No recording yet.</p>
                                 </div>
-                                <button id="toggleTranscriptBtn" class="btn btn-light btn-tiny" type="button">Show / hide</button>
+
+                                <div class="document-actions">
+                                    <button id="toggleTranscriptBtn" class="btn btn-light btn-tiny" type="button">Show / hide</button>
+                                    <button id="toggleSpeakerViewBtn" class="btn btn-light btn-tiny" type="button">Speaker view</button>
+                                </div>
                             </div>
 
                             <audio id="audioPlayback" controls style="display:none;"></audio>
 
-                            <div id="transcriptContent" class="panel-scroll">
+                            <div id="transcriptContent" class="panel-scroll transcript-shell">
+                                <div class="speaker-summary-bar">
+                                    <div class="speaker-summary-card">
+                                        <span class="speaker-summary-label">Detected speakers</span>
+                                        <strong id="speakerCountText">0</strong>
+                                    </div>
+                                    <div class="speaker-summary-card">
+                                        <span class="speaker-summary-label">Primary speaker</span>
+                                        <strong id="primarySpeakerText">—</strong>
+                                    </div>
+                                    <div class="speaker-summary-card">
+                                        <span class="speaker-summary-label">Transcript mode</span>
+                                        <strong id="transcriptModeText">Standard</strong>
+                                    </div>
+                                </div>
+
                                 <div class="quick-prompts">
                                     <button class="prompt-chip prompt-chip-secondary" type="button" data-transcript-action="clean">Clean transcript only</button>
                                     <button class="prompt-chip prompt-chip-secondary" type="button" data-transcript-action="speakerize">Format speaker turns</button>
                                     <button class="prompt-chip prompt-chip-secondary" type="button" data-transcript-action="summarise">Summarise transcript</button>
+                                </div>
+
+                                <div id="speakerTimelinePanel" class="speaker-timeline-panel hidden">
+                                    <div class="speaker-timeline-header">
+                                        <div>
+                                            <p class="panel-label">Speaker timeline</p>
+                                            <h4>Detected conversation flow</h4>
+                                        </div>
+                                    </div>
+
+                                    <div id="speakerLegend" class="speaker-legend"></div>
+                                    <div id="speakerTimelineList" class="speaker-timeline-list">
+                                        <div class="speaker-empty-state">No speaker-separated transcript yet.</div>
+                                    </div>
                                 </div>
 
                                 <div class="field">
@@ -466,14 +560,15 @@
                             <div>
                                 <p class="panel-label">Speaker view</p>
                                 <h3>Detected speakers</h3>
-                                <p>Speaker detection works when the backend transcription service supports diarisation.</p>
+                                <p>Speaker detection appears here when diarisation is returned by the transcription service.</p>
                             </div>
                         </div>
 
                         <div class="panel-scroll">
-                            <div class="speaker-note-box">
-                                <p><strong>Planned behaviour:</strong> show Speaker 1, Speaker 2 and speaker-separated transcript blocks automatically.</p>
-                                <p><strong>Backend requirement:</strong> diarisation-enabled transcription.</p>
+                            <div id="speakerCards" class="speaker-cards">
+                                <div class="speaker-empty-state">
+                                    No speaker-separated transcript available yet.
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -507,3 +602,4 @@
     <script src="/ai-notes.js"></script>
 </body>
 </html>
+```
