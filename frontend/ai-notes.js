@@ -1,9 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
     const ACCESS_TOKEN_KEY = "access_token";
-    const LOCAL_TEMPLATE_KEY = "indicare_custom_templates_v6";
-    const LOCAL_DRAFT_KEY = "indicare_ai_notes_draft_v6";
-    const LOCAL_HISTORY_KEY = "indicare_ai_notes_history_v6";
-    const LOCAL_VERSIONS_KEY = "indicare_ai_notes_versions_v2";
+    const LOCAL_TEMPLATE_KEY = "indicare_custom_templates_v7";
+    const LOCAL_DRAFT_KEY = "indicare_ai_notes_draft_v7";
+    const LOCAL_HISTORY_KEY = "indicare_ai_notes_history_v7";
+    const LOCAL_VERSIONS_KEY = "indicare_ai_notes_versions_v3";
 
     const builtInTemplates = [
         {
@@ -155,11 +155,29 @@ document.addEventListener("DOMContentLoaded", () => {
     ];
 
     const chronologyKeywords = [
-        "before", "after", "then", "later", "earlier", "at ", "around ", "today", "yesterday",
+        "before", "after", "then", "later", "earlier", "today", "yesterday",
         "this morning", "this afternoon", "this evening", "tonight"
     ];
 
+    const speakerPalette = [
+        "#2563eb",
+        "#7c3aed",
+        "#059669",
+        "#ea580c",
+        "#dc2626",
+        "#0891b2",
+        "#4f46e5",
+        "#65a30d"
+    ];
+
     const els = {
+        openCreateTabBtn: document.getElementById("openCreateTabBtn"),
+        openSavedTabBtn: document.getElementById("openSavedTabBtn"),
+        createTabPanel: document.getElementById("createTabPanel"),
+        savedTabPanel: document.getElementById("savedTabPanel"),
+        savedNotesSearch: document.getElementById("savedNotesSearch"),
+        savedNotesFilter: document.getElementById("savedNotesFilter"),
+
         startRecordingBtn: document.getElementById("startRecordingBtn"),
         stopRecordingBtn: document.getElementById("stopRecordingBtn"),
         pauseRecordingBtn: document.getElementById("pauseRecordingBtn"),
@@ -224,6 +242,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         toggleTranscriptBtn: document.getElementById("toggleTranscriptBtn"),
         transcriptContentEl: document.getElementById("transcriptContent"),
+        toggleSpeakerViewBtn: document.getElementById("toggleSpeakerViewBtn"),
 
         templateModalEl: document.getElementById("templateModal"),
         openTemplateManagerBtn: document.getElementById("openTemplateManagerBtn"),
@@ -273,7 +292,15 @@ document.addEventListener("DOMContentLoaded", () => {
         versionsDrawerEl: document.getElementById("versionsDrawer"),
         closeVersionsDrawerBtn: document.getElementById("closeVersionsDrawerBtn"),
         versionsEmptyStateEl: document.getElementById("versionsEmptyState"),
-        versionsListEl: document.getElementById("versionsList")
+        versionsListEl: document.getElementById("versionsList"),
+
+        speakerCountTextEl: document.getElementById("speakerCountText"),
+        primarySpeakerTextEl: document.getElementById("primarySpeakerText"),
+        transcriptModeTextEl: document.getElementById("transcriptModeText"),
+        speakerTimelinePanelEl: document.getElementById("speakerTimelinePanel"),
+        speakerLegendEl: document.getElementById("speakerLegend"),
+        speakerTimelineListEl: document.getElementById("speakerTimelineList"),
+        speakerCardsEl: document.getElementById("speakerCards")
     };
 
     const state = {
@@ -294,11 +321,15 @@ document.addEventListener("DOMContentLoaded", () => {
         autosaveTimeout: null,
         currentNoteId: null,
         isTranscriptVisible: true,
+        isSpeakerViewVisible: false,
         extractedActions: [],
         hasUnsavedChanges: false,
         versions: [],
         isHydrating: false,
-        serverHistoryLoaded: false
+        serverHistoryLoaded: false,
+        activeTab: "create",
+        speakerSegments: [],
+        filteredHistory: []
     };
 
     function getAccessToken() {
@@ -363,6 +394,13 @@ document.addEventListener("DOMContentLoaded", () => {
         return `${mins}:${secs}`;
     }
 
+    function formatTimecode(seconds) {
+        const total = Math.max(0, Math.floor(Number(seconds) || 0));
+        const mins = String(Math.floor(total / 60)).padStart(2, "0");
+        const secs = String(total % 60).padStart(2, "0");
+        return `${mins}:${secs}`;
+    }
+
     function getElapsedRecordingSeconds() {
         if (!state.recordingStartTime) return 0;
         const now = state.pausedAt || Date.now();
@@ -419,6 +457,23 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!els.noteModeBadgeEl) return;
         els.noteModeBadgeEl.className = isEditing ? "note-mode-badge is-editing" : "note-mode-badge is-new";
         els.noteModeBadgeEl.textContent = isEditing ? "Editing saved note" : "New unsaved note";
+    }
+
+    function setActiveTab(tabName) {
+        state.activeTab = tabName;
+
+        if (els.openCreateTabBtn) {
+            els.openCreateTabBtn.classList.toggle("is-active", tabName === "create");
+        }
+        if (els.openSavedTabBtn) {
+            els.openSavedTabBtn.classList.toggle("is-active", tabName === "saved");
+        }
+        if (els.createTabPanel) {
+            els.createTabPanel.classList.toggle("is-active", tabName === "create");
+        }
+        if (els.savedTabPanel) {
+            els.savedTabPanel.classList.toggle("is-active", tabName === "saved");
+        }
     }
 
     function openModal(modalEl) {
@@ -887,6 +942,7 @@ document.addEventListener("DOMContentLoaded", () => {
             meetingDate: els.meetingDateEl?.value || "",
             locationContext: els.locationContextEl?.value || "",
             extractedActions: state.extractedActions || [],
+            speakerSegments: state.speakerSegments || [],
             timestamp: new Date().toISOString()
         };
         localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify(payload));
@@ -917,7 +973,10 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             state.extractedActions = Array.isArray(draft.extractedActions) ? draft.extractedActions : [];
+            state.speakerSegments = Array.isArray(draft.speakerSegments) ? draft.speakerSegments : [];
+
             renderExtractedActions();
+            renderSpeakerUI();
             updateSelectedTemplateUI();
             analyseDocument();
             setNoteMode(Boolean(state.currentNoteId));
@@ -940,14 +999,44 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem(LOCAL_HISTORY_KEY, JSON.stringify(items));
     }
 
+    function inferFilterValue(item) {
+        const name = String(item.templateName || "").toLowerCase();
+        if (name.includes("daily")) return "daily";
+        if (name.includes("handover")) return "handover";
+        if (name.includes("incident")) return "incident";
+        if (name.includes("supervision")) return "supervision";
+        if (name.includes("key")) return "keywork";
+        if (name.includes("safeguarding")) return "safeguarding";
+        if (name.includes("professional")) return "meeting";
+        return "all";
+    }
+
+    function normaliseHistoryItem(item) {
+        return {
+            id: item.id || `note-${Date.now()}`,
+            title: item.title || "Untitled care note",
+            templateName: item.templateName || item.template_name || "Unknown template",
+            updatedAt: item.updatedAt || item.updated_at || new Date().toISOString(),
+            excerpt: item.excerpt || (item.finalNote || item.final_note || item.ai_draft || "").slice(0, 180),
+            finalNote: item.finalNote || item.final_note || item.ai_draft || "",
+            transcript: item.transcript || "",
+            personName: item.personName || item.young_person_name || "",
+            status: item.status || (item.isLocalOnly ? "Draft" : "Saved"),
+            isLocalOnly: Boolean(item.isLocalOnly),
+            serviceType: item.serviceType || item.service_type || "",
+            shiftType: item.shiftType || item.shift_type || ""
+        };
+    }
+
     function upsertHistoryItem(item) {
+        const normalised = normaliseHistoryItem(item);
         const next = [
-            item,
-            ...getLocalHistory().filter(x => x.id !== item.id)
-        ].slice(0, 30);
+            normalised,
+            ...getLocalHistory().filter(x => x.id !== normalised.id)
+        ].slice(0, 50);
 
         setLocalHistory(next);
-        renderHistory();
+        applyHistoryFiltersAndRender();
     }
 
     function addToLocalHistory(item) {
@@ -959,18 +1048,24 @@ document.addEventListener("DOMContentLoaded", () => {
             excerpt: (item.finalNote || "").slice(0, 180),
             finalNote: item.finalNote || "",
             transcript: item.transcript || "",
-            isLocalOnly: item.isLocalOnly || false
+            personName: item.personName || els.youngPersonNameEl?.value?.trim() || "",
+            status: "Saved",
+            isLocalOnly: item.isLocalOnly || false,
+            serviceType: item.serviceType || els.serviceTypeEl?.value || "",
+            shiftType: item.shiftType || els.shiftTypeEl?.value || ""
         });
     }
 
     function deleteHistoryItem(id) {
         const next = getLocalHistory().filter(x => x.id !== id);
         setLocalHistory(next);
-        renderHistory();
+        applyHistoryFiltersAndRender();
+
         if (state.currentNoteId === id) {
             state.currentNoteId = null;
             setNoteMode(false);
         }
+
         showToast("Saved note deleted.");
     }
 
@@ -983,17 +1078,44 @@ document.addEventListener("DOMContentLoaded", () => {
             id: `note-${Date.now()}`,
             title: `${item.title} (Copy)`,
             updatedAt: new Date().toISOString(),
-            isLocalOnly: true
+            isLocalOnly: true,
+            status: "Draft"
         };
 
         upsertHistoryItem(duplicate);
         showToast("Saved note duplicated.");
     }
 
-    function renderHistory() {
-        if (!els.historyListEl || !els.historyEmptyStateEl) return;
+    function getSavedNoteStatusClass(status) {
+        return String(status || "").toLowerCase() === "saved" ? "saved" : "draft";
+    }
 
-        const items = getLocalHistory();
+    function applyHistoryFiltersAndRender() {
+        const allItems = getLocalHistory().map(normaliseHistoryItem);
+        const search = String(els.savedNotesSearch?.value || "").trim().toLowerCase();
+        const filter = String(els.savedNotesFilter?.value || "all");
+
+        const filtered = allItems.filter(item => {
+            const haystack = [
+                item.title,
+                item.templateName,
+                item.personName,
+                item.updatedAt,
+                item.shiftType,
+                item.serviceType
+            ].join(" ").toLowerCase();
+
+            const matchesSearch = !search || haystack.includes(search);
+            const matchesFilter = filter === "all" || inferFilterValue(item) === filter;
+            return matchesSearch && matchesFilter;
+        });
+
+        state.filteredHistory = filtered;
+        renderHistoryTable(filtered);
+    }
+
+    function renderHistoryTable(items) {
+        if (!els.historyListEl || !els.historyEmptyStateEl) return;
         els.historyListEl.innerHTML = "";
 
         if (!items.length) {
@@ -1004,33 +1126,48 @@ document.addEventListener("DOMContentLoaded", () => {
         els.historyEmptyStateEl.style.display = "none";
 
         items.forEach(item => {
-            const card = document.createElement("div");
-            card.className = "history-item";
-            card.innerHTML = `
-                <div class="history-title">${escapeHtml(item.title)}</div>
-                <div class="history-meta">${escapeHtml(item.templateName)} · ${new Date(item.updatedAt).toLocaleString("en-GB")}</div>
-                <div class="history-meta">${escapeHtml(item.excerpt || "No preview available.")}</div>
-                <div class="history-actions">
-                    <button class="btn btn-light btn-tiny" type="button" data-history-open="${item.id}">Open</button>
-                    <button class="btn btn-light btn-tiny" type="button" data-history-copy="${item.id}">Copy</button>
-                    <button class="btn btn-light btn-tiny" type="button" data-history-duplicate="${item.id}">Duplicate</button>
-                    <button class="btn btn-danger btn-tiny" type="button" data-history-delete="${item.id}">Delete</button>
-                </div>
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td class="saved-note-title-cell">
+                    <div class="saved-note-title">${escapeHtml(item.title)}</div>
+                    <div class="saved-note-subtitle">${escapeHtml(item.excerpt || "No preview available.")}</div>
+                </td>
+                <td>${escapeHtml(item.templateName || "—")}</td>
+                <td>${escapeHtml(item.personName || "—")}</td>
+                <td>${new Date(item.updatedAt).toLocaleString("en-GB")}</td>
+                <td>
+                    <span class="saved-note-status ${getSavedNoteStatusClass(item.status)}">
+                        ${escapeHtml(item.status || "Draft")}
+                    </span>
+                </td>
+                <td>
+                    <div class="saved-note-actions">
+                        <button class="btn btn-light btn-tiny" type="button" data-history-open="${item.id}">Edit</button>
+                        <button class="btn btn-light btn-tiny" type="button" data-history-copy="${item.id}">Copy</button>
+                        <button class="btn btn-light btn-tiny" type="button" data-history-export="${item.id}">Export</button>
+                        <button class="btn btn-light btn-tiny" type="button" data-history-print="${item.id}">Print</button>
+                        <button class="btn btn-light btn-tiny" type="button" data-history-duplicate="${item.id}">Duplicate</button>
+                        <button class="btn btn-danger btn-tiny" type="button" data-history-delete="${item.id}">Delete</button>
+                    </div>
+                </td>
             `;
-            els.historyListEl.appendChild(card);
+            els.historyListEl.appendChild(row);
         });
     }
 
     function openHistoryItem(id) {
-        const item = getLocalHistory().find(x => x.id === id);
+        const item = getLocalHistory().map(normaliseHistoryItem).find(x => x.id === id);
         if (!item) return;
 
         state.isHydrating = true;
         state.currentNoteId = item.id;
+
         if (els.noteTitleEl) els.noteTitleEl.value = item.title || "";
         if (els.transcriptEl) els.transcriptEl.value = item.transcript || "";
         if (els.finalNoteEl) els.finalNoteEl.value = item.finalNote || "";
         if (els.aiDraftEl) els.aiDraftEl.value = item.finalNote || "";
+        if (els.youngPersonNameEl) els.youngPersonNameEl.value = item.personName || "";
+
         state.isHydrating = false;
 
         setNoteMode(true);
@@ -1039,7 +1176,8 @@ document.addEventListener("DOMContentLoaded", () => {
         setWorkflowStep("refine");
         state.hasUnsavedChanges = false;
         setSaveState("is-idle", "Ready");
-        showToast("Saved note opened.");
+        setActiveTab("create");
+        showToast("Saved note opened for editing.");
     }
 
     async function copyTextToClipboard(text) {
@@ -1049,6 +1187,90 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch {
             alert("Could not copy to clipboard.");
         }
+    }
+
+    function downloadBlob(blob, filename) {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+    }
+
+    async function exportHistoryItem(id) {
+        const item = getLocalHistory().map(normaliseHistoryItem).find(x => x.id === id);
+        if (!item) return;
+
+        const usePdf = window.confirm("Press OK to export as PDF.\nPress Cancel to export as Word DOCX.");
+        const format = usePdf ? "pdf" : "docx";
+
+        const form = new FormData();
+        form.append("title", item.title || "Care Note");
+        form.append("final_note", item.finalNote || "");
+        form.append("template_name", item.templateName || "");
+
+        try {
+            const response = await fetch(`/ai-notes/export/${format}`, {
+                method: "POST",
+                headers: getAuthHeaders(),
+                body: form
+            });
+
+            if (!response.ok) {
+                const data = await safeJson(response);
+                if (handleUnauthorized(response, data)) return;
+                alert(data.detail || "Export failed.");
+                return;
+            }
+
+            const blob = await response.blob();
+            downloadBlob(blob, `${item.title || "Care Note"}.${format}`);
+            showToast(`Saved note exported as ${format.toUpperCase()}.`);
+        } catch (error) {
+            console.error("Export saved item error:", error);
+            alert("Could not export this saved note.");
+        }
+    }
+
+    function printHistoryItem(id) {
+        const item = getLocalHistory().map(normaliseHistoryItem).find(x => x.id === id);
+        if (!item) return;
+
+        const printWindow = window.open("", "_blank");
+        if (!printWindow) {
+            alert("Print window was blocked by the browser.");
+            return;
+        }
+
+        printWindow.document.write(`
+            <html lang="en-GB">
+                <head>
+                    <title>${escapeHtml(item.title)}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 30px; line-height: 1.6; color: #111827; }
+                        h1 { font-size: 24px; margin-bottom: 10px; }
+                        .meta { margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid #e5e7eb; color: #4b5563; font-size: 14px; }
+                        pre { white-space: pre-wrap; word-wrap: break-word; font-family: Arial, sans-serif; font-size: 14px; }
+                    </style>
+                </head>
+                <body>
+                    <h1>${escapeHtml(item.title || "Care Note")}</h1>
+                    <div class="meta">
+                        Template: ${escapeHtml(item.templateName || "")}<br>
+                        Person / Young person: ${escapeHtml(item.personName || "")}<br>
+                        Updated: ${escapeHtml(new Date(item.updatedAt).toLocaleString("en-GB"))}
+                    </div>
+                    <pre>${escapeHtml(item.finalNote || "")}</pre>
+                </body>
+            </html>
+        `);
+
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
     }
 
     function renderTemplateBuilderSections() {
@@ -1142,10 +1364,152 @@ document.addEventListener("DOMContentLoaded", () => {
         if (els.recordingModalTimerEl) els.recordingModalTimerEl.textContent = "00:00";
     }
 
+    function getSpeakerColor(speakerName) {
+        const key = String(speakerName || "Speaker 1");
+        let hash = 0;
+        for (let i = 0; i < key.length; i += 1) {
+            hash = ((hash << 5) - hash) + key.charCodeAt(i);
+            hash |= 0;
+        }
+        return speakerPalette[Math.abs(hash) % speakerPalette.length];
+    }
+
+    function resetSpeakerUiState() {
+        state.speakerSegments = [];
+        renderSpeakerUI();
+    }
+
+    function renderSpeakerLegend(uniqueSpeakers) {
+        if (!els.speakerLegendEl) return;
+        els.speakerLegendEl.innerHTML = "";
+
+        uniqueSpeakers.forEach(speaker => {
+            const item = document.createElement("div");
+            item.className = "speaker-legend-item";
+            item.innerHTML = `
+                <span class="speaker-dot" style="background:${getSpeakerColor(speaker)};"></span>
+                <span>${escapeHtml(speaker)}</span>
+            `;
+            els.speakerLegendEl.appendChild(item);
+        });
+    }
+
+    function groupSpeakerStats(segments) {
+        const grouped = new Map();
+
+        segments.forEach(segment => {
+            const speaker = segment.speaker || "Speaker 1";
+            const text = segment.text || "";
+            const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+            const entry = grouped.get(speaker) || {
+                speaker,
+                turns: 0,
+                words: 0,
+                preview: ""
+            };
+
+            entry.turns += 1;
+            entry.words += words;
+            if (!entry.preview && text) {
+                entry.preview = text.slice(0, 140);
+            }
+
+            grouped.set(speaker, entry);
+        });
+
+        return Array.from(grouped.values()).sort((a, b) => b.words - a.words);
+    }
+
+    function renderSpeakerTimeline(segments) {
+        if (!els.speakerTimelineListEl) return;
+        els.speakerTimelineListEl.innerHTML = "";
+
+        if (!segments.length) {
+            els.speakerTimelineListEl.innerHTML = `<div class="speaker-empty-state">No speaker-separated transcript yet.</div>`;
+            return;
+        }
+
+        segments.forEach((segment, index) => {
+            const speaker = segment.speaker || `Speaker ${index + 1}`;
+            const item = document.createElement("div");
+            item.className = "speaker-timeline-item";
+            item.innerHTML = `
+                <div class="speaker-timeline-meta">
+                    <span class="speaker-name-pill" style="background:${getSpeakerColor(speaker)}22;color:${getSpeakerColor(speaker)};">
+                        ${escapeHtml(speaker)}
+                    </span>
+                    <span class="speaker-time-pill">
+                        ${escapeHtml(formatTimecode(segment.start))}${segment.end !== undefined ? ` - ${escapeHtml(formatTimecode(segment.end))}` : ""}
+                    </span>
+                </div>
+                <div class="speaker-timeline-text">${escapeHtml(segment.text || "")}</div>
+            `;
+            els.speakerTimelineListEl.appendChild(item);
+        });
+    }
+
+    function renderSpeakerCards(segments) {
+        if (!els.speakerCardsEl) return;
+        els.speakerCardsEl.innerHTML = "";
+
+        if (!segments.length) {
+            els.speakerCardsEl.innerHTML = `<div class="speaker-empty-state">No speaker-separated transcript available yet.</div>`;
+            return;
+        }
+
+        const grouped = groupSpeakerStats(segments);
+        grouped.forEach(item => {
+            const card = document.createElement("div");
+            card.className = "speaker-card";
+            card.innerHTML = `
+                <div class="speaker-card-head">
+                    <div class="speaker-card-name" style="color:${getSpeakerColor(item.speaker)};">
+                        ${escapeHtml(item.speaker)}
+                    </div>
+                    <div class="speaker-card-meta">
+                        ${item.turns} turn${item.turns === 1 ? "" : "s"} · ${item.words} words
+                    </div>
+                </div>
+                <div class="speaker-card-preview">${escapeHtml(item.preview || "No preview available.")}</div>
+            `;
+            els.speakerCardsEl.appendChild(card);
+        });
+    }
+
+    function renderSpeakerSummary(segments) {
+        const grouped = groupSpeakerStats(segments);
+        const primary = grouped[0]?.speaker || "—";
+
+        if (els.speakerCountTextEl) {
+            els.speakerCountTextEl.textContent = String(grouped.length);
+        }
+        if (els.primarySpeakerTextEl) {
+            els.primarySpeakerTextEl.textContent = primary;
+        }
+        if (els.transcriptModeTextEl) {
+            els.transcriptModeTextEl.textContent = segments.length ? "Speaker aware" : "Standard";
+        }
+    }
+
+    function renderSpeakerUI() {
+        const segments = Array.isArray(state.speakerSegments) ? state.speakerSegments : [];
+        const uniqueSpeakers = [...new Set(segments.map(segment => segment.speaker || "Speaker 1"))];
+
+        renderSpeakerSummary(segments);
+        renderSpeakerLegend(uniqueSpeakers);
+        renderSpeakerTimeline(segments);
+        renderSpeakerCards(segments);
+
+        if (els.speakerTimelinePanelEl) {
+            els.speakerTimelinePanelEl.classList.toggle("hidden", !state.isSpeakerViewVisible);
+        }
+    }
+
     async function startRecording() {
         try {
             state.recordedChunks = [];
             state.recordedBlob = null;
+            resetSpeakerUiState();
 
             if (els.audioPlaybackEl) {
                 els.audioPlaybackEl.src = "";
@@ -1264,6 +1628,28 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function extractSpeakerSegmentsFromResponse(data) {
+        if (Array.isArray(data?.segments) && data.segments.length) {
+            return data.segments.map((segment, index) => ({
+                speaker: segment.speaker || `Speaker ${index + 1}`,
+                text: segment.text || "",
+                start: Number(segment.start || 0),
+                end: Number(segment.end || 0)
+            }));
+        }
+
+        if (Array.isArray(data?.speaker_segments) && data.speaker_segments.length) {
+            return data.speaker_segments.map((segment, index) => ({
+                speaker: segment.speaker || `Speaker ${index + 1}`,
+                text: segment.text || "",
+                start: Number(segment.start || 0),
+                end: Number(segment.end || 0)
+            }));
+        }
+
+        return [];
+    }
+
     async function transcribeAudio() {
         if (!state.recordedBlob) {
             alert("Please record audio first.");
@@ -1297,15 +1683,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
+            state.speakerSegments = extractSpeakerSegmentsFromResponse(data);
+
             let transcript = data.transcript || "";
 
-            if (Array.isArray(data.segments) && data.segments.length) {
-                transcript = data.segments
-                    .map((segment, idx) => {
-                        const speaker = segment.speaker || `Speaker ${idx + 1}`;
-                        const text = segment.text || "";
-                        return `${speaker}: ${text}`;
-                    })
+            if (state.speakerSegments.length) {
+                transcript = state.speakerSegments
+                    .map(segment => `${segment.speaker}: ${segment.text}`)
                     .join("\n\n");
             }
 
@@ -1320,6 +1704,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 els.noteTitleEl.value = smartDefaultTitle();
             }
 
+            renderSpeakerUI();
             analyseDocument();
             markDirty();
             setStatus("success", "Transcript ready");
@@ -1741,9 +2126,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 title,
                 templateName: getSelectedTemplate()?.name || "",
                 finalNote,
-                transcript
+                transcript,
+                personName: els.youngPersonNameEl?.value?.trim() || "",
+                serviceType: els.serviceTypeEl?.value || "",
+                shiftType: els.shiftTypeEl?.value || ""
             });
 
+            applyHistoryFiltersAndRender();
             snapshotVersion("Saved version");
             showToast("Document saved successfully.");
         } catch (error) {
@@ -1797,15 +2186,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = `${title}.${format}`;
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.URL.revokeObjectURL(url);
-
+            downloadBlob(blob, `${title}.${format}`);
             showToast(`Exported as ${format.toUpperCase()}.`);
         } catch (error) {
             console.error("Export error:", error);
@@ -1884,6 +2265,8 @@ document.addEventListener("DOMContentLoaded", () => {
         state.previousAiDraft = "";
         state.currentNoteId = null;
         state.extractedActions = [];
+        state.speakerSegments = [];
+        state.isSpeakerViewVisible = false;
 
         if (els.audioPlaybackEl) {
             els.audioPlaybackEl.src = "";
@@ -1896,6 +2279,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         setNoteMode(false);
         setSaveState("is-idle", "Ready");
+        renderSpeakerUI();
         analyseDocument();
         renderExtractedActions();
         localStorage.removeItem(LOCAL_DRAFT_KEY);
@@ -1911,6 +2295,16 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         if (els.toggleTranscriptBtn) {
             els.toggleTranscriptBtn.textContent = state.isTranscriptVisible ? "Show / hide" : "Show transcript";
+        }
+    }
+
+    function toggleSpeakerView() {
+        state.isSpeakerViewVisible = !state.isSpeakerViewVisible;
+        if (els.speakerTimelinePanelEl) {
+            els.speakerTimelinePanelEl.classList.toggle("hidden", !state.isSpeakerViewVisible);
+        }
+        if (els.toggleSpeakerViewBtn) {
+            els.toggleSpeakerViewBtn.textContent = state.isSpeakerViewVisible ? "Hide speaker view" : "Speaker view";
         }
     }
 
@@ -1948,7 +2342,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!response.ok) {
                 const data = await safeJson(response);
                 if (handleUnauthorized(response, data)) return;
-                renderHistory();
+                applyHistoryFiltersAndRender();
                 return;
             }
 
@@ -1956,34 +2350,39 @@ document.addEventListener("DOMContentLoaded", () => {
             const items = Array.isArray(data.notes) ? data.notes : [];
 
             if (items.length) {
-                const merged = [...items.map(item => ({
-                    id: item.id || `server-${Date.now()}-${Math.random()}`,
-                    title: item.title || "Untitled care note",
-                    templateName: item.template_name || "Saved note",
-                    updatedAt: item.updated_at || new Date().toISOString(),
-                    excerpt: (item.final_note || item.ai_draft || "").slice(0, 180),
-                    finalNote: item.final_note || item.ai_draft || "",
-                    transcript: item.transcript || "",
-                    isLocalOnly: false
-                })), ...getLocalHistory()]
-                    .reduce((acc, item) => {
-                        if (!acc.find(x => x.id === item.id)) acc.push(item);
-                        return acc;
-                    }, [])
-                    .slice(0, 30);
+                const merged = [
+                    ...items.map(item => normaliseHistoryItem({
+                        id: item.id,
+                        title: item.title,
+                        template_name: item.template_name,
+                        updated_at: item.updated_at,
+                        final_note: item.final_note,
+                        ai_draft: item.ai_draft,
+                        transcript: item.transcript,
+                        young_person_name: item.young_person_name,
+                        service_type: item.service_type,
+                        shift_type: item.shift_type,
+                        status: "Saved",
+                        isLocalOnly: false
+                    })),
+                    ...getLocalHistory().map(normaliseHistoryItem)
+                ].reduce((acc, item) => {
+                    if (!acc.find(x => x.id === item.id)) acc.push(item);
+                    return acc;
+                }, []).slice(0, 50);
 
                 setLocalHistory(merged);
             }
 
             state.serverHistoryLoaded = true;
-            renderHistory();
+            applyHistoryFiltersAndRender();
         } catch {
-            renderHistory();
+            applyHistoryFiltersAndRender();
         }
     }
 
     async function deleteSavedNote(id) {
-        const item = getLocalHistory().find(x => x.id === id);
+        const item = getLocalHistory().map(normaliseHistoryItem).find(x => x.id === id);
         if (!item) return;
 
         const confirmed = window.confirm(`Delete "${item.title}"?`);
@@ -2076,6 +2475,8 @@ document.addEventListener("DOMContentLoaded", () => {
         els.historyListEl?.addEventListener("click", async event => {
             const openId = event.target.getAttribute("data-history-open");
             const copyId = event.target.getAttribute("data-history-copy");
+            const exportId = event.target.getAttribute("data-history-export");
+            const printId = event.target.getAttribute("data-history-print");
             const duplicateId = event.target.getAttribute("data-history-duplicate");
             const deleteId = event.target.getAttribute("data-history-delete");
 
@@ -2084,8 +2485,16 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             if (copyId) {
-                const item = getLocalHistory().find(x => x.id === copyId);
+                const item = getLocalHistory().map(normaliseHistoryItem).find(x => x.id === copyId);
                 if (item) await copyTextToClipboard(item.finalNote || "");
+            }
+
+            if (exportId) {
+                await exportHistoryItem(exportId);
+            }
+
+            if (printId) {
+                printHistoryItem(printId);
             }
 
             if (duplicateId) {
@@ -2138,6 +2547,17 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    function bindTabEvents() {
+        els.openCreateTabBtn?.addEventListener("click", () => setActiveTab("create"));
+        els.openSavedTabBtn?.addEventListener("click", () => {
+            setActiveTab("saved");
+            applyHistoryFiltersAndRender();
+        });
+
+        els.savedNotesSearch?.addEventListener("input", applyHistoryFiltersAndRender);
+        els.savedNotesFilter?.addEventListener("change", applyHistoryFiltersAndRender);
+    }
+
     function bindEvents() {
         els.startRecordingBtn?.addEventListener("click", startRecording);
         els.stopRecordingBtn?.addEventListener("click", stopRecording);
@@ -2170,12 +2590,14 @@ document.addEventListener("DOMContentLoaded", () => {
         els.clearBtn?.addEventListener("click", clearAll);
         els.refreshHistoryBtn?.addEventListener("click", loadSavedHistoryFromServer);
         els.toggleTranscriptBtn?.addEventListener("click", toggleTranscriptVisibility);
+        els.toggleSpeakerViewBtn?.addEventListener("click", toggleSpeakerView);
 
         bindTextInputs();
         bindTemplateEvents();
         bindHistoryEvents();
         bindVersionEvents();
         bindPromptEvents();
+        bindTabEvents();
 
         window.addEventListener("beforeunload", event => {
             if (!state.hasUnsavedChanges) return;
@@ -2231,16 +2653,18 @@ document.addEventListener("DOMContentLoaded", () => {
         populateTemplates();
         renderTemplateBuilderSections();
         renderSavedTemplates();
-        renderHistory();
         renderExtractedActions();
         renderVersions();
+        renderSpeakerUI();
         restoreLocalDraft();
+        applyHistoryFiltersAndRender();
 
         if (els.transcribeBtn) els.transcribeBtn.disabled = true;
         setStatus("idle", "Ready");
         setSaveState("is-idle", "Ready");
         setNoteMode(Boolean(state.currentNoteId));
         setWorkflowStep("record");
+        setActiveTab("create");
         analyseDocument();
 
         bindEvents();
