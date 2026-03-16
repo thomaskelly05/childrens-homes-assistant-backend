@@ -10,7 +10,10 @@ const state = {
   latestRiskData: [],
   latestIncidentsData: [],
   latestComplianceData: null,
-  jumpComplianceFilter: "all"
+  jumpComplianceFilter: "all",
+  monthlyReviews: [],
+  activeMonthlyReviewId: null,
+  activeMonthlyReviewDetail: null
 };
 
 const endpoints = {
@@ -61,7 +64,14 @@ const endpoints = {
     `/young-people/${id}/standards/evidence`
   ],
   standardsRebuild: (id) => `/young-people/${id}/standards/rebuild`,
-  inspectionPackCreate: "/inspection-pack"
+  inspectionPackCreate: "/inspection-pack",
+  monthlyReviewsList: (id) => `/monthly-reviews/young-person/${id}`,
+  monthlyReviewById: (id) => `/monthly-reviews/${id}`,
+  monthlyReviewCreate: "/monthly-reviews",
+  monthlyReviewUpdate: (id) => `/monthly-reviews/${id}`,
+  monthlyReviewGenerate: (id, reviewMonth) => `/monthly-reviews/young-person/${id}/generate?review_month=${encodeURIComponent(reviewMonth)}`,
+  monthlyReviewActionCreate: "/monthly-reviews/actions",
+  monthlyReviewActionUpdate: (id) => `/monthly-reviews/actions/${id}`
 };
 
 const els = {
@@ -97,6 +107,34 @@ const els = {
   standardsEvidenceList: document.getElementById("standardsEvidenceList"),
   rebuildStandardsBtn: document.getElementById("rebuildStandardsBtn"),
 
+  monthlyReviewMonth: document.getElementById("monthlyReviewMonth"),
+  generateMonthlyReviewBtn: document.getElementById("generateMonthlyReviewBtn"),
+  newMonthlyReviewBtn: document.getElementById("newMonthlyReviewBtn"),
+  monthlyReviewsList: document.getElementById("monthlyReviewsList"),
+  monthlyReviewForm: document.getElementById("monthlyReviewForm"),
+  monthlyReviewFormTitle: document.getElementById("monthlyReviewFormTitle"),
+  monthlyReviewId: document.getElementById("monthlyReviewId"),
+  monthlyReviewStatus: document.getElementById("monthlyReviewStatus"),
+  monthlyReviewTitle: document.getElementById("monthlyReviewTitle"),
+  summaryOfMonth: document.getElementById("summaryOfMonth"),
+  progressSummary: document.getElementById("progressSummary"),
+  childVoiceSummary: document.getElementById("childVoiceSummary"),
+  concernsAndRisks: document.getElementById("concernsAndRisks"),
+  educationSummary: document.getElementById("educationSummary"),
+  healthSummary: document.getElementById("healthSummary"),
+  familySummary: document.getElementById("familySummary"),
+  keyworkSummary: document.getElementById("keyworkSummary"),
+  behaviourSummary: document.getElementById("behaviourSummary"),
+  achievementsSummary: document.getElementById("achievementsSummary"),
+  actionsForNextMonth: document.getElementById("actionsForNextMonth"),
+  managerAnalysis: document.getElementById("managerAnalysis"),
+  clearMonthlyReviewFormBtn: document.getElementById("clearMonthlyReviewFormBtn"),
+  monthlyReviewEvidenceContent: document.getElementById("monthlyReviewEvidenceContent"),
+  monthlyReviewActionsContent: document.getElementById("monthlyReviewActionsContent"),
+  monthlyReviewActionForm: document.getElementById("monthlyReviewActionForm"),
+  monthlyReviewActionText: document.getElementById("monthlyReviewActionText"),
+  monthlyReviewActionDueDate: document.getElementById("monthlyReviewActionDueDate"),
+
   complianceStatusFilter: document.getElementById("complianceStatusFilter"),
   complianceCategoryFilter: document.getElementById("complianceCategoryFilter"),
 
@@ -123,9 +161,18 @@ const els = {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
+  initialiseDefaultMonth();
   bindEvents();
   loadYoungPeople();
 });
+
+function initialiseDefaultMonth() {
+  if (!els.monthlyReviewMonth) return;
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  els.monthlyReviewMonth.value = `${year}-${month}`;
+}
 
 function bindEvents() {
   document.querySelectorAll(".tab-btn").forEach((btn) => {
@@ -185,6 +232,26 @@ function bindEvents() {
 
   if (els.rebuildStandardsBtn) {
     els.rebuildStandardsBtn.addEventListener("click", rebuildStandardsLinks);
+  }
+
+  if (els.generateMonthlyReviewBtn) {
+    els.generateMonthlyReviewBtn.addEventListener("click", generateMonthlyReview);
+  }
+
+  if (els.newMonthlyReviewBtn) {
+    els.newMonthlyReviewBtn.addEventListener("click", createBlankMonthlyReview);
+  }
+
+  if (els.monthlyReviewForm) {
+    els.monthlyReviewForm.addEventListener("submit", saveMonthlyReview);
+  }
+
+  if (els.clearMonthlyReviewFormBtn) {
+    els.clearMonthlyReviewFormBtn.addEventListener("click", resetMonthlyReviewForm);
+  }
+
+  if (els.monthlyReviewActionForm) {
+    els.monthlyReviewActionForm.addEventListener("submit", addMonthlyReviewAction);
   }
 
   if (els.complianceStatusFilter) {
@@ -365,9 +432,13 @@ async function selectYoungPerson(person) {
   state.latestRiskData = [];
   state.latestIncidentsData = [];
   state.latestComplianceData = null;
+  state.monthlyReviews = [];
+  state.activeMonthlyReviewId = null;
+  state.activeMonthlyReviewDetail = null;
   renderYoungPeopleList();
   updateSelectedPersonHeader();
   resetKeyworkForm();
+  resetMonthlyReviewForm();
   closeRecordDrawer();
   await loadActionBarData();
   await loadActiveTabData();
@@ -493,6 +564,9 @@ async function loadActiveTabData() {
         break;
       case "standards":
         await loadStandards(id);
+        break;
+      case "monthly_reviews":
+        await loadMonthlyReviews(id);
         break;
       case "compliance":
         await loadCompliance(id);
@@ -923,6 +997,402 @@ function renderStandardsEvidence(rows) {
       </table>
     </div>
   `;
+}
+
+async function loadMonthlyReviews(youngPersonId) {
+  if (!els.monthlyReviewsList) return;
+
+  els.monthlyReviewsList.innerHTML = `<div class="empty-state">Loading monthly reviews...</div>`;
+
+  try {
+    const data = await fetchJson(endpoints.monthlyReviewsList(youngPersonId));
+    state.monthlyReviews = normaliseArrayResponse(data);
+    renderMonthlyReviewsList();
+
+    if (state.activeMonthlyReviewId) {
+      await loadSingleMonthlyReview(state.activeMonthlyReviewId);
+    } else {
+      clearMonthlyReviewEvidencePanels();
+    }
+  } catch (error) {
+    els.monthlyReviewsList.innerHTML = `
+      <div class="empty-state">
+        Could not load monthly reviews.
+        <br />
+        <small>${escapeHtml(error.message)}</small>
+      </div>
+    `;
+  }
+}
+
+function renderMonthlyReviewsList() {
+  if (!els.monthlyReviewsList) return;
+
+  const rows = state.monthlyReviews;
+
+  if (!rows.length) {
+    els.monthlyReviewsList.innerHTML = `<div class="empty-state">No monthly reviews found.</div>`;
+    return;
+  }
+
+  els.monthlyReviewsList.innerHTML = `
+    <div class="section-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th>Status</th>
+            <th>Title</th>
+            <th>Updated</th>
+            <th>Open</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `
+            <tr>
+              <td>${escapeHtml(formatDate(row.review_month))}</td>
+              <td>${renderStatusPill(row.status)}</td>
+              <td>${escapeHtml(stringifyValue(row.review_title))}</td>
+              <td>${escapeHtml(formatDate(row.updated_at))}</td>
+              <td>
+                <button class="text-link-btn js-open-monthly-review" data-review-id="${row.id}">View</button>
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  els.monthlyReviewsList.querySelectorAll(".js-open-monthly-review").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      await loadSingleMonthlyReview(Number(btn.dataset.reviewId));
+    });
+  });
+}
+
+async function loadSingleMonthlyReview(reviewId) {
+  try {
+    const data = await fetchJson(endpoints.monthlyReviewById(reviewId));
+    state.activeMonthlyReviewId = reviewId;
+    state.activeMonthlyReviewDetail = data;
+    fillMonthlyReviewForm(data.review);
+    renderMonthlyReviewEvidence(data);
+    renderMonthlyReviewActions(data.actions || []);
+  } catch (error) {
+    showStatus(`Could not load monthly review: ${error.message}`, true);
+  }
+}
+
+function fillMonthlyReviewForm(review) {
+  if (!review) return;
+
+  if (els.monthlyReviewFormTitle) {
+    els.monthlyReviewFormTitle.textContent = `Monthly Review #${review.id}`;
+  }
+
+  setInputValue(els.monthlyReviewId, review.id);
+  setInputValue(els.monthlyReviewStatus, review.status || "draft");
+  setInputValue(els.monthlyReviewTitle, review.review_title);
+  setInputValue(els.summaryOfMonth, review.summary_of_month);
+  setInputValue(els.progressSummary, review.progress_summary);
+  setInputValue(els.childVoiceSummary, review.child_voice_summary);
+  setInputValue(els.concernsAndRisks, review.concerns_and_risks);
+  setInputValue(els.educationSummary, review.education_summary);
+  setInputValue(els.healthSummary, review.health_summary);
+  setInputValue(els.familySummary, review.family_summary);
+  setInputValue(els.keyworkSummary, review.keywork_summary);
+  setInputValue(els.behaviourSummary, review.behaviour_summary);
+  setInputValue(els.achievementsSummary, review.achievements_summary);
+  setInputValue(els.actionsForNextMonth, review.actions_for_next_month);
+  setInputValue(els.managerAnalysis, review.manager_analysis);
+}
+
+function resetMonthlyReviewForm() {
+  state.activeMonthlyReviewId = null;
+  state.activeMonthlyReviewDetail = null;
+
+  if (els.monthlyReviewForm) {
+    els.monthlyReviewForm.reset();
+  }
+
+  setInputValue(els.monthlyReviewId, "");
+  if (els.monthlyReviewFormTitle) {
+    els.monthlyReviewFormTitle.textContent = "Monthly Review Detail";
+  }
+
+  clearMonthlyReviewEvidencePanels();
+}
+
+function clearMonthlyReviewEvidencePanels() {
+  if (els.monthlyReviewEvidenceContent) {
+    els.monthlyReviewEvidenceContent.innerHTML = `<div class="empty-state">Open a monthly review to view linked evidence.</div>`;
+  }
+
+  if (els.monthlyReviewActionsContent) {
+    els.monthlyReviewActionsContent.innerHTML = `<div class="empty-state">Open a monthly review to view actions.</div>`;
+  }
+}
+
+async function generateMonthlyReview() {
+  if (!state.selectedYoungPerson) {
+    showStatus("Please select a young person first.", true);
+    return;
+  }
+
+  const monthValue = els.monthlyReviewMonth ? els.monthlyReviewMonth.value : "";
+  if (!monthValue) {
+    showStatus("Please select a review month.", true);
+    return;
+  }
+
+  const reviewMonth = `${monthValue}-01`;
+
+  try {
+    const response = await fetchJson(endpoints.monthlyReviewGenerate(state.selectedYoungPerson.id, reviewMonth), {
+      method: "POST"
+    });
+
+    showStatus("Monthly review evidence generated.");
+    await loadMonthlyReviews(state.selectedYoungPerson.id);
+
+    if (response && response.monthly_review_id) {
+      await loadSingleMonthlyReview(response.monthly_review_id);
+    }
+  } catch (error) {
+    showStatus(`Could not generate monthly review: ${error.message}`, true);
+  }
+}
+
+async function createBlankMonthlyReview() {
+  if (!state.selectedYoungPerson) {
+    showStatus("Please select a young person first.", true);
+    return;
+  }
+
+  const monthValue = els.monthlyReviewMonth ? els.monthlyReviewMonth.value : "";
+  if (!monthValue) {
+    showStatus("Please select a review month.", true);
+    return;
+  }
+
+  try {
+    const response = await fetchJson(endpoints.monthlyReviewCreate, {
+      method: "POST",
+      body: JSON.stringify({
+        young_person_id: state.selectedYoungPerson.id,
+        review_month: `${monthValue}-01`,
+        review_title: `Monthly Review - ${formatMonthYear(monthValue)}`,
+        created_by: 1
+      })
+    });
+
+    showStatus("Blank monthly review created.");
+    await loadMonthlyReviews(state.selectedYoungPerson.id);
+
+    if (response && response.id) {
+      await loadSingleMonthlyReview(response.id);
+    }
+  } catch (error) {
+    showStatus(`Could not create monthly review: ${error.message}`, true);
+  }
+}
+
+async function saveMonthlyReview(event) {
+  event.preventDefault();
+
+  const reviewId = cleanValue(els.monthlyReviewId ? els.monthlyReviewId.value : "");
+  if (!reviewId) {
+    showStatus("Open or create a monthly review first.", true);
+    return;
+  }
+
+  try {
+    await fetchJson(endpoints.monthlyReviewUpdate(reviewId), {
+      method: "PUT",
+      body: JSON.stringify({
+        status: cleanValue(els.monthlyReviewStatus?.value),
+        review_title: cleanValue(els.monthlyReviewTitle?.value),
+        summary_of_month: cleanValue(els.summaryOfMonth?.value),
+        progress_summary: cleanValue(els.progressSummary?.value),
+        child_voice_summary: cleanValue(els.childVoiceSummary?.value),
+        concerns_and_risks: cleanValue(els.concernsAndRisks?.value),
+        education_summary: cleanValue(els.educationSummary?.value),
+        health_summary: cleanValue(els.healthSummary?.value),
+        family_summary: cleanValue(els.familySummary?.value),
+        keywork_summary: cleanValue(els.keyworkSummary?.value),
+        behaviour_summary: cleanValue(els.behaviourSummary?.value),
+        achievements_summary: cleanValue(els.achievementsSummary?.value),
+        actions_for_next_month: cleanValue(els.actionsForNextMonth?.value),
+        manager_analysis: cleanValue(els.managerAnalysis?.value)
+      })
+    });
+
+    showStatus("Monthly review saved successfully.");
+    await loadMonthlyReviews(state.selectedYoungPerson.id);
+    await loadSingleMonthlyReview(Number(reviewId));
+  } catch (error) {
+    showStatus(`Could not save monthly review: ${error.message}`, true);
+  }
+}
+
+function renderMonthlyReviewEvidence(detail) {
+  if (!els.monthlyReviewEvidenceContent) return;
+
+  const links = detail?.record_links || [];
+  const standards = detail?.standards || [];
+
+  els.monthlyReviewEvidenceContent.innerHTML = `
+    <section class="section-group">
+      <h3 class="group-title">Linked Records</h3>
+      ${links.length ? `
+        <div class="section-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Source</th>
+                <th>Source ID</th>
+                <th>Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${links.map((row) => `
+                <tr>
+                  <td>${escapeHtml(stringifyValue(row.source_table))}</td>
+                  <td>${escapeHtml(String(row.source_id))}</td>
+                  <td>${escapeHtml(stringifyValue(row.link_reason))}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      ` : `<div class="empty-state">No linked records found.</div>`}
+    </section>
+
+    <section class="section-group">
+      <h3 class="group-title">Standards Summary</h3>
+      ${standards.length ? `
+        <div class="section-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Standard</th>
+                <th>Title</th>
+                <th>Evidence Count</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${standards.map((row) => `
+                <tr>
+                  <td>${escapeHtml(stringifyValue(row.standard_code))}</td>
+                  <td>${escapeHtml(stringifyValue(row.standard_short_label || row.standard_title))}</td>
+                  <td>${escapeHtml(String(row.evidence_count ?? 0))}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      ` : `<div class="empty-state">No standards summary found.</div>`}
+    </section>
+  `;
+}
+
+function renderMonthlyReviewActions(rows) {
+  if (!els.monthlyReviewActionsContent) return;
+
+  if (!rows || !rows.length) {
+    els.monthlyReviewActionsContent.innerHTML = `<div class="empty-state">No actions added yet.</div>`;
+    return;
+  }
+
+  els.monthlyReviewActionsContent.innerHTML = `
+    <div class="section-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Action</th>
+            <th>Due Date</th>
+            <th>Status</th>
+            <th>Update</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `
+            <tr>
+              <td>${escapeHtml(stringifyValue(row.action_text))}</td>
+              <td>${escapeHtml(formatDate(row.due_date))}</td>
+              <td>${escapeHtml(stringifyValue(row.status))}</td>
+              <td>
+                <button class="text-link-btn js-complete-monthly-action" data-action-id="${row.id}">Mark Complete</button>
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  els.monthlyReviewActionsContent.querySelectorAll(".js-complete-monthly-action").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      await markMonthlyReviewActionComplete(Number(btn.dataset.actionId));
+    });
+  });
+}
+
+async function addMonthlyReviewAction(event) {
+  event.preventDefault();
+
+  if (!state.activeMonthlyReviewId) {
+    showStatus("Open a monthly review first.", true);
+    return;
+  }
+
+  const actionText = cleanValue(els.monthlyReviewActionText?.value);
+  const dueDate = cleanValue(els.monthlyReviewActionDueDate?.value);
+
+  if (!actionText) {
+    showStatus("Please enter an action.", true);
+    return;
+  }
+
+  try {
+    await fetchJson(endpoints.monthlyReviewActionCreate, {
+      method: "POST",
+      body: JSON.stringify({
+        monthly_review_id: state.activeMonthlyReviewId,
+        action_text: actionText,
+        due_date: dueDate,
+        status: "open"
+      })
+    });
+
+    if (els.monthlyReviewActionForm) {
+      els.monthlyReviewActionForm.reset();
+    }
+
+    showStatus("Monthly review action added.");
+    await loadSingleMonthlyReview(state.activeMonthlyReviewId);
+  } catch (error) {
+    showStatus(`Could not add action: ${error.message}`, true);
+  }
+}
+
+async function markMonthlyReviewActionComplete(actionId) {
+  try {
+    await fetchJson(endpoints.monthlyReviewActionUpdate(actionId), {
+      method: "PUT",
+      body: JSON.stringify({
+        status: "complete"
+      })
+    });
+
+    showStatus("Action updated.");
+    if (state.activeMonthlyReviewId) {
+      await loadSingleMonthlyReview(state.activeMonthlyReviewId);
+    }
+  } catch (error) {
+    showStatus(`Could not update action: ${error.message}`, true);
+  }
 }
 
 async function loadCompliance(youngPersonId) {
@@ -1392,8 +1862,8 @@ function renderWorkflowPill(value) {
   const lower = String(value || "").toLowerCase();
   let cls = "status-grey";
 
-  if (lower === "approved") cls = "status-green";
-  else if (lower === "submitted") cls = "status-blue";
+  if (lower === "approved" || lower === "complete") cls = "status-green";
+  else if (lower === "submitted" || lower === "in_review") cls = "status-blue";
   else if (lower === "returned") cls = "status-red";
   else if (lower === "draft") cls = "status-grey";
 
@@ -1476,6 +1946,10 @@ function setText(el, value) {
   if (el) el.textContent = String(value);
 }
 
+function setInputValue(el, value) {
+  if (el) el.value = value ?? "";
+}
+
 function cleanValue(value) {
   const cleaned = typeof value === "string" ? value.trim() : value;
   return cleaned === "" ? null : cleaned;
@@ -1489,7 +1963,7 @@ function parseNullableInt(value) {
 }
 
 function trimForTable(value, key) {
-  const max = ["summary", "description", "presenting_need", "concern_summary", "positives", "actions_required", "what_matters_to_me", "rationale"].includes(key)
+  const max = ["summary", "description", "presenting_need", "concern_summary", "positives", "actions_required", "what_matters_to_me", "rationale", "action_text"].includes(key)
     ? 80
     : 48;
 
@@ -1533,7 +2007,9 @@ function formatFieldValue(key, value) {
     "approved_at",
     "returned_at",
     "submitted_at",
-    "next_action_date"
+    "next_action_date",
+    "review_month",
+    "due_date"
   ];
 
   if (dateKeys.includes(key)) {
@@ -1549,7 +2025,9 @@ function formatFieldValue(key, value) {
       key === "next_session_date" ||
       key === "effective_from" ||
       key === "effective_to" ||
-      key === "next_action_date"
+      key === "next_action_date" ||
+      key === "review_month" ||
+      key === "due_date"
     ) {
       return formatDate(value);
     }
@@ -1581,6 +2059,13 @@ function formatDateTime(value) {
   })}`;
 }
 
+function formatMonthYear(monthValue) {
+  if (!monthValue) return "";
+  const [year, month] = monthValue.split("-");
+  const date = new Date(Number(year), Number(month) - 1, 1);
+  return date.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+}
+
 function toDateInputValue(value) {
   if (!value) return "";
   const date = new Date(value);
@@ -1595,10 +2080,10 @@ function hasValue(value) {
 function statusColour(value) {
   const lower = String(value || "").toLowerCase();
 
-  if (lower === "overdue" || lower === "high") return "status-red";
+  if (lower === "overdue" || lower === "high" || lower === "returned") return "status-red";
   if (lower === "due_soon" || lower === "medium" || lower === "pending") return "status-amber";
   if (lower === "ok" || lower === "active" || lower === "approved" || lower === "complete") return "status-green";
-  if (lower === "submitted" || lower === "info") return "status-blue";
+  if (lower === "submitted" || lower === "info" || lower === "in_review") return "status-blue";
 
   return "status-grey";
 }
