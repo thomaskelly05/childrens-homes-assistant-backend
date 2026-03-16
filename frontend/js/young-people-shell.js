@@ -3,13 +3,25 @@ const state = {
   filteredYoungPeople: [],
   selectedYoungPerson: null,
   activeTab: "overview",
+
   keyworkSessions: [],
   activeKeyworkSessionId: null,
+
   latestProfileData: null,
   latestPlansData: [],
   latestRiskData: [],
   latestIncidentsData: [],
   latestComplianceData: null,
+  latestDailyNotesData: [],
+  latestOverviewData: null,
+
+  activeDailyNoteId: null,
+  activeDailyNoteRecord: null,
+  activeDailyNoteVersions: [],
+  dailyNoteAutosaveTimer: null,
+  dailyNoteIsDirty: false,
+  dailyNoteLastSavedAt: null,
+  dailyNoteLanguageHints: [],
   jumpComplianceFilter: "all"
 };
 
@@ -33,6 +45,19 @@ const endpoints = {
   daily_notes: (id) => [
     `/young-people/${id}/daily-notes`
   ],
+  daily_note_single: (youngPersonId, noteId) =>
+    `/young-people/${youngPersonId}/daily-notes/${noteId}`,
+  daily_note_versions: (youngPersonId, noteId) =>
+    `/young-people/${youngPersonId}/daily-notes/${noteId}/versions`,
+  daily_note_create: (youngPersonId) =>
+    `/young-people/${youngPersonId}/daily-notes`,
+  daily_note_update: (youngPersonId, noteId) =>
+    `/young-people/${youngPersonId}/daily-notes/${noteId}`,
+  daily_note_review: (youngPersonId, noteId) =>
+    `/young-people/${youngPersonId}/daily-notes/${noteId}/review`,
+  daily_note_therapeutic_language_check:
+    "/young-people/daily-notes/therapeutic-language-check",
+
   incidents: (id) => [
     `/young-people/${id}/incidents`
   ],
@@ -81,8 +106,25 @@ const els = {
   inspectionPackBtn: document.getElementById("inspectionPackBtn"),
   headerOfstedAiBtn: document.getElementById("headerOfstedAiBtn"),
   monthlyOfstedAiBtn: document.getElementById("monthlyOfstedAiBtn"),
+
   selectedYoungPersonName: document.getElementById("selectedYoungPersonName"),
   selectedYoungPersonMeta: document.getElementById("selectedYoungPersonMeta"),
+
+  stickyYoungPersonBar: document.getElementById("stickyYoungPersonBar"),
+  stickyPersonAvatar: document.getElementById("stickyPersonAvatar"),
+  stickyYoungPersonName: document.getElementById("stickyYoungPersonName"),
+  stickyYoungPersonSummary: document.getElementById("stickyYoungPersonSummary"),
+  stickyDobChip: document.getElementById("stickyDobChip"),
+  stickyPlacementChip: document.getElementById("stickyPlacementChip"),
+  stickySocialWorkerChip: document.getElementById("stickySocialWorkerChip"),
+  stickyEducationChip: document.getElementById("stickyEducationChip"),
+  stickyRiskLevel: document.getElementById("stickyRiskLevel"),
+  stickyPlanReview: document.getElementById("stickyPlanReview"),
+  stickyTodayInfo: document.getElementById("stickyTodayInfo"),
+  quickAddDailyNoteBtn: document.getElementById("quickAddDailyNoteBtn"),
+  quickAddIncidentBtn: document.getElementById("quickAddIncidentBtn"),
+  quickAddKeyworkBtn: document.getElementById("quickAddKeyworkBtn"),
+
   statusBar: document.getElementById("statusBar"),
 
   actionOverdueCount: document.getElementById("actionOverdueCount"),
@@ -93,6 +135,7 @@ const els = {
   actionIncidentsCount: document.getElementById("actionIncidentsCount"),
 
   overviewContent: document.getElementById("overviewContent"),
+  overviewActionsContent: document.getElementById("overviewActionsContent"),
   profileContent: document.getElementById("profileContent"),
   plansContent: document.getElementById("plansContent"),
   riskContent: document.getElementById("riskContent"),
@@ -135,7 +178,80 @@ const els = {
 
   recordDetailDrawer: document.getElementById("recordDetailDrawer"),
   recordDetailContent: document.getElementById("recordDetailContent"),
-  closeDrawerBtn: document.getElementById("closeDrawerBtn")
+  closeDrawerBtn: document.getElementById("closeDrawerBtn"),
+
+  dailyNoteStatusFilter: document.getElementById("dailyNoteStatusFilter"),
+  dailyNoteShiftFilter: document.getElementById("dailyNoteShiftFilter"),
+  dailyNoteSearch: document.getElementById("dailyNoteSearch"),
+  newDailyNoteBtn: document.getElementById("newDailyNoteBtn"),
+  refreshDailyNotesBtn: document.getElementById("refreshDailyNotesBtn"),
+
+  dailyNoteForm: document.getElementById("dailyNoteForm"),
+  dailyNoteFormTitle: document.getElementById("dailyNoteFormTitle"),
+  dailyNoteId: document.getElementById("dailyNoteId"),
+  dailyNoteVersionNumber: document.getElementById("dailyNoteVersionNumber"),
+  dailyNoteCurrentStatus: document.getElementById("dailyNoteCurrentStatus"),
+  dailyNoteSaveIndicator: document.getElementById("dailyNoteSaveIndicator"),
+  dailyNoteWorkflowIndicator: document.getElementById("dailyNoteWorkflowIndicator"),
+
+  dailyNoteDate: document.getElementById("dailyNoteDate"),
+  dailyNoteShiftType: document.getElementById("dailyNoteShiftType"),
+  dailyNoteCustomShift: document.getElementById("dailyNoteCustomShift"),
+  dailyNoteStaffOnShift: document.getElementById("dailyNoteStaffOnShift"),
+  dailyNoteLocation: document.getElementById("dailyNoteLocation"),
+  dailyNoteTags: document.getElementById("dailyNoteTags"),
+  dailyNoteSignificantEvent: document.getElementById("dailyNoteSignificantEvent"),
+  dailyNoteManagerReviewRequired: document.getElementById("dailyNoteManagerReviewRequired"),
+
+  dailyNotePresentation: document.getElementById("dailyNotePresentation"),
+  dailyNoteMainEvents: document.getElementById("dailyNoteMainEvents"),
+  dailyNoteRoutineEngagement: document.getElementById("dailyNoteRoutineEngagement"),
+  dailyNoteEducationUpdate: document.getElementById("dailyNoteEducationUpdate"),
+  dailyNoteHealthUpdate: document.getElementById("dailyNoteHealthUpdate"),
+  dailyNoteFamilyUpdate: document.getElementById("dailyNoteFamilyUpdate"),
+  dailyNoteWorries: document.getElementById("dailyNoteWorries"),
+  dailyNotePositives: document.getElementById("dailyNotePositives"),
+
+  dailyNotePacePlayfulnessStatus: document.getElementById("dailyNotePacePlayfulnessStatus"),
+  dailyNotePacePlayfulness: document.getElementById("dailyNotePacePlayfulness"),
+  dailyNotePaceAcceptanceStatus: document.getElementById("dailyNotePaceAcceptanceStatus"),
+  dailyNotePaceAcceptance: document.getElementById("dailyNotePaceAcceptance"),
+  dailyNotePaceCuriosityTags: document.getElementById("dailyNotePaceCuriosityTags"),
+  dailyNotePaceCuriosity: document.getElementById("dailyNotePaceCuriosity"),
+  dailyNotePaceEmpathyTags: document.getElementById("dailyNotePaceEmpathyTags"),
+  dailyNotePaceEmpathy: document.getElementById("dailyNotePaceEmpathy"),
+
+  dailyNoteYoungPersonVoice: document.getElementById("dailyNoteYoungPersonVoice"),
+  dailyNoteCommunicationStyle: document.getElementById("dailyNoteCommunicationStyle"),
+
+  dailyNoteStaffResponse: document.getElementById("dailyNoteStaffResponse"),
+  dailyNoteWhatHelped: document.getElementById("dailyNoteWhatHelped"),
+  dailyNoteWhatDidNotHelp: document.getElementById("dailyNoteWhatDidNotHelp"),
+  dailyNoteImpact: document.getElementById("dailyNoteImpact"),
+
+  dailyNoteActionsRequired: document.getElementById("dailyNoteActionsRequired"),
+  dailyNoteDiscussInHandover: document.getElementById("dailyNoteDiscussInHandover"),
+  dailyNoteUpdateRiskAssessment: document.getElementById("dailyNoteUpdateRiskAssessment"),
+  dailyNoteLinkMonthlyReview: document.getElementById("dailyNoteLinkMonthlyReview"),
+
+  dailyNoteLinkedStandards: document.getElementById("dailyNoteLinkedStandards"),
+  dailyNoteLinkedRisks: document.getElementById("dailyNoteLinkedRisks"),
+  dailyNoteLinkedPlans: document.getElementById("dailyNoteLinkedPlans"),
+  dailyNoteEvidenceImpactStatement: document.getElementById("dailyNoteEvidenceImpactStatement"),
+
+  dailyNoteChangeReason: document.getElementById("dailyNoteChangeReason"),
+  dailyNoteManagerReviewComment: document.getElementById("dailyNoteManagerReviewComment"),
+
+  saveDailyNoteDraftBtn: document.getElementById("saveDailyNoteDraftBtn"),
+  completeDailyNoteBtn: document.getElementById("completeDailyNoteBtn"),
+  reviewDailyNoteBtn: document.getElementById("reviewDailyNoteBtn"),
+  clearDailyNoteFormBtn: document.getElementById("clearDailyNoteFormBtn"),
+
+  dailyNoteSidebarTodayInfo: document.getElementById("dailyNoteSidebarTodayInfo"),
+  dailyNoteSidebarRisks: document.getElementById("dailyNoteSidebarRisks"),
+  dailyNoteSidebarActions: document.getElementById("dailyNoteSidebarActions"),
+  therapeuticLanguageHints: document.getElementById("therapeuticLanguageHints"),
+  dailyNoteVersionHistory: document.getElementById("dailyNoteVersionHistory")
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -166,6 +282,15 @@ function bindEvents() {
       }
 
       setActiveTab(jumpTab);
+    });
+  });
+
+  document.querySelectorAll(".help-toggle").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const target = document.getElementById(btn.dataset.helpTarget);
+      if (!target) return;
+      target.classList.toggle("hidden");
+      btn.textContent = target.classList.contains("hidden") ? "Why this matters" : "Hide help";
     });
   });
 
@@ -232,6 +357,152 @@ function bindEvents() {
   if (els.closeDrawerBtn) {
     els.closeDrawerBtn.addEventListener("click", closeRecordDrawer);
   }
+
+  if (els.quickAddDailyNoteBtn) {
+    els.quickAddDailyNoteBtn.addEventListener("click", () => {
+      setActiveTab("daily_notes");
+      createNewDailyNote();
+    });
+  }
+
+  if (els.quickAddKeyworkBtn) {
+    els.quickAddKeyworkBtn.addEventListener("click", () => {
+      setActiveTab("keywork");
+      resetKeyworkForm();
+    });
+  }
+
+  if (els.quickAddIncidentBtn) {
+    els.quickAddIncidentBtn.addEventListener("click", () => {
+      setActiveTab("incidents");
+      showStatus("Incident quick-add can be wired next.", false);
+    });
+  }
+
+  if (els.newDailyNoteBtn) {
+    els.newDailyNoteBtn.addEventListener("click", createNewDailyNote);
+  }
+
+  if (els.refreshDailyNotesBtn) {
+    els.refreshDailyNotesBtn.addEventListener("click", async () => {
+      if (!state.selectedYoungPerson) return;
+      await loadDailyNotes(state.selectedYoungPerson.id);
+    });
+  }
+
+  if (els.dailyNoteStatusFilter) {
+    els.dailyNoteStatusFilter.addEventListener("change", renderDailyNotesListFromState);
+  }
+
+  if (els.dailyNoteShiftFilter) {
+    els.dailyNoteShiftFilter.addEventListener("change", renderDailyNotesListFromState);
+  }
+
+  if (els.dailyNoteSearch) {
+    els.dailyNoteSearch.addEventListener("input", renderDailyNotesListFromState);
+  }
+
+  if (els.dailyNoteForm) {
+    els.dailyNoteForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      await saveDailyNote("draft");
+    });
+  }
+
+  if (els.completeDailyNoteBtn) {
+    els.completeDailyNoteBtn.addEventListener("click", async () => {
+      await saveDailyNote("completed");
+    });
+  }
+
+  if (els.reviewDailyNoteBtn) {
+    els.reviewDailyNoteBtn.addEventListener("click", async () => {
+      await markDailyNoteReviewed();
+    });
+  }
+
+  if (els.clearDailyNoteFormBtn) {
+    els.clearDailyNoteFormBtn.addEventListener("click", clearDailyNoteFormWithPrompt);
+  }
+
+  bindDailyNoteDirtyTracking();
+
+  window.addEventListener("beforeunload", (event) => {
+    if (!state.dailyNoteIsDirty) return;
+    event.preventDefault();
+    event.returnValue = "";
+  });
+}
+
+function bindDailyNoteDirtyTracking() {
+  const dailyNoteInputs = [
+    els.dailyNoteDate,
+    els.dailyNoteShiftType,
+    els.dailyNoteCustomShift,
+    els.dailyNoteStaffOnShift,
+    els.dailyNoteLocation,
+    els.dailyNoteTags,
+    els.dailyNoteSignificantEvent,
+    els.dailyNoteManagerReviewRequired,
+    els.dailyNotePresentation,
+    els.dailyNoteMainEvents,
+    els.dailyNoteRoutineEngagement,
+    els.dailyNoteEducationUpdate,
+    els.dailyNoteHealthUpdate,
+    els.dailyNoteFamilyUpdate,
+    els.dailyNoteWorries,
+    els.dailyNotePositives,
+    els.dailyNotePacePlayfulnessStatus,
+    els.dailyNotePacePlayfulness,
+    els.dailyNotePaceAcceptanceStatus,
+    els.dailyNotePaceAcceptance,
+    els.dailyNotePaceCuriosityTags,
+    els.dailyNotePaceCuriosity,
+    els.dailyNotePaceEmpathyTags,
+    els.dailyNotePaceEmpathy,
+    els.dailyNoteYoungPersonVoice,
+    els.dailyNoteCommunicationStyle,
+    els.dailyNoteStaffResponse,
+    els.dailyNoteWhatHelped,
+    els.dailyNoteWhatDidNotHelp,
+    els.dailyNoteImpact,
+    els.dailyNoteActionsRequired,
+    els.dailyNoteDiscussInHandover,
+    els.dailyNoteUpdateRiskAssessment,
+    els.dailyNoteLinkMonthlyReview,
+    els.dailyNoteLinkedStandards,
+    els.dailyNoteLinkedRisks,
+    els.dailyNoteLinkedPlans,
+    els.dailyNoteEvidenceImpactStatement,
+    els.dailyNoteChangeReason,
+    els.dailyNoteManagerReviewComment
+  ].filter(Boolean);
+
+  dailyNoteInputs.forEach((field) => {
+    const eventName = field.type === "checkbox" ? "change" : "input";
+    field.addEventListener(eventName, () => {
+      state.dailyNoteIsDirty = true;
+      setDailyNoteSaveIndicator("Unsaved changes");
+      scheduleDailyNoteAutosave();
+      maybeRunTherapeuticLanguageCheck();
+    });
+  });
+}
+
+function scheduleDailyNoteAutosave() {
+  clearTimeout(state.dailyNoteAutosaveTimer);
+
+  if (!state.selectedYoungPerson) return;
+  if (state.activeTab !== "daily_notes") return;
+  if (!state.dailyNoteIsDirty) return;
+
+  state.dailyNoteAutosaveTimer = setTimeout(async () => {
+    try {
+      await saveDailyNote("draft", { silent: true, autosave: true });
+    } catch (_err) {
+      // handled in saveDailyNote
+    }
+  }, 2500);
 }
 
 function getSelectedReviewMonthParam() {
@@ -253,6 +524,16 @@ function showStatus(message, isError = false) {
   showStatus.timer = setTimeout(() => {
     els.statusBar.classList.add("hidden");
   }, 4000);
+}
+
+function setDailyNoteSaveIndicator(text) {
+  if (!els.dailyNoteSaveIndicator) return;
+  els.dailyNoteSaveIndicator.textContent = text;
+}
+
+function setDailyNoteWorkflowIndicator(text) {
+  if (!els.dailyNoteWorkflowIndicator) return;
+  els.dailyNoteWorkflowIndicator.textContent = text || "Draft";
 }
 
 async function fetchJson(url, options = {}) {
@@ -318,6 +599,7 @@ async function loadYoungPeople() {
         state.selectedYoungPerson = refreshed;
         renderYoungPeopleList();
         updateSelectedPersonHeader();
+        updateStickyYoungPersonBar();
       }
     }
 
@@ -393,10 +675,20 @@ async function selectYoungPerson(person) {
   state.latestRiskData = [];
   state.latestIncidentsData = [];
   state.latestComplianceData = null;
+  state.latestDailyNotesData = [];
+  state.latestOverviewData = null;
+
+  state.activeDailyNoteId = null;
+  state.activeDailyNoteRecord = null;
+  state.activeDailyNoteVersions = [];
+  state.dailyNoteIsDirty = false;
+  clearTimeout(state.dailyNoteAutosaveTimer);
 
   renderYoungPeopleList();
   updateSelectedPersonHeader();
+  updateStickyYoungPersonBar();
   resetKeyworkForm();
+  resetDailyNoteForm();
   closeRecordDrawer();
 
   await loadActionBarData();
@@ -421,6 +713,63 @@ function updateSelectedPersonHeader() {
 
   els.selectedYoungPersonName.textContent = getFullName(person);
   els.selectedYoungPersonMeta.textContent = bits.join(" | ");
+}
+
+function updateStickyYoungPersonBar() {
+  if (!state.selectedYoungPerson) {
+    setText(els.stickyYoungPersonName, "No young person selected");
+    setText(els.stickyYoungPersonSummary, "Select a record to view the full shell");
+    setText(els.stickyDobChip, "DOB: —");
+    setText(els.stickyPlacementChip, "Placement: —");
+    setText(els.stickySocialWorkerChip, "SW: —");
+    setText(els.stickyEducationChip, "Education: —");
+    setText(els.stickyRiskLevel, "Risk: —");
+    setText(els.stickyPlanReview, "Plan review: —");
+    setText(els.stickyTodayInfo, "Today I need to know: —");
+    setText(els.stickyPersonAvatar, "YP");
+    return;
+  }
+
+  const person = state.selectedYoungPerson;
+  const profileData = state.latestProfileData || {};
+  const youngPerson = profileData?.young_person || person;
+  const legalStatus = Array.isArray(profileData?.legal_status) ? profileData.legal_status[0] : null;
+  const educationProfile = Array.isArray(profileData?.education_profile) ? profileData.education_profile[0] : null;
+  const alerts = Array.isArray(profileData?.alerts) ? profileData.alerts : [];
+  const plans = state.latestPlansData || [];
+  const risks = state.latestRiskData || [];
+
+  const initials = getInitials(person);
+  const activePlan = plans.find((plan) => String(plan.status || "").toLowerCase() === "active");
+  const nextPlanReview = activePlan?.review_date ? formatDate(activePlan.review_date) : "—";
+  const topAlert = alerts[0]?.title || alerts[0]?.description || "No live alert";
+  const schoolName =
+    youngPerson.school_name ||
+    educationProfile?.school_name ||
+    youngPerson.education_status ||
+    "—";
+  const swName =
+    youngPerson.social_worker_name ||
+    youngPerson.social_worker ||
+    "—";
+  const riskLevel =
+    youngPerson.summary_risk_level ||
+    risks[0]?.severity ||
+    "—";
+
+  setText(els.stickyPersonAvatar, initials);
+  setText(els.stickyYoungPersonName, getFullName(person));
+  setText(
+    els.stickyYoungPersonSummary,
+    `${youngPerson.placement_status || "Placement status not recorded"}${legalStatus?.legal_status ? ` • ${legalStatus.legal_status}` : ""}`
+  );
+  setText(els.stickyDobChip, `DOB: ${youngPerson.date_of_birth ? formatDate(youngPerson.date_of_birth) : "—"}`);
+  setText(els.stickyPlacementChip, `Placement: ${youngPerson.placement_status || "—"}`);
+  setText(els.stickySocialWorkerChip, `SW: ${swName}`);
+  setText(els.stickyEducationChip, `Education: ${schoolName}`);
+  setText(els.stickyRiskLevel, `Risk: ${stringifyValue(riskLevel)}`);
+  setText(els.stickyPlanReview, `Plan review: ${nextPlanReview}`);
+  setText(els.stickyTodayInfo, `Today I need to know: ${topAlert}`);
 }
 
 function setActiveTab(tabName) {
@@ -454,12 +803,20 @@ async function loadActionBarData() {
   const id = state.selectedYoungPerson.id;
 
   try {
-    const [profileData, plansData, riskData, incidentsData, complianceData] = await Promise.all([
+    const [
+      profileData,
+      plansData,
+      riskData,
+      incidentsData,
+      complianceData,
+      dailyNotesData
+    ] = await Promise.all([
       fetchFromCandidates(endpoints.profile(id)).catch(() => null),
       fetchFromCandidates(endpoints.plans(id)).catch(() => []),
       fetchFromCandidates(endpoints.risk(id)).catch(() => []),
       fetchFromCandidates(endpoints.incidents(id)).catch(() => []),
-      fetchFromCandidates(endpoints.compliance(id)).catch(() => null)
+      fetchFromCandidates(endpoints.compliance(id)).catch(() => null),
+      fetchFromCandidates(endpoints.daily_notes(id)).catch(() => [])
     ]);
 
     state.latestProfileData = profileData;
@@ -467,6 +824,7 @@ async function loadActionBarData() {
     state.latestRiskData = normaliseArrayResponse(riskData);
     state.latestIncidentsData = normaliseArrayResponse(incidentsData);
     state.latestComplianceData = complianceData;
+    state.latestDailyNotesData = normaliseArrayResponse(dailyNotesData);
 
     const alertsCount = Array.isArray(profileData?.alerts) ? profileData.alerts.length : 0;
     const complianceItems = Array.isArray(complianceData?.compliance_items) ? complianceData.compliance_items : [];
@@ -479,6 +837,8 @@ async function loadActionBarData() {
     setText(els.actionPlansCount, state.latestPlansData.length);
     setText(els.actionRiskCount, state.latestRiskData.length);
     setText(els.actionIncidentsCount, state.latestIncidentsData.length);
+
+    updateStickyYoungPersonBar();
   } catch (error) {
     console.error("Action bar load failed:", error);
   }
@@ -546,58 +906,73 @@ async function loadOverview(youngPersonId) {
   if (!els.overviewContent) return;
 
   els.overviewContent.innerHTML = `<div class="empty-state">Loading overview...</div>`;
+  if (els.overviewActionsContent) {
+    els.overviewActionsContent.innerHTML = `<div class="empty-state">Loading actions...</div>`;
+  }
 
   try {
     const data = await fetchFromCandidates(endpoints.overview(youngPersonId));
+    state.latestOverviewData = data;
 
-    const keyGroups = [
-      {
-        title: "Core Details",
-        keys: ["first_name", "last_name", "preferred_name", "date_of_birth", "gender", "ethnicity", "local_id_number"]
-      },
-      {
-        title: "Placement",
-        keys: ["admission_date", "discharge_date", "placement_status", "summary_risk_level", "home_id"]
-      },
-      {
-        title: "Legal and Education",
-        keys: ["legal_status", "order_type", "school_name", "year_group", "education_status"]
-      },
-      {
-        title: "Health and Communication",
-        keys: ["gp_name", "allergies", "diagnoses", "communication_style", "sensory_profile"]
-      },
-      {
-        title: "Identity and Voice",
-        keys: ["interests", "strengths_summary", "what_matters_to_me"]
-      }
-    ];
+    const activePlans = state.latestPlansData.filter((row) => String(row.status || "").toLowerCase() === "active");
+    const activeRisks = state.latestRiskData.filter((row) => String(row.status || "").toLowerCase() === "active");
+    const recentNotes = state.latestDailyNotesData.slice(0, 5);
+    const complianceItems = Array.isArray(state.latestComplianceData?.compliance_items)
+      ? state.latestComplianceData.compliance_items
+      : [];
+    const liveActions = complianceItems.filter((item) => item.compliance_status !== "ok").slice(0, 8);
 
     const topTiles = [
-      "placement_status",
-      "summary_risk_level",
-      "legal_status",
-      "school_name",
-      "gp_name",
-      "allergies",
-      "interests",
-      "what_matters_to_me"
-    ].filter((key) => hasValue(data?.[key]));
+      {
+        title: "Placement Status",
+        value: data?.placement_status
+      },
+      {
+        title: "Risk Level",
+        value: data?.summary_risk_level
+      },
+      {
+        title: "Legal Status",
+        value: data?.legal_status
+      },
+      {
+        title: "School",
+        value: data?.school_name
+      },
+      {
+        title: "GP",
+        value: data?.gp_name
+      },
+      {
+        title: "What Matters",
+        value: data?.what_matters_to_me
+      }
+    ].filter((tile) => hasValue(tile.value));
 
     els.overviewContent.innerHTML = `
       ${topTiles.length ? `
         <div class="overview-grid">
-          ${topTiles.map((key) => `
+          ${topTiles.map((tile) => `
             <div class="overview-tile">
-              <h4>${escapeHtml(formatLabel(key))}</h4>
-              <p>${escapeHtml(formatFieldValue(key, data[key]))}</p>
+              <h4>${escapeHtml(tile.title)}</h4>
+              <p>${escapeHtml(trimForTable(stringifyValue(tile.value), "what_matters_to_me"))}</p>
             </div>
           `).join("")}
         </div>
       ` : ""}
 
-      ${keyGroups.map((group) => renderGroupedKeyValueSection(group.title, data || {}, group.keys)).join("")}
+      ${renderOverviewNarrativeSummary(data, activePlans, activeRisks)}
+      ${renderOverviewRecentNotes(recentNotes)}
+      ${renderOverviewRisks(activeRisks)}
+      ${renderOverviewPlans(activePlans)}
     `;
+
+    if (els.overviewActionsContent) {
+      els.overviewActionsContent.innerHTML = `
+        ${renderOverviewActions(liveActions)}
+        ${renderOverviewInspectionReadiness(state.latestProfileData, state.latestPlansData, state.latestRiskData)}
+      `;
+    }
   } catch (error) {
     els.overviewContent.innerHTML = `
       <div class="empty-state">
@@ -606,7 +981,162 @@ async function loadOverview(youngPersonId) {
         <small>${escapeHtml(error.message)}</small>
       </div>
     `;
+    if (els.overviewActionsContent) {
+      els.overviewActionsContent.innerHTML = `<div class="empty-state">Could not load actions.</div>`;
+    }
   }
+}
+
+function renderOverviewNarrativeSummary(data, activePlans, activeRisks) {
+  const summaryPoints = [
+    data?.placement_status ? `Current placement status: ${data.placement_status}` : null,
+    data?.summary_risk_level ? `Current recorded risk level: ${data.summary_risk_level}` : null,
+    activePlans.length ? `${activePlans.length} active support plan${activePlans.length === 1 ? "" : "s"}` : "No active support plans shown",
+    activeRisks.length ? `${activeRisks.length} active risk assessment${activeRisks.length === 1 ? "" : "s"}` : "No active risks shown",
+    data?.what_matters_to_me ? `What matters to the young person: ${data.what_matters_to_me}` : null
+  ].filter(Boolean);
+
+  return `
+    <section class="section-group">
+      <h3 class="group-title">Current picture</h3>
+      <div class="info-card-list">
+        ${summaryPoints.map((point) => `<div class="info-card-item">${escapeHtml(point)}</div>`).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderOverviewRecentNotes(rows) {
+  return `
+    <section class="section-group">
+      <h3 class="group-title">Recent daily notes</h3>
+      ${rows.length ? `
+        <div class="section-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Shift</th>
+                <th>Status</th>
+                <th>Presentation</th>
+                <th>Positives</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map((row) => `
+                <tr>
+                  <td>${escapeHtml(formatDate(row.note_date))}</td>
+                  <td>${escapeHtml(stringifyValue(row.shift_type))}</td>
+                  <td>${renderWorkflowPill(row.workflow_status)}</td>
+                  <td>${escapeHtml(trimForTable(
+                    getDailyNoteField(row, ["what_happened", "presentation"]) || "—",
+                    "presentation"
+                  ))}</td>
+                  <td>${escapeHtml(trimForTable(
+                    getDailyNoteField(row, ["what_happened", "positives"]) || "—",
+                    "positives"
+                  ))}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      ` : `<div class="empty-state">No daily notes found.</div>`}
+    </section>
+  `;
+}
+
+function renderOverviewRisks(rows) {
+  return `
+    <section class="section-group">
+      <h3 class="group-title">Live risks</h3>
+      ${rows.length ? renderTableSection("Live Risks", rows, [
+        "severity",
+        "category",
+        "title",
+        "concern_summary",
+        "review_date",
+        "status"
+      ], true) : `<div class="empty-state">No active risks found.</div>`}
+    </section>
+  `;
+}
+
+function renderOverviewPlans(rows) {
+  return `
+    <section class="section-group">
+      <h3 class="group-title">Current plans</h3>
+      ${rows.length ? renderTableSection("Current Plans", rows, [
+        "status",
+        "plan_type",
+        "title",
+        "presenting_need",
+        "review_date"
+      ], true) : `<div class="empty-state">No active plans found.</div>`}
+    </section>
+  `;
+}
+
+function renderOverviewActions(rows) {
+  return `
+    <section class="section-group">
+      <h3 class="group-title">Live actions and due items</h3>
+      ${rows.length ? `
+        <div class="section-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Type</th>
+                <th>Title</th>
+                <th>Due</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map((row) => `
+                <tr>
+                  <td>${renderStatusPill(row.compliance_status)}</td>
+                  <td>${escapeHtml(formatComplianceGroupTitle(row.compliance_type))}</td>
+                  <td>${escapeHtml(stringifyValue(row.title))}</td>
+                  <td>${escapeHtml(formatDate(row.due_date))}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      ` : `<div class="empty-state">No overdue or due soon items.</div>`}
+    </section>
+  `;
+}
+
+function renderOverviewInspectionReadiness(profileData, plansData, riskData) {
+  const alertsCount = Array.isArray(profileData?.alerts) ? profileData.alerts.length : 0;
+  const activePlanCount = (plansData || []).filter((row) => String(row.status || "").toLowerCase() === "active").length;
+  const activeRiskCount = (riskData || []).filter((row) => String(row.status || "").toLowerCase() === "active").length;
+
+  return `
+    <section class="section-group">
+      <h3 class="group-title">Inspection readiness snapshot</h3>
+      <div class="overview-grid">
+        <div class="overview-tile">
+          <h4>Active alerts</h4>
+          <p>${alertsCount}</p>
+        </div>
+        <div class="overview-tile">
+          <h4>Active plans</h4>
+          <p>${activePlanCount}</p>
+        </div>
+        <div class="overview-tile">
+          <h4>Active risks</h4>
+          <p>${activeRiskCount}</p>
+        </div>
+        <div class="overview-tile">
+          <h4>Daily notes</h4>
+          <p>${state.latestDailyNotesData.length}</p>
+        </div>
+      </div>
+    </section>
+  `;
 }
 
 async function loadProfile(youngPersonId) {
@@ -617,6 +1147,7 @@ async function loadProfile(youngPersonId) {
   try {
     const data = await fetchFromCandidates(endpoints.profile(youngPersonId));
     state.latestProfileData = data;
+    updateStickyYoungPersonBar();
 
     els.profileContent.innerHTML = `
       ${renderObjectSection("Young Person", data?.young_person || {}, ["id", "first_name", "last_name", "preferred_name", "date_of_birth", "gender", "ethnicity", "local_id_number", "placement_status", "summary_risk_level"])}
@@ -645,6 +1176,7 @@ async function loadPlans(youngPersonId) {
     const data = await fetchFromCandidates(endpoints.plans(youngPersonId));
     const rows = normaliseArrayResponse(data);
     state.latestPlansData = rows;
+    updateStickyYoungPersonBar();
 
     els.plansContent.innerHTML = renderArraySection("Support Plans", rows, [
       "status",
@@ -676,6 +1208,7 @@ async function loadRisk(youngPersonId) {
     const data = await fetchFromCandidates(endpoints.risk(youngPersonId));
     const rows = normaliseArrayResponse(data);
     state.latestRiskData = rows;
+    updateStickyYoungPersonBar();
 
     els.riskContent.innerHTML = renderArraySection("Risk Assessments", rows, [
       "severity",
@@ -702,21 +1235,18 @@ async function loadDailyNotes(youngPersonId) {
   if (!els.dailyNotesContent) return;
 
   els.dailyNotesContent.innerHTML = `<div class="empty-state">Loading daily notes...</div>`;
+  renderDailyNoteSidebarContext();
 
   try {
     const data = await fetchFromCandidates(endpoints.daily_notes(youngPersonId));
-    const rows = normaliseArrayResponse(data);
+    state.latestDailyNotesData = normaliseArrayResponse(data);
 
-    els.dailyNotesContent.innerHTML = renderArraySection("Daily Notes", rows, [
-      "note_date",
-      "shift_type",
-      "workflow_status",
-      "mood",
-      "presentation",
-      "positives",
-      "actions_required",
-      "author_first_name"
-    ]);
+    renderDailyNotesListFromState();
+    renderDailyNoteSidebarContext();
+
+    if (!state.activeDailyNoteId) {
+      createNewDailyNote({ quiet: true });
+    }
   } catch (error) {
     els.dailyNotesContent.innerHTML = `
       <div class="empty-state">
@@ -726,6 +1256,658 @@ async function loadDailyNotes(youngPersonId) {
       </div>
     `;
   }
+}
+
+function renderDailyNotesListFromState() {
+  if (!els.dailyNotesContent) return;
+
+  const statusFilter = els.dailyNoteStatusFilter ? els.dailyNoteStatusFilter.value : "all";
+  const shiftFilter = els.dailyNoteShiftFilter ? els.dailyNoteShiftFilter.value : "all";
+  const searchTerm = (els.dailyNoteSearch?.value || "").trim().toLowerCase();
+
+  let rows = [...state.latestDailyNotesData];
+
+  if (statusFilter !== "all") {
+    rows = rows.filter((row) => String(row.workflow_status || "").toLowerCase() === statusFilter);
+  }
+
+  if (shiftFilter !== "all") {
+    rows = rows.filter((row) => String(row.shift_type || "").toLowerCase() === shiftFilter);
+  }
+
+  if (searchTerm) {
+    rows = rows.filter((row) => {
+      const haystack = [
+        row.note_date,
+        row.shift_type,
+        row.workflow_status,
+        getDailyNoteField(row, ["what_happened", "presentation"]),
+        getDailyNoteField(row, ["what_happened", "main_events"]),
+        getDailyNoteField(row, ["what_happened", "positives"]),
+        getDailyNoteField(row, ["young_person_voice", "voice"]),
+        getDailyNoteField(row, ["follow_up", "actions_required"])
+      ].join(" ").toLowerCase();
+
+      return haystack.includes(searchTerm);
+    });
+  }
+
+  if (!rows.length) {
+    els.dailyNotesContent.innerHTML = `<div class="empty-state">No daily notes match the selected filters.</div>`;
+    return;
+  }
+
+  els.dailyNotesContent.innerHTML = `
+    <div class="daily-note-list">
+      ${rows.map((row) => {
+        const isActive = Number(state.activeDailyNoteId) === Number(row.id);
+        const presentation = getDailyNoteField(row, ["what_happened", "presentation"]) || row.summary?.presentation || "—";
+        const positives = getDailyNoteField(row, ["what_happened", "positives"]) || row.summary?.positives || "—";
+        const voice = getDailyNoteField(row, ["young_person_voice", "voice"]) || row.summary?.young_person_voice || "—";
+
+        return `
+          <button
+            class="record-card daily-note-card ${isActive ? "active" : ""}"
+            type="button"
+            data-note-id="${row.id}"
+          >
+            <div class="record-card-top">
+              <h4>${escapeHtml(formatDate(row.note_date))} • ${escapeHtml(stringifyValue(row.shift_type))}</h4>
+              <div>${renderWorkflowPill(row.workflow_status)}</div>
+            </div>
+
+            <div class="record-card-meta">
+              <span>Version ${escapeHtml(String(row.version_number || 1))}</span>
+              <span>${escapeHtml(row.author_name || "Unknown author")}</span>
+            </div>
+
+            <div class="record-card-section">
+              <strong>Presentation</strong>
+              <p>${escapeHtml(trimForTable(stringifyValue(presentation), "presentation"))}</p>
+            </div>
+
+            <div class="record-card-section">
+              <strong>Positive moments</strong>
+              <p>${escapeHtml(trimForTable(stringifyValue(positives), "positives"))}</p>
+            </div>
+
+            <div class="record-card-section">
+              <strong>Young person’s voice</strong>
+              <p>${escapeHtml(trimForTable(stringifyValue(voice), "young_person_voice"))}</p>
+            </div>
+          </button>
+        `;
+      }).join("")}
+    </div>
+  `;
+
+  els.dailyNotesContent.querySelectorAll("[data-note-id]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const noteId = Number(btn.dataset.noteId);
+      await loadSingleDailyNote(noteId);
+    });
+  });
+}
+
+function createNewDailyNote(options = {}) {
+  if (!state.selectedYoungPerson) {
+    showStatus("Please select a young person first.", true);
+    return;
+  }
+
+  if (state.dailyNoteIsDirty && !options.quiet) {
+    const proceed = window.confirm("You have unsaved changes. Start a new daily note anyway?");
+    if (!proceed) return;
+  }
+
+  resetDailyNoteForm();
+  prefillNewDailyNoteDefaults();
+  renderDailyNoteSidebarContext();
+  showStatus(options.quiet ? "Ready." : "New daily note ready.");
+}
+
+function prefillNewDailyNoteDefaults() {
+  if (els.dailyNoteDate) {
+    els.dailyNoteDate.value = toDateInputValue(new Date());
+  }
+  if (els.dailyNoteShiftType && !els.dailyNoteShiftType.value) {
+    els.dailyNoteShiftType.value = "day";
+  }
+  setDailyNoteSaveIndicator("Not saved yet");
+  setDailyNoteWorkflowIndicator("Draft");
+}
+
+function resetDailyNoteForm() {
+  state.activeDailyNoteId = null;
+  state.activeDailyNoteRecord = null;
+  state.activeDailyNoteVersions = [];
+  state.dailyNoteIsDirty = false;
+  state.dailyNoteLanguageHints = [];
+  clearTimeout(state.dailyNoteAutosaveTimer);
+
+  if (els.dailyNoteForm) {
+    els.dailyNoteForm.reset();
+  }
+
+  if (els.dailyNoteId) els.dailyNoteId.value = "";
+  if (els.dailyNoteVersionNumber) els.dailyNoteVersionNumber.value = "";
+  if (els.dailyNoteCurrentStatus) els.dailyNoteCurrentStatus.value = "draft";
+
+  if (els.dailyNoteFormTitle) {
+    els.dailyNoteFormTitle.textContent = "Create / Edit Daily Note";
+  }
+
+  setDailyNoteSaveIndicator("Not saved yet");
+  setDailyNoteWorkflowIndicator("Draft");
+
+  if (els.dailyNoteVersionHistory) {
+    els.dailyNoteVersionHistory.innerHTML = `<div class="empty-state">Version history will appear here.</div>`;
+  }
+
+  renderTherapeuticLanguageHints([]);
+}
+
+async function clearDailyNoteFormWithPrompt() {
+  if (state.dailyNoteIsDirty) {
+    const proceed = window.confirm("You have unsaved changes. Clear this form?");
+    if (!proceed) return;
+  }
+  createNewDailyNote();
+}
+
+async function loadSingleDailyNote(noteId) {
+  if (!state.selectedYoungPerson) return;
+
+  if (state.dailyNoteIsDirty && Number(state.activeDailyNoteId) !== Number(noteId)) {
+    const proceed = window.confirm("You have unsaved changes. Open another daily note anyway?");
+    if (!proceed) return;
+  }
+
+  try {
+    setDailyNoteSaveIndicator("Loading...");
+    const record = await fetchJson(
+      endpoints.daily_note_single(state.selectedYoungPerson.id, noteId)
+    );
+    state.activeDailyNoteId = noteId;
+    state.activeDailyNoteRecord = record;
+    fillDailyNoteForm(record);
+    await loadDailyNoteVersions(noteId);
+    renderDailyNotesListFromState();
+    renderDailyNoteSidebarContext();
+    setDailyNoteSaveIndicator("Loaded");
+    showStatus("Daily note loaded.");
+  } catch (error) {
+    console.error(error);
+    showStatus(`Could not load daily note: ${error.message}`, true);
+    setDailyNoteSaveIndicator("Load failed");
+  }
+}
+
+function fillDailyNoteForm(record) {
+  const content = record?.content_json || {};
+  const basicContext = content.basic_context || {};
+  const whatHappened = content.what_happened || {};
+  const pace = content.pace || {};
+  const voice = content.young_person_voice || {};
+  const staffResponse = content.staff_response || {};
+  const followUp = content.follow_up || {};
+  const evidence = content.evidence || {};
+  const reviewMeta = content.review_meta || {};
+
+  state.dailyNoteIsDirty = false;
+
+  if (els.dailyNoteFormTitle) {
+    els.dailyNoteFormTitle.textContent = `Edit Daily Note #${record.id}`;
+  }
+
+  if (els.dailyNoteId) els.dailyNoteId.value = record.id || "";
+  if (els.dailyNoteVersionNumber) els.dailyNoteVersionNumber.value = record.version_number || "";
+  if (els.dailyNoteCurrentStatus) els.dailyNoteCurrentStatus.value = record.workflow_status || "draft";
+
+  if (els.dailyNoteDate) els.dailyNoteDate.value = toDateInputValue(basicContext.note_date || record.note_date);
+  if (els.dailyNoteShiftType) els.dailyNoteShiftType.value = basicContext.shift_type || record.shift_type || "day";
+  if (els.dailyNoteCustomShift) els.dailyNoteCustomShift.value = basicContext.custom_shift_label || "";
+  if (els.dailyNoteStaffOnShift) els.dailyNoteStaffOnShift.value = basicContext.staff_on_shift || "";
+  if (els.dailyNoteLocation) els.dailyNoteLocation.value = basicContext.location || "";
+  if (els.dailyNoteTags) els.dailyNoteTags.value = basicContext.tags || "";
+  if (els.dailyNoteSignificantEvent) els.dailyNoteSignificantEvent.checked = Boolean(basicContext.significant_event || record.significant_event);
+  if (els.dailyNoteManagerReviewRequired) els.dailyNoteManagerReviewRequired.checked = Boolean(basicContext.manager_review_required || record.manager_review_required);
+
+  if (els.dailyNotePresentation) els.dailyNotePresentation.value = whatHappened.presentation || "";
+  if (els.dailyNoteMainEvents) els.dailyNoteMainEvents.value = whatHappened.main_events || "";
+  if (els.dailyNoteRoutineEngagement) els.dailyNoteRoutineEngagement.value = whatHappened.routine_engagement || "";
+  if (els.dailyNoteEducationUpdate) els.dailyNoteEducationUpdate.value = whatHappened.education_update || "";
+  if (els.dailyNoteHealthUpdate) els.dailyNoteHealthUpdate.value = whatHappened.health_update || "";
+  if (els.dailyNoteFamilyUpdate) els.dailyNoteFamilyUpdate.value = whatHappened.family_update || "";
+  if (els.dailyNoteWorries) els.dailyNoteWorries.value = whatHappened.worries || "";
+  if (els.dailyNotePositives) els.dailyNotePositives.value = whatHappened.positives || "";
+
+  if (els.dailyNotePacePlayfulnessStatus) els.dailyNotePacePlayfulnessStatus.value = pace?.playfulness?.status || "not_used";
+  if (els.dailyNotePacePlayfulness) els.dailyNotePacePlayfulness.value = pace?.playfulness?.reflection || "";
+  if (els.dailyNotePaceAcceptanceStatus) els.dailyNotePaceAcceptanceStatus.value = pace?.acceptance?.status || "not_evident";
+  if (els.dailyNotePaceAcceptance) els.dailyNotePaceAcceptance.value = pace?.acceptance?.reflection || "";
+  if (els.dailyNotePaceCuriosityTags) els.dailyNotePaceCuriosityTags.value = Array.isArray(pace?.curiosity?.tags) ? pace.curiosity.tags.join(", ") : "";
+  if (els.dailyNotePaceCuriosity) els.dailyNotePaceCuriosity.value = pace?.curiosity?.reflection || "";
+  if (els.dailyNotePaceEmpathyTags) els.dailyNotePaceEmpathyTags.value = Array.isArray(pace?.empathy?.tags) ? pace.empathy.tags.join(", ") : "";
+  if (els.dailyNotePaceEmpathy) els.dailyNotePaceEmpathy.value = pace?.empathy?.reflection || "";
+
+  if (els.dailyNoteYoungPersonVoice) els.dailyNoteYoungPersonVoice.value = voice.voice || "";
+  if (els.dailyNoteCommunicationStyle) els.dailyNoteCommunicationStyle.value = voice.communication_style || "";
+
+  if (els.dailyNoteStaffResponse) els.dailyNoteStaffResponse.value = staffResponse.staff_response || "";
+  if (els.dailyNoteWhatHelped) els.dailyNoteWhatHelped.value = staffResponse.what_helped || "";
+  if (els.dailyNoteWhatDidNotHelp) els.dailyNoteWhatDidNotHelp.value = staffResponse.what_did_not_help || "";
+  if (els.dailyNoteImpact) els.dailyNoteImpact.value = staffResponse.impact || "";
+
+  if (els.dailyNoteActionsRequired) els.dailyNoteActionsRequired.value = followUp.actions_required || "";
+  if (els.dailyNoteDiscussInHandover) els.dailyNoteDiscussInHandover.checked = Boolean(followUp.discuss_in_handover);
+  if (els.dailyNoteUpdateRiskAssessment) els.dailyNoteUpdateRiskAssessment.checked = Boolean(followUp.update_risk_assessment);
+  if (els.dailyNoteLinkMonthlyReview) els.dailyNoteLinkMonthlyReview.checked = Boolean(followUp.link_monthly_review);
+
+  if (els.dailyNoteLinkedStandards) els.dailyNoteLinkedStandards.value = Array.isArray(evidence.linked_standards) ? evidence.linked_standards.join(", ") : "";
+  if (els.dailyNoteLinkedRisks) els.dailyNoteLinkedRisks.value = Array.isArray(evidence.linked_risks) ? evidence.linked_risks.join(", ") : "";
+  if (els.dailyNoteLinkedPlans) els.dailyNoteLinkedPlans.value = Array.isArray(evidence.linked_plans) ? evidence.linked_plans.join(", ") : "";
+  if (els.dailyNoteEvidenceImpactStatement) els.dailyNoteEvidenceImpactStatement.value = evidence.impact_statement || "";
+
+  if (els.dailyNoteChangeReason) els.dailyNoteChangeReason.value = reviewMeta.change_reason || record.change_reason || "";
+  if (els.dailyNoteManagerReviewComment) els.dailyNoteManagerReviewComment.value = reviewMeta.manager_review_comment || record.manager_review_comment || "";
+
+  setDailyNoteWorkflowIndicator(record.workflow_status || "draft");
+  setDailyNoteSaveIndicator("Loaded");
+  maybeRunTherapeuticLanguageCheck();
+}
+
+function collectDailyNotePayload() {
+  return {
+    home_id: state.selectedYoungPerson?.home_id || null,
+    note_date: cleanValue(els.dailyNoteDate?.value),
+    shift_type: cleanValue(els.dailyNoteShiftType?.value) || "day",
+    custom_shift_label: cleanValue(els.dailyNoteCustomShift?.value),
+    staff_on_shift: cleanValue(els.dailyNoteStaffOnShift?.value),
+    location: cleanValue(els.dailyNoteLocation?.value),
+    tags: cleanValue(els.dailyNoteTags?.value),
+    significant_event: Boolean(els.dailyNoteSignificantEvent?.checked),
+    manager_review_required: Boolean(els.dailyNoteManagerReviewRequired?.checked),
+
+    presentation: cleanValue(els.dailyNotePresentation?.value),
+    main_events: cleanValue(els.dailyNoteMainEvents?.value),
+    routine_engagement: cleanValue(els.dailyNoteRoutineEngagement?.value),
+    education_update: cleanValue(els.dailyNoteEducationUpdate?.value),
+    health_update: cleanValue(els.dailyNoteHealthUpdate?.value),
+    family_update: cleanValue(els.dailyNoteFamilyUpdate?.value),
+    worries: cleanValue(els.dailyNoteWorries?.value),
+    positives: cleanValue(els.dailyNotePositives?.value),
+
+    pace_playfulness_status: cleanValue(els.dailyNotePacePlayfulnessStatus?.value) || "not_used",
+    pace_playfulness: cleanValue(els.dailyNotePacePlayfulness?.value),
+    pace_acceptance_status: cleanValue(els.dailyNotePaceAcceptanceStatus?.value) || "not_evident",
+    pace_acceptance: cleanValue(els.dailyNotePaceAcceptance?.value),
+    pace_curiosity_tags: cleanValue(els.dailyNotePaceCuriosityTags?.value),
+    pace_curiosity: cleanValue(els.dailyNotePaceCuriosity?.value),
+    pace_empathy_tags: cleanValue(els.dailyNotePaceEmpathyTags?.value),
+    pace_empathy: cleanValue(els.dailyNotePaceEmpathy?.value),
+
+    young_person_voice: cleanValue(els.dailyNoteYoungPersonVoice?.value),
+    communication_style: cleanValue(els.dailyNoteCommunicationStyle?.value),
+
+    staff_response: cleanValue(els.dailyNoteStaffResponse?.value),
+    what_helped: cleanValue(els.dailyNoteWhatHelped?.value),
+    what_did_not_help: cleanValue(els.dailyNoteWhatDidNotHelp?.value),
+    impact: cleanValue(els.dailyNoteImpact?.value),
+
+    actions_required: cleanValue(els.dailyNoteActionsRequired?.value),
+    discuss_in_handover: Boolean(els.dailyNoteDiscussInHandover?.checked),
+    update_risk_assessment: Boolean(els.dailyNoteUpdateRiskAssessment?.checked),
+    link_monthly_review: Boolean(els.dailyNoteLinkMonthlyReview?.checked),
+
+    linked_standards: cleanValue(els.dailyNoteLinkedStandards?.value),
+    linked_risks: cleanValue(els.dailyNoteLinkedRisks?.value),
+    linked_plans: cleanValue(els.dailyNoteLinkedPlans?.value),
+    evidence_impact_statement: cleanValue(els.dailyNoteEvidenceImpactStatement?.value),
+
+    change_reason: cleanValue(els.dailyNoteChangeReason?.value),
+    manager_review_comment: cleanValue(els.dailyNoteManagerReviewComment?.value),
+
+    author_id: 1
+  };
+}
+
+async function saveDailyNote(saveAs = "draft", options = {}) {
+  if (!state.selectedYoungPerson) {
+    showStatus("Please select a young person first.", true);
+    return;
+  }
+
+  const payload = collectDailyNotePayload();
+
+  if (!payload.note_date) {
+    showStatus("Daily note date is required.", true);
+    return;
+  }
+
+  if (!payload.shift_type) {
+    showStatus("Shift type is required.", true);
+    return;
+  }
+
+  setDailyNoteSaveIndicator(options.autosave ? "Autosaving..." : "Saving...");
+
+  try {
+    let result = null;
+    const noteId = cleanValue(els.dailyNoteId?.value);
+
+    if (noteId) {
+      result = await fetchJson(
+        endpoints.daily_note_update(state.selectedYoungPerson.id, noteId),
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            ...payload,
+            edited_by: 1,
+            save_as: saveAs === "completed" ? "completed" : "draft"
+          })
+        }
+      );
+    } else {
+      result = await fetchJson(
+        endpoints.daily_note_create(state.selectedYoungPerson.id),
+        {
+          method: "POST",
+          body: JSON.stringify({
+            ...payload,
+            save_as: saveAs === "completed" ? "completed" : "draft"
+          })
+        }
+      );
+    }
+
+    state.dailyNoteIsDirty = false;
+    state.dailyNoteLastSavedAt = new Date();
+
+    if (result?.therapeutic_language_suggestions) {
+      renderTherapeuticLanguageHints(result.therapeutic_language_suggestions);
+    }
+
+    setDailyNoteSaveIndicator(
+      options.autosave
+        ? `Autosaved ${formatTimeOnly(state.dailyNoteLastSavedAt)}`
+        : `Saved ${formatTimeOnly(state.dailyNoteLastSavedAt)}`
+    );
+
+    if (!options.silent) {
+      showStatus(saveAs === "completed" ? "Daily note completed." : "Daily note saved.");
+    }
+
+    await loadDailyNotes(state.selectedYoungPerson.id);
+
+    if (result?.daily_note_id) {
+      await loadSingleDailyNote(result.daily_note_id);
+    }
+
+    await loadActionBarData();
+  } catch (error) {
+    console.error(error);
+    setDailyNoteSaveIndicator("Save failed");
+    if (!options.silent) {
+      showStatus(`Could not save daily note: ${error.message}`, true);
+    }
+    throw error;
+  }
+}
+
+async function markDailyNoteReviewed() {
+  if (!state.selectedYoungPerson) {
+    showStatus("Please select a young person first.", true);
+    return;
+  }
+
+  const noteId = cleanValue(els.dailyNoteId?.value);
+  if (!noteId) {
+    showStatus("Please open or save a daily note before marking it reviewed.", true);
+    return;
+  }
+
+  try {
+    await fetchJson(
+      endpoints.daily_note_review(state.selectedYoungPerson.id, noteId),
+      {
+        method: "POST",
+        body: JSON.stringify({
+          reviewed_by: 1,
+          manager_review_comment: cleanValue(els.dailyNoteManagerReviewComment?.value),
+          mark_as: "reviewed"
+        })
+      }
+    );
+
+    showStatus("Daily note marked as reviewed.");
+    await loadDailyNotes(state.selectedYoungPerson.id);
+    await loadSingleDailyNote(Number(noteId));
+    await loadActionBarData();
+  } catch (error) {
+    console.error(error);
+    showStatus(`Could not mark daily note reviewed: ${error.message}`, true);
+  }
+}
+
+async function loadDailyNoteVersions(noteId) {
+  if (!state.selectedYoungPerson || !noteId) return;
+
+  try {
+    const versions = await fetchJson(
+      endpoints.daily_note_versions(state.selectedYoungPerson.id, noteId)
+    );
+    state.activeDailyNoteVersions = normaliseArrayResponse(versions);
+    renderDailyNoteVersionHistory();
+  } catch (error) {
+    console.error(error);
+    if (els.dailyNoteVersionHistory) {
+      els.dailyNoteVersionHistory.innerHTML = `
+        <div class="empty-state">
+          Could not load version history.
+          <br />
+          <small>${escapeHtml(error.message)}</small>
+        </div>
+      `;
+    }
+  }
+}
+
+function renderDailyNoteVersionHistory() {
+  if (!els.dailyNoteVersionHistory) return;
+
+  const rows = state.activeDailyNoteVersions || [];
+  if (!rows.length) {
+    els.dailyNoteVersionHistory.innerHTML = `<div class="empty-state">Version history will appear here.</div>`;
+    return;
+  }
+
+  els.dailyNoteVersionHistory.innerHTML = `
+    <div class="version-history-list">
+      ${rows.map((row) => `
+        <button
+          type="button"
+          class="version-history-item"
+          data-version-id="${row.id}"
+        >
+          <div class="version-history-top">
+            <strong>Version ${escapeHtml(String(row.version_number || 1))}</strong>
+            <span>${renderWorkflowPill(row.workflow_status)}</span>
+          </div>
+          <div class="version-history-meta">
+            <span>${escapeHtml(row.edited_by_name || "Unknown user")}</span>
+            <span>${escapeHtml(formatDateTime(row.edited_at))}</span>
+          </div>
+          <div class="version-history-reason">
+            ${escapeHtml(row.change_reason || "No reason recorded")}
+          </div>
+        </button>
+      `).join("")}
+    </div>
+  `;
+
+  els.dailyNoteVersionHistory.querySelectorAll("[data-version-id]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const versionId = Number(btn.dataset.versionId);
+      const version = rows.find((row) => Number(row.id) === versionId);
+      if (version) {
+        openRecordDrawer("Daily Note Version", version);
+      }
+    });
+  });
+}
+
+function renderDailyNoteSidebarContext() {
+  renderDailyNoteSidebarTodayInfo();
+  renderDailyNoteSidebarRisks();
+  renderDailyNoteSidebarActions();
+}
+
+function renderDailyNoteSidebarTodayInfo() {
+  if (!els.dailyNoteSidebarTodayInfo) return;
+
+  const profile = state.latestProfileData || {};
+  const alerts = Array.isArray(profile?.alerts) ? profile.alerts : [];
+  const activePlans = state.latestPlansData.filter((row) => String(row.status || "").toLowerCase() === "active");
+
+  els.dailyNoteSidebarTodayInfo.innerHTML = `
+    <div class="support-lines">
+      <div><strong>Alerts:</strong> ${alerts.length ? escapeHtml(alerts.map((a) => a.title || a.description).slice(0, 3).join(" • ")) : "None recorded"}</div>
+      <div><strong>Active plans:</strong> ${activePlans.length}</div>
+      <div><strong>Placement status:</strong> ${escapeHtml(stringifyValue(state.selectedYoungPerson?.placement_status))}</div>
+      <div><strong>Risk level:</strong> ${escapeHtml(stringifyValue(state.selectedYoungPerson?.summary_risk_level))}</div>
+    </div>
+  `;
+}
+
+function renderDailyNoteSidebarRisks() {
+  if (!els.dailyNoteSidebarRisks) return;
+
+  const risks = state.latestRiskData || [];
+
+  if (!risks.length) {
+    els.dailyNoteSidebarRisks.innerHTML = `<div class="empty-state">No current risks loaded.</div>`;
+    return;
+  }
+
+  els.dailyNoteSidebarRisks.innerHTML = `
+    <ul class="support-list">
+      ${risks.slice(0, 6).map((risk) => `
+        <li>
+          <strong>${escapeHtml(stringifyValue(risk.title || risk.category))}</strong>
+          <div>${escapeHtml(stringifyValue(risk.concern_summary || risk.category))}</div>
+        </li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+function renderDailyNoteSidebarActions() {
+  if (!els.dailyNoteSidebarActions) return;
+
+  const complianceItems = Array.isArray(state.latestComplianceData?.compliance_items)
+    ? state.latestComplianceData.compliance_items
+    : [];
+  const liveItems = complianceItems.filter((item) => item.compliance_status !== "ok");
+
+  if (!liveItems.length) {
+    els.dailyNoteSidebarActions.innerHTML = `<div class="empty-state">No active actions loaded.</div>`;
+    return;
+  }
+
+  els.dailyNoteSidebarActions.innerHTML = `
+    <ul class="support-list">
+      ${liveItems.slice(0, 6).map((item) => `
+        <li>
+          <strong>${escapeHtml(stringifyValue(item.title))}</strong>
+          <div>${escapeHtml(formatComplianceGroupTitle(item.compliance_type))} • ${escapeHtml(formatDate(item.due_date))}</div>
+        </li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+async function maybeRunTherapeuticLanguageCheck() {
+  const fields = [
+    els.dailyNotePresentation?.value,
+    els.dailyNoteMainEvents?.value,
+    els.dailyNoteRoutineEngagement?.value,
+    els.dailyNoteEducationUpdate?.value,
+    els.dailyNoteHealthUpdate?.value,
+    els.dailyNoteFamilyUpdate?.value,
+    els.dailyNoteWorries?.value,
+    els.dailyNotePositives?.value,
+    els.dailyNotePacePlayfulness?.value,
+    els.dailyNotePaceAcceptance?.value,
+    els.dailyNotePaceCuriosity?.value,
+    els.dailyNotePaceEmpathy?.value,
+    els.dailyNoteYoungPersonVoice?.value,
+    els.dailyNoteCommunicationStyle?.value,
+    els.dailyNoteStaffResponse?.value,
+    els.dailyNoteWhatHelped?.value,
+    els.dailyNoteWhatDidNotHelp?.value,
+    els.dailyNoteImpact?.value,
+    els.dailyNoteActionsRequired?.value,
+    els.dailyNoteEvidenceImpactStatement?.value
+  ].filter(Boolean);
+
+  if (!fields.length) {
+    renderTherapeuticLanguageHints([]);
+    return;
+  }
+
+  clearTimeout(maybeRunTherapeuticLanguageCheck.timer);
+  maybeRunTherapeuticLanguageCheck.timer = setTimeout(async () => {
+    try {
+      const result = await fetchJson(endpoints.daily_note_therapeutic_language_check, {
+        method: "POST",
+        body: JSON.stringify({
+          text_fields: fields
+        })
+      });
+      renderTherapeuticLanguageHints(result?.suggestions || []);
+    } catch (_error) {
+      // soft feature - ignore quietly
+    }
+  }, 500);
+}
+
+function renderTherapeuticLanguageHints(suggestions) {
+  state.dailyNoteLanguageHints = suggestions || [];
+
+  if (!els.therapeuticLanguageHints) return;
+
+  if (!state.dailyNoteLanguageHints.length) {
+    els.therapeuticLanguageHints.innerHTML = `
+      <p class="muted-copy">No wording prompts at the moment.</p>
+      <ul class="support-list">
+        <li><strong>Try:</strong> clear, kind, factual recording</li>
+        <li><strong>Use:</strong> curiosity, empathy and child-centred language</li>
+      </ul>
+    `;
+    return;
+  }
+
+  els.therapeuticLanguageHints.innerHTML = `
+    <p class="muted-copy">Suggested therapeutic wording:</p>
+    <ul class="support-list">
+      ${state.dailyNoteLanguageHints.map((item) => `
+        <li>
+          <strong>Try:</strong> ${escapeHtml(item.suggestion)}
+          <div>${escapeHtml(item.reason || "")}</div>
+        </li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+function getDailyNoteField(row, path) {
+  let current = row?.content_json || row || {};
+  for (const key of path) {
+    if (!current || typeof current !== "object") return null;
+    current = current[key];
+  }
+  return current ?? null;
 }
 
 async function loadIncidents(youngPersonId) {
@@ -1650,8 +2832,8 @@ function renderWorkflowPill(value) {
   const lower = String(value || "").toLowerCase();
   let cls = "status-grey";
 
-  if (lower === "approved") cls = "status-green";
-  else if (lower === "submitted") cls = "status-blue";
+  if (lower === "reviewed" || lower === "approved") cls = "status-green";
+  else if (lower === "submitted" || lower === "completed" || lower === "amended") cls = "status-blue";
   else if (lower === "returned") cls = "status-red";
   else if (lower === "draft") cls = "status-grey";
 
@@ -1770,7 +2952,8 @@ function formatComplianceGroupTitle(value) {
     risk_review: "Risk Reviews",
     keywork_follow_up: "Key Work Follow-up",
     health_follow_up: "Health Follow-up",
-    family_follow_up: "Family Follow-up"
+    family_follow_up: "Family Follow-up",
+    daily_note_follow_up: "Daily Note Follow-up"
   };
   return map[value] || formatLabel(value);
 }
@@ -1779,6 +2962,12 @@ function getFullName(person) {
   const preferred = person.preferred_name ? ` (${person.preferred_name})` : "";
   const name = `${person.first_name || ""} ${person.last_name || ""}`.trim();
   return name ? `${name}${preferred}` : `Young Person #${person.id}`;
+}
+
+function getInitials(person) {
+  const parts = [person?.first_name, person?.last_name].filter(Boolean);
+  if (!parts.length) return "YP";
+  return parts.map((part) => String(part).charAt(0).toUpperCase()).slice(0, 2).join("");
 }
 
 function setText(el, value) {
@@ -1798,7 +2987,18 @@ function parseNullableInt(value) {
 }
 
 function trimForTable(value, key) {
-  const max = ["summary", "description", "presenting_need", "concern_summary", "positives", "actions_required", "what_matters_to_me", "rationale"].includes(key)
+  const max = [
+    "summary",
+    "description",
+    "presenting_need",
+    "concern_summary",
+    "positives",
+    "actions_required",
+    "what_matters_to_me",
+    "rationale",
+    "presentation",
+    "young_person_voice"
+  ].includes(key)
     ? 80
     : 48;
 
@@ -1845,7 +3045,9 @@ function formatFieldValue(key, value) {
     "submitted_at",
     "next_action_date",
     "due_date",
-    "generated_at"
+    "generated_at",
+    "last_edited_at",
+    "edited_at"
   ];
 
   if (dateKeys.includes(key)) {
@@ -1895,6 +3097,15 @@ function formatDateTime(value) {
   })}`;
 }
 
+function formatTimeOnly(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
 function formatMonthApiValue(value) {
   if (!value) return "";
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
@@ -1920,8 +3131,8 @@ function statusColour(value) {
 
   if (lower === "overdue" || lower === "high" || lower === "returned") return "status-red";
   if (lower === "due_soon" || lower === "medium" || lower === "pending") return "status-amber";
-  if (lower === "ok" || lower === "active" || lower === "approved" || lower === "complete" || lower === "open") return "status-green";
-  if (lower === "submitted" || lower === "info") return "status-blue";
+  if (lower === "ok" || lower === "active" || lower === "approved" || lower === "reviewed" || lower === "complete" || lower === "open") return "status-green";
+  if (lower === "submitted" || lower === "completed" || lower === "amended" || lower === "info") return "status-blue";
 
   return "status-grey";
 }
