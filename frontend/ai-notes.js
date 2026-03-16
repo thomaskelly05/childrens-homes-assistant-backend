@@ -1,9 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
     const ACCESS_TOKEN_KEY = "access_token";
-    const LOCAL_TEMPLATE_KEY = "indicare_custom_templates_v5";
-    const LOCAL_DRAFT_KEY = "indicare_ai_notes_draft_v5";
-    const LOCAL_HISTORY_KEY = "indicare_ai_notes_history_v5";
-    const LOCAL_VERSIONS_KEY = "indicare_ai_notes_versions_v1";
+    const LOCAL_TEMPLATE_KEY = "indicare_custom_templates_v6";
+    const LOCAL_DRAFT_KEY = "indicare_ai_notes_draft_v6";
+    const LOCAL_HISTORY_KEY = "indicare_ai_notes_history_v6";
+    const LOCAL_VERSIONS_KEY = "indicare_ai_notes_versions_v2";
 
     const builtInTemplates = [
         {
@@ -264,6 +264,11 @@ document.addEventListener("DOMContentLoaded", () => {
         reviewChronologyScoreEl: document.getElementById("reviewChronologyScore"),
         reviewChronologyTextEl: document.getElementById("reviewChronologyText"),
 
+        reviewSafeguardingCardEl: document.getElementById("reviewSafeguardingCard"),
+        reviewVagueCardEl: document.getElementById("reviewVagueCard"),
+        reviewPersonCentredCardEl: document.getElementById("reviewPersonCentredCard"),
+        reviewChronologyCardEl: document.getElementById("reviewChronologyCard"),
+
         openVersionsDrawerBtn: document.getElementById("openVersionsDrawerBtn"),
         versionsDrawerEl: document.getElementById("versionsDrawer"),
         closeVersionsDrawerBtn: document.getElementById("closeVersionsDrawerBtn"),
@@ -291,7 +296,9 @@ document.addEventListener("DOMContentLoaded", () => {
         isTranscriptVisible: true,
         extractedActions: [],
         hasUnsavedChanges: false,
-        versions: []
+        versions: [],
+        isHydrating: false,
+        serverHistoryLoaded: false
     };
 
     function getAccessToken() {
@@ -442,6 +449,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function openWorkflowModal() {
         openModal(els.workflowModalEl);
+        document.body.classList.add("workspace-open");
     }
 
     function closeWorkflowModal(force = false) {
@@ -450,6 +458,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!confirmed) return;
         }
         closeModal(els.workflowModalEl);
+        document.body.classList.remove("workspace-open");
     }
 
     function openVersionsDrawer() {
@@ -495,10 +504,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function populateTemplates() {
         if (!els.templateSelectEl) return;
+        const currentValue = els.templateSelectEl.value;
         const allTemplates = getAllTemplates();
         els.templateSelectEl.innerHTML = allTemplates
             .map(template => `<option value="${template.id}">${template.name}</option>`)
             .join("");
+
+        if (currentValue && els.templateSelectEl.querySelector(`option[value="${currentValue}"]`)) {
+            els.templateSelectEl.value = currentValue;
+        }
+
         updateSelectedTemplateUI();
     }
 
@@ -528,7 +543,6 @@ document.addEventListener("DOMContentLoaded", () => {
             els.youngPersonNameEl?.value?.trim() || "",
             els.meetingDateEl?.value || new Date().toISOString().slice(0, 10)
         ].filter(Boolean);
-
         return parts.join(" - ");
     }
 
@@ -635,11 +649,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    function setReviewCardState(elementId, stateName) {
-        const el = document.getElementById(elementId);
-        if (!el) return;
-        el.classList.remove("is-good", "is-warning", "is-alert");
-        if (stateName) el.classList.add(stateName);
+    function setReviewCardState(cardEl, stateName) {
+        if (!cardEl) return;
+        cardEl.classList.remove("is-good", "is-warning", "is-alert");
+        if (stateName) cardEl.classList.add(stateName);
     }
 
     function scoreReviewStrip(text) {
@@ -666,8 +679,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 ? `${safeguardingMatches[0]}${safeguardingMatches.length > 1 ? " and others detected" : " detected"}`
                 : "No markers detected";
         }
-        setReviewCardState("reviewSafeguardingCount", safeguardingMatches.length ? "is-alert" : "is-good");
-        setReviewCardState("reviewSafeguardingText", safeguardingMatches.length ? "is-alert" : "is-good");
+        setReviewCardState(els.reviewSafeguardingCardEl, safeguardingMatches.length ? "is-alert" : "is-good");
 
         if (els.reviewVagueCountEl) {
             els.reviewVagueCountEl.textContent = String(vagueMatches.length);
@@ -677,8 +689,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 ? "Consider making wording more factual"
                 : "Writing appears factual";
         }
-        setReviewCardState("reviewVagueCount", vagueMatches.length > 2 ? "is-warning" : vagueMatches.length ? "is-warning" : "is-good");
-        setReviewCardState("reviewVagueText", vagueMatches.length ? "is-warning" : "is-good");
+        setReviewCardState(els.reviewVagueCardEl, vagueMatches.length ? "is-warning" : "is-good");
 
         if (els.reviewPersonCentredScoreEl) {
             els.reviewPersonCentredScoreEl.textContent =
@@ -691,8 +702,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 personCentredMatches.length >= 2 ? "Can still be strengthened" :
                 "Add more wishes, feelings and choices";
         }
-        setReviewCardState("reviewPersonCentredScore", personCentredMatches.length >= 4 ? "is-good" : personCentredMatches.length >= 2 ? "is-warning" : "is-alert");
-        setReviewCardState("reviewPersonCentredText", personCentredMatches.length >= 4 ? "is-good" : personCentredMatches.length >= 2 ? "is-warning" : "is-alert");
+        setReviewCardState(
+            els.reviewPersonCentredCardEl,
+            personCentredMatches.length >= 4 ? "is-good" :
+            personCentredMatches.length >= 2 ? "is-warning" : "is-alert"
+        );
 
         if (els.reviewChronologyScoreEl) {
             els.reviewChronologyScoreEl.textContent =
@@ -705,8 +719,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 chronologyMatches.length >= 2 ? "Some sequencing detected" :
                 "Consider clarifying timings";
         }
-        setReviewCardState("reviewChronologyScore", chronologyMatches.length >= 4 ? "is-good" : chronologyMatches.length >= 2 ? "is-warning" : "is-alert");
-        setReviewCardState("reviewChronologyText", chronologyMatches.length >= 4 ? "is-good" : chronologyMatches.length >= 2 ? "is-warning" : "is-alert");
+        setReviewCardState(
+            els.reviewChronologyCardEl,
+            chronologyMatches.length >= 4 ? "is-good" :
+            chronologyMatches.length >= 2 ? "is-warning" : "is-alert"
+        );
 
         return { safeguardingMatches, vagueMatches, personCentredMatches, chronologyMatches };
     }
@@ -772,7 +789,7 @@ document.addEventListener("DOMContentLoaded", () => {
             createdAt: new Date().toISOString()
         };
 
-        const next = [version, ...getVersions()].slice(0, 20);
+        const next = [version, ...getVersions()].slice(0, 30);
         state.versions = next;
         saveVersions(next);
         renderVersions();
@@ -802,6 +819,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="version-item-actions">
                     <button class="btn btn-light btn-tiny" type="button" data-version-restore="${version.id}">Restore</button>
                     <button class="btn btn-light btn-tiny" type="button" data-version-copy="${version.id}">Copy</button>
+                    <button class="btn btn-danger btn-tiny" type="button" data-version-delete="${version.id}">Delete</button>
                 </div>
             `;
             els.versionsListEl.appendChild(card);
@@ -822,7 +840,16 @@ document.addEventListener("DOMContentLoaded", () => {
         showToast("Previous version restored.");
     }
 
+    function deleteVersion(id) {
+        const next = getVersions().filter(v => v.id !== id);
+        saveVersions(next);
+        state.versions = next;
+        renderVersions();
+        showToast("Version deleted.");
+    }
+
     function markDirty() {
+        if (state.isHydrating) return;
         state.hasUnsavedChanges = true;
         setSaveState("is-dirty", "Unsaved changes");
         clearTimeout(state.autosaveTimeout);
@@ -836,8 +863,17 @@ document.addEventListener("DOMContentLoaded", () => {
         setSaveState("is-saved", "Saved");
     }
 
+    function getLocalDraft() {
+        try {
+            return JSON.parse(localStorage.getItem(LOCAL_DRAFT_KEY) || "null");
+        } catch {
+            return null;
+        }
+    }
+
     function persistDraftLocally() {
         const payload = {
+            currentNoteId: state.currentNoteId,
             transcript: els.transcriptEl?.value || "",
             finalNote: els.finalNoteEl?.value || "",
             aiDraft: els.aiDraftEl?.value || "",
@@ -858,9 +894,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function restoreLocalDraft() {
         try {
-            const raw = localStorage.getItem(LOCAL_DRAFT_KEY);
-            if (!raw) return;
-            const draft = JSON.parse(raw);
+            const draft = getLocalDraft();
+            if (!draft) return;
+
+            state.isHydrating = true;
+            state.currentNoteId = draft.currentNoteId || null;
 
             if (els.transcriptEl) els.transcriptEl.value = draft.transcript || "";
             if (els.finalNoteEl) els.finalNoteEl.value = draft.finalNote || "";
@@ -871,8 +909,8 @@ document.addEventListener("DOMContentLoaded", () => {
             if (els.youngPersonNameEl) els.youngPersonNameEl.value = draft.youngPersonName || "";
             if (els.meetingDateEl) els.meetingDateEl.value = draft.meetingDate || "";
             if (els.locationContextEl) els.locationContextEl.value = draft.locationContext || "";
-            if (els.serviceTypeEl) els.serviceTypeEl.value = draft.serviceType || els.serviceTypeEl.value;
-            if (els.shiftTypeEl) els.shiftTypeEl.value = draft.shiftType || els.shiftTypeEl.value;
+            if (els.serviceTypeEl && draft.serviceType) els.serviceTypeEl.value = draft.serviceType;
+            if (els.shiftTypeEl && draft.shiftType) els.shiftTypeEl.value = draft.shiftType;
 
             if (draft.templateId && els.templateSelectEl?.querySelector(`option[value="${draft.templateId}"]`)) {
                 els.templateSelectEl.value = draft.templateId;
@@ -882,7 +920,10 @@ document.addEventListener("DOMContentLoaded", () => {
             renderExtractedActions();
             updateSelectedTemplateUI();
             analyseDocument();
+            setNoteMode(Boolean(state.currentNoteId));
+            state.isHydrating = false;
         } catch (error) {
+            state.isHydrating = false;
             console.warn("Could not restore draft", error);
         }
     }
@@ -899,22 +940,54 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem(LOCAL_HISTORY_KEY, JSON.stringify(items));
     }
 
-    function addToLocalHistory(item) {
+    function upsertHistoryItem(item) {
         const next = [
-            {
-                id: item.id || `note-${Date.now()}`,
-                title: item.title || "Untitled care note",
-                templateName: item.templateName || getSelectedTemplate()?.name || "Unknown template",
-                updatedAt: new Date().toISOString(),
-                excerpt: (item.finalNote || "").slice(0, 180),
-                finalNote: item.finalNote || "",
-                transcript: item.transcript || ""
-            },
+            item,
             ...getLocalHistory().filter(x => x.id !== item.id)
-        ].slice(0, 12);
+        ].slice(0, 30);
 
         setLocalHistory(next);
         renderHistory();
+    }
+
+    function addToLocalHistory(item) {
+        upsertHistoryItem({
+            id: item.id || `note-${Date.now()}`,
+            title: item.title || "Untitled care note",
+            templateName: item.templateName || getSelectedTemplate()?.name || "Unknown template",
+            updatedAt: new Date().toISOString(),
+            excerpt: (item.finalNote || "").slice(0, 180),
+            finalNote: item.finalNote || "",
+            transcript: item.transcript || "",
+            isLocalOnly: item.isLocalOnly || false
+        });
+    }
+
+    function deleteHistoryItem(id) {
+        const next = getLocalHistory().filter(x => x.id !== id);
+        setLocalHistory(next);
+        renderHistory();
+        if (state.currentNoteId === id) {
+            state.currentNoteId = null;
+            setNoteMode(false);
+        }
+        showToast("Saved note deleted.");
+    }
+
+    function duplicateHistoryItem(id) {
+        const item = getLocalHistory().find(x => x.id === id);
+        if (!item) return;
+
+        const duplicate = {
+            ...item,
+            id: `note-${Date.now()}`,
+            title: `${item.title} (Copy)`,
+            updatedAt: new Date().toISOString(),
+            isLocalOnly: true
+        };
+
+        upsertHistoryItem(duplicate);
+        showToast("Saved note duplicated.");
     }
 
     function renderHistory() {
@@ -940,6 +1013,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="history-actions">
                     <button class="btn btn-light btn-tiny" type="button" data-history-open="${item.id}">Open</button>
                     <button class="btn btn-light btn-tiny" type="button" data-history-copy="${item.id}">Copy</button>
+                    <button class="btn btn-light btn-tiny" type="button" data-history-duplicate="${item.id}">Duplicate</button>
+                    <button class="btn btn-danger btn-tiny" type="button" data-history-delete="${item.id}">Delete</button>
                 </div>
             `;
             els.historyListEl.appendChild(card);
@@ -950,17 +1025,21 @@ document.addEventListener("DOMContentLoaded", () => {
         const item = getLocalHistory().find(x => x.id === id);
         if (!item) return;
 
+        state.isHydrating = true;
         state.currentNoteId = item.id;
         if (els.noteTitleEl) els.noteTitleEl.value = item.title || "";
         if (els.transcriptEl) els.transcriptEl.value = item.transcript || "";
         if (els.finalNoteEl) els.finalNoteEl.value = item.finalNote || "";
         if (els.aiDraftEl) els.aiDraftEl.value = item.finalNote || "";
+        state.isHydrating = false;
 
         setNoteMode(true);
         analyseDocument();
         openWorkflowModal();
         setWorkflowStep("refine");
-        showToast("Recent note opened.");
+        state.hasUnsavedChanges = false;
+        setSaveState("is-idle", "Ready");
+        showToast("Saved note opened.");
     }
 
     async function copyTextToClipboard(text) {
@@ -1218,7 +1297,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            const transcript = data.transcript || "";
+            let transcript = data.transcript || "";
+
+            if (Array.isArray(data.segments) && data.segments.length) {
+                transcript = data.segments
+                    .map((segment, idx) => {
+                        const speaker = segment.speaker || `Speaker ${idx + 1}`;
+                        const text = segment.text || "";
+                        return `${speaker}: ${text}`;
+                    })
+                    .join("\n\n");
+            }
+
             if (els.transcriptEl) els.transcriptEl.value = transcript;
             if (els.finalNoteEl) els.finalNoteEl.value = transcript;
             if (els.aiDraftEl) els.aiDraftEl.value = transcript;
@@ -1782,11 +1872,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const confirmed = window.confirm("Clear the transcript, working draft and current note details?");
         if (!confirmed) return;
 
+        state.isHydrating = true;
         if (els.transcriptEl) els.transcriptEl.value = "";
         if (els.finalNoteEl) els.finalNoteEl.value = "";
         if (els.aiDraftEl) els.aiDraftEl.value = "";
         if (els.aiInstructionEl) els.aiInstructionEl.value = "";
         if (els.noteTitleEl) els.noteTitleEl.value = "";
+        state.isHydrating = false;
 
         state.previousFinalNote = "";
         state.previousAiDraft = "";
@@ -1864,23 +1956,56 @@ document.addEventListener("DOMContentLoaded", () => {
             const items = Array.isArray(data.notes) ? data.notes : [];
 
             if (items.length) {
-                setLocalHistory(
-                    items.slice(0, 12).map(item => ({
-                        id: item.id || `server-${Date.now()}-${Math.random()}`,
-                        title: item.title || "Untitled care note",
-                        templateName: item.template_name || "Saved note",
-                        updatedAt: item.updated_at || new Date().toISOString(),
-                        excerpt: (item.final_note || item.ai_draft || "").slice(0, 180),
-                        finalNote: item.final_note || item.ai_draft || "",
-                        transcript: item.transcript || ""
-                    }))
-                );
+                const merged = [...items.map(item => ({
+                    id: item.id || `server-${Date.now()}-${Math.random()}`,
+                    title: item.title || "Untitled care note",
+                    templateName: item.template_name || "Saved note",
+                    updatedAt: item.updated_at || new Date().toISOString(),
+                    excerpt: (item.final_note || item.ai_draft || "").slice(0, 180),
+                    finalNote: item.final_note || item.ai_draft || "",
+                    transcript: item.transcript || "",
+                    isLocalOnly: false
+                })), ...getLocalHistory()]
+                    .reduce((acc, item) => {
+                        if (!acc.find(x => x.id === item.id)) acc.push(item);
+                        return acc;
+                    }, [])
+                    .slice(0, 30);
+
+                setLocalHistory(merged);
             }
 
+            state.serverHistoryLoaded = true;
             renderHistory();
         } catch {
             renderHistory();
         }
+    }
+
+    async function deleteSavedNote(id) {
+        const item = getLocalHistory().find(x => x.id === id);
+        if (!item) return;
+
+        const confirmed = window.confirm(`Delete "${item.title}"?`);
+        if (!confirmed) return;
+
+        try {
+            if (!item.isLocalOnly) {
+                const response = await fetch(`/ai-notes/${encodeURIComponent(id)}`, {
+                    method: "DELETE",
+                    headers: getAuthHeaders()
+                });
+
+                if (!response.ok) {
+                    const data = await safeJson(response);
+                    if (handleUnauthorized(response, data)) return;
+                }
+            }
+        } catch (error) {
+            console.warn("Delete from server failed, removing locally only.", error);
+        }
+
+        deleteHistoryItem(id);
     }
 
     function bindTextInputs() {
@@ -1951,6 +2076,8 @@ document.addEventListener("DOMContentLoaded", () => {
         els.historyListEl?.addEventListener("click", async event => {
             const openId = event.target.getAttribute("data-history-open");
             const copyId = event.target.getAttribute("data-history-copy");
+            const duplicateId = event.target.getAttribute("data-history-duplicate");
+            const deleteId = event.target.getAttribute("data-history-delete");
 
             if (openId) {
                 openHistoryItem(openId);
@@ -1959,6 +2086,14 @@ document.addEventListener("DOMContentLoaded", () => {
             if (copyId) {
                 const item = getLocalHistory().find(x => x.id === copyId);
                 if (item) await copyTextToClipboard(item.finalNote || "");
+            }
+
+            if (duplicateId) {
+                duplicateHistoryItem(duplicateId);
+            }
+
+            if (deleteId) {
+                await deleteSavedNote(deleteId);
             }
         });
     }
@@ -1970,6 +2105,7 @@ document.addEventListener("DOMContentLoaded", () => {
         els.versionsListEl?.addEventListener("click", async event => {
             const restoreId = event.target.getAttribute("data-version-restore");
             const copyId = event.target.getAttribute("data-version-copy");
+            const deleteId = event.target.getAttribute("data-version-delete");
 
             if (restoreId) {
                 restoreVersion(restoreId);
@@ -1977,9 +2113,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (copyId) {
                 const version = getVersions().find(v => v.id === copyId);
-                if (version) {
-                    await copyTextToClipboard(version.content || "");
-                }
+                if (version) await copyTextToClipboard(version.content || "");
+            }
+
+            if (deleteId) {
+                deleteVersion(deleteId);
             }
         });
 
@@ -2101,7 +2239,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (els.transcribeBtn) els.transcribeBtn.disabled = true;
         setStatus("idle", "Ready");
         setSaveState("is-idle", "Ready");
-        setNoteMode(false);
+        setNoteMode(Boolean(state.currentNoteId));
         setWorkflowStep("record");
         analyseDocument();
 
