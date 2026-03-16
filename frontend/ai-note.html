@@ -39,10 +39,23 @@
                     <h3>Session status</h3>
                     <span id="statusIndicatorDot" class="live-dot idle"></span>
                 </div>
+
                 <div id="recordingStatus" class="status-pill idle">Ready</div>
                 <div id="recordingTimer" class="timer">00:00</div>
+
+                <div class="session-stats">
+                    <div class="session-stat">
+                        <span class="session-stat-label">Template</span>
+                        <strong id="sidebarTemplateText">—</strong>
+                    </div>
+                    <div class="session-stat">
+                        <span class="session-stat-label">Save state</span>
+                        <strong id="sidebarSaveText">Not saved</strong>
+                    </div>
+                </div>
+
                 <p class="sidebar-note">
-                    Record first. When you stop, the AI workspace will open automatically for transcription and drafting.
+                    Record first. When you stop, the AI workspace opens automatically for transcription, drafting, review and saving.
                 </p>
             </div>
 
@@ -59,6 +72,7 @@
                     <h3>Recent notes</h3>
                     <button id="refreshHistoryBtn" class="btn btn-light btn-tiny" type="button">Refresh</button>
                 </div>
+
                 <div id="historyEmptyState" class="history-empty">No saved notes yet.</div>
                 <div id="historyList" class="history-list"></div>
             </div>
@@ -73,14 +87,16 @@
                 <header class="workspace-hero">
                     <div class="hero-copy">
                         <p class="eyebrow">AI documentation for care</p>
-                        <h1>Record once. Turn it into a professional care note.</h1>
+                        <h1>Record once. Turn it into a professional care record.</h1>
                         <p class="workspace-subtitle">
-                            Built for children’s homes, supported living, residential care, supervision, safeguarding, handovers, incidents, and professional meetings.
+                            Designed for children’s homes, supported living, residential care, supervision, safeguarding, handovers, incidents and professional meetings.
                         </p>
                     </div>
 
                     <div class="hero-actions">
-                        <button id="startRecordingBtn" class="btn btn-primary btn-hero" type="button">Start recording</button>
+                        <button id="startRecordingBtn" class="btn btn-primary btn-hero" type="button">
+                            Start recording
+                        </button>
                     </div>
                 </header>
 
@@ -89,8 +105,8 @@
                         <div class="section-head">
                             <div>
                                 <p class="panel-label">Template</p>
-                                <h2>Choose your note structure</h2>
-                                <p>Select the format you want AI to use after transcription.</p>
+                                <h2>Choose your document structure</h2>
+                                <p>Select the format you want the AI to use after transcription.</p>
                             </div>
                         </div>
 
@@ -108,7 +124,7 @@
                             <div>
                                 <p class="panel-label">Record details</p>
                                 <h2>Capture essential context</h2>
-                                <p>These details help the generated note feel accurate and structured.</p>
+                                <p>These details help generate a more accurate and better-structured note.</p>
                             </div>
                         </div>
 
@@ -135,6 +151,9 @@
                                     <option value="Supervision">Supervision</option>
                                     <option value="Incident Review">Incident Review</option>
                                     <option value="Key-work Session">Key-work Session</option>
+                                    <option value="Daily Record">Daily Record</option>
+                                    <option value="Professionals Meeting">Professionals Meeting</option>
+                                    <option value="Safeguarding Discussion">Safeguarding Discussion</option>
                                 </select>
                             </div>
 
@@ -148,9 +167,14 @@
                                 <input id="youngPersonName" type="text" placeholder="Optional">
                             </div>
 
-                            <div class="field field-span-2">
+                            <div class="field">
                                 <label for="meetingDate">Record date</label>
                                 <input id="meetingDate" type="date">
+                            </div>
+
+                            <div class="field">
+                                <label for="locationContext">Location / home / service</label>
+                                <input id="locationContext" type="text" placeholder="Optional">
                             </div>
                         </div>
                     </div>
@@ -161,13 +185,16 @@
         </main>
     </div>
 
+    <!-- TEMPLATE MANAGER -->
     <div id="templateModal" class="modal-overlay hidden">
         <div class="modal-card">
             <div class="modal-header">
                 <div>
                     <p class="panel-label">Templates</p>
                     <h2>Create and manage templates</h2>
-                    <p class="modal-copy">Build templates for handovers, supervision, incidents, daily logs, safeguarding records, and internal meetings.</p>
+                    <p class="modal-copy">
+                        Build templates for handovers, daily logs, supervision, incidents, key-work, safeguarding and internal meetings.
+                    </p>
                 </div>
                 <button id="closeTemplateManagerBtn" class="btn btn-light btn-tiny" type="button">Close</button>
             </div>
@@ -199,12 +226,13 @@
         </div>
     </div>
 
+    <!-- RECORDING MODAL -->
     <div id="recordingModal" class="recording-modal-overlay hidden">
         <div class="recording-modal">
             <div class="recording-modal-header">
                 <p class="panel-label">Recording live</p>
                 <h2>Capture conversation or dictation</h2>
-                <p>When you stop recording, the full AI documentation workspace will open automatically.</p>
+                <p>When you stop recording, the full AI workspace will open automatically.</p>
             </div>
 
             <div class="recording-mic-wrap">
@@ -221,6 +249,7 @@
         </div>
     </div>
 
+    <!-- FULL WORKFLOW MODAL -->
     <div id="workflowModal" class="workflow-modal-overlay hidden">
         <div class="workflow-modal">
             <div class="workflow-topbar">
@@ -228,23 +257,62 @@
                     <p class="panel-label">AI workspace</p>
                     <h2>Transcribe, generate and refine</h2>
                 </div>
+
                 <div class="workflow-topbar-actions">
                     <button id="closeWorkflowModalBtn" class="btn btn-light" type="button">Close</button>
                 </div>
             </div>
 
-            <div class="workflow-banner">
-                <div class="workflow-banner-item">
-                    <span class="workflow-banner-label">Template</span>
+            <div class="workflow-stepper">
+                <div class="workflow-step" id="stepRecord">
+                    <span class="workflow-step-number">1</span>
+                    <div>
+                        <strong>Recording</strong>
+                        <small>Audio captured</small>
+                    </div>
+                </div>
+
+                <div class="workflow-step" id="stepTranscribe">
+                    <span class="workflow-step-number">2</span>
+                    <div>
+                        <strong>Transcript</strong>
+                        <small>Convert speech to text</small>
+                    </div>
+                </div>
+
+                <div class="workflow-step" id="stepGenerate">
+                    <span class="workflow-step-number">3</span>
+                    <div>
+                        <strong>Document</strong>
+                        <small>Generate care note</small>
+                    </div>
+                </div>
+
+                <div class="workflow-step" id="stepRefine">
+                    <span class="workflow-step-number">4</span>
+                    <div>
+                        <strong>Refine</strong>
+                        <small>Review and save</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="workflow-insights">
+                <div class="workflow-insight-card">
+                    <span>Template</span>
                     <strong id="workflowTemplateText">—</strong>
                 </div>
-                <div class="workflow-banner-item">
-                    <span class="workflow-banner-label">Status</span>
+                <div class="workflow-insight-card">
+                    <span>Status</span>
                     <strong id="workflowStatusText">Ready</strong>
                 </div>
-                <div class="workflow-banner-item">
-                    <span class="workflow-banner-label">Save state</span>
+                <div class="workflow-insight-card">
+                    <span>Save state</span>
                     <strong id="workflowSaveText">Not saved</strong>
+                </div>
+                <div class="workflow-insight-card">
+                    <span>Word count</span>
+                    <strong id="workflowWordCount">0</strong>
                 </div>
             </div>
 
@@ -255,6 +323,7 @@
             </div>
 
             <div class="workflow-body">
+                <!-- LEFT COLUMN -->
                 <div class="workflow-column">
                     <div class="split-panel">
                         <div class="section-head">
@@ -264,6 +333,7 @@
                                 <p id="audioReadyText">No recording yet.</p>
                             </div>
                         </div>
+
                         <audio id="audioPlayback" controls style="display:none;"></audio>
                     </div>
 
@@ -272,7 +342,7 @@
                             <div>
                                 <p class="panel-label">Transcript</p>
                                 <h3>Source text</h3>
-                                <p>Paste, review or transcribe audio here.</p>
+                                <p>Review, paste or transcribe audio here.</p>
                             </div>
                             <button id="toggleTranscriptBtn" class="btn btn-light btn-tiny" type="button">Show / hide</button>
                         </div>
@@ -292,6 +362,7 @@
                     </div>
                 </div>
 
+                <!-- RIGHT COLUMN -->
                 <div class="workflow-column">
                     <div class="split-panel document-panel">
                         <div class="section-head">
@@ -351,6 +422,28 @@
                             <button id="printBtn" class="btn btn-light" type="button">Print</button>
                             <button id="clearBtn" class="btn btn-danger" type="button">Clear</button>
                         </div>
+                    </div>
+
+                    <div class="split-panel actions-panel">
+                        <div class="section-head">
+                            <div>
+                                <p class="panel-label">AI extraction</p>
+                                <h3>Actions and review prompts</h3>
+                                <p>Pull out key actions, ownership and follow-up items from the note.</p>
+                            </div>
+                        </div>
+
+                        <div class="panel-actions">
+                            <button id="extractActionsBtn" class="btn btn-light" type="button">Extract actions</button>
+                            <button id="createHandoverBtn" class="btn btn-light" type="button">Create handover version</button>
+                            <button id="createManagerSummaryBtn" class="btn btn-light" type="button">Manager summary</button>
+                        </div>
+
+                        <div id="actionsEmptyState" class="actions-empty-state">
+                            No extracted actions yet.
+                        </div>
+
+                        <div id="actionsList" class="actions-list"></div>
                     </div>
                 </div>
             </div>
