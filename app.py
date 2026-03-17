@@ -51,7 +51,6 @@ include_router("routers.chat_routes")
 include_router("routers.dashboard_routes")
 include_router("routers.documents_routes")
 include_router("routers.handover_routes")
-include_router("routers.incident_routes")
 include_router("routers.monthly_reviews_routes")
 include_router("routers.ofsted_ai_report_routes")
 include_router("routers.ofsted_pack_routes")
@@ -87,13 +86,10 @@ include_router("routers.young_people_photo_routes")
 include_router("routers.young_people_statutory_documents_routes")
 
 # =========================================================
-# Workflow routers
-# Keep only those that are genuinely separate.
-# Do not duplicate routes already handled inside the main module.
+# Workflow / QA routers
+# Keep only global / non-duplicating workflow routers here.
+# Module-specific workflow is now handled inside the main module files.
 # =========================================================
-include_router("routers.young_people_daily_notes_workflow_routes")
-include_router("routers.young_people_keywork_workflow_routes")
-include_router("routers.young_people_risk_workflow_routes")
 include_router("routers.workflow_review_routes")
 
 # =========================================================
@@ -103,6 +99,7 @@ include_router("routers.command_centre_routes")
 include_router("routers.events_routes")
 include_router("routers.evidence_routes")
 include_router("routers.qa_routes")
+include_router("routers.exports_routes")
 
 # =========================================================
 # Static mounts
