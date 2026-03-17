@@ -19,10 +19,30 @@
         <input type="date" id="weekStart" />
         <button id="loadWeekBtn">Load week</button>
         <button id="buildWeekBtn">Build week</button>
+        <button id="publishWeekBtn" class="primary">Publish + SMS</button>
         <button id="payrollBtn">Payroll export</button>
         <button id="evidenceBtn">Evidence pack</button>
       </div>
     </header>
+
+    <section class="summary-strip">
+      <div class="summary-card">
+        <span class="summary-label">Publication</span>
+        <strong id="publicationStatus">Draft</strong>
+      </div>
+      <div class="summary-card">
+        <span class="summary-label">Warnings</span>
+        <strong id="warningCount">0</strong>
+      </div>
+      <div class="summary-card">
+        <span class="summary-label">Attendance</span>
+        <strong id="attendanceCount">0</strong>
+      </div>
+      <div class="summary-card">
+        <span class="summary-label">SMS</span>
+        <strong id="smsCount">0</strong>
+      </div>
+    </section>
 
     <section class="rostering-main">
       <aside class="staff-sidebar">
@@ -36,6 +56,18 @@
         <div id="warningPanel"></div>
         <div id="rotaBoard"></div>
       </main>
+
+      <aside class="manager-sidebar">
+        <div class="panel-head">
+          <h2>Attendance</h2>
+        </div>
+        <div id="attendancePanel" class="side-list"></div>
+
+        <div class="panel-head top-gap">
+          <h2>SMS delivery</h2>
+        </div>
+        <div id="smsPanel" class="side-list"></div>
+      </aside>
     </section>
   </div>
 
