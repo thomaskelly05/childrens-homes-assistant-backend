@@ -39,13 +39,12 @@
           <p id="pageSubtitle">Shift-first oversight for children’s residential care</p>
         </div>
         <div class="header-actions">
-          <button class="btn" id="quickEventBtn">Quick record</button>
+          <button class="btn" id="quickEventBtn">Go to timeline</button>
           <button class="btn primary" id="newPlanBtn">New plan</button>
         </div>
       </header>
 
       <section id="browseMode">
-        <!-- COMMAND CENTRE -->
         <section class="section active" id="section-command-centre">
           <div class="grid metrics-grid" id="commandCentreMetrics"></div>
 
@@ -82,7 +81,6 @@
           </div>
         </section>
 
-        <!-- YOUNG PEOPLE -->
         <section class="section" id="section-young-people">
           <div class="person-hero card">
             <div>
@@ -107,18 +105,16 @@
             <div class="card toolbar-card">
               <div class="toolbar">
                 <select id="timelineEventType" class="input slim">
-                  <option value="">All event types</option>
-                  <option value="daily_note">Daily note</option>
-                  <option value="incident">Incident</option>
+                  <option value="">All chronology</option>
+                  <option value="daily_note">Daily notes</option>
+                  <option value="incident">Incidents</option>
                   <option value="health">Health</option>
                   <option value="education">Education</option>
-                  <option value="contact">Contact</option>
+                  <option value="family">Family</option>
                   <option value="keywork">Key work</option>
-                  <option value="missing_update">Missing update</option>
-                  <option value="achievement">Achievement</option>
+                  <option value="plan">Plans</option>
+                  <option value="risk">Risk</option>
                 </select>
-
-                <button class="btn" id="createEventBtn">New event</button>
               </div>
             </div>
             <div id="timelineContent"></div>
@@ -138,7 +134,6 @@
           </div>
         </section>
 
-        <!-- HANDOVER -->
         <section class="section" id="section-handover">
           <div class="card">
             <h2 class="card-title">Shift handover</h2>
@@ -147,7 +142,6 @@
           </div>
         </section>
 
-        <!-- MANAGER QA -->
         <section class="section" id="section-manager-qa">
           <div class="card">
             <h2 class="card-title">Manager review queue</h2>
