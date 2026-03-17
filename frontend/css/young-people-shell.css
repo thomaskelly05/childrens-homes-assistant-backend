@@ -13,7 +13,10 @@
   --radius:18px;
 }
 
-*{ box-sizing:border-box; }
+*{
+  box-sizing:border-box;
+}
+
 html,body{
   margin:0;
   padding:0;
@@ -30,8 +33,48 @@ body{
   min-height:100vh;
 }
 
-.hidden{ display:none !important; }
-.active{ display:block; }
+.hidden{
+  display:none !important;
+}
+
+.section{
+  display:none;
+}
+
+.section.active{
+  display:block;
+}
+
+.panel{
+  display:none;
+}
+
+.panel.active{
+  display:block;
+}
+
+#browseMode{
+  display:block;
+  width:100%;
+}
+
+#section-command-centre,
+#section-young-people,
+#section-handover,
+#section-manager-qa,
+#commandCentreMetrics,
+#commandCentreAlerts,
+#commandCentreTasks,
+#commandCentreMeds,
+#commandCentreHandover,
+#overviewContent,
+#timelineContent,
+#plansContent,
+#reviewsContent,
+#managerQaContent,
+#handoverBoard{
+  width:100%;
+}
 
 .app-shell{
   display:grid;
@@ -116,6 +159,7 @@ body{
   display:flex;
   flex-direction:column;
   gap:22px;
+  width:100%;
 }
 
 .page-header{
@@ -138,10 +182,6 @@ body{
 .header-actions{
   display:flex;
   gap:10px;
-}
-
-.section{
-  display:none;
 }
 
 .card{
@@ -174,11 +214,15 @@ body{
 }
 
 .metrics-grid{
+  display:grid;
   grid-template-columns:repeat(6, minmax(0, 1fr));
+  gap:16px;
 }
 
 .two-col{
+  display:grid;
   grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:16px;
 }
 
 .metric-card{
@@ -186,6 +230,7 @@ body{
   border-radius:18px;
   background:linear-gradient(180deg,#172230,#1a2634);
   border:1px solid var(--line);
+  min-height:110px;
 }
 
 .metric-label{
@@ -269,6 +314,7 @@ select{
   display:flex;
   gap:8px;
   margin:4px 0 14px;
+  flex-wrap:wrap;
 }
 
 .tab{
@@ -282,10 +328,6 @@ select{
 
 .tab.active{
   background:#1c2b3a;
-}
-
-.panel{
-  display:none;
 }
 
 .toolbar-card{
@@ -341,10 +383,25 @@ select{
   background:#152130;
 }
 
-.pill.green{ background:rgba(31,157,99,.15); color:#8fe0b8; }
-.pill.red{ background:rgba(201,74,74,.15); color:#ffadad; }
-.pill.amber{ background:rgba(208,139,36,.15); color:#ffd08b; }
-.pill.blue{ background:rgba(77,163,255,.15); color:#b8d9ff; }
+.pill.green{
+  background:rgba(31,157,99,.15);
+  color:#8fe0b8;
+}
+
+.pill.red{
+  background:rgba(201,74,74,.15);
+  color:#ffadad;
+}
+
+.pill.amber{
+  background:rgba(208,139,36,.15);
+  color:#ffd08b;
+}
+
+.pill.blue{
+  background:rgba(77,163,255,.15);
+  color:#b8d9ff;
+}
 
 .doc-header{
   display:flex;
