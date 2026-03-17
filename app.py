@@ -15,6 +15,7 @@ COMPONENTS_DIR = os.path.join(FRONTEND_DIR, "components")
 
 app = FastAPI(title="IndiCare")
 
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -89,6 +90,13 @@ include_router("routers.young_people_risk_workflow_routes")
 include_router("routers.young_people_daily_notes_workflow_routes")
 include_router("routers.young_people_incidents_workflow_routes")
 include_router("routers.young_people_keywork_workflow_routes")
+
+# New OS layer routers
+include_router("routers.command_centre_routes")
+include_router("routers.events_routes")
+include_router("routers.workflow_review_routes")
+include_router("routers.evidence_routes")
+include_router("routers.qa_routes")
 
 # Static
 app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
@@ -190,6 +198,16 @@ def serve_young_people_shell():
 @app.get("/young-people-shell.html")
 def serve_young_people_shell_html():
     return FileResponse(os.path.join(FRONTEND_DIR, "young-people-shell.html"))
+
+
+@app.get("/childrens-home-os")
+def serve_childrens_home_os():
+    return FileResponse(os.path.join(FRONTEND_DIR, "childrens-home-os.html"))
+
+
+@app.get("/childrens-home-os.html")
+def serve_childrens_home_os_html():
+    return FileResponse(os.path.join(FRONTEND_DIR, "childrens-home-os.html"))
 
 
 @app.get("/health")
