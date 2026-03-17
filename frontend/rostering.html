@@ -1,1 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IndiCare Rostering</title>
+  <link rel="stylesheet" href="/css/rostering.css" />
+</head>
+<body>
+  <div class="rostering-shell">
+    <header class="rostering-topbar">
+      <div class="title-wrap">
+        <h1>IndiCare Rostering</h1>
+        <p>Residential workforce operating system</p>
+      </div>
 
+      <div class="rostering-actions">
+        <input type="number" id="homeId" value="1" min="1" />
+        <input type="date" id="weekStart" />
+        <button id="loadWeekBtn">Load week</button>
+        <button id="buildWeekBtn">Build week</button>
+        <button id="payrollBtn">Payroll export</button>
+        <button id="evidenceBtn">Evidence pack</button>
+      </div>
+    </header>
+
+    <section class="rostering-main">
+      <aside class="staff-sidebar">
+        <div class="panel-head">
+          <h2>Available staff</h2>
+        </div>
+        <div id="staffList"></div>
+      </aside>
+
+      <main class="rota-board-wrap">
+        <div id="warningPanel"></div>
+        <div id="rotaBoard"></div>
+      </main>
+    </section>
+  </div>
+
+  <script src="/js/rostering.js"></script>
+</body>
+</html>
