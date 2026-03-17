@@ -4,14 +4,14 @@
  <meta charset="UTF-8" />
  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
  <title>IndiCare — Children’s Home OS</title>
- <link rel="stylesheet" href="/css/young-people-shell.css?v=20260317" />
+ <link rel="stylesheet" href="/css/young-people-shell.css?v=20260317b" />
 </head>
 <body>
  <div class="app-shell">
  <aside class="sidebar">
  <div class="brand">
  <div class="brand-mark">I</div>
- <div>
+ <div class="brand-copy">
  <div class="brand-title">IndiCare</div>
  <div class="brand-subtitle">Children’s Home OS</div>
  </div>
@@ -32,9 +32,9 @@
  </div>
 
  <div class="sidebar-block">
- <div class="card" style="padding:14px;">
- <div class="row-title" style="margin-bottom:8px;">Quick actions</div>
- <div class="list" style="gap:8px;">
+ <div class="quick-card">
+ <div class="quick-card-title">Quick actions</div>
+ <div class="quick-actions">
  <button class="btn" id="quickEventBtn">Go to timeline</button>
  <button class="btn primary" id="newPlanBtn">New plan</button>
  </div>
@@ -51,27 +51,32 @@
  <p id="pageSubtitle">Shift-first oversight for children’s residential care</p>
  </div>
  <div class="header-actions">
- <button class="btn" id="headerTimelineBtn" onclick="document.getElementById('quickEventBtn')?.click()">Timeline</button>
- <button class="btn primary" id="headerPlanBtn" onclick="document.getElementById('newPlanBtn')?.click()">Create plan</button>
+ <button class="btn soft" onclick="document.getElementById('quickEventBtn')?.click()">Timeline</button>
+ <button class="btn primary" onclick="document.getElementById('newPlanBtn')?.click()">Create plan</button>
  </div>
  </header>
 
  <section id="browseMode">
- <!-- COMMAND CENTRE -->
  <section class="section active" id="section-command-centre">
  <div class="grid metrics-grid" id="commandCentreMetrics"></div>
 
  <div class="grid two-col">
  <div class="card">
  <div class="card-title-row">
+ <div>
  <h2 class="card-title">Live alerts</h2>
+ <p class="card-subtitle">What needs attention on shift.</p>
+ </div>
  </div>
  <div id="commandCentreAlerts"></div>
  </div>
 
  <div class="card">
  <div class="card-title-row">
+ <div>
  <h2 class="card-title">Shift tasks</h2>
+ <p class="card-subtitle">Outstanding actions and deadlines.</p>
+ </div>
  </div>
  <div id="commandCentreTasks"></div>
  </div>
@@ -80,24 +85,29 @@
  <div class="grid two-col">
  <div class="card">
  <div class="card-title-row">
+ <div>
  <h2 class="card-title">Medication due</h2>
+ <p class="card-subtitle">Current and upcoming medication activity.</p>
+ </div>
  </div>
  <div id="commandCentreMeds"></div>
  </div>
 
  <div class="card">
  <div class="card-title-row">
+ <div>
  <h2 class="card-title">Latest handover</h2>
+ <p class="card-subtitle">Continuity from the previous shift.</p>
+ </div>
  </div>
  <div id="commandCentreHandover"></div>
  </div>
  </div>
  </section>
 
- <!-- YOUNG PEOPLE -->
  <section class="section" id="section-young-people">
  <div class="person-hero card">
- <div>
+ <div class="person-hero-main">
  <h2 id="selectedYoungPersonName">—</h2>
  <div class="hero-meta" id="selectedYoungPersonMeta">—</div>
  </div>
@@ -124,7 +134,7 @@
  <div class="panel" id="tab-timeline">
  <div class="card toolbar-card">
  <div class="toolbar">
- <div class="badges" style="margin:0;">
+ <div class="toolbar-left">
  <select id="timelineEventType" class="input slim">
  <option value="">All chronology</option>
  <option value="daily_note">Daily notes</option>
@@ -169,7 +179,10 @@
  <div class="panel" id="tab-plans">
  <div class="card toolbar-card">
  <div class="toolbar">
- <div class="muted">Child-centred plans, staff guidance and review workflow.</div>
+ <div class="toolbar-copy">
+ <div class="toolbar-title">Plans</div>
+ <div class="toolbar-subtitle">Child-centred plans, staff guidance and review workflow.</div>
+ </div>
  <button class="btn primary" id="plansOpenCreateBtn">Create plan</button>
  </div>
  </div>
@@ -181,26 +194,24 @@
  </div>
  </section>
 
- <!-- HANDOVER -->
  <section class="section" id="section-handover">
  <div class="card">
  <div class="card-title-row">
  <div>
  <h2 class="card-title">Shift handover</h2>
- <p class="muted" style="margin:6px 0 0;">Auto-drafted from recorded reality, incidents, medication and tasks.</p>
+ <p class="card-subtitle">Auto-drafted from recorded reality, incidents, medication and tasks.</p>
  </div>
  </div>
  <div id="handoverBoard"></div>
  </div>
  </section>
 
- <!-- MANAGER QA -->
  <section class="section" id="section-manager-qa">
  <div class="card">
  <div class="card-title-row">
  <div>
  <h2 class="card-title">Manager review queue</h2>
- <p class="muted" style="margin:6px 0 0;">Approve, return and quality assure records before inspection or audit.</p>
+ <p class="card-subtitle">Approve, return and quality assure records before inspection or audit.</p>
  </div>
  </div>
  <div id="managerQaContent"></div>
@@ -221,6 +232,6 @@
  </main>
  </div>
 
- <script src="/js/young-people-shell.js?v=20260317"></script>
+ <script src="/js/young-people-shell.js?v=20260317b"></script>
 </body>
 </html>
