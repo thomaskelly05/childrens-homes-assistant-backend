@@ -51,7 +51,39 @@ def incident_status_for_ui(row: dict) -> str:
     return review_status
 
 
-def fetch_incident_select_sql(where_sql: str):
+def has_column(cur, table_name: str, column_name: str) -> bool:
+    cur.execute(
+        """
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = %s
+          AND column_name = %s
+        LIMIT 1
+        """,
+        (table_name, column_name),
+    )
+    return bool(cur.fetchone())
+
+
+def optional_incident_columns(cur):
+    possible = [
+        "antecedent",
+        "presentation",
+        "staff_response",
+        "trauma_informed_formulation",
+        "child_voice",
+        "restorative_follow_up",
+        "outcome",
+        "manager_review_comment",
+        "approved_by",
+        "approved_at",
+        "returned_at",
+        "submitted_at",
+    ]
+    return {c: has_column(cur, "incidents", c) for c in possible}
+
+
+def fetch_incident_select_sql(extra_select: str, where_sql: str):
     return f"""
         SELECT
             i.id,
@@ -66,7 +98,9 @@ def fetch_incident_select_sql(where_sql: str):
             i.staff_id,
             i.archived,
             i.created_at,
-            i.updated_at,
+            i.updated_at
+            {extra_select}
+            ,
             s.first_name AS staff_first_name,
             s.last_name AS staff_last_name
         FROM incidents i
@@ -80,7 +114,6 @@ def transform_incident_row(row: dict) -> dict:
     workflow_status = incident_status_for_ui(row)
     severity = normalise_severity(row.get("severity"))
 
-    # Working aliases so the OS shell and event workspace can consume it
     return {
         "id": row.get("id"),
         "young_person_id": row.get("young_person_id"),
@@ -96,21 +129,26 @@ def transform_incident_row(row: dict) -> dict:
         "manager_review_status": normalise_review_status(row.get("manager_review_status")),
         "workflow_status": workflow_status,
         "follow_up_required": row.get("follow_up_required"),
-        "outcome": row.get("follow_up_required"),
+        "outcome": row.get("outcome") or row.get("follow_up_required"),
         "staff_id": row.get("staff_id"),
         "staff_name": staff_name,
         "archived": row.get("archived"),
         "created_at": row.get("created_at"),
         "updated_at": row.get("updated_at"),
 
-        # richer shell fields
         "title": f"{(row.get('incident_type') or 'Incident').replace('_', ' ').title()}",
-        "antecedent": None,
-        "presentation": None,
-        "staff_response": None,
-        "trauma_informed_formulation": None,
-        "child_voice": None,
-        "restorative_follow_up": row.get("follow_up_required"),
+        "antecedent": row.get("antecedent"),
+        "presentation": row.get("presentation"),
+        "staff_response": row.get("staff_response"),
+        "trauma_informed_formulation": row.get("trauma_informed_formulation"),
+        "child_voice": row.get("child_voice"),
+        "restorative_follow_up": row.get("restorative_follow_up") or row.get("follow_up_required"),
+        "manager_review_comment": row.get("manager_review_comment"),
+        "approved_by": row.get("approved_by"),
+        "approved_at": row.get("approved_at"),
+        "returned_at": row.get("returned_at"),
+        "submitted_at": row.get("submitted_at"),
+
         "requires_manager_review": True,
         "quality_standards": ["protection_of_children"],
         "judgement_areas": ["helped_and_protected"],
@@ -119,14 +157,23 @@ def transform_incident_row(row: dict) -> dict:
 
 
 def fetch_incident_by_id(cur, incident_id: int):
+    cols = optional_incident_columns(cur)
+
+    extra_select = ""
+    for col, exists in cols.items():
+        if exists:
+            extra_select += f", i.{col}"
+        else:
+            extra_select += f", NULL AS {col}"
+
     cur.execute(
-        fetch_incident_select_sql("WHERE i.id = %s LIMIT 1"),
+        fetch_incident_select_sql(extra_select, "WHERE i.id = %s LIMIT 1"),
         (incident_id,),
     )
     row = cur.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Incident not found")
-    return row
+    return row, cols
 
 
 # =========================================================
@@ -147,7 +194,6 @@ class IncidentCreate(BaseModel):
     staff_id: Optional[int] = None
     archived: Optional[bool] = False
 
-    # OS shell aliases
     title: Optional[str] = None
     narrative: Optional[str] = Field(default=None, alias="narrative")
     occurred_at: Optional[str] = Field(default=None, alias="occurred_at")
@@ -160,6 +206,7 @@ class IncidentCreate(BaseModel):
     presentation: Optional[str] = None
     staff_response: Optional[str] = None
     trauma_informed_formulation: Optional[str] = None
+    manager_review_comment: Optional[str] = None
 
 
 class IncidentUpdate(BaseModel):
@@ -175,7 +222,6 @@ class IncidentUpdate(BaseModel):
     staff_id: Optional[int] = None
     archived: Optional[bool] = None
 
-    # OS shell aliases
     title: Optional[str] = None
     narrative: Optional[str] = Field(default=None, alias="narrative")
     occurred_at: Optional[str] = Field(default=None, alias="occurred_at")
@@ -188,10 +234,12 @@ class IncidentUpdate(BaseModel):
     presentation: Optional[str] = None
     staff_response: Optional[str] = None
     trauma_informed_formulation: Optional[str] = None
+    manager_review_comment: Optional[str] = None
 
 
-class IncidentReturnPayload(BaseModel):
+class IncidentReviewPayload(BaseModel):
     review_note: Optional[str] = None
+    approved_by: Optional[int] = None
 
 
 # =========================================================
@@ -203,8 +251,18 @@ def get_young_person_incidents(young_person_id: int, conn=Depends(get_db)):
     try:
         with conn.cursor() as cur:
             ensure_young_person_exists(cur, young_person_id)
+            cols = optional_incident_columns(cur)
+
+            extra_select = ""
+            for col, exists in cols.items():
+                if exists:
+                    extra_select += f", i.{col}"
+                else:
+                    extra_select += f", NULL AS {col}"
+
             cur.execute(
                 fetch_incident_select_sql(
+                    extra_select,
                     """
                     WHERE i.young_person_id = %s
                       AND COALESCE(i.archived, FALSE) = FALSE
@@ -227,8 +285,18 @@ def get_young_person_archived_incidents(young_person_id: int, conn=Depends(get_d
     try:
         with conn.cursor() as cur:
             ensure_young_person_exists(cur, young_person_id)
+            cols = optional_incident_columns(cur)
+
+            extra_select = ""
+            for col, exists in cols.items():
+                if exists:
+                    extra_select += f", i.{col}"
+                else:
+                    extra_select += f", NULL AS {col}"
+
             cur.execute(
                 fetch_incident_select_sql(
+                    extra_select,
                     """
                     WHERE i.young_person_id = %s
                       AND (
@@ -252,7 +320,7 @@ def get_young_person_archived_incidents(young_person_id: int, conn=Depends(get_d
 def get_incident(incident_id: int, conn=Depends(get_db)):
     try:
         with conn.cursor() as cur:
-            row = fetch_incident_by_id(cur, incident_id)
+            row, _ = fetch_incident_by_id(cur, incident_id)
             return transform_incident_row(row)
     except HTTPException:
         raise
@@ -271,7 +339,6 @@ def create_incident(payload: IncidentCreate, conn=Depends(get_db)):
     incident_datetime = payload.incident_datetime or payload.occurred_at or now.isoformat()
     description = payload.description or payload.narrative
     follow_up_required = payload.follow_up_required or payload.outcome or payload.restorative_follow_up
-
     severity = payload.severity or payload.risk_level or "medium"
 
     workflow_status = (payload.workflow_status or "").strip().lower()
@@ -283,45 +350,66 @@ def create_incident(payload: IncidentCreate, conn=Depends(get_db)):
     elif workflow_status == "returned":
         manager_review_status = "returned"
 
-    query = """
-        INSERT INTO incidents (
-            young_person_id,
-            incident_datetime,
-            incident_type,
-            severity,
-            location,
-            description,
-            manager_review_status,
-            follow_up_required,
-            staff_id,
-            archived,
-            created_at,
-            updated_at
-        )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        RETURNING id
-    """
-
-    values = (
-        payload.young_person_id,
-        incident_datetime,
-        payload.incident_type,
-        normalise_severity(severity),
-        payload.location,
-        description,
-        normalise_review_status(manager_review_status),
-        follow_up_required,
-        payload.staff_id,
-        bool(payload.archived),
-        now,
-        now,
-    )
-
     try:
         with conn.cursor() as cur:
             ensure_young_person_exists(cur, payload.young_person_id)
-            cur.execute(query, values)
+            cols = optional_incident_columns(cur)
+
+            insert_columns = [
+                "young_person_id",
+                "incident_datetime",
+                "incident_type",
+                "severity",
+                "location",
+                "description",
+                "manager_review_status",
+                "follow_up_required",
+                "staff_id",
+                "archived",
+                "created_at",
+                "updated_at",
+            ]
+            values = [
+                payload.young_person_id,
+                incident_datetime,
+                payload.incident_type,
+                normalise_severity(severity),
+                payload.location,
+                description,
+                normalise_review_status(manager_review_status),
+                follow_up_required,
+                payload.staff_id,
+                bool(payload.archived),
+                now,
+                now,
+            ]
+
+            optional_values = {
+                "antecedent": payload.antecedent,
+                "presentation": payload.presentation,
+                "staff_response": payload.staff_response,
+                "trauma_informed_formulation": payload.trauma_informed_formulation,
+                "child_voice": payload.child_voice,
+                "restorative_follow_up": payload.restorative_follow_up,
+                "outcome": payload.outcome,
+                "manager_review_comment": payload.manager_review_comment,
+            }
+
+            for col, value in optional_values.items():
+                if cols.get(col):
+                    insert_columns.append(col)
+                    values.append(value)
+
+            placeholders = ", ".join(["%s"] * len(insert_columns))
+            sql = f"""
+                INSERT INTO incidents ({", ".join(insert_columns)})
+                VALUES ({placeholders})
+                RETURNING id
+            """
+
+            cur.execute(sql, values)
             row = cur.fetchone()
+
         conn.commit()
         return {"message": "Incident created successfully", "id": row["id"]}
     except HTTPException:
@@ -338,7 +426,6 @@ def update_incident(incident_id: int, payload: IncidentUpdate, conn=Depends(get_
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields provided for update")
 
-    # Map OS shell aliases
     if "occurred_at" in update_data:
         update_data["incident_datetime"] = update_data.pop("occurred_at")
 
@@ -349,14 +436,10 @@ def update_incident(incident_id: int, payload: IncidentUpdate, conn=Depends(get_
         update_data["severity"] = update_data.pop("risk_level")
 
     if "outcome" in update_data and "follow_up_required" not in update_data:
-        update_data["follow_up_required"] = update_data.pop("outcome")
-    elif "outcome" in update_data:
-        update_data.pop("outcome")
+        update_data["follow_up_required"] = update_data["outcome"]
 
     if "restorative_follow_up" in update_data and "follow_up_required" not in update_data:
-        update_data["follow_up_required"] = update_data.pop("restorative_follow_up")
-    elif "restorative_follow_up" in update_data:
-        update_data.pop("restorative_follow_up")
+        update_data["follow_up_required"] = update_data["restorative_follow_up"]
 
     if "workflow_status" in update_data:
         workflow_status = (update_data.pop("workflow_status") or "").strip().lower()
@@ -367,16 +450,7 @@ def update_incident(incident_id: int, payload: IncidentUpdate, conn=Depends(get_
         elif workflow_status == "returned":
             update_data["manager_review_status"] = "returned"
 
-    # These fields are accepted by the editor but do not yet have backing columns
-    for unsupported in [
-        "title",
-        "child_voice",
-        "antecedent",
-        "presentation",
-        "staff_response",
-        "trauma_informed_formulation",
-    ]:
-        update_data.pop(unsupported, None)
+    update_data.pop("title", None)
 
     if "severity" in update_data and update_data["severity"] is not None:
         update_data["severity"] = normalise_severity(update_data["severity"])
@@ -384,26 +458,53 @@ def update_incident(incident_id: int, payload: IncidentUpdate, conn=Depends(get_
     if "manager_review_status" in update_data and update_data["manager_review_status"] is not None:
         update_data["manager_review_status"] = normalise_review_status(update_data["manager_review_status"])
 
-    update_data["updated_at"] = now_utc()
-
-    set_parts = []
-    values = []
-
-    for field, value in update_data.items():
-        set_parts.append(f"{field} = %s")
-        values.append(value)
-
-    values.append(incident_id)
-
-    query = f"""
-        UPDATE incidents
-        SET {", ".join(set_parts)}
-        WHERE id = %s
-        RETURNING id
-    """
-
     try:
         with conn.cursor() as cur:
+            _, cols = fetch_incident_by_id(cur, incident_id)
+
+            unsupported_if_missing = [
+                "antecedent",
+                "presentation",
+                "staff_response",
+                "trauma_informed_formulation",
+                "child_voice",
+                "restorative_follow_up",
+                "outcome",
+                "manager_review_comment",
+                "approved_by",
+                "approved_at",
+                "returned_at",
+                "submitted_at",
+            ]
+            for field in unsupported_if_missing:
+                if not cols.get(field):
+                    update_data.pop(field, None)
+
+            update_data.pop("outcome", None if cols.get("outcome") else None)
+            update_data.pop("restorative_follow_up", None if cols.get("restorative_follow_up") else None)
+
+            update_data["updated_at"] = now_utc()
+
+            set_parts = []
+            values = []
+
+            for field, value in update_data.items():
+                if field == "outcome" and not cols.get("outcome"):
+                    continue
+                if field == "restorative_follow_up" and not cols.get("restorative_follow_up"):
+                    continue
+                set_parts.append(f"{field} = %s")
+                values.append(value)
+
+            values.append(incident_id)
+
+            query = f"""
+                UPDATE incidents
+                SET {", ".join(set_parts)}
+                WHERE id = %s
+                RETURNING id
+            """
+
             cur.execute(query, values)
             row = cur.fetchone()
 
@@ -428,18 +529,28 @@ def update_incident(incident_id: int, payload: IncidentUpdate, conn=Depends(get_
 def submit_incident(incident_id: int, conn=Depends(get_db)):
     try:
         with conn.cursor() as cur:
-            fetch_incident_by_id(cur, incident_id)
+            _, cols = fetch_incident_by_id(cur, incident_id)
+
+            set_parts = [
+                "manager_review_status = %s",
+                "updated_at = %s",
+            ]
+            values = ["pending", now_utc()]
+
+            if cols.get("submitted_at"):
+                set_parts.append("submitted_at = %s")
+                values.append(now_utc())
+
+            values.append(incident_id)
 
             cur.execute(
-                """
+                f"""
                 UPDATE incidents
-                SET
-                    manager_review_status = %s,
-                    updated_at = %s
+                SET {", ".join(set_parts)}
                 WHERE id = %s
                 RETURNING id
                 """,
-                ("pending", now_utc(), incident_id),
+                values,
             )
             row = cur.fetchone()
 
@@ -453,21 +564,39 @@ def submit_incident(incident_id: int, conn=Depends(get_db)):
 
 
 @router.post("/incidents/{incident_id}/approve")
-def approve_incident(incident_id: int, conn=Depends(get_db)):
+def approve_incident(incident_id: int, payload: IncidentReviewPayload, conn=Depends(get_db)):
     try:
         with conn.cursor() as cur:
-            fetch_incident_by_id(cur, incident_id)
+            _, cols = fetch_incident_by_id(cur, incident_id)
+
+            set_parts = [
+                "manager_review_status = %s",
+                "updated_at = %s",
+            ]
+            values = ["reviewed", now_utc()]
+
+            if cols.get("manager_review_comment"):
+                set_parts.append("manager_review_comment = %s")
+                values.append(payload.review_note)
+
+            if cols.get("approved_by"):
+                set_parts.append("approved_by = %s")
+                values.append(payload.approved_by)
+
+            if cols.get("approved_at"):
+                set_parts.append("approved_at = %s")
+                values.append(now_utc())
+
+            values.append(incident_id)
 
             cur.execute(
-                """
+                f"""
                 UPDATE incidents
-                SET
-                    manager_review_status = %s,
-                    updated_at = %s
+                SET {", ".join(set_parts)}
                 WHERE id = %s
                 RETURNING id
                 """,
-                ("reviewed", now_utc(), incident_id),
+                values,
             )
             row = cur.fetchone()
 
@@ -481,21 +610,35 @@ def approve_incident(incident_id: int, conn=Depends(get_db)):
 
 
 @router.post("/incidents/{incident_id}/return")
-def return_incident(incident_id: int, payload: IncidentReturnPayload, conn=Depends(get_db)):
+def return_incident(incident_id: int, payload: IncidentReviewPayload, conn=Depends(get_db)):
     try:
         with conn.cursor() as cur:
-            fetch_incident_by_id(cur, incident_id)
+            _, cols = fetch_incident_by_id(cur, incident_id)
+
+            set_parts = [
+                "manager_review_status = %s",
+                "updated_at = %s",
+            ]
+            values = ["returned", now_utc()]
+
+            if cols.get("manager_review_comment"):
+                set_parts.append("manager_review_comment = %s")
+                values.append(payload.review_note)
+
+            if cols.get("returned_at"):
+                set_parts.append("returned_at = %s")
+                values.append(now_utc())
+
+            values.append(incident_id)
 
             cur.execute(
-                """
+                f"""
                 UPDATE incidents
-                SET
-                    manager_review_status = %s,
-                    updated_at = %s
+                SET {", ".join(set_parts)}
                 WHERE id = %s
                 RETURNING id
                 """,
-                ("returned", now_utc(), incident_id),
+                values,
             )
             row = cur.fetchone()
 
@@ -550,7 +693,7 @@ def archive_incident(incident_id: int, conn=Depends(get_db)):
 def export_incident(incident_id: int, conn=Depends(get_db)):
     try:
         with conn.cursor() as cur:
-            row = fetch_incident_by_id(cur, incident_id)
+            row, _ = fetch_incident_by_id(cur, incident_id)
             incident = transform_incident_row(row)
 
         text = f"""INDICARE INCIDENT EXPORT
@@ -567,11 +710,30 @@ Location: {incident.get('location') or '—'}
 Description
 {incident.get('description') or '—'}
 
+Antecedent
+{incident.get('antecedent') or '—'}
+
+Presentation
+{incident.get('presentation') or '—'}
+
+Staff response
+{incident.get('staff_response') or '—'}
+
+Trauma-informed formulation
+{incident.get('trauma_informed_formulation') or '—'}
+
+Child voice
+{incident.get('child_voice') or '—'}
+
 Follow-up required
 {incident.get('follow_up_required') or '—'}
 
+Restorative follow-up
+{incident.get('restorative_follow_up') or '—'}
+
 Manager review status: {incident.get('manager_review_status') or '—'}
 Workflow status: {incident.get('workflow_status') or '—'}
+Manager review comment: {incident.get('manager_review_comment') or '—'}
 Recorded by: {incident.get('staff_name') or '—'}
 
 Created at: {incident.get('created_at') or '—'}
