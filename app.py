@@ -38,6 +38,8 @@ from routers.young_people_chronology_routes import router as young_people_chrono
 from routers.young_people_compliance_routes import router as young_people_compliance_router
 from routers.young_people_standards_routes import router as young_people_standards_router
 from routers.young_people_handover_routes import router as young_people_handover_router
+from routers.young_people_reports_routes import router as young_people_reports_router
+from routers.young_people_photo_routes import router as young_people_photo_router
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
@@ -60,6 +62,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Core
 app.include_router(auth_router)
 app.include_router(account_router)
 app.include_router(admin_router)
@@ -80,6 +83,7 @@ app.include_router(staff_journal_router)
 app.include_router(supervision_router)
 app.include_router(tasks_router)
 
+# Young people
 app.include_router(young_people_router)
 app.include_router(young_people_profile_router)
 app.include_router(young_people_plans_router)
@@ -94,6 +98,8 @@ app.include_router(young_people_chronology_router)
 app.include_router(young_people_compliance_router)
 app.include_router(young_people_standards_router)
 app.include_router(young_people_handover_router)
+app.include_router(young_people_reports_router)
+app.include_router(young_people_photo_router)
 
 app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
 app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
