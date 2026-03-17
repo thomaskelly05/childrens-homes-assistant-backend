@@ -47,7 +47,12 @@ body{ min-height:100vh; }
 button,input,textarea,select{ font:inherit; }
 
 .hidden{ display:none !important; }
-.active{ display:block; }
+
+.section{ display:none; }
+.section.active{ display:block; }
+
+.panel{ display:none; }
+.panel.active{ display:block; }
 
 .app-shell{
   display:grid;
@@ -362,9 +367,7 @@ select:focus{
   justify-content:flex-end;
 }
 
-/* Sections / tabs */
-.section{ display:none; }
-
+/* Tabs */
 .subtabs{
   display:flex;
   gap:8px;
@@ -392,8 +395,6 @@ select:focus{
   border-color:transparent;
   color:#31413c;
 }
-
-.panel{ display:none; }
 
 /* Toolbar / list */
 .toolbar-card{ margin-bottom:14px; }
