@@ -1,54 +1,10 @@
 import os
+import importlib
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-
-from routers.account_routes import router as account_router
-from routers.admin_routes import router as admin_router
-from routers.ai_note_export_routes import router as ai_note_export_router
-from routers.ai_note_templates_routes import router as ai_note_templates_router
-from routers.ai_notes_routes import router as ai_notes_router
-from routers.auth_routes import router as auth_router
-from routers.chat_routes import router as chat_router
-from routers.dashboard_routes import router as dashboard_router
-from routers.documents_routes import router as documents_router
-from routers.handover_routes import router as handover_router
-from routers.incident_routes import router as incident_router
-from routers.monthly_reviews_routes import router as monthly_reviews_router
-from routers.ofsted_ai_report_routes import router as ofsted_ai_report_router
-from routers.ofsted_pack_routes import router as ofsted_pack_router
-from routers.reports_routes import router as reports_router
-from routers.risk_routes import router as risk_router
-from routers.staff_journal_routes import router as staff_journal_router
-from routers.supervision_routes import router as supervision_router
-from routers.tasks_routes import router as tasks_router
-
-from routers.young_people_routes import router as young_people_router
-from routers.young_people_profile_routes import router as young_people_profile_router
-from routers.young_people_plans_routes import router as young_people_plans_router
-from routers.young_people_risk_routes import router as young_people_risk_router
-from routers.young_people_daily_notes_routes import router as young_people_daily_notes_router
-from routers.young_people_incidents_routes import router as young_people_incidents_router
-from routers.young_people_health_routes import router as young_people_health_router
-from routers.young_people_education_routes import router as young_people_education_router
-from routers.young_people_family_routes import router as young_people_family_router
-from routers.young_people_keywork_routes import router as young_people_keywork_router
-from routers.young_people_chronology_routes import router as young_people_chronology_router
-from routers.young_people_compliance_routes import router as young_people_compliance_router
-from routers.young_people_standards_routes import router as young_people_standards_router
-
-from routers.young_people_handover_routes import router as young_people_handover_router
-from routers.young_people_reports_routes import router as young_people_reports_router
-from routers.young_people_photo_routes import router as young_people_photo_router
-from routers.young_people_statutory_documents_routes import router as young_people_statutory_documents_router
-
-from routers.young_people_plans_workflow_routes import router as young_people_plans_workflow_router
-from routers.young_people_risk_workflow_routes import router as young_people_risk_workflow_router
-from routers.young_people_daily_notes_workflow_routes import router as young_people_daily_notes_workflow_router
-from routers.young_people_incidents_workflow_routes import router as young_people_incidents_workflow_router
-from routers.young_people_keywork_workflow_routes import router as young_people_keywork_workflow_router
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
@@ -71,55 +27,70 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Core routes
-app.include_router(auth_router)
-app.include_router(account_router)
-app.include_router(admin_router)
-app.include_router(ai_note_export_router)
-app.include_router(ai_note_templates_router)
-app.include_router(ai_notes_router)
-app.include_router(chat_router)
-app.include_router(dashboard_router)
-app.include_router(documents_router)
-app.include_router(handover_router)
-app.include_router(incident_router)
-app.include_router(monthly_reviews_router)
-app.include_router(ofsted_ai_report_router)
-app.include_router(ofsted_pack_router)
-app.include_router(reports_router)
-app.include_router(risk_router)
-app.include_router(staff_journal_router)
-app.include_router(supervision_router)
-app.include_router(tasks_router)
 
-# Young people data routes
-app.include_router(young_people_router)
-app.include_router(young_people_profile_router)
-app.include_router(young_people_plans_router)
-app.include_router(young_people_risk_router)
-app.include_router(young_people_daily_notes_router)
-app.include_router(young_people_incidents_router)
-app.include_router(young_people_health_router)
-app.include_router(young_people_education_router)
-app.include_router(young_people_family_router)
-app.include_router(young_people_keywork_router)
-app.include_router(young_people_chronology_router)
-app.include_router(young_people_compliance_router)
-app.include_router(young_people_standards_router)
+def include_router(module_path: str):
+    try:
+        module = importlib.import_module(module_path)
+        router = getattr(module, "router", None)
+        if router is not None:
+            app.include_router(router)
+            print(f"[IndiCare] Loaded router: {module_path}")
+        else:
+            print(f"[IndiCare] Skipped router (no router object): {module_path}")
+    except Exception as e:
+        print(f"[IndiCare] Skipped router {module_path}: {e}")
 
-# Young people feature routes
-app.include_router(young_people_handover_router)
-app.include_router(young_people_reports_router)
-app.include_router(young_people_photo_router)
-app.include_router(young_people_statutory_documents_router)
 
-# Young people workflow routes
-app.include_router(young_people_plans_workflow_router)
-app.include_router(young_people_risk_workflow_router)
-app.include_router(young_people_daily_notes_workflow_router)
-app.include_router(young_people_incidents_workflow_router)
-app.include_router(young_people_keywork_workflow_router)
+# Core routers
+include_router("routers.auth_routes")
+include_router("routers.account_routes")
+include_router("routers.admin_routes")
+include_router("routers.ai_note_export_routes")
+include_router("routers.ai_note_templates_routes")
+include_router("routers.ai_notes_routes")
+include_router("routers.chat_routes")
+include_router("routers.dashboard_routes")
+include_router("routers.documents_routes")
+include_router("routers.handover_routes")
+include_router("routers.incident_routes")
+include_router("routers.monthly_reviews_routes")
+include_router("routers.ofsted_ai_report_routes")
+include_router("routers.ofsted_pack_routes")
+include_router("routers.reports_routes")
+include_router("routers.risk_routes")
+include_router("routers.staff_journal_routes")
+include_router("routers.supervision_routes")
+include_router("routers.tasks_routes")
 
+# Young people routers
+include_router("routers.young_people_routes")
+include_router("routers.young_people_profile_routes")
+include_router("routers.young_people_plans_routes")
+include_router("routers.young_people_risk_routes")
+include_router("routers.young_people_daily_notes_routes")
+include_router("routers.young_people_incidents_routes")
+include_router("routers.young_people_health_routes")
+include_router("routers.young_people_education_routes")
+include_router("routers.young_people_family_routes")
+include_router("routers.young_people_keywork_routes")
+include_router("routers.young_people_chronology_routes")
+include_router("routers.young_people_compliance_routes")
+include_router("routers.young_people_standards_routes")
+
+# Extra young people feature routers
+include_router("routers.young_people_handover_routes")
+include_router("routers.young_people_reports_routes")
+include_router("routers.young_people_photo_routes")
+include_router("routers.young_people_statutory_documents_routes")
+
+# Workflow routers
+include_router("routers.young_people_plans_workflow_routes")
+include_router("routers.young_people_risk_workflow_routes")
+include_router("routers.young_people_daily_notes_workflow_routes")
+include_router("routers.young_people_incidents_workflow_routes")
+include_router("routers.young_people_keywork_workflow_routes")
+
+# Static
 app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
 app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
 app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
