@@ -4,7 +4,7 @@
  <meta charset="UTF-8" />
  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
  <title>IndiCare — Children’s Home OS</title>
- <link rel="stylesheet" href="/css/young-people-shell.css?v=20260317c" />
+ <link rel="stylesheet" href="/css/young-people-shell.css?v=20260318a" />
 </head>
 <body>
  <div class="app-shell">
@@ -23,7 +23,6 @@
  <button class="nav-btn" data-section="handover">Handover</button>
  <button class="nav-btn" data-section="manager-qa">Manager QA</button>
  <button class="nav-btn" data-section="staff">Staff</button>
- <button class="nav-btn" data-section="archive">Archive</button>
  </nav>
 
  <div class="sidebar-block">
@@ -37,13 +36,10 @@
  <div class="quick-card">
  <div class="quick-card-title">Quick actions</div>
  <div class="quick-actions">
- <button class="btn" id="quickEventBtn">Go to timeline</button>
- <button class="btn primary" id="newPlanBtn">New plan</button>
- <button class="btn" id="newDailyNoteBtn">Daily note</button>
- <button class="btn" id="newIncidentBtn">Incident</button>
- <button class="btn" id="newHealthBtn">Health</button>
- <button class="btn" id="newFamilyRecordBtn">Contact</button>
- <button class="btn" id="newKeyworkBtn">Key work</button>
+ <button class="btn" id="quickTimelineBtn">Go to timeline</button>
+ <button class="btn" id="quickDailyNoteBtn">New daily note</button>
+ <button class="btn" id="quickIncidentBtn">New incident</button>
+ <button class="btn primary" id="quickPlanBtn">New plan</button>
  </div>
  </div>
  </div>
@@ -54,7 +50,7 @@
  <main class="main">
  <header class="page-header">
  <div>
- <div id="welcomeMessage" class="welcome-message">Welcome</div>
+ <div id="welcomeMessage" class="welcome-message">Welcome back.</div>
  <h1 id="pageTitle">Command Centre</h1>
  <p id="pageSubtitle">Shift-first oversight for children’s residential care</p>
  </div>
@@ -135,17 +131,15 @@
  <button class="tab" data-tab="family">Family</button>
  <button class="tab" data-tab="keywork">Key Work</button>
  <button class="tab" data-tab="plans">Plans</button>
+ <button class="tab" data-tab="archive">Archive</button>
  <button class="tab" data-tab="reviews">Reviews</button>
  </div>
 
- <div class="panel active" id="tab-overview">
- <div id="overviewContent"></div>
- </div>
+ <div class="panel active" id="tab-overview"><div id="overviewContent"></div></div>
 
  <div class="panel" id="tab-timeline">
  <div class="card toolbar-card">
  <div class="toolbar">
- <div class="toolbar-left">
  <select id="timelineEventType" class="input slim">
  <option value="">All chronology</option>
  <option value="daily_note">Daily notes</option>
@@ -157,35 +151,21 @@
  <option value="plan">Plans</option>
  <option value="risk">Risk</option>
  </select>
+ <div class="toolbar-actions">
+ <button class="btn" id="timelineNewDailyBtn">Daily note</button>
+ <button class="btn" id="timelineNewIncidentBtn">Incident</button>
  </div>
  </div>
  </div>
  <div id="timelineContent"></div>
  </div>
 
- <div class="panel" id="tab-daily-notes">
- <div id="dailyNotesContent"></div>
- </div>
-
- <div class="panel" id="tab-incidents">
- <div id="incidentsContent"></div>
- </div>
-
- <div class="panel" id="tab-health">
- <div id="healthContent"></div>
- </div>
-
- <div class="panel" id="tab-education">
- <div id="educationContent"></div>
- </div>
-
- <div class="panel" id="tab-family">
- <div id="familyContent"></div>
- </div>
-
- <div class="panel" id="tab-keywork">
- <div id="keyworkContent"></div>
- </div>
+ <div class="panel" id="tab-daily-notes"><div id="dailyNotesContent"></div></div>
+ <div class="panel" id="tab-incidents"><div id="incidentsContent"></div></div>
+ <div class="panel" id="tab-health"><div id="healthContent"></div></div>
+ <div class="panel" id="tab-education"><div id="educationContent"></div></div>
+ <div class="panel" id="tab-family"><div id="familyContent"></div></div>
+ <div class="panel" id="tab-keywork"><div id="keyworkContent"></div></div>
 
  <div class="panel" id="tab-plans">
  <div class="card toolbar-card">
@@ -200,9 +180,8 @@
  <div id="plansContent"></div>
  </div>
 
- <div class="panel" id="tab-reviews">
- <div id="reviewsContent"></div>
- </div>
+ <div class="panel" id="tab-archive"><div id="archiveContent"></div></div>
+ <div class="panel" id="tab-reviews"><div id="reviewsContent"></div></div>
  </section>
 
  <!-- HANDOVER -->
@@ -233,85 +212,88 @@
 
  <!-- STAFF -->
  <section class="section" id="section-staff">
- <div class="subtabs">
- <button class="tab active" data-tab="staff-overview">Overview</button>
- <button class="tab" data-tab="staff-supervision">Supervision</button>
- <button class="tab" data-tab="staff-team-meetings">Team Meetings</button>
- <button class="tab" data-tab="staff-training">Training</button>
- <button class="tab" data-tab="staff-policies">Policies</button>
- </div>
-
- <div class="panel active" id="tab-staff-overview">
- <div id="staffOverviewContent"></div>
- </div>
-
- <div class="panel" id="tab-staff-supervision">
- <div id="staffSupervisionContent"></div>
- </div>
-
- <div class="panel" id="tab-staff-team-meetings">
- <div id="staffMeetingsContent"></div>
- </div>
-
- <div class="panel" id="tab-staff-training">
- <div id="staffTrainingContent"></div>
- </div>
-
- <div class="panel" id="tab-staff-policies">
- <div id="staffPoliciesContent"></div>
- </div>
- </section>
-
- <!-- ARCHIVE -->
- <section class="section" id="section-archive">
+ <div class="grid two-col">
  <div class="card">
  <div class="card-title-row">
  <div>
- <h2 class="card-title">Archive</h2>
- <p class="card-subtitle">Approved and signed-off records remain viewable here for all authorised users.</p>
+ <h2 class="card-title">Staff workspace</h2>
+ <p class="card-subtitle">Supervision, team meetings, journals and operational records.</p>
  </div>
  </div>
- <div id="archiveContent"></div>
+ <div class="list">
+ <div class="row-card click-staff-link" data-href="/supervision">
+ <div class="row-title">Supervision</div>
+ <div class="row-meta">Open supervision records and sessions.</div>
+ </div>
+ <div class="row-card click-staff-link" data-href="/journal">
+ <div class="row-title">Staff journal</div>
+ <div class="row-meta">Reflective notes and staff communication.</div>
+ </div>
+ <div class="row-card click-staff-placeholder" data-type="team-meeting">
+ <div class="row-title">Team meetings</div>
+ <div class="row-meta">Minutes, actions and attendance.</div>
+ </div>
+ <div class="row-card click-staff-placeholder" data-type="training">
+ <div class="row-title">Training and compliance</div>
+ <div class="row-meta">Mandatory training, refreshers and checks.</div>
+ </div>
+ </div>
+ </div>
+
+ <div class="card">
+ <div class="card-title-row">
+ <div>
+ <h2 class="card-title">Home operations</h2>
+ <p class="card-subtitle">What a children’s home needs beyond direct recording.</p>
+ </div>
+ </div>
+ <div class="list">
+ <div class="row-card click-staff-placeholder" data-type="health-safety">
+ <div class="row-title">Health and safety checks</div>
+ <div class="row-meta">Daily checks, fire safety, room checks and environmental issues.</div>
+ </div>
+ <div class="row-card click-staff-placeholder" data-type="handover-audit">
+ <div class="row-title">Handover audit</div>
+ <div class="row-meta">Review quality and continuity between shifts.</div>
+ </div>
+ <div class="row-card click-staff-placeholder" data-type="reg44">
+ <div class="row-title">Regulation 44 / inspection readiness</div>
+ <div class="row-meta">Evidence packs, audits and findings.</div>
+ </div>
+ </div>
+ </div>
  </div>
  </section>
  </section>
  </main>
  </div>
 
- <!-- FULL SCREEN MODAL -->
+ <!-- GLOBAL MODAL -->
  <div id="globalModal" class="modal hidden">
- <div id="modalOverlay" class="modal-overlay"></div>
-
- <div class="modal-shell">
- <div class="modal-frame">
+ <div class="modal-overlay" id="modalCloseOverlay"></div>
+ <div class="modal-content">
  <div class="modal-header">
  <div>
  <h2 id="modalTitle">Document</h2>
  <div class="muted" id="modalMeta">—</div>
  </div>
-
- <div class="modal-actions">
  <button class="btn ghost" id="modalCloseBtn">Close</button>
  </div>
- </div>
-
  <div id="modalBody" class="modal-body"></div>
  </div>
  </div>
+
+ <!-- FAB -->
+ <button class="fab" id="fabBtn" aria-label="Quick actions">☰</button>
+ <div class="fab-menu hidden" id="fabMenu">
+ <button class="fab-action" id="fabDailyBtn">Daily note</button>
+ <button class="fab-action" id="fabIncidentBtn">Incident</button>
+ <button class="fab-action" id="fabPlanBtn">Plan</button>
+ <button class="fab-action" id="fabHealthBtn">Health record</button>
+ <button class="fab-action" id="fabFamilyBtn">Family record</button>
+ <button class="fab-action" id="fabKeyworkBtn">Key work</button>
  </div>
 
- <!-- FLOATING QUICK ACTION MENU -->
- <button id="fabButton" class="fab-button" aria-label="Quick actions">☰</button>
-
- <div id="fabMenu" class="fab-menu hidden">
- <button class="btn" id="fabDailyNoteBtn">Daily note</button>
- <button class="btn" id="fabIncidentBtn">Incident</button>
- <button class="btn" id="fabHealthBtn">Health</button>
- <button class="btn" id="fabFamilyBtn">Contact</button>
- <button class="btn" id="fabKeyworkBtn">Key work</button>
- <button class="btn primary" id="fabPlanBtn">Plan</button>
- </div>
-
- <script src="/js/young-people-shell.js?v=20260317c"></script>
+ <script src="/js/young-people-shell.js?v=20260318a"></script>
 </body>
 </html>
