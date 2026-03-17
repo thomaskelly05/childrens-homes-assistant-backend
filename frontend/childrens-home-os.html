@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IndiCare — Children’s Home OS</title>
+  <link rel="stylesheet" href="/css/childrens-home-os.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">I</div>
+        <div>
+          <div class="brand-name">IndiCare</div>
+          <div class="brand-sub">Children’s Home OS</div>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <button class="nav-btn active" data-section="command-centre">Command Centre</button>
+        <button class="nav-btn" data-section="young-people">Young People</button>
+        <button class="nav-btn" data-section="handover">Handover</button>
+        <button class="nav-btn" data-section="incidents">Incidents & Safeguarding</button>
+        <button class="nav-btn" data-section="plans">Plans & Documents</button>
+        <button class="nav-btn" data-section="reports">Reports & Exports</button>
+        <button class="nav-btn" data-section="manager-qa">Manager QA</button>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 id="pageTitle">Command Centre</h1>
+          <div id="pageSubtitle" class="muted">Shift-first residential care recording</div>
+        </div>
+        <div class="topbar-actions">
+          <div id="statusBar" class="status-bar hidden"></div>
+        </div>
+      </header>
+
+      <section id="section-command-centre" class="section active"></section>
+
+      <section id="section-young-people" class="section">
+        <div class="workspace-grid">
+          <div class="workspace-sidebar card">
+            <div class="field">
+              <label class="label" for="youngPersonSelect">Young person</label>
+              <select id="youngPersonSelect" class="input"></select>
+            </div>
+
+            <div id="youngPersonSummary" class="summary-stack"></div>
+
+            <div class="tabs tabs-vertical">
+              <button class="yp-tab active" data-tab="timeline">Timeline</button>
+              <button class="yp-tab" data-tab="overview">Overview</button>
+              <button class="yp-tab" data-tab="plans">Plans</button>
+              <button class="yp-tab" data-tab="risks">Risks & Safety</button>
+              <button class="yp-tab" data-tab="health">Health</button>
+              <button class="yp-tab" data-tab="education">Education</button>
+              <button class="yp-tab" data-tab="family">Family & Contact</button>
+              <button class="yp-tab" data-tab="keywork">Key Work</button>
+              <button class="yp-tab" data-tab="chronology">Chronology</button>
+              <button class="yp-tab" data-tab="outcomes">Outcomes</button>
+              <button class="yp-tab" data-tab="reviews">Reviews & Approvals</button>
+            </div>
+          </div>
+
+          <div class="workspace-main">
+            <div id="browseMode">
+              <div class="toolbar">
+                <div class="toolbar-title" id="youngPersonWorkspaceTitle">Timeline</div>
+                <div class="toolbar-actions" id="toolbarActions"></div>
+              </div>
+              <div id="workspaceContent"></div>
+            </div>
+
+            <div id="documentMode" class="hidden">
+              <div class="toolbar">
+                <button id="docBackBtn" class="btn">← Back</button>
+                <div class="toolbar-title" id="docTitle">Document</div>
+              </div>
+              <div id="docBody"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="section-handover" class="section"></section>
+      <section id="section-incidents" class="section"></section>
+      <section id="section-plans" class="section"></section>
+      <section id="section-reports" class="section"></section>
+      <section id="section-manager-qa" class="section"></section>
+    </main>
+  </div>
+
+  <script src="/js/childrens-home-os.js"></script>
+</body>
+</html>
