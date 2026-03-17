@@ -42,7 +42,9 @@ def include_router(module_path: str):
         print(f"[IndiCare] Skipped router {module_path}: {e}")
 
 
+# =========================================================
 # Core routers
+# =========================================================
 include_router("routers.auth_routes")
 include_router("routers.account_routes")
 include_router("routers.admin_routes")
@@ -63,7 +65,9 @@ include_router("routers.staff_journal_routes")
 include_router("routers.supervision_routes")
 include_router("routers.tasks_routes")
 
+# =========================================================
 # Young people routers
+# =========================================================
 include_router("routers.young_people_routes")
 include_router("routers.young_people_profile_routes")
 include_router("routers.young_people_plans_routes")
@@ -78,33 +82,44 @@ include_router("routers.young_people_chronology_routes")
 include_router("routers.young_people_compliance_routes")
 include_router("routers.young_people_standards_routes")
 
+# =========================================================
 # Extra young people feature routers
+# =========================================================
 include_router("routers.young_people_handover_routes")
 include_router("routers.young_people_reports_routes")
 include_router("routers.young_people_photo_routes")
 include_router("routers.young_people_statutory_documents_routes")
 
+# =========================================================
 # Workflow routers
-include_router("routers.young_people_plans_workflow_routes")
+# Keep only workflow routers that do NOT duplicate logic now
+# contained in the upgraded main route files.
+# =========================================================
 include_router("routers.young_people_risk_workflow_routes")
 include_router("routers.young_people_daily_notes_workflow_routes")
-include_router("routers.young_people_incidents_workflow_routes")
 include_router("routers.young_people_keywork_workflow_routes")
 
+# =========================================================
 # New OS layer routers
+# =========================================================
 include_router("routers.command_centre_routes")
 include_router("routers.events_routes")
 include_router("routers.workflow_review_routes")
 include_router("routers.evidence_routes")
 include_router("routers.qa_routes")
 
-# Static
+# =========================================================
+# Static mounts
+# =========================================================
 app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
 app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
 app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
 app.mount("/components", StaticFiles(directory=COMPONENTS_DIR), name="components")
 
 
+# =========================================================
+# Page routes
+# =========================================================
 @app.get("/")
 def serve_index():
     return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
