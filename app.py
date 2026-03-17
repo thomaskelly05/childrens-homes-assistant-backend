@@ -30,16 +30,12 @@ app.add_middleware(
 
 
 def include_router(module_path: str):
-    try:
-        module = importlib.import_module(module_path)
-        router = getattr(module, "router", None)
-        if router is not None:
-            app.include_router(router)
-            print(f"[IndiCare] Loaded router: {module_path}")
-        else:
-            print(f"[IndiCare] Skipped router (no router object): {module_path}")
-    except Exception as e:
-        print(f"[IndiCare] Skipped router {module_path}: {e}")
+    module = importlib.import_module(module_path)
+    router = getattr(module, "router", None)
+    if router is None:
+        raise RuntimeError(f"No router object found in {module_path}")
+    app.include_router(router)
+    print(f"[IndiCare] Loaded router: {module_path}")
 
 
 # =========================================================
@@ -70,14 +66,14 @@ include_router("routers.tasks_routes")
 # =========================================================
 include_router("routers.young_people_routes")
 include_router("routers.young_people_profile_routes")
-include_router("routers.young_people_plans_routes")
-include_router("routers.young_people_risk_routes")
 include_router("routers.young_people_daily_notes_routes")
 include_router("routers.young_people_incidents_routes")
 include_router("routers.young_people_health_routes")
 include_router("routers.young_people_education_routes")
 include_router("routers.young_people_family_routes")
 include_router("routers.young_people_keywork_routes")
+include_router("routers.young_people_plans_routes")
+include_router("routers.young_people_risk_routes")
 include_router("routers.young_people_chronology_routes")
 include_router("routers.young_people_compliance_routes")
 include_router("routers.young_people_standards_routes")
@@ -92,19 +88,19 @@ include_router("routers.young_people_statutory_documents_routes")
 
 # =========================================================
 # Workflow routers
-# Keep only workflow routers that do NOT duplicate logic now
-# contained in the upgraded main route files.
+# Keep only those that are genuinely separate.
+# Do not duplicate routes already handled inside the main module.
 # =========================================================
-include_router("routers.young_people_risk_workflow_routes")
 include_router("routers.young_people_daily_notes_workflow_routes")
 include_router("routers.young_people_keywork_workflow_routes")
+include_router("routers.young_people_risk_workflow_routes")
+include_router("routers.workflow_review_routes")
 
 # =========================================================
-# New OS layer routers
+# OS layer routers
 # =========================================================
 include_router("routers.command_centre_routes")
 include_router("routers.events_routes")
-include_router("routers.workflow_review_routes")
 include_router("routers.evidence_routes")
 include_router("routers.qa_routes")
 
@@ -217,12 +213,12 @@ def serve_young_people_shell_html():
 
 @app.get("/childrens-home-os")
 def serve_childrens_home_os():
-    return FileResponse(os.path.join(FRONTEND_DIR, "childrens-home-os.html"))
+    return FileResponse(os.path.join(FRONTEND_DIR, "young-people-shell.html"))
 
 
 @app.get("/childrens-home-os.html")
 def serve_childrens_home_os_html():
-    return FileResponse(os.path.join(FRONTEND_DIR, "childrens-home-os.html"))
+    return FileResponse(os.path.join(FRONTEND_DIR, "young-people-shell.html"))
 
 
 @app.get("/health")
