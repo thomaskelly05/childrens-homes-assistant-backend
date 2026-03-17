@@ -8,15 +8,22 @@ const state = {
   inspectionPack: null,
 };
 
+const ROUTES = {
+  dailyNotes: (id) => `/young-people/${id}/daily-notes`,
+  incidents: (id) => `/young-people/${id}/incidents`,
+  health: (id) => `/young-people/${id}/health`,
+  education: (id) => `/young-people/${id}/education`,
+  family: (id) => `/young-people/${id}/family`,
+  keywork: (id) => `/young-people/${id}/keywork`,
+};
+
 const $ = (id) => document.getElementById(id);
 const $$ = (s) => [...document.querySelectorAll(s)];
-const arr = (d) => Array.isArray(d) ? d : Array.isArray(d?.items) ? d.items : [];
+const arr = (d) => Array.isArray(d) ? d : Array.isArray(d?.items) ? d.items : Array.isArray(d?.rows) ? d.rows : Array.isArray(d?.data) ? d.data : [];
 const esc = (s) => String(s ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 const fmtDate = (v) => v ? new Date(v).toLocaleDateString("en-GB") : "—";
 const fmtDateTime = (v) => v ? new Date(v).toLocaleString("en-GB") : "—";
 const fullName = (p) => `${p?.first_name || ""} ${p?.last_name || ""}`.trim() || p?.name || "Young person";
-
-console.log("young-people-shell.js loaded");
 
 async function api(url, options = {}) {
   const res = await fetch(url, {
@@ -50,7 +57,7 @@ function pillClass(v) {
   v = String(v || "").toLowerCase();
   if (["high", "critical", "escalated"].includes(v)) return "red";
   if (["medium", "pending", "submitted", "awaiting_review", "returned"].includes(v)) return "amber";
-  if (["approved", "reviewed", "active"].includes(v)) return "green";
+  if (["approved", "reviewed", "active", "low"].includes(v)) return "green";
   return "blue";
 }
 
@@ -79,7 +86,7 @@ function setSection(section) {
 
   const titles = {
     "command-centre": ["Command Centre", "Shift-first oversight for children’s residential care"],
-    "young-people": ["Young People", "Child-centred recording, chronology and plans"],
+    "young-people": ["Young People", "Recording, reporting and chronology for residential care"],
     "handover": ["Handover", "Continuity built from recorded reality"],
     "manager-qa": ["Manager QA", "Review, oversight and inspection readiness"]
   };
@@ -106,7 +113,6 @@ function evidenceBadges(row) {
   if (row.linked_standard) badges.push(`<span class="pill blue">${esc(row.linked_standard.replaceAll("_", " "))}</span>`);
   if (row.linked_judgement_area) badges.push(`<span class="pill blue">${esc(row.linked_judgement_area.replaceAll("_", " "))}</span>`);
   if (row.source_table) badges.push(`<span class="pill blue">Source: ${esc(row.source_table)}</span>`);
-  if (row.source_id) badges.push(`<span class="pill blue">Ref ${esc(row.source_id)}</span>`);
   return badges.join("");
 }
 
@@ -126,6 +132,30 @@ function buildInspectionSummary(chronologyRows = [], reviews = [], plans = []) {
     standards,
     judgements
   };
+}
+
+function renderSimpleRows(rows, config = {}) {
+  const {
+    title = (r) => r.title || r.name || "Record",
+    meta = () => "",
+    body = () => "",
+    badges = () => "",
+    clickableClass = "",
+    idField = "id"
+  } = config;
+
+  return `
+    <div class="list">
+      ${rows.length ? rows.map(r => `
+        <div class="row-card ${clickableClass}" ${clickableClass ? `data-id="${esc(r[idField])}"` : ""}>
+          <div class="row-title">${esc(title(r))}</div>
+          ${meta(r) ? `<div class="row-meta">${meta(r)}</div>` : ""}
+          ${body(r) ? `<div>${body(r)}</div>` : ""}
+          ${badges(r) ? `<div class="badges">${badges(r)}</div>` : ""}
+        </div>
+      `).join("") : emptyCard("No records found.")}
+    </div>
+  `;
 }
 
 async function loadYoungPeople() {
@@ -175,7 +205,6 @@ async function loadCommandCentre() {
 
   try {
     const d = await api("/command-centre");
-    console.log("command centre", d);
     state.commandCentre = d;
 
     const m = d.summary || d.metrics || {};
@@ -195,41 +224,29 @@ async function loadCommandCentre() {
       </div>
     `).join(""));
 
-    const renderRows = (rows, mapper, empty) =>
-      `<div class="list">${rows.length ? rows.map(mapper).join("") : `<div class="row-card"><div class="muted">${empty}</div></div>`}</div>`;
+    setHTML("commandCentreAlerts", renderSimpleRows(d.alerts || [], {
+      title: r => r.title,
+      meta: r => esc(r.young_person_name || "—"),
+      body: r => esc(r.detail || ""),
+      badges: r => `<span class="pill ${pillClass(r.level)}">${esc(r.level || "info")}</span><span class="pill blue">Evidence</span>`
+    }));
 
-    setHTML("commandCentreAlerts", renderRows(d.alerts || [], r => `
-      <div class="row-card">
-        <div class="row-title">${esc(r.title)}</div>
-        <div class="row-meta">${esc(r.young_person_name || "—")}</div>
-        <div>${esc(r.detail || "")}</div>
-        <div class="badges">
-          <span class="pill ${pillClass(r.level)}">${esc(r.level || "info")}</span>
-          <span class="pill blue">Evidence</span>
-        </div>
-      </div>
-    `, "No live alerts."));
+    setHTML("commandCentreTasks", renderSimpleRows(d.tasks || [], {
+      title: r => r.title,
+      meta: r => `Due: ${esc(r.due || "—")}`,
+      body: r => esc(r.young_person_name || "")
+    }));
 
-    setHTML("commandCentreTasks", renderRows(d.tasks || [], r => `
-      <div class="row-card">
-        <div class="row-title">${esc(r.title)}</div>
-        <div class="row-meta">Due: ${esc(r.due || "—")}</div>
-      </div>
-    `, "No outstanding shift tasks."));
+    setHTML("commandCentreMeds", renderSimpleRows(d.meds_due || [], {
+      title: r => r.young_person_name || "Young person",
+      meta: r => `${esc(r.item || r.medicine || "Medication")} · Due ${esc(r.time_due || "—")}`,
+      badges: r => `<span class="pill ${pillClass(r.status)}">${esc(r.status || "due")}</span>`
+    }));
 
-    setHTML("commandCentreMeds", renderRows(d.meds_due || [], r => `
-      <div class="row-card">
-        <div class="row-title">${esc(r.young_person_name || "—")}</div>
-        <div class="row-meta">${esc(r.item || "—")} · Due ${esc(r.time_due || "—")}</div>
-      </div>
-    `, "No medication due."));
-
-    setHTML("commandCentreHandover", renderRows(d.handover || [], r => `
-      <div class="row-card">
-        <div class="row-title">${esc(r.time || "—")} · ${esc(r.title || "Handover item")}</div>
-        <div>${esc(r.detail || "")}</div>
-      </div>
-    `, "No handover items."));
+    setHTML("commandCentreHandover", renderSimpleRows(d.handover || [], {
+      title: r => `${r.time || "—"} · ${r.title || "Handover item"}`,
+      body: r => esc(r.detail || "")
+    }));
   } catch (e) {
     console.error("loadCommandCentre failed", e);
     msg(e.message, true);
@@ -257,19 +274,20 @@ async function loadOverview() {
       api(`/young-people/${state.selected.id}/plans`).then(arr).catch(() => []),
     ]);
 
-    console.log("overview", d);
-
     const inspection = buildInspectionSummary(chronologyRows, reviewRows, planRows);
     state.inspectionPack = inspection;
 
     setHTML("overviewContent", `
       <div class="grid two-col">
         <div class="card">
-          <h3 class="card-title">Tonight at a glance</h3>
+          <h3 class="card-title">Background and current presentation</h3>
           <div class="list">
             <div class="row-card"><div class="row-title">Current risk summary</div><div>${esc(d.summary_risk || d.summary_risk_level || "No summary recorded")}</div></div>
             <div class="row-card"><div class="row-title">Key guidance for staff</div><div>${esc(d.staff_guidance || "No staff guidance recorded")}</div></div>
             <div class="row-card"><div class="row-title">De-escalation / regulation</div><div>${esc(d.de_escalation_guidance || "No de-escalation guidance recorded")}</div></div>
+            <div class="row-card"><div class="row-title">Communication</div><div>${esc(d.communication_style || "No communication summary recorded")}</div></div>
+            <div class="row-card"><div class="row-title">Sensory profile</div><div>${esc(d.sensory_profile || "No sensory profile recorded")}</div></div>
+            <div class="row-card"><div class="row-title">Strengths</div><div>${esc(d.strengths_summary || "No strengths summary recorded")}</div></div>
           </div>
         </div>
 
@@ -277,8 +295,11 @@ async function loadOverview() {
           <h3 class="card-title">Operational snapshot</h3>
           <div class="list">
             <div class="row-card"><div class="row-title">Placement status</div><div>${esc(d.placement_status || "—")}</div></div>
+            <div class="row-card"><div class="row-title">Legal status</div><div>${esc(d.legal_status || "—")}</div></div>
+            <div class="row-card"><div class="row-title">School / education</div><div>${esc(d.school_name || d.education_status || "No education summary")}</div></div>
             <div class="row-card"><div class="row-title">Allergies / health alerts</div><div>${esc(d.health_alerts || "None recorded")}</div></div>
             <div class="row-card"><div class="row-title">Family/contact note</div><div>${esc(d.family_contact_summary || "No current summary")}</div></div>
+            <div class="row-card"><div class="row-title">What matters to me</div><div>${esc(d.what_matters_to_me || "No current summary")}</div></div>
           </div>
         </div>
       </div>
@@ -339,7 +360,6 @@ async function loadTimeline() {
     if (state.timelineCategory) qs.set("category", state.timelineCategory);
 
     const rows = arr(await api(`/young-people/${state.selected.id}/chronology?${qs.toString()}`));
-    console.log("timeline", rows);
 
     setHTML("timelineContent", `
       <div class="list">
@@ -370,6 +390,81 @@ async function loadTimeline() {
   }
 }
 
+async function loadCollectionPanel(url, targetId, config) {
+  if (!state.selected) {
+    setHTML(targetId, emptyCard("No young person selected."));
+    return;
+  }
+
+  setHTML(targetId, emptyCard("Loading..."));
+
+  try {
+    const rows = arr(await api(url));
+    setHTML(targetId, renderSimpleRows(rows, config));
+  } catch (e) {
+    console.error(`loadCollectionPanel failed for ${url}`, e);
+    setHTML(targetId, emptyCard("This section is not available yet."));
+  }
+}
+
+async function loadDailyNotes() {
+  return loadCollectionPanel(ROUTES.dailyNotes(state.selected.id), "dailyNotesContent", {
+    title: r => r.title || "Daily note",
+    meta: r => fmtDateTime(r.note_date || r.recorded_at || r.created_at),
+    body: r => esc(r.summary || r.positives || r.presentation || r.behaviour_update || "Daily note recorded"),
+    badges: r => `<span class="pill ${pillClass(r.significance || r.status)}">${esc(r.significance || r.status || "recorded")}</span>`
+  });
+}
+
+async function loadIncidents() {
+  try {
+    const rows = arr(await api(ROUTES.incidents(state.selected.id)));
+    setHTML("incidentsContent", renderSimpleRows(rows, {
+      title: r => r.title || r.incident_type || "Incident",
+      meta: r => `${fmtDateTime(r.occurred_at || r.incident_datetime || r.created_at)} · ${esc(r.location || "—")}`,
+      body: r => esc(r.description || r.narrative || r.follow_up_required || "Incident recorded"),
+      badges: r => `<span class="pill ${pillClass(r.severity || r.risk_level)}">${esc(r.severity || r.risk_level || "medium")}</span><span class="pill ${pillClass(r.manager_review_status || r.workflow_status)}">${esc(r.manager_review_status || r.workflow_status || "pending")}</span>`
+    }));
+  } catch (e) {
+    console.error("loadIncidents failed", e);
+    setHTML("incidentsContent", emptyCard("Incidents failed to load."));
+  }
+}
+
+async function loadHealth() {
+  return loadCollectionPanel(ROUTES.health(state.selected.id), "healthContent", {
+    title: r => r.title || r.record_type || "Health record",
+    meta: r => fmtDateTime(r.event_datetime || r.recorded_at || r.created_at),
+    body: r => esc(r.summary || r.notes || r.outcome || "Health record"),
+    badges: r => r.follow_up_required ? `<span class="pill amber">Follow-up required</span>` : `<span class="pill green">Recorded</span>`
+  });
+}
+
+async function loadEducation() {
+  return loadCollectionPanel(ROUTES.education(state.selected.id), "educationContent", {
+    title: r => r.provision_name || r.school_name || "Education record",
+    meta: r => `${fmtDate(r.record_date || r.created_at)} · ${esc(r.attendance_status || r.education_status || "—")}`,
+    body: r => esc(r.achievement_note || r.behaviour_summary || r.learning_engagement || r.summary || "Education update")
+  });
+}
+
+async function loadFamily() {
+  return loadCollectionPanel(ROUTES.family(state.selected.id), "familyContent", {
+    title: r => r.contact_person || r.title || "Family contact",
+    meta: r => `${fmtDateTime(r.contact_datetime || r.created_at)} · ${esc(r.contact_type || "contact")}`,
+    body: r => esc(r.child_voice || r.post_contact_presentation || r.concerns || r.summary || "Family contact recorded"),
+    badges: r => r.follow_up_required ? `<span class="pill amber">Follow-up required</span>` : ""
+  });
+}
+
+async function loadKeywork() {
+  return loadCollectionPanel(ROUTES.keywork(state.selected.id), "keyworkContent", {
+    title: r => r.topic || r.title || "Key work session",
+    meta: r => fmtDate(r.session_date || r.created_at),
+    body: r => esc(r.summary || r.child_voice || r.reflective_analysis || "Key work session recorded")
+  });
+}
+
 async function loadPlans() {
   if (!state.selected) {
     setHTML("plansContent", emptyCard("No young person selected."));
@@ -380,7 +475,6 @@ async function loadPlans() {
 
   try {
     const rows = arr(await api(`/young-people/${state.selected.id}/plans`));
-    console.log("plans", rows);
 
     setHTML("plansContent", `
       <div class="list">
@@ -412,7 +506,6 @@ async function loadReviews() {
 
   try {
     const rows = arr(await api("/workflow-reviews"));
-    console.log("reviews", rows);
 
     const html = `
       <div class="list">
@@ -775,6 +868,12 @@ function loadTab() {
   const map = {
     overview: loadOverview,
     timeline: loadTimeline,
+    "daily-notes": loadDailyNotes,
+    incidents: loadIncidents,
+    health: loadHealth,
+    education: loadEducation,
+    family: loadFamily,
+    keywork: loadKeywork,
     plans: loadPlans,
     reviews: loadReviews
   };
@@ -786,6 +885,12 @@ document.addEventListener("DOMContentLoaded", () => {
   setHTML("commandCentreMetrics", emptyCard("Shell loaded. Waiting for data..."));
   setHTML("overviewContent", emptyCard("Select a young person to begin."));
   setHTML("timelineContent", emptyCard("Timeline will load here."));
+  setHTML("dailyNotesContent", emptyCard("Daily notes will load here."));
+  setHTML("incidentsContent", emptyCard("Incidents will load here."));
+  setHTML("healthContent", emptyCard("Health records will load here."));
+  setHTML("educationContent", emptyCard("Education records will load here."));
+  setHTML("familyContent", emptyCard("Family records will load here."));
+  setHTML("keyworkContent", emptyCard("Key work sessions will load here."));
   setHTML("plansContent", emptyCard("Plans will load here."));
   setHTML("reviewsContent", emptyCard("Reviews will load here."));
   setHTML("managerQaContent", emptyCard("Manager QA will load here."));
