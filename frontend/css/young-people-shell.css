@@ -1,465 +1,226 @@
-:root{
-  --bg:#0f1720;
-  --panel:#16212d;
-  --panel-2:#1b2836;
-  --line:#263648;
-  --text:#eaf1f7;
-  --muted:#9fb0c0;
-  --accent:#4da3ff;
-  --green:#1f9d63;
-  --amber:#d08b24;
-  --red:#c94a4a;
-  --shadow:0 18px 50px rgba(0,0,0,.25);
-  --radius:18px;
-}
-
-*{
-  box-sizing:border-box;
-}
-
-html,body{
-  margin:0;
-  padding:0;
-  background:var(--bg);
-  color:var(--text);
-  font-family:Inter,Segoe UI,Arial,sans-serif;
-}
-
-button,input,textarea,select{
-  font:inherit;
-}
-
-body{
-  min-height:100vh;
-}
-
-.hidden{
-  display:none !important;
-}
-
-.section{
-  display:none;
-}
-
-.section.active{
-  display:block;
-}
-
-.panel{
-  display:none;
-}
-
-.panel.active{
-  display:block;
-}
-
-#browseMode{
-  display:block;
-  width:100%;
-}
-
-#section-command-centre,
-#section-young-people,
-#section-handover,
-#section-manager-qa,
-#commandCentreMetrics,
-#commandCentreAlerts,
-#commandCentreTasks,
-#commandCentreMeds,
-#commandCentreHandover,
-#overviewContent,
-#timelineContent,
-#plansContent,
-#reviewsContent,
-#managerQaContent,
-#handoverBoard{
-  width:100%;
-}
-
-.app-shell{
-  display:grid;
-  grid-template-columns:280px 1fr;
-  min-height:100vh;
-}
-
-.sidebar{
-  background:#0c141c;
-  border-right:1px solid var(--line);
-  padding:22px 18px;
-  display:flex;
-  flex-direction:column;
-  gap:22px;
-}
-
-.brand{
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
-
-.brand-mark{
-  width:42px;
-  height:42px;
-  border-radius:14px;
-  background:linear-gradient(135deg,#5faeff,#2b6fd3);
-  display:grid;
-  place-items:center;
-  font-weight:700;
-  color:white;
-}
-
-.brand-title{
-  font-weight:700;
-  font-size:18px;
-}
-
-.brand-subtitle{
-  color:var(--muted);
-  font-size:13px;
-}
-
-.nav{
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-
-.nav-btn{
-  width:100%;
-  text-align:left;
-  border:1px solid transparent;
-  background:transparent;
-  color:var(--text);
-  padding:12px 14px;
-  border-radius:14px;
-  cursor:pointer;
-}
-
-.nav-btn:hover,
-.nav-btn.active{
-  background:var(--panel);
-  border-color:var(--line);
-}
-
-.sidebar-block{
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-
-.label{
-  font-size:12px;
-  color:var(--muted);
-  text-transform:uppercase;
-  letter-spacing:.04em;
-}
-
-.main{
-  padding:24px;
-  display:flex;
-  flex-direction:column;
-  gap:22px;
-  width:100%;
-}
-
-.page-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:16px;
-}
-
-.page-header h1{
-  margin:0 0 6px;
-  font-size:28px;
-}
-
-.page-header p{
-  margin:0;
-  color:var(--muted);
-}
-
-.header-actions{
-  display:flex;
-  gap:10px;
-}
-
-.card{
-  background:linear-gradient(180deg,var(--panel),var(--panel-2));
-  border:1px solid var(--line);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  padding:18px;
-}
-
-.card-title-row{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:12px;
-}
-
-.card-title{
-  margin:0;
-  font-size:18px;
-}
-
-.muted{
-  color:var(--muted);
-}
-
-.grid{
-  display:grid;
-  gap:16px;
-}
-
-.metrics-grid{
-  display:grid;
-  grid-template-columns:repeat(6, minmax(0, 1fr));
-  gap:16px;
-}
-
-.two-col{
-  display:grid;
-  grid-template-columns:repeat(2, minmax(0, 1fr));
-  gap:16px;
-}
-
-.metric-card{
-  padding:18px;
-  border-radius:18px;
-  background:linear-gradient(180deg,#172230,#1a2634);
-  border:1px solid var(--line);
-  min-height:110px;
-}
-
-.metric-label{
-  color:var(--muted);
-  font-size:13px;
-  margin-bottom:8px;
-}
-
-.metric-value{
-  font-size:28px;
-  font-weight:700;
-}
-
-.input,
-.textarea,
-select{
-  width:100%;
-  border:1px solid var(--line);
-  background:#0f1822;
-  color:var(--text);
-  border-radius:14px;
-  padding:12px 14px;
-  outline:none;
-}
-
-.textarea{
-  min-height:120px;
-  resize:vertical;
-}
-
-.input.slim{
-  max-width:220px;
-}
-
-.btn{
-  border:1px solid var(--line);
-  background:#182535;
-  color:var(--text);
-  border-radius:14px;
-  padding:11px 14px;
-  cursor:pointer;
-}
-
-.btn:hover{
-  filter:brightness(1.06);
-}
-
-.btn.primary{
-  background:linear-gradient(135deg,#4da3ff,#317fdf);
-  border-color:transparent;
-  color:white;
-}
-
-.btn.ghost{
-  background:transparent;
-}
-
-.person-hero{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:16px;
-}
-
-.person-hero h2{
-  margin:0 0 8px;
-  font-size:26px;
-}
-
-.hero-meta{
-  color:var(--muted);
-}
-
-.hero-badges{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-}
-
-.subtabs{
-  display:flex;
-  gap:8px;
-  margin:4px 0 14px;
-  flex-wrap:wrap;
-}
-
-.tab{
-  border:1px solid var(--line);
-  background:#111c27;
-  color:var(--text);
-  border-radius:12px;
-  padding:10px 14px;
-  cursor:pointer;
-}
-
-.tab.active{
-  background:#1c2b3a;
-}
-
-.toolbar-card{
-  margin-bottom:14px;
-}
-
-.toolbar{
-  display:flex;
-  justify-content:space-between;
-  gap:12px;
-  align-items:center;
-}
-
-.list{
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-}
-
-.row-card{
-  border:1px solid var(--line);
-  background:#111b25;
-  border-radius:16px;
-  padding:14px;
-}
-
-.row-title{
-  font-weight:600;
-  margin-bottom:6px;
-}
-
-.row-meta{
-  color:var(--muted);
-  font-size:13px;
-  margin-bottom:8px;
-}
-
-.badges{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  margin-top:10px;
-}
-
-.pill{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  padding:7px 10px;
-  border-radius:999px;
-  font-size:12px;
-  border:1px solid var(--line);
-  background:#152130;
-}
-
-.pill.green{
-  background:rgba(31,157,99,.15);
-  color:#8fe0b8;
-}
-
-.pill.red{
-  background:rgba(201,74,74,.15);
-  color:#ffadad;
-}
-
-.pill.amber{
-  background:rgba(208,139,36,.15);
-  color:#ffd08b;
-}
-
-.pill.blue{
-  background:rgba(77,163,255,.15);
-  color:#b8d9ff;
-}
-
-.doc-header{
-  display:flex;
-  gap:16px;
-  align-items:flex-start;
-  margin-bottom:18px;
-}
-
-.doc-grid{
-  display:grid;
-  grid-template-columns:2fr 1fr;
-  gap:16px;
-}
-
-.doc-meta-bar{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  margin-bottom:14px;
-}
-
-.doc-side{
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-}
-
-hr{
-  border:none;
-  border-top:1px solid var(--line);
-  width:100%;
-}
-
-.statusbar{
-  min-height:28px;
-}
-
-.mini-meta{
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-  color:var(--muted);
-  font-size:14px;
-}
-
-@media (max-width: 1100px){
-  .app-shell{
-    grid-template-columns:1fr;
-  }
-
-  .sidebar{
-    border-right:none;
-    border-bottom:1px solid var(--line);
-  }
-
-  .metrics-grid,
-  .two-col,
-  .doc-grid{
-    grid-template-columns:1fr;
-  }
-}
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+ <meta charset="UTF-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+ <title>IndiCare — Children’s Home OS</title>
+ <link rel="stylesheet" href="/css/young-people-shell.css?v=20260317" />
+</head>
+<body>
+ <div class="app-shell">
+ <aside class="sidebar">
+ <div class="brand">
+ <div class="brand-mark">I</div>
+ <div>
+ <div class="brand-title">IndiCare</div>
+ <div class="brand-subtitle">Children’s Home OS</div>
+ </div>
+ </div>
+
+ <nav class="nav">
+ <button class="nav-btn active" data-section="command-centre">Command Centre</button>
+ <button class="nav-btn" data-section="young-people">Young People</button>
+ <button class="nav-btn" data-section="handover">Handover</button>
+ <button class="nav-btn" data-section="manager-qa">Manager QA</button>
+ </nav>
+
+ <div class="sidebar-block">
+ <label class="label" for="youngPersonSelect">Selected young person</label>
+ <select id="youngPersonSelect" class="input">
+ <option>Loading…</option>
+ </select>
+ </div>
+
+ <div class="sidebar-block">
+ <div class="card" style="padding:14px;">
+ <div class="row-title" style="margin-bottom:8px;">Quick actions</div>
+ <div class="list" style="gap:8px;">
+ <button class="btn" id="quickEventBtn">Go to timeline</button>
+ <button class="btn primary" id="newPlanBtn">New plan</button>
+ </div>
+ </div>
+ </div>
+
+ <div class="sidebar-block statusbar hidden" id="statusBar"></div>
+ </aside>
+
+ <main class="main">
+ <header class="page-header">
+ <div>
+ <h1 id="pageTitle">Command Centre</h1>
+ <p id="pageSubtitle">Shift-first oversight for children’s residential care</p>
+ </div>
+ <div class="header-actions">
+ <button class="btn" id="headerTimelineBtn" onclick="document.getElementById('quickEventBtn')?.click()">Timeline</button>
+ <button class="btn primary" id="headerPlanBtn" onclick="document.getElementById('newPlanBtn')?.click()">Create plan</button>
+ </div>
+ </header>
+
+ <section id="browseMode">
+ <!-- COMMAND CENTRE -->
+ <section class="section active" id="section-command-centre">
+ <div class="grid metrics-grid" id="commandCentreMetrics"></div>
+
+ <div class="grid two-col">
+ <div class="card">
+ <div class="card-title-row">
+ <h2 class="card-title">Live alerts</h2>
+ </div>
+ <div id="commandCentreAlerts"></div>
+ </div>
+
+ <div class="card">
+ <div class="card-title-row">
+ <h2 class="card-title">Shift tasks</h2>
+ </div>
+ <div id="commandCentreTasks"></div>
+ </div>
+ </div>
+
+ <div class="grid two-col">
+ <div class="card">
+ <div class="card-title-row">
+ <h2 class="card-title">Medication due</h2>
+ </div>
+ <div id="commandCentreMeds"></div>
+ </div>
+
+ <div class="card">
+ <div class="card-title-row">
+ <h2 class="card-title">Latest handover</h2>
+ </div>
+ <div id="commandCentreHandover"></div>
+ </div>
+ </div>
+ </section>
+
+ <!-- YOUNG PEOPLE -->
+ <section class="section" id="section-young-people">
+ <div class="person-hero card">
+ <div>
+ <h2 id="selectedYoungPersonName">—</h2>
+ <div class="hero-meta" id="selectedYoungPersonMeta">—</div>
+ </div>
+ <div class="hero-badges" id="selectedYoungPersonBadges"></div>
+ </div>
+
+ <div class="subtabs">
+ <button class="tab active" data-tab="overview">Overview</button>
+ <button class="tab" data-tab="timeline">Timeline</button>
+ <button class="tab" data-tab="daily-notes">Daily Notes</button>
+ <button class="tab" data-tab="incidents">Incidents</button>
+ <button class="tab" data-tab="health">Health</button>
+ <button class="tab" data-tab="education">Education</button>
+ <button class="tab" data-tab="family">Family</button>
+ <button class="tab" data-tab="keywork">Key Work</button>
+ <button class="tab" data-tab="plans">Plans</button>
+ <button class="tab" data-tab="reviews">Reviews</button>
+ </div>
+
+ <div class="panel active" id="tab-overview">
+ <div id="overviewContent"></div>
+ </div>
+
+ <div class="panel" id="tab-timeline">
+ <div class="card toolbar-card">
+ <div class="toolbar">
+ <div class="badges" style="margin:0;">
+ <select id="timelineEventType" class="input slim">
+ <option value="">All chronology</option>
+ <option value="daily_note">Daily notes</option>
+ <option value="incident">Incidents</option>
+ <option value="health">Health</option>
+ <option value="education">Education</option>
+ <option value="family">Family</option>
+ <option value="keywork">Key work</option>
+ <option value="plan">Plans</option>
+ <option value="risk">Risk</option>
+ </select>
+ </div>
+ </div>
+ </div>
+ <div id="timelineContent"></div>
+ </div>
+
+ <div class="panel" id="tab-daily-notes">
+ <div id="dailyNotesContent"></div>
+ </div>
+
+ <div class="panel" id="tab-incidents">
+ <div id="incidentsContent"></div>
+ </div>
+
+ <div class="panel" id="tab-health">
+ <div id="healthContent"></div>
+ </div>
+
+ <div class="panel" id="tab-education">
+ <div id="educationContent"></div>
+ </div>
+
+ <div class="panel" id="tab-family">
+ <div id="familyContent"></div>
+ </div>
+
+ <div class="panel" id="tab-keywork">
+ <div id="keyworkContent"></div>
+ </div>
+
+ <div class="panel" id="tab-plans">
+ <div class="card toolbar-card">
+ <div class="toolbar">
+ <div class="muted">Child-centred plans, staff guidance and review workflow.</div>
+ <button class="btn primary" id="plansOpenCreateBtn">Create plan</button>
+ </div>
+ </div>
+ <div id="plansContent"></div>
+ </div>
+
+ <div class="panel" id="tab-reviews">
+ <div id="reviewsContent"></div>
+ </div>
+ </section>
+
+ <!-- HANDOVER -->
+ <section class="section" id="section-handover">
+ <div class="card">
+ <div class="card-title-row">
+ <div>
+ <h2 class="card-title">Shift handover</h2>
+ <p class="muted" style="margin:6px 0 0;">Auto-drafted from recorded reality, incidents, medication and tasks.</p>
+ </div>
+ </div>
+ <div id="handoverBoard"></div>
+ </div>
+ </section>
+
+ <!-- MANAGER QA -->
+ <section class="section" id="section-manager-qa">
+ <div class="card">
+ <div class="card-title-row">
+ <div>
+ <h2 class="card-title">Manager review queue</h2>
+ <p class="muted" style="margin:6px 0 0;">Approve, return and quality assure records before inspection or audit.</p>
+ </div>
+ </div>
+ <div id="managerQaContent"></div>
+ </div>
+ </section>
+ </section>
+
+ <section id="documentMode" class="hidden">
+ <div class="doc-header">
+ <button class="btn ghost" id="docBackBtn">← Back</button>
+ <div>
+ <h2 id="docTitle">Document</h2>
+ <div class="muted" id="docMetaLine">—</div>
+ </div>
+ </div>
+ <div id="docBody"></div>
+ </section>
+ </main>
+ </div>
+
+ <script src="/js/young-people-shell.js?v=20260317"></script>
+</body>
+</html>
