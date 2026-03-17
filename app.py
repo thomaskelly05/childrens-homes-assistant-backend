@@ -37,6 +37,7 @@ from routers.young_people_keywork_routes import router as young_people_keywork_r
 from routers.young_people_chronology_routes import router as young_people_chronology_router
 from routers.young_people_compliance_routes import router as young_people_compliance_router
 from routers.young_people_standards_routes import router as young_people_standards_router
+from routers.young_people_handover_routes import router as young_people_handover_router
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
@@ -78,6 +79,7 @@ app.include_router(risk_router)
 app.include_router(staff_journal_router)
 app.include_router(supervision_router)
 app.include_router(tasks_router)
+
 app.include_router(young_people_router)
 app.include_router(young_people_profile_router)
 app.include_router(young_people_plans_router)
@@ -91,6 +93,7 @@ app.include_router(young_people_keywork_router)
 app.include_router(young_people_chronology_router)
 app.include_router(young_people_compliance_router)
 app.include_router(young_people_standards_router)
+app.include_router(young_people_handover_router)
 
 app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
 app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
