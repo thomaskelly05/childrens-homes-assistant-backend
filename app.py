@@ -24,6 +24,7 @@ from routers.risk_routes import router as risk_router
 from routers.staff_journal_routes import router as staff_journal_router
 from routers.supervision_routes import router as supervision_router
 from routers.tasks_routes import router as tasks_router
+
 from routers.young_people_routes import router as young_people_router
 from routers.young_people_profile_routes import router as young_people_profile_router
 from routers.young_people_plans_routes import router as young_people_plans_router
@@ -37,9 +38,16 @@ from routers.young_people_keywork_routes import router as young_people_keywork_r
 from routers.young_people_chronology_routes import router as young_people_chronology_router
 from routers.young_people_compliance_routes import router as young_people_compliance_router
 from routers.young_people_standards_routes import router as young_people_standards_router
+
 from routers.young_people_handover_routes import router as young_people_handover_router
 from routers.young_people_reports_routes import router as young_people_reports_router
 from routers.young_people_photo_routes import router as young_people_photo_router
+
+from routers.young_people_plans_workflow_routes import router as young_people_plans_workflow_router
+from routers.young_people_risk_workflow_routes import router as young_people_risk_workflow_router
+from routers.young_people_daily_notes_workflow_routes import router as young_people_daily_notes_workflow_router
+from routers.young_people_incidents_workflow_routes import router as young_people_incidents_workflow_router
+from routers.young_people_keywork_workflow_routes import router as young_people_keywork_workflow_router
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
@@ -62,7 +70,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Core
+# Core routes
 app.include_router(auth_router)
 app.include_router(account_router)
 app.include_router(admin_router)
@@ -83,7 +91,7 @@ app.include_router(staff_journal_router)
 app.include_router(supervision_router)
 app.include_router(tasks_router)
 
-# Young people
+# Young people base/data routes
 app.include_router(young_people_router)
 app.include_router(young_people_profile_router)
 app.include_router(young_people_plans_router)
@@ -97,9 +105,18 @@ app.include_router(young_people_keywork_router)
 app.include_router(young_people_chronology_router)
 app.include_router(young_people_compliance_router)
 app.include_router(young_people_standards_router)
+
+# Young people extra feature routes
 app.include_router(young_people_handover_router)
 app.include_router(young_people_reports_router)
 app.include_router(young_people_photo_router)
+
+# Young people workflow action routes
+app.include_router(young_people_plans_workflow_router)
+app.include_router(young_people_risk_workflow_router)
+app.include_router(young_people_daily_notes_workflow_router)
+app.include_router(young_people_incidents_workflow_router)
+app.include_router(young_people_keywork_workflow_router)
 
 app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
 app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
