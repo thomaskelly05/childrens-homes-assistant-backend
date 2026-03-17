@@ -4,11 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IndiCare | Young People</title>
-  <link rel="stylesheet" href="/css/young-people-shell.css?v=70" />
+  <link rel="stylesheet" href="/css/young-people-shell.css?v=80" />
 </head>
 <body>
   <div class="app">
-    <aside class="sidebar">
+    <aside id="sidebar" class="sidebar">
       <div class="brand">
         <div class="brand-mark">I</div>
         <div>
@@ -27,8 +27,9 @@
     </aside>
 
     <main class="main">
-      <header class="hero">
-        <div class="hero-left">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="mobileSidebarBtn" class="icon-btn mobile-only" type="button" aria-label="Open young people menu">☰</button>
           <label for="youngPersonPhotoUpload" class="avatar">
             <img id="youngPersonPhotoPreview" hidden alt="Profile photo" />
             <span id="youngPersonPhotoFallback">YP</span>
@@ -38,14 +39,11 @@
             <div class="eyebrow">Therapeutic record and care overview</div>
             <h2 id="selectedYoungPersonName">Select a young person</h2>
             <p id="selectedYoungPersonMeta" class="muted">No record loaded</p>
-            <div class="chips">
-              <span class="chip">Child-centred</span>
-              <span class="chip">Trauma-informed</span>
-              <span class="chip">SCCIF-aligned</span>
-            </div>
           </div>
         </div>
-        <div class="row">
+
+        <div class="topbar-actions">
+          <button id="mobileTabsBtn" class="icon-btn mobile-only" type="button" aria-label="Open section menu">☰</button>
           <button id="reloadCurrentBtn" class="btn secondary" type="button">Reload</button>
           <button id="inspectionPackBtn" class="btn secondary" type="button">Inspection Pack</button>
           <button id="headerOfstedAiBtn" class="btn primary" type="button">AI OFSTED Report</button>
@@ -54,7 +52,7 @@
 
       <div id="statusBar" class="status hidden"></div>
 
-      <nav class="tabs">
+      <nav id="tabsBar" class="tabs">
         <button class="tab active" data-tab="overview" type="button">Overview</button>
         <button class="tab" data-tab="profile" type="button">Profile</button>
         <button class="tab" data-tab="plans" type="button">Plans</button>
@@ -84,113 +82,36 @@
         <div class="panel-head">
           <div>
             <h3>Profile</h3>
-            <p class="muted">Core identity and relational profile.</p>
+            <p class="muted">Core identity, communication and relational profile.</p>
           </div>
+          <button id="openProfileDocBtn" class="btn primary" type="button">Open Profile</button>
         </div>
         <div id="profileContent"><div class="empty">Profile will appear here.</div></div>
       </section>
 
       <section id="tab-plans" class="panel">
         <div class="panel-head">
-          <div>
-            <h3>Plans</h3>
-            <p class="muted">Support plans with therapeutic and review workflow.</p>
-          </div>
+          <div><h3>Plans</h3><p class="muted">Support plans and therapeutic guidance.</p></div>
           <button id="plansOpenCreateBtn" class="btn primary" type="button">New Plan</button>
         </div>
         <div class="subtabs">
           <button class="subtab active" data-section="plans" data-sub="records" type="button">Records</button>
-          <button class="subtab" data-section="plans" data-sub="form" type="button">Create / Edit</button>
           <button class="subtab" data-section="plans" data-sub="archive" type="button">Archive</button>
         </div>
         <div id="plans-records" class="subpanel active"><div id="plansContent"></div></div>
-        <div id="plans-form" class="subpanel">
-          <form id="planForm" class="form">
-            <input id="planId" type="hidden" />
-            <div class="grid two">
-              <div><label class="label">Plan Type</label><input id="planType" class="input" /></div>
-              <div><label class="label">Title</label><input id="planTitle" class="input" /></div>
-            </div>
-            <div><label class="label">Presenting Need</label><textarea id="planPresentingNeed" class="textarea"></textarea></div>
-            <div><label class="label">Summary</label><textarea id="planSummary" class="textarea"></textarea></div>
-            <div><label class="label">Young Person's Voice</label><textarea id="planChildVoice" class="textarea"></textarea></div>
-            <div><label class="label">Proactive Strategies</label><textarea id="planProactiveStrategies" class="textarea"></textarea></div>
-            <div><label class="label">PACE / Relational Guidance</label><textarea id="planPaceGuidance" class="textarea"></textarea></div>
-            <div><label class="label">Triggers / Stressors</label><textarea id="planTriggers" class="textarea"></textarea></div>
-            <div><label class="label">Protective Factors / Strengths</label><textarea id="planProtectiveFactors" class="textarea"></textarea></div>
-            <div class="grid three">
-              <div><label class="label">Start Date</label><input id="planStartDate" class="input" type="date" /></div>
-              <div><label class="label">Review Date</label><input id="planReviewDate" class="input" type="date" /></div>
-              <div><label class="label">Status</label><select id="planStatus" class="input"><option>active</option><option>draft</option><option>completed</option><option>archived</option></select></div>
-            </div>
-            <div><label class="label">Review Comment</label><textarea id="planReviewComment" class="textarea small"></textarea></div>
-            <div class="workflow">
-              <div class="row">
-                <span id="planWorkflowState" class="pill grey">Draft</span>
-                <span id="planAutosaveState" class="pill grey">Not yet saved</span>
-              </div>
-              <div class="row">
-                <button id="planSaveNowBtn" class="btn secondary" type="button">Save now</button>
-                <button id="planSubmitReviewBtn" class="btn secondary" type="button">Send for review</button>
-                <button id="planApproveBtn" class="btn secondary" type="button">Approve</button>
-                <button id="planReturnBtn" class="btn secondary" type="button">Return</button>
-                <button class="btn primary" type="submit">Save Plan</button>
-                <button id="clearPlanFormBtn" class="btn secondary" type="button">Clear</button>
-              </div>
-            </div>
-          </form>
-        </div>
         <div id="plans-archive" class="subpanel"><div id="plansArchiveContent"></div></div>
       </section>
 
       <section id="tab-risk" class="panel">
         <div class="panel-head">
-          <div><h3>Risk</h3><p class="muted">Relational risk recording and support responses.</p></div>
+          <div><h3>Risk</h3><p class="muted">Risk, safety and support responses.</p></div>
           <button id="riskOpenCreateBtn" class="btn primary" type="button">New Risk</button>
         </div>
         <div class="subtabs">
           <button class="subtab active" data-section="risk" data-sub="records" type="button">Records</button>
-          <button class="subtab" data-section="risk" data-sub="form" type="button">Create / Edit</button>
           <button class="subtab" data-section="risk" data-sub="archive" type="button">Archive</button>
         </div>
         <div id="risk-records" class="subpanel active"><div id="riskContent"></div></div>
-        <div id="risk-form" class="subpanel">
-          <form id="riskForm" class="form">
-            <input id="riskId" type="hidden" />
-            <div class="grid two">
-              <div><label class="label">Category</label><input id="riskCategory" class="input" /></div>
-              <div><label class="label">Title</label><input id="riskTitle" class="input" /></div>
-            </div>
-            <div><label class="label">Concern Summary</label><textarea id="riskConcernSummary" class="textarea"></textarea></div>
-            <div><label class="label">Known Triggers</label><textarea id="riskKnownTriggers" class="textarea"></textarea></div>
-            <div><label class="label">Early Warning Signs</label><textarea id="riskEarlyWarningSigns" class="textarea"></textarea></div>
-            <div><label class="label">Contextual Factors</label><textarea id="riskContextualFactors" class="textarea"></textarea></div>
-            <div><label class="label">Current Controls</label><textarea id="riskCurrentControls" class="textarea"></textarea></div>
-            <div><label class="label">De-escalation Strategies</label><textarea id="riskDeescalationStrategies" class="textarea"></textarea></div>
-            <div><label class="label">Response Actions</label><textarea id="riskResponseActions" class="textarea"></textarea></div>
-            <div><label class="label">Young Person's Views</label><textarea id="riskChildViews" class="textarea"></textarea></div>
-            <div class="grid three">
-              <div><label class="label">Severity</label><select id="riskSeverity" class="input"><option>low</option><option selected>medium</option><option>high</option></select></div>
-              <div><label class="label">Likelihood</label><select id="riskLikelihood" class="input"><option>low</option><option selected>medium</option><option>high</option></select></div>
-              <div><label class="label">Review Date</label><input id="riskReviewDate" class="input" type="date" /></div>
-            </div>
-            <div><label class="label">Review Comment</label><textarea id="riskReviewComment" class="textarea small"></textarea></div>
-            <div class="workflow">
-              <div class="row">
-                <span id="riskWorkflowState" class="pill grey">Draft</span>
-                <span id="riskAutosaveState" class="pill grey">Not yet saved</span>
-              </div>
-              <div class="row">
-                <button id="riskSaveNowBtn" class="btn secondary" type="button">Save now</button>
-                <button id="riskSubmitReviewBtn" class="btn secondary" type="button">Send for review</button>
-                <button id="riskApproveBtn" class="btn secondary" type="button">Approve</button>
-                <button id="riskReturnBtn" class="btn secondary" type="button">Return</button>
-                <button class="btn primary" type="submit">Save Risk</button>
-                <button id="clearRiskFormBtn" class="btn secondary" type="button">Clear</button>
-              </div>
-            </div>
-          </form>
-        </div>
         <div id="risk-archive" class="subpanel"><div id="riskArchiveContent"></div></div>
       </section>
 
@@ -202,141 +123,38 @@
             <button id="refreshDailyNotesBtn" class="btn secondary" type="button">Refresh</button>
           </div>
         </div>
-        <div class="subtabs">
-          <button class="subtab active" data-section="daily_notes" data-sub="records" type="button">Records</button>
-          <button class="subtab" data-section="daily_notes" data-sub="form" type="button">Create / Edit</button>
-          <button class="subtab" data-section="daily_notes" data-sub="archive" type="button">Archive</button>
-        </div>
-        <div id="daily_notes-records" class="subpanel active"><div id="dailyNotesContent"></div></div>
-        <div id="daily_notes-form" class="subpanel">
-          <form id="dailyNoteForm" class="form">
-            <input id="dailyNoteId" type="hidden" />
-            <div class="grid three">
-              <div><label class="label">Date</label><input id="dailyNoteDate" class="input" type="date" /></div>
-              <div><label class="label">Shift Type</label><select id="dailyNoteShiftType" class="input"><option>day</option><option>evening</option><option>night</option><option>waking_night</option><option>school</option><option>custom</option></select></div>
-              <div><label class="label">Workflow Status</label><select id="dailyNoteWorkflowStatus" class="input"><option>draft</option><option>completed</option><option>reviewed</option><option>returned</option></select></div>
-            </div>
-            <div><label class="label">Mood / Presentation</label><textarea id="dailyNoteMood" class="textarea"></textarea></div>
-            <div><label class="label">Activities / Daily Life</label><textarea id="dailyNoteActivities" class="textarea"></textarea></div>
-            <div><label class="label">Education Update</label><textarea id="dailyNoteEducationUpdate" class="textarea small"></textarea></div>
-            <div><label class="label">Health Update</label><textarea id="dailyNoteHealthUpdate" class="textarea small"></textarea></div>
-            <div><label class="label">Family Update</label><textarea id="dailyNoteFamilyUpdate" class="textarea small"></textarea></div>
-            <div><label class="label">Behaviour / Regulation</label><textarea id="dailyNoteBehaviourUpdate" class="textarea"></textarea></div>
-            <div><label class="label">Young Person's Voice</label><textarea id="dailyNoteYoungPersonVoice" class="textarea"></textarea></div>
-            <div><label class="label">Positives</label><textarea id="dailyNotePositives" class="textarea small"></textarea></div>
-            <div><label class="label">Actions Required</label><textarea id="dailyNoteActionsRequired" class="textarea small"></textarea></div>
-            <div><label class="label">Review Comment</label><textarea id="dailyReviewComment" class="textarea small"></textarea></div>
-            <div class="workflow">
-              <div class="row">
-                <span id="dailyWorkflowState" class="pill grey">Draft</span>
-                <span id="dailyAutosaveState" class="pill grey">Not yet saved</span>
-              </div>
-              <div class="row">
-                <button id="dailySaveNowBtn" class="btn secondary" type="button">Save now</button>
-                <button id="dailySubmitReviewBtn" class="btn secondary" type="button">Send for review</button>
-                <button id="dailyApproveBtn" class="btn secondary" type="button">Approve</button>
-                <button id="dailyReturnBtn" class="btn secondary" type="button">Return</button>
-                <button class="btn primary" type="submit">Save Daily Note</button>
-                <button id="clearDailyNoteFormBtn" class="btn secondary" type="button">Clear</button>
-              </div>
-            </div>
-          </form>
-        </div>
-        <div id="daily_notes-archive" class="subpanel"><div id="dailyNotesArchiveContent"></div></div>
+        <div id="dailyNotesContent"></div>
       </section>
 
       <section id="tab-incidents" class="panel">
         <div class="panel-head">
-          <div><h3>Incidents</h3><p class="muted">Factual, reflective and reviewable incident recording.</p></div>
+          <div><h3>Incidents</h3><p class="muted">Factual incident records and review.</p></div>
           <button id="incidentsOpenCreateBtn" class="btn primary" type="button">New Incident</button>
         </div>
         <div class="subtabs">
           <button class="subtab active" data-section="incidents" data-sub="records" type="button">Records</button>
-          <button class="subtab" data-section="incidents" data-sub="form" type="button">Create / Edit</button>
           <button class="subtab" data-section="incidents" data-sub="archive" type="button">Archive</button>
         </div>
         <div id="incidents-records" class="subpanel active"><div id="incidentsContent"></div></div>
-        <div id="incidents-form" class="subpanel">
-          <form id="incidentForm" class="form">
-            <input id="incidentId" type="hidden" />
-            <div class="grid three">
-              <div><label class="label">Incident Date / Time</label><input id="incidentDatetime" class="input" type="datetime-local" /></div>
-              <div><label class="label">Incident Type</label><input id="incidentType" class="input" /></div>
-              <div><label class="label">Severity</label><select id="incidentSeverity" class="input"><option>low</option><option selected>medium</option><option>high</option></select></div>
-            </div>
-            <div><label class="label">Location</label><input id="incidentLocation" class="input" /></div>
-            <div><label class="label">Description</label><textarea id="incidentDescription" class="textarea"></textarea></div>
-            <div><label class="label">Staff Response</label><textarea id="incidentResponse" class="textarea"></textarea></div>
-            <div><label class="label">Follow-up Required</label><textarea id="incidentFollowUp" class="textarea small"></textarea></div>
-            <div><label class="label">Manager Review Status</label><select id="incidentManagerReviewStatus" class="input"><option>pending</option><option>reviewed</option><option>returned</option></select></div>
-            <div><label class="label">Review Comment</label><textarea id="incidentReviewComment" class="textarea small"></textarea></div>
-            <div class="workflow">
-              <div class="row">
-                <span id="incidentWorkflowState" class="pill grey">Draft</span>
-                <span id="incidentAutosaveState" class="pill grey">Not yet saved</span>
-              </div>
-              <div class="row">
-                <button id="incidentSaveNowBtn" class="btn secondary" type="button">Save now</button>
-                <button id="incidentSubmitReviewBtn" class="btn secondary" type="button">Send for review</button>
-                <button id="incidentApproveBtn" class="btn secondary" type="button">Approve</button>
-                <button id="incidentReturnBtn" class="btn secondary" type="button">Return</button>
-                <button class="btn primary" type="submit">Save Incident</button>
-                <button id="clearIncidentFormBtn" class="btn secondary" type="button">Clear</button>
-              </div>
-            </div>
-          </form>
-        </div>
         <div id="incidents-archive" class="subpanel"><div id="incidentsArchiveContent"></div></div>
       </section>
 
       <section id="tab-keywork" class="panel">
         <div class="panel-head">
-          <div><h3>Key Work</h3><p class="muted">Relationship-based intervention, reflection and agreed action.</p></div>
+          <div><h3>Key Work</h3><p class="muted">Relationship-based intervention and reflection.</p></div>
           <button id="keyworkOpenCreateBtn" class="btn primary" type="button">New Key Work</button>
         </div>
         <div class="subtabs">
           <button class="subtab active" data-section="keywork" data-sub="records" type="button">Records</button>
-          <button class="subtab" data-section="keywork" data-sub="form" type="button">Create / Edit</button>
           <button class="subtab" data-section="keywork" data-sub="archive" type="button">Archive</button>
         </div>
         <div id="keywork-records" class="subpanel active"><div id="keyworkContent"></div></div>
-        <div id="keywork-form" class="subpanel">
-          <form id="keyworkForm" class="form">
-            <input id="keyworkId" type="hidden" />
-            <div class="grid three">
-              <div><label class="label">Session Date</label><input id="keyworkSessionDate" class="input" type="date" /></div>
-              <div><label class="label">Worker ID</label><input id="keyworkWorkerId" class="input" type="number" /></div>
-              <div><label class="label">Topic</label><input id="keyworkTopic" class="input" /></div>
-            </div>
-            <div><label class="label">Purpose</label><textarea id="keyworkPurpose" class="textarea"></textarea></div>
-            <div><label class="label">Summary</label><textarea id="keyworkSummary" class="textarea"></textarea></div>
-            <div><label class="label">Young Person's Voice</label><textarea id="keyworkChildVoice" class="textarea"></textarea></div>
-            <div><label class="label">Reflective Analysis</label><textarea id="keyworkReflectiveAnalysis" class="textarea"></textarea></div>
-            <div><label class="label">Actions Agreed</label><textarea id="keyworkActionsAgreed" class="textarea small"></textarea></div>
-            <div><label class="label">Next Session Date</label><input id="keyworkNextSessionDate" class="input" type="date" /></div>
-            <div><label class="label">Review Comment</label><textarea id="keyworkReviewComment" class="textarea small"></textarea></div>
-            <div class="workflow">
-              <div class="row">
-                <span id="keyworkWorkflowState" class="pill grey">Draft</span>
-                <span id="keyworkAutosaveState" class="pill grey">Not yet saved</span>
-              </div>
-              <div class="row">
-                <button id="keyworkSaveNowBtn" class="btn secondary" type="button">Save now</button>
-                <button id="keyworkSubmitReviewBtn" class="btn secondary" type="button">Send for review</button>
-                <button id="keyworkApproveBtn" class="btn secondary" type="button">Approve</button>
-                <button id="keyworkReturnBtn" class="btn secondary" type="button">Return</button>
-                <button class="btn primary" type="submit">Save Key Work</button>
-                <button id="clearKeyworkFormBtn" class="btn secondary" type="button">Clear</button>
-              </div>
-            </div>
-          </form>
-        </div>
         <div id="keywork-archive" class="subpanel"><div id="keyworkArchiveContent"></div></div>
       </section>
 
       <section id="tab-handover" class="panel">
         <div class="panel-head">
-          <div><h3>Handover</h3><p class="muted">Auto-generated summaries from current records and actions due.</p></div>
+          <div><h3>Handover</h3><p class="muted">Shift-ready summaries and next actions.</p></div>
           <div class="row">
             <button id="generateHandoverBtn" class="btn primary" type="button">Generate Handover</button>
             <button id="refreshHandoverBtn" class="btn secondary" type="button">Refresh</button>
@@ -347,7 +165,7 @@
 
       <section id="tab-reports" class="panel">
         <div class="panel-head">
-          <div><h3>AI Reports</h3><p class="muted">Generated reports with linked source evidence.</p></div>
+          <div><h3>AI Reports</h3><p class="muted">Downloadable reports and linked evidence.</p></div>
         </div>
         <div id="reportsContent"><div class="empty">Reports will appear here.</div></div>
       </section>
@@ -364,7 +182,7 @@
         <div class="panel-head">
           <div><h3>Monthly Reviews</h3><p class="muted">Themes, progress and next steps.</p></div>
           <div class="row">
-            <input id="monthlyReviewMonth" class="input" type="month" />
+            <input id="monthlyReviewMonth" class="input month-input" type="month" />
             <button id="generateMonthlyReviewBtn" class="btn primary" type="button">Generate Review</button>
             <button id="monthlyOfstedAiBtn" class="btn secondary" type="button">AI OFSTED Report</button>
           </div>
@@ -391,6 +209,35 @@
     </main>
   </div>
 
-  <script src="/js/young-people-shell.js?v=70"></script>
+  <div id="overlay" class="overlay hidden"></div>
+
+  <aside id="docDrawer" class="doc-drawer">
+    <div class="doc-head">
+      <div>
+        <div id="docEyebrow" class="eyebrow">Document</div>
+        <h3 id="docTitle">Record</h3>
+        <p id="docMeta" class="muted">Open a record to view or edit.</p>
+      </div>
+      <div class="row">
+        <span id="docWorkflowState" class="pill grey">Draft</span>
+        <span id="docAutosaveState" class="pill grey">Not yet saved</span>
+        <button id="docCloseBtn" class="icon-btn" type="button" aria-label="Close document">✕</button>
+      </div>
+    </div>
+
+    <div id="docActions" class="doc-actions hidden">
+      <button id="docSaveBtn" class="btn secondary" type="button">Save now</button>
+      <button id="docSubmitBtn" class="btn secondary" type="button">Send for review</button>
+      <button id="docApproveBtn" class="btn secondary" type="button">Approve</button>
+      <button id="docReturnBtn" class="btn secondary" type="button">Return</button>
+      <button id="docDownloadBtn" class="btn primary" type="button">Download / Print</button>
+    </div>
+
+    <div id="docBody" class="doc-body">
+      <div class="empty">Open a record to view it as a document.</div>
+    </div>
+  </aside>
+
+  <script src="/js/young-people-shell.js?v=80"></script>
 </body>
 </html>
