@@ -15,13 +15,15 @@ const fmtDate = (v) => v ? new Date(v).toLocaleDateString("en-GB") : "—";
 const fmtDateTime = (v) => v ? new Date(v).toLocaleString("en-GB") : "—";
 const fullName = (p) => `${p?.first_name || ""} ${p?.last_name || ""}`.trim() || p?.name || "Young person";
 
+console.log("young-people-shell.js loaded");
+
 async function api(url, options = {}) {
   const res = await fetch(url, {
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     ...options
   });
-  if (!res.ok) throw new Error(`Request failed (${res.status})`);
+  if (!res.ok) throw new Error(`${url} failed (${res.status})`);
   return res.json();
 }
 
@@ -46,8 +48,12 @@ function msg(text, bad = false) {
 function pillClass(v) {
   v = String(v || "").toLowerCase();
   if (v === "high" || v === "critical") return "red";
-  if (v === "medium" || v === "pending" || v === "submitted") return "amber";
+  if (v === "medium" || v === "pending" || v === "submitted" || v === "awaiting_review") return "amber";
   return "blue";
+}
+
+function emptyCard(text) {
+  return `<div class="card"><div class="muted">${esc(text)}</div></div>`;
 }
 
 function openDoc(title, meta, bodyHtml) {
@@ -65,6 +71,7 @@ function closeDoc() {
 
 function setSection(section) {
   state.section = section;
+
   $$(".nav-btn").forEach(b => b.classList.toggle("active", b.dataset.section === section));
   $$(".section").forEach(s => s.classList.toggle("active", s.id === `section-${section}`));
 
@@ -95,11 +102,13 @@ async function loadYoungPeople() {
   try {
     const rows = arr(await api("/young-people"));
     state.youngPeople = rows;
+
     const select = $("youngPersonSelect");
     if (!select) return;
 
     if (!rows.length) {
       select.innerHTML = `<option>No young people</option>`;
+      setHTML("overviewContent", emptyCard("No young people found."));
       return;
     }
 
@@ -108,7 +117,9 @@ async function loadYoungPeople() {
     renderPersonHeader();
     loadTab();
   } catch (e) {
+    console.error("loadYoungPeople failed", e);
     msg(e.message, true);
+    setHTML("overviewContent", emptyCard("Young people failed to load."));
   }
 }
 
@@ -126,8 +137,15 @@ function renderPersonHeader() {
 }
 
 async function loadCommandCentre() {
+  setHTML("commandCentreMetrics", emptyCard("Loading command centre..."));
+  setHTML("commandCentreAlerts", emptyCard("Loading alerts..."));
+  setHTML("commandCentreTasks", emptyCard("Loading tasks..."));
+  setHTML("commandCentreMeds", emptyCard("Loading medication..."));
+  setHTML("commandCentreHandover", emptyCard("Loading handover..."));
+
   try {
     const d = await api("/command-centre");
+    console.log("command centre", d);
     state.commandCentre = d;
 
     const metrics = [
@@ -140,19 +158,20 @@ async function loadCommandCentre() {
     ];
 
     setHTML("commandCentreMetrics", metrics.map(([k, v]) => `
-      <div class="metric-card"><div class="metric-label">${esc(k)}</div><div class="metric-value">${esc(v)}</div></div>
+      <div class="metric-card">
+        <div class="metric-label">${esc(k)}</div>
+        <div class="metric-value">${esc(v)}</div>
+      </div>
     `).join(""));
 
-    const renderRows = (rows, mapper, empty) => `
-      <div class="list">${rows.length ? rows.map(mapper).join("") : `<div class="muted">${empty}</div>`}</div>
-    `;
+    const renderRows = (rows, mapper, empty) =>
+      `<div class="list">${rows.length ? rows.map(mapper).join("") : `<div class="row-card"><div class="muted">${empty}</div></div>`}</div>`;
 
     setHTML("commandCentreAlerts", renderRows(d.alerts || [], r => `
       <div class="row-card">
         <div class="row-title">${esc(r.title)}</div>
         <div class="row-meta">${esc(r.young_person_name || "—")}</div>
         <div>${esc(r.detail || "")}</div>
-        <div class="badges"><span class="pill ${pillClass(r.level)}">${esc(r.level || "info")}</span></div>
       </div>
     `, "No live alerts."));
 
@@ -160,32 +179,45 @@ async function loadCommandCentre() {
       <div class="row-card">
         <div class="row-title">${esc(r.title)}</div>
         <div class="row-meta">Due: ${esc(r.due || "—")}</div>
-        <div class="badges"><span class="pill ${pillClass(r.priority)}">${esc(r.priority || "normal")}</span></div>
       </div>
     `, "No outstanding shift tasks."));
 
     setHTML("commandCentreMeds", renderRows(d.meds_due || [], r => `
       <div class="row-card">
-        <div class="row-title">${esc(r.young_person_name)}</div>
-        <div class="row-meta">${esc(r.item)} · Due ${esc(r.time_due)}</div>
-        <div class="badges"><span class="pill amber">${esc(r.status || "due")}</span></div>
+        <div class="row-title">${esc(r.young_person_name || "—")}</div>
+        <div class="row-meta">${esc(r.item || "—")} · Due ${esc(r.time_due || "—")}</div>
       </div>
     `, "No medication due."));
 
     setHTML("commandCentreHandover", renderRows(d.handover || [], r => `
       <div class="row-card">
-        <div class="row-title">${esc(r.time)} · ${esc(r.title)}</div>
+        <div class="row-title">${esc(r.time || "—")} · ${esc(r.title || "Handover item")}</div>
         <div>${esc(r.detail || "")}</div>
       </div>
     `, "No handover items."));
   } catch (e) {
+    console.error("loadCommandCentre failed", e);
     msg(e.message, true);
+    setHTML("commandCentreMetrics", emptyCard("Command Centre failed to load."));
+    setHTML("commandCentreAlerts", emptyCard("Alerts unavailable."));
+    setHTML("commandCentreTasks", emptyCard("Tasks unavailable."));
+    setHTML("commandCentreMeds", emptyCard("Medication unavailable."));
+    setHTML("commandCentreHandover", emptyCard("Handover unavailable."));
   }
 }
 
 async function loadOverview() {
+  if (!state.selected) {
+    setHTML("overviewContent", emptyCard("No young person selected."));
+    return;
+  }
+
+  setHTML("overviewContent", emptyCard("Loading overview..."));
+
   try {
     const d = await api(`/young-people/${state.selected.id}`);
+    console.log("overview", d);
+
     setHTML("overviewContent", `
       <div class="grid two-col">
         <div class="card">
@@ -207,16 +239,26 @@ async function loadOverview() {
       </div>
     `);
   } catch (e) {
+    console.error("loadOverview failed", e);
     msg(e.message, true);
+    setHTML("overviewContent", emptyCard("Overview failed to load."));
   }
 }
 
 async function loadTimeline() {
+  if (!state.selected) {
+    setHTML("timelineContent", emptyCard("No young person selected."));
+    return;
+  }
+
+  setHTML("timelineContent", emptyCard("Loading timeline..."));
+
   try {
     const qs = new URLSearchParams();
     if (state.timelineCategory) qs.set("category", state.timelineCategory);
 
     const rows = arr(await api(`/young-people/${state.selected.id}/chronology?${qs.toString()}`));
+    console.log("timeline", rows);
 
     setHTML("timelineContent", `
       <div class="list">
@@ -231,17 +273,28 @@ async function loadTimeline() {
               ${r.linked_judgement_area ? `<span class="pill blue">${esc(r.linked_judgement_area.replaceAll("_", " "))}</span>` : ""}
             </div>
           </div>
-        `).join("") : `<div class="card"><div class="muted">No chronology recorded yet.</div></div>`}
+        `).join("") : emptyCard("No chronology recorded yet.")}
       </div>
     `);
   } catch (e) {
+    console.error("loadTimeline failed", e);
     msg(e.message, true);
+    setHTML("timelineContent", emptyCard("Timeline failed to load."));
   }
 }
 
 async function loadPlans() {
+  if (!state.selected) {
+    setHTML("plansContent", emptyCard("No young person selected."));
+    return;
+  }
+
+  setHTML("plansContent", emptyCard("Loading plans..."));
+
   try {
     const rows = arr(await api(`/young-people/${state.selected.id}/plans`));
+    console.log("plans", rows);
+
     setHTML("plansContent", `
       <div class="list">
         ${rows.length ? rows.map(r => `
@@ -250,18 +303,26 @@ async function loadPlans() {
             <div class="row-meta">${esc(r.plan_type || "Plan")} · Status: ${esc(r.status || "draft")} · Version ${esc(r.version_no || 1)}</div>
             <div>${esc(r.summary || "No summary recorded.")}</div>
           </div>
-        `).join("") : `<div class="card"><div class="muted">No plans found.</div></div>`}
+        `).join("") : emptyCard("No plans found.")}
       </div>
     `);
+
     $$(".open-plan").forEach(el => el.onclick = () => openPlan(Number(el.dataset.id)));
   } catch (e) {
+    console.error("loadPlans failed", e);
     msg(e.message, true);
+    setHTML("plansContent", emptyCard("Plans failed to load."));
   }
 }
 
 async function loadReviews() {
+  setHTML("reviewsContent", emptyCard("Loading reviews..."));
+  setHTML("managerQaContent", emptyCard("Loading reviews..."));
+
   try {
     const rows = arr(await api("/workflow-reviews"));
+    console.log("reviews", rows);
+
     const html = `
       <div class="list">
         ${rows.length ? rows.map(r => `
@@ -271,14 +332,18 @@ async function loadReviews() {
             <div>${esc(r.review_note || "Awaiting manager decision.")}</div>
             <div class="badges"><span class="pill ${pillClass(r.status)}">${esc(r.status)}</span></div>
           </div>
-        `).join("") : `<div class="card"><div class="muted">No review items.</div></div>`}
+        `).join("") : emptyCard("No review items.")}
       </div>
     `;
+
     setHTML("reviewsContent", html);
     setHTML("managerQaContent", html);
     $$(".open-review").forEach(el => el.onclick = () => openReview(Number(el.dataset.id)));
   } catch (e) {
+    console.error("loadReviews failed", e);
     msg(e.message, true);
+    setHTML("reviewsContent", emptyCard("Review queue unavailable."));
+    setHTML("managerQaContent", emptyCard("Review queue unavailable."));
   }
 }
 
@@ -288,10 +353,10 @@ function renderHandover() {
     <div class="list">
       ${rows.length ? rows.map(r => `
         <div class="row-card">
-          <div class="row-title">${esc(r.time)} · ${esc(r.title)}</div>
+          <div class="row-title">${esc(r.time || "—")} · ${esc(r.title || "Handover item")}</div>
           <div>${esc(r.detail || "")}</div>
         </div>
-      `).join("") : `<div class="muted">No handover items available.</div>`}
+      `).join("") : emptyCard("No handover items available.")}
     </div>
   `);
 }
@@ -299,6 +364,7 @@ function renderHandover() {
 async function openPlan(id) {
   try {
     const r = await api(`/young-people/plans/${id}`);
+
     openDoc(
       r.title || "Plan",
       `${r.plan_type || "Plan"} · Status: ${r.status || "draft"} · Version ${r.version_no || 1}`,
@@ -369,6 +435,7 @@ async function openPlan(id) {
 
     $("exportPlanBtn").onclick = () => window.open(`/young-people/plans/${id}/export`, "_blank");
   } catch (e) {
+    console.error("openPlan failed", e);
     msg(e.message, true);
   }
 }
@@ -412,6 +479,7 @@ function openNewPlan() {
       loadPlans();
       openPlan(res.id);
     } catch (e) {
+      console.error("openNewPlan failed", e);
       msg(e.message, true);
     }
   };
@@ -420,6 +488,7 @@ function openNewPlan() {
 async function openReview(id) {
   try {
     const r = await api(`/workflow-reviews/${id}`);
+
     openDoc(`${r.record_type} review`, `${r.young_person_name || "—"} · Status: ${r.status}`, `
       <div class="doc-grid">
         <section class="card">
@@ -460,6 +529,7 @@ async function openReview(id) {
     $("returnReviewBtn").onclick = () => decide("returned");
     $("escalateReviewBtn").onclick = () => decide("escalated");
   } catch (e) {
+    console.error("openReview failed", e);
     msg(e.message, true);
   }
 }
@@ -467,10 +537,25 @@ async function openReview(id) {
 function loadTab() {
   if (!state.selected) return;
   renderPersonHeader();
-  ({ overview: loadOverview, timeline: loadTimeline, plans: loadPlans, reviews: loadReviews }[state.tab] || loadOverview)();
+
+  const map = {
+    overview: loadOverview,
+    timeline: loadTimeline,
+    plans: loadPlans,
+    reviews: loadReviews
+  };
+
+  (map[state.tab] || loadOverview)();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  setHTML("commandCentreMetrics", emptyCard("Shell loaded. Waiting for data..."));
+  setHTML("overviewContent", emptyCard("Select a young person to begin."));
+  setHTML("timelineContent", emptyCard("Timeline will load here."));
+  setHTML("plansContent", emptyCard("Plans will load here."));
+  setHTML("reviewsContent", emptyCard("Reviews will load here."));
+  setHTML("managerQaContent", emptyCard("Manager QA will load here."));
+
   $$(".nav-btn").forEach(btn => btn.onclick = () => setSection(btn.dataset.section));
   $$(".tab").forEach(btn => btn.onclick = () => setTab(btn.dataset.tab));
 
