@@ -4,7 +4,7 @@
  <meta charset="UTF-8" />
  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
  <title>IndiCare — Children’s Home OS</title>
- <link rel="stylesheet" href="/css/young-people-shell.css?v=20260317b" />
+ <link rel="stylesheet" href="/css/young-people-shell.css?v=20260317c" />
 </head>
 <body>
  <div class="app-shell">
@@ -22,6 +22,8 @@
  <button class="nav-btn" data-section="young-people">Young People</button>
  <button class="nav-btn" data-section="handover">Handover</button>
  <button class="nav-btn" data-section="manager-qa">Manager QA</button>
+ <button class="nav-btn" data-section="staff">Staff</button>
+ <button class="nav-btn" data-section="archive">Archive</button>
  </nav>
 
  <div class="sidebar-block">
@@ -37,6 +39,11 @@
  <div class="quick-actions">
  <button class="btn" id="quickEventBtn">Go to timeline</button>
  <button class="btn primary" id="newPlanBtn">New plan</button>
+ <button class="btn" id="newDailyNoteBtn">Daily note</button>
+ <button class="btn" id="newIncidentBtn">Incident</button>
+ <button class="btn" id="newHealthBtn">Health</button>
+ <button class="btn" id="newFamilyRecordBtn">Contact</button>
+ <button class="btn" id="newKeyworkBtn">Key work</button>
  </div>
  </div>
  </div>
@@ -47,16 +54,19 @@
  <main class="main">
  <header class="page-header">
  <div>
+ <div id="welcomeMessage" class="welcome-message">Welcome</div>
  <h1 id="pageTitle">Command Centre</h1>
  <p id="pageSubtitle">Shift-first oversight for children’s residential care</p>
  </div>
+
  <div class="header-actions">
- <button class="btn soft" onclick="document.getElementById('quickEventBtn')?.click()">Timeline</button>
- <button class="btn primary" onclick="document.getElementById('newPlanBtn')?.click()">Create plan</button>
+ <button class="btn soft" id="headerTimelineBtn">Timeline</button>
+ <button class="btn primary" id="headerPlanBtn">Create plan</button>
  </div>
  </header>
 
  <section id="browseMode">
+ <!-- COMMAND CENTRE -->
  <section class="section active" id="section-command-centre">
  <div class="grid metrics-grid" id="commandCentreMetrics"></div>
 
@@ -105,6 +115,7 @@
  </div>
  </section>
 
+ <!-- YOUNG PEOPLE -->
  <section class="section" id="section-young-people">
  <div class="person-hero card">
  <div class="person-hero-main">
@@ -194,6 +205,7 @@
  </div>
  </section>
 
+ <!-- HANDOVER -->
  <section class="section" id="section-handover">
  <div class="card">
  <div class="card-title-row">
@@ -206,6 +218,7 @@
  </div>
  </section>
 
+ <!-- MANAGER QA -->
  <section class="section" id="section-manager-qa">
  <div class="card">
  <div class="card-title-row">
@@ -217,21 +230,88 @@
  <div id="managerQaContent"></div>
  </div>
  </section>
+
+ <!-- STAFF -->
+ <section class="section" id="section-staff">
+ <div class="subtabs">
+ <button class="tab active" data-tab="staff-overview">Overview</button>
+ <button class="tab" data-tab="staff-supervision">Supervision</button>
+ <button class="tab" data-tab="staff-team-meetings">Team Meetings</button>
+ <button class="tab" data-tab="staff-training">Training</button>
+ <button class="tab" data-tab="staff-policies">Policies</button>
+ </div>
+
+ <div class="panel active" id="tab-staff-overview">
+ <div id="staffOverviewContent"></div>
+ </div>
+
+ <div class="panel" id="tab-staff-supervision">
+ <div id="staffSupervisionContent"></div>
+ </div>
+
+ <div class="panel" id="tab-staff-team-meetings">
+ <div id="staffMeetingsContent"></div>
+ </div>
+
+ <div class="panel" id="tab-staff-training">
+ <div id="staffTrainingContent"></div>
+ </div>
+
+ <div class="panel" id="tab-staff-policies">
+ <div id="staffPoliciesContent"></div>
+ </div>
  </section>
 
- <section id="documentMode" class="hidden">
- <div class="doc-header">
- <button class="btn ghost" id="docBackBtn">← Back</button>
+ <!-- ARCHIVE -->
+ <section class="section" id="section-archive">
+ <div class="card">
+ <div class="card-title-row">
  <div>
- <h2 id="docTitle">Document</h2>
- <div class="muted" id="docMetaLine">—</div>
+ <h2 class="card-title">Archive</h2>
+ <p class="card-subtitle">Approved and signed-off records remain viewable here for all authorised users.</p>
  </div>
  </div>
- <div id="docBody"></div>
+ <div id="archiveContent"></div>
+ </div>
+ </section>
  </section>
  </main>
  </div>
 
- <script src="/js/young-people-shell.js?v=20260317b"></script>
+ <!-- FULL SCREEN MODAL -->
+ <div id="globalModal" class="modal hidden">
+ <div id="modalOverlay" class="modal-overlay"></div>
+
+ <div class="modal-shell">
+ <div class="modal-frame">
+ <div class="modal-header">
+ <div>
+ <h2 id="modalTitle">Document</h2>
+ <div class="muted" id="modalMeta">—</div>
+ </div>
+
+ <div class="modal-actions">
+ <button class="btn ghost" id="modalCloseBtn">Close</button>
+ </div>
+ </div>
+
+ <div id="modalBody" class="modal-body"></div>
+ </div>
+ </div>
+ </div>
+
+ <!-- FLOATING QUICK ACTION MENU -->
+ <button id="fabButton" class="fab-button" aria-label="Quick actions">☰</button>
+
+ <div id="fabMenu" class="fab-menu hidden">
+ <button class="btn" id="fabDailyNoteBtn">Daily note</button>
+ <button class="btn" id="fabIncidentBtn">Incident</button>
+ <button class="btn" id="fabHealthBtn">Health</button>
+ <button class="btn" id="fabFamilyBtn">Contact</button>
+ <button class="btn" id="fabKeyworkBtn">Key work</button>
+ <button class="btn primary" id="fabPlanBtn">Plan</button>
+ </div>
+
+ <script src="/js/young-people-shell.js?v=20260317c"></script>
 </body>
 </html>
