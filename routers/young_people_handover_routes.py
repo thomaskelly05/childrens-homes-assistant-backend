@@ -176,20 +176,7 @@ def generate_handover_record(
                     NOW(),
                     NOW()
                 )
-                RETURNING
-                    id,
-                    young_person_id,
-                    handover_date,
-                    shift_type,
-                    title,
-                    summary_text,
-                    status,
-                    source_window_start,
-                    source_window_end,
-                    generated_by,
-                    approved_by,
-                    created_at,
-                    updated_at
+                RETURNING *
                 """,
                 (young_person_id, summary_text),
             )
@@ -201,3 +188,70 @@ def generate_handover_record(
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to generate handover: {str(e)}")
+
+
+@router.put("/handover/{handover_id}/approve")
+def approve_handover(
+    handover_id: int,
+    conn=Depends(get_db),
+):
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE handover_records
+                SET
+                    status = 'approved',
+                    approved_by = 1,
+                    updated_at = NOW()
+                WHERE id = %s
+                RETURNING *
+                """,
+                (handover_id,),
+            )
+            row = cur.fetchone()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="Handover not found")
+
+        conn.commit()
+        return row
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to approve handover: {str(e)}")
+
+
+@router.put("/handover/{handover_id}/archive")
+def archive_handover(
+    handover_id: int,
+    conn=Depends(get_db),
+):
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE handover_records
+                SET
+                    status = 'archived',
+                    updated_at = NOW()
+                WHERE id = %s
+                RETURNING *
+                """,
+                (handover_id,),
+            )
+            row = cur.fetchone()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="Handover not found")
+
+        conn.commit()
+        return row
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to archive handover: {str(e)}")
