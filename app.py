@@ -87,8 +87,6 @@ include_router("routers.young_people_statutory_documents_routes")
 
 # =========================================================
 # Workflow / QA routers
-# Keep only global / non-duplicating workflow routers here.
-# Module-specific workflow is now handled inside the main module files.
 # =========================================================
 include_router("routers.workflow_review_routes")
 
@@ -100,6 +98,8 @@ include_router("routers.events_routes")
 include_router("routers.evidence_routes")
 include_router("routers.qa_routes")
 include_router("routers.exports_routes")
+include_router("routers.rostering_routes")
+
 
 # =========================================================
 # Static mounts
@@ -216,6 +216,16 @@ def serve_childrens_home_os():
 @app.get("/childrens-home-os.html")
 def serve_childrens_home_os_html():
     return FileResponse(os.path.join(FRONTEND_DIR, "young-people-shell.html"))
+
+
+@app.get("/rostering")
+def serve_rostering():
+    return FileResponse(os.path.join(FRONTEND_DIR, "rostering.html"))
+
+
+@app.get("/rostering.html")
+def serve_rostering_html():
+    return FileResponse(os.path.join(FRONTEND_DIR, "rostering.html"))
 
 
 @app.get("/health")
