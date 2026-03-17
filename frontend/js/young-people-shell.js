@@ -5,6 +5,7 @@ const state = {
   selected: null,
   commandCentre: null,
   timelineCategory: "",
+  inspectionPack: null,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -47,8 +48,9 @@ function msg(text, bad = false) {
 
 function pillClass(v) {
   v = String(v || "").toLowerCase();
-  if (v === "high" || v === "critical") return "red";
-  if (v === "medium" || v === "pending" || v === "submitted" || v === "awaiting_review") return "amber";
+  if (["high", "critical", "escalated"].includes(v)) return "red";
+  if (["medium", "pending", "submitted", "awaiting_review", "returned"].includes(v)) return "amber";
+  if (["approved", "reviewed", "active"].includes(v)) return "green";
   return "blue";
 }
 
@@ -96,6 +98,34 @@ function setTab(tab) {
   $$(".tab").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
   $$(".panel").forEach(p => p.classList.toggle("active", p.id === `tab-${tab}`));
   loadTab();
+}
+
+function evidenceBadges(row) {
+  const badges = [];
+  if (row.significance) badges.push(`<span class="pill ${pillClass(row.significance)}">${esc(row.significance)}</span>`);
+  if (row.linked_standard) badges.push(`<span class="pill blue">${esc(row.linked_standard.replaceAll("_", " "))}</span>`);
+  if (row.linked_judgement_area) badges.push(`<span class="pill blue">${esc(row.linked_judgement_area.replaceAll("_", " "))}</span>`);
+  if (row.source_table) badges.push(`<span class="pill blue">Source: ${esc(row.source_table)}</span>`);
+  if (row.source_id) badges.push(`<span class="pill blue">Ref ${esc(row.source_id)}</span>`);
+  return badges.join("");
+}
+
+function buildInspectionSummary(chronologyRows = [], reviews = [], plans = []) {
+  const standards = {};
+  const judgements = {};
+
+  chronologyRows.forEach(r => {
+    if (r.linked_standard) standards[r.linked_standard] = (standards[r.linked_standard] || 0) + 1;
+    if (r.linked_judgement_area) judgements[r.linked_judgement_area] = (judgements[r.linked_judgement_area] || 0) + 1;
+  });
+
+  return {
+    chronologyCount: chronologyRows.length,
+    reviewCount: reviews.length,
+    planCount: plans.length,
+    standards,
+    judgements
+  };
 }
 
 async function loadYoungPeople() {
@@ -148,13 +178,14 @@ async function loadCommandCentre() {
     console.log("command centre", d);
     state.commandCentre = d;
 
+    const m = d.summary || d.metrics || {};
     const metrics = [
-      ["Children in home", d.metrics?.children_in_home ?? 0],
-      ["High-risk alerts", d.metrics?.high_risk_alerts ?? 0],
-      ["Open safeguarding", d.metrics?.open_safeguarding_items ?? 0],
-      ["Meds due", d.metrics?.meds_due_this_shift ?? 0],
-      ["Overdue reviews", d.metrics?.overdue_reviews ?? 0],
-      ["Documents due", d.metrics?.documents_due ?? 0],
+      ["Children in home", m.children_in_home ?? 0],
+      ["High-risk alerts", (d.alerts || []).filter(a => String(a.level || "").toLowerCase() === "high").length],
+      ["Open safeguarding", m.open_safeguarding_items ?? 0],
+      ["Meds due", (d.meds_due || []).length],
+      ["Overdue reviews", m.overdue_reviews ?? 0],
+      ["Documents due", m.documents_due ?? 0],
     ];
 
     setHTML("commandCentreMetrics", metrics.map(([k, v]) => `
@@ -172,6 +203,10 @@ async function loadCommandCentre() {
         <div class="row-title">${esc(r.title)}</div>
         <div class="row-meta">${esc(r.young_person_name || "—")}</div>
         <div>${esc(r.detail || "")}</div>
+        <div class="badges">
+          <span class="pill ${pillClass(r.level)}">${esc(r.level || "info")}</span>
+          <span class="pill blue">Evidence</span>
+        </div>
       </div>
     `, "No live alerts."));
 
@@ -215,8 +250,17 @@ async function loadOverview() {
   setHTML("overviewContent", emptyCard("Loading overview..."));
 
   try {
-    const d = await api(`/young-people/${state.selected.id}`);
+    const [d, chronologyRows, reviewRows, planRows] = await Promise.all([
+      api(`/young-people/${state.selected.id}`),
+      api(`/young-people/${state.selected.id}/chronology`).then(arr).catch(() => []),
+      api(`/workflow-reviews`).then(arr).catch(() => []),
+      api(`/young-people/${state.selected.id}/plans`).then(arr).catch(() => []),
+    ]);
+
     console.log("overview", d);
+
+    const inspection = buildInspectionSummary(chronologyRows, reviewRows, planRows);
+    state.inspectionPack = inspection;
 
     setHTML("overviewContent", `
       <div class="grid two-col">
@@ -228,6 +272,7 @@ async function loadOverview() {
             <div class="row-card"><div class="row-title">De-escalation / regulation</div><div>${esc(d.de_escalation_guidance || "No de-escalation guidance recorded")}</div></div>
           </div>
         </div>
+
         <div class="card">
           <h3 class="card-title">Operational snapshot</h3>
           <div class="list">
@@ -237,7 +282,43 @@ async function loadOverview() {
           </div>
         </div>
       </div>
+
+      <div class="grid two-col" style="margin-top:16px;">
+        <div class="card">
+          <h3 class="card-title">Inspection readiness</h3>
+          <div class="list">
+            <div class="row-card"><div class="row-title">Chronology entries</div><div>${esc(inspection.chronologyCount)}</div></div>
+            <div class="row-card"><div class="row-title">Plans on file</div><div>${esc(inspection.planCount)}</div></div>
+            <div class="row-card"><div class="row-title">Review items</div><div>${esc(inspection.reviewCount)}</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">Evidence coverage</h3>
+          <div class="list">
+            ${Object.keys(inspection.standards).length ? Object.entries(inspection.standards).map(([k,v]) => `
+              <div class="row-card">
+                <div class="row-title">${esc(k.replaceAll("_", " "))}</div>
+                <div>${esc(v)} linked records</div>
+              </div>
+            `).join("") : `<div class="row-card"><div class="muted">No standards-linked evidence yet.</div></div>`}
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <h3 class="card-title">Inspection pack</h3>
+        <div class="badges" style="margin-bottom:12px;">
+          <button class="btn" id="exportChronologyBtn">Export chronology</button>
+          <button class="btn" id="exportPlansBtn">Export plans</button>
+          <button class="btn primary" id="openInspectionPreviewBtn">Open inspection preview</button>
+        </div>
+      </div>
     `);
+
+    $("exportChronologyBtn").onclick = () => exportChronology();
+    $("exportPlansBtn").onclick = () => exportPlans();
+    $("openInspectionPreviewBtn").onclick = () => openInspectionPreview(d, chronologyRows, reviewRows, planRows);
   } catch (e) {
     console.error("loadOverview failed", e);
     msg(e.message, true);
@@ -268,14 +349,20 @@ async function loadTimeline() {
             <div class="row-meta">${esc(fmtDateTime(r.occurred_at || r.event_datetime))} · ${esc(r.category || "event")} · ${esc(r.subcategory || "—")}</div>
             <div>${esc(r.summary || "No summary recorded.")}</div>
             <div class="badges">
-              <span class="pill ${pillClass(r.significance)}">${esc(r.significance || "standard")}</span>
-              ${r.linked_standard ? `<span class="pill blue">${esc(r.linked_standard.replaceAll("_", " "))}</span>` : ""}
-              ${r.linked_judgement_area ? `<span class="pill blue">${esc(r.linked_judgement_area.replaceAll("_", " "))}</span>` : ""}
+              ${evidenceBadges(r)}
+              <button class="btn open-chronology-evidence" data-id="${r.id}" style="padding:7px 10px;">Evidence</button>
             </div>
           </div>
         `).join("") : emptyCard("No chronology recorded yet.")}
       </div>
     `);
+
+    $$(".open-chronology-evidence").forEach(btn => {
+      btn.onclick = async () => {
+        const row = rows.find(x => Number(x.id) === Number(btn.dataset.id));
+        if (row) openEvidencePreview(row);
+      };
+    });
   } catch (e) {
     console.error("loadTimeline failed", e);
     msg(e.message, true);
@@ -302,6 +389,10 @@ async function loadPlans() {
             <div class="row-title">${esc(r.title || "Untitled plan")}</div>
             <div class="row-meta">${esc(r.plan_type || "Plan")} · Status: ${esc(r.status || "draft")} · Version ${esc(r.version_no || 1)}</div>
             <div>${esc(r.summary || "No summary recorded.")}</div>
+            <div class="badges">
+              <span class="pill ${pillClass(r.status)}">${esc(r.status || "draft")}</span>
+              <span class="pill blue">Inspection evidence</span>
+            </div>
           </div>
         `).join("") : emptyCard("No plans found.")}
       </div>
@@ -330,7 +421,11 @@ async function loadReviews() {
             <div class="row-title">${esc(r.record_type)} review · ${esc(r.young_person_name || "—")}</div>
             <div class="row-meta">Status: ${esc(r.status)} · Submitted: ${esc(fmtDateTime(r.submitted_at))}</div>
             <div>${esc(r.review_note || "Awaiting manager decision.")}</div>
-            <div class="badges"><span class="pill ${pillClass(r.status)}">${esc(r.status)}</span></div>
+            <div class="badges">
+              <span class="pill ${pillClass(r.status)}">${esc(r.status)}</span>
+              ${!r.child_voice_captured ? `<span class="pill amber">Child voice missing</span>` : ""}
+              ${!r.trauma_informed ? `<span class="pill amber">Reflective review needed</span>` : ""}
+            </div>
           </div>
         `).join("") : emptyCard("No review items.")}
       </div>
@@ -371,7 +466,7 @@ async function openPlan(id) {
       `
       <div class="doc-meta-bar">
         <span class="pill">${esc(r.plan_type || "Plan")}</span>
-        <span class="pill">${esc(r.status || "draft")}</span>
+        <span class="pill ${pillClass(r.status)}">${esc(r.status || "draft")}</span>
         <span class="pill">Review due: ${esc(r.review_due_at ? fmtDate(r.review_due_at) : "—")}</span>
       </div>
       <div class="doc-grid">
@@ -393,6 +488,7 @@ async function openPlan(id) {
           <button id="submitPlanBtn" class="btn">Submit</button>
           <button id="approvePlanBtn" class="btn">Approve</button>
           <button id="exportPlanBtn" class="btn">Export</button>
+          <button id="planEvidenceBtn" class="btn">Evidence preview</button>
           <hr>
           <div class="mini-meta">
             <div><strong>Owner:</strong> ${esc(r.owner_name || "—")}</div>
@@ -434,6 +530,18 @@ async function openPlan(id) {
     };
 
     $("exportPlanBtn").onclick = () => window.open(`/young-people/plans/${id}/export`, "_blank");
+
+    $("planEvidenceBtn").onclick = () => {
+      openEvidencePreview({
+        title: r.title,
+        summary: r.summary,
+        linked_standard: "care_planning",
+        linked_judgement_area: "leadership_and_management",
+        source_table: "support_plans",
+        source_id: r.id,
+        significance: r.status || "draft"
+      });
+    };
   } catch (e) {
     console.error("openPlan failed", e);
     msg(e.message, true);
@@ -531,6 +639,132 @@ async function openReview(id) {
   } catch (e) {
     console.error("openReview failed", e);
     msg(e.message, true);
+  }
+}
+
+function openEvidencePreview(row) {
+  openDoc(
+    `${row.title || "Evidence item"} — Evidence preview`,
+    `${row.source_table || "record"} · Ref ${row.source_id || "—"}`,
+    `
+    <div class="doc-grid">
+      <section class="card">
+        <div class="row-card">
+          <div class="row-title">Summary</div>
+          <div>${esc(row.summary || "No summary recorded.")}</div>
+        </div>
+
+        <div class="row-card">
+          <div class="row-title">Inspection linkage</div>
+          <div class="badges">
+            ${row.linked_standard ? `<span class="pill blue">${esc(row.linked_standard.replaceAll("_", " "))}</span>` : ""}
+            ${row.linked_judgement_area ? `<span class="pill blue">${esc(row.linked_judgement_area.replaceAll("_", " "))}</span>` : ""}
+            <span class="pill ${pillClass(row.significance)}">${esc(row.significance || "standard")}</span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="card doc-side">
+        <div class="card-title">Evidence metadata</div>
+        <div class="mini-meta">
+          <div><strong>Source table:</strong> ${esc(row.source_table || "—")}</div>
+          <div><strong>Source id:</strong> ${esc(row.source_id || "—")}</div>
+          <div><strong>Occurred:</strong> ${esc(fmtDateTime(row.occurred_at || row.event_datetime))}</div>
+          <div><strong>Category:</strong> ${esc(row.category || "—")}</div>
+          <div><strong>Subcategory:</strong> ${esc(row.subcategory || "—")}</div>
+        </div>
+      </aside>
+    </div>
+    `
+  );
+}
+
+function openInspectionPreview(profile, chronologyRows, reviewRows, planRows) {
+  const pack = buildInspectionSummary(chronologyRows, reviewRows, planRows);
+
+  openDoc(
+    `${fullName(profile)} — Inspection preview`,
+    `Inspection-ready evidence summary`,
+    `
+    <div class="doc-grid">
+      <section class="card">
+        <div class="row-card">
+          <div class="row-title">Child profile</div>
+          <div>${esc(fullName(profile))}</div>
+          <div class="row-meta">Placement: ${esc(profile.placement_status || "—")} · Legal status: ${esc(profile.legal_status || "—")}</div>
+        </div>
+
+        <div class="row-card">
+          <div class="row-title">Pack contents</div>
+          <div>Chronology entries: ${esc(pack.chronologyCount)}</div>
+          <div>Plans: ${esc(pack.planCount)}</div>
+          <div>Reviews: ${esc(pack.reviewCount)}</div>
+        </div>
+
+        <div class="row-card">
+          <div class="row-title">Quality standards evidence</div>
+          ${Object.keys(pack.standards).length ? Object.entries(pack.standards).map(([k,v]) => `
+            <div>${esc(k.replaceAll("_", " "))}: ${esc(v)}</div>
+          `).join("") : `<div class="muted">No standards-linked evidence yet.</div>`}
+        </div>
+
+        <div class="row-card">
+          <div class="row-title">Judgement areas</div>
+          ${Object.keys(pack.judgements).length ? Object.entries(pack.judgements).map(([k,v]) => `
+            <div>${esc(k.replaceAll("_", " "))}: ${esc(v)}</div>
+          `).join("") : `<div class="muted">No judgement-area links yet.</div>`}
+        </div>
+      </section>
+
+      <aside class="card doc-side">
+        <div class="card-title">Export actions</div>
+        <button class="btn" id="inspectionExportChronologyBtn">Export chronology</button>
+        <button class="btn" id="inspectionExportPlansBtn">Export plans</button>
+        <button class="btn primary" id="inspectionPrintBtn">Print / Save PDF</button>
+      </aside>
+    </div>
+    `
+  );
+
+  $("inspectionExportChronologyBtn").onclick = () => exportChronology();
+  $("inspectionExportPlansBtn").onclick = () => exportPlans();
+  $("inspectionPrintBtn").onclick = () => window.print();
+}
+
+async function exportChronology() {
+  try {
+    const rows = arr(await api(`/young-people/${state.selected.id}/chronology`));
+    const text = rows.map(r => [
+      `${r.title || "Chronology event"}`,
+      `${fmtDateTime(r.occurred_at || r.event_datetime)} · ${r.category || "event"} · ${r.subcategory || "—"}`,
+      `${r.summary || ""}`,
+      `${r.linked_standard || ""} ${r.linked_judgement_area || ""}`.trim()
+    ].join("\n")).join("\n\n---\n\n");
+
+    const blob = new Blob([text || "No chronology entries."], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+  } catch (e) {
+    console.error("exportChronology failed", e);
+    msg("Chronology export failed", true);
+  }
+}
+
+async function exportPlans() {
+  try {
+    const rows = arr(await api(`/young-people/${state.selected.id}/plans`));
+    const text = rows.map(r => [
+      `${r.title || "Plan"}`,
+      `${r.plan_type || "Plan"} · ${r.status || "draft"} · Version ${r.version_no || 1}`,
+      `${r.summary || ""}`
+    ].join("\n")).join("\n\n---\n\n");
+
+    const blob = new Blob([text || "No plans found."], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+  } catch (e) {
+    console.error("exportPlans failed", e);
+    msg("Plan export failed", true);
   }
 }
 
