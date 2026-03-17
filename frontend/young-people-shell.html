@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IndiCare — Children’s Home OS</title>
-  <link rel="stylesheet" href="/css/young-people-shell.css?v=7" />
+  <link rel="stylesheet" href="/css/young-people-shell.css?v=101" />
 </head>
 <body>
   <div class="app-shell">
@@ -93,6 +93,12 @@
           <div class="subtabs">
             <button class="tab active" data-tab="overview">Overview</button>
             <button class="tab" data-tab="timeline">Timeline</button>
+            <button class="tab" data-tab="daily-notes">Daily Notes</button>
+            <button class="tab" data-tab="incidents">Incidents</button>
+            <button class="tab" data-tab="health">Health</button>
+            <button class="tab" data-tab="education">Education</button>
+            <button class="tab" data-tab="family">Family</button>
+            <button class="tab" data-tab="keywork">Key Work</button>
             <button class="tab" data-tab="plans">Plans</button>
             <button class="tab" data-tab="reviews">Reviews</button>
           </div>
@@ -118,6 +124,30 @@
               </div>
             </div>
             <div id="timelineContent"></div>
+          </div>
+
+          <div class="panel" id="tab-daily-notes">
+            <div id="dailyNotesContent"></div>
+          </div>
+
+          <div class="panel" id="tab-incidents">
+            <div id="incidentsContent"></div>
+          </div>
+
+          <div class="panel" id="tab-health">
+            <div id="healthContent"></div>
+          </div>
+
+          <div class="panel" id="tab-education">
+            <div id="educationContent"></div>
+          </div>
+
+          <div class="panel" id="tab-family">
+            <div id="familyContent"></div>
+          </div>
+
+          <div class="panel" id="tab-keywork">
+            <div id="keyworkContent"></div>
           </div>
 
           <div class="panel" id="tab-plans">
@@ -163,6 +193,6 @@
     </main>
   </div>
 
-  <script src="/js/young-people-shell.js?v=7"></script>
+  <script src="/js/young-people-shell.js?v=101"></script>
 </body>
 </html>
