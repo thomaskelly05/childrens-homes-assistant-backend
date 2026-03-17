@@ -42,6 +42,7 @@ from routers.young_people_standards_routes import router as young_people_standar
 from routers.young_people_handover_routes import router as young_people_handover_router
 from routers.young_people_reports_routes import router as young_people_reports_router
 from routers.young_people_photo_routes import router as young_people_photo_router
+from routers.young_people_statutory_documents_routes import router as young_people_statutory_documents_router
 
 from routers.young_people_plans_workflow_routes import router as young_people_plans_workflow_router
 from routers.young_people_risk_workflow_routes import router as young_people_risk_workflow_router
@@ -91,7 +92,7 @@ app.include_router(staff_journal_router)
 app.include_router(supervision_router)
 app.include_router(tasks_router)
 
-# Young people base/data routes
+# Young people data routes
 app.include_router(young_people_router)
 app.include_router(young_people_profile_router)
 app.include_router(young_people_plans_router)
@@ -106,12 +107,13 @@ app.include_router(young_people_chronology_router)
 app.include_router(young_people_compliance_router)
 app.include_router(young_people_standards_router)
 
-# Young people extra feature routes
+# Young people feature routes
 app.include_router(young_people_handover_router)
 app.include_router(young_people_reports_router)
 app.include_router(young_people_photo_router)
+app.include_router(young_people_statutory_documents_router)
 
-# Young people workflow action routes
+# Young people workflow routes
 app.include_router(young_people_plans_workflow_router)
 app.include_router(young_people_risk_workflow_router)
 app.include_router(young_people_daily_notes_workflow_router)
