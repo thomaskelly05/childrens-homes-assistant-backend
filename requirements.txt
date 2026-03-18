@@ -24,3 +24,4 @@ pypdf
 tavily-python
 typing_extensions
 twilio
+requests
