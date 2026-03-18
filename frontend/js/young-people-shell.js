@@ -120,39 +120,21 @@ const CONFIG = {
     },
 
     health: {
-      list: (id) => `/young-people/${id}/health`,
-      profileSave: (id) => `/young-people/${id}/health/profile`,
-      create: "/young-people/health-records",
-      update: (id) => `/young-people/health-records/${id}`,
-      get: (id) => `/young-people/health-records/${id}`
+      list: (id) => `/young-people/${id}/health`
     },
 
     education: {
-      list: (id) => `/young-people/${id}/education`,
-      profileSave: (id) => `/young-people/${id}/education/profile`,
-      create: "/young-people/education-records",
-      update: (id) => `/young-people/education-records/${id}`,
-      get: (id) => `/young-people/education-records/${id}`
+      list: (id) => `/young-people/${id}/education`
     },
 
     family: {
-      list: (id) => `/young-people/${id}/family`,
-      contactCreate: (id) => `/young-people/${id}/family/contacts`,
-      contactUpdate: (id) => `/young-people/family/contacts/${id}`,
-      contactGet: (id) => `/young-people/family/contacts/${id}`,
-      recordCreate: "/young-people/family/records",
-      recordUpdate: (id) => `/young-people/family/records/${id}`,
-      recordGet: (id) => `/young-people/family/records/${id}`
+      list: (id) => `/young-people/${id}/family`
     },
 
     keywork: {
       list: (id) => `/young-people/${id}/keywork`,
-      create: "/young-people/keywork",
-      update: (id) => `/young-people/keywork/${id}`,
-      get: (id) => `/young-people/keywork/${id}`,
-      submit: (id) => `/young-people/keywork/${id}/submit`,
-      approve: (id) => `/young-people/keywork/${id}/approve`,
-      archive: (id) => `/young-people/keywork/${id}/archive`
+      submit: (id) => `/young-people/${id}/keywork/${id}/submit`,
+      archive: (id) => `/young-people/${id}/keywork/${id}/archive`
     },
 
     plans: {
@@ -176,9 +158,6 @@ const CONFIG = {
 
     chronology: {
       list: (id) => `/young-people/${id}/chronology`,
-      create: "/young-people/chronology",
-      update: (id) => `/young-people/chronology/${id}`,
-      get: (id) => `/young-people/chronology/${id}`,
       rebuild: (id) => `/young-people/${id}/chronology/rebuild`
     },
 
@@ -191,27 +170,15 @@ const CONFIG = {
     },
 
     statutory: {
-      list: (id) => `/young-people/${id}/statutory-documents`,
-      create: (id) => `/young-people/${id}/statutory-documents`,
-      update: (id) => `/young-people/statutory-documents/${id}`
+      list: (id) => `/young-people/${id}/statutory-documents`
     },
 
     ai: {
-      history: "/ai-notes/history",
-      one: (id) => `/ai-notes/history/${id}`,
-      generate: "/ai-notes/generate",
-      edit: "/ai-notes/edit",
-      save: "/ai-notes/save"
+      history: "/ai-notes/history"
     },
 
     inspection: (id) => `/inspection-pack/young-person/${id}`,
-
-    photo: (id) => `/young-people/${id}/photo`,
-
-    rosteringWeek: (homeId, weekStart) =>
-      `/api/rostering/week?home_id=${encodeURIComponent(homeId)}&week_start=${encodeURIComponent(weekStart)}`,
-    rosteringBuild: "/api/rostering/build-week-template",
-    rosteringPublish: "/api/rostering/publish-week"
+    photo: (id) => `/young-people/${id}/photo`
   }
 };
 
@@ -530,6 +497,16 @@ function badgeClass(value) {
   return "badge-neutral";
 }
 
+function titleCaseLabel(value) {
+  return String(value || "")
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function safeArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
 function card(title, meta = "", body = "", actions = "") {
   return `
     <article class="record-card">
@@ -545,12 +522,88 @@ function card(title, meta = "", body = "", actions = "") {
   `;
 }
 
-function stat(label, value) {
+function summaryCard(label, value, tone = "neutral") {
   return `
-    <div class="dashboard-card">
-      <strong>${escapeHtml(label)}</strong><br>
-      ${escapeHtml(value)}
+    <div class="dashboard-stat dashboard-stat-${tone}">
+      <div class="dashboard-stat-label">${escapeHtml(label)}</div>
+      <div class="dashboard-stat-value">${escapeHtml(value)}</div>
     </div>
+  `;
+}
+
+function alertCard(item = {}) {
+  return `
+    <article class="priority-card priority-${escapeHtml(String(item.level || "neutral").toLowerCase())}">
+      <div class="priority-card-top">
+        <div class="priority-title">${escapeHtml(item.title || "Alert")}</div>
+        <span class="badge ${badgeClass(item.level)}">${escapeHtml(item.level || "info")}</span>
+      </div>
+      <div class="priority-meta">${escapeHtml(item.young_person_name || "Home-wide")}</div>
+      <div class="priority-body">${escapeHtml(item.detail || "No further detail recorded.")}</div>
+    </article>
+  `;
+}
+
+function taskCard(item = {}) {
+  return `
+    <article class="flow-card">
+      <div class="flow-card-title">${escapeHtml(item.title || "Task")}</div>
+      <div class="flow-card-meta">${escapeHtml(item.young_person_name || "Home-wide")} • ${escapeHtml(item.due || "No due time")}</div>
+    </article>
+  `;
+}
+
+function medCard(item = {}) {
+  return `
+    <article class="flow-card">
+      <div class="flow-card-title">${escapeHtml(item.medicine || item.item || "Medication")}</div>
+      <div class="flow-card-meta">${escapeHtml(item.young_person_name || "Young person")} • ${escapeHtml(item.time_due || "No due time")}</div>
+      <div class="flow-card-foot">
+        <span class="badge ${badgeClass(item.status)}">${escapeHtml(item.status || "due")}</span>
+      </div>
+    </article>
+  `;
+}
+
+function handoverCard(item = {}) {
+  return `
+    <article class="flow-card">
+      <div class="flow-card-title">${escapeHtml(item.title || "Handover")}</div>
+      <div class="flow-card-meta">${escapeHtml(item.time || "No time recorded")}</div>
+      <div class="flow-card-body">${escapeHtml(item.detail || "No handover detail recorded.")}</div>
+    </article>
+  `;
+}
+
+function overdueCard(item = {}) {
+  return `
+    <article class="priority-card priority-high">
+      <div class="priority-card-top">
+        <div class="priority-title">${escapeHtml(item.title || "Overdue item")}</div>
+        <span class="badge badge-danger">Overdue</span>
+      </div>
+      <div class="priority-meta">${escapeHtml(item.young_person_name || "Home-wide")}</div>
+      <div class="priority-body">${escapeHtml(titleCaseLabel(item.type || "review"))}</div>
+    </article>
+  `;
+}
+
+function renderCollection(title, kicker, items, mapFn, actionBtn = "") {
+  return `
+    <section class="surface">
+      <div class="surface-header">
+        <div>
+          <div class="surface-kicker">${escapeHtml(kicker)}</div>
+          <h3>${escapeHtml(title)}</h3>
+        </div>
+        ${actionBtn}
+      </div>
+      <div class="surface-body">
+        <div class="records-wrap">
+          ${items.length ? items.map(mapFn).join("") : `<div class="empty-state">No records found.</div>`}
+        </div>
+      </div>
+    </section>
   `;
 }
 
@@ -643,11 +696,10 @@ function renderGlobalActions() {
 }
 
 function renderYoungPersonSelect() {
-  const select = UI.youngPersonSelect;
-  if (!select) return;
+  if (!UI.youngPersonSelect) return;
 
   if (!state.youngPeople.length) {
-    select.innerHTML = `<option value="">No young people found</option>`;
+    UI.youngPersonSelect.innerHTML = `<option value="">No young people found</option>`;
     return;
   }
 
@@ -655,7 +707,7 @@ function renderYoungPersonSelect() {
     state.selectedYoungPersonId = state.youngPeople[0].id;
   }
 
-  select.innerHTML = state.youngPeople
+  UI.youngPersonSelect.innerHTML = state.youngPeople
     .map((yp) => `
       <option value="${yp.id}" ${state.selectedYoungPersonId === yp.id ? "selected" : ""}>
         ${escapeHtml(fullName(yp))}
@@ -663,67 +715,174 @@ function renderYoungPersonSelect() {
     `)
     .join("");
 
-  select.onchange = async (e) => {
+  UI.youngPersonSelect.onchange = async (e) => {
     state.selectedYoungPersonId = Number(e.target.value);
     await loadSelectedYoungPerson();
     renderApp();
   };
 }
 
-function renderCollection(title, kicker, items, mapFn, actionBtn = "") {
+function selectedYoungPeopleSummary() {
+  const yp = state.profile?.young_person;
+  const alerts = safeArray(state.profile?.alerts);
+  const plans = safeArray(state.cache?.plans?.items);
+  const risks = safeArray(state.cache?.risk?.items || state.cache?.risk);
+  const incidents = safeArray(state.cache?.incidents?.items);
+  const daily = safeArray(state.cache?.daily?.items);
+  const compliance = safeArray(state.cache?.compliance?.compliance_items);
+
+  if (!yp) {
+    return `<div class="empty-state">Select a young person to view their therapeutic care snapshot.</div>`;
+  }
+
+  const overdueCompliance = compliance.filter(
+    (x) => String(x.compliance_status || "").toLowerCase() === "overdue"
+  ).length;
+
+  const submittedCount =
+    daily.filter((x) => String(x.workflow_status || "").toLowerCase() === "submitted").length +
+    incidents.filter((x) => String(x.workflow_status || "").toLowerCase() === "submitted").length +
+    plans.filter((x) => String(x.approval_status || "").toLowerCase() === "submitted").length;
+
   return `
-    <section class="surface">
-      <div class="surface-header">
+    <div class="yp-focus-card">
+      <div class="yp-focus-head">
         <div>
-          <div class="surface-kicker">${escapeHtml(kicker)}</div>
-          <h3>${escapeHtml(title)}</h3>
+          <div class="surface-kicker">Selected young person</div>
+          <h3>${escapeHtml(yp.preferred_name || fullName(yp) || "Young person")}</h3>
         </div>
-        ${actionBtn}
-      </div>
-      <div class="surface-body">
-        <div class="records-wrap">
-          ${items.length ? items.map(mapFn).join("") : `<div class="empty-state">No records found.</div>`}
+        <div class="hero-badges">
+          <span class="badge ${badgeClass(yp.summary_risk_level)}">${escapeHtml(yp.summary_risk_level || "No risk set")}</span>
+          <span class="badge badge-neutral">${escapeHtml(yp.placement_status || "Placement not set")}</span>
         </div>
       </div>
-    </section>
+
+      <div class="yp-focus-grid">
+        ${summaryCard("Open alerts", alerts.length, alerts.length ? "danger" : "neutral")}
+        ${summaryCard("Active plans", plans.length, plans.length ? "success" : "neutral")}
+        ${summaryCard("Active risks", risks.length, risks.length ? "warning" : "neutral")}
+        ${summaryCard("Incidents", incidents.length, incidents.length ? "warning" : "neutral")}
+        ${summaryCard("Submitted for review", submittedCount, submittedCount ? "warning" : "neutral")}
+        ${summaryCard("Overdue compliance", overdueCompliance, overdueCompliance ? "danger" : "success")}
+      </div>
+    </div>
+  `;
+}
+
+function managementQueueHome() {
+  const daily = safeArray(state.cache?.daily?.items)
+    .filter((x) => String(x.workflow_status || "").toLowerCase() === "submitted")
+    .map((x) => ({
+      title: x.title || "Daily note",
+      meta: `${fmtDate(x.note_date)} • ${x.shift_type || "shift"}`,
+      body: x.summary || x.presentation || "Submitted daily note"
+    }));
+
+  const incidents = safeArray(state.cache?.incidents?.items)
+    .filter((x) => String(x.workflow_status || "").toLowerCase() === "submitted")
+    .map((x) => ({
+      title: x.title || "Incident",
+      meta: `${fmtDateTime(x.occurred_at)} • ${x.severity || "medium"}`,
+      body: x.description || "Submitted incident"
+    }));
+
+  const plans = safeArray(state.cache?.plans?.items)
+    .filter((x) => String(x.approval_status || "").toLowerCase() === "submitted")
+    .map((x) => ({
+      title: x.title || "Support plan",
+      meta: `${x.plan_type || "plan"} • review ${fmtDate(x.review_due_at)}`,
+      body: x.summary || x.formulation || "Submitted support plan"
+    }));
+
+  const queue = [...daily, ...incidents, ...plans].slice(0, 8);
+
+  if (!queue.length) {
+    return `<div class="empty-state">No submitted items currently awaiting management review.</div>`;
+  }
+
+  return `
+    <div class="records-wrap">
+      ${queue
+        .map(
+          (q) => `
+            <article class="record-card">
+              <div class="record-card-header">
+                <div>
+                  <div class="record-title">${escapeHtml(q.title)}</div>
+                  <div class="record-meta">${escapeHtml(q.meta)}</div>
+                </div>
+                <span class="badge badge-warning">Review due</span>
+              </div>
+              <div class="record-body">${escapeHtml(q.body)}</div>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
   `;
 }
 
 function renderHome() {
-  const c = state.command;
-  if (!c) return `<div class="empty-state">Loading command centre…</div>`;
-
-  const summary = Object.entries(c.summary || {}).map(([k, v]) => stat(k.replaceAll("_", " "), v)).join("");
-  const alerts = (c.alerts || []).map((a) => card(a.title, `${a.level || ""} • ${a.young_person_name || ""}`, a.detail || "")).join("");
-  const tasks = (c.tasks || []).map((t) => card(t.title, `${t.young_person_name || ""} • ${t.due || ""}`)).join("");
-  const meds = (c.meds_due || []).map((m) => card(m.medicine || m.item, `${m.young_person_name || ""} • ${m.time_due || ""}`, m.status || "")).join("");
-  const handover = (c.handover || []).map((h) => card(h.title, h.time || "", h.detail || "")).join("");
-  const overdue = (c.overdue || []).map((o) => card(o.title, `${o.type || ""} • ${o.young_person_name || ""}`)).join("");
+  const c = state.command || {};
+  const summary = c.summary || {};
+  const alerts = safeArray(c.alerts);
+  const tasks = safeArray(c.tasks);
+  const meds = safeArray(c.meds_due);
+  const handover = safeArray(c.handover);
+  const overdue = safeArray(c.overdue);
 
   return `
-    <div class="workspace-grid home-grid">
+    <div class="workspace-grid home-command-grid">
       <section class="surface surface-hero">
         <div class="surface-header">
           <div>
             <div class="surface-kicker">Command Centre</div>
-            <h3>Shift overview</h3>
+            <h3>Home operational picture</h3>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-primary" onclick="App.primaryTabTo('youngPeople', 'recording')">Go to Recording</button>
+            <button class="btn btn-ghost" onclick="App.primaryTabTo('quality', 'management')">Open Review Queue</button>
           </div>
         </div>
         <div class="surface-body">
-          <div class="records-wrap">${summary}</div>
+          <div class="dashboard-stat-grid">
+            ${summaryCard("Children in home", summary.children_in_home ?? "—", "neutral")}
+            ${summaryCard("Staff on shift", summary.staff_on_shift ?? "—", "neutral")}
+            ${summaryCard("High risk alerts", summary.high_risk_alerts ?? "—", (summary.high_risk_alerts || 0) > 0 ? "danger" : "success")}
+            ${summaryCard("Open incidents", summary.open_incidents ?? "—", (summary.open_incidents || 0) > 0 ? "warning" : "success")}
+            ${summaryCard("Safeguarding items", summary.open_safeguarding_items ?? "—", (summary.open_safeguarding_items || 0) > 0 ? "danger" : "success")}
+            ${summaryCard("Manager reviews due", summary.manager_reviews_due ?? "—", (summary.manager_reviews_due || 0) > 0 ? "warning" : "success")}
+            ${summaryCard("Overdue reviews", summary.overdue_reviews ?? "—", (summary.overdue_reviews || 0) > 0 ? "danger" : "success")}
+            ${summaryCard("Plans overdue", summary.plans_overdue ?? "—", (summary.plans_overdue || 0) > 0 ? "danger" : "success")}
+            ${summaryCard("Documents due", summary.documents_due ?? "—", (summary.documents_due || 0) > 0 ? "warning" : "success")}
+            ${summaryCard("Medication due this shift", summary.medication_due_this_shift ?? "—", (summary.medication_due_this_shift || 0) > 0 ? "warning" : "neutral")}
+          </div>
         </div>
       </section>
 
       <section class="surface">
         <div class="surface-header">
           <div>
-            <div class="surface-kicker">Safeguarding and priority alerts</div>
-            <h3>Current alerts</h3>
+            <div class="surface-kicker">Therapeutic care focus</div>
+            <h3>Selected young person snapshot</h3>
+          </div>
+        </div>
+        <div class="surface-body">
+          ${selectedYoungPeopleSummary()}
+        </div>
+      </section>
+
+      <section class="surface">
+        <div class="surface-header">
+          <div>
+            <div class="surface-kicker">Priority alerts</div>
+            <h3>Safeguarding and risk</h3>
           </div>
         </div>
         <div class="surface-body">
           <div class="records-wrap">
-            ${alerts || `<div class="empty-state">No alerts.</div>`}
+            ${alerts.length ? alerts.map(alertCard).join("") : `<div class="empty-state">No current safeguarding or risk alerts.</div>`}
+            ${overdue.length ? overdue.map(overdueCard).join("") : ""}
           </div>
         </div>
       </section>
@@ -736,13 +895,41 @@ function renderHome() {
           </div>
         </div>
         <div class="surface-body">
-          <div class="records-wrap">
-            ${tasks || ""}
-            ${meds || ""}
-            ${handover || ""}
-            ${overdue || ""}
-            ${!(tasks || meds || handover || overdue) ? `<div class="empty-state">No current shift actions.</div>` : ""}
+          <div class="flow-stack">
+            <div class="flow-group">
+              <div class="flow-group-title">Tasks</div>
+              <div class="records-wrap">
+                ${tasks.length ? tasks.map(taskCard).join("") : `<div class="empty-state">No open tasks.</div>`}
+              </div>
+            </div>
+
+            <div class="flow-group">
+              <div class="flow-group-title">Medication due</div>
+              <div class="records-wrap">
+                ${meds.length ? meds.map(medCard).join("") : `<div class="empty-state">No medication due in this view.</div>`}
+              </div>
+            </div>
+
+            <div class="flow-group">
+              <div class="flow-group-title">Handover</div>
+              <div class="records-wrap">
+                ${handover.length ? handover.map(handoverCard).join("") : `<div class="empty-state">No handover summary loaded.</div>`}
+              </div>
+            </div>
           </div>
+        </div>
+      </section>
+
+      <section class="surface surface-wide">
+        <div class="surface-header">
+          <div>
+            <div class="surface-kicker">Leadership and oversight</div>
+            <h3>Management review queue</h3>
+          </div>
+          <button class="btn btn-ghost" onclick="App.primaryTabTo('quality', 'management')">Open full queue</button>
+        </div>
+        <div class="surface-body">
+          ${managementQueueHome()}
         </div>
       </section>
     </div>
@@ -993,11 +1180,7 @@ function renderKeywork() {
       card(
         k.title || "Keywork session",
         `${fmtDate(k.session_date)} • ${k.workflow_status || "draft"}`,
-        k.summary || "Keywork session recorded",
-        `
-          <button class="btn btn-ghost" onclick="App.submitKeywork(${k.id})">Submit</button>
-          <button class="btn btn-ghost" onclick="App.archiveKeywork(${k.id})">Archive</button>
-        `
+        k.summary || "Keywork session recorded"
       )
   );
 }
@@ -1126,13 +1309,11 @@ function renderAI() {
 function renderManagement() {
   const daily = state.cache.daily?.items || [];
   const incidents = state.cache.incidents?.items || [];
-  const keywork = state.cache.keywork?.items || [];
   const plans = state.cache.plans?.items || [];
 
   const queue = [
     ...daily.filter((x) => String(x.workflow_status || "").toLowerCase() === "submitted"),
     ...incidents.filter((x) => String(x.workflow_status || "").toLowerCase() === "submitted"),
-    ...keywork.filter((x) => String(x.workflow_status || "").toLowerCase() === "submitted"),
     ...plans.filter((x) => String(x.approval_status || "").toLowerCase() === "submitted")
   ];
 
@@ -1190,16 +1371,15 @@ function renderInspection() {
         </div>
         <div class="surface-body">
           <div class="records-wrap">
-            ${stat("Plans", (inspection.plans || []).length)}
-            ${stat("Risks", (inspection.risks || []).length)}
-            ${stat("Daily notes", (inspection.daily_notes || []).length)}
-            ${stat("Incidents", (inspection.incidents || []).length)}
-            ${stat("Health records", (inspection.health_records || []).length)}
-            ${stat("Education records", (inspection.education_records || []).length)}
-            ${stat("Family records", (inspection.family_records || []).length)}
-            ${stat("Keywork", (inspection.keywork_sessions || []).length)}
-            ${stat("Chronology", (inspection.chronology || []).length)}
-            ${stat("Compliance items", (inspection.compliance_items || []).length)}
+            ${summaryCard("Plans", (inspection.plans || []).length, "neutral")}
+            ${summaryCard("Risks", (inspection.risks || []).length, "neutral")}
+            ${summaryCard("Daily notes", (inspection.daily_notes || []).length, "neutral")}
+            ${summaryCard("Incidents", (inspection.incidents || []).length, "neutral")}
+            ${summaryCard("Health records", (inspection.health_records || []).length, "neutral")}
+            ${summaryCard("Education records", (inspection.education_records || []).length, "neutral")}
+            ${summaryCard("Family records", (inspection.family_records || []).length, "neutral")}
+            ${summaryCard("Keywork", (inspection.keywork_sessions || []).length, "neutral")}
+            ${summaryCard("Chronology", (inspection.chronology || []).length, "neutral")}
           </div>
         </div>
       </section>
@@ -1593,18 +1773,6 @@ async function archiveIncident(id) {
   renderApp();
 }
 
-async function submitKeywork(id) {
-  await postJson(CONFIG.endpoints.keywork.submit(id), {});
-  await loadSelectedYoungPerson();
-  renderApp();
-}
-
-async function archiveKeywork(id) {
-  await postJson(CONFIG.endpoints.keywork.archive(id), {});
-  await loadSelectedYoungPerson();
-  renderApp();
-}
-
 async function submitPlan(id) {
   await postJson(CONFIG.endpoints.plans.submit(id), {});
   await loadSelectedYoungPerson();
@@ -1627,6 +1795,13 @@ async function loadInspection() {
   if (!state.selectedYoungPersonId) return;
   state.cache.inspection = await api(CONFIG.endpoints.inspection(state.selectedYoungPersonId));
   state.primaryTab = "inspection";
+  renderApp();
+}
+
+function primaryTabTo(primary, secondary = "") {
+  state.primaryTab = primary;
+  const secondaryTabs = CONFIG.primaryTabs[primary]?.secondary || null;
+  state.secondaryTab = secondary || (secondaryTabs ? Object.keys(secondaryTabs)[0] : "");
   renderApp();
 }
 
@@ -1663,12 +1838,11 @@ const App = {
   archiveDaily,
   submitIncident,
   archiveIncident,
-  submitKeywork,
-  archiveKeywork,
   submitPlan,
   approvePlan,
   archivePlan,
-  loadInspection
+  loadInspection,
+  primaryTabTo
 };
 
 async function init() {
