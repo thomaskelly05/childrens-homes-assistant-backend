@@ -48,6 +48,94 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function getAccessToken() {
+  return localStorage.getItem("chos_access_token") || "";
+}
+
+function getCurrentUser() {
+  try {
+    return JSON.parse(localStorage.getItem("chos_user") || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function redirectToLogin() {
+  window.location.href = "oslogin.html";
+}
+
+function requireAuth() {
+  const token = getAccessToken();
+  if (!token) {
+    redirectToLogin();
+    throw new Error("No access token found");
+  }
+  return token;
+}
+
+async function fetchJson(url, options = {}) {
+  const token = requireAuth();
+
+  const headers = {
+    ...(options.headers || {}),
+    Authorization: `Bearer ${token}`,
+  };
+
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  });
+
+  const contentType = response.headers.get("content-type") || "";
+  const data = contentType.includes("application/json")
+    ? await response.json()
+    : await response.text();
+
+  if (response.status === 401) {
+    localStorage.removeItem("chos_access_token");
+    localStorage.removeItem("chos_user");
+    redirectToLogin();
+    throw new Error("Session expired");
+  }
+
+  if (!response.ok) {
+    const message = typeof data === "object" ? data.detail || "Request failed" : data;
+    throw new Error(message);
+  }
+
+  return data;
+}
+
+function renderCurrentUser() {
+  const user = getCurrentUser();
+  const chip = document.getElementById("currentUserChip");
+  if (!chip) return;
+
+  if (!user || !user.email) {
+    chip.textContent = "Not signed in";
+    return;
+  }
+
+  chip.textContent = `${user.email} • ${user.role || "user"}`;
+}
+
+async function logout() {
+  const token = getAccessToken();
+
+  try {
+    await fetch("/auth/logout", {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+  } catch (error) {
+    console.error("Logout request failed:", error);
+  }
+
+  localStorage.removeItem("chos_access_token");
+  localStorage.removeItem("chos_user");
+  redirectToLogin();
+}
+
 function fullName(person) {
   const first = person?.first_name || "";
   const last = person?.last_name || "";
@@ -106,23 +194,6 @@ function calculateAge(dateOfBirth) {
   const m = today.getMonth() - dob.getMonth();
   if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
   return age;
-}
-
-async function fetchJson(url, options = {}) {
-  const response = await fetch(url, {
-    credentials: "same-origin",
-    ...options,
-  });
-
-  const contentType = response.headers.get("content-type") || "";
-  const data = contentType.includes("application/json") ? await response.json() : await response.text();
-
-  if (!response.ok) {
-    const message = typeof data === "object" ? data.detail || "Request failed" : data;
-    throw new Error(message);
-  }
-
-  return data;
 }
 
 function setLoading(id, text = "Loading...") {
@@ -995,6 +1066,7 @@ async function archiveHandoverAction(id) {
 
 function bindEvents() {
   document.getElementById("refreshBtn").addEventListener("click", reloadSelectedYoungPerson);
+  document.getElementById("logoutBtn").addEventListener("click", logout);
 
   document.getElementById("youngPeopleSearch").addEventListener("input", (e) => {
     renderYoungPeopleList(filterYoungPeople(e.target.value));
@@ -1033,13 +1105,14 @@ function bindEvents() {
 }
 
 function init() {
+  requireAuth();
+  renderCurrentUser();
   bindEvents();
   loadYoungPeople();
 }
 
 document.addEventListener("DOMContentLoaded", init);
 
-// expose workflow actions for inline buttons
 window.submitDailyNoteAction = submitDailyNoteAction;
 window.approveDailyNoteAction = approveDailyNoteAction;
 window.returnDailyNoteAction = returnDailyNoteAction;
