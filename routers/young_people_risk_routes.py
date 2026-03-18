@@ -1,8 +1,6 @@
 from datetime import datetime
-
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-
 from db.connection import get_db
 
 router = APIRouter(prefix="/young-people", tags=["Young People Risk"])
@@ -57,6 +55,10 @@ def ensure_young_person_exists(cur, young_person_id: int):
         raise HTTPException(status_code=404, detail="Young person not found")
 
 
+def full_name(first_name, last_name):
+    return " ".join([x for x in [first_name, last_name] if x]).strip() or None
+
+
 def fetch_risk_select_sql(where_sql: str):
     return f"""
         SELECT
@@ -93,6 +95,44 @@ def fetch_risk_select_sql(where_sql: str):
     """
 
 
+def transform_risk_row(row: dict) -> dict:
+    return {
+        "id": row.get("id"),
+        "young_person_id": row.get("young_person_id"),
+        "category": row.get("category"),
+        "title": row.get("title"),
+        "concern_summary": row.get("concern_summary"),
+        "known_triggers": row.get("known_triggers"),
+        "early_warning_signs": row.get("early_warning_signs"),
+        "contextual_factors": row.get("contextual_factors"),
+        "current_controls": row.get("current_controls"),
+        "deescalation_strategies": row.get("deescalation_strategies"),
+        "response_actions": row.get("response_actions"),
+        "child_views": row.get("child_views"),
+        "severity": row.get("severity"),
+        "likelihood": row.get("likelihood"),
+        "review_date": row.get("review_date"),
+        "status": row.get("status"),
+        "approval_status": row.get("approval_status"),
+        "owner_id": row.get("owner_id"),
+        "owner_name": full_name(row.get("owner_first_name"), row.get("owner_last_name")),
+        "created_by": row.get("created_by"),
+        "created_by_name": full_name(row.get("created_by_first_name"), row.get("created_by_last_name")),
+        "archived": row.get("archived"),
+        "created_at": row.get("created_at"),
+        "updated_at": row.get("updated_at"),
+
+        # shell aliases
+        "summary": row.get("concern_summary") or "Risk assessment",
+        "narrative": row.get("concern_summary") or "Risk assessment",
+        "workflow_status": row.get("approval_status") or row.get("status") or "active",
+        "review_due_at": row.get("review_date"),
+        "event_type": "risk",
+        "formulation": row.get("concern_summary"),
+        "staff_guidance": row.get("current_controls"),
+    }
+
+
 @router.get("/{young_person_id}/risk")
 def get_young_person_risk(young_person_id: int, conn=Depends(get_db)):
     try:
@@ -117,7 +157,8 @@ def get_young_person_risk(young_person_id: int, conn=Depends(get_db)):
                 ),
                 (young_person_id,),
             )
-            return cur.fetchall()
+            rows = cur.fetchall() or []
+            return {"items": [transform_risk_row(r) for r in rows]}
     except HTTPException:
         raise
     except Exception as e:
@@ -142,7 +183,8 @@ def get_young_person_archived_risk(young_person_id: int, conn=Depends(get_db)):
                 ),
                 (young_person_id,),
             )
-            return cur.fetchall()
+            rows = cur.fetchall() or []
+            return {"items": [transform_risk_row(r) for r in rows]}
     except HTTPException:
         raise
     except Exception as e:
@@ -162,7 +204,7 @@ def get_risk_assessment(risk_id: int, conn=Depends(get_db)):
         if not row:
             raise HTTPException(status_code=404, detail="Risk assessment not found")
 
-        return row
+        return transform_risk_row(row)
     except HTTPException:
         raise
     except Exception as e:
@@ -230,6 +272,7 @@ def create_risk_assessment(payload: RiskAssessmentCreate, conn=Depends(get_db)):
 
     try:
         with conn.cursor() as cur:
+            ensure_young_person_exists(cur, payload.young_person_id)
             cur.execute(query, values)
             row = cur.fetchone()
         conn.commit()
@@ -265,11 +308,12 @@ def update_risk_assessment(risk_id: int, payload: RiskAssessmentUpdate, conn=Dep
         with conn.cursor() as cur:
             cur.execute(query, values)
             row = cur.fetchone()
-        conn.commit()
 
         if not row:
+            conn.rollback()
             raise HTTPException(status_code=404, detail="Risk assessment not found")
 
+        conn.commit()
         return {"message": "Risk assessment updated successfully", "id": row["id"]}
     except HTTPException:
         raise
