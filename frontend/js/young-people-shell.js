@@ -24,7 +24,8 @@ const state = {
     autosaveTimer: null,
     autosaveState: "Ready",
     draftCreated: false,
-    hasChanges: false
+    hasChanges: false,
+    detailType: null
   }
 };
 
@@ -106,6 +107,8 @@ const CONFIG = {
       update: (id) => `/young-people/daily-notes/${id}`,
       get: (id) => `/young-people/daily-notes/${id}`,
       submit: (id) => `/young-people/daily-notes/${id}/submit`,
+      approve: (id) => `/young-people/daily-notes/${id}/approve`,
+      return: (id) => `/young-people/daily-notes/${id}/return`,
       archive: (id) => `/young-people/daily-notes/${id}/archive`
     },
 
@@ -116,6 +119,8 @@ const CONFIG = {
       update: (id) => `/young-people/incidents/${id}`,
       get: (id) => `/young-people/incidents/${id}`,
       submit: (id) => `/young-people/incidents/${id}/submit`,
+      approve: (id) => `/young-people/incidents/${id}/approve`,
+      return: (id) => `/young-people/incidents/${id}/return`,
       archive: (id) => `/young-people/incidents/${id}/archive`
     },
 
@@ -145,6 +150,7 @@ const CONFIG = {
       get: (id) => `/young-people/keywork/${id}`,
       submit: (id) => `/young-people/keywork/${id}/submit`,
       approve: (id) => `/young-people/keywork/${id}/approve`,
+      return: (id) => `/young-people/keywork/${id}/return`,
       archive: (id) => `/young-people/keywork/${id}/archive`
     },
 
@@ -156,6 +162,7 @@ const CONFIG = {
       get: (id) => `/young-people/plans/${id}`,
       submit: (id) => `/young-people/plans/${id}/submit`,
       approve: (id) => `/young-people/plans/${id}/approve`,
+      return: (id) => `/young-people/plans/${id}/return`,
       archive: (id) => `/young-people/plans/${id}/archive`
     },
 
@@ -169,7 +176,8 @@ const CONFIG = {
 
     chronology: {
       list: (id) => `/young-people/${id}/chronology`,
-      rebuild: (id) => `/young-people/${id}/chronology/rebuild`
+      rebuild: (id) => `/young-people/${id}/chronology/rebuild`,
+      get: (id) => `/young-people/chronology/${id}`
     },
 
     compliance: (id) => `/young-people/${id}/compliance`,
@@ -181,7 +189,8 @@ const CONFIG = {
     },
 
     statutory: {
-      list: (id) => `/young-people/${id}/statutory-documents`
+      list: (id) => `/young-people/${id}/statutory-documents`,
+      get: (id) => `/young-people/statutory-documents/${id}`
     },
 
     ai: {
@@ -677,21 +686,6 @@ function safeArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function card(title, meta = "", body = "", actions = "") {
-  return `
-    <article class="record-card">
-      <div class="record-card-header">
-        <div>
-          <div class="record-title">${escapeHtml(title || "Untitled")}</div>
-          <div class="record-meta">${escapeHtml(meta)}</div>
-        </div>
-      </div>
-      <div class="record-body">${escapeHtml(body || "No detail")}</div>
-      ${actions ? `<div class="record-actions">${actions}</div>` : ""}
-    </article>
-  `;
-}
-
 function summaryCard(label, value, tone = "neutral") {
   return `
     <div class="dashboard-stat dashboard-stat-${tone}">
@@ -701,59 +695,17 @@ function summaryCard(label, value, tone = "neutral") {
   `;
 }
 
-function alertCard(item = {}) {
+function interactiveCard({ title, meta = "", body = "", actions = "", onClick = "" }) {
   return `
-    <article class="priority-card priority-${escapeHtml(String(item.level || "neutral").toLowerCase())}">
-      <div class="priority-card-top">
-        <div class="priority-title">${escapeHtml(item.title || "Alert")}</div>
-        <span class="badge ${badgeClass(item.level)}">${escapeHtml(item.level || "info")}</span>
+    <article class="record-card clickable-card" ${onClick ? `onclick="${onClick}"` : ""}>
+      <div class="record-card-header">
+        <div>
+          <div class="record-title">${escapeHtml(title || "Untitled")}</div>
+          <div class="record-meta">${escapeHtml(meta)}</div>
+        </div>
       </div>
-      <div class="priority-meta">${escapeHtml(item.young_person_name || "Home-wide")}</div>
-      <div class="priority-body">${escapeHtml(item.detail || "No further detail recorded.")}</div>
-    </article>
-  `;
-}
-
-function taskCard(item = {}) {
-  return `
-    <article class="flow-card">
-      <div class="flow-card-title">${escapeHtml(item.title || "Task")}</div>
-      <div class="flow-card-meta">${escapeHtml(item.young_person_name || "Home-wide")} • ${escapeHtml(item.due || "No due time")}</div>
-    </article>
-  `;
-}
-
-function medCard(item = {}) {
-  return `
-    <article class="flow-card">
-      <div class="flow-card-title">${escapeHtml(item.medicine || item.item || "Medication")}</div>
-      <div class="flow-card-meta">${escapeHtml(item.young_person_name || "Young person")} • ${escapeHtml(item.time_due || "No due time")}</div>
-      <div class="flow-card-foot">
-        <span class="badge ${badgeClass(item.status)}">${escapeHtml(item.status || "due")}</span>
-      </div>
-    </article>
-  `;
-}
-
-function handoverCard(item = {}) {
-  return `
-    <article class="flow-card">
-      <div class="flow-card-title">${escapeHtml(item.title || "Handover")}</div>
-      <div class="flow-card-meta">${escapeHtml(item.time || "No time recorded")}</div>
-      <div class="flow-card-body">${escapeHtml(item.detail || "No handover detail recorded.")}</div>
-    </article>
-  `;
-}
-
-function overdueCard(item = {}) {
-  return `
-    <article class="priority-card priority-high">
-      <div class="priority-card-top">
-        <div class="priority-title">${escapeHtml(item.title || "Overdue item")}</div>
-        <span class="badge badge-danger">Overdue</span>
-      </div>
-      <div class="priority-meta">${escapeHtml(item.young_person_name || "Home-wide")}</div>
-      <div class="priority-body">${escapeHtml(titleCaseLabel(item.type || "review"))}</div>
+      <div class="record-body">${escapeHtml(body || "No detail")}</div>
+      ${actions ? `<div class="record-actions" onclick="event.stopPropagation()">${actions}</div>` : ""}
     </article>
   `;
 }
@@ -902,6 +854,8 @@ function renderYoungPersonSelect() {
 
   UI.youngPersonSelect.onchange = async (e) => {
     state.selectedYoungPersonId = Number(e.target.value);
+    state.primaryTab = "youngPeople";
+    state.secondaryTab = "overview";
     await loadSelectedYoungPerson();
     renderApp();
   };
@@ -950,36 +904,19 @@ function selectedYoungPeopleSummary() {
         ${summaryCard("Submitted for review", submittedCount, submittedCount ? "warning" : "neutral")}
         ${summaryCard("Overdue compliance", overdueCompliance, overdueCompliance ? "danger" : "success")}
       </div>
+
+      <div class="quick-open-row">
+        <button class="btn btn-secondary" onclick="App.primaryTabTo('youngPeople','recording')">Open Recording</button>
+        <button class="btn btn-secondary" onclick="App.primaryTabTo('youngPeople','plans')">Open Plans</button>
+        <button class="btn btn-secondary" onclick="App.primaryTabTo('youngPeople','risk')">Open Risk</button>
+        <button class="btn btn-secondary" onclick="App.primaryTabTo('youngPeople','timeline')">Open Timeline</button>
+      </div>
     </div>
   `;
 }
 
 function managementQueueHome() {
-  const daily = safeArray(state.cache?.daily?.items)
-    .filter((x) => String(x.workflow_status || "").toLowerCase() === "submitted")
-    .map((x) => ({
-      title: x.title || "Daily Care Record",
-      meta: `${fmtDate(x.note_date)} • ${x.shift_type || "shift"}`,
-      body: x.summary || x.presentation || "Submitted daily record"
-    }));
-
-  const incidents = safeArray(state.cache?.incidents?.items)
-    .filter((x) => ["submitted", "pending"].includes(String(x.workflow_status || x.manager_review_status || "").toLowerCase()))
-    .map((x) => ({
-      title: x.title || "Significant Event Record",
-      meta: `${fmtDateTime(x.occurred_at)} • ${x.severity || "medium"}`,
-      body: x.description || "Submitted significant event"
-    }));
-
-  const plans = safeArray(state.cache?.plans?.items)
-    .filter((x) => String(x.approval_status || "").toLowerCase() === "submitted")
-    .map((x) => ({
-      title: x.title || "Care and Support Plan",
-      meta: `${x.plan_type || "plan"} • review ${fmtDate(x.review_due_at)}`,
-      body: x.summary || x.formulation || "Submitted plan"
-    }));
-
-  const queue = [...daily, ...incidents, ...plans].slice(0, 8);
+  const queue = buildManagementQueue().slice(0, 8);
 
   if (!queue.length) {
     return `<div class="empty-state">No submitted items currently awaiting management review.</div>`;
@@ -987,20 +924,49 @@ function managementQueueHome() {
 
   return `
     <div class="records-wrap">
-      ${queue.map((q) => `
-        <article class="record-card">
-          <div class="record-card-header">
-            <div>
-              <div class="record-title">${escapeHtml(q.title)}</div>
-              <div class="record-meta">${escapeHtml(q.meta)}</div>
-            </div>
-            <span class="badge badge-warning">Review due</span>
-          </div>
-          <div class="record-body">${escapeHtml(q.body)}</div>
-        </article>
-      `).join("")}
+      ${queue.map((q) =>
+        interactiveCard({
+          title: q.title,
+          meta: q.meta,
+          body: q.body,
+          onClick: `App.openManagerReview('${q.type}', ${q.id})`
+        })
+      ).join("")}
     </div>
   `;
+}
+
+function buildManagementQueue() {
+  return [
+    ...splitDailyRecords(state.cache.daily?.items || []).submitted.map((x) => ({
+      type: "daily",
+      id: x.id,
+      title: x.title || "Daily Care Record",
+      meta: `${fmtDate(x.note_date)} • ${x.shift_type || "shift"}`,
+      body: x.summary || x.presentation || "Submitted daily care record"
+    })),
+    ...splitIncidentRecords(state.cache.incidents?.items || []).submitted.map((x) => ({
+      type: "incident",
+      id: x.id,
+      title: x.title || "Significant Event Record",
+      meta: `${fmtDateTime(x.occurred_at)} • ${x.severity || "medium"}`,
+      body: x.description || "Submitted significant event record"
+    })),
+    ...splitKeyworkRecords(state.cache.keywork?.items || []).submitted.map((x) => ({
+      type: "keywork",
+      id: x.id,
+      title: x.title || "Direct Work Record",
+      meta: `${fmtDate(x.session_date)} • ${x.workflow_status || x.status || "submitted"}`,
+      body: x.summary || "Submitted direct work record"
+    })),
+    ...splitPlanRecords(state.cache.plans?.items || []).submitted.map((x) => ({
+      type: "plan",
+      id: x.id,
+      title: x.title || "Care and Support Plan",
+      meta: `${x.plan_type || "plan"} • review ${fmtDate(x.review_due_at)}`,
+      body: x.summary || x.formulation || "Submitted care and support plan"
+    }))
+  ];
 }
 
 function renderHome() {
@@ -1062,8 +1028,26 @@ function renderHome() {
         </div>
         <div class="surface-body">
           <div class="records-wrap">
-            ${alerts.length ? alerts.map(alertCard).join("") : `<div class="empty-state">No current safeguarding or risk alerts.</div>`}
-            ${overdue.length ? overdue.map(overdueCard).join("") : ""}
+            ${alerts.length ? alerts.map((item) => `
+              <article class="priority-card priority-${escapeHtml(String(item.level || "neutral").toLowerCase())} clickable-card command-link-card" onclick="App.primaryTabTo('youngPeople','overview')">
+                <div class="priority-card-top">
+                  <div class="priority-title">${escapeHtml(item.title || "Alert")}</div>
+                  <span class="badge ${badgeClass(item.level)}">${escapeHtml(item.level || "info")}</span>
+                </div>
+                <div class="priority-meta">${escapeHtml(item.young_person_name || "Home-wide")}</div>
+                <div class="priority-body">${escapeHtml(item.detail || "No further detail recorded.")}</div>
+              </article>
+            `).join("") : `<div class="empty-state">No current safeguarding or risk alerts.</div>`}
+            ${overdue.length ? overdue.map((item) => `
+              <article class="priority-card priority-high clickable-card command-link-card" onclick="App.primaryTabTo('quality','compliance')">
+                <div class="priority-card-top">
+                  <div class="priority-title">${escapeHtml(item.title || "Overdue item")}</div>
+                  <span class="badge badge-danger">Overdue</span>
+                </div>
+                <div class="priority-meta">${escapeHtml(item.young_person_name || "Home-wide")}</div>
+                <div class="priority-body">${escapeHtml(titleCaseLabel(item.type || "review"))}</div>
+              </article>
+            `).join("") : ""}
           </div>
         </div>
       </section>
@@ -1080,21 +1064,40 @@ function renderHome() {
             <div class="flow-group">
               <div class="flow-group-title">Tasks</div>
               <div class="records-wrap">
-                ${tasks.length ? tasks.map(taskCard).join("") : `<div class="empty-state">No open tasks.</div>`}
+                ${tasks.length ? tasks.map((item) => `
+                  <article class="flow-card clickable-card command-link-card" onclick="App.primaryTabTo('youngPeople','recording')">
+                    <div class="flow-card-title">${escapeHtml(item.title || "Task")}</div>
+                    <div class="flow-card-meta">${escapeHtml(item.young_person_name || "Home-wide")} • ${escapeHtml(item.due || "No due time")}</div>
+                  </article>
+                `).join("") : `<div class="empty-state">No open tasks.</div>`}
               </div>
             </div>
 
             <div class="flow-group">
               <div class="flow-group-title">Medication due</div>
               <div class="records-wrap">
-                ${meds.length ? meds.map(medCard).join("") : `<div class="empty-state">No medication due in this view.</div>`}
+                ${meds.length ? meds.map((item) => `
+                  <article class="flow-card clickable-card command-link-card" onclick="App.primaryTabTo('youngPeople','health')">
+                    <div class="flow-card-title">${escapeHtml(item.medicine || item.item || "Medication")}</div>
+                    <div class="flow-card-meta">${escapeHtml(item.young_person_name || "Young person")} • ${escapeHtml(item.time_due || "No due time")}</div>
+                    <div class="flow-card-foot">
+                      <span class="badge ${badgeClass(item.status)}">${escapeHtml(item.status || "due")}</span>
+                    </div>
+                  </article>
+                `).join("") : `<div class="empty-state">No medication due in this view.</div>`}
               </div>
             </div>
 
             <div class="flow-group">
               <div class="flow-group-title">Handover</div>
               <div class="records-wrap">
-                ${handover.length ? handover.map(handoverCard).join("") : `<div class="empty-state">No handover summary loaded.</div>`}
+                ${handover.length ? handover.map((item) => `
+                  <article class="flow-card clickable-card command-link-card" onclick="App.primaryTabTo('youngPeople','recording')">
+                    <div class="flow-card-title">${escapeHtml(item.title || "Handover")}</div>
+                    <div class="flow-card-meta">${escapeHtml(item.time || "No time recorded")}</div>
+                    <div class="flow-card-body">${escapeHtml(item.detail || "No handover detail recorded.")}</div>
+                  </article>
+                `).join("") : `<div class="empty-state">No handover summary loaded.</div>`}
               </div>
             </div>
           </div>
@@ -1176,7 +1179,14 @@ function renderOverview() {
             <h4>Alerts</h4>
             ${
               alerts.length
-                ? alerts.map((a) => `<div class="alert-item"><strong>${escapeHtml(a.title || a.alert_type || "Alert")}</strong><br>${escapeHtml(a.description || "")}</div>`).join("")
+                ? alerts.map((a) =>
+                    interactiveCard({
+                      title: a.title || a.alert_type || "Alert",
+                      meta: a.severity || "Alert",
+                      body: a.description || "",
+                      onClick: `App.primaryTabTo('youngPeople','overview')`
+                    })
+                  ).join("")
                 : `<div class="empty-state">No alerts recorded.</div>`
             }
           </div>
@@ -1185,8 +1195,6 @@ function renderOverview() {
     </div>
   `;
 }
-
-/* ---------- workflow filters ---------- */
 
 function splitDailyRecords(items = []) {
   return {
@@ -1227,8 +1235,6 @@ function splitRiskRecords(items = []) {
   };
 }
 
-/* ---------- main module renders ---------- */
-
 function renderRecording() {
   const dailySplit = splitDailyRecords(state.cache.daily?.items || []);
   const incidentSplit = splitIncidentRecords(state.cache.incidents?.items || []);
@@ -1254,16 +1260,17 @@ function renderRecording() {
           <div class="records-wrap">
             ${(dailySplit[dailyCurrent] || []).length
               ? (dailySplit[dailyCurrent] || []).map((n) =>
-                  card(
-                    n.title || "Daily Care Record",
-                    `${fmtDate(n.note_date)} • ${n.shift_type || "shift"} • ${n.workflow_status || "draft"}`,
-                    n.summary || n.presentation || "Daily care record",
-                    `
-                      <button class="btn btn-secondary" onclick="App.openForm('daily', ${n.id})">Open</button>
+                  interactiveCard({
+                    title: n.title || "Daily Care Record",
+                    meta: `${fmtDate(n.note_date)} • ${n.shift_type || "shift"} • ${n.workflow_status || "draft"}`,
+                    body: n.summary || n.presentation || "Daily care record",
+                    onClick: `App.openRecord('daily', ${n.id})`,
+                    actions: `
+                      <button class="btn btn-secondary" onclick="App.openRecord('daily', ${n.id})">Open</button>
                       ${dailyCurrent === "draft" ? `<button class="btn btn-ghost" onclick="App.submitDaily(${n.id})">Submit</button>` : ""}
                       ${dailyCurrent !== "approved" ? `<button class="btn btn-ghost" onclick="App.archiveDaily(${n.id})">Archive</button>` : ""}
                     `
-                  )
+                  })
                 ).join("")
               : `<div class="workflow-empty">No ${escapeHtml(dailyCurrent)} daily care records.</div>`
             }
@@ -1288,16 +1295,17 @@ function renderRecording() {
           <div class="records-wrap">
             ${(incidentSplit[incidentCurrent] || []).length
               ? (incidentSplit[incidentCurrent] || []).map((n) =>
-                  card(
-                    n.title || "Significant Event Record",
-                    `${fmtDateTime(n.occurred_at)} • ${n.severity || "medium"} • ${n.workflow_status || n.manager_review_status || "draft"}`,
-                    n.description || "Significant event recorded",
-                    `
-                      <button class="btn btn-secondary" onclick="App.openForm('incident', ${n.id})">Open</button>
+                  interactiveCard({
+                    title: n.title || "Significant Event Record",
+                    meta: `${fmtDateTime(n.occurred_at)} • ${n.severity || "medium"} • ${n.workflow_status || n.manager_review_status || "draft"}`,
+                    body: n.description || "Significant event recorded",
+                    onClick: `App.openRecord('incident', ${n.id})`,
+                    actions: `
+                      <button class="btn btn-secondary" onclick="App.openRecord('incident', ${n.id})">Open</button>
                       ${incidentCurrent === "draft" ? `<button class="btn btn-ghost" onclick="App.submitIncident(${n.id})">Submit</button>` : ""}
                       ${incidentCurrent !== "approved" ? `<button class="btn btn-ghost" onclick="App.archiveIncident(${n.id})">Archive</button>` : ""}
                     `
-                  )
+                  })
                 ).join("")
               : `<div class="workflow-empty">No ${escapeHtml(incidentCurrent)} significant event records.</div>`
             }
@@ -1310,15 +1318,17 @@ function renderRecording() {
         "Shift continuity",
         state.cache.handover || [],
         (h) =>
-          card(
-            h.title || "Shift Handover Summary",
-            `${fmtDate(h.handover_date)} • ${h.shift_type || "shift"} • ${h.status || "draft"}`,
-            h.summary_text || "Handover summary",
-            `
+          interactiveCard({
+            title: h.title || "Shift Handover Summary",
+            meta: `${fmtDate(h.handover_date)} • ${h.shift_type || "shift"} • ${h.status || "draft"}`,
+            body: h.summary_text || "Handover summary",
+            onClick: `App.openInlineObjectDetail('Shift Handover Summary', '${encodeURIComponent(JSON.stringify(h))}')`,
+            actions: `
+              <button class="btn btn-secondary" onclick="App.openInlineObjectDetail('Shift Handover Summary', '${encodeURIComponent(JSON.stringify(h))}')">Open</button>
               <button class="btn btn-ghost" onclick="App.approveHandover(${h.id})">Approve</button>
               <button class="btn btn-ghost" onclick="App.archiveHandover(${h.id})">Archive</button>
             `
-          ),
+          }),
         `<button class="btn btn-primary" onclick="App.generateHandover()">Generate Handover</button>`
       )}
     </div>
@@ -1338,7 +1348,13 @@ function renderHealth() {
         "Health and Wellbeing Records",
         "Health",
         records,
-        (r) => card(r.title || "Health and Wellbeing Record", `${fmtDateTime(r.event_datetime)} • ${r.record_type || "record"}`, r.summary || r.outcome || "Health record")
+        (r) =>
+          interactiveCard({
+            title: r.title || "Health and Wellbeing Record",
+            meta: `${fmtDateTime(r.event_datetime)} • ${r.record_type || "record"}`,
+            body: r.summary || r.outcome || "Health record",
+            onClick: `App.openGenericDetail('health', ${r.id})`
+          })
       )}
 
       <section class="surface">
@@ -1359,14 +1375,26 @@ function renderHealth() {
         "Medication Profiles",
         "Medication",
         medProfiles,
-        (m) => card(m.medication_name || "Medication", `${m.dose || "—"} • ${m.frequency || "—"}`, m.reason || "")
+        (m) =>
+          interactiveCard({
+            title: m.medication_name || "Medication",
+            meta: `${m.dose || "—"} • ${m.frequency || "—"}`,
+            body: m.reason || "",
+            onClick: `App.openInlineObjectDetail('Medication Profile', '${encodeURIComponent(JSON.stringify(m))}')`
+          })
       )}
 
       ${renderCollection(
         "Medication Records",
         "Administration",
         medRecords,
-        (m) => card(m.medication_name || "Medication", `${fmtDateTime(m.scheduled_time)} • ${m.status || "recorded"}`, m.dose || "")
+        (m) =>
+          interactiveCard({
+            title: m.medication_name || "Medication",
+            meta: `${fmtDateTime(m.scheduled_time)} • ${m.status || "recorded"}`,
+            body: m.dose || "",
+            onClick: `App.openInlineObjectDetail('Medication Record', '${encodeURIComponent(JSON.stringify(m))}')`
+          })
       )}
     </div>
   `;
@@ -1383,7 +1411,13 @@ function renderEducation() {
         "Education and Participation Records",
         "Education",
         records,
-        (r) => card(r.title || "Education and Participation Record", `${fmtDate(r.record_date)} • ${r.attendance_status || "attendance"}`, r.summary || r.learning_engagement || "Education update")
+        (r) =>
+          interactiveCard({
+            title: r.title || "Education and Participation Record",
+            meta: `${fmtDate(r.record_date)} • ${r.attendance_status || "attendance"}`,
+            body: r.summary || r.learning_engagement || "Education update",
+            onClick: `App.openGenericDetail('education', ${r.id})`
+          })
       )}
 
       <section class="surface">
@@ -1414,14 +1448,26 @@ function renderFamily() {
         "Family and Important Relationships Records",
         "Relationships",
         records,
-        (r) => card(r.title || "Family and Important Relationships Record", `${fmtDateTime(r.contact_datetime)} • ${r.contact_type || "contact"}`, r.summary || r.concerns || "Relationship record")
+        (r) =>
+          interactiveCard({
+            title: r.title || "Family and Important Relationships Record",
+            meta: `${fmtDateTime(r.contact_datetime)} • ${r.contact_type || "contact"}`,
+            body: r.summary || r.concerns || "Relationship record",
+            onClick: `App.openGenericDetail('family', ${r.id})`
+          })
       )}
 
       ${renderCollection(
         "Contacts",
         "Approved network",
         contacts,
-        (c) => card(c.full_name || "Contact", `${c.relationship_to_child || "Relationship"} • ${c.is_approved_contact ? "Approved" : "Not approved"}`, c.contact_notes || c.phone_number || c.email || "")
+        (c) =>
+          interactiveCard({
+            title: c.full_name || "Contact",
+            meta: `${c.relationship_to_child || "Relationship"} • ${c.is_approved_contact ? "Approved" : "Not approved"}`,
+            body: c.contact_notes || c.phone_number || c.email || "",
+            onClick: `App.openInlineObjectDetail('Contact', '${encodeURIComponent(JSON.stringify(c))}')`
+          })
       )}
     </div>
   `;
@@ -1449,16 +1495,17 @@ function renderKeywork() {
         <div class="records-wrap">
           ${(split[current] || []).length
             ? (split[current] || []).map((k) =>
-                card(
-                  k.title || "Direct Work Record",
-                  `${fmtDate(k.session_date)} • ${k.workflow_status || k.status || "draft"}`,
-                  k.summary || "Direct work record",
-                  `
-                    <button class="btn btn-secondary" onclick="App.openForm('keywork', ${k.id})">Open</button>
+                interactiveCard({
+                  title: k.title || "Direct Work Record",
+                  meta: `${fmtDate(k.session_date)} • ${k.workflow_status || k.status || "draft"}`,
+                  body: k.summary || "Direct work record",
+                  onClick: `App.openRecord('keywork', ${k.id})`,
+                  actions: `
+                    <button class="btn btn-secondary" onclick="App.openRecord('keywork', ${k.id})">Open</button>
                     ${current === "draft" ? `<button class="btn btn-ghost" onclick="App.submitKeywork(${k.id})">Submit</button>` : ""}
                     ${current !== "approved" ? `<button class="btn btn-ghost" onclick="App.archiveKeywork(${k.id})">Archive</button>` : ""}
                   `
-                )
+                })
               ).join("")
             : `<div class="workflow-empty">No ${escapeHtml(current)} direct work records.</div>`
           }
@@ -1490,17 +1537,18 @@ function renderPlans() {
         <div class="records-wrap">
           ${(split[current] || []).length
             ? (split[current] || []).map((p) =>
-                card(
-                  p.title || "Care and Support Plan",
-                  `${p.plan_type || "plan"} • review ${fmtDate(p.review_due_at)} • ${p.status || p.approval_status || "draft"}`,
-                  p.summary || p.formulation || "Care and support plan",
-                  `
-                    <button class="btn btn-secondary" onclick="App.openForm('plan', ${p.id})">Open</button>
+                interactiveCard({
+                  title: p.title || "Care and Support Plan",
+                  meta: `${p.plan_type || "plan"} • review ${fmtDate(p.review_due_at)} • ${p.status || p.approval_status || "draft"}`,
+                  body: p.summary || p.formulation || "Care and support plan",
+                  onClick: `App.openRecord('plan', ${p.id})`,
+                  actions: `
+                    <button class="btn btn-secondary" onclick="App.openRecord('plan', ${p.id})">Open</button>
                     ${current === "draft" ? `<button class="btn btn-ghost" onclick="App.submitPlan(${p.id})">Submit</button>` : ""}
-                    ${current === "submitted" ? `<button class="btn btn-ghost" onclick="App.approvePlan(${p.id})">Approve</button>` : ""}
+                    ${current === "submitted" ? `<button class="btn btn-ghost" onclick="App.openManagerReview('plan', ${p.id})">Review</button>` : ""}
                     ${current !== "approved" ? `<button class="btn btn-ghost" onclick="App.archivePlan(${p.id})">Archive</button>` : ""}
                   `
-                )
+                })
               ).join("")
             : `<div class="workflow-empty">No ${escapeHtml(current)} care and support plans.</div>`
           }
@@ -1531,12 +1579,15 @@ function renderRisk() {
         <div class="records-wrap">
           ${(split[current] || []).length
             ? (split[current] || []).map((r) =>
-                card(
-                  r.title || "Safer Care and Risk Plan",
-                  `${r.category || "risk"} • ${r.severity || "medium"} • review ${fmtDate(r.review_date)}`,
-                  r.concern_summary || "Risk plan",
-                  current === "active" ? `<button class="btn btn-secondary" onclick="App.openForm('risk', ${r.id})">Open</button>` : ""
-                )
+                interactiveCard({
+                  title: r.title || "Safer Care and Risk Plan",
+                  meta: `${r.category || "risk"} • ${r.severity || "medium"} • review ${fmtDate(r.review_date)}`,
+                  body: r.concern_summary || "Risk plan",
+                  onClick: `App.openRecord('risk', ${r.id})`,
+                  actions: current === "active"
+                    ? `<button class="btn btn-secondary" onclick="App.openRecord('risk', ${r.id})">Open</button>`
+                    : ""
+                })
               ).join("")
             : `<div class="workflow-empty">No ${escapeHtml(current)} risk plans.</div>`
           }
@@ -1552,7 +1603,13 @@ function renderTimeline() {
     "Chronology",
     "Joined-up timeline",
     items,
-    (e) => card(e.title || "Chronology event", `${fmtDateTime(e.event_datetime)} • ${e.category || "event"}`, e.summary || "Chronology event"),
+    (e) =>
+      interactiveCard({
+        title: e.title || "Chronology event",
+        meta: `${fmtDateTime(e.event_datetime)} • ${e.category || "event"}`,
+        body: e.summary || "Chronology event",
+        onClick: `App.openChronologyEvent(${e.id})`
+      }),
     `<button class="btn btn-primary" onclick="App.rebuildChronology()">Rebuild Chronology</button>`
   );
 }
@@ -1563,7 +1620,13 @@ function renderDocuments() {
     "Statutory Documents",
     "Documents",
     items,
-    (d) => card(d.title || "Document", `${d.document_type || "document"} • review ${fmtDate(d.review_date)}`, d.description || d.status || "")
+    (d) =>
+      interactiveCard({
+        title: d.title || "Document",
+        meta: `${d.document_type || "document"} • review ${fmtDate(d.review_date)}`,
+        body: d.description || d.status || "",
+        onClick: `App.openStatutoryDocument(${d.id})`
+      })
   );
 }
 
@@ -1577,7 +1640,13 @@ function renderStandards() {
         "Standards summary",
         "Quality standards",
         summary,
-        (s) => card(`${s.code} • ${s.short_label || s.title}`, `Display order ${s.display_order || "—"}`, `${s.linked_record_count || 0} linked records`),
+        (s) =>
+          interactiveCard({
+            title: `${s.code} • ${s.short_label || s.title}`,
+            meta: `Display order ${s.display_order || "—"}`,
+            body: `${s.linked_record_count || 0} linked records`,
+            onClick: `App.primaryTabTo('quality','standards')`
+          }),
         `<button class="btn btn-primary" onclick="App.rebuildStandards()">Rebuild Evidence</button>`
       )}
 
@@ -1585,7 +1654,13 @@ function renderStandards() {
         "Standards evidence",
         "Evidence",
         evidence,
-        (e) => card(`${e.standard_code} • ${e.standard_short_label || e.standard_title}`, `${e.source_table || "source"} #${e.source_id || "—"}`, e.rationale || "No rationale")
+        (e) =>
+          interactiveCard({
+            title: `${e.standard_code} • ${e.standard_short_label || e.standard_title}`,
+            meta: `${e.source_table || "source"} #${e.source_id || "—"}`,
+            body: e.rationale || "No rationale",
+            onClick: `App.openEvidenceSource('${e.source_table}', ${e.source_id})`
+          })
       )}
     </div>
   `;
@@ -1597,7 +1672,13 @@ function renderCompliance() {
     "Compliance",
     "Reviews and due dates",
     items,
-    (c) => card(c.title || "Compliance item", `${c.compliance_type || "item"} • due ${fmtDate(c.due_date)} • ${c.compliance_status || "ok"}`, `${c.status || ""} ${c.approval_status || ""}`.trim())
+    (c) =>
+      interactiveCard({
+        title: c.title || "Compliance item",
+        meta: `${c.compliance_type || "item"} • due ${fmtDate(c.due_date)} • ${c.compliance_status || "ok"}`,
+        body: `${c.status || ""} ${c.approval_status || ""}`.trim(),
+        onClick: `App.primaryTabTo('quality','compliance')`
+      })
   );
 }
 
@@ -1609,7 +1690,13 @@ function renderAI() {
         "AI / therapeutic notes",
         "Therapeutic recording",
         items,
-        (n) => card(n.title || "AI note", `${n.young_person_name || "No young person"} • ${n.record_date || "No date"}`, n.excerpt || n.final_note || "")
+        (n) =>
+          interactiveCard({
+            title: n.title || "AI note",
+            meta: `${n.young_person_name || "No young person"} • ${n.record_date || "No date"}`,
+            body: n.excerpt || n.final_note || "",
+            onClick: `App.primaryTabTo('quality','ai')`
+          })
       )}
       <section class="surface">
         <div class="surface-header">
@@ -1620,7 +1707,7 @@ function renderAI() {
         </div>
         <div class="surface-body">
           <div class="simple-item">
-            All long-text fields in the main forms now support spellcheck, autosave and AI language support.
+            All major long-text fields in the main forms now support spellcheck, autosave and AI improve inside the editor.
           </div>
         </div>
       </section>
@@ -1629,34 +1716,22 @@ function renderAI() {
 }
 
 function renderManagement() {
-  const queue = [
-    ...splitDailyRecords(state.cache.daily?.items || []).submitted.map((x) => ({
-      title: x.title || "Daily Care Record",
-      meta: fmtDate(x.note_date),
-      body: x.summary || x.presentation || "Submitted daily care record"
-    })),
-    ...splitIncidentRecords(state.cache.incidents?.items || []).submitted.map((x) => ({
-      title: x.title || "Significant Event Record",
-      meta: fmtDateTime(x.occurred_at),
-      body: x.description || "Submitted event record"
-    })),
-    ...splitKeyworkRecords(state.cache.keywork?.items || []).submitted.map((x) => ({
-      title: x.title || "Direct Work Record",
-      meta: fmtDate(x.session_date),
-      body: x.summary || "Submitted direct work record"
-    })),
-    ...splitPlanRecords(state.cache.plans?.items || []).submitted.map((x) => ({
-      title: x.title || "Care and Support Plan",
-      meta: fmtDate(x.review_due_at),
-      body: x.summary || x.formulation || "Submitted plan"
-    }))
-  ];
+  const queue = buildManagementQueue();
 
   return renderCollection(
     "Management queue",
     "Leadership and oversight",
     queue,
-    (q) => card(q.title, q.meta, q.body)
+    (q) =>
+      interactiveCard({
+        title: q.title,
+        meta: q.meta,
+        body: q.body,
+        onClick: `App.openManagerReview('${q.type}', ${q.id})`,
+        actions: `
+          <button class="btn btn-secondary" onclick="App.openManagerReview('${q.type}', ${q.id})">Review</button>
+        `
+      })
   );
 }
 
@@ -1667,13 +1742,24 @@ function renderArchive() {
   const risk = Array.isArray(state.cache.riskArchive) ? state.cache.riskArchive : [];
 
   const merged = [
-    ...daily.map((x) => ({ title: x.title || "Daily Care Record", meta: fmtDate(x.note_date), body: x.summary || "" })),
-    ...incidents.map((x) => ({ title: x.title || "Significant Event Record", meta: fmtDateTime(x.occurred_at), body: x.description || "" })),
-    ...plans.map((x) => ({ title: x.title || "Care and Support Plan", meta: fmtDate(x.review_due_at), body: x.summary || "" })),
-    ...risk.map((x) => ({ title: x.title || "Safer Care and Risk Plan", meta: fmtDate(x.review_date), body: x.concern_summary || "" }))
+    ...daily.map((x) => ({ type: "daily", id: x.id, title: x.title || "Daily Care Record", meta: fmtDate(x.note_date), body: x.summary || "" })),
+    ...incidents.map((x) => ({ type: "incident", id: x.id, title: x.title || "Significant Event Record", meta: fmtDateTime(x.occurred_at), body: x.description || "" })),
+    ...plans.map((x) => ({ type: "plan", id: x.id, title: x.title || "Care and Support Plan", meta: fmtDate(x.review_due_at), body: x.summary || "" })),
+    ...risk.map((x) => ({ type: "risk", id: x.id, title: x.title || "Safer Care and Risk Plan", meta: fmtDate(x.review_date), body: x.concern_summary || "" }))
   ];
 
-  return renderCollection("Archive", "Archived records", merged, (x) => card(x.title, x.meta, x.body));
+  return renderCollection(
+    "Archive",
+    "Archived records",
+    merged,
+    (x) =>
+      interactiveCard({
+        title: x.title,
+        meta: x.meta,
+        body: x.body,
+        onClick: `App.openRecord('${x.type}', ${x.id})`
+      })
+  );
 }
 
 function renderInspection() {
@@ -1723,7 +1809,13 @@ function renderInspection() {
         "Inspection evidence",
         "Due dates and compliance",
         (inspection.compliance_items || []).slice(0, 10),
-        (item) => card(item.title || item.compliance_type, `${fmtDate(item.due_date)} • ${item.compliance_status || "ok"}`, item.status || "")
+        (item) =>
+          interactiveCard({
+            title: item.title || item.compliance_type,
+            meta: `${fmtDate(item.due_date)} • ${item.compliance_status || "ok"}`,
+            body: item.status || "",
+            onClick: `App.primaryTabTo('quality','compliance')`
+          })
       )}
     </div>
   `;
@@ -1781,8 +1873,6 @@ function renderApp() {
   setHero();
   renderContent();
 }
-
-/* ---------- modal + forms ---------- */
 
 function draftStorageKey(formKey, recordId = "new") {
   return `indicare_draft_${state.selectedYoungPersonId}_${formKey}_${recordId}`;
@@ -1886,6 +1976,7 @@ function resetModalState() {
   state.modal.autosaveState = "Ready";
   state.modal.draftCreated = false;
   state.modal.hasChanges = false;
+  state.modal.detailType = null;
 }
 
 function closeModal() {
@@ -1980,7 +2071,7 @@ function bindFormEditorEvents() {
   const doneBtn = $("modalDoneBtn");
 
   if (saveBtn) saveBtn.onclick = () => saveCurrentForm(false);
-  if (submitBtn) submitBtn.onclick = () => submitCurrentForm();
+  if (submitBtn) submitBtn.onclick = async () => { await submitCurrentForm(); };
   if (doneBtn) doneBtn.onclick = async () => {
     await saveCurrentForm(false);
     closeModal();
@@ -2111,6 +2202,538 @@ async function runAiForField(fieldName) {
   }
 }
 
+function buildDetailSection(title, value) {
+  if (!value) return "";
+  return `
+    <section class="detail-section">
+      <h4>${escapeHtml(title)}</h4>
+      <p>${escapeHtml(value)}</p>
+    </section>
+  `;
+}
+
+function openDetailView(title, kicker, data, sections = [], meta = [], actions = "") {
+  const metaHtml = meta.length
+    ? `
+      <div class="detail-meta-grid">
+        ${meta.map((m) => `
+          <div class="detail-meta-card">
+            <div class="detail-meta-label">${escapeHtml(m.label)}</div>
+            <div class="detail-meta-value">${escapeHtml(m.value ?? "—")}</div>
+          </div>
+        `).join("")}
+      </div>
+    `
+    : "";
+
+  const sectionsHtml = sections.map((s) => buildDetailSection(s.title, s.value)).join("");
+
+  openModal(
+    title,
+    `
+      <div class="detail-view">
+        <div class="detail-hero">
+          <div class="workspace-kicker">${escapeHtml(kicker)}</div>
+          ${metaHtml}
+          ${actions ? `<div class="detail-actions">${actions}</div>` : ""}
+        </div>
+        <div class="detail-sections">
+          ${sectionsHtml || `<div class="empty-state">No further detail recorded.</div>`}
+        </div>
+      </div>
+    `,
+    kicker
+  );
+}
+
+function generateAIInsight(record) {
+  const text = JSON.stringify(record || {}).toLowerCase();
+  const insights = [];
+
+  if (
+    text.includes("aggression") ||
+    text.includes("hit") ||
+    text.includes("kick") ||
+    text.includes("restraint") ||
+    text.includes("physical")
+  ) {
+    insights.push("Behaviour may reflect dysregulation or felt threat. Review triggers, co-regulation and relational repair.");
+  }
+
+  if (text.includes("refused") || text.includes("would not") || text.includes("declined")) {
+    insights.push("Possible demand avoidance or overwhelm. Consider lower-demand pacing and relational curiosity.");
+  }
+
+  if (text.includes("family") || text.includes("contact")) {
+    insights.push("Consider whether contact or attachment themes may have influenced presentation before or after the event.");
+  }
+
+  if (text.includes("night") || text.includes("sleep") || text.includes("tired")) {
+    insights.push("Sleep, fatigue or routine disruption may be contributing factors worth reviewing.");
+  }
+
+  if (text.includes("abscond") || text.includes("missing_from_placement")) {
+    insights.push("This record may need linked risk planning, return-home reflection and chronology review.");
+  }
+
+  if (!text.includes("child_voice") && !text.includes("young_person_voice") && !text.includes("said")) {
+    insights.push("Child's voice appears limited or missing from this record.");
+  }
+
+  if (!insights.length) {
+    insights.push("No immediate therapeutic concerns detected from the wording alone. Review relational response and child voice before sign-off.");
+  }
+
+  return insights;
+}
+
+function runQualityCheck(type, record) {
+  const issues = [];
+
+  if (type === "daily") {
+    if (!record.young_person_voice || String(record.young_person_voice).trim().length < 8) issues.push("Child's voice is missing or too brief");
+    if (!record.presentation || String(record.presentation).trim().length < 8) issues.push("Presentation is not clearly described");
+    if (!record.actions_required || String(record.actions_required).trim().length < 5) issues.push("Next actions / handover needs are missing");
+  }
+
+  if (type === "incident") {
+    if (!record.description || String(record.description).trim().length < 10) issues.push("What happened is too brief");
+    if (!record.staff_response || String(record.staff_response).trim().length < 8) issues.push("Staff response is missing or too brief");
+    if (!record.child_voice || String(record.child_voice).trim().length < 5) issues.push("Child's voice is missing or too brief");
+  }
+
+  if (type === "keywork") {
+    if (!record.summary || String(record.summary).trim().length < 10) issues.push("Session summary is too brief");
+    if (!record.child_voice || String(record.child_voice).trim().length < 8) issues.push("Child's voice is missing or too brief");
+    if (!record.actions_agreed || String(record.actions_agreed).trim().length < 5) issues.push("Actions agreed are missing");
+  }
+
+  if (type === "plan") {
+    if (!record.summary || String(record.summary).trim().length < 10) issues.push("Summary of need is too brief");
+    if (!record.child_voice || String(record.child_voice).trim().length < 8) issues.push("Child's voice is missing or too brief");
+    if (!record.proactive_strategies && !record.staff_guidance) issues.push("Staff guidance / proactive strategies are missing");
+  }
+
+  return issues;
+}
+
+async function fetchRecordForReview(type, id) {
+  if (type === "daily") return api(CONFIG.endpoints.daily.get(id));
+  if (type === "incident") return api(CONFIG.endpoints.incidents.get(id));
+  if (type === "keywork") return api(CONFIG.endpoints.keywork.get(id));
+  if (type === "plan") return api(CONFIG.endpoints.plans.get(id));
+  return null;
+}
+
+function buildReviewSections(type, record) {
+  if (type === "daily") {
+    return [
+      { title: "Presentation and emotional wellbeing", value: record.presentation },
+      { title: "Activities and daily living", value: record.activities },
+      { title: "Education", value: record.education_update },
+      { title: "Health", value: record.health_update },
+      { title: "Family / contact", value: record.family_update },
+      { title: "Behaviour and response", value: record.behaviour_update },
+      { title: "Child's voice", value: record.young_person_voice },
+      { title: "Strengths and positives", value: record.positives },
+      { title: "Next actions", value: record.actions_required }
+    ];
+  }
+
+  if (type === "incident") {
+    return [
+      { title: "What happened", value: record.description },
+      { title: "Antecedent / context", value: record.antecedent },
+      { title: "Presentation", value: record.presentation },
+      { title: "Staff response", value: record.staff_response },
+      { title: "Therapeutic formulation", value: record.trauma_informed_formulation },
+      { title: "Child's voice", value: record.child_voice },
+      { title: "Restorative follow-up", value: record.restorative_follow_up }
+    ];
+  }
+
+  if (type === "keywork") {
+    return [
+      { title: "Purpose", value: record.purpose },
+      { title: "Summary", value: record.summary },
+      { title: "Child's voice", value: record.child_voice },
+      { title: "Reflective analysis", value: record.reflective_analysis },
+      { title: "Actions agreed", value: record.actions_agreed }
+    ];
+  }
+
+  if (type === "plan") {
+    return [
+      { title: "Summary of need", value: record.summary },
+      { title: "Child's voice", value: record.child_voice },
+      { title: "Therapeutic formulation", value: record.formulation || record.presenting_need },
+      { title: "Staff guidance", value: record.staff_guidance || record.proactive_strategies },
+      { title: "PACE / relational guidance", value: record.pace_guidance },
+      { title: "Triggers", value: record.triggers },
+      { title: "Protective factors", value: record.protective_factors }
+    ];
+  }
+
+  return [];
+}
+
+function buildReviewMeta(type, record) {
+  if (type === "daily") {
+    return [
+      { label: "Record date", value: fmtDate(record.note_date) },
+      { label: "Shift", value: record.shift_type || "—" },
+      { label: "Status", value: record.workflow_status || "draft" },
+      { label: "Author", value: record.author_name || "—" }
+    ];
+  }
+
+  if (type === "incident") {
+    return [
+      { label: "Occurred at", value: fmtDateTime(record.occurred_at || record.incident_datetime) },
+      { label: "Type", value: record.incident_type || "—" },
+      { label: "Severity", value: record.severity || "—" },
+      { label: "Staff", value: record.staff_name || "—" }
+    ];
+  }
+
+  if (type === "keywork") {
+    return [
+      { label: "Session date", value: fmtDate(record.session_date) },
+      { label: "Topic", value: record.topic || "—" },
+      { label: "Status", value: record.workflow_status || record.status || "draft" },
+      { label: "Worker", value: record.worker_name || "—" }
+    ];
+  }
+
+  if (type === "plan") {
+    return [
+      { label: "Plan type", value: record.plan_type || "support_plan" },
+      { label: "Review date", value: fmtDate(record.review_due_at || record.review_date) },
+      { label: "Approval status", value: record.approval_status || "draft" },
+      { label: "Owner", value: record.owner_name || "—" }
+    ];
+  }
+
+  return [];
+}
+
+async function openManagerReview(type, id) {
+  try {
+    const record = await fetchRecordForReview(type, id);
+    if (!record) return;
+
+    const insights = generateAIInsight(record);
+    const issues = runQualityCheck(type, record);
+    const sections = buildReviewSections(type, record);
+    const meta = buildReviewMeta(type, record);
+
+    openModal(
+      `Manager Review • ${record.title || titleCaseLabel(type)}`,
+      `
+        <div class="review-layout">
+          <div class="review-record">
+            <div class="detail-view">
+              <div class="detail-hero">
+                <div class="workspace-kicker">Submitted record</div>
+                <div class="detail-meta-grid">
+                  ${meta.map((m) => `
+                    <div class="detail-meta-card">
+                      <div class="detail-meta-label">${escapeHtml(m.label)}</div>
+                      <div class="detail-meta-value">${escapeHtml(m.value ?? "—")}</div>
+                    </div>
+                  `).join("")}
+                </div>
+              </div>
+
+              <div class="detail-sections">
+                ${sections.map((s) => buildDetailSection(s.title, s.value)).join("")}
+              </div>
+            </div>
+          </div>
+
+          <div class="review-panel">
+            <div class="review-box">
+              <h4>AI Insight</h4>
+              ${insights.map((i) => `<p>${escapeHtml(i)}</p>`).join("")}
+            </div>
+
+            <div class="review-box">
+              <h4>Quality Check</h4>
+              ${
+                issues.length
+                  ? issues.map((i) => `<div class="qa-flag">${escapeHtml(i)}</div>`).join("")
+                  : `<p>No immediate quality concerns detected.</p>`
+              }
+            </div>
+
+            <div class="review-box">
+              <h4>Manager Decision</h4>
+              <textarea id="managerReviewComment" rows="7" spellcheck="true" placeholder="Add manager feedback or sign-off note..."></textarea>
+              <div class="review-actions">
+                <button class="btn btn-primary" onclick="App.approveRecord('${type}', ${id})">Approve</button>
+                <button class="btn btn-secondary" onclick="App.returnRecord('${type}', ${id})">Return</button>
+                <button class="btn btn-ghost" onclick="App.flagSafeguarding('${type}', ${id})">Safeguarding</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `,
+      "Management review"
+    );
+  } catch (error) {
+    openSimpleMessage(error.message || "Could not open manager review.");
+  }
+}
+
+async function approveRecord(type, id) {
+  try {
+    const comment = $("managerReviewComment")?.value || "";
+
+    if (type === "daily") {
+      await postJson(CONFIG.endpoints.daily.approve(id), {
+        review_note: comment
+      });
+    }
+
+    if (type === "incident") {
+      await postJson(CONFIG.endpoints.incidents.approve(id), {
+        review_note: comment
+      });
+    }
+
+    if (type === "keywork") {
+      await postJson(CONFIG.endpoints.keywork.approve(id), {
+        review_note: comment
+      });
+    }
+
+    if (type === "plan") {
+      await postJson(CONFIG.endpoints.plans.approve(id), {});
+    }
+
+    await loadSelectedYoungPerson();
+    renderApp();
+    closeModal();
+  } catch (error) {
+    UI.modalStatus.textContent = error.message || "Approval failed.";
+  }
+}
+
+async function returnRecord(type, id) {
+  try {
+    const comment = $("managerReviewComment")?.value || "";
+
+    if (!comment.trim()) {
+      UI.modalStatus.textContent = "Please add a return comment.";
+      return;
+    }
+
+    if (type === "daily") {
+      await postJson(CONFIG.endpoints.daily.return(id), {
+        review_note: comment
+      });
+    }
+
+    if (type === "incident") {
+      await postJson(CONFIG.endpoints.incidents.return(id), {
+        review_note: comment
+      });
+    }
+
+    if (type === "keywork") {
+      await postJson(CONFIG.endpoints.keywork.return(id), {
+        review_note: comment
+      });
+    }
+
+    if (type === "plan") {
+      await postJson(CONFIG.endpoints.plans.return(id), {
+        review_note: comment
+      });
+    }
+
+    await loadSelectedYoungPerson();
+    renderApp();
+    closeModal();
+  } catch (error) {
+    UI.modalStatus.textContent = error.message || "Return failed.";
+  }
+}
+
+function flagSafeguarding(type, id) {
+  const message = `Safeguarding follow-up should be considered for this ${titleCaseLabel(type)} (record #${id}).`;
+  UI.modalStatus.textContent = message;
+}
+
+async function openRecord(type, id) {
+  if (["daily", "incident", "keywork", "plan", "risk"].includes(type)) {
+    await openForm(type, id);
+    return;
+  }
+
+  await openGenericDetail(type, id);
+}
+
+async function openGenericDetail(type, id) {
+  try {
+    if (type === "health") {
+      const item = await api(`/young-people/health-records/${id}`);
+      openDetailView(
+        item.title || "Health and Wellbeing Record",
+        "Health and wellbeing",
+        item,
+        [
+          { title: "Summary", value: item.summary },
+          { title: "Outcome", value: item.outcome }
+        ],
+        [
+          { label: "Record type", value: item.record_type },
+          { label: "Event date", value: fmtDateTime(item.event_datetime) },
+          { label: "Professional", value: item.professional_name || "—" },
+          { label: "Created by", value: item.created_by_name || "—" }
+        ]
+      );
+      return;
+    }
+
+    if (type === "education") {
+      const item = await api(`/young-people/education-records/${id}`);
+      openDetailView(
+        item.title || "Education and Participation Record",
+        "Education",
+        item,
+        [
+          { title: "Summary", value: item.summary },
+          { title: "Behaviour summary", value: item.behaviour_summary },
+          { title: "Learning engagement", value: item.learning_engagement },
+          { title: "Achievement note", value: item.achievement_note }
+        ],
+        [
+          { label: "Record date", value: fmtDate(item.record_date) },
+          { label: "Attendance", value: item.attendance_status || "—" },
+          { label: "Provision", value: item.provision_name || "—" },
+          { label: "Created by", value: item.created_by_name || "—" }
+        ]
+      );
+      return;
+    }
+
+    if (type === "family") {
+      const item = await api(`/young-people/family/records/${id}`);
+      openDetailView(
+        item.title || "Family and Important Relationships Record",
+        "Relationships",
+        item,
+        [
+          { title: "Child's voice", value: item.child_voice },
+          { title: "Pre-contact presentation", value: item.pre_contact_presentation },
+          { title: "Post-contact presentation", value: item.post_contact_presentation },
+          { title: "Concerns", value: item.concerns }
+        ],
+        [
+          { label: "Contact date", value: fmtDateTime(item.contact_datetime) },
+          { label: "Contact type", value: item.contact_type || "—" },
+          { label: "Contact person", value: item.contact_person || "—" },
+          { label: "Created by", value: item.created_by_name || "—" }
+        ]
+      );
+      return;
+    }
+
+    if (type === "chronology") {
+      const item = await api(CONFIG.endpoints.chronology.get(id));
+      openDetailView(
+        item.title || "Chronology event",
+        "Chronology",
+        item,
+        [
+          { title: "Summary", value: item.summary }
+        ],
+        [
+          { label: "Category", value: item.category || "—" },
+          { label: "Subcategory", value: item.subcategory || "—" },
+          { label: "Event date", value: fmtDateTime(item.event_datetime) },
+          { label: "Created by", value: item.created_by_name || "—" }
+        ]
+      );
+      return;
+    }
+
+    if (type === "statutory") {
+      const item = await api(CONFIG.endpoints.statutory.get(id));
+      openDetailView(
+        item.title || "Statutory Document",
+        "Document",
+        item,
+        [
+          { title: "Description", value: item.description }
+        ],
+        [
+          { label: "Document type", value: item.document_type || "—" },
+          { label: "Issue date", value: fmtDate(item.issue_date) },
+          { label: "Review date", value: fmtDate(item.review_date) },
+          { label: "Status", value: item.status || "—" }
+        ]
+      );
+      return;
+    }
+  } catch (error) {
+    openSimpleMessage(error.message || "Could not open record.");
+  }
+}
+
+async function openChronologyEvent(id) {
+  try {
+    const item = await api(CONFIG.endpoints.chronology.get(id));
+
+    if (item.source_table && item.source_id) {
+      await openEvidenceSource(item.source_table, item.source_id);
+      return;
+    }
+
+    await openGenericDetail("chronology", id);
+  } catch (error) {
+    openSimpleMessage(error.message || "Could not open chronology event.");
+  }
+}
+
+async function openStatutoryDocument(id) {
+  await openGenericDetail("statutory", id);
+}
+
+async function openEvidenceSource(sourceTable, sourceId) {
+  const table = String(sourceTable || "").toLowerCase();
+
+  if (table === "daily_notes") return openRecord("daily", sourceId);
+  if (table === "incidents") return openRecord("incident", sourceId);
+  if (table === "keywork_sessions") return openRecord("keywork", sourceId);
+  if (table === "support_plans") return openRecord("plan", sourceId);
+  if (table === "risk_assessments") return openRecord("risk", sourceId);
+  if (table === "health_records") return openGenericDetail("health", sourceId);
+  if (table === "education_records") return openGenericDetail("education", sourceId);
+  if (table === "family_contact_records") return openGenericDetail("family", sourceId);
+  if (table === "chronology_events") return openGenericDetail("chronology", sourceId);
+  if (table === "statutory_documents") return openGenericDetail("statutory", sourceId);
+
+  openSimpleMessage(`Open source not yet mapped for ${sourceTable}.`);
+}
+
+function openInlineObjectDetail(title, encodedJson) {
+  try {
+    const data = JSON.parse(decodeURIComponent(encodedJson));
+    const meta = Object.entries(data)
+      .slice(0, 12)
+      .map(([key, value]) => ({
+        label: titleCaseLabel(key),
+        value: typeof value === "object" ? JSON.stringify(value) : String(value ?? "—")
+      }));
+
+    openDetailView(title, "Record detail", data, [], meta);
+  } catch {
+    openSimpleMessage("Could not open detail.");
+  }
+}
+
 function openSimpleMessage(message) {
   openModal("Information", `<div class="simple-item">${escapeHtml(message)}</div>`);
 }
@@ -2163,8 +2786,6 @@ function handleGlobalAction(action) {
     openSimpleMessage("All major long-text fields now support spellcheck, autosave and AI improve inside the editor.");
   }
 }
-
-/* ---------- data loading ---------- */
 
 async function loadYoungPeople() {
   const data = await api(CONFIG.endpoints.youngPeople);
@@ -2253,8 +2874,6 @@ async function loadSelectedYoungPerson() {
     riskArchive
   };
 }
-
-/* ---------- actions ---------- */
 
 async function rebuildChronology() {
   if (!state.selectedYoungPersonId) return;
@@ -2386,6 +3005,16 @@ const App = {
   openForm,
   openPhotoUpload,
   openSimpleMessage,
+  openRecord,
+  openGenericDetail,
+  openChronologyEvent,
+  openStatutoryDocument,
+  openEvidenceSource,
+  openInlineObjectDetail,
+  openManagerReview,
+  approveRecord,
+  returnRecord,
+  flagSafeguarding,
   rebuildChronology,
   rebuildStandards,
   generateHandover,
