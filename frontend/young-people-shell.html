@@ -1,79 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Home OS</title>
-  <link rel="stylesheet" href="css/young-people-shell.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Young People Shell</title>
+  <link rel="stylesheet" href="css/young-people-shell.css" />
 </head>
 <body>
-
-<div class="app">
-
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="logo">🏡 Home OS</div>
-
-    <button onclick="loadDashboard()">Shift</button>
-    <button onclick="loadYoungPeople()">Young People</button>
-    <button onclick="loadHandover()">Handover</button>
-  </aside>
-
-  <!-- Main -->
-  <main class="main">
-
-    <!-- Top Bar -->
-    <div class="topbar">
-      <h1 id="pageTitle">Shift</h1>
-
-      <div class="top-actions">
-        <button onclick="openNoteModal()">+ Note</button>
-        <button onclick="openIncidentModal()">+ Incident</button>
-      </div>
-    </div>
-
-    <!-- Main Grid -->
-    <div class="grid">
-
-      <!-- Left: Young People -->
-      <div class="panel">
-        <h3>Young People</h3>
-        <div id="youngPeopleList"></div>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">🏡</div>
+        <div>
+          <h1>Home OS</h1>
+          <p>Young People Shell</p>
+        </div>
       </div>
 
-      <!-- Right: Activity -->
-      <div class="panel">
-        <h3>Activity</h3>
-        <div id="activityFeed"></div>
+      <nav class="nav">
+        <button class="nav-btn active" data-view="dashboard">Shift</button>
+        <button class="nav-btn" data-view="young-people">Young People</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="status-pill">
+          <span class="dot"></span>
+          System ready
+        </div>
       </div>
+    </aside>
 
-    </div>
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h2 id="pageTitle">Shift Dashboard</h2>
+          <p id="pageSubtitle">Overview of young people in the home</p>
+        </div>
 
-  </main>
+        <div class="topbar-actions">
+          <button class="secondary-btn" id="refreshBtn">Refresh</button>
+        </div>
+      </header>
 
-</div>
+      <section class="content-grid">
+        <section class="panel panel-left">
+          <div class="panel-header">
+            <h3>Young People</h3>
+            <div class="panel-tools">
+              <input
+                id="youngPeopleSearch"
+                type="text"
+                placeholder="Search young people..."
+              />
+            </div>
+          </div>
 
-<!-- NOTE MODAL -->
-<div id="noteModal" class="modal hidden">
-  <div class="modal-content">
-    <h2>Write Note</h2>
-    <textarea id="noteInput"></textarea>
-    <button onclick="runAINote()">Improve with AI</button>
-    <textarea id="noteOutput"></textarea>
-    <button onclick="saveNote()">Save</button>
+          <div id="youngPeopleList" class="young-people-list"></div>
+        </section>
+
+        <section class="panel panel-right">
+          <div class="panel-header">
+            <h3>Profile Overview</h3>
+          </div>
+
+          <div id="profilePanel" class="profile-panel empty-panel">
+            Select a young person to view their profile.
+          </div>
+        </section>
+      </section>
+    </main>
   </div>
-</div>
 
-<!-- INCIDENT MODAL -->
-<div id="incidentModal" class="modal hidden">
-  <div class="modal-content">
-    <h2>Log Incident</h2>
-    <textarea id="incidentInput"></textarea>
-    <button onclick="runAIIncident()">Structure with AI</button>
-    <textarea id="incidentOutput"></textarea>
-    <button onclick="saveIncident()">Save</button>
-  </div>
-</div>
-
-<script src="js/young-people-shell.js"></script>
+  <script src="js/young-people-shell.js"></script>
 </body>
 </html>
