@@ -18,26 +18,23 @@
       </div>
 
       <nav class="nav">
-        <button class="nav-btn active" data-view="dashboard">Shift</button>
-        <button class="nav-btn" data-view="young-people">Young People</button>
+        <button class="nav-btn active">Young People</button>
       </nav>
 
       <div class="sidebar-footer">
-        <div class="status-pill">
-          <span class="dot"></span>
-          System ready
-        </div>
+        <button class="primary-btn full" id="openAiNoteBtn">New AI Note</button>
       </div>
     </aside>
 
     <main class="main">
       <header class="topbar">
         <div>
-          <h2 id="pageTitle">Shift Dashboard</h2>
-          <p id="pageSubtitle">Overview of young people in the home</p>
+          <h2 id="pageTitle">Young People</h2>
+          <p id="pageSubtitle">Profile-led residential care workspace</p>
         </div>
 
         <div class="topbar-actions">
+          <input id="youngPeopleSearch" type="text" placeholder="Search young people..." />
           <button class="secondary-btn" id="refreshBtn">Refresh</button>
         </div>
       </header>
@@ -46,15 +43,7 @@
         <section class="panel panel-left">
           <div class="panel-header">
             <h3>Young People</h3>
-            <div class="panel-tools">
-              <input
-                id="youngPeopleSearch"
-                type="text"
-                placeholder="Search young people..."
-              />
-            </div>
           </div>
-
           <div id="youngPeopleList" class="young-people-list"></div>
         </section>
 
@@ -62,13 +51,73 @@
           <div class="panel-header">
             <h3>Profile Overview</h3>
           </div>
-
           <div id="profilePanel" class="profile-panel empty-panel">
             Select a young person to view their profile.
           </div>
         </section>
       </section>
     </main>
+  </div>
+
+  <div id="aiNoteModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Create AI Note</h3>
+        <button class="icon-btn" id="closeAiNoteBtn">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="field">
+            <label for="aiYoungPerson">Young person</label>
+            <select id="aiYoungPerson"></select>
+          </div>
+
+          <div class="field">
+            <label for="aiRecordDate">Record date</label>
+            <input id="aiRecordDate" type="date" />
+          </div>
+
+          <div class="field">
+            <label for="aiShiftType">Shift type</label>
+            <input id="aiShiftType" type="text" placeholder="e.g. Day shift" />
+          </div>
+
+          <div class="field">
+            <label for="aiLocationContext">Location</label>
+            <input id="aiLocationContext" type="text" placeholder="e.g. Home / community" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="aiTranscript">Raw note / transcript</label>
+          <textarea id="aiTranscript" placeholder="Write the rough note here..."></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button class="primary-btn" id="generateAiBtn">Generate with AI</button>
+        </div>
+
+        <div class="field">
+          <label for="aiDraft">AI draft</label>
+          <textarea id="aiDraft" readonly></textarea>
+        </div>
+
+        <div class="field">
+          <label for="aiFinalNote">Final note</label>
+          <textarea id="aiFinalNote" placeholder="Edit before saving..."></textarea>
+        </div>
+
+        <div id="aiSafeguardingBanner" class="banner hidden"></div>
+
+        <div class="modal-actions end">
+          <button class="secondary-btn" id="copyDraftBtn">Copy draft to final</button>
+          <button class="primary-btn" id="saveAiBtn">Save note</button>
+        </div>
+
+        <div id="aiStatus" class="status-text"></div>
+      </div>
+    </div>
   </div>
 
   <script src="js/young-people-shell.js"></script>
