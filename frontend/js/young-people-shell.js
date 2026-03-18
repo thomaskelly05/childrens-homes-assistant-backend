@@ -1,12 +1,28 @@
 const ENDPOINTS = {
   listYoungPeople: "/young-people/",
   getYoungPersonProfile: (id) => `/young-people/${id}/profile`,
+
   getDailyNotes: (id) => `/young-people/${id}/daily-notes`,
+  getArchivedDailyNotes: (id) => `/young-people/${id}/daily-notes/archive`,
   createDailyNote: "/young-people/daily-notes",
+  submitDailyNote: (id) => `/young-people/daily-notes/${id}/submit`,
+  approveDailyNote: (id) => `/young-people/daily-notes/${id}/approve`,
+  returnDailyNote: (id) => `/young-people/daily-notes/${id}/return`,
+  archiveDailyNote: (id) => `/young-people/daily-notes/${id}/archive`,
+
   getIncidents: (id) => `/young-people/${id}/incidents`,
+  getArchivedIncidents: (id) => `/young-people/${id}/incidents/archive`,
   createIncident: "/young-people/incidents",
+  submitIncident: (id) => `/young-people/incidents/${id}/submit`,
+  approveIncident: (id) => `/young-people/incidents/${id}/approve`,
+  returnIncident: (id) => `/young-people/incidents/${id}/return`,
+  archiveIncident: (id) => `/young-people/incidents/${id}/archive`,
+
   getHandover: (id) => `/young-people/${id}/handover`,
   generateHandover: (id) => `/young-people/${id}/handover/generate`,
+  approveHandover: (id) => `/young-people/handover/${id}/approve`,
+  archiveHandover: (id) => `/young-people/handover/${id}/archive`,
+
   aiGenerate: "/ai-notes/generate",
   aiSave: "/ai-notes/save",
 };
@@ -16,6 +32,12 @@ let selectedYoungPersonId = null;
 let selectedProfile = null;
 let latestSafeguardingFlag = false;
 let latestSafeguardingReason = "";
+
+let currentDailyNotes = [];
+let currentIncidents = [];
+let currentHandover = [];
+let currentArchivedDailyNotes = [];
+let currentArchivedIncidents = [];
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -42,11 +64,11 @@ function initials(person) {
   return `${first}${last}`.toUpperCase() || "YP";
 }
 
-function riskBadgeClass(riskLevel) {
-  const value = (riskLevel || "").toLowerCase();
-  if (value.includes("high") || value.includes("critical")) return "badge-danger";
-  if (value.includes("medium")) return "badge-warning";
-  if (value.includes("low")) return "badge-success";
+function riskBadgeClass(value) {
+  const v = (value || "").toString().toLowerCase();
+  if (v.includes("high") || v.includes("critical")) return "badge-danger";
+  if (v.includes("medium") || v.includes("submitted") || v.includes("pending")) return "badge-warning";
+  if (v.includes("low") || v.includes("approved") || v.includes("reviewed")) return "badge-success";
   return "badge-neutral";
 }
 
@@ -82,18 +104,34 @@ function calculateAge(dateOfBirth) {
   const today = new Date();
   let age = today.getFullYear() - dob.getFullYear();
   const m = today.getMonth() - dob.getMonth();
-
   if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
   return age;
 }
 
-function setLoading(containerId, text = "Loading...") {
-  const el = document.getElementById(containerId);
+async function fetchJson(url, options = {}) {
+  const response = await fetch(url, {
+    credentials: "same-origin",
+    ...options,
+  });
+
+  const contentType = response.headers.get("content-type") || "";
+  const data = contentType.includes("application/json") ? await response.json() : await response.text();
+
+  if (!response.ok) {
+    const message = typeof data === "object" ? data.detail || "Request failed" : data;
+    throw new Error(message);
+  }
+
+  return data;
+}
+
+function setLoading(id, text = "Loading...") {
+  const el = document.getElementById(id);
   if (el) el.innerHTML = `<div class="loading">${escapeHtml(text)}</div>`;
 }
 
-function setError(containerId, text = "Something went wrong") {
-  const el = document.getElementById(containerId);
+function setError(id, text = "Something went wrong") {
+  const el = document.getElementById(id);
   if (el) el.innerHTML = `<div class="error-state">${escapeHtml(text)}</div>`;
 }
 
@@ -104,8 +142,14 @@ function setStatus(id, text, isError = false) {
   el.style.color = isError ? "#991b1b" : "#6b7280";
 }
 
-function getSelectedYP() {
-  return youngPeopleCache.find((yp) => yp.id === selectedYoungPersonId) || null;
+function activateTab(tabName) {
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.tab === tabName);
+  });
+
+  document.querySelectorAll(".tab-panel").forEach((panel) => {
+    panel.classList.toggle("active", panel.id === `tab-${tabName}`);
+  });
 }
 
 function populateYoungPersonSelects(items) {
@@ -115,13 +159,31 @@ function populateYoungPersonSelects(items) {
     document.getElementById("incidentYoungPerson"),
   ].filter(Boolean);
 
-  const options = items
-    .map((yp) => `<option value="${yp.id}">${escapeHtml(fullName(yp))}</option>`)
-    .join("");
+  const options = items.map((yp) => {
+    return `<option value="${yp.id}">${escapeHtml(fullName(yp))}</option>`;
+  }).join("");
 
   selects.forEach((select) => {
     select.innerHTML = options;
     if (selectedYoungPersonId) select.value = String(selectedYoungPersonId);
+  });
+}
+
+function filterYoungPeople(query) {
+  const value = query.trim().toLowerCase();
+  if (!value) return youngPeopleCache;
+
+  return youngPeopleCache.filter((yp) => {
+    const text = [
+      yp.first_name,
+      yp.last_name,
+      yp.placement_status,
+      yp.summary_risk_level,
+      yp.primary_keyworker_first_name,
+      yp.primary_keyworker_last_name,
+    ].filter(Boolean).join(" ").toLowerCase();
+
+    return text.includes(value);
   });
 }
 
@@ -133,22 +195,18 @@ function renderYoungPeopleList(items) {
     return;
   }
 
-  container.innerHTML = items
-    .map((yp) => {
-      const activeClass = selectedYoungPersonId === yp.id ? "active" : "";
-      return `
-        <article class="yp-card ${activeClass}" data-id="${yp.id}">
-          <div class="yp-name-row">
-            <div class="yp-name">${escapeHtml(fullName(yp))}</div>
-            <span class="badge ${riskBadgeClass(yp.summary_risk_level)}">
-              ${escapeHtml(yp.summary_risk_level || "No risk")}
-            </span>
-          </div>
-          <div class="yp-sub">${escapeHtml(yp.placement_status || "Placement not set")}</div>
-        </article>
-      `;
-    })
-    .join("");
+  container.innerHTML = items.map((yp) => {
+    const activeClass = selectedYoungPersonId === yp.id ? "active" : "";
+    return `
+      <article class="yp-card ${activeClass}" data-id="${yp.id}">
+        <div class="yp-name-row">
+          <div class="yp-name">${escapeHtml(fullName(yp))}</div>
+          <span class="badge ${riskBadgeClass(yp.summary_risk_level)}">${escapeHtml(yp.summary_risk_level || "No risk")}</span>
+        </div>
+        <div class="yp-sub">${escapeHtml(yp.placement_status || "Placement not set")}</div>
+      </article>
+    `;
+  }).join("");
 
   container.querySelectorAll(".yp-card").forEach((card) => {
     card.addEventListener("click", () => {
@@ -159,15 +217,20 @@ function renderYoungPeopleList(items) {
 
 function renderHero(profile) {
   const yp = profile?.young_person;
-  if (!yp) return;
-
-  document.getElementById("heroAvatar").textContent = initials(yp);
-  document.getElementById("heroName").textContent = preferredDisplayName(yp);
+  if (!yp) {
+    document.getElementById("heroAvatar").textContent = "OS";
+    document.getElementById("heroTitle").textContent = "Children's Home Operating System";
+    document.getElementById("heroDescription").textContent = "Select a young person to begin working.";
+    document.getElementById("heroBadges").innerHTML = "";
+    return;
+  }
 
   const keyworker =
     `${yp.primary_keyworker_first_name || ""} ${yp.primary_keyworker_last_name || ""}`.trim() || "Not assigned";
 
-  document.getElementById("heroMeta").textContent =
+  document.getElementById("heroAvatar").textContent = initials(yp);
+  document.getElementById("heroTitle").textContent = preferredDisplayName(yp);
+  document.getElementById("heroDescription").textContent =
     `Age ${calculateAge(yp.date_of_birth)} • ${yp.placement_status || "Placement not set"} • Keyworker: ${keyworker}`;
 
   document.getElementById("heroBadges").innerHTML = `
@@ -180,11 +243,11 @@ function renderHero(profile) {
 function renderProfile(profileData) {
   const yp = profileData?.young_person;
   const profilePanel = document.getElementById("profilePanel");
-  const sidePanel = document.getElementById("sideProfilePanel");
+  const sideProfilePanel = document.getElementById("sideProfilePanel");
 
   if (!yp) {
     profilePanel.innerHTML = `<div class="empty-state">Profile not available.</div>`;
-    sidePanel.innerHTML = `<div class="empty-state">No profile detail available.</div>`;
+    sideProfilePanel.innerHTML = `<div class="empty-state">No detail available.</div>`;
     return;
   }
 
@@ -198,54 +261,29 @@ function renderProfile(profileData) {
 
   profilePanel.innerHTML = `
     <div class="kv">
-      <div class="kv-label">Full name</div>
-      <div>${escapeHtml(fullName(yp))}</div>
-
-      <div class="kv-label">Preferred name</div>
-      <div>${escapeHtml(preferredDisplayName(yp))}</div>
-
-      <div class="kv-label">Date of birth</div>
-      <div>${escapeHtml(formatDate(yp.date_of_birth))}</div>
-
-      <div class="kv-label">Age</div>
-      <div>${escapeHtml(calculateAge(yp.date_of_birth))}</div>
-
-      <div class="kv-label">Gender</div>
-      <div>${escapeHtml(yp.gender || "—")}</div>
-
-      <div class="kv-label">Ethnicity</div>
-      <div>${escapeHtml(yp.ethnicity || "—")}</div>
-
-      <div class="kv-label">NHS number</div>
-      <div>${escapeHtml(yp.nhs_number || "—")}</div>
-
-      <div class="kv-label">Local ID</div>
-      <div>${escapeHtml(yp.local_id_number || "—")}</div>
-
-      <div class="kv-label">Admission date</div>
-      <div>${escapeHtml(formatDate(yp.admission_date))}</div>
-
-      <div class="kv-label">Discharge date</div>
-      <div>${escapeHtml(formatDate(yp.discharge_date))}</div>
-
-      <div class="kv-label">Placement status</div>
-      <div>${escapeHtml(yp.placement_status || "—")}</div>
+      <div class="kv-label">Full name</div><div>${escapeHtml(fullName(yp))}</div>
+      <div class="kv-label">Preferred name</div><div>${escapeHtml(preferredDisplayName(yp))}</div>
+      <div class="kv-label">Date of birth</div><div>${escapeHtml(formatDate(yp.date_of_birth))}</div>
+      <div class="kv-label">Age</div><div>${escapeHtml(calculateAge(yp.date_of_birth))}</div>
+      <div class="kv-label">Gender</div><div>${escapeHtml(yp.gender || "—")}</div>
+      <div class="kv-label">Ethnicity</div><div>${escapeHtml(yp.ethnicity || "—")}</div>
+      <div class="kv-label">NHS number</div><div>${escapeHtml(yp.nhs_number || "—")}</div>
+      <div class="kv-label">Local ID</div><div>${escapeHtml(yp.local_id_number || "—")}</div>
+      <div class="kv-label">Admission date</div><div>${escapeHtml(formatDate(yp.admission_date))}</div>
+      <div class="kv-label">Discharge date</div><div>${escapeHtml(formatDate(yp.discharge_date))}</div>
+      <div class="kv-label">Placement status</div><div>${escapeHtml(yp.placement_status || "—")}</div>
     </div>
 
     <div class="section-block">
       <h4>Legal Status</h4>
       ${
         legalStatus.length
-          ? legalStatus
-              .map(
-                (item) => `
-              <div class="simple-item">
-                <strong>${escapeHtml(item.status || item.legal_status || "Legal status")}</strong><br>
-                Effective from: ${escapeHtml(formatDate(item.effective_from))}
-              </div>
-            `
-              )
-              .join("")
+          ? legalStatus.map((item) => `
+            <div class="simple-item">
+              <strong>${escapeHtml(item.status || item.legal_status || "Legal status")}</strong><br>
+              Effective from: ${escapeHtml(formatDate(item.effective_from))}
+            </div>
+          `).join("")
           : `<div class="empty-state">No legal status recorded.</div>`
       }
     </div>
@@ -268,21 +306,17 @@ function renderProfile(profileData) {
     </div>
   `;
 
-  sidePanel.innerHTML = `
+  sideProfilePanel.innerHTML = `
     <div class="section-block">
       <h4>Alerts</h4>
       ${
         alerts.length
-          ? alerts
-              .map(
-                (alert) => `
-              <div class="alert-item">
-                <strong>${escapeHtml(alert.title || alert.alert_type || "Alert")}</strong><br>
-                ${escapeHtml(alert.description || alert.summary || "")}
-              </div>
-            `
-              )
-              .join("")
+          ? alerts.map((alert) => `
+            <div class="alert-item">
+              <strong>${escapeHtml(alert.title || alert.alert_type || "Alert")}</strong><br>
+              ${escapeHtml(alert.description || alert.summary || "")}
+            </div>
+          `).join("")
           : `<div class="empty-state">No alerts recorded.</div>`
       }
     </div>
@@ -319,9 +353,7 @@ function renderDailyNotes(items) {
 
   panel.innerHTML = `
     <div class="record-list">
-      ${items
-        .map(
-          (note) => `
+      ${items.map((note) => `
         <div class="record-card">
           <div class="record-card-header">
             <div>
@@ -330,13 +362,17 @@ function renderDailyNotes(items) {
                 ${escapeHtml(formatDate(note.note_date))} • ${escapeHtml(note.shift_type || "shift")} • ${escapeHtml(note.author_name || "No author")}
               </div>
             </div>
-            <span class="badge ${riskBadgeClass(note.significance || "standard")}">${escapeHtml(note.workflow_status || "draft")}</span>
+            <span class="badge ${riskBadgeClass(note.workflow_status)}">${escapeHtml(note.workflow_status || "draft")}</span>
           </div>
           <div class="record-body">${escapeHtml(note.summary || "Daily note recorded")}</div>
+          <div class="record-actions">
+            <button class="secondary-btn" onclick="submitDailyNoteAction(${note.id})">Submit</button>
+            <button class="primary-btn" onclick="approveDailyNoteAction(${note.id})">Approve</button>
+            <button class="secondary-btn" onclick="returnDailyNoteAction(${note.id})">Return</button>
+            <button class="danger-btn" onclick="archiveDailyNoteAction(${note.id})">Archive</button>
+          </div>
         </div>
-      `
-        )
-        .join("")}
+      `).join("")}
     </div>
   `;
 }
@@ -351,9 +387,7 @@ function renderIncidents(items) {
 
   panel.innerHTML = `
     <div class="record-list">
-      ${items
-        .map(
-          (incident) => `
+      ${items.map((incident) => `
         <div class="record-card">
           <div class="record-card-header">
             <div>
@@ -365,10 +399,14 @@ function renderIncidents(items) {
             <span class="badge ${riskBadgeClass(incident.severity)}">${escapeHtml(incident.severity || "medium")}</span>
           </div>
           <div class="record-body">${escapeHtml(incident.description || "No description recorded")}</div>
+          <div class="record-actions">
+            <button class="secondary-btn" onclick="submitIncidentAction(${incident.id})">Submit</button>
+            <button class="primary-btn" onclick="approveIncidentAction(${incident.id})">Approve</button>
+            <button class="secondary-btn" onclick="returnIncidentAction(${incident.id})">Return</button>
+            <button class="danger-btn" onclick="archiveIncidentAction(${incident.id})">Archive</button>
+          </div>
         </div>
-      `
-        )
-        .join("")}
+      `).join("")}
     </div>
   `;
 }
@@ -383,9 +421,7 @@ function renderHandover(items) {
 
   panel.innerHTML = `
     <div class="record-list">
-      ${items
-        .map(
-          (handover) => `
+      ${items.map((handover) => `
         <div class="record-card">
           <div class="record-card-header">
             <div>
@@ -394,50 +430,219 @@ function renderHandover(items) {
                 ${escapeHtml(formatDate(handover.handover_date))} • ${escapeHtml(handover.shift_type || "day")} • ${escapeHtml(handover.status || "draft")}
               </div>
             </div>
-            <span class="badge badge-neutral">${escapeHtml(handover.status || "draft")}</span>
+            <span class="badge ${riskBadgeClass(handover.status)}">${escapeHtml(handover.status || "draft")}</span>
           </div>
           <div class="record-body">${escapeHtml(handover.summary_text || "No summary text")}</div>
+          <div class="record-actions">
+            <button class="primary-btn" onclick="approveHandoverAction(${handover.id})">Approve</button>
+            <button class="danger-btn" onclick="archiveHandoverAction(${handover.id})">Archive</button>
+          </div>
         </div>
-      `
-        )
-        .join("")}
+      `).join("")}
     </div>
   `;
 }
 
-async function fetchJson(url, options = {}) {
-  const response = await fetch(url, {
-    credentials: "same-origin",
-    ...options,
-  });
+function renderArchive() {
+  const panel = document.getElementById("archivePanel");
 
-  const contentType = response.headers.get("content-type") || "";
-  const data = contentType.includes("application/json") ? await response.json() : await response.text();
+  const daily = currentArchivedDailyNotes || [];
+  const incidents = currentArchivedIncidents || [];
 
-  if (!response.ok) {
-    const message = typeof data === "object" ? data.detail || "Request failed" : data;
-    throw new Error(message);
-  }
+  panel.innerHTML = `
+    <div class="record-list">
+      <div class="dashboard-card">
+        <strong>Archived Daily Notes</strong><br>
+        ${daily.length} archived
+      </div>
+      ${
+        daily.length
+          ? daily.map((note) => `
+            <div class="record-card">
+              <div class="record-card-header">
+                <div>
+                  <div class="record-title">${escapeHtml(note.title || "Daily note")}</div>
+                  <div class="record-meta">${escapeHtml(formatDate(note.note_date))}</div>
+                </div>
+                <span class="badge badge-neutral">${escapeHtml(note.workflow_status || "archived")}</span>
+              </div>
+              <div class="record-body">${escapeHtml(note.summary || "Daily note recorded")}</div>
+            </div>
+          `).join("")
+          : `<div class="empty-state">No archived daily notes.</div>`
+      }
 
-  return data;
+      <div class="dashboard-card">
+        <strong>Archived Incidents</strong><br>
+        ${incidents.length} archived
+      </div>
+      ${
+        incidents.length
+          ? incidents.map((incident) => `
+            <div class="record-card">
+              <div class="record-card-header">
+                <div>
+                  <div class="record-title">${escapeHtml(incident.title || "Incident")}</div>
+                  <div class="record-meta">${escapeHtml(formatDateTime(incident.occurred_at))}</div>
+                </div>
+                <span class="badge badge-neutral">${escapeHtml(incident.workflow_status || "archived")}</span>
+              </div>
+              <div class="record-body">${escapeHtml(incident.description || "No description recorded")}</div>
+            </div>
+          `).join("")
+          : `<div class="empty-state">No archived incidents.</div>`
+      }
+    </div>
+  `;
+}
+
+function renderManagementQueue() {
+  const panel = document.getElementById("managementPanel");
+
+  const submittedNotes = currentDailyNotes.filter((x) => ["submitted"].includes((x.workflow_status || "").toLowerCase()));
+  const returnedNotes = currentDailyNotes.filter((x) => ["returned"].includes((x.workflow_status || "").toLowerCase()));
+
+  const submittedIncidents = currentIncidents.filter((x) => ["submitted"].includes((x.workflow_status || "").toLowerCase()));
+  const returnedIncidents = currentIncidents.filter((x) => ["returned"].includes((x.workflow_status || "").toLowerCase()));
+
+  const handoverDrafts = currentHandover.filter((x) => ["draft"].includes((x.status || "").toLowerCase()));
+
+  panel.innerHTML = `
+    <div class="record-list">
+      <div class="dashboard-card">
+        <strong>Daily Notes Awaiting Review</strong><br>
+        ${submittedNotes.length} submitted • ${returnedNotes.length} returned
+      </div>
+
+      ${submittedNotes.map((note) => `
+        <div class="record-card">
+          <div class="record-card-header">
+            <div>
+              <div class="record-title">${escapeHtml(note.title || "Daily note")}</div>
+              <div class="record-meta">${escapeHtml(formatDate(note.note_date))}</div>
+            </div>
+            <span class="badge badge-warning">${escapeHtml(note.workflow_status || "submitted")}</span>
+          </div>
+          <div class="record-body">${escapeHtml(note.summary || "Daily note recorded")}</div>
+          <div class="record-actions">
+            <button class="primary-btn" onclick="approveDailyNoteAction(${note.id})">Approve</button>
+            <button class="secondary-btn" onclick="returnDailyNoteAction(${note.id})">Return</button>
+            <button class="danger-btn" onclick="archiveDailyNoteAction(${note.id})">Archive</button>
+          </div>
+        </div>
+      `).join("")}
+
+      <div class="dashboard-card">
+        <strong>Incidents Awaiting Review</strong><br>
+        ${submittedIncidents.length} submitted • ${returnedIncidents.length} returned
+      </div>
+
+      ${submittedIncidents.map((incident) => `
+        <div class="record-card">
+          <div class="record-card-header">
+            <div>
+              <div class="record-title">${escapeHtml(incident.title || "Incident")}</div>
+              <div class="record-meta">${escapeHtml(formatDateTime(incident.occurred_at))}</div>
+            </div>
+            <span class="badge badge-warning">${escapeHtml(incident.workflow_status || "submitted")}</span>
+          </div>
+          <div class="record-body">${escapeHtml(incident.description || "No description recorded")}</div>
+          <div class="record-actions">
+            <button class="primary-btn" onclick="approveIncidentAction(${incident.id})">Approve</button>
+            <button class="secondary-btn" onclick="returnIncidentAction(${incident.id})">Return</button>
+            <button class="danger-btn" onclick="archiveIncidentAction(${incident.id})">Archive</button>
+          </div>
+        </div>
+      `).join("")}
+
+      <div class="dashboard-card">
+        <strong>Handover Awaiting Sign-off</strong><br>
+        ${handoverDrafts.length} draft
+      </div>
+
+      ${handoverDrafts.map((handover) => `
+        <div class="record-card">
+          <div class="record-card-header">
+            <div>
+              <div class="record-title">${escapeHtml(handover.title || "Shift Handover")}</div>
+              <div class="record-meta">${escapeHtml(formatDate(handover.handover_date))}</div>
+            </div>
+            <span class="badge badge-warning">${escapeHtml(handover.status || "draft")}</span>
+          </div>
+          <div class="record-body">${escapeHtml(handover.summary_text || "No summary text")}</div>
+          <div class="record-actions">
+            <button class="primary-btn" onclick="approveHandoverAction(${handover.id})">Approve</button>
+            <button class="danger-btn" onclick="archiveHandoverAction(${handover.id})">Archive</button>
+          </div>
+        </div>
+      `).join("")}
+
+      ${
+        !submittedNotes.length && !submittedIncidents.length && !handoverDrafts.length
+          ? `<div class="empty-state">No items currently waiting for management sign-off.</div>`
+          : ""
+      }
+    </div>
+  `;
+
+  document.getElementById("dashboardQueue").innerHTML = `
+    <div class="record-list">
+      <div class="dashboard-card"><strong>Submitted Daily Notes</strong><br>${submittedNotes.length}</div>
+      <div class="dashboard-card"><strong>Submitted Incidents</strong><br>${submittedIncidents.length}</div>
+      <div class="dashboard-card"><strong>Draft Handovers</strong><br>${handoverDrafts.length}</div>
+    </div>
+  `;
+}
+
+function renderDashboardOverview() {
+  const container = document.getElementById("dashboardOverview");
+
+  const ypCount = youngPeopleCache.length;
+  const notesCount = currentDailyNotes.length;
+  const incidentsCount = currentIncidents.length;
+  const handoverCount = currentHandover.length;
+
+  const selectedYP = youngPeopleCache.find((yp) => yp.id === selectedYoungPersonId);
+
+  container.innerHTML = `
+    <div class="record-list">
+      <div class="dashboard-card">
+        <strong>Young People</strong><br>
+        ${ypCount} active
+      </div>
+      <div class="dashboard-card">
+        <strong>Current Daily Notes</strong><br>
+        ${notesCount}
+      </div>
+      <div class="dashboard-card">
+        <strong>Current Incidents</strong><br>
+        ${incidentsCount}
+      </div>
+      <div class="dashboard-card">
+        <strong>Handover Records</strong><br>
+        ${handoverCount}
+      </div>
+      <div class="dashboard-card">
+        <strong>Selected Young Person</strong><br>
+        ${selectedYP ? escapeHtml(fullName(selectedYP)) : "None selected"}
+      </div>
+    </div>
+  `;
 }
 
 async function loadYoungPeople() {
   setLoading("youngPeopleList", "Loading young people...");
-
   try {
     const data = await fetchJson(ENDPOINTS.listYoungPeople);
-    const items = Array.isArray(data?.items) ? data.items : [];
+    youngPeopleCache = Array.isArray(data?.items) ? data.items : [];
+    renderYoungPeopleList(youngPeopleCache);
+    populateYoungPersonSelects(youngPeopleCache);
+    renderDashboardOverview();
 
-    youngPeopleCache = items;
-    renderYoungPeopleList(items);
-    populateYoungPersonSelects(items);
-
-    if (items.length && !selectedYoungPersonId) {
-      await selectYoungPerson(items[0].id);
+    if (youngPeopleCache.length && !selectedYoungPersonId) {
+      await selectYoungPerson(youngPeopleCache[0].id);
     }
   } catch (error) {
-    console.error(error);
     setError("youngPeopleList", error.message || "Unable to load young people.");
   }
 }
@@ -452,48 +657,58 @@ async function selectYoungPerson(id) {
   setLoading("dailyNotesPanel", "Loading daily notes...");
   setLoading("incidentsPanel", "Loading incidents...");
   setLoading("handoverPanel", "Loading handover...");
+  setLoading("archivePanel", "Loading archive...");
+  setLoading("managementPanel", "Loading management queue...");
 
   try {
-    const [profileData, dailyNotes, incidents, handover] = await Promise.all([
+    const [
+      profileData,
+      dailyNotes,
+      incidents,
+      handover,
+      archivedDailyNotes,
+      archivedIncidents
+    ] = await Promise.all([
       fetchJson(ENDPOINTS.getYoungPersonProfile(id)),
       fetchJson(ENDPOINTS.getDailyNotes(id)),
       fetchJson(ENDPOINTS.getIncidents(id)),
       fetchJson(ENDPOINTS.getHandover(id)),
+      fetchJson(ENDPOINTS.getArchivedDailyNotes(id)),
+      fetchJson(ENDPOINTS.getArchivedIncidents(id)),
     ]);
 
     selectedProfile = profileData;
+    currentDailyNotes = Array.isArray(dailyNotes?.items) ? dailyNotes.items : [];
+    currentIncidents = Array.isArray(incidents?.items) ? incidents.items : [];
+    currentHandover = Array.isArray(handover) ? handover : [];
+    currentArchivedDailyNotes = Array.isArray(archivedDailyNotes?.items) ? archivedDailyNotes.items : [];
+    currentArchivedIncidents = Array.isArray(archivedIncidents?.items) ? archivedIncidents.items : [];
+
     renderHero(profileData);
     renderProfile(profileData);
-    renderDailyNotes(Array.isArray(dailyNotes?.items) ? dailyNotes.items : []);
-    renderIncidents(Array.isArray(incidents?.items) ? incidents.items : []);
-    renderHandover(Array.isArray(handover) ? handover : []);
+    renderDailyNotes(currentDailyNotes);
+    renderIncidents(currentIncidents);
+    renderHandover(currentHandover);
+    renderArchive();
+    renderManagementQueue();
+    renderDashboardOverview();
   } catch (error) {
-    console.error(error);
     setError("profilePanel", error.message || "Unable to load records.");
     setError("sideProfilePanel", error.message || "Unable to load records.");
     setError("dailyNotesPanel", error.message || "Unable to load daily notes.");
     setError("incidentsPanel", error.message || "Unable to load incidents.");
     setError("handoverPanel", error.message || "Unable to load handover.");
+    setError("archivePanel", error.message || "Unable to load archive.");
+    setError("managementPanel", error.message || "Unable to load management queue.");
   }
 }
 
-function filterYoungPeople(query) {
-  const value = query.trim().toLowerCase();
-  if (!value) return youngPeopleCache;
-
-  return youngPeopleCache.filter((yp) => {
-    const text = [
-      yp.first_name,
-      yp.last_name,
-      yp.placement_status,
-      yp.summary_risk_level,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-
-    return text.includes(value);
-  });
+async function reloadSelectedYoungPerson() {
+  if (selectedYoungPersonId) {
+    await selectYoungPerson(selectedYoungPersonId);
+  } else {
+    await loadYoungPeople();
+  }
 }
 
 function openModal(id) {
@@ -502,19 +717,6 @@ function openModal(id) {
 
 function closeModal(id) {
   document.getElementById(id).classList.add("hidden");
-}
-
-function resetAiForm() {
-  document.getElementById("aiTranscript").value = "";
-  document.getElementById("aiDraft").value = "";
-  document.getElementById("aiFinalNote").value = "";
-  document.getElementById("aiShiftType").value = "";
-  document.getElementById("aiLocationContext").value = "";
-  latestSafeguardingFlag = false;
-  latestSafeguardingReason = "";
-  document.getElementById("aiSafeguardingBanner").classList.add("hidden");
-  document.getElementById("aiSafeguardingBanner").textContent = "";
-  setStatus("aiStatus", "");
 }
 
 function openAiModal() {
@@ -534,17 +736,14 @@ function openDailyModal() {
 function openIncidentModal() {
   populateYoungPersonSelects(youngPeopleCache);
   if (selectedYoungPersonId) document.getElementById("incidentYoungPerson").value = String(selectedYoungPersonId);
-
   const now = new Date();
   const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   document.getElementById("incidentOccurredAt").value = local;
-
   openModal("incidentModal");
 }
 
 async function generateAiNote() {
   const transcript = document.getElementById("aiTranscript").value.trim();
-
   if (!transcript) {
     setStatus("aiStatus", "Please enter a raw note or transcript first.", true);
     return;
@@ -577,7 +776,6 @@ async function generateAiNote() {
 
     setStatus("aiStatus", "AI note generated.");
   } catch (error) {
-    console.error(error);
     setStatus("aiStatus", error.message || "Unable to generate AI note.", true);
   }
 }
@@ -624,9 +822,7 @@ async function saveAiNote() {
 
     setStatus("aiStatus", "AI note saved.");
     closeModal("aiNoteModal");
-    resetAiForm();
   } catch (error) {
-    console.error(error);
     setStatus("aiStatus", error.message || "Unable to save AI note.", true);
   }
 }
@@ -665,13 +861,9 @@ async function saveDailyNote() {
 
     setStatus("dailyStatus", "Daily note saved.");
     closeModal("dailyNoteModal");
-
-    if (selectedYoungPersonId === payload.young_person_id) {
-      const notes = await fetchJson(ENDPOINTS.getDailyNotes(payload.young_person_id));
-      renderDailyNotes(Array.isArray(notes?.items) ? notes.items : []);
-    }
+    await reloadSelectedYoungPerson();
+    activateTab("daily-notes");
   } catch (error) {
-    console.error(error);
     setStatus("dailyStatus", error.message || "Unable to save daily note.", true);
   }
 }
@@ -711,51 +903,98 @@ async function saveIncident() {
 
     setStatus("incidentStatus", "Incident saved.");
     closeModal("incidentModal");
-
-    if (selectedYoungPersonId === payload.young_person_id) {
-      const incidents = await fetchJson(ENDPOINTS.getIncidents(payload.young_person_id));
-      renderIncidents(Array.isArray(incidents?.items) ? incidents.items : []);
-    }
+    await reloadSelectedYoungPerson();
+    activateTab("incidents");
   } catch (error) {
-    console.error(error);
     setStatus("incidentStatus", error.message || "Unable to save incident.", true);
   }
 }
 
 async function generateHandover() {
   if (!selectedYoungPersonId) return;
-
   setLoading("handoverPanel", "Generating handover...");
-
   try {
-    await fetchJson(ENDPOINTS.generateHandover(selectedYoungPersonId), {
-      method: "POST",
-    });
-
-    const handover = await fetchJson(ENDPOINTS.getHandover(selectedYoungPersonId));
-    renderHandover(Array.isArray(handover) ? handover : []);
-
+    await fetchJson(ENDPOINTS.generateHandover(selectedYoungPersonId), { method: "POST" });
+    await reloadSelectedYoungPerson();
     activateTab("handover");
   } catch (error) {
-    console.error(error);
     setError("handoverPanel", error.message || "Unable to generate handover.");
   }
 }
 
-function activateTab(tabName) {
-  document.querySelectorAll(".tab-btn").forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.tab === tabName);
-  });
+async function submitDailyNoteAction(id) {
+  await fetchJson(ENDPOINTS.submitDailyNote(id), { method: "POST" });
+  await reloadSelectedYoungPerson();
+}
 
-  document.querySelectorAll(".tab-panel").forEach((panel) => {
-    panel.classList.toggle("active", panel.id === `tab-${tabName}`);
+async function approveDailyNoteAction(id) {
+  await fetchJson(ENDPOINTS.approveDailyNote(id), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ review_note: "Approved in Young People Shell", approved_by: null }),
   });
+  await reloadSelectedYoungPerson();
+}
+
+async function returnDailyNoteAction(id) {
+  const review_note = window.prompt("Add a return comment:", "Please review and update this record.") || "";
+  await fetchJson(ENDPOINTS.returnDailyNote(id), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ review_note }),
+  });
+  await reloadSelectedYoungPerson();
+}
+
+async function archiveDailyNoteAction(id) {
+  await fetchJson(ENDPOINTS.archiveDailyNote(id), { method: "POST" });
+  await reloadSelectedYoungPerson();
+  activateTab("archive");
+}
+
+async function submitIncidentAction(id) {
+  await fetchJson(ENDPOINTS.submitIncident(id), { method: "POST" });
+  await reloadSelectedYoungPerson();
+}
+
+async function approveIncidentAction(id) {
+  await fetchJson(ENDPOINTS.approveIncident(id), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ review_note: "Approved in Young People Shell", approved_by: null }),
+  });
+  await reloadSelectedYoungPerson();
+}
+
+async function returnIncidentAction(id) {
+  const review_note = window.prompt("Add a return comment:", "Please review and update this incident.") || "";
+  await fetchJson(ENDPOINTS.returnIncident(id), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ review_note }),
+  });
+  await reloadSelectedYoungPerson();
+}
+
+async function archiveIncidentAction(id) {
+  await fetchJson(ENDPOINTS.archiveIncident(id), { method: "POST" });
+  await reloadSelectedYoungPerson();
+  activateTab("archive");
+}
+
+async function approveHandoverAction(id) {
+  await fetchJson(ENDPOINTS.approveHandover(id), { method: "PUT" });
+  await reloadSelectedYoungPerson();
+}
+
+async function archiveHandoverAction(id) {
+  await fetchJson(ENDPOINTS.archiveHandover(id), { method: "PUT" });
+  await reloadSelectedYoungPerson();
+  activateTab("archive");
 }
 
 function bindEvents() {
-  document.getElementById("refreshBtn").addEventListener("click", () => {
-    loadYoungPeople();
-  });
+  document.getElementById("refreshBtn").addEventListener("click", reloadSelectedYoungPerson);
 
   document.getElementById("youngPeopleSearch").addEventListener("input", (e) => {
     renderYoungPeopleList(filterYoungPeople(e.target.value));
@@ -799,3 +1038,17 @@ function init() {
 }
 
 document.addEventListener("DOMContentLoaded", init);
+
+// expose workflow actions for inline buttons
+window.submitDailyNoteAction = submitDailyNoteAction;
+window.approveDailyNoteAction = approveDailyNoteAction;
+window.returnDailyNoteAction = returnDailyNoteAction;
+window.archiveDailyNoteAction = archiveDailyNoteAction;
+
+window.submitIncidentAction = submitIncidentAction;
+window.approveIncidentAction = approveIncidentAction;
+window.returnIncidentAction = returnIncidentAction;
+window.archiveIncidentAction = archiveIncidentAction;
+
+window.approveHandoverAction = approveHandoverAction;
+window.archiveHandoverAction = archiveHandoverAction;
