@@ -128,6 +128,16 @@ def serve_login_html():
     return FileResponse(os.path.join(FRONTEND_DIR, "login.html"))
 
 
+@app.get("/oslogin")
+def serve_oslogin():
+    return FileResponse(os.path.join(FRONTEND_DIR, "oslogin.html"))
+
+
+@app.get("/oslogin.html")
+def serve_oslogin_html():
+    return FileResponse(os.path.join(FRONTEND_DIR, "oslogin.html"))
+
+
 @app.get("/assistant")
 def serve_assistant():
     return FileResponse(os.path.join(COMPONENTS_DIR, "assistant.html"))
