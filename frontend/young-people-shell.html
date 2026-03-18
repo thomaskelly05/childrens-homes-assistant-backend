@@ -3,25 +3,42 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Children's Home OS</title>
+  <title>IndiCare OS</title>
   <link rel="stylesheet" href="/css/young-people-shell.css" />
 </head>
 <body>
-  <div class="app-shell">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark">🏡</div>
-        <div>
-          <h1>Children's Home OS</h1>
-          <p>Operational Workspace</p>
+  <div class="os-shell">
+    <aside class="os-sidebar">
+      <div class="brand-wrap">
+        <div class="brand-logo">IC</div>
+        <div class="brand-copy">
+          <h1>IndiCare OS</h1>
+          <p>Children’s Home Operating System</p>
         </div>
       </div>
 
+      <div class="sidebar-user">
+        <div id="currentUserChip" class="user-chip">Loading user…</div>
+      </div>
+
       <div class="sidebar-actions">
-        <button class="primary-btn full" id="openAiNoteBtn">New Therapeutic / AI Note</button>
-        <button class="secondary-btn full" id="openDailyNoteBtn">New Daily Note</button>
-        <button class="secondary-btn full" id="openIncidentBtn">New Incident</button>
-        <button class="secondary-btn full" id="generateHandoverBtn">Generate Handover</button>
+        <button id="refreshBtn" class="primary-btn full">Refresh</button>
+        <button id="logoutBtn" class="danger-btn full">Logout</button>
+      </div>
+
+      <div class="sidebar-actions">
+        <button id="openAiNoteBtn" class="primary-btn full">New AI Note</button>
+        <button id="openDailyNoteBtn" class="secondary-btn full">New Daily Note</button>
+        <button id="openIncidentBtn" class="secondary-btn full">New Incident</button>
+        <button id="openHealthRecordBtn" class="secondary-btn full">New Health Record</button>
+        <button id="openEducationRecordBtn" class="secondary-btn full">New Education Record</button>
+        <button id="openFamilyRecordBtn" class="secondary-btn full">New Family Record</button>
+        <button id="openKeyworkBtn" class="secondary-btn full">New Keywork</button>
+        <button id="openPlanBtn" class="secondary-btn full">New Plan</button>
+        <button id="openRiskBtn" class="secondary-btn full">New Risk</button>
+        <button id="generateHandoverBtn" class="secondary-btn full">Generate Handover</button>
+        <button id="rebuildChronologyBtn" class="secondary-btn full">Rebuild Chronology</button>
+        <button id="rebuildStandardsBtn" class="secondary-btn full">Rebuild Standards</button>
       </div>
 
       <div class="sidebar-search">
@@ -29,40 +46,42 @@
         <input id="youngPeopleSearch" type="text" placeholder="Search young people..." />
       </div>
 
-      <div id="youngPeopleList" class="young-people-list"></div>
+      <div id="youngPeopleList" class="young-people-list">
+        <div class="loading">Loading young people…</div>
+      </div>
     </aside>
 
-    <main class="main">
+    <main class="os-main">
       <header class="topbar">
-        <div>
+        <div class="topbar-left">
           <h2 id="pageTitle">Dashboard</h2>
-          <p id="pageSubtitle">Operational workspace for staff and management</p>
+          <p id="pageSubtitle">Operational overview, recording, review, quality and inspection readiness</p>
         </div>
-        <div class="topbar-actions">
-          <div class="user-chip" id="currentUserChip">Not signed in</div>
-          <button class="secondary-btn" id="refreshBtn">Refresh</button>
-          <button class="danger-btn" id="logoutBtn">Logout</button>
+        <div class="topbar-right">
+          <button id="commandCentreRefreshBtn" class="secondary-btn">Refresh Command Centre</button>
+          <button id="openInspectionPackBtn" class="primary-btn">Inspection Pack</button>
         </div>
       </header>
 
       <section class="hero">
-        <div class="hero-main">
-          <div class="hero-avatar" id="heroAvatar">OS</div>
-          <div>
-            <h3 id="heroTitle">Children's Home Operating System</h3>
-            <p id="heroDescription">Select a young person to begin working.</p>
-            <div class="hero-badges" id="heroBadges"></div>
+        <div class="hero-card">
+          <div class="hero-avatar-wrap">
+            <div id="heroAvatar" class="hero-avatar">OS</div>
+          </div>
+          <div class="hero-content">
+            <h3 id="heroTitle">IndiCare OS</h3>
+            <p id="heroDescription">Select a young person to begin.</p>
+            <div id="heroBadges" class="hero-badges"></div>
           </div>
         </div>
       </section>
 
-      <section class="tabs">
+      <nav class="tab-row">
         <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+        <button class="tab-btn" data-tab="command">Command Centre</button>
         <button class="tab-btn" data-tab="overview">Overview</button>
-        <button class="tab-btn" data-tab="daily-notes">Daily Notes</button>
+        <button class="tab-btn" data-tab="daily">Daily Notes</button>
         <button class="tab-btn" data-tab="incidents">Incidents</button>
-        <button class="tab-btn" data-tab="therapeutic">Therapeutic / AI</button>
-        <button class="tab-btn" data-tab="handover">Handover</button>
         <button class="tab-btn" data-tab="health">Health</button>
         <button class="tab-btn" data-tab="education">Education</button>
         <button class="tab-btn" data-tab="family">Family</button>
@@ -70,236 +89,505 @@
         <button class="tab-btn" data-tab="plans">Plans</button>
         <button class="tab-btn" data-tab="risk">Risk</button>
         <button class="tab-btn" data-tab="chronology">Chronology</button>
+        <button class="tab-btn" data-tab="standards">Standards</button>
         <button class="tab-btn" data-tab="compliance">Compliance</button>
-        <button class="tab-btn" data-tab="management">Management</button>
+        <button class="tab-btn" data-tab="statutory">Statutory Docs</button>
+        <button class="tab-btn" data-tab="handover">Handover</button>
+        <button class="tab-btn" data-tab="therapeutic">AI / Therapeutic</button>
+        <button class="tab-btn" data-tab="management">Management Queue</button>
+        <button class="tab-btn" data-tab="inspection">Inspection / Evidence</button>
+        <button class="tab-btn" data-tab="rostering">Rostering</button>
         <button class="tab-btn" data-tab="archive">Archive</button>
-      </section>
+      </nav>
 
+      <!-- DASHBOARD -->
       <section class="tab-panel active" id="tab-dashboard">
-        <div class="dashboard-grid">
+        <div class="grid two">
           <section class="panel">
             <div class="panel-header">
               <h3>Home Overview</h3>
             </div>
-            <div class="panel-body" id="dashboardOverview">
-              <div class="empty-state">Loading dashboard...</div>
+            <div id="dashboardOverview" class="panel-body">
+              <div class="loading">Loading dashboard…</div>
             </div>
           </section>
 
           <section class="panel">
             <div class="panel-header">
-              <h3>Management Queue</h3>
+              <h3>Review Queue</h3>
             </div>
-            <div class="panel-body" id="dashboardQueue">
-              <div class="empty-state">Loading queue...</div>
+            <div id="dashboardQueue" class="panel-body">
+              <div class="loading">Loading review queue…</div>
             </div>
           </section>
         </div>
       </section>
 
+      <!-- COMMAND CENTRE -->
+      <section class="tab-panel" id="tab-command">
+        <div class="grid three">
+          <section class="panel">
+            <div class="panel-header">
+              <h3>Summary</h3>
+            </div>
+            <div id="commandSummaryPanel" class="panel-body">
+              <div class="loading">Loading command centre…</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h3>Alerts</h3>
+            </div>
+            <div id="commandAlertsPanel" class="panel-body">
+              <div class="loading">Loading alerts…</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h3>Tasks / Meds / Handover</h3>
+            </div>
+            <div id="commandTasksPanel" class="panel-body">
+              <div class="loading">Loading tasks…</div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- OVERVIEW -->
       <section class="tab-panel" id="tab-overview">
-        <div class="dashboard-grid">
+        <div class="grid two">
           <section class="panel">
             <div class="panel-header">
               <h3>Core Profile</h3>
             </div>
-            <div class="panel-body" id="profilePanel">
+            <div id="profilePanel" class="panel-body">
               <div class="empty-state">Select a young person to view profile.</div>
             </div>
           </section>
 
           <section class="panel">
-            <div class="panel-header">
-              <h3>Alerts and Identity</h3>
+            <div class="panel-header panel-header-row">
+              <h3>Identity / Alerts / Photo</h3>
+              <button id="openPhotoUploadBtn" class="secondary-btn">Upload Photo</button>
             </div>
-            <div class="panel-body" id="sideProfilePanel">
-              <div class="empty-state">Select a young person to view alerts and identity.</div>
+            <div id="sideProfilePanel" class="panel-body">
+              <div class="empty-state">Select a young person to view profile detail.</div>
             </div>
           </section>
         </div>
       </section>
 
-      <section class="tab-panel" id="tab-daily-notes">
-        <div class="panel">
+      <!-- DAILY -->
+      <section class="tab-panel" id="tab-daily">
+        <section class="panel">
           <div class="panel-header panel-header-row">
             <h3>Daily Notes</h3>
-            <button class="primary-btn" id="openDailyNoteBtn2">New Daily Note</button>
+            <button id="openDailyNoteBtn2" class="primary-btn">New Daily Note</button>
           </div>
-          <div class="panel-body" id="dailyNotesPanel">
+          <div id="dailyNotesPanel" class="panel-body">
             <div class="empty-state">Select a young person to load daily notes.</div>
           </div>
-        </div>
+        </section>
       </section>
 
+      <!-- INCIDENTS -->
       <section class="tab-panel" id="tab-incidents">
-        <div class="panel">
+        <section class="panel">
           <div class="panel-header panel-header-row">
             <h3>Incidents</h3>
-            <button class="primary-btn" id="openIncidentBtn2">New Incident</button>
+            <button id="openIncidentBtn2" class="primary-btn">New Incident</button>
           </div>
-          <div class="panel-body" id="incidentsPanel">
+          <div id="incidentsPanel" class="panel-body">
             <div class="empty-state">Select a young person to load incidents.</div>
           </div>
-        </div>
+        </section>
       </section>
 
-      <section class="tab-panel" id="tab-therapeutic">
-        <div class="dashboard-grid">
+      <!-- HEALTH -->
+      <section class="tab-panel" id="tab-health">
+        <div class="grid two">
           <section class="panel">
             <div class="panel-header panel-header-row">
-              <h3>Therapeutic / AI Notes</h3>
-              <button class="primary-btn" id="openAiNoteBtn2">New AI Note</button>
+              <h3>Health Records</h3>
+              <div class="inline-actions">
+                <button id="openHealthProfileBtn" class="secondary-btn">Health Profile</button>
+                <button id="openHealthRecordBtn2" class="primary-btn">New Health Record</button>
+                <button id="openMedicationProfileBtn" class="secondary-btn">Medication Profile</button>
+                <button id="openMedicationRecordBtn" class="secondary-btn">Medication Record</button>
+              </div>
             </div>
-            <div class="panel-body" id="aiHistoryPanel">
-              <div class="empty-state">Loading AI notes...</div>
+            <div id="healthPanel" class="panel-body">
+              <div class="empty-state">Select a young person to load health data.</div>
             </div>
           </section>
 
           <section class="panel">
             <div class="panel-header">
-              <h3>Practice Guidance</h3>
+              <h3>Health Profile</h3>
+            </div>
+            <div id="healthProfilePanel" class="panel-body">
+              <div class="empty-state">Select a young person to load health profile.</div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- EDUCATION -->
+      <section class="tab-panel" id="tab-education">
+        <div class="grid two">
+          <section class="panel">
+            <div class="panel-header panel-header-row">
+              <h3>Education Records</h3>
+              <div class="inline-actions">
+                <button id="openEducationProfileBtn" class="secondary-btn">Education Profile</button>
+                <button id="openEducationRecordBtn2" class="primary-btn">New Education Record</button>
+              </div>
+            </div>
+            <div id="educationPanel" class="panel-body">
+              <div class="empty-state">Select a young person to load education records.</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h3>Education Profile</h3>
+            </div>
+            <div id="educationProfilePanel" class="panel-body">
+              <div class="empty-state">Select a young person to load education profile.</div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- FAMILY -->
+      <section class="tab-panel" id="tab-family">
+        <div class="grid two">
+          <section class="panel">
+            <div class="panel-header panel-header-row">
+              <h3>Family Contact Records</h3>
+              <div class="inline-actions">
+                <button id="openFamilyContactBtn" class="secondary-btn">Add Contact</button>
+                <button id="openFamilyRecordBtn2" class="primary-btn">New Family Record</button>
+              </div>
+            </div>
+            <div id="familyPanel" class="panel-body">
+              <div class="empty-state">Select a young person to load family records.</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h3>Contacts</h3>
+            </div>
+            <div id="familyContactsPanel" class="panel-body">
+              <div class="empty-state">Select a young person to load contacts.</div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- KEYWORK -->
+      <section class="tab-panel" id="tab-keywork">
+        <section class="panel">
+          <div class="panel-header panel-header-row">
+            <h3>Keywork Sessions</h3>
+            <button id="openKeyworkBtn2" class="primary-btn">New Keywork Session</button>
+          </div>
+          <div id="keyworkPanel" class="panel-body">
+            <div class="empty-state">Select a young person to load keywork sessions.</div>
+          </div>
+        </section>
+      </section>
+
+      <!-- PLANS -->
+      <section class="tab-panel" id="tab-plans">
+        <section class="panel">
+          <div class="panel-header panel-header-row">
+            <h3>Support Plans</h3>
+            <button id="openPlanBtn2" class="primary-btn">New Support Plan</button>
+          </div>
+          <div id="plansPanel" class="panel-body">
+            <div class="empty-state">Select a young person to load plans.</div>
+          </div>
+        </section>
+      </section>
+
+      <!-- RISK -->
+      <section class="tab-panel" id="tab-risk">
+        <section class="panel">
+          <div class="panel-header panel-header-row">
+            <h3>Risk Assessments</h3>
+            <button id="openRiskBtn2" class="primary-btn">New Risk Assessment</button>
+          </div>
+          <div id="riskPanel" class="panel-body">
+            <div class="empty-state">Select a young person to load risks.</div>
+          </div>
+        </section>
+      </section>
+
+      <!-- CHRONOLOGY -->
+      <section class="tab-panel" id="tab-chronology">
+        <div class="grid two">
+          <section class="panel">
+            <div class="panel-header panel-header-row">
+              <h3>Chronology</h3>
+              <div class="inline-actions">
+                <button id="openChronologyEventBtn" class="secondary-btn">Add Event</button>
+                <button id="rebuildChronologyBtn2" class="primary-btn">Rebuild</button>
+              </div>
+            </div>
+            <div id="chronologyPanel" class="panel-body">
+              <div class="empty-state">Select a young person to load chronology.</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h3>Chronology Filters</h3>
             </div>
             <div class="panel-body">
-              <div class="simple-item">
-                <strong>Use this area for</strong><br>
-                Therapeutic reflections, trauma-informed reframing, structured narratives, and practice-safe wording.
+              <div class="field">
+                <label for="chronologyCategoryFilter">Category</label>
+                <select id="chronologyCategoryFilter">
+                  <option value="">All</option>
+                  <option value="daily_note">Daily Note</option>
+                  <option value="incident">Incident</option>
+                  <option value="health">Health</option>
+                  <option value="education">Education</option>
+                  <option value="family">Family</option>
+                  <option value="keywork">Keywork</option>
+                  <option value="plan">Plan</option>
+                  <option value="risk">Risk</option>
+                </select>
               </div>
-              <div class="simple-item">
-                <strong>Flow</strong><br>
-                Raw note → AI draft → edit → save → use in daily notes, incidents, supervision, handover, or management review.
+              <div class="field">
+                <label for="chronologySignificanceFilter">Significance</label>
+                <select id="chronologySignificanceFilter">
+                  <option value="">All</option>
+                  <option value="standard">Standard</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </div>
+              <div class="actions-row">
+                <button id="applyChronologyFiltersBtn" class="secondary-btn">Apply Filters</button>
               </div>
             </div>
           </section>
         </div>
       </section>
 
-      <section class="tab-panel" id="tab-handover">
-        <div class="panel">
-          <div class="panel-header panel-header-row">
-            <h3>Handover</h3>
-            <button class="primary-btn" id="generateHandoverBtn2">Generate Handover</button>
-          </div>
-          <div class="panel-body" id="handoverPanel">
-            <div class="empty-state">Select a young person to load handover.</div>
-          </div>
+      <!-- STANDARDS -->
+      <section class="tab-panel" id="tab-standards">
+        <div class="grid two">
+          <section class="panel">
+            <div class="panel-header panel-header-row">
+              <h3>Quality Standards Summary</h3>
+              <button id="rebuildStandardsBtn2" class="primary-btn">Rebuild Standards Evidence</button>
+            </div>
+            <div id="standardsPanel" class="panel-body">
+              <div class="empty-state">Select a young person to load standards summary.</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h3>Standards Evidence</h3>
+            </div>
+            <div id="standardsEvidencePanel" class="panel-body">
+              <div class="empty-state">Select a young person to load standards evidence.</div>
+            </div>
+          </section>
         </div>
       </section>
 
-      <section class="tab-panel" id="tab-health">
-        <div class="panel">
-          <div class="panel-header">
-            <h3>Health</h3>
-          </div>
-          <div class="panel-body" id="healthPanel">
-            <div class="empty-state">Select a young person to load health records.</div>
-          </div>
-        </div>
-      </section>
-
-      <section class="tab-panel" id="tab-education">
-        <div class="panel">
-          <div class="panel-header">
-            <h3>Education</h3>
-          </div>
-          <div class="panel-body" id="educationPanel">
-            <div class="empty-state">Select a young person to load education records.</div>
-          </div>
-        </div>
-      </section>
-
-      <section class="tab-panel" id="tab-family">
-        <div class="panel">
-          <div class="panel-header">
-            <h3>Family</h3>
-          </div>
-          <div class="panel-body" id="familyPanel">
-            <div class="empty-state">Select a young person to load family records.</div>
-          </div>
-        </div>
-      </section>
-
-      <section class="tab-panel" id="tab-keywork">
-        <div class="panel">
-          <div class="panel-header">
-            <h3>Keywork</h3>
-          </div>
-          <div class="panel-body" id="keyworkPanel">
-            <div class="empty-state">Select a young person to load keywork sessions.</div>
-          </div>
-        </div>
-      </section>
-
-      <section class="tab-panel" id="tab-plans">
-        <div class="panel">
-          <div class="panel-header">
-            <h3>Plans</h3>
-          </div>
-          <div class="panel-body" id="plansPanel">
-            <div class="empty-state">Select a young person to load plans.</div>
-          </div>
-        </div>
-      </section>
-
-      <section class="tab-panel" id="tab-risk">
-        <div class="panel">
-          <div class="panel-header">
-            <h3>Risk</h3>
-          </div>
-          <div class="panel-body" id="riskPanel">
-            <div class="empty-state">Select a young person to load risk records.</div>
-          </div>
-        </div>
-      </section>
-
-      <section class="tab-panel" id="tab-chronology">
-        <div class="panel">
-          <div class="panel-header">
-            <h3>Chronology</h3>
-          </div>
-          <div class="panel-body" id="chronologyPanel">
-            <div class="empty-state">Select a young person to load chronology.</div>
-          </div>
-        </div>
-      </section>
-
+      <!-- COMPLIANCE -->
       <section class="tab-panel" id="tab-compliance">
-        <div class="panel">
+        <section class="panel">
           <div class="panel-header">
             <h3>Compliance</h3>
           </div>
-          <div class="panel-body" id="compliancePanel">
-            <div class="empty-state">Select a young person to load compliance records.</div>
+          <div id="compliancePanel" class="panel-body">
+            <div class="empty-state">Select a young person to load compliance.</div>
           </div>
+        </section>
+      </section>
+
+      <!-- STATUTORY -->
+      <section class="tab-panel" id="tab-statutory">
+        <section class="panel">
+          <div class="panel-header panel-header-row">
+            <h3>Statutory Documents</h3>
+            <div class="inline-actions">
+              <button id="openStatutoryCreateBtn" class="secondary-btn">Create Record</button>
+              <button id="openStatutoryUploadBtn" class="primary-btn">Upload Document</button>
+            </div>
+          </div>
+          <div id="statutoryPanel" class="panel-body">
+            <div class="empty-state">Select a young person to load statutory documents.</div>
+          </div>
+        </section>
+      </section>
+
+      <!-- HANDOVER -->
+      <section class="tab-panel" id="tab-handover">
+        <section class="panel">
+          <div class="panel-header panel-header-row">
+            <h3>Handover</h3>
+            <button id="generateHandoverBtn2" class="primary-btn">Generate Handover</button>
+          </div>
+          <div id="handoverPanel" class="panel-body">
+            <div class="empty-state">Select a young person to load handover.</div>
+          </div>
+        </section>
+      </section>
+
+      <!-- THERAPEUTIC -->
+      <section class="tab-panel" id="tab-therapeutic">
+        <div class="grid two">
+          <section class="panel">
+            <div class="panel-header panel-header-row">
+              <h3>AI / Therapeutic Notes</h3>
+              <button id="openAiNoteBtn2" class="primary-btn">New AI Note</button>
+            </div>
+            <div id="aiHistoryPanel" class="panel-body">
+              <div class="loading">Loading AI notes…</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h3>Assistant Workspace</h3>
+            </div>
+            <div class="panel-body">
+              <div class="field">
+                <label for="quickAssistantPrompt">Quick Practice Prompt</label>
+                <textarea id="quickAssistantPrompt" rows="7" placeholder="Ask for a therapeutic rewrite, reflective summary, safer recording language, analysis, or planning support."></textarea>
+              </div>
+              <div class="actions-row">
+                <button id="runQuickAssistantBtn" class="primary-btn">Generate Support</button>
+              </div>
+              <div id="quickAssistantOutput" class="assistant-output empty-state">No output yet.</div>
+            </div>
+          </section>
         </div>
       </section>
 
+      <!-- MANAGEMENT -->
       <section class="tab-panel" id="tab-management">
-        <div class="panel">
+        <section class="panel">
           <div class="panel-header">
-            <h3>Review and Sign-off Queue</h3>
+            <h3>Management Queue</h3>
           </div>
-          <div class="panel-body" id="managementPanel">
-            <div class="empty-state">Loading management queue...</div>
+          <div id="managementPanel" class="panel-body">
+            <div class="loading">Loading management queue…</div>
           </div>
+        </section>
+      </section>
+
+      <!-- INSPECTION -->
+      <section class="tab-panel" id="tab-inspection">
+        <div class="grid two">
+          <section class="panel">
+            <div class="panel-header panel-header-row">
+              <h3>Inspection Pack</h3>
+              <button id="loadInspectionPackBtn" class="primary-btn">Load Inspection Data</button>
+            </div>
+            <div id="inspectionPanel" class="panel-body">
+              <div class="empty-state">Select a young person and load the inspection pack.</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h3>Inspection Evidence Summary</h3>
+            </div>
+            <div id="inspectionSummaryPanel" class="panel-body">
+              <div class="empty-state">Inspection evidence summary will appear here.</div>
+            </div>
+          </section>
         </div>
       </section>
 
+      <!-- ROSTERING -->
+      <section class="tab-panel" id="tab-rostering">
+        <div class="grid two">
+          <section class="panel">
+            <div class="panel-header panel-header-row">
+              <h3>Rostering</h3>
+              <div class="inline-actions">
+                <button id="loadRosteringBtn" class="secondary-btn">Load Week</button>
+                <button id="buildRosteringWeekBtn" class="secondary-btn">Build Week Template</button>
+                <button id="publishRosteringWeekBtn" class="primary-btn">Publish Week</button>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="form-grid two">
+                <div class="field">
+                  <label for="rosteringHomeId">Home ID</label>
+                  <input id="rosteringHomeId" type="number" placeholder="1" />
+                </div>
+                <div class="field">
+                  <label for="rosteringWeekStart">Week Start</label>
+                  <input id="rosteringWeekStart" type="date" />
+                </div>
+              </div>
+              <div id="rosteringPanel" class="records-wrap">
+                <div class="empty-state">Load a rostering week to view rota data.</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h3>Rostering Warnings / Evidence</h3>
+            </div>
+            <div id="rosteringEvidencePanel" class="panel-body">
+              <div class="empty-state">Rostering warnings and evidence will appear here.</div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- ARCHIVE -->
       <section class="tab-panel" id="tab-archive">
-        <div class="panel">
+        <section class="panel">
           <div class="panel-header">
             <h3>Archived Records</h3>
           </div>
-          <div class="panel-body" id="archivePanel">
+          <div id="archivePanel" class="panel-body">
             <div class="empty-state">Select a young person to load archived records.</div>
           </div>
-        </div>
+        </section>
       </section>
     </main>
   </div>
 
-  <!-- AI / THERAPEUTIC NOTE MODAL -->
+  <!-- PHOTO MODAL -->
+  <div class="modal hidden" id="photoUploadModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Upload Young Person Photo</h3>
+        <button class="icon-btn close-modal" data-close="photoUploadModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label for="youngPersonPhotoFile">Photo</label>
+          <input id="youngPersonPhotoFile" type="file" accept="image/*" />
+        </div>
+        <div class="actions-row right">
+          <button id="savePhotoBtn" class="primary-btn">Upload Photo</button>
+        </div>
+        <div id="photoStatus" class="status-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI NOTE MODAL -->
   <div class="modal hidden" id="aiNoteModal">
-    <div class="modal-card modal-lg">
+    <div class="modal-card modal-xl">
       <div class="modal-header">
         <h3 id="aiModalTitle">Create Therapeutic / AI Note</h3>
         <button class="icon-btn close-modal" data-close="aiNoteModal">✕</button>
@@ -309,58 +597,57 @@
 
         <div class="form-grid two">
           <div class="field">
-            <label>Young person</label>
+            <label for="aiYoungPerson">Young person</label>
             <select id="aiYoungPerson"></select>
           </div>
           <div class="field">
-            <label>Record date</label>
+            <label for="aiRecordDate">Record date</label>
             <input id="aiRecordDate" type="date" />
           </div>
           <div class="field">
-            <label>Shift type</label>
+            <label for="aiShiftType">Shift type</label>
             <input id="aiShiftType" type="text" placeholder="day / evening / night" />
           </div>
           <div class="field">
-            <label>Location</label>
-            <input id="aiLocationContext" type="text" placeholder="home / community / contact" />
+            <label for="aiLocationContext">Location</label>
+            <input id="aiLocationContext" type="text" placeholder="home / school / community" />
           </div>
         </div>
 
         <div class="field">
-          <label>Raw note / transcript</label>
+          <label for="aiTranscript">Raw note / transcript</label>
           <textarea id="aiTranscript" rows="7"></textarea>
         </div>
 
         <div class="actions-row">
-          <button class="primary-btn" id="generateAiBtn">Generate with AI</button>
-          <button class="secondary-btn" id="polishAiBtn">Polish Final Note</button>
+          <button id="generateAiBtn" class="primary-btn">Generate AI Draft</button>
+          <button id="copyDraftBtn" class="secondary-btn">Copy Draft To Final</button>
+          <button id="polishAiBtn" class="secondary-btn">Polish Final</button>
         </div>
 
         <div class="field">
-          <label>AI draft</label>
+          <label for="aiDraft">AI Draft</label>
           <textarea id="aiDraft" rows="8" readonly></textarea>
         </div>
 
         <div class="field">
-          <label>Final note</label>
+          <label for="aiFinalNote">Final Note</label>
           <textarea id="aiFinalNote" rows="8"></textarea>
         </div>
 
-        <div class="banner hidden" id="aiSafeguardingBanner"></div>
+        <div id="aiSafeguardingBanner" class="banner hidden"></div>
 
         <div class="actions-row right">
-          <button class="secondary-btn" id="copyDraftBtn">Copy draft to final</button>
-          <button class="primary-btn" id="saveAiBtn">Save AI Note</button>
+          <button id="saveAiBtn" class="primary-btn">Save AI Note</button>
         </div>
-
-        <div class="status-text" id="aiStatus"></div>
+        <div id="aiStatus" class="status-text"></div>
       </div>
     </div>
   </div>
 
   <!-- DAILY NOTE MODAL -->
   <div class="modal hidden" id="dailyNoteModal">
-    <div class="modal-card modal-lg">
+    <div class="modal-card modal-xl">
       <div class="modal-header">
         <h3 id="dailyModalTitle">New Daily Note</h3>
         <button class="icon-btn close-modal" data-close="dailyNoteModal">✕</button>
@@ -370,53 +657,53 @@
 
         <div class="form-grid two">
           <div class="field">
-            <label>Young person</label>
+            <label for="dailyYoungPerson">Young person</label>
             <select id="dailyYoungPerson"></select>
           </div>
           <div class="field">
-            <label>Note date</label>
+            <label for="dailyNoteDate">Note date</label>
             <input id="dailyNoteDate" type="date" />
           </div>
           <div class="field">
-            <label>Shift type</label>
+            <label for="dailyShiftType">Shift type</label>
             <input id="dailyShiftType" type="text" />
           </div>
           <div class="field">
-            <label>Mood</label>
+            <label for="dailyMood">Mood</label>
             <input id="dailyMood" type="text" />
           </div>
         </div>
 
-        <div class="field"><label>Presentation</label><textarea id="dailyPresentation" rows="3"></textarea></div>
-        <div class="field"><label>Activities</label><textarea id="dailyActivities" rows="3"></textarea></div>
-        <div class="field"><label>Education update</label><textarea id="dailyEducation" rows="3"></textarea></div>
-        <div class="field"><label>Health update</label><textarea id="dailyHealth" rows="3"></textarea></div>
-        <div class="field"><label>Family update</label><textarea id="dailyFamily" rows="3"></textarea></div>
-        <div class="field"><label>Behaviour update</label><textarea id="dailyBehaviour" rows="3"></textarea></div>
-        <div class="field"><label>Young person's voice</label><textarea id="dailyVoice" rows="3"></textarea></div>
-        <div class="field"><label>Positives</label><textarea id="dailyPositives" rows="3"></textarea></div>
-        <div class="field"><label>Actions required</label><textarea id="dailyActions" rows="3"></textarea></div>
+        <div class="field"><label for="dailyPresentation">Presentation</label><textarea id="dailyPresentation" rows="3"></textarea></div>
+        <div class="field"><label for="dailyActivities">Activities</label><textarea id="dailyActivities" rows="3"></textarea></div>
+        <div class="field"><label for="dailyEducation">Education update</label><textarea id="dailyEducation" rows="3"></textarea></div>
+        <div class="field"><label for="dailyHealth">Health update</label><textarea id="dailyHealth" rows="3"></textarea></div>
+        <div class="field"><label for="dailyFamily">Family update</label><textarea id="dailyFamily" rows="3"></textarea></div>
+        <div class="field"><label for="dailyBehaviour">Behaviour update</label><textarea id="dailyBehaviour" rows="3"></textarea></div>
+        <div class="field"><label for="dailyVoice">Young person’s voice</label><textarea id="dailyVoice" rows="3"></textarea></div>
+        <div class="field"><label for="dailyPositives">Positives</label><textarea id="dailyPositives" rows="3"></textarea></div>
+        <div class="field"><label for="dailyActions">Actions required</label><textarea id="dailyActions" rows="3"></textarea></div>
 
         <div class="actions-row">
-          <button class="secondary-btn" id="dailyAiAssistBtn">AI Assist</button>
+          <button id="dailyAiAssistBtn" class="secondary-btn">AI Assist</button>
         </div>
 
         <div class="field">
-          <label>AI Support Draft</label>
+          <label for="dailyAiDraft">AI Support Draft</label>
           <textarea id="dailyAiDraft" rows="6" readonly></textarea>
         </div>
 
         <div class="actions-row right">
-          <button class="primary-btn" id="saveDailyBtn">Save Daily Note</button>
+          <button id="saveDailyBtn" class="primary-btn">Save Daily Note</button>
         </div>
-        <div class="status-text" id="dailyStatus"></div>
+        <div id="dailyStatus" class="status-text"></div>
       </div>
     </div>
   </div>
 
   <!-- INCIDENT MODAL -->
   <div class="modal hidden" id="incidentModal">
-    <div class="modal-card modal-lg">
+    <div class="modal-card modal-xl">
       <div class="modal-header">
         <h3 id="incidentModalTitle">New Incident</h3>
         <button class="icon-btn close-modal" data-close="incidentModal">✕</button>
@@ -426,15 +713,15 @@
 
         <div class="form-grid two">
           <div class="field">
-            <label>Young person</label>
+            <label for="incidentYoungPerson">Young person</label>
             <select id="incidentYoungPerson"></select>
           </div>
           <div class="field">
-            <label>Occurred at</label>
+            <label for="incidentOccurredAt">Occurred at</label>
             <input id="incidentOccurredAt" type="datetime-local" />
           </div>
           <div class="field">
-            <label>Incident type</label>
+            <label for="incidentType">Incident type</label>
             <select id="incidentType">
               <option value="missing_from_placement">Missing from placement</option>
               <option value="physical_aggression">Physical aggression</option>
@@ -454,46 +741,479 @@
             </select>
           </div>
           <div class="field">
-            <label>Severity</label>
+            <label for="incidentSeverity">Severity</label>
             <select id="incidentSeverity">
               <option value="low">Low</option>
-              <option value="medium" selected>Medium</option>
+              <option value="medium">Medium</option>
               <option value="high">High</option>
               <option value="critical">Critical</option>
             </select>
           </div>
           <div class="field">
-            <label>Location</label>
+            <label for="incidentLocation">Location</label>
             <input id="incidentLocation" type="text" />
           </div>
           <div class="field">
-            <label>Staff ID</label>
+            <label for="incidentStaffId">Staff ID</label>
             <input id="incidentStaffId" type="number" />
           </div>
         </div>
 
-        <div class="field"><label>Description</label><textarea id="incidentDescription" rows="4"></textarea></div>
-        <div class="field"><label>Antecedent</label><textarea id="incidentAntecedent" rows="3"></textarea></div>
-        <div class="field"><label>Presentation</label><textarea id="incidentPresentation" rows="3"></textarea></div>
-        <div class="field"><label>Staff response</label><textarea id="incidentStaffResponse" rows="3"></textarea></div>
-        <div class="field"><label>Trauma-informed formulation</label><textarea id="incidentFormulation" rows="3"></textarea></div>
-        <div class="field"><label>Child voice</label><textarea id="incidentVoice" rows="3"></textarea></div>
-        <div class="field"><label>Restorative follow-up</label><textarea id="incidentRestorative" rows="3"></textarea></div>
+        <div class="field"><label for="incidentDescription">Description</label><textarea id="incidentDescription" rows="4"></textarea></div>
+        <div class="field"><label for="incidentAntecedent">Antecedent</label><textarea id="incidentAntecedent" rows="3"></textarea></div>
+        <div class="field"><label for="incidentPresentation">Presentation</label><textarea id="incidentPresentation" rows="3"></textarea></div>
+        <div class="field"><label for="incidentStaffResponse">Staff response</label><textarea id="incidentStaffResponse" rows="3"></textarea></div>
+        <div class="field"><label for="incidentFormulation">Trauma-informed formulation</label><textarea id="incidentFormulation" rows="3"></textarea></div>
+        <div class="field"><label for="incidentVoice">Child voice</label><textarea id="incidentVoice" rows="3"></textarea></div>
+        <div class="field"><label for="incidentRestorative">Restorative follow-up</label><textarea id="incidentRestorative" rows="3"></textarea></div>
 
         <div class="actions-row">
-          <button class="secondary-btn" id="incidentAiAssistBtn">AI Assist</button>
-          <button class="secondary-btn" id="incidentAiPolishBtn">Polish Description</button>
+          <button id="incidentAiAssistBtn" class="secondary-btn">AI Assist</button>
+          <button id="incidentAiPolishBtn" class="secondary-btn">Polish Description</button>
         </div>
 
         <div class="field">
-          <label>AI Support Draft</label>
+          <label for="incidentAiDraft">AI Support Draft</label>
           <textarea id="incidentAiDraft" rows="6" readonly></textarea>
         </div>
 
         <div class="actions-row right">
-          <button class="primary-btn" id="saveIncidentBtn">Save Incident</button>
+          <button id="saveIncidentBtn" class="primary-btn">Save Incident</button>
         </div>
-        <div class="status-text" id="incidentStatus"></div>
+        <div id="incidentStatus" class="status-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HEALTH PROFILE MODAL -->
+  <div class="modal hidden" id="healthProfileModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Health Profile</h3>
+        <button class="icon-btn close-modal" data-close="healthProfileModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field"><label for="healthGpName">GP name</label><input id="healthGpName" type="text" /></div>
+        <div class="field"><label for="healthAllergies">Allergies</label><textarea id="healthAllergies" rows="4"></textarea></div>
+        <div class="field"><label for="healthDiagnoses">Diagnoses</label><textarea id="healthDiagnoses" rows="4"></textarea></div>
+        <div class="actions-row right">
+          <button id="saveHealthProfileBtn" class="primary-btn">Save Health Profile</button>
+        </div>
+        <div id="healthProfileStatus" class="status-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HEALTH RECORD MODAL -->
+  <div class="modal hidden" id="healthRecordModal">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3 id="healthRecordModalTitle">New Health Record</h3>
+        <button class="icon-btn close-modal" data-close="healthRecordModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="healthRecordId" />
+
+        <div class="form-grid two">
+          <div class="field"><label for="healthRecordType">Record type</label><input id="healthRecordType" type="text" /></div>
+          <div class="field"><label for="healthRecordTitle">Title</label><input id="healthRecordTitle" type="text" /></div>
+          <div class="field"><label for="healthProfessionalName">Professional name</label><input id="healthProfessionalName" type="text" /></div>
+          <div class="field"><label for="healthEventDateTime">Event date / time</label><input id="healthEventDateTime" type="datetime-local" /></div>
+          <div class="field"><label for="healthNextActionDate">Next action date</label><input id="healthNextActionDate" type="date" /></div>
+          <div class="field">
+            <label for="healthFollowUpRequired">Follow-up required</label>
+            <select id="healthFollowUpRequired">
+              <option value="false">No</option>
+              <option value="true">Yes</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field"><label for="healthSummary">Summary</label><textarea id="healthSummary" rows="5"></textarea></div>
+        <div class="field"><label for="healthOutcome">Outcome</label><textarea id="healthOutcome" rows="4"></textarea></div>
+
+        <div class="actions-row right">
+          <button id="saveHealthRecordBtn" class="primary-btn">Save Health Record</button>
+        </div>
+        <div id="healthRecordStatus" class="status-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MEDICATION PROFILE MODAL -->
+  <div class="modal hidden" id="medicationProfileModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="medicationProfileModalTitle">Medication Profile</h3>
+        <button class="icon-btn close-modal" data-close="medicationProfileModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="medicationProfileId" />
+        <div class="field"><label for="medProfileName">Medication name</label><input id="medProfileName" type="text" /></div>
+        <div class="field"><label for="medProfileDose">Dose</label><input id="medProfileDose" type="text" /></div>
+        <div class="field"><label for="medProfileRoute">Route</label><input id="medProfileRoute" type="text" /></div>
+        <div class="field"><label for="medProfileFrequency">Frequency</label><input id="medProfileFrequency" type="text" /></div>
+        <div class="field"><label for="medProfileReason">Reason</label><textarea id="medProfileReason" rows="3"></textarea></div>
+        <div class="field"><label for="medProfileStartDate">Start date</label><input id="medProfileStartDate" type="date" /></div>
+        <div class="field"><label for="medProfileEndDate">End date</label><input id="medProfileEndDate" type="date" /></div>
+        <div class="field">
+          <label for="medProfileActive">Active</label>
+          <select id="medProfileActive">
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+        <div class="actions-row right">
+          <button id="saveMedicationProfileBtn" class="primary-btn">Save Medication Profile</button>
+        </div>
+        <div id="medicationProfileStatus" class="status-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MEDICATION RECORD MODAL -->
+  <div class="modal hidden" id="medicationRecordModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="medicationRecordModalTitle">Medication Record</h3>
+        <button class="icon-btn close-modal" data-close="medicationRecordModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="medicationRecordId" />
+        <div class="field"><label for="medRecordName">Medication name</label><input id="medRecordName" type="text" /></div>
+        <div class="field"><label for="medRecordDose">Dose</label><input id="medRecordDose" type="text" /></div>
+        <div class="field"><label for="medRecordRoute">Route</label><input id="medRecordRoute" type="text" /></div>
+        <div class="field"><label for="medRecordStatusValue">Status</label><input id="medRecordStatusValue" type="text" placeholder="given / refused / omitted" /></div>
+        <div class="field">
+          <label for="medRecordErrorFlag">Error flag</label>
+          <select id="medRecordErrorFlag">
+            <option value="false">No</option>
+            <option value="true">Yes</option>
+          </select>
+        </div>
+        <div class="field"><label for="medRecordScheduledTime">Scheduled time</label><input id="medRecordScheduledTime" type="datetime-local" /></div>
+        <div class="field"><label for="medRecordAdministeredTime">Administered time</label><input id="medRecordAdministeredTime" type="datetime-local" /></div>
+        <div class="field"><label for="medRecordAdministeredBy">Administered by (user ID)</label><input id="medRecordAdministeredBy" type="number" /></div>
+        <div class="actions-row right">
+          <button id="saveMedicationRecordBtn" class="primary-btn">Save Medication Record</button>
+        </div>
+        <div id="medicationRecordStatus" class="status-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDUCATION PROFILE MODAL -->
+  <div class="modal hidden" id="educationProfileModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Education Profile</h3>
+        <button class="icon-btn close-modal" data-close="educationProfileModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field"><label for="educationSchoolName">School name</label><input id="educationSchoolName" type="text" /></div>
+        <div class="field"><label for="educationYearGroup">Year group</label><input id="educationYearGroup" type="text" /></div>
+        <div class="field"><label for="educationStatusValue">Education status</label><input id="educationStatusValue" type="text" /></div>
+        <div class="actions-row right">
+          <button id="saveEducationProfileBtn" class="primary-btn">Save Education Profile</button>
+        </div>
+        <div id="educationProfileStatus" class="status-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDUCATION RECORD MODAL -->
+  <div class="modal hidden" id="educationRecordModal">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3 id="educationRecordModalTitle">New Education Record</h3>
+        <button class="icon-btn close-modal" data-close="educationRecordModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="educationRecordId" />
+        <div class="form-grid two">
+          <div class="field"><label for="educationRecordDate">Record date</label><input id="educationRecordDate" type="date" /></div>
+          <div class="field"><label for="educationAttendanceStatus">Attendance status</label><input id="educationAttendanceStatus" type="text" /></div>
+          <div class="field"><label for="educationProvisionName">Provision name</label><input id="educationProvisionName" type="text" /></div>
+          <div class="field"><label for="educationProfessionalInvolved">Professional involved</label><input id="educationProfessionalInvolved" type="text" /></div>
+        </div>
+        <div class="field"><label for="educationBehaviourSummary">Behaviour summary</label><textarea id="educationBehaviourSummary" rows="3"></textarea></div>
+        <div class="field"><label for="educationLearningEngagement">Learning engagement</label><textarea id="educationLearningEngagement" rows="3"></textarea></div>
+        <div class="field"><label for="educationIssueRaised">Issue raised</label><textarea id="educationIssueRaised" rows="3"></textarea></div>
+        <div class="field"><label for="educationActionTaken">Action taken</label><textarea id="educationActionTaken" rows="3"></textarea></div>
+        <div class="field"><label for="educationAchievementNote">Achievement note</label><textarea id="educationAchievementNote" rows="3"></textarea></div>
+        <div class="actions-row right">
+          <button id="saveEducationRecordBtn" class="primary-btn">Save Education Record</button>
+        </div>
+        <div id="educationRecordStatus" class="status-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAMILY CONTACT MODAL -->
+  <div class="modal hidden" id="familyContactModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="familyContactModalTitle">Add Family Contact</h3>
+        <button class="icon-btn close-modal" data-close="familyContactModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="familyContactId" />
+        <div class="field"><label for="familyContactFullName">Full name</label><input id="familyContactFullName" type="text" /></div>
+        <div class="field"><label for="familyRelationship">Relationship to child</label><input id="familyRelationship" type="text" /></div>
+        <div class="field"><label for="familyPhoneNumber">Phone number</label><input id="familyPhoneNumber" type="text" /></div>
+        <div class="field"><label for="familyEmail">Email</label><input id="familyEmail" type="text" /></div>
+        <div class="field"><label for="familyAddress">Address</label><textarea id="familyAddress" rows="3"></textarea></div>
+        <div class="field">
+          <label for="familyParentalResponsibility">Parental responsibility</label>
+          <select id="familyParentalResponsibility">
+            <option value="false">No</option>
+            <option value="true">Yes</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="familyApprovedContact">Approved contact</label>
+          <select id="familyApprovedContact">
+            <option value="false">No</option>
+            <option value="true">Yes</option>
+          </select>
+        </div>
+        <div class="field"><label for="familyContactNotes">Contact notes</label><textarea id="familyContactNotes" rows="3"></textarea></div>
+        <div class="actions-row right">
+          <button id="saveFamilyContactBtn" class="primary-btn">Save Contact</button>
+        </div>
+        <div id="familyContactStatus" class="status-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAMILY RECORD MODAL -->
+  <div class="modal hidden" id="familyRecordModal">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3 id="familyRecordModalTitle">New Family Contact Record</h3>
+        <button class="icon-btn close-modal" data-close="familyRecordModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="familyRecordId" />
+        <div class="form-grid two">
+          <div class="field"><label for="familyContactDateTime">Contact date / time</label><input id="familyContactDateTime" type="datetime-local" /></div>
+          <div class="field"><label for="familyContactType">Contact type</label><input id="familyContactType" type="text" /></div>
+          <div class="field"><label for="familyContactPerson">Contact person</label><input id="familyContactPerson" type="text" /></div>
+          <div class="field"><label for="familySupervisionLevel">Supervision level</label><input id="familySupervisionLevel" type="text" /></div>
+          <div class="field"><label for="familyLocation">Location</label><input id="familyLocation" type="text" /></div>
+        </div>
+        <div class="field"><label for="familyPrePresentation">Pre-contact presentation</label><textarea id="familyPrePresentation" rows="3"></textarea></div>
+        <div class="field"><label for="familyPostPresentation">Post-contact presentation</label><textarea id="familyPostPresentation" rows="3"></textarea></div>
+        <div class="field"><label for="familyChildVoice">Child voice</label><textarea id="familyChildVoice" rows="3"></textarea></div>
+        <div class="field"><label for="familyConcerns">Concerns</label><textarea id="familyConcerns" rows="3"></textarea></div>
+        <div class="field">
+          <label for="familyFollowUpRequired">Follow-up required</label>
+          <select id="familyFollowUpRequired">
+            <option value="false">No</option>
+            <option value="true">Yes</option>
+          </select>
+        </div>
+        <div class="actions-row right">
+          <button id="saveFamilyRecordBtn" class="primary-btn">Save Family Record</button>
+        </div>
+        <div id="familyRecordStatus" class="status-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KEYWORK MODAL -->
+  <div class="modal hidden" id="keyworkModal">
+    <div class="modal-card modal-xl">
+      <div class="modal-header">
+        <h3 id="keyworkModalTitle">New Keywork Session</h3>
+        <button class="icon-btn close-modal" data-close="keyworkModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="keyworkId" />
+        <div class="form-grid two">
+          <div class="field"><label for="keyworkSessionDate">Session date</label><input id="keyworkSessionDate" type="date" /></div>
+          <div class="field"><label for="keyworkWorkerId">Worker ID</label><input id="keyworkWorkerId" type="number" /></div>
+          <div class="field"><label for="keyworkTopic">Topic</label><input id="keyworkTopic" type="text" /></div>
+          <div class="field"><label for="keyworkNextSessionDate">Next session date</label><input id="keyworkNextSessionDate" type="date" /></div>
+        </div>
+        <div class="field"><label for="keyworkPurpose">Purpose</label><textarea id="keyworkPurpose" rows="3"></textarea></div>
+        <div class="field"><label for="keyworkSummary">Summary</label><textarea id="keyworkSummary" rows="4"></textarea></div>
+        <div class="field"><label for="keyworkChildVoice">Child voice</label><textarea id="keyworkChildVoice" rows="3"></textarea></div>
+        <div class="field"><label for="keyworkReflectiveAnalysis">Reflective analysis</label><textarea id="keyworkReflectiveAnalysis" rows="4"></textarea></div>
+        <div class="field"><label for="keyworkActionsAgreed">Actions agreed</label><textarea id="keyworkActionsAgreed" rows="3"></textarea></div>
+        <div class="actions-row">
+          <button id="keyworkAiAssistBtn" class="secondary-btn">AI Assist</button>
+        </div>
+        <div class="field">
+          <label for="keyworkAiDraft">AI Support Draft</label>
+          <textarea id="keyworkAiDraft" rows="6" readonly></textarea>
+        </div>
+        <div class="actions-row right">
+          <button id="saveKeyworkBtn" class="primary-btn">Save Keywork Session</button>
+        </div>
+        <div id="keyworkStatus" class="status-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLAN MODAL -->
+  <div class="modal hidden" id="planModal">
+    <div class="modal-card modal-xl">
+      <div class="modal-header">
+        <h3 id="planModalTitle">New Support Plan</h3>
+        <button class="icon-btn close-modal" data-close="planModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="planId" />
+        <div class="form-grid two">
+          <div class="field"><label for="planType">Plan type</label><input id="planType" type="text" value="support_plan" /></div>
+          <div class="field"><label for="planTitle">Title</label><input id="planTitle" type="text" /></div>
+          <div class="field"><label for="planStartDate">Start date</label><input id="planStartDate" type="date" /></div>
+          <div class="field"><label for="planReviewDate">Review date</label><input id="planReviewDate" type="date" /></div>
+          <div class="field"><label for="planOwnerId">Owner ID</label><input id="planOwnerId" type="number" /></div>
+        </div>
+        <div class="field"><label for="planSummary">Summary</label><textarea id="planSummary" rows="3"></textarea></div>
+        <div class="field"><label for="planChildVoice">Child voice</label><textarea id="planChildVoice" rows="3"></textarea></div>
+        <div class="field"><label for="planFormulation">Formulation / presenting need</label><textarea id="planFormulation" rows="4"></textarea></div>
+        <div class="field"><label for="planStaffGuidance">Staff guidance / proactive strategies</label><textarea id="planStaffGuidance" rows="4"></textarea></div>
+        <div class="field"><label for="planPaceGuidance">PACE guidance</label><textarea id="planPaceGuidance" rows="3"></textarea></div>
+        <div class="field"><label for="planTriggers">Triggers</label><textarea id="planTriggers" rows="3"></textarea></div>
+        <div class="field"><label for="planProtectiveFactors">Protective factors</label><textarea id="planProtectiveFactors" rows="3"></textarea></div>
+        <div class="actions-row right">
+          <button id="savePlanBtn" class="primary-btn">Save Support Plan</button>
+        </div>
+        <div id="planStatus" class="status-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RISK MODAL -->
+  <div class="modal hidden" id="riskModal">
+    <div class="modal-card modal-xl">
+      <div class="modal-header">
+        <h3 id="riskModalTitle">New Risk Assessment</h3>
+        <button class="icon-btn close-modal" data-close="riskModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="riskId" />
+        <div class="form-grid two">
+          <div class="field"><label for="riskCategory">Category</label><input id="riskCategory" type="text" /></div>
+          <div class="field"><label for="riskTitle">Title</label><input id="riskTitle" type="text" /></div>
+          <div class="field">
+            <label for="riskSeverity">Severity</label>
+            <select id="riskSeverity">
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="riskLikelihood">Likelihood</label>
+            <select id="riskLikelihood">
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+          <div class="field"><label for="riskReviewDate">Review date</label><input id="riskReviewDate" type="date" /></div>
+          <div class="field"><label for="riskOwnerId">Owner ID</label><input id="riskOwnerId" type="number" /></div>
+        </div>
+        <div class="field"><label for="riskConcernSummary">Concern summary</label><textarea id="riskConcernSummary" rows="3"></textarea></div>
+        <div class="field"><label for="riskKnownTriggers">Known triggers</label><textarea id="riskKnownTriggers" rows="3"></textarea></div>
+        <div class="field"><label for="riskEarlyWarningSigns">Early warning signs</label><textarea id="riskEarlyWarningSigns" rows="3"></textarea></div>
+        <div class="field"><label for="riskContextualFactors">Contextual factors</label><textarea id="riskContextualFactors" rows="3"></textarea></div>
+        <div class="field"><label for="riskCurrentControls">Current controls</label><textarea id="riskCurrentControls" rows="3"></textarea></div>
+        <div class="field"><label for="riskDeescalationStrategies">De-escalation strategies</label><textarea id="riskDeescalationStrategies" rows="3"></textarea></div>
+        <div class="field"><label for="riskResponseActions">Response actions</label><textarea id="riskResponseActions" rows="3"></textarea></div>
+        <div class="field"><label for="riskChildViews">Child views</label><textarea id="riskChildViews" rows="3"></textarea></div>
+        <div class="actions-row right">
+          <button id="saveRiskBtn" class="primary-btn">Save Risk Assessment</button>
+        </div>
+        <div id="riskStatus" class="status-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHRONOLOGY EVENT MODAL -->
+  <div class="modal hidden" id="chronologyEventModal">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3 id="chronologyEventModalTitle">Add Chronology Event</h3>
+        <button class="icon-btn close-modal" data-close="chronologyEventModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="chronologyEventId" />
+        <div class="form-grid two">
+          <div class="field"><label for="chronologyEventDateTime">Event date / time</label><input id="chronologyEventDateTime" type="datetime-local" /></div>
+          <div class="field"><label for="chronologyCategory">Category</label><input id="chronologyCategory" type="text" /></div>
+          <div class="field"><label for="chronologySubcategory">Subcategory</label><input id="chronologySubcategory" type="text" /></div>
+          <div class="field"><label for="chronologySignificance">Significance</label><input id="chronologySignificance" type="text" value="standard" /></div>
+          <div class="field"><label for="chronologyLinkedStandard">Linked standard</label><input id="chronologyLinkedStandard" type="text" /></div>
+          <div class="field"><label for="chronologyLinkedJudgementArea">Linked judgement area</label><input id="chronologyLinkedJudgementArea" type="text" /></div>
+        </div>
+        <div class="field"><label for="chronologyTitle">Title</label><input id="chronologyTitle" type="text" /></div>
+        <div class="field"><label for="chronologySummary">Summary</label><textarea id="chronologySummary" rows="4"></textarea></div>
+        <div class="actions-row right">
+          <button id="saveChronologyEventBtn" class="primary-btn">Save Chronology Event</button>
+        </div>
+        <div id="chronologyEventStatus" class="status-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATUTORY CREATE MODAL -->
+  <div class="modal hidden" id="statutoryCreateModal">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3 id="statutoryCreateModalTitle">Create Statutory Document Record</h3>
+        <button class="icon-btn close-modal" data-close="statutoryCreateModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="statutoryDocumentId" />
+        <div class="form-grid two">
+          <div class="field"><label for="statutoryDocumentType">Document type</label><input id="statutoryDocumentType" type="text" /></div>
+          <div class="field"><label for="statutoryTitle">Title</label><input id="statutoryTitle" type="text" /></div>
+          <div class="field"><label for="statutoryIssueDate">Issue date</label><input id="statutoryIssueDate" type="date" /></div>
+          <div class="field"><label for="statutoryReviewDate">Review date</label><input id="statutoryReviewDate" type="date" /></div>
+          <div class="field"><label for="statutoryExpiryDate">Expiry date</label><input id="statutoryExpiryDate" type="date" /></div>
+          <div class="field"><label for="statutoryStatusValue">Status</label><input id="statutoryStatusValue" type="text" value="current" /></div>
+          <div class="field"><label for="statutoryComplianceCategory">Compliance category</label><input id="statutoryComplianceCategory" type="text" /></div>
+          <div class="field"><label for="statutoryLinkedStandardCode">Linked standard code</label><input id="statutoryLinkedStandardCode" type="text" /></div>
+        </div>
+        <div class="field"><label for="statutoryDescription">Description</label><textarea id="statutoryDescription" rows="4"></textarea></div>
+        <div class="actions-row right">
+          <button id="saveStatutoryCreateBtn" class="primary-btn">Save Statutory Record</button>
+        </div>
+        <div id="statutoryCreateStatus" class="status-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATUTORY UPLOAD MODAL -->
+  <div class="modal hidden" id="statutoryUploadModal">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3>Upload Statutory Document</h3>
+        <button class="icon-btn close-modal" data-close="statutoryUploadModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid two">
+          <div class="field"><label for="statUploadDocumentType">Document type</label><input id="statUploadDocumentType" type="text" /></div>
+          <div class="field"><label for="statUploadTitle">Title</label><input id="statUploadTitle" type="text" /></div>
+          <div class="field"><label for="statUploadIssueDate">Issue date</label><input id="statUploadIssueDate" type="date" /></div>
+          <div class="field"><label for="statUploadReviewDate">Review date</label><input id="statUploadReviewDate" type="date" /></div>
+          <div class="field"><label for="statUploadExpiryDate">Expiry date</label><input id="statUploadExpiryDate" type="date" /></div>
+          <div class="field"><label for="statUploadStatus">Status</label><input id="statUploadStatus" type="text" value="current" /></div>
+          <div class="field"><label for="statUploadComplianceCategory">Compliance category</label><input id="statUploadComplianceCategory" type="text" /></div>
+          <div class="field"><label for="statUploadLinkedStandardCode">Linked standard code</label><input id="statUploadLinkedStandardCode" type="text" /></div>
+        </div>
+        <div class="field"><label for="statUploadDescription">Description</label><textarea id="statUploadDescription" rows="3"></textarea></div>
+        <div class="field"><label for="statUploadFile">File</label><input id="statUploadFile" type="file" /></div>
+        <div class="actions-row right">
+          <button id="saveStatutoryUploadBtn" class="primary-btn">Upload Document</button>
+        </div>
+        <div id="statutoryUploadStatus" class="status-text"></div>
       </div>
     </div>
   </div>
