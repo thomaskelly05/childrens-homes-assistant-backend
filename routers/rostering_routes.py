@@ -3,23 +3,27 @@ import io
 import json
 import math
 import os
+import smtplib
 from datetime import date, datetime, timedelta
+from email.mime.text import MIMEText
 from typing import Optional
 
 import psycopg2
-from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from psycopg2.extras import Json, RealDictCursor
-from twilio.rest import Client
 
 router = APIRouter(prefix="/api/rostering", tags=["Rostering"])
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 APP_BASE_URL = os.getenv("APP_BASE_URL", "").rstrip("/")
-TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
-TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
-TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER")
+
+SMTP_HOST = os.getenv("SMTP_HOST")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+SMTP_FROM = os.getenv("SMTP_FROM")
 
 
 def get_db():
@@ -28,10 +32,19 @@ def get_db():
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 
-def get_twilio_client():
-    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_FROM_NUMBER:
-        raise RuntimeError("Twilio environment variables are not fully configured")
-    return Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+def send_email(to_email: str, subject: str, body: str):
+    if not SMTP_HOST or not SMTP_USER or not SMTP_PASSWORD or not SMTP_FROM:
+        raise HTTPException(status_code=500, detail="Email is not configured")
+
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = SMTP_FROM
+    msg["To"] = to_email
+
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASSWORD)
+        server.send_message(msg)
 
 
 class AssignRequest(BaseModel):
@@ -64,7 +77,7 @@ class PublishWeekRequest(BaseModel):
     home_id: int
     week_start: date
     actor: str = "manager"
-    send_sms: bool = True
+    send_email: bool = True
 
 
 class CheckEventRequest(BaseModel):
@@ -214,14 +227,24 @@ def build_week_warnings(shifts, assignments, checkins=None):
     return warnings
 
 
-def build_sms_text_for_staff(home_name, week_start, shifts):
-    lines = [f"IndiCare rota for {home_name}", f"Week commencing {week_start.strftime('%d %b %Y')}"]
-    for shift in shifts[:8]:
+def build_email_text_for_staff(home_name, week_start, shifts):
+    lines = [
+        f"IndiCare rota for {home_name}",
+        f"Week commencing {week_start.strftime('%d %b %Y')}",
+        "",
+    ]
+
+    for shift in shifts[:10]:
         shift_date = shift["shift_date"].strftime("%a %d %b")
         shift_type = str(shift["shift_type"]).replace("_", " ").title()
         lines.append(f"{shift_date} {shift['start_time']}-{shift['end_time']} {shift_type}")
+
     if APP_BASE_URL:
-        lines.append(f"Live rota: {APP_BASE_URL}/rostering")
+        lines.extend([
+            "",
+            f"Live rota: {APP_BASE_URL}/rostering"
+        ])
+
     return "\n".join(lines)
 
 
@@ -265,7 +288,7 @@ def get_roster_week(home_id: int, week_start: str):
                     st.safe_to_work,
                     st.can_sleep_in,
                     st.can_waking_night,
-                    st.mobile_number
+                    st.email
                 FROM roster_assignments ra
                 LEFT JOIN staff st ON st.id = ra.staff_id
                 WHERE ra.shift_id = ANY(%s)
@@ -639,7 +662,7 @@ def publish_week(payload: PublishWeekRequest):
 
         cur.execute(
             """
-            INSERT INTO roster_publications (home_id, week_start, published_by, published_at, sms_sent, sms_sent_at)
+            INSERT INTO roster_publications (home_id, week_start, published_by, published_at, email_sent, email_sent_at)
             VALUES (%s, %s, %s, NOW(), FALSE, NULL)
             ON CONFLICT (home_id, week_start)
             DO UPDATE SET published_by = EXCLUDED.published_by, published_at = NOW()
@@ -659,15 +682,15 @@ def publish_week(payload: PublishWeekRequest):
             after_json=serialise_row(publication),
         )
 
-        sms_count = 0
+        email_count = 0
 
-        if payload.send_sms:
+        if payload.send_email:
             cur.execute(
                 """
                 SELECT
                     st.id AS staff_id,
                     st.full_name,
-                    st.mobile_number,
+                    st.email,
                     rs.shift_date,
                     rs.shift_type,
                     rs.start_time,
@@ -677,7 +700,8 @@ def publish_week(payload: PublishWeekRequest):
                 JOIN roster_shifts rs ON rs.id = ra.shift_id
                 WHERE rs.home_id = %s
                   AND rs.shift_date BETWEEN %s AND %s
-                  AND st.mobile_number IS NOT NULL
+                  AND st.email IS NOT NULL
+                  AND st.email <> ''
                 ORDER BY st.id, rs.shift_date, rs.start_time
                 """,
                 (payload.home_id, payload.week_start, week_end),
@@ -688,97 +712,69 @@ def publish_week(payload: PublishWeekRequest):
             for row in rows:
                 staff_shift_map.setdefault(row["staff_id"], {
                     "full_name": row["full_name"],
-                    "mobile_number": row["mobile_number"],
+                    "email": row["email"],
                     "shifts": []
                 })
                 staff_shift_map[row["staff_id"]]["shifts"].append(row)
 
-            if staff_shift_map:
-                twilio = get_twilio_client()
+            for staff_id, item in staff_shift_map.items():
+                subject = f"IndiCare rota – week commencing {payload.week_start.strftime('%d/%m/%Y')}"
+                message_body = build_email_text_for_staff(
+                    home_name=home["name"],
+                    week_start=payload.week_start,
+                    shifts=item["shifts"]
+                )
 
-                for staff_id, item in staff_shift_map.items():
-                    message_body = build_sms_text_for_staff(
-                        home_name=home["name"],
-                        week_start=payload.week_start,
-                        shifts=item["shifts"]
-                    )
+                status = "sent"
+                error_message = None
 
-                    status_callback = f"{APP_BASE_URL}/api/rostering/twilio/status" if APP_BASE_URL else None
-
-                    message = twilio.messages.create(
+                try:
+                    send_email(
+                        to_email=item["email"],
+                        subject=subject,
                         body=message_body,
-                        from_=TWILIO_FROM_NUMBER,
-                        to=item["mobile_number"],
-                        status_callback=status_callback,
                     )
-
-                    cur.execute(
-                        """
-                        INSERT INTO roster_sms_log
-                        (
-                            publication_id, staff_id, mobile_number, message_body,
-                            twilio_message_sid, status, sent_at, updated_at
-                        )
-                        VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW())
-                        """,
-                        (
-                            publication["id"],
-                            staff_id,
-                            item["mobile_number"],
-                            message_body,
-                            message.sid,
-                            message.status,
-                        ),
-                    )
-                    sms_count += 1
+                    email_count += 1
+                except Exception as exc:
+                    status = "failed"
+                    error_message = str(exc)
 
                 cur.execute(
                     """
-                    UPDATE roster_publications
-                    SET sms_sent = TRUE, sms_sent_at = NOW()
-                    WHERE id = %s
+                    INSERT INTO roster_email_log
+                    (
+                        publication_id, staff_id, email_address, message_body,
+                        status, error_message, sent_at, updated_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW())
                     """,
-                    (publication["id"],),
+                    (
+                        publication["id"],
+                        staff_id,
+                        item["email"],
+                        message_body,
+                        status,
+                        error_message,
+                    ),
                 )
+
+            cur.execute(
+                """
+                UPDATE roster_publications
+                SET email_sent = TRUE, email_sent_at = NOW()
+                WHERE id = %s
+                """,
+                (publication["id"],),
+            )
 
         conn.commit()
 
         return {
             "ok": True,
             "publication_id": publication["id"],
-            "sms_count": sms_count,
+            "email_count": email_count,
         }
 
-    finally:
-        cur.close()
-        conn.close()
-
-
-@router.post("/twilio/status")
-async def twilio_status_callback(request: Request):
-    form = await request.form()
-
-    message_sid = form.get("MessageSid")
-    message_status = form.get("MessageStatus")
-    error_message = form.get("ErrorMessage")
-
-    conn = get_db()
-    cur = conn.cursor()
-
-    try:
-        cur.execute(
-            """
-            UPDATE roster_sms_log
-            SET status = %s,
-                error_message = %s,
-                delivered_at = CASE WHEN %s = 'delivered' THEN NOW() ELSE delivered_at END,
-                updated_at = NOW()
-            WHERE twilio_message_sid = %s
-            """,
-            (message_status, error_message, message_status, message_sid),
-        )
-        conn.commit()
-        return JSONResponse({"ok": True})
     finally:
         cur.close()
         conn.close()
@@ -902,15 +898,14 @@ def attendance_summary(home_id: int, week_start: str):
             """,
             (home_id, start, end),
         )
-        rows = cur.fetchall()
-        return rows
+        return cur.fetchall()
     finally:
         cur.close()
         conn.close()
 
 
-@router.get("/sms-log")
-def sms_log(home_id: int, week_start: str):
+@router.get("/email-log")
+def email_log(home_id: int, week_start: str):
     conn = get_db()
     cur = conn.cursor()
 
@@ -930,11 +925,11 @@ def sms_log(home_id: int, week_start: str):
 
         cur.execute(
             """
-            SELECT sl.*, st.full_name
-            FROM roster_sms_log sl
-            LEFT JOIN staff st ON st.id = sl.staff_id
-            WHERE sl.publication_id = %s
-            ORDER BY sl.sent_at DESC, sl.id DESC
+            SELECT el.*, st.full_name
+            FROM roster_email_log el
+            LEFT JOIN staff st ON st.id = el.staff_id
+            WHERE el.publication_id = %s
+            ORDER BY el.sent_at DESC, el.id DESC
             """,
             (pub["id"],),
         )
