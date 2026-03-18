@@ -1,299 +1,187 @@
 <!DOCTYPE html>
-<html lang="en-GB">
+<html lang="en">
 <head>
- <meta charset="UTF-8" />
- <meta name="viewport" content="width=device-width, initial-scale=1.0" />
- <title>IndiCare — Children’s Home OS</title>
- <link rel="stylesheet" href="/css/young-people-shell.css?v=20260318a" />
+<meta charset="UTF-8">
+<title>IndiCare</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/styles.css">
 </head>
+
 <body>
- <div class="app-shell">
- <aside class="sidebar">
- <div class="brand">
- <div class="brand-mark">I</div>
- <div class="brand-copy">
- <div class="brand-title">IndiCare</div>
- <div class="brand-subtitle">Children’s Home OS</div>
- </div>
- </div>
 
- <nav class="nav">
- <button class="nav-btn active" data-section="command-centre">Command Centre</button>
- <button class="nav-btn" data-section="young-people">Young People</button>
- <button class="nav-btn" data-section="handover">Handover</button>
- <button class="nav-btn" data-section="manager-qa">Manager QA</button>
- <button class="nav-btn" data-section="staff">Staff</button>
- </nav>
+<div class="app-shell">
 
- <div class="sidebar-block">
- <label class="label" for="youngPersonSelect">Selected young person</label>
- <select id="youngPersonSelect" class="input">
- <option>Loading…</option>
- </select>
- </div>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
 
- <div class="sidebar-block">
- <div class="quick-card">
- <div class="quick-card-title">Quick actions</div>
- <div class="quick-actions">
- <button class="btn" id="quickTimelineBtn">Go to timeline</button>
- <button class="btn" id="quickDailyNoteBtn">New daily note</button>
- <button class="btn" id="quickIncidentBtn">New incident</button>
- <button class="btn primary" id="quickPlanBtn">New plan</button>
- </div>
- </div>
- </div>
+    <div class="brand">
+      <div class="brand-mark">IC</div>
+      <div>
+        <div class="brand-title">IndiCare</div>
+        <div class="brand-subtitle">Children’s Home</div>
+      </div>
+    </div>
 
- <div class="sidebar-block statusbar hidden" id="statusBar"></div>
- </aside>
+    <div class="nav">
+      <button class="nav-btn active" data-section="command-centre">Command Centre</button>
+      <button class="nav-btn" data-section="young-people">Young People</button>
+      <button class="nav-btn" data-section="handover">Handover</button>
+      <button class="nav-btn" data-section="manager-qa">Manager QA</button>
+      <button class="nav-btn" data-section="staff">Staff</button>
+    </div>
 
- <main class="main">
- <header class="page-header">
- <div>
- <div id="welcomeMessage" class="welcome-message">Welcome back.</div>
- <h1 id="pageTitle">Command Centre</h1>
- <p id="pageSubtitle">Shift-first oversight for children’s residential care</p>
- </div>
+  </aside>
 
- <div class="header-actions">
- <button class="btn soft" id="headerTimelineBtn">Timeline</button>
- <button class="btn primary" id="headerPlanBtn">Create plan</button>
- </div>
- </header>
+  <!-- MAIN -->
+  <main class="main">
 
- <section id="browseMode">
- <!-- COMMAND CENTRE -->
- <section class="section active" id="section-command-centre">
- <div class="grid metrics-grid" id="commandCentreMetrics"></div>
+    <!-- HEADER -->
+    <div class="page-header">
+      <div>
+        <h1 id="pageTitle">Command Centre</h1>
+        <p id="pageSubtitle"></p>
+        <p id="welcomeMessage" class="muted"></p>
+      </div>
+    </div>
 
- <div class="grid two-col">
- <div class="card">
- <div class="card-title-row">
- <div>
- <h2 class="card-title">Live alerts</h2>
- <p class="card-subtitle">What needs attention on shift.</p>
- </div>
- </div>
- <div id="commandCentreAlerts"></div>
- </div>
+    <!-- STATUS -->
+    <div id="statusBar" class="statusbar hidden"></div>
 
- <div class="card">
- <div class="card-title-row">
- <div>
- <h2 class="card-title">Shift tasks</h2>
- <p class="card-subtitle">Outstanding actions and deadlines.</p>
- </div>
- </div>
- <div id="commandCentreTasks"></div>
- </div>
- </div>
+    <!-- BROWSE MODE -->
+    <div id="browseMode">
 
- <div class="grid two-col">
- <div class="card">
- <div class="card-title-row">
- <div>
- <h2 class="card-title">Medication due</h2>
- <p class="card-subtitle">Current and upcoming medication activity.</p>
- </div>
- </div>
- <div id="commandCentreMeds"></div>
- </div>
+      <!-- COMMAND CENTRE -->
+      <section class="section active" id="section-command-centre">
+        <div class="grid metrics-grid" id="commandCentreMetrics"></div>
 
- <div class="card">
- <div class="card-title-row">
- <div>
- <h2 class="card-title">Latest handover</h2>
- <p class="card-subtitle">Continuity from the previous shift.</p>
- </div>
- </div>
- <div id="commandCentreHandover"></div>
- </div>
- </div>
- </section>
+        <div class="grid two-col">
+          <div class="card">
+            <h3>Alerts</h3>
+            <div id="commandCentreAlerts"></div>
+          </div>
 
- <!-- YOUNG PEOPLE -->
- <section class="section" id="section-young-people">
- <div class="person-hero card">
- <div class="person-hero-main">
- <h2 id="selectedYoungPersonName">—</h2>
- <div class="hero-meta" id="selectedYoungPersonMeta">—</div>
- </div>
- <div class="hero-badges" id="selectedYoungPersonBadges"></div>
- </div>
+          <div class="card">
+            <h3>Tasks</h3>
+            <div id="commandCentreTasks"></div>
+          </div>
 
- <div class="subtabs">
- <button class="tab active" data-tab="overview">Overview</button>
- <button class="tab" data-tab="timeline">Timeline</button>
- <button class="tab" data-tab="daily-notes">Daily Notes</button>
- <button class="tab" data-tab="incidents">Incidents</button>
- <button class="tab" data-tab="health">Health</button>
- <button class="tab" data-tab="education">Education</button>
- <button class="tab" data-tab="family">Family</button>
- <button class="tab" data-tab="keywork">Key Work</button>
- <button class="tab" data-tab="plans">Plans</button>
- <button class="tab" data-tab="archive">Archive</button>
- <button class="tab" data-tab="reviews">Reviews</button>
- </div>
+          <div class="card">
+            <h3>Medication</h3>
+            <div id="commandCentreMeds"></div>
+          </div>
 
- <div class="panel active" id="tab-overview"><div id="overviewContent"></div></div>
+          <div class="card">
+            <h3>Handover</h3>
+            <div id="commandCentreHandover"></div>
+          </div>
+        </div>
+      </section>
 
- <div class="panel" id="tab-timeline">
- <div class="card toolbar-card">
- <div class="toolbar">
- <select id="timelineEventType" class="input slim">
- <option value="">All chronology</option>
- <option value="daily_note">Daily notes</option>
- <option value="incident">Incidents</option>
- <option value="health">Health</option>
- <option value="education">Education</option>
- <option value="family">Family</option>
- <option value="keywork">Key work</option>
- <option value="plan">Plans</option>
- <option value="risk">Risk</option>
- </select>
- <div class="toolbar-actions">
- <button class="btn" id="timelineNewDailyBtn">Daily note</button>
- <button class="btn" id="timelineNewIncidentBtn">Incident</button>
- </div>
- </div>
- </div>
- <div id="timelineContent"></div>
- </div>
+      <!-- YOUNG PEOPLE -->
+      <section class="section" id="section-young-people">
 
- <div class="panel" id="tab-daily-notes"><div id="dailyNotesContent"></div></div>
- <div class="panel" id="tab-incidents"><div id="incidentsContent"></div></div>
- <div class="panel" id="tab-health"><div id="healthContent"></div></div>
- <div class="panel" id="tab-education"><div id="educationContent"></div></div>
- <div class="panel" id="tab-family"><div id="familyContent"></div></div>
- <div class="panel" id="tab-keywork"><div id="keyworkContent"></div></div>
+        <select id="youngPersonSelect" class="input slim"></select>
 
- <div class="panel" id="tab-plans">
- <div class="card toolbar-card">
- <div class="toolbar">
- <div class="toolbar-copy">
- <div class="toolbar-title">Plans</div>
- <div class="toolbar-subtitle">Child-centred plans, staff guidance and review workflow.</div>
- </div>
- <button class="btn primary" id="plansOpenCreateBtn">Create plan</button>
- </div>
- </div>
- <div id="plansContent"></div>
- </div>
+        <div class="person-hero">
+          <div>
+            <h2 id="selectedYoungPersonName"></h2>
+            <div id="selectedYoungPersonMeta"></div>
+          </div>
+          <div id="selectedYoungPersonBadges"></div>
+        </div>
 
- <div class="panel" id="tab-archive"><div id="archiveContent"></div></div>
- <div class="panel" id="tab-reviews"><div id="reviewsContent"></div></div>
- </section>
+        <!-- TABS -->
+        <div class="subtabs">
+          <button class="tab active" data-tab="overview">Overview</button>
+          <button class="tab" data-tab="timeline">Timeline</button>
+          <button class="tab" data-tab="daily-notes">Daily</button>
+          <button class="tab" data-tab="incidents">Incidents</button>
+          <button class="tab" data-tab="health">Health</button>
+          <button class="tab" data-tab="education">Education</button>
+          <button class="tab" data-tab="family">Family</button>
+          <button class="tab" data-tab="keywork">Keywork</button>
+          <button class="tab" data-tab="plans">Plans</button>
+          <button class="tab" data-tab="reviews">Reviews</button>
+          <button class="tab" data-tab="archive">Archive</button>
+        </div>
 
- <!-- HANDOVER -->
- <section class="section" id="section-handover">
- <div class="card">
- <div class="card-title-row">
- <div>
- <h2 class="card-title">Shift handover</h2>
- <p class="card-subtitle">Auto-drafted from recorded reality, incidents, medication and tasks.</p>
- </div>
- </div>
- <div id="handoverBoard"></div>
- </div>
- </section>
+        <!-- PANELS -->
+        <div id="tab-overview" class="panel active"></div>
+        <div id="tab-timeline" class="panel"></div>
+        <div id="tab-daily-notes" class="panel"></div>
+        <div id="tab-incidents" class="panel"></div>
+        <div id="tab-health" class="panel"></div>
+        <div id="tab-education" class="panel"></div>
+        <div id="tab-family" class="panel"></div>
+        <div id="tab-keywork" class="panel"></div>
+        <div id="tab-plans" class="panel"></div>
+        <div id="tab-reviews" class="panel"></div>
+        <div id="tab-archive" class="panel"></div>
 
- <!-- MANAGER QA -->
- <section class="section" id="section-manager-qa">
- <div class="card">
- <div class="card-title-row">
- <div>
- <h2 class="card-title">Manager review queue</h2>
- <p class="card-subtitle">Approve, return and quality assure records before inspection or audit.</p>
- </div>
- </div>
- <div id="managerQaContent"></div>
- </div>
- </section>
+      </section>
 
- <!-- STAFF -->
- <section class="section" id="section-staff">
- <div class="grid two-col">
- <div class="card">
- <div class="card-title-row">
- <div>
- <h2 class="card-title">Staff workspace</h2>
- <p class="card-subtitle">Supervision, team meetings, journals and operational records.</p>
- </div>
- </div>
- <div class="list">
- <div class="row-card click-staff-link" data-href="/supervision">
- <div class="row-title">Supervision</div>
- <div class="row-meta">Open supervision records and sessions.</div>
- </div>
- <div class="row-card click-staff-link" data-href="/journal">
- <div class="row-title">Staff journal</div>
- <div class="row-meta">Reflective notes and staff communication.</div>
- </div>
- <div class="row-card click-staff-placeholder" data-type="team-meeting">
- <div class="row-title">Team meetings</div>
- <div class="row-meta">Minutes, actions and attendance.</div>
- </div>
- <div class="row-card click-staff-placeholder" data-type="training">
- <div class="row-title">Training and compliance</div>
- <div class="row-meta">Mandatory training, refreshers and checks.</div>
- </div>
- </div>
- </div>
+      <!-- HANDOVER -->
+      <section class="section" id="section-handover">
+        <div id="handoverBoard"></div>
+      </section>
 
- <div class="card">
- <div class="card-title-row">
- <div>
- <h2 class="card-title">Home operations</h2>
- <p class="card-subtitle">What a children’s home needs beyond direct recording.</p>
- </div>
- </div>
- <div class="list">
- <div class="row-card click-staff-placeholder" data-type="health-safety">
- <div class="row-title">Health and safety checks</div>
- <div class="row-meta">Daily checks, fire safety, room checks and environmental issues.</div>
- </div>
- <div class="row-card click-staff-placeholder" data-type="handover-audit">
- <div class="row-title">Handover audit</div>
- <div class="row-meta">Review quality and continuity between shifts.</div>
- </div>
- <div class="row-card click-staff-placeholder" data-type="reg44">
- <div class="row-title">Regulation 44 / inspection readiness</div>
- <div class="row-meta">Evidence packs, audits and findings.</div>
- </div>
- </div>
- </div>
- </div>
- </section>
- </section>
- </main>
- </div>
+      <!-- MANAGER -->
+      <section class="section" id="section-manager-qa">
+        <div id="managerQaContent"></div>
+      </section>
 
- <!-- GLOBAL MODAL -->
- <div id="globalModal" class="modal hidden">
- <div class="modal-overlay" id="modalCloseOverlay"></div>
- <div class="modal-content">
- <div class="modal-header">
- <div>
- <h2 id="modalTitle">Document</h2>
- <div class="muted" id="modalMeta">—</div>
- </div>
- <button class="btn ghost" id="modalCloseBtn">Close</button>
- </div>
- <div id="modalBody" class="modal-body"></div>
- </div>
- </div>
+      <!-- STAFF -->
+      <section class="section" id="section-staff">
 
- <!-- FAB -->
- <button class="fab" id="fabBtn" aria-label="Quick actions">☰</button>
- <div class="fab-menu hidden" id="fabMenu">
- <button class="fab-action" id="fabDailyBtn">Daily note</button>
- <button class="fab-action" id="fabIncidentBtn">Incident</button>
- <button class="fab-action" id="fabPlanBtn">Plan</button>
- <button class="fab-action" id="fabHealthBtn">Health record</button>
- <button class="fab-action" id="fabFamilyBtn">Family record</button>
- <button class="fab-action" id="fabKeyworkBtn">Key work</button>
- </div>
+        <div class="subtabs">
+          <button class="tab active" data-tab="staff-home">Home</button>
+          <button class="tab" data-tab="supervision">Supervision</button>
+          <button class="tab" data-tab="team-meetings">Meetings</button>
+          <button class="tab" data-tab="health-safety">H&S</button>
+        </div>
 
- <script src="/js/young-people-shell.js?v=20260318a"></script>
+        <div id="tab-staff-home" class="panel active"></div>
+        <div id="tab-supervision" class="panel"></div>
+        <div id="tab-team-meetings" class="panel"></div>
+        <div id="tab-health-safety" class="panel"></div>
+
+      </section>
+
+    </div>
+
+    <!-- DOCUMENT MODAL -->
+    <div id="documentMode" class="hidden">
+      <button id="docBackBtn" class="btn">← Back</button>
+      <h2 id="docTitle"></h2>
+      <div id="docMetaLine" class="muted"></div>
+      <div id="docBody"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- QUICK MENU -->
+<div class="quick-menu-wrap">
+  <button id="quickMenuBtn" class="quick-menu-btn">☰</button>
+
+  <div id="quickMenu" class="quick-menu hidden">
+    <button class="btn" id="quickNewDailyNote">Daily note</button>
+    <button class="btn" id="quickNewIncident">Incident</button>
+    <button class="btn" id="quickNewHealth">Health</button>
+    <button class="btn" id="quickNewFamily">Family</button>
+    <button class="btn" id="quickNewKeywork">Keywork</button>
+    <button class="btn primary" id="quickNewPlan">Plan</button>
+    <hr>
+    <button class="btn" id="quickHandover">Handover</button>
+    <button class="btn" id="quickMissing">Missing</button>
+    <button class="btn" id="quickFireDrill">Fire drill</button>
+    <button class="btn" id="quickMedAudit">Medication audit</button>
+    <button class="btn" id="quickDailyHsCheck">Daily H&S</button>
+  </div>
+</div>
+
+<script src="/static/young-people-shell.js"></script>
 </body>
 </html>
