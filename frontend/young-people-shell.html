@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Children's Home OS</title>
-  <link rel="stylesheet" href="css/young-people-shell.css" />
+  <link rel="stylesheet" href="/css/young-people-shell.css" />
 </head>
 <body>
   <div class="app-shell">
@@ -13,12 +13,12 @@
         <div class="brand-mark">🏡</div>
         <div>
           <h1>Children's Home OS</h1>
-          <p>Young People Shell</p>
+          <p>Operational Workspace</p>
         </div>
       </div>
 
       <div class="sidebar-actions">
-        <button class="primary-btn full" id="openAiNoteBtn">New AI Note</button>
+        <button class="primary-btn full" id="openAiNoteBtn">New Therapeutic / AI Note</button>
         <button class="secondary-btn full" id="openDailyNoteBtn">New Daily Note</button>
         <button class="secondary-btn full" id="openIncidentBtn">New Incident</button>
         <button class="secondary-btn full" id="generateHandoverBtn">Generate Handover</button>
@@ -61,6 +61,7 @@
         <button class="tab-btn" data-tab="overview">Overview</button>
         <button class="tab-btn" data-tab="daily-notes">Daily Notes</button>
         <button class="tab-btn" data-tab="incidents">Incidents</button>
+        <button class="tab-btn" data-tab="therapeutic">Therapeutic / AI</button>
         <button class="tab-btn" data-tab="handover">Handover</button>
         <button class="tab-btn" data-tab="management">Management</button>
         <button class="tab-btn" data-tab="archive">Archive</button>
@@ -134,6 +135,40 @@
         </div>
       </section>
 
+      <section class="tab-panel" id="tab-therapeutic">
+        <div class="dashboard-grid">
+          <section class="panel">
+            <div class="panel-header panel-header-row">
+              <h3>Therapeutic / AI Notes</h3>
+              <button class="primary-btn" id="openAiNoteBtn2">New AI Note</button>
+            </div>
+            <div class="panel-body" id="aiHistoryPanel">
+              <div class="empty-state">Loading AI notes...</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h3>Therapeutic Guidance</h3>
+            </div>
+            <div class="panel-body">
+              <div class="simple-item">
+                <strong>Use this area for</strong><br>
+                Therapeutic reflections, structured shift narratives, trauma-informed reframing, and practice-safe wording.
+              </div>
+              <div class="simple-item">
+                <strong>Suggested flow</strong><br>
+                Rough note → AI draft → edit → save → use in daily notes, incidents, supervision, or handover.
+              </div>
+              <div class="simple-item">
+                <strong>Current route support</strong><br>
+                Create, edit, save, and history are live from your existing AI note routes.
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+
       <section class="tab-panel" id="tab-handover">
         <div class="panel">
           <div class="panel-header panel-header-row">
@@ -170,13 +205,16 @@
     </main>
   </div>
 
+  <!-- AI / THERAPEUTIC NOTE MODAL -->
   <div class="modal hidden" id="aiNoteModal">
     <div class="modal-card modal-lg">
       <div class="modal-header">
-        <h3>Create AI Note</h3>
+        <h3 id="aiModalTitle">Create Therapeutic / AI Note</h3>
         <button class="icon-btn close-modal" data-close="aiNoteModal">✕</button>
       </div>
       <div class="modal-body">
+        <input type="hidden" id="aiNoteId" />
+
         <div class="form-grid two">
           <div class="field">
             <label>Young person</label>
@@ -203,6 +241,7 @@
 
         <div class="actions-row">
           <button class="primary-btn" id="generateAiBtn">Generate with AI</button>
+          <button class="secondary-btn" id="polishAiBtn">Polish Final Note</button>
         </div>
 
         <div class="field">
@@ -227,13 +266,16 @@
     </div>
   </div>
 
+  <!-- DAILY NOTE MODAL -->
   <div class="modal hidden" id="dailyNoteModal">
-    <div class="modal-card">
+    <div class="modal-card modal-lg">
       <div class="modal-header">
-        <h3>New Daily Note</h3>
+        <h3 id="dailyModalTitle">New Daily Note</h3>
         <button class="icon-btn close-modal" data-close="dailyNoteModal">✕</button>
       </div>
       <div class="modal-body">
+        <input type="hidden" id="dailyNoteId" />
+
         <div class="form-grid two">
           <div class="field">
             <label>Young person</label>
@@ -263,6 +305,15 @@
         <div class="field"><label>Positives</label><textarea id="dailyPositives" rows="3"></textarea></div>
         <div class="field"><label>Actions required</label><textarea id="dailyActions" rows="3"></textarea></div>
 
+        <div class="actions-row">
+          <button class="secondary-btn" id="dailyAiAssistBtn">AI Assist</button>
+        </div>
+
+        <div class="field">
+          <label>AI Support Draft</label>
+          <textarea id="dailyAiDraft" rows="6" readonly></textarea>
+        </div>
+
         <div class="actions-row right">
           <button class="primary-btn" id="saveDailyBtn">Save Daily Note</button>
         </div>
@@ -271,13 +322,16 @@
     </div>
   </div>
 
+  <!-- INCIDENT MODAL -->
   <div class="modal hidden" id="incidentModal">
-    <div class="modal-card">
+    <div class="modal-card modal-lg">
       <div class="modal-header">
-        <h3>New Incident</h3>
+        <h3 id="incidentModalTitle">New Incident</h3>
         <button class="icon-btn close-modal" data-close="incidentModal">✕</button>
       </div>
       <div class="modal-body">
+        <input type="hidden" id="incidentId" />
+
         <div class="form-grid two">
           <div class="field">
             <label>Young person</label>
@@ -334,6 +388,16 @@
         <div class="field"><label>Child voice</label><textarea id="incidentVoice" rows="3"></textarea></div>
         <div class="field"><label>Restorative follow-up</label><textarea id="incidentRestorative" rows="3"></textarea></div>
 
+        <div class="actions-row">
+          <button class="secondary-btn" id="incidentAiAssistBtn">AI Assist</button>
+          <button class="secondary-btn" id="incidentAiPolishBtn">Polish Description</button>
+        </div>
+
+        <div class="field">
+          <label>AI Support Draft</label>
+          <textarea id="incidentAiDraft" rows="6" readonly></textarea>
+        </div>
+
         <div class="actions-row right">
           <button class="primary-btn" id="saveIncidentBtn">Save Incident</button>
         </div>
@@ -342,6 +406,6 @@
     </div>
   </div>
 
-  <script src="js/young-people-shell.js"></script>
+  <script src="/js/young-people-shell.js"></script>
 </body>
 </html>
