@@ -39,7 +39,9 @@
           <p id="pageSubtitle">Operational workspace for staff and management</p>
         </div>
         <div class="topbar-actions">
+          <div class="user-chip" id="currentUserChip">Not signed in</div>
           <button class="secondary-btn" id="refreshBtn">Refresh</button>
+          <button class="danger-btn" id="logoutBtn">Logout</button>
         </div>
       </header>
 
@@ -168,7 +170,6 @@
     </main>
   </div>
 
-  <!-- AI NOTE MODAL -->
   <div class="modal hidden" id="aiNoteModal">
     <div class="modal-card modal-lg">
       <div class="modal-header">
@@ -226,7 +227,6 @@
     </div>
   </div>
 
-  <!-- DAILY NOTE MODAL -->
   <div class="modal hidden" id="dailyNoteModal">
     <div class="modal-card">
       <div class="modal-header">
@@ -271,7 +271,6 @@
     </div>
   </div>
 
-  <!-- INCIDENT MODAL -->
   <div class="modal hidden" id="incidentModal">
     <div class="modal-card">
       <div class="modal-header">
