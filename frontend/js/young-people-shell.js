@@ -32,6 +32,17 @@ const ENDPOINTS = {
   aiSave: "/ai-notes/save",
   aiHistory: "/ai-notes/history",
   aiHistoryById: (id) => `/ai-notes/history/${id}`,
+
+  modules: {
+    health: (id) => `/young-people/${id}/health`,
+    education: (id) => `/young-people/${id}/education`,
+    family: (id) => `/young-people/${id}/family`,
+    keywork: (id) => `/young-people/${id}/keywork`,
+    plans: (id) => `/young-people/${id}/plans`,
+    risk: (id) => `/young-people/${id}/risk`,
+    chronology: (id) => `/young-people/${id}/chronology`,
+    compliance: (id) => `/young-people/${id}/compliance`,
+  }
 };
 
 let youngPeopleCache = [];
@@ -61,6 +72,17 @@ let globalCounts = {
   submittedDailyNotes: 0,
   submittedIncidents: 0,
   draftHandovers: 0,
+};
+
+let currentModules = {
+  health: [],
+  education: [],
+  family: [],
+  keywork: [],
+  plans: [],
+  risk: [],
+  chronology: [],
+  compliance: [],
 };
 
 function escapeHtml(value) {
@@ -641,6 +663,69 @@ function renderArchive() {
   `;
 }
 
+function renderGenericModule(panelId, title, items) {
+  const panel = document.getElementById(panelId);
+
+  if (!Array.isArray(items)) {
+    panel.innerHTML = `<div class="error-state">${escapeHtml(title)} endpoint returned an unexpected format.</div>`;
+    return;
+  }
+
+  if (!items.length) {
+    panel.innerHTML = `<div class="empty-state">No ${escapeHtml(title.toLowerCase())} records found.</div>`;
+    return;
+  }
+
+  panel.innerHTML = `
+    <div class="record-list">
+      ${items.map((item, index) => {
+        const itemTitle =
+          item.title ||
+          item.name ||
+          item.topic ||
+          item.type ||
+          item.category ||
+          item.event_type ||
+          `${title} record ${index + 1}`;
+
+        const dateValue =
+          item.date ||
+          item.recorded_at ||
+          item.created_at ||
+          item.updated_at ||
+          item.session_date ||
+          item.review_date ||
+          item.event_date ||
+          item.contact_date ||
+          item.assessment_date;
+
+        const summary =
+          item.summary ||
+          item.description ||
+          item.narrative ||
+          item.details ||
+          item.notes ||
+          item.outcome ||
+          item.status ||
+          JSON.stringify(item, null, 2);
+
+        return `
+          <div class="record-card">
+            <div class="record-card-header">
+              <div>
+                <div class="record-title">${escapeHtml(itemTitle)}</div>
+                <div class="record-meta">${escapeHtml(dateValue ? formatDateTime(dateValue) : "No date recorded")}</div>
+              </div>
+              <span class="badge badge-neutral">${escapeHtml(item.status || item.workflow_status || title)}</span>
+            </div>
+            <div class="record-body">${escapeHtml(summary)}</div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
 function renderManagementQueue() {
   const panel = document.getElementById("managementPanel");
 
@@ -794,28 +879,19 @@ async function buildGlobalManagementQueue() {
       dailyItems
         .filter((item) => (item.workflow_status || "").toLowerCase() === "submitted")
         .forEach((item) => {
-          result.dailyNotes.push({
-            ...item,
-            young_person_name: fullName(yp),
-          });
+          result.dailyNotes.push({ ...item, young_person_name: fullName(yp) });
         });
 
       incidentItems
         .filter((item) => (item.workflow_status || "").toLowerCase() === "submitted")
         .forEach((item) => {
-          result.incidents.push({
-            ...item,
-            young_person_name: fullName(yp),
-          });
+          result.incidents.push({ ...item, young_person_name: fullName(yp) });
         });
 
       handoverItems
         .filter((item) => (item.status || "").toLowerCase() === "draft")
         .forEach((item) => {
-          result.handovers.push({
-            ...item,
-            young_person_name: fullName(yp),
-          });
+          result.handovers.push({ ...item, young_person_name: fullName(yp) });
         });
     } catch (error) {
       console.error(`Queue load failed for YP ${yp.id}`, error);
@@ -841,6 +917,37 @@ async function buildGlobalManagementQueue() {
   globalCounts = result.counts;
   renderManagementQueue();
   renderDashboardOverview();
+}
+
+function normaliseModuleResponse(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.records)) return data.records;
+  if (Array.isArray(data?.results)) return data.results;
+  if (data && typeof data === "object") return [data];
+  return [];
+}
+
+async function loadExtraModules(youngPersonId) {
+  const moduleNames = Object.keys(ENDPOINTS.modules);
+
+  await Promise.all(moduleNames.map(async (moduleName) => {
+    const panelId = `${moduleName}Panel`;
+    setLoading(panelId, `Loading ${moduleName}...`);
+
+    try {
+      const data = await fetchJson(ENDPOINTS.modules[moduleName](youngPersonId));
+      const items = normaliseModuleResponse(data);
+      currentModules[moduleName] = items;
+      renderGenericModule(panelId, moduleName.charAt(0).toUpperCase() + moduleName.slice(1), items);
+    } catch (error) {
+      currentModules[moduleName] = [];
+      setError(
+        panelId,
+        `${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)} endpoint not available or returned an error.`
+      );
+    }
+  }));
 }
 
 async function loadYoungPeople() {
@@ -904,6 +1011,8 @@ async function selectYoungPerson(id) {
     renderHandover(currentHandover);
     renderArchive();
     renderDashboardOverview();
+
+    await loadExtraModules(id);
   } catch (error) {
     setError("profilePanel", error.message || "Unable to load records.");
     setError("sideProfilePanel", error.message || "Unable to load records.");
