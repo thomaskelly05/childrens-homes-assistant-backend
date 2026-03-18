@@ -26,8 +26,8 @@
         </div>
 
         <div class="sidebar-actions">
-          <button id="refreshBtn" class="btn btn-primary btn-full">Refresh</button>
-          <button id="logoutBtn" class="btn btn-ghost btn-full">Logout</button>
+          <button id="refreshBtn" class="btn btn-primary btn-full" type="button">Refresh</button>
+          <button id="logoutBtn" class="btn btn-ghost btn-full" type="button">Logout</button>
         </div>
       </div>
     </aside>
@@ -38,7 +38,9 @@
           <div>
             <div class="workspace-kicker">Residential Children’s Homes Operating System</div>
             <h2 id="pageTitle">Home</h2>
-            <p id="pageSubtitle">Therapeutic recording, oversight, compliance and inspection readiness.</p>
+            <p id="pageSubtitle">
+              Therapeutic recording, oversight, compliance and inspection readiness.
+            </p>
           </div>
 
           <div id="globalActions" class="header-actions"></div>
@@ -48,7 +50,9 @@
           <div class="context-left">
             <div class="field field-compact yp-select-field">
               <label for="youngPersonSelect">Young person</label>
-              <select id="youngPersonSelect"></select>
+              <select id="youngPersonSelect">
+                <option value="">Loading young people…</option>
+              </select>
             </div>
 
             <div class="hero-block">
@@ -74,17 +78,19 @@
     </main>
   </div>
 
-  <div class="modal hidden modal-fullscreen" id="appModal">
+  <div class="modal hidden modal-fullscreen" id="appModal" aria-hidden="true">
     <div class="modal-card modal-card-full">
       <div class="modal-header">
         <div>
-          <div class="workspace-kicker" id="modalKicker">Workspace</div>
-          <h3 id="modalTitle">Modal</h3>
+          <div class="workspace-kicker" id="modalKicker">Record editor</div>
+          <h3 id="modalTitle">Editor</h3>
         </div>
+
         <div class="header-actions">
-          <button class="btn btn-ghost" id="closeModalBtn">Close</button>
+          <button class="btn btn-ghost" id="closeModalBtn" type="button">Close</button>
         </div>
       </div>
+
       <div class="modal-body modal-body-full">
         <div id="modalContent"></div>
         <div id="modalStatus" class="status-text"></div>
