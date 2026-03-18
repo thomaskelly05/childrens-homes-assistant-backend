@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Children’s Home OS</title>
+  <title>Home OS</title>
   <link rel="stylesheet" href="css/young-people-shell.css">
 </head>
 <body>
@@ -11,28 +11,42 @@
 
   <!-- Sidebar -->
   <aside class="sidebar">
-    <h2>🏡 Home OS</h2>
-    <nav>
-      <button onclick="loadDashboard()">Shift</button>
-      <button onclick="loadYoungPeople()">Young People</button>
-      <button onclick="loadHandover()">Handover</button>
-    </nav>
+    <div class="logo">🏡 Home OS</div>
+
+    <button onclick="loadDashboard()">Shift</button>
+    <button onclick="loadYoungPeople()">Young People</button>
+    <button onclick="loadHandover()">Handover</button>
   </aside>
 
-  <!-- Main Content -->
+  <!-- Main -->
   <main class="main">
 
-    <!-- Header -->
-    <header class="header">
-      <h1 id="pageTitle">Shift Dashboard</h1>
-      <div class="actions">
-        <button onclick="openNoteModal()">➕ Note</button>
-        <button onclick="openIncidentModal()">⚠️ Incident</button>
-      </div>
-    </header>
+    <!-- Top Bar -->
+    <div class="topbar">
+      <h1 id="pageTitle">Shift</h1>
 
-    <!-- Content -->
-    <section id="content" class="content"></section>
+      <div class="top-actions">
+        <button onclick="openNoteModal()">+ Note</button>
+        <button onclick="openIncidentModal()">+ Incident</button>
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid">
+
+      <!-- Left: Young People -->
+      <div class="panel">
+        <h3>Young People</h3>
+        <div id="youngPeopleList"></div>
+      </div>
+
+      <!-- Right: Activity -->
+      <div class="panel">
+        <h3>Activity</h3>
+        <div id="activityFeed"></div>
+      </div>
+
+    </div>
 
   </main>
 
@@ -41,24 +55,22 @@
 <!-- NOTE MODAL -->
 <div id="noteModal" class="modal hidden">
   <div class="modal-content">
-    <h2>New Daily Note</h2>
-    <textarea id="noteInput" placeholder="Type what happened..."></textarea>
-    <button onclick="generateAINote()">✨ Improve with AI</button>
-    <textarea id="noteOutput" placeholder="AI output..."></textarea>
+    <h2>Write Note</h2>
+    <textarea id="noteInput"></textarea>
+    <button onclick="runAINote()">Improve with AI</button>
+    <textarea id="noteOutput"></textarea>
     <button onclick="saveNote()">Save</button>
-    <button onclick="closeModal('noteModal')">Cancel</button>
   </div>
 </div>
 
 <!-- INCIDENT MODAL -->
 <div id="incidentModal" class="modal hidden">
   <div class="modal-content">
-    <h2>New Incident</h2>
-    <textarea id="incidentInput" placeholder="Describe incident..."></textarea>
-    <button onclick="generateAIIncident()">✨ Structure with AI</button>
+    <h2>Log Incident</h2>
+    <textarea id="incidentInput"></textarea>
+    <button onclick="runAIIncident()">Structure with AI</button>
     <textarea id="incidentOutput"></textarea>
     <button onclick="saveIncident()">Save</button>
-    <button onclick="closeModal('incidentModal')">Cancel</button>
   </div>
 </div>
 
