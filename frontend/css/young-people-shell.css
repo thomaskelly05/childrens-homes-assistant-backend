@@ -437,6 +437,7 @@ body {
   display: flex;
   gap: 10px;
   margin: 10px 0 16px;
+  flex-wrap: wrap;
 }
 
 .actions-row.right {
