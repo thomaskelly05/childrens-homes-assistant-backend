@@ -9,9 +9,22 @@ const state = {
   command: null,
   profile: null,
   cache: {},
+  workflowViews: {
+    daily: "draft",
+    incidents: "draft",
+    keywork: "draft",
+    plans: "draft",
+    risk: "active"
+  },
   modal: {
     key: null,
-    recordId: null
+    recordId: null,
+    draftId: null,
+    isNew: false,
+    autosaveTimer: null,
+    autosaveState: "Ready",
+    draftCreated: false,
+    hasChanges: false
   }
 };
 
@@ -33,6 +46,7 @@ const UI = {
   youngPersonSelect: $("youngPersonSelect"),
   modal: $("appModal"),
   modalTitle: $("modalTitle"),
+  modalKicker: $("modalKicker"),
   modalContent: $("modalContent"),
   modalStatus: $("modalStatus")
 };
@@ -44,7 +58,7 @@ const CONFIG = {
       subtitle: "Therapeutic recording, oversight, compliance and inspection readiness.",
       actions: [
         { id: "refreshCommand", label: "Refresh Command Centre", kind: "ghost" },
-        { id: "openAiInfo", label: "AI Notes", kind: "primary" }
+        { id: "openAiInfo", label: "AI Writing Support", kind: "primary" }
       ]
     },
     youngPeople: {
@@ -77,13 +91,6 @@ const CONFIG = {
     inspection: {
       label: "Inspection",
       subtitle: "Inspection pack and evidence overview."
-    },
-    operations: {
-      label: "Operations",
-      subtitle: "Rostering and home operations.",
-      secondary: {
-        rostering: { label: "Rostering" }
-      }
     }
   },
 
@@ -133,8 +140,12 @@ const CONFIG = {
 
     keywork: {
       list: (id) => `/young-people/${id}/keywork`,
-      submit: (id) => `/young-people/${id}/keywork/${id}/submit`,
-      archive: (id) => `/young-people/${id}/keywork/${id}/archive`
+      create: "/young-people/keywork",
+      update: (id) => `/young-people/keywork/${id}`,
+      get: (id) => `/young-people/keywork/${id}`,
+      submit: (id) => `/young-people/keywork/${id}/submit`,
+      approve: (id) => `/young-people/keywork/${id}/approve`,
+      archive: (id) => `/young-people/keywork/${id}/archive`
     },
 
     plans: {
@@ -174,7 +185,8 @@ const CONFIG = {
     },
 
     ai: {
-      history: "/ai-notes/history"
+      history: "/ai-notes/history",
+      edit: "/ai-notes/edit"
     },
 
     inspection: (id) => `/inspection-pack/young-person/${id}`,
@@ -184,25 +196,58 @@ const CONFIG = {
 
 const FORM_SCHEMAS = {
   daily: {
-    title: "Daily Note",
+    title: "Daily Care Record",
+    kicker: "Quality and purpose of care • Child's views • Health and wellbeing • Relationships",
+    intro:
+      "Use this record to capture the young person's day with clarity, warmth and professional accuracy. Record lived experience, regulation, routine, relationships and next caring actions.",
+    standards: ["Quality of care", "Views, wishes and feelings", "Health and wellbeing", "Positive relationships", "Care planning"],
     load: CONFIG.endpoints.daily.get,
     save: {
       create: CONFIG.endpoints.daily.create,
-      update: CONFIG.endpoints.daily.update
+      update: CONFIG.endpoints.daily.update,
+      submit: CONFIG.endpoints.daily.submit
     },
-    fields: [
-      { name: "note_date", label: "Note date", type: "date" },
-      { name: "shift_type", label: "Shift type" },
-      { name: "mood", label: "Mood" },
-      { name: "presentation", label: "Presentation", type: "textarea" },
-      { name: "activities", label: "Activities", type: "textarea" },
-      { name: "education_update", label: "Education update", type: "textarea" },
-      { name: "health_update", label: "Health update", type: "textarea" },
-      { name: "family_update", label: "Family update", type: "textarea" },
-      { name: "behaviour_update", label: "Behaviour update", type: "textarea" },
-      { name: "young_person_voice", label: "Young person’s voice", type: "textarea" },
-      { name: "positives", label: "Positives", type: "textarea" },
-      { name: "actions_required", label: "Actions required", type: "textarea" }
+    sections: [
+      {
+        title: "Record context",
+        helper: "Start with the essentials for the shift record.",
+        columns: 2,
+        fields: [
+          { name: "note_date", label: "Record date", type: "date" },
+          { name: "shift_type", label: "Shift type", type: "select", options: ["day", "evening", "night", "waking_night", "sleep_in", "handover"] },
+          { name: "mood", label: "Overall mood / presentation" }
+        ]
+      },
+      {
+        title: "Daily lived experience",
+        helper: "Describe how the day felt and what took place in ordinary daily living.",
+        columns: 1,
+        fields: [
+          { name: "presentation", label: "Presentation and emotional wellbeing", type: "textarea", ai: true },
+          { name: "activities", label: "Daily living, activities and engagement", type: "textarea", ai: true }
+        ]
+      },
+      {
+        title: "Progress and wellbeing",
+        helper: "Capture relevant progress, health, education and family information.",
+        columns: 1,
+        fields: [
+          { name: "education_update", label: "Education / structure / participation", type: "textarea", ai: true },
+          { name: "health_update", label: "Health and wellbeing", type: "textarea", ai: true },
+          { name: "family_update", label: "Family, contact and relationships", type: "textarea", ai: true }
+        ]
+      },
+      {
+        title: "Reflection and response",
+        helper: "Record behaviour, the child's voice, strengths and next actions.",
+        columns: 1,
+        fields: [
+          { name: "behaviour_update", label: "Behaviour, regulation and staff response", type: "textarea", ai: true },
+          { name: "young_person_voice", label: "Child's voice", type: "textarea", ai: true },
+          { name: "positives", label: "Strengths, positives and progress", type: "textarea", ai: true },
+          { name: "actions_required", label: "Next caring actions / handover needs", type: "textarea", ai: true }
+        ]
+      }
     ],
     buildPayload: () => ({
       young_person_id: state.selectedYoungPersonId,
@@ -217,56 +262,78 @@ const FORM_SCHEMAS = {
       behaviour_update: value("behaviour_update"),
       young_person_voice: value("young_person_voice"),
       positives: value("positives"),
-      actions_required: value("actions_required")
+      actions_required: value("actions_required"),
+      workflow_status: "draft"
     })
   },
 
   incident: {
-    title: "Incident",
+    title: "Significant Event Record",
+    kicker: "Protection of children • Positive relationships • Leadership and management",
+    intro:
+      "Use this record for significant incidents or safeguarding-related events. Be factual, proportionate and clear about context, response and follow-up.",
+    standards: ["Protection of children", "Positive relationships", "Leadership and management", "Care planning"],
     load: CONFIG.endpoints.incidents.get,
     save: {
       create: CONFIG.endpoints.incidents.create,
-      update: CONFIG.endpoints.incidents.update
+      update: CONFIG.endpoints.incidents.update,
+      submit: CONFIG.endpoints.incidents.submit
     },
-    fields: [
-      { name: "occurred_at", label: "Occurred at", type: "datetime-local" },
+    sections: [
       {
-        name: "incident_type",
-        label: "Incident type",
-        type: "select",
-        options: [
-          "missing_from_placement",
-          "physical_aggression",
-          "verbal_aggression",
-          "self_harm_concern",
-          "safeguarding_concern",
-          "absconding",
-          "property_damage",
-          "bullying",
-          "substance_misuse",
-          "relationship_incident",
-          "health_incident",
-          "medication_error",
-          "physical_intervention",
-          "restraint",
-          "other"
+        title: "Event details",
+        helper: "Record the essential facts of the event.",
+        columns: 2,
+        fields: [
+          { name: "occurred_at", label: "Occurred at", type: "datetime-local" },
+          {
+            name: "incident_type",
+            label: "Event type",
+            type: "select",
+            options: [
+              "missing_from_placement",
+              "physical_aggression",
+              "verbal_aggression",
+              "self_harm_concern",
+              "safeguarding_concern",
+              "absconding",
+              "property_damage",
+              "bullying",
+              "substance_misuse",
+              "relationship_incident",
+              "health_incident",
+              "medication_error",
+              "physical_intervention",
+              "restraint",
+              "other"
+            ]
+          },
+          { name: "severity", label: "Level of concern", type: "select", options: ["low", "medium", "high", "critical"] },
+          { name: "location", label: "Location" },
+          { name: "staff_id", label: "Staff ID", type: "number" }
         ]
       },
       {
-        name: "severity",
-        label: "Severity",
-        type: "select",
-        options: ["low", "medium", "high", "critical"]
+        title: "What happened",
+        helper: "Describe the event, context and presentation in clear professional language.",
+        columns: 1,
+        fields: [
+          { name: "description", label: "What happened", type: "textarea", ai: true },
+          { name: "antecedent", label: "Context and antecedents", type: "textarea", ai: true },
+          { name: "presentation", label: "Child presentation and regulation", type: "textarea", ai: true }
+        ]
       },
-      { name: "location", label: "Location" },
-      { name: "staff_id", label: "Staff ID", type: "number" },
-      { name: "description", label: "Description", type: "textarea" },
-      { name: "antecedent", label: "Antecedent", type: "textarea" },
-      { name: "presentation", label: "Presentation", type: "textarea" },
-      { name: "staff_response", label: "Staff response", type: "textarea" },
-      { name: "trauma_informed_formulation", label: "Trauma-informed formulation", type: "textarea" },
-      { name: "child_voice", label: "Child voice", type: "textarea" },
-      { name: "restorative_follow_up", label: "Restorative follow-up", type: "textarea" }
+      {
+        title: "Response and follow-up",
+        helper: "Record relational response, child voice and restorative follow-up.",
+        columns: 1,
+        fields: [
+          { name: "staff_response", label: "Relational / staff response", type: "textarea", ai: true },
+          { name: "trauma_informed_formulation", label: "Therapeutic understanding / formulation", type: "textarea", ai: true },
+          { name: "child_voice", label: "Child's voice", type: "textarea", ai: true },
+          { name: "restorative_follow_up", label: "Restorative follow-up and next protective actions", type: "textarea", ai: true }
+        ]
+      }
     ],
     buildPayload: () => ({
       young_person_id: state.selectedYoungPersonId,
@@ -281,35 +348,124 @@ const FORM_SCHEMAS = {
       trauma_informed_formulation: value("trauma_informed_formulation"),
       child_voice: value("child_voice"),
       restorative_follow_up: value("restorative_follow_up"),
-      staff_id: numberOrNull(value("staff_id"))
+      staff_id: numberOrNull(value("staff_id")),
+      manager_review_status: "draft"
+    })
+  },
+
+  keywork: {
+    title: "Direct Work Record",
+    kicker: "Views, wishes and feelings • Positive relationships • Care planning",
+    intro:
+      "Use this record for keywork and direct work sessions. Capture purpose, the child's voice, your reflection and the agreed next steps.",
+    standards: ["Views, wishes and feelings", "Positive relationships", "Care planning", "Enjoyment and achievement"],
+    load: CONFIG.endpoints.keywork.get,
+    save: {
+      create: CONFIG.endpoints.keywork.create,
+      update: CONFIG.endpoints.keywork.update,
+      submit: CONFIG.endpoints.keywork.submit
+    },
+    sections: [
+      {
+        title: "Session context",
+        helper: "Set out the basic details for the direct work session.",
+        columns: 2,
+        fields: [
+          { name: "session_date", label: "Session date", type: "date" },
+          { name: "worker_id", label: "Worker ID", type: "number" },
+          { name: "topic", label: "Focus / topic" },
+          { name: "next_session_date", label: "Next session date", type: "date" }
+        ]
+      },
+      {
+        title: "Purpose and child voice",
+        helper: "What was the purpose of the session and what did the child communicate?",
+        columns: 1,
+        fields: [
+          { name: "purpose", label: "Purpose", type: "textarea", ai: true },
+          { name: "summary", label: "Session summary", type: "textarea", ai: true },
+          { name: "child_voice", label: "Child's voice", type: "textarea", ai: true }
+        ]
+      },
+      {
+        title: "Reflection and continuity",
+        helper: "Record understanding, actions and continuity planning.",
+        columns: 1,
+        fields: [
+          { name: "reflective_analysis", label: "Reflective analysis / understanding", type: "textarea", ai: true },
+          { name: "actions_agreed", label: "Actions agreed", type: "textarea", ai: true }
+        ]
+      }
+    ],
+    buildPayload: () => ({
+      young_person_id: state.selectedYoungPersonId,
+      session_date: value("session_date"),
+      worker_id: numberOrNull(value("worker_id")),
+      topic: value("topic"),
+      purpose: value("purpose"),
+      summary: value("summary"),
+      child_voice: value("child_voice"),
+      reflective_analysis: value("reflective_analysis"),
+      actions_agreed: value("actions_agreed"),
+      next_session_date: value("next_session_date"),
+      status: "draft"
     })
   },
 
   plan: {
-    title: "Support Plan",
+    title: "Care and Support Plan",
+    kicker: "Quality and purpose of care • Care planning • Positive relationships",
+    intro:
+      "Use this plan to describe a clear need, the child's views, therapeutic understanding and the practical guidance staff should follow consistently.",
+    standards: ["Quality of care", "Care planning", "Positive relationships", "Protection of children"],
     load: CONFIG.endpoints.plans.get,
     save: {
       create: CONFIG.endpoints.plans.create,
-      update: CONFIG.endpoints.plans.update
+      update: CONFIG.endpoints.plans.update,
+      submit: CONFIG.endpoints.plans.submit
     },
-    fields: [
-      { name: "plan_type", label: "Plan type", value: "support_plan" },
-      { name: "title", label: "Title" },
-      { name: "start_date", label: "Start date", type: "date" },
-      { name: "review_date", label: "Review date", type: "date" },
-      { name: "owner_id", label: "Owner ID", type: "number" },
-      { name: "summary", label: "Summary", type: "textarea" },
-      { name: "child_voice", label: "Child voice", type: "textarea" },
-      { name: "formulation", label: "Formulation / presenting need", type: "textarea" },
-      { name: "staff_guidance", label: "Staff guidance / proactive strategies", type: "textarea" },
-      { name: "pace_guidance", label: "PACE guidance", type: "textarea" },
-      { name: "triggers", label: "Triggers", type: "textarea" },
-      { name: "protective_factors", label: "Protective factors", type: "textarea" }
+    sections: [
+      {
+        title: "Plan details",
+        helper: "Set ownership, review date and plan purpose.",
+        columns: 2,
+        fields: [
+          { name: "plan_type", label: "Plan type", value: "support_plan" },
+          { name: "title", label: "Plan title" },
+          { name: "start_date", label: "Start date", type: "date" },
+          { name: "review_date", label: "Review date", type: "date" },
+          { name: "owner_id", label: "Owner ID", type: "number" }
+        ]
+      },
+      {
+        title: "Need and understanding",
+        helper: "Describe the identified need and the child's own views.",
+        columns: 1,
+        fields: [
+          { name: "summary", label: "Summary of need", type: "textarea", ai: true },
+          { name: "child_voice", label: "Child's voice", type: "textarea", ai: true },
+          { name: "formulation", label: "Therapeutic understanding / formulation", type: "textarea", ai: true }
+        ]
+      },
+      {
+        title: "Support guidance",
+        helper: "Set out what helps, how staff should respond and what to notice.",
+        columns: 1,
+        fields: [
+          { name: "staff_guidance", label: "Staff guidance / proactive strategies", type: "textarea", ai: true },
+          { name: "pace_guidance", label: "PACE / relational guidance", type: "textarea", ai: true },
+          { name: "triggers", label: "Known triggers / indicators of stress", type: "textarea", ai: true },
+          { name: "protective_factors", label: "Protective factors / strengths", type: "textarea", ai: true }
+        ]
+      }
     ],
     buildPayload: () => ({
       young_person_id: state.selectedYoungPersonId,
       plan_type: value("plan_type") || "support_plan",
       title: value("title"),
+      start_date: value("start_date"),
+      review_date: value("review_date"),
+      owner_id: numberOrNull(value("owner_id")),
       summary: value("summary"),
       child_voice: value("child_voice"),
       formulation: value("formulation"),
@@ -317,51 +473,68 @@ const FORM_SCHEMAS = {
       pace_guidance: value("pace_guidance"),
       triggers: value("triggers"),
       protective_factors: value("protective_factors"),
-      start_date: value("start_date"),
-      review_date: value("review_date"),
-      owner_id: numberOrNull(value("owner_id")),
       status: "draft",
       approval_status: "draft"
     })
   },
 
   risk: {
-    title: "Risk Assessment",
+    title: "Safer Care and Risk Plan",
+    kicker: "Protection of children • Care planning • Leadership and management",
+    intro:
+      "Use this record to identify risk clearly, explain what to notice and set out consistent safeguarding and relational responses.",
+    standards: ["Protection of children", "Care planning", "Leadership and management"],
     load: CONFIG.endpoints.risk.get,
     save: {
       create: CONFIG.endpoints.risk.create,
-      update: CONFIG.endpoints.risk.update
+      update: CONFIG.endpoints.risk.update,
+      submit: null
     },
-    fields: [
-      { name: "category", label: "Category" },
-      { name: "title", label: "Title" },
+    sections: [
       {
-        name: "severity",
-        label: "Severity",
-        type: "select",
-        options: ["low", "medium", "high", "critical"]
+        title: "Risk details",
+        helper: "Set out the category, severity and review information.",
+        columns: 2,
+        fields: [
+          { name: "category", label: "Risk category" },
+          { name: "title", label: "Risk title" },
+          { name: "severity", label: "Severity", type: "select", options: ["low", "medium", "high", "critical"] },
+          { name: "likelihood", label: "Likelihood", type: "select", options: ["low", "medium", "high"] },
+          { name: "review_date", label: "Review date", type: "date" },
+          { name: "owner_id", label: "Owner ID", type: "number" }
+        ]
       },
       {
-        name: "likelihood",
-        label: "Likelihood",
-        type: "select",
-        options: ["low", "medium", "high"]
+        title: "Risk picture",
+        helper: "Describe the concern, triggers and early warning signs.",
+        columns: 1,
+        fields: [
+          { name: "concern_summary", label: "Presenting concern", type: "textarea", ai: true },
+          { name: "known_triggers", label: "Known triggers and vulnerabilities", type: "textarea", ai: true },
+          { name: "early_warning_signs", label: "Early warning signs", type: "textarea", ai: true },
+          { name: "contextual_factors", label: "Contextual factors", type: "textarea", ai: true }
+        ]
       },
-      { name: "review_date", label: "Review date", type: "date" },
-      { name: "owner_id", label: "Owner ID", type: "number" },
-      { name: "concern_summary", label: "Concern summary", type: "textarea" },
-      { name: "known_triggers", label: "Known triggers", type: "textarea" },
-      { name: "early_warning_signs", label: "Early warning signs", type: "textarea" },
-      { name: "contextual_factors", label: "Contextual factors", type: "textarea" },
-      { name: "current_controls", label: "Current controls", type: "textarea" },
-      { name: "deescalation_strategies", label: "De-escalation strategies", type: "textarea" },
-      { name: "response_actions", label: "Response actions", type: "textarea" },
-      { name: "child_views", label: "Child views", type: "textarea" }
+      {
+        title: "Protective planning",
+        helper: "State the current safeguards, de-escalation approach and child views.",
+        columns: 1,
+        fields: [
+          { name: "current_controls", label: "Current safeguards / controls", type: "textarea", ai: true },
+          { name: "deescalation_strategies", label: "Relational and de-escalation responses", type: "textarea", ai: true },
+          { name: "response_actions", label: "Response actions / next protective steps", type: "textarea", ai: true },
+          { name: "child_views", label: "Child's views and protective factors", type: "textarea", ai: true }
+        ]
+      }
     ],
     buildPayload: () => ({
       young_person_id: state.selectedYoungPersonId,
       category: value("category"),
       title: value("title"),
+      severity: value("severity"),
+      likelihood: value("likelihood"),
+      review_date: value("review_date"),
+      owner_id: numberOrNull(value("owner_id")),
       concern_summary: value("concern_summary"),
       known_triggers: value("known_triggers"),
       early_warning_signs: value("early_warning_signs"),
@@ -370,11 +543,8 @@ const FORM_SCHEMAS = {
       deescalation_strategies: value("deescalation_strategies"),
       response_actions: value("response_actions"),
       child_views: value("child_views"),
-      severity: value("severity"),
-      likelihood: value("likelihood"),
-      review_date: value("review_date"),
-      owner_id: numberOrNull(value("owner_id")),
-      status: "active"
+      status: "active",
+      approval_status: "not_required"
     })
   }
 };
@@ -492,8 +662,8 @@ function value(fieldName) {
 function badgeClass(value) {
   const v = String(value || "").toLowerCase();
   if (v.includes("critical") || v.includes("high") || v.includes("overdue")) return "badge-danger";
-  if (v.includes("medium") || v.includes("returned") || v.includes("submitted") || v.includes("due_soon")) return "badge-warning";
-  if (v.includes("approved") || v.includes("active") || v.includes("ok")) return "badge-success";
+  if (v.includes("medium") || v.includes("returned") || v.includes("submitted") || v.includes("pending") || v.includes("due_soon")) return "badge-warning";
+  if (v.includes("approved") || v.includes("active") || v.includes("ok") || v.includes("recorded")) return "badge-success";
   return "badge-neutral";
 }
 
@@ -604,6 +774,21 @@ function renderCollection(title, kicker, items, mapFn, actionBtn = "") {
         </div>
       </div>
     </section>
+  `;
+}
+
+function renderStatusTabs(key, current, tabs) {
+  return `
+    <div class="workflow-tabs">
+      ${tabs.map((tab) => `
+        <button
+          class="workflow-tab ${current === tab.value ? "active" : ""}"
+          onclick="App.setWorkflowView('${key}', '${tab.value}')"
+        >
+          ${escapeHtml(tab.label)} ${typeof tab.count === "number" ? `(${tab.count})` : ""}
+        </button>
+      `).join("")}
+    </div>
   `;
 }
 
@@ -741,7 +926,7 @@ function selectedYoungPeopleSummary() {
 
   const submittedCount =
     daily.filter((x) => String(x.workflow_status || "").toLowerCase() === "submitted").length +
-    incidents.filter((x) => String(x.workflow_status || "").toLowerCase() === "submitted").length +
+    incidents.filter((x) => ["submitted", "pending"].includes(String(x.workflow_status || x.manager_review_status || "").toLowerCase())).length +
     plans.filter((x) => String(x.approval_status || "").toLowerCase() === "submitted").length;
 
   return `
@@ -773,25 +958,25 @@ function managementQueueHome() {
   const daily = safeArray(state.cache?.daily?.items)
     .filter((x) => String(x.workflow_status || "").toLowerCase() === "submitted")
     .map((x) => ({
-      title: x.title || "Daily note",
+      title: x.title || "Daily Care Record",
       meta: `${fmtDate(x.note_date)} • ${x.shift_type || "shift"}`,
-      body: x.summary || x.presentation || "Submitted daily note"
+      body: x.summary || x.presentation || "Submitted daily record"
     }));
 
   const incidents = safeArray(state.cache?.incidents?.items)
-    .filter((x) => String(x.workflow_status || "").toLowerCase() === "submitted")
+    .filter((x) => ["submitted", "pending"].includes(String(x.workflow_status || x.manager_review_status || "").toLowerCase()))
     .map((x) => ({
-      title: x.title || "Incident",
+      title: x.title || "Significant Event Record",
       meta: `${fmtDateTime(x.occurred_at)} • ${x.severity || "medium"}`,
-      body: x.description || "Submitted incident"
+      body: x.description || "Submitted significant event"
     }));
 
   const plans = safeArray(state.cache?.plans?.items)
     .filter((x) => String(x.approval_status || "").toLowerCase() === "submitted")
     .map((x) => ({
-      title: x.title || "Support plan",
+      title: x.title || "Care and Support Plan",
       meta: `${x.plan_type || "plan"} • review ${fmtDate(x.review_due_at)}`,
-      body: x.summary || x.formulation || "Submitted support plan"
+      body: x.summary || x.formulation || "Submitted plan"
     }));
 
   const queue = [...daily, ...incidents, ...plans].slice(0, 8);
@@ -802,22 +987,18 @@ function managementQueueHome() {
 
   return `
     <div class="records-wrap">
-      ${queue
-        .map(
-          (q) => `
-            <article class="record-card">
-              <div class="record-card-header">
-                <div>
-                  <div class="record-title">${escapeHtml(q.title)}</div>
-                  <div class="record-meta">${escapeHtml(q.meta)}</div>
-                </div>
-                <span class="badge badge-warning">Review due</span>
-              </div>
-              <div class="record-body">${escapeHtml(q.body)}</div>
-            </article>
-          `
-        )
-        .join("")}
+      ${queue.map((q) => `
+        <article class="record-card">
+          <div class="record-card-header">
+            <div>
+              <div class="record-title">${escapeHtml(q.title)}</div>
+              <div class="record-meta">${escapeHtml(q.meta)}</div>
+            </div>
+            <span class="badge badge-warning">Review due</span>
+          </div>
+          <div class="record-body">${escapeHtml(q.body)}</div>
+        </article>
+      `).join("")}
     </div>
   `;
 }
@@ -1005,58 +1186,134 @@ function renderOverview() {
   `;
 }
 
+/* ---------- workflow filters ---------- */
+
+function splitDailyRecords(items = []) {
+  return {
+    draft: items.filter((x) => ["draft", "returned", ""].includes(String(x.workflow_status || "").toLowerCase())),
+    submitted: items.filter((x) => String(x.workflow_status || "").toLowerCase() === "submitted"),
+    approved: items.filter((x) => ["approved", "reviewed", "completed"].includes(String(x.workflow_status || "").toLowerCase()))
+  };
+}
+
+function splitIncidentRecords(items = []) {
+  return {
+    draft: items.filter((x) => ["draft", "returned", ""].includes(String(x.workflow_status || x.manager_review_status || "").toLowerCase())),
+    submitted: items.filter((x) => ["submitted", "pending"].includes(String(x.workflow_status || x.manager_review_status || "").toLowerCase())),
+    approved: items.filter((x) => ["approved", "reviewed", "closed"].includes(String(x.workflow_status || x.manager_review_status || "").toLowerCase()))
+  };
+}
+
+function splitKeyworkRecords(items = []) {
+  return {
+    draft: items.filter((x) => ["draft", "returned", ""].includes(String(x.workflow_status || x.status || "").toLowerCase())),
+    submitted: items.filter((x) => String(x.workflow_status || x.status || "").toLowerCase() === "submitted"),
+    approved: items.filter((x) => ["approved"].includes(String(x.workflow_status || x.status || "").toLowerCase()))
+  };
+}
+
+function splitPlanRecords(items = []) {
+  return {
+    draft: items.filter((x) => ["draft", "returned", ""].includes(String(x.approval_status || x.status || "").toLowerCase())),
+    submitted: items.filter((x) => String(x.approval_status || "").toLowerCase() === "submitted"),
+    approved: items.filter((x) => ["approved", "active"].includes(String(x.approval_status || x.status || "").toLowerCase()))
+  };
+}
+
+function splitRiskRecords(items = []) {
+  return {
+    active: items.filter((x) => !["archived", "completed"].includes(String(x.status || "").toLowerCase()) && !x.archived),
+    archived: items.filter((x) => ["archived", "completed"].includes(String(x.status || "").toLowerCase()) || x.archived)
+  };
+}
+
+/* ---------- main module renders ---------- */
+
 function renderRecording() {
-  const daily = state.cache.daily?.items || [];
-  const incidents = state.cache.incidents?.items || [];
-  const handover = state.cache.handover || [];
+  const dailySplit = splitDailyRecords(state.cache.daily?.items || []);
+  const incidentSplit = splitIncidentRecords(state.cache.incidents?.items || []);
+  const dailyCurrent = state.workflowViews.daily;
+  const incidentCurrent = state.workflowViews.incidents;
 
   return `
     <div class="workspace-grid split-grid">
-      ${renderCollection(
-        "Daily notes",
-        "Daily living",
-        daily,
-        (n) =>
-          card(
-            n.title || "Daily note",
-            `${fmtDate(n.note_date)} • ${n.shift_type || "shift"} • ${n.workflow_status || "draft"}`,
-            n.summary || n.presentation || "Daily note recorded",
-            `
-              <button class="btn btn-secondary" onclick="App.openForm('daily', ${n.id})">Edit</button>
-              <button class="btn btn-ghost" onclick="App.submitDaily(${n.id})">Submit</button>
-              <button class="btn btn-ghost" onclick="App.archiveDaily(${n.id})">Archive</button>
-            `
-          ),
-        `<button class="btn btn-primary" onclick="App.openForm('daily')">New Daily Note</button>`
-      )}
+      <section class="surface">
+        <div class="surface-header">
+          <div>
+            <div class="surface-kicker">Daily living</div>
+            <h3>Daily Care Records</h3>
+          </div>
+          <button class="btn btn-primary" onclick="App.openForm('daily')">New Daily Care Record</button>
+        </div>
+        <div class="surface-body">
+          ${renderStatusTabs("daily", dailyCurrent, [
+            { value: "draft", label: "Drafts", count: dailySplit.draft.length },
+            { value: "submitted", label: "Submitted", count: dailySplit.submitted.length },
+            { value: "approved", label: "Approved", count: dailySplit.approved.length }
+          ])}
+          <div class="records-wrap">
+            ${(dailySplit[dailyCurrent] || []).length
+              ? (dailySplit[dailyCurrent] || []).map((n) =>
+                  card(
+                    n.title || "Daily Care Record",
+                    `${fmtDate(n.note_date)} • ${n.shift_type || "shift"} • ${n.workflow_status || "draft"}`,
+                    n.summary || n.presentation || "Daily care record",
+                    `
+                      <button class="btn btn-secondary" onclick="App.openForm('daily', ${n.id})">Open</button>
+                      ${dailyCurrent === "draft" ? `<button class="btn btn-ghost" onclick="App.submitDaily(${n.id})">Submit</button>` : ""}
+                      ${dailyCurrent !== "approved" ? `<button class="btn btn-ghost" onclick="App.archiveDaily(${n.id})">Archive</button>` : ""}
+                    `
+                  )
+                ).join("")
+              : `<div class="workflow-empty">No ${escapeHtml(dailyCurrent)} daily care records.</div>`
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="surface">
+        <div class="surface-header">
+          <div>
+            <div class="surface-kicker">Protection of children</div>
+            <h3>Significant Event Records</h3>
+          </div>
+          <button class="btn btn-primary" onclick="App.openForm('incident')">New Significant Event Record</button>
+        </div>
+        <div class="surface-body">
+          ${renderStatusTabs("incidents", incidentCurrent, [
+            { value: "draft", label: "Drafts", count: incidentSplit.draft.length },
+            { value: "submitted", label: "Submitted", count: incidentSplit.submitted.length },
+            { value: "approved", label: "Approved", count: incidentSplit.approved.length }
+          ])}
+          <div class="records-wrap">
+            ${(incidentSplit[incidentCurrent] || []).length
+              ? (incidentSplit[incidentCurrent] || []).map((n) =>
+                  card(
+                    n.title || "Significant Event Record",
+                    `${fmtDateTime(n.occurred_at)} • ${n.severity || "medium"} • ${n.workflow_status || n.manager_review_status || "draft"}`,
+                    n.description || "Significant event recorded",
+                    `
+                      <button class="btn btn-secondary" onclick="App.openForm('incident', ${n.id})">Open</button>
+                      ${incidentCurrent === "draft" ? `<button class="btn btn-ghost" onclick="App.submitIncident(${n.id})">Submit</button>` : ""}
+                      ${incidentCurrent !== "approved" ? `<button class="btn btn-ghost" onclick="App.archiveIncident(${n.id})">Archive</button>` : ""}
+                    `
+                  )
+                ).join("")
+              : `<div class="workflow-empty">No ${escapeHtml(incidentCurrent)} significant event records.</div>`
+            }
+          </div>
+        </div>
+      </section>
 
       ${renderCollection(
-        "Incidents",
-        "Safeguarding",
-        incidents,
-        (n) =>
-          card(
-            n.title || "Incident",
-            `${fmtDateTime(n.occurred_at)} • ${n.severity || "medium"} • ${n.workflow_status || "draft"}`,
-            n.description || "Incident recorded",
-            `
-              <button class="btn btn-secondary" onclick="App.openForm('incident', ${n.id})">Edit</button>
-              <button class="btn btn-ghost" onclick="App.submitIncident(${n.id})">Submit</button>
-              <button class="btn btn-ghost" onclick="App.archiveIncident(${n.id})">Archive</button>
-            `
-          ),
-        `<button class="btn btn-primary" onclick="App.openForm('incident')">New Incident</button>`
-      )}
-
-      ${renderCollection(
-        "Handover",
+        "Shift Handover Summary",
         "Shift continuity",
-        handover,
+        state.cache.handover || [],
         (h) =>
           card(
-            h.title || "Handover",
+            h.title || "Shift Handover Summary",
             `${fmtDate(h.handover_date)} • ${h.shift_type || "shift"} • ${h.status || "draft"}`,
-            h.summary_text || "Handover recorded",
+            h.summary_text || "Handover summary",
             `
               <button class="btn btn-ghost" onclick="App.approveHandover(${h.id})">Approve</button>
               <button class="btn btn-ghost" onclick="App.archiveHandover(${h.id})">Archive</button>
@@ -1078,10 +1335,10 @@ function renderHealth() {
   return `
     <div class="workspace-grid split-grid">
       ${renderCollection(
-        "Health records",
+        "Health and Wellbeing Records",
         "Health",
         records,
-        (r) => card(r.title || "Health record", `${fmtDateTime(r.event_datetime)} • ${r.record_type || "record"}`, r.summary || r.outcome || "Health record")
+        (r) => card(r.title || "Health and Wellbeing Record", `${fmtDateTime(r.event_datetime)} • ${r.record_type || "record"}`, r.summary || r.outcome || "Health record")
       )}
 
       <section class="surface">
@@ -1099,14 +1356,14 @@ function renderHealth() {
       </section>
 
       ${renderCollection(
-        "Medication profiles",
+        "Medication Profiles",
         "Medication",
         medProfiles,
         (m) => card(m.medication_name || "Medication", `${m.dose || "—"} • ${m.frequency || "—"}`, m.reason || "")
       )}
 
       ${renderCollection(
-        "Medication records",
+        "Medication Records",
         "Administration",
         medRecords,
         (m) => card(m.medication_name || "Medication", `${fmtDateTime(m.scheduled_time)} • ${m.status || "recorded"}`, m.dose || "")
@@ -1123,10 +1380,10 @@ function renderEducation() {
   return `
     <div class="workspace-grid split-grid">
       ${renderCollection(
-        "Education records",
+        "Education and Participation Records",
         "Education",
         records,
-        (r) => card(r.title || "Education record", `${fmtDate(r.record_date)} • ${r.attendance_status || "attendance"}`, r.summary || r.learning_engagement || "Education record")
+        (r) => card(r.title || "Education and Participation Record", `${fmtDate(r.record_date)} • ${r.attendance_status || "attendance"}`, r.summary || r.learning_engagement || "Education update")
       )}
 
       <section class="surface">
@@ -1154,10 +1411,10 @@ function renderFamily() {
   return `
     <div class="workspace-grid split-grid">
       ${renderCollection(
-        "Family contact records",
-        "Family and relationships",
+        "Family and Important Relationships Records",
+        "Relationships",
         records,
-        (r) => card(r.title || "Family contact", `${fmtDateTime(r.contact_datetime)} • ${r.contact_type || "contact"}`, r.summary || r.concerns || "Family contact recorded")
+        (r) => card(r.title || "Family and Important Relationships Record", `${fmtDateTime(r.contact_datetime)} • ${r.contact_type || "contact"}`, r.summary || r.concerns || "Relationship record")
       )}
 
       ${renderCollection(
@@ -1171,57 +1428,122 @@ function renderFamily() {
 }
 
 function renderKeywork() {
-  const items = state.cache.keywork?.items || [];
-  return renderCollection(
-    "Keywork sessions",
-    "Direct work",
-    items,
-    (k) =>
-      card(
-        k.title || "Keywork session",
-        `${fmtDate(k.session_date)} • ${k.workflow_status || "draft"}`,
-        k.summary || "Keywork session recorded"
-      )
-  );
+  const split = splitKeyworkRecords(state.cache.keywork?.items || []);
+  const current = state.workflowViews.keywork;
+
+  return `
+    <section class="surface">
+      <div class="surface-header">
+        <div>
+          <div class="surface-kicker">Direct work</div>
+          <h3>Direct Work Records</h3>
+        </div>
+        <button class="btn btn-primary" onclick="App.openForm('keywork')">New Direct Work Record</button>
+      </div>
+      <div class="surface-body">
+        ${renderStatusTabs("keywork", current, [
+          { value: "draft", label: "Drafts", count: split.draft.length },
+          { value: "submitted", label: "Submitted", count: split.submitted.length },
+          { value: "approved", label: "Approved", count: split.approved.length }
+        ])}
+        <div class="records-wrap">
+          ${(split[current] || []).length
+            ? (split[current] || []).map((k) =>
+                card(
+                  k.title || "Direct Work Record",
+                  `${fmtDate(k.session_date)} • ${k.workflow_status || k.status || "draft"}`,
+                  k.summary || "Direct work record",
+                  `
+                    <button class="btn btn-secondary" onclick="App.openForm('keywork', ${k.id})">Open</button>
+                    ${current === "draft" ? `<button class="btn btn-ghost" onclick="App.submitKeywork(${k.id})">Submit</button>` : ""}
+                    ${current !== "approved" ? `<button class="btn btn-ghost" onclick="App.archiveKeywork(${k.id})">Archive</button>` : ""}
+                  `
+                )
+              ).join("")
+            : `<div class="workflow-empty">No ${escapeHtml(current)} direct work records.</div>`
+          }
+        </div>
+      </div>
+    </section>
+  `;
 }
 
 function renderPlans() {
-  const items = state.cache.plans?.items || [];
-  return renderCollection(
-    "Support plans",
-    "Planning",
-    items,
-    (p) =>
-      card(
-        p.title || "Support plan",
-        `${p.plan_type || "plan"} • review ${fmtDate(p.review_due_at)} • ${p.status || "draft"}`,
-        p.summary || p.formulation || "Support plan recorded",
-        `
-          <button class="btn btn-secondary" onclick="App.openForm('plan', ${p.id})">Edit</button>
-          <button class="btn btn-ghost" onclick="App.submitPlan(${p.id})">Submit</button>
-          <button class="btn btn-ghost" onclick="App.approvePlan(${p.id})">Approve</button>
-          <button class="btn btn-ghost" onclick="App.archivePlan(${p.id})">Archive</button>
-        `
-      ),
-    `<button class="btn btn-primary" onclick="App.openForm('plan')">New Support Plan</button>`
-  );
+  const split = splitPlanRecords(state.cache.plans?.items || []);
+  const current = state.workflowViews.plans;
+
+  return `
+    <section class="surface">
+      <div class="surface-header">
+        <div>
+          <div class="surface-kicker">Care planning</div>
+          <h3>Care and Support Plans</h3>
+        </div>
+        <button class="btn btn-primary" onclick="App.openForm('plan')">New Care and Support Plan</button>
+      </div>
+      <div class="surface-body">
+        ${renderStatusTabs("plans", current, [
+          { value: "draft", label: "Drafts", count: split.draft.length },
+          { value: "submitted", label: "Submitted", count: split.submitted.length },
+          { value: "approved", label: "Approved", count: split.approved.length }
+        ])}
+        <div class="records-wrap">
+          ${(split[current] || []).length
+            ? (split[current] || []).map((p) =>
+                card(
+                  p.title || "Care and Support Plan",
+                  `${p.plan_type || "plan"} • review ${fmtDate(p.review_due_at)} • ${p.status || p.approval_status || "draft"}`,
+                  p.summary || p.formulation || "Care and support plan",
+                  `
+                    <button class="btn btn-secondary" onclick="App.openForm('plan', ${p.id})">Open</button>
+                    ${current === "draft" ? `<button class="btn btn-ghost" onclick="App.submitPlan(${p.id})">Submit</button>` : ""}
+                    ${current === "submitted" ? `<button class="btn btn-ghost" onclick="App.approvePlan(${p.id})">Approve</button>` : ""}
+                    ${current !== "approved" ? `<button class="btn btn-ghost" onclick="App.archivePlan(${p.id})">Archive</button>` : ""}
+                  `
+                )
+              ).join("")
+            : `<div class="workflow-empty">No ${escapeHtml(current)} care and support plans.</div>`
+          }
+        </div>
+      </div>
+    </section>
+  `;
 }
 
 function renderRisk() {
-  const items = Array.isArray(state.cache.risk) ? state.cache.risk : (state.cache.risk?.items || []);
-  return renderCollection(
-    "Risk assessments",
-    "Risk management",
-    items,
-    (r) =>
-      card(
-        r.title || "Risk assessment",
-        `${r.category || "risk"} • ${r.severity || "medium"} • review ${fmtDate(r.review_date)}`,
-        r.concern_summary || "Risk assessment recorded",
-        `<button class="btn btn-secondary" onclick="App.openForm('risk', ${r.id})">Edit</button>`
-      ),
-    `<button class="btn btn-primary" onclick="App.openForm('risk')">New Risk Assessment</button>`
-  );
+  const split = splitRiskRecords(Array.isArray(state.cache.risk) ? state.cache.risk : (state.cache.risk?.items || []));
+  const current = state.workflowViews.risk;
+
+  return `
+    <section class="surface">
+      <div class="surface-header">
+        <div>
+          <div class="surface-kicker">Risk management</div>
+          <h3>Safer Care and Risk Plans</h3>
+        </div>
+        <button class="btn btn-primary" onclick="App.openForm('risk')">New Safer Care and Risk Plan</button>
+      </div>
+      <div class="surface-body">
+        ${renderStatusTabs("risk", current, [
+          { value: "active", label: "Active", count: split.active.length },
+          { value: "archived", label: "Archived", count: split.archived.length }
+        ])}
+        <div class="records-wrap">
+          ${(split[current] || []).length
+            ? (split[current] || []).map((r) =>
+                card(
+                  r.title || "Safer Care and Risk Plan",
+                  `${r.category || "risk"} • ${r.severity || "medium"} • review ${fmtDate(r.review_date)}`,
+                  r.concern_summary || "Risk plan",
+                  current === "active" ? `<button class="btn btn-secondary" onclick="App.openForm('risk', ${r.id})">Open</button>` : ""
+                )
+              ).join("")
+            : `<div class="workflow-empty">No ${escapeHtml(current)} risk plans.</div>`
+          }
+        </div>
+      </div>
+    </section>
+  `;
 }
 
 function renderTimeline() {
@@ -1238,7 +1560,7 @@ function renderTimeline() {
 function renderDocuments() {
   const items = Array.isArray(state.cache.statutory) ? state.cache.statutory : [];
   return renderCollection(
-    "Statutory documents",
+    "Statutory Documents",
     "Documents",
     items,
     (d) => card(d.title || "Document", `${d.document_type || "document"} • review ${fmtDate(d.review_date)}`, d.description || d.status || "")
@@ -1293,12 +1615,12 @@ function renderAI() {
         <div class="surface-header">
           <div>
             <div class="surface-kicker">Practice support</div>
-            <h3>Assistant workspace</h3>
+            <h3>Writing support</h3>
           </div>
         </div>
         <div class="surface-body">
           <div class="simple-item">
-            AI notes are available in history. The live therapeutic writing assistant can be added into this modal system next.
+            All long-text fields in the main forms now support spellcheck, autosave and AI language support.
           </div>
         </div>
       </section>
@@ -1307,21 +1629,34 @@ function renderAI() {
 }
 
 function renderManagement() {
-  const daily = state.cache.daily?.items || [];
-  const incidents = state.cache.incidents?.items || [];
-  const plans = state.cache.plans?.items || [];
-
   const queue = [
-    ...daily.filter((x) => String(x.workflow_status || "").toLowerCase() === "submitted"),
-    ...incidents.filter((x) => String(x.workflow_status || "").toLowerCase() === "submitted"),
-    ...plans.filter((x) => String(x.approval_status || "").toLowerCase() === "submitted")
+    ...splitDailyRecords(state.cache.daily?.items || []).submitted.map((x) => ({
+      title: x.title || "Daily Care Record",
+      meta: fmtDate(x.note_date),
+      body: x.summary || x.presentation || "Submitted daily care record"
+    })),
+    ...splitIncidentRecords(state.cache.incidents?.items || []).submitted.map((x) => ({
+      title: x.title || "Significant Event Record",
+      meta: fmtDateTime(x.occurred_at),
+      body: x.description || "Submitted event record"
+    })),
+    ...splitKeyworkRecords(state.cache.keywork?.items || []).submitted.map((x) => ({
+      title: x.title || "Direct Work Record",
+      meta: fmtDate(x.session_date),
+      body: x.summary || "Submitted direct work record"
+    })),
+    ...splitPlanRecords(state.cache.plans?.items || []).submitted.map((x) => ({
+      title: x.title || "Care and Support Plan",
+      meta: fmtDate(x.review_due_at),
+      body: x.summary || x.formulation || "Submitted plan"
+    }))
   ];
 
   return renderCollection(
     "Management queue",
     "Leadership and oversight",
     queue,
-    (q) => card(q.title || "Review item", q.workflow_status || q.approval_status || "", q.summary || q.description || "Awaiting review")
+    (q) => card(q.title, q.meta, q.body)
   );
 }
 
@@ -1332,10 +1667,10 @@ function renderArchive() {
   const risk = Array.isArray(state.cache.riskArchive) ? state.cache.riskArchive : [];
 
   const merged = [
-    ...daily.map((x) => ({ title: x.title || "Daily note", meta: fmtDate(x.note_date), body: x.summary || "" })),
-    ...incidents.map((x) => ({ title: x.title || "Incident", meta: fmtDateTime(x.occurred_at), body: x.description || "" })),
-    ...plans.map((x) => ({ title: x.title || "Plan", meta: fmtDate(x.review_due_at), body: x.summary || "" })),
-    ...risk.map((x) => ({ title: x.title || "Risk", meta: fmtDate(x.review_date), body: x.concern_summary || "" }))
+    ...daily.map((x) => ({ title: x.title || "Daily Care Record", meta: fmtDate(x.note_date), body: x.summary || "" })),
+    ...incidents.map((x) => ({ title: x.title || "Significant Event Record", meta: fmtDateTime(x.occurred_at), body: x.description || "" })),
+    ...plans.map((x) => ({ title: x.title || "Care and Support Plan", meta: fmtDate(x.review_due_at), body: x.summary || "" })),
+    ...risk.map((x) => ({ title: x.title || "Safer Care and Risk Plan", meta: fmtDate(x.review_date), body: x.concern_summary || "" }))
   ];
 
   return renderCollection("Archive", "Archived records", merged, (x) => card(x.title, x.meta, x.body));
@@ -1394,30 +1729,10 @@ function renderInspection() {
   `;
 }
 
-function renderOperations() {
-  return `
-    <section class="surface">
-      <div class="surface-header">
-        <div>
-          <div class="surface-kicker">Operations</div>
-          <h3>Rostering</h3>
-        </div>
-      </div>
-      <div class="surface-body">
-        <div class="simple-item">
-          Rostering routes are available. This section can be turned into a dedicated rota board next.
-        </div>
-      </div>
-    </section>
-  `;
-}
-
 function renderContent() {
   let html = `<div class="empty-state">Nothing selected.</div>`;
 
-  if (state.primaryTab === "home") {
-    html = renderHome();
-  }
+  if (state.primaryTab === "home") html = renderHome();
 
   if (state.primaryTab === "youngPeople") {
     if (!state.selectedYoungPersonId) {
@@ -1454,10 +1769,6 @@ function renderContent() {
       : `<div class="empty-state">Select a young person to continue.</div>`;
   }
 
-  if (state.primaryTab === "operations") {
-    html = renderOperations();
-  }
-
   UI.content.innerHTML = html;
 }
 
@@ -1471,6 +1782,38 @@ function renderApp() {
   renderContent();
 }
 
+/* ---------- modal + forms ---------- */
+
+function draftStorageKey(formKey, recordId = "new") {
+  return `indicare_draft_${state.selectedYoungPersonId}_${formKey}_${recordId}`;
+}
+
+function clearDraftStorage(formKey, recordId = "new") {
+  localStorage.removeItem(draftStorageKey(formKey, recordId));
+}
+
+function saveDraftStorage(formKey, recordId, payload) {
+  localStorage.setItem(
+    draftStorageKey(formKey, recordId || "new"),
+    JSON.stringify(payload)
+  );
+}
+
+function loadDraftStorage(formKey, recordId = "new") {
+  try {
+    const raw = localStorage.getItem(draftStorageKey(formKey, recordId));
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function updateAutosaveState(text) {
+  state.modal.autosaveState = text;
+  const el = $("autosaveState");
+  if (el) el.textContent = text;
+}
+
 function buildField(field, data = {}) {
   const rawValue = data[field.name] ?? field.value ?? "";
   const fieldValue =
@@ -1480,20 +1823,29 @@ function buildField(field, data = {}) {
 
   if (field.type === "textarea") {
     return `
-      <div class="field">
-        <label>${escapeHtml(field.label)}</label>
-        <textarea data-field="${field.name}" rows="4">${escapeHtml(fieldValue)}</textarea>
+      <div class="field-row">
+        <div class="field-head">
+          <label>${escapeHtml(field.label)}</label>
+          ${field.ai ? `<button type="button" class="ai-inline-btn" data-ai-field="${field.name}">AI improve</button>` : ""}
+        </div>
+        <textarea
+          data-field="${field.name}"
+          rows="5"
+          spellcheck="true"
+          autocapitalize="sentences"
+          autocomplete="off"
+        >${escapeHtml(fieldValue)}</textarea>
       </div>
     `;
   }
 
   if (field.type === "select") {
     return `
-      <div class="field">
+      <div class="field-row">
         <label>${escapeHtml(field.label)}</label>
         <select data-field="${field.name}">
           ${(field.options || [])
-            .map((opt) => `<option value="${escapeHtml(opt)}" ${String(fieldValue) === String(opt) ? "selected" : ""}>${escapeHtml(opt)}</option>`)
+            .map((opt) => `<option value="${escapeHtml(opt)}" ${String(fieldValue) === String(opt) ? "selected" : ""}>${escapeHtml(titleCaseLabel(opt))}</option>`)
             .join("")}
         </select>
       </div>
@@ -1501,82 +1853,266 @@ function buildField(field, data = {}) {
   }
 
   return `
-    <div class="field">
+    <div class="field-row">
       <label>${escapeHtml(field.label)}</label>
-      <input data-field="${field.name}" type="${field.type || "text"}" value="${escapeHtml(fieldValue)}" />
+      <input
+        data-field="${field.name}"
+        type="${field.type || "text"}"
+        value="${escapeHtml(fieldValue)}"
+        autocomplete="off"
+      />
     </div>
   `;
 }
 
-function openModal(title, html) {
+function openModal(title, html, kicker = "Record editor") {
   UI.modalTitle.textContent = title;
+  UI.modalKicker.textContent = kicker;
   UI.modalContent.innerHTML = html;
   UI.modalStatus.textContent = "";
   UI.modal.classList.remove("hidden");
 }
 
+function resetModalState() {
+  if (state.modal.autosaveTimer) {
+    clearTimeout(state.modal.autosaveTimer);
+  }
+
+  state.modal.key = null;
+  state.modal.recordId = null;
+  state.modal.draftId = null;
+  state.modal.isNew = false;
+  state.modal.autosaveTimer = null;
+  state.modal.autosaveState = "Ready";
+  state.modal.draftCreated = false;
+  state.modal.hasChanges = false;
+}
+
 function closeModal() {
   UI.modal.classList.add("hidden");
   UI.modalTitle.textContent = "Editor";
+  UI.modalKicker.textContent = "Record editor";
   UI.modalContent.innerHTML = "";
   UI.modalStatus.textContent = "";
-  state.modal.key = null;
-  state.modal.recordId = null;
+  resetModalState();
+}
+
+function buildFormLayout(schema, data = {}) {
+  const sectionsHtml = schema.sections.map((section) => `
+    <section class="form-section">
+      <div class="form-section-head">
+        <h4>${escapeHtml(section.title)}</h4>
+        <p>${escapeHtml(section.helper || "")}</p>
+      </div>
+      <div class="form-grid ${section.columns === 2 ? "two" : "one"}">
+        ${section.fields.map((field) => buildField(field, data)).join("")}
+      </div>
+    </section>
+  `).join("");
+
+  return `
+    <div class="form-layout">
+      <div class="form-intro">
+        <div class="workspace-kicker">${escapeHtml(schema.kicker || "Record")}</div>
+        <div class="helper-text">${escapeHtml(schema.intro || "")}</div>
+        <div class="standards-row">
+          ${(schema.standards || []).map((s) => `<span class="badge badge-neutral">${escapeHtml(s)}</span>`).join("")}
+        </div>
+      </div>
+
+      ${sectionsHtml}
+
+      <div class="editor-toolbar">
+        <div>
+          <div class="autosave-state" id="autosaveState">Ready</div>
+          <div class="meta-line">Forms autosave as draft while you type. Submitting clears the form and moves the record to review.</div>
+        </div>
+        <div class="action-row">
+          <button class="btn btn-secondary" id="modalSaveBtn">Save Draft</button>
+          ${schema.save.submit ? `<button class="btn btn-primary" id="modalSubmitBtn">Submit for Review</button>` : `<button class="btn btn-primary" id="modalDoneBtn">Save and Close</button>`}
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 async function openForm(formKey, recordId = null) {
   const schema = FORM_SCHEMAS[formKey];
   if (!schema) return;
 
+  resetModalState();
+
   state.modal.key = formKey;
   state.modal.recordId = recordId;
+  state.modal.draftId = recordId;
+  state.modal.isNew = !recordId;
 
   let data = {};
   if (recordId && schema.load) {
     data = await api(schema.load(recordId));
+  } else {
+    const localDraft = loadDraftStorage(formKey, "new");
+    if (localDraft) data = localDraft;
   }
-
-  const fieldsHtml = schema.fields.map((f) => buildField(f, data)).join("");
 
   openModal(
     recordId ? `Edit ${schema.title}` : `New ${schema.title}`,
-    `
-      <div class="form-grid two">${fieldsHtml}</div>
-      <div class="action-row">
-        <button class="btn btn-primary" id="modalSaveBtn">Save</button>
-      </div>
-    `
+    buildFormLayout(schema, data),
+    schema.kicker || "Record editor"
   );
 
-  $("modalSaveBtn").onclick = saveCurrentForm;
+  bindFormEditorEvents();
+  updateAutosaveState(recordId ? "Loaded" : "Ready");
 }
 
-async function saveCurrentForm() {
+function bindFormEditorEvents() {
+  document.querySelectorAll("[data-field]").forEach((el) => {
+    el.addEventListener("input", onFormEdited);
+    el.addEventListener("change", onFormEdited);
+  });
+
+  document.querySelectorAll("[data-ai-field]").forEach((btn) => {
+    btn.addEventListener("click", () => runAiForField(btn.dataset.aiField));
+  });
+
+  const saveBtn = $("modalSaveBtn");
+  const submitBtn = $("modalSubmitBtn");
+  const doneBtn = $("modalDoneBtn");
+
+  if (saveBtn) saveBtn.onclick = () => saveCurrentForm(false);
+  if (submitBtn) submitBtn.onclick = () => submitCurrentForm();
+  if (doneBtn) doneBtn.onclick = async () => {
+    await saveCurrentForm(false);
+    closeModal();
+  };
+}
+
+function onFormEdited() {
+  state.modal.hasChanges = true;
+  updateAutosaveState("Unsaved changes");
+
   const schema = FORM_SCHEMAS[state.modal.key];
   if (!schema) return;
+
+  const payload = schema.buildPayload();
+  saveDraftStorage(state.modal.key, state.modal.draftId || "new", payload);
+
+  if (state.modal.autosaveTimer) {
+    clearTimeout(state.modal.autosaveTimer);
+  }
+
+  state.modal.autosaveTimer = setTimeout(async () => {
+    await saveCurrentForm(true);
+  }, 1400);
+}
+
+async function saveCurrentForm(isAutosave = false) {
+  const schema = FORM_SCHEMAS[state.modal.key];
+  if (!schema) return null;
 
   try {
     const payload = schema.buildPayload();
 
-    if (state.modal.recordId) {
-      await putJson(schema.save.update(state.modal.recordId), payload);
+    if (isAutosave) updateAutosaveState("Saving…");
+
+    let result;
+    const targetId = state.modal.draftId || state.modal.recordId;
+
+    if (targetId) {
+      result = await putJson(schema.save.update(targetId), payload);
     } else {
-      await postJson(schema.save.create, payload);
+      result = await postJson(schema.save.create, payload);
+      const newId = result?.id || result?.record?.id || null;
+      if (newId) {
+        state.modal.draftId = newId;
+        state.modal.recordId = newId;
+        state.modal.draftCreated = true;
+        clearDraftStorage(state.modal.key, "new");
+        saveDraftStorage(state.modal.key, newId, payload);
+      }
     }
 
-    UI.modalStatus.textContent = "Saved successfully.";
-    if (state.selectedYoungPersonId) {
-      await loadSelectedYoungPerson();
-      renderApp();
+    state.modal.hasChanges = false;
+    updateAutosaveState("Saved");
+
+    if (!isAutosave) {
+      UI.modalStatus.textContent = "Draft saved.";
     }
-    setTimeout(closeModal, 500);
+
+    return state.modal.draftId || state.modal.recordId || result?.id || null;
   } catch (error) {
-    UI.modalStatus.textContent = error.message || "Save failed.";
+    updateAutosaveState("Save failed");
+    if (!isAutosave) {
+      UI.modalStatus.textContent = error.message || "Save failed.";
+    }
+    return null;
+  }
+}
+
+async function submitCurrentForm() {
+  const schema = FORM_SCHEMAS[state.modal.key];
+  if (!schema || !schema.save.submit) return;
+
+  try {
+    updateAutosaveState("Saving…");
+    const recordId = await saveCurrentForm(false);
+    if (!recordId) throw new Error("Could not save draft before submission.");
+
+    await postJson(schema.save.submit(recordId), {});
+    clearDraftStorage(state.modal.key, "new");
+    clearDraftStorage(state.modal.key, recordId);
+
+    UI.modalStatus.textContent = "Submitted for manager review.";
+    updateAutosaveState("Submitted");
+
+    await loadSelectedYoungPerson();
+    renderApp();
+
+    setTimeout(() => {
+      closeModal();
+    }, 500);
+  } catch (error) {
+    UI.modalStatus.textContent = error.message || "Submission failed.";
+    updateAutosaveState("Submit failed");
+  }
+}
+
+async function runAiForField(fieldName) {
+  const field = document.querySelector(`[data-field="${fieldName}"]`);
+  if (!field) return;
+
+  const text = String(field.value || "").trim();
+  if (!text) {
+    UI.modalStatus.textContent = "Add some text first, then use AI improve.";
+    return;
+  }
+
+  try {
+    UI.modalStatus.textContent = "AI is improving the text…";
+
+    const fd = new FormData();
+    fd.append("text", text);
+    fd.append("mode", "improve");
+    fd.append(
+      "instruction",
+      "Improve spelling, grammar, clarity and professional therapeutic language for a children's residential care record. Keep the facts unchanged. Do not add information."
+    );
+
+    const result = await api(CONFIG.endpoints.ai.edit, {
+      method: "POST",
+      body: fd
+    });
+
+    field.value = result.text || text;
+    onFormEdited();
+    UI.modalStatus.textContent = "AI suggestion applied. Review before saving or submitting.";
+  } catch (error) {
+    UI.modalStatus.textContent = error.message || "AI improvement failed.";
   }
 }
 
 function openSimpleMessage(message) {
-  openModal("Info", `<div class="simple-item">${escapeHtml(message)}</div>`);
+  openModal("Information", `<div class="simple-item">${escapeHtml(message)}</div>`);
 }
 
 function openPhotoUpload() {
@@ -1624,9 +2160,11 @@ function handleGlobalAction(action) {
     loadCommand().then(renderApp);
   }
   if (action === "openAiInfo") {
-    openSimpleMessage("AI note builder can be added back into this streamlined modal system next.");
+    openSimpleMessage("All major long-text fields now support spellcheck, autosave and AI improve inside the editor.");
   }
 }
+
+/* ---------- data loading ---------- */
 
 async function loadYoungPeople() {
   const data = await api(CONFIG.endpoints.youngPeople);
@@ -1716,6 +2254,8 @@ async function loadSelectedYoungPerson() {
   };
 }
 
+/* ---------- actions ---------- */
+
 async function rebuildChronology() {
   if (!state.selectedYoungPersonId) return;
   await postJson(CONFIG.endpoints.chronology.rebuild(state.selectedYoungPersonId), {});
@@ -1773,6 +2313,18 @@ async function archiveIncident(id) {
   renderApp();
 }
 
+async function submitKeywork(id) {
+  await postJson(CONFIG.endpoints.keywork.submit(id), {});
+  await loadSelectedYoungPerson();
+  renderApp();
+}
+
+async function archiveKeywork(id) {
+  await postJson(CONFIG.endpoints.keywork.archive(id), {});
+  await loadSelectedYoungPerson();
+  renderApp();
+}
+
 async function submitPlan(id) {
   await postJson(CONFIG.endpoints.plans.submit(id), {});
   await loadSelectedYoungPerson();
@@ -1803,6 +2355,11 @@ function primaryTabTo(primary, secondary = "") {
   const secondaryTabs = CONFIG.primaryTabs[primary]?.secondary || null;
   state.secondaryTab = secondary || (secondaryTabs ? Object.keys(secondaryTabs)[0] : "");
   renderApp();
+}
+
+function setWorkflowView(key, value) {
+  state.workflowViews[key] = value;
+  renderContent();
 }
 
 function bindGlobalEvents() {
@@ -1838,20 +2395,20 @@ const App = {
   archiveDaily,
   submitIncident,
   archiveIncident,
+  submitKeywork,
+  archiveKeywork,
   submitPlan,
   approvePlan,
   archivePlan,
   loadInspection,
-  primaryTabTo
+  primaryTabTo,
+  setWorkflowView
 };
 
 async function init() {
   requireAuth();
 
   UI.userChip.textContent = currentUser().email || "Unknown user";
-
-  const homeSecondary = CONFIG.primaryTabs.home.secondary;
-  state.secondaryTab = homeSecondary ? Object.keys(homeSecondary)[0] : "";
 
   bindGlobalEvents();
 
