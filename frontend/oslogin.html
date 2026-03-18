@@ -1,1 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Children's Home OS Login</title>
+  <link rel="stylesheet" href="css/oslogin.css" />
+</head>
+<body>
+  <div class="login-shell">
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="login-mark">🏡</div>
+        <div>
+          <h1>Children's Home OS</h1>
+          <p>Secure staff access</p>
+        </div>
+      </div>
 
+      <form id="loginForm" class="login-form">
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" autocomplete="username" required />
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required />
+        </div>
+
+        <button type="submit" class="primary-btn full">Sign in</button>
+
+        <div id="loginStatus" class="status-text"></div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/oslogin.js"></script>
+</body>
+</html>
