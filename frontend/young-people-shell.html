@@ -17,105 +17,349 @@
         </div>
       </div>
 
-      <nav class="nav">
-        <button class="nav-btn active">Young People</button>
-      </nav>
-
-      <div class="sidebar-footer">
+      <div class="sidebar-section">
         <button class="primary-btn full" id="openAiNoteBtn">New AI Note</button>
+        <button class="secondary-btn full" id="openDailyNoteBtn">New Daily Note</button>
+        <button class="secondary-btn full" id="openIncidentBtn">New Incident</button>
+        <button class="secondary-btn full" id="generateHandoverBtn">Generate Handover</button>
       </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Young People</div>
+        <input id="youngPeopleSearch" type="text" placeholder="Search..." />
+      </div>
+
+      <div id="youngPeopleList" class="young-people-list"></div>
     </aside>
 
     <main class="main">
       <header class="topbar">
         <div>
           <h2 id="pageTitle">Young People</h2>
-          <p id="pageSubtitle">Profile-led residential care workspace</p>
+          <p id="pageSubtitle">Select a young person to view their records</p>
         </div>
 
         <div class="topbar-actions">
-          <input id="youngPeopleSearch" type="text" placeholder="Search young people..." />
           <button class="secondary-btn" id="refreshBtn">Refresh</button>
         </div>
       </header>
 
-      <section class="content-grid">
-        <section class="panel panel-left">
-          <div class="panel-header">
-            <h3>Young People</h3>
+      <section class="hero" id="heroPanel">
+        <div class="hero-left">
+          <div class="hero-avatar" id="heroAvatar">YP</div>
+          <div>
+            <h3 id="heroName">No young person selected</h3>
+            <p id="heroMeta">Profile overview will appear here</p>
+            <div class="hero-badges" id="heroBadges"></div>
           </div>
-          <div id="youngPeopleList" class="young-people-list"></div>
-        </section>
+        </div>
+      </section>
 
-        <section class="panel panel-right">
-          <div class="panel-header">
-            <h3>Profile Overview</h3>
+      <section class="tabs">
+        <button class="tab-btn active" data-tab="overview">Overview</button>
+        <button class="tab-btn" data-tab="daily-notes">Daily Notes</button>
+        <button class="tab-btn" data-tab="incidents">Incidents</button>
+        <button class="tab-btn" data-tab="handover">Handover</button>
+      </section>
+
+      <section class="tab-panel active" id="tab-overview">
+        <div class="content-grid">
+          <section class="panel">
+            <div class="panel-header">
+              <h3>Core Profile</h3>
+            </div>
+            <div id="profilePanel" class="panel-body empty-state">
+              Select a young person to view their profile.
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h3>Alerts and Identity</h3>
+            </div>
+            <div id="sideProfilePanel" class="panel-body empty-state">
+              Select a young person to view alerts and identity information.
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-daily-notes">
+        <div class="panel">
+          <div class="panel-header header-with-action">
+            <h3>Daily Notes</h3>
+            <button class="primary-btn" id="openDailyNoteBtn2">New Daily Note</button>
           </div>
-          <div id="profilePanel" class="profile-panel empty-panel">
-            Select a young person to view their profile.
+          <div id="dailyNotesPanel" class="panel-body empty-state">
+            Select a young person to load daily notes.
           </div>
-        </section>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-incidents">
+        <div class="panel">
+          <div class="panel-header header-with-action">
+            <h3>Incidents</h3>
+            <button class="primary-btn" id="openIncidentBtn2">New Incident</button>
+          </div>
+          <div id="incidentsPanel" class="panel-body empty-state">
+            Select a young person to load incidents.
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-handover">
+        <div class="panel">
+          <div class="panel-header header-with-action">
+            <h3>Handover</h3>
+            <button class="primary-btn" id="generateHandoverBtn2">Generate Handover</button>
+          </div>
+          <div id="handoverPanel" class="panel-body empty-state">
+            Select a young person to load handover records.
+          </div>
+        </div>
       </section>
     </main>
   </div>
 
-  <div id="aiNoteModal" class="modal hidden">
-    <div class="modal-card">
+  <!-- AI NOTE MODAL -->
+  <div class="modal hidden" id="aiNoteModal">
+    <div class="modal-card modal-lg">
       <div class="modal-header">
         <h3>Create AI Note</h3>
-        <button class="icon-btn" id="closeAiNoteBtn">✕</button>
+        <button class="icon-btn close-modal" data-close="aiNoteModal">✕</button>
       </div>
 
       <div class="modal-body">
-        <div class="form-grid">
+        <div class="form-grid two">
           <div class="field">
-            <label for="aiYoungPerson">Young person</label>
+            <label>Young person</label>
             <select id="aiYoungPerson"></select>
           </div>
-
           <div class="field">
-            <label for="aiRecordDate">Record date</label>
+            <label>Record date</label>
             <input id="aiRecordDate" type="date" />
           </div>
-
           <div class="field">
-            <label for="aiShiftType">Shift type</label>
-            <input id="aiShiftType" type="text" placeholder="e.g. Day shift" />
+            <label>Shift type</label>
+            <input id="aiShiftType" type="text" placeholder="e.g. day" />
           </div>
-
           <div class="field">
-            <label for="aiLocationContext">Location</label>
-            <input id="aiLocationContext" type="text" placeholder="e.g. Home / community" />
+            <label>Location</label>
+            <input id="aiLocationContext" type="text" placeholder="e.g. home" />
           </div>
         </div>
 
         <div class="field">
-          <label for="aiTranscript">Raw note / transcript</label>
-          <textarea id="aiTranscript" placeholder="Write the rough note here..."></textarea>
+          <label>Raw note / transcript</label>
+          <textarea id="aiTranscript" rows="7" placeholder="Write rough shift notes here..."></textarea>
         </div>
 
-        <div class="modal-actions">
+        <div class="actions-row">
           <button class="primary-btn" id="generateAiBtn">Generate with AI</button>
         </div>
 
         <div class="field">
-          <label for="aiDraft">AI draft</label>
-          <textarea id="aiDraft" readonly></textarea>
+          <label>AI draft</label>
+          <textarea id="aiDraft" rows="8" readonly></textarea>
         </div>
 
         <div class="field">
-          <label for="aiFinalNote">Final note</label>
-          <textarea id="aiFinalNote" placeholder="Edit before saving..."></textarea>
+          <label>Final note</label>
+          <textarea id="aiFinalNote" rows="8"></textarea>
         </div>
 
-        <div id="aiSafeguardingBanner" class="banner hidden"></div>
+        <div class="banner hidden" id="aiSafeguardingBanner"></div>
 
-        <div class="modal-actions end">
+        <div class="actions-row right">
           <button class="secondary-btn" id="copyDraftBtn">Copy draft to final</button>
-          <button class="primary-btn" id="saveAiBtn">Save note</button>
+          <button class="primary-btn" id="saveAiBtn">Save AI note</button>
         </div>
 
-        <div id="aiStatus" class="status-text"></div>
+        <div class="status-text" id="aiStatus"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DAILY NOTE MODAL -->
+  <div class="modal hidden" id="dailyNoteModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>New Daily Note</h3>
+        <button class="icon-btn close-modal" data-close="dailyNoteModal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-grid two">
+          <div class="field">
+            <label>Young person</label>
+            <select id="dailyYoungPerson"></select>
+          </div>
+          <div class="field">
+            <label>Note date</label>
+            <input id="dailyNoteDate" type="date" />
+          </div>
+          <div class="field">
+            <label>Shift type</label>
+            <input id="dailyShiftType" type="text" placeholder="day / evening / night" />
+          </div>
+          <div class="field">
+            <label>Mood</label>
+            <input id="dailyMood" type="text" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Presentation</label>
+          <textarea id="dailyPresentation" rows="3"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Activities</label>
+          <textarea id="dailyActivities" rows="3"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Education update</label>
+          <textarea id="dailyEducation" rows="3"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Health update</label>
+          <textarea id="dailyHealth" rows="3"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Family update</label>
+          <textarea id="dailyFamily" rows="3"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Behaviour update</label>
+          <textarea id="dailyBehaviour" rows="3"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Young person's voice</label>
+          <textarea id="dailyVoice" rows="3"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Positives</label>
+          <textarea id="dailyPositives" rows="3"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Actions required</label>
+          <textarea id="dailyActions" rows="3"></textarea>
+        </div>
+
+        <div class="actions-row right">
+          <button class="primary-btn" id="saveDailyBtn">Save Daily Note</button>
+        </div>
+
+        <div class="status-text" id="dailyStatus"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INCIDENT MODAL -->
+  <div class="modal hidden" id="incidentModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>New Incident</h3>
+        <button class="icon-btn close-modal" data-close="incidentModal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-grid two">
+          <div class="field">
+            <label>Young person</label>
+            <select id="incidentYoungPerson"></select>
+          </div>
+          <div class="field">
+            <label>Occurred at</label>
+            <input id="incidentOccurredAt" type="datetime-local" />
+          </div>
+          <div class="field">
+            <label>Incident type</label>
+            <select id="incidentType">
+              <option value="missing_from_placement">Missing from placement</option>
+              <option value="physical_aggression">Physical aggression</option>
+              <option value="verbal_aggression">Verbal aggression</option>
+              <option value="self_harm_concern">Self-harm concern</option>
+              <option value="safeguarding_concern">Safeguarding concern</option>
+              <option value="absconding">Absconding</option>
+              <option value="property_damage">Property damage</option>
+              <option value="bullying">Bullying</option>
+              <option value="substance_misuse">Substance misuse</option>
+              <option value="relationship_incident">Relationship incident</option>
+              <option value="health_incident">Health incident</option>
+              <option value="medication_error">Medication error</option>
+              <option value="physical_intervention">Physical intervention</option>
+              <option value="restraint">Restraint</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Severity</label>
+            <select id="incidentSeverity">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Location</label>
+            <input id="incidentLocation" type="text" />
+          </div>
+          <div class="field">
+            <label>Staff ID</label>
+            <input id="incidentStaffId" type="number" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Description</label>
+          <textarea id="incidentDescription" rows="4"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Antecedent</label>
+          <textarea id="incidentAntecedent" rows="3"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Presentation</label>
+          <textarea id="incidentPresentation" rows="3"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Staff response</label>
+          <textarea id="incidentStaffResponse" rows="3"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Trauma-informed formulation</label>
+          <textarea id="incidentFormulation" rows="3"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Child voice</label>
+          <textarea id="incidentVoice" rows="3"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Restorative follow-up</label>
+          <textarea id="incidentRestorative" rows="3"></textarea>
+        </div>
+
+        <div class="actions-row right">
+          <button class="primary-btn" id="saveIncidentBtn">Save Incident</button>
+        </div>
+
+        <div class="status-text" id="incidentStatus"></div>
       </div>
     </div>
   </div>
