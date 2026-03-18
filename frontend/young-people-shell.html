@@ -7,565 +7,691 @@
   <link rel="stylesheet" href="/css/young-people-shell.css" />
 </head>
 <body>
-  <div class="os-shell">
-    <aside class="os-sidebar">
-      <div class="brand-wrap">
-        <div class="brand-logo">IC</div>
-        <div class="brand-copy">
+  <div class="app-shell">
+    <!-- LEFT RAIL -->
+    <aside class="app-rail">
+      <div class="rail-brand">
+        <div class="rail-logo">IC</div>
+        <div class="rail-brand-copy">
           <h1>IndiCare OS</h1>
-          <p>Children’s Home Operating System</p>
+          <p>Residential Care Operating System</p>
         </div>
       </div>
 
-      <div class="sidebar-user">
-        <div id="currentUserChip" class="user-chip">Loading user…</div>
+      <div class="rail-user">
+        <div class="rail-user-label">Signed in</div>
+        <div id="currentUserChip" class="rail-user-chip">Loading…</div>
       </div>
 
-      <div class="sidebar-actions">
-        <button id="refreshBtn" class="primary-btn full">Refresh</button>
-        <button id="logoutBtn" class="danger-btn full">Logout</button>
+      <nav class="rail-nav">
+        <button class="rail-nav-btn active" data-primary-tab="home">
+          <span class="rail-nav-icon">⌂</span>
+          <span>Home</span>
+        </button>
+        <button class="rail-nav-btn" data-primary-tab="young-people">
+          <span class="rail-nav-icon">◉</span>
+          <span>Young People</span>
+        </button>
+        <button class="rail-nav-btn" data-primary-tab="quality">
+          <span class="rail-nav-icon">✓</span>
+          <span>Quality</span>
+        </button>
+        <button class="rail-nav-btn" data-primary-tab="inspection">
+          <span class="rail-nav-icon">▣</span>
+          <span>Inspection</span>
+        </button>
+        <button class="rail-nav-btn" data-primary-tab="operations">
+          <span class="rail-nav-icon">≡</span>
+          <span>Operations</span>
+        </button>
+      </nav>
+
+      <div class="rail-actions">
+        <button id="refreshBtn" class="btn btn-primary btn-full">Refresh</button>
+        <button id="logoutBtn" class="btn btn-ghost btn-full">Logout</button>
       </div>
 
-      <div class="sidebar-actions">
-        <button id="openAiNoteBtn" class="primary-btn full">New AI Note</button>
-        <button id="openDailyNoteBtn" class="secondary-btn full">New Daily Note</button>
-        <button id="openIncidentBtn" class="secondary-btn full">New Incident</button>
-        <button id="openHealthRecordBtn" class="secondary-btn full">New Health Record</button>
-        <button id="openEducationRecordBtn" class="secondary-btn full">New Education Record</button>
-        <button id="openFamilyRecordBtn" class="secondary-btn full">New Family Record</button>
-        <button id="openKeyworkBtn" class="secondary-btn full">New Keywork</button>
-        <button id="openPlanBtn" class="secondary-btn full">New Plan</button>
-        <button id="openRiskBtn" class="secondary-btn full">New Risk</button>
-        <button id="generateHandoverBtn" class="secondary-btn full">Generate Handover</button>
-        <button id="rebuildChronologyBtn" class="secondary-btn full">Rebuild Chronology</button>
-        <button id="rebuildStandardsBtn" class="secondary-btn full">Rebuild Standards</button>
+      <div class="rail-search">
+        <label for="youngPeopleSearch">Find young person</label>
+        <input id="youngPeopleSearch" type="text" placeholder="Search by name or status" />
       </div>
 
-      <div class="sidebar-search">
-        <label for="youngPeopleSearch">Young People</label>
-        <input id="youngPeopleSearch" type="text" placeholder="Search young people..." />
-      </div>
-
-      <div id="youngPeopleList" class="young-people-list">
-        <div class="loading">Loading young people…</div>
-      </div>
+      <section class="rail-list-wrap">
+        <div class="rail-section-title">Young people</div>
+        <div id="youngPeopleList" class="young-people-list">
+          <div class="empty-state compact">Loading young people…</div>
+        </div>
+      </section>
     </aside>
 
-    <main class="os-main">
-      <header class="topbar">
-        <div class="topbar-left">
-          <h2 id="pageTitle">Dashboard</h2>
-          <p id="pageSubtitle">Operational overview, recording, review, quality and inspection readiness</p>
+    <!-- MAIN -->
+    <main class="workspace">
+      <!-- TOP BAR -->
+      <header class="workspace-topbar">
+        <div class="workspace-topbar-left">
+          <div class="workspace-kicker">Children’s Home Operating System</div>
+          <h2 id="pageTitle">Home</h2>
+          <p id="pageSubtitle">Command, care, quality and inspection readiness in one place.</p>
         </div>
-        <div class="topbar-right">
-          <button id="commandCentreRefreshBtn" class="secondary-btn">Refresh Command Centre</button>
-          <button id="openInspectionPackBtn" class="primary-btn">Inspection Pack</button>
+
+        <div class="workspace-topbar-right">
+          <button id="openAiNoteBtn" class="btn btn-primary">New AI Note</button>
+          <button id="openDailyNoteBtn" class="btn btn-secondary">Daily Note</button>
+          <button id="openIncidentBtn" class="btn btn-secondary">Incident</button>
+          <button id="generateHandoverBtn" class="btn btn-secondary">Generate Handover</button>
         </div>
       </header>
 
-      <section class="hero">
-        <div class="hero-card">
-          <div class="hero-avatar-wrap">
-            <div id="heroAvatar" class="hero-avatar">OS</div>
-          </div>
-          <div class="hero-content">
+      <!-- CONTEXT BAR -->
+      <section class="context-bar">
+        <div class="context-profile">
+          <div id="heroAvatar" class="context-avatar">OS</div>
+          <div class="context-copy">
             <h3 id="heroTitle">IndiCare OS</h3>
             <p id="heroDescription">Select a young person to begin.</p>
-            <div id="heroBadges" class="hero-badges"></div>
           </div>
         </div>
+
+        <div id="heroBadges" class="context-badges"></div>
       </section>
 
-      <nav class="tab-row">
-        <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
-        <button class="tab-btn" data-tab="command">Command Centre</button>
-        <button class="tab-btn" data-tab="overview">Overview</button>
-        <button class="tab-btn" data-tab="daily">Daily Notes</button>
-        <button class="tab-btn" data-tab="incidents">Incidents</button>
-        <button class="tab-btn" data-tab="health">Health</button>
-        <button class="tab-btn" data-tab="education">Education</button>
-        <button class="tab-btn" data-tab="family">Family</button>
-        <button class="tab-btn" data-tab="keywork">Keywork</button>
-        <button class="tab-btn" data-tab="plans">Plans</button>
-        <button class="tab-btn" data-tab="risk">Risk</button>
-        <button class="tab-btn" data-tab="chronology">Chronology</button>
-        <button class="tab-btn" data-tab="standards">Standards</button>
-        <button class="tab-btn" data-tab="compliance">Compliance</button>
-        <button class="tab-btn" data-tab="statutory">Statutory Docs</button>
-        <button class="tab-btn" data-tab="handover">Handover</button>
-        <button class="tab-btn" data-tab="therapeutic">AI / Therapeutic</button>
-        <button class="tab-btn" data-tab="management">Management Queue</button>
-        <button class="tab-btn" data-tab="inspection">Inspection / Evidence</button>
-        <button class="tab-btn" data-tab="rostering">Rostering</button>
-        <button class="tab-btn" data-tab="archive">Archive</button>
-      </nav>
+      <!-- PRIMARY WORKSPACES -->
 
-      <!-- DASHBOARD -->
-      <section class="tab-panel active" id="tab-dashboard">
-        <div class="grid two">
-          <section class="panel">
-            <div class="panel-header">
-              <h3>Home Overview</h3>
+      <!-- HOME -->
+      <section class="primary-panel active" id="primary-home">
+        <div class="workspace-grid home-grid">
+          <section class="surface surface-hero">
+            <div class="surface-header">
+              <div>
+                <div class="surface-kicker">Command Centre</div>
+                <h3>Shift overview</h3>
+              </div>
+              <button id="commandCentreRefreshBtn" class="btn btn-ghost">Refresh Command Centre</button>
             </div>
-            <div id="dashboardOverview" class="panel-body">
-              <div class="loading">Loading dashboard…</div>
+            <div id="commandSummaryPanel" class="surface-body">
+              <div class="empty-state">Loading command centre…</div>
             </div>
           </section>
 
-          <section class="panel">
-            <div class="panel-header">
-              <h3>Review Queue</h3>
+          <section class="surface">
+            <div class="surface-header">
+              <div>
+                <div class="surface-kicker">Alerts</div>
+                <h3>Risk and safeguarding</h3>
+              </div>
             </div>
-            <div id="dashboardQueue" class="panel-body">
-              <div class="loading">Loading review queue…</div>
+            <div id="commandAlertsPanel" class="surface-body">
+              <div class="empty-state">Loading alerts…</div>
+            </div>
+          </section>
+
+          <section class="surface">
+            <div class="surface-header">
+              <div>
+                <div class="surface-kicker">Shift actions</div>
+                <h3>Tasks, meds and handover</h3>
+              </div>
+            </div>
+            <div id="commandTasksPanel" class="surface-body">
+              <div class="empty-state">Loading operational actions…</div>
+            </div>
+          </section>
+
+          <section class="surface">
+            <div class="surface-header">
+              <div>
+                <div class="surface-kicker">Management</div>
+                <h3>Review queue</h3>
+              </div>
+            </div>
+            <div id="dashboardQueue" class="surface-body">
+              <div class="empty-state">Loading management queue…</div>
+            </div>
+          </section>
+
+          <section class="surface">
+            <div class="surface-header">
+              <div>
+                <div class="surface-kicker">Overview</div>
+                <h3>Home dashboard</h3>
+              </div>
+            </div>
+            <div id="dashboardOverview" class="surface-body">
+              <div class="empty-state">Loading dashboard…</div>
             </div>
           </section>
         </div>
       </section>
 
-      <!-- COMMAND CENTRE -->
-      <section class="tab-panel" id="tab-command">
-        <div class="grid three">
-          <section class="panel">
-            <div class="panel-header">
-              <h3>Summary</h3>
-            </div>
-            <div id="commandSummaryPanel" class="panel-body">
-              <div class="loading">Loading command centre…</div>
-            </div>
-          </section>
-
-          <section class="panel">
-            <div class="panel-header">
-              <h3>Alerts</h3>
-            </div>
-            <div id="commandAlertsPanel" class="panel-body">
-              <div class="loading">Loading alerts…</div>
-            </div>
-          </section>
-
-          <section class="panel">
-            <div class="panel-header">
-              <h3>Tasks / Meds / Handover</h3>
-            </div>
-            <div id="commandTasksPanel" class="panel-body">
-              <div class="loading">Loading tasks…</div>
-            </div>
-          </section>
+      <!-- YOUNG PEOPLE -->
+      <section class="primary-panel" id="primary-young-people">
+        <div class="subnav-wrap">
+          <nav class="subnav">
+            <button class="subnav-btn active" data-subtab="overview">Overview</button>
+            <button class="subnav-btn" data-subtab="recording">Recording</button>
+            <button class="subnav-btn" data-subtab="health">Health</button>
+            <button class="subnav-btn" data-subtab="education">Education</button>
+            <button class="subnav-btn" data-subtab="family">Family</button>
+            <button class="subnav-btn" data-subtab="keywork">Keywork</button>
+            <button class="subnav-btn" data-subtab="plans">Plans</button>
+            <button class="subnav-btn" data-subtab="risk">Risk</button>
+            <button class="subnav-btn" data-subtab="timeline">Timeline</button>
+            <button class="subnav-btn" data-subtab="documents">Documents</button>
+          </nav>
         </div>
-      </section>
 
-      <!-- OVERVIEW -->
-      <section class="tab-panel" id="tab-overview">
-        <div class="grid two">
-          <section class="panel">
-            <div class="panel-header">
-              <h3>Core Profile</h3>
-            </div>
-            <div id="profilePanel" class="panel-body">
-              <div class="empty-state">Select a young person to view profile.</div>
-            </div>
-          </section>
+        <!-- OVERVIEW -->
+        <section class="subtab-panel active" id="subtab-overview">
+          <div class="workspace-grid split-grid">
+            <section class="surface">
+              <div class="surface-header">
+                <div>
+                  <div class="surface-kicker">Profile</div>
+                  <h3>Core information</h3>
+                </div>
+              </div>
+              <div id="profilePanel" class="surface-body">
+                <div class="empty-state">Select a young person to view profile.</div>
+              </div>
+            </section>
 
-          <section class="panel">
-            <div class="panel-header panel-header-row">
-              <h3>Identity / Alerts / Photo</h3>
-              <button id="openPhotoUploadBtn" class="secondary-btn">Upload Photo</button>
-            </div>
-            <div id="sideProfilePanel" class="panel-body">
-              <div class="empty-state">Select a young person to view profile detail.</div>
-            </div>
-          </section>
-        </div>
-      </section>
-
-      <!-- DAILY -->
-      <section class="tab-panel" id="tab-daily">
-        <section class="panel">
-          <div class="panel-header panel-header-row">
-            <h3>Daily Notes</h3>
-            <button id="openDailyNoteBtn2" class="primary-btn">New Daily Note</button>
+            <section class="surface">
+              <div class="surface-header">
+                <div>
+                  <div class="surface-kicker">Identity</div>
+                  <h3>Alerts, identity and photo</h3>
+                </div>
+                <button id="openPhotoUploadBtn" class="btn btn-ghost">Upload Photo</button>
+              </div>
+              <div id="sideProfilePanel" class="surface-body">
+                <div class="empty-state">Select a young person to view further profile detail.</div>
+              </div>
+            </section>
           </div>
-          <div id="dailyNotesPanel" class="panel-body">
-            <div class="empty-state">Select a young person to load daily notes.</div>
+        </section>
+
+        <!-- RECORDING -->
+        <section class="subtab-panel" id="subtab-recording">
+          <div class="workspace-grid split-grid">
+            <section class="surface">
+              <div class="surface-header">
+                <div>
+                  <div class="surface-kicker">Daily living</div>
+                  <h3>Daily notes</h3>
+                </div>
+                <button id="openDailyNoteBtn2" class="btn btn-primary">New Daily Note</button>
+              </div>
+              <div id="dailyNotesPanel" class="surface-body">
+                <div class="empty-state">Select a young person to load daily notes.</div>
+              </div>
+            </section>
+
+            <section class="surface">
+              <div class="surface-header">
+                <div>
+                  <div class="surface-kicker">Safeguarding</div>
+                  <h3>Incidents</h3>
+                </div>
+                <button id="openIncidentBtn2" class="btn btn-primary">New Incident</button>
+              </div>
+              <div id="incidentsPanel" class="surface-body">
+                <div class="empty-state">Select a young person to load incidents.</div>
+              </div>
+            </section>
+
+            <section class="surface surface-wide">
+              <div class="surface-header">
+                <div>
+                  <div class="surface-kicker">Shift continuity</div>
+                  <h3>Handover</h3>
+                </div>
+                <button id="generateHandoverBtn2" class="btn btn-primary">Generate Handover</button>
+              </div>
+              <div id="handoverPanel" class="surface-body">
+                <div class="empty-state">Select a young person to load handover.</div>
+              </div>
+            </section>
           </div>
+        </section>
+
+        <!-- HEALTH -->
+        <section class="subtab-panel" id="subtab-health">
+          <div class="workspace-grid split-grid">
+            <section class="surface">
+              <div class="surface-header">
+                <div>
+                  <div class="surface-kicker">Health</div>
+                  <h3>Health profile and records</h3>
+                </div>
+                <div class="surface-actions">
+                  <button id="openHealthProfileBtn" class="btn btn-ghost">Health Profile</button>
+                  <button id="openHealthRecordBtn2" class="btn btn-primary">New Health Record</button>
+                  <button id="openMedicationProfileBtn" class="btn btn-ghost">Medication Profile</button>
+                  <button id="openMedicationRecordBtn" class="btn btn-ghost">Medication Record</button>
+                </div>
+              </div>
+              <div id="healthPanel" class="surface-body">
+                <div class="empty-state">Select a young person to load health data.</div>
+              </div>
+            </section>
+
+            <section class="surface">
+              <div class="surface-header">
+                <div>
+                  <div class="surface-kicker">Health summary</div>
+                  <h3>Current profile</h3>
+                </div>
+              </div>
+              <div id="healthProfilePanel" class="surface-body">
+                <div class="empty-state">Select a young person to load health profile.</div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <!-- EDUCATION -->
+        <section class="subtab-panel" id="subtab-education">
+          <div class="workspace-grid split-grid">
+            <section class="surface">
+              <div class="surface-header">
+                <div>
+                  <div class="surface-kicker">Education</div>
+                  <h3>Education records</h3>
+                </div>
+                <div class="surface-actions">
+                  <button id="openEducationProfileBtn" class="btn btn-ghost">Education Profile</button>
+                  <button id="openEducationRecordBtn2" class="btn btn-primary">New Education Record</button>
+                </div>
+              </div>
+              <div id="educationPanel" class="surface-body">
+                <div class="empty-state">Select a young person to load education data.</div>
+              </div>
+            </section>
+
+            <section class="surface">
+              <div class="surface-header">
+                <div>
+                  <div class="surface-kicker">Education summary</div>
+                  <h3>Current profile</h3>
+                </div>
+              </div>
+              <div id="educationProfilePanel" class="surface-body">
+                <div class="empty-state">Select a young person to load education profile.</div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <!-- FAMILY -->
+        <section class="subtab-panel" id="subtab-family">
+          <div class="workspace-grid split-grid">
+            <section class="surface">
+              <div class="surface-header">
+                <div>
+                  <div class="surface-kicker">Family and relationships</div>
+                  <h3>Family contact records</h3>
+                </div>
+                <div class="surface-actions">
+                  <button id="openFamilyContactBtn" class="btn btn-ghost">Add Contact</button>
+                  <button id="openFamilyRecordBtn2" class="btn btn-primary">New Family Record</button>
+                </div>
+              </div>
+              <div id="familyPanel" class="surface-body">
+                <div class="empty-state">Select a young person to load family records.</div>
+              </div>
+            </section>
+
+            <section class="surface">
+              <div class="surface-header">
+                <div>
+                  <div class="surface-kicker">Approved network</div>
+                  <h3>Contacts</h3>
+                </div>
+              </div>
+              <div id="familyContactsPanel" class="surface-body">
+                <div class="empty-state">Select a young person to load contacts.</div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <!-- KEYWORK -->
+        <section class="subtab-panel" id="subtab-keywork">
+          <section class="surface">
+            <div class="surface-header">
+              <div>
+                <div class="surface-kicker">Direct work</div>
+                <h3>Keywork sessions</h3>
+              </div>
+              <button id="openKeyworkBtn2" class="btn btn-primary">New Keywork Session</button>
+            </div>
+            <div id="keyworkPanel" class="surface-body">
+              <div class="empty-state">Select a young person to load keywork sessions.</div>
+            </div>
+          </section>
+        </section>
+
+        <!-- PLANS -->
+        <section class="subtab-panel" id="subtab-plans">
+          <section class="surface">
+            <div class="surface-header">
+              <div>
+                <div class="surface-kicker">Planning</div>
+                <h3>Support plans</h3>
+              </div>
+              <button id="openPlanBtn2" class="btn btn-primary">New Support Plan</button>
+            </div>
+            <div id="plansPanel" class="surface-body">
+              <div class="empty-state">Select a young person to load plans.</div>
+            </div>
+          </section>
+        </section>
+
+        <!-- RISK -->
+        <section class="subtab-panel" id="subtab-risk">
+          <section class="surface">
+            <div class="surface-header">
+              <div>
+                <div class="surface-kicker">Risk management</div>
+                <h3>Risk assessments</h3>
+              </div>
+              <button id="openRiskBtn2" class="btn btn-primary">New Risk Assessment</button>
+            </div>
+            <div id="riskPanel" class="surface-body">
+              <div class="empty-state">Select a young person to load risks.</div>
+            </div>
+          </section>
+        </section>
+
+        <!-- TIMELINE -->
+        <section class="subtab-panel" id="subtab-timeline">
+          <div class="workspace-grid split-grid">
+            <section class="surface">
+              <div class="surface-header">
+                <div>
+                  <div class="surface-kicker">Joined-up timeline</div>
+                  <h3>Chronology</h3>
+                </div>
+                <div class="surface-actions">
+                  <button id="openChronologyEventBtn" class="btn btn-ghost">Add Event</button>
+                  <button id="rebuildChronologyBtn2" class="btn btn-primary">Rebuild</button>
+                </div>
+              </div>
+              <div id="chronologyPanel" class="surface-body">
+                <div class="empty-state">Select a young person to load chronology.</div>
+              </div>
+            </section>
+
+            <section class="surface">
+              <div class="surface-header">
+                <div>
+                  <div class="surface-kicker">Filters</div>
+                  <h3>Refine timeline</h3>
+                </div>
+              </div>
+              <div class="surface-body">
+                <div class="field">
+                  <label for="chronologyCategoryFilter">Category</label>
+                  <select id="chronologyCategoryFilter">
+                    <option value="">All</option>
+                    <option value="daily_note">Daily Note</option>
+                    <option value="incident">Incident</option>
+                    <option value="health">Health</option>
+                    <option value="education">Education</option>
+                    <option value="family">Family</option>
+                    <option value="keywork">Keywork</option>
+                    <option value="plan">Plan</option>
+                    <option value="risk">Risk</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="chronologySignificanceFilter">Significance</label>
+                  <select id="chronologySignificanceFilter">
+                    <option value="">All</option>
+                    <option value="standard">Standard</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </div>
+
+                <div class="action-row">
+                  <button id="applyChronologyFiltersBtn" class="btn btn-primary">Apply Filters</button>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <!-- DOCUMENTS -->
+        <section class="subtab-panel" id="subtab-documents">
+          <section class="surface">
+            <div class="surface-header">
+              <div>
+                <div class="surface-kicker">Documents</div>
+                <h3>Statutory documents</h3>
+              </div>
+              <div class="surface-actions">
+                <button id="openStatutoryCreateBtn" class="btn btn-ghost">Create Record</button>
+                <button id="openStatutoryUploadBtn" class="btn btn-primary">Upload Document</button>
+              </div>
+            </div>
+            <div id="statutoryPanel" class="surface-body">
+              <div class="empty-state">Select a young person to load statutory documents.</div>
+            </div>
+          </section>
         </section>
       </section>
 
-      <!-- INCIDENTS -->
-      <section class="tab-panel" id="tab-incidents">
-        <section class="panel">
-          <div class="panel-header panel-header-row">
-            <h3>Incidents</h3>
-            <button id="openIncidentBtn2" class="primary-btn">New Incident</button>
-          </div>
-          <div id="incidentsPanel" class="panel-body">
-            <div class="empty-state">Select a young person to load incidents.</div>
-          </div>
-        </section>
-      </section>
-
-      <!-- HEALTH -->
-      <section class="tab-panel" id="tab-health">
-        <div class="grid two">
-          <section class="panel">
-            <div class="panel-header panel-header-row">
-              <h3>Health Records</h3>
-              <div class="inline-actions">
-                <button id="openHealthProfileBtn" class="secondary-btn">Health Profile</button>
-                <button id="openHealthRecordBtn2" class="primary-btn">New Health Record</button>
-                <button id="openMedicationProfileBtn" class="secondary-btn">Medication Profile</button>
-                <button id="openMedicationRecordBtn" class="secondary-btn">Medication Record</button>
-              </div>
-            </div>
-            <div id="healthPanel" class="panel-body">
-              <div class="empty-state">Select a young person to load health data.</div>
-            </div>
-          </section>
-
-          <section class="panel">
-            <div class="panel-header">
-              <h3>Health Profile</h3>
-            </div>
-            <div id="healthProfilePanel" class="panel-body">
-              <div class="empty-state">Select a young person to load health profile.</div>
-            </div>
-          </section>
+      <!-- QUALITY -->
+      <section class="primary-panel" id="primary-quality">
+        <div class="subnav-wrap">
+          <nav class="subnav">
+            <button class="subnav-btn active" data-subtab="quality-standards">Standards</button>
+            <button class="subnav-btn" data-subtab="quality-compliance">Compliance</button>
+            <button class="subnav-btn" data-subtab="quality-ai">AI / Therapeutic</button>
+            <button class="subnav-btn" data-subtab="quality-management">Management Queue</button>
+            <button class="subnav-btn" data-subtab="quality-archive">Archive</button>
+          </nav>
         </div>
-      </section>
 
-      <!-- EDUCATION -->
-      <section class="tab-panel" id="tab-education">
-        <div class="grid two">
-          <section class="panel">
-            <div class="panel-header panel-header-row">
-              <h3>Education Records</h3>
-              <div class="inline-actions">
-                <button id="openEducationProfileBtn" class="secondary-btn">Education Profile</button>
-                <button id="openEducationRecordBtn2" class="primary-btn">New Education Record</button>
+        <section class="subtab-panel active" id="subtab-quality-standards">
+          <div class="workspace-grid split-grid">
+            <section class="surface">
+              <div class="surface-header">
+                <div>
+                  <div class="surface-kicker">Quality standards</div>
+                  <h3>Standards summary</h3>
+                </div>
+                <button id="rebuildStandardsBtn2" class="btn btn-primary">Rebuild Evidence</button>
               </div>
-            </div>
-            <div id="educationPanel" class="panel-body">
-              <div class="empty-state">Select a young person to load education records.</div>
-            </div>
-          </section>
-
-          <section class="panel">
-            <div class="panel-header">
-              <h3>Education Profile</h3>
-            </div>
-            <div id="educationProfilePanel" class="panel-body">
-              <div class="empty-state">Select a young person to load education profile.</div>
-            </div>
-          </section>
-        </div>
-      </section>
-
-      <!-- FAMILY -->
-      <section class="tab-panel" id="tab-family">
-        <div class="grid two">
-          <section class="panel">
-            <div class="panel-header panel-header-row">
-              <h3>Family Contact Records</h3>
-              <div class="inline-actions">
-                <button id="openFamilyContactBtn" class="secondary-btn">Add Contact</button>
-                <button id="openFamilyRecordBtn2" class="primary-btn">New Family Record</button>
+              <div id="standardsPanel" class="surface-body">
+                <div class="empty-state">Select a young person to load standards summary.</div>
               </div>
-            </div>
-            <div id="familyPanel" class="panel-body">
-              <div class="empty-state">Select a young person to load family records.</div>
-            </div>
-          </section>
+            </section>
 
-          <section class="panel">
-            <div class="panel-header">
-              <h3>Contacts</h3>
-            </div>
-            <div id="familyContactsPanel" class="panel-body">
-              <div class="empty-state">Select a young person to load contacts.</div>
-            </div>
-          </section>
-        </div>
-      </section>
-
-      <!-- KEYWORK -->
-      <section class="tab-panel" id="tab-keywork">
-        <section class="panel">
-          <div class="panel-header panel-header-row">
-            <h3>Keywork Sessions</h3>
-            <button id="openKeyworkBtn2" class="primary-btn">New Keywork Session</button>
-          </div>
-          <div id="keyworkPanel" class="panel-body">
-            <div class="empty-state">Select a young person to load keywork sessions.</div>
+            <section class="surface">
+              <div class="surface-header">
+                <div>
+                  <div class="surface-kicker">Evidence</div>
+                  <h3>Standards evidence</h3>
+                </div>
+              </div>
+              <div id="standardsEvidencePanel" class="surface-body">
+                <div class="empty-state">Select a young person to load standards evidence.</div>
+              </div>
+            </section>
           </div>
         </section>
-      </section>
 
-      <!-- PLANS -->
-      <section class="tab-panel" id="tab-plans">
-        <section class="panel">
-          <div class="panel-header panel-header-row">
-            <h3>Support Plans</h3>
-            <button id="openPlanBtn2" class="primary-btn">New Support Plan</button>
-          </div>
-          <div id="plansPanel" class="panel-body">
-            <div class="empty-state">Select a young person to load plans.</div>
+        <section class="subtab-panel" id="subtab-quality-compliance">
+          <section class="surface">
+            <div class="surface-header">
+              <div>
+                <div class="surface-kicker">Compliance</div>
+                <h3>Reviews, due dates and follow-up</h3>
+              </div>
+            </div>
+            <div id="compliancePanel" class="surface-body">
+              <div class="empty-state">Select a young person to load compliance.</div>
+            </div>
+          </section>
+        </section>
+
+        <section class="subtab-panel" id="subtab-quality-ai">
+          <div class="workspace-grid split-grid">
+            <section class="surface">
+              <div class="surface-header">
+                <div>
+                  <div class="surface-kicker">Therapeutic recording</div>
+                  <h3>AI / therapeutic notes</h3>
+                </div>
+                <button id="openAiNoteBtn2" class="btn btn-primary">New AI Note</button>
+              </div>
+              <div id="aiHistoryPanel" class="surface-body">
+                <div class="empty-state">Loading AI notes…</div>
+              </div>
+            </section>
+
+            <section class="surface">
+              <div class="surface-header">
+                <div>
+                  <div class="surface-kicker">Practice support</div>
+                  <h3>Assistant workspace</h3>
+                </div>
+              </div>
+              <div class="surface-body">
+                <div class="field">
+                  <label for="quickAssistantPrompt">Quick practice prompt</label>
+                  <textarea id="quickAssistantPrompt" rows="8" placeholder="Ask for safer wording, a therapeutic rewrite, reflective analysis, planning support, or a supervision-ready summary."></textarea>
+                </div>
+                <div class="action-row">
+                  <button id="runQuickAssistantBtn" class="btn btn-primary">Generate Support</button>
+                </div>
+                <div id="quickAssistantOutput" class="assistant-output empty-state">No output yet.</div>
+              </div>
+            </section>
           </div>
         </section>
-      </section>
 
-      <!-- RISK -->
-      <section class="tab-panel" id="tab-risk">
-        <section class="panel">
-          <div class="panel-header panel-header-row">
-            <h3>Risk Assessments</h3>
-            <button id="openRiskBtn2" class="primary-btn">New Risk Assessment</button>
-          </div>
-          <div id="riskPanel" class="panel-body">
-            <div class="empty-state">Select a young person to load risks.</div>
-          </div>
+        <section class="subtab-panel" id="subtab-quality-management">
+          <section class="surface">
+            <div class="surface-header">
+              <div>
+                <div class="surface-kicker">Leadership and oversight</div>
+                <h3>Management queue</h3>
+              </div>
+            </div>
+            <div id="managementPanel" class="surface-body">
+              <div class="empty-state">Loading management queue…</div>
+            </div>
+          </section>
         </section>
-      </section>
 
-      <!-- CHRONOLOGY -->
-      <section class="tab-panel" id="tab-chronology">
-        <div class="grid two">
-          <section class="panel">
-            <div class="panel-header panel-header-row">
-              <h3>Chronology</h3>
-              <div class="inline-actions">
-                <button id="openChronologyEventBtn" class="secondary-btn">Add Event</button>
-                <button id="rebuildChronologyBtn2" class="primary-btn">Rebuild</button>
+        <section class="subtab-panel" id="subtab-quality-archive">
+          <section class="surface">
+            <div class="surface-header">
+              <div>
+                <div class="surface-kicker">Archive</div>
+                <h3>Archived records</h3>
               </div>
             </div>
-            <div id="chronologyPanel" class="panel-body">
-              <div class="empty-state">Select a young person to load chronology.</div>
+            <div id="archivePanel" class="surface-body">
+              <div class="empty-state">Select a young person to load archived records.</div>
             </div>
           </section>
-
-          <section class="panel">
-            <div class="panel-header">
-              <h3>Chronology Filters</h3>
-            </div>
-            <div class="panel-body">
-              <div class="field">
-                <label for="chronologyCategoryFilter">Category</label>
-                <select id="chronologyCategoryFilter">
-                  <option value="">All</option>
-                  <option value="daily_note">Daily Note</option>
-                  <option value="incident">Incident</option>
-                  <option value="health">Health</option>
-                  <option value="education">Education</option>
-                  <option value="family">Family</option>
-                  <option value="keywork">Keywork</option>
-                  <option value="plan">Plan</option>
-                  <option value="risk">Risk</option>
-                </select>
-              </div>
-              <div class="field">
-                <label for="chronologySignificanceFilter">Significance</label>
-                <select id="chronologySignificanceFilter">
-                  <option value="">All</option>
-                  <option value="standard">Standard</option>
-                  <option value="high">High</option>
-                  <option value="critical">Critical</option>
-                </select>
-              </div>
-              <div class="actions-row">
-                <button id="applyChronologyFiltersBtn" class="secondary-btn">Apply Filters</button>
-              </div>
-            </div>
-          </section>
-        </div>
-      </section>
-
-      <!-- STANDARDS -->
-      <section class="tab-panel" id="tab-standards">
-        <div class="grid two">
-          <section class="panel">
-            <div class="panel-header panel-header-row">
-              <h3>Quality Standards Summary</h3>
-              <button id="rebuildStandardsBtn2" class="primary-btn">Rebuild Standards Evidence</button>
-            </div>
-            <div id="standardsPanel" class="panel-body">
-              <div class="empty-state">Select a young person to load standards summary.</div>
-            </div>
-          </section>
-
-          <section class="panel">
-            <div class="panel-header">
-              <h3>Standards Evidence</h3>
-            </div>
-            <div id="standardsEvidencePanel" class="panel-body">
-              <div class="empty-state">Select a young person to load standards evidence.</div>
-            </div>
-          </section>
-        </div>
-      </section>
-
-      <!-- COMPLIANCE -->
-      <section class="tab-panel" id="tab-compliance">
-        <section class="panel">
-          <div class="panel-header">
-            <h3>Compliance</h3>
-          </div>
-          <div id="compliancePanel" class="panel-body">
-            <div class="empty-state">Select a young person to load compliance.</div>
-          </div>
-        </section>
-      </section>
-
-      <!-- STATUTORY -->
-      <section class="tab-panel" id="tab-statutory">
-        <section class="panel">
-          <div class="panel-header panel-header-row">
-            <h3>Statutory Documents</h3>
-            <div class="inline-actions">
-              <button id="openStatutoryCreateBtn" class="secondary-btn">Create Record</button>
-              <button id="openStatutoryUploadBtn" class="primary-btn">Upload Document</button>
-            </div>
-          </div>
-          <div id="statutoryPanel" class="panel-body">
-            <div class="empty-state">Select a young person to load statutory documents.</div>
-          </div>
-        </section>
-      </section>
-
-      <!-- HANDOVER -->
-      <section class="tab-panel" id="tab-handover">
-        <section class="panel">
-          <div class="panel-header panel-header-row">
-            <h3>Handover</h3>
-            <button id="generateHandoverBtn2" class="primary-btn">Generate Handover</button>
-          </div>
-          <div id="handoverPanel" class="panel-body">
-            <div class="empty-state">Select a young person to load handover.</div>
-          </div>
-        </section>
-      </section>
-
-      <!-- THERAPEUTIC -->
-      <section class="tab-panel" id="tab-therapeutic">
-        <div class="grid two">
-          <section class="panel">
-            <div class="panel-header panel-header-row">
-              <h3>AI / Therapeutic Notes</h3>
-              <button id="openAiNoteBtn2" class="primary-btn">New AI Note</button>
-            </div>
-            <div id="aiHistoryPanel" class="panel-body">
-              <div class="loading">Loading AI notes…</div>
-            </div>
-          </section>
-
-          <section class="panel">
-            <div class="panel-header">
-              <h3>Assistant Workspace</h3>
-            </div>
-            <div class="panel-body">
-              <div class="field">
-                <label for="quickAssistantPrompt">Quick Practice Prompt</label>
-                <textarea id="quickAssistantPrompt" rows="7" placeholder="Ask for a therapeutic rewrite, reflective summary, safer recording language, analysis, or planning support."></textarea>
-              </div>
-              <div class="actions-row">
-                <button id="runQuickAssistantBtn" class="primary-btn">Generate Support</button>
-              </div>
-              <div id="quickAssistantOutput" class="assistant-output empty-state">No output yet.</div>
-            </div>
-          </section>
-        </div>
-      </section>
-
-      <!-- MANAGEMENT -->
-      <section class="tab-panel" id="tab-management">
-        <section class="panel">
-          <div class="panel-header">
-            <h3>Management Queue</h3>
-          </div>
-          <div id="managementPanel" class="panel-body">
-            <div class="loading">Loading management queue…</div>
-          </div>
         </section>
       </section>
 
       <!-- INSPECTION -->
-      <section class="tab-panel" id="tab-inspection">
-        <div class="grid two">
-          <section class="panel">
-            <div class="panel-header panel-header-row">
-              <h3>Inspection Pack</h3>
-              <button id="loadInspectionPackBtn" class="primary-btn">Load Inspection Data</button>
+      <section class="primary-panel" id="primary-inspection">
+        <div class="workspace-grid split-grid">
+          <section class="surface">
+            <div class="surface-header">
+              <div>
+                <div class="surface-kicker">Inspection readiness</div>
+                <h3>Inspection pack</h3>
+              </div>
+              <button id="loadInspectionPackBtn" class="btn btn-primary">Load Inspection Data</button>
             </div>
-            <div id="inspectionPanel" class="panel-body">
+            <div id="inspectionPanel" class="surface-body">
               <div class="empty-state">Select a young person and load the inspection pack.</div>
             </div>
           </section>
 
-          <section class="panel">
-            <div class="panel-header">
-              <h3>Inspection Evidence Summary</h3>
+          <section class="surface">
+            <div class="surface-header">
+              <div>
+                <div class="surface-kicker">Evidence summary</div>
+                <h3>Inspection evidence overview</h3>
+              </div>
             </div>
-            <div id="inspectionSummaryPanel" class="panel-body">
+            <div id="inspectionSummaryPanel" class="surface-body">
               <div class="empty-state">Inspection evidence summary will appear here.</div>
             </div>
           </section>
         </div>
       </section>
 
-      <!-- ROSTERING -->
-      <section class="tab-panel" id="tab-rostering">
-        <div class="grid two">
-          <section class="panel">
-            <div class="panel-header panel-header-row">
-              <h3>Rostering</h3>
-              <div class="inline-actions">
-                <button id="loadRosteringBtn" class="secondary-btn">Load Week</button>
-                <button id="buildRosteringWeekBtn" class="secondary-btn">Build Week Template</button>
-                <button id="publishRosteringWeekBtn" class="primary-btn">Publish Week</button>
-              </div>
-            </div>
-            <div class="panel-body">
-              <div class="form-grid two">
-                <div class="field">
-                  <label for="rosteringHomeId">Home ID</label>
-                  <input id="rosteringHomeId" type="number" placeholder="1" />
-                </div>
-                <div class="field">
-                  <label for="rosteringWeekStart">Week Start</label>
-                  <input id="rosteringWeekStart" type="date" />
-                </div>
-              </div>
-              <div id="rosteringPanel" class="records-wrap">
-                <div class="empty-state">Load a rostering week to view rota data.</div>
-              </div>
-            </div>
-          </section>
-
-          <section class="panel">
-            <div class="panel-header">
-              <h3>Rostering Warnings / Evidence</h3>
-            </div>
-            <div id="rosteringEvidencePanel" class="panel-body">
-              <div class="empty-state">Rostering warnings and evidence will appear here.</div>
-            </div>
-          </section>
+      <!-- OPERATIONS -->
+      <section class="primary-panel" id="primary-operations">
+        <div class="subnav-wrap">
+          <nav class="subnav">
+            <button class="subnav-btn active" data-subtab="ops-rostering">Rostering</button>
+          </nav>
         </div>
-      </section>
 
-      <!-- ARCHIVE -->
-      <section class="tab-panel" id="tab-archive">
-        <section class="panel">
-          <div class="panel-header">
-            <h3>Archived Records</h3>
-          </div>
-          <div id="archivePanel" class="panel-body">
-            <div class="empty-state">Select a young person to load archived records.</div>
+        <section class="subtab-panel active" id="subtab-ops-rostering">
+          <div class="workspace-grid split-grid">
+            <section class="surface">
+              <div class="surface-header">
+                <div>
+                  <div class="surface-kicker">Operations</div>
+                  <h3>Rostering</h3>
+                </div>
+                <div class="surface-actions">
+                  <button id="loadRosteringBtn" class="btn btn-ghost">Load Week</button>
+                  <button id="buildRosteringWeekBtn" class="btn btn-ghost">Build Week</button>
+                  <button id="publishRosteringWeekBtn" class="btn btn-primary">Publish Week</button>
+                </div>
+              </div>
+
+              <div class="surface-body">
+                <div class="form-row">
+                  <div class="field">
+                    <label for="rosteringHomeId">Home ID</label>
+                    <input id="rosteringHomeId" type="number" placeholder="1" />
+                  </div>
+                  <div class="field">
+                    <label for="rosteringWeekStart">Week start</label>
+                    <input id="rosteringWeekStart" type="date" />
+                  </div>
+                </div>
+
+                <div id="rosteringPanel">
+                  <div class="empty-state">Load a rota week to view rostering.</div>
+                </div>
+              </div>
+            </section>
+
+            <section class="surface">
+              <div class="surface-header">
+                <div>
+                  <div class="surface-kicker">Assurance</div>
+                  <h3>Warnings and evidence</h3>
+                </div>
+              </div>
+              <div id="rosteringEvidencePanel" class="surface-body">
+                <div class="empty-state">Rostering warnings and evidence will appear here.</div>
+              </div>
+            </section>
           </div>
         </section>
       </section>
     </main>
   </div>
 
-  <!-- PHOTO MODAL -->
+  <!-- MODALS -->
   <div class="modal hidden" id="photoUploadModal">
     <div class="modal-card">
       <div class="modal-header">
@@ -577,15 +703,14 @@
           <label for="youngPersonPhotoFile">Photo</label>
           <input id="youngPersonPhotoFile" type="file" accept="image/*" />
         </div>
-        <div class="actions-row right">
-          <button id="savePhotoBtn" class="primary-btn">Upload Photo</button>
+        <div class="action-row right">
+          <button id="savePhotoBtn" class="btn btn-primary">Upload Photo</button>
         </div>
         <div id="photoStatus" class="status-text"></div>
       </div>
     </div>
   </div>
 
-  <!-- AI NOTE MODAL -->
   <div class="modal hidden" id="aiNoteModal">
     <div class="modal-card modal-xl">
       <div class="modal-header">
@@ -594,7 +719,6 @@
       </div>
       <div class="modal-body">
         <input type="hidden" id="aiNoteId" />
-
         <div class="form-grid two">
           <div class="field">
             <label for="aiYoungPerson">Young person</label>
@@ -606,11 +730,11 @@
           </div>
           <div class="field">
             <label for="aiShiftType">Shift type</label>
-            <input id="aiShiftType" type="text" placeholder="day / evening / night" />
+            <input id="aiShiftType" type="text" />
           </div>
           <div class="field">
             <label for="aiLocationContext">Location</label>
-            <input id="aiLocationContext" type="text" placeholder="home / school / community" />
+            <input id="aiLocationContext" type="text" />
           </div>
         </div>
 
@@ -619,33 +743,32 @@
           <textarea id="aiTranscript" rows="7"></textarea>
         </div>
 
-        <div class="actions-row">
-          <button id="generateAiBtn" class="primary-btn">Generate AI Draft</button>
-          <button id="copyDraftBtn" class="secondary-btn">Copy Draft To Final</button>
-          <button id="polishAiBtn" class="secondary-btn">Polish Final</button>
+        <div class="action-row">
+          <button id="generateAiBtn" class="btn btn-primary">Generate AI Draft</button>
+          <button id="copyDraftBtn" class="btn btn-secondary">Copy Draft To Final</button>
+          <button id="polishAiBtn" class="btn btn-secondary">Polish Final</button>
         </div>
 
         <div class="field">
-          <label for="aiDraft">AI Draft</label>
+          <label for="aiDraft">AI draft</label>
           <textarea id="aiDraft" rows="8" readonly></textarea>
         </div>
 
         <div class="field">
-          <label for="aiFinalNote">Final Note</label>
+          <label for="aiFinalNote">Final note</label>
           <textarea id="aiFinalNote" rows="8"></textarea>
         </div>
 
         <div id="aiSafeguardingBanner" class="banner hidden"></div>
 
-        <div class="actions-row right">
-          <button id="saveAiBtn" class="primary-btn">Save AI Note</button>
+        <div class="action-row right">
+          <button id="saveAiBtn" class="btn btn-primary">Save AI Note</button>
         </div>
         <div id="aiStatus" class="status-text"></div>
       </div>
     </div>
   </div>
 
-  <!-- DAILY NOTE MODAL -->
   <div class="modal hidden" id="dailyNoteModal">
     <div class="modal-card modal-xl">
       <div class="modal-header">
@@ -654,7 +777,6 @@
       </div>
       <div class="modal-body">
         <input type="hidden" id="dailyNoteId" />
-
         <div class="form-grid two">
           <div class="field">
             <label for="dailyYoungPerson">Young person</label>
@@ -684,24 +806,23 @@
         <div class="field"><label for="dailyPositives">Positives</label><textarea id="dailyPositives" rows="3"></textarea></div>
         <div class="field"><label for="dailyActions">Actions required</label><textarea id="dailyActions" rows="3"></textarea></div>
 
-        <div class="actions-row">
-          <button id="dailyAiAssistBtn" class="secondary-btn">AI Assist</button>
+        <div class="action-row">
+          <button id="dailyAiAssistBtn" class="btn btn-secondary">AI Assist</button>
         </div>
 
         <div class="field">
-          <label for="dailyAiDraft">AI Support Draft</label>
+          <label for="dailyAiDraft">AI support draft</label>
           <textarea id="dailyAiDraft" rows="6" readonly></textarea>
         </div>
 
-        <div class="actions-row right">
-          <button id="saveDailyBtn" class="primary-btn">Save Daily Note</button>
+        <div class="action-row right">
+          <button id="saveDailyBtn" class="btn btn-primary">Save Daily Note</button>
         </div>
         <div id="dailyStatus" class="status-text"></div>
       </div>
     </div>
   </div>
 
-  <!-- INCIDENT MODAL -->
   <div class="modal hidden" id="incidentModal">
     <div class="modal-card modal-xl">
       <div class="modal-header">
@@ -710,7 +831,6 @@
       </div>
       <div class="modal-body">
         <input type="hidden" id="incidentId" />
-
         <div class="form-grid two">
           <div class="field">
             <label for="incidentYoungPerson">Young person</label>
@@ -749,14 +869,8 @@
               <option value="critical">Critical</option>
             </select>
           </div>
-          <div class="field">
-            <label for="incidentLocation">Location</label>
-            <input id="incidentLocation" type="text" />
-          </div>
-          <div class="field">
-            <label for="incidentStaffId">Staff ID</label>
-            <input id="incidentStaffId" type="number" />
-          </div>
+          <div class="field"><label for="incidentLocation">Location</label><input id="incidentLocation" type="text" /></div>
+          <div class="field"><label for="incidentStaffId">Staff ID</label><input id="incidentStaffId" type="number" /></div>
         </div>
 
         <div class="field"><label for="incidentDescription">Description</label><textarea id="incidentDescription" rows="4"></textarea></div>
@@ -767,25 +881,24 @@
         <div class="field"><label for="incidentVoice">Child voice</label><textarea id="incidentVoice" rows="3"></textarea></div>
         <div class="field"><label for="incidentRestorative">Restorative follow-up</label><textarea id="incidentRestorative" rows="3"></textarea></div>
 
-        <div class="actions-row">
-          <button id="incidentAiAssistBtn" class="secondary-btn">AI Assist</button>
-          <button id="incidentAiPolishBtn" class="secondary-btn">Polish Description</button>
+        <div class="action-row">
+          <button id="incidentAiAssistBtn" class="btn btn-secondary">AI Assist</button>
+          <button id="incidentAiPolishBtn" class="btn btn-secondary">Polish Description</button>
         </div>
 
         <div class="field">
-          <label for="incidentAiDraft">AI Support Draft</label>
+          <label for="incidentAiDraft">AI support draft</label>
           <textarea id="incidentAiDraft" rows="6" readonly></textarea>
         </div>
 
-        <div class="actions-row right">
-          <button id="saveIncidentBtn" class="primary-btn">Save Incident</button>
+        <div class="action-row right">
+          <button id="saveIncidentBtn" class="btn btn-primary">Save Incident</button>
         </div>
         <div id="incidentStatus" class="status-text"></div>
       </div>
     </div>
   </div>
 
-  <!-- HEALTH PROFILE MODAL -->
   <div class="modal hidden" id="healthProfileModal">
     <div class="modal-card">
       <div class="modal-header">
@@ -796,15 +909,14 @@
         <div class="field"><label for="healthGpName">GP name</label><input id="healthGpName" type="text" /></div>
         <div class="field"><label for="healthAllergies">Allergies</label><textarea id="healthAllergies" rows="4"></textarea></div>
         <div class="field"><label for="healthDiagnoses">Diagnoses</label><textarea id="healthDiagnoses" rows="4"></textarea></div>
-        <div class="actions-row right">
-          <button id="saveHealthProfileBtn" class="primary-btn">Save Health Profile</button>
+        <div class="action-row right">
+          <button id="saveHealthProfileBtn" class="btn btn-primary">Save Health Profile</button>
         </div>
         <div id="healthProfileStatus" class="status-text"></div>
       </div>
     </div>
   </div>
 
-  <!-- HEALTH RECORD MODAL -->
   <div class="modal hidden" id="healthRecordModal">
     <div class="modal-card modal-lg">
       <div class="modal-header">
@@ -813,7 +925,6 @@
       </div>
       <div class="modal-body">
         <input type="hidden" id="healthRecordId" />
-
         <div class="form-grid two">
           <div class="field"><label for="healthRecordType">Record type</label><input id="healthRecordType" type="text" /></div>
           <div class="field"><label for="healthRecordTitle">Title</label><input id="healthRecordTitle" type="text" /></div>
@@ -828,23 +939,20 @@
             </select>
           </div>
         </div>
-
         <div class="field"><label for="healthSummary">Summary</label><textarea id="healthSummary" rows="5"></textarea></div>
         <div class="field"><label for="healthOutcome">Outcome</label><textarea id="healthOutcome" rows="4"></textarea></div>
-
-        <div class="actions-row right">
-          <button id="saveHealthRecordBtn" class="primary-btn">Save Health Record</button>
+        <div class="action-row right">
+          <button id="saveHealthRecordBtn" class="btn btn-primary">Save Health Record</button>
         </div>
         <div id="healthRecordStatus" class="status-text"></div>
       </div>
     </div>
   </div>
 
-  <!-- MEDICATION PROFILE MODAL -->
   <div class="modal hidden" id="medicationProfileModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 id="medicationProfileModalTitle">Medication Profile</h3>
+        <h3>Medication Profile</h3>
         <button class="icon-btn close-modal" data-close="medicationProfileModal">✕</button>
       </div>
       <div class="modal-body">
@@ -863,19 +971,18 @@
             <option value="false">No</option>
           </select>
         </div>
-        <div class="actions-row right">
-          <button id="saveMedicationProfileBtn" class="primary-btn">Save Medication Profile</button>
+        <div class="action-row right">
+          <button id="saveMedicationProfileBtn" class="btn btn-primary">Save Medication Profile</button>
         </div>
         <div id="medicationProfileStatus" class="status-text"></div>
       </div>
     </div>
   </div>
 
-  <!-- MEDICATION RECORD MODAL -->
   <div class="modal hidden" id="medicationRecordModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 id="medicationRecordModalTitle">Medication Record</h3>
+        <h3>Medication Record</h3>
         <button class="icon-btn close-modal" data-close="medicationRecordModal">✕</button>
       </div>
       <div class="modal-body">
@@ -883,7 +990,7 @@
         <div class="field"><label for="medRecordName">Medication name</label><input id="medRecordName" type="text" /></div>
         <div class="field"><label for="medRecordDose">Dose</label><input id="medRecordDose" type="text" /></div>
         <div class="field"><label for="medRecordRoute">Route</label><input id="medRecordRoute" type="text" /></div>
-        <div class="field"><label for="medRecordStatusValue">Status</label><input id="medRecordStatusValue" type="text" placeholder="given / refused / omitted" /></div>
+        <div class="field"><label for="medRecordStatusValue">Status</label><input id="medRecordStatusValue" type="text" /></div>
         <div class="field">
           <label for="medRecordErrorFlag">Error flag</label>
           <select id="medRecordErrorFlag">
@@ -894,15 +1001,14 @@
         <div class="field"><label for="medRecordScheduledTime">Scheduled time</label><input id="medRecordScheduledTime" type="datetime-local" /></div>
         <div class="field"><label for="medRecordAdministeredTime">Administered time</label><input id="medRecordAdministeredTime" type="datetime-local" /></div>
         <div class="field"><label for="medRecordAdministeredBy">Administered by (user ID)</label><input id="medRecordAdministeredBy" type="number" /></div>
-        <div class="actions-row right">
-          <button id="saveMedicationRecordBtn" class="primary-btn">Save Medication Record</button>
+        <div class="action-row right">
+          <button id="saveMedicationRecordBtn" class="btn btn-primary">Save Medication Record</button>
         </div>
         <div id="medicationRecordStatus" class="status-text"></div>
       </div>
     </div>
   </div>
 
-  <!-- EDUCATION PROFILE MODAL -->
   <div class="modal hidden" id="educationProfileModal">
     <div class="modal-card">
       <div class="modal-header">
@@ -913,15 +1019,14 @@
         <div class="field"><label for="educationSchoolName">School name</label><input id="educationSchoolName" type="text" /></div>
         <div class="field"><label for="educationYearGroup">Year group</label><input id="educationYearGroup" type="text" /></div>
         <div class="field"><label for="educationStatusValue">Education status</label><input id="educationStatusValue" type="text" /></div>
-        <div class="actions-row right">
-          <button id="saveEducationProfileBtn" class="primary-btn">Save Education Profile</button>
+        <div class="action-row right">
+          <button id="saveEducationProfileBtn" class="btn btn-primary">Save Education Profile</button>
         </div>
         <div id="educationProfileStatus" class="status-text"></div>
       </div>
     </div>
   </div>
 
-  <!-- EDUCATION RECORD MODAL -->
   <div class="modal hidden" id="educationRecordModal">
     <div class="modal-card modal-lg">
       <div class="modal-header">
@@ -941,19 +1046,18 @@
         <div class="field"><label for="educationIssueRaised">Issue raised</label><textarea id="educationIssueRaised" rows="3"></textarea></div>
         <div class="field"><label for="educationActionTaken">Action taken</label><textarea id="educationActionTaken" rows="3"></textarea></div>
         <div class="field"><label for="educationAchievementNote">Achievement note</label><textarea id="educationAchievementNote" rows="3"></textarea></div>
-        <div class="actions-row right">
-          <button id="saveEducationRecordBtn" class="primary-btn">Save Education Record</button>
+        <div class="action-row right">
+          <button id="saveEducationRecordBtn" class="btn btn-primary">Save Education Record</button>
         </div>
         <div id="educationRecordStatus" class="status-text"></div>
       </div>
     </div>
   </div>
 
-  <!-- FAMILY CONTACT MODAL -->
   <div class="modal hidden" id="familyContactModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 id="familyContactModalTitle">Add Family Contact</h3>
+        <h3>Add Family Contact</h3>
         <button class="icon-btn close-modal" data-close="familyContactModal">✕</button>
       </div>
       <div class="modal-body">
@@ -978,19 +1082,18 @@
           </select>
         </div>
         <div class="field"><label for="familyContactNotes">Contact notes</label><textarea id="familyContactNotes" rows="3"></textarea></div>
-        <div class="actions-row right">
-          <button id="saveFamilyContactBtn" class="primary-btn">Save Contact</button>
+        <div class="action-row right">
+          <button id="saveFamilyContactBtn" class="btn btn-primary">Save Contact</button>
         </div>
         <div id="familyContactStatus" class="status-text"></div>
       </div>
     </div>
   </div>
 
-  <!-- FAMILY RECORD MODAL -->
   <div class="modal hidden" id="familyRecordModal">
     <div class="modal-card modal-lg">
       <div class="modal-header">
-        <h3 id="familyRecordModalTitle">New Family Contact Record</h3>
+        <h3>New Family Contact Record</h3>
         <button class="icon-btn close-modal" data-close="familyRecordModal">✕</button>
       </div>
       <div class="modal-body">
@@ -1013,19 +1116,18 @@
             <option value="true">Yes</option>
           </select>
         </div>
-        <div class="actions-row right">
-          <button id="saveFamilyRecordBtn" class="primary-btn">Save Family Record</button>
+        <div class="action-row right">
+          <button id="saveFamilyRecordBtn" class="btn btn-primary">Save Family Record</button>
         </div>
         <div id="familyRecordStatus" class="status-text"></div>
       </div>
     </div>
   </div>
 
-  <!-- KEYWORK MODAL -->
   <div class="modal hidden" id="keyworkModal">
     <div class="modal-card modal-xl">
       <div class="modal-header">
-        <h3 id="keyworkModalTitle">New Keywork Session</h3>
+        <h3>New Keywork Session</h3>
         <button class="icon-btn close-modal" data-close="keyworkModal">✕</button>
       </div>
       <div class="modal-body">
@@ -1041,26 +1143,25 @@
         <div class="field"><label for="keyworkChildVoice">Child voice</label><textarea id="keyworkChildVoice" rows="3"></textarea></div>
         <div class="field"><label for="keyworkReflectiveAnalysis">Reflective analysis</label><textarea id="keyworkReflectiveAnalysis" rows="4"></textarea></div>
         <div class="field"><label for="keyworkActionsAgreed">Actions agreed</label><textarea id="keyworkActionsAgreed" rows="3"></textarea></div>
-        <div class="actions-row">
-          <button id="keyworkAiAssistBtn" class="secondary-btn">AI Assist</button>
+        <div class="action-row">
+          <button id="keyworkAiAssistBtn" class="btn btn-secondary">AI Assist</button>
         </div>
         <div class="field">
-          <label for="keyworkAiDraft">AI Support Draft</label>
+          <label for="keyworkAiDraft">AI support draft</label>
           <textarea id="keyworkAiDraft" rows="6" readonly></textarea>
         </div>
-        <div class="actions-row right">
-          <button id="saveKeyworkBtn" class="primary-btn">Save Keywork Session</button>
+        <div class="action-row right">
+          <button id="saveKeyworkBtn" class="btn btn-primary">Save Keywork Session</button>
         </div>
         <div id="keyworkStatus" class="status-text"></div>
       </div>
     </div>
   </div>
 
-  <!-- PLAN MODAL -->
   <div class="modal hidden" id="planModal">
     <div class="modal-card modal-xl">
       <div class="modal-header">
-        <h3 id="planModalTitle">New Support Plan</h3>
+        <h3>New Support Plan</h3>
         <button class="icon-btn close-modal" data-close="planModal">✕</button>
       </div>
       <div class="modal-body">
@@ -1079,19 +1180,18 @@
         <div class="field"><label for="planPaceGuidance">PACE guidance</label><textarea id="planPaceGuidance" rows="3"></textarea></div>
         <div class="field"><label for="planTriggers">Triggers</label><textarea id="planTriggers" rows="3"></textarea></div>
         <div class="field"><label for="planProtectiveFactors">Protective factors</label><textarea id="planProtectiveFactors" rows="3"></textarea></div>
-        <div class="actions-row right">
-          <button id="savePlanBtn" class="primary-btn">Save Support Plan</button>
+        <div class="action-row right">
+          <button id="savePlanBtn" class="btn btn-primary">Save Support Plan</button>
         </div>
         <div id="planStatus" class="status-text"></div>
       </div>
     </div>
   </div>
 
-  <!-- RISK MODAL -->
   <div class="modal hidden" id="riskModal">
     <div class="modal-card modal-xl">
       <div class="modal-header">
-        <h3 id="riskModalTitle">New Risk Assessment</h3>
+        <h3>New Risk Assessment</h3>
         <button class="icon-btn close-modal" data-close="riskModal">✕</button>
       </div>
       <div class="modal-body">
@@ -1127,19 +1227,18 @@
         <div class="field"><label for="riskDeescalationStrategies">De-escalation strategies</label><textarea id="riskDeescalationStrategies" rows="3"></textarea></div>
         <div class="field"><label for="riskResponseActions">Response actions</label><textarea id="riskResponseActions" rows="3"></textarea></div>
         <div class="field"><label for="riskChildViews">Child views</label><textarea id="riskChildViews" rows="3"></textarea></div>
-        <div class="actions-row right">
-          <button id="saveRiskBtn" class="primary-btn">Save Risk Assessment</button>
+        <div class="action-row right">
+          <button id="saveRiskBtn" class="btn btn-primary">Save Risk Assessment</button>
         </div>
         <div id="riskStatus" class="status-text"></div>
       </div>
     </div>
   </div>
 
-  <!-- CHRONOLOGY EVENT MODAL -->
   <div class="modal hidden" id="chronologyEventModal">
     <div class="modal-card modal-lg">
       <div class="modal-header">
-        <h3 id="chronologyEventModalTitle">Add Chronology Event</h3>
+        <h3>Add Chronology Event</h3>
         <button class="icon-btn close-modal" data-close="chronologyEventModal">✕</button>
       </div>
       <div class="modal-body">
@@ -1154,19 +1253,18 @@
         </div>
         <div class="field"><label for="chronologyTitle">Title</label><input id="chronologyTitle" type="text" /></div>
         <div class="field"><label for="chronologySummary">Summary</label><textarea id="chronologySummary" rows="4"></textarea></div>
-        <div class="actions-row right">
-          <button id="saveChronologyEventBtn" class="primary-btn">Save Chronology Event</button>
+        <div class="action-row right">
+          <button id="saveChronologyEventBtn" class="btn btn-primary">Save Chronology Event</button>
         </div>
         <div id="chronologyEventStatus" class="status-text"></div>
       </div>
     </div>
   </div>
 
-  <!-- STATUTORY CREATE MODAL -->
   <div class="modal hidden" id="statutoryCreateModal">
     <div class="modal-card modal-lg">
       <div class="modal-header">
-        <h3 id="statutoryCreateModalTitle">Create Statutory Document Record</h3>
+        <h3>Create Statutory Document Record</h3>
         <button class="icon-btn close-modal" data-close="statutoryCreateModal">✕</button>
       </div>
       <div class="modal-body">
@@ -1182,15 +1280,14 @@
           <div class="field"><label for="statutoryLinkedStandardCode">Linked standard code</label><input id="statutoryLinkedStandardCode" type="text" /></div>
         </div>
         <div class="field"><label for="statutoryDescription">Description</label><textarea id="statutoryDescription" rows="4"></textarea></div>
-        <div class="actions-row right">
-          <button id="saveStatutoryCreateBtn" class="primary-btn">Save Statutory Record</button>
+        <div class="action-row right">
+          <button id="saveStatutoryCreateBtn" class="btn btn-primary">Save Statutory Record</button>
         </div>
         <div id="statutoryCreateStatus" class="status-text"></div>
       </div>
     </div>
   </div>
 
-  <!-- STATUTORY UPLOAD MODAL -->
   <div class="modal hidden" id="statutoryUploadModal">
     <div class="modal-card modal-lg">
       <div class="modal-header">
@@ -1210,8 +1307,8 @@
         </div>
         <div class="field"><label for="statUploadDescription">Description</label><textarea id="statUploadDescription" rows="3"></textarea></div>
         <div class="field"><label for="statUploadFile">File</label><input id="statUploadFile" type="file" /></div>
-        <div class="actions-row right">
-          <button id="saveStatutoryUploadBtn" class="primary-btn">Upload Document</button>
+        <div class="action-row right">
+          <button id="saveStatutoryUploadBtn" class="btn btn-primary">Upload Document</button>
         </div>
         <div id="statutoryUploadStatus" class="status-text"></div>
       </div>
