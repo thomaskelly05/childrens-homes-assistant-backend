@@ -1,149 +1,115 @@
-const API = "/api";
+// 🔥 CONFIG — CHANGE THESE TO MATCH YOUR BACKEND
+const ENDPOINTS = {
+  youngPeople: "/young-people",
+  notes: "/young-people/daily-notes",
+  incidents: "/incidents",
+  aiNote: "/ai-notes/generate",
+  aiIncident: "/ai-notes/incident"
+};
 
-/* ---------- LOAD DASHBOARD ---------- */
+/* LOAD DASHBOARD */
 async function loadDashboard() {
-  document.getElementById("pageTitle").innerText = "Shift Dashboard";
-
-  const res = await fetch(`${API}/young-people`);
-  const data = await res.json();
-
-  const content = document.getElementById("content");
-  content.innerHTML = "";
-
-  data.forEach(yp => {
-    const card = document.createElement("div");
-    card.className = "card";
-    card.innerHTML = `
-      <h3>${yp.name}</h3>
-      <p>Age: ${yp.age}</p>
-      <button onclick="viewYoungPerson(${yp.id})">Open</button>
-    `;
-    content.appendChild(card);
-  });
+  loadYoungPeople();
+  loadActivity();
 }
 
-/* ---------- LOAD YOUNG PEOPLE ---------- */
+/* LOAD YOUNG PEOPLE */
 async function loadYoungPeople() {
-  document.getElementById("pageTitle").innerText = "Young People";
+  try {
+    const res = await fetch(ENDPOINTS.youngPeople);
+    const data = await res.json();
 
-  const res = await fetch(`${API}/young-people`);
-  const data = await res.json();
+    const container = document.getElementById("youngPeopleList");
+    container.innerHTML = "";
 
-  const content = document.getElementById("content");
-  content.innerHTML = "";
+    data.forEach(yp => {
+      const div = document.createElement("div");
+      div.className = "yp-card";
+      div.innerHTML = `
+        <strong>${yp.name}</strong><br>
+        Age: ${yp.age || "-"}
+      `;
+      div.onclick = () => viewYoungPerson(yp.id);
+      container.appendChild(div);
+    });
 
-  data.forEach(yp => {
-    const card = document.createElement("div");
-    card.className = "card";
-    card.innerHTML = `
-      <h3>${yp.name}</h3>
-      <button onclick="viewYoungPerson(${yp.id})">View Profile</button>
-    `;
-    content.appendChild(card);
-  });
+  } catch (e) {
+    console.error("YP LOAD ERROR", e);
+  }
 }
 
-/* ---------- VIEW PROFILE ---------- */
+/* LOAD ACTIVITY */
+async function loadActivity() {
+  const container = document.getElementById("activityFeed");
+  container.innerHTML = `<div class="activity-item">No recent activity</div>`;
+}
+
+/* VIEW PROFILE */
 async function viewYoungPerson(id) {
-  const res = await fetch(`${API}/young-people/${id}`);
-  const yp = await res.json();
-
-  document.getElementById("pageTitle").innerText = yp.name;
-
-  const content = document.getElementById("content");
-  content.innerHTML = `
-    <div class="card">
-      <h2>${yp.name}</h2>
-      <p>Age: ${yp.age}</p>
-      <p>Risk: ${yp.risk_level || "N/A"}</p>
-    </div>
-  `;
+  alert("Open profile next phase");
 }
 
-/* ---------- HANDOVER ---------- */
-async function loadHandover() {
-  document.getElementById("pageTitle").innerText = "Handover";
-
-  const res = await fetch(`${API}/handover`);
-  const data = await res.json();
-
-  const content = document.getElementById("content");
-  content.innerHTML = `
-    <div class="card">
-      <h3>Shift Summary</h3>
-      <p>${data.summary}</p>
-    </div>
-  `;
-}
-
-/* ---------- MODALS ---------- */
+/* MODALS */
 function openNoteModal() {
   document.getElementById("noteModal").classList.remove("hidden");
 }
-
 function openIncidentModal() {
   document.getElementById("incidentModal").classList.remove("hidden");
 }
 
-function closeModal(id) {
-  document.getElementById(id).classList.add("hidden");
-}
-
-/* ---------- AI NOTE ---------- */
-async function generateAINote() {
+/* AI NOTE */
+async function runAINote() {
   const input = document.getElementById("noteInput").value;
 
-  const res = await fetch(`${API}/ai/notes`, {
+  const res = await fetch(ENDPOINTS.aiNote, {
     method: "POST",
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({text: input})
+    body: JSON.stringify({ text: input })
   });
 
   const data = await res.json();
-  document.getElementById("noteOutput").value = data.output;
+  document.getElementById("noteOutput").value = data.output || data.text;
 }
 
-/* ---------- SAVE NOTE ---------- */
+/* SAVE NOTE */
 async function saveNote() {
   const text = document.getElementById("noteOutput").value;
 
-  await fetch(`${API}/young-people/daily-notes`, {
+  await fetch(ENDPOINTS.notes, {
     method: "POST",
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({text})
+    body: JSON.stringify({ text })
   });
 
-  closeModal("noteModal");
-  loadDashboard();
+  location.reload();
 }
 
-/* ---------- AI INCIDENT ---------- */
-async function generateAIIncident() {
+/* AI INCIDENT */
+async function runAIIncident() {
   const input = document.getElementById("incidentInput").value;
 
-  const res = await fetch(`${API}/ai/incident`, {
+  const res = await fetch(ENDPOINTS.aiIncident, {
     method: "POST",
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({text: input})
+    body: JSON.stringify({ text: input })
   });
 
   const data = await res.json();
-  document.getElementById("incidentOutput").value = data.output;
+  document.getElementById("incidentOutput").value = data.output || data.text;
 }
 
-/* ---------- SAVE INCIDENT ---------- */
+/* SAVE INCIDENT */
 async function saveIncident() {
   const text = document.getElementById("incidentOutput").value;
 
-  await fetch(`${API}/incidents`, {
+  await fetch(ENDPOINTS.incidents, {
     method: "POST",
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({text})
+    body: JSON.stringify({ text })
   });
 
-  closeModal("incidentModal");
-  loadDashboard();
+  location.reload();
 }
 
-/* ---------- INIT ---------- */
+/* INIT */
 loadDashboard();
