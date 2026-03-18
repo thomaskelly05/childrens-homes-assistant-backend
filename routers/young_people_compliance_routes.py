@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException
-
 from db.connection import get_db
 
 router = APIRouter(prefix="/young-people", tags=["Young People Compliance"])
@@ -31,15 +30,15 @@ def get_young_person_compliance(
                 SELECT * FROM (
                     SELECT
                         'support_plan_review' AS compliance_type,
-                        COALESCE(p.title, p.plan_type, 'Plan review') AS title,
-                        p.review_date AS due_date,
-                        p.status,
-                        p.workflow_status AS approval_status,
-                        p.created_at
-                    FROM young_person_plans p
-                    WHERE p.young_person_id = %s
-                      AND p.review_date IS NOT NULL
-                      AND COALESCE(p.archived, FALSE) = FALSE
+                        COALESCE(sp.title, sp.plan_type, 'Plan review') AS title,
+                        sp.review_date AS due_date,
+                        sp.status,
+                        sp.approval_status,
+                        sp.created_at
+                    FROM support_plans sp
+                    WHERE sp.young_person_id = %s
+                      AND sp.review_date IS NOT NULL
+                      AND COALESCE(sp.archived, FALSE) = FALSE
 
                     UNION ALL
 
@@ -48,9 +47,9 @@ def get_young_person_compliance(
                         COALESCE(r.title, r.category, 'Risk review') AS title,
                         r.review_date AS due_date,
                         r.status,
-                        r.workflow_status AS approval_status,
+                        r.approval_status,
                         r.created_at
-                    FROM young_person_risk_assessments r
+                    FROM risk_assessments r
                     WHERE r.young_person_id = %s
                       AND r.review_date IS NOT NULL
                       AND COALESCE(r.archived, FALSE) = FALSE
@@ -62,7 +61,7 @@ def get_young_person_compliance(
                         COALESCE(k.topic, 'Key work follow up') AS title,
                         k.next_session_date AS due_date,
                         k.status,
-                        k.workflow_status AS approval_status,
+                        NULL::text AS approval_status,
                         k.created_at
                     FROM keywork_sessions k
                     WHERE k.young_person_id = %s
@@ -87,7 +86,7 @@ def get_young_person_compliance(
                 """,
                 (young_person_id, young_person_id, young_person_id, young_person_id),
             )
-            rows = cur.fetchall()
+            rows = cur.fetchall() or []
 
             cur.execute("SELECT CURRENT_DATE AS today")
             today_row = cur.fetchone()
