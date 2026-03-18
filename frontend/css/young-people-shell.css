@@ -168,6 +168,23 @@ body {
   color: var(--muted);
 }
 
+.topbar-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #eef2f7;
+  color: #334155;
+  font-weight: 600;
+}
+
 .hero {
   background: linear-gradient(135deg, #ffffff, #f8fbff);
   border: 1px solid var(--line);
