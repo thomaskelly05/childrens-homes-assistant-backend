@@ -8,59 +8,61 @@
 </head>
 <body>
   <div class="app-shell">
-    <aside class="app-rail">
-      <div class="rail-brand">
-        <div class="rail-logo">IC</div>
-        <div>
+    <aside class="app-sidebar">
+      <div class="brand-block">
+        <div class="brand-logo">IC</div>
+        <div class="brand-copy">
           <h1>IndiCare OS</h1>
-          <p>Residential Care Operating System</p>
+          <p>Therapeutic Residential Care Platform</p>
         </div>
       </div>
 
-      <div class="rail-card">
-        <div class="rail-label">Signed in</div>
-        <div id="currentUserChip">Loading…</div>
-      </div>
+      <nav id="primaryNav" class="sidebar-nav"></nav>
 
-      <nav id="primaryNav" class="rail-nav"></nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="sidebar-label">Signed in</div>
+          <div id="currentUserChip">Loading…</div>
+        </div>
 
-      <div class="rail-card rail-actions">
-        <button id="refreshBtn" class="btn btn-primary btn-full">Refresh</button>
-        <button id="logoutBtn" class="btn btn-ghost btn-full">Logout</button>
-      </div>
-
-      <div class="rail-card">
-        <label class="rail-label" for="youngPeopleSearch">Find young person</label>
-        <input id="youngPeopleSearch" type="text" placeholder="Search by name or status" />
-      </div>
-
-      <div class="rail-card rail-list">
-        <div class="rail-label">Young people</div>
-        <div id="youngPeopleList" class="young-people-list"></div>
+        <div class="sidebar-actions">
+          <button id="refreshBtn" class="btn btn-primary btn-full">Refresh</button>
+          <button id="logoutBtn" class="btn btn-ghost btn-full">Logout</button>
+        </div>
       </div>
     </aside>
 
     <main class="workspace">
-      <header class="workspace-topbar">
-        <div>
-          <div class="workspace-kicker">Children’s Home Operating System</div>
-          <h2 id="pageTitle">Home</h2>
-          <p id="pageSubtitle">Command, care, quality and inspection readiness in one place.</p>
-        </div>
-
-        <div id="globalActions" class="toolbar-actions"></div>
-      </header>
-
-      <section class="context-bar">
-        <div class="context-main">
-          <div id="heroAvatar" class="context-avatar">OS</div>
+      <header class="workspace-header">
+        <div class="workspace-header-top">
           <div>
-            <h3 id="heroTitle">IndiCare OS</h3>
-            <p id="heroDescription">Select a young person to begin.</p>
+            <div class="workspace-kicker">Residential Children’s Homes Operating System</div>
+            <h2 id="pageTitle">Home</h2>
+            <p id="pageSubtitle">Therapeutic recording, oversight, compliance and inspection readiness.</p>
           </div>
+
+          <div id="globalActions" class="header-actions"></div>
         </div>
-        <div id="heroBadges" class="context-badges"></div>
-      </section>
+
+        <div class="workspace-context">
+          <div class="context-left">
+            <div class="field field-compact yp-select-field">
+              <label for="youngPersonSelect">Young person</label>
+              <select id="youngPersonSelect"></select>
+            </div>
+
+            <div class="hero-block">
+              <div id="heroAvatar" class="hero-avatar">OS</div>
+              <div class="hero-copy">
+                <h3 id="heroTitle">IndiCare OS</h3>
+                <p id="heroDescription">Select a young person to begin.</p>
+              </div>
+            </div>
+          </div>
+
+          <div id="heroBadges" class="hero-badges"></div>
+        </div>
+      </header>
 
       <section id="secondaryNavWrap" class="subnav-wrap hidden">
         <nav id="secondaryNav" class="subnav"></nav>
@@ -72,14 +74,12 @@
     </main>
   </div>
 
-  <!-- UNIVERSAL MODAL -->
   <div class="modal hidden" id="appModal">
     <div class="modal-card modal-xl">
       <div class="modal-header">
         <h3 id="modalTitle">Editor</h3>
         <button class="icon-btn" id="closeModalBtn">✕</button>
       </div>
-
       <div class="modal-body">
         <div id="modalContent"></div>
         <div id="modalStatus" class="status-text"></div>
