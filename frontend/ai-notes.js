@@ -1,1 +1,769 @@
-document.addEventListener("DOMContentLoaded",()=>{const $=id=>document.getElementById(id),els={recordBtn:$("recordBtn"),transcribeBtn:$("transcribeBtn"),aiBtn:$("aiBtn"),saveBtn:$("saveBtn"),printBtn:$("printBtn"),pdfBtn:$("pdfBtn"),docxBtn:$("docxBtn"),clearBtn:$("clearBtn"),refreshBtn:$("refreshBtn"),title:$("title"),prompt:$("prompt"),transcript:$("transcript"),note:$("note"),status:$("status"),list:$("list"),empty:$("empty"),modal:$("modal"),timer:$("timer"),recState:$("recState"),pauseBtn:$("pauseBtn"),resumeBtn:$("resumeBtn"),stopBtn:$("stopBtn"),toast:$("toast"),audio:$("audio")};let mediaRecorder,stream,chunks=[],blob,noteId=null,timerInt,startAt=0,pausedAt=0,pausedMs=0,saved=[];const token=()=>localStorage.getItem("access_token")||"",hdr=(x={})=>token()?{...x,Authorization:`Bearer ${token()}`}:{...x},toast=m=>{els.toast.textContent=m;els.toast.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>els.toast.classList.remove("show"),2200)},json=async r=>{const t=await r.text();try{return t?JSON.parse(t):{}}catch{return{detail:t||"Invalid server response"}}},status=t=>els.status.textContent=t,fmt=s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`,elapsed=()=>startAt?Math.max(0,Math.floor(((pausedAt||Date.now())-startAt-pausedMs)/1000)):0,auth=async()=>{if(!token())return location.href="/login";const r=await fetch("/auth/me",{headers:hdr()});if(!r.ok)return location.href="/login"},titleFrom=t=>(t.split("\n").find(Boolean)||"Meeting note").replace(/[:#*-]/g,"").slice(0,120),download=(b,n)=>{const u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=n;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(u)};async function load(){const r=await fetch("/ai-notes/history",{headers:hdr()}),d=await json(r);if(!r.ok)return toast(d.detail||"Could not load notes");saved=Array.isArray(d.notes)?d.notes:[];render()}function render(){els.list.innerHTML="";els.empty.style.display=saved.length?"none":"block";saved.forEach(n=>{const tr=document.createElement("tr");tr.innerHTML=`<td>${esc(n.title||"Untitled")}</td><td>${n.updated_at?new Date(n.updated_at).toLocaleString("en-GB"):"—"}</td><td><div class="row"><button class="btn light" data-edit="${n.id}">Edit</button><button class="btn danger" data-del="${n.id}">Delete</button></div></td>`;els.list.appendChild(tr)})}function esc(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}async function startRec(){try{chunks=[];blob=null;stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});mediaRecorder=new MediaRecorder(stream);mediaRecorder.ondataavailable=e=>e.data.size&&chunks.push(e.data);mediaRecorder.onstop=async()=>{blob=new Blob(chunks,{type:"audio/webm"});stream.getTracks().forEach(t=>t.stop());els.transcribeBtn.disabled=false;els.modal.classList.add("hide");status("Transcribing...");await transcribe(true)};mediaRecorder.start(1000);startAt=Date.now();pausedAt=0;pausedMs=0;timerInt=setInterval(()=>els.timer.textContent=fmt(elapsed()),250);els.modal.classList.remove("hide");els.pauseBtn.disabled=false;els.resumeBtn.disabled=true;els.stopBtn.disabled=false;status("Recording")}catch{alert("Unable to access microphone.")}}function pauseRec(){if(mediaRecorder?.state!=="recording")return;mediaRecorder.pause();pausedAt=Date.now();els.recState.textContent="Paused";els.pauseBtn.disabled=true;els.resumeBtn.disabled=false}function resumeRec(){if(mediaRecorder?.state!=="paused")return;mediaRecorder.resume();pausedMs+=Date.now()-pausedAt;pausedAt=0;els.recState.textContent="Recording...";els.pauseBtn.disabled=false;els.resumeBtn.disabled=true}function stopRec(){if(mediaRecorder&&mediaRecorder.state!=="inactive"){if(pausedAt){pausedMs+=Date.now()-pausedAt;pausedAt=0}clearInterval(timerInt);mediaRecorder.stop()}}async function transcribe(autoAi=false){if(!blob)return alert("Record audio first.");const fd=new FormData();fd.append("file",blob,"note.webm");try{const c=new AbortController(),t=setTimeout(()=>c.abort(),120000);const r=await fetch("/ai-notes/transcribe",{method:"POST",headers:hdr(),body:fd,signal:c.signal});clearTimeout(t);const d=await json(r);if(!r.ok)return alert(d.detail||"Transcription failed.");els.transcript.value=(d.transcript||"").trim();if(!els.note.value.trim())els.note.value=els.transcript.value;if(!els.title.value.trim())els.title.value=titleFrom(els.transcript.value);status("Transcript ready");toast("Transcription complete.");if(autoAi)await ai(true)}catch(e){console.error(e);alert("Transcription failed.")}}async function ai(silent=false){const text=(els.note.value||els.transcript.value).trim(),instruction=(els.prompt.value||"Turn this into a professional meeting note.").trim();if(!text)return alert("Nothing to edit.");const fd=new FormData();fd.append("text",text);fd.append("mode","custom");fd.append("instruction",instruction);const r=await fetch("/ai-notes/edit",{method:"POST",headers:hdr(),body:fd}),d=await json(r);if(!r.ok)return alert(d.detail||"AI edit failed.");els.note.value=d.text||text;if(!els.title.value.trim())els.title.value=titleFrom(els.note.value);status("Note ready");if(!silent)toast("AI update applied.")}async function save(){const transcript=els.transcript.value.trim(),final_note=els.note.value.trim(),title=(els.title.value||titleFrom(final_note)).trim();if(!transcript||!final_note)return alert("Transcript and note are required.");const fd=new FormData();fd.append("transcript",transcript);fd.append("ai_draft",final_note);fd.append("final_note",final_note);fd.append("title",title);if(noteId)fd.append("note_id",String(noteId));const r=await fetch("/ai-notes/save",{method:"POST",headers:hdr(),body:fd}),d=await json(r);if(!r.ok)return alert(d.detail||"Save failed.");noteId=d.record?.id||d.id||noteId;toast("Saved.");status("Saved");load()}function edit(id){const n=saved.find(x=>String(x.id)===String(id));if(!n)return;noteId=n.id;els.title.value=n.title||"";els.transcript.value=n.transcript||"";els.note.value=n.final_note||"";status("Editing saved note");window.scrollTo({top:0,behavior:"smooth"})}async function del(id){if(!confirm("Delete this note?"))return;const r=await fetch(`/ai-notes/${id}`,{method:"DELETE",headers:hdr()}),d=await json(r);if(!r.ok)return alert(d.detail||"Delete failed.");if(String(noteId)===String(id))noteId=null;toast("Deleted.");load()}async function exp(fmt){const text=els.note.value.trim(),title=(els.title.value||"Meeting Note").trim();if(!text)return alert("Nothing to export.");const fd=new FormData();fd.append("title",title);fd.append("final_note",text);fd.append("template_name","Meeting note");const r=await fetch(`/ai-notes/export/${fmt}`,{method:"POST",headers:hdr(),body:fd});if(!r.ok){const d=await json(r);return alert(d.detail||"Export failed.")}download(await r.blob(),`${title}.${fmt}`);toast(`Exported ${fmt.toUpperCase()}.`)}function printNote(){const t=(els.title.value||"Meeting Note").trim(),c=els.note.value.trim();if(!c)return alert("Nothing to print.");const w=window.open("","_blank");w.document.write(`<html><head><title>${esc(t)}</title></head><body style="font-family:Arial;padding:30px;line-height:1.6"><h1>${esc(t)}</h1><pre style="white-space:pre-wrap;font-family:Arial">${esc(c)}</pre></body></html>`);w.document.close();w.print()}function clearAll(){if(!confirm("Clear this note?"))return;noteId=null;els.title.value="";els.prompt.value="";els.transcript.value="";els.note.value="";blob=null;status("Ready")}els.recordBtn.onclick=startRec;els.pauseBtn.onclick=pauseRec;els.resumeBtn.onclick=resumeRec;els.stopBtn.onclick=stopRec;els.transcribeBtn.onclick=()=>transcribe(false);els.aiBtn.onclick=()=>ai(false);els.saveBtn.onclick=save;els.refreshBtn.onclick=load;els.pdfBtn.onclick=()=>exp("pdf");els.docxBtn.onclick=()=>exp("docx");els.printBtn.onclick=printNote;els.clearBtn.onclick=clearAll;els.list.onclick=e=>{const a=e.target.getAttribute("data-edit"),d=e.target.getAttribute("data-del");if(a)edit(a);if(d)del(d)};auth().then(load);});
+document.addEventListener("DOMContentLoaded", () => {
+  const $ = id => document.getElementById(id);
+
+  const els = {
+    recordBtn: $("recordBtn"),
+    transcribeBtn: $("transcribeBtn"),
+    aiBtn: $("aiBtn"),
+    saveBtn: $("saveBtn"),
+    printBtn: $("printBtn"),
+    pdfBtn: $("pdfBtn"),
+    docxBtn: $("docxBtn"),
+    clearBtn: $("clearBtn"),
+    resetBtn: $("resetBtn"),
+    refreshBtn: $("refreshBtn"),
+    searchInput: $("searchInput"),
+
+    title: $("title"),
+    prompt: $("prompt"),
+    transcript: $("transcript"),
+    note: $("note"),
+
+    status: $("status"),
+    saveState: $("saveState"),
+    list: $("list"),
+    empty: $("empty"),
+
+    modal: $("modal"),
+    timer: $("timer"),
+    recState: $("recState"),
+    mic: $("mic"),
+    pauseBtn: $("pauseBtn"),
+    resumeBtn: $("resumeBtn"),
+    cancelBtn: $("cancelBtn"),
+    stopBtn: $("stopBtn"),
+
+    toast: $("toast"),
+    audio: $("audio")
+  };
+
+  const state = {
+    mediaRecorder: null,
+    stream: null,
+    chunks: [],
+    blob: null,
+    recordingExtension: "webm",
+    timerInt: null,
+    startAt: 0,
+    pausedAt: 0,
+    pausedMs: 0,
+    noteId: null,
+    saved: [],
+    filtered: [],
+    dirty: false
+  };
+
+  const token = () => localStorage.getItem("access_token") || "";
+
+  const headers = (extra = {}) =>
+    token() ? { ...extra, Authorization: `Bearer ${token()}` } : { ...extra };
+
+  const showToast = message => {
+    if (!els.toast) return;
+    els.toast.textContent = message;
+    els.toast.classList.add("show");
+    clearTimeout(showToast._timer);
+    showToast._timer = setTimeout(() => els.toast.classList.remove("show"), 2200);
+  };
+
+  const safeJson = async response => {
+    const text = await response.text();
+    try {
+      return text ? JSON.parse(text) : {};
+    } catch {
+      return { detail: text || "Invalid server response" };
+    }
+  };
+
+  const redirectToLogin = () => {
+    localStorage.removeItem("access_token");
+    window.location.href = "/login";
+  };
+
+  const statusText = value => {
+    if (els.status) els.status.textContent = value;
+  };
+
+  const setSaveState = (mode, text) => {
+    if (!els.saveState) return;
+    els.saveState.className = `save-badge ${mode}`;
+    els.saveState.textContent = text;
+  };
+
+  const markDirty = () => {
+    state.dirty = true;
+    setSaveState("dirty", "Unsaved changes");
+  };
+
+  const markSaved = () => {
+    state.dirty = false;
+    setSaveState("saved", "Saved");
+  };
+
+  const formatTime = secs =>
+    `${String(Math.floor(secs / 60)).padStart(2, "0")}:${String(secs % 60).padStart(2, "0")}`;
+
+  const elapsed = () => {
+    if (!state.startAt) return 0;
+    const now = state.pausedAt || Date.now();
+    return Math.max(0, Math.floor((now - state.startAt - state.pausedMs) / 1000));
+  };
+
+  const escapeHtml = value =>
+    String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+
+  const titleFrom = text =>
+    (String(text || "").split("\n").map(x => x.trim()).find(Boolean) || "Meeting note")
+      .replace(/[:#*-]/g, "")
+      .slice(0, 120);
+
+  const notePreview = text => {
+    const clean = String(text || "").replace(/\s+/g, " ").trim();
+    return clean.length > 100 ? `${clean.slice(0, 100)}…` : clean;
+  };
+
+  const downloadBlob = (blob, filename) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const getSupportedRecordingOptions = () => {
+    const candidates = [
+      { mimeType: "audio/webm;codecs=opus", extension: "webm" },
+      { mimeType: "audio/webm", extension: "webm" },
+      { mimeType: "audio/mp4", extension: "mp4" },
+      { mimeType: "audio/ogg;codecs=opus", extension: "ogg" }
+    ];
+
+    for (const option of candidates) {
+      if (window.MediaRecorder && MediaRecorder.isTypeSupported(option.mimeType)) {
+        return option;
+      }
+    }
+
+    return { mimeType: "", extension: "webm" };
+  };
+
+  async function verifyAuth() {
+    if (!token()) {
+      redirectToLogin();
+      return false;
+    }
+
+    try {
+      const response = await fetch("/auth/me", { headers: headers() });
+      const data = await safeJson(response);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          redirectToLogin();
+          return false;
+        }
+        if (response.status === 403) {
+          alert(data.detail || "Subscription required");
+          return false;
+        }
+        alert(data.detail || "Could not load account");
+        return false;
+      }
+
+      return true;
+    } catch {
+      alert("Could not connect to authentication service.");
+      return false;
+    }
+  }
+
+  function openModal() {
+    els.modal?.classList.remove("hide");
+  }
+
+  function closeModal() {
+    els.modal?.classList.add("hide");
+    els.mic?.classList.remove("paused");
+  }
+
+  function startTimer() {
+    stopTimer();
+    state.startAt = Date.now();
+    state.pausedAt = 0;
+    state.pausedMs = 0;
+    state.timerInt = setInterval(() => {
+      if (els.timer) els.timer.textContent = formatTime(elapsed());
+    }, 250);
+  }
+
+  function stopTimer() {
+    if (state.timerInt) {
+      clearInterval(state.timerInt);
+      state.timerInt = null;
+    }
+  }
+
+  function resetRecordingState() {
+    state.chunks = [];
+    state.blob = null;
+    stopTimer();
+    if (els.timer) els.timer.textContent = "00:00";
+    if (els.recState) els.recState.textContent = "Recording...";
+    if (els.pauseBtn) els.pauseBtn.disabled = true;
+    if (els.resumeBtn) els.resumeBtn.disabled = true;
+    if (els.cancelBtn) els.cancelBtn.disabled = true;
+    if (els.stopBtn) els.stopBtn.disabled = true;
+  }
+
+  async function startRecording() {
+    try {
+      resetRecordingState();
+
+      const option = getSupportedRecordingOptions();
+      state.recordingExtension = option.extension;
+
+      state.stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+
+      state.mediaRecorder = option.mimeType
+        ? new MediaRecorder(state.stream, { mimeType: option.mimeType })
+        : new MediaRecorder(state.stream);
+
+      state.mediaRecorder.ondataavailable = event => {
+        if (event.data && event.data.size > 0) state.chunks.push(event.data);
+      };
+
+      state.mediaRecorder.onstop = async () => {
+        state.blob = new Blob(state.chunks, { type: option.mimeType || "audio/webm" });
+        if (state.stream) state.stream.getTracks().forEach(track => track.stop());
+        if (els.audio) els.audio.src = URL.createObjectURL(state.blob);
+
+        closeModal();
+        statusText("Transcribing...");
+        els.transcribeBtn.disabled = false;
+        await transcribeAudio(true);
+      };
+
+      state.mediaRecorder.start(1000);
+
+      if (els.recState) els.recState.textContent = "Recording...";
+      if (els.pauseBtn) els.pauseBtn.disabled = false;
+      if (els.resumeBtn) els.resumeBtn.disabled = true;
+      if (els.cancelBtn) els.cancelBtn.disabled = false;
+      if (els.stopBtn) els.stopBtn.disabled = false;
+
+      startTimer();
+      openModal();
+      statusText("Recording");
+    } catch (error) {
+      console.error(error);
+      alert("Unable to access microphone.");
+    }
+  }
+
+  function pauseRecording() {
+    if (!state.mediaRecorder || state.mediaRecorder.state !== "recording") return;
+    state.mediaRecorder.pause();
+    state.pausedAt = Date.now();
+    if (els.recState) els.recState.textContent = "Paused";
+    if (els.pauseBtn) els.pauseBtn.disabled = true;
+    if (els.resumeBtn) els.resumeBtn.disabled = false;
+    els.mic?.classList.add("paused");
+  }
+
+  function resumeRecording() {
+    if (!state.mediaRecorder || state.mediaRecorder.state !== "paused") return;
+    state.mediaRecorder.resume();
+    if (state.pausedAt) {
+      state.pausedMs += Date.now() - state.pausedAt;
+      state.pausedAt = 0;
+    }
+    if (els.recState) els.recState.textContent = "Recording...";
+    if (els.pauseBtn) els.pauseBtn.disabled = false;
+    if (els.resumeBtn) els.resumeBtn.disabled = true;
+    els.mic?.classList.remove("paused");
+  }
+
+  function cancelRecording() {
+    const confirmed = window.confirm("Cancel this recording?");
+    if (!confirmed) return;
+
+    if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
+      state.mediaRecorder.onstop = null;
+      state.mediaRecorder.stop();
+    }
+    if (state.stream) {
+      state.stream.getTracks().forEach(track => track.stop());
+    }
+    resetRecordingState();
+    closeModal();
+    statusText("Ready");
+    showToast("Recording cancelled.");
+  }
+
+  function stopRecording() {
+    if (!state.mediaRecorder || state.mediaRecorder.state === "inactive") return;
+    if (state.pausedAt) {
+      state.pausedMs += Date.now() - state.pausedAt;
+      state.pausedAt = 0;
+    }
+    stopTimer();
+    state.mediaRecorder.stop();
+  }
+
+  async function transcribeAudio(autoAi = false) {
+    if (!state.blob) {
+      alert("Please record audio first.");
+      return;
+    }
+
+    const form = new FormData();
+    form.append("file", state.blob, `meeting-note.${state.recordingExtension}`);
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 120000);
+
+      const response = await fetch("/ai-notes/transcribe", {
+        method: "POST",
+        headers: headers(),
+        body: form,
+        signal: controller.signal
+      });
+
+      clearTimeout(timeout);
+
+      const data = await safeJson(response);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          redirectToLogin();
+          return;
+        }
+        alert(data.detail || "Transcription failed.");
+        statusText("Ready");
+        return;
+      }
+
+      const transcript = (data.transcript || "").trim();
+      if (els.transcript) els.transcript.value = transcript;
+      if (els.note && !els.note.value.trim()) els.note.value = transcript;
+      if (els.title && !els.title.value.trim()) els.title.value = titleFrom(transcript);
+
+      markDirty();
+      statusText("Transcript ready");
+      showToast("Transcription complete.");
+
+      if (autoAi && transcript) {
+        await applyAI(true);
+      }
+    } catch (error) {
+      console.error("Transcription error:", error);
+      alert(error.name === "AbortError"
+        ? "Transcription timed out."
+        : "The transcription connection was lost.");
+      statusText("Ready");
+    }
+  }
+
+  async function applyAI(silent = false) {
+    const sourceText = (els.note?.value || els.transcript?.value || "").trim();
+    const instruction = (els.prompt?.value || "").trim()
+      || "Turn this into a professional meeting note using clear, factual language.";
+
+    if (!sourceText) {
+      alert("There is no text to improve.");
+      return;
+    }
+
+    const form = new FormData();
+    form.append("text", sourceText);
+    form.append("mode", "custom");
+    form.append("instruction", instruction);
+
+    try {
+      statusText("Applying AI...");
+
+      const response = await fetch("/ai-notes/edit", {
+        method: "POST",
+        headers: headers(),
+        body: form
+      });
+
+      const data = await safeJson(response);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          redirectToLogin();
+          return;
+        }
+        alert(data.detail || "AI edit failed.");
+        statusText("Ready");
+        return;
+      }
+
+      if (els.note) els.note.value = data.text || sourceText;
+      if (els.title && !els.title.value.trim()) els.title.value = titleFrom(els.note.value);
+
+      markDirty();
+      statusText("Note ready");
+      if (!silent) showToast("AI update applied.");
+    } catch (error) {
+      console.error(error);
+      alert("Could not connect to AI service.");
+      statusText("Ready");
+    }
+  }
+
+  async function saveNote() {
+    const transcript = (els.transcript?.value || "").trim();
+    const finalNote = (els.note?.value || "").trim();
+    const title = (els.title?.value || "").trim() || titleFrom(finalNote);
+
+    if (!transcript) {
+      alert("Transcript is required.");
+      return;
+    }
+
+    if (!finalNote) {
+      alert("Note is required.");
+      return;
+    }
+
+    const form = new FormData();
+    form.append("transcript", transcript);
+    form.append("ai_draft", finalNote);
+    form.append("final_note", finalNote);
+    form.append("title", title);
+
+    if (state.noteId) form.append("note_id", String(state.noteId));
+
+    try {
+      statusText("Saving...");
+      setSaveState("idle", "Saving...");
+
+      const response = await fetch("/ai-notes/save", {
+        method: "POST",
+        headers: headers(),
+        body: form
+      });
+
+      const data = await safeJson(response);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          redirectToLogin();
+          return;
+        }
+        alert(data.detail || "Save failed.");
+        statusText("Ready");
+        setSaveState("dirty", "Unsaved changes");
+        return;
+      }
+
+      state.noteId = data.record?.id || data.id || state.noteId;
+      statusText("Saved");
+      markSaved();
+      showToast("Note saved.");
+      await loadSavedNotes();
+    } catch (error) {
+      console.error(error);
+      alert("Could not connect to save service.");
+      statusText("Ready");
+      setSaveState("dirty", "Unsaved changes");
+    }
+  }
+
+  async function loadSavedNotes() {
+    try {
+      const response = await fetch("/ai-notes/history", { headers: headers() });
+      const data = await safeJson(response);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          redirectToLogin();
+          return;
+        }
+        alert(data.detail || "Could not load saved notes.");
+        return;
+      }
+
+      state.saved = Array.isArray(data.notes) ? data.notes : [];
+      applySearch();
+    } catch (error) {
+      console.error(error);
+      alert("Could not load saved notes.");
+    }
+  }
+
+  function applySearch() {
+    const query = String(els.searchInput?.value || "").trim().toLowerCase();
+
+    state.filtered = state.saved.filter(note => {
+      const haystack = [
+        note.title,
+        note.transcript,
+        note.final_note
+      ].join(" ").toLowerCase();
+
+      return !query || haystack.includes(query);
+    });
+
+    renderSavedNotes();
+  }
+
+  function renderSavedNotes() {
+    if (!els.list || !els.empty) return;
+
+    els.list.innerHTML = "";
+    els.empty.style.display = state.filtered.length ? "none" : "flex";
+
+    state.filtered.forEach(note => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>
+          <div class="saved-title">${escapeHtml(note.title || "Untitled note")}</div>
+          <div class="saved-preview">${escapeHtml(notePreview(note.final_note || note.transcript || ""))}</div>
+        </td>
+        <td>${note.updated_at ? new Date(note.updated_at).toLocaleString("en-GB") : "—"}</td>
+        <td>
+          <div class="editor-head-actions">
+            <button class="btn btn-light btn-sm" data-edit="${note.id}">Edit</button>
+            <button class="btn btn-danger btn-sm" data-del="${note.id}">Delete</button>
+          </div>
+        </td>
+      `;
+      els.list.appendChild(row);
+    });
+  }
+
+  function loadIntoEditor(id) {
+    const note = state.saved.find(item => String(item.id) === String(id));
+    if (!note) return;
+
+    state.noteId = note.id;
+    if (els.title) els.title.value = note.title || "";
+    if (els.transcript) els.transcript.value = note.transcript || "";
+    if (els.note) els.note.value = note.final_note || "";
+
+    setSaveState("idle", "Loaded");
+    state.dirty = false;
+    statusText("Editing saved note");
+    showToast("Saved note loaded.");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function deleteNote(id) {
+    const confirmed = window.confirm("Delete this saved note?");
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/ai-notes/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: headers()
+      });
+
+      const data = await safeJson(response);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          redirectToLogin();
+          return;
+        }
+        alert(data.detail || "Delete failed.");
+        return;
+      }
+
+      if (String(state.noteId) === String(id)) {
+        state.noteId = null;
+      }
+
+      showToast("Note deleted.");
+      await loadSavedNotes();
+    } catch (error) {
+      console.error(error);
+      alert("Could not delete note.");
+    }
+  }
+
+  async function exportNote(format) {
+    const finalNote = (els.note?.value || "").trim();
+    const title = (els.title?.value || "").trim() || "Meeting Note";
+
+    if (!finalNote) {
+      alert("There is nothing to export.");
+      return;
+    }
+
+    const form = new FormData();
+    form.append("title", title);
+    form.append("final_note", finalNote);
+    form.append("template_name", "Meeting note");
+
+    try {
+      const response = await fetch(`/ai-notes/export/${format}`, {
+        method: "POST",
+        headers: headers(),
+        body: form
+      });
+
+      if (!response.ok) {
+        const data = await safeJson(response);
+        if (response.status === 401) {
+          redirectToLogin();
+          return;
+        }
+        alert(data.detail || "Export failed.");
+        return;
+      }
+
+      const blob = await response.blob();
+      downloadBlob(blob, `${title}.${format}`);
+      showToast(`Exported ${format.toUpperCase()}.`);
+    } catch (error) {
+      console.error(error);
+      alert("Could not export note.");
+    }
+  }
+
+  function printNote() {
+    const title = (els.title?.value || "").trim() || "Meeting Note";
+    const content = (els.note?.value || "").trim();
+
+    if (!content) {
+      alert("There is nothing to print.");
+      return;
+    }
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Print window was blocked.");
+      return;
+    }
+
+    printWindow.document.write(`
+      <html lang="en-GB">
+        <head>
+          <title>${escapeHtml(title)}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 30px; line-height: 1.6; color: #111827; }
+            h1 { font-size: 24px; margin-bottom: 10px; }
+            pre { white-space: pre-wrap; word-wrap: break-word; font-family: Arial, sans-serif; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <h1>${escapeHtml(title)}</h1>
+          <pre>${escapeHtml(content)}</pre>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  }
+
+  function resetFromTranscript() {
+    const transcript = (els.transcript?.value || "").trim();
+    if (!transcript) {
+      alert("There is no transcript to restore.");
+      return;
+    }
+    if (!window.confirm("Replace the current note with the transcript?")) return;
+
+    if (els.note) els.note.value = transcript;
+    markDirty();
+    statusText("Note reset");
+    showToast("Note reset from transcript.");
+  }
+
+  function clearEditor() {
+    const confirmed = window.confirm("Clear the current note?");
+    if (!confirmed) return;
+
+    state.noteId = null;
+    state.blob = null;
+    if (els.title) els.title.value = "";
+    if (els.prompt) els.prompt.value = "";
+    if (els.transcript) els.transcript.value = "";
+    if (els.note) els.note.value = "";
+
+    state.dirty = false;
+    statusText("Ready");
+    setSaveState("idle", "Not saved");
+    showToast("Editor cleared.");
+  }
+
+  function bindPromptChips() {
+    document.querySelectorAll(".prompt-chip").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const value = btn.getAttribute("data-fill") || "";
+        if (els.prompt) els.prompt.value = value;
+      });
+    });
+  }
+
+  function bindDirtyTracking() {
+    [els.title, els.prompt, els.transcript, els.note].forEach(el => {
+      el?.addEventListener("input", markDirty);
+    });
+  }
+
+  function bindEvents() {
+    els.recordBtn?.addEventListener("click", startRecording);
+    els.pauseBtn?.addEventListener("click", pauseRecording);
+    els.resumeBtn?.addEventListener("click", resumeRecording);
+    els.cancelBtn?.addEventListener("click", cancelRecording);
+    els.stopBtn?.addEventListener("click", stopRecording);
+
+    els.transcribeBtn?.addEventListener("click", () => transcribeAudio(false));
+    els.aiBtn?.addEventListener("click", () => applyAI(false));
+    els.saveBtn?.addEventListener("click", saveNote);
+    els.refreshBtn?.addEventListener("click", loadSavedNotes);
+    els.pdfBtn?.addEventListener("click", () => exportNote("pdf"));
+    els.docxBtn?.addEventListener("click", () => exportNote("docx"));
+    els.printBtn?.addEventListener("click", printNote);
+    els.resetBtn?.addEventListener("click", resetFromTranscript);
+    els.clearBtn?.addEventListener("click", clearEditor);
+    els.searchInput?.addEventListener("input", applySearch);
+
+    els.list?.addEventListener("click", event => {
+      const editId = event.target.getAttribute("data-edit");
+      const delId = event.target.getAttribute("data-del");
+      if (editId) loadIntoEditor(editId);
+      if (delId) deleteNote(delId);
+    });
+
+    bindPromptChips();
+    bindDirtyTracking();
+
+    window.addEventListener("beforeunload", event => {
+      if (!state.dirty) return;
+      event.preventDefault();
+      event.returnValue = "";
+    });
+  }
+
+  async function init() {
+    const ok = await verifyAuth();
+    if (!ok) return;
+
+    bindEvents();
+    statusText("Ready");
+    setSaveState("idle", "Not saved");
+    await loadSavedNotes();
+  }
+
+  init();
+});
