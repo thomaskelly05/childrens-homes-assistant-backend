@@ -1,5 +1,3 @@
-import os
-
 from fastapi import APIRouter, Depends, Form, HTTPException
 from fastapi.responses import FileResponse
 
