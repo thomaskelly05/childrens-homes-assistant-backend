@@ -7,9 +7,6 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 
-# =========================================================
-# BASE PATHS
-# =========================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 CSS_DIR = os.path.join(FRONTEND_DIR, "css")
@@ -18,9 +15,6 @@ ASSETS_DIR = os.path.join(FRONTEND_DIR, "assets")
 COMPONENTS_DIR = os.path.join(FRONTEND_DIR, "components")
 
 
-# =========================================================
-# ENV VALIDATION (FAIL FAST)
-# =========================================================
 REQUIRED_ENV_VARS = [
     "SESSION_SECRET",
     "OPENAI_API_KEY"
@@ -31,15 +25,9 @@ if missing:
     raise RuntimeError(f"Missing required environment variables: {', '.join(missing)}")
 
 
-# =========================================================
-# APP INIT
-# =========================================================
 app = FastAPI(title="IndiCare API")
 
 
-# =========================================================
-# CORS
-# =========================================================
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -53,37 +41,25 @@ app.add_middleware(
 )
 
 
-# =========================================================
-# ROUTER LOADER (SAFE)
-# =========================================================
 def include_router(module_path: str):
-    try:
-        module = importlib.import_module(module_path)
-        router = getattr(module, "router", None)
+    module = importlib.import_module(module_path)
+    router = getattr(module, "router", None)
 
-        if router is None:
-            raise RuntimeError(f"No router found in {module_path}")
+    if router is None:
+        raise RuntimeError(f"No router found in {module_path}")
 
-        app.include_router(router)
-        print(f"[IndiCare] Loaded router: {module_path}")
-
-    except Exception as e:
-        print(f"[IndiCare ERROR] Failed to load {module_path}: {str(e)}")
+    app.include_router(router)
+    print(f"[IndiCare] Loaded router: {module_path}")
 
 
-# =========================================================
-# ROUTERS
-# =========================================================
 ROUTERS = [
     "routers.auth_routes",
     "routers.account_routes",
     "routers.admin_routes",
     "routers.billing_routes",
-
     "routers.ai_notes_routes",
     "routers.ai_note_templates_routes",
     "routers.ai_note_export_routes",
-
     "routers.chat_routes",
     "routers.dashboard_routes",
     "routers.documents_routes",
@@ -96,7 +72,6 @@ ROUTERS = [
     "routers.staff_journal_routes",
     "routers.supervision_routes",
     "routers.tasks_routes",
-
     "routers.young_people_routes",
     "routers.young_people_profile_routes",
     "routers.young_people_daily_notes_routes",
@@ -110,12 +85,10 @@ ROUTERS = [
     "routers.young_people_chronology_routes",
     "routers.young_people_compliance_routes",
     "routers.young_people_standards_routes",
-
     "routers.young_people_handover_routes",
     "routers.young_people_reports_routes",
     "routers.young_people_photo_routes",
     "routers.young_people_statutory_documents_routes",
-
     "routers.workflow_review_routes",
     "routers.command_centre_routes",
     "routers.events_routes",
@@ -129,30 +102,20 @@ for route in ROUTERS:
     include_router(route)
 
 
-# =========================================================
-# STATIC FILES
-# =========================================================
 app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
 app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
 app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
 app.mount("/components", StaticFiles(directory=COMPONENTS_DIR), name="components")
 
 
-# =========================================================
-# BASIC HEALTH CHECK
-# =========================================================
 @app.get("/health")
 def health():
     return {"ok": True}
 
 
-# =========================================================
-# GLOBAL ERROR HANDLER (CLEAN API ERRORS)
-# =========================================================
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     print(f"[GLOBAL ERROR] {str(exc)}")
-
     return JSONResponse(
         status_code=500,
         content={
@@ -162,9 +125,6 @@ async def global_exception_handler(request, exc):
     )
 
 
-# =========================================================
-# FRONTEND ROUTES
-# =========================================================
 def serve_page(file_name: str):
     path = os.path.join(FRONTEND_DIR, file_name)
     if not os.path.exists(path):
