@@ -4,6 +4,7 @@ from psycopg2.extras import RealDictCursor
 import bcrypt
 
 from db.connection import get_db
+from db.billing_db import ensure_billing_columns, get_user_billing_by_user_id
 from auth.tokens import create_session_token, decode_session_token
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -33,10 +34,20 @@ def _get_bearer_payload(authorization: str | None):
 
 @router.post("/login")
 def login(payload: LoginRequest, conn=Depends(get_db)):
+    ensure_billing_columns(conn)
+
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
-            SELECT id, email, password_hash, role, home_id, first_name, last_name, archived
+            SELECT
+                id,
+                email,
+                password_hash,
+                role,
+                home_id,
+                first_name,
+                last_name,
+                archived
             FROM users
             WHERE email = %s
             LIMIT 1
@@ -66,6 +77,8 @@ def login(payload: LoginRequest, conn=Depends(get_db)):
         user.get("home_id")
     )
 
+    billing = get_user_billing_by_user_id(conn, user["id"])
+
     return {
         "ok": True,
         "message": "Logged in",
@@ -76,7 +89,10 @@ def login(payload: LoginRequest, conn=Depends(get_db)):
             "role": user["role"],
             "home_id": user.get("home_id"),
             "first_name": user.get("first_name"),
-            "last_name": user.get("last_name")
+            "last_name": user.get("last_name"),
+            "is_active": bool(billing and billing.get("is_active")),
+            "subscription_status": billing.get("subscription_status") if billing else "inactive",
+            "plan_name": billing.get("plan_name") if billing else None,
         }
     }
 
@@ -90,7 +106,10 @@ def logout():
 
 
 @router.get("/check")
-def check_auth(authorization: str | None = Header(default=None)):
+def check_auth(
+    authorization: str | None = Header(default=None),
+    conn=Depends(get_db)
+):
     payload = _get_bearer_payload(authorization)
 
     if not payload:
@@ -98,12 +117,27 @@ def check_auth(authorization: str | None = Header(default=None)):
             "authenticated": False
         }
 
+    user_id = payload.get("sub")
+
+    try:
+        user_id = int(user_id)
+    except (TypeError, ValueError):
+        return {
+            "authenticated": False
+        }
+
+    ensure_billing_columns(conn)
+    billing = get_user_billing_by_user_id(conn, user_id)
+
     return {
         "authenticated": True,
         "user_id": payload.get("sub"),
         "email": payload.get("email"),
         "role": payload.get("role"),
-        "home_id": payload.get("home_id")
+        "home_id": payload.get("home_id"),
+        "is_active": bool(billing and billing.get("is_active")),
+        "subscription_status": billing.get("subscription_status") if billing else "inactive",
+        "plan_name": billing.get("plan_name") if billing else None,
     }
 
 
@@ -126,6 +160,8 @@ def get_me(
         user_id = int(user_id)
     except (TypeError, ValueError):
         raise HTTPException(status_code=401, detail="Invalid session")
+
+    ensure_billing_columns(conn)
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
@@ -157,7 +193,17 @@ def get_me(
     if user.get("archived") is True:
         raise HTTPException(status_code=403, detail="User is archived")
 
+    billing = get_user_billing_by_user_id(conn, user_id)
+
     return {
         "ok": True,
-        "user": dict(user)
+        "user": {
+            **dict(user),
+            "is_active": bool(billing and billing.get("is_active")),
+            "subscription_status": billing.get("subscription_status") if billing else "inactive",
+            "plan_name": billing.get("plan_name") if billing else None,
+            "stripe_customer_id": billing.get("stripe_customer_id") if billing else None,
+            "stripe_subscription_id": billing.get("stripe_subscription_id") if billing else None,
+            "current_period_end": billing.get("current_period_end") if billing else None,
+        }
     }
