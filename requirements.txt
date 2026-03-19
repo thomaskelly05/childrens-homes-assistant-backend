@@ -25,3 +25,4 @@ tavily-python
 typing_extensions
 twilio
 requests
+stripe>=10.0.0
