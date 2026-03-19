@@ -3,9 +3,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const els = {
     recordBtn: $("recordBtn"),
+    recordBtnSidebar: $("recordBtnSidebar"),
     transcribeBtn: $("transcribeBtn"),
     renameSpeakersBtn: $("renameSpeakersBtn"),
     extractActionsBtn: $("extractActionsBtn"),
+    useTranscriptForAiBtn: $("useTranscriptForAiBtn"),
     aiBtn: $("aiBtn"),
     saveBtn: $("saveBtn"),
     printBtn: $("printBtn"),
@@ -31,11 +33,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     status: $("status"),
     saveState: $("saveState"),
+    statusDot: $("statusDot"),
     list: $("list"),
     empty: $("empty"),
 
     speakerMapList: $("speakerMapList"),
+    speakerTimeline: $("speakerTimeline"),
     speakerCountBadge: $("speakerCountBadge"),
+    actionCountBadge: $("actionCountBadge"),
     actionsList: $("actionsList"),
 
     modal: $("modal"),
@@ -105,6 +110,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (els.status) els.status.textContent = value;
   };
 
+  const setStatusMode = mode => {
+    if (!els.statusDot) return;
+    els.statusDot.className = `status-dot ${mode}`;
+  };
+
   const setSaveState = (mode, text) => {
     if (!els.saveState) return;
     els.saveState.className = `save-badge ${mode}`;
@@ -123,6 +133,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const formatTime = secs =>
     `${String(Math.floor(secs / 60)).padStart(2, "0")}:${String(secs % 60).padStart(2, "0")}`;
+
+  const formatTimecode = secs => {
+    const total = Math.max(0, Math.floor(Number(secs) || 0));
+    const mins = String(Math.floor(total / 60)).padStart(2, "0");
+    const sec = String(total % 60).padStart(2, "0");
+    return `${mins}:${sec}`;
+  };
 
   const elapsed = () => {
     if (!state.startAt) return 0;
@@ -198,9 +215,36 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function renderSpeakerTimeline() {
+    if (!els.speakerTimeline) return;
+    els.speakerTimeline.innerHTML = "";
+
+    if (!state.speakerSegments.length) {
+      els.speakerTimeline.innerHTML = `<div class="speaker-empty">No speaker timeline yet.</div>`;
+      return;
+    }
+
+    state.speakerSegments.forEach(segment => {
+      const speaker = state.speakerMap[segment.speaker] || segment.speaker || "Speaker";
+      const item = document.createElement("div");
+      item.className = "timeline-item";
+      item.innerHTML = `
+        <div class="timeline-meta">
+          <span class="timeline-speaker">${escapeHtml(speaker)}</span>
+          <span class="timeline-time">${escapeHtml(formatTimecode(segment.start))}${segment.end !== undefined ? ` - ${escapeHtml(formatTimecode(segment.end))}` : ""}</span>
+        </div>
+        <div class="timeline-text">${escapeHtml(segment.text || "")}</div>
+      `;
+      els.speakerTimeline.appendChild(item);
+    });
+  }
+
   function renderActions() {
     if (!els.actionsList) return;
     els.actionsList.innerHTML = "";
+    if (els.actionCountBadge) {
+      els.actionCountBadge.textContent = String(state.extractedActions.length);
+    }
 
     if (!state.extractedActions.length) {
       els.actionsList.innerHTML = `<div class="speaker-empty">No extracted actions yet.</div>`;
@@ -349,6 +393,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         closeModal();
         statusText("Transcribing...");
+        setStatusMode("processing");
         if (els.transcribeBtn) els.transcribeBtn.disabled = false;
         setActiveTab("workspace");
         await transcribeAudio(true);
@@ -365,9 +410,12 @@ document.addEventListener("DOMContentLoaded", () => {
       startTimer();
       openModal();
       statusText("Recording");
+      setStatusMode("recording");
     } catch (error) {
       console.error(error);
       alert("Unable to access microphone.");
+      statusText("Ready");
+      setStatusMode("idle");
     }
   }
 
@@ -405,9 +453,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (state.stream) {
       state.stream.getTracks().forEach(track => track.stop());
     }
+
     resetRecordingState();
     closeModal();
     statusText("Ready");
+    setStatusMode("idle");
     showToast("Recording cancelled.");
   }
 
@@ -451,12 +501,14 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         alert(data.detail || "Transcription failed.");
         statusText("Ready");
+        setStatusMode("idle");
         return;
       }
 
       state.speakerSegments = Array.isArray(data.segments) ? data.segments : [];
       state.speakerMap = {};
       renderSpeakerMap();
+      renderSpeakerTimeline();
 
       const transcript = (data.transcript || "").trim();
       if (els.transcript) els.transcript.value = transcript;
@@ -465,6 +517,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       markDirty();
       statusText("Transcript ready");
+      setStatusMode("success");
       showToast("Transcription complete.");
 
       if (autoAi && transcript) {
@@ -476,6 +529,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ? "Transcription timed out."
         : "The transcription connection was lost.");
       statusText("Ready");
+      setStatusMode("idle");
     }
   }
 
@@ -496,6 +550,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       statusText("Applying AI...");
+      setStatusMode("processing");
 
       const response = await fetch("/ai-notes/edit", {
         method: "POST",
@@ -512,6 +567,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         alert(data.detail || "AI edit failed.");
         statusText("Ready");
+        setStatusMode("idle");
         return;
       }
 
@@ -520,11 +576,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
       markDirty();
       statusText("Note ready");
+      setStatusMode("success");
       if (!silent) showToast("AI update applied.");
     } catch (error) {
       console.error(error);
       alert("Could not connect to AI service.");
       statusText("Ready");
+      setStatusMode("idle");
     }
   }
 
@@ -540,6 +598,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       statusText("Extracting actions...");
+      setStatusMode("processing");
+
       const response = await fetch("/ai-notes/extract-actions", {
         method: "POST",
         headers: headers(),
@@ -555,17 +615,20 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         alert(data.detail || "Could not extract actions.");
         statusText("Ready");
+        setStatusMode("idle");
         return;
       }
 
       state.extractedActions = Array.isArray(data.actions) ? data.actions : [];
       renderActions();
       statusText("Note ready");
+      setStatusMode("success");
       showToast("Actions extracted.");
     } catch (error) {
       console.error(error);
       alert("Could not connect to action extraction service.");
       statusText("Ready");
+      setStatusMode("idle");
     }
   }
 
@@ -598,6 +661,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       statusText("Saving...");
+      setStatusMode("processing");
       setSaveState("idle", "Saving...");
 
       const controller = new AbortController();
@@ -620,12 +684,14 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         alert(data.detail || "Save failed.");
         statusText("Ready");
+        setStatusMode("idle");
         setSaveState("dirty", "Unsaved changes");
         return;
       }
 
       state.noteId = data.record?.id || data.id || state.noteId;
       statusText("Saved");
+      setStatusMode("success");
       markSaved();
       showToast("Note saved.");
       await loadSavedNotes();
@@ -633,6 +699,7 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Save error:", error);
       alert(error.name === "AbortError" ? "Save timed out." : "The save connection was lost.");
       statusText("Ready");
+      setStatusMode("idle");
       setSaveState("dirty", "Unsaved changes");
     }
   }
@@ -718,14 +785,15 @@ document.addEventListener("DOMContentLoaded", () => {
     if (els.noteStatus) els.noteStatus.value = note.note_status || "draft";
 
     renderSpeakerMap();
+    renderSpeakerTimeline();
     renderActions();
 
     setSaveState("idle", "Loaded");
     state.dirty = false;
     statusText("Editing saved note");
+    setStatusMode("success");
     setActiveTab("workspace");
     showToast("Saved note loaded.");
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function deleteNote(id) {
@@ -943,6 +1011,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (els.note) els.note.value = transcript;
     markDirty();
     statusText("Note reset");
+    setStatusMode("success");
     showToast("Note reset from transcript.");
   }
 
@@ -964,12 +1033,25 @@ document.addEventListener("DOMContentLoaded", () => {
     if (els.noteStatus) els.noteStatus.value = "draft";
 
     renderSpeakerMap();
+    renderSpeakerTimeline();
     renderActions();
 
     state.dirty = false;
     statusText("Ready");
+    setStatusMode("idle");
     setSaveState("idle", "Not saved");
     showToast("Editor cleared.");
+  }
+
+  function useTranscriptForAi() {
+    const transcript = buildSpeakerAwareTranscript() || (els.transcript?.value || "").trim();
+    if (!transcript) {
+      alert("There is no transcript available.");
+      return;
+    }
+    if (els.note) els.note.value = transcript;
+    markDirty();
+    showToast("Transcript copied into final note.");
   }
 
   function bindPromptButtons() {
@@ -993,12 +1075,15 @@ document.addEventListener("DOMContentLoaded", () => {
       const key = event.target.getAttribute("data-speaker-key");
       if (!key) return;
       state.speakerMap[key] = event.target.value.trim();
+      renderSpeakerTimeline();
       markDirty();
     });
   }
 
   function bindEvents() {
     els.recordBtn?.addEventListener("click", startRecording);
+    els.recordBtnSidebar?.addEventListener("click", startRecording);
+
     els.pauseBtn?.addEventListener("click", pauseRecording);
     els.resumeBtn?.addEventListener("click", resumeRecording);
     els.cancelBtn?.addEventListener("click", cancelRecording);
@@ -1008,8 +1093,13 @@ document.addEventListener("DOMContentLoaded", () => {
     els.savedTabBtn?.addEventListener("click", () => setActiveTab("saved"));
 
     els.transcribeBtn?.addEventListener("click", () => transcribeAudio(false));
-    els.renameSpeakersBtn?.addEventListener("click", renderSpeakerMap);
+    els.renameSpeakersBtn?.addEventListener("click", () => {
+      renderSpeakerMap();
+      renderSpeakerTimeline();
+      showToast("Speaker view refreshed.");
+    });
     els.extractActionsBtn?.addEventListener("click", extractActionsFromNote);
+    els.useTranscriptForAiBtn?.addEventListener("click", useTranscriptForAi);
     els.aiBtn?.addEventListener("click", () => applyAI(false));
     els.saveBtn?.addEventListener("click", saveNote);
     els.refreshBtn?.addEventListener("click", loadSavedNotes);
@@ -1051,9 +1141,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     bindEvents();
     renderSpeakerMap();
+    renderSpeakerTimeline();
     renderActions();
     setActiveTab("workspace");
     statusText("Ready");
+    setStatusMode("idle");
     setSaveState("idle", "Not saved");
     await loadSavedNotes();
   }
