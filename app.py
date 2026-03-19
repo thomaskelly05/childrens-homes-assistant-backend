@@ -3,9 +3,13 @@ import importlib
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+
+# =========================================================
+# BASE PATHS
+# =========================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 CSS_DIR = os.path.join(FRONTEND_DIR, "css")
@@ -13,9 +17,29 @@ JS_DIR = os.path.join(FRONTEND_DIR, "js")
 ASSETS_DIR = os.path.join(FRONTEND_DIR, "assets")
 COMPONENTS_DIR = os.path.join(FRONTEND_DIR, "components")
 
-app = FastAPI(title="IndiCare")
+
+# =========================================================
+# ENV VALIDATION (FAIL FAST)
+# =========================================================
+REQUIRED_ENV_VARS = [
+    "SESSION_SECRET",
+    "OPENAI_API_KEY"
+]
+
+missing = [key for key in REQUIRED_ENV_VARS if not os.getenv(key)]
+if missing:
+    raise RuntimeError(f"Missing required environment variables: {', '.join(missing)}")
 
 
+# =========================================================
+# APP INIT
+# =========================================================
+app = FastAPI(title="IndiCare API")
+
+
+# =========================================================
+# CORS
+# =========================================================
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -29,88 +53,138 @@ app.add_middleware(
 )
 
 
+# =========================================================
+# ROUTER LOADER (SAFE)
+# =========================================================
 def include_router(module_path: str):
-    module = importlib.import_module(module_path)
-    router = getattr(module, "router", None)
-    if router is None:
-        raise RuntimeError(f"No router object found in {module_path}")
-    app.include_router(router)
-    print(f"[IndiCare] Loaded router: {module_path}")
+    try:
+        module = importlib.import_module(module_path)
+        router = getattr(module, "router", None)
+
+        if router is None:
+            raise RuntimeError(f"No router found in {module_path}")
+
+        app.include_router(router)
+        print(f"[IndiCare] Loaded router: {module_path}")
+
+    except Exception as e:
+        print(f"[IndiCare ERROR] Failed to load {module_path}: {str(e)}")
 
 
-include_router("routers.auth_routes")
-include_router("routers.account_routes")
-include_router("routers.admin_routes")
-include_router("routers.ai_note_export_routes")
-include_router("routers.ai_note_templates_routes")
-include_router("routers.ai_notes_routes")
-include_router("routers.billing_routes")
-include_router("routers.chat_routes")
-include_router("routers.dashboard_routes")
-include_router("routers.documents_routes")
-include_router("routers.handover_routes")
-include_router("routers.monthly_reviews_routes")
-include_router("routers.ofsted_ai_report_routes")
-include_router("routers.ofsted_pack_routes")
-include_router("routers.reports_routes")
-include_router("routers.risk_routes")
-include_router("routers.staff_journal_routes")
-include_router("routers.supervision_routes")
-include_router("routers.tasks_routes")
-include_router("routers.young_people_routes")
-include_router("routers.young_people_profile_routes")
-include_router("routers.young_people_daily_notes_routes")
-include_router("routers.young_people_incidents_routes")
-include_router("routers.young_people_health_routes")
-include_router("routers.young_people_education_routes")
-include_router("routers.young_people_family_routes")
-include_router("routers.young_people_keywork_routes")
-include_router("routers.young_people_plans_routes")
-include_router("routers.young_people_risk_routes")
-include_router("routers.young_people_chronology_routes")
-include_router("routers.young_people_compliance_routes")
-include_router("routers.young_people_standards_routes")
-include_router("routers.young_people_handover_routes")
-include_router("routers.young_people_reports_routes")
-include_router("routers.young_people_photo_routes")
-include_router("routers.young_people_statutory_documents_routes")
-include_router("routers.workflow_review_routes")
-include_router("routers.command_centre_routes")
-include_router("routers.events_routes")
-include_router("routers.evidence_routes")
-include_router("routers.qa_routes")
-include_router("routers.exports_routes")
-include_router("routers.rostering_routes")
+# =========================================================
+# ROUTERS
+# =========================================================
+ROUTERS = [
+    "routers.auth_routes",
+    "routers.account_routes",
+    "routers.admin_routes",
+    "routers.billing_routes",
 
+    "routers.ai_notes_routes",
+    "routers.ai_note_templates_routes",
+    "routers.ai_note_export_routes",
+
+    "routers.chat_routes",
+    "routers.dashboard_routes",
+    "routers.documents_routes",
+    "routers.handover_routes",
+    "routers.monthly_reviews_routes",
+    "routers.ofsted_ai_report_routes",
+    "routers.ofsted_pack_routes",
+    "routers.reports_routes",
+    "routers.risk_routes",
+    "routers.staff_journal_routes",
+    "routers.supervision_routes",
+    "routers.tasks_routes",
+
+    "routers.young_people_routes",
+    "routers.young_people_profile_routes",
+    "routers.young_people_daily_notes_routes",
+    "routers.young_people_incidents_routes",
+    "routers.young_people_health_routes",
+    "routers.young_people_education_routes",
+    "routers.young_people_family_routes",
+    "routers.young_people_keywork_routes",
+    "routers.young_people_plans_routes",
+    "routers.young_people_risk_routes",
+    "routers.young_people_chronology_routes",
+    "routers.young_people_compliance_routes",
+    "routers.young_people_standards_routes",
+
+    "routers.young_people_handover_routes",
+    "routers.young_people_reports_routes",
+    "routers.young_people_photo_routes",
+    "routers.young_people_statutory_documents_routes",
+
+    "routers.workflow_review_routes",
+    "routers.command_centre_routes",
+    "routers.events_routes",
+    "routers.evidence_routes",
+    "routers.qa_routes",
+    "routers.exports_routes",
+    "routers.rostering_routes",
+]
+
+for route in ROUTERS:
+    include_router(route)
+
+
+# =========================================================
+# STATIC FILES
+# =========================================================
 app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
 app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
 app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
 app.mount("/components", StaticFiles(directory=COMPONENTS_DIR), name="components")
 
 
+# =========================================================
+# BASIC HEALTH CHECK
+# =========================================================
+@app.get("/health")
+def health():
+    return {"ok": True}
+
+
+# =========================================================
+# GLOBAL ERROR HANDLER (CLEAN API ERRORS)
+# =========================================================
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    print(f"[GLOBAL ERROR] {str(exc)}")
+
+    return JSONResponse(
+        status_code=500,
+        content={
+            "ok": False,
+            "error": "Internal server error"
+        }
+    )
+
+
+# =========================================================
+# FRONTEND ROUTES
+# =========================================================
+def serve_page(file_name: str):
+    path = os.path.join(FRONTEND_DIR, file_name)
+    if not os.path.exists(path):
+        return JSONResponse(status_code=404, content={"error": "Page not found"})
+    return FileResponse(path)
+
+
 @app.get("/")
 def serve_index():
-    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+    return serve_page("index.html")
 
 
 @app.get("/login")
 def serve_login():
-    return FileResponse(os.path.join(FRONTEND_DIR, "login.html"))
-
-
-@app.get("/login.html")
-def serve_login_html():
-    return FileResponse(os.path.join(FRONTEND_DIR, "login.html"))
+    return serve_page("login.html")
 
 
 @app.get("/oslogin")
 def serve_oslogin():
-    return FileResponse(os.path.join(FRONTEND_DIR, "oslogin.html"))
-
-
-@app.get("/oslogin.html")
-def serve_oslogin_html():
-    return FileResponse(os.path.join(FRONTEND_DIR, "oslogin.html"))
+    return serve_page("oslogin.html")
 
 
 @app.get("/assistant")
@@ -120,99 +194,34 @@ def serve_assistant():
 
 @app.get("/journal")
 def serve_journal():
-    return FileResponse(os.path.join(FRONTEND_DIR, "journal.html"))
-
-
-@app.get("/journal.html")
-def serve_journal_html():
-    return FileResponse(os.path.join(FRONTEND_DIR, "journal.html"))
-
-
-@app.get("/journal.css")
-def serve_journal_css():
-    return FileResponse(os.path.join(FRONTEND_DIR, "journal.css"))
-
-
-@app.get("/journal.js")
-def serve_journal_js():
-    return FileResponse(os.path.join(FRONTEND_DIR, "journal.js"))
+    return serve_page("journal.html")
 
 
 @app.get("/supervision")
 def serve_supervision():
-    return FileResponse(os.path.join(FRONTEND_DIR, "supervision.html"))
-
-
-@app.get("/supervision.html")
-def serve_supervision_html():
-    return FileResponse(os.path.join(FRONTEND_DIR, "supervision.html"))
-
-
-@app.get("/supervision.js")
-def serve_supervision_js():
-    return FileResponse(os.path.join(FRONTEND_DIR, "supervision.js"))
+    return serve_page("supervision.html")
 
 
 @app.get("/ai-notes")
 def serve_ai_notes():
-    return FileResponse(os.path.join(FRONTEND_DIR, "ai-note.html"))
-
-
-@app.get("/ai-note.html")
-def serve_ai_note_html():
-    return FileResponse(os.path.join(FRONTEND_DIR, "ai-note.html"))
-
-
-@app.get("/ai-notes.css")
-def serve_ai_notes_css():
-    return FileResponse(os.path.join(FRONTEND_DIR, "ai-notes.css"))
-
-
-@app.get("/ai-notes.js")
-def serve_ai_notes_js():
-    return FileResponse(os.path.join(FRONTEND_DIR, "ai-notes.js"))
+    return serve_page("ai-note.html")
 
 
 @app.get("/young-people-page")
 def serve_young_people():
-    return FileResponse(os.path.join(FRONTEND_DIR, "young-people.html"))
-
-
-@app.get("/young-people-page.html")
-def serve_young_people_html():
-    return FileResponse(os.path.join(FRONTEND_DIR, "young-people.html"))
+    return serve_page("young-people.html")
 
 
 @app.get("/young-people-shell")
 def serve_young_people_shell():
-    return FileResponse(os.path.join(FRONTEND_DIR, "young-people-shell.html"))
-
-
-@app.get("/young-people-shell.html")
-def serve_young_people_shell_html():
-    return FileResponse(os.path.join(FRONTEND_DIR, "young-people-shell.html"))
+    return serve_page("young-people-shell.html")
 
 
 @app.get("/childrens-home-os")
 def serve_childrens_home_os():
-    return FileResponse(os.path.join(FRONTEND_DIR, "young-people-shell.html"))
-
-
-@app.get("/childrens-home-os.html")
-def serve_childrens_home_os_html():
-    return FileResponse(os.path.join(FRONTEND_DIR, "young-people-shell.html"))
+    return serve_page("young-people-shell.html")
 
 
 @app.get("/rostering")
 def serve_rostering():
-    return FileResponse(os.path.join(FRONTEND_DIR, "rostering.html"))
-
-
-@app.get("/rostering.html")
-def serve_rostering_html():
-    return FileResponse(os.path.join(FRONTEND_DIR, "rostering.html"))
-
-
-@app.get("/health")
-def health():
-    return {"ok": True}
+    return serve_page("rostering.html")
