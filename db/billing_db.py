@@ -157,85 +157,7 @@ def set_stripe_customer_id(conn, user_id: int, stripe_customer_id: str) -> dict[
             """,
             (stripe_customer_id, user_id)
         )
-        row = cur.fetchone()
-        conn.commit()
-        return dict(row) if row else None
 
-
-def activate_user_subscription(
-    conn,
-    user_id: int,
-    stripe_customer_id: str | None,
-    stripe_subscription_id: str | None,
-    subscription_status: str,
-    plan_name: str | None,
-    current_period_end
-) -> dict[str, Any] | None:
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            UPDATE users
-            SET
-                stripe_customer_id = COALESCE(%s, stripe_customer_id),
-                stripe_subscription_id = %s,
-                subscription_status = %s,
-                plan_name = %s,
-                current_period_end = %s,
-                is_active = TRUE
-            WHERE id = %s
-            RETURNING
-                id,
-                email,
-                full_name,
-                stripe_customer_id,
-                stripe_subscription_id,
-                subscription_status,
-                plan_name,
-                current_period_end,
-                is_active;
-            """,
-            (
-                stripe_customer_id,
-                stripe_subscription_id,
-                subscription_status,
-                plan_name,
-                current_period_end,
-                user_id,
-            )
-        )
-        row = cur.fetchone()
-        conn.commit()
-        return dict(row) if row else None
-
-
-def deactivate_user_subscription(
-    conn,
-    user_id: int,
-    subscription_status: str,
-    current_period_end=None
-) -> dict[str, Any] | None:
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            UPDATE users
-            SET
-                subscription_status = %s,
-                current_period_end = %s,
-                is_active = FALSE
-            WHERE id = %s
-            RETURNING
-                id,
-                email,
-                full_name,
-                stripe_customer_id,
-                stripe_subscription_id,
-                subscription_status,
-                plan_name,
-                current_period_end,
-                is_active;
-            """,
-            (subscription_status, current_period_end, user_id)
-        )
         row = cur.fetchone()
         conn.commit()
         return dict(row) if row else None
@@ -281,6 +203,7 @@ def update_subscription_status_by_customer_id(
                 stripe_customer_id,
             )
         )
+
         row = cur.fetchone()
         conn.commit()
         return dict(row) if row else None
