@@ -13,6 +13,9 @@ if not OPENAI_API_KEY:
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
+MAX_AUDIO_BYTES = 25 * 1024 * 1024
+MAX_TEXT_CHARS = 120000
+
 
 def _get_audio_mime_type(file_path: str) -> str:
     filename = os.path.basename(file_path).lower()
@@ -26,6 +29,15 @@ def _get_audio_mime_type(file_path: str) -> str:
     if filename.endswith(".mp3"):
         return "audio/mpeg"
     return "audio/webm"
+
+
+def _normalise_text(value: str | None) -> str:
+    return (value or "").strip()
+
+
+def _truncate_text(value: str, max_chars: int = MAX_TEXT_CHARS) -> str:
+    clean = _normalise_text(value)
+    return clean[:max_chars]
 
 
 def _normalise_speaker_segments(raw_segments: Any) -> list[dict[str, Any]]:
@@ -72,6 +84,9 @@ def _transcribe_audio_sync(file_path: str) -> dict[str, Any]:
     if file_size <= 0:
         raise RuntimeError("Audio file is empty")
 
+    if file_size > MAX_AUDIO_BYTES:
+        raise RuntimeError("Audio file is too large")
+
     mime_type = _get_audio_mime_type(file_path)
 
     with open(file_path, "rb") as audio_file:
@@ -83,13 +98,13 @@ def _transcribe_audio_sync(file_path: str) -> dict[str, Any]:
 
     result_dict = result.model_dump() if hasattr(result, "model_dump") else result
     segments = _normalise_speaker_segments(result_dict.get("segments"))
-    text = str(result_dict.get("text") or "").strip()
+    text = _normalise_text(result_dict.get("text"))
 
     if not text and segments:
         text = _speaker_text_from_segments(segments)
 
     return {
-        "transcript": text,
+        "transcript": _truncate_text(text),
         "segments": segments,
         "duration": result_dict.get("duration")
     }
@@ -163,7 +178,7 @@ Transcript:
 
 
 def _generate_note_sync(transcript: str) -> dict[str, Any]:
-    transcript = transcript.strip()
+    transcript = _truncate_text(transcript)
 
     if not transcript:
         return {
@@ -184,7 +199,7 @@ def _generate_note_sync(transcript: str) -> dict[str, Any]:
         response_format={"type": "json_object"}
     )
 
-    content = (response.choices[0].message.content or "").strip()
+    content = _normalise_text(response.choices[0].message.content)
 
     try:
         parsed = json.loads(content)
@@ -195,9 +210,9 @@ def _generate_note_sync(transcript: str) -> dict[str, Any]:
             "safeguarding_reason": "Safeguarding analysis unavailable."
         }
 
-    note = (parsed.get("note") or "").strip()
+    note = _normalise_text(parsed.get("note"))
     safeguarding_flag = bool(parsed.get("safeguarding_flag", False))
-    safeguarding_reason = (parsed.get("safeguarding_reason") or "").strip()
+    safeguarding_reason = _normalise_text(parsed.get("safeguarding_reason"))
 
     if not safeguarding_reason:
         safeguarding_reason = (
@@ -226,9 +241,9 @@ async def generate_note(transcript: str) -> dict[str, Any]:
 
 
 def _edit_note_sync(text: str, mode: str, instruction: str = "") -> str:
-    text = text.strip()
-    mode = (mode or "").strip().lower()
-    instruction = (instruction or "").strip()
+    text = _truncate_text(text)
+    mode = _normalise_text(mode).lower()
+    instruction = _normalise_text(instruction)
 
     mode_map = {
         "improve": "Improve the wording while keeping the meaning the same.",
@@ -277,7 +292,7 @@ Document:
         temperature=0.2
     )
 
-    return (response.choices[0].message.content or "").strip()
+    return _normalise_text(response.choices[0].message.content)
 
 
 async def edit_note(text: str, mode: str, instruction: str = "") -> str:
