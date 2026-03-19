@@ -943,7 +943,7 @@ textarea {
 .workspace-shell-content {
     min-height: 0;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
     padding: 16px 20px 20px;
     overflow: hidden;
@@ -965,6 +965,54 @@ textarea {
     grid-template-rows: 1fr 1fr;
     gap: 16px;
     overflow: hidden;
+}
+
+.workflow-first-step-panel {
+    flex-shrink: 0;
+}
+
+.meeting-mode-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.meeting-mode-card {
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: #fff;
+    padding: 18px;
+    text-align: left;
+    cursor: pointer;
+    transition: 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 110px;
+}
+
+.meeting-mode-card strong {
+    font-size: 16px;
+    color: var(--text);
+}
+
+.meeting-mode-card span {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--muted);
+}
+
+.meeting-mode-card:hover {
+    transform: translateY(-1px);
+    border-color: #93c5fd;
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.10);
+}
+
+.meeting-mode-card.is-selected {
+    border-color: #2563eb;
+    background: #eff6ff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
 }
 
 .workflow-stepper {
@@ -1032,7 +1080,7 @@ textarea {
 
 .workflow-insights {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 12px;
 }
 
@@ -1060,7 +1108,7 @@ textarea {
 }
 
 .review-strip {
-    display: grid;
+    display: none;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
 }
@@ -1127,7 +1175,7 @@ textarea {
 .workspace-two-column {
     min-height: 0;
     display: grid;
-    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
     gap: 16px;
     overflow: hidden;
 }
@@ -1223,6 +1271,29 @@ textarea {
 .quality-badge {
     background: #f1f5f9;
     color: #334155;
+}
+
+.advanced-tools {
+    margin-top: 10px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: #f8fbff;
+    padding: 12px 14px;
+}
+
+.advanced-tools summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--text);
+    list-style: none;
+}
+
+.advanced-tools summary::-webkit-details-marker {
+    display: none;
+}
+
+.advanced-tools-actions {
+    margin-top: 12px;
 }
 
 .actions-empty-state {
@@ -1548,11 +1619,17 @@ textarea {
     background: transparent;
 }
 
+/* Simplified default workspace */
+.workspace-side-column,
+#speakerTimelinePanel {
+    display: none !important;
+}
+
 /* Responsive */
 
 @media (max-width: 1440px) {
-    .workspace-shell-content {
-        grid-template-columns: minmax(0, 1fr) 300px;
+    .workflow-insights {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
 
@@ -1575,11 +1652,6 @@ textarea {
 @media (max-width: 1180px) {
     .workspace-shell-content {
         grid-template-columns: 1fr;
-    }
-
-    .workspace-side-column {
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: 1fr;
     }
 
     .workspace-two-column {
@@ -1639,10 +1711,10 @@ textarea {
     .workflow-stepper,
     .workflow-insights,
     .review-strip,
-    .workspace-side-column,
     .editor-grid,
     .speaker-summary-bar,
-    .saved-notes-toolbar {
+    .saved-notes-toolbar,
+    .meeting-mode-grid {
         grid-template-columns: 1fr;
     }
 
