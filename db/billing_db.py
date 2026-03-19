@@ -69,7 +69,6 @@ def get_user_billing_by_user_id(conn, user_id: int) -> dict[str, Any] | None:
             SELECT
                 id,
                 email,
-                full_name,
                 stripe_customer_id,
                 stripe_subscription_id,
                 subscription_status,
@@ -94,7 +93,6 @@ def get_user_billing_by_email(conn, email: str) -> dict[str, Any] | None:
             SELECT
                 id,
                 email,
-                full_name,
                 stripe_customer_id,
                 stripe_subscription_id,
                 subscription_status,
@@ -119,7 +117,6 @@ def get_user_billing_by_customer_id(conn, stripe_customer_id: str) -> dict[str, 
             SELECT
                 id,
                 email,
-                full_name,
                 stripe_customer_id,
                 stripe_subscription_id,
                 subscription_status,
@@ -147,7 +144,6 @@ def set_stripe_customer_id(conn, user_id: int, stripe_customer_id: str) -> dict[
             RETURNING
                 id,
                 email,
-                full_name,
                 stripe_customer_id,
                 stripe_subscription_id,
                 subscription_status,
@@ -186,7 +182,6 @@ def update_subscription_status_by_customer_id(
             RETURNING
                 id,
                 email,
-                full_name,
                 stripe_customer_id,
                 stripe_subscription_id,
                 subscription_status,
