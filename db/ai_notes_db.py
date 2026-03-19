@@ -3,10 +3,24 @@ from typing import Any
 
 
 def _json_dumps(value: Any) -> str:
-    return json.dumps(value or [])
+    return json.dumps(value or {} if isinstance(value, dict) else value or [])
 
 
-def _json_loads(value: Any) -> list[dict[str, Any]]:
+def _json_loads_object(value: Any) -> dict[str, Any]:
+    if value is None:
+        return {}
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+            return parsed if isinstance(parsed, dict) else {}
+        except Exception:
+            return {}
+    return {}
+
+
+def _json_loads_list(value: Any) -> list[dict[str, Any]]:
     if value is None:
         return []
     if isinstance(value, list):
@@ -25,7 +39,8 @@ def _normalise_note_row(row: dict[str, Any] | None) -> dict[str, Any] | None:
         return None
 
     data = dict(row)
-    data["speaker_segments"] = _json_loads(data.get("speaker_segments"))
+    data["speaker_segments"] = _json_loads_list(data.get("speaker_segments"))
+    data["speaker_map"] = _json_loads_object(data.get("speaker_map"))
     return data
 
 
@@ -51,7 +66,11 @@ def ensure_ai_meetings_table(conn) -> None:
                 young_person_name TEXT,
                 record_date TEXT,
                 location_context TEXT,
+
                 speaker_segments JSONB NOT NULL DEFAULT '[]'::jsonb,
+                speaker_map JSONB NOT NULL DEFAULT '{}'::jsonb,
+                note_status TEXT NOT NULL DEFAULT 'draft',
+                deleted_at TIMESTAMPTZ NULL,
 
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -59,96 +78,22 @@ def ensure_ai_meetings_table(conn) -> None:
             """
         )
 
-        cur.execute(
-            """
-            ALTER TABLE ai_meeting_notes
-            ADD COLUMN IF NOT EXISTS user_id INTEGER;
-            """
-        )
-
-        cur.execute(
-            """
-            ALTER TABLE ai_meeting_notes
-            ADD COLUMN IF NOT EXISTS title TEXT;
-            """
-        )
-
-        cur.execute(
-            """
-            ALTER TABLE ai_meeting_notes
-            ADD COLUMN IF NOT EXISTS safeguarding_flag BOOLEAN NOT NULL DEFAULT FALSE;
-            """
-        )
-
-        cur.execute(
-            """
-            ALTER TABLE ai_meeting_notes
-            ADD COLUMN IF NOT EXISTS safeguarding_reason TEXT;
-            """
-        )
-
-        cur.execute(
-            """
-            ALTER TABLE ai_meeting_notes
-            ADD COLUMN IF NOT EXISTS template_name TEXT;
-            """
-        )
-
-        cur.execute(
-            """
-            ALTER TABLE ai_meeting_notes
-            ADD COLUMN IF NOT EXISTS service_type TEXT;
-            """
-        )
-
-        cur.execute(
-            """
-            ALTER TABLE ai_meeting_notes
-            ADD COLUMN IF NOT EXISTS shift_type TEXT;
-            """
-        )
-
-        cur.execute(
-            """
-            ALTER TABLE ai_meeting_notes
-            ADD COLUMN IF NOT EXISTS meeting_format TEXT;
-            """
-        )
-
-        cur.execute(
-            """
-            ALTER TABLE ai_meeting_notes
-            ADD COLUMN IF NOT EXISTS record_author TEXT;
-            """
-        )
-
-        cur.execute(
-            """
-            ALTER TABLE ai_meeting_notes
-            ADD COLUMN IF NOT EXISTS young_person_name TEXT;
-            """
-        )
-
-        cur.execute(
-            """
-            ALTER TABLE ai_meeting_notes
-            ADD COLUMN IF NOT EXISTS record_date TEXT;
-            """
-        )
-
-        cur.execute(
-            """
-            ALTER TABLE ai_meeting_notes
-            ADD COLUMN IF NOT EXISTS location_context TEXT;
-            """
-        )
-
-        cur.execute(
-            """
-            ALTER TABLE ai_meeting_notes
-            ADD COLUMN IF NOT EXISTS speaker_segments JSONB NOT NULL DEFAULT '[]'::jsonb;
-            """
-        )
+        cur.execute("ALTER TABLE ai_meeting_notes ADD COLUMN IF NOT EXISTS user_id INTEGER;")
+        cur.execute("ALTER TABLE ai_meeting_notes ADD COLUMN IF NOT EXISTS title TEXT;")
+        cur.execute("ALTER TABLE ai_meeting_notes ADD COLUMN IF NOT EXISTS safeguarding_flag BOOLEAN NOT NULL DEFAULT FALSE;")
+        cur.execute("ALTER TABLE ai_meeting_notes ADD COLUMN IF NOT EXISTS safeguarding_reason TEXT;")
+        cur.execute("ALTER TABLE ai_meeting_notes ADD COLUMN IF NOT EXISTS template_name TEXT;")
+        cur.execute("ALTER TABLE ai_meeting_notes ADD COLUMN IF NOT EXISTS service_type TEXT;")
+        cur.execute("ALTER TABLE ai_meeting_notes ADD COLUMN IF NOT EXISTS shift_type TEXT;")
+        cur.execute("ALTER TABLE ai_meeting_notes ADD COLUMN IF NOT EXISTS meeting_format TEXT;")
+        cur.execute("ALTER TABLE ai_meeting_notes ADD COLUMN IF NOT EXISTS record_author TEXT;")
+        cur.execute("ALTER TABLE ai_meeting_notes ADD COLUMN IF NOT EXISTS young_person_name TEXT;")
+        cur.execute("ALTER TABLE ai_meeting_notes ADD COLUMN IF NOT EXISTS record_date TEXT;")
+        cur.execute("ALTER TABLE ai_meeting_notes ADD COLUMN IF NOT EXISTS location_context TEXT;")
+        cur.execute("ALTER TABLE ai_meeting_notes ADD COLUMN IF NOT EXISTS speaker_segments JSONB NOT NULL DEFAULT '[]'::jsonb;")
+        cur.execute("ALTER TABLE ai_meeting_notes ADD COLUMN IF NOT EXISTS speaker_map JSONB NOT NULL DEFAULT '{}'::jsonb;")
+        cur.execute("ALTER TABLE ai_meeting_notes ADD COLUMN IF NOT EXISTS note_status TEXT NOT NULL DEFAULT 'draft';")
+        cur.execute("ALTER TABLE ai_meeting_notes ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ NULL;")
 
         cur.execute(
             """
@@ -161,13 +106,6 @@ def ensure_ai_meetings_table(conn) -> None:
             """
             CREATE INDEX IF NOT EXISTS idx_ai_meeting_notes_user_updated
             ON ai_meeting_notes (user_id, updated_at DESC);
-            """
-        )
-
-        cur.execute(
-            """
-            CREATE INDEX IF NOT EXISTS idx_ai_meeting_notes_created_at
-            ON ai_meeting_notes (created_at DESC);
             """
         )
 
@@ -191,7 +129,9 @@ def insert_ai_meeting_note(
     young_person_name: str | None = None,
     record_date: str | None = None,
     location_context: str | None = None,
-    speaker_segments: list[dict[str, Any]] | None = None
+    speaker_segments: list[dict[str, Any]] | None = None,
+    speaker_map: dict[str, str] | None = None,
+    note_status: str = "draft"
 ) -> dict[str, Any]:
     with conn.cursor() as cur:
         cur.execute(
@@ -212,9 +152,11 @@ def insert_ai_meeting_note(
                 young_person_name,
                 record_date,
                 location_context,
-                speaker_segments
+                speaker_segments,
+                speaker_map,
+                note_status
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s)
             RETURNING
                 id,
                 user_id,
@@ -233,6 +175,9 @@ def insert_ai_meeting_note(
                 record_date,
                 location_context,
                 speaker_segments,
+                speaker_map,
+                note_status,
+                deleted_at,
                 created_at,
                 updated_at;
             """,
@@ -252,7 +197,9 @@ def insert_ai_meeting_note(
                 young_person_name,
                 record_date,
                 location_context,
-                _json_dumps(speaker_segments)
+                _json_dumps(speaker_segments or []),
+                _json_dumps(speaker_map or {}),
+                note_status
             )
         )
 
@@ -279,7 +226,9 @@ def update_ai_meeting_note(
     young_person_name: str | None = None,
     record_date: str | None = None,
     location_context: str | None = None,
-    speaker_segments: list[dict[str, Any]] | None = None
+    speaker_segments: list[dict[str, Any]] | None = None,
+    speaker_map: dict[str, str] | None = None,
+    note_status: str = "draft"
 ) -> dict[str, Any] | None:
     with conn.cursor() as cur:
         cur.execute(
@@ -301,9 +250,12 @@ def update_ai_meeting_note(
                 record_date = %s,
                 location_context = %s,
                 speaker_segments = %s::jsonb,
+                speaker_map = %s::jsonb,
+                note_status = %s,
                 updated_at = NOW()
             WHERE id = %s
               AND user_id = %s
+              AND deleted_at IS NULL
             RETURNING
                 id,
                 user_id,
@@ -322,6 +274,9 @@ def update_ai_meeting_note(
                 record_date,
                 location_context,
                 speaker_segments,
+                speaker_map,
+                note_status,
+                deleted_at,
                 created_at,
                 updated_at;
             """,
@@ -340,7 +295,9 @@ def update_ai_meeting_note(
                 young_person_name,
                 record_date,
                 location_context,
-                _json_dumps(speaker_segments),
+                _json_dumps(speaker_segments or []),
+                _json_dumps(speaker_map or {}),
+                note_status,
                 note_id,
                 user_id
             )
@@ -377,10 +334,14 @@ def list_ai_meeting_notes(
                 record_date,
                 location_context,
                 speaker_segments,
+                speaker_map,
+                note_status,
+                deleted_at,
                 created_at,
                 updated_at
             FROM ai_meeting_notes
             WHERE user_id = %s
+              AND deleted_at IS NULL
             ORDER BY updated_at DESC, created_at DESC
             LIMIT %s;
             """,
@@ -417,11 +378,15 @@ def get_ai_meeting_note(
                 record_date,
                 location_context,
                 speaker_segments,
+                speaker_map,
+                note_status,
+                deleted_at,
                 created_at,
                 updated_at
             FROM ai_meeting_notes
             WHERE id = %s
               AND user_id = %s
+              AND deleted_at IS NULL
             LIMIT 1;
             """,
             (note_id, user_id)
@@ -431,7 +396,7 @@ def get_ai_meeting_note(
         return _normalise_note_row(dict(row) if row else None)
 
 
-def delete_ai_meeting_note(
+def soft_delete_ai_meeting_note(
     conn,
     note_id: int,
     user_id: int
@@ -439,9 +404,11 @@ def delete_ai_meeting_note(
     with conn.cursor() as cur:
         cur.execute(
             """
-            DELETE FROM ai_meeting_notes
+            UPDATE ai_meeting_notes
+            SET deleted_at = NOW(), updated_at = NOW()
             WHERE id = %s
               AND user_id = %s
+              AND deleted_at IS NULL
             RETURNING id;
             """,
             (note_id, user_id)
