@@ -97,7 +97,7 @@
                         Create note
                     </button>
                     <button id="openSavedTabBtn" class="page-tab" type="button" data-tab="saved">
-                        Note history
+                        Saved notes
                     </button>
                 </div>
 
@@ -244,7 +244,6 @@
                                     </tr>
                                 </thead>
                                 <tbody id="historyList">
-                                    <!-- JS renders saved notes rows here -->
                                 </tbody>
                             </table>
                         </div>
@@ -256,6 +255,7 @@
         </main>
     </div>
 
+    <!-- TEMPLATE MANAGER -->
     <div id="templateModal" class="modal-overlay hidden">
         <div class="modal-card">
             <div class="modal-header">
@@ -296,12 +296,13 @@
         </div>
     </div>
 
+    <!-- RECORDING MODAL -->
     <div id="recordingModal" class="recording-modal-overlay hidden">
         <div class="recording-modal">
             <div class="recording-modal-header">
                 <p class="panel-label">Recording live</p>
                 <h2>Capture conversation or dictation</h2>
-                <p>When you stop recording, IndiCare will transcribe and structure your note automatically.</p>
+                <p>When you stop recording, IndiCare will create your I-Notes draft automatically.</p>
             </div>
 
             <div class="recording-mic-wrap">
@@ -318,6 +319,7 @@
         </div>
     </div>
 
+    <!-- FULLSCREEN WORKSPACE -->
     <div id="workflowModal" class="fullscreen-workspace hidden">
         <div class="workspace-shell">
             <div class="workspace-shell-topbar">
@@ -334,12 +336,13 @@
 
             <div class="workspace-shell-content">
                 <div class="workspace-main-column">
+
                     <div class="premium-panel workflow-first-step-panel" id="workflowFirstStepPanel">
                         <div class="section-head">
                             <div>
                                 <p class="panel-label">Step 1</p>
                                 <h3>Meeting setup</h3>
-                                <p>Choose how this conversation or note took place before creating the structured record.</p>
+                                <p>Choose how this conversation or note took place before creating the draft.</p>
                             </div>
                         </div>
 
@@ -622,6 +625,7 @@
         </div>
     </div>
 
+    <!-- VERSION HISTORY DRAWER -->
     <div id="versionsDrawer" class="versions-drawer hidden">
         <div class="versions-drawer-panel">
             <div class="modal-header">
