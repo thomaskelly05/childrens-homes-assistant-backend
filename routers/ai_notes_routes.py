@@ -1,4 +1,5 @@
 import os
+import json
 import shutil
 import uuid
 from typing import Any
@@ -14,13 +15,17 @@ from db.ai_notes_db import (
     get_ai_meeting_note,
     delete_ai_meeting_note
 )
-
+from db.ai_note_versions_db import (
+    ensure_ai_note_versions_table,
+    insert_ai_note_version,
+    list_ai_note_versions,
+    get_ai_note_version
+)
 from services.ai_notes_service import (
     transcribe_audio,
     generate_note,
     edit_note
 )
-
 from auth.dependencies import get_current_user
 
 router = APIRouter(
@@ -30,6 +35,8 @@ router = APIRouter(
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UPLOAD_DIR = os.path.join(BASE_DIR, "_tmp_uploads")
+MAX_AUDIO_UPLOAD_BYTES = 25 * 1024 * 1024
+MAX_TEXT_LENGTH = 120000
 
 if os.path.exists(UPLOAD_DIR) and not os.path.isdir(UPLOAD_DIR):
     os.remove(UPLOAD_DIR)
@@ -45,6 +52,10 @@ def _to_bool(value: str | None) -> bool:
 
 def _clean_text(value: str | None) -> str:
     return (value or "").strip()
+
+
+def _clamp_text(value: str | None, max_length: int = MAX_TEXT_LENGTH) -> str:
+    return _clean_text(value)[:max_length]
 
 
 def _none_if_empty(value: str | None) -> str | None:
@@ -92,6 +103,16 @@ def _normalise_segments(raw_segments: Any) -> list[dict[str, Any]]:
     return normalised
 
 
+def _parse_speaker_segments_json(value: str | None) -> list[dict[str, Any]]:
+    if not value:
+        return []
+    try:
+        parsed = json.loads(value)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid speaker_segments_json")
+    return _normalise_segments(parsed)
+
+
 def _build_history_note(note: dict[str, Any]) -> dict[str, Any]:
     final_note = note.get("final_note") or note.get("ai_draft") or ""
     excerpt = final_note[:180]
@@ -116,6 +137,19 @@ def _build_history_note(note: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _build_version_record(version: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": version.get("id"),
+        "note_id": version.get("note_id"),
+        "title": version.get("title") or "Untitled note",
+        "transcript": version.get("transcript") or "",
+        "ai_draft": version.get("ai_draft") or "",
+        "final_note": version.get("final_note") or "",
+        "speaker_segments": _normalise_segments(version.get("speaker_segments") or []),
+        "created_at": version.get("created_at")
+    }
+
+
 @router.post("/transcribe")
 async def transcribe_note_audio(
     file: UploadFile = File(...),
@@ -135,8 +169,16 @@ async def transcribe_note_audio(
     temp_path = os.path.join(UPLOAD_DIR, temp_filename)
 
     try:
+        total_bytes = 0
         with open(temp_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+            while True:
+                chunk = file.file.read(1024 * 1024)
+                if not chunk:
+                    break
+                total_bytes += len(chunk)
+                if total_bytes > MAX_AUDIO_UPLOAD_BYTES:
+                    raise HTTPException(status_code=400, detail="Audio file is too large")
+                buffer.write(chunk)
 
         if not os.path.exists(temp_path) or os.path.getsize(temp_path) == 0:
             raise HTTPException(status_code=400, detail="Uploaded file is empty")
@@ -145,7 +187,7 @@ async def transcribe_note_audio(
 
         return {
             "ok": True,
-            "transcript": _clean_text(result.get("transcript")),
+            "transcript": _clamp_text(result.get("transcript")),
             "segments": _normalise_segments(result.get("segments") or []),
             "duration": result.get("duration")
         }
@@ -165,7 +207,7 @@ async def generate_ai_note(
     transcript: str = Form(...),
     current_user=Depends(get_current_user)
 ):
-    transcript = transcript.strip()
+    transcript = _clamp_text(transcript)
 
     if not transcript:
         raise HTTPException(status_code=400, detail="Transcript required")
@@ -192,9 +234,9 @@ async def edit_ai_note(
     instruction: str | None = Form(None),
     current_user=Depends(get_current_user)
 ):
-    text = text.strip()
-    mode = mode.strip().lower()
-    instruction = (instruction or "").strip()
+    text = _clamp_text(text)
+    mode = _clean_text(mode).lower()
+    instruction = _clamp_text(instruction, 5000)
 
     if not text:
         raise HTTPException(status_code=400, detail="Text required")
@@ -242,9 +284,9 @@ async def save_ai_note(
     conn=Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    transcript = _clean_text(transcript)
-    ai_draft = _clean_text(ai_draft)
-    final_note = _clean_text(final_note)
+    transcript = _clamp_text(transcript)
+    ai_draft = _clamp_text(ai_draft)
+    final_note = _clamp_text(final_note)
     safeguarding_reason = _clean_text(safeguarding_reason)
     title = _clean_text(title)
 
@@ -256,6 +298,7 @@ async def save_ai_note(
     young_person_name = _clean_text(young_person_name)
     record_date = _clean_text(record_date)
     location_context = _clean_text(location_context)
+    speaker_segments = _parse_speaker_segments_json(speaker_segments_json)
 
     if not transcript:
         raise HTTPException(status_code=400, detail="Transcript required")
@@ -264,16 +307,9 @@ async def save_ai_note(
     if not final_note:
         raise HTTPException(status_code=400, detail="Final note required")
 
-    speaker_segments = []
-    if speaker_segments_json:
-        import json
-        try:
-            speaker_segments = _normalise_segments(json.loads(speaker_segments_json))
-        except Exception:
-            raise HTTPException(status_code=400, detail="Invalid speaker_segments_json")
-
     try:
         ensure_ai_meetings_table(conn)
+        ensure_ai_note_versions_table(conn)
 
         final_title = title or _derive_title(final_note) or "I-Note"
         final_safeguarding_flag = _to_bool(safeguarding_flag)
@@ -300,6 +336,26 @@ async def save_ai_note(
         )
 
         if note_id is not None:
+            existing = get_ai_meeting_note(
+                conn=conn,
+                note_id=note_id,
+                user_id=current_user["user_id"]
+            )
+
+            if not existing:
+                raise HTTPException(status_code=404, detail="Note not found")
+
+            insert_ai_note_version(
+                conn=conn,
+                note_id=note_id,
+                user_id=current_user["user_id"],
+                title=existing.get("title") or "Untitled note",
+                transcript=existing.get("transcript") or "",
+                ai_draft=existing.get("ai_draft") or "",
+                final_note=existing.get("final_note") or "",
+                speaker_segments=existing.get("speaker_segments") or []
+            )
+
             record = update_ai_meeting_note(
                 note_id=note_id,
                 **payload
@@ -316,6 +372,17 @@ async def save_ai_note(
             }
 
         record = insert_ai_meeting_note(**payload)
+
+        insert_ai_note_version(
+            conn=conn,
+            note_id=record["id"],
+            user_id=current_user["user_id"],
+            title=record.get("title") or "Untitled note",
+            transcript=record.get("transcript") or "",
+            ai_draft=record.get("ai_draft") or "",
+            final_note=record.get("final_note") or "",
+            speaker_segments=record.get("speaker_segments") or []
+        )
 
         return {
             "ok": True,
@@ -384,6 +451,116 @@ async def get_saved_ai_note(
     except Exception as e:
         print("GET NOTE ERROR:", str(e))
         raise HTTPException(status_code=500, detail=f"Could not load note: {str(e)}")
+
+
+@router.get("/history/{note_id}/versions")
+async def get_note_versions(
+    note_id: int,
+    limit: int = Query(20, ge=1, le=50),
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    try:
+        ensure_ai_meetings_table(conn)
+        ensure_ai_note_versions_table(conn)
+
+        note = get_ai_meeting_note(
+            conn=conn,
+            note_id=note_id,
+            user_id=current_user["user_id"]
+        )
+        if not note:
+            raise HTTPException(status_code=404, detail="Note not found")
+
+        versions = list_ai_note_versions(
+            conn=conn,
+            note_id=note_id,
+            user_id=current_user["user_id"],
+            limit=limit
+        )
+
+        return {
+            "ok": True,
+            "versions": [_build_version_record(v) for v in versions]
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print("VERSIONS ERROR:", str(e))
+        raise HTTPException(status_code=500, detail=f"Could not load note versions: {str(e)}")
+
+
+@router.post("/history/{note_id}/restore-version")
+async def restore_note_version(
+    note_id: int,
+    version_id: int = Form(...),
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    try:
+        ensure_ai_meetings_table(conn)
+        ensure_ai_note_versions_table(conn)
+
+        note = get_ai_meeting_note(
+            conn=conn,
+            note_id=note_id,
+            user_id=current_user["user_id"]
+        )
+        if not note:
+            raise HTTPException(status_code=404, detail="Note not found")
+
+        version = get_ai_note_version(
+            conn=conn,
+            version_id=version_id,
+            user_id=current_user["user_id"]
+        )
+        if not version or int(version.get("note_id")) != int(note_id):
+            raise HTTPException(status_code=404, detail="Version not found")
+
+        insert_ai_note_version(
+            conn=conn,
+            note_id=note_id,
+            user_id=current_user["user_id"],
+            title=note.get("title") or "Untitled note",
+            transcript=note.get("transcript") or "",
+            ai_draft=note.get("ai_draft") or "",
+            final_note=note.get("final_note") or "",
+            speaker_segments=note.get("speaker_segments") or []
+        )
+
+        restored = update_ai_meeting_note(
+            conn=conn,
+            note_id=note_id,
+            user_id=current_user["user_id"],
+            title=version.get("title"),
+            transcript=version.get("transcript") or "",
+            ai_draft=version.get("ai_draft") or "",
+            final_note=version.get("final_note") or "",
+            safeguarding_flag=note.get("safeguarding_flag") or False,
+            safeguarding_reason=note.get("safeguarding_reason"),
+            template_name=note.get("template_name"),
+            service_type=note.get("service_type"),
+            shift_type=note.get("shift_type"),
+            meeting_format=note.get("meeting_format"),
+            record_author=note.get("record_author"),
+            young_person_name=note.get("young_person_name"),
+            record_date=note.get("record_date"),
+            location_context=note.get("location_context"),
+            speaker_segments=version.get("speaker_segments") or []
+        )
+
+        return {
+            "ok": True,
+            "message": "Version restored",
+            "record": _build_history_note(restored)
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print("RESTORE VERSION ERROR:", str(e))
+        raise HTTPException(status_code=500, detail=f"Could not restore version: {str(e)}")
 
 
 @router.delete("/{note_id}")
