@@ -45,19 +45,8 @@ def _dt_from_unix(ts: int | None):
 def _normalise_subscription_status(status: str | None) -> tuple[str, bool]:
     value = (status or "").strip().lower()
 
-    active_statuses = {
-        "active",
-        "trialing"
-    }
-
-    inactive_statuses = {
-        "incomplete",
-        "incomplete_expired",
-        "past_due",
-        "canceled",
-        "unpaid",
-        "paused"
-    }
+    active_statuses = {"active", "trialing"}
+    inactive_statuses = {"incomplete", "incomplete_expired", "past_due", "canceled", "unpaid", "paused"}
 
     if value in active_statuses:
         return value, True
@@ -136,7 +125,6 @@ async def create_checkout_session(
 
     except stripe.error.StripeError as e:
         raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Could not create checkout session: {str(e)}")
 
@@ -185,10 +173,7 @@ async def stripe_webhook(
                 plan_name = None
                 if item_data:
                     price_obj = item_data.get("price", {})
-                    plan_name = (
-                        price_obj.get("nickname")
-                        or price_obj.get("id")
-                    )
+                    plan_name = price_obj.get("nickname") or price_obj.get("id")
 
                 current_period_end = _dt_from_unix(subscription.get("current_period_end"))
 
@@ -219,10 +204,7 @@ async def stripe_webhook(
             plan_name = None
             if item_data:
                 price_obj = item_data.get("price", {})
-                plan_name = (
-                    price_obj.get("nickname")
-                    or price_obj.get("id")
-                )
+                plan_name = price_obj.get("nickname") or price_obj.get("id")
 
             current_period_end = _dt_from_unix(data_object.get("current_period_end"))
 
