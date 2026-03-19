@@ -13,492 +13,124 @@
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/ai-notes.css">
 </head>
-<body class="inotes-page">
-
-    <!-- AUTH GATE -->
-    <div id="authGate" class="auth-gate-overlay">
-        <div class="auth-gate-card">
-            <div class="auth-gate-brand">
-                <img src="/assets/logo.svg" alt="IndiCare logo" class="auth-gate-logo">
+<body class="notes-page">
+    <div class="simple-shell">
+        <header class="simple-topbar">
+            <div class="brand-row">
+                <img src="/assets/logo.svg" alt="IndiCare logo" class="brand-logo">
                 <div>
                     <h1>I-Notes</h1>
-                    <p>Sign in to access your documentation workspace</p>
+                    <p>Record, transcribe, edit, save.</p>
                 </div>
             </div>
 
-            <div id="authGateMessage" class="auth-gate-message">
-                Please sign in to continue.
-            </div>
-
-            <form id="authGateLoginForm" class="auth-gate-form">
-                <div class="field">
-                    <label for="authEmail">Email</label>
-                    <input id="authEmail" type="text" autocomplete="username" placeholder="you@example.com">
-                </div>
-
-                <div class="field">
-                    <label for="authPassword">Password</label>
-                    <input id="authPassword" type="password" autocomplete="current-password" placeholder="Enter your password">
-                </div>
-
-                <button id="authLoginBtn" class="btn btn-primary" type="submit">Sign in</button>
-            </form>
-
-            <div class="auth-gate-divider">
-                <span>Subscription</span>
-            </div>
-
-            <div class="auth-gate-actions">
-                <button id="startSubscriptionBtn" class="btn btn-dark" type="button">Start subscription</button>
-                <a href="/" class="btn btn-light">Back to website</a>
-            </div>
-        </div>
-    </div>
-
-    <!-- APP -->
-    <div id="appRoot" class="app-shell app-hidden">
-        <header class="app-topbar">
-            <div class="app-topbar-brand">
-                <img src="/assets/logo.svg" alt="IndiCare logo" class="app-topbar-logo">
-                <div>
-                    <h1>I-Notes</h1>
-                    <p>AI documentation for care</p>
-                </div>
-            </div>
-
-            <div class="app-topbar-actions">
-                <button id="refreshHistoryBtn" class="btn btn-light" type="button">Refresh saved notes</button>
-                <button id="logoutBtn" class="btn btn-light" type="button">Log out</button>
+            <div class="topbar-actions">
+                <a href="/" class="btn btn-light">Dashboard</a>
+                <button id="startRecordingBtn" class="btn btn-primary" type="button">Record meeting</button>
             </div>
         </header>
 
-        <main class="app-main">
-            <section class="hero-card">
-                <div class="hero-copy">
-                    <p class="eyebrow">Professional care documentation</p>
-                    <h2>Record once. Turn it into a structured care note.</h2>
-                    <p>
-                        Designed for children’s homes, supported living, supervision, safeguarding, handovers,
-                        incidents and professional meetings.
-                    </p>
+        <main class="simple-main">
+            <section class="workspace-panel">
+                <div class="section-head">
+                    <div>
+                        <p class="panel-label">Current note</p>
+                        <h2>Create and edit</h2>
+                        <p>A simple workflow for recording a meeting and turning it into a usable note.</p>
+                    </div>
+                    <div class="status-row">
+                        <span id="recordingStatus" class="status-pill idle">Ready</span>
+                    </div>
                 </div>
 
-                <div class="hero-actions">
-                    <button id="startRecordingBtn" class="btn btn-primary btn-hero" type="button">
-                        Start I-Notes
-                    </button>
-                </div>
-            </section>
-
-            <div class="page-tabs">
-                <button id="openCreateTabBtn" class="page-tab is-active" type="button">Create note</button>
-                <button id="openSavedTabBtn" class="page-tab" type="button">Saved notes</button>
-            </div>
-
-            <section id="createTabPanel" class="tab-panel is-active">
-                <div class="setup-grid">
-                    <div class="panel">
-                        <div class="section-head">
-                            <div>
-                                <p class="panel-label">Template</p>
-                                <h3>Choose your structure</h3>
-                                <p>The selected template will be used when the note is generated.</p>
-                            </div>
-                        </div>
-
-                        <div class="field">
-                            <label for="templateSelect">Template</label>
-                            <div class="stack-inline">
-                                <select id="templateSelect"></select>
-                                <button id="openTemplateManagerBtn" class="btn btn-light" type="button">Manage templates</button>
-                            </div>
-                        </div>
+                <div class="meta-grid">
+                    <div class="field">
+                        <label for="noteTitle">Title</label>
+                        <input id="noteTitle" type="text" placeholder="Example: Team meeting - March review">
                     </div>
 
-                    <div class="panel">
-                        <div class="section-head">
-                            <div>
-                                <p class="panel-label">Context</p>
-                                <h3>Capture the essentials</h3>
-                                <p>These details help create a cleaner, more accurate record.</p>
-                            </div>
-                        </div>
+                    <div class="field">
+                        <label for="aiInstruction">AI instruction</label>
+                        <input id="aiInstruction" type="text" placeholder="Example: Turn this into a professional meeting note">
+                    </div>
+                </div>
 
-                        <div class="context-grid">
-                            <div class="field">
-                                <label for="serviceType">Service type</label>
-                                <select id="serviceType">
-                                    <option value="Residential Children's Home">Residential Children's Home</option>
-                                    <option value="Supported Living">Supported Living</option>
-                                    <option value="Domiciliary Care">Domiciliary Care</option>
-                                    <option value="Residential Adult Care">Residential Adult Care</option>
-                                    <option value="Family Support">Family Support</option>
-                                    <option value="Education / Therapeutic Setting">Education / Therapeutic Setting</option>
-                                </select>
-                            </div>
+                <div class="quick-actions">
+                    <button id="transcribeBtn" class="btn btn-dark" type="button" disabled>Transcribe</button>
+                    <button id="improveBtn" class="btn btn-light" type="button">Improve with AI</button>
+                    <button id="saveBtn" class="btn btn-success" type="button">Save</button>
+                    <button id="exportPdfBtn" class="btn btn-light" type="button">Export PDF</button>
+                    <button id="exportDocxBtn" class="btn btn-light" type="button">Export DOCX</button>
+                    <button id="printBtn" class="btn btn-light" type="button">Print</button>
+                    <button id="clearBtn" class="btn btn-danger" type="button">Clear</button>
+                </div>
 
-                            <div class="field">
-                                <label for="shiftType">Shift / context</label>
-                                <select id="shiftType">
-                                    <option value="Day Shift">Day Shift</option>
-                                    <option value="Night Shift">Night Shift</option>
-                                    <option value="Handover">Handover</option>
-                                    <option value="Meeting">Meeting</option>
-                                    <option value="Supervision">Supervision</option>
-                                    <option value="Incident Review">Incident Review</option>
-                                    <option value="Key-work Session">Key-work Session</option>
-                                    <option value="Daily Record">Daily Record</option>
-                                    <option value="Professionals Meeting">Professionals Meeting</option>
-                                    <option value="Safeguarding Discussion">Safeguarding Discussion</option>
-                                </select>
-                            </div>
+                <div class="editor-layout">
+                    <div class="field">
+                        <label for="transcript">Transcript</label>
+                        <textarea id="transcript" class="editor-box" placeholder="Your transcript will appear here after recording and transcription."></textarea>
+                    </div>
 
-                            <div class="field">
-                                <label for="meetingFormat">Meeting format</label>
-                                <select id="meetingFormat">
-                                    <option value="Not specified">Not specified</option>
-                                    <option value="Online meeting">Online meeting</option>
-                                    <option value="Meeting in person">Meeting in person</option>
-                                </select>
-                            </div>
-
-                            <div class="field">
-                                <label for="recordAuthor">Recorded by</label>
-                                <input id="recordAuthor" type="text" placeholder="Staff member name">
-                            </div>
-
-                            <div class="field">
-                                <label for="youngPersonName">Young person / person supported</label>
-                                <input id="youngPersonName" type="text" placeholder="Optional">
-                            </div>
-
-                            <div class="field">
-                                <label for="meetingDate">Record date</label>
-                                <input id="meetingDate" type="date">
-                            </div>
-
-                            <div class="field context-grid-full">
-                                <label for="locationContext">Location / home / service</label>
-                                <input id="locationContext" type="text" placeholder="Optional">
-                            </div>
-                        </div>
+                    <div class="field">
+                        <label for="finalNote">Editable note</label>
+                        <textarea id="finalNote" class="editor-box editor-box-large" placeholder="Your AI-assisted note will appear here."></textarea>
                     </div>
                 </div>
             </section>
 
-            <section id="savedTabPanel" class="tab-panel">
-                <div class="panel saved-panel">
-                    <div class="section-head">
-                        <div>
-                            <p class="panel-label">Saved notes</p>
-                            <h3>Manage saved records</h3>
-                            <p>Open, edit, export, print or delete saved records.</p>
-                        </div>
+            <section class="workspace-panel saved-panel">
+                <div class="section-head">
+                    <div>
+                        <p class="panel-label">Saved notes</p>
+                        <h2>Your notes</h2>
+                        <p>Only your saved notes are shown here.</p>
                     </div>
-
-                    <div class="saved-toolbar">
-                        <div class="field">
-                            <label for="savedNotesSearch">Search saved notes</label>
-                            <input id="savedNotesSearch" type="text" placeholder="Search by title, template, person or date">
-                        </div>
-
-                        <div class="field">
-                            <label for="savedNotesFilter">Filter</label>
-                            <select id="savedNotesFilter">
-                                <option value="all">All notes</option>
-                                <option value="daily">Daily care note</option>
-                                <option value="handover">Shift handover</option>
-                                <option value="incident">Incident record</option>
-                                <option value="supervision">Supervision note</option>
-                                <option value="keywork">Key-work session</option>
-                                <option value="safeguarding">Safeguarding discussion</option>
-                                <option value="meeting">Professionals meeting</option>
-                            </select>
-                        </div>
+                    <div class="topbar-actions">
+                        <button id="refreshSavedBtn" class="btn btn-light" type="button">Refresh</button>
                     </div>
+                </div>
 
-                    <div id="historyEmptyState" class="empty-state">
-                        No saved notes yet.
-                    </div>
+                <div id="savedEmptyState" class="empty-state">No saved notes yet.</div>
 
-                    <div class="saved-table-wrap">
-                        <table class="saved-table">
-                            <thead>
-                                <tr>
-                                    <th>Title</th>
-                                    <th>Template</th>
-                                    <th>Person</th>
-                                    <th>Updated</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="historyList"></tbody>
-                        </table>
-                    </div>
+                <div class="saved-list-wrap">
+                    <table class="saved-table">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Updated</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="savedNotesBody"></tbody>
+                    </table>
                 </div>
             </section>
         </main>
     </div>
 
-    <!-- TEMPLATE MANAGER -->
-    <div id="templateModal" class="modal-overlay hidden">
-        <div class="modal-card">
-            <div class="modal-header">
-                <div>
-                    <p class="panel-label">Templates</p>
-                    <h2>Create and manage templates</h2>
-                    <p class="modal-copy">Build templates for handovers, daily logs, supervision, incidents and meetings.</p>
-                </div>
-                <button id="closeTemplateManagerBtn" class="btn btn-light btn-tiny" type="button">Close</button>
+    <div id="recordingModal" class="recording-overlay hidden">
+        <div class="recording-card">
+            <p class="panel-label">Recording live</p>
+            <h2>Recording meeting</h2>
+            <p>Pause, resume or stop when you are finished.</p>
+
+            <div class="recording-centre">
+                <div id="recordingMic" class="recording-mic">🎤</div>
+                <div id="recordingTimer" class="recording-timer">00:00</div>
+                <div id="recordingModalStatus" class="recording-modal-status">Recording live</div>
             </div>
 
-            <div class="template-builder">
-                <div class="field">
-                    <label for="templateNameInput">Template name</label>
-                    <input id="templateNameInput" type="text" placeholder="Example: Daily care note">
-                </div>
-
-                <div class="field">
-                    <label>Sections</label>
-                    <div id="templateSectionsList" class="template-sections-list"></div>
-                    <div class="stack-inline">
-                        <input id="newTemplateSectionInput" type="text" placeholder="Add section name">
-                        <button id="addTemplateSectionBtn" class="btn btn-light" type="button">Add section</button>
-                    </div>
-                </div>
-
-                <div class="panel-actions">
-                    <button id="saveTemplateBtn" class="btn btn-primary" type="button">Save template</button>
-                </div>
-            </div>
-
-            <div class="saved-templates-box">
-                <h3>Your custom templates</h3>
-                <div id="savedTemplatesList" class="saved-templates-list"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- RECORDING MODAL -->
-    <div id="recordingModal" class="modal-overlay hidden">
-        <div class="recording-modal">
-            <div class="recording-modal-header">
-                <p class="panel-label">Recording live</p>
-                <h2>Capture conversation or dictation</h2>
-                <p>When you stop recording, I-Notes will build your draft automatically.</p>
-            </div>
-
-            <div class="recording-mic-wrap">
-                <div id="recordingModalMic" class="recording-modal-mic">🎤</div>
-                <div id="recordingModalTimer" class="recording-modal-timer">00:00</div>
-                <div id="recordingModalStatus" class="recording-modal-status">Recorder ready</div>
-            </div>
-
-            <div class="recording-modal-actions">
+            <div class="recording-actions">
                 <button id="pauseRecordingBtn" class="btn btn-light" type="button" disabled>Pause</button>
                 <button id="resumeRecordingBtn" class="btn btn-light" type="button" disabled>Resume</button>
-                <button id="stopRecordingBtn" class="btn btn-danger" type="button" disabled>Stop recording</button>
+                <button id="stopRecordingBtn" class="btn btn-danger" type="button" disabled>Stop</button>
             </div>
-        </div>
-    </div>
-
-    <!-- WORKSPACE -->
-    <div id="workflowModal" class="workspace-overlay hidden">
-        <div class="workspace-shell">
-            <div class="workspace-topbar">
-                <div>
-                    <p class="panel-label">I-Notes workspace</p>
-                    <h2>Review and refine your note</h2>
-                </div>
-                <button id="closeWorkflowModalBtn" class="btn btn-light" type="button">Close</button>
-            </div>
-
-            <div class="workspace-scroll">
-                <section class="panel workspace-panel">
-                    <div class="section-head">
-                        <div>
-                            <p class="panel-label">Step 1</p>
-                            <h3>Meeting setup</h3>
-                            <p>Choose how this conversation or note took place.</p>
-                        </div>
-                    </div>
-
-                    <div class="meeting-mode-grid">
-                        <button id="meetingModeOnlineBtn" class="meeting-mode-card" type="button">
-                            <strong>Online meeting</strong>
-                            <span>Video call, Teams, Zoom or other virtual meeting</span>
-                        </button>
-
-                        <button id="meetingModeInPersonBtn" class="meeting-mode-card" type="button">
-                            <strong>Meeting in person</strong>
-                            <span>Face-to-face meeting, room discussion or office conversation</span>
-                        </button>
-                    </div>
-
-                    <div class="field">
-                        <label for="workflowMeetingFormat">Selected meeting format</label>
-                        <select id="workflowMeetingFormat">
-                            <option value="Not specified">Not specified</option>
-                            <option value="Online meeting">Online meeting</option>
-                            <option value="Meeting in person">Meeting in person</option>
-                        </select>
-                    </div>
-                </section>
-
-                <section class="workspace-status-grid">
-                    <div class="status-card">
-                        <span>Template</span>
-                        <strong id="workflowTemplateText">—</strong>
-                    </div>
-                    <div class="status-card">
-                        <span>Meeting format</span>
-                        <strong id="workflowMeetingFormatText">Not specified</strong>
-                    </div>
-                    <div class="status-card">
-                        <span>Status</span>
-                        <strong id="workflowStatusText">Ready</strong>
-                    </div>
-                    <div class="status-card">
-                        <span>Save state</span>
-                        <strong id="workflowSaveText">Ready</strong>
-                    </div>
-                    <div class="status-card">
-                        <span>Word count</span>
-                        <strong id="workflowWordCount">0</strong>
-                    </div>
-                </section>
-
-                <section class="panel workspace-panel">
-                    <div class="workspace-action-bar">
-                        <button id="transcribeBtn" class="btn btn-dark" type="button" disabled>Transcribe recording</button>
-                        <button id="generateBtn" class="btn btn-primary" type="button">Create note</button>
-                        <button id="reapplyTemplateBtn" class="btn btn-light" type="button">Re-apply template</button>
-                    </div>
-                </section>
-
-                <section class="workspace-grid">
-                    <div class="panel workspace-panel">
-                        <div class="section-head">
-                            <div>
-                                <p class="panel-label">Transcript</p>
-                                <h3>Source text</h3>
-                                <p id="audioReadyText">No recording yet.</p>
-                            </div>
-                            <button id="toggleTranscriptBtn" class="btn btn-light btn-tiny" type="button">Show / hide</button>
-                        </div>
-
-                        <audio id="audioPlayback" controls style="display:none;"></audio>
-
-                        <div id="transcriptContent" class="transcript-stack">
-                            <div class="quick-prompts">
-                                <button class="prompt-chip prompt-chip-secondary" type="button" data-transcript-action="clean">Clean transcript only</button>
-                                <button class="prompt-chip prompt-chip-secondary" type="button" data-transcript-action="speakerize">Format speaker turns</button>
-                                <button class="prompt-chip prompt-chip-secondary" type="button" data-transcript-action="summarise">Summarise transcript</button>
-                            </div>
-
-                            <div class="field">
-                                <label for="transcript">Original transcript</label>
-                                <textarea id="transcript" class="source-transcript" placeholder="The transcript will appear here after transcription, or you can paste one manually."></textarea>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="panel workspace-panel">
-                        <div class="section-head">
-                            <div>
-                                <p class="panel-label">Document</p>
-                                <h3>Editable care record</h3>
-                                <div class="document-meta">
-                                    <span id="noteModeBadge" class="badge badge-blue">New unsaved note</span>
-                                    <span id="saveStateBadge" class="badge badge-grey">Ready</span>
-                                    <span id="documentQualityBadge" class="badge badge-soft">Care draft</span>
-                                </div>
-                            </div>
-
-                            <div class="document-actions">
-                                <button id="copyFinalBtn" class="btn btn-light" type="button">Copy</button>
-                                <button id="saveBtnTop" class="btn btn-success" type="button">Save</button>
-                                <button id="exportBtnTop" class="btn btn-light" type="button">Export</button>
-                                <button id="printBtnTop" class="btn btn-light" type="button">Print</button>
-                            </div>
-                        </div>
-
-                        <div class="field">
-                            <label for="noteTitle">Document title</label>
-                            <input id="noteTitle" type="text" placeholder="Example: Team meeting - March review">
-                        </div>
-
-                        <div class="field">
-                            <label for="aiInstruction">Instruction for AI</label>
-                            <textarea id="aiInstruction" class="instruction-box" placeholder="Example: rewrite this into a professional supervision summary using the selected template."></textarea>
-                        </div>
-
-                        <div class="panel-actions">
-                            <button id="applyAiEditBtn" class="btn btn-dark" type="button">Improve note</button>
-                            <button id="undoAiEditBtn" class="btn btn-light" type="button">Undo last change</button>
-                            <button id="copyDraftBtn" class="btn btn-light" type="button">Reset from draft</button>
-                        </div>
-
-                        <details class="advanced-tools">
-                            <summary>More tools</summary>
-                            <div class="panel-actions advanced-tools-actions">
-                                <button id="createHandoverBtn" class="btn btn-light" type="button">Create handover version</button>
-                                <button id="createManagerSummaryBtn" class="btn btn-light" type="button">Manager summary</button>
-                                <button id="insertTemplateBtn" class="btn btn-light" type="button">Insert blank template</button>
-                                <button id="extractActionsBtn" class="btn btn-light" type="button">Extract actions</button>
-                            </div>
-                        </details>
-
-                        <div class="field">
-                            <label for="finalNote">Editable document</label>
-                            <textarea id="finalNote" class="document-editor" placeholder="The editable working document will appear here..."></textarea>
-                        </div>
-
-                        <div class="panel-actions final-actions">
-                            <button id="saveBtn" class="btn btn-success" type="button">Save document</button>
-                            <button id="exportBtn" class="btn btn-light" type="button">Export</button>
-                            <button id="printBtn" class="btn btn-light" type="button">Print</button>
-                            <button id="clearBtn" class="btn btn-danger" type="button">Clear</button>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="workspace-bottom-grid">
-                    <div class="panel workspace-panel">
-                        <div class="section-head">
-                            <div>
-                                <p class="panel-label">Follow-up</p>
-                                <h3>Actions and next steps</h3>
-                                <p>Key actions, ownership and follow-up items from the note.</p>
-                            </div>
-                        </div>
-
-                        <div id="actionsEmptyState" class="empty-state-inline">
-                            No extracted actions yet.
-                        </div>
-                        <div id="actionsList" class="actions-list"></div>
-                    </div>
-
-                    <div id="safeguardingBox" class="panel workspace-panel safeguarding-panel hidden">
-                        <div class="section-head">
-                            <div>
-                                <p class="panel-label">Review</p>
-                                <h3>Safeguarding review</h3>
-                                <p>Detected language to review before saving.</p>
-                            </div>
-                        </div>
-                        <p id="safeguardingText"></p>
-                    </div>
-                </section>
-            </div>
-
-            <textarea id="aiDraft" style="display:none;"></textarea>
-            <textarea id="transcriptMirror" style="display:none;"></textarea>
         </div>
     </div>
 
     <div id="toast" class="toast"></div>
+
+    <audio id="audioPlayback" controls style="display:none;"></audio>
 
     <script src="/js/api.js"></script>
     <script src="/js/auth.js"></script>
