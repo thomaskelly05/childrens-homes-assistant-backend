@@ -29,8 +29,8 @@
 
       <div class="sidebar-card">
         <span class="card-label">Why teams use this</span>
-        <h3>Fast, simple, professional</h3>
-        <p>Turn live meeting audio into a clear, editable professional note with AI support and a clean save workflow.</p>
+        <h3>Fast, consistent, professional</h3>
+        <p>Record a meeting once, refine the note with AI, then save, print or export a professional final version.</p>
       </div>
     </aside>
 
@@ -38,9 +38,9 @@
       <header class="hero">
         <div>
           <p class="eyebrow">AI documentation workflow</p>
-          <h2>Record once. Turn it into a professional meeting note.</h2>
+          <h2>Turn live meetings into clean professional notes.</h2>
           <p class="hero-copy">
-            Capture the meeting, transcribe automatically, refine with AI and save a clean final record.
+            Capture the conversation, transcribe automatically, refine the note with AI and save a polished final record.
           </p>
         </div>
 
@@ -49,6 +49,24 @@
           <button id="recordBtn" class="btn btn-primary">Record meeting</button>
         </div>
       </header>
+
+      <section class="value-strip">
+        <div class="value-card">
+          <span>1</span>
+          <strong>Record meetings</strong>
+          <small>Use a simple live recorder with timer, pause and resume.</small>
+        </div>
+        <div class="value-card">
+          <span>2</span>
+          <strong>Refine with AI</strong>
+          <small>Generate a draft, improve wording and apply custom instructions.</small>
+        </div>
+        <div class="value-card">
+          <span>3</span>
+          <strong>Save and export</strong>
+          <small>Keep your notes organised and ready to print or export.</small>
+        </div>
+      </section>
 
       <section class="workspace-grid">
         <section class="editor-column">
@@ -59,7 +77,11 @@
                 <h3>Workspace</h3>
                 <p class="panel-copy">Transcript on the left, final editable note on the right.</p>
               </div>
-              <span id="status" class="status-badge">Ready</span>
+
+              <div class="status-stack">
+                <span id="status" class="status-badge">Ready</span>
+                <span id="saveState" class="save-badge idle">Not saved</span>
+              </div>
             </div>
 
             <div class="meta-grid">
@@ -74,7 +96,7 @@
                 <div class="editor-head">
                   <div>
                     <h4>Transcript</h4>
-                    <p class="mini-copy">Source text from the recording.</p>
+                    <p class="mini-copy">Original source text from the recording.</p>
                   </div>
                   <button id="transcribeBtn" class="btn btn-dark btn-sm" disabled>Transcribe</button>
                 </div>
@@ -97,9 +119,14 @@
             </div>
 
             <div class="toolbar">
+              <button id="resetBtn" class="btn btn-light btn-sm">Reset from transcript</button>
               <button id="pdfBtn" class="btn btn-light btn-sm">Export PDF</button>
               <button id="docxBtn" class="btn btn-light btn-sm">Export DOCX</button>
               <button id="clearBtn" class="btn btn-danger btn-sm">Clear</button>
+            </div>
+
+            <div class="trust-note">
+              AI assists with drafting. Users remain responsible for checking final content before saving or sharing.
             </div>
           </div>
 
@@ -113,7 +140,14 @@
               <button id="refreshBtn" class="btn btn-light btn-sm">Refresh</button>
             </div>
 
-            <div id="empty" class="empty-state">No saved notes yet.</div>
+            <div class="search-row">
+              <input id="searchInput" type="text" placeholder="Search saved notes" />
+            </div>
+
+            <div id="empty" class="empty-state">
+              <strong>No saved notes yet.</strong>
+              <span>Start by recording your first meeting note.</span>
+            </div>
 
             <div class="table-wrap">
               <table class="saved-table">
@@ -136,17 +170,18 @@
               <div>
                 <p class="eyebrow small">Edit with AI</p>
                 <h3>Describe a change</h3>
-                <p class="panel-copy">Tell AI exactly how you want the note changed.</p>
+                <p class="panel-copy">Tell AI exactly how you want the note refined.</p>
               </div>
             </div>
 
+            <div class="section-label">Quick actions</div>
             <div class="prompt-list">
               <button class="prompt-chip" data-fill="Make this more professional and improve clarity.">Improve wording</button>
               <button class="prompt-chip" data-fill="Turn this into concise meeting minutes with clear decisions and actions.">Meeting minutes</button>
               <button class="prompt-chip" data-fill="Rewrite this as a manager summary with key points, risks and next steps.">Manager summary</button>
               <button class="prompt-chip" data-fill="Make this shorter, cleaner and more structured.">Make concise</button>
               <button class="prompt-chip" data-fill="Rewrite this using clear, factual, adult professional language.">Professional tone</button>
-              <button class="prompt-chip" data-fill="Extract key actions and make accountabilities clearer.">Clarify actions</button>
+              <button class="prompt-chip" data-fill="Extract key actions and make responsibilities clearer.">Clarify actions</button>
             </div>
 
             <div class="field">
@@ -158,13 +193,13 @@
           </div>
 
           <div class="panel mini-panel">
-            <p class="eyebrow small">Workflow</p>
+            <p class="eyebrow small">Demo flow</p>
             <ul class="steps">
-              <li>Start recording</li>
-              <li>Stop when the meeting is finished</li>
-              <li>Transcription appears automatically</li>
-              <li>Refine the note with AI</li>
-              <li>Save, edit, print or export</li>
+              <li>Record the meeting</li>
+              <li>Stop when finished</li>
+              <li>Review transcript and note</li>
+              <li>Tell AI what to change</li>
+              <li>Save, print or export</li>
             </ul>
           </div>
         </aside>
@@ -178,7 +213,7 @@
         <div>
           <p class="eyebrow small">Recording live</p>
           <h3>Meeting in progress</h3>
-          <p class="panel-copy">Pause, resume or stop when you are ready.</p>
+          <p class="panel-copy">Pause, resume, cancel or stop when you are ready.</p>
         </div>
       </div>
 
@@ -191,6 +226,7 @@
       <div class="recording-actions">
         <button id="pauseBtn" class="btn btn-light" disabled>Pause</button>
         <button id="resumeBtn" class="btn btn-light" disabled>Resume</button>
+        <button id="cancelBtn" class="btn btn-light" disabled>Cancel</button>
         <button id="stopBtn" class="btn btn-danger" disabled>Stop</button>
       </div>
     </div>
