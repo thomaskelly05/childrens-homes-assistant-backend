@@ -17,6 +17,7 @@ function initChat() {
     bindSidebarControls();
     bindThemeToggle();
     bindGlobalMessageActions();
+    applyWelcomeMessage();
     refreshUploadStatus();
     loadConversations(true);
 }
@@ -316,6 +317,48 @@ function bindLogout() {
             window.location.href = "/login";
         }
     });
+}
+
+function getAdultFirstName() {
+    try {
+        const raw = localStorage.getItem("current_user");
+        if (!raw) return "";
+        const parsed = JSON.parse(raw);
+
+        if (parsed?.first_name) return String(parsed.first_name).trim();
+        if (parsed?.user?.first_name) return String(parsed.user.first_name).trim();
+        if (parsed?.adult?.first_name) return String(parsed.adult.first_name).trim();
+
+        return "";
+    } catch (error) {
+        console.error("Could not read first_name from current_user:", error);
+        return "";
+    }
+}
+
+function getTimeGreeting() {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+}
+
+function applyWelcomeMessage() {
+    const heading = document.getElementById("welcomeHeading");
+    const subtext = document.getElementById("welcomeSubtext");
+
+    if (!heading || !subtext) return;
+
+    const firstName = getAdultFirstName();
+    const greeting = getTimeGreeting();
+
+    heading.textContent = firstName
+        ? `${greeting}, ${firstName}`
+        : `${greeting}`;
+
+    subtext.textContent = firstName
+        ? `How can I help with support for ${firstName} today? Ask for help with care records, professional wording, reflection, planning, behaviour support, key work ideas, incident follow-up, or day-to-day residential practice.`
+        : `How can I help today? Ask for help with care records, professional wording, reflection, planning, behaviour support, key work ideas, incident follow-up, or day-to-day residential practice.`;
 }
 
 async function sendMessage() {
@@ -670,6 +713,7 @@ function clearChatWindow() {
     if (empty) empty.hidden = false;
 
     showTypingIndicator(false);
+    applyWelcomeMessage();
 }
 
 function ensureMessagesContainer() {
