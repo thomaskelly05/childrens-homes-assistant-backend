@@ -124,7 +124,9 @@ async def global_exception_handler(request, exc):
         }
     )
 
-
+# =========================================================
+# FRONTEND ROUTES
+# =========================================================
 def serve_page(file_name: str):
     path = os.path.join(FRONTEND_DIR, file_name)
     if not os.path.exists(path):
@@ -142,8 +144,18 @@ def serve_login():
     return serve_page("login.html")
 
 
+@app.get("/login.html")
+def serve_login_html():
+    return serve_page("login.html")
+
+
 @app.get("/oslogin")
 def serve_oslogin():
+    return serve_page("oslogin.html")
+
+
+@app.get("/oslogin.html")
+def serve_oslogin_html():
     return serve_page("oslogin.html")
 
 
@@ -157,8 +169,18 @@ def serve_journal():
     return serve_page("journal.html")
 
 
+@app.get("/journal.html")
+def serve_journal_html():
+    return serve_page("journal.html")
+
+
 @app.get("/supervision")
 def serve_supervision():
+    return serve_page("supervision.html")
+
+
+@app.get("/supervision.html")
+def serve_supervision_html():
     return serve_page("supervision.html")
 
 
@@ -167,8 +189,28 @@ def serve_ai_notes():
     return serve_page("ai-note.html")
 
 
+@app.get("/ai-note.html")
+def serve_ai_note_html():
+    return serve_page("ai-note.html")
+
+
+@app.get("/ai-notes.css")
+def serve_ai_notes_css():
+    return FileResponse(os.path.join(FRONTEND_DIR, "ai-notes.css"))
+
+
+@app.get("/ai-notes.js")
+def serve_ai_notes_js():
+    return FileResponse(os.path.join(FRONTEND_DIR, "ai-notes.js"))
+
+
 @app.get("/young-people-page")
 def serve_young_people():
+    return serve_page("young-people.html")
+
+
+@app.get("/young-people-page.html")
+def serve_young_people_html():
     return serve_page("young-people.html")
 
 
@@ -177,11 +219,26 @@ def serve_young_people_shell():
     return serve_page("young-people-shell.html")
 
 
+@app.get("/young-people-shell.html")
+def serve_young_people_shell_html():
+    return serve_page("young-people-shell.html")
+
+
 @app.get("/childrens-home-os")
 def serve_childrens_home_os():
     return serve_page("young-people-shell.html")
 
 
+@app.get("/childrens-home-os.html")
+def serve_childrens_home_os_html():
+    return serve_page("young-people-shell.html")
+
+
 @app.get("/rostering")
 def serve_rostering():
+    return serve_page("rostering.html")
+
+
+@app.get("/rostering.html")
+def serve_rostering_html():
     return serve_page("rostering.html")
