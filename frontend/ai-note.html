@@ -1,10 +1,9 @@
-```html
 <!DOCTYPE html>
 <html lang="en-GB">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IndiCare | AI Care Notes Studio</title>
+    <title>IndiCare | I-Notes</title>
 
     <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
     <link rel="stylesheet" href="/css/reset.css">
@@ -24,7 +23,7 @@
                     </div>
                     <div class="sidebar__brand-text">
                         <h1>IndiCare</h1>
-                        <p>AI Care Notes</p>
+                        <p>I-Notes</p>
                     </div>
                 </div>
 
@@ -33,7 +32,7 @@
                     <a href="/assistant" class="nav-link">Assistant</a>
                     <a href="/journal" class="nav-link">Staff Journal</a>
                     <a href="/supervision" class="nav-link">Supervision</a>
-                    <a href="/ai-note.html" class="nav-link is-active">AI Notes</a>
+                    <a href="/ai-note.html" class="nav-link is-active">I-Notes</a>
                 </nav>
 
                 <div class="sidebar-card compact-status-card">
@@ -49,6 +48,10 @@
                         <div class="session-stat">
                             <span class="session-stat-label">Template</span>
                             <strong id="sidebarTemplateText">—</strong>
+                        </div>
+                        <div class="session-stat">
+                            <span class="session-stat-label">Meeting format</span>
+                            <strong id="sidebarMeetingFormatText">Not specified</strong>
                         </div>
                         <div class="session-stat">
                             <span class="session-stat-label">Save state</span>
@@ -84,7 +87,7 @@
 
                     <div class="hero-actions">
                         <button id="startRecordingBtn" class="btn btn-primary btn-hero" type="button">
-                            Start recording
+                            Start I-Notes
                         </button>
                     </div>
                 </header>
@@ -94,7 +97,7 @@
                         Create note
                     </button>
                     <button id="openSavedTabBtn" class="page-tab" type="button" data-tab="saved">
-                        Saved notes
+                        Note history
                     </button>
                 </div>
 
@@ -153,6 +156,15 @@
                                         <option value="Daily Record">Daily Record</option>
                                         <option value="Professionals Meeting">Professionals Meeting</option>
                                         <option value="Safeguarding Discussion">Safeguarding Discussion</option>
+                                    </select>
+                                </div>
+
+                                <div class="field">
+                                    <label for="meetingFormat">Meeting format</label>
+                                    <select id="meetingFormat">
+                                        <option value="Not specified">Not specified</option>
+                                        <option value="Online meeting">Online meeting</option>
+                                        <option value="Meeting in person">Meeting in person</option>
                                     </select>
                                 </div>
 
@@ -244,7 +256,6 @@
         </main>
     </div>
 
-    <!-- TEMPLATE MANAGER -->
     <div id="templateModal" class="modal-overlay hidden">
         <div class="modal-card">
             <div class="modal-header">
@@ -285,13 +296,12 @@
         </div>
     </div>
 
-    <!-- RECORDING MODAL -->
     <div id="recordingModal" class="recording-modal-overlay hidden">
         <div class="recording-modal">
             <div class="recording-modal-header">
                 <p class="panel-label">Recording live</p>
                 <h2>Capture conversation or dictation</h2>
-                <p>When you stop recording, the full AI workspace will open automatically.</p>
+                <p>When you stop recording, IndiCare will transcribe and structure your note automatically.</p>
             </div>
 
             <div class="recording-mic-wrap">
@@ -308,13 +318,12 @@
         </div>
     </div>
 
-    <!-- FULLSCREEN WORKSPACE -->
     <div id="workflowModal" class="fullscreen-workspace hidden">
         <div class="workspace-shell">
             <div class="workspace-shell-topbar">
                 <div>
-                    <p class="panel-label">AI workspace</p>
-                    <h2>Transcribe, generate and refine</h2>
+                    <p class="panel-label">I-Notes</p>
+                    <h2>Record, structure and refine</h2>
                 </div>
 
                 <div class="workflow-topbar-actions">
@@ -325,6 +334,37 @@
 
             <div class="workspace-shell-content">
                 <div class="workspace-main-column">
+                    <div class="premium-panel workflow-first-step-panel" id="workflowFirstStepPanel">
+                        <div class="section-head">
+                            <div>
+                                <p class="panel-label">Step 1</p>
+                                <h3>Meeting setup</h3>
+                                <p>Choose how this conversation or note took place before creating the structured record.</p>
+                            </div>
+                        </div>
+
+                        <div class="meeting-mode-grid">
+                            <button id="meetingModeOnlineBtn" class="meeting-mode-card" type="button" data-meeting-mode="Online meeting">
+                                <strong>Online meeting</strong>
+                                <span>Video call, Teams, Zoom or other virtual meeting</span>
+                            </button>
+
+                            <button id="meetingModeInPersonBtn" class="meeting-mode-card" type="button" data-meeting-mode="Meeting in person">
+                                <strong>Meeting in person</strong>
+                                <span>Face-to-face meeting, office discussion or room-based conversation</span>
+                            </button>
+                        </div>
+
+                        <div class="field">
+                            <label for="workflowMeetingFormat">Selected meeting format</label>
+                            <select id="workflowMeetingFormat">
+                                <option value="Not specified">Not specified</option>
+                                <option value="Online meeting">Online meeting</option>
+                                <option value="Meeting in person">Meeting in person</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div class="workflow-stepper">
                         <div class="workflow-step" id="stepRecord">
                             <span class="workflow-step-number">1</span>
@@ -363,6 +403,10 @@
                         <div class="workflow-insight-card">
                             <span>Template</span>
                             <strong id="workflowTemplateText">—</strong>
+                        </div>
+                        <div class="workflow-insight-card">
+                            <span>Meeting format</span>
+                            <strong id="workflowMeetingFormatText">Not specified</strong>
                         </div>
                         <div class="workflow-insight-card">
                             <span>Status</span>
@@ -406,12 +450,74 @@
 
                     <div class="workflow-stage-actions sticky-workspace-actions">
                         <button id="transcribeBtn" class="btn btn-dark" type="button" disabled>Transcribe recording</button>
-                        <button id="generateBtn" class="btn btn-primary" type="button">Generate care document</button>
-                        <button id="insertTemplateBtn" class="btn btn-light" type="button">Insert blank template</button>
-                        <button id="extractActionsBtn" class="btn btn-light" type="button">Extract actions</button>
+                        <button id="generateBtn" class="btn btn-primary" type="button">Create note</button>
+                        <button id="reapplyTemplateBtn" class="btn btn-light" type="button">Re-apply selected template</button>
                     </div>
 
                     <div class="workspace-two-column">
+                        <div class="split-panel document-panel fixed-height-panel">
+                            <div class="section-head">
+                                <div>
+                                    <p class="panel-label">Final document</p>
+                                    <h3>Editable care record</h3>
+                                    <div class="document-meta">
+                                        <span id="noteModeBadge" class="note-mode-badge is-new">New unsaved note</span>
+                                        <span id="saveStateBadge" class="save-state-badge is-idle">Ready</span>
+                                        <span id="documentQualityBadge" class="quality-badge">Care draft</span>
+                                    </div>
+                                </div>
+
+                                <div class="document-actions">
+                                    <button id="copyFinalBtn" class="btn btn-light" type="button">Copy</button>
+                                    <button id="saveBtnTop" class="btn btn-success" type="button">Save</button>
+                                    <button id="exportBtnTop" class="btn btn-light" type="button">Export</button>
+                                    <button id="printBtnTop" class="btn btn-light" type="button">Print</button>
+                                </div>
+                            </div>
+
+                            <div class="panel-scroll">
+                                <div class="editor-grid">
+                                    <div class="field">
+                                        <label for="noteTitle">Document title</label>
+                                        <input id="noteTitle" type="text" placeholder="Example: Team meeting - March review">
+                                    </div>
+
+                                    <div class="field">
+                                        <label for="aiInstruction">Instruction for AI</label>
+                                        <textarea id="aiInstruction" class="instruction-box" placeholder="Example: rewrite this into a professional supervision summary using the selected template."></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="panel-actions">
+                                    <button id="applyAiEditBtn" class="btn btn-dark" type="button">Improve note</button>
+                                </div>
+
+                                <details class="advanced-tools">
+                                    <summary>More AI tools</summary>
+                                    <div class="panel-actions advanced-tools-actions">
+                                        <button id="undoAiEditBtn" class="btn btn-light" type="button">Undo last change</button>
+                                        <button id="copyDraftBtn" class="btn btn-light" type="button">Reset from generated draft</button>
+                                        <button id="createHandoverBtn" class="btn btn-light" type="button">Create handover version</button>
+                                        <button id="createManagerSummaryBtn" class="btn btn-light" type="button">Manager summary</button>
+                                        <button id="insertTemplateBtn" class="btn btn-light" type="button">Insert blank template</button>
+                                        <button id="extractActionsBtn" class="btn btn-light" type="button">Extract actions</button>
+                                    </div>
+                                </details>
+
+                                <div class="field">
+                                    <label for="finalNote">Editable document</label>
+                                    <textarea id="finalNote" class="document-editor" placeholder="The editable working document will appear here..."></textarea>
+                                </div>
+
+                                <div class="panel-actions final-actions">
+                                    <button id="saveBtn" class="btn btn-success" type="button">Save document</button>
+                                    <button id="exportBtn" class="btn btn-light" type="button">Export</button>
+                                    <button id="printBtn" class="btn btn-light" type="button">Print</button>
+                                    <button id="clearBtn" class="btn btn-danger" type="button">Clear</button>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="split-panel transcript-panel fixed-height-panel">
                             <div class="section-head">
                                 <div>
@@ -470,70 +576,6 @@
                                 </div>
                             </div>
                         </div>
-
-                        <div class="split-panel document-panel fixed-height-panel">
-                            <div class="section-head">
-                                <div>
-                                    <p class="panel-label">Final document</p>
-                                    <h3>Editable care record</h3>
-                                    <div class="document-meta">
-                                        <span id="noteModeBadge" class="note-mode-badge is-new">New unsaved note</span>
-                                        <span id="saveStateBadge" class="save-state-badge is-idle">Ready</span>
-                                        <span id="documentQualityBadge" class="quality-badge">Care draft</span>
-                                    </div>
-                                </div>
-
-                                <div class="document-actions">
-                                    <button id="copyFinalBtn" class="btn btn-light" type="button">Copy</button>
-                                    <button id="saveBtnTop" class="btn btn-success" type="button">Save</button>
-                                    <button id="exportBtnTop" class="btn btn-light" type="button">Export</button>
-                                    <button id="printBtnTop" class="btn btn-light" type="button">Print</button>
-                                </div>
-                            </div>
-
-                            <div class="panel-scroll">
-                                <div class="quick-prompts">
-                                    <button class="prompt-chip" type="button" data-prompt="Rewrite this into a professional care sector record using clear, factual, respectful language and the selected template.">Professional care note</button>
-                                    <button class="prompt-chip" type="button" data-prompt="Turn this into a concise handover-ready summary with risks, actions, health, appointments, and priorities for the next shift.">Handover summary</button>
-                                    <button class="prompt-chip" type="button" data-prompt="Structure this under the selected template headings and remove repetition without inventing information.">Apply template structure</button>
-                                    <button class="prompt-chip" type="button" data-prompt="Improve grammar, spelling, factual clarity, chronology, and professional tone while keeping the meaning the same.">Improve wording</button>
-                                    <button class="prompt-chip" type="button" data-prompt="Rewrite this as a safeguarding-conscious record and clearly separate facts, observations, actions taken, and next steps.">Safeguarding format</button>
-                                    <button class="prompt-chip" type="button" data-prompt="Rewrite this in a person-centred way that reflects the voice, wishes, feelings, choices, and presentation of the person discussed.">Person-centred language</button>
-                                </div>
-
-                                <div class="editor-grid">
-                                    <div class="field">
-                                        <label for="noteTitle">Document title</label>
-                                        <input id="noteTitle" type="text" placeholder="Example: Team meeting - March review">
-                                    </div>
-
-                                    <div class="field">
-                                        <label for="aiInstruction">Instruction for AI</label>
-                                        <textarea id="aiInstruction" class="instruction-box" placeholder="Example: rewrite this into a professional supervision summary using the selected template."></textarea>
-                                    </div>
-                                </div>
-
-                                <div class="panel-actions">
-                                    <button id="applyAiEditBtn" class="btn btn-dark" type="button">Apply AI change</button>
-                                    <button id="undoAiEditBtn" class="btn btn-light" type="button">Undo last change</button>
-                                    <button id="copyDraftBtn" class="btn btn-light" type="button">Reset from generated draft</button>
-                                    <button id="createHandoverBtn" class="btn btn-light" type="button">Create handover version</button>
-                                    <button id="createManagerSummaryBtn" class="btn btn-light" type="button">Manager summary</button>
-                                </div>
-
-                                <div class="field">
-                                    <label for="finalNote">Editable document</label>
-                                    <textarea id="finalNote" class="document-editor" placeholder="The editable working document will appear here..."></textarea>
-                                </div>
-
-                                <div class="panel-actions final-actions">
-                                    <button id="saveBtn" class="btn btn-success" type="button">Save document</button>
-                                    <button id="exportBtn" class="btn btn-light" type="button">Export</button>
-                                    <button id="printBtn" class="btn btn-light" type="button">Print</button>
-                                    <button id="clearBtn" class="btn btn-danger" type="button">Clear</button>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -580,7 +622,6 @@
         </div>
     </div>
 
-    <!-- VERSION HISTORY DRAWER -->
     <div id="versionsDrawer" class="versions-drawer hidden">
         <div class="versions-drawer-panel">
             <div class="modal-header">
@@ -602,4 +643,3 @@
     <script src="/ai-notes.js"></script>
 </body>
 </html>
-```
