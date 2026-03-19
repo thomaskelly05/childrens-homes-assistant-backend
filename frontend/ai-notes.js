@@ -4,6 +4,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const els = {
     recordBtn: $("recordBtn"),
     transcribeBtn: $("transcribeBtn"),
+    renameSpeakersBtn: $("renameSpeakersBtn"),
+    extractActionsBtn: $("extractActionsBtn"),
     aiBtn: $("aiBtn"),
     saveBtn: $("saveBtn"),
     printBtn: $("printBtn"),
@@ -11,6 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
     docxBtn: $("docxBtn"),
     clearBtn: $("clearBtn"),
     resetBtn: $("resetBtn"),
+    versionsBtn: $("versionsBtn"),
     refreshBtn: $("refreshBtn"),
     searchInput: $("searchInput"),
 
@@ -23,11 +26,17 @@ document.addEventListener("DOMContentLoaded", () => {
     prompt: $("prompt"),
     transcript: $("transcript"),
     note: $("note"),
+    meetingFormat: $("meetingFormat"),
+    noteStatus: $("noteStatus"),
 
     status: $("status"),
     saveState: $("saveState"),
     list: $("list"),
     empty: $("empty"),
+
+    speakerMapList: $("speakerMapList"),
+    speakerCountBadge: $("speakerCountBadge"),
+    actionsList: $("actionsList"),
 
     modal: $("modal"),
     timer: $("timer"),
@@ -37,6 +46,10 @@ document.addEventListener("DOMContentLoaded", () => {
     resumeBtn: $("resumeBtn"),
     cancelBtn: $("cancelBtn"),
     stopBtn: $("stopBtn"),
+
+    versionsModal: $("versionsModal"),
+    closeVersionsBtn: $("closeVersionsBtn"),
+    versionsList: $("versionsList"),
 
     toast: $("toast"),
     audio: $("audio")
@@ -55,7 +68,10 @@ document.addEventListener("DOMContentLoaded", () => {
     noteId: null,
     saved: [],
     filtered: [],
-    dirty: false
+    dirty: false,
+    speakerSegments: [],
+    speakerMap: {},
+    extractedActions: []
   };
 
   const token = () => localStorage.getItem("access_token") || "";
@@ -127,7 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const notePreview = text => {
     const clean = String(text || "").replace(/\s+/g, " ").trim();
-    return clean.length > 100 ? `${clean.slice(0, 100)}…` : clean;
+    return clean.length > 110 ? `${clean.slice(0, 110)}…` : clean;
   };
 
   const downloadBlob = (blob, filename) => {
@@ -141,22 +157,70 @@ document.addEventListener("DOMContentLoaded", () => {
     URL.revokeObjectURL(url);
   };
 
-  const getSupportedRecordingOptions = () => {
-    const candidates = [
-      { mimeType: "audio/webm;codecs=opus", extension: "webm" },
-      { mimeType: "audio/webm", extension: "webm" },
-      { mimeType: "audio/mp4", extension: "mp4" },
-      { mimeType: "audio/ogg;codecs=opus", extension: "ogg" }
-    ];
+  const uniqueSpeakers = () => {
+    const speakers = state.speakerSegments.map(x => x.speaker).filter(Boolean);
+    return [...new Set(speakers)];
+  };
 
-    for (const option of candidates) {
-      if (window.MediaRecorder && MediaRecorder.isTypeSupported(option.mimeType)) {
-        return option;
-      }
+  function buildSpeakerAwareTranscript() {
+    if (!state.speakerSegments.length) {
+      return (els.transcript?.value || "").trim();
     }
 
-    return { mimeType: "", extension: "webm" };
-  };
+    return state.speakerSegments
+      .map(segment => {
+        const speaker = state.speakerMap[segment.speaker] || segment.speaker || "Speaker";
+        return `${speaker}: ${segment.text}`;
+      })
+      .join("\n\n");
+  }
+
+  function renderSpeakerMap() {
+    if (!els.speakerMapList || !els.speakerCountBadge) return;
+
+    const speakers = uniqueSpeakers();
+    els.speakerCountBadge.textContent = String(speakers.length);
+    els.speakerMapList.innerHTML = "";
+
+    if (!speakers.length) {
+      els.speakerMapList.innerHTML = `<div class="speaker-empty">No speakers detected yet.</div>`;
+      return;
+    }
+
+    speakers.forEach(speaker => {
+      const row = document.createElement("div");
+      row.className = "speaker-map-row";
+      row.innerHTML = `
+        <div class="speaker-label">${escapeHtml(speaker)}</div>
+        <input type="text" value="${escapeHtml(state.speakerMap[speaker] || "")}" placeholder="Rename speaker" data-speaker-key="${escapeHtml(speaker)}">
+      `;
+      els.speakerMapList.appendChild(row);
+    });
+  }
+
+  function renderActions() {
+    if (!els.actionsList) return;
+    els.actionsList.innerHTML = "";
+
+    if (!state.extractedActions.length) {
+      els.actionsList.innerHTML = `<div class="speaker-empty">No extracted actions yet.</div>`;
+      return;
+    }
+
+    state.extractedActions.forEach(action => {
+      const item = document.createElement("div");
+      item.className = "action-item";
+      item.innerHTML = `
+        <div class="action-title">${escapeHtml(action.title || "Untitled action")}</div>
+        <div class="action-meta">
+          <span class="action-pill">Owner: ${escapeHtml(action.owner || "Not specified")}</span>
+          <span class="action-pill">Due: ${escapeHtml(action.due || "Not specified")}</span>
+          <span class="action-pill">Priority: ${escapeHtml(action.priority || "medium")}</span>
+        </div>
+      `;
+      els.actionsList.appendChild(item);
+    });
+  }
 
   async function verifyAuth() {
     if (!token()) {
@@ -171,10 +235,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!response.ok) {
         if (response.status === 401) {
           redirectToLogin();
-          return false;
-        }
-        if (response.status === 403) {
-          alert(data.detail || "Subscription required");
           return false;
         }
         alert(data.detail || "Could not load account");
@@ -205,6 +265,14 @@ document.addEventListener("DOMContentLoaded", () => {
     els.mic?.classList.remove("paused");
   }
 
+  function openVersionsModal() {
+    els.versionsModal?.classList.remove("hide");
+  }
+
+  function closeVersionsModal() {
+    els.versionsModal?.classList.add("hide");
+  }
+
   function startTimer() {
     stopTimer();
     state.startAt = Date.now();
@@ -233,6 +301,23 @@ document.addEventListener("DOMContentLoaded", () => {
     if (els.cancelBtn) els.cancelBtn.disabled = true;
     if (els.stopBtn) els.stopBtn.disabled = true;
   }
+
+  const getSupportedRecordingOptions = () => {
+    const candidates = [
+      { mimeType: "audio/webm;codecs=opus", extension: "webm" },
+      { mimeType: "audio/webm", extension: "webm" },
+      { mimeType: "audio/mp4", extension: "mp4" },
+      { mimeType: "audio/ogg;codecs=opus", extension: "ogg" }
+    ];
+
+    for (const option of candidates) {
+      if (window.MediaRecorder && MediaRecorder.isTypeSupported(option.mimeType)) {
+        return option;
+      }
+    }
+
+    return { mimeType: "", extension: "webm" };
+  };
 
   async function startRecording() {
     try {
@@ -357,7 +442,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       clearTimeout(timeout);
-
       const data = await safeJson(response);
 
       if (!response.ok) {
@@ -369,6 +453,10 @@ document.addEventListener("DOMContentLoaded", () => {
         statusText("Ready");
         return;
       }
+
+      state.speakerSegments = Array.isArray(data.segments) ? data.segments : [];
+      state.speakerMap = {};
+      renderSpeakerMap();
 
       const transcript = (data.transcript || "").trim();
       if (els.transcript) els.transcript.value = transcript;
@@ -392,7 +480,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function applyAI(silent = false) {
-    const sourceText = (els.note?.value || els.transcript?.value || "").trim();
+    const sourceText = (els.note?.value || buildSpeakerAwareTranscript()).trim();
     const instruction = (els.prompt?.value || "").trim()
       || "Turn this into a professional meeting note using clear, factual language.";
 
@@ -440,6 +528,47 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  async function extractActionsFromNote() {
+    const text = (els.note?.value || "").trim();
+    if (!text) {
+      alert("There is no note to extract actions from.");
+      return;
+    }
+
+    const form = new FormData();
+    form.append("text", text);
+
+    try {
+      statusText("Extracting actions...");
+      const response = await fetch("/ai-notes/extract-actions", {
+        method: "POST",
+        headers: headers(),
+        body: form
+      });
+
+      const data = await safeJson(response);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          redirectToLogin();
+          return;
+        }
+        alert(data.detail || "Could not extract actions.");
+        statusText("Ready");
+        return;
+      }
+
+      state.extractedActions = Array.isArray(data.actions) ? data.actions : [];
+      renderActions();
+      statusText("Note ready");
+      showToast("Actions extracted.");
+    } catch (error) {
+      console.error(error);
+      alert("Could not connect to action extraction service.");
+      statusText("Ready");
+    }
+  }
+
   async function saveNote() {
     const transcript = (els.transcript?.value || "").trim();
     const finalNote = (els.note?.value || "").trim();
@@ -460,6 +589,10 @@ document.addEventListener("DOMContentLoaded", () => {
     form.append("ai_draft", finalNote);
     form.append("final_note", finalNote);
     form.append("title", title);
+    form.append("meeting_format", els.meetingFormat?.value || "");
+    form.append("note_status", els.noteStatus?.value || "draft");
+    form.append("speaker_segments_json", JSON.stringify(state.speakerSegments || []));
+    form.append("speaker_map_json", JSON.stringify(state.speakerMap || {}));
 
     if (state.noteId) form.append("note_id", String(state.noteId));
 
@@ -478,7 +611,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       clearTimeout(timeout);
-
       const data = await safeJson(response);
 
       if (!response.ok) {
@@ -499,9 +631,7 @@ document.addEventListener("DOMContentLoaded", () => {
       await loadSavedNotes();
     } catch (error) {
       console.error("Save error:", error);
-      alert(error.name === "AbortError"
-        ? "Save timed out."
-        : "The save connection was lost.");
+      alert(error.name === "AbortError" ? "Save timed out." : "The save connection was lost.");
       statusText("Ready");
       setSaveState("dirty", "Unsaved changes");
     }
@@ -536,7 +666,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const haystack = [
         note.title,
         note.transcript,
-        note.final_note
+        note.final_note,
+        note.note_status
       ].join(" ").toLowerCase();
 
       return !query || haystack.includes(query);
@@ -558,9 +689,10 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="saved-title">${escapeHtml(note.title || "Untitled note")}</div>
           <div class="saved-preview">${escapeHtml(notePreview(note.final_note || note.transcript || ""))}</div>
         </td>
+        <td><span class="mini-badge">${escapeHtml(note.note_status || "draft")}</span></td>
         <td>${note.updated_at ? new Date(note.updated_at).toLocaleString("en-GB") : "—"}</td>
         <td>
-          <div class="panel-toolbar wrap">
+          <div class="panel-toolbar wrap" style="margin:0;">
             <button class="btn btn-light btn-sm" data-edit="${note.id}">Edit</button>
             <button class="btn btn-danger btn-sm" data-del="${note.id}">Delete</button>
           </div>
@@ -575,9 +707,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!note) return;
 
     state.noteId = note.id;
+    state.speakerSegments = Array.isArray(note.speaker_segments) ? note.speaker_segments : [];
+    state.speakerMap = note.speaker_map || {};
+    state.extractedActions = [];
+
     if (els.title) els.title.value = note.title || "";
     if (els.transcript) els.transcript.value = note.transcript || "";
     if (els.note) els.note.value = note.final_note || "";
+    if (els.meetingFormat) els.meetingFormat.value = note.meeting_format || "";
+    if (els.noteStatus) els.noteStatus.value = note.note_status || "draft";
+
+    renderSpeakerMap();
+    renderActions();
 
     setSaveState("idle", "Loaded");
     state.dirty = false;
@@ -602,7 +743,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       clearTimeout(timeout);
-
       const data = await safeJson(response);
 
       if (!response.ok) {
@@ -622,9 +762,96 @@ document.addEventListener("DOMContentLoaded", () => {
       await loadSavedNotes();
     } catch (error) {
       console.error("Delete error:", error);
-      alert(error.name === "AbortError"
-        ? "Delete timed out."
-        : "The delete connection was lost.");
+      alert(error.name === "AbortError" ? "Delete timed out." : "The delete connection was lost.");
+    }
+  }
+
+  async function loadVersions() {
+    if (!state.noteId) {
+      alert("Save the note first to create version history.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/ai-notes/history/${encodeURIComponent(state.noteId)}/versions`, {
+        headers: headers()
+      });
+
+      const data = await safeJson(response);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          redirectToLogin();
+          return;
+        }
+        alert(data.detail || "Could not load versions.");
+        return;
+      }
+
+      const versions = Array.isArray(data.versions) ? data.versions : [];
+      renderVersions(versions);
+      openVersionsModal();
+    } catch (error) {
+      console.error(error);
+      alert("Could not load version history.");
+    }
+  }
+
+  function renderVersions(versions) {
+    if (!els.versionsList) return;
+    els.versionsList.innerHTML = "";
+
+    if (!versions.length) {
+      els.versionsList.innerHTML = `<div class="speaker-empty">No versions available yet.</div>`;
+      return;
+    }
+
+    versions.forEach(version => {
+      const item = document.createElement("div");
+      item.className = "version-item";
+      item.innerHTML = `
+        <div class="version-title">${escapeHtml(version.title || "Untitled note")}</div>
+        <div class="version-meta">${version.created_at ? new Date(version.created_at).toLocaleString("en-GB") : "—"}</div>
+        <div class="version-preview">${escapeHtml(notePreview(version.final_note || ""))}</div>
+        <div class="version-actions">
+          <button class="btn btn-light btn-sm" data-restore-version="${version.id}">Restore</button>
+        </div>
+      `;
+      els.versionsList.appendChild(item);
+    });
+  }
+
+  async function restoreVersion(versionId) {
+    if (!state.noteId) return;
+
+    const form = new FormData();
+    form.append("version_id", String(versionId));
+
+    try {
+      const response = await fetch(`/ai-notes/history/${encodeURIComponent(state.noteId)}/restore-version`, {
+        method: "POST",
+        headers: headers(),
+        body: form
+      });
+
+      const data = await safeJson(response);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          redirectToLogin();
+          return;
+        }
+        alert(data.detail || "Could not restore version.");
+        return;
+      }
+
+      closeVersionsModal();
+      loadIntoEditor(state.noteId);
+      await loadSavedNotes();
+      showToast("Version restored.");
+    } catch (error) {
+      console.error(error);
+      alert("Could not restore version.");
     }
   }
 
@@ -706,7 +933,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function resetFromTranscript() {
-    const transcript = (els.transcript?.value || "").trim();
+    const transcript = buildSpeakerAwareTranscript() || (els.transcript?.value || "").trim();
     if (!transcript) {
       alert("There is no transcript to restore.");
       return;
@@ -725,10 +952,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     state.noteId = null;
     state.blob = null;
+    state.speakerSegments = [];
+    state.speakerMap = {};
+    state.extractedActions = [];
+
     if (els.title) els.title.value = "";
     if (els.prompt) els.prompt.value = "";
     if (els.transcript) els.transcript.value = "";
     if (els.note) els.note.value = "";
+    if (els.meetingFormat) els.meetingFormat.value = "";
+    if (els.noteStatus) els.noteStatus.value = "draft";
+
+    renderSpeakerMap();
+    renderActions();
 
     state.dirty = false;
     statusText("Ready");
@@ -746,8 +982,18 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function bindDirtyTracking() {
-    [els.title, els.prompt, els.transcript, els.note].forEach(el => {
+    [els.title, els.prompt, els.transcript, els.note, els.meetingFormat, els.noteStatus].forEach(el => {
       el?.addEventListener("input", markDirty);
+      el?.addEventListener("change", markDirty);
+    });
+  }
+
+  function bindSpeakerMapInputs() {
+    els.speakerMapList?.addEventListener("input", event => {
+      const key = event.target.getAttribute("data-speaker-key");
+      if (!key) return;
+      state.speakerMap[key] = event.target.value.trim();
+      markDirty();
     });
   }
 
@@ -762,6 +1008,8 @@ document.addEventListener("DOMContentLoaded", () => {
     els.savedTabBtn?.addEventListener("click", () => setActiveTab("saved"));
 
     els.transcribeBtn?.addEventListener("click", () => transcribeAudio(false));
+    els.renameSpeakersBtn?.addEventListener("click", renderSpeakerMap);
+    els.extractActionsBtn?.addEventListener("click", extractActionsFromNote);
     els.aiBtn?.addEventListener("click", () => applyAI(false));
     els.saveBtn?.addEventListener("click", saveNote);
     els.refreshBtn?.addEventListener("click", loadSavedNotes);
@@ -770,6 +1018,8 @@ document.addEventListener("DOMContentLoaded", () => {
     els.printBtn?.addEventListener("click", printNote);
     els.resetBtn?.addEventListener("click", resetFromTranscript);
     els.clearBtn?.addEventListener("click", clearEditor);
+    els.versionsBtn?.addEventListener("click", loadVersions);
+    els.closeVersionsBtn?.addEventListener("click", closeVersionsModal);
     els.searchInput?.addEventListener("input", applySearch);
 
     els.list?.addEventListener("click", event => {
@@ -779,8 +1029,14 @@ document.addEventListener("DOMContentLoaded", () => {
       if (delId) deleteNote(delId);
     });
 
+    els.versionsList?.addEventListener("click", event => {
+      const versionId = event.target.getAttribute("data-restore-version");
+      if (versionId) restoreVersion(versionId);
+    });
+
     bindPromptButtons();
     bindDirtyTracking();
+    bindSpeakerMapInputs();
 
     window.addEventListener("beforeunload", event => {
       if (!state.dirty) return;
@@ -794,6 +1050,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!ok) return;
 
     bindEvents();
+    renderSpeakerMap();
+    renderActions();
     setActiveTab("workspace");
     statusText("Ready");
     setSaveState("idle", "Not saved");
