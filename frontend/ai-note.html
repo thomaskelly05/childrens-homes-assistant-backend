@@ -36,12 +36,22 @@
             <button class="quick-action" data-fill="Extract key actions and make responsibilities clearer.">Clarify actions</button>
           </div>
         </div>
+
+        <div class="sidebar-block">
+          <span class="card-label">Workflow</span>
+          <div class="sidebar-mini-list">
+            <div class="sidebar-mini-item">1. Record the meeting</div>
+            <div class="sidebar-mini-item">2. Review speakers and transcript</div>
+            <div class="sidebar-mini-item">3. Refine with AI</div>
+            <div class="sidebar-mini-item">4. Save, print or export</div>
+          </div>
+        </div>
       </div>
 
       <div class="sidebar-card">
-        <span class="card-label">Workflow</span>
-        <h3>Simple and focused</h3>
-        <p>Record the meeting, review the transcript, refine the final note with AI, then save or export.</p>
+        <span class="card-label">Why it works</span>
+        <h3>Fast, clear, professional</h3>
+        <p>Capture live meetings, identify speakers, refine the final note with AI, and keep everything saved in one secure workflow.</p>
       </div>
     </aside>
 
@@ -51,7 +61,7 @@
           <p class="eyebrow">AI documentation workflow</p>
           <h2>Turn meetings into clean professional notes.</h2>
           <p class="hero-copy">
-            Capture the conversation, transcribe automatically and refine the final note with AI.
+            Record once, transcribe automatically, identify speakers, refine the final note with AI and save a polished record.
           </p>
         </div>
 
@@ -73,7 +83,7 @@
               <div>
                 <p class="eyebrow small">Source</p>
                 <h3>Transcript</h3>
-                <p class="panel-copy">Original source text from the recording.</p>
+                <p class="panel-copy">Review the speaker-aware transcript from your recording.</p>
               </div>
               <div class="status-stack">
                 <span id="status" class="status-badge">Ready</span>
@@ -81,8 +91,20 @@
               </div>
             </div>
 
-            <div class="panel-toolbar">
+            <div class="panel-toolbar wrap">
               <button id="transcribeBtn" class="btn btn-dark btn-sm" disabled>Transcribe</button>
+              <button id="renameSpeakersBtn" class="btn btn-light btn-sm">Refresh speakers</button>
+              <button id="extractActionsBtn" class="btn btn-light btn-sm">Extract actions</button>
+            </div>
+
+            <div class="speaker-panel">
+              <div class="speaker-panel-head">
+                <strong>Detected speakers</strong>
+                <span id="speakerCountBadge" class="mini-badge">0</span>
+              </div>
+              <div id="speakerMapList" class="speaker-map-list">
+                <div class="speaker-empty">No speakers detected yet.</div>
+              </div>
             </div>
 
             <textarea id="transcript" class="editor-box transcript-box" placeholder="Transcript will appear here after recording."></textarea>
@@ -93,13 +115,33 @@
               <div>
                 <p class="eyebrow small">Final note</p>
                 <h3>Editable document</h3>
-                <p class="panel-copy">Refine the final note with AI and save the version you want to keep.</p>
+                <p class="panel-copy">Refine the final note with AI, then save or export the version you want to keep.</p>
               </div>
             </div>
 
             <div class="field">
               <label for="title">Note title</label>
               <input id="title" type="text" placeholder="Example: Operational review meeting - weekly summary" />
+            </div>
+
+            <div class="field two-up">
+              <div>
+                <label for="meetingFormat">Meeting format</label>
+                <select id="meetingFormat">
+                  <option value="">Not specified</option>
+                  <option value="Online">Online</option>
+                  <option value="In person">In person</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="noteStatus">Status</label>
+                <select id="noteStatus">
+                  <option value="draft">Draft</option>
+                  <option value="final">Final</option>
+                  <option value="approved">Approved</option>
+                </select>
+              </div>
             </div>
 
             <div class="note-editor-shell">
@@ -120,7 +162,17 @@
               <button id="pdfBtn" class="btn btn-light btn-sm">Export PDF</button>
               <button id="docxBtn" class="btn btn-light btn-sm">Export DOCX</button>
               <button id="resetBtn" class="btn btn-light btn-sm">Reset from transcript</button>
+              <button id="versionsBtn" class="btn btn-light btn-sm">Version history</button>
               <button id="clearBtn" class="btn btn-danger btn-sm">Clear</button>
+            </div>
+
+            <div class="actions-panel">
+              <div class="actions-panel-head">
+                <strong>Extracted actions</strong>
+              </div>
+              <div id="actionsList" class="actions-list">
+                <div class="speaker-empty">No extracted actions yet.</div>
+              </div>
             </div>
 
             <div class="trust-note">
@@ -155,6 +207,7 @@
               <thead>
                 <tr>
                   <th>Title</th>
+                  <th>Status</th>
                   <th>Updated</th>
                   <th>Actions</th>
                 </tr>
@@ -188,6 +241,23 @@
         <button id="resumeBtn" class="btn btn-light" disabled>Resume</button>
         <button id="cancelBtn" class="btn btn-light" disabled>Cancel</button>
         <button id="stopBtn" class="btn btn-danger" disabled>Stop</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="versionsModal" class="recording-modal hide">
+    <div class="versions-card">
+      <div class="panel-head between">
+        <div>
+          <p class="eyebrow small">Version history</p>
+          <h3>Previous versions</h3>
+          <p class="panel-copy">Restore an earlier saved version if needed.</p>
+        </div>
+        <button id="closeVersionsBtn" class="btn btn-light btn-sm">Close</button>
+      </div>
+
+      <div id="versionsList" class="versions-list">
+        <div class="speaker-empty">No versions available yet.</div>
       </div>
     </div>
   </div>
