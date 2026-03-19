@@ -1,4 +1,3 @@
-```javascript
 document.addEventListener("DOMContentLoaded", () => {
     const ACCESS_TOKEN_KEY = "access_token";
     const LOCAL_TEMPLATE_KEY = "indicare_custom_templates_v9";
@@ -302,7 +301,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function getAuthHeaders(extraHeaders = {}) {
         const token = getAccessToken();
-        return token ? { ...extraHeaders, Authorization: `Bearer ${token}` } : { ...extraHeaders };
+        return token
+            ? { ...extraHeaders, Authorization: "Bearer " + token }
+            : { ...extraHeaders };
     }
 
     function escapeHtml(value) {
@@ -327,7 +328,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (els.appRootEl) els.appRootEl.classList.add("app-hidden");
         if (els.authGateMessageEl) {
             els.authGateMessageEl.textContent = message;
-            els.authGateMessageEl.className = `auth-gate-message${mode ? ` ${mode}` : ""}`;
+            els.authGateMessageEl.className = "auth-gate-message" + (mode ? " " + mode : "");
         }
     }
 
@@ -459,13 +460,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function buildCareContextBlock() {
         return [
-            `Service type: ${els.serviceTypeEl?.value || "Not specified"}`,
-            `Shift or context: ${els.shiftTypeEl?.value || "Not specified"}`,
-            `Meeting format: ${state.meetingFormat || "Not specified"}`,
-            `Recorded by: ${els.recordAuthorEl?.value.trim() || "Not specified"}`,
-            `Person supported / young person: ${els.youngPersonNameEl?.value.trim() || "Not specified"}`,
-            `Record date: ${els.meetingDateEl?.value || "Not specified"}`,
-            `Location / home / service: ${els.locationContextEl?.value.trim() || "Not specified"}`
+            "Service type: " + (els.serviceTypeEl?.value || "Not specified"),
+            "Shift or context: " + (els.shiftTypeEl?.value || "Not specified"),
+            "Meeting format: " + (state.meetingFormat || "Not specified"),
+            "Recorded by: " + (els.recordAuthorEl?.value.trim() || "Not specified"),
+            "Person supported / young person: " + (els.youngPersonNameEl?.value.trim() || "Not specified"),
+            "Record date: " + (els.meetingDateEl?.value || "Not specified"),
+            "Location / home / service: " + (els.locationContextEl?.value.trim() || "Not specified")
         ].join("\n");
     }
 
@@ -480,7 +481,7 @@ document.addEventListener("DOMContentLoaded", () => {
             buildCareContextBlock(),
             "",
             "Use these exact headings:",
-            ...template.sections.map(section => `- ${section}`)
+            ...template.sections.map(section => "- " + section)
         ].join("\n");
     }
 
@@ -609,7 +610,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         state.customTemplates.push({
-            id: `custom-${Date.now()}`,
+            id: "custom-" + Date.now(),
             name,
             sections: [...state.templateBuilderSections]
         });
@@ -708,7 +709,9 @@ document.addEventListener("DOMContentLoaded", () => {
             els.safeguardingBoxEl?.classList.remove("hidden");
             if (els.safeguardingTextEl) {
                 els.safeguardingTextEl.textContent =
-                    `Potential safeguarding or risk-related language found: ${safeguardingMatches.join(", ")}. Review the final note carefully before saving.`;
+                    "Potential safeguarding or risk-related language found: " +
+                    safeguardingMatches.join(", ") +
+                    ". Review the final note carefully before saving.";
             }
         } else {
             els.safeguardingBoxEl?.classList.add("hidden");
@@ -899,7 +902,7 @@ document.addEventListener("DOMContentLoaded", () => {
         form.append("template_name", item.templateName || "");
 
         try {
-            const response = await fetch(`/ai-notes/export/${format}`, {
+            const response = await fetch("/ai-notes/export/" + format, {
                 method: "POST",
                 headers: getAuthHeaders(),
                 body: form
@@ -912,8 +915,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const blob = await response.blob();
-            downloadBlob(blob, `${item.title || "Care Note"}.${format}`);
-            showToast(`Saved note exported as ${format.toUpperCase()}.`);
+            downloadBlob(blob, (item.title || "Care Note") + "." + format);
+            showToast("Saved note exported as " + format.toUpperCase() + ".");
         } catch (error) {
             console.error(error);
             alert("Could not export this saved note.");
@@ -966,7 +969,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
             if (!item.isLocalOnly && item.id) {
-                await fetch(`/ai-notes/${encodeURIComponent(item.id)}`, {
+                await fetch("/ai-notes/" + encodeURIComponent(item.id), {
                     method: "DELETE",
                     headers: getAuthHeaders()
                 });
@@ -1047,7 +1050,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
                 if (els.audioReadyTextEl) {
-                    els.audioReadyTextEl.textContent = `Recording ready (${formatTime(getElapsedRecordingSeconds())}).`;
+                    els.audioReadyTextEl.textContent = "Recording ready (" + formatTime(getElapsedRecordingSeconds()) + ").";
                 }
 
                 if (state.recordingStream) {
@@ -1140,7 +1143,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const filename = `care-note.${state.recordingExtension || "webm"}`;
+        const filename = "care-note." + (state.recordingExtension || "webm");
         const form = new FormData();
         form.append("file", state.recordedBlob, filename);
 
@@ -1359,7 +1362,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const template = getSelectedTemplate();
         if (!template || !els.finalNoteEl) return;
 
-        els.finalNoteEl.value = template.sections.map(section => `${section}\n`).join("\n").trim();
+        els.finalNoteEl.value = template.sections.map(section => section + "\n").join("\n").trim();
 
         if (els.noteTitleEl && !els.noteTitleEl.value.trim()) {
             els.noteTitleEl.value = smartDefaultTitle();
@@ -1584,7 +1587,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            state.currentNoteId = data.id || data.record?.id || state.currentNoteId || `note-${Date.now()}`;
+            state.currentNoteId = data.id || data.record?.id || state.currentNoteId || ("note-" + Date.now());
             setNoteMode(true);
             markSaved();
 
@@ -1640,7 +1643,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 els.exportBtnTop.textContent = "Exporting...";
             }
 
-            const response = await fetch(`/ai-notes/export/${format}`, {
+            const response = await fetch("/ai-notes/export/" + format, {
                 method: "POST",
                 headers: getAuthHeaders(),
                 body: form
@@ -1653,8 +1656,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const blob = await response.blob();
-            downloadBlob(blob, `${title}.${format}`);
-            showToast(`Exported as ${format.toUpperCase()}.`);
+            downloadBlob(blob, title + "." + format);
+            showToast("Exported as " + format.toUpperCase() + ".");
         } catch (error) {
             console.error(error);
             alert("Could not connect to the export service.");
@@ -1763,7 +1766,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const response = await fetch("/auth/me", {
             method: "GET",
             headers: {
-                Authorization: `Bearer ${token}`
+                Authorization: "Bearer " + token
             }
         });
 
@@ -1780,7 +1783,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         try {
-            const { response, data } = await fetchCurrentUserWithToken(token);
+            const result = await fetchCurrentUserWithToken(token);
+            const response = result.response;
+            const data = result.data;
 
             if (response.ok) {
                 hideAuthGate();
@@ -1868,7 +1873,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const response = await fetch("/billing/create-checkout-session", {
                 method: "POST",
                 headers: {
-                    Authorization: `Bearer ${token}`
+                    Authorization: "Bearer " + token
                 }
             });
 
@@ -2133,4 +2138,3 @@ document.addEventListener("DOMContentLoaded", () => {
 
     init();
 });
-```
