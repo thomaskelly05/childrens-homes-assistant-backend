@@ -1,139 +1,94 @@
 <!DOCTYPE html>
 <html lang="en-GB">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IndiCare | I-Notes</title>
-
-    <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
-    <link rel="stylesheet" href="/css/reset.css">
-    <link rel="stylesheet" href="/css/base.css">
-    <link rel="stylesheet" href="/css/theme.css">
-    <link rel="stylesheet" href="/css/layout.css">
-    <link rel="stylesheet" href="/css/components.css">
-    <link rel="stylesheet" href="/ai-notes.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>I-Notes</title>
+  <link rel="stylesheet" href="/ai-notes.css" />
 </head>
-<body class="notes-page">
-    <div class="simple-shell">
-        <header class="simple-topbar">
-            <div class="brand-row">
-                <img src="/assets/logo.svg" alt="IndiCare logo" class="brand-logo">
-                <div>
-                    <h1>I-Notes</h1>
-                    <p>Record, transcribe, edit, save.</p>
-                </div>
-            </div>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <div>
+        <h1>I-Notes</h1>
+        <p>Record, transcribe, edit, save.</p>
+      </div>
+      <div class="row">
+        <a href="/" class="btn light">Dashboard</a>
+        <button id="recordBtn" class="btn primary">Record meeting</button>
+      </div>
+    </header>
 
-            <div class="topbar-actions">
-                <a href="/" class="btn btn-light">Dashboard</a>
-                <button id="startRecordingBtn" class="btn btn-primary" type="button">Record meeting</button>
-            </div>
-        </header>
-
-        <main class="simple-main">
-            <section class="workspace-panel">
-                <div class="section-head">
-                    <div>
-                        <p class="panel-label">Current note</p>
-                        <h2>Create and edit</h2>
-                        <p>A simple workflow for recording a meeting and turning it into a usable note.</p>
-                    </div>
-                    <div class="status-row">
-                        <span id="recordingStatus" class="status-pill idle">Ready</span>
-                    </div>
-                </div>
-
-                <div class="meta-grid">
-                    <div class="field">
-                        <label for="noteTitle">Title</label>
-                        <input id="noteTitle" type="text" placeholder="Example: Team meeting - March review">
-                    </div>
-
-                    <div class="field">
-                        <label for="aiInstruction">AI instruction</label>
-                        <input id="aiInstruction" type="text" placeholder="Example: Turn this into a professional meeting note">
-                    </div>
-                </div>
-
-                <div class="quick-actions">
-                    <button id="transcribeBtn" class="btn btn-dark" type="button" disabled>Transcribe</button>
-                    <button id="improveBtn" class="btn btn-light" type="button">Improve with AI</button>
-                    <button id="saveBtn" class="btn btn-success" type="button">Save</button>
-                    <button id="exportPdfBtn" class="btn btn-light" type="button">Export PDF</button>
-                    <button id="exportDocxBtn" class="btn btn-light" type="button">Export DOCX</button>
-                    <button id="printBtn" class="btn btn-light" type="button">Print</button>
-                    <button id="clearBtn" class="btn btn-danger" type="button">Clear</button>
-                </div>
-
-                <div class="editor-layout">
-                    <div class="field">
-                        <label for="transcript">Transcript</label>
-                        <textarea id="transcript" class="editor-box" placeholder="Your transcript will appear here after recording and transcription."></textarea>
-                    </div>
-
-                    <div class="field">
-                        <label for="finalNote">Editable note</label>
-                        <textarea id="finalNote" class="editor-box editor-box-large" placeholder="Your AI-assisted note will appear here."></textarea>
-                    </div>
-                </div>
-            </section>
-
-            <section class="workspace-panel saved-panel">
-                <div class="section-head">
-                    <div>
-                        <p class="panel-label">Saved notes</p>
-                        <h2>Your notes</h2>
-                        <p>Only your saved notes are shown here.</p>
-                    </div>
-                    <div class="topbar-actions">
-                        <button id="refreshSavedBtn" class="btn btn-light" type="button">Refresh</button>
-                    </div>
-                </div>
-
-                <div id="savedEmptyState" class="empty-state">No saved notes yet.</div>
-
-                <div class="saved-list-wrap">
-                    <table class="saved-table">
-                        <thead>
-                            <tr>
-                                <th>Title</th>
-                                <th>Updated</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="savedNotesBody"></tbody>
-                    </table>
-                </div>
-            </section>
-        </main>
-    </div>
-
-    <div id="recordingModal" class="recording-overlay hidden">
-        <div class="recording-card">
-            <p class="panel-label">Recording live</p>
-            <h2>Recording meeting</h2>
-            <p>Pause, resume or stop when you are finished.</p>
-
-            <div class="recording-centre">
-                <div id="recordingMic" class="recording-mic">🎤</div>
-                <div id="recordingTimer" class="recording-timer">00:00</div>
-                <div id="recordingModalStatus" class="recording-modal-status">Recording live</div>
-            </div>
-
-            <div class="recording-actions">
-                <button id="pauseRecordingBtn" class="btn btn-light" type="button" disabled>Pause</button>
-                <button id="resumeRecordingBtn" class="btn btn-light" type="button" disabled>Resume</button>
-                <button id="stopRecordingBtn" class="btn btn-danger" type="button" disabled>Stop</button>
-            </div>
+    <main class="grid">
+      <section class="card main">
+        <div class="row between">
+          <div>
+            <h2>Current note</h2>
+            <p class="muted">Transcript on the left, editable note on the right.</p>
+          </div>
+          <span id="status" class="pill">Ready</span>
         </div>
+
+        <div class="row">
+          <input id="title" placeholder="Note title" />
+          <input id="prompt" placeholder="Describe a change... e.g. make this more professional" />
+        </div>
+
+        <div class="row">
+          <button id="transcribeBtn" class="btn dark" disabled>Transcribe</button>
+          <button id="aiBtn" class="btn light">Apply AI</button>
+          <button id="saveBtn" class="btn success">Save</button>
+          <button id="printBtn" class="btn light">Print</button>
+          <button id="pdfBtn" class="btn light">PDF</button>
+          <button id="docxBtn" class="btn light">DOCX</button>
+          <button id="clearBtn" class="btn danger">Clear</button>
+        </div>
+
+        <div class="editor">
+          <div>
+            <label>Transcript</label>
+            <textarea id="transcript" placeholder="Transcript..."></textarea>
+          </div>
+          <div>
+            <label>Note</label>
+            <textarea id="note" class="big" placeholder="AI note..."></textarea>
+          </div>
+        </div>
+      </section>
+
+      <aside class="card side">
+        <div class="row between">
+          <div>
+            <h2>Saved notes</h2>
+            <p class="muted">Only your notes.</p>
+          </div>
+          <button id="refreshBtn" class="btn light">Refresh</button>
+        </div>
+        <div id="empty" class="muted">No saved notes yet.</div>
+        <table>
+          <thead><tr><th>Title</th><th>Updated</th><th>Actions</th></tr></thead>
+          <tbody id="list"></tbody>
+        </table>
+      </aside>
+    </main>
+  </div>
+
+  <div id="modal" class="modal hide">
+    <div class="rec">
+      <div class="small">Recording live</div>
+      <div id="timer" class="timer">00:00</div>
+      <div id="recState" class="muted">Recording...</div>
+      <div class="mic" id="mic">🎤</div>
+      <div class="row center">
+        <button id="pauseBtn" class="btn light" disabled>Pause</button>
+        <button id="resumeBtn" class="btn light" disabled>Resume</button>
+        <button id="stopBtn" class="btn danger" disabled>Stop</button>
+      </div>
     </div>
+  </div>
 
-    <div id="toast" class="toast"></div>
-
-    <audio id="audioPlayback" controls style="display:none;"></audio>
-
-    <script src="/js/api.js"></script>
-    <script src="/js/auth.js"></script>
-    <script src="/ai-notes.js"></script>
+  <audio id="audio" controls hidden></audio>
+  <div id="toast" class="toast"></div>
+  <script src="/ai-notes.js"></script>
 </body>
 </html>
