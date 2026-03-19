@@ -92,7 +92,7 @@ async def create_checkout_session(
         if not customer_id:
             customer = stripe.Customer.create(
                 email=user["email"],
-                name=user.get("full_name") or user["email"],
+                name=user["email"],
                 metadata={
                     "user_id": str(user["id"])
                 }
