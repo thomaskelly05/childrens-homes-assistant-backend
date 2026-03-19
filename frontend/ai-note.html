@@ -10,7 +10,7 @@
 <body class="notes-page">
   <div class="app-shell">
     <aside class="sidebar">
-      <div>
+      <div class="sidebar-top">
         <div class="brand">
           <div class="brand-mark">
             <img src="/assets/logo.svg" alt="IndiCare logo" />
@@ -26,32 +26,33 @@
           <a href="/ai-note.html" class="nav-link active">I-Notes</a>
         </nav>
 
-        <div class="sidebar-block">
+        <div class="sidebar-card sidebar-card-primary">
+          <span class="card-label">Start</span>
+          <h3>Capture your meeting</h3>
+          <p>Record, transcribe, refine with AI and save a clean professional note.</p>
+          <button id="recordBtnSidebar" class="btn btn-primary btn-sidebar-record">Record meeting</button>
+        </div>
+
+        <div class="sidebar-card">
           <span class="card-label">Quick actions</span>
           <div class="quick-stack">
             <button class="quick-action" data-fill="Make this more professional and improve clarity.">Improve wording</button>
             <button class="quick-action" data-fill="Turn this into concise meeting minutes with clear decisions and actions.">Meeting minutes</button>
             <button class="quick-action" data-fill="Rewrite this as a manager summary with key points, risks and next steps.">Manager summary</button>
             <button class="quick-action" data-fill="Make this shorter, cleaner and more structured.">Make concise</button>
-            <button class="quick-action" data-fill="Extract key actions and make responsibilities clearer.">Clarify actions</button>
-          </div>
-        </div>
-
-        <div class="sidebar-block">
-          <span class="card-label">Workflow</span>
-          <div class="sidebar-mini-list">
-            <div class="sidebar-mini-item">1. Record the meeting</div>
-            <div class="sidebar-mini-item">2. Review speakers and transcript</div>
-            <div class="sidebar-mini-item">3. Refine with AI</div>
-            <div class="sidebar-mini-item">4. Save, print or export</div>
           </div>
         </div>
       </div>
 
-      <div class="sidebar-card">
-        <span class="card-label">Why it works</span>
-        <h3>Fast, clear, professional</h3>
-        <p>Capture live meetings, identify speakers, refine the final note with AI, and keep everything saved in one secure workflow.</p>
+      <div class="sidebar-footer">
+        <div class="sidebar-status-card">
+          <div class="sidebar-status-head">
+            <span class="card-label">Session</span>
+            <span id="statusDot" class="status-dot idle"></span>
+          </div>
+          <div id="status" class="status-badge">Ready</div>
+          <div id="saveState" class="save-badge idle">Not saved</div>
+        </div>
       </div>
     </aside>
 
@@ -76,42 +77,57 @@
         <button id="savedTabBtn" class="page-tab" type="button">Saved notes</button>
       </div>
 
-      <section id="workspacePanel" class="tab-panel active">
+      <section id="workspacePanel" class="tab-panel active app-panel">
         <div class="workspace-grid">
-          <section class="panel">
-            <div class="panel-head between">
+          <section class="panel app-card fill-card">
+            <div class="panel-head between compact-head">
               <div>
                 <p class="eyebrow small">Source</p>
                 <h3>Transcript</h3>
                 <p class="panel-copy">Review the speaker-aware transcript from your recording.</p>
               </div>
-              <div class="status-stack">
-                <span id="status" class="status-badge">Ready</span>
-                <span id="saveState" class="save-badge idle">Not saved</span>
+
+              <div class="panel-head-side">
+                <div class="mini-stat">
+                  <span>Speakers</span>
+                  <strong id="speakerCountBadge">0</strong>
+                </div>
               </div>
             </div>
 
-            <div class="panel-toolbar wrap">
+            <div class="panel-toolbar wrap compact-toolbar">
               <button id="transcribeBtn" class="btn btn-dark btn-sm" disabled>Transcribe</button>
               <button id="renameSpeakersBtn" class="btn btn-light btn-sm">Refresh speakers</button>
               <button id="extractActionsBtn" class="btn btn-light btn-sm">Extract actions</button>
+              <button id="useTranscriptForAiBtn" class="btn btn-light btn-sm">Use transcript for AI</button>
             </div>
 
-            <div class="speaker-panel">
+            <div class="speaker-panel compact-panel-block">
               <div class="speaker-panel-head">
                 <strong>Detected speakers</strong>
-                <span id="speakerCountBadge" class="mini-badge">0</span>
+                <span class="mini-badge">Rename if needed</span>
               </div>
               <div id="speakerMapList" class="speaker-map-list">
                 <div class="speaker-empty">No speakers detected yet.</div>
               </div>
             </div>
 
-            <textarea id="transcript" class="editor-box transcript-box" placeholder="Transcript will appear here after recording."></textarea>
+            <div class="timeline-panel compact-panel-block">
+              <div class="timeline-panel-head">
+                <strong>Speaker timeline</strong>
+              </div>
+              <div id="speakerTimeline" class="speaker-timeline">
+                <div class="speaker-empty">No speaker timeline yet.</div>
+              </div>
+            </div>
+
+            <div class="editor-fill-wrap">
+              <textarea id="transcript" class="editor-box transcript-box" placeholder="Transcript will appear here after recording."></textarea>
+            </div>
           </section>
 
-          <section class="panel">
-            <div class="panel-head">
+          <section class="panel app-card fill-card">
+            <div class="panel-head compact-head">
               <div>
                 <p class="eyebrow small">Final note</p>
                 <h3>Editable document</h3>
@@ -119,32 +135,34 @@
               </div>
             </div>
 
-            <div class="field">
-              <label for="title">Note title</label>
-              <input id="title" type="text" placeholder="Example: Operational review meeting - weekly summary" />
-            </div>
-
-            <div class="field two-up">
-              <div>
-                <label for="meetingFormat">Meeting format</label>
-                <select id="meetingFormat">
-                  <option value="">Not specified</option>
-                  <option value="Online">Online</option>
-                  <option value="In person">In person</option>
-                </select>
+            <div class="top-fields">
+              <div class="field">
+                <label for="title">Note title</label>
+                <input id="title" type="text" placeholder="Example: Operational review meeting - weekly summary" />
               </div>
 
-              <div>
-                <label for="noteStatus">Status</label>
-                <select id="noteStatus">
-                  <option value="draft">Draft</option>
-                  <option value="final">Final</option>
-                  <option value="approved">Approved</option>
-                </select>
+              <div class="field two-up">
+                <div>
+                  <label for="meetingFormat">Meeting format</label>
+                  <select id="meetingFormat">
+                    <option value="">Not specified</option>
+                    <option value="Online">Online</option>
+                    <option value="In person">In person</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label for="noteStatus">Status</label>
+                  <select id="noteStatus">
+                    <option value="draft">Draft</option>
+                    <option value="final">Final</option>
+                    <option value="approved">Approved</option>
+                  </select>
+                </div>
               </div>
             </div>
 
-            <div class="note-editor-shell">
+            <div class="note-editor-shell note-shell-large">
               <div class="note-ai-inline">
                 <label for="prompt">AI instruction</label>
                 <div class="note-ai-row">
@@ -153,10 +171,12 @@
                 </div>
               </div>
 
-              <textarea id="note" class="editor-box note-box" placeholder="Your final note will appear here."></textarea>
+              <div class="note-main-area">
+                <textarea id="note" class="editor-box note-box" placeholder="Your final note will appear here."></textarea>
+              </div>
             </div>
 
-            <div class="panel-toolbar wrap">
+            <div class="panel-toolbar wrap compact-toolbar">
               <button id="saveBtn" class="btn btn-success btn-sm">Save</button>
               <button id="printBtn" class="btn btn-light btn-sm">Print</button>
               <button id="pdfBtn" class="btn btn-light btn-sm">Export PDF</button>
@@ -166,25 +186,22 @@
               <button id="clearBtn" class="btn btn-danger btn-sm">Clear</button>
             </div>
 
-            <div class="actions-panel">
+            <div class="actions-panel compact-panel-block">
               <div class="actions-panel-head">
                 <strong>Extracted actions</strong>
+                <span id="actionCountBadge" class="mini-badge">0</span>
               </div>
               <div id="actionsList" class="actions-list">
                 <div class="speaker-empty">No extracted actions yet.</div>
               </div>
             </div>
-
-            <div class="trust-note">
-              AI assists with drafting. Users remain responsible for checking final content before saving or sharing.
-            </div>
           </section>
         </div>
       </section>
 
-      <section id="savedPanel" class="tab-panel">
-        <div class="panel">
-          <div class="panel-head between">
+      <section id="savedPanel" class="tab-panel app-panel">
+        <div class="panel app-card saved-notes-card">
+          <div class="panel-head between compact-head">
             <div>
               <p class="eyebrow small">Saved notes</p>
               <h3>Your notes</h3>
@@ -217,6 +234,10 @@
           </div>
         </div>
       </section>
+
+      <footer class="app-footer">
+        © IndiCare 2026. All rights reserved.
+      </footer>
     </main>
   </div>
 
