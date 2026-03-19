@@ -102,13 +102,19 @@
               <input id="title" type="text" placeholder="Example: Operational review meeting - weekly summary" />
             </div>
 
-            <div class="field">
-              <label for="prompt">Instruction for AI</label>
-              <textarea id="prompt" class="prompt-box" placeholder="Example: Rewrite this as a concise professional meeting record, remove repetition and clearly separate decisions from actions."></textarea>
+            <div class="note-editor-shell">
+              <div class="note-ai-inline">
+                <label for="prompt">AI instruction</label>
+                <div class="note-ai-row">
+                  <textarea id="prompt" class="prompt-inline" placeholder="Tell AI what to change in the final note..."></textarea>
+                  <button id="aiBtn" class="btn btn-primary btn-sm apply-inline">Apply AI</button>
+                </div>
+              </div>
+
+              <textarea id="note" class="editor-box note-box" placeholder="Your final note will appear here."></textarea>
             </div>
 
             <div class="panel-toolbar wrap">
-              <button id="aiBtn" class="btn btn-primary btn-sm">Apply AI change</button>
               <button id="saveBtn" class="btn btn-success btn-sm">Save</button>
               <button id="printBtn" class="btn btn-light btn-sm">Print</button>
               <button id="pdfBtn" class="btn btn-light btn-sm">Export PDF</button>
@@ -116,8 +122,6 @@
               <button id="resetBtn" class="btn btn-light btn-sm">Reset from transcript</button>
               <button id="clearBtn" class="btn btn-danger btn-sm">Clear</button>
             </div>
-
-            <textarea id="note" class="editor-box note-box" placeholder="Your final note will appear here."></textarea>
 
             <div class="trust-note">
               AI assists with drafting. Users remain responsible for checking final content before saving or sharing.
