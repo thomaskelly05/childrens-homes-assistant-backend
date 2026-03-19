@@ -2,6 +2,7 @@ import os
 import json
 import asyncio
 from datetime import datetime, timezone
+from typing import Any
 
 from openai import OpenAI
 
@@ -27,7 +28,43 @@ def _get_audio_mime_type(file_path: str) -> str:
     return "audio/webm"
 
 
-def _transcribe_audio_sync(file_path: str) -> str:
+def _normalise_speaker_segments(raw_segments: Any) -> list[dict[str, Any]]:
+    if not isinstance(raw_segments, list):
+        return []
+
+    normalised: list[dict[str, Any]] = []
+
+    for index, segment in enumerate(raw_segments):
+        if not isinstance(segment, dict):
+            continue
+
+        speaker = str(segment.get("speaker") or f"Speaker {index + 1}").strip()
+        text = str(segment.get("text") or "").strip()
+
+        if not text:
+            continue
+
+        normalised.append({
+            "id": str(segment.get("id") or f"seg_{index + 1}"),
+            "speaker": speaker,
+            "text": text,
+            "start": float(segment.get("start") or 0),
+            "end": float(segment.get("end") or 0),
+            "type": str(segment.get("type") or "transcript.text.segment")
+        })
+
+    return normalised
+
+
+def _speaker_text_from_segments(segments: list[dict[str, Any]]) -> str:
+    return "\n\n".join(
+        f"{segment['speaker']}: {segment['text']}"
+        for segment in segments
+        if segment.get("text")
+    ).strip()
+
+
+def _transcribe_audio_sync(file_path: str) -> dict[str, Any]:
     if not os.path.exists(file_path):
         raise RuntimeError("Audio file not found")
 
@@ -38,20 +75,27 @@ def _transcribe_audio_sync(file_path: str) -> str:
     mime_type = _get_audio_mime_type(file_path)
 
     with open(file_path, "rb") as audio_file:
-        transcript = client.audio.transcriptions.create(
-            model="gpt-4o-mini-transcribe",
-            file=(os.path.basename(file_path), audio_file, mime_type)
+        result = client.audio.transcriptions.create(
+            model="gpt-4o-transcribe-diarize",
+            file=(os.path.basename(file_path), audio_file, mime_type),
+            response_format="diarized_json"
         )
 
-    text = getattr(transcript, "text", "") or ""
-    return text.strip()
+    result_dict = result.model_dump() if hasattr(result, "model_dump") else result
+    segments = _normalise_speaker_segments(result_dict.get("segments"))
+    text = str(result_dict.get("text") or "").strip()
+
+    if not text and segments:
+        text = _speaker_text_from_segments(segments)
+
+    return {
+        "transcript": text,
+        "segments": segments,
+        "duration": result_dict.get("duration")
+    }
 
 
-# --------------------------------------------------
-# AUDIO TRANSCRIPTION
-# --------------------------------------------------
-
-async def transcribe_audio(file_path: str) -> str:
+async def transcribe_audio(file_path: str) -> dict[str, Any]:
     try:
         return await asyncio.wait_for(
             asyncio.to_thread(_transcribe_audio_sync, file_path),
@@ -63,46 +107,30 @@ async def transcribe_audio(file_path: str) -> str:
         raise RuntimeError(f"Transcription service failed: {str(e)}")
 
 
-# --------------------------------------------------
-# GENERATE MEETING NOTE
-# --------------------------------------------------
-
-def _generate_note_sync(transcript: str) -> dict:
-    transcript = transcript.strip()
-
-    if not transcript:
-        return {
-            "note": "",
-            "safeguarding_flag": False,
-            "safeguarding_reason": "No transcript provided."
-        }
-
+def _build_meeting_note_prompt(transcript: str) -> tuple[str, str]:
     today = datetime.now(timezone.utc).strftime("%d %B %Y")
 
     system_prompt = """
 You create structured, professional internal staff meeting notes for a UK care setting.
 
-You must:
-- write in clear UK English
-- be concise, factual, and professional
-- never invent facts
-- never invent names, dates, actions, attendees, or outcomes
-- use 'Not specified' where information is missing
-- keep the output suitable for internal adult staff operational records
-- only mention children or young people if they are explicitly discussed in the transcript
+Rules:
+- use UK English
+- keep wording factual, professional and concise
+- do not invent names, actions, decisions, dates, times or outcomes
+- preserve speaker meaning accurately
+- if information is not present, leave it out or use 'Not specified'
+- return valid JSON only
 
-You must also assess whether the transcript contains a possible safeguarding, welfare, risk, or protection concern.
-
-Return valid JSON only with exactly these keys:
+Return exactly these JSON keys:
 - note
 - safeguarding_flag
 - safeguarding_reason
 """
 
     user_prompt = f"""
-Create a structured internal adult staff meeting record from the transcript below.
+Create a structured internal adult staff meeting note from this speaker-aware transcript.
 
-Return the note using this exact structure inside the "note" field:
+Use this exact structure inside "note":
 
 Meeting Title:
 Date: {today}
@@ -131,18 +159,26 @@ Safeguarding guidance:
 Transcript:
 {transcript}
 """
+    return system_prompt, user_prompt
+
+
+def _generate_note_sync(transcript: str) -> dict[str, Any]:
+    transcript = transcript.strip()
+
+    if not transcript:
+        return {
+            "note": "",
+            "safeguarding_flag": False,
+            "safeguarding_reason": "No transcript provided."
+        }
+
+    system_prompt, user_prompt = _build_meeting_note_prompt(transcript)
 
     response = client.chat.completions.create(
         model="gpt-4.1-mini",
         messages=[
-            {
-                "role": "system",
-                "content": system_prompt
-            },
-            {
-                "role": "user",
-                "content": user_prompt
-            }
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
         ],
         temperature=0.2,
         response_format={"type": "json_object"}
@@ -177,7 +213,7 @@ Transcript:
     }
 
 
-async def generate_note(transcript: str) -> dict:
+async def generate_note(transcript: str) -> dict[str, Any]:
     try:
         return await asyncio.wait_for(
             asyncio.to_thread(_generate_note_sync, transcript),
@@ -188,10 +224,6 @@ async def generate_note(transcript: str) -> dict:
     except Exception as e:
         raise RuntimeError(f"Note generation failed: {str(e)}")
 
-
-# --------------------------------------------------
-# EDIT FINAL NOTE WITH AI
-# --------------------------------------------------
 
 def _edit_note_sync(text: str, mode: str, instruction: str = "") -> str:
     text = text.strip()
@@ -218,7 +250,7 @@ def _edit_note_sync(text: str, mode: str, instruction: str = "") -> str:
 You edit professional internal meeting records for a UK care setting.
 
 Rules:
-- preserve the original factual meaning unless the instruction explicitly asks for restructuring
+- preserve factual meaning unless the instruction explicitly asks for restructuring
 - do not invent facts
 - do not add names, dates, actions, risks, or decisions that are not already present
 - keep the result suitable for an internal adult staff meeting record
@@ -239,14 +271,8 @@ Document:
     response = client.chat.completions.create(
         model="gpt-4.1-mini",
         messages=[
-            {
-                "role": "system",
-                "content": system_prompt
-            },
-            {
-                "role": "user",
-                "content": user_prompt
-            }
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
         ],
         temperature=0.2
     )
