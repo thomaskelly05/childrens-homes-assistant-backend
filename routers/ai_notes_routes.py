@@ -105,6 +105,7 @@ def _build_history_note(note: dict[str, Any]) -> dict[str, Any]:
         "young_person_name": note.get("young_person_name") or "",
         "service_type": note.get("service_type") or "",
         "shift_type": note.get("shift_type") or "",
+        "meeting_format": note.get("meeting_format") or "",
         "record_author": note.get("record_author") or "",
         "record_date": note.get("record_date") or "",
         "location_context": note.get("location_context") or "",
@@ -259,6 +260,7 @@ async def save_ai_note(
     template_name: str | None = Form(None),
     service_type: str | None = Form(None),
     shift_type: str | None = Form(None),
+    meeting_format: str | None = Form(None),
     record_author: str | None = Form(None),
     young_person_name: str | None = Form(None),
     record_date: str | None = Form(None),
@@ -276,6 +278,7 @@ async def save_ai_note(
     template_name = _clean_text(template_name)
     service_type = _clean_text(service_type)
     shift_type = _clean_text(shift_type)
+    meeting_format = _clean_text(meeting_format)
     record_author = _clean_text(record_author)
     young_person_name = _clean_text(young_person_name)
     record_date = _clean_text(record_date)
@@ -308,10 +311,10 @@ async def save_ai_note(
                 title=final_title,
                 safeguarding_flag=final_safeguarding_flag,
                 safeguarding_reason=final_safeguarding_reason,
-
                 template_name=_none_if_empty(template_name),
                 service_type=_none_if_empty(service_type),
                 shift_type=_none_if_empty(shift_type),
+                meeting_format=_none_if_empty(meeting_format),
                 record_author=_none_if_empty(record_author),
                 young_person_name=_none_if_empty(young_person_name),
                 record_date=_none_if_empty(record_date),
@@ -324,6 +327,7 @@ async def save_ai_note(
             return {
                 "ok": True,
                 "message": "Meeting note updated",
+                "id": record.get("id"),
                 "record": _build_history_note(record),
                 "updated": True
             }
@@ -337,10 +341,10 @@ async def save_ai_note(
             title=final_title,
             safeguarding_flag=final_safeguarding_flag,
             safeguarding_reason=final_safeguarding_reason,
-
             template_name=_none_if_empty(template_name),
             service_type=_none_if_empty(service_type),
             shift_type=_none_if_empty(shift_type),
+            meeting_format=_none_if_empty(meeting_format),
             record_author=_none_if_empty(record_author),
             young_person_name=_none_if_empty(young_person_name),
             record_date=_none_if_empty(record_date),
@@ -350,6 +354,7 @@ async def save_ai_note(
         return {
             "ok": True,
             "message": "Meeting note saved",
+            "id": record.get("id"),
             "record": _build_history_note(record),
             "updated": False
         }
