@@ -1,4 +1,6 @@
 import os
+import json
+import asyncio
 from datetime import datetime, timezone
 
 from openai import OpenAI
@@ -11,23 +13,29 @@ if not OPENAI_API_KEY:
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 
-# --------------------------------------------------
-# AUDIO TRANSCRIPTION
-# --------------------------------------------------
-
-async def transcribe_audio(file_path: str) -> str:
+def _get_audio_mime_type(file_path: str) -> str:
     filename = os.path.basename(file_path).lower()
 
     if filename.endswith(".m4a") or filename.endswith(".mp4"):
-        mime_type = "audio/mp4"
-    elif filename.endswith(".ogg"):
-        mime_type = "audio/ogg"
-    elif filename.endswith(".wav"):
-        mime_type = "audio/wav"
-    elif filename.endswith(".mp3"):
-        mime_type = "audio/mpeg"
-    else:
-        mime_type = "audio/webm"
+        return "audio/mp4"
+    if filename.endswith(".ogg"):
+        return "audio/ogg"
+    if filename.endswith(".wav"):
+        return "audio/wav"
+    if filename.endswith(".mp3"):
+        return "audio/mpeg"
+    return "audio/webm"
+
+
+def _transcribe_audio_sync(file_path: str) -> str:
+    if not os.path.exists(file_path):
+        raise RuntimeError("Audio file not found")
+
+    file_size = os.path.getsize(file_path)
+    if file_size <= 0:
+        raise RuntimeError("Audio file is empty")
+
+    mime_type = _get_audio_mime_type(file_path)
 
     with open(file_path, "rb") as audio_file:
         transcript = client.audio.transcriptions.create(
@@ -40,10 +48,26 @@ async def transcribe_audio(file_path: str) -> str:
 
 
 # --------------------------------------------------
+# AUDIO TRANSCRIPTION
+# --------------------------------------------------
+
+async def transcribe_audio(file_path: str) -> str:
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(_transcribe_audio_sync, file_path),
+            timeout=180
+        )
+    except asyncio.TimeoutError:
+        raise RuntimeError("Transcription timed out")
+    except Exception as e:
+        raise RuntimeError(f"Transcription service failed: {str(e)}")
+
+
+# --------------------------------------------------
 # GENERATE MEETING NOTE
 # --------------------------------------------------
 
-async def generate_note(transcript: str) -> dict:
+def _generate_note_sync(transcript: str) -> dict:
     transcript = transcript.strip()
 
     if not transcript:
@@ -127,7 +151,6 @@ Transcript:
     content = (response.choices[0].message.content or "").strip()
 
     try:
-        import json
         parsed = json.loads(content)
     except Exception:
         return {
@@ -154,11 +177,23 @@ Transcript:
     }
 
 
+async def generate_note(transcript: str) -> dict:
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(_generate_note_sync, transcript),
+            timeout=180
+        )
+    except asyncio.TimeoutError:
+        raise RuntimeError("Note generation timed out")
+    except Exception as e:
+        raise RuntimeError(f"Note generation failed: {str(e)}")
+
+
 # --------------------------------------------------
 # EDIT FINAL NOTE WITH AI
 # --------------------------------------------------
 
-async def edit_note(text: str, mode: str, instruction: str = "") -> str:
+def _edit_note_sync(text: str, mode: str, instruction: str = "") -> str:
     text = text.strip()
     mode = (mode or "").strip().lower()
     instruction = (instruction or "").strip()
@@ -217,3 +252,15 @@ Document:
     )
 
     return (response.choices[0].message.content or "").strip()
+
+
+async def edit_note(text: str, mode: str, instruction: str = "") -> str:
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(_edit_note_sync, text, mode, instruction),
+            timeout=180
+        )
+    except asyncio.TimeoutError:
+        raise RuntimeError("AI edit timed out")
+    except Exception as e:
+        raise RuntimeError(f"AI edit failed: {str(e)}")
