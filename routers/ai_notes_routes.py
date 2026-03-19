@@ -76,11 +76,17 @@ def _normalise_segments(raw_segments: Any) -> list[dict[str, Any]]:
         if not isinstance(segment, dict):
             continue
 
+        text = str(segment.get("text") or "").strip()
+        if not text:
+            continue
+
         normalised.append({
+            "id": str(segment.get("id") or f"seg_{index + 1}"),
             "speaker": str(segment.get("speaker") or f"Speaker {index + 1}"),
-            "text": str(segment.get("text") or "").strip(),
+            "text": text,
             "start": float(segment.get("start") or 0),
-            "end": float(segment.get("end") or 0)
+            "end": float(segment.get("end") or 0),
+            "type": str(segment.get("type") or "transcript.text.segment")
         })
 
     return normalised
@@ -101,9 +107,11 @@ def _build_history_note(note: dict[str, Any]) -> dict[str, Any]:
         "young_person_name": note.get("young_person_name") or "",
         "service_type": note.get("service_type") or "",
         "shift_type": note.get("shift_type") or "",
+        "meeting_format": note.get("meeting_format") or "",
         "record_author": note.get("record_author") or "",
         "record_date": note.get("record_date") or "",
         "location_context": note.get("location_context") or "",
+        "speaker_segments": _normalise_segments(note.get("speaker_segments") or []),
         "excerpt": excerpt
     }
 
@@ -117,11 +125,7 @@ async def transcribe_note_audio(
         raise HTTPException(status_code=400, detail="No file uploaded")
 
     filename = file.filename or ""
-    extension = os.path.splitext(filename)[1].lower()
-
-    if extension == "":
-        extension = ".webm"
-
+    extension = os.path.splitext(filename)[1].lower() or ".webm"
     allowed = [".webm", ".wav", ".mp3", ".m4a", ".mp4", ".ogg"]
 
     if extension not in allowed:
@@ -139,13 +143,12 @@ async def transcribe_note_audio(
 
         result = await transcribe_audio(temp_path)
 
-        if isinstance(result, dict):
-            transcript = _clean_text(result.get("transcript"))
-            segments = _normalise_segments(result.get("segments") or result.get("speaker_segments"))
-            return {"ok": True, "transcript": transcript, "segments": segments}
-
-        transcript = _clean_text(str(result or ""))
-        return {"ok": True, "transcript": transcript, "segments": []}
+        return {
+            "ok": True,
+            "transcript": _clean_text(result.get("transcript")),
+            "segments": _normalise_segments(result.get("segments") or []),
+            "duration": result.get("duration")
+        }
 
     except HTTPException:
         raise
@@ -170,19 +173,11 @@ async def generate_ai_note(
     try:
         result = await generate_note(transcript)
 
-        if isinstance(result, dict):
-            return {
-                "ok": True,
-                "note": result.get("note", ""),
-                "safeguarding_flag": result.get("safeguarding_flag", False),
-                "safeguarding_reason": result.get("safeguarding_reason", "")
-            }
-
         return {
             "ok": True,
-            "note": str(result or "").strip(),
-            "safeguarding_flag": False,
-            "safeguarding_reason": "No safeguarding concern identified."
+            "note": result.get("note", ""),
+            "safeguarding_flag": result.get("safeguarding_flag", False),
+            "safeguarding_reason": result.get("safeguarding_reason", "")
         }
 
     except Exception as e:
@@ -237,10 +232,12 @@ async def save_ai_note(
     template_name: str | None = Form(None),
     service_type: str | None = Form(None),
     shift_type: str | None = Form(None),
+    meeting_format: str | None = Form(None),
     record_author: str | None = Form(None),
     young_person_name: str | None = Form(None),
     record_date: str | None = Form(None),
     location_context: str | None = Form(None),
+    speaker_segments_json: str | None = Form(None),
 
     conn=Depends(get_db),
     current_user=Depends(get_current_user)
@@ -254,6 +251,7 @@ async def save_ai_note(
     template_name = _clean_text(template_name)
     service_type = _clean_text(service_type)
     shift_type = _clean_text(shift_type)
+    meeting_format = _clean_text(meeting_format)
     record_author = _clean_text(record_author)
     young_person_name = _clean_text(young_person_name)
     record_date = _clean_text(record_date)
@@ -261,12 +259,18 @@ async def save_ai_note(
 
     if not transcript:
         raise HTTPException(status_code=400, detail="Transcript required")
-
     if not ai_draft:
         raise HTTPException(status_code=400, detail="AI draft required")
-
     if not final_note:
         raise HTTPException(status_code=400, detail="Final note required")
+
+    speaker_segments = []
+    if speaker_segments_json:
+        import json
+        try:
+            speaker_segments = _normalise_segments(json.loads(speaker_segments_json))
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid speaker_segments_json")
 
     try:
         ensure_ai_meetings_table(conn)
@@ -275,24 +279,30 @@ async def save_ai_note(
         final_safeguarding_flag = _to_bool(safeguarding_flag)
         final_safeguarding_reason = _none_if_empty(safeguarding_reason)
 
+        payload = dict(
+            conn=conn,
+            user_id=current_user["user_id"],
+            transcript=transcript,
+            ai_draft=ai_draft,
+            final_note=final_note,
+            title=final_title,
+            safeguarding_flag=final_safeguarding_flag,
+            safeguarding_reason=final_safeguarding_reason,
+            template_name=_none_if_empty(template_name),
+            service_type=_none_if_empty(service_type),
+            shift_type=_none_if_empty(shift_type),
+            meeting_format=_none_if_empty(meeting_format),
+            record_author=_none_if_empty(record_author),
+            young_person_name=_none_if_empty(young_person_name),
+            record_date=_none_if_empty(record_date),
+            location_context=_none_if_empty(location_context),
+            speaker_segments=speaker_segments
+        )
+
         if note_id is not None:
             record = update_ai_meeting_note(
-                conn=conn,
                 note_id=note_id,
-                user_id=current_user["user_id"],
-                transcript=transcript,
-                ai_draft=ai_draft,
-                final_note=final_note,
-                title=final_title,
-                safeguarding_flag=final_safeguarding_flag,
-                safeguarding_reason=final_safeguarding_reason,
-                template_name=_none_if_empty(template_name),
-                service_type=_none_if_empty(service_type),
-                shift_type=_none_if_empty(shift_type),
-                record_author=_none_if_empty(record_author),
-                young_person_name=_none_if_empty(young_person_name),
-                record_date=_none_if_empty(record_date),
-                location_context=_none_if_empty(location_context)
+                **payload
             )
 
             if not record:
@@ -305,23 +315,7 @@ async def save_ai_note(
                 "updated": True
             }
 
-        record = insert_ai_meeting_note(
-            conn=conn,
-            user_id=current_user["user_id"],
-            transcript=transcript,
-            ai_draft=ai_draft,
-            final_note=final_note,
-            title=final_title,
-            safeguarding_flag=final_safeguarding_flag,
-            safeguarding_reason=final_safeguarding_reason,
-            template_name=_none_if_empty(template_name),
-            service_type=_none_if_empty(service_type),
-            shift_type=_none_if_empty(shift_type),
-            record_author=_none_if_empty(record_author),
-            young_person_name=_none_if_empty(young_person_name),
-            record_date=_none_if_empty(record_date),
-            location_context=_none_if_empty(location_context)
-        )
+        record = insert_ai_meeting_note(**payload)
 
         return {
             "ok": True,
