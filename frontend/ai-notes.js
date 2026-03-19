@@ -14,6 +14,11 @@ document.addEventListener("DOMContentLoaded", () => {
     refreshBtn: $("refreshBtn"),
     searchInput: $("searchInput"),
 
+    workspaceTabBtn: $("workspaceTabBtn"),
+    savedTabBtn: $("savedTabBtn"),
+    workspacePanel: $("workspacePanel"),
+    savedPanel: $("savedPanel"),
+
     title: $("title"),
     prompt: $("prompt"),
     transcript: $("transcript"),
@@ -183,6 +188,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function setActiveTab(tab) {
+    const workspace = tab === "workspace";
+    els.workspaceTabBtn?.classList.toggle("active", workspace);
+    els.savedTabBtn?.classList.toggle("active", !workspace);
+    els.workspacePanel?.classList.toggle("active", workspace);
+    els.savedPanel?.classList.toggle("active", !workspace);
+  }
+
   function openModal() {
     els.modal?.classList.remove("hide");
   }
@@ -251,7 +264,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         closeModal();
         statusText("Transcribing...");
-        els.transcribeBtn.disabled = false;
+        if (els.transcribeBtn) els.transcribeBtn.disabled = false;
+        setActiveTab("workspace");
         await transcribeAudio(true);
       };
 
@@ -453,11 +467,17 @@ document.addEventListener("DOMContentLoaded", () => {
       statusText("Saving...");
       setSaveState("idle", "Saving...");
 
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+
       const response = await fetch("/ai-notes/save", {
         method: "POST",
         headers: headers(),
-        body: form
+        body: form,
+        signal: controller.signal
       });
+
+      clearTimeout(timeout);
 
       const data = await safeJson(response);
 
@@ -478,8 +498,10 @@ document.addEventListener("DOMContentLoaded", () => {
       showToast("Note saved.");
       await loadSavedNotes();
     } catch (error) {
-      console.error(error);
-      alert("Could not connect to save service.");
+      console.error("Save error:", error);
+      alert(error.name === "AbortError"
+        ? "Save timed out."
+        : "The save connection was lost.");
       statusText("Ready");
       setSaveState("dirty", "Unsaved changes");
     }
@@ -538,7 +560,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </td>
         <td>${note.updated_at ? new Date(note.updated_at).toLocaleString("en-GB") : "—"}</td>
         <td>
-          <div class="editor-head-actions">
+          <div class="panel-toolbar wrap">
             <button class="btn btn-light btn-sm" data-edit="${note.id}">Edit</button>
             <button class="btn btn-danger btn-sm" data-del="${note.id}">Delete</button>
           </div>
@@ -560,6 +582,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setSaveState("idle", "Loaded");
     state.dirty = false;
     statusText("Editing saved note");
+    setActiveTab("workspace");
     showToast("Saved note loaded.");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -569,10 +592,16 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!confirmed) return;
 
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+
       const response = await fetch(`/ai-notes/${encodeURIComponent(id)}`, {
         method: "DELETE",
-        headers: headers()
+        headers: headers(),
+        signal: controller.signal
       });
+
+      clearTimeout(timeout);
 
       const data = await safeJson(response);
 
@@ -592,8 +621,10 @@ document.addEventListener("DOMContentLoaded", () => {
       showToast("Note deleted.");
       await loadSavedNotes();
     } catch (error) {
-      console.error(error);
-      alert("Could not delete note.");
+      console.error("Delete error:", error);
+      alert(error.name === "AbortError"
+        ? "Delete timed out."
+        : "The delete connection was lost.");
     }
   }
 
@@ -705,8 +736,8 @@ document.addEventListener("DOMContentLoaded", () => {
     showToast("Editor cleared.");
   }
 
-  function bindPromptChips() {
-    document.querySelectorAll(".prompt-chip").forEach(btn => {
+  function bindPromptButtons() {
+    document.querySelectorAll("[data-fill]").forEach(btn => {
       btn.addEventListener("click", () => {
         const value = btn.getAttribute("data-fill") || "";
         if (els.prompt) els.prompt.value = value;
@@ -727,6 +758,9 @@ document.addEventListener("DOMContentLoaded", () => {
     els.cancelBtn?.addEventListener("click", cancelRecording);
     els.stopBtn?.addEventListener("click", stopRecording);
 
+    els.workspaceTabBtn?.addEventListener("click", () => setActiveTab("workspace"));
+    els.savedTabBtn?.addEventListener("click", () => setActiveTab("saved"));
+
     els.transcribeBtn?.addEventListener("click", () => transcribeAudio(false));
     els.aiBtn?.addEventListener("click", () => applyAI(false));
     els.saveBtn?.addEventListener("click", saveNote);
@@ -745,7 +779,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (delId) deleteNote(delId);
     });
 
-    bindPromptChips();
+    bindPromptButtons();
     bindDirtyTracking();
 
     window.addEventListener("beforeunload", event => {
@@ -760,6 +794,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!ok) return;
 
     bindEvents();
+    setActiveTab("workspace");
     statusText("Ready");
     setSaveState("idle", "Not saved");
     await loadSavedNotes();
