@@ -1,51 +1,79 @@
-from fastapi import Header, HTTPException, Request, Depends
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-from auth.tokens import decode_session_token
 from db.connection import get_db
 from db.billing_db import ensure_billing_columns, get_user_billing_by_user_id
+from auth.tokens import decode_session_token
+
+security = HTTPBearer(auto_error=False)
 
 
-def get_bearer_token(authorization: str | None = Header(default=None)) -> str:
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+def get_bearer_token(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security)
+) -> str | None:
+    if not credentials:
+        return None
 
-    parts = authorization.split(" ", 1)
+    if credentials.scheme.lower() != "bearer":
+        return None
 
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise HTTPException(status_code=401, detail="Invalid authorization header")
+    return credentials.credentials
 
-    token = parts[1].strip()
 
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    return token
+def _get_user_by_id(conn, user_id: int):
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT *
+            FROM users
+            WHERE id = %s
+            LIMIT 1;
+            """,
+            (user_id,)
+        )
+        row = cur.fetchone()
+        return dict(row) if row else None
 
 
 def get_current_user(
     request: Request,
-    authorization: str | None = Header(default=None),
+    token: str | None = Depends(get_bearer_token),
     conn=Depends(get_db)
 ):
-    token = get_bearer_token(authorization)
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated"
+        )
 
     payload = decode_session_token(token)
-
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired session"
+        )
 
-    user_id = payload.get("sub")
-    email = payload.get("email")
-    role = payload.get("role")
-    home_id = payload.get("home_id")
-
-    if user_id is None:
-        raise HTTPException(status_code=401, detail="Invalid token payload")
+    raw_user_id = payload.get("sub")
+    if not raw_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid session payload"
+        )
 
     try:
-        user_id = int(user_id)
+        user_id = int(raw_user_id)
     except (TypeError, ValueError):
-        raise HTTPException(status_code=401, detail="Invalid token payload")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid session subject"
+        )
+
+    user = _get_user_by_id(conn, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found"
+        )
 
     ensure_billing_columns(conn)
     billing = get_user_billing_by_user_id(conn, user_id)
@@ -67,21 +95,23 @@ def get_current_user(
 
     is_exempt = any(request_path.startswith(prefix) for prefix in billing_exempt_prefixes)
 
-    is_active = bool(billing and billing.get("is_active"))
+    if not is_exempt:
+        is_active = bool(billing and billing.get("is_active"))
+        if not is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Subscription required"
+            )
 
-    if not is_exempt and not is_active:
-        raise HTTPException(status_code=403, detail="Subscription required")
-
-    return {
-        "id": user_id,
-        "user_id": user_id,
-        "email": email,
-        "role": role,
-        "home_id": home_id,
-        "is_active": is_active,
+    enriched_user = {
+        **user,
+        "user_id": user.get("id"),
+        "email": payload.get("email") or user.get("email"),
+        "role": payload.get("role") or user.get("role"),
+        "home_id": payload.get("home_id") if payload.get("home_id") is not None else user.get("home_id"),
+        "is_active": bool(billing and billing.get("is_active")),
         "subscription_status": billing.get("subscription_status") if billing else "inactive",
         "plan_name": billing.get("plan_name") if billing else None,
-        "stripe_customer_id": billing.get("stripe_customer_id") if billing else None,
-        "stripe_subscription_id": billing.get("stripe_subscription_id") if billing else None,
-        "current_period_end": billing.get("current_period_end") if billing else None,
     }
+
+    return enriched_user
