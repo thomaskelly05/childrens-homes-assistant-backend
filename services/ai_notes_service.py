@@ -68,9 +68,10 @@ def _normalise_speaker_segments(raw_segments: Any) -> list[dict[str, Any]]:
     return normalised
 
 
-def _speaker_text_from_segments(segments: list[dict[str, Any]]) -> str:
+def _speaker_text_from_segments(segments: list[dict[str, Any]], speaker_map: dict[str, str] | None = None) -> str:
+    speaker_map = speaker_map or {}
     return "\n\n".join(
-        f"{segment['speaker']}: {segment['text']}"
+        f"{speaker_map.get(segment['speaker'], segment['speaker'])}: {segment['text']}"
         for segment in segments
         if segment.get("text")
     ).strip()
@@ -305,3 +306,77 @@ async def edit_note(text: str, mode: str, instruction: str = "") -> str:
         raise RuntimeError("AI edit timed out")
     except Exception as e:
         raise RuntimeError(f"AI edit failed: {str(e)}")
+
+
+def _extract_actions_sync(text: str) -> list[dict[str, Any]]:
+    text = _truncate_text(text)
+
+    if not text:
+        return []
+
+    system_prompt = """
+You extract structured action points from professional meeting notes.
+
+Rules:
+- return valid JSON only
+- output must be an object with one key: actions
+- actions must be a list of objects
+- each action object must have:
+  - title
+  - owner
+  - due
+  - priority
+- if owner or due is unknown, use "Not specified"
+- priority must be one of: low, medium, high
+- do not invent facts
+"""
+
+    user_prompt = f"""
+Extract action points from this meeting note.
+
+Meeting note:
+{text}
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        temperature=0.1,
+        response_format={"type": "json_object"}
+    )
+
+    content = _normalise_text(response.choices[0].message.content)
+
+    try:
+        parsed = json.loads(content)
+        actions = parsed.get("actions") or []
+        if not isinstance(actions, list):
+            return []
+        cleaned = []
+        for item in actions:
+            if not isinstance(item, dict):
+                continue
+            cleaned.append({
+                "title": _normalise_text(item.get("title")) or "Untitled action",
+                "owner": _normalise_text(item.get("owner")) or "Not specified",
+                "due": _normalise_text(item.get("due")) or "Not specified",
+                "priority": (_normalise_text(item.get("priority")) or "medium").lower()
+            })
+        return cleaned[:20]
+    except Exception:
+        return []
+
+
+async def extract_actions(text: str) -> list[dict[str, Any]]:
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(_extract_actions_sync, text),
+            timeout=120
+        )
+    except asyncio.TimeoutError:
+        raise RuntimeError("Action extraction timed out")
+    except Exception as e:
+        raise RuntimeError(f"Action extraction failed: {str(e)}")
