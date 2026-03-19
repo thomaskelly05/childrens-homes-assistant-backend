@@ -1,9 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
     const ACCESS_TOKEN_KEY = "access_token";
-    const LOCAL_TEMPLATE_KEY = "indicare_custom_templates_v7";
-    const LOCAL_DRAFT_KEY = "indicare_ai_notes_draft_v7";
-    const LOCAL_HISTORY_KEY = "indicare_ai_notes_history_v7";
-    const LOCAL_VERSIONS_KEY = "indicare_ai_notes_versions_v3";
+    const LOCAL_TEMPLATE_KEY = "indicare_custom_templates_v8";
+    const LOCAL_DRAFT_KEY = "indicare_ai_notes_draft_v8";
+    const LOCAL_HISTORY_KEY = "indicare_ai_notes_history_v8";
+    const LOCAL_VERSIONS_KEY = "indicare_ai_notes_versions_v4";
 
     const builtInTemplates = [
         {
@@ -184,6 +184,7 @@ document.addEventListener("DOMContentLoaded", () => {
         resumeRecordingBtn: document.getElementById("resumeRecordingBtn"),
         transcribeBtn: document.getElementById("transcribeBtn"),
         generateBtn: document.getElementById("generateBtn"),
+        reapplyTemplateBtn: document.getElementById("reapplyTemplateBtn"),
         insertTemplateBtn: document.getElementById("insertTemplateBtn"),
 
         saveBtn: document.getElementById("saveBtn"),
@@ -214,6 +215,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         serviceTypeEl: document.getElementById("serviceType"),
         shiftTypeEl: document.getElementById("shiftType"),
+        meetingFormatEl: document.getElementById("meetingFormat"),
+        workflowMeetingFormatEl: document.getElementById("workflowMeetingFormat"),
         recordAuthorEl: document.getElementById("recordAuthor"),
         youngPersonNameEl: document.getElementById("youngPersonName"),
         meetingDateEl: document.getElementById("meetingDate"),
@@ -232,6 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
         safeguardingTextEl: document.getElementById("safeguardingText"),
 
         sidebarTemplateTextEl: document.getElementById("sidebarTemplateText"),
+        sidebarMeetingFormatTextEl: document.getElementById("sidebarMeetingFormatText"),
         sidebarSaveTextEl: document.getElementById("sidebarSaveText"),
 
         historyListEl: document.getElementById("historyList"),
@@ -262,9 +266,13 @@ document.addEventListener("DOMContentLoaded", () => {
         workflowModalEl: document.getElementById("workflowModal"),
         closeWorkflowModalBtn: document.getElementById("closeWorkflowModalBtn"),
         workflowTemplateTextEl: document.getElementById("workflowTemplateText"),
+        workflowMeetingFormatTextEl: document.getElementById("workflowMeetingFormatText"),
         workflowStatusTextEl: document.getElementById("workflowStatusText"),
         workflowSaveTextEl: document.getElementById("workflowSaveText"),
         workflowWordCountEl: document.getElementById("workflowWordCount"),
+
+        meetingModeOnlineBtn: document.getElementById("meetingModeOnlineBtn"),
+        meetingModeInPersonBtn: document.getElementById("meetingModeInPersonBtn"),
 
         stepRecordEl: document.getElementById("stepRecord"),
         stepTranscribeEl: document.getElementById("stepTranscribe"),
@@ -329,7 +337,10 @@ document.addEventListener("DOMContentLoaded", () => {
         serverHistoryLoaded: false,
         activeTab: "create",
         speakerSegments: [],
-        filteredHistory: []
+        filteredHistory: [],
+        autoRunAfterStop: true,
+        isGeneratingINotes: false,
+        meetingFormat: "Not specified"
     };
 
     function getAccessToken() {
@@ -557,6 +568,29 @@ document.addEventListener("DOMContentLoaded", () => {
         return [...builtInTemplates, ...state.customTemplates];
     }
 
+    function setDefaultAiInstruction(force = false) {
+        const template = getSelectedTemplate();
+        if (!els.aiInstructionEl || !template) return;
+
+        if (!force && els.aiInstructionEl.value.trim()) return;
+
+        const lower = template.name.toLowerCase();
+
+        if (lower.includes("handover")) {
+            els.aiInstructionEl.value = "Create a concise, professional shift handover with clear risks, actions and priorities.";
+        } else if (lower.includes("incident")) {
+            els.aiInstructionEl.value = "Create a factual incident record with clear chronology, staff response, outcome and follow-up.";
+        } else if (lower.includes("safeguarding")) {
+            els.aiInstructionEl.value = "Create a safeguarding-conscious record separating facts, observations, actions taken and next steps.";
+        } else if (lower.includes("supervision")) {
+            els.aiInstructionEl.value = "Create a professional supervision summary with reflection, strengths, development areas and agreed actions.";
+        } else if (lower.includes("key-work") || lower.includes("keywork")) {
+            els.aiInstructionEl.value = "Create a person-centred key-work session note reflecting the young person's voice, wishes and feelings.";
+        } else {
+            els.aiInstructionEl.value = "Create a professional, factual, person-centred care note using the selected template.";
+        }
+    }
+
     function populateTemplates() {
         if (!els.templateSelectEl) return;
         const currentValue = els.templateSelectEl.value;
@@ -570,6 +604,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         updateSelectedTemplateUI();
+        setDefaultAiInstruction();
     }
 
     function getSelectedTemplate() {
@@ -582,6 +617,43 @@ document.addEventListener("DOMContentLoaded", () => {
         const name = template?.name || "—";
         if (els.workflowTemplateTextEl) els.workflowTemplateTextEl.textContent = name;
         if (els.sidebarTemplateTextEl) els.sidebarTemplateTextEl.textContent = name;
+    }
+
+    function setMeetingFormat(value) {
+        const nextValue = value || "Not specified";
+        state.meetingFormat = nextValue;
+
+        if (els.meetingFormatEl) {
+            els.meetingFormatEl.value = nextValue;
+        }
+
+        if (els.workflowMeetingFormatEl) {
+            els.workflowMeetingFormatEl.value = nextValue;
+        }
+
+        if (els.workflowMeetingFormatTextEl) {
+            els.workflowMeetingFormatTextEl.textContent = nextValue;
+        }
+
+        if (els.sidebarMeetingFormatTextEl) {
+            els.sidebarMeetingFormatTextEl.textContent = nextValue;
+        }
+
+        if (els.meetingModeOnlineBtn) {
+            els.meetingModeOnlineBtn.classList.toggle("is-selected", nextValue === "Online meeting");
+        }
+
+        if (els.meetingModeInPersonBtn) {
+            els.meetingModeInPersonBtn.classList.toggle("is-selected", nextValue === "Meeting in person");
+        }
+    }
+
+    function syncMeetingFormatFromMainForm() {
+        setMeetingFormat(els.meetingFormatEl?.value || "Not specified");
+    }
+
+    function syncMeetingFormatFromWorkflow() {
+        setMeetingFormat(els.workflowMeetingFormatEl?.value || "Not specified");
     }
 
     function deriveTitleFromText(text) {
@@ -605,6 +677,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return [
             `Service type: ${els.serviceTypeEl?.value || "Not specified"}`,
             `Shift or context: ${els.shiftTypeEl?.value || "Not specified"}`,
+            `Meeting format: ${state.meetingFormat || els.meetingFormatEl?.value || "Not specified"}`,
             `Recorded by: ${els.recordAuthorEl?.value.trim() || "Not specified"}`,
             `Person supported / young person: ${els.youngPersonNameEl?.value.trim() || "Not specified"}`,
             `Record date: ${els.meetingDateEl?.value || "Not specified"}`,
@@ -937,6 +1010,7 @@ document.addEventListener("DOMContentLoaded", () => {
             templateId: els.templateSelectEl?.value || "",
             serviceType: els.serviceTypeEl?.value || "",
             shiftType: els.shiftTypeEl?.value || "",
+            meetingFormat: state.meetingFormat || els.meetingFormatEl?.value || "Not specified",
             recordAuthor: els.recordAuthorEl?.value || "",
             youngPersonName: els.youngPersonNameEl?.value || "",
             meetingDate: els.meetingDateEl?.value || "",
@@ -967,6 +1041,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (els.locationContextEl) els.locationContextEl.value = draft.locationContext || "";
             if (els.serviceTypeEl && draft.serviceType) els.serviceTypeEl.value = draft.serviceType;
             if (els.shiftTypeEl && draft.shiftType) els.shiftTypeEl.value = draft.shiftType;
+            setMeetingFormat(draft.meetingFormat || "Not specified");
 
             if (draft.templateId && els.templateSelectEl?.querySelector(`option[value="${draft.templateId}"]`)) {
                 els.templateSelectEl.value = draft.templateId;
@@ -1024,7 +1099,8 @@ document.addEventListener("DOMContentLoaded", () => {
             status: item.status || (item.isLocalOnly ? "Draft" : "Saved"),
             isLocalOnly: Boolean(item.isLocalOnly),
             serviceType: item.serviceType || item.service_type || "",
-            shiftType: item.shiftType || item.shift_type || ""
+            shiftType: item.shiftType || item.shift_type || "",
+            meetingFormat: item.meetingFormat || item.meeting_format || "Not specified"
         };
     }
 
@@ -1052,7 +1128,8 @@ document.addEventListener("DOMContentLoaded", () => {
             status: "Saved",
             isLocalOnly: item.isLocalOnly || false,
             serviceType: item.serviceType || els.serviceTypeEl?.value || "",
-            shiftType: item.shiftType || els.shiftTypeEl?.value || ""
+            shiftType: item.shiftType || els.shiftTypeEl?.value || "",
+            meetingFormat: item.meetingFormat || state.meetingFormat || "Not specified"
         });
     }
 
@@ -1102,7 +1179,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 item.personName,
                 item.updatedAt,
                 item.shiftType,
-                item.serviceType
+                item.serviceType,
+                item.meetingFormat
             ].join(" ").toLowerCase();
 
             const matchesSearch = !search || haystack.includes(search);
@@ -1167,6 +1245,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (els.finalNoteEl) els.finalNoteEl.value = item.finalNote || "";
         if (els.aiDraftEl) els.aiDraftEl.value = item.finalNote || "";
         if (els.youngPersonNameEl) els.youngPersonNameEl.value = item.personName || "";
+        setMeetingFormat(item.meetingFormat || "Not specified");
 
         state.isHydrating = false;
 
@@ -1565,11 +1644,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (els.transcribeBtn) els.transcribeBtn.disabled = false;
 
                 resetRecordingUi();
-                openWorkflowModal();
-                setStatus("success", "Recording complete");
                 setWorkflowStep("record");
                 snapshotVersion("Recording captured");
-                showToast("Recording complete. AI workspace opened.");
+
+                if (state.autoRunAfterStop) {
+                    runINotesFlow();
+                } else {
+                    openWorkflowModal();
+                    setStatus("success", "Recording complete");
+                    showToast("Recording complete.");
+                }
             };
 
             state.mediaRecorder.onerror = () => {
@@ -1650,7 +1734,34 @@ document.addEventListener("DOMContentLoaded", () => {
         return [];
     }
 
-    async function transcribeAudio() {
+    async function runINotesFlow() {
+        if (state.isGeneratingINotes) return;
+        state.isGeneratingINotes = true;
+
+        try {
+            openWorkflowModal();
+            setStatus("processing", "Creating I-Notes");
+
+            if (els.workflowStatusTextEl) {
+                els.workflowStatusTextEl.textContent = "Transcribing and generating note";
+            }
+
+            await transcribeAudio(true);
+            await generateWorkingDocument(true);
+
+            setWorkflowStep("refine");
+            setStatus("success", "I-Notes ready");
+            showToast("I-Notes ready.");
+        } catch (error) {
+            console.error("I-Notes flow error:", error);
+            setStatus("idle", "Ready");
+            alert("The recording was captured, but the draft could not be completed automatically.");
+        } finally {
+            state.isGeneratingINotes = false;
+        }
+    }
+
+    async function transcribeAudio(silent = false) {
         if (!state.recordedBlob) {
             alert("Please record audio first.");
             return;
@@ -1666,7 +1777,9 @@ document.addEventListener("DOMContentLoaded", () => {
         form.append("file", state.recordedBlob, filename);
 
         try {
-            setButtonLoading(els.transcribeBtn, true, "Transcribing...", "Transcribe recording");
+            if (!silent) {
+                setButtonLoading(els.transcribeBtn, true, "Transcribing...", "Transcribe recording");
+            }
             setStatus("processing", "Transcribing recording");
 
             const response = await fetch("/ai-notes/transcribe", {
@@ -1710,17 +1823,21 @@ document.addEventListener("DOMContentLoaded", () => {
             setStatus("success", "Transcript ready");
             setWorkflowStep("transcribe");
             snapshotVersion("Transcript created");
-            showToast("Transcription complete.");
+            if (!silent) {
+                showToast("Transcription complete.");
+            }
         } catch (error) {
             console.error("Transcription error:", error);
             alert("Could not connect to the transcription service.");
             setStatus("idle", "Ready");
         } finally {
-            setButtonLoading(els.transcribeBtn, false, "Transcribing...", "Transcribe recording");
+            if (!silent) {
+                setButtonLoading(els.transcribeBtn, false, "Transcribing...", "Transcribe recording");
+            }
         }
     }
 
-    async function generateWorkingDocument() {
+    async function generateWorkingDocument(silent = false) {
         const transcript = els.transcriptEl?.value.trim();
 
         if (!transcript) {
@@ -1735,7 +1852,9 @@ document.addEventListener("DOMContentLoaded", () => {
         form.append("instruction", buildTemplateInstruction(template));
 
         try {
-            setButtonLoading(els.generateBtn, true, "Generating...", "Generate care document");
+            if (!silent) {
+                setButtonLoading(els.generateBtn, true, "Creating...", "Create note");
+            }
             setStatus("processing", "Generating document");
 
             const response = await fetch("/ai-notes/edit", {
@@ -1768,13 +1887,17 @@ document.addEventListener("DOMContentLoaded", () => {
             setStatus("success", "Document generated");
             setWorkflowStep("generate");
             snapshotVersion("Document generated");
-            showToast("Care document generated.");
+            if (!silent) {
+                showToast("Care document generated.");
+            }
         } catch (error) {
             console.error("Generate document error:", error);
             alert("Could not connect to the AI service.");
             setStatus("idle", "Ready");
         } finally {
-            setButtonLoading(els.generateBtn, false, "Generating...", "Generate care document");
+            if (!silent) {
+                setButtonLoading(els.generateBtn, false, "Creating...", "Create note");
+            }
         }
     }
 
@@ -1821,7 +1944,7 @@ document.addEventListener("DOMContentLoaded", () => {
         form.append("instruction", buildAiInstruction(instruction));
 
         try {
-            setButtonLoading(els.applyAiEditBtn, true, "Applying...", "Apply AI change");
+            setButtonLoading(els.applyAiEditBtn, true, "Applying...", "Improve note");
             setStatus("processing", "Applying AI changes");
 
             const response = await fetch("/ai-notes/edit", {
@@ -1853,7 +1976,7 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("Could not connect to the AI service.");
             setStatus("idle", "Ready");
         } finally {
-            setButtonLoading(els.applyAiEditBtn, false, "Applying...", "Apply AI change");
+            setButtonLoading(els.applyAiEditBtn, false, "Applying...", "Improve note");
         }
     }
 
@@ -2069,6 +2192,52 @@ document.addEventListener("DOMContentLoaded", () => {
         );
     }
 
+    async function reapplySelectedTemplate() {
+        const currentText = els.finalNoteEl?.value.trim() || els.transcriptEl?.value.trim();
+
+        if (!currentText) {
+            alert("There is no content to restructure.");
+            return;
+        }
+
+        const template = getSelectedTemplate();
+        const form = new FormData();
+        form.append("text", currentText);
+        form.append("mode", "custom");
+        form.append("instruction", buildTemplateInstruction(template));
+
+        try {
+            setStatus("processing", "Applying template");
+
+            const response = await fetch("/ai-notes/edit", {
+                method: "POST",
+                headers: getAuthHeaders(),
+                body: form
+            });
+
+            const data = await safeJson(response);
+
+            if (!response.ok) {
+                if (handleUnauthorized(response, data)) return;
+                alert(data.detail || "Could not apply the selected template.");
+                return;
+            }
+
+            state.previousFinalNote = els.finalNoteEl?.value || "";
+            if (els.finalNoteEl) els.finalNoteEl.value = data.text || currentText;
+
+            analyseDocument();
+            markDirty();
+            setStatus("success", "Template applied");
+            snapshotVersion("Template re-applied");
+            showToast("Selected template applied.");
+        } catch (error) {
+            console.error("Reapply template error:", error);
+            alert("Could not connect to the AI service.");
+            setStatus("idle", "Ready");
+        }
+    }
+
     async function saveDocument() {
         const transcript = els.transcriptEl?.value.trim();
         const finalNote = els.finalNoteEl?.value.trim();
@@ -2092,6 +2261,7 @@ document.addEventListener("DOMContentLoaded", () => {
         form.append("template_name", getSelectedTemplate()?.name || "");
         form.append("service_type", els.serviceTypeEl?.value || "");
         form.append("shift_type", els.shiftTypeEl?.value || "");
+        form.append("meeting_format", state.meetingFormat || els.meetingFormatEl?.value || "");
         form.append("record_author", els.recordAuthorEl?.value || "");
         form.append("young_person_name", els.youngPersonNameEl?.value || "");
         form.append("record_date", els.meetingDateEl?.value || "");
@@ -2129,7 +2299,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 transcript,
                 personName: els.youngPersonNameEl?.value?.trim() || "",
                 serviceType: els.serviceTypeEl?.value || "",
-                shiftType: els.shiftTypeEl?.value || ""
+                shiftType: els.shiftTypeEl?.value || "",
+                meetingFormat: state.meetingFormat || "Not specified"
             });
 
             applyHistoryFiltersAndRender();
@@ -2235,6 +2406,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         Template: ${escapeHtml(getSelectedTemplate()?.name || "")}<br>
                         Service: ${escapeHtml(els.serviceTypeEl?.value || "")}<br>
                         Shift / Context: ${escapeHtml(els.shiftTypeEl?.value || "")}<br>
+                        Meeting format: ${escapeHtml(state.meetingFormat || "Not specified")}<br>
                         Recorded by: ${escapeHtml(els.recordAuthorEl?.value || "")}<br>
                         Record date: ${escapeHtml(els.meetingDateEl?.value || "")}<br>
                         Location: ${escapeHtml(els.locationContextEl?.value || "")}
@@ -2259,6 +2431,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (els.aiDraftEl) els.aiDraftEl.value = "";
         if (els.aiInstructionEl) els.aiInstructionEl.value = "";
         if (els.noteTitleEl) els.noteTitleEl.value = "";
+        setMeetingFormat("Not specified");
         state.isHydrating = false;
 
         state.previousFinalNote = "";
@@ -2362,6 +2535,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         young_person_name: item.young_person_name,
                         service_type: item.service_type,
                         shift_type: item.shift_type,
+                        meeting_format: item.meeting_format,
                         status: "Saved",
                         isLocalOnly: false
                     })),
@@ -2412,6 +2586,8 @@ document.addEventListener("DOMContentLoaded", () => {
             els.templateSelectEl,
             els.serviceTypeEl,
             els.shiftTypeEl,
+            els.meetingFormatEl,
+            els.workflowMeetingFormatEl,
             els.recordAuthorEl,
             els.youngPersonNameEl,
             els.meetingDateEl,
@@ -2433,6 +2609,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 analyseDocument();
                 markDirty();
             });
+        });
+
+        els.templateSelectEl?.addEventListener("change", () => {
+            setDefaultAiInstruction();
         });
     }
 
@@ -2456,6 +2636,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (useId && els.templateSelectEl) {
                 els.templateSelectEl.value = useId;
                 updateSelectedTemplateUI();
+                setDefaultAiInstruction(true);
                 closeModal(els.templateModalEl);
                 markDirty();
                 showToast("Template selected.");
@@ -2565,8 +2746,9 @@ document.addEventListener("DOMContentLoaded", () => {
         els.resumeRecordingBtn?.addEventListener("click", resumeRecording);
 
         els.closeWorkflowModalBtn?.addEventListener("click", () => closeWorkflowModal(false));
-        els.transcribeBtn?.addEventListener("click", transcribeAudio);
-        els.generateBtn?.addEventListener("click", generateWorkingDocument);
+        els.transcribeBtn?.addEventListener("click", () => transcribeAudio(false));
+        els.generateBtn?.addEventListener("click", () => generateWorkingDocument(false));
+        els.reapplyTemplateBtn?.addEventListener("click", reapplySelectedTemplate);
         els.insertTemplateBtn?.addEventListener("click", insertBlankTemplate);
 
         els.applyAiEditBtn?.addEventListener("click", applyAiChange);
@@ -2591,6 +2773,26 @@ document.addEventListener("DOMContentLoaded", () => {
         els.refreshHistoryBtn?.addEventListener("click", loadSavedHistoryFromServer);
         els.toggleTranscriptBtn?.addEventListener("click", toggleTranscriptVisibility);
         els.toggleSpeakerViewBtn?.addEventListener("click", toggleSpeakerView);
+
+        els.meetingFormatEl?.addEventListener("change", () => {
+            syncMeetingFormatFromMainForm();
+            markDirty();
+        });
+
+        els.workflowMeetingFormatEl?.addEventListener("change", () => {
+            syncMeetingFormatFromWorkflow();
+            markDirty();
+        });
+
+        els.meetingModeOnlineBtn?.addEventListener("click", () => {
+            setMeetingFormat("Online meeting");
+            markDirty();
+        });
+
+        els.meetingModeInPersonBtn?.addEventListener("click", () => {
+            setMeetingFormat("Meeting in person");
+            markDirty();
+        });
 
         bindTextInputs();
         bindTemplateEvents();
@@ -2651,12 +2853,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
         loadLocalTemplates();
         populateTemplates();
+        setMeetingFormat("Not specified");
         renderTemplateBuilderSections();
         renderSavedTemplates();
         renderExtractedActions();
         renderVersions();
         renderSpeakerUI();
         restoreLocalDraft();
+
+        if (!state.meetingFormat || state.meetingFormat === "Not specified") {
+            syncMeetingFormatFromMainForm();
+        }
+
         applyHistoryFiltersAndRender();
 
         if (els.transcribeBtn) els.transcribeBtn.disabled = true;
