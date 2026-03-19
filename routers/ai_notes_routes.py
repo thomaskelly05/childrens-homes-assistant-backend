@@ -13,7 +13,7 @@ from db.ai_notes_db import (
     update_ai_meeting_note,
     list_ai_meeting_notes,
     get_ai_meeting_note,
-    delete_ai_meeting_note
+    soft_delete_ai_meeting_note
 )
 from db.ai_note_versions_db import (
     ensure_ai_note_versions_table,
@@ -24,7 +24,8 @@ from db.ai_note_versions_db import (
 from services.ai_notes_service import (
     transcribe_audio,
     generate_note,
-    edit_note
+    edit_note,
+    extract_actions
 )
 from auth.dependencies import get_current_user
 
@@ -113,6 +114,32 @@ def _parse_speaker_segments_json(value: str | None) -> list[dict[str, Any]]:
     return _normalise_segments(parsed)
 
 
+def _parse_speaker_map_json(value: str | None) -> dict[str, str]:
+    if not value:
+        return {}
+    try:
+        parsed = json.loads(value)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid speaker_map_json")
+
+    if not isinstance(parsed, dict):
+        raise HTTPException(status_code=400, detail="speaker_map_json must be an object")
+
+    cleaned: dict[str, str] = {}
+    for key, val in parsed.items():
+        k = str(key).strip()
+        v = str(val).strip()
+        if k and v:
+            cleaned[k] = v
+    return cleaned
+
+
+def _normalise_note_status(value: str | None) -> str:
+    allowed = {"draft", "final", "approved"}
+    cleaned = _clean_text(value).lower() or "draft"
+    return cleaned if cleaned in allowed else "draft"
+
+
 def _build_history_note(note: dict[str, Any]) -> dict[str, Any]:
     final_note = note.get("final_note") or note.get("ai_draft") or ""
     excerpt = final_note[:180]
@@ -133,6 +160,8 @@ def _build_history_note(note: dict[str, Any]) -> dict[str, Any]:
         "record_date": note.get("record_date") or "",
         "location_context": note.get("location_context") or "",
         "speaker_segments": _normalise_segments(note.get("speaker_segments") or []),
+        "speaker_map": note.get("speaker_map") or {},
+        "note_status": note.get("note_status") or "draft",
         "excerpt": excerpt
     }
 
@@ -147,6 +176,17 @@ def _build_version_record(version: dict[str, Any]) -> dict[str, Any]:
         "final_note": version.get("final_note") or "",
         "speaker_segments": _normalise_segments(version.get("speaker_segments") or []),
         "created_at": version.get("created_at")
+    }
+
+
+@router.get("/diagnostics")
+async def diagnostics(current_user=Depends(get_current_user)):
+    return {
+        "ok": True,
+        "message": "I-Notes diagnostics healthy",
+        "user_id": current_user["user_id"],
+        "upload_dir_exists": os.path.isdir(UPLOAD_DIR),
+        "openai_key_present": bool(os.getenv("OPENAI_API_KEY"))
     }
 
 
@@ -261,6 +301,27 @@ async def edit_ai_note(
         raise HTTPException(status_code=500, detail=f"AI edit failed: {str(e)}")
 
 
+@router.post("/extract-actions")
+async def extract_ai_note_actions(
+    text: str = Form(...),
+    current_user=Depends(get_current_user)
+):
+    text = _clamp_text(text)
+
+    if not text:
+        raise HTTPException(status_code=400, detail="Text required")
+
+    try:
+        actions = await extract_actions(text)
+        return {
+            "ok": True,
+            "actions": actions
+        }
+    except Exception as e:
+        print("EXTRACT ACTIONS ERROR:", str(e))
+        raise HTTPException(status_code=500, detail=f"Action extraction failed: {str(e)}")
+
+
 @router.post("/save")
 async def save_ai_note(
     transcript: str = Form(...),
@@ -280,6 +341,8 @@ async def save_ai_note(
     record_date: str | None = Form(None),
     location_context: str | None = Form(None),
     speaker_segments_json: str | None = Form(None),
+    speaker_map_json: str | None = Form(None),
+    note_status: str | None = Form(None),
 
     conn=Depends(get_db),
     current_user=Depends(get_current_user)
@@ -299,6 +362,8 @@ async def save_ai_note(
     record_date = _clean_text(record_date)
     location_context = _clean_text(location_context)
     speaker_segments = _parse_speaker_segments_json(speaker_segments_json)
+    speaker_map = _parse_speaker_map_json(speaker_map_json)
+    final_note_status = _normalise_note_status(note_status)
 
     if not transcript:
         raise HTTPException(status_code=400, detail="Transcript required")
@@ -332,7 +397,9 @@ async def save_ai_note(
             young_person_name=_none_if_empty(young_person_name),
             record_date=_none_if_empty(record_date),
             location_context=_none_if_empty(location_context),
-            speaker_segments=speaker_segments
+            speaker_segments=speaker_segments,
+            speaker_map=speaker_map,
+            note_status=final_note_status
         )
 
         if note_id is not None:
@@ -547,7 +614,9 @@ async def restore_note_version(
             young_person_name=note.get("young_person_name"),
             record_date=note.get("record_date"),
             location_context=note.get("location_context"),
-            speaker_segments=version.get("speaker_segments") or []
+            speaker_segments=version.get("speaker_segments") or [],
+            speaker_map=note.get("speaker_map") or {},
+            note_status=note.get("note_status") or "draft"
         )
 
         return {
@@ -572,7 +641,7 @@ async def delete_note(
     try:
         ensure_ai_meetings_table(conn)
 
-        deleted = delete_ai_meeting_note(
+        deleted = soft_delete_ai_meeting_note(
             conn=conn,
             note_id=note_id,
             user_id=current_user["user_id"]
