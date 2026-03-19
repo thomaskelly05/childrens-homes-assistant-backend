@@ -18,6 +18,7 @@ def ensure_ai_meetings_table(conn) -> None:
                 template_name TEXT,
                 service_type TEXT,
                 shift_type TEXT,
+                meeting_format TEXT,
                 record_author TEXT,
                 young_person_name TEXT,
                 record_date TEXT,
@@ -81,6 +82,13 @@ def ensure_ai_meetings_table(conn) -> None:
         cur.execute(
             """
             ALTER TABLE ai_meeting_notes
+            ADD COLUMN IF NOT EXISTS meeting_format TEXT;
+            """
+        )
+
+        cur.execute(
+            """
+            ALTER TABLE ai_meeting_notes
             ADD COLUMN IF NOT EXISTS record_author TEXT;
             """
         )
@@ -135,6 +143,7 @@ def insert_ai_meeting_note(
     template_name: str | None = None,
     service_type: str | None = None,
     shift_type: str | None = None,
+    meeting_format: str | None = None,
     record_author: str | None = None,
     young_person_name: str | None = None,
     record_date: str | None = None,
@@ -154,12 +163,13 @@ def insert_ai_meeting_note(
                 template_name,
                 service_type,
                 shift_type,
+                meeting_format,
                 record_author,
                 young_person_name,
                 record_date,
                 location_context
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING
                 id,
                 user_id,
@@ -172,6 +182,7 @@ def insert_ai_meeting_note(
                 template_name,
                 service_type,
                 shift_type,
+                meeting_format,
                 record_author,
                 young_person_name,
                 record_date,
@@ -190,6 +201,7 @@ def insert_ai_meeting_note(
                 template_name,
                 service_type,
                 shift_type,
+                meeting_format,
                 record_author,
                 young_person_name,
                 record_date,
@@ -215,6 +227,7 @@ def update_ai_meeting_note(
     template_name: str | None = None,
     service_type: str | None = None,
     shift_type: str | None = None,
+    meeting_format: str | None = None,
     record_author: str | None = None,
     young_person_name: str | None = None,
     record_date: str | None = None,
@@ -234,6 +247,7 @@ def update_ai_meeting_note(
                 template_name = %s,
                 service_type = %s,
                 shift_type = %s,
+                meeting_format = %s,
                 record_author = %s,
                 young_person_name = %s,
                 record_date = %s,
@@ -253,6 +267,7 @@ def update_ai_meeting_note(
                 template_name,
                 service_type,
                 shift_type,
+                meeting_format,
                 record_author,
                 young_person_name,
                 record_date,
@@ -270,6 +285,7 @@ def update_ai_meeting_note(
                 template_name,
                 service_type,
                 shift_type,
+                meeting_format,
                 record_author,
                 young_person_name,
                 record_date,
@@ -304,6 +320,7 @@ def list_ai_meeting_notes(
                 template_name,
                 service_type,
                 shift_type,
+                meeting_format,
                 record_author,
                 young_person_name,
                 record_date,
@@ -342,6 +359,7 @@ def get_ai_meeting_note(
                 template_name,
                 service_type,
                 shift_type,
+                meeting_format,
                 record_author,
                 young_person_name,
                 record_date,
