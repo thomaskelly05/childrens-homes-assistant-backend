@@ -51,7 +51,7 @@ function bindChatInput() {
         input.focus();
     });
 
-    document.querySelectorAll(".prompt-chip").forEach((chip) => {
+    document.querySelectorAll(".ica-prompt-chip").forEach((chip) => {
         chip.addEventListener("click", () => {
             input.value = chip.textContent?.trim() || "";
             autoResizeTextarea(input);
@@ -61,11 +61,8 @@ function bindChatInput() {
 }
 
 function bindConversationButtons() {
-    const newBtn = document.getElementById("newConversationBtn");
-    const headerNewBtn = document.getElementById("headerNewChatBtn");
-
-    newBtn?.addEventListener("click", startNewConversation);
-    headerNewBtn?.addEventListener("click", startNewConversation);
+    document.getElementById("newConversationBtn")?.addEventListener("click", startNewConversation);
+    document.getElementById("headerNewChatBtn")?.addEventListener("click", startNewConversation);
 }
 
 function bindHistorySearch() {
@@ -85,27 +82,20 @@ function bindSidebarControls() {
     if (!shell) return;
 
     toggle?.addEventListener("click", () => {
-        shell.classList.toggle("sidebar-open");
-        const isOpen = shell.classList.contains("sidebar-open");
-        toggle.setAttribute("aria-expanded", String(isOpen));
+        shell.classList.toggle("is-sidebar-open");
+        toggle.setAttribute("aria-expanded", String(shell.classList.contains("is-sidebar-open")));
     });
 
     backdrop?.addEventListener("click", closeSidebar);
 
     window.addEventListener("resize", () => {
-        if (window.innerWidth > 980) {
-            closeSidebar();
-        }
+        if (window.innerWidth > 980) closeSidebar();
     });
 }
 
 function bindThemeToggle() {
-    const themeToggle = document.getElementById("themeToggle");
-    if (!themeToggle) return;
-
-    themeToggle.addEventListener("click", () => {
-        const nextTheme = chatState.theme === "dark" ? "light" : "dark";
-        applyTheme(nextTheme);
+    document.getElementById("themeToggle")?.addEventListener("click", () => {
+        applyTheme(chatState.theme === "dark" ? "light" : "dark");
     });
 }
 
@@ -134,32 +124,26 @@ function bindGlobalMessageActions() {
         if (editBtn) {
             const messageId = editBtn.getAttribute("data-edit-message-id");
             const currentText = decodeURIComponent(editBtn.getAttribute("data-current-text") || "");
-            if (messageId) {
-                await startInlineMessageEdit(messageId, currentText);
-            }
+            if (messageId) await startInlineMessageEdit(messageId, currentText);
             return;
         }
 
         const cancelBtn = event.target.closest("[data-cancel-edit-message-id]");
         if (cancelBtn) {
             const messageId = cancelBtn.getAttribute("data-cancel-edit-message-id");
-            if (messageId) {
-                cancelInlineMessageEdit(messageId);
-            }
+            if (messageId) cancelInlineMessageEdit(messageId);
             return;
         }
 
         const saveBtn = event.target.closest("[data-save-edit-message-id]");
         if (saveBtn) {
             const messageId = saveBtn.getAttribute("data-save-edit-message-id");
-            if (messageId) {
-                await submitInlineMessageEdit(messageId);
-            }
+            if (messageId) await submitInlineMessageEdit(messageId);
         }
     });
 
     messages.addEventListener("keydown", async (event) => {
-        const textarea = event.target.closest(".inline-edit-textarea");
+        const textarea = event.target.closest(".ica-inline-edit-textarea");
         if (!textarea) return;
 
         const messageId = textarea.getAttribute("data-editing-message-id");
@@ -177,7 +161,7 @@ function bindGlobalMessageActions() {
     });
 
     messages.addEventListener("input", (event) => {
-        const textarea = event.target.closest(".inline-edit-textarea");
+        const textarea = event.target.closest(".ica-inline-edit-textarea");
         if (!textarea) return;
         autoResizeTextarea(textarea);
     });
@@ -194,7 +178,7 @@ function closeSidebar() {
     const toggle = document.getElementById("sidebarToggle");
     if (!shell) return;
 
-    shell.classList.remove("sidebar-open");
+    shell.classList.remove("is-sidebar-open");
     toggle?.setAttribute("aria-expanded", "false");
 }
 
@@ -276,9 +260,7 @@ function bindDocumentUpload() {
 
 function setUploadStatus(text) {
     const uploadStatus = document.getElementById("uploadStatus");
-    if (uploadStatus) {
-        uploadStatus.textContent = text || "";
-    }
+    if (uploadStatus) uploadStatus.textContent = text || "";
 }
 
 function refreshUploadStatus() {
@@ -286,16 +268,12 @@ function refreshUploadStatus() {
     const chipText = document.getElementById("documentChipText");
 
     if (window.currentDocumentName && window.currentDocumentText) {
-        chip?.classList.remove("hidden");
-        if (chipText) {
-            chipText.textContent = window.currentDocumentName;
-        }
+        chip?.classList.remove("ica-hidden");
+        if (chipText) chipText.textContent = window.currentDocumentName;
         setUploadStatus("Document attached to this chat.");
     } else {
-        chip?.classList.add("hidden");
-        if (chipText) {
-            chipText.textContent = "";
-        }
+        chip?.classList.add("ica-hidden");
+        if (chipText) chipText.textContent = "";
         setUploadStatus("");
     }
 }
@@ -305,32 +283,17 @@ function showStatusBanner(type, message) {
     if (!banner) return;
 
     const icons = {
-        success: `
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 6L9 17l-5-5"></path>
-            </svg>
-        `,
-        warn: `
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 9v4"></path>
-                <path d="M12 17h.01"></path>
-                <path d="M10.3 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0z"></path>
-            </svg>
-        `,
-        error: `
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M18 6L6 18"></path>
-                <path d="M6 6l12 12"></path>
-            </svg>
-        `
+        success: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"></path></svg>`,
+        warn: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0z"></path></svg>`,
+        error: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18"></path><path d="M6 6l12 12"></path></svg>`
     };
 
-    banner.className = `status-banner show ${type}`;
+    banner.className = `ica-status-banner is-show is-${type}`;
     banner.innerHTML = `${icons[type] || ""}<span>${escapeHtml(message)}</span>`;
 
     clearTimeout(showStatusBanner._timer);
     showStatusBanner._timer = setTimeout(() => {
-        banner.className = "status-banner";
+        banner.className = "ica-status-banner";
         banner.innerHTML = "";
     }, 2800);
 }
@@ -439,26 +402,26 @@ async function streamAssistantResponse(url, bodyData) {
 
 function createMessageElement(role, text = "", messageId = null, timestamp = null) {
     const wrapper = document.createElement("div");
-    wrapper.className = `message-wrapper ${role}`;
+    wrapper.className = `ica-message-wrapper ${role === "user" ? "is-user" : "is-assistant"}`;
     if (messageId) wrapper.dataset.messageId = messageId;
 
     const block = document.createElement("div");
-    block.className = "message-block";
+    block.className = "ica-message-block";
 
     const meta = document.createElement("div");
-    meta.className = "message-meta";
+    meta.className = "ica-message-meta";
 
     const roleLabel = role === "assistant" ? "Assistant" : "You";
     const displayTime = formatTime(timestamp ? new Date(timestamp) : new Date());
 
     if (role === "assistant") {
-        meta.innerHTML = `<span class="message-role-dot"></span><span>${roleLabel} · ${displayTime}</span>`;
+        meta.innerHTML = `<span class="ica-message-role-dot"></span><span>${roleLabel} · ${displayTime}</span>`;
     } else {
         meta.textContent = `${roleLabel} · ${displayTime}`;
     }
 
     const msg = document.createElement("div");
-    msg.className = `message ${role}`;
+    msg.className = `ica-message ${role === "user" ? "is-user" : "is-assistant"}`;
 
     block._messageEl = msg;
     block._rawText = text;
@@ -468,10 +431,10 @@ function createMessageElement(role, text = "", messageId = null, timestamp = nul
         msg.innerHTML = renderMarkdown(text);
 
         const actions = document.createElement("div");
-        actions.className = "message-actions";
+        actions.className = "ica-message-actions";
 
         const copyBtn = document.createElement("button");
-        copyBtn.className = "copy-btn";
+        copyBtn.className = "ica-copy-btn";
         copyBtn.type = "button";
         copyBtn.textContent = "Copy";
         copyBtn.setAttribute("data-copy-text", text);
@@ -484,16 +447,15 @@ function createMessageElement(role, text = "", messageId = null, timestamp = nul
         msg.textContent = text;
 
         const actions = document.createElement("div");
-        actions.className = "message-actions";
+        actions.className = "ica-message-actions";
 
         if (messageId) {
             const editBtn = document.createElement("button");
-            editBtn.className = "copy-btn";
+            editBtn.className = "ica-copy-btn";
             editBtn.type = "button";
             editBtn.textContent = "Edit";
             editBtn.setAttribute("data-edit-message-id", messageId);
             editBtn.setAttribute("data-current-text", encodeURIComponent(text));
-
             actions.appendChild(editBtn);
         }
 
@@ -529,30 +491,22 @@ function updateAssistantMessage(text) {
     const messages = document.getElementById("messages");
     if (!messages) return;
 
-    const streamingWrappers = messages.querySelectorAll('.message-wrapper.assistant[data-streaming="true"]');
+    const streamingWrappers = messages.querySelectorAll('.ica-message-wrapper.is-assistant[data-streaming="true"]');
     const lastStreaming = streamingWrappers[streamingWrappers.length - 1];
-    const lastAssistant = lastStreaming || messages.querySelector(".message-wrapper.assistant:last-of-type");
+    const lastAssistant = lastStreaming || messages.querySelector(".ica-message-wrapper.is-assistant:last-of-type");
 
     if (!lastAssistant) {
         appendMessage("assistant", text);
         return;
     }
 
-    const block = lastAssistant.querySelector(".message-block");
-    const msg = block?.querySelector(".message.assistant");
+    const block = lastAssistant.querySelector(".ica-message-block");
+    const msg = block?.querySelector(".ica-message.is-assistant");
     const copyBtn = block?.querySelector("[data-copy-text]");
 
-    if (msg) {
-        msg.innerHTML = renderMarkdown(text);
-    }
-
-    if (block) {
-        block._rawText = text;
-    }
-
-    if (copyBtn) {
-        copyBtn.setAttribute("data-copy-text", text);
-    }
+    if (msg) msg.innerHTML = renderMarkdown(text);
+    if (block) block._rawText = text;
+    if (copyBtn) copyBtn.setAttribute("data-copy-text", text);
 
     scrollChatToBottom();
 }
@@ -571,8 +525,7 @@ function renderMarkdown(text) {
 
     function flushParagraph() {
         if (!paragraphBuffer.length) return;
-        const content = paragraphBuffer.join("<br>");
-        html += `<p>${applyInlineMarkdown(content)}</p>`;
+        html += `<p>${paragraphBuffer.join("<br>")}</p>`;
         paragraphBuffer = [];
     }
 
@@ -686,9 +639,7 @@ function renderMarkdown(text) {
     closeLists();
     closeBlockquote();
 
-    if (inCodeBlock) {
-        html += "</code></pre>";
-    }
+    if (inCodeBlock) html += "</code></pre>";
 
     return html;
 }
@@ -703,7 +654,7 @@ function applyInlineMarkdown(text) {
 }
 
 function removeChatEmptyState() {
-    const empty = document.getElementById("chatEmpty") || document.querySelector(".chat-empty");
+    const empty = document.getElementById("chatEmpty");
     if (empty) empty.hidden = true;
 }
 
@@ -716,9 +667,7 @@ function clearChatWindow() {
         messages.hidden = true;
     }
 
-    if (empty) {
-        empty.hidden = false;
-    }
+    if (empty) empty.hidden = false;
 
     showTypingIndicator(false);
 }
@@ -745,9 +694,7 @@ function startNewConversation() {
 
 function setConversationHeading(text) {
     const heading = document.getElementById("conversationHeading");
-    if (heading) {
-        heading.textContent = text || "New conversation";
-    }
+    if (heading) heading.textContent = text || "New conversation";
 }
 
 function setSendLoading(isLoading) {
@@ -775,11 +722,9 @@ async function loadConversations(autoOpenLatest = false) {
         chatState.historyRows = Array.isArray(rows) ? rows : [];
 
         if (!chatState.historyRows.length) {
-            list.innerHTML = `<div class="history-empty">No conversations yet.</div>`;
+            list.innerHTML = `<div class="ica-history-empty">No conversations yet.</div>`;
             updateHistoryCount(0);
-            if (!window.conversationId) {
-                setConversationHeading("New conversation");
-            }
+            if (!window.conversationId) setConversationHeading("New conversation");
             return;
         }
 
@@ -791,7 +736,7 @@ async function loadConversations(autoOpenLatest = false) {
         renderConversationList(chatState.historyRows, searchValue);
     } catch (error) {
         console.error("Failed to load conversations:", error);
-        list.innerHTML = `<div class="history-empty">Could not load conversations.</div>`;
+        list.innerHTML = `<div class="ica-history-empty">Could not load conversations.</div>`;
         updateHistoryCount(0);
     }
 }
@@ -809,39 +754,28 @@ function renderConversationList(rows, filter = "") {
     updateHistoryCount(filteredRows.length);
 
     if (!filteredRows.length) {
-        list.innerHTML = `<div class="history-empty">No matching conversations found.</div>`;
+        list.innerHTML = `<div class="ica-history-empty">No matching conversations found.</div>`;
         return;
     }
 
     list.innerHTML = filteredRows.map((row) => `
-        <article class="history-item ${String(window.conversationId) === String(row.id) ? "active" : ""}" data-row-id="${row.id}">
-            <div class="history-item-top">
-                <div class="history-item-title">${escapeHtml(row.title || "New chat")}</div>
-                <div class="history-inline-actions">
-                    <button class="icon-ghost" type="button" data-open-id="${row.id}" data-title="${escapeHtmlAttr(row.title || "Conversation")}" aria-label="Open conversation" title="Open">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M15 3h6v6"></path>
-                            <path d="M10 14L21 3"></path>
-                            <path d="M21 14v7H3V3h7"></path>
-                        </svg>
+        <article class="ica-history-item ${String(window.conversationId) === String(row.id) ? "is-active" : ""}" data-row-id="${row.id}" tabindex="0">
+            <div class="ica-history-item-top">
+                <div class="ica-history-item-title">${escapeHtml(row.title || "New chat")}</div>
+                <div class="ica-history-actions">
+                    <button class="ica-history-icon-btn" type="button" data-open-id="${row.id}" data-title="${escapeHtmlAttr(row.title || "Conversation")}" aria-label="Open conversation" title="Open">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"></path><path d="M10 14L21 3"></path><path d="M21 14v7H3V3h7"></path></svg>
                     </button>
-                    <button class="icon-ghost" type="button" data-rename-id="${row.id}" data-title="${escapeHtmlAttr(row.title || "Conversation")}" aria-label="Rename conversation" title="Rename">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 20h9"></path>
-                            <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
-                        </svg>
+                    <button class="ica-history-icon-btn" type="button" data-rename-id="${row.id}" data-title="${escapeHtmlAttr(row.title || "Conversation")}" aria-label="Rename conversation" title="Rename">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>
                     </button>
-                    <button class="icon-ghost" type="button" data-delete-id="${row.id}" aria-label="Delete conversation" title="Delete">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M3 6h18"></path>
-                            <path d="M8 6V4h8v2"></path>
-                            <path d="M19 6l-1 14H6L5 6"></path>
-                        </svg>
+                    <button class="ica-history-icon-btn" type="button" data-delete-id="${row.id}" aria-label="Delete conversation" title="Delete">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path></svg>
                     </button>
                 </div>
             </div>
-            <div class="history-item-meta">${escapeHtml(formatDate(row.created_at))}</div>
-            <div class="history-item-preview">${escapeHtml(row.title || "Conversation")}</div>
+            <div class="ica-history-item-meta">${escapeHtml(formatDate(row.created_at))}</div>
+            <div class="ica-history-item-preview">${escapeHtml(row.title || "Conversation")}</div>
         </article>
     `).join("");
 
@@ -866,25 +800,31 @@ function renderConversationList(rows, filter = "") {
         });
     });
 
-    list.querySelectorAll(".history-item").forEach((item) => {
+    list.querySelectorAll(".ica-history-item").forEach((item) => {
         item.addEventListener("click", async () => {
             const openBtn = item.querySelector("[data-open-id]");
             if (!openBtn) return;
             await openConversation(openBtn.dataset.openId, openBtn.dataset.title || "Conversation");
+        });
+
+        item.addEventListener("keydown", async (e) => {
+            if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                const openBtn = item.querySelector("[data-open-id]");
+                if (openBtn) await openConversation(openBtn.dataset.openId, openBtn.dataset.title || "Conversation");
+            }
         });
     });
 }
 
 function updateHistoryCount(count) {
     const countEl = document.getElementById("historyCount");
-    if (countEl) {
-        countEl.textContent = String(count);
-    }
+    if (countEl) countEl.textContent = String(count);
 }
 
 function renderConversationSelection() {
-    document.querySelectorAll(".history-item").forEach((item) => {
-        item.classList.remove("active");
+    document.querySelectorAll(".ica-history-item").forEach((item) => {
+        item.classList.remove("is-active");
     });
 }
 
@@ -923,18 +863,16 @@ async function openConversation(conversationId, title = "Conversation", reloadLi
 }
 
 async function renameConversationInline(conversationId, currentTitle = "") {
-    const button = document.querySelector(`.history-item [data-rename-id="${cssEscapeSafe(String(conversationId))}"]`);
-    const item = button?.closest(".history-item");
+    const button = document.querySelector(`.ica-history-item [data-rename-id="${cssEscapeSafe(String(conversationId))}"]`);
+    const item = button?.closest(".ica-history-item");
     if (!item) return;
 
-    const titleEl = item.querySelector(".history-item-title");
+    const titleEl = item.querySelector(".ica-history-item-title");
     if (!titleEl) return;
-
-    const existingInput = item.querySelector(".rename-input");
-    if (existingInput) return;
+    if (item.querySelector(".ica-rename-input")) return;
 
     const input = document.createElement("input");
-    input.className = "rename-input";
+    input.className = "ica-rename-input";
     input.value = currentTitle;
     input.type = "text";
     input.maxLength = 120;
@@ -1004,36 +942,35 @@ async function deleteConversation(conversationId) {
 }
 
 async function startInlineMessageEdit(messageId, currentText) {
-    const wrapper = document.querySelector(`.message-wrapper.user[data-message-id="${cssEscapeSafe(String(messageId))}"]`);
+    const wrapper = document.querySelector(`.ica-message-wrapper.is-user[data-message-id="${cssEscapeSafe(String(messageId))}"]`);
     if (!wrapper) return;
 
-    const messageEl = wrapper.querySelector(".message.user");
-    const actionsEl = wrapper.querySelector(".message-actions");
+    const messageEl = wrapper.querySelector(".ica-message.is-user");
+    const actionsEl = wrapper.querySelector(".ica-message-actions");
     if (!messageEl || !actionsEl) return;
-
-    if (wrapper.querySelector(".inline-edit-wrap")) return;
+    if (wrapper.querySelector(".ica-inline-edit-wrap")) return;
 
     messageEl.hidden = true;
     actionsEl.hidden = true;
 
     const editWrap = document.createElement("div");
-    editWrap.className = "inline-edit-wrap";
+    editWrap.className = "ica-inline-edit-wrap";
     editWrap.innerHTML = `
         <textarea
-            class="inline-edit-textarea"
+            class="ica-inline-edit-textarea"
             data-editing-message-id="${escapeHtmlAttr(String(messageId))}"
             rows="1"
             aria-label="Edit message"
         >${escapeHtml(currentText)}</textarea>
-        <div class="message-actions">
-            <button class="copy-btn" type="button" data-save-edit-message-id="${escapeHtmlAttr(String(messageId))}">Save</button>
-            <button class="copy-btn" type="button" data-cancel-edit-message-id="${escapeHtmlAttr(String(messageId))}">Cancel</button>
+        <div class="ica-message-actions">
+            <button class="ica-copy-btn" type="button" data-save-edit-message-id="${escapeHtmlAttr(String(messageId))}">Save</button>
+            <button class="ica-copy-btn" type="button" data-cancel-edit-message-id="${escapeHtmlAttr(String(messageId))}">Cancel</button>
         </div>
     `;
 
-    wrapper.querySelector(".message-block")?.appendChild(editWrap);
+    wrapper.querySelector(".ica-message-block")?.appendChild(editWrap);
 
-    const textarea = editWrap.querySelector(".inline-edit-textarea");
+    const textarea = editWrap.querySelector(".ica-inline-edit-textarea");
     if (textarea) {
         textarea.value = currentText;
         autoResizeTextarea(textarea);
@@ -1043,27 +980,27 @@ async function startInlineMessageEdit(messageId, currentText) {
 }
 
 function cancelInlineMessageEdit(messageId) {
-    const wrapper = document.querySelector(`.message-wrapper.user[data-message-id="${cssEscapeSafe(String(messageId))}"]`);
+    const wrapper = document.querySelector(`.ica-message-wrapper.is-user[data-message-id="${cssEscapeSafe(String(messageId))}"]`);
     if (!wrapper) return;
 
-    wrapper.querySelector(".inline-edit-wrap")?.remove();
+    wrapper.querySelector(".ica-inline-edit-wrap")?.remove();
 
-    const messageEl = wrapper.querySelector(".message.user");
-    const actionsEl = wrapper.querySelector(".message-actions");
+    const messageEl = wrapper.querySelector(".ica-message.is-user");
+    const actionsEl = wrapper.querySelector(".ica-message-actions");
 
     if (messageEl) messageEl.hidden = false;
     if (actionsEl) actionsEl.hidden = false;
 }
 
 async function submitInlineMessageEdit(messageId) {
-    const wrapper = document.querySelector(`.message-wrapper.user[data-message-id="${cssEscapeSafe(String(messageId))}"]`);
+    const wrapper = document.querySelector(`.ica-message-wrapper.is-user[data-message-id="${cssEscapeSafe(String(messageId))}"]`);
     if (!wrapper) return;
 
-    const textarea = wrapper.querySelector(`.inline-edit-textarea[data-editing-message-id="${cssEscapeSafe(String(messageId))}"]`);
+    const textarea = wrapper.querySelector(`.ica-inline-edit-textarea[data-editing-message-id="${cssEscapeSafe(String(messageId))}"]`);
     if (!textarea) return;
 
     const newText = textarea.value.trim();
-    const originalText = wrapper.querySelector(".message.user")?.textContent?.trim() || "";
+    const originalText = wrapper.querySelector(".ica-message.is-user")?.textContent?.trim() || "";
 
     if (!newText) {
         cancelInlineMessageEdit(messageId);
@@ -1124,7 +1061,7 @@ function formatTime(date) {
 function autoResizeTextarea(el) {
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 180) + "px";
+    el.style.height = Math.min(el.scrollHeight, 220) + "px";
 }
 
 function scrollChatToBottom() {
