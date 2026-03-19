@@ -2,13 +2,23 @@ window.conversationId = null;
 window.currentDocumentText = null;
 window.currentDocumentName = null;
 
+const chatState = {
+    historyRows: [],
+    theme: localStorage.getItem("indicare-theme") || "light"
+};
+
 function initChat() {
+    applyTheme(chatState.theme);
     bindChatInput();
     bindConversationButtons();
     bindDocumentUpload();
     bindLogout();
-    loadConversations(true);
+    bindHistorySearch();
+    bindSidebarControls();
+    bindThemeToggle();
+    bindGlobalMessageActions();
     refreshUploadStatus();
+    loadConversations(true);
 }
 
 window.initChat = initChat;
@@ -16,10 +26,17 @@ window.initChat = initChat;
 function bindChatInput() {
     const sendBtn = document.getElementById("send-btn");
     const input = document.getElementById("chat-input");
+    const clearBtn = document.getElementById("clearChatBtn");
 
     if (!sendBtn || !input) return;
 
+    autoResizeTextarea(input);
+
     sendBtn.addEventListener("click", sendMessage);
+
+    input.addEventListener("input", () => {
+        autoResizeTextarea(input);
+    });
 
     input.addEventListener("keydown", (e) => {
         if (e.key === "Enter" && !e.shiftKey) {
@@ -27,13 +44,158 @@ function bindChatInput() {
             sendMessage();
         }
     });
+
+    clearBtn?.addEventListener("click", () => {
+        input.value = "";
+        autoResizeTextarea(input);
+        input.focus();
+    });
+
+    document.querySelectorAll(".prompt-chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+            input.value = chip.textContent?.trim() || "";
+            autoResizeTextarea(input);
+            input.focus();
+        });
+    });
 }
 
 function bindConversationButtons() {
     const newBtn = document.getElementById("newConversationBtn");
-    if (newBtn) {
-        newBtn.addEventListener("click", startNewConversation);
-    }
+    const headerNewBtn = document.getElementById("headerNewChatBtn");
+
+    newBtn?.addEventListener("click", startNewConversation);
+    headerNewBtn?.addEventListener("click", startNewConversation);
+}
+
+function bindHistorySearch() {
+    const search = document.getElementById("historySearch");
+    if (!search) return;
+
+    search.addEventListener("input", () => {
+        renderConversationList(chatState.historyRows, search.value.trim());
+    });
+}
+
+function bindSidebarControls() {
+    const shell = document.getElementById("assistantShell");
+    const toggle = document.getElementById("sidebarToggle");
+    const backdrop = document.getElementById("sidebarBackdrop");
+
+    if (!shell) return;
+
+    toggle?.addEventListener("click", () => {
+        shell.classList.toggle("sidebar-open");
+        const isOpen = shell.classList.contains("sidebar-open");
+        toggle.setAttribute("aria-expanded", String(isOpen));
+    });
+
+    backdrop?.addEventListener("click", closeSidebar);
+
+    window.addEventListener("resize", () => {
+        if (window.innerWidth > 980) {
+            closeSidebar();
+        }
+    });
+}
+
+function bindThemeToggle() {
+    const themeToggle = document.getElementById("themeToggle");
+    if (!themeToggle) return;
+
+    themeToggle.addEventListener("click", () => {
+        const nextTheme = chatState.theme === "dark" ? "light" : "dark";
+        applyTheme(nextTheme);
+    });
+}
+
+function bindGlobalMessageActions() {
+    const messages = document.getElementById("messages");
+    if (!messages) return;
+
+    messages.addEventListener("click", async (event) => {
+        const copyBtn = event.target.closest("[data-copy-text]");
+        if (copyBtn) {
+            const text = copyBtn.getAttribute("data-copy-text") || "";
+            try {
+                await navigator.clipboard.writeText(text);
+                const original = copyBtn.textContent;
+                copyBtn.textContent = "Copied";
+                setTimeout(() => {
+                    copyBtn.textContent = original;
+                }, 1500);
+            } catch (err) {
+                console.error("Copy failed:", err);
+            }
+            return;
+        }
+
+        const editBtn = event.target.closest("[data-edit-message-id]");
+        if (editBtn) {
+            const messageId = editBtn.getAttribute("data-edit-message-id");
+            const currentText = decodeURIComponent(editBtn.getAttribute("data-current-text") || "");
+            if (messageId) {
+                await startInlineMessageEdit(messageId, currentText);
+            }
+            return;
+        }
+
+        const cancelBtn = event.target.closest("[data-cancel-edit-message-id]");
+        if (cancelBtn) {
+            const messageId = cancelBtn.getAttribute("data-cancel-edit-message-id");
+            if (messageId) {
+                cancelInlineMessageEdit(messageId);
+            }
+            return;
+        }
+
+        const saveBtn = event.target.closest("[data-save-edit-message-id]");
+        if (saveBtn) {
+            const messageId = saveBtn.getAttribute("data-save-edit-message-id");
+            if (messageId) {
+                await submitInlineMessageEdit(messageId);
+            }
+        }
+    });
+
+    messages.addEventListener("keydown", async (event) => {
+        const textarea = event.target.closest(".inline-edit-textarea");
+        if (!textarea) return;
+
+        const messageId = textarea.getAttribute("data-editing-message-id");
+        if (!messageId) return;
+
+        if (event.key === "Escape") {
+            event.preventDefault();
+            cancelInlineMessageEdit(messageId);
+        }
+
+        if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            await submitInlineMessageEdit(messageId);
+        }
+    });
+
+    messages.addEventListener("input", (event) => {
+        const textarea = event.target.closest(".inline-edit-textarea");
+        if (!textarea) return;
+        autoResizeTextarea(textarea);
+    });
+}
+
+function applyTheme(theme) {
+    chatState.theme = theme;
+    localStorage.setItem("indicare-theme", theme);
+    document.body.classList.toggle("theme-dark", theme === "dark");
+}
+
+function closeSidebar() {
+    const shell = document.getElementById("assistantShell");
+    const toggle = document.getElementById("sidebarToggle");
+    if (!shell) return;
+
+    shell.classList.remove("sidebar-open");
+    toggle?.setAttribute("aria-expanded", "false");
 }
 
 function bindDocumentUpload() {
@@ -52,6 +214,7 @@ function bindDocumentUpload() {
         }
 
         setUploadStatus(`Uploading ${file.name}...`);
+        showStatusBanner("success", `Uploading ${file.name}...`);
 
         try {
             const token = localStorage.getItem("access_token");
@@ -76,15 +239,18 @@ function bindDocumentUpload() {
                 }
 
                 setUploadStatus(data.detail || "Upload failed.");
+                showStatusBanner("error", data.detail || "Upload failed.");
                 return;
             }
 
             window.currentDocumentText = data.text || "";
             window.currentDocumentName = data.filename || file.name;
             refreshUploadStatus();
+            showStatusBanner("success", "Document attached.");
         } catch (error) {
             console.error("Upload failed:", error);
             setUploadStatus("Could not upload the document.");
+            showStatusBanner("error", "Could not upload the document.");
         } finally {
             uploadInput.value = "";
         }
@@ -104,6 +270,7 @@ function bindDocumentUpload() {
         window.currentDocumentText = null;
         window.currentDocumentName = null;
         refreshUploadStatus();
+        showStatusBanner("warn", "Document removed.");
     });
 }
 
@@ -133,6 +300,41 @@ function refreshUploadStatus() {
     }
 }
 
+function showStatusBanner(type, message) {
+    const banner = document.getElementById("statusBanner");
+    if (!banner) return;
+
+    const icons = {
+        success: `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 6L9 17l-5-5"></path>
+            </svg>
+        `,
+        warn: `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 9v4"></path>
+                <path d="M12 17h.01"></path>
+                <path d="M10.3 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0z"></path>
+            </svg>
+        `,
+        error: `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 6L6 18"></path>
+                <path d="M6 6l12 12"></path>
+            </svg>
+        `
+    };
+
+    banner.className = `status-banner show ${type}`;
+    banner.innerHTML = `${icons[type] || ""}<span>${escapeHtml(message)}</span>`;
+
+    clearTimeout(showStatusBanner._timer);
+    showStatusBanner._timer = setTimeout(() => {
+        banner.className = "status-banner";
+        banner.innerHTML = "";
+    }, 2800);
+}
+
 function bindLogout() {
     const logoutBtn = document.getElementById("logoutBtn");
     if (!logoutBtn) return;
@@ -155,16 +357,19 @@ function bindLogout() {
 
 async function sendMessage() {
     const input = document.getElementById("chat-input");
-    const chat = document.getElementById("chat");
-
-    if (!input || !chat) return;
+    if (!input) return;
 
     const message = input.value.trim();
     if (!message) return;
 
     removeChatEmptyState();
+    ensureMessagesContainer();
     appendMessage("user", message);
     input.value = "";
+    autoResizeTextarea(input);
+
+    setSendLoading(true);
+    showTypingIndicator(true);
 
     await streamAssistantResponse("/chat/", {
         message,
@@ -172,6 +377,9 @@ async function sendMessage() {
         document_text: window.currentDocumentText,
         document_name: window.currentDocumentName
     });
+
+    showTypingIndicator(false);
+    setSendLoading(false);
 
     await loadConversations(true);
 }
@@ -213,6 +421,8 @@ async function streamAssistantResponse(url, bodyData) {
         const decoder = new TextDecoder();
         let assistantMessage = "";
 
+        createOrResetStreamingAssistantMessage();
+
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -227,13 +437,25 @@ async function streamAssistantResponse(url, bodyData) {
     }
 }
 
-function createMessageElement(role, text = "", messageId = null) {
+function createMessageElement(role, text = "", messageId = null, timestamp = null) {
     const wrapper = document.createElement("div");
     wrapper.className = `message-wrapper ${role}`;
     if (messageId) wrapper.dataset.messageId = messageId;
 
     const block = document.createElement("div");
     block.className = "message-block";
+
+    const meta = document.createElement("div");
+    meta.className = "message-meta";
+
+    const roleLabel = role === "assistant" ? "Assistant" : "You";
+    const displayTime = formatTime(timestamp ? new Date(timestamp) : new Date());
+
+    if (role === "assistant") {
+        meta.innerHTML = `<span class="message-role-dot"></span><span>${roleLabel} · ${displayTime}</span>`;
+    } else {
+        meta.textContent = `${roleLabel} · ${displayTime}`;
+    }
 
     const msg = document.createElement("div");
     msg.className = `message ${role}`;
@@ -252,24 +474,14 @@ function createMessageElement(role, text = "", messageId = null) {
         copyBtn.className = "copy-btn";
         copyBtn.type = "button";
         copyBtn.textContent = "Copy";
-
-        copyBtn.addEventListener("click", async () => {
-            try {
-                await navigator.clipboard.writeText(block._rawText || "");
-                copyBtn.textContent = "Copied";
-                setTimeout(() => {
-                    copyBtn.textContent = "Copy";
-                }, 1500);
-            } catch (err) {
-                console.error("Copy failed:", err);
-            }
-        });
+        copyBtn.setAttribute("data-copy-text", text);
 
         actions.appendChild(copyBtn);
+        block.appendChild(meta);
         block.appendChild(msg);
         block.appendChild(actions);
     } else {
-        msg.innerText = text;
+        msg.textContent = text;
 
         const actions = document.createElement("div");
         actions.className = "message-actions";
@@ -279,14 +491,13 @@ function createMessageElement(role, text = "", messageId = null) {
             editBtn.className = "copy-btn";
             editBtn.type = "button";
             editBtn.textContent = "Edit";
-
-            editBtn.addEventListener("click", async () => {
-                await editUserMessage(messageId, text);
-            });
+            editBtn.setAttribute("data-edit-message-id", messageId);
+            editBtn.setAttribute("data-current-text", encodeURIComponent(text));
 
             actions.appendChild(editBtn);
         }
 
+        block.appendChild(meta);
         block.appendChild(msg);
         if (messageId) block.appendChild(actions);
     }
@@ -295,29 +506,41 @@ function createMessageElement(role, text = "", messageId = null) {
     return wrapper;
 }
 
-function appendMessage(role, text, messageId = null) {
-    const chat = document.getElementById("chat");
-    if (!chat) return;
+function appendMessage(role, text, messageId = null, timestamp = null) {
+    const messages = ensureMessagesContainer();
+    if (!messages) return;
 
-    const el = createMessageElement(role, text, messageId);
-    chat.appendChild(el);
-    chat.scrollTop = chat.scrollHeight;
+    const el = createMessageElement(role, text, messageId, timestamp);
+    messages.appendChild(el);
+    scrollChatToBottom();
+}
+
+function createOrResetStreamingAssistantMessage() {
+    const messages = ensureMessagesContainer();
+    if (!messages) return;
+
+    const wrapper = createMessageElement("assistant", "");
+    wrapper.dataset.streaming = "true";
+    messages.appendChild(wrapper);
+    scrollChatToBottom();
 }
 
 function updateAssistantMessage(text) {
-    const chat = document.getElementById("chat");
-    if (!chat) return;
+    const messages = document.getElementById("messages");
+    if (!messages) return;
 
-    const assistantWrappers = chat.querySelectorAll(".message-wrapper.assistant");
-    const lastWrapper = assistantWrappers[assistantWrappers.length - 1];
+    const streamingWrappers = messages.querySelectorAll('.message-wrapper.assistant[data-streaming="true"]');
+    const lastStreaming = streamingWrappers[streamingWrappers.length - 1];
+    const lastAssistant = lastStreaming || messages.querySelector(".message-wrapper.assistant:last-of-type");
 
-    if (!lastWrapper) {
+    if (!lastAssistant) {
         appendMessage("assistant", text);
         return;
     }
 
-    const block = lastWrapper.querySelector(".message-block");
+    const block = lastAssistant.querySelector(".message-block");
     const msg = block?.querySelector(".message.assistant");
+    const copyBtn = block?.querySelector("[data-copy-text]");
 
     if (msg) {
         msg.innerHTML = renderMarkdown(text);
@@ -327,34 +550,186 @@ function updateAssistantMessage(text) {
         block._rawText = text;
     }
 
-    chat.scrollTop = chat.scrollHeight;
+    if (copyBtn) {
+        copyBtn.setAttribute("data-copy-text", text);
+    }
+
+    scrollChatToBottom();
 }
 
 function renderMarkdown(text) {
-    return String(text || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/\n/g, "<br>");
+    const source = String(text || "").replace(/\r\n/g, "\n");
+    const escaped = escapeHtml(source);
+    const lines = escaped.split("\n");
+
+    let html = "";
+    let inCodeBlock = false;
+    let inUl = false;
+    let inOl = false;
+    let inBlockquote = false;
+    let paragraphBuffer = [];
+
+    function flushParagraph() {
+        if (!paragraphBuffer.length) return;
+        const content = paragraphBuffer.join("<br>");
+        html += `<p>${applyInlineMarkdown(content)}</p>`;
+        paragraphBuffer = [];
+    }
+
+    function closeLists() {
+        if (inUl) {
+            html += "</ul>";
+            inUl = false;
+        }
+        if (inOl) {
+            html += "</ol>";
+            inOl = false;
+        }
+    }
+
+    function closeBlockquote() {
+        if (inBlockquote) {
+            html += "</blockquote>";
+            inBlockquote = false;
+        }
+    }
+
+    for (const rawLine of lines) {
+        const line = rawLine;
+
+        if (line.trim().startsWith("```")) {
+            flushParagraph();
+            closeLists();
+            closeBlockquote();
+
+            if (!inCodeBlock) {
+                inCodeBlock = true;
+                html += "<pre><code>";
+            } else {
+                inCodeBlock = false;
+                html += "</code></pre>";
+            }
+            continue;
+        }
+
+        if (inCodeBlock) {
+            html += `${line}\n`;
+            continue;
+        }
+
+        if (!line.trim()) {
+            flushParagraph();
+            closeLists();
+            closeBlockquote();
+            continue;
+        }
+
+        const headingMatch = line.match(/^(#{1,6})\s+(.*)$/);
+        if (headingMatch) {
+            flushParagraph();
+            closeLists();
+            closeBlockquote();
+            const level = headingMatch[1].length;
+            html += `<h${level}>${applyInlineMarkdown(headingMatch[2])}</h${level}>`;
+            continue;
+        }
+
+        const blockquoteMatch = line.match(/^&gt;\s?(.*)$/);
+        if (blockquoteMatch) {
+            flushParagraph();
+            closeLists();
+            if (!inBlockquote) {
+                html += "<blockquote>";
+                inBlockquote = true;
+            }
+            html += `<p>${applyInlineMarkdown(blockquoteMatch[1])}</p>`;
+            continue;
+        } else {
+            closeBlockquote();
+        }
+
+        const ulMatch = line.match(/^[-*]\s+(.*)$/);
+        if (ulMatch) {
+            flushParagraph();
+            if (inOl) {
+                html += "</ol>";
+                inOl = false;
+            }
+            if (!inUl) {
+                html += "<ul>";
+                inUl = true;
+            }
+            html += `<li>${applyInlineMarkdown(ulMatch[1])}</li>`;
+            continue;
+        }
+
+        const olMatch = line.match(/^\d+\.\s+(.*)$/);
+        if (olMatch) {
+            flushParagraph();
+            if (inUl) {
+                html += "</ul>";
+                inUl = false;
+            }
+            if (!inOl) {
+                html += "<ol>";
+                inOl = true;
+            }
+            html += `<li>${applyInlineMarkdown(olMatch[1])}</li>`;
+            continue;
+        }
+
+        closeLists();
+        paragraphBuffer.push(applyInlineMarkdown(line));
+    }
+
+    flushParagraph();
+    closeLists();
+    closeBlockquote();
+
+    if (inCodeBlock) {
+        html += "</code></pre>";
+    }
+
+    return html;
+}
+
+function applyInlineMarkdown(text) {
+    return String(text)
+        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+        .replace(/__(.*?)__/g, "<strong>$1</strong>")
+        .replace(/\*(.*?)\*/g, "<em>$1</em>")
+        .replace(/_(.*?)_/g, "<em>$1</em>")
+        .replace(/`([^`]+)`/g, "<code>$1</code>");
 }
 
 function removeChatEmptyState() {
-    const empty = document.querySelector(".chat-empty");
-    if (empty) empty.remove();
+    const empty = document.getElementById("chatEmpty") || document.querySelector(".chat-empty");
+    if (empty) empty.hidden = true;
 }
 
 function clearChatWindow() {
-    const chat = document.getElementById("chat");
-    if (!chat) return;
+    const messages = document.getElementById("messages");
+    const empty = document.getElementById("chatEmpty");
 
-    chat.innerHTML = `
-        <div class="chat-empty">
-            <div>
-                <h3>How can I help today?</h3>
-                <p>Ask anything about residential care practice, wording, reflection, planning, records, or professional support.</p>
-            </div>
-        </div>
-    `;
+    if (messages) {
+        messages.innerHTML = "";
+        messages.hidden = true;
+    }
+
+    if (empty) {
+        empty.hidden = false;
+    }
+
+    showTypingIndicator(false);
+}
+
+function ensureMessagesContainer() {
+    const messages = document.getElementById("messages");
+    if (!messages) return null;
+
+    messages.hidden = false;
+    removeChatEmptyState();
+    return messages;
 }
 
 function startNewConversation() {
@@ -365,6 +740,7 @@ function startNewConversation() {
     setConversationHeading("New conversation");
     renderConversationSelection();
     refreshUploadStatus();
+    closeSidebar();
 }
 
 function setConversationHeading(text) {
@@ -374,15 +750,33 @@ function setConversationHeading(text) {
     }
 }
 
+function setSendLoading(isLoading) {
+    const sendBtn = document.getElementById("send-btn");
+    if (!sendBtn) return;
+
+    sendBtn.classList.toggle("is-loading", isLoading);
+    sendBtn.disabled = isLoading;
+}
+
+function showTypingIndicator(show) {
+    const typingRow = document.getElementById("typingRow");
+    if (!typingRow) return;
+
+    typingRow.hidden = !show;
+    if (show) scrollChatToBottom();
+}
+
 async function loadConversations(autoOpenLatest = false) {
     const list = document.getElementById("conversationList");
     if (!list) return;
 
     try {
         const rows = await apiRequest("/chat/conversations");
+        chatState.historyRows = Array.isArray(rows) ? rows : [];
 
-        if (!Array.isArray(rows) || !rows.length) {
+        if (!chatState.historyRows.length) {
             list.innerHTML = `<div class="history-empty">No conversations yet.</div>`;
+            updateHistoryCount(0);
             if (!window.conversationId) {
                 setConversationHeading("New conversation");
             }
@@ -390,49 +784,102 @@ async function loadConversations(autoOpenLatest = false) {
         }
 
         if (autoOpenLatest && !window.conversationId) {
-            await openConversation(rows[0].id, rows[0].title || "Conversation", false);
+            await openConversation(chatState.historyRows[0].id, chatState.historyRows[0].title || "Conversation", false);
         }
 
-        renderConversationList(rows);
+        const searchValue = document.getElementById("historySearch")?.value?.trim() || "";
+        renderConversationList(chatState.historyRows, searchValue);
     } catch (error) {
         console.error("Failed to load conversations:", error);
         list.innerHTML = `<div class="history-empty">Could not load conversations.</div>`;
+        updateHistoryCount(0);
     }
 }
 
-function renderConversationList(rows) {
+function renderConversationList(rows, filter = "") {
     const list = document.getElementById("conversationList");
     if (!list) return;
 
-    list.innerHTML = rows.map((row) => `
-        <div class="history-item ${String(window.conversationId) === String(row.id) ? "active" : ""}">
-            <div class="history-item-title">${escapeHtml(row.title || "New chat")}</div>
-            <div class="history-item-meta">${escapeHtml(formatDate(row.created_at))}</div>
-            <div class="history-item-actions">
-                <button class="history-btn" type="button" data-open-id="${row.id}" data-title="${escapeHtmlAttr(row.title || "Conversation")}">Open</button>
-                <button class="history-btn" type="button" data-rename-id="${row.id}" data-title="${escapeHtmlAttr(row.title || "Conversation")}">Rename</button>
-                <button class="history-btn" type="button" data-delete-id="${row.id}">Delete</button>
+    const query = filter.toLowerCase();
+    const filteredRows = rows.filter((row) => {
+        const title = String(row.title || "New chat").toLowerCase();
+        return !query || title.includes(query);
+    });
+
+    updateHistoryCount(filteredRows.length);
+
+    if (!filteredRows.length) {
+        list.innerHTML = `<div class="history-empty">No matching conversations found.</div>`;
+        return;
+    }
+
+    list.innerHTML = filteredRows.map((row) => `
+        <article class="history-item ${String(window.conversationId) === String(row.id) ? "active" : ""}" data-row-id="${row.id}">
+            <div class="history-item-top">
+                <div class="history-item-title">${escapeHtml(row.title || "New chat")}</div>
+                <div class="history-inline-actions">
+                    <button class="icon-ghost" type="button" data-open-id="${row.id}" data-title="${escapeHtmlAttr(row.title || "Conversation")}" aria-label="Open conversation" title="Open">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M15 3h6v6"></path>
+                            <path d="M10 14L21 3"></path>
+                            <path d="M21 14v7H3V3h7"></path>
+                        </svg>
+                    </button>
+                    <button class="icon-ghost" type="button" data-rename-id="${row.id}" data-title="${escapeHtmlAttr(row.title || "Conversation")}" aria-label="Rename conversation" title="Rename">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 20h9"></path>
+                            <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+                        </svg>
+                    </button>
+                    <button class="icon-ghost" type="button" data-delete-id="${row.id}" aria-label="Delete conversation" title="Delete">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 6h18"></path>
+                            <path d="M8 6V4h8v2"></path>
+                            <path d="M19 6l-1 14H6L5 6"></path>
+                        </svg>
+                    </button>
+                </div>
             </div>
-        </div>
+            <div class="history-item-meta">${escapeHtml(formatDate(row.created_at))}</div>
+            <div class="history-item-preview">${escapeHtml(row.title || "Conversation")}</div>
+        </article>
     `).join("");
 
     list.querySelectorAll("[data-open-id]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
+        btn.addEventListener("click", async (e) => {
+            e.stopPropagation();
             await openConversation(btn.dataset.openId, btn.dataset.title || "Conversation");
         });
     });
 
     list.querySelectorAll("[data-rename-id]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-            await renameConversation(btn.dataset.renameId, btn.dataset.title || "");
+        btn.addEventListener("click", async (e) => {
+            e.stopPropagation();
+            await renameConversationInline(btn.dataset.renameId, btn.dataset.title || "");
         });
     });
 
     list.querySelectorAll("[data-delete-id]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
+        btn.addEventListener("click", async (e) => {
+            e.stopPropagation();
             await deleteConversation(btn.dataset.deleteId);
         });
     });
+
+    list.querySelectorAll(".history-item").forEach((item) => {
+        item.addEventListener("click", async () => {
+            const openBtn = item.querySelector("[data-open-id]");
+            if (!openBtn) return;
+            await openConversation(openBtn.dataset.openId, openBtn.dataset.title || "Conversation");
+        });
+    });
+}
+
+function updateHistoryCount(count) {
+    const countEl = document.getElementById("historyCount");
+    if (countEl) {
+        countEl.textContent = String(count);
+    }
 }
 
 function renderConversationSelection() {
@@ -453,16 +900,12 @@ async function openConversation(conversationId, title = "Conversation", reloadLi
         window.currentDocumentName = documentInfo?.filename || null;
         refreshUploadStatus();
 
-        const chat = document.getElementById("chat");
-        if (!chat) return;
+        clearChatWindow();
 
-        chat.innerHTML = "";
-
-        if (!rows.length) {
-            clearChatWindow();
-        } else {
+        if (rows.length) {
+            ensureMessagesContainer();
             rows.forEach((row) => {
-                appendMessage(row.role, row.message || "", row.id || null);
+                appendMessage(row.role, row.message || "", row.id || null, row.created_at || null);
             });
         }
 
@@ -471,29 +914,72 @@ async function openConversation(conversationId, title = "Conversation", reloadLi
         if (reloadList) {
             await loadConversations(false);
         }
+
+        closeSidebar();
     } catch (error) {
         console.error("Failed to open conversation:", error);
+        showStatusBanner("error", "Failed to open conversation.");
     }
 }
 
-async function renameConversation(conversationId, currentTitle = "") {
-    const newTitle = window.prompt("Rename conversation", currentTitle);
-    if (!newTitle || !newTitle.trim()) return;
+async function renameConversationInline(conversationId, currentTitle = "") {
+    const button = document.querySelector(`.history-item [data-rename-id="${cssEscapeSafe(String(conversationId))}"]`);
+    const item = button?.closest(".history-item");
+    if (!item) return;
 
-    try {
-        await apiRequest(`/chat/conversations/${conversationId}/rename`, {
-            method: "POST",
-            body: JSON.stringify({ title: newTitle.trim() })
-        });
+    const titleEl = item.querySelector(".history-item-title");
+    if (!titleEl) return;
 
-        if (String(window.conversationId) === String(conversationId)) {
-            setConversationHeading(newTitle.trim());
+    const existingInput = item.querySelector(".rename-input");
+    if (existingInput) return;
+
+    const input = document.createElement("input");
+    input.className = "rename-input";
+    input.value = currentTitle;
+    input.type = "text";
+    input.maxLength = 120;
+
+    titleEl.replaceWith(input);
+    input.focus();
+    input.select();
+
+    const commit = async () => {
+        const newTitle = input.value.trim();
+        if (!newTitle) {
+            renderConversationList(chatState.historyRows, document.getElementById("historySearch")?.value?.trim() || "");
+            return;
         }
 
-        await loadConversations(false);
-    } catch (error) {
-        console.error("Failed to rename conversation:", error);
-    }
+        try {
+            await apiRequest(`/chat/conversations/${conversationId}/rename`, {
+                method: "POST",
+                body: JSON.stringify({ title: newTitle })
+            });
+
+            if (String(window.conversationId) === String(conversationId)) {
+                setConversationHeading(newTitle);
+            }
+
+            await loadConversations(false);
+            showStatusBanner("success", "Conversation renamed.");
+        } catch (error) {
+            console.error("Failed to rename conversation:", error);
+            showStatusBanner("error", "Failed to rename conversation.");
+            await loadConversations(false);
+        }
+    };
+
+    input.addEventListener("keydown", async (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            await commit();
+        }
+        if (e.key === "Escape") {
+            renderConversationList(chatState.historyRows, document.getElementById("historySearch")?.value?.trim() || "");
+        }
+    });
+
+    input.addEventListener("blur", commit, { once: true });
 }
 
 async function deleteConversation(conversationId) {
@@ -510,35 +996,104 @@ async function deleteConversation(conversationId) {
         }
 
         await loadConversations(false);
+        showStatusBanner("success", "Conversation deleted.");
     } catch (error) {
         console.error("Failed to delete conversation:", error);
+        showStatusBanner("error", "Failed to delete conversation.");
     }
 }
 
-async function editUserMessage(messageId, currentText) {
-    const newText = window.prompt("Edit your message", currentText);
-    if (!newText || !newText.trim() || newText.trim() === currentText.trim()) return;
+async function startInlineMessageEdit(messageId, currentText) {
+    const wrapper = document.querySelector(`.message-wrapper.user[data-message-id="${cssEscapeSafe(String(messageId))}"]`);
+    if (!wrapper) return;
 
-    const chat = document.getElementById("chat");
-    if (!chat) return;
+    const messageEl = wrapper.querySelector(".message.user");
+    const actionsEl = wrapper.querySelector(".message-actions");
+    if (!messageEl || !actionsEl) return;
 
-    const targetWrapper = document.querySelector(`.message-wrapper.user[data-message-id="${messageId}"]`);
-    if (!targetWrapper) return;
+    if (wrapper.querySelector(".inline-edit-wrap")) return;
 
-    let current = targetWrapper;
+    messageEl.hidden = true;
+    actionsEl.hidden = true;
+
+    const editWrap = document.createElement("div");
+    editWrap.className = "inline-edit-wrap";
+    editWrap.innerHTML = `
+        <textarea
+            class="inline-edit-textarea"
+            data-editing-message-id="${escapeHtmlAttr(String(messageId))}"
+            rows="1"
+            aria-label="Edit message"
+        >${escapeHtml(currentText)}</textarea>
+        <div class="message-actions">
+            <button class="copy-btn" type="button" data-save-edit-message-id="${escapeHtmlAttr(String(messageId))}">Save</button>
+            <button class="copy-btn" type="button" data-cancel-edit-message-id="${escapeHtmlAttr(String(messageId))}">Cancel</button>
+        </div>
+    `;
+
+    wrapper.querySelector(".message-block")?.appendChild(editWrap);
+
+    const textarea = editWrap.querySelector(".inline-edit-textarea");
+    if (textarea) {
+        textarea.value = currentText;
+        autoResizeTextarea(textarea);
+        textarea.focus();
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    }
+}
+
+function cancelInlineMessageEdit(messageId) {
+    const wrapper = document.querySelector(`.message-wrapper.user[data-message-id="${cssEscapeSafe(String(messageId))}"]`);
+    if (!wrapper) return;
+
+    wrapper.querySelector(".inline-edit-wrap")?.remove();
+
+    const messageEl = wrapper.querySelector(".message.user");
+    const actionsEl = wrapper.querySelector(".message-actions");
+
+    if (messageEl) messageEl.hidden = false;
+    if (actionsEl) actionsEl.hidden = false;
+}
+
+async function submitInlineMessageEdit(messageId) {
+    const wrapper = document.querySelector(`.message-wrapper.user[data-message-id="${cssEscapeSafe(String(messageId))}"]`);
+    if (!wrapper) return;
+
+    const textarea = wrapper.querySelector(`.inline-edit-textarea[data-editing-message-id="${cssEscapeSafe(String(messageId))}"]`);
+    if (!textarea) return;
+
+    const newText = textarea.value.trim();
+    const originalText = wrapper.querySelector(".message.user")?.textContent?.trim() || "";
+
+    if (!newText) {
+        cancelInlineMessageEdit(messageId);
+        return;
+    }
+
+    if (newText === originalText) {
+        cancelInlineMessageEdit(messageId);
+        return;
+    }
+
+    let current = wrapper;
     while (current) {
         const next = current.nextElementSibling;
         current.remove();
         current = next;
     }
 
-    appendMessage("user", newText.trim(), messageId);
+    appendMessage("user", newText, messageId);
+    showTypingIndicator(true);
+    setSendLoading(true);
 
     await streamAssistantResponse(`/chat/messages/${messageId}/edit`, {
-        message: newText.trim(),
+        message: newText,
         document_text: window.currentDocumentText,
         document_name: window.currentDocumentName
     });
+
+    showTypingIndicator(false);
+    setSendLoading(false);
 
     if (window.conversationId) {
         await openConversation(
@@ -549,6 +1104,7 @@ async function editUserMessage(messageId, currentText) {
     }
 
     await loadConversations(false);
+    showStatusBanner("success", "Message updated.");
 }
 
 function formatDate(value) {
@@ -556,6 +1112,34 @@ function formatDate(value) {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return String(value);
     return date.toLocaleString("en-GB");
+}
+
+function formatTime(date) {
+    return new Intl.DateTimeFormat("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit"
+    }).format(date);
+}
+
+function autoResizeTextarea(el) {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 180) + "px";
+}
+
+function scrollChatToBottom() {
+    const chat = document.getElementById("chat");
+    if (!chat) return;
+    requestAnimationFrame(() => {
+        chat.scrollTop = chat.scrollHeight;
+    });
+}
+
+function cssEscapeSafe(value) {
+    if (window.CSS && typeof window.CSS.escape === "function") {
+        return window.CSS.escape(value);
+    }
+    return String(value).replace(/["\\]/g, "\\$&");
 }
 
 function escapeHtml(value) {
