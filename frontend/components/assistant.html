@@ -4,66 +4,205 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>IndiCare | Assistant</title>
-    <link rel="stylesheet" href="styles.css" />
+
+    <link rel="icon" type="image/svg+xml" href="/assets/logo.svg" />
+    <link rel="stylesheet" href="/css/reset.css" />
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/theme.css" />
+    <link rel="stylesheet" href="/css/layout.css" />
+    <link rel="stylesheet" href="/css/components.css" />
+    <link rel="stylesheet" href="/css/assistant-isolated.css" />
 </head>
-<body>
+<body class="indicare-assistant">
+    <div class="ica-page">
+        <div class="ica-shell" id="assistantShell">
+            <div class="ica-sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
 
-    <main class="ica-main" id="appMain">
-        <header class="ica-topbar">
-            <h2>IndiCare Assistant</h2>
-            <div style="display: flex; gap: 8px;">
-                <button id="privacyBtn" class="ica-icon-btn" title="Quick Privacy Blur (Hide Screen)">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                </button>
-                <button class="ica-icon-btn" title="New Chat">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 5v14M5 12h14"></path>
-                    </svg>
-                </button>
-            </div>
-        </header>
-
-        <section class="ica-chat" id="chatArea">
-            <div class="msg msg-ai">Hello. How can I assist you with your residential care duties today?</div>
-        </section>
-
-        <div class="ica-composer">
-            <div class="ica-chatbar">
-                
-                <label for="docUpload" class="ica-chatbar-icon" title="Upload Document">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
-                    </svg>
-                </label>
-                <input type="file" id="docUpload" hidden>
-
-                <button id="micBtn" class="ica-chatbar-icon" title="Dictate Message">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
-                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                        <line x1="12" y1="19" x2="12" y2="22"></line>
-                    </svg>
-                </button>
-
-                <textarea id="chatInput" class="ica-textarea" rows="1" placeholder="Type a message or click the mic to speak..."></textarea>
-
-                <button id="sendBtn" class="ica-send-btn">Send</button>
-            </div>
-
-            <div class="ica-footer-note-wrap">
-                <div class="ica-note">
-                    <strong>Important:</strong> Always accuracy-check AI outputs against the facts provided, current guidance, and your organisation’s policy before use.
+            <aside class="ica-sidebar" aria-label="Conversation sidebar">
+                <div class="ica-brand">
+                    <img src="/assets/logo.svg" alt="IndiCare logo" />
+                    <div>
+                        <h1>IndiCare</h1>
+                        <p>Assistant</p>
+                    </div>
                 </div>
-                <div class="ica-copyright">
-                    &copy; 2026 IndiCare. All rights reserved.
+
+                <div class="ica-sidebar-top">
+                    <button id="newConversationBtn" class="ica-btn ica-btn--primary ica-btn--full" type="button">
+                        New chat
+                    </button>
+
+                    <div class="ica-search-wrap">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <circle cx="11" cy="11" r="7"></circle>
+                            <path d="M20 20l-3.5-3.5"></path>
+                        </svg>
+                        <label for="historySearch" class="ica-sr-only">Search conversations</label>
+                        <input id="historySearch" class="ica-input" type="text" placeholder="Search conversations" />
+                    </div>
+
+                    <div class="ica-sidebar-heading">
+                        <h3>Chat history</h3>
+                        <span id="historyCount" class="ica-count-pill">0</span>
+                    </div>
                 </div>
-            </div>
+
+                <div id="conversationList" class="ica-history-list" aria-live="polite">
+                    <div class="ica-history-empty">No conversations yet.</div>
+                </div>
+
+                <div class="ica-sidebar-footer">
+                    <a href="/" class="ica-btn ica-btn--sidebar">Back to dashboard</a>
+                    <button id="logoutBtn" class="ica-btn ica-btn--sidebar" type="button">Log out</button>
+                </div>
+            </aside>
+
+            <main class="ica-main">
+                <header class="ica-topbar">
+                    <div class="ica-topbar-left">
+                        <button
+                            id="sidebarToggle"
+                            class="ica-icon-btn ica-mobile-only"
+                            type="button"
+                            aria-label="Open chat history"
+                            aria-expanded="false"
+                            aria-controls="conversationList"
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path d="M3 6h18M3 12h18M3 18h18"></path>
+                            </svg>
+                        </button>
+
+                        <div class="ica-topbar-copy">
+                            <h2>IndiCare Assistant</h2>
+                            <p id="conversationHeading">New conversation</p>
+                        </div>
+                    </div>
+
+                    <div class="ica-topbar-actions">
+                        <span class="ica-role-badge">Residential AI Brain</span>
+
+                        <button id="themeToggle" class="ica-icon-btn" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                            </svg>
+                        </button>
+
+                        <button id="headerNewChatBtn" class="ica-icon-btn" type="button" aria-label="Start new chat" title="Start new chat">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path d="M12 5v14M5 12h14"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </header>
+
+                <section id="chat" class="ica-chat" aria-label="Chat conversation">
+                    <div class="ica-chat-inner">
+                        <div class="ica-empty-state" id="chatEmpty">
+                            <div class="ica-empty-card">
+                                <div class="ica-empty-badge">Professional support for residential care</div>
+                                <h3 id="welcomeHeading">Welcome</h3>
+                                <p id="welcomeSubtext">
+                                    Ask for help with care records, professional wording, reflection,
+                                    planning, behaviour support, key work ideas, incident follow-up,
+                                    or day-to-day residential practice.
+                                </p>
+
+                                <div class="ica-prompt-chips">
+                                    <button class="ica-prompt-chip" type="button">Write a professional daily log entry</button>
+                                    <button class="ica-prompt-chip" type="button">Help me phrase a safeguarding concern</button>
+                                    <button class="ica-prompt-chip" type="button">Summarise this incident clearly</button>
+                                    <button class="ica-prompt-chip" type="button">Create a key work session plan</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ica-messages" id="messages" hidden></div>
+
+                        <div class="ica-typing-row" id="typingRow" hidden>
+                            <div class="ica-typing-indicator" aria-live="polite">
+                                <span>IndiCare is thinking</span>
+                                <span class="ica-typing-dots" aria-hidden="true">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="ica-composer">
+                    <div class="ica-composer-inner">
+                        <div class="ica-status-banner" id="statusBanner" role="status" aria-live="polite"></div>
+
+                        <div class="ica-document-row">
+                            <div id="documentChip" class="ica-document-chip ica-hidden">
+                                <span id="documentChipText"></span>
+                                <button id="clearDocumentBtn" class="ica-chip-remove" type="button" aria-label="Remove uploaded document">×</button>
+                            </div>
+                        </div>
+
+                        <div class="ica-composer-box">
+                            <div class="ica-composer-main">
+                                <label for="documentUpload" class="ica-upload-btn" title="Upload document" aria-label="Upload document">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                        <path d="M12 16V4"></path>
+                                        <path d="M7 9l5-5 5 5"></path>
+                                        <path d="M20 16.5v2A1.5 1.5 0 0 1 18.5 20h-13A1.5 1.5 0 0 1 4 18.5v-2"></path>
+                                    </svg>
+                                </label>
+                                <input id="documentUpload" type="file" accept=".txt,.docx,.pdf" hidden />
+
+                                <div class="ica-composer-fields">
+                                    <div class="ica-textarea-wrap">
+                                        <label for="chat-input" class="ica-sr-only">Type your message</label>
+                                        <textarea
+                                            id="chat-input"
+                                            class="ica-textarea"
+                                            rows="1"
+                                            placeholder="Message IndiCare..."
+                                            aria-label="Message IndiCare"
+                                        ></textarea>
+                                    </div>
+
+                                    <div class="ica-composer-actions">
+                                        <div class="ica-composer-hint">
+                                            Press <strong>Enter</strong> to send, <strong>Shift + Enter</strong> for a new line
+                                        </div>
+
+                                        <div class="ica-composer-buttons">
+                                            <button id="clearChatBtn" class="ica-btn ica-btn--ghost" type="button">Clear</button>
+
+                                            <button id="send-btn" class="ica-btn ica-btn--primary ica-send-btn" type="button">
+                                                <span class="ica-send-label">Send</span>
+                                                <span class="ica-send-spinner" aria-hidden="true">
+                                                    <span class="ica-send-spinner-dot"></span>
+                                                    <span class="ica-send-spinner-dot"></span>
+                                                    <span class="ica-send-spinner-dot"></span>
+                                                </span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="uploadStatus" class="ica-upload-status" aria-live="polite"></div>
+
+                        <div class="ica-note">
+                            <strong>Important:</strong> Always accuracy-check AI outputs against the facts provided,
+                            current guidance, and your organisation’s policy before use.
+                        </div>
+                    </div>
+                </div>
+            </main>
         </div>
-    </main>
+    </div>
 
-    <script src="app.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/ui.js"></script>
+    <script src="/js/chat.js"></script>
 </body>
 </html>
