@@ -1,4 +1,4 @@
-:root {
+.indicare-assistant {
     --ica-sidebar-width: 320px;
     --ica-sidebar-collapsed-width: 78px;
 
@@ -48,6 +48,7 @@
     --ica-shadow-md: 0 18px 44px rgba(15, 30, 60, 0.08);
 
     --ica-topbar-height: 72px;
+    --ica-composer-height: 124px;
     --ica-chat-width: 980px;
 
     --ica-font:
@@ -60,19 +61,18 @@
         sans-serif;
 }
 
-*,
-*::before,
-*::after {
+.indicare-assistant,
+.indicare-assistant * {
     box-sizing: border-box;
 }
 
 html,
-body.ica-app-body {
+body.indicare-assistant {
     height: 100%;
-    margin: 0;
 }
 
-body.ica-app-body {
+body.indicare-assistant {
+    margin: 0;
     overflow: hidden;
     background: var(--ica-app-bg);
     color: var(--ica-text);
@@ -81,18 +81,14 @@ body.ica-app-body {
     text-rendering: optimizeLegibility;
 }
 
-button,
-input,
-textarea,
-select {
+.indicare-assistant button,
+.indicare-assistant input,
+.indicare-assistant textarea,
+.indicare-assistant select {
     font: inherit;
 }
 
-a {
-    color: inherit;
-}
-
-.ica-sr-only {
+.indicare-assistant .ica-sr-only {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -104,17 +100,17 @@ a {
     border: 0;
 }
 
-.ica-hidden {
+.indicare-assistant .ica-hidden {
     display: none !important;
 }
 
-.ica-app {
+.indicare-assistant .ica-app {
     height: 100dvh;
     width: 100%;
     overflow: hidden;
 }
 
-.ica-shell {
+.indicare-assistant .ica-shell {
     height: 100dvh;
     width: 100%;
     display: grid;
@@ -124,11 +120,12 @@ a {
     transition: grid-template-columns 0.22s ease;
 }
 
-.ica-shell.is-sidebar-collapsed {
+.indicare-assistant .ica-shell.is-sidebar-collapsed {
     grid-template-columns: var(--ica-sidebar-collapsed-width) minmax(0, 1fr);
 }
 
-.ica-sidebar-backdrop {
+/* backdrop */
+.indicare-assistant .ica-sidebar-backdrop {
     display: none;
     position: fixed;
     inset: 0;
@@ -139,7 +136,8 @@ a {
     transition: opacity 0.2s ease;
 }
 
-.ica-sidebar {
+/* sidebar */
+.indicare-assistant .ica-sidebar {
     position: relative;
     min-width: 0;
     min-height: 0;
@@ -149,7 +147,7 @@ a {
     overflow: hidden;
 }
 
-.ica-sidebar-inner {
+.indicare-assistant .ica-sidebar-inner {
     height: 100%;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
@@ -157,23 +155,23 @@ a {
     padding: 1rem;
 }
 
-.ica-sidebar-top {
+.indicare-assistant .ica-sidebar-top {
     display: grid;
     gap: 0.9rem;
 }
 
-.ica-sidebar-brand-row {
+.indicare-assistant .ica-sidebar-brand-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
 }
 
-.ica-brand {
+.indicare-assistant .ica-brand {
     min-width: 0;
 }
 
-.ica-brand-copy h1 {
+.indicare-assistant .ica-brand-copy h1 {
     margin: 0;
     font-size: 1.12rem;
     line-height: 1.1;
@@ -181,34 +179,34 @@ a {
     letter-spacing: -0.02em;
 }
 
-.ica-brand-copy p {
+.indicare-assistant .ica-brand-copy p {
     margin: 0.2rem 0 0;
     font-size: 0.9rem;
     color: var(--ica-text-on-dark-soft);
 }
 
-.ica-sidebar-history {
+.indicare-assistant .ica-sidebar-history {
     min-height: 0;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     gap: 0.8rem;
 }
 
-.ica-sidebar-heading {
+.indicare-assistant .ica-sidebar-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
 }
 
-.ica-sidebar-heading h3 {
+.indicare-assistant .ica-sidebar-heading h3 {
     margin: 0;
     font-size: 0.95rem;
     color: #fff;
     font-weight: 700;
 }
 
-.ica-count-pill {
+.indicare-assistant .ica-count-pill {
     font-size: 0.74rem;
     color: rgba(255, 255, 255, 0.76);
     padding: 0.22rem 0.5rem;
@@ -218,11 +216,11 @@ a {
     line-height: 1;
 }
 
-.ica-search-wrap {
+.indicare-assistant .ica-search-wrap {
     position: relative;
 }
 
-.ica-search-wrap svg {
+.indicare-assistant .ica-search-wrap svg {
     position: absolute;
     left: 0.9rem;
     top: 50%;
@@ -233,7 +231,7 @@ a {
     pointer-events: none;
 }
 
-.ica-input {
+.indicare-assistant .ica-input {
     width: 100%;
     height: 44px;
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -244,11 +242,17 @@ a {
     outline: none;
 }
 
-.ica-input::placeholder {
+.indicare-assistant .ica-input::placeholder {
     color: rgba(255, 255, 255, 0.6);
 }
 
-.ica-history-list {
+.indicare-assistant .ica-input:focus {
+    border-color: rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.08);
+}
+
+.indicare-assistant .ica-history-list {
     min-height: 0;
     overflow-y: auto;
     display: grid;
@@ -257,25 +261,25 @@ a {
     padding-right: 0.15rem;
 }
 
-.ica-history-list::-webkit-scrollbar,
-.ica-chat::-webkit-scrollbar {
+.indicare-assistant .ica-history-list::-webkit-scrollbar,
+.indicare-assistant .ica-chat::-webkit-scrollbar {
     width: 10px;
 }
 
-.ica-history-list::-webkit-scrollbar-thumb,
-.ica-chat::-webkit-scrollbar-thumb {
+.indicare-assistant .ica-history-list::-webkit-scrollbar-thumb,
+.indicare-assistant .ica-chat::-webkit-scrollbar-thumb {
     background: rgba(120, 138, 167, 0.32);
     border-radius: 999px;
 }
 
-.ica-history-empty {
+.indicare-assistant .ica-history-empty {
     color: rgba(255, 255, 255, 0.68);
     font-size: 0.92rem;
     line-height: 1.5;
     padding: 0.25rem 0.1rem;
 }
 
-.ica-history-item {
+.indicare-assistant .ica-history-item {
     border: 1px solid rgba(255, 255, 255, 0.1);
     background: rgba(255, 255, 255, 0.06);
     border-radius: 16px;
@@ -288,27 +292,27 @@ a {
         box-shadow 0.18s ease;
 }
 
-.ica-history-item:hover {
+.indicare-assistant .ica-history-item:hover {
     transform: translateY(-1px);
     border-color: rgba(255, 255, 255, 0.18);
     background: rgba(255, 255, 255, 0.1);
     box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
 }
 
-.ica-history-item.is-active {
+.indicare-assistant .ica-history-item.is-active {
     background: rgba(79, 116, 255, 0.2);
     border-color: rgba(121, 147, 255, 0.45);
     box-shadow: inset 0 0 0 1px rgba(121, 147, 255, 0.14);
 }
 
-.ica-history-item-top {
+.indicare-assistant .ica-history-item-top {
     display: flex;
     justify-content: space-between;
     gap: 0.5rem;
     align-items: flex-start;
 }
 
-.ica-history-item-title {
+.indicare-assistant .ica-history-item-title {
     font-weight: 700;
     color: #fff;
     margin-bottom: 0.35rem;
@@ -317,13 +321,13 @@ a {
     font-size: 0.97rem;
 }
 
-.ica-history-item-meta {
+.indicare-assistant .ica-history-item-meta {
     font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.66);
     margin-bottom: 0.45rem;
 }
 
-.ica-history-item-preview {
+.indicare-assistant .ica-history-item-preview {
     font-size: 0.83rem;
     color: rgba(255, 255, 255, 0.74);
     line-height: 1.42;
@@ -333,19 +337,20 @@ a {
     overflow: hidden;
 }
 
-.ica-history-actions {
+.indicare-assistant .ica-history-actions {
     display: flex;
     gap: 0.35rem;
 }
 
-.ica-sidebar-footer {
+.indicare-assistant .ica-sidebar-footer {
     display: grid;
     gap: 0.6rem;
 }
 
-.ica-history-icon-btn,
-.ica-icon-btn,
-.ica-chatbar-icon-btn {
+/* buttons */
+.indicare-assistant .ica-history-icon-btn,
+.indicare-assistant .ica-icon-btn,
+.indicare-assistant .ica-chatbar-icon-btn {
     width: 40px;
     height: 40px;
     border-radius: 12px;
@@ -365,7 +370,7 @@ a {
         box-shadow 0.18s ease;
 }
 
-.ica-history-icon-btn {
+.indicare-assistant .ica-history-icon-btn {
     width: 30px;
     height: 30px;
     border-radius: 9px;
@@ -374,38 +379,38 @@ a {
     color: #fff;
 }
 
-.ica-sidebar-collapse-btn {
+.indicare-assistant .ica-sidebar-collapse-btn {
     background: rgba(255, 255, 255, 0.08);
     border-color: rgba(255, 255, 255, 0.14);
     color: #fff;
 }
 
-.ica-history-icon-btn:hover,
-.ica-history-icon-btn:focus-visible,
-.ica-sidebar-collapse-btn:hover,
-.ica-sidebar-collapse-btn:focus-visible {
+.indicare-assistant .ica-history-icon-btn:hover,
+.indicare-assistant .ica-history-icon-btn:focus-visible,
+.indicare-assistant .ica-sidebar-collapse-btn:hover,
+.indicare-assistant .ica-sidebar-collapse-btn:focus-visible {
     background: rgba(255, 255, 255, 0.14);
     border-color: rgba(255, 255, 255, 0.24);
 }
 
-.ica-icon-btn:hover,
-.ica-icon-btn:focus-visible,
-.ica-chatbar-icon-btn:hover,
-.ica-chatbar-icon-btn:focus-visible {
+.indicare-assistant .ica-icon-btn:hover,
+.indicare-assistant .ica-icon-btn:focus-visible,
+.indicare-assistant .ica-chatbar-icon-btn:hover,
+.indicare-assistant .ica-chatbar-icon-btn:focus-visible {
     transform: translateY(-1px);
     border-color: var(--ica-primary);
     background: #eef4ff;
 }
 
-.ica-history-icon-btn svg,
-.ica-icon-btn svg,
-.ica-chatbar-icon-btn svg,
-.ica-btn svg {
+.indicare-assistant .ica-history-icon-btn svg,
+.indicare-assistant .ica-icon-btn svg,
+.indicare-assistant .ica-chatbar-icon-btn svg,
+.indicare-assistant .ica-btn svg {
     width: 18px;
     height: 18px;
 }
 
-.ica-chatbar-icon-btn.is-recording {
+.indicare-assistant .ica-chatbar-icon-btn.is-recording {
     color: #fff;
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     border-color: #dc2626;
@@ -419,7 +424,7 @@ a {
     100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 
-.ica-btn {
+.indicare-assistant .ica-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -438,24 +443,24 @@ a {
         border-color 0.2s ease;
 }
 
-.ica-btn--primary {
+.indicare-assistant .ica-btn--primary {
     background: linear-gradient(135deg, var(--ica-primary) 0%, var(--ica-primary-hover) 100%);
     color: #fff;
     box-shadow: 0 10px 20px rgba(47, 92, 255, 0.18);
 }
 
-.ica-btn--primary:hover {
+.indicare-assistant .ica-btn--primary:hover {
     transform: translateY(-1px);
     box-shadow: 0 14px 26px rgba(47, 92, 255, 0.22);
 }
 
-.ica-btn--ghost {
+.indicare-assistant .ica-btn--ghost {
     background: #f8fafc;
     color: var(--ica-text);
     border-color: var(--ica-border);
 }
 
-.ica-btn--sidebar {
+.indicare-assistant .ica-btn--sidebar {
     background: rgba(255, 255, 255, 0.08);
     color: #fff;
     border-color: rgba(255, 255, 255, 0.14);
@@ -465,11 +470,16 @@ a {
     font-weight: 650;
 }
 
-.ica-btn--full {
+.indicare-assistant .ica-btn--sidebar:hover {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.indicare-assistant .ica-btn--full {
     width: 100%;
 }
 
-.ica-main {
+/* main */
+.indicare-assistant .ica-main {
     min-width: 0;
     min-height: 0;
     display: grid;
@@ -478,7 +488,7 @@ a {
     position: relative;
 }
 
-.ica-topbar {
+.indicare-assistant .ica-topbar {
     min-width: 0;
     display: flex;
     align-items: center;
@@ -492,18 +502,18 @@ a {
     z-index: 5;
 }
 
-.ica-topbar-left {
+.indicare-assistant .ica-topbar-left {
     display: flex;
     align-items: center;
     gap: 0.9rem;
     min-width: 0;
 }
 
-.ica-topbar-copy {
+.indicare-assistant .ica-topbar-copy {
     min-width: 0;
 }
 
-.ica-topbar-copy h2 {
+.indicare-assistant .ica-topbar-copy h2 {
     margin: 0 0 0.12rem;
     font-size: 1.16rem;
     line-height: 1.15;
@@ -514,7 +524,7 @@ a {
     text-overflow: ellipsis;
 }
 
-.ica-topbar-copy p {
+.indicare-assistant .ica-topbar-copy p {
     margin: 0;
     color: var(--ica-text-soft);
     font-size: 0.9rem;
@@ -523,14 +533,14 @@ a {
     text-overflow: ellipsis;
 }
 
-.ica-topbar-actions {
+.indicare-assistant .ica-topbar-actions {
     display: flex;
     align-items: center;
     gap: 0.55rem;
     flex-shrink: 0;
 }
 
-.ica-mode-select {
+.indicare-assistant .ica-mode-select {
     height: 40px;
     border-radius: 12px;
     border: 1px solid var(--ica-border);
@@ -540,14 +550,14 @@ a {
     min-width: 126px;
 }
 
-.ica-chat {
+.indicare-assistant .ica-chat {
     min-height: 0;
     overflow-y: auto;
     background: var(--ica-chat-bg);
     padding: 1.25rem 1.2rem 1rem;
 }
 
-.ica-chat-inner {
+.indicare-assistant .ica-chat-inner {
     width: min(100%, var(--ica-chat-width));
     margin: 0 auto;
     min-height: 100%;
@@ -555,7 +565,7 @@ a {
     flex-direction: column;
 }
 
-.ica-empty-state {
+.indicare-assistant .ica-empty-state {
     flex: 1;
     display: grid;
     place-items: center;
@@ -564,7 +574,7 @@ a {
     padding: 1.2rem 0 1.4rem;
 }
 
-.ica-empty-card {
+.indicare-assistant .ica-empty-card {
     width: min(100%, 720px);
     padding: 1.7rem 1.35rem 1.25rem;
     border-radius: 28px;
@@ -574,7 +584,7 @@ a {
     backdrop-filter: blur(10px);
 }
 
-.ica-empty-badge {
+.indicare-assistant .ica-empty-badge {
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
@@ -588,7 +598,7 @@ a {
     margin-bottom: 0.95rem;
 }
 
-.ica-empty-card h3 {
+.indicare-assistant .ica-empty-card h3 {
     margin: 0 0 0.6rem;
     color: var(--ica-text);
     font-size: 1.82rem;
@@ -596,7 +606,7 @@ a {
     line-height: 1.08;
 }
 
-.ica-empty-card p {
+.indicare-assistant .ica-empty-card p {
     margin: 0 auto;
     max-width: 58ch;
     line-height: 1.65;
@@ -604,7 +614,7 @@ a {
     font-size: 1rem;
 }
 
-.ica-prompt-chips {
+.indicare-assistant .ica-prompt-chips {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
@@ -612,7 +622,7 @@ a {
     margin-top: 1rem;
 }
 
-.ica-prompt-chip {
+.indicare-assistant .ica-prompt-chip {
     border: 1px solid #d7e5ff;
     background: #fff;
     color: var(--ica-text);
@@ -623,27 +633,34 @@ a {
     transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
 
-.ica-messages {
+.indicare-assistant .ica-prompt-chip:hover,
+.indicare-assistant .ica-prompt-chip:focus-visible {
+    transform: translateY(-1px);
+    border-color: var(--ica-primary);
+    background: #eef4ff;
+}
+
+.indicare-assistant .ica-messages {
     display: grid;
     gap: 1rem;
     padding-bottom: 0.25rem;
 }
 
-.ica-message-wrapper {
+.indicare-assistant .ica-message-wrapper {
     display: flex;
     align-items: flex-end;
     gap: 0.75rem;
 }
 
-.ica-message-wrapper.is-user {
+.indicare-assistant .ica-message-wrapper.is-user {
     justify-content: flex-end;
 }
 
-.ica-message-wrapper.is-assistant {
+.indicare-assistant .ica-message-wrapper.is-assistant {
     justify-content: flex-start;
 }
 
-.ica-message-avatar {
+.indicare-assistant .ica-message-avatar {
     width: 38px;
     height: 38px;
     border-radius: 999px;
@@ -656,22 +673,22 @@ a {
     box-shadow: var(--ica-shadow-xs);
 }
 
-.ica-message-wrapper.is-user .ica-message-avatar {
+.indicare-assistant .ica-message-wrapper.is-user .ica-message-avatar {
     background: linear-gradient(135deg, #2447d5 0%, #315efb 100%);
     color: #fff;
 }
 
-.ica-message-wrapper.is-assistant .ica-message-avatar {
+.indicare-assistant .ica-message-wrapper.is-assistant .ica-message-avatar {
     background: #fff;
     color: #24437f;
     border: 1px solid var(--ica-border);
 }
 
-.ica-message-block {
+.indicare-assistant .ica-message-block {
     max-width: min(820px, 84%);
 }
 
-.ica-message-meta {
+.indicare-assistant .ica-message-meta {
     font-size: 0.74rem;
     color: var(--ica-text-soft);
     margin: 0 0 0.38rem;
@@ -681,11 +698,11 @@ a {
     gap: 0.45rem;
 }
 
-.ica-message-wrapper.is-user .ica-message-meta {
+.indicare-assistant .ica-message-wrapper.is-user .ica-message-meta {
     justify-content: flex-end;
 }
 
-.ica-message-role-dot {
+.indicare-assistant .ica-message-role-dot {
     width: 6px;
     height: 6px;
     border-radius: 999px;
@@ -693,7 +710,7 @@ a {
     opacity: 0.55;
 }
 
-.ica-message {
+.indicare-assistant .ica-message {
     position: relative;
     padding: 1rem 1.08rem;
     border-radius: 24px;
@@ -702,27 +719,27 @@ a {
     box-shadow: var(--ica-shadow-sm);
 }
 
-.ica-message.is-user {
+.indicare-assistant .ica-message.is-user {
     background: linear-gradient(135deg, var(--ica-primary) 0%, var(--ica-primary-hover) 100%);
     color: #fff;
     border-bottom-right-radius: 8px;
 }
 
-.ica-message.is-assistant {
+.indicare-assistant .ica-message.is-assistant {
     background: rgba(255, 255, 255, 0.97);
     color: var(--ica-text);
     border: 1px solid #d2dceb;
     border-bottom-left-radius: 8px;
 }
 
-.ica-message-actions {
+.indicare-assistant .ica-message-actions {
     margin-top: 0.45rem;
     display: flex;
     gap: 0.45rem;
     flex-wrap: wrap;
 }
 
-.ica-copy-btn {
+.indicare-assistant .ica-copy-btn {
     border: 1px solid var(--ica-border);
     background: rgba(255, 255, 255, 0.88);
     color: var(--ica-text-soft);
@@ -730,53 +747,61 @@ a {
     padding: 0.38rem 0.72rem;
     cursor: pointer;
     font-size: 0.82rem;
+    transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
 }
 
-.ica-message h1,
-.ica-message h2,
-.ica-message h3,
-.ica-message h4,
-.ica-message h5,
-.ica-message h6 {
+.indicare-assistant .ica-copy-btn:hover,
+.indicare-assistant .ica-copy-btn:focus-visible {
+    border-color: var(--ica-primary);
+    background: #eef4ff;
+    color: var(--ica-text);
+}
+
+.indicare-assistant .ica-message h1,
+.indicare-assistant .ica-message h2,
+.indicare-assistant .ica-message h3,
+.indicare-assistant .ica-message h4,
+.indicare-assistant .ica-message h5,
+.indicare-assistant .ica-message h6 {
     margin: 0 0 0.75rem;
     line-height: 1.2;
     letter-spacing: -0.02em;
 }
 
-.ica-message h1 { font-size: 1.45rem; }
-.ica-message h2 { font-size: 1.3rem; }
-.ica-message h3 { font-size: 1.12rem; }
-.ica-message h4,
-.ica-message h5,
-.ica-message h6 { font-size: 1rem; }
+.indicare-assistant .ica-message h1 { font-size: 1.45rem; }
+.indicare-assistant .ica-message h2 { font-size: 1.3rem; }
+.indicare-assistant .ica-message h3 { font-size: 1.12rem; }
+.indicare-assistant .ica-message h4,
+.indicare-assistant .ica-message h5,
+.indicare-assistant .ica-message h6 { font-size: 1rem; }
 
-.ica-message p {
+.indicare-assistant .ica-message p {
     margin: 0 0 0.85rem;
     color: inherit;
 }
 
-.ica-message p:last-child {
+.indicare-assistant .ica-message p:last-child {
     margin-bottom: 0;
 }
 
-.ica-message ul,
-.ica-message ol {
+.indicare-assistant .ica-message ul,
+.indicare-assistant .ica-message ol {
     margin: 0.45rem 0 0.9rem 1.25rem;
     padding: 0;
 }
 
-.ica-message li {
+.indicare-assistant .ica-message li {
     margin: 0.28rem 0;
 }
 
-.ica-message blockquote {
+.indicare-assistant .ica-message blockquote {
     margin: 0.8rem 0;
     padding: 0.1rem 0 0.1rem 0.9rem;
     border-left: 3px solid rgba(120, 140, 180, 0.45);
     color: var(--ica-text-soft);
 }
 
-.ica-message pre {
+.indicare-assistant .ica-message pre {
     overflow: auto;
     margin: 0.8rem 0;
     padding: 0.9rem;
@@ -785,23 +810,23 @@ a {
     color: #f8fafc;
 }
 
-.ica-message code {
+.indicare-assistant .ica-message code {
     background: rgba(15, 23, 42, 0.06);
     padding: 0.12rem 0.34rem;
     border-radius: 7px;
     font-size: 0.92em;
 }
 
-.ica-message pre code {
+.indicare-assistant .ica-message pre code {
     background: transparent;
     padding: 0;
 }
 
-.ica-inline-edit-wrap {
+.indicare-assistant .ica-inline-edit-wrap {
     margin-top: 0.65rem;
 }
 
-.ica-inline-edit-textarea {
+.indicare-assistant .ica-inline-edit-textarea {
     width: 100%;
     min-height: 56px;
     max-height: 220px;
@@ -815,12 +840,12 @@ a {
     line-height: 1.55;
 }
 
-.ica-typing-row {
+.indicare-assistant .ica-typing-row {
     display: flex;
     justify-content: flex-start;
 }
 
-.ica-typing-indicator {
+.indicare-assistant .ica-typing-indicator {
     display: inline-flex;
     align-items: center;
     gap: 0.42rem;
@@ -833,13 +858,13 @@ a {
     font-size: 0.86rem;
 }
 
-.ica-typing-dots {
+.indicare-assistant .ica-typing-dots {
     display: inline-flex;
     gap: 0.28rem;
 }
 
-.ica-typing-dots span,
-.ica-send-spinner-dot {
+.indicare-assistant .ica-typing-dots span,
+.indicare-assistant .ica-send-spinner-dot {
     width: 8px;
     height: 8px;
     border-radius: 999px;
@@ -847,13 +872,13 @@ a {
     animation: ica-bounce 1.2s infinite ease-in-out;
 }
 
-.ica-typing-dots span:nth-child(2),
-.ica-send-spinner-dot:nth-child(2) {
+.indicare-assistant .ica-typing-dots span:nth-child(2),
+.indicare-assistant .ica-send-spinner-dot:nth-child(2) {
     animation-delay: 0.12s;
 }
 
-.ica-typing-dots span:nth-child(3),
-.ica-send-spinner-dot:nth-child(3) {
+.indicare-assistant .ica-typing-dots span:nth-child(3),
+.indicare-assistant .ica-send-spinner-dot:nth-child(3) {
     animation-delay: 0.24s;
 }
 
@@ -862,7 +887,8 @@ a {
     40% { transform: translateY(-4px); opacity: 1; }
 }
 
-.ica-composer {
+/* composer */
+.indicare-assistant .ica-composer {
     border-top: 1px solid var(--ica-border);
     background: var(--ica-surface-strong);
     backdrop-filter: blur(14px);
@@ -871,14 +897,14 @@ a {
     z-index: 6;
 }
 
-.ica-composer-inner {
+.indicare-assistant .ica-composer-inner {
     width: min(100%, var(--ica-chat-width));
     margin: 0 auto;
     display: grid;
     gap: 0.45rem;
 }
 
-.ica-status-banner {
+.indicare-assistant .ica-status-banner {
     display: none;
     align-items: center;
     gap: 0.65rem;
@@ -889,24 +915,30 @@ a {
     font-size: 0.88rem;
 }
 
-.ica-status-banner.is-show { display: flex; }
-.ica-status-banner.is-success {
+.indicare-assistant .ica-status-banner.is-show { display: flex; }
+.indicare-assistant .ica-status-banner.is-success {
     background: var(--ica-success-bg);
     border-color: var(--ica-success-border);
     color: var(--ica-success-text);
 }
-.ica-status-banner.is-warn {
+.indicare-assistant .ica-status-banner.is-warn {
     background: var(--ica-warn-bg);
     border-color: var(--ica-warn-border);
     color: var(--ica-warn-text);
 }
-.ica-status-banner.is-error {
+.indicare-assistant .ica-status-banner.is-error {
     background: var(--ica-error-bg);
     border-color: var(--ica-error-border);
     color: var(--ica-error-text);
 }
 
-.ica-document-row {
+.indicare-assistant .ica-status-banner svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.indicare-assistant .ica-document-row {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -914,7 +946,7 @@ a {
     min-height: 1.2rem;
 }
 
-.ica-document-chip {
+.indicare-assistant .ica-document-chip {
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
@@ -927,14 +959,14 @@ a {
     max-width: 100%;
 }
 
-.ica-document-chip span {
+.indicare-assistant .ica-document-chip span {
     max-width: 300px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.ica-chip-remove {
+.indicare-assistant .ica-chip-remove {
     border: none;
     background: transparent;
     color: var(--ica-text-soft);
@@ -944,7 +976,7 @@ a {
     padding: 0;
 }
 
-.ica-chatbar {
+.indicare-assistant .ica-chatbar {
     display: grid;
     grid-template-columns: auto auto minmax(0, 1fr) auto auto;
     gap: 0.55rem;
@@ -956,11 +988,11 @@ a {
     box-shadow: 0 6px 18px rgba(15, 30, 60, 0.05);
 }
 
-.ica-chatbar-input-wrap {
+.indicare-assistant .ica-chatbar-input-wrap {
     min-width: 0;
 }
 
-.ica-chatbar-input {
+.indicare-assistant .ica-chatbar-input {
     width: 100%;
     min-height: 24px;
     max-height: 124px;
@@ -973,23 +1005,23 @@ a {
     line-height: 1.5;
 }
 
-.ica-chatbar-input::placeholder {
+.indicare-assistant .ica-chatbar-input::placeholder {
     color: #94a3b8;
 }
 
-.ica-chatbar-btn {
+.indicare-assistant .ica-chatbar-btn {
     height: 42px;
     padding-top: 0;
     padding-bottom: 0;
 }
 
-.ica-send-btn {
+.indicare-assistant .ica-send-btn {
     min-width: 96px;
     position: relative;
     overflow: hidden;
 }
 
-.ica-send-spinner {
+.indicare-assistant .ica-send-spinner {
     position: absolute;
     inset: 0;
     opacity: 0;
@@ -1000,43 +1032,43 @@ a {
     gap: 0.15rem;
 }
 
-.ica-send-btn.is-loading .ica-send-label {
+.indicare-assistant .ica-send-btn.is-loading .ica-send-label {
     opacity: 0;
 }
 
-.ica-send-btn.is-loading .ica-send-spinner {
+.indicare-assistant .ica-send-btn.is-loading .ica-send-spinner {
     opacity: 1;
 }
 
-.ica-upload-status {
+.indicare-assistant .ica-upload-status {
     font-size: 0.8rem;
     color: var(--ica-text-soft);
     min-height: 1rem;
 }
 
-.ica-footer-meta {
+.indicare-assistant .ica-footer-meta {
     display: grid;
     gap: 0.18rem;
 }
 
-.ica-note {
+.indicare-assistant .ica-note {
     font-size: 0.76rem;
     color: var(--ica-text-soft);
     line-height: 1.35;
     margin-top: 0.05rem;
 }
 
-.ica-note strong {
+.indicare-assistant .ica-note strong {
     color: var(--ica-text);
 }
 
-.ica-copyright {
+.indicare-assistant .ica-copyright {
     font-size: 0.74rem;
     color: var(--ica-text-soft);
     line-height: 1.3;
 }
 
-.ica-rename-input {
+.indicare-assistant .ica-rename-input {
     width: 100%;
     border: 1px solid rgba(255, 255, 255, 0.18);
     background: rgba(255, 255, 255, 0.12);
@@ -1047,64 +1079,66 @@ a {
     margin-bottom: 0.55rem;
 }
 
-.ica-mobile-only {
+.indicare-assistant .ica-mobile-only {
     display: none;
 }
 
-.ica-inline-edit-textarea:focus,
-.ica-chatbar-input:focus,
-.ica-btn:focus-visible,
-.ica-icon-btn:focus-visible,
-.ica-copy-btn:focus-visible,
-.ica-chatbar-icon-btn:focus-visible,
-.ica-history-item:focus-visible,
-.ica-mode-select:focus,
-.ica-input:focus {
+/* focus */
+.indicare-assistant .ica-inline-edit-textarea:focus,
+.indicare-assistant .ica-chatbar-input:focus,
+.indicare-assistant .ica-btn:focus-visible,
+.indicare-assistant .ica-icon-btn:focus-visible,
+.indicare-assistant .ica-copy-btn:focus-visible,
+.indicare-assistant .ica-chatbar-icon-btn:focus-visible,
+.indicare-assistant .ica-history-item:focus-visible,
+.indicare-assistant .ica-mode-select:focus,
+.indicare-assistant .ica-input:focus {
     outline: none;
     border-color: var(--ica-primary);
     box-shadow: 0 0 0 4px rgba(47, 92, 255, 0.12);
 }
 
-.ica-shell.is-sidebar-collapsed .ica-sidebar-inner {
+/* collapsed desktop sidebar */
+.indicare-assistant .ica-shell.is-sidebar-collapsed .ica-sidebar-inner {
     padding: 0.9rem 0.7rem;
 }
 
-.ica-shell.is-sidebar-collapsed .ica-brand-copy,
-.ica-shell.is-sidebar-collapsed .ica-search-wrap,
-.ica-shell.is-sidebar-collapsed .ica-sidebar-heading h3,
-.ica-shell.is-sidebar-collapsed .ica-history-item-title,
-.ica-shell.is-sidebar-collapsed .ica-history-item-preview,
-.ica-shell.is-sidebar-collapsed .ica-history-item-meta,
-.ica-shell.is-sidebar-collapsed .ica-btn--sidebar,
-.ica-shell.is-sidebar-collapsed .ica-btn--primary span {
+.indicare-assistant .ica-shell.is-sidebar-collapsed .ica-brand-copy,
+.indicare-assistant .ica-shell.is-sidebar-collapsed .ica-search-wrap,
+.indicare-assistant .ica-shell.is-sidebar-collapsed .ica-sidebar-heading h3,
+.indicare-assistant .ica-shell.is-sidebar-collapsed .ica-history-item-title,
+.indicare-assistant .ica-shell.is-sidebar-collapsed .ica-history-item-preview,
+.indicare-assistant .ica-shell.is-sidebar-collapsed .ica-history-item-meta,
+.indicare-assistant .ica-shell.is-sidebar-collapsed .ica-btn--sidebar {
     display: none;
 }
 
-.ica-shell.is-sidebar-collapsed .ica-sidebar-history {
+.indicare-assistant .ica-shell.is-sidebar-collapsed .ica-sidebar-history {
     grid-template-rows: 1fr;
 }
 
-.ica-shell.is-sidebar-collapsed .ica-sidebar-heading {
+.indicare-assistant .ica-shell.is-sidebar-collapsed .ica-sidebar-heading {
     justify-content: center;
 }
 
-.ica-shell.is-sidebar-collapsed .ica-count-pill {
+.indicare-assistant .ica-shell.is-sidebar-collapsed .ica-count-pill {
     margin: 0 auto;
 }
 
-.ica-shell.is-sidebar-collapsed .ica-history-item {
+.indicare-assistant .ica-shell.is-sidebar-collapsed .ica-history-item {
     padding: 0.55rem;
 }
 
-.ica-shell.is-sidebar-collapsed .ica-history-item-top {
+.indicare-assistant .ica-shell.is-sidebar-collapsed .ica-history-item-top {
     justify-content: center;
 }
 
-.ica-shell.is-sidebar-collapsed .ica-history-actions {
+.indicare-assistant .ica-shell.is-sidebar-collapsed .ica-history-actions {
     display: none;
 }
 
-body.ica-app-body.theme-dark {
+/* dark mode */
+body.indicare-assistant.theme-dark {
     --ica-app-bg:
         radial-gradient(circle at top, rgba(79, 116, 255, 0.1), transparent 30%),
         linear-gradient(180deg, #09111f 0%, #0b1324 100%);
@@ -1114,77 +1148,78 @@ body.ica-app-body.theme-dark {
         linear-gradient(180deg, #0b1220 0%, #111a2e 100%);
 }
 
-body.ica-app-body.theme-dark .ica-shell {
+body.indicare-assistant.theme-dark .ica-shell {
     background: rgba(15, 23, 42, 0.68);
 }
 
-body.ica-app-body.theme-dark .ica-topbar,
-body.ica-app-body.theme-dark .ica-composer {
+body.indicare-assistant.theme-dark .ica-topbar,
+body.indicare-assistant.theme-dark .ica-composer {
     background: rgba(15, 23, 42, 0.82);
     border-color: rgba(148, 163, 184, 0.14);
 }
 
-body.ica-app-body.theme-dark .ica-empty-card,
-body.ica-app-body.theme-dark .ica-message.is-assistant,
-body.ica-app-body.theme-dark .ica-typing-indicator,
-body.ica-app-body.theme-dark .ica-chatbar,
-body.ica-app-body.theme-dark .ica-icon-btn,
-body.ica-app-body.theme-dark .ica-chatbar-icon-btn,
-body.ica-app-body.theme-dark .ica-prompt-chip,
-body.ica-app-body.theme-dark .ica-copy-btn,
-body.ica-app-body.theme-dark .ica-btn--ghost,
-body.ica-app-body.theme-dark .ica-inline-edit-textarea,
-body.ica-app-body.theme-dark .ica-mode-select {
+body.indicare-assistant.theme-dark .ica-empty-card,
+body.indicare-assistant.theme-dark .ica-message.is-assistant,
+body.indicare-assistant.theme-dark .ica-typing-indicator,
+body.indicare-assistant.theme-dark .ica-chatbar,
+body.indicare-assistant.theme-dark .ica-icon-btn,
+body.indicare-assistant.theme-dark .ica-chatbar-icon-btn,
+body.indicare-assistant.theme-dark .ica-prompt-chip,
+body.indicare-assistant.theme-dark .ica-copy-btn,
+body.indicare-assistant.theme-dark .ica-btn--ghost,
+body.indicare-assistant.theme-dark .ica-inline-edit-textarea,
+body.indicare-assistant.theme-dark .ica-mode-select {
     background: rgba(15, 23, 42, 0.92);
     color: #e5eefb;
     border-color: rgba(148, 163, 184, 0.18);
 }
 
-body.ica-app-body.theme-dark .ica-topbar-copy h2,
-body.ica-app-body.theme-dark .ica-empty-card h3,
-body.ica-app-body.theme-dark .ica-note strong,
-body.ica-app-body.theme-dark .ica-document-chip,
-body.ica-app-body.theme-dark .ica-message h1,
-body.ica-app-body.theme-dark .ica-message h2,
-body.ica-app-body.theme-dark .ica-message h3,
-body.ica-app-body.theme-dark .ica-message h4,
-body.ica-app-body.theme-dark .ica-message h5,
-body.ica-app-body.theme-dark .ica-message h6 {
+body.indicare-assistant.theme-dark .ica-topbar-copy h2,
+body.indicare-assistant.theme-dark .ica-empty-card h3,
+body.indicare-assistant.theme-dark .ica-note strong,
+body.indicare-assistant.theme-dark .ica-document-chip,
+body.indicare-assistant.theme-dark .ica-message h1,
+body.indicare-assistant.theme-dark .ica-message h2,
+body.indicare-assistant.theme-dark .ica-message h3,
+body.indicare-assistant.theme-dark .ica-message h4,
+body.indicare-assistant.theme-dark .ica-message h5,
+body.indicare-assistant.theme-dark .ica-message h6 {
     color: #f8fbff;
 }
 
-body.ica-app-body.theme-dark .ica-topbar-copy p,
-body.ica-app-body.theme-dark .ica-note,
-body.ica-app-body.theme-dark .ica-upload-status,
-body.ica-app-body.theme-dark .ica-message-meta,
-body.ica-app-body.theme-dark .ica-empty-card p,
-body.ica-app-body.theme-dark .ica-message blockquote,
-body.ica-app-body.theme-dark .ica-copyright {
+body.indicare-assistant.theme-dark .ica-topbar-copy p,
+body.indicare-assistant.theme-dark .ica-note,
+body.indicare-assistant.theme-dark .ica-upload-status,
+body.indicare-assistant.theme-dark .ica-message-meta,
+body.indicare-assistant.theme-dark .ica-empty-card p,
+body.indicare-assistant.theme-dark .ica-message blockquote,
+body.indicare-assistant.theme-dark .ica-copyright {
     color: #b6c2d6;
 }
 
-body.ica-app-body.theme-dark .ica-document-chip,
-body.ica-app-body.theme-dark .ica-empty-badge {
+body.indicare-assistant.theme-dark .ica-document-chip,
+body.indicare-assistant.theme-dark .ica-empty-badge {
     background: rgba(30, 41, 59, 0.9);
     border-color: rgba(96, 165, 250, 0.22);
     color: #dbeafe;
 }
 
-body.ica-app-body.theme-dark .ica-message code {
+body.indicare-assistant.theme-dark .ica-message code {
     background: rgba(255, 255, 255, 0.09);
 }
 
-body.ica-app-body.theme-dark .ica-chatbar-input::placeholder {
+body.indicare-assistant.theme-dark .ica-chatbar-input::placeholder {
     color: #8ea0ba;
 }
 
+/* mobile */
 @media (max-width: 980px) {
-    .ica-shell,
-    .ica-shell.is-sidebar-collapsed {
+    .indicare-assistant .ica-shell,
+    .indicare-assistant .ica-shell.is-sidebar-collapsed {
         grid-template-columns: 1fr;
     }
 
-    .ica-sidebar {
+    .indicare-assistant .ica-sidebar {
         position: fixed;
         left: 0;
         top: 0;
@@ -1196,178 +1231,178 @@ body.ica-app-body.theme-dark .ica-chatbar-input::placeholder {
         z-index: 40;
     }
 
-    .ica-shell.is-sidebar-open .ica-sidebar {
+    .indicare-assistant .ica-shell.is-sidebar-open .ica-sidebar {
         transform: translateX(0);
     }
 
-    .ica-shell.is-sidebar-open .ica-sidebar-backdrop {
+    .indicare-assistant .ica-shell.is-sidebar-open .ica-sidebar-backdrop {
         display: block;
         opacity: 1;
         pointer-events: auto;
     }
 
-    .ica-sidebar-backdrop {
+    .indicare-assistant .ica-sidebar-backdrop {
         display: block;
     }
 
-    .ica-mobile-only {
+    .indicare-assistant .ica-mobile-only {
         display: inline-flex;
     }
 
-    .ica-sidebar-collapse-btn {
+    .indicare-assistant .ica-sidebar-collapse-btn {
         display: none;
     }
 
-    .ica-topbar {
+    .indicare-assistant .ica-topbar {
         padding: 0 0.85rem;
     }
 
-    .ica-topbar-copy h2 {
+    .indicare-assistant .ica-topbar-copy h2 {
         font-size: 1.02rem;
     }
 
-    .ica-topbar-copy p {
+    .indicare-assistant .ica-topbar-copy p {
         font-size: 0.84rem;
     }
 
-    .ica-topbar-actions {
+    .indicare-assistant .ica-topbar-actions {
         gap: 0.45rem;
     }
 
-    .ica-mode-select {
+    .indicare-assistant .ica-mode-select {
         min-width: 108px;
         max-width: 108px;
         font-size: 0.87rem;
         padding: 0 0.7rem;
     }
 
-    .ica-chat {
+    .indicare-assistant .ica-chat {
         padding: 0.95rem 0.8rem 0.85rem;
     }
 
-    .ica-empty-card {
+    .indicare-assistant .ica-empty-card {
         padding: 1.25rem 1rem 1rem;
         border-radius: 22px;
     }
 
-    .ica-empty-card h3 {
+    .indicare-assistant .ica-empty-card h3 {
         font-size: 1.45rem;
     }
 
-    .ica-message-block {
+    .indicare-assistant .ica-message-block {
         max-width: 100%;
     }
 
-    .ica-message-avatar {
+    .indicare-assistant .ica-message-avatar {
         width: 32px;
         height: 32px;
         font-size: 0.72rem;
     }
 
-    .ica-composer {
+    .indicare-assistant .ica-composer {
         padding: 0.6rem 0.8rem calc(0.7rem + env(safe-area-inset-bottom));
     }
 
-    .ica-chatbar {
+    .indicare-assistant .ica-chatbar {
         grid-template-columns: auto auto minmax(0, 1fr) auto;
     }
 
-    .ica-chatbar-btn--desktop {
+    .indicare-assistant .ica-chatbar-btn--desktop {
         display: none;
     }
 
-    .ica-send-btn {
+    .indicare-assistant .ica-send-btn {
         min-width: 76px;
     }
 
-    .ica-desktop-meta {
+    .indicare-assistant .ica-desktop-meta {
         display: none;
     }
 }
 
 @media (max-width: 720px) {
-    :root {
-        --ica-topbar-height: 64px;
-    }
-
-    .ica-topbar {
+    .indicare-assistant .ica-topbar {
         gap: 0.7rem;
     }
 
-    .ica-topbar-copy p {
+    .indicare-assistant .ica-topbar-copy p {
         display: none;
     }
 
-    .ica-mode-select {
+    .indicare-assistant .ica-mode-select {
         min-width: 94px;
         max-width: 94px;
         font-size: 0.82rem;
     }
 
-    .ica-empty-card {
+    .indicare-assistant .ica-empty-card {
         padding: 1.15rem 0.92rem 0.95rem;
     }
 
-    .ica-prompt-chips {
+    .indicare-assistant .ica-prompt-chips {
         justify-content: stretch;
     }
 
-    .ica-prompt-chip {
+    .indicare-assistant .ica-prompt-chip {
         width: 100%;
         text-align: left;
     }
 
-    .ica-message-wrapper {
+    .indicare-assistant .ica-message-wrapper {
         gap: 0.52rem;
     }
 
-    .ica-message {
+    .indicare-assistant .ica-message {
         padding: 0.92rem 0.96rem;
         line-height: 1.62;
     }
 
-    .ica-chatbar {
+    .indicare-assistant .ica-chatbar {
         grid-template-columns: auto auto minmax(0, 1fr) auto;
         gap: 0.45rem;
         padding: 0.56rem;
         border-radius: 18px;
     }
 
-    .ica-chatbar-input {
+    .indicare-assistant .ica-chatbar-input {
         max-height: 96px;
         font-size: 16px;
     }
 
-    .ica-icon-btn,
-    .ica-chatbar-icon-btn {
+    .indicare-assistant .ica-icon-btn,
+    .indicare-assistant .ica-chatbar-icon-btn {
         width: 38px;
         height: 38px;
         border-radius: 11px;
     }
 
-    .ica-upload-status {
+    .indicare-assistant .ica-upload-status {
         min-height: 0.9rem;
     }
 }
 
 @media (max-width: 520px) {
-    .ica-chat {
+    .indicare-assistant {
+        --ica-topbar-height: 64px;
+    }
+
+    .indicare-assistant .ica-chat {
         padding: 0.8rem 0.65rem 0.7rem;
     }
 
-    .ica-composer {
+    .indicare-assistant .ica-composer {
         padding: 0.55rem 0.65rem calc(0.7rem + env(safe-area-inset-bottom));
     }
 
-    .ica-mode-select {
+    .indicare-assistant .ica-mode-select {
         display: none;
     }
 
-    .ica-empty-card p {
+    .indicare-assistant .ica-empty-card p {
         font-size: 0.95rem;
     }
 
-    .ica-document-chip span {
+    .indicare-assistant .ica-document-chip span {
         max-width: 180px;
     }
 }
