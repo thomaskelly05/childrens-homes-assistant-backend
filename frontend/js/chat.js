@@ -1,1423 +1,597 @@
-window.conversationId = null;
-window.currentDocumentText = null;
-window.currentDocumentName = null;
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form
+from fastapi.responses import StreamingResponse
+from psycopg2.extras import RealDictCursor
+from pydantic import BaseModel
+import logging
+import io
 
-const chatState = {
-    historyRows: [],
-    theme: localStorage.getItem("indicare-theme") || "light",
-    recognition: null,
-    isRecording: false,
-    speechSupported: false,
-    draftKeyPrefix: "indicare-chat-draft:",
-    isStreamingResponse: false
-};
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
-function initChat() {
-    applyTheme(chatState.theme);
-    bindChatInput();
-    bindConversationButtons();
-    bindDocumentUpload();
-    bindLogout();
-    bindHistorySearch();
-    bindSidebarControls();
-    bindThemeToggle();
-    bindGlobalMessageActions();
-    bindResponseMode();
-    initSpeechToText();
-    applyWelcomeMessage();
-    applyFooterMeta();
-    refreshUploadStatus();
-    restoreDraft();
-    loadConversations(true);
-}
+from db.connection import get_db
+from auth.dependencies import get_current_user
+from services.ai_service import generate_ai_stream
 
-window.initChat = initChat;
+try:
+    from docx import Document
+except Exception:
+    Document = None
 
-function bindChatInput() {
-    const sendBtn = document.getElementById("send-btn");
-    const input = document.getElementById("chat-input");
-    const clearBtn = document.getElementById("clearChatBtn");
+try:
+    from pypdf import PdfReader
+except Exception:
+    PdfReader = None
 
-    if (!sendBtn || !input) return;
+router = APIRouter(
+    prefix="/chat",
+    tags=["Chat"]
+)
 
-    autoResizeTextarea(input);
+logger = logging.getLogger(__name__)
+limiter = Limiter(key_func=get_remote_address)
 
-    sendBtn.addEventListener("click", sendMessage);
 
-    input.addEventListener("input", () => {
-        autoResizeTextarea(input);
-        saveDraft();
-    });
+class RenameConversation(BaseModel):
+    title: str
 
-    input.addEventListener("keydown", (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
-            e.preventDefault();
-            document.getElementById("historySearch")?.focus();
-            return;
-        }
 
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
-    });
+class EditMessagePayload(BaseModel):
+    message: str
+    document_text: str | None = None
+    document_name: str | None = None
+    response_mode: str | None = "balanced"
 
-    clearBtn?.addEventListener("click", () => {
-        input.value = "";
-        autoResizeTextarea(input);
-        saveDraft();
-        input.focus();
-    });
 
-    document.querySelectorAll(".ica-prompt-chip").forEach((chip) => {
-        chip.addEventListener("click", () => {
-            input.value = chip.textContent?.trim() || "";
-            autoResizeTextarea(input);
-            saveDraft();
-            input.focus();
-        });
-    });
-}
+# ---------------------------------------------------------
+# DATABASE HELPER FUNCTIONS
+# ---------------------------------------------------------
+def ensure_conversation_owner(conn, conversation_id: int, user_id: int) -> None:
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT id FROM conversations
+            WHERE id = %s AND user_id = %s LIMIT 1
+            """,
+            (conversation_id, user_id)
+        )
+        row = cur.fetchone()
 
-function bindConversationButtons() {
-    document.getElementById("newConversationBtn")?.addEventListener("click", startNewConversation);
-    document.getElementById("headerNewChatBtn")?.addEventListener("click", startNewConversation);
-}
+    if not row:
+        raise HTTPException(status_code=404, detail="Conversation not found")
 
-function bindHistorySearch() {
-    const search = document.getElementById("historySearch");
-    if (!search) return;
 
-    search.addEventListener("input", () => {
-        renderConversationList(chatState.historyRows, search.value.trim());
-    });
-}
+def get_conversation_history(conn, conversation_id: int):
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT id, role, message, created_at
+            FROM messages
+            WHERE conversation_id = %s
+            ORDER BY created_at ASC, id ASC
+            """,
+            (conversation_id,)
+        )
+        rows = cur.fetchall()
+    return rows
 
-function bindSidebarControls() {
-    const shell = document.getElementById("assistantShell");
-    const toggle = document.getElementById("sidebarToggle");
-    const backdrop = document.getElementById("sidebarBackdrop");
 
-    if (!shell) return;
+def get_conversation_document(conn, conversation_id: int):
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT id, filename, document_text, created_at
+            FROM conversation_documents
+            WHERE conversation_id = %s
+            ORDER BY created_at DESC, id DESC LIMIT 1
+            """,
+            (conversation_id,)
+        )
+        row = cur.fetchone()
+    return row
 
-    toggle?.addEventListener("click", () => {
-        shell.classList.toggle("is-sidebar-open");
-        toggle.setAttribute("aria-expanded", String(shell.classList.contains("is-sidebar-open")));
-    });
 
-    backdrop?.addEventListener("click", closeSidebar);
+def upsert_conversation_document(conn, conversation_id: int, filename: str, document_text: str):
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT id FROM conversation_documents
+            WHERE conversation_id = %s
+            ORDER BY created_at DESC, id DESC LIMIT 1
+            """,
+            (conversation_id,)
+        )
+        existing = cur.fetchone()
 
-    window.addEventListener("resize", () => {
-        if (window.innerWidth > 980) closeSidebar();
-    });
-}
+        if existing:
+            cur.execute(
+                """
+                UPDATE conversation_documents
+                SET filename = %s, document_text = %s, created_at = NOW()
+                WHERE id = %s
+                RETURNING id, filename, document_text, created_at
+                """,
+                (filename, document_text, existing["id"])
+            )
+            row = cur.fetchone()
+        else:
+            cur.execute(
+                """
+                INSERT INTO conversation_documents (conversation_id, filename, document_text)
+                VALUES (%s, %s, %s)
+                RETURNING id, filename, document_text, created_at
+                """,
+                (conversation_id, filename, document_text)
+            )
+            row = cur.fetchone()
 
-function bindThemeToggle() {
-    document.getElementById("themeToggle")?.addEventListener("click", () => {
-        applyTheme(chatState.theme === "dark" ? "light" : "dark");
-    });
-}
+    conn.commit()
+    return row
 
-function bindResponseMode() {
-    const select = document.getElementById("responseMode");
-    if (!select) return;
 
-    const saved = localStorage.getItem("indicare-response-mode");
-    if (saved && ["quick", "balanced", "deep"].includes(saved)) {
-        select.value = saved;
+def delete_conversation_document(conn, conversation_id: int):
+    with conn.cursor() as cur:
+        cur.execute(
+            "DELETE FROM conversation_documents WHERE conversation_id = %s",
+            (conversation_id,)
+        )
+    conn.commit()
+
+
+def generate_title(message: str) -> str:
+    cleaned = (message or "").strip()
+    if len(cleaned) > 60:
+        cleaned = cleaned[:60]
+    return cleaned or "New chat"
+
+
+def prep_chat_db_sync(conn, user_id, message, conversation_id, document_text, document_name):
+    if conversation_id is None:
+        title = generate_title(message)
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                "INSERT INTO conversations (user_id, title) VALUES (%s, %s) RETURNING id",
+                (user_id, title)
+            )
+            conversation_id = cur.fetchone()["id"]
+        conn.commit()
+    else:
+        try:
+            conversation_id = int(conversation_id)
+        except (TypeError, ValueError):
+            raise ValueError("Invalid conversation ID")
+        ensure_conversation_owner(conn, conversation_id, user_id)
+
+    if document_text and document_name:
+        upsert_conversation_document(conn, conversation_id, document_name, document_text)
+
+    stored_document = get_conversation_document(conn, conversation_id)
+    doc_text = stored_document["document_text"] if stored_document else None
+    doc_name = stored_document["filename"] if stored_document else None
+
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO messages (conversation_id, role, message) VALUES (%s, 'user', %s)",
+            (conversation_id, message)
+        )
+    conn.commit()
+
+    history = get_conversation_history(conn, conversation_id)
+    return conversation_id, history, doc_text, doc_name
+
+
+def save_ai_message_sync(conn, conversation_id, ai_text):
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO messages (conversation_id, role, message) VALUES (%s, 'assistant', %s)",
+                (conversation_id, ai_text)
+            )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        logger.exception("Failed to save assistant message for conversation %s", conversation_id)
+
+
+def prep_edit_db_sync(conn, user_id, message_id, new_message, document_text, document_name):
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT m.id, m.conversation_id, m.role
+            FROM messages m
+            JOIN conversations c ON c.id = m.conversation_id
+            WHERE m.id = %s AND c.user_id = %s LIMIT 1
+            """,
+            (message_id, user_id)
+        )
+        row = cur.fetchone()
+
+    if not row:
+        raise ValueError("Message not found")
+    if row["role"] != "user":
+        raise ValueError("Only user messages can be edited")
+
+    conversation_id = row["conversation_id"]
+    ensure_conversation_owner(conn, conversation_id, user_id)
+
+    if document_text and document_name:
+        upsert_conversation_document(conn, conversation_id, document_name, document_text)
+
+    stored_document = get_conversation_document(conn, conversation_id)
+    doc_text = stored_document["document_text"] if stored_document else None
+    doc_name = stored_document["filename"] if stored_document else None
+
+    with conn.cursor() as cur:
+        cur.execute("UPDATE messages SET message = %s WHERE id = %s", (new_message, message_id))
+        cur.execute("DELETE FROM messages WHERE conversation_id = %s AND id > %s", (conversation_id, message_id))
+    conn.commit()
+
+    history = get_conversation_history(conn, conversation_id)
+    return conversation_id, history, doc_text, doc_name
+
+
+# ---------------------------------------------------------
+# DOCUMENT EXTRACTION
+# ---------------------------------------------------------
+def extract_text_from_txt(file_bytes: bytes) -> str:
+    try:
+        return file_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        return file_bytes.decode("latin-1", errors="ignore")
+
+
+def extract_text_from_docx(file_bytes: bytes) -> str:
+    if Document is None:
+        raise HTTPException(status_code=500, detail="DOCX support is not installed on the server")
+    document = Document(io.BytesIO(file_bytes))
+    parts = []
+
+    for paragraph in document.paragraphs:
+        text = (paragraph.text or "").strip()
+        if text:
+            parts.append(text)
+
+    for table in document.tables:
+        for row in table.rows:
+            cells = []
+            for cell in row.cells:
+                value = (cell.text or "").strip()
+                if value:
+                    cells.append(value)
+            if cells:
+                parts.append(" | ".join(cells))
+
+    return "\n".join(parts).strip()
+
+
+def extract_text_from_pdf(file_bytes: bytes) -> str:
+    if PdfReader is None:
+        raise HTTPException(status_code=500, detail="PDF support is not installed on the server")
+    reader = PdfReader(io.BytesIO(file_bytes))
+    parts = []
+
+    for page in reader.pages:
+        text = page.extract_text() or ""
+        text = text.strip()
+        if text:
+            parts.append(text)
+
+    return "\n\n".join(parts).strip()
+
+
+def extract_document_text(filename: str, file_bytes: bytes) -> str:
+    lower = (filename or "").lower()
+
+    if lower.endswith(".txt"):
+        return extract_text_from_txt(file_bytes)
+    if lower.endswith(".docx"):
+        return extract_text_from_docx(file_bytes)
+    if lower.endswith(".pdf"):
+        return extract_text_from_pdf(file_bytes)
+
+    raise HTTPException(
+        status_code=400,
+        detail="Unsupported file type. Please upload a .txt, .docx, or .pdf file."
+    )
+
+
+# ---------------------------------------------------------
+# SSE HELPERS
+# ---------------------------------------------------------
+def sse_data(payload: str) -> str:
+    safe_payload = (payload or "").replace("\r\n", "\n").replace("\r", "\n")
+    return "".join(f"data: {line}\n" for line in safe_payload.split("\n")) + "\n"
+
+
+def sse_done() -> str:
+    return "event: done\ndata: [DONE]\n\n"
+
+
+# ---------------------------------------------------------
+# ROUTE ENDPOINTS
+# ---------------------------------------------------------
+@router.post("/upload")
+@limiter.limit("10/minute")
+async def upload_chat_document(
+    request: Request,
+    file: UploadFile = File(...),
+    conversation_id: int | None = Form(default=None),
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    MAX_FILE_SIZE = 5 * 1024 * 1024
+    contents = await file.read()
+
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail="File too large. Maximum size is 5MB to protect the server."
+        )
+
+    filename = file.filename or "document"
+    if not contents:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+
+    try:
+        extracted_text = extract_document_text(filename, contents)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Document extraction failed: %s", e)
+        raise HTTPException(status_code=500, detail="Could not read the uploaded document")
+
+    if not extracted_text.strip():
+        raise HTTPException(status_code=400, detail="No readable text was found in the uploaded document")
+
+    if conversation_id is not None:
+        ensure_conversation_owner(conn, conversation_id, current_user["user_id"])
+        upsert_conversation_document(conn, conversation_id, filename, extracted_text)
+
+    return {
+        "ok": True,
+        "filename": filename,
+        "text": extracted_text,
+        "preview": extracted_text[:1200]
     }
 
-    select.addEventListener("change", () => {
-        const value = getResponseMode();
-        localStorage.setItem("indicare-response-mode", value);
-        showStatusBanner("success", `Response mode set to ${labelForResponseMode(value)}.`);
-    });
-}
 
-function getResponseMode() {
-    const select = document.getElementById("responseMode");
-    const value = select?.value || localStorage.getItem("indicare-response-mode") || "balanced";
-    return ["quick", "balanced", "deep"].includes(value) ? value : "balanced";
-}
+@router.get("/conversations")
+def list_conversations(conn=Depends(get_db), current_user=Depends(get_current_user)):
+    user_id = current_user["user_id"]
 
-function labelForResponseMode(value) {
-    if (value === "quick") return "Quick";
-    if (value === "deep") return "Deep review";
-    return "Balanced";
-}
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT id, title, created_at
+            FROM conversations
+            WHERE user_id = %s
+            ORDER BY created_at DESC
+            """,
+            (user_id,)
+        )
+        rows = cur.fetchall()
 
-function bindGlobalMessageActions() {
-    const messages = document.getElementById("messages");
-    if (!messages) return;
+    return rows
 
-    messages.addEventListener("click", async (event) => {
-        const copyBtn = event.target.closest("[data-copy-text]");
-        if (copyBtn) {
-            const text = copyBtn.getAttribute("data-copy-text") || "";
-            try {
-                await navigator.clipboard.writeText(text);
-                const original = copyBtn.textContent;
-                copyBtn.textContent = "Copied";
-                setTimeout(() => {
-                    copyBtn.textContent = original;
-                }, 1500);
-            } catch (err) {
-                console.error("Copy failed:", err);
-            }
-            return;
-        }
 
-        const editBtn = event.target.closest("[data-edit-message-id]");
-        if (editBtn) {
-            const messageId = editBtn.getAttribute("data-edit-message-id");
-            const currentText = decodeURIComponent(editBtn.getAttribute("data-current-text") || "");
-            if (messageId) await startInlineMessageEdit(messageId, currentText);
-            return;
-        }
+@router.get("/conversations/{conversation_id}")
+def load_conversation(conversation_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
+    user_id = current_user["user_id"]
+    ensure_conversation_owner(conn, conversation_id, user_id)
 
-        const cancelBtn = event.target.closest("[data-cancel-edit-message-id]");
-        if (cancelBtn) {
-            const messageId = cancelBtn.getAttribute("data-cancel-edit-message-id");
-            if (messageId) cancelInlineMessageEdit(messageId);
-            return;
-        }
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT id, role, message, created_at
+            FROM messages
+            WHERE conversation_id = %s
+            ORDER BY created_at ASC, id ASC
+            """,
+            (conversation_id,)
+        )
+        rows = cur.fetchall()
 
-        const saveBtn = event.target.closest("[data-save-edit-message-id]");
-        if (saveBtn) {
-            const messageId = saveBtn.getAttribute("data-save-edit-message-id");
-            if (messageId) await submitInlineMessageEdit(messageId);
-        }
-    });
+    document = get_conversation_document(conn, conversation_id)
 
-    messages.addEventListener("keydown", async (event) => {
-        const textarea = event.target.closest(".ica-inline-edit-textarea");
-        if (!textarea) return;
-
-        const messageId = textarea.getAttribute("data-editing-message-id");
-        if (!messageId) return;
-
-        if (event.key === "Escape") {
-            event.preventDefault();
-            cancelInlineMessageEdit(messageId);
-        }
-
-        if (event.key === "Enter" && !event.shiftKey) {
-            event.preventDefault();
-            await submitInlineMessageEdit(messageId);
-        }
-    });
-
-    messages.addEventListener("input", (event) => {
-        const textarea = event.target.closest(".ica-inline-edit-textarea");
-        if (!textarea) return;
-        autoResizeTextarea(textarea);
-    });
-}
-
-function applyTheme(theme) {
-    chatState.theme = theme;
-    localStorage.setItem("indicare-theme", theme);
-    document.body.classList.toggle("theme-dark", theme === "dark");
-}
-
-function closeSidebar() {
-    const shell = document.getElementById("assistantShell");
-    const toggle = document.getElementById("sidebarToggle");
-    if (!shell) return;
-
-    shell.classList.remove("is-sidebar-open");
-    toggle?.setAttribute("aria-expanded", "false");
-}
-
-function bindDocumentUpload() {
-    const uploadInput = document.getElementById("documentUpload");
-    const clearBtn = document.getElementById("clearDocumentBtn");
-
-    uploadInput?.addEventListener("change", async () => {
-        const file = uploadInput.files?.[0];
-        if (!file) return;
-
-        const formData = new FormData();
-        formData.append("file", file);
-
-        if (window.conversationId) {
-            formData.append("conversation_id", String(window.conversationId));
-        }
-
-        setUploadStatus(`Uploading ${file.name}...`);
-        showStatusBanner("success", `Uploading ${file.name}...`);
-
-        try {
-            const token = localStorage.getItem("access_token");
-
-            const response = await fetch("/chat/upload", {
-                method: "POST",
-                headers: {
-                    ...(token ? { Authorization: `Bearer ${token}` } : {})
-                },
-                credentials: "include",
-                body: formData
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                if (response.status === 401) {
-                    localStorage.removeItem("access_token");
-                    localStorage.removeItem("current_user");
-                    window.location.href = "/login";
-                    return;
-                }
-
-                setUploadStatus(data.detail || "Upload failed.");
-                showStatusBanner("error", data.detail || "Upload failed.");
-                return;
-            }
-
-            window.currentDocumentText = data.text || "";
-            window.currentDocumentName = data.filename || file.name;
-            refreshUploadStatus();
-            showStatusBanner("success", "Document attached.");
-        } catch (error) {
-            console.error("Upload failed:", error);
-            setUploadStatus("Could not upload the document.");
-            showStatusBanner("error", "Could not upload the document.");
-        } finally {
-            uploadInput.value = "";
-        }
-    });
-
-    clearBtn?.addEventListener("click", async () => {
-        if (window.conversationId) {
-            try {
-                await apiRequest(`/chat/conversations/${window.conversationId}/document`, {
-                    method: "DELETE"
-                });
-            } catch (error) {
-                console.error("Failed to clear stored document:", error);
-            }
-        }
-
-        window.currentDocumentText = null;
-        window.currentDocumentName = null;
-        refreshUploadStatus();
-        showStatusBanner("warn", "Document removed.");
-    });
-}
-
-function setUploadStatus(text) {
-    const uploadStatus = document.getElementById("uploadStatus");
-    if (uploadStatus) uploadStatus.textContent = text || "";
-}
-
-function refreshUploadStatus() {
-    const chip = document.getElementById("documentChip");
-    const chipText = document.getElementById("documentChipText");
-
-    if (window.currentDocumentName && window.currentDocumentText) {
-        chip?.classList.remove("ica-hidden");
-        if (chipText) chipText.textContent = window.currentDocumentName;
-        setUploadStatus("Document attached to this chat.");
-    } else {
-        chip?.classList.add("ica-hidden");
-        if (chipText) chipText.textContent = "";
-        setUploadStatus("");
-    }
-}
-
-function showStatusBanner(type, message) {
-    const banner = document.getElementById("statusBanner");
-    if (!banner) return;
-
-    const icons = {
-        success: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"></path></svg>`,
-        warn: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0z"></path></svg>`,
-        error: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18"></path><path d="M6 6l12 12"></path></svg>`
-    };
-
-    banner.className = `ica-status-banner is-show is-${type}`;
-    banner.innerHTML = `${icons[type] || ""}<span>${escapeHtml(message)}</span>`;
-
-    clearTimeout(showStatusBanner._timer);
-    showStatusBanner._timer = setTimeout(() => {
-        banner.className = "ica-status-banner";
-        banner.innerHTML = "";
-    }, 2800);
-}
-
-function bindLogout() {
-    const logoutBtn = document.getElementById("logoutBtn");
-    if (!logoutBtn) return;
-
-    logoutBtn.addEventListener("click", async () => {
-        try {
-            localStorage.removeItem("access_token");
-            localStorage.removeItem("current_user");
-
-            try {
-                await apiRequest("/auth/logout", { method: "POST" });
-            } catch (_) {}
-
-            window.location.href = "/login";
-        } catch (_) {
-            window.location.href = "/login";
-        }
-    });
-}
-
-function getAdultFirstName() {
-    try {
-        const raw = localStorage.getItem("current_user");
-        if (!raw) return "";
-        const parsed = JSON.parse(raw);
-
-        if (parsed?.first_name) return String(parsed.first_name).trim();
-        if (parsed?.user?.first_name) return String(parsed.user.first_name).trim();
-        if (parsed?.adult?.first_name) return String(parsed.adult.first_name).trim();
-
-        return "";
-    } catch (error) {
-        console.error("Could not read first_name from current_user:", error);
-        return "";
-    }
-}
-
-function getUserInitials() {
-    const firstName = getAdultFirstName();
-    if (firstName) return firstName.trim().slice(0, 1).toUpperCase();
-    return "Y";
-}
-
-function getTimeGreeting() {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 18) return "Good afternoon";
-    return "Good evening";
-}
-
-function applyWelcomeMessage() {
-    const heading = document.getElementById("welcomeHeading");
-    const subtext = document.getElementById("welcomeSubtext");
-
-    if (!heading || !subtext) return;
-
-    const firstName = getAdultFirstName();
-    const greeting = getTimeGreeting();
-
-    heading.textContent = firstName ? `${greeting}, ${firstName}` : greeting;
-
-    subtext.textContent = firstName
-        ? `How can I help with support for ${firstName} today? Ask for help with care records, professional wording, reflection, planning, behaviour support, key work ideas, incident follow-up, or day-to-day residential practice.`
-        : `How can I help today? Ask for help with care records, professional wording, reflection, planning, behaviour support, key work ideas, incident follow-up, or day-to-day residential practice.`;
-}
-
-function applyFooterMeta() {
-    const warning = document.getElementById("footerWarning");
-    const copyright = document.getElementById("footerCopyright");
-
-    if (warning) {
-        warning.textContent = "Important: Always accuracy-check AI outputs against the facts provided, current guidance, and your organisation’s policy before use.";
+    return {
+        "messages": rows,
+        "document": {
+            "filename": document["filename"],
+            "text": document["document_text"],
+            "created_at": document["created_at"]
+        } if document else None
     }
 
-    if (copyright) {
-        copyright.textContent = `© ${new Date().getFullYear()} IndiCare. All rights reserved.`;
-    }
-}
-
-function initSpeechToText() {
-    const micBtn = document.getElementById("micBtn");
-    const input = document.getElementById("chat-input");
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!micBtn || !input || !SpeechRecognition) {
-        if (micBtn) {
-            micBtn.disabled = true;
-            micBtn.title = "Speech to text not supported in this browser";
-            micBtn.setAttribute("aria-label", "Speech to text not supported");
-        }
-        return;
-    }
-
-    chatState.speechSupported = true;
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = "en-GB";
-    recognition.interimResults = true;
-    recognition.continuous = false;
-    recognition.maxAlternatives = 1;
-
-    let baseTextBeforeRecording = "";
-    let micBusy = false;
-
-    recognition.onstart = () => {
-        chatState.isRecording = true;
-        baseTextBeforeRecording = input.value.trim();
-        micBtn.classList.add("is-recording");
-        micBtn.setAttribute("aria-label", "Stop voice input");
-        micBtn.title = "Listening… click to stop";
-        showStatusBanner("success", "Listening…");
-    };
-
-    recognition.onresult = (event) => {
-        const results = Array.from(event.results);
-        const transcript = results.map((r) => r[0].transcript).join(" ").trim();
-
-        input.value = [baseTextBeforeRecording, transcript].filter(Boolean).join(baseTextBeforeRecording ? " " : "");
-        autoResizeTextarea(input);
-        saveDraft();
-    };
-
-    recognition.onerror = (event) => {
-        console.error("Speech recognition error:", event.error);
-
-        if (event.error === "aborted") {
-            stopMicVisualState();
-            return;
-        }
-
-        if (event.error === "no-speech") {
-            stopMicVisualState();
-            showStatusBanner("warn", "No speech was detected.");
-            return;
-        }
-
-        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-            stopMicVisualState();
-            showStatusBanner("error", "Microphone access was not allowed.");
-            return;
-        }
-
-        stopMicVisualState();
-        showStatusBanner("error", "Voice input could not be completed.");
-    };
-
-    recognition.onend = () => {
-        stopMicVisualState();
-        input.focus();
-        saveDraft();
-    };
-
-    micBtn.addEventListener("click", () => {
-        if (micBusy) return;
-
-        if (!chatState.isRecording) {
-            try {
-                micBusy = true;
-                recognition.start();
-                setTimeout(() => {
-                    micBusy = false;
-                }, 400);
-            } catch (error) {
-                micBusy = false;
-                console.error("Could not start speech recognition:", error);
-            }
-        } else {
-            micBusy = true;
-            recognition.stop();
-            setTimeout(() => {
-                micBusy = false;
-            }, 400);
-        }
-    });
-
-    chatState.recognition = recognition;
-}
-
-function stopMicVisualState() {
-    const micBtn = document.getElementById("micBtn");
-    chatState.isRecording = false;
-
-    if (micBtn) {
-        micBtn.classList.remove("is-recording");
-        micBtn.setAttribute("aria-label", "Start voice input");
-        micBtn.title = "Start voice input";
-    }
-}
-
-function getDraftStorageKey() {
-    return `${chatState.draftKeyPrefix}${window.conversationId || "new"}`;
-}
-
-function saveDraft() {
-    const input = document.getElementById("chat-input");
-    if (!input) return;
-    localStorage.setItem(getDraftStorageKey(), input.value || "");
-}
-
-function restoreDraft() {
-    const input = document.getElementById("chat-input");
-    if (!input) return;
-
-    const draft = localStorage.getItem(getDraftStorageKey()) || "";
-    if (draft) {
-        input.value = draft;
-        autoResizeTextarea(input);
-    } else {
-        input.value = "";
-        autoResizeTextarea(input);
-    }
-}
-
-function clearDraft() {
-    localStorage.removeItem(getDraftStorageKey());
-}
-
-async function sendMessage() {
-    const input = document.getElementById("chat-input");
-    if (!input || chatState.isStreamingResponse) return;
-
-    const message = input.value.trim();
-    if (!message) return;
-
-    removeChatEmptyState();
-    ensureMessagesContainer();
-    appendMessage("user", message);
-    input.value = "";
-    autoResizeTextarea(input);
-    clearDraft();
-
-    setSendLoading(true);
-    showTypingIndicator(true);
-    chatState.isStreamingResponse = true;
-
-    try {
-        await streamAssistantResponse("/chat/", {
-            message,
-            conversation_id: window.conversationId || null,
-            document_text: window.currentDocumentText,
-            document_name: window.currentDocumentName,
-            response_mode: getResponseMode()
-        });
-
-        await loadConversations(true);
-    } finally {
-        chatState.isStreamingResponse = false;
-        showTypingIndicator(false);
-        setSendLoading(false);
-    }
-}
-
-async function streamAssistantResponse(url, bodyData) {
-    try {
-        const token = localStorage.getItem("access_token");
-
-        const response = await fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                ...(token ? { Authorization: `Bearer ${token}` } : {})
-            },
-            credentials: "include",
-            body: JSON.stringify(bodyData)
-        });
-
-        if (!response.ok || !response.body) {
-            let data = {};
-            try {
-                data = await response.json();
-            } catch {
-                data = {};
-            }
-
-            if (response.status === 401) {
-                localStorage.removeItem("access_token");
-                localStorage.removeItem("current_user");
-                window.location.href = "/login";
-                return;
-            }
-
-            appendMessage("assistant", data.detail || `Request failed (${response.status}).`);
-            showStatusBanner("error", data.detail || `Request failed (${response.status}).`);
-            return;
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-
-        let fullText = "";
-        let partial = "";
-
-        createOrResetStreamingAssistantMessage();
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            partial += decoder.decode(value, { stream: true });
-
-            const events = partial.split("\n\n");
-            partial = events.pop() || "";
-
-            for (const eventBlock of events) {
-                const lines = eventBlock.split("\n");
-
-                let eventName = "message";
-                const dataLines = [];
-
-                for (const line of lines) {
-                    if (line.startsWith("event:")) {
-                        eventName = line.slice(6).trim();
-                    } else if (line.startsWith("data:")) {
-                        dataLines.push(line.slice(5).trimStart());
-                    }
-                }
-
-                const data = dataLines.join("\n");
-
-                if (eventName === "done" || data === "[DONE]") {
-                    updateAssistantMessage(fullText);
-                    return;
-                }
-
-                if (data) {
-                    fullText += data;
-                    updateAssistantMessage(fullText);
-                }
-            }
-        }
-
-        if (partial.trim()) {
-            const lines = partial.split("\n");
-            const dataLines = lines
-                .filter((line) => line.startsWith("data:"))
-                .map((line) => line.slice(5).trimStart());
-
-            const data = dataLines.join("\n");
-            if (data && data !== "[DONE]") {
-                fullText += data;
-                updateAssistantMessage(fullText);
-            }
-        }
-    } catch (error) {
-        console.error("Stream failed:", error);
-
-        const isNetworkDrop =
-            error instanceof TypeError &&
-            /load failed|network connection was lost|fetch/i.test(String(error.message || error));
-
-        if (isNetworkDrop) {
-            appendMessage("assistant", "The connection dropped while waiting for a response. Please try again.");
-            showStatusBanner("error", "The connection was lost while generating the reply.");
-            return;
-        }
-
-        appendMessage("assistant", `Connection error: ${error?.message || "Unknown error"}`);
-        showStatusBanner("error", "The connection was lost while generating the reply.");
-    }
-}
-
-function createMessageElement(role, text = "", messageId = null, timestamp = null) {
-    const wrapper = document.createElement("div");
-    wrapper.className = `ica-message-wrapper ${role === "user" ? "is-user" : "is-assistant"}`;
-    if (messageId) wrapper.dataset.messageId = messageId;
-
-    const avatar = document.createElement("div");
-    avatar.className = "ica-message-avatar";
-    avatar.textContent = role === "assistant" ? "IC" : getUserInitials();
-
-    const block = document.createElement("div");
-    block.className = "ica-message-block";
-
-    const meta = document.createElement("div");
-    meta.className = "ica-message-meta";
-
-    const roleLabel = role === "assistant" ? "IndiCare" : "You";
-    const displayTime = formatTime(timestamp ? new Date(timestamp) : new Date());
-
-    if (role === "assistant") {
-        meta.innerHTML = `<span class="ica-message-role-dot"></span><span>${roleLabel} · ${displayTime}</span>`;
-    } else {
-        meta.textContent = `${roleLabel} · ${displayTime}`;
-    }
-
-    const msg = document.createElement("div");
-    msg.className = `ica-message ${role === "user" ? "is-user" : "is-assistant"}`;
-
-    block._messageEl = msg;
-    block._rawText = text;
-    block._messageId = messageId;
-
-    if (role === "assistant") {
-        msg.innerHTML = renderMarkdown(text);
-
-        const actions = document.createElement("div");
-        actions.className = "ica-message-actions";
-
-        const copyBtn = document.createElement("button");
-        copyBtn.className = "ica-copy-btn";
-        copyBtn.type = "button";
-        copyBtn.textContent = "Copy";
-        copyBtn.setAttribute("data-copy-text", text);
-
-        actions.appendChild(copyBtn);
-        block.appendChild(meta);
-        block.appendChild(msg);
-        block.appendChild(actions);
-    } else {
-        msg.textContent = text;
-
-        const actions = document.createElement("div");
-        actions.className = "ica-message-actions";
-
-        if (messageId) {
-            const editBtn = document.createElement("button");
-            editBtn.className = "ica-copy-btn";
-            editBtn.type = "button";
-            editBtn.textContent = "Edit";
-            editBtn.setAttribute("data-edit-message-id", messageId);
-            editBtn.setAttribute("data-current-text", encodeURIComponent(text));
-            actions.appendChild(editBtn);
-        }
-
-        block.appendChild(meta);
-        block.appendChild(msg);
-        if (messageId) block.appendChild(actions);
-    }
-
-    if (role === "user") {
-        wrapper.appendChild(block);
-        wrapper.appendChild(avatar);
-    } else {
-        wrapper.appendChild(avatar);
-        wrapper.appendChild(block);
-    }
-
-    return wrapper;
-}
-
-function appendMessage(role, text, messageId = null, timestamp = null) {
-    const messages = ensureMessagesContainer();
-    if (!messages) return;
-
-    const el = createMessageElement(role, text, messageId, timestamp);
-    messages.appendChild(el);
-    scrollChatToBottom();
-}
-
-function createOrResetStreamingAssistantMessage() {
-    const messages = ensureMessagesContainer();
-    if (!messages) return;
-
-    const existingStreaming = messages.querySelector('.ica-message-wrapper.is-assistant[data-streaming="true"]');
-    if (existingStreaming) {
-        existingStreaming.remove();
-    }
-
-    const wrapper = createMessageElement("assistant", "");
-    wrapper.dataset.streaming = "true";
-    messages.appendChild(wrapper);
-    scrollChatToBottom();
-}
-
-function updateAssistantMessage(text) {
-    const messages = document.getElementById("messages");
-    if (!messages) return;
-
-    const streamingWrappers = messages.querySelectorAll('.ica-message-wrapper.is-assistant[data-streaming="true"]');
-    const lastStreaming = streamingWrappers[streamingWrappers.length - 1];
-    const lastAssistant = lastStreaming || messages.querySelector(".ica-message-wrapper.is-assistant:last-of-type");
-
-    if (!lastAssistant) {
-        appendMessage("assistant", text);
-        return;
-    }
-
-    const block = lastAssistant.querySelector(".ica-message-block");
-    const msg = block?.querySelector(".ica-message.is-assistant");
-    const copyBtn = block?.querySelector("[data-copy-text]");
-
-    if (msg) msg.innerHTML = renderMarkdown(text);
-    if (block) block._rawText = text;
-    if (copyBtn) copyBtn.setAttribute("data-copy-text", text);
-
-    scrollChatToBottom();
-}
-
-function renderMarkdown(text) {
-    const source = String(text || "").replace(/\r\n/g, "\n");
-    const escaped = escapeHtml(source);
-    const lines = escaped.split("\n");
-
-    let html = "";
-    let inCodeBlock = false;
-    let inUl = false;
-    let inOl = false;
-    let inBlockquote = false;
-    let paragraphBuffer = [];
-
-    function flushParagraph() {
-        if (!paragraphBuffer.length) return;
-        html += `<p>${paragraphBuffer.join("<br>")}</p>`;
-        paragraphBuffer = [];
-    }
-
-    function closeLists() {
-        if (inUl) {
-            html += "</ul>";
-            inUl = false;
-        }
-        if (inOl) {
-            html += "</ol>";
-            inOl = false;
-        }
-    }
-
-    function closeBlockquote() {
-        if (inBlockquote) {
-            html += "</blockquote>";
-            inBlockquote = false;
-        }
-    }
-
-    for (const rawLine of lines) {
-        const line = rawLine;
-
-        if (line.trim().startsWith("```")) {
-            flushParagraph();
-            closeLists();
-            closeBlockquote();
-
-            if (!inCodeBlock) {
-                inCodeBlock = true;
-                html += "<pre><code>";
-            } else {
-                inCodeBlock = false;
-                html += "</code></pre>";
-            }
-            continue;
-        }
-
-        if (inCodeBlock) {
-            html += `${line}\n`;
-            continue;
-        }
-
-        if (!line.trim()) {
-            flushParagraph();
-            closeLists();
-            closeBlockquote();
-            continue;
-        }
-
-        const headingMatch = line.match(/^(#{1,6})\s+(.*)$/);
-        if (headingMatch) {
-            flushParagraph();
-            closeLists();
-            closeBlockquote();
-            const level = headingMatch[1].length;
-            html += `<h${level}>${applyInlineMarkdown(headingMatch[2])}</h${level}>`;
-            continue;
-        }
-
-        const blockquoteMatch = line.match(/^&gt;\s?(.*)$/);
-        if (blockquoteMatch) {
-            flushParagraph();
-            closeLists();
-            if (!inBlockquote) {
-                html += "<blockquote>";
-                inBlockquote = true;
-            }
-            html += `<p>${applyInlineMarkdown(blockquoteMatch[1])}</p>`;
-            continue;
-        } else {
-            closeBlockquote();
-        }
-
-        const ulMatch = line.match(/^[-*]\s+(.*)$/);
-        if (ulMatch) {
-            flushParagraph();
-            if (inOl) {
-                html += "</ol>";
-                inOl = false;
-            }
-            if (!inUl) {
-                html += "<ul>";
-                inUl = true;
-            }
-            html += `<li>${applyInlineMarkdown(ulMatch[1])}</li>`;
-            continue;
-        }
-
-        const olMatch = line.match(/^\d+\.\s+(.*)$/);
-        if (olMatch) {
-            flushParagraph();
-            if (inUl) {
-                html += "</ul>";
-                inUl = false;
-            }
-            if (!inOl) {
-                html += "<ol>";
-                inOl = true;
-            }
-            html += `<li>${applyInlineMarkdown(olMatch[1])}</li>`;
-            continue;
-        }
-
-        closeLists();
-        paragraphBuffer.push(applyInlineMarkdown(line));
-    }
-
-    flushParagraph();
-    closeLists();
-    closeBlockquote();
-
-    if (inCodeBlock) html += "</code></pre>";
-
-    return html;
-}
-
-function applyInlineMarkdown(text) {
-    return String(text)
-        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-        .replace(/__(.*?)__/g, "<strong>$1</strong>")
-        .replace(/\*(.*?)\*/g, "<em>$1</em>")
-        .replace(/_(.*?)_/g, "<em>$1</em>")
-        .replace(/`([^`]+)`/g, "<code>$1</code>");
-}
-
-function removeChatEmptyState() {
-    const empty = document.getElementById("chatEmpty");
-    if (empty) empty.hidden = true;
-}
-
-function clearChatWindow() {
-    const messages = document.getElementById("messages");
-    const empty = document.getElementById("chatEmpty");
-
-    if (messages) {
-        messages.innerHTML = "";
-        messages.hidden = true;
-    }
-
-    if (empty) empty.hidden = false;
-
-    showTypingIndicator(false);
-    applyWelcomeMessage();
-}
-
-function ensureMessagesContainer() {
-    const messages = document.getElementById("messages");
-    if (!messages) return null;
-
-    messages.hidden = false;
-    removeChatEmptyState();
-    return messages;
-}
-
-function startNewConversation() {
-    window.conversationId = null;
-    window.currentDocumentText = null;
-    window.currentDocumentName = null;
-    clearChatWindow();
-    setConversationHeading("New conversation");
-    renderConversationSelection();
-    refreshUploadStatus();
-    restoreDraft();
-    closeSidebar();
-}
-
-function setConversationHeading(text) {
-    const heading = document.getElementById("conversationHeading");
-    if (heading) heading.textContent = text || "New conversation";
-}
-
-function setSendLoading(isLoading) {
-    const sendBtn = document.getElementById("send-btn");
-    if (!sendBtn) return;
-
-    sendBtn.classList.toggle("is-loading", isLoading);
-    sendBtn.disabled = isLoading;
-}
-
-function showTypingIndicator(show) {
-    const typingRow = document.getElementById("typingRow");
-    if (!typingRow) return;
-
-    typingRow.hidden = !show;
-    if (show) scrollChatToBottom();
-}
-
-async function loadConversations(autoOpenLatest = false) {
-    const list = document.getElementById("conversationList");
-    if (!list) return;
-
-    try {
-        const rows = await apiRequest("/chat/conversations");
-        chatState.historyRows = Array.isArray(rows) ? rows : [];
-
-        if (!chatState.historyRows.length) {
-            list.innerHTML = `<div class="ica-history-empty">No conversations yet.</div>`;
-            updateHistoryCount(0);
-            if (!window.conversationId) setConversationHeading("New conversation");
-            return;
-        }
-
-        if (autoOpenLatest && !window.conversationId) {
-            await openConversation(chatState.historyRows[0].id, chatState.historyRows[0].title || "Conversation", false);
-        }
-
-        const searchValue = document.getElementById("historySearch")?.value?.trim() || "";
-        renderConversationList(chatState.historyRows, searchValue);
-    } catch (error) {
-        console.error("Failed to load conversations:", error);
-        list.innerHTML = `<div class="ica-history-empty">Could not load conversations.</div>`;
-        updateHistoryCount(0);
-    }
-}
-
-function renderConversationList(rows, filter = "") {
-    const list = document.getElementById("conversationList");
-    if (!list) return;
-
-    const query = filter.toLowerCase();
-    const filteredRows = rows.filter((row) => {
-        const title = String(row.title || "New chat").toLowerCase();
-        return !query || title.includes(query);
-    });
-
-    updateHistoryCount(filteredRows.length);
-
-    if (!filteredRows.length) {
-        list.innerHTML = `<div class="ica-history-empty">No matching conversations found.</div>`;
-        return;
-    }
-
-    list.innerHTML = filteredRows.map((row) => `
-        <article class="ica-history-item ${String(window.conversationId) === String(row.id) ? "is-active" : ""}" data-row-id="${row.id}" tabindex="0">
-            <div class="ica-history-item-top">
-                <div class="ica-history-item-title">${escapeHtml(row.title || "New chat")}</div>
-                <div class="ica-history-actions">
-                    <button class="ica-history-icon-btn" type="button" data-open-id="${row.id}" data-title="${escapeHtmlAttr(row.title || "Conversation")}" aria-label="Open conversation" title="Open">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"></path><path d="M10 14L21 3"></path><path d="M21 14v7H3V3h7"></path></svg>
-                    </button>
-                    <button class="ica-history-icon-btn" type="button" data-rename-id="${row.id}" data-title="${escapeHtmlAttr(row.title || "Conversation")}" aria-label="Rename conversation" title="Rename">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>
-                    </button>
-                    <button class="ica-history-icon-btn" type="button" data-delete-id="${row.id}" aria-label="Delete conversation" title="Delete">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path></svg>
-                    </button>
-                </div>
-            </div>
-            <div class="ica-history-item-meta">${escapeHtml(formatDate(row.created_at))}</div>
-            <div class="ica-history-item-preview">${escapeHtml(row.title || "Conversation")}</div>
-        </article>
-    `).join("");
-
-    list.querySelectorAll("[data-open-id]").forEach((btn) => {
-        btn.addEventListener("click", async (e) => {
-            e.stopPropagation();
-            await openConversation(btn.dataset.openId, btn.dataset.title || "Conversation");
-        });
-    });
-
-    list.querySelectorAll("[data-rename-id]").forEach((btn) => {
-        btn.addEventListener("click", async (e) => {
-            e.stopPropagation();
-            await renameConversationInline(btn.dataset.renameId, btn.dataset.title || "");
-        });
-    });
-
-    list.querySelectorAll("[data-delete-id]").forEach((btn) => {
-        btn.addEventListener("click", async (e) => {
-            e.stopPropagation();
-            await deleteConversation(btn.dataset.deleteId);
-        });
-    });
-
-    list.querySelectorAll(".ica-history-item").forEach((item) => {
-        item.addEventListener("click", async () => {
-            const openBtn = item.querySelector("[data-open-id]");
-            if (!openBtn) return;
-            await openConversation(openBtn.dataset.openId, openBtn.dataset.title || "Conversation");
-        });
-
-        item.addEventListener("keydown", async (e) => {
-            if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                const openBtn = item.querySelector("[data-open-id]");
-                if (openBtn) await openConversation(openBtn.dataset.openId, openBtn.dataset.title || "Conversation");
-            }
-        });
-    });
-}
-
-function updateHistoryCount(count) {
-    const countEl = document.getElementById("historyCount");
-    if (countEl) countEl.textContent = String(count);
-}
-
-function renderConversationSelection() {
-    document.querySelectorAll(".ica-history-item").forEach((item) => {
-        item.classList.remove("is-active");
-    });
-}
-
-async function openConversation(conversationId, title = "Conversation", reloadList = true) {
-    try {
-        const payload = await apiRequest(`/chat/conversations/${conversationId}`);
-        window.conversationId = conversationId;
-
-        const rows = Array.isArray(payload.messages) ? payload.messages : [];
-        const documentInfo = payload.document || null;
-
-        window.currentDocumentText = documentInfo?.text || null;
-        window.currentDocumentName = documentInfo?.filename || null;
-        refreshUploadStatus();
-
-        clearChatWindow();
-
-        if (rows.length) {
-            ensureMessagesContainer();
-            rows.forEach((row) => {
-                appendMessage(row.role, row.message || "", row.id || null, row.created_at || null);
-            });
-        }
-
-        setConversationHeading(title || "Conversation");
-
-        if (reloadList) {
-            await loadConversations(false);
-        }
-
-        restoreDraft();
-        closeSidebar();
-    } catch (error) {
-        console.error("Failed to open conversation:", error);
-        showStatusBanner("error", "Failed to open conversation.");
-    }
-}
-
-async function renameConversationInline(conversationId, currentTitle = "") {
-    const button = document.querySelector(`.ica-history-item [data-rename-id="${cssEscapeSafe(String(conversationId))}"]`);
-    const item = button?.closest(".ica-history-item");
-    if (!item) return;
-
-    const titleEl = item.querySelector(".ica-history-item-title");
-    if (!titleEl) return;
-    if (item.querySelector(".ica-rename-input")) return;
-
-    const input = document.createElement("input");
-    input.className = "ica-rename-input";
-    input.value = currentTitle;
-    input.type = "text";
-    input.maxLength = 120;
-
-    titleEl.replaceWith(input);
-    input.focus();
-    input.select();
-
-    const commit = async () => {
-        const newTitle = input.value.trim();
-        if (!newTitle) {
-            renderConversationList(chatState.historyRows, document.getElementById("historySearch")?.value?.trim() || "");
-            return;
-        }
-
-        try {
-            await apiRequest(`/chat/conversations/${conversationId}/rename`, {
-                method: "POST",
-                body: JSON.stringify({ title: newTitle })
-            });
-
-            if (String(window.conversationId) === String(conversationId)) {
-                setConversationHeading(newTitle);
-            }
-
-            await loadConversations(false);
-            showStatusBanner("success", "Conversation renamed.");
-        } catch (error) {
-            console.error("Failed to rename conversation:", error);
-            showStatusBanner("error", "Failed to rename conversation.");
-            await loadConversations(false);
-        }
-    };
-
-    input.addEventListener("keydown", async (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            await commit();
-        }
-        if (e.key === "Escape") {
-            renderConversationList(chatState.historyRows, document.getElementById("historySearch")?.value?.trim() || "");
-        }
-    });
-
-    input.addEventListener("blur", commit, { once: true });
-}
-
-async function deleteConversation(conversationId) {
-    const confirmed = window.confirm("Delete this conversation?");
-    if (!confirmed) return;
-
-    try {
-        await apiRequest(`/chat/conversations/${conversationId}`, {
-            method: "DELETE"
-        });
-
-        if (String(window.conversationId) === String(conversationId)) {
-            startNewConversation();
-        }
-
-        await loadConversations(false);
-        showStatusBanner("success", "Conversation deleted.");
-    } catch (error) {
-        console.error("Failed to delete conversation:", error);
-        showStatusBanner("error", "Failed to delete conversation.");
-    }
-}
-
-async function startInlineMessageEdit(messageId, currentText) {
-    const wrapper = document.querySelector(`.ica-message-wrapper.is-user[data-message-id="${cssEscapeSafe(String(messageId))}"]`);
-    if (!wrapper) return;
-
-    const messageEl = wrapper.querySelector(".ica-message.is-user");
-    const actionsEl = wrapper.querySelector(".ica-message-actions");
-    if (!messageEl || !actionsEl) return;
-    if (wrapper.querySelector(".ica-inline-edit-wrap")) return;
-
-    messageEl.hidden = true;
-    actionsEl.hidden = true;
-
-    const editWrap = document.createElement("div");
-    editWrap.className = "ica-inline-edit-wrap";
-    editWrap.innerHTML = `
-        <textarea
-            class="ica-inline-edit-textarea"
-            data-editing-message-id="${escapeHtmlAttr(String(messageId))}"
-            rows="1"
-            aria-label="Edit message"
-        >${escapeHtml(currentText)}</textarea>
-        <div class="ica-message-actions">
-            <button class="ica-copy-btn" type="button" data-save-edit-message-id="${escapeHtmlAttr(String(messageId))}">Save</button>
-            <button class="ica-copy-btn" type="button" data-cancel-edit-message-id="${escapeHtmlAttr(String(messageId))}">Cancel</button>
-        </div>
-    `;
-
-    wrapper.querySelector(".ica-message-block")?.appendChild(editWrap);
-
-    const textarea = editWrap.querySelector(".ica-inline-edit-textarea");
-    if (textarea) {
-        textarea.value = currentText;
-        autoResizeTextarea(textarea);
-        textarea.focus();
-        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-    }
-}
-
-function cancelInlineMessageEdit(messageId) {
-    const wrapper = document.querySelector(`.ica-message-wrapper.is-user[data-message-id="${cssEscapeSafe(String(messageId))}"]`);
-    if (!wrapper) return;
-
-    wrapper.querySelector(".ica-inline-edit-wrap")?.remove();
-
-    const messageEl = wrapper.querySelector(".ica-message.is-user");
-    const actionsEl = wrapper.querySelector(".ica-message-actions");
-
-    if (messageEl) messageEl.hidden = false;
-    if (actionsEl) actionsEl.hidden = false;
-}
-
-async function submitInlineMessageEdit(messageId) {
-    const wrapper = document.querySelector(`.ica-message-wrapper.is-user[data-message-id="${cssEscapeSafe(String(messageId))}"]`);
-    if (!wrapper) return;
-
-    const textarea = wrapper.querySelector(`.ica-inline-edit-textarea[data-editing-message-id="${cssEscapeSafe(String(messageId))}"]`);
-    if (!textarea) return;
-
-    const newText = textarea.value.trim();
-    const originalText = wrapper.querySelector(".ica-message.is-user")?.textContent?.trim() || "";
-
-    if (!newText) {
-        cancelInlineMessageEdit(messageId);
-        return;
-    }
-
-    if (newText === originalText) {
-        cancelInlineMessageEdit(messageId);
-        return;
-    }
-
-    let current = wrapper;
-    while (current) {
-        const next = current.nextElementSibling;
-        current.remove();
-        current = next;
-    }
-
-    appendMessage("user", newText, messageId);
-    showTypingIndicator(true);
-    setSendLoading(true);
-
-    await streamAssistantResponse(`/chat/messages/${messageId}/edit`, {
-        message: newText,
-        document_text: window.currentDocumentText,
-        document_name: window.currentDocumentName,
-        response_mode: getResponseMode()
-    });
-
-    showTypingIndicator(false);
-    setSendLoading(false);
-
-    if (window.conversationId) {
-        await openConversation(
-            window.conversationId,
-            document.getElementById("conversationHeading")?.textContent || "Conversation",
-            false
-        );
-    }
-
-    await loadConversations(false);
-    showStatusBanner("success", "Message updated.");
-}
-
-function formatDate(value) {
-    if (!value) return "-";
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return String(value);
-    return date.toLocaleString("en-GB");
-}
-
-function formatTime(date) {
-    return new Intl.DateTimeFormat("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit"
-    }).format(date);
-}
-
-function autoResizeTextarea(el) {
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 220) + "px";
-}
-
-function scrollChatToBottom() {
-    const chat = document.getElementById("chat");
-    if (!chat) return;
-    requestAnimationFrame(() => {
-        chat.scrollTop = chat.scrollHeight;
-    });
-}
-
-function cssEscapeSafe(value) {
-    if (window.CSS && typeof window.CSS.escape === "function") {
-        return window.CSS.escape(value);
-    }
-    return String(value).replace(/["\\]/g, "\\$&");
-}
-
-function escapeHtml(value) {
-    return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-}
-
-function escapeHtmlAttr(value) {
-    return escapeHtml(value);
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-    initChat();
-});
+
+@router.delete("/conversations/{conversation_id}/document")
+def remove_conversation_document(conversation_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
+    ensure_conversation_owner(conn, conversation_id, current_user["user_id"])
+    delete_conversation_document(conn, conversation_id)
+    return {"ok": True, "message": "Document removed"}
+
+
+@router.post("/")
+@limiter.limit("20/minute")
+async def chat(request: Request, conn=Depends(get_db), current_user=Depends(get_current_user)):
+    user_id = current_user["user_id"]
+    body = await request.json()
+
+    message = (body.get("message") or "").strip()
+    conversation_id = body.get("conversation_id")
+    document_text = (body.get("document_text") or "").strip() or None
+    document_name = (body.get("document_name") or "").strip() or None
+
+    response_mode = (body.get("response_mode") or "balanced").strip().lower()
+    if response_mode not in {"quick", "balanced", "deep"}:
+        response_mode = "balanced"
+
+    logger.info("Chat request received for user_id=%s", user_id)
+
+    if not message:
+        raise HTTPException(status_code=400, detail="Message required")
+
+    if conversation_id in ("", None):
+        conversation_id = None
+
+    try:
+        conversation_id, history, doc_text, doc_name = prep_chat_db_sync(
+            conn, user_id, message, conversation_id, document_text, document_name
+        )
+        logger.info("Prepared chat DB state for conversation_id=%s", conversation_id)
+    except ValueError as e:
+        logger.warning("Invalid chat request: %s", e)
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Failed preparing chat DB state: %s", e)
+        raise HTTPException(status_code=500, detail="Could not prepare chat request")
+
+    async def stream():
+        ai_text = ""
+        try:
+            logger.info("Starting AI stream for conversation_id=%s", conversation_id)
+
+            async for token in generate_ai_stream(
+                message=message,
+                session_id=str(conversation_id),
+                history=history,
+                document_text=doc_text,
+                document_name=doc_name,
+                response_mode=response_mode,
+            ):
+                if token:
+                    ai_text += token
+                    yield sse_data(token)
+
+            logger.info("Finished AI stream for conversation_id=%s", conversation_id)
+
+        except Exception as e:
+            logger.exception("AI stream failed for conversation %s: %s", conversation_id, e)
+            fallback = "Sorry, something went wrong while generating the response. Please try again."
+            ai_text += fallback
+            yield sse_data(fallback)
+
+        finally:
+            if ai_text.strip():
+                try:
+                    save_ai_message_sync(conn, conversation_id, ai_text)
+                    logger.info("Saved assistant message for conversation_id=%s", conversation_id)
+                except Exception as e:
+                    logger.exception("Failed saving assistant message for conversation %s: %s", conversation_id, e)
+
+            yield sse_done()
+
+    return StreamingResponse(
+        stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.post("/conversations/{conversation_id}/rename")
+def rename_conversation(conversation_id: int, payload: RenameConversation, conn=Depends(get_db), current_user=Depends(get_current_user)):
+    ensure_conversation_owner(conn, conversation_id, current_user["user_id"])
+    title = payload.title.strip()
+
+    if not title:
+        raise HTTPException(status_code=400, detail="Title is required")
+
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE conversations SET title = %s WHERE id = %s",
+            (title, conversation_id)
+        )
+        conn.commit()
+
+    return {"ok": True, "message": "Conversation renamed"}
+
+
+@router.delete("/conversations/{conversation_id}")
+def delete_conversation(conversation_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
+    ensure_conversation_owner(conn, conversation_id, current_user["user_id"])
+
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM conversations WHERE id = %s", (conversation_id,))
+        conn.commit()
+
+    return {"ok": True, "message": "Conversation deleted"}
+
+
+@router.post("/messages/{message_id}/edit")
+@limiter.limit("20/minute")
+async def edit_message_and_regenerate(
+    request: Request,
+    message_id: int,
+    payload: EditMessagePayload,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    user_id = current_user["user_id"]
+    new_message = payload.message.strip()
+
+    response_mode = (payload.response_mode or "balanced").strip().lower()
+    if response_mode not in {"quick", "balanced", "deep"}:
+        response_mode = "balanced"
+
+    if not new_message:
+        raise HTTPException(status_code=400, detail="Message is required")
+
+    try:
+        conversation_id, history, document_text, document_name = prep_edit_db_sync(
+            conn, user_id, message_id, new_message, payload.document_text, payload.document_name
+        )
+        logger.info("Prepared edit/regenerate DB state for conversation_id=%s", conversation_id)
+    except ValueError as e:
+        if str(e) == "Message not found":
+            raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Failed preparing edit/regenerate DB state: %s", e)
+        raise HTTPException(status_code=500, detail="Could not prepare message regeneration")
+
+    async def stream():
+        ai_text = ""
+        try:
+            logger.info("Starting regenerate AI stream for conversation_id=%s", conversation_id)
+
+            async for token in generate_ai_stream(
+                message=new_message,
+                session_id=str(conversation_id),
+                history=history,
+                document_text=document_text,
+                document_name=document_name,
+                response_mode=response_mode,
+            ):
+                if token:
+                    ai_text += token
+                    yield sse_data(token)
+
+            logger.info("Finished regenerate AI stream for conversation_id=%s", conversation_id)
+
+        except Exception as e:
+            logger.exception("AI regenerate failed for conversation %s: %s", conversation_id, e)
+            fallback = "Sorry, something went wrong while regenerating. Please try again."
+            ai_text += fallback
+            yield sse_data(fallback)
+
+        finally:
+            if ai_text.strip():
+                try:
+                    save_ai_message_sync(conn, conversation_id, ai_text)
+                    logger.info("Saved regenerated assistant message for conversation_id=%s", conversation_id)
+                except Exception as e:
+                    logger.exception("Failed saving regenerated assistant message for conversation %s: %s", conversation_id, e)
+
+            yield sse_done()
+
+    return StreamingResponse(
+        stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
