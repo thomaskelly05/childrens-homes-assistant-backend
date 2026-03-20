@@ -109,7 +109,9 @@ function bindSidebarControls() {
     backdrop?.addEventListener("click", closeSidebar);
 
     window.addEventListener("resize", () => {
-        if (window.innerWidth > 980) closeSidebar();
+        if (window.innerWidth > 980) {
+            closeSidebar();
+        }
     });
 }
 
@@ -455,10 +457,9 @@ function applyWelcomeMessage() {
     const greeting = getTimeGreeting();
 
     heading.textContent = firstName ? `${greeting}, ${firstName}` : greeting;
-
     subtext.textContent = firstName
-        ? `How can I help with support for ${firstName} today? Ask for help with care records, professional wording, reflection, planning, behaviour support, key work ideas, incident follow-up, or day-to-day residential practice.`
-        : `How can I help today? Ask for help with care records, professional wording, reflection, planning, behaviour support, key work ideas, incident follow-up, or day-to-day residential practice.`;
+        ? `How can I help with support for ${firstName} today? Ask for help with care records, safeguarding wording, support planning, reflection, behaviour support, key work ideas, incident follow-up, or day-to-day residential practice.`
+        : `How can I help today? Ask for help with care records, safeguarding wording, support planning, reflection, behaviour support, key work ideas, incident follow-up, or day-to-day residential practice.`;
 }
 
 function applyFooterMeta() {
@@ -680,7 +681,7 @@ async function streamAssistantResponse(url, bodyData) {
         const decoder = new TextDecoder();
 
         let fullText = "";
-        let partial = "";
+        let receivedAnyChunk = false;
 
         createOrResetStreamingAssistantMessage();
 
@@ -688,49 +689,16 @@ async function streamAssistantResponse(url, bodyData) {
             const { done, value } = await reader.read();
             if (done) break;
 
-            partial += decoder.decode(value, { stream: true });
+            const chunk = decoder.decode(value, { stream: true });
+            if (!chunk) continue;
 
-            const events = partial.split("\n\n");
-            partial = events.pop() || "";
-
-            for (const eventBlock of events) {
-                const lines = eventBlock.split("\n");
-                let eventName = "message";
-                const dataLines = [];
-
-                for (const line of lines) {
-                    if (line.startsWith("event:")) {
-                        eventName = line.slice(6).trim();
-                    } else if (line.startsWith("data:")) {
-                        dataLines.push(line.slice(5));
-                    }
-                }
-
-                const data = dataLines.join("\n").replace(/^\s/, "");
-
-                if (eventName === "done" || data === "[DONE]") {
-                    updateAssistantMessage(fullText);
-                    return;
-                }
-
-                if (data) {
-                    fullText += data;
-                    updateAssistantMessage(fullText);
-                }
-            }
+            receivedAnyChunk = true;
+            fullText += chunk;
+            updateAssistantMessage(fullText);
         }
 
-        if (partial.trim()) {
-            const lines = partial.split("\n");
-            const dataLines = lines
-                .filter((line) => line.startsWith("data:"))
-                .map((line) => line.slice(5));
-
-            const data = dataLines.join("\n").replace(/^\s/, "");
-            if (data && data !== "[DONE]") {
-                fullText += data;
-                updateAssistantMessage(fullText);
-            }
+        if (!receivedAnyChunk && !fullText.trim()) {
+            updateAssistantMessage("Sorry, something went wrong.");
         }
     } catch (error) {
         console.error("Stream failed:", error);
