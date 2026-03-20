@@ -27,3 +27,5 @@ twilio
 requests
 stripe>=10.0.0
 PyJWT>=2.0.0
+slowapi 
+sentry-sdk
