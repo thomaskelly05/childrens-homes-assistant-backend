@@ -1,178 +1,1198 @@
-:root {
-    --ica-radius-xl: 22px;
-    --ica-bg-chat: linear-gradient(180deg, #f7fbff 0%, #edf3fb 100%);
-    --ica-text: #172338;
+.indicare-assistant {
+    --ica-sidebar-width: 330px;
+    --ica-radius-xl: 24px;
+    --ica-radius-lg: 18px;
+    --ica-radius-md: 14px;
+    --ica-radius-sm: 10px;
+
+    --ica-bg-shell: rgba(255,255,255,0.68);
+    --ica-bg-chat:
+        radial-gradient(circle at top left, rgba(79,116,255,0.12), transparent 16%),
+        radial-gradient(circle at bottom right, rgba(88,160,255,0.10), transparent 18%),
+        linear-gradient(180deg, #f8fbff 0%, #edf3fb 100%);
+    --ica-bg-sidebar: linear-gradient(180deg, #0b1731 0%, #13284f 100%);
+    --ica-bg-glass: rgba(255,255,255,0.84);
+    --ica-bg-glass-strong: rgba(255,255,255,0.94);
+
+    --ica-text: #152033;
     --ica-text-soft: #64748b;
+    --ica-text-on-dark: rgba(255,255,255,0.92);
+    --ica-text-on-dark-soft: rgba(255,255,255,0.72);
+
     --ica-border: #dbe4f0;
+    --ica-border-soft: rgba(255,255,255,0.12);
     --ica-primary: #315efb;
     --ica-primary-hover: #2447d5;
-    --ica-font: Inter, system-ui, -apple-system, sans-serif;
+    --ica-shadow-sm: 0 8px 24px rgba(15, 30, 60, 0.05);
+    --ica-shadow-md: 0 18px 44px rgba(15, 30, 60, 0.08);
+
+    --ica-success-bg: #eefaf1;
+    --ica-success-border: #cfe9d7;
+    --ica-success-text: #1f6b3a;
+
+    --ica-warn-bg: #fff8e8;
+    --ica-warn-border: #f0dfae;
+    --ica-warn-text: #7b5a11;
+
+    --ica-error-bg: #fff1f1;
+    --ica-error-border: #f1cccc;
+    --ica-error-text: #9b2c2c;
+
+    --ica-chat-width: 980px;
+    --ica-font:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
 }
 
-body, html {
+.indicare-assistant,
+.indicare-assistant * {
+    box-sizing: border-box;
+}
+
+body.indicare-assistant {
     margin: 0;
-    padding: 0;
-    height: 100%;
-    font-family: var(--ica-font);
+    overflow: hidden;
+    background:
+        radial-gradient(circle at top, rgba(79,116,255,0.08), transparent 30%),
+        linear-gradient(180deg, #eef3fb 0%, #f7faff 100%);
     color: var(--ica-text);
-    background: var(--ica-bg-chat);
+    font-family: var(--ica-font);
+}
+
+.indicare-assistant button,
+.indicare-assistant input,
+.indicare-assistant textarea,
+.indicare-assistant select {
+    font: inherit;
+}
+
+.indicare-assistant .ica-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.indicare-assistant .ica-hidden {
+    display: none !important;
+}
+
+.indicare-assistant .ica-page {
+    height: 100vh;
+    padding: 16px;
+}
+
+.indicare-assistant .ica-shell {
+    height: calc(100vh - 32px);
+    display: grid;
+    grid-template-columns: var(--ica-sidebar-width) minmax(0, 1fr);
+    overflow: hidden;
+    border: 1px solid var(--ica-border);
+    border-radius: var(--ica-radius-xl);
+    background: var(--ica-bg-shell);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow:
+        0 10px 40px rgba(15, 30, 60, 0.08),
+        0 2px 12px rgba(15, 30, 60, 0.04);
+    position: relative;
+}
+
+.indicare-assistant .ica-sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 15, 30, 0.45);
+    z-index: 15;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.indicare-assistant .ica-sidebar {
+    background: var(--ica-bg-sidebar);
+    color: #fff;
+    border-right: 1px solid rgba(255,255,255,0.08);
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    gap: 1rem;
+    padding: 1rem;
+    min-height: 0;
+    z-index: 20;
+}
+
+.indicare-assistant .ica-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.2rem 0.15rem 0;
+}
+
+.indicare-assistant .ica-brand img {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.14);
+    padding: 0.42rem;
+    flex-shrink: 0;
+}
+
+.indicare-assistant .ica-brand h1 {
+    margin: 0;
+    font-size: 1.1rem;
+    line-height: 1.1;
+    color: #fff;
+}
+
+.indicare-assistant .ica-brand p {
+    margin: 0.2rem 0 0;
+    font-size: 0.9rem;
+    color: var(--ica-text-on-dark-soft);
+}
+
+.indicare-assistant .ica-sidebar-top {
+    display: grid;
+    gap: 0.8rem;
+}
+
+.indicare-assistant .ica-sidebar-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.indicare-assistant .ica-sidebar-heading h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #fff;
+}
+
+.indicare-assistant .ica-count-pill {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.72);
+    padding: 0.22rem 0.5rem;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+}
+
+.indicare-assistant .ica-search-wrap {
+    position: relative;
+}
+
+.indicare-assistant .ica-search-wrap svg {
+    position: absolute;
+    left: 0.9rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    color: rgba(255,255,255,0.62);
+    pointer-events: none;
+}
+
+.indicare-assistant .ica-input {
+    width: 100%;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    border-radius: var(--ica-radius-md);
+    padding: 0.8rem 0.9rem 0.8rem 2.5rem;
+    outline: none;
+    box-shadow: none;
+}
+
+.indicare-assistant .ica-input::placeholder {
+    color: rgba(255,255,255,0.6);
+}
+
+.indicare-assistant .ica-input:focus {
+    border-color: rgba(255,255,255,0.32);
+    background: rgba(255,255,255,0.12);
+    box-shadow: 0 0 0 4px rgba(255,255,255,0.08);
+}
+
+.indicare-assistant .ica-history-list {
+    min-height: 0;
+    overflow-y: auto;
+    display: grid;
+    align-content: start;
+    gap: 0.7rem;
+    padding-right: 0.15rem;
+}
+
+.indicare-assistant .ica-history-empty {
+    color: rgba(255,255,255,0.68);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    padding: 0.35rem 0.1rem;
+}
+
+.indicare-assistant .ica-history-item {
+    border: 1px solid rgba(255,255,255,0.10);
+    background: rgba(255,255,255,0.06);
+    border-radius: 15px;
+    padding: 0.85rem;
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+    cursor: pointer;
+}
+
+.indicare-assistant .ica-history-item:hover {
+    transform: translateY(-1px);
+    border-color: rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.12);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+}
+
+.indicare-assistant .ica-history-item.is-active {
+    background: rgba(79,116,255,0.20);
+    border-color: rgba(121,147,255,0.45);
+    box-shadow: 0 0 0 1px rgba(121,147,255,0.12) inset;
+}
+
+.indicare-assistant .ica-history-item-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    align-items: start;
+}
+
+.indicare-assistant .ica-history-item-title {
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.35rem;
+    line-height: 1.3;
+    word-break: break-word;
+    font-size: 0.98rem;
+}
+
+.indicare-assistant .ica-history-item-meta {
+    font-size: 0.76rem;
+    color: rgba(255,255,255,0.66);
+    margin-bottom: 0.5rem;
+}
+
+.indicare-assistant .ica-history-item-preview {
+    font-size: 0.84rem;
+    color: rgba(255,255,255,0.74);
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
     overflow: hidden;
 }
 
-/* Privacy Blur Feature */
-.privacy-active .ica-chat, 
-.privacy-active .ica-composer {
-    filter: blur(12px);
-    pointer-events: none;
-    user-select: none;
-    transition: filter 0.2s ease;
-}
-
-.ica-main {
+.indicare-assistant .ica-history-actions {
     display: flex;
-    flex-direction: column;
-    height: 100vh;
-    max-width: 1000px;
-    margin: 0 auto;
-    background: #ffffff;
-    box-shadow: 0 0 40px rgba(0,0,0,0.05);
+    gap: 0.35rem;
 }
 
-.ica-topbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--ica-border);
-    background: rgba(255,255,255,0.95);
-}
-
-.ica-topbar h2 {
-    margin: 0;
-    font-size: 1.2rem;
-    color: var(--ica-text);
-}
-
-.ica-icon-btn {
-    background: transparent;
+.indicare-assistant .ica-history-icon-btn,
+.indicare-assistant .ica-icon-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
     border: 1px solid var(--ica-border);
-    border-radius: 8px;
-    padding: 8px;
+    background: #fff;
+    color: var(--ica-text);
     cursor: pointer;
-    color: var(--ica-text-soft);
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    padding: 0;
 }
 
-.ica-icon-btn:hover {
-    background: #eef4ff;
+.indicare-assistant .ica-history-icon-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+}
+
+.indicare-assistant .ica-history-icon-btn:hover,
+.indicare-assistant .ica-history-icon-btn:focus-visible {
+    background: rgba(255,255,255,0.14);
+    border-color: rgba(255,255,255,0.24);
+}
+
+.indicare-assistant .ica-icon-btn:hover,
+.indicare-assistant .ica-icon-btn:focus-visible {
+    transform: translateY(-1px);
     border-color: var(--ica-primary);
-    color: var(--ica-primary);
+    background: #eef4ff;
 }
 
-.ica-chat {
-    flex: 1;
-    overflow-y: auto;
-    padding: 1.5rem;
-    scroll-behavior: smooth;
+.indicare-assistant .ica-history-icon-btn svg,
+.indicare-assistant .ica-icon-btn svg,
+.indicare-assistant .ica-upload-btn svg {
+    width: 18px;
+    height: 18px;
 }
 
-.ica-composer {
-    padding: 1rem 1.5rem;
-    border-top: 1px solid var(--ica-border);
-    background: #fff;
+.indicare-assistant .ica-sidebar-footer {
+    display: grid;
+    gap: 0.6rem;
 }
 
-.ica-chatbar {
+.indicare-assistant .ica-main {
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    overflow: hidden;
+}
+
+.indicare-assistant .ica-topbar {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    border: 1px solid var(--ica-border);
-    border-radius: 18px;
-    padding: 0.5rem 0.8rem;
-    background: #fff;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--ica-border);
+    background: var(--ica-bg-glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: inset 0 -1px 0 rgba(219,228,240,0.9);
 }
 
-.ica-chatbar:focus-within {
-    border-color: var(--ica-primary);
-    box-shadow: 0 0 0 3px rgba(49, 94, 251, 0.1);
+.indicare-assistant .ica-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    min-width: 0;
 }
 
-.ica-textarea {
-    flex: 1;
-    border: none;
-    resize: none;
-    outline: none;
-    padding: 0.5rem;
-    font-family: inherit;
-    font-size: 1rem;
-    max-height: 120px;
+.indicare-assistant .ica-topbar-copy {
+    min-width: 0;
 }
 
-.ica-chatbar-icon {
-    background: transparent;
-    border: none;
-    color: var(--ica-text-soft);
-    cursor: pointer;
-    padding: 8px;
-    border-radius: 50%;
-    display: inline-flex;
-    transition: all 0.2s;
-}
-
-.ica-chatbar-icon:hover {
-    background: #f1f5f9;
+.indicare-assistant .ica-topbar-copy h2 {
+    margin: 0 0 0.1rem;
+    font-size: 1.4rem;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
     color: var(--ica-text);
 }
 
-/* Flashing Mic Animation */
-.ica-chatbar-icon.is-listening {
-    color: #ef4444;
-    background: #fef2f2;
-    animation: pulse-red 1.5s infinite;
+.indicare-assistant .ica-topbar-copy p {
+    margin: 0;
+    color: var(--ica-text-soft);
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-@keyframes pulse-red {
-    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-    70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+.indicare-assistant .ica-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-shrink: 0;
 }
 
-.ica-send-btn {
-    background: var(--ica-primary);
-    color: white;
-    border: none;
-    padding: 0.6rem 1.2rem;
-    border-radius: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
+.indicare-assistant .ica-role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.55rem 0.85rem;
+    border-radius: 999px;
+    background: #eef4ff;
+    border: 1px solid #d9e5ff;
+    color: #24437f;
+    font-size: 0.82rem;
+    font-weight: 700;
+    white-space: nowrap;
 }
 
-.ica-send-btn:hover {
-    background: var(--ica-primary-hover);
+.indicare-assistant .ica-chat {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 1.25rem;
+    background: var(--ica-bg-chat);
+    scroll-behavior: smooth;
 }
 
-.ica-footer-note-wrap {
+.indicare-assistant .ica-chat-inner {
+    width: min(100%, var(--ica-chat-width));
+    margin: 0 auto;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.indicare-assistant .ica-empty-state {
+    flex: 1;
+    display: grid;
+    place-items: center;
     text-align: center;
-    margin-top: 0.8rem;
+    color: var(--ica-text-soft);
+    padding: 1.6rem 0;
 }
 
-.ica-note {
+.indicare-assistant .ica-empty-card {
+    width: min(100%, 680px);
+    padding: 1.8rem 1.35rem 1.35rem;
+    border-radius: 24px;
+    background: rgba(255,255,255,0.88);
+    border: 1px solid var(--ica-border);
+    box-shadow: 0 18px 44px rgba(15, 30, 60, 0.08);
+    backdrop-filter: blur(10px);
+}
+
+.indicare-assistant .ica-empty-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.8rem;
+    border-radius: 999px;
+    background: #eef4ff;
+    border: 1px solid #dbe7ff;
+    color: #24437f;
+    font-size: 0.82rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.indicare-assistant .ica-empty-card h3 {
+    margin: 0 0 0.65rem;
+    color: var(--ica-text);
+    font-size: 1.9rem;
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+}
+
+.indicare-assistant .ica-empty-card p {
+    margin: 0 auto;
+    max-width: 58ch;
+    line-height: 1.7;
+    color: var(--ica-text-soft);
+    font-size: 1.03rem;
+}
+
+.indicare-assistant .ica-prompt-chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.65rem;
+    margin-top: 1.2rem;
+}
+
+.indicare-assistant .ica-prompt-chip {
+    border: 1px solid #d7e5ff;
+    background: #fff;
+    color: var(--ica-text);
+    border-radius: 999px;
+    padding: 0.72rem 0.95rem;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.indicare-assistant .ica-prompt-chip:hover,
+.indicare-assistant .ica-prompt-chip:focus-visible {
+    transform: translateY(-1px);
+    border-color: var(--ica-primary);
+    background: #eef4ff;
+}
+
+.indicare-assistant .ica-messages {
+    display: grid;
+    gap: 1rem;
+    padding-bottom: 0.25rem;
+}
+
+.indicare-assistant .ica-message-wrapper {
+    display: flex;
+}
+
+.indicare-assistant .ica-message-wrapper.is-user {
+    justify-content: flex-end;
+}
+
+.indicare-assistant .ica-message-wrapper.is-assistant {
+    justify-content: flex-start;
+}
+
+.indicare-assistant .ica-message-block {
+    max-width: min(800px, 88%);
+}
+
+.indicare-assistant .ica-message-meta {
     font-size: 0.75rem;
     color: var(--ica-text-soft);
-    margin-bottom: 0.3rem;
+    margin: 0 0 0.36rem;
+    padding: 0 0.24rem;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
 }
 
-.ica-copyright {
-    font-size: 0.7rem;
-    color: #94a3b8;
+.indicare-assistant .ica-message-wrapper.is-user .ica-message-meta {
+    justify-content: flex-end;
 }
 
-/* Basic Message Bubbles for Demo */
-.msg { padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; max-width: 80%; line-height: 1.4; }
-.msg-user { background: var(--ica-primary); color: white; margin-left: auto; border-bottom-right-radius: 4px; }
-.msg-ai { background: #f1f5f9; color: var(--ica-text); margin-right: auto; border-bottom-left-radius: 4px; }
+.indicare-assistant .ica-message-role-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: currentColor;
+    opacity: 0.55;
+}
+
+.indicare-assistant .ica-message {
+    position: relative;
+    padding: 1rem 1.05rem;
+    border-radius: 22px;
+    line-height: 1.7;
+    word-break: break-word;
+    box-shadow: var(--ica-shadow-sm);
+}
+
+.indicare-assistant .ica-message.is-user {
+    background: linear-gradient(135deg, var(--ica-primary) 0%, var(--ica-primary-hover) 100%);
+    color: #fff;
+    border-bottom-right-radius: 8px;
+}
+
+.indicare-assistant .ica-message.is-assistant {
+    background: rgba(255,255,255,0.96);
+    color: var(--ica-text);
+    border: 1px solid #d2dceb;
+    border-bottom-left-radius: 8px;
+}
+
+.indicare-assistant .ica-message-actions {
+    margin-top: 0.45rem;
+    display: flex;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.indicare-assistant .ica-copy-btn {
+    border: 1px solid var(--ica-border);
+    background: rgba(255,255,255,0.85);
+    color: var(--ica-text-soft);
+    border-radius: 10px;
+    padding: 0.38rem 0.72rem;
+    cursor: pointer;
+    font-size: 0.82rem;
+    transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+.indicare-assistant .ica-copy-btn:hover,
+.indicare-assistant .ica-copy-btn:focus-visible {
+    border-color: var(--ica-primary);
+    background: #eef4ff;
+    color: var(--ica-text);
+}
+
+.indicare-assistant .ica-message h1,
+.indicare-assistant .ica-message h2,
+.indicare-assistant .ica-message h3,
+.indicare-assistant .ica-message h4,
+.indicare-assistant .ica-message h5,
+.indicare-assistant .ica-message h6 {
+    margin: 0 0 0.75rem;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+
+.indicare-assistant .ica-message h1 { font-size: 1.45rem; }
+.indicare-assistant .ica-message h2 { font-size: 1.3rem; }
+.indicare-assistant .ica-message h3 { font-size: 1.15rem; }
+.indicare-assistant .ica-message h4,
+.indicare-assistant .ica-message h5,
+.indicare-assistant .ica-message h6 { font-size: 1rem; }
+
+.indicare-assistant .ica-message p {
+    margin: 0 0 0.85rem;
+    color: inherit;
+}
+
+.indicare-assistant .ica-message p:last-child {
+    margin-bottom: 0;
+}
+
+.indicare-assistant .ica-message ul,
+.indicare-assistant .ica-message ol {
+    margin: 0.4rem 0 0.9rem 1.3rem;
+    padding: 0;
+}
+
+.indicare-assistant .ica-message li {
+    margin: 0.25rem 0;
+}
+
+.indicare-assistant .ica-message blockquote {
+    margin: 0.8rem 0;
+    padding: 0.1rem 0 0.1rem 0.9rem;
+    border-left: 3px solid rgba(120, 140, 180, 0.45);
+    color: var(--ica-text-soft);
+}
+
+.indicare-assistant .ica-message pre {
+    overflow: auto;
+    margin: 0.8rem 0;
+    padding: 0.9rem;
+    border-radius: 14px;
+    background: #0f172a;
+    color: #f8fafc;
+}
+
+.indicare-assistant .ica-message code {
+    background: rgba(15, 23, 42, 0.06);
+    padding: 0.12rem 0.34rem;
+    border-radius: 7px;
+    font-size: 0.92em;
+}
+
+.indicare-assistant .ica-message pre code {
+    background: transparent;
+    padding: 0;
+}
+
+.indicare-assistant .ica-inline-edit-wrap {
+    margin-top: 0.65rem;
+}
+
+.indicare-assistant .ica-inline-edit-textarea,
+.indicare-assistant .ica-textarea {
+    width: 100%;
+    resize: none;
+    color: var(--ica-text);
+    outline: none;
+    font: inherit;
+    line-height: 1.55;
+    box-shadow: none;
+}
+
+.indicare-assistant .ica-inline-edit-textarea {
+    min-height: 56px;
+    max-height: 220px;
+    border: 1px solid var(--ica-border);
+    border-radius: 14px;
+    background: #fff;
+    padding: 0.85rem 0.95rem;
+}
+
+.indicare-assistant .ica-textarea {
+    min-height: 26px;
+    max-height: 160px;
+    border: none;
+    background: transparent;
+    padding: 0;
+}
+
+.indicare-assistant .ica-inline-edit-textarea:focus,
+.indicare-assistant .ica-textarea:focus,
+.indicare-assistant .ica-upload-btn:focus-visible,
+.indicare-assistant .ica-btn:focus-visible,
+.indicare-assistant .ica-icon-btn:focus-visible,
+.indicare-assistant .ica-copy-btn:focus-visible,
+.indicare-assistant .ica-history-item:focus-visible {
+    outline: none;
+    border-color: var(--ica-primary);
+    box-shadow: 0 0 0 4px rgba(47,92,255,0.12);
+}
+
+.indicare-assistant .ica-typing-row {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.indicare-assistant .ica-typing-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.8rem 0.95rem;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid #d2dceb;
+    box-shadow: var(--ica-shadow-sm);
+    color: var(--ica-text-soft);
+    font-size: 0.86rem;
+}
+
+.indicare-assistant .ica-typing-dots {
+    display: inline-flex;
+    gap: 0.28rem;
+}
+
+.indicare-assistant .ica-typing-dots span,
+.indicare-assistant .ica-send-spinner-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: currentColor;
+    animation: ica-bounce 1.2s infinite ease-in-out;
+}
+
+.indicare-assistant .ica-typing-dots span:nth-child(2),
+.indicare-assistant .ica-send-spinner-dot:nth-child(2) {
+    animation-delay: 0.12s;
+}
+
+.indicare-assistant .ica-typing-dots span:nth-child(3),
+.indicare-assistant .ica-send-spinner-dot:nth-child(3) {
+    animation-delay: 0.24s;
+}
+
+@keyframes ica-bounce {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.55; }
+    40% { transform: translateY(-4px); opacity: 1; }
+}
+
+.indicare-assistant .ica-composer {
+    border-top: 1px solid var(--ica-border);
+    background: var(--ica-bg-glass-strong);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 0.9rem 1.25rem 1rem;
+}
+
+.indicare-assistant .ica-composer-inner {
+    width: min(100%, var(--ica-chat-width));
+    margin: 0 auto;
+    display: grid;
+    gap: 0.65rem;
+}
+
+.indicare-assistant .ica-status-banner {
+    display: none;
+    align-items: center;
+    gap: 0.65rem;
+    border-radius: 14px;
+    padding: 0.8rem 0.95rem;
+    border: 1px solid transparent;
+    line-height: 1.5;
+    font-size: 0.88rem;
+}
+
+.indicare-assistant .ica-status-banner.is-show {
+    display: flex;
+}
+
+.indicare-assistant .ica-status-banner.is-success {
+    background: var(--ica-success-bg);
+    border-color: var(--ica-success-border);
+    color: var(--ica-success-text);
+}
+
+.indicare-assistant .ica-status-banner.is-warn {
+    background: var(--ica-warn-bg);
+    border-color: var(--ica-warn-border);
+    color: var(--ica-warn-text);
+}
+
+.indicare-assistant .ica-status-banner.is-error {
+    background: var(--ica-error-bg);
+    border-color: var(--ica-error-border);
+    color: var(--ica-error-text);
+}
+
+.indicare-assistant .ica-status-banner svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.indicare-assistant .ica-document-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    min-height: 1.5rem;
+}
+
+.indicare-assistant .ica-document-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    background: #eef4ff;
+    border: 1px solid #d7e5ff;
+    color: var(--ica-text);
+    border-radius: 999px;
+    padding: 0.42rem 0.8rem;
+    font-size: 0.86rem;
+    max-width: 100%;
+}
+
+.indicare-assistant .ica-document-chip span {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.indicare-assistant .ica-chip-remove {
+    border: none;
+    background: transparent;
+    color: var(--ica-text-soft);
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0;
+}
+
+.indicare-assistant .ica-composer-box {
+    border: 1px solid var(--ica-border);
+    border-radius: 22px;
+    background: #fff;
+    box-shadow: var(--ica-shadow-sm), inset 0 1px 0 rgba(255,255,255,0.8);
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.indicare-assistant .ica-composer-box:focus-within {
+    border-color: var(--ica-primary);
+    box-shadow: 0 0 0 4px rgba(47,92,255,0.12), var(--ica-shadow-sm);
+}
+
+.indicare-assistant .ica-composer-main {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.65rem;
+    align-items: center;
+    padding: 0.7rem;
+}
+
+.indicare-assistant .ica-upload-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 16px;
+    border: 1px solid var(--ica-border);
+    background: #fff;
+    color: var(--ica-text);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.indicare-assistant .ica-upload-btn:hover,
+.indicare-assistant .ica-upload-btn:focus-visible {
+    transform: translateY(-1px);
+    border-color: var(--ica-primary);
+    background: #eef4ff;
+}
+
+.indicare-assistant .ica-composer-fields {
+    min-width: 0;
+    display: grid;
+    gap: 0.45rem;
+}
+
+.indicare-assistant .ica-composer-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.indicare-assistant .ica-composer-hint {
+    font-size: 0.8rem;
+    color: var(--ica-text-soft);
+}
+
+.indicare-assistant .ica-composer-buttons {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.indicare-assistant .ica-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    border-radius: 14px;
+    padding: 0.85rem 1rem;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 700;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.indicare-assistant .ica-btn--primary {
+    background: linear-gradient(135deg, var(--ica-primary) 0%, var(--ica-primary-hover) 100%);
+    color: #fff;
+    box-shadow: 0 10px 20px rgba(47, 92, 255, 0.18);
+}
+
+.indicare-assistant .ica-btn--primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 26px rgba(47, 92, 255, 0.22);
+}
+
+.indicare-assistant .ica-btn--ghost {
+    background: #f8fafc;
+    color: var(--ica-text);
+    border-color: var(--ica-border);
+}
+
+.indicare-assistant .ica-btn--sidebar {
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    border-color: rgba(255,255,255,0.14);
+    padding: 0.78rem 0.95rem;
+    border-radius: 13px;
+    font-size: 0.96rem;
+    font-weight: 650;
+}
+
+.indicare-assistant .ica-btn--sidebar:hover {
+    background: rgba(255,255,255,0.14);
+}
+
+.indicare-assistant .ica-btn--full {
+    width: 100%;
+}
+
+.indicare-assistant .ica-send-btn {
+    min-width: 118px;
+    position: relative;
+    overflow: hidden;
+}
+
+.indicare-assistant .ica-send-spinner {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15rem;
+}
+
+.indicare-assistant .ica-send-btn.is-loading .ica-send-label {
+    opacity: 0;
+}
+
+.indicare-assistant .ica-send-btn.is-loading .ica-send-spinner {
+    opacity: 1;
+}
+
+.indicare-assistant .ica-upload-status {
+    font-size: 0.82rem;
+    color: var(--ica-text-soft);
+    min-height: 1rem;
+}
+
+.indicare-assistant .ica-note {
+    font-size: 0.8rem;
+    color: var(--ica-text-soft);
+    line-height: 1.45;
+}
+
+.indicare-assistant .ica-note strong {
+    color: var(--ica-text);
+}
+
+.indicare-assistant .ica-rename-input {
+    width: 100%;
+    border: 1px solid rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    border-radius: 10px;
+    padding: 0.55rem 0.7rem;
+    outline: none;
+    margin-bottom: 0.55rem;
+}
+
+.indicare-assistant .ica-mobile-only {
+    display: none;
+}
+
+body.indicare-assistant.theme-dark {
+    background:
+        radial-gradient(circle at top, rgba(79,116,255,0.10), transparent 30%),
+        linear-gradient(180deg, #09111f 0%, #0b1324 100%);
+}
+
+body.indicare-assistant.theme-dark .ica-shell {
+    background: rgba(15, 23, 42, 0.68);
+    border-color: rgba(148,163,184,0.14);
+}
+
+body.indicare-assistant.theme-dark .ica-topbar,
+body.indicare-assistant.theme-dark .ica-composer {
+    background: rgba(15, 23, 42, 0.82);
+    border-color: rgba(148,163,184,0.14);
+}
+
+body.indicare-assistant.theme-dark .ica-chat {
+    background:
+        radial-gradient(circle at top left, rgba(79,116,255,0.14), transparent 18%),
+        radial-gradient(circle at bottom right, rgba(88,160,255,0.10), transparent 20%),
+        linear-gradient(180deg, #0b1220 0%, #111a2e 100%);
+}
+
+body.indicare-assistant.theme-dark .ica-empty-card,
+body.indicare-assistant.theme-dark .ica-message.is-assistant,
+body.indicare-assistant.theme-dark .ica-typing-indicator,
+body.indicare-assistant.theme-dark .ica-composer-box,
+body.indicare-assistant.theme-dark .ica-icon-btn,
+body.indicare-assistant.theme-dark .ica-upload-btn,
+body.indicare-assistant.theme-dark .ica-prompt-chip,
+body.indicare-assistant.theme-dark .ica-copy-btn,
+body.indicare-assistant.theme-dark .ica-btn--ghost,
+body.indicare-assistant.theme-dark .ica-inline-edit-textarea {
+    background: rgba(15, 23, 42, 0.9);
+    color: #e5eefb;
+    border-color: rgba(148,163,184,0.18);
+}
+
+body.indicare-assistant.theme-dark .ica-topbar-copy h2,
+body.indicare-assistant.theme-dark .ica-empty-card h3,
+body.indicare-assistant.theme-dark .ica-note strong,
+body.indicare-assistant.theme-dark .ica-document-chip,
+body.indicare-assistant.theme-dark .ica-composer-hint strong,
+body.indicare-assistant.theme-dark .ica-message h1,
+body.indicare-assistant.theme-dark .ica-message h2,
+body.indicare-assistant.theme-dark .ica-message h3,
+body.indicare-assistant.theme-dark .ica-message h4,
+body.indicare-assistant.theme-dark .ica-message h5,
+body.indicare-assistant.theme-dark .ica-message h6 {
+    color: #f8fbff;
+}
+
+body.indicare-assistant.theme-dark .ica-topbar-copy p,
+body.indicare-assistant.theme-dark .ica-note,
+body.indicare-assistant.theme-dark .ica-composer-hint,
+body.indicare-assistant.theme-dark .ica-upload-status,
+body.indicare-assistant.theme-dark .ica-message-meta,
+body.indicare-assistant.theme-dark .ica-empty-card p,
+body.indicare-assistant.theme-dark .ica-message blockquote {
+    color: #b6c2d6;
+}
+
+body.indicare-assistant.theme-dark .ica-document-chip,
+body.indicare-assistant.theme-dark .ica-role-badge,
+body.indicare-assistant.theme-dark .ica-empty-badge {
+    background: rgba(30, 41, 59, 0.9);
+    border-color: rgba(96,165,250,0.22);
+    color: #dbeafe;
+}
+
+body.indicare-assistant.theme-dark .ica-message code {
+    background: rgba(255,255,255,0.09);
+}
+
+@media (max-width: 980px) {
+    .indicare-assistant .ica-page {
+        padding: 0;
+        height: 100vh;
+    }
+
+    .indicare-assistant .ica-shell {
+        height: 100vh;
+        border-radius: 0;
+        border: none;
+        grid-template-columns: 1fr;
+    }
+
+    .indicare-assistant .ica-sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: min(88vw, 340px);
+        transform: translateX(-100%);
+        transition: transform 0.22s ease;
+        box-shadow: 12px 0 30px rgba(0,0,0,0.25);
+    }
+
+    .indicare-assistant .ica-shell.is-sidebar-open .ica-sidebar {
+        transform: translateX(0);
+    }
+
+    .indicare-assistant .ica-shell.is-sidebar-open .ica-sidebar-backdrop {
+        display: block;
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .indicare-assistant .ica-sidebar-backdrop {
+        display: block;
+    }
+
+    .indicare-assistant .ica-mobile-only {
+        display: inline-flex;
+    }
+
+    .indicare-assistant .ica-role-badge {
+        display: none;
+    }
+}
+
+@media (max-width: 720px) {
+    .indicare-assistant .ica-topbar {
+        align-items: flex-start;
+        gap: 0.8rem;
+    }
+
+    .indicare-assistant .ica-empty-card {
+        padding: 1.45rem 1rem 1.1rem;
+        border-radius: 22px;
+    }
+
+    .indicare-assistant .ica-empty-card h3 {
+        font-size: 1.45rem;
+    }
+
+    .indicare-assistant .ica-prompt-chips {
+        justify-content: stretch;
+    }
+
+    .indicare-assistant .ica-prompt-chip {
+        width: 100%;
+        text-align: left;
+    }
+
+    .indicare-assistant .ica-message-block {
+        max-width: 100%;
+    }
+
+    .indicare-assistant .ica-composer-main {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+
+    .indicare-assistant .ica-upload-btn {
+        width: 100%;
+        height: 46px;
+        border-radius: 14px;
+    }
+
+    .indicare-assistant .ica-composer-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .indicare-assistant .ica-composer-buttons {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .indicare-assistant .ica-composer-buttons .ica-btn {
+        width: 100%;
+    }
+}
