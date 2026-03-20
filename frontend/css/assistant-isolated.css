@@ -37,7 +37,7 @@
     --ica-error-border: #f1cccc;
     --ica-error-text: #9b2c2c;
 
-    --ica-chat-width: 980px;
+    --ica-chat-width: 920px;
     --ica-font:
         Inter,
         ui-sans-serif,
@@ -346,15 +346,9 @@ body.indicare-assistant {
 }
 
 @keyframes ica-mic-pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(239,68,68,0.55);
-    }
-    70% {
-        box-shadow: 0 0 0 10px rgba(239,68,68,0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(239,68,68,0);
-    }
+    0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.55); }
+    70% { box-shadow: 0 0 0 10px rgba(239,68,68,0); }
+    100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
 }
 
 .indicare-assistant .ica-sidebar-footer {
@@ -435,7 +429,7 @@ body.indicare-assistant {
 .indicare-assistant .ica-chat {
     min-height: 0;
     overflow-y: auto;
-    padding: 1.25rem;
+    padding: 1rem 1.25rem 0.9rem;
     background: var(--ica-bg-chat);
     scroll-behavior: smooth;
 }
@@ -525,12 +519,14 @@ body.indicare-assistant {
 
 .indicare-assistant .ica-messages {
     display: grid;
-    gap: 1rem;
-    padding-bottom: 0.25rem;
+    gap: 1.15rem;
+    padding: 0.35rem 0 0.5rem;
 }
 
 .indicare-assistant .ica-message-wrapper {
     display: flex;
+    align-items: flex-end;
+    gap: 0.7rem;
 }
 
 .indicare-assistant .ica-message-wrapper.is-user {
@@ -541,15 +537,45 @@ body.indicare-assistant {
     justify-content: flex-start;
 }
 
+.indicare-assistant .ica-message-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    border: 1px solid var(--ica-border);
+    box-shadow: var(--ica-shadow-sm);
+}
+
+.indicare-assistant .ica-message-wrapper.is-user .ica-message-avatar {
+    background: linear-gradient(135deg, var(--ica-primary) 0%, var(--ica-primary-hover) 100%);
+    color: #fff;
+    order: 2;
+}
+
+.indicare-assistant .ica-message-wrapper.is-assistant .ica-message-avatar {
+    background: #eef4ff;
+    color: #24437f;
+}
+
 .indicare-assistant .ica-message-block {
-    max-width: min(800px, 88%);
+    max-width: min(860px, 78%);
+}
+
+.indicare-assistant .ica-message-wrapper.is-user .ica-message-block {
+    max-width: min(700px, 68%);
 }
 
 .indicare-assistant .ica-message-meta {
-    font-size: 0.75rem;
+    font-size: 0.74rem;
     color: var(--ica-text-soft);
-    margin: 0 0 0.36rem;
-    padding: 0 0.24rem;
+    margin: 0 0 0.35rem;
+    padding: 0 0.35rem;
     display: flex;
     align-items: center;
     gap: 0.45rem;
@@ -569,41 +595,49 @@ body.indicare-assistant {
 
 .indicare-assistant .ica-message {
     position: relative;
-    padding: 1rem 1.05rem;
-    border-radius: 22px;
-    line-height: 1.7;
+    padding: 1.05rem 1.15rem;
+    border-radius: 24px;
+    line-height: 1.72;
     word-break: break-word;
     box-shadow: var(--ica-shadow-sm);
+    font-size: 1rem;
 }
 
 .indicare-assistant .ica-message.is-user {
     background: linear-gradient(135deg, var(--ica-primary) 0%, var(--ica-primary-hover) 100%);
     color: #fff;
-    border-bottom-right-radius: 8px;
+    border-bottom-right-radius: 10px;
 }
 
 .indicare-assistant .ica-message.is-assistant {
-    background: rgba(255,255,255,0.96);
+    background: rgba(255,255,255,0.97);
     color: var(--ica-text);
     border: 1px solid #d2dceb;
-    border-bottom-left-radius: 8px;
+    border-bottom-left-radius: 10px;
 }
 
 .indicare-assistant .ica-message-actions {
-    margin-top: 0.45rem;
+    margin-top: 0.42rem;
     display: flex;
     gap: 0.45rem;
     flex-wrap: wrap;
+    padding-left: 0.2rem;
+}
+
+.indicare-assistant .ica-message-wrapper.is-user .ica-message-actions {
+    justify-content: flex-end;
+    padding-right: 0.2rem;
+    padding-left: 0;
 }
 
 .indicare-assistant .ica-copy-btn {
     border: 1px solid var(--ica-border);
-    background: rgba(255,255,255,0.85);
+    background: rgba(255,255,255,0.86);
     color: var(--ica-text-soft);
     border-radius: 10px;
-    padding: 0.38rem 0.72rem;
+    padding: 0.36rem 0.7rem;
     cursor: pointer;
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
 }
 
@@ -702,7 +736,6 @@ body.indicare-assistant {
 .indicare-assistant .ica-inline-edit-textarea:focus,
 .indicare-assistant .ica-chatbar-input:focus,
 .indicare-assistant .ica-response-mode-select:focus,
-.indicare-assistant .ica-upload-btn:focus-visible,
 .indicare-assistant .ica-btn:focus-visible,
 .indicare-assistant .ica-icon-btn:focus-visible,
 .indicare-assistant .ica-copy-btn:focus-visible,
@@ -765,14 +798,14 @@ body.indicare-assistant {
     background: var(--ica-bg-glass-strong);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    padding: 0.65rem 1rem 0.75rem;
+    padding: 0.55rem 1rem 0.65rem;
 }
 
 .indicare-assistant .ica-composer-inner {
     width: min(100%, var(--ica-chat-width));
     margin: 0 auto;
     display: grid;
-    gap: 0.45rem;
+    gap: 0.38rem;
 }
 
 .indicare-assistant .ica-status-banner {
@@ -814,6 +847,14 @@ body.indicare-assistant {
     flex-shrink: 0;
 }
 
+.indicare-assistant .ica-composer-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
 .indicare-assistant .ica-document-row {
     display: flex;
     align-items: center;
@@ -853,16 +894,16 @@ body.indicare-assistant {
 }
 
 .indicare-assistant .ica-response-mode {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 0.6rem;
-    flex-wrap: wrap;
-    min-height: 1.4rem;
-    padding: 0.05rem 0;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+    min-height: auto;
+    padding: 0;
 }
 
 .indicare-assistant .ica-response-mode-label {
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     font-weight: 700;
     color: var(--ica-text-soft);
     white-space: nowrap;
@@ -870,11 +911,12 @@ body.indicare-assistant {
 
 .indicare-assistant .ica-response-mode-select {
     border: 1px solid var(--ica-border);
-    border-radius: 12px;
+    border-radius: 10px;
     background: #fff;
     color: var(--ica-text);
-    padding: 0.48rem 0.75rem;
-    min-width: 168px;
+    padding: 0.42rem 0.7rem;
+    min-width: 150px;
+    height: 36px;
     outline: none;
     box-shadow: none;
     transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
@@ -883,9 +925,9 @@ body.indicare-assistant {
 .indicare-assistant .ica-chatbar {
     display: grid;
     grid-template-columns: auto auto minmax(0, 1fr) auto auto;
-    gap: 0.5rem;
+    gap: 0.45rem;
     align-items: center;
-    padding: 0.5rem 0.55rem;
+    padding: 0.45rem 0.5rem;
     border: 1px solid var(--ica-border);
     border-radius: 18px;
     background: #fff;
@@ -899,15 +941,15 @@ body.indicare-assistant {
 .indicare-assistant .ica-chatbar-input {
     width: 100%;
     min-height: 22px;
-    max-height: 120px;
+    max-height: 110px;
     resize: none;
     border: none;
     background: transparent;
     color: var(--ica-text);
-    padding: 0.1rem 0;
+    padding: 0.08rem 0;
     outline: none;
     font: inherit;
-    line-height: 1.45;
+    line-height: 1.4;
     box-shadow: none;
 }
 
@@ -965,7 +1007,7 @@ body.indicare-assistant {
 }
 
 .indicare-assistant .ica-chatbar-btn {
-    height: 40px;
+    height: 42px;
     padding-top: 0;
     padding-bottom: 0;
 }
@@ -996,9 +1038,9 @@ body.indicare-assistant {
 }
 
 .indicare-assistant .ica-upload-status {
-    font-size: 0.8rem;
+    font-size: 0.77rem;
     color: var(--ica-text-soft);
-    min-height: 1rem;
+    min-height: 0.9rem;
 }
 
 .indicare-assistant .ica-footer-meta {
@@ -1104,7 +1146,8 @@ body.indicare-assistant.theme-dark .ica-response-mode-label {
 
 body.indicare-assistant.theme-dark .ica-document-chip,
 body.indicare-assistant.theme-dark .ica-role-badge,
-body.indicare-assistant.theme-dark .ica-empty-badge {
+body.indicare-assistant.theme-dark .ica-empty-badge,
+body.indicare-assistant.theme-dark .ica-message-wrapper.is-assistant .ica-message-avatar {
     background: rgba(30, 41, 59, 0.9);
     border-color: rgba(96,165,250,0.22);
     color: #dbeafe;
@@ -1185,21 +1228,29 @@ body.indicare-assistant.theme-dark .ica-message code {
         text-align: left;
     }
 
-    .indicare-assistant .ica-message-block {
+    .indicare-assistant .ica-message-block,
+    .indicare-assistant .ica-message-wrapper.is-user .ica-message-block {
         max-width: 100%;
     }
 
-    .indicare-assistant .ica-response-mode {
+    .indicare-assistant .ica-message-avatar {
+        width: 34px;
+        height: 34px;
+        font-size: 0.74rem;
+    }
+
+    .indicare-assistant .ica-composer-topbar {
         align-items: stretch;
+    }
+
+    .indicare-assistant .ica-response-mode {
+        width: 100%;
+        justify-content: space-between;
         gap: 0.4rem;
     }
 
-    .indicare-assistant .ica-response-mode-label {
-        width: 100%;
-    }
-
     .indicare-assistant .ica-response-mode-select {
-        width: 100%;
+        flex: 1 1 auto;
         min-width: 0;
     }
 
