@@ -4,7 +4,6 @@ from psycopg2.extras import RealDictCursor
 from pydantic import BaseModel
 import logging
 import io
-import json
 
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -299,7 +298,7 @@ def extract_document_text(filename: str, file_bytes: bytes) -> str:
 # SSE HELPERS
 # ---------------------------------------------------------
 def sse_data(payload: str) -> str:
-    safe_payload = payload.replace("\r\n", "\n").replace("\r", "\n")
+    safe_payload = (payload or "").replace("\r\n", "\n").replace("\r", "\n")
     return "".join(f"data: {line}\n" for line in safe_payload.split("\n")) + "\n"
 
 
