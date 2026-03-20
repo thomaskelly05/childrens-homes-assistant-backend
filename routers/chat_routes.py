@@ -4,6 +4,7 @@ from psycopg2.extras import RealDictCursor
 from pydantic import BaseModel
 import logging
 import io
+import json
 
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -295,6 +296,21 @@ def extract_document_text(filename: str, file_bytes: bytes) -> str:
 
 
 # ---------------------------------------------------------
+# SSE HELPERS
+# ---------------------------------------------------------
+def sse_data(payload: str) -> str:
+    return f"data: {payload}\n\n"
+
+
+def sse_json(data: dict) -> str:
+    return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+def sse_done() -> str:
+    return "event: done\ndata: [DONE]\n\n"
+
+
+# ---------------------------------------------------------
 # ROUTE ENDPOINTS
 # ---------------------------------------------------------
 @router.post("/upload")
@@ -447,15 +463,15 @@ async def chat(request: Request, conn=Depends(get_db), current_user=Depends(get_
             ):
                 if token:
                     ai_text += token
-                    yield token
+                    yield sse_data(token)
 
             logger.info("Finished AI stream for conversation_id=%s", conversation_id)
 
         except Exception as e:
             logger.exception("AI stream failed for conversation %s: %s", conversation_id, e)
-            fallback = "\n\nSorry, something went wrong while generating the response. Please try again."
+            fallback = "Sorry, something went wrong while generating the response. Please try again."
             ai_text += fallback
-            yield fallback
+            yield sse_data(fallback)
 
         finally:
             if ai_text.strip():
@@ -465,11 +481,14 @@ async def chat(request: Request, conn=Depends(get_db), current_user=Depends(get_
                 except Exception as e:
                     logger.exception("Failed saving assistant message for conversation %s: %s", conversation_id, e)
 
+            yield sse_done()
+
     return StreamingResponse(
         stream(),
-        media_type="text/plain; charset=utf-8",
+        media_type="text/event-stream",
         headers={
-            "Cache-Control": "no-cache",
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
         },
     )
@@ -551,15 +570,15 @@ async def edit_message_and_regenerate(
             ):
                 if token:
                     ai_text += token
-                    yield token
+                    yield sse_data(token)
 
             logger.info("Finished regenerate AI stream for conversation_id=%s", conversation_id)
 
         except Exception as e:
             logger.exception("AI regenerate failed for conversation %s: %s", conversation_id, e)
-            fallback = "\n\nSorry, something went wrong while regenerating. Please try again."
+            fallback = "Sorry, something went wrong while regenerating. Please try again."
             ai_text += fallback
-            yield fallback
+            yield sse_data(fallback)
 
         finally:
             if ai_text.strip():
@@ -569,11 +588,14 @@ async def edit_message_and_regenerate(
                 except Exception as e:
                     logger.exception("Failed saving regenerated assistant message for conversation %s: %s", conversation_id, e)
 
+            yield sse_done()
+
     return StreamingResponse(
         stream(),
-        media_type="text/plain; charset=utf-8",
+        media_type="text/event-stream",
         headers={
-            "Cache-Control": "no-cache",
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
         },
     )
