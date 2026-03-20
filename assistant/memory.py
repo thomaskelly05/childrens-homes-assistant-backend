@@ -12,10 +12,8 @@ logger = logging.getLogger("indicare.memory")
 
 def get_connection():
     database_url = os.environ.get("DATABASE_URL")
-
     if not database_url:
         raise RuntimeError("DATABASE_URL environment variable missing")
-
     return psycopg2.connect(database_url)
 
 
@@ -27,11 +25,7 @@ def _safe_string(value: Any) -> str:
     return str(value).strip()
 
 
-def load_recent_messages(session_id: str, limit: int = 10) -> list[dict[str, Any]]:
-    """
-    Load recent messages for a conversation, oldest first.
-    """
-
+def load_recent_messages(session_id: str, limit: int = 4) -> list[dict[str, Any]]:
     conn = None
     rows: list[dict[str, Any]] = []
 
@@ -64,11 +58,6 @@ def load_recent_messages(session_id: str, limit: int = 10) -> list[dict[str, Any
 
 
 def save_message(session_id: str, role: str, message: str) -> bool:
-    """
-    Save a message to the conversation.
-    Returns True if successful, otherwise False.
-    """
-
     conn = None
 
     try:
@@ -97,12 +86,7 @@ def save_message(session_id: str, role: str, message: str) -> bool:
             conn.close()
 
 
-def summarise_recent_messages(messages: list[dict[str, Any]], max_items: int = 6) -> str:
-    """
-    Build a light memory summary from recent messages.
-    Keeps the assistant grounded without creating a huge prompt.
-    """
-
+def summarise_recent_messages(messages: list[dict[str, Any]], max_items: int = 4) -> str:
     if not messages:
         return ""
 
@@ -116,11 +100,10 @@ def summarise_recent_messages(messages: list[dict[str, Any]], max_items: int = 6
         if not role or not message:
             continue
 
-        short_message = message
-        if len(short_message) > 280:
-            short_message = short_message[:280].rsplit(" ", 1)[0] + "..."
+        if len(message) > 160:
+            message = message[:160].rsplit(" ", 1)[0] + "..."
 
-        lines.append(f"{role.title()}: {short_message}")
+        lines.append(f"{role.title()}: {message}")
 
     if not lines:
         return ""
@@ -129,11 +112,6 @@ def summarise_recent_messages(messages: list[dict[str, Any]], max_items: int = 6
 
 
 def build_user_preference_context(user_context: dict[str, Any] | None = None) -> str:
-    """
-    Build a small stable preference block from user context.
-    Safe by default and easy to extend later.
-    """
-
     if not user_context:
         return ""
 
@@ -142,7 +120,6 @@ def build_user_preference_context(user_context: dict[str, Any] | None = None) ->
     role = _safe_string(user_context.get("role"))
     preferred_style = _safe_string(user_context.get("preferred_style"))
     preferred_length = _safe_string(user_context.get("preferred_length"))
-    home_style = _safe_string(user_context.get("home_style"))
 
     if role:
         parts.append(f"User role: {role}")
@@ -150,8 +127,6 @@ def build_user_preference_context(user_context: dict[str, Any] | None = None) ->
         parts.append(f"Preferred style: {preferred_style}")
     if preferred_length:
         parts.append(f"Preferred detail level: {preferred_length}")
-    if home_style:
-        parts.append(f"Service / home writing preference: {home_style}")
 
     if not parts:
         return ""
@@ -164,23 +139,14 @@ def get_memory_context(
     user_context: dict[str, Any] | None = None,
     message: str = "",
     mode: str = "",
-    recent_limit: int = 8,
+    recent_limit: int = 4,
 ) -> str:
-    """
-    Main runtime memory function for the assistant engine.
-
-    Returns a small prompt-ready memory context made up of:
-    - stable user preferences
-    - recent conversation continuity
-    """
-
     recent_messages = load_recent_messages(session_id=session_id, limit=recent_limit)
 
-    recent_context = summarise_recent_messages(recent_messages)
+    recent_context = summarise_recent_messages(recent_messages, max_items=recent_limit)
     preference_context = build_user_preference_context(user_context)
 
     parts = [part for part in [preference_context, recent_context] if part]
-
     if not parts:
         return ""
 
