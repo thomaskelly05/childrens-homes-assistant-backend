@@ -4,9 +4,7 @@ window.currentDocumentName = null;
 
 const chatState = {
     historyRows: [],
-    theme: localStorage.getItem("indicare-theme") || "light",
-    recognition: null,
-    isListening: false
+    theme: localStorage.getItem("indicare-theme") || "light"
 };
 
 function initChat() {
@@ -19,7 +17,6 @@ function initChat() {
     bindSidebarControls();
     bindThemeToggle();
     bindGlobalMessageActions();
-    bindSpeechToText();
     applyWelcomeMessage();
     refreshUploadStatus();
     loadConversations(true);
@@ -169,79 +166,6 @@ function bindGlobalMessageActions() {
         if (!textarea) return;
         autoResizeTextarea(textarea);
     });
-}
-
-function bindSpeechToText() {
-    const micBtn = document.getElementById("micBtn");
-    if (!micBtn) return;
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-        setMicStatus("Speech to text is not available in this browser.");
-        micBtn.disabled = true;
-        micBtn.title = "Speech to text not available";
-        return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = "en-GB";
-    recognition.continuous = false;
-    recognition.interimResults = true;
-
-    chatState.recognition = recognition;
-
-    recognition.onstart = () => {
-        chatState.isListening = true;
-        micBtn.classList.add("is-listening");
-        setMicStatus("Listening…");
-    };
-
-    recognition.onend = () => {
-        chatState.isListening = false;
-        micBtn.classList.remove("is-listening");
-        setMicStatus("");
-    };
-
-    recognition.onerror = (event) => {
-        console.error("Speech recognition error:", event);
-        chatState.isListening = false;
-        micBtn.classList.remove("is-listening");
-        setMicStatus("Could not use speech to text.");
-    };
-
-    recognition.onresult = (event) => {
-        const input = document.getElementById("chat-input");
-        if (!input) return;
-
-        let transcript = "";
-        for (let i = event.resultIndex; i < event.results.length; i += 1) {
-            transcript += event.results[i][0].transcript;
-        }
-
-        input.value = transcript.trim();
-        autoResizeTextarea(input);
-    };
-
-    micBtn.addEventListener("click", () => {
-        if (!chatState.recognition) return;
-
-        if (chatState.isListening) {
-            chatState.recognition.stop();
-            return;
-        }
-
-        try {
-            chatState.recognition.start();
-        } catch (error) {
-            console.error("Could not start speech recognition:", error);
-        }
-    });
-}
-
-function setMicStatus(text) {
-    const micStatus = document.getElementById("micStatus");
-    if (micStatus) micStatus.textContent = text || "";
 }
 
 function applyTheme(theme) {
@@ -428,11 +352,13 @@ function applyWelcomeMessage() {
     const firstName = getAdultFirstName();
     const greeting = getTimeGreeting();
 
-    heading.textContent = firstName ? `${greeting}, ${firstName}` : greeting;
+    heading.textContent = firstName
+        ? `${greeting}, ${firstName}`
+        : `${greeting}`;
 
     subtext.textContent = firstName
-        ? `How can I help with support for ${firstName} today? Ask for help with care records, professional wording, reflection, planning, behaviour support, key work ideas, incident follow-up, routines, risk management, and day-to-day residential practice.`
-        : `How can I help today? Ask for help with care records, professional wording, reflection, planning, behaviour support, key work ideas, incident follow-up, routines, risk management, and day-to-day residential practice.`;
+        ? `How can I help with support for ${firstName} today? Ask for help with care records, professional wording, reflection, planning, behaviour support, key work ideas, incident follow-up, or day-to-day residential practice.`
+        : `How can I help today? Ask for help with care records, professional wording, reflection, planning, behaviour support, key work ideas, incident follow-up, or day-to-day residential practice.`;
 }
 
 async function sendMessage() {
@@ -1053,3 +979,163 @@ async function deleteConversation(conversationId) {
 
         await loadConversations(false);
         showStatusBanner("success", "Conversation deleted.");
+    } catch (error) {
+        console.error("Failed to delete conversation:", error);
+        showStatusBanner("error", "Failed to delete conversation.");
+    }
+}
+
+async function startInlineMessageEdit(messageId, currentText) {
+    const wrapper = document.querySelector(`.ica-message-wrapper.is-user[data-message-id="${cssEscapeSafe(String(messageId))}"]`);
+    if (!wrapper) return;
+
+    const messageEl = wrapper.querySelector(".ica-message.is-user");
+    const actionsEl = wrapper.querySelector(".ica-message-actions");
+    if (!messageEl || !actionsEl) return;
+    if (wrapper.querySelector(".ica-inline-edit-wrap")) return;
+
+    messageEl.hidden = true;
+    actionsEl.hidden = true;
+
+    const editWrap = document.createElement("div");
+    editWrap.className = "ica-inline-edit-wrap";
+    editWrap.innerHTML = `
+        <textarea
+            class="ica-inline-edit-textarea"
+            data-editing-message-id="${escapeHtmlAttr(String(messageId))}"
+            rows="1"
+            aria-label="Edit message"
+        >${escapeHtml(currentText)}</textarea>
+        <div class="ica-message-actions">
+            <button class="ica-copy-btn" type="button" data-save-edit-message-id="${escapeHtmlAttr(String(messageId))}">Save</button>
+            <button class="ica-copy-btn" type="button" data-cancel-edit-message-id="${escapeHtmlAttr(String(messageId))}">Cancel</button>
+        </div>
+    `;
+
+    wrapper.querySelector(".ica-message-block")?.appendChild(editWrap);
+
+    const textarea = editWrap.querySelector(".ica-inline-edit-textarea");
+    if (textarea) {
+        textarea.value = currentText;
+        autoResizeTextarea(textarea);
+        textarea.focus();
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    }
+}
+
+function cancelInlineMessageEdit(messageId) {
+    const wrapper = document.querySelector(`.ica-message-wrapper.is-user[data-message-id="${cssEscapeSafe(String(messageId))}"]`);
+    if (!wrapper) return;
+
+    wrapper.querySelector(".ica-inline-edit-wrap")?.remove();
+
+    const messageEl = wrapper.querySelector(".ica-message.is-user");
+    const actionsEl = wrapper.querySelector(".ica-message-actions");
+
+    if (messageEl) messageEl.hidden = false;
+    if (actionsEl) actionsEl.hidden = false;
+}
+
+async function submitInlineMessageEdit(messageId) {
+    const wrapper = document.querySelector(`.ica-message-wrapper.is-user[data-message-id="${cssEscapeSafe(String(messageId))}"]`);
+    if (!wrapper) return;
+
+    const textarea = wrapper.querySelector(`.ica-inline-edit-textarea[data-editing-message-id="${cssEscapeSafe(String(messageId))}"]`);
+    if (!textarea) return;
+
+    const newText = textarea.value.trim();
+    const originalText = wrapper.querySelector(".ica-message.is-user")?.textContent?.trim() || "";
+
+    if (!newText) {
+        cancelInlineMessageEdit(messageId);
+        return;
+    }
+
+    if (newText === originalText) {
+        cancelInlineMessageEdit(messageId);
+        return;
+    }
+
+    let current = wrapper;
+    while (current) {
+        const next = current.nextElementSibling;
+        current.remove();
+        current = next;
+    }
+
+    appendMessage("user", newText, messageId);
+    showTypingIndicator(true);
+    setSendLoading(true);
+
+    await streamAssistantResponse(`/chat/messages/${messageId}/edit`, {
+        message: newText,
+        document_text: window.currentDocumentText,
+        document_name: window.currentDocumentName
+    });
+
+    showTypingIndicator(false);
+    setSendLoading(false);
+
+    if (window.conversationId) {
+        await openConversation(
+            window.conversationId,
+            document.getElementById("conversationHeading")?.textContent || "Conversation",
+            false
+        );
+    }
+
+    await loadConversations(false);
+    showStatusBanner("success", "Message updated.");
+}
+
+function formatDate(value) {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return date.toLocaleString("en-GB");
+}
+
+function formatTime(date) {
+    return new Intl.DateTimeFormat("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit"
+    }).format(date);
+}
+
+function autoResizeTextarea(el) {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 220) + "px";
+}
+
+function scrollChatToBottom() {
+    const chat = document.getElementById("chat");
+    if (!chat) return;
+    requestAnimationFrame(() => {
+        chat.scrollTop = chat.scrollHeight;
+    });
+}
+
+function cssEscapeSafe(value) {
+    if (window.CSS && typeof window.CSS.escape === "function") {
+        return window.CSS.escape(value);
+    }
+    return String(value).replace(/["\\]/g, "\\$&");
+}
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+function escapeHtmlAttr(value) {
+    return escapeHtml(value);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    initChat();
+});
