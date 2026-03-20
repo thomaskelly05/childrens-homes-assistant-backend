@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IndiCare | AI Workspace</title>
+  <title>IndiCare | Professional Documentation</title>
   <link rel="icon" type="image/svg+xml" href="/assets/logo.svg" />
   <link rel="stylesheet" href="/ai-notes.css" />
 </head>
@@ -14,31 +14,33 @@
       <div class="sidebar-top">
         <div class="brand">
           <div class="brand-mark">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
           </div>
           <div>
             <h1>IndiCare</h1>
-            <p>Intelligence</p>
+            <p>Clinical Workspace</p>
           </div>
         </div>
 
         <nav class="nav">
           <a href="/" class="nav-link">Dashboard</a>
-          <a href="/ai-note.html" class="nav-link active">I-Notes</a>
+          <a href="/ai-note.html" class="nav-link active">Documentation</a>
         </nav>
 
-        <div class="sidebar-section">
-          <span class="section-label">Session Actions</span>
+        <div class="sidebar-section mt-24">
+          <span class="section-label">Session Controls</span>
           <button id="recordBtnSidebar" class="btn btn-primary w-full mt-8">Record Meeting</button>
         </div>
 
         <div class="sidebar-section mt-24">
-          <span class="section-label">Smart Prompts</span>
+          <span class="section-label">Care Sector Prompts</span>
           <div class="prompt-stack">
-            <button class="prompt-btn" data-fill="Make this more professional and improve clarity.">Improve Wording</button>
-            <button class="prompt-btn" data-fill="Turn this into concise meeting minutes with clear decisions and actions.">Meeting Minutes</button>
-            <button class="prompt-btn" data-fill="Rewrite this as a manager summary with key points, risks and next steps.">Manager Summary</button>
-            <button class="prompt-btn" data-fill="Make this shorter, cleaner and more structured.">Make Concise</button>
+            <button class="prompt-btn" data-fill="Format this into a formal Staff Supervision record, highlighting well-being, current caseloads, and agreed actions.">Supervision Record</button>
+            <button class="prompt-btn" data-fill="Extract and summarise all safeguarding concerns, risks, and immediate actions required. Use factual, objective language.">Safeguarding Summary</button>
+            <button class="prompt-btn" data-fill="Review this meeting and structure it as a Personal Education Plan (PEP) update, focusing on educational milestones and support needed.">PEP Update</button>
+            <button class="prompt-btn" data-fill="Remove all emotive language and rewrite this incident report to be strictly objective, chronological, and factual.">Make Objective & Factual</button>
           </div>
         </div>
       </div>
@@ -67,7 +69,7 @@
         </div>
         <div class="page-tabs">
           <button id="workspaceTabBtn" class="page-tab active" type="button">Editor</button>
-          <button id="savedTabBtn" class="page-tab" type="button">Saved Notes</button>
+          <button id="savedTabBtn" class="page-tab" type="button">Saved Records</button>
         </div>
         <div class="topbar-right">
           <button id="recordBtn" class="btn btn-primary">Start New Recording</button>
@@ -81,10 +83,10 @@
             
             <div class="context-card flex-col">
               <div class="card-header between">
-                <span class="card-title">Source Transcript</span>
-                <button id="transcribeBtn" class="btn btn-ghost btn-sm" disabled>Transcribe Audio</button>
+                <span class="card-title">Source Audio Transcript</span>
+                <button id="transcribeBtn" class="btn btn-ghost btn-sm" disabled>Transcribe</button>
               </div>
-              <textarea id="transcript" class="source-box" placeholder="Raw transcript will appear here after recording..."></textarea>
+              <textarea id="transcript" class="source-box" placeholder="Raw transcript will appear here after the session is recorded..."></textarea>
               <div class="card-actions border-top">
                 <button id="useTranscriptForAiBtn" class="btn btn-secondary w-full">Push to Editor</button>
               </div>
@@ -92,13 +94,13 @@
 
             <div class="context-card">
               <div class="card-header between">
-                <span class="card-title">Detected Speakers (<span id="speakerCountBadge">0</span>)</span>
+                <span class="card-title">Meeting Participants (<span id="speakerCountBadge">0</span>)</span>
                 <button id="renameSpeakersBtn" class="btn btn-ghost btn-sm">Refresh</button>
               </div>
               <div class="card-body">
-                <div id="speakerMapList" class="data-list"><div class="empty-text">No speakers detected.</div></div>
+                <div id="speakerMapList" class="data-list"><div class="empty-text">No participants detected.</div></div>
                 
-                <span class="card-title mt-16 mb-8 block">Timeline</span>
+                <span class="card-title mt-16 mb-8 block">Speaking Timeline</span>
                 <div id="speakerTimeline" class="data-list timeline-list"><div class="empty-text">No timeline yet.</div></div>
               </div>
             </div>
@@ -109,7 +111,7 @@
                 <button id="extractActionsBtn" class="btn btn-ghost btn-sm">Extract</button>
               </div>
               <div class="card-body">
-                <div id="actionsList" class="data-list"><div class="empty-text">No extracted actions yet.</div></div>
+                <div id="actionsList" class="data-list"><div class="empty-text">No actions identified yet.</div></div>
               </div>
             </div>
 
@@ -119,49 +121,70 @@
             <div class="editor-card">
               
               <div class="editor-header">
-                <input id="title" type="text" class="document-title-input" placeholder="Untitled Document" />
-                <div class="document-meta">
+                <input id="title" type="text" class="document-title-input" placeholder="Untitled Record" />
+                
+                <div class="document-meta-grid">
                   <div class="meta-item">
-                    <label for="meetingFormat">Format</label>
+                    <label for="meetingFormat">Record Type</label>
                     <select id="meetingFormat" class="meta-select">
-                      <option value="">Not specified</option>
-                      <option value="Online">Online</option>
-                      <option value="In person">In person</option>
+                      <option value="">Select type...</option>
+                      <option value="Supervision">Staff Supervision</option>
+                      <option value="Appraisal">Annual Appraisal</option>
+                      <option value="Safeguarding">Safeguarding Meeting</option>
+                      <option value="PEP">PEP Meeting</option>
+                      <option value="Review">Care Review</option>
                     </select>
                   </div>
+                  
                   <div class="meta-item">
-                    <label for="noteStatus">Status</label>
-                    <select id="noteStatus" class="meta-select">
-                      <option value="draft">Draft</option>
-                      <option value="final">Final</option>
-                      <option value="approved">Approved</option>
+                    <label for="documentTemplate">Framework Template</label>
+                    <select id="documentTemplate" class="meta-select">
+                      <option value="blank">Blank Document</option>
+                      <option value="ofsted">Standard Ofsted Layout</option>
+                      <option value="local_auth">Local Authority Standard</option>
+                      <optgroup label="Company Templates">
+                        <option value="custom_1">Our Home: Monthly Summary</option>
+                        <option value="custom_2">Our Home: Incident Report</option>
+                      </optgroup>
+                      <option value="create_new">+ Create New Template...</option>
+                    </select>
+                  </div>
+
+                  <div class="meta-item">
+                    <label for="noteStatus">Sign-off Status</label>
+                    <select id="noteStatus" class="meta-select status-badge-select">
+                      <option value="draft">Draft (In Progress)</option>
+                      <option value="review">Pending Manager Review</option>
+                      <option value="approved">Approved & Locked</option>
                     </select>
                   </div>
                 </div>
               </div>
 
               <div class="ai-command-bar">
-                <div class="ai-icon">✨</div>
-                <input id="prompt" type="text" class="ai-command-input" placeholder="Instruct the AI to format, summarize, or refine this document..." />
-                <button id="aiBtn" class="btn btn-primary btn-sm">Run AI</button>
+                <div class="ai-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                </div>
+                <input id="prompt" type="text" class="ai-command-input" placeholder="Instruct the assistant to structure, summarise, or anonymise this document..." />
+                <button id="aiBtn" class="btn btn-primary btn-sm">Process Document</button>
               </div>
 
               <div class="document-area">
-                <textarea id="note" class="document-box" placeholder="Your intelligent, refined document will be generated here. Start typing or use the transcript..."></textarea>
+                <textarea id="note" class="document-box" placeholder="Your compliant, refined document will be generated here."></textarea>
               </div>
 
               <div class="editor-footer">
                 <div class="footer-left">
-                  <button id="saveBtn" class="btn btn-success">Save Document</button>
-                  <button id="versionsBtn" class="btn btn-secondary">Version History</button>
-                  <button id="resetBtn" class="btn btn-ghost">Reset</button>
+                  <button id="saveBtn" class="btn btn-success">Save to File</button>
+                  <button id="versionsBtn" class="btn btn-secondary">Audit History</button>
+                  <button id="resetBtn" class="btn btn-ghost">Revert to Original</button>
                 </div>
                 <div class="footer-right">
                   <button id="printBtn" class="btn btn-secondary">Print</button>
-                  <button id="pdfBtn" class="btn btn-secondary">PDF</button>
-                  <button id="docxBtn" class="btn btn-secondary">DOCX</button>
+                  <button id="pdfBtn" class="btn btn-secondary">Export PDF</button>
+                  <button id="docxBtn" class="btn btn-secondary">Export Word</button>
                   <div class="divider"></div>
-                  <button id="clearBtn" class="btn btn-danger-ghost">Clear All</button>
+                  <button id="clearBtn" class="btn btn-danger-ghost">Clear Editor</button>
                 </div>
               </div>
 
@@ -175,28 +198,28 @@
         <div class="saved-notes-layout">
           <div class="saved-header">
             <div>
-              <h2 class="page-title">Document History</h2>
-              <p class="text-muted mt-4">Review, edit, and export your previously saved sessions.</p>
+              <h2 class="page-title">Document Archive</h2>
+              <p class="text-muted mt-4">Securely review, edit, and export previously saved records.</p>
             </div>
-            <button id="refreshBtn" class="btn btn-secondary">Refresh List</button>
+            <button id="refreshBtn" class="btn btn-secondary">Refresh Archive</button>
           </div>
           
           <div class="search-bar">
             <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input id="searchInput" type="text" class="search-input" placeholder="Search by title, content, or status..." />
+            <input id="searchInput" type="text" class="search-input" placeholder="Search by resident, staff name, content, or record type..." />
           </div>
 
           <div id="empty" class="empty-state large">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-            <strong>No documents found</strong>
-            <span>Your saved clinical and professional notes will appear here.</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+            <strong>No records found</strong>
+            <span>Your securely saved clinical and professional notes will appear here.</span>
           </div>
 
           <div class="table-container">
             <table class="modern-table">
               <thead>
                 <tr>
-                  <th>Document Title</th>
+                  <th>Record Title</th>
                   <th>Status</th>
                   <th>Last Modified</th>
                   <th class="text-right">Actions</th>
@@ -213,23 +236,23 @@
 
   <div id="modal" class="modal-overlay hide">
     <div class="modal-content text-center">
-      <div class="live-badge">Live Session</div>
-      <h3 class="modal-title">Recording Audio</h3>
+      <div class="live-badge">Session Recording Live</div>
+      <h3 class="modal-title">Capturing Audio</h3>
       
       <div class="mic-container">
         <div id="mic" class="mic-pulsing-orb">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         </div>
       </div>
       
       <div id="timer" class="timer-huge">00:00</div>
-      <div id="recState" class="status-indicator-text">Recording in progress...</div>
+      <div id="recState" class="status-indicator-text">Recording in progress. Maintain confidentiality.</div>
 
       <div class="modal-action-row">
         <button id="pauseBtn" class="btn btn-secondary" disabled>Pause</button>
         <button id="resumeBtn" class="btn btn-secondary" disabled>Resume</button>
-        <button id="cancelBtn" class="btn btn-danger-ghost" disabled>Cancel</button>
-        <button id="stopBtn" class="btn btn-primary" disabled>Finish & Transcribe</button>
+        <button id="cancelBtn" class="btn btn-danger-ghost" disabled>Discard</button>
+        <button id="stopBtn" class="btn btn-primary" disabled>End & Transcribe</button>
       </div>
     </div>
   </div>
@@ -237,11 +260,11 @@
   <div id="versionsModal" class="modal-overlay hide">
     <div class="modal-content large">
       <div class="modal-header">
-        <h3 class="modal-title">Version History</h3>
+        <h3 class="modal-title">Audit History</h3>
         <button id="closeVersionsBtn" class="btn btn-ghost btn-icon">✕</button>
       </div>
       <div id="versionsList" class="versions-scroll-area">
-        <div class="empty-text text-center mt-24">No previous versions available.</div>
+        <div class="empty-text text-center mt-24">No previous audit versions available.</div>
       </div>
     </div>
   </div>
