@@ -19,41 +19,53 @@
             <div class="ica-sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
 
             <aside class="ica-sidebar" id="assistantSidebar" aria-label="Conversation sidebar">
-                <div class="ica-brand">
-                    <div>
-                        <h1>IndiCare</h1>
-                        <p>Assistant</p>
+                <div class="ica-sidebar-header">
+                    <div class="ica-brand">
+                        <div class="ica-brand-copy">
+                            <h1>IndiCare</h1>
+                            <p>Assistant</p>
+                        </div>
                     </div>
+
+                    <button
+                        id="sidebarCollapseBtn"
+                        class="ica-icon-btn ica-sidebar-collapse-btn"
+                        type="button"
+                        aria-label="Collapse sidebar"
+                        title="Collapse sidebar"
+                    >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path d="M15 18l-6-6 6-6"></path>
+                        </svg>
+                    </button>
                 </div>
 
-                <div class="ica-sidebar-top">
+                <div class="ica-sidebar-section">
                     <button id="newConversationBtn" class="ica-btn ica-btn--primary ica-btn--full" type="button">
                         New chat
                     </button>
+                </div>
 
+                <div class="ica-sidebar-section">
                     <div class="ica-search-wrap">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <circle cx="11" cy="11" r="7"></circle>
                             <path d="M20 20l-3.5-3.5"></path>
                         </svg>
                         <label for="historySearch" class="ica-sr-only">Search conversations</label>
-                        <input
-                            id="historySearch"
-                            class="ica-input"
-                            type="text"
-                            placeholder="Search conversations"
-                            autocomplete="off"
-                        />
-                    </div>
-
-                    <div class="ica-sidebar-heading">
-                        <h3>Chat history</h3>
-                        <span id="historyCount" class="ica-count-pill">0</span>
+                        <input id="historySearch" class="ica-input" type="text" placeholder="Search conversations" />
                     </div>
                 </div>
 
-                <div id="conversationList" class="ica-history-list" aria-live="polite">
-                    <div class="ica-history-empty">No conversations yet.</div>
+                <div class="ica-sidebar-section ica-sidebar-section--history">
+                    <div class="ica-sidebar-heading">
+                        <h3>Recent chats</h3>
+                        <span id="historyCount" class="ica-count-pill">0</span>
+                    </div>
+
+                    <div id="conversationList" class="ica-history-list" aria-live="polite">
+                        <div class="ica-history-empty">No conversations yet.</div>
+                    </div>
                 </div>
 
                 <div class="ica-sidebar-footer">
@@ -71,7 +83,7 @@
                             type="button"
                             aria-label="Open chat history"
                             aria-expanded="false"
-                            aria-controls="assistantSidebar"
+                            aria-controls="conversationList"
                         >
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                 <path d="M3 6h18M3 12h18M3 18h18"></path>
@@ -85,29 +97,19 @@
                     </div>
 
                     <div class="ica-topbar-actions">
-                        <span class="ica-role-badge" title="Residential care support assistant">
-                            Residential care support
-                        </span>
+                        <select id="responseMode" class="ica-mode-select" aria-label="Response mode">
+                            <option value="quick">Quick</option>
+                            <option value="balanced" selected>Balanced</option>
+                            <option value="deep">Deep review</option>
+                        </select>
 
-                        <button
-                            id="themeToggle"
-                            class="ica-icon-btn"
-                            type="button"
-                            aria-label="Toggle dark mode"
-                            title="Toggle dark mode"
-                        >
+                        <button id="themeToggle" class="ica-icon-btn" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                             </svg>
                         </button>
 
-                        <button
-                            id="headerNewChatBtn"
-                            class="ica-icon-btn"
-                            type="button"
-                            aria-label="Start new chat"
-                            title="Start new chat"
-                        >
+                        <button id="headerNewChatBtn" class="ica-icon-btn" type="button" aria-label="Start new chat" title="Start new chat">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                 <path d="M12 5v14M5 12h14"></path>
                             </svg>
@@ -127,7 +129,7 @@
                                     or day-to-day residential practice.
                                 </p>
 
-                                <div class="ica-prompt-chips" aria-label="Suggested prompts">
+                                <div class="ica-prompt-chips">
                                     <button class="ica-prompt-chip" type="button">Write a professional daily log entry</button>
                                     <button class="ica-prompt-chip" type="button">Help me phrase a safeguarding concern</button>
                                     <button class="ica-prompt-chip" type="button">Summarise this incident clearly</button>
@@ -136,10 +138,10 @@
                             </div>
                         </div>
 
-                        <div class="ica-messages" id="messages" hidden aria-live="polite"></div>
+                        <div class="ica-messages" id="messages" hidden></div>
 
                         <div class="ica-typing-row" id="typingRow" hidden>
-                            <div class="ica-typing-indicator" aria-live="polite" aria-atomic="true">
+                            <div class="ica-typing-indicator" aria-live="polite">
                                 <span>IndiCare is thinking</span>
                                 <span class="ica-typing-dots" aria-hidden="true">
                                     <span></span>
@@ -153,41 +155,17 @@
 
                 <div class="ica-composer">
                     <div class="ica-composer-inner">
-                        <div class="ica-status-banner" id="statusBanner" role="status" aria-live="polite" aria-atomic="true"></div>
+                        <div class="ica-status-banner" id="statusBanner" role="status" aria-live="polite"></div>
 
-                        <div class="ica-composer-topbar">
-                            <div class="ica-document-row">
-                                <div id="documentChip" class="ica-document-chip ica-hidden">
-                                    <span id="documentChipText"></span>
-                                    <button
-                                        id="clearDocumentBtn"
-                                        class="ica-chip-remove"
-                                        type="button"
-                                        aria-label="Remove uploaded document"
-                                    >×</button>
-                                </div>
-                            </div>
-
-                            <div class="ica-response-mode" aria-label="Response mode selection">
-                                <label for="responseMode" class="ica-response-mode-label">Mode</label>
-                                <select id="responseMode" class="ica-response-mode-select" aria-describedby="responseModeHint">
-                                    <option value="quick">Quick</option>
-                                    <option value="balanced" selected>Balanced</option>
-                                    <option value="deep">Deep review</option>
-                                </select>
-                                <span id="responseModeHint" class="ica-sr-only">
-                                    Quick gives faster replies, Balanced suits most tasks, and Deep review gives more detail.
-                                </span>
+                        <div class="ica-document-row">
+                            <div id="documentChip" class="ica-document-chip ica-hidden">
+                                <span id="documentChipText"></span>
+                                <button id="clearDocumentBtn" class="ica-chip-remove" type="button" aria-label="Remove uploaded document">×</button>
                             </div>
                         </div>
 
                         <div class="ica-chatbar">
-                            <label
-                                for="documentUpload"
-                                class="ica-chatbar-icon-btn"
-                                title="Upload document"
-                                aria-label="Upload document"
-                            >
+                            <label for="documentUpload" class="ica-chatbar-icon-btn" title="Upload document" aria-label="Upload document">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                     <path d="M12 16V4"></path>
                                     <path d="M7 9l5-5 5 5"></path>
@@ -219,13 +197,10 @@
                                     rows="1"
                                     placeholder="Message IndiCare..."
                                     aria-label="Message IndiCare"
-                                    aria-describedby="uploadStatus"
                                 ></textarea>
                             </div>
 
-                            <button id="clearChatBtn" class="ica-btn ica-btn--ghost ica-chatbar-btn" type="button">
-                                Clear
-                            </button>
+                            <button id="clearChatBtn" class="ica-btn ica-btn--ghost ica-chatbar-btn" type="button">Clear</button>
 
                             <button id="send-btn" class="ica-btn ica-btn--primary ica-chatbar-btn ica-send-btn" type="button">
                                 <span class="ica-send-label">Send</span>
