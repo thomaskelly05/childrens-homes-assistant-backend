@@ -3,26 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>IndiCare AI Assistant</title>
+    <title>IndiCare AI | Intelligence for Care</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     
     <style>
-        /* --- Million Pound Design System --- */
+        /* --- Premium Blue Design System --- */
         :root {
-            --bg-app: #ffffff;
-            --bg-sidebar: #f9fafb;
+            --bg-app: #f4f7fb;
+            --bg-sidebar: #ffffff;
             --bg-chat: #ffffff;
             --bg-input: #ffffff;
-            --bg-msg-user: #f3f4f6;
+            --bg-msg-user: #e0e9f5;
             --bg-msg-assistant: transparent;
-            --text-primary: #111827;
-            --text-secondary: #4b5563;
-            --text-muted: #9ca3af;
-            --border-color: #e5e7eb;
-            --accent-color: #0f766e;
-            --accent-hover: #115e59;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border-color: #e2e8f0;
+            --accent-color: #2563eb; /* Royal Blue */
+            --accent-hover: #1d4ed8;
             --danger-color: #ef4444;
             --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.03);
             --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.05);
@@ -34,16 +34,24 @@
         }
 
         body.theme-dark {
-            --bg-app: #111827; --bg-sidebar: #1f2937; --bg-chat: #111827;
-            --bg-input: #374151; --bg-msg-user: #374151;
-            --text-primary: #f9fafb; --text-secondary: #d1d5db; --text-muted: #6b7280;
-            --border-color: #374151; --accent-color: #14b8a6; --accent-hover: #0d9488;
+            --bg-app: #0f172a;
+            --bg-sidebar: #1e293b;
+            --bg-chat: #0f172a;
+            --bg-input: #1e293b;
+            --bg-msg-user: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border-color: #334155;
+            --accent-color: #3b82f6;
+            --accent-hover: #60a5fa;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-        body { background-color: var(--bg-app); color: var(--text-primary); height: 100dvh; overflow: hidden; -webkit-font-smoothing: antialiased; }
+        body { background-color: var(--bg-app); color: var(--text-primary); height: 100dvh; overflow: hidden; -webkit-font-smoothing: antialiased; transition: background 0.3s ease; }
         button { background: none; border: none; cursor: pointer; color: inherit; outline: none; transition: all 0.2s; }
-        
+        textarea { resize: none; border: none; outline: none; background: transparent; color: inherit; font-size: 1rem; }
+
         .ica-shell { display: flex; height: 100%; width: 100vw; position: relative; }
 
         /* --- SIDEBAR RAIL --- */
@@ -56,7 +64,6 @@
             z-index: 40; overflow: hidden; position: relative;
         }
         .is-sidebar-open .ica-sidebar { width: var(--sidebar-width-full); }
-
         .ica-sidebar-header { height: 60px; display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0; }
         
         .ica-sidebar-content {
@@ -73,9 +80,9 @@
 
         .rail-icon { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 12px; color: var(--text-secondary); }
         .rail-icon:hover { background: var(--bg-hover); color: var(--accent-color); }
-        .rail-icon.active { background: rgba(15, 118, 110, 0.1); color: var(--accent-color); }
+        .rail-icon.active { background: rgba(37, 99, 235, 0.1); color: var(--accent-color); }
 
-        /* --- UI COMPONENTS --- */
+        /* --- COMPONENTS --- */
         .ica-btn-primary { display: flex; align-items: center; justify-content: center; gap: 8px; background-color: var(--accent-color); color: white; padding: 10px 16px; border-radius: var(--radius-full); font-weight: 500; margin: 0 16px 16px; font-size: 0.9rem; }
         .ica-sidebar-search-wrap { margin: 0 16px 16px; position: relative; }
         .ica-search-input { width: 100%; background: var(--bg-app); padding: 10px 12px 10px 36px; border-radius: var(--radius-full); border: 1px solid var(--border-color); font-size: 0.875rem; }
@@ -83,55 +90,51 @@
 
         .ica-sidebar-list { flex: 1; overflow-y: auto; padding: 0 8px; }
         .ica-history-item { padding: 10px 12px; border-radius: var(--radius-lg); cursor: pointer; margin-bottom: 2px; position: relative; transition: 0.2s; }
-        .ica-history-item:hover { background: var(--bg-hover); }
-        .ica-history-item.is-active { background: var(--bg-active); }
-        .ica-history-item-title { font-size: 0.875rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 24px; }
-        
-        .ica-history-actions { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: none; gap: 4px; }
-        .ica-history-item:hover .ica-history-actions { display: flex; }
+        .ica-history-item:hover { background: var(--bg-app); }
+        .ica-history-item.is-active { background: var(--bg-app); border: 1px solid var(--border-color); }
+        .ica-history-item-title { font-size: 0.875rem; font-weight: 500; color: var(--text-primary); }
 
         .ica-sidebar-footer { padding: 16px; border-top: 1px solid var(--border-color); width: var(--sidebar-width-full); }
-        .ica-select { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-app); margin-bottom: 8px; font-size: 0.85rem; }
 
         /* --- MAIN CONTENT --- */
         .ica-main { flex: 1; display: flex; flex-direction: column; background: var(--bg-chat); min-width: 0; }
-        .ica-header { height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; border-bottom: 1px solid transparent; flex-shrink: 0; }
+        .ica-header { height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; flex-shrink: 0; }
+        
         .ica-chat-scroll { flex: 1; overflow-y: auto; padding: 24px; scroll-behavior: smooth; }
-        .ica-messages-container { max-width: 768px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; padding-bottom: 20px; }
+        .ica-messages-container { max-width: 768px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; padding-bottom: 40px; }
 
-        .ica-message-wrapper { display: flex; gap: 16px; width: 100%; animation: fadeIn 0.3s ease forwards; }
+        .ica-message-wrapper { display: flex; gap: 16px; width: 100%; }
         .ica-message-wrapper.is-user { flex-direction: row-reverse; }
-        .ica-message-avatar { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; background: var(--bg-active); flex-shrink: 0; }
+        .ica-message-avatar { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; background: var(--border-color); flex-shrink: 0; }
         .is-assistant .ica-message-avatar { background: var(--accent-color); color: white; }
         .ica-message-block { display: flex; flex-direction: column; gap: 4px; max-width: 85%; }
         .is-user .ica-message-block { align-items: flex-end; }
-        .ica-message { padding: 12px 16px; font-size: 0.95rem; line-height: 1.6; color: var(--text-primary); }
-        .is-user .ica-message { background: var(--bg-msg-user); border-radius: 18px 18px 4px 18px; }
+        .ica-message { padding: 12px 18px; font-size: 0.95rem; line-height: 1.6; color: var(--text-primary); }
+        .is-user .ica-message { background: var(--bg-msg-user); border-radius: 18px 18px 4px 18px; color: #0f172a; }
         
-        .ica-message-actions { display: flex; gap: 12px; margin-top: 4px; opacity: 0; transition: 0.2s; }
-        .ica-message-wrapper:hover .ica-message-actions { opacity: 1; }
-        .ica-action-btn { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
-        .ica-action-btn:hover { color: var(--accent-color); }
+        /* Cursor effect for typing */
+        .is-typing::after { content: '▊'; font-size: 1rem; color: var(--accent-color); animation: blink 1s infinite; }
 
-        /* --- INPUT --- */
+        /* --- INPUT PILL --- */
         .ica-input-container { padding: 0 24px 12px; max-width: 768px; margin: 0 auto; width: 100%; flex-shrink: 0; }
-        .ica-input-box { background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 28px; padding: 8px 16px; box-shadow: var(--shadow-md); display: flex; flex-direction: column; }
+        .ica-input-box { background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 28px; padding: 8px 16px; box-shadow: var(--shadow-md); display: flex; flex-direction: column; transition: 0.2s; }
+        .ica-input-box:focus-within { border-color: var(--accent-color); box-shadow: var(--shadow-lg); }
         .ica-input-row { display: flex; align-items: flex-end; gap: 12px; }
-        .ica-textarea { flex: 1; max-height: 200px; padding: 10px 0; border: none; outline: none; background: transparent; color: inherit; font-size: 1rem; }
+        .ica-textarea { flex: 1; max-height: 150px; padding: 10px 0; color: var(--text-primary); }
         
         .ica-send-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--accent-color); color: white; display: flex; align-items: center; justify-content: center; }
-        .ica-send-btn:disabled { background: var(--bg-active); color: var(--text-muted); }
+        .ica-send-btn:disabled { background: var(--border-color); color: var(--text-muted); cursor: not-allowed; }
 
-        .ica-status-banner { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--bg-sidebar); border: 1px solid var(--border-color); padding: 10px 24px; border-radius: var(--radius-full); box-shadow: var(--shadow-lg); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 100; opacity: 0; font-size: 0.85rem; font-weight: 500; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        
+        .ica-status-banner { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--accent-color); color: white; padding: 10px 24px; border-radius: var(--radius-full); box-shadow: var(--shadow-lg); transition: 0.4s; z-index: 100; opacity: 0; font-size: 0.85rem; font-weight: 500; }
         .ica-status-banner.is-show { transform: translateX(-50%) translateY(0); opacity: 1; }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         @media (max-width: 768px) {
             .ica-sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 0; transform: translateX(-100%); }
             .is-sidebar-open .ica-sidebar { width: 280px; transform: translateX(0); }
             .ica-nav-rail { display: none; }
-            .ica-sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 35; backdrop-filter: blur(2px); }
+            .ica-sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 35; backdrop-filter: blur(4px); }
             .is-sidebar-open .ica-sidebar-backdrop { display: block; }
         }
     </style>
@@ -145,7 +148,7 @@
         <aside class="ica-sidebar">
             <div class="ica-sidebar-header">
                 <button id="sidebarToggle"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
-                <span style="font-weight: 600; color: var(--accent-color);">IndiCare</span>
+                <span style="font-weight: 600; color: var(--accent-color); letter-spacing: -0.02em;">IndiCare</span>
             </div>
 
             <div class="ica-nav-rail">
@@ -159,7 +162,7 @@
                 </button>
                 <div class="ica-sidebar-search-wrap">
                     <svg class="ica-search-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    <input type="text" id="historySearch" class="ica-search-input" placeholder="Search history...">
+                    <input type="text" id="historySearch" class="ica-search-input" placeholder="Search logs...">
                 </div>
                 <div id="conversationList" class="ica-sidebar-list"></div>
                 <div class="ica-sidebar-footer">
@@ -168,7 +171,7 @@
                         <option value="quick">⚡ Quick</option>
                         <option value="deep">🧠 Deep Review</option>
                     </select>
-                    <button id="logoutBtn" style="font-size: 0.8rem; color: var(--text-secondary); display: flex; gap: 8px; padding: 8px 0;">
+                    <button id="logoutBtn" style="font-size: 0.8rem; color: var(--text-secondary); display: flex; gap: 8px;">
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg> Sign out
                     </button>
                 </div>
@@ -177,14 +180,14 @@
 
         <main class="ica-main">
             <header class="ica-header">
-                <h2 id="conversationHeading" style="font-size: 0.95rem; font-weight: 500;">New Conversation</h2>
-                <button id="themeToggle" class="ica-icon-btn"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg></button>
+                <h2 id="conversationHeading" style="font-size: 0.95rem; font-weight: 500;">New Session</h2>
+                <button id="themeToggle" class="ica-icon-btn"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></button>
             </header>
 
             <div id="chat" class="ica-chat-scroll">
-                <div id="chatEmpty" style="text-align: center; margin-top: 120px;">
-                    <h1 id="welcomeHeading" style="font-size: 2rem; letter-spacing: -0.02em; margin-bottom: 8px;">Good morning</h1>
-                    <p id="welcomeSubtext" style="color: var(--text-secondary); max-width: 400px; margin: 0 auto;">How can I help with your residential documentation today?</p>
+                <div id="chatEmpty" style="text-align: center; margin-top: 150px;">
+                    <h1 id="welcomeHeading" style="font-size: 2.2rem; letter-spacing: -0.03em; margin-bottom: 8px;">Ready.</h1>
+                    <p style="color: var(--text-secondary);">How can I assist with your residential care workflows?</p>
                 </div>
                 <div id="messages" class="ica-messages-container" hidden></div>
                 <div id="typingRow" class="ica-message-wrapper is-assistant" hidden style="margin-top: 20px;">
@@ -196,7 +199,6 @@
             <div class="ica-input-container">
                 <div class="ica-input-box">
                     <div id="documentChip" class="ica-doc-chip ica-hidden">
-                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>
                         <span id="documentChipText"></span>
                         <button id="clearDocumentBtn">×</button>
                     </div>
@@ -205,12 +207,12 @@
                             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
                             <input type="file" id="documentUpload" hidden>
                         </label>
-                        <textarea id="chat-input" class="ica-textarea" placeholder="Ask IndiCare..." rows="1"></textarea>
+                        <textarea id="chat-input" class="ica-textarea" placeholder="Describe the situation or ask for guidance..." rows="1"></textarea>
                         <button id="micBtn" style="padding: 8px; color: var(--text-muted);"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path></svg></button>
                         <button id="send-btn" class="ica-send-btn"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="transform: rotate(45deg);"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></button>
                     </div>
                 </div>
-                <div style="text-align: center; font-size: 0.65rem; color: var(--text-muted); padding-top: 8px;">Verify AI outputs. © 2026 IndiCare. <button id="clearChatBtn" style="text-decoration: underline;">Clear draft</button></div>
+                <div style="text-align: center; font-size: 0.65rem; color: var(--text-muted); padding-top: 8px; letter-spacing: 0.02em;">POWERED BY INDICARE OS • VERIFY AI OUTPUTS • © 2026</div>
             </div>
         </main>
     </div>
@@ -226,29 +228,11 @@
             theme: localStorage.getItem("indicare-theme") || "light",
             isStreamingResponse: false,
             draftKeyPrefix: "indicare-chat-draft:",
-            isRecording: false
+            typewriterQueue: "",
+            isTypewriterActive: false
         };
 
-        // --- 2. BACKEND API BRIDGE ---
-        async function apiRequest(url, options = {}) {
-            const token = localStorage.getItem("access_token");
-            const response = await fetch(url, {
-                ...options,
-                headers: {
-                    "Content-Type": "application/json",
-                    ...(token ? { "Authorization": `Bearer ${token}` } : {}),
-                    ...options.headers
-                }
-            });
-            if (response.status === 401) {
-                localStorage.removeItem("access_token");
-                window.location.href = "/login";
-                return;
-            }
-            return response.json();
-        }
-
-        // --- 3. THE BRAIN: STREAM PARSER ---
+        // --- 2. THE BRAIN: STREAM PARSER + TYPEWRITER ---
         async function streamAssistantResponse(url, bodyData) {
             try {
                 const token = localStorage.getItem("access_token");
@@ -260,7 +244,7 @@
 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
-                let fullText = "", buffer = "";
+                let buffer = "";
 
                 createOrResetStreamingMessage();
 
@@ -274,35 +258,60 @@
                     for (const message of messages) {
                         const line = message.split('\n').find(l => l.startsWith('data:'));
                         if (line) {
-                            const chunk = line.slice(5).trim();
-                            if (chunk === '[DONE]') continue;
-                            fullText += chunk;
-                            updateAssistantMessage(fullText);
+                            const chunkData = line.slice(5).trim();
+                            if (chunkData === '[DONE]') continue;
+                            
+                            // Add to typewriter queue instead of direct render
+                            chatState.typewriterQueue += chunkData;
+                            startTypewriter();
                         }
                     }
                 }
             } catch (err) {
                 console.error(err);
-                appendMessage("assistant", "The connection was interrupted.");
+                appendMessage("assistant", "System connection lost. Please check network.");
             }
         }
 
-        // --- 4. CORE LOGIC ---
+        // High-speed character-by-character effect
+        function startTypewriter() {
+            if (chatState.isTypewriterActive) return;
+            chatState.isTypewriterActive = true;
+            
+            const el = document.querySelector('#streaming-msg .ica-message');
+            el.classList.add('is-typing');
+            
+            let currentText = el.getAttribute('data-raw') || "";
+
+            const interval = setInterval(() => {
+                if (chatState.typewriterQueue.length > 0) {
+                    currentText += chatState.typewriterQueue.charAt(0);
+                    chatState.typewriterQueue = chatState.typewriterQueue.slice(1);
+                    el.innerHTML = renderMarkdown(currentText);
+                    el.setAttribute('data-raw', currentText);
+                    scrollChatToBottom();
+                } else if (!chatState.isStreamingResponse) {
+                    clearInterval(interval);
+                    chatState.isTypewriterActive = false;
+                    el.classList.remove('is-typing');
+                }
+            }, 10); // Super fast typing
+        }
+
+        // --- 3. UI LOGIC ---
         function initChat() {
             const shell = document.getElementById('assistantShell');
             const input = document.getElementById('chat-input');
             
             applyTheme(chatState.theme);
 
-            // Sidebar & Backdrop
             document.getElementById('sidebarToggle').onclick = () => shell.classList.toggle('is-sidebar-open');
             document.getElementById('sidebarBackdrop').onclick = () => shell.classList.remove('is-sidebar-open');
 
-            // Send & Input
             document.getElementById('send-btn').onclick = sendMessage;
             input.oninput = () => {
                 input.style.height = 'auto';
-                input.style.height = Math.min(input.scrollHeight, 200) + 'px';
+                input.style.height = Math.min(input.scrollHeight, 150) + 'px';
                 saveDraft();
             };
             input.onkeydown = (e) => {
@@ -312,15 +321,12 @@
                 }
             };
 
-            // Doc Upload
             document.getElementById('documentUpload').onchange = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-                showStatusBanner("Uploading " + file.name);
+                showStatusBanner("Linking " + file.name);
                 const formData = new FormData();
                 formData.append("file", file);
-                if (window.conversationId) formData.append("conversation_id", window.conversationId);
-                
                 try {
                     const res = await fetch("/chat/upload", { 
                         method: "POST", 
@@ -331,22 +337,15 @@
                     window.currentDocumentText = data.text;
                     window.currentDocumentName = data.filename || file.name;
                     refreshUploadStatus();
-                } catch (err) { showStatusBanner("Upload failed"); }
-            };
-
-            document.getElementById('clearDocumentBtn').onclick = () => {
-                window.currentDocumentName = null;
-                refreshUploadStatus();
+                } catch (err) { showStatusBanner("Upload error"); }
             };
 
             document.getElementById('themeToggle').onclick = () => applyTheme(chatState.theme === 'dark' ? 'light' : 'dark');
-            document.getElementById('newConversationBtn').onclick = startNewConversation;
-            document.getElementById('clearChatBtn').onclick = () => { input.value = ''; saveDraft(); };
+            document.getElementById('newConversationBtn').onclick = () => window.location.reload();
             document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = "/login"; };
 
             restoreDraft();
-            loadConversations(true);
-            applyWelcomeMessage();
+            loadConversations();
         }
 
         async function sendMessage() {
@@ -357,8 +356,7 @@
             document.getElementById('chatEmpty').hidden = true;
             document.getElementById('messages').hidden = false;
             
-            const msgId = Date.now();
-            appendMessage('user', text, msgId);
+            appendMessage('user', text, Date.now());
             input.value = '';
             input.style.height = 'auto';
             clearDraft();
@@ -386,16 +384,11 @@
             
             const content = role === 'user' ? escapeHtml(text) : renderMarkdown(text);
             const avatar = role === 'assistant' ? '<div class="ica-message-avatar">IC</div>' : '';
-            const actions = role === 'user' ? `<div class="ica-message-actions">
-                <button class="ica-action-btn" onclick="startInlineEdit('${id}')">Edit</button>
-                <button class="ica-action-btn" onclick="copyToClipboard('${id}')">Copy</button>
-            </div>` : `<div class="ica-message-actions"><button class="ica-action-btn" onclick="copyToClipboard('${id}')">Copy</button></div>`;
 
             wrapper.innerHTML = `
                 ${avatar}
                 <div class="ica-message-block">
                     <div class="ica-message">${content}</div>
-                    ${actions}
                 </div>
             `;
             container.appendChild(wrapper);
@@ -403,41 +396,72 @@
         }
 
         function createOrResetStreamingMessage() {
+            const container = document.getElementById('messages');
             const old = document.getElementById('streaming-msg');
             if (old) old.remove();
             const wrapper = document.createElement("div");
             wrapper.id = 'streaming-msg';
             wrapper.className = 'ica-message-wrapper is-assistant';
-            wrapper.innerHTML = `<div class="ica-message-avatar">IC</div><div class="ica-message-block"><div class="ica-message"></div></div>`;
+            wrapper.innerHTML = `<div class="ica-message-avatar">IC</div><div class="ica-message-block"><div class="ica-message" data-raw=""></div></div>`;
             document.getElementById('messages').appendChild(wrapper);
-            scrollChatToBottom();
         }
 
-        function updateAssistantMessage(text) {
-            const el = document.querySelector('#streaming-msg .ica-message');
-            if (el) el.innerHTML = renderMarkdown(text);
-            scrollChatToBottom();
-        }
-
-        // --- 5. UTILS & HELPERS ---
         function renderMarkdown(text) {
-            return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n/g, '<br>')
+                .replace(/^[-*]\s+(.*)/gm, '• $1');
         }
+
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
+
         function applyTheme(theme) {
             chatState.theme = theme;
             localStorage.setItem("indicare-theme", theme);
             document.body.className = theme === 'dark' ? 'theme-dark' : 'theme-light';
         }
+
         function saveDraft() { localStorage.setItem(chatState.draftKeyPrefix + (window.conversationId || "new"), document.getElementById('chat-input').value); }
         function restoreDraft() { document.getElementById('chat-input').value = localStorage.getItem(chatState.draftKeyPrefix + (window.conversationId || "new")) || ""; }
         function clearDraft() { localStorage.removeItem(chatState.draftKeyPrefix + (window.conversationId || "new")); }
         function scrollChatToBottom() { const chat = document.getElementById('chat'); chat.scrollTop = chat.scrollHeight; }
-        
+
+        async function loadConversations() {
+            const list = document.getElementById('conversationList');
+            try {
+                const token = localStorage.getItem("access_token");
+                const res = await fetch("/chat/conversations", { headers: { "Authorization": `Bearer ${token}` } });
+                const rows = await res.json();
+                list.innerHTML = rows.map(r => `
+                    <div class="ica-history-item ${window.conversationId == r.id ? 'is-active' : ''}" onclick="openConversation('${r.id}')">
+                        <div class="ica-history-item-title">${r.title || "Observation"}</div>
+                    </div>
+                `).join('');
+            } catch(e) {}
+        }
+
+        async function openConversation(id) {
+            const token = localStorage.getItem("access_token");
+            const res = await fetch(`/chat/conversations/${id}`, { headers: { "Authorization": `Bearer ${token}` } });
+            const data = await res.json();
+            window.conversationId = id;
+            document.getElementById('messages').innerHTML = '';
+            document.getElementById('chatEmpty').hidden = true;
+            document.getElementById('messages').hidden = false;
+            data.messages.forEach(m => appendMessage(m.role, m.message, m.id));
+            loadConversations();
+        }
+
+        function showStatusBanner(m) {
+            const b = document.getElementById('statusBanner');
+            b.textContent = m; b.classList.add('is-show');
+            setTimeout(() => b.classList.remove('is-show'), 3000);
+        }
+
         function refreshUploadStatus() {
             const chip = document.getElementById('documentChip');
             if (window.currentDocumentName) {
@@ -445,33 +469,6 @@
                 document.getElementById('documentChipText').textContent = window.currentDocumentName;
             } else { chip.classList.add('ica-hidden'); }
         }
-
-        async function loadConversations(autoOpen = false) {
-            const list = document.getElementById('conversationList');
-            const rows = await apiRequest("/chat/conversations");
-            if (!rows || rows.length === 0) return;
-            chatState.historyRows = rows;
-            list.innerHTML = rows.map(r => `
-                <div class="ica-history-item ${window.conversationId == r.id ? 'is-active' : ''}" onclick="openConversation('${r.id}')">
-                    <div class="ica-history-item-title">${r.title || "Untitled Chat"}</div>
-                </div>
-            `).join('');
-        }
-
-        async function openConversation(id) {
-            const data = await apiRequest(`/chat/conversations/${id}`);
-            window.conversationId = id;
-            document.getElementById('messages').innerHTML = '';
-            document.getElementById('chatEmpty').hidden = true;
-            document.getElementById('messages').hidden = false;
-            data.messages.forEach(m => appendMessage(m.role, m.message, m.id));
-            setConversationHeading(data.title);
-            loadConversations();
-        }
-
-        function setConversationHeading(t) { document.getElementById('conversationHeading').textContent = t || "New Conversation"; }
-        function startNewConversation() { window.location.reload(); }
-        function showStatusBanner(m) { const b = document.getElementById('statusBanner'); b.textContent = m; b.classList.add('is-show'); setTimeout(() => b.classList.remove('is-show'), 3000); }
 
         document.addEventListener("DOMContentLoaded", initChat);
     </script>
