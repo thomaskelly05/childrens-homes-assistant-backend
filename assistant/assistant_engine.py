@@ -16,6 +16,26 @@ from assistant.response_schemas import get_schema_for_mode, schema_to_prompt_blo
 logger = logging.getLogger("indicare.engine")
 
 
+FAST_MODES_SKIP_RETRIEVAL = {
+    "handover",
+    "rewrite",
+}
+
+FAST_MODES_LIGHT_MEMORY = {
+    "handover",
+    "recording",
+    "incident_summary",
+    "rewrite",
+    "chronology",
+}
+
+REFLECTIVE_MODES = {
+    "reflective",
+    "supervision",
+    "manager_review",
+}
+
+
 @dataclass
 class AssistantRequest:
     message: str
@@ -69,7 +89,7 @@ def _append_section(base: str, title: str, content: str) -> str:
     )
 
 
-def _normalise_history(history: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _normalise_history(history: list[dict[str, Any]], max_messages: int = 6) -> list[dict[str, Any]]:
     cleaned: list[dict[str, Any]] = []
 
     for item in history or []:
@@ -88,42 +108,58 @@ def _normalise_history(history: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "id": item.get("id"),
         })
 
-    return cleaned
+    return cleaned[-max_messages:]
+
+
+def _should_use_retrieval(
+    mode: str,
+    safeguarding_level: str,
+    message: str,
+    document_text: str | None,
+) -> bool:
+    text = (message or "").lower()
+
+    if document_text:
+        return False
+
+    if mode in FAST_MODES_SKIP_RETRIEVAL:
+        return False
+
+    if safeguarding_level in {"heightened", "urgent"} and mode in {"recording", "incident_summary", "practical"}:
+        return False
+
+    if any(kw in text for kw in ["how often", "regulation", "statutory", "ofsted", "quality standard", "sccif"]):
+        return True
+
+    return mode in {"factual", "support_planning", "manager_review", "reflective", "supervision", "general_practice"}
+
+
+def _should_use_memory(mode: str) -> bool:
+    return mode not in FAST_MODES_LIGHT_MEMORY
 
 
 def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPackage:
     message = _safe_string(req.message)
-    history = _normalise_history(req.history)
+    history = _normalise_history(req.history, max_messages=6)
 
     runtime = AssistantRuntimeContext()
 
-    # 1. Task / mode detection
     try:
         runtime.mode = detect_mode(message=message, history=history)
     except TypeError:
-        try:
-            runtime.mode = detect_mode(message)
-        except Exception as e:
-            logger.exception("Mode detection failed: %s", e)
-            runtime.mode = "general_practice"
+        runtime.mode = detect_mode(message)
     except Exception as e:
         logger.exception("Mode detection failed: %s", e)
         runtime.mode = "general_practice"
 
-    # 2. Safeguarding level
     try:
         runtime.safeguarding_level = assess_safeguarding_level(message=message, history=history)
     except TypeError:
-        try:
-            runtime.safeguarding_level = assess_safeguarding_level(message)
-        except Exception as e:
-            logger.exception("Safeguarding assessment failed: %s", e)
-            runtime.safeguarding_level = "normal"
+        runtime.safeguarding_level = assess_safeguarding_level(message)
     except Exception as e:
         logger.exception("Safeguarding assessment failed: %s", e)
         runtime.safeguarding_level = "normal"
 
-    # 3. Response schema
     try:
         schema = get_schema_for_mode(runtime.mode, runtime.safeguarding_level)
         runtime.schema_context = _safe_string(schema_to_prompt_block(schema))
@@ -131,89 +167,65 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         logger.exception("Schema selection failed: %s", e)
         runtime.schema_context = ""
 
-    # 4. Memory context
-    try:
-        runtime.memory_context = _safe_string(
-            get_memory_context(
-                session_id=req.session_id,
-                user_context=req.user_context,
-                message=message,
-                mode=runtime.mode,
-            )
-        )
-    except TypeError:
+    if _should_use_memory(runtime.mode):
         try:
-            runtime.memory_context = _safe_string(get_memory_context(req.session_id, req.user_context))
+            runtime.memory_context = _safe_string(
+                get_memory_context(
+                    session_id=req.session_id,
+                    user_context=req.user_context,
+                    message=message,
+                    mode=runtime.mode,
+                    recent_limit=4,
+                )
+            )
         except Exception as e:
             logger.exception("Memory lookup failed: %s", e)
             runtime.memory_context = ""
-    except Exception as e:
-        logger.exception("Memory lookup failed: %s", e)
-        runtime.memory_context = ""
 
-    # 5. Retrieval
-    try:
-        runtime.retrieval_context = _safe_string(
-            retrieve_context(
-                message=message,
-                mode=runtime.mode,
-                safeguarding_level=runtime.safeguarding_level,
-                document_text=req.document_text,
-                document_name=req.document_name,
-                role=req.role,
-            )
-        )
-    except TypeError:
+    if _should_use_retrieval(runtime.mode, runtime.safeguarding_level, message, req.document_text):
         try:
-            runtime.retrieval_context = _safe_string(retrieve_context(message))
+            runtime.retrieval_context = _safe_string(
+                retrieve_context(
+                    message=message,
+                    mode=runtime.mode,
+                    safeguarding_level=runtime.safeguarding_level,
+                    document_text=req.document_text,
+                    document_name=req.document_name,
+                    role=req.role,
+                    limit=3,
+                )
+            )
         except Exception as e:
             logger.exception("Retrieval failed: %s", e)
             runtime.retrieval_context = ""
-    except Exception as e:
-        logger.exception("Retrieval failed: %s", e)
-        runtime.retrieval_context = ""
 
-    # 6. Reflection context
-    try:
-        runtime.reflection_context = _safe_string(
-            maybe_build_reflection_context(
-                message=message,
-                mode=runtime.mode,
-                safeguarding_level=runtime.safeguarding_level,
-                history=history,
-            )
-        )
-    except TypeError:
+    if runtime.mode in REFLECTIVE_MODES:
         try:
-            runtime.reflection_context = _safe_string(maybe_build_reflection_context(message, runtime.mode))
+            runtime.reflection_context = _safe_string(
+                maybe_build_reflection_context(
+                    message=message,
+                    mode=runtime.mode,
+                    safeguarding_level=runtime.safeguarding_level,
+                    history=history,
+                )
+            )
         except Exception as e:
             logger.exception("Reflection context failed: %s", e)
             runtime.reflection_context = ""
-    except Exception as e:
-        logger.exception("Reflection context failed: %s", e)
-        runtime.reflection_context = ""
 
-    # 7. Supervision context
-    try:
-        runtime.supervision_context = _safe_string(
-            maybe_build_supervision_context(
-                message=message,
-                mode=runtime.mode,
-                safeguarding_level=runtime.safeguarding_level,
-                history=history,
-            )
-        )
-    except TypeError:
         try:
-            runtime.supervision_context = _safe_string(maybe_build_supervision_context(message, runtime.mode))
+            runtime.supervision_context = _safe_string(
+                maybe_build_supervision_context(
+                    message=message,
+                    mode=runtime.mode,
+                    safeguarding_level=runtime.safeguarding_level,
+                    history=history,
+                )
+            )
         except Exception as e:
             logger.exception("Supervision context failed: %s", e)
             runtime.supervision_context = ""
-    except Exception as e:
-        logger.exception("Supervision context failed: %s", e)
-        runtime.supervision_context = ""
 
-    # 8. Base prompt
     system_prompt, user_message = build_chat_prompt(
         message=message,
         role=req.role,
@@ -222,7 +234,6 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         speed=req.speed,
     )
 
-    # 9. Runtime mode context
     system_prompt = _append_section(
         system_prompt,
         "RUNTIME MODE CONTEXT",
@@ -233,22 +244,14 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         ),
     )
 
-    # 10. Response structure
-    system_prompt = _append_section(
-        system_prompt,
-        "RESPONSE STRUCTURE",
-        runtime.schema_context,
-    )
-
-    # 11. Attach runtime contexts
+    system_prompt = _append_section(system_prompt, "RESPONSE STRUCTURE", runtime.schema_context)
     system_prompt = _append_section(system_prompt, "MEMORY CONTEXT", runtime.memory_context)
     system_prompt = _append_section(system_prompt, "RETRIEVED CONTEXT", runtime.retrieval_context)
     system_prompt = _append_section(system_prompt, "REFLECTION CONTEXT", runtime.reflection_context)
     system_prompt = _append_section(system_prompt, "SUPERVISION CONTEXT", runtime.supervision_context)
 
-    # 12. Uploaded document context
     if req.document_text:
-        trimmed_document_text = req.document_text[:24000]
+        trimmed_document_text = req.document_text[:12000]
         system_prompt = _append_section(
             system_prompt,
             "UPLOADED DOCUMENT CONTEXT",
