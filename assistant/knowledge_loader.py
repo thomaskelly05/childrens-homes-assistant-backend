@@ -8,22 +8,24 @@ from typing import Any
 BASE_PATH = os.path.join(os.path.dirname(__file__), "knowledge")
 
 logger = logging.getLogger("indicare.knowledge")
-logging.basicConfig(level=logging.INFO)
 
 
+# -----------------------------------------------------
+# JSON HELPERS
+# -----------------------------------------------------
 def _safe_load_json(path: str):
     """
     Safely load JSON with helpful error handling.
     """
     if not os.path.exists(path):
-        logger.error(f"Knowledge file missing: {path}")
+        logger.error("Knowledge file missing: %s", path)
         raise FileNotFoundError(f"Knowledge file missing: {path}")
 
     try:
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
     except json.JSONDecodeError as e:
-        logger.error(f"Invalid JSON in {path}: {e}")
+        logger.error("Invalid JSON in %s: %s", path, e)
         raise
 
 
@@ -33,6 +35,14 @@ def _load_json(filename: str):
     """
     path = os.path.join(BASE_PATH, filename)
     return _safe_load_json(path)
+
+
+def _safe_string(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value.strip()
+    return str(value).strip()
 
 
 def _serialise_value(value: Any) -> str:
@@ -51,6 +61,9 @@ def _serialise_value(value: Any) -> str:
     return str(value).strip()
 
 
+# -----------------------------------------------------
+# PYTHON KNOWLEDGE MODULE SERIALISING
+# -----------------------------------------------------
 def _module_to_text(module) -> str:
     """
     Convert a knowledge module into readable prompt text
@@ -99,9 +112,8 @@ def _module_to_text(module) -> str:
 
 
 # -----------------------------------------------------
-# Core JSON Knowledge Loaders
+# CORE JSON KNOWLEDGE LOADERS
 # -----------------------------------------------------
-
 @lru_cache(maxsize=None)
 def load_templates():
     return _load_json("template_library.json")
@@ -148,9 +160,8 @@ def load_knowledge_version():
 
 
 # -----------------------------------------------------
-# Python Knowledge Modules
+# PYTHON KNOWLEDGE MODULES
 # -----------------------------------------------------
-
 PYTHON_KNOWLEDGE_MODULES = {
     "boundaries_identity": "assistant.knowledge.boundaries_identity",
     "contextual_safeguarding": "assistant.knowledge.contextual_safeguarding",
@@ -176,7 +187,8 @@ def load_python_knowledge_modules() -> dict[str, str]:
     for short_name, module_path in PYTHON_KNOWLEDGE_MODULES.items():
         try:
             module = importlib.import_module(module_path)
-            loaded[short_name] = _module_to_text(module)
+            text = _module_to_text(module)
+            loaded[short_name] = text if text.strip() else ""
         except Exception as e:
             logger.exception("Failed loading knowledge module %s: %s", module_path, e)
             loaded[short_name] = ""
@@ -185,9 +197,8 @@ def load_python_knowledge_modules() -> dict[str, str]:
 
 
 # -----------------------------------------------------
-# Combined Knowledge
+# COMBINED KNOWLEDGE
 # -----------------------------------------------------
-
 @lru_cache(maxsize=1)
 def load_all_knowledge():
     return {
@@ -202,9 +213,8 @@ def load_all_knowledge():
 
 
 # -----------------------------------------------------
-# Knowledge Metadata
+# KNOWLEDGE METADATA
 # -----------------------------------------------------
-
 def get_guidance_review_info():
     data = load_guidance_sources()
 
@@ -216,95 +226,200 @@ def get_guidance_review_info():
 
 
 # -----------------------------------------------------
-# Knowledge Selection
+# KNOWLEDGE SELECTION
 # -----------------------------------------------------
+MODULE_KEYWORDS = {
+    "safe_recording": [
+        "record",
+        "recording",
+        "daily log",
+        "incident",
+        "handover",
+        "chronology",
+        "write up",
+        "rewrite",
+        "professional wording",
+        "body map",
+        "bruise",
+        "injury",
+        "observation",
+        "factual",
+        "log entry",
+    ],
+    "contextual_safeguarding": [
+        "safeguarding",
+        "concern",
+        "bruise",
+        "injury",
+        "neglect",
+        "exploitation",
+        "criminal exploitation",
+        "sexual exploitation",
+        "missing",
+        "risk",
+        "allegation",
+        "disclosure",
+        "staff hurt",
+    ],
+    "trauma_informed": [
+        "trauma",
+        "distress",
+        "dysregulated",
+        "trigger",
+        "de-escalation",
+        "regulation",
+        "meltdown",
+        "shutdown",
+        "fight",
+        "flight",
+        "freeze",
+    ],
+    "therapeutic_language": [
+        "wording",
+        "language",
+        "phrase",
+        "rephrase",
+        "rewrite",
+        "say this better",
+        "professional",
+        "child-centred",
+    ],
+    "neurodevelopmental": [
+        "autism",
+        "autistic",
+        "adhd",
+        "learning disability",
+        "learning difficulties",
+        "global developmental delay",
+        "communication",
+        "sensory",
+        "non-verbal",
+        "minimally verbal",
+        "neurodivergent",
+    ],
+    "reflective_practice": [
+        "reflect",
+        "reflection",
+        "supervision",
+        "learning",
+        "what could i have done",
+        "practice reflection",
+    ],
+    "reflective_debrief": [
+        "debrief",
+        "after the incident",
+        "post-incident",
+        "what went well",
+        "what to learn",
+    ],
+    "emotional_load": [
+        "overwhelmed",
+        "emotional impact",
+        "stress",
+        "burnout",
+        "heavy shift",
+        "upset",
+        "drained",
+    ],
+    "environment_routines": [
+        "routine",
+        "transition",
+        "bedtime",
+        "morning",
+        "environment",
+        "predictable",
+        "structure",
+    ],
+    "leadership_management": [
+        "manager",
+        "management",
+        "oversight",
+        "action plan",
+        "team inconsistency",
+        "quality assurance",
+        "audit",
+        "ofsted",
+    ],
+    "practice_triangle": [
+        "analysis",
+        "formulation",
+        "understanding behaviour",
+        "what is going on",
+    ],
+    "boundaries_identity": [
+        "identity",
+        "belonging",
+        "boundaries",
+        "relationships",
+        "safe relationships",
+    ],
+    "team_learning_loop": [
+        "team learning",
+        "lessons learned",
+        "improvement",
+        "staff consistency",
+    ],
+    "values_engine": [
+        "values",
+        "ethos",
+        "best practice",
+        "approach",
+        "principles",
+    ],
+}
+
+
+def _score_module(text: str, keywords: list[str]) -> int:
+    score = 0
+    for kw in keywords:
+        if kw in text:
+            # longer phrases usually indicate better intent match
+            score += 2 if len(kw.split()) >= 2 else 1
+    return score
+
 
 def select_relevant_python_knowledge(message: str, max_modules: int = 4) -> dict[str, str]:
     """
     Select the most relevant practice knowledge modules for a request.
     Keeps prompts focused and faster than loading everything every time.
     """
-    text = (message or "").lower()
+    text = _safe_string(message).lower()
     all_modules = load_python_knowledge_modules()
-
-    keyword_map = {
-        "safe_recording": [
-            "record", "recording", "daily log", "incident", "handover", "chronology",
-            "write up", "rewrite", "professional wording", "body map", "bruise", "injury",
-            "observation", "factual"
-        ],
-        "contextual_safeguarding": [
-            "safeguarding", "concern", "bruise", "injury", "neglect", "exploitation",
-            "criminal exploitation", "sexual exploitation", "missing", "risk", "allegation"
-        ],
-        "trauma_informed": [
-            "trauma", "distress", "dysregulated", "trigger", "de-escalation", "regulation",
-            "meltdown", "shutdown", "fight", "flight", "freeze"
-        ],
-        "therapeutic_language": [
-            "wording", "language", "phrase", "rephrase", "rewrite", "say this better",
-            "professional", "child-centred"
-        ],
-        "neurodevelopmental": [
-            "autism", "autistic", "adhd", "learning disability", "learning difficulties",
-            "global developmental delay", "communication", "sensory", "non-verbal",
-            "minimally verbal", "neurodivergent"
-        ],
-        "reflective_practice": [
-            "reflect", "reflection", "supervision", "learning", "what could i have done",
-            "practice reflection"
-        ],
-        "reflective_debrief": [
-            "debrief", "after the incident", "post-incident", "what went well", "what to learn"
-        ],
-        "emotional_load": [
-            "overwhelmed", "emotional impact", "stress", "burnout", "heavy shift", "upset"
-        ],
-        "environment_routines": [
-            "routine", "transition", "bedtime", "morning", "environment", "predictable",
-            "structure"
-        ],
-        "leadership_management": [
-            "manager", "management", "oversight", "action plan", "team inconsistency",
-            "quality assurance", "audit"
-        ],
-        "practice_triangle": [
-            "analysis", "formulation", "understanding behaviour", "what is going on"
-        ],
-        "boundaries_identity": [
-            "identity", "belonging", "boundaries", "relationships", "safe relationships"
-        ],
-        "team_learning_loop": [
-            "team learning", "lessons learned", "improvement", "staff consistency"
-        ],
-        "values_engine": [
-            "values", "ethos", "best practice", "approach", "principles"
-        ],
-    }
 
     scored: list[tuple[int, str]] = []
 
-    for module_name, keywords in keyword_map.items():
-        score = sum(1 for kw in keywords if kw in text)
-        if score > 0 and all_modules.get(module_name):
+    for module_name, keywords in MODULE_KEYWORDS.items():
+        module_text = all_modules.get(module_name, "")
+        if not module_text:
+            continue
+
+        score = _score_module(text, keywords)
+        if score > 0:
             scored.append((score, module_name))
 
-    scored.sort(reverse=True)
+    scored.sort(key=lambda item: (-item[0], item[1]))
 
     selected_names = [name for _, name in scored[:max_modules]]
 
     if not selected_names:
         # sensible defaults for general children’s home drafting
-        defaults = ["safe_recording", "trauma_informed", "therapeutic_language"]
+        defaults = [
+            "safe_recording",
+            "trauma_informed",
+            "therapeutic_language",
+        ]
         selected_names = [name for name in defaults if all_modules.get(name)]
 
-    return {name: all_modules[name] for name in selected_names if all_modules.get(name)}
+    return {
+        name: all_modules[name]
+        for name in selected_names
+        if all_modules.get(name)
+    }
 
 
 # -----------------------------------------------------
-# Knowledge Reload Utility
+# KNOWLEDGE RELOAD UTILITY
 # -----------------------------------------------------
-
 def reload_knowledge():
     """
     Clears cached knowledge so updates can be loaded
@@ -323,9 +438,8 @@ def reload_knowledge():
 
 
 # -----------------------------------------------------
-# Knowledge Health Check
+# KNOWLEDGE HEALTH CHECK
 # -----------------------------------------------------
-
 def validate_knowledge_files():
     """
     Ensures required JSON knowledge files exist
