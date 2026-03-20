@@ -2,7 +2,7 @@
 <html lang="en-GB">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>IndiCare | Assistant</title>
 
     <link rel="icon" type="image/svg+xml" href="/assets/logo.svg" />
@@ -14,66 +14,71 @@
     <link rel="stylesheet" href="/css/assistant-isolated.css" />
 </head>
 <body class="indicare-assistant">
-    <div class="ica-page">
+    <div class="ica-app" id="assistantApp">
         <div class="ica-shell" id="assistantShell">
             <div class="ica-sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
 
+            <!-- SIDEBAR -->
             <aside class="ica-sidebar" id="assistantSidebar" aria-label="Conversation sidebar">
-                <div class="ica-sidebar-header">
-                    <div class="ica-brand">
-                        <div class="ica-brand-copy">
-                            <h1>IndiCare</h1>
-                            <p>Assistant</p>
+                <div class="ica-sidebar-inner">
+                    <div class="ica-sidebar-top">
+                        <div class="ica-sidebar-brand-row">
+                            <div class="ica-brand">
+                                <div class="ica-brand-copy">
+                                    <h1>IndiCare</h1>
+                                    <p>Assistant</p>
+                                </div>
+                            </div>
+
+                            <button
+                                id="sidebarCollapseBtn"
+                                class="ica-icon-btn ica-sidebar-collapse-btn"
+                                type="button"
+                                aria-label="Collapse sidebar"
+                                title="Collapse sidebar"
+                            >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <path d="M15 18l-6-6 6-6"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <button id="newConversationBtn" class="ica-btn ica-btn--primary ica-btn--full" type="button">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path d="M12 5v14M5 12h14"></path>
+                            </svg>
+                            <span>New chat</span>
+                        </button>
+
+                        <div class="ica-search-wrap">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <circle cx="11" cy="11" r="7"></circle>
+                                <path d="M20 20l-3.5-3.5"></path>
+                            </svg>
+                            <label for="historySearch" class="ica-sr-only">Search conversations</label>
+                            <input id="historySearch" class="ica-input" type="text" placeholder="Search chats" />
                         </div>
                     </div>
 
-                    <button
-                        id="sidebarCollapseBtn"
-                        class="ica-icon-btn ica-sidebar-collapse-btn"
-                        type="button"
-                        aria-label="Collapse sidebar"
-                        title="Collapse sidebar"
-                    >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <path d="M15 18l-6-6 6-6"></path>
-                        </svg>
-                    </button>
-                </div>
+                    <div class="ica-sidebar-history">
+                        <div class="ica-sidebar-heading">
+                            <h3>Recent chats</h3>
+                            <span id="historyCount" class="ica-count-pill">0</span>
+                        </div>
 
-                <div class="ica-sidebar-section">
-                    <button id="newConversationBtn" class="ica-btn ica-btn--primary ica-btn--full" type="button">
-                        New chat
-                    </button>
-                </div>
-
-                <div class="ica-sidebar-section">
-                    <div class="ica-search-wrap">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <circle cx="11" cy="11" r="7"></circle>
-                            <path d="M20 20l-3.5-3.5"></path>
-                        </svg>
-                        <label for="historySearch" class="ica-sr-only">Search conversations</label>
-                        <input id="historySearch" class="ica-input" type="text" placeholder="Search conversations" />
-                    </div>
-                </div>
-
-                <div class="ica-sidebar-section ica-sidebar-section--history">
-                    <div class="ica-sidebar-heading">
-                        <h3>Recent chats</h3>
-                        <span id="historyCount" class="ica-count-pill">0</span>
+                        <div id="conversationList" class="ica-history-list" aria-live="polite">
+                            <div class="ica-history-empty">No conversations yet.</div>
+                        </div>
                     </div>
 
-                    <div id="conversationList" class="ica-history-list" aria-live="polite">
-                        <div class="ica-history-empty">No conversations yet.</div>
+                    <div class="ica-sidebar-footer">
+                        <a href="/" class="ica-btn ica-btn--sidebar">Back to dashboard</a>
+                        <button id="logoutBtn" class="ica-btn ica-btn--sidebar" type="button">Log out</button>
                     </div>
-                </div>
-
-                <div class="ica-sidebar-footer">
-                    <a href="/" class="ica-btn ica-btn--sidebar">Back to dashboard</a>
-                    <button id="logoutBtn" class="ica-btn ica-btn--sidebar" type="button">Log out</button>
                 </div>
             </aside>
 
+            <!-- MAIN -->
             <main class="ica-main">
                 <header class="ica-topbar">
                     <div class="ica-topbar-left">
@@ -91,12 +96,13 @@
                         </button>
 
                         <div class="ica-topbar-copy">
-                            <h2>IndiCare Assistant</h2>
-                            <p id="conversationHeading">New conversation</p>
+                            <h2 id="conversationHeading">New conversation</h2>
+                            <p id="topbarSubtext">Residential care support, drafting, reflection, and recording</p>
                         </div>
                     </div>
 
                     <div class="ica-topbar-actions">
+                        <label for="responseMode" class="ica-sr-only">Response mode</label>
                         <select id="responseMode" class="ica-mode-select" aria-label="Response mode">
                             <option value="quick">Quick</option>
                             <option value="balanced" selected>Balanced</option>
@@ -122,11 +128,13 @@
                         <div class="ica-empty-state" id="chatEmpty">
                             <div class="ica-empty-card">
                                 <div class="ica-empty-badge">Professional support for residential care</div>
+
                                 <h3 id="welcomeHeading">Welcome</h3>
+
                                 <p id="welcomeSubtext">
-                                    Ask for help with care records, professional wording, reflection,
-                                    planning, behaviour support, key work ideas, incident follow-up,
-                                    or day-to-day residential practice.
+                                    Ask for help with care records, safeguarding wording, support planning,
+                                    reflection, behaviour support, key work ideas, and day-to-day
+                                    residential practice.
                                 </p>
 
                                 <div class="ica-prompt-chips">
@@ -153,7 +161,7 @@
                     </div>
                 </section>
 
-                <div class="ica-composer">
+                <footer class="ica-composer">
                     <div class="ica-composer-inner">
                         <div class="ica-status-banner" id="statusBanner" role="status" aria-live="polite"></div>
 
@@ -200,7 +208,9 @@
                                 ></textarea>
                             </div>
 
-                            <button id="clearChatBtn" class="ica-btn ica-btn--ghost ica-chatbar-btn" type="button">Clear</button>
+                            <button id="clearChatBtn" class="ica-btn ica-btn--ghost ica-chatbar-btn ica-chatbar-btn--desktop" type="button">
+                                Clear
+                            </button>
 
                             <button id="send-btn" class="ica-btn ica-btn--primary ica-chatbar-btn ica-send-btn" type="button">
                                 <span class="ica-send-label">Send</span>
@@ -214,7 +224,7 @@
 
                         <div id="uploadStatus" class="ica-upload-status" aria-live="polite"></div>
 
-                        <div class="ica-footer-meta">
+                        <div class="ica-footer-meta ica-desktop-meta">
                             <div id="footerWarning" class="ica-note">
                                 <strong>Important:</strong> Always accuracy-check AI outputs against the facts provided,
                                 current guidance, and your organisation’s policy before use.
@@ -222,7 +232,7 @@
                             <div id="footerCopyright" class="ica-copyright"></div>
                         </div>
                     </div>
-                </div>
+                </footer>
             </main>
         </div>
     </div>
