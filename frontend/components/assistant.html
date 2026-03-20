@@ -9,7 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     
     <style>
-        /* --- Premium Variables & Theming --- */
         :root {
             --bg-app: #ffffff;
             --bg-sidebar: #f9fafb;
@@ -17,26 +16,22 @@
             --bg-input: #ffffff;
             --bg-msg-user: #f3f4f6;
             --bg-msg-assistant: transparent;
-            --bg-hover: #f3f4f6;
-            --bg-active: #e5e7eb;
-            
             --text-primary: #111827;
             --text-secondary: #4b5563;
             --text-muted: #9ca3af;
-            
             --border-color: #e5e7eb;
-            --accent-color: #0f766e; /* IndiCare Teal */
+            --accent-color: #0f766e;
             --accent-hover: #115e59;
             --danger-color: #ef4444;
-            
-            /* Softer, more premium shadows */
             --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.03);
             --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.05);
             --shadow-lg: 0 10px 25px -3px rgb(0 0 0 / 0.08);
-            
             --radius-lg: 12px;
             --radius-full: 9999px;
-            --sidebar-width: 280px;
+            
+            /* Sidebar Widths */
+            --sidebar-width-full: 280px;
+            --sidebar-width-mini: 68px;
         }
 
         body.theme-dark {
@@ -45,1816 +40,459 @@
             --bg-chat: #111827;
             --bg-input: #374151;
             --bg-msg-user: #374151;
-            --bg-msg-assistant: transparent;
-            --bg-hover: #374151;
-            --bg-active: #4b5563;
-            
             --text-primary: #f9fafb;
             --text-secondary: #d1d5db;
             --text-muted: #6b7280;
-            
             --border-color: #374151;
             --accent-color: #14b8a6;
             --accent-hover: #0d9488;
         }
 
-        /* --- Resets --- */
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
-        body { background-color: var(--bg-app); color: var(--text-primary); height: 100vh; height: 100dvh; overflow: hidden; -webkit-font-smoothing: antialiased; }
-        button { background: none; border: none; cursor: pointer; color: inherit; font: inherit; outline: none; }
-        input, textarea, select { font: inherit; background: none; border: none; outline: none; color: inherit; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-app); color: var(--text-primary); height: 100dvh; overflow: hidden; -webkit-font-smoothing: antialiased; }
+        button { background: none; border: none; cursor: pointer; color: inherit; outline: none; transition: all 0.2s; }
 
-        /* --- Layout --- */
         .ica-shell { display: flex; height: 100%; width: 100vw; position: relative; }
-        .ica-hidden { display: none !important; }
 
-        /* --- Sidebar --- */
+        /* --- Sidebar Logic --- */
         .ica-sidebar {
-            width: var(--sidebar-width);
+            width: var(--sidebar-width-mini);
             background-color: var(--bg-sidebar);
             border-right: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
-            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 40;
+            overflow: hidden;
+            position: relative;
         }
 
-        .is-sidebar-collapsed .ica-sidebar { width: 0; overflow: hidden; border-right: none; }
+        /* Expanded State (Desktop) */
+        .is-sidebar-open .ica-sidebar {
+            width: var(--sidebar-width-full);
+        }
 
-        .ica-sidebar-header { padding: 20px 16px; display: flex; gap: 8px; align-items: center; }
+        /* Header in Sidebar */
+        .ica-sidebar-header { 
+            height: 60px;
+            display: flex; 
+            align-items: center; 
+            padding: 0 16px;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .ica-sidebar-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            width: var(--sidebar-width-full); /* Fixed width inner container */
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+
+        .is-sidebar-open .ica-sidebar-content {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Nav Rail Icons (Visible when closed) */
+        .ica-nav-rail {
+            position: absolute;
+            top: 70px;
+            left: 0;
+            width: var(--sidebar-width-mini);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            transition: opacity 0.2s;
+        }
+
+        .is-sidebar-open .ica-nav-rail { opacity: 0; pointer-events: none; }
+
+        .rail-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            color: var(--text-secondary);
+        }
+        .rail-icon:hover { background: var(--bg-hover); color: var(--accent-color); }
+        .rail-icon.active { background: rgba(15, 118, 110, 0.1); color: var(--accent-color); }
+
+        /* Sidebar Elements */
         .ica-btn-primary {
             display: flex; align-items: center; justify-content: center; gap: 8px;
             background-color: var(--accent-color); color: white;
             padding: 10px 16px; border-radius: var(--radius-full);
-            font-weight: 500; width: 100%; transition: all 0.2s ease;
-            box-shadow: var(--shadow-sm);
+            font-weight: 500; margin: 0 16px 16px;
         }
-        .ica-btn-primary:hover { background-color: var(--accent-hover); transform: translateY(-1px); box-shadow: var(--shadow-md); }
-        .ica-btn-primary:active { transform: translateY(0); }
-        .ica-btn-primary svg { width: 18px; height: 18px; }
 
         .ica-sidebar-search-wrap { margin: 0 16px 16px; position: relative; }
-        .ica-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; color: var(--text-muted); }
         .ica-search-input {
             width: 100%; background: var(--bg-app); padding: 10px 12px 10px 36px;
             border-radius: var(--radius-full); border: 1px solid var(--border-color);
-            font-size: 0.875rem; transition: all 0.2s ease;
+            font-size: 0.875rem;
         }
-        .ica-search-input:focus { border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1); }
+        .ica-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; color: var(--text-muted); }
 
-        .ica-sidebar-list-header { padding: 0 16px 8px; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
-        .ica-sidebar-list { flex: 1; overflow-y: auto; padding: 0 8px; display: flex; flex-direction: column; gap: 2px; }
-        
-        /* Custom Scrollbar */
-        .ica-sidebar-list::-webkit-scrollbar, .ica-chat-scroll::-webkit-scrollbar, .ica-textarea::-webkit-scrollbar { width: 6px; }
-        .ica-sidebar-list::-webkit-scrollbar-track, .ica-chat-scroll::-webkit-scrollbar-track { background: transparent; }
-        .ica-sidebar-list::-webkit-scrollbar-thumb, .ica-chat-scroll::-webkit-scrollbar-thumb, .ica-textarea::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
-        .ica-sidebar-list::-webkit-scrollbar-thumb:hover, .ica-chat-scroll::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
-
+        .ica-sidebar-list { flex: 1; overflow-y: auto; padding: 0 8px; }
         .ica-history-item {
-            padding: 12px 14px; border-radius: var(--radius-lg); cursor: pointer;
-            position: relative; transition: background-color 0.2s ease;
+            padding: 10px 12px; border-radius: var(--radius-lg); cursor: pointer;
+            margin-bottom: 2px;
         }
-        .ica-history-item:hover { background-color: var(--bg-hover); }
-        .ica-history-item.is-active { background-color: var(--bg-active); }
-        .ica-history-item-top { display: flex; justify-content: space-between; align-items: center; }
-        .ica-history-item-title { font-size: 0.875rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary); }
-        .ica-history-item-meta { font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; }
-        .ica-history-item-preview { display: none; } 
+        .ica-history-item:hover { background: var(--bg-hover); }
+        .ica-history-item.is-active { background: var(--bg-active); }
+        .ica-history-item-title { font-size: 0.875rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        .ica-history-actions { display: none; gap: 4px; }
-        .ica-history-item:hover .ica-history-actions { display: flex; }
-        .ica-history-icon-btn { color: var(--text-secondary); padding: 4px; border-radius: 4px; transition: 0.2s; }
-        .ica-history-icon-btn:hover { color: var(--text-primary); background: var(--border-color); }
-        .ica-history-icon-btn svg { width: 14px; height: 14px; }
+        .ica-sidebar-footer { padding: 16px; border-top: 1px solid var(--border-color); width: var(--sidebar-width-full); }
 
-        .ica-rename-input { width: 100%; font-size: 0.875rem; padding: 4px 6px; border: 1px solid var(--accent-color); border-radius: 6px; background: var(--bg-app); }
-
-        .ica-sidebar-footer { padding: 16px; border-top: 1px solid var(--border-color); background: var(--bg-sidebar); padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
-        .ica-select { width: 100%; padding: 10px 12px; margin-bottom: 12px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); background: var(--bg-app); font-size: 0.875rem; cursor: pointer; transition: 0.2s; }
-        .ica-select:hover { border-color: var(--text-muted); }
-        .ica-btn-secondary { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px; color: var(--text-secondary); font-size: 0.875rem; border-radius: var(--radius-lg); font-weight: 500; transition: 0.2s; }
-        .ica-btn-secondary:hover { background-color: var(--bg-hover); color: var(--text-primary); }
-        .ica-btn-secondary svg { width: 16px; height: 16px; }
-
-        /* --- Main Area --- */
-        .ica-main { flex: 1; display: flex; flex-direction: column; position: relative; background: var(--bg-chat); min-width: 0; }
-        .ica-header { height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 24px; flex-shrink: 0; }
-        .ica-header-left, .ica-header-right { display: flex; align-items: center; gap: 12px; }
-        .ica-header-title { font-size: 1rem; font-weight: 600; color: var(--text-primary); display: none; }
-        .ica-icon-btn { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: var(--radius-full); color: var(--text-secondary); transition: all 0.2s ease; }
-        .ica-icon-btn:hover { background-color: var(--bg-hover); color: var(--text-primary); transform: scale(1.05); }
-        .ica-icon-btn svg { width: 18px; height: 18px; }
-
-        /* --- Chat Container --- */
-        .ica-chat-scroll { flex: 1; overflow-y: auto; padding: 24px; scroll-behavior: smooth; }
-        .ica-messages-container { max-width: 768px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; padding-bottom: 20px; }
-
-        /* --- Messages --- */
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        /* --- Main Content --- */
+        .ica-main { flex: 1; display: flex; flex-direction: column; background: var(--bg-chat); min-width: 0; }
+        .ica-header { height: 60px; display: flex; align-items: center; padding: 0 24px; border-bottom: 1px solid transparent; }
         
-        .ica-message-wrapper { display: flex; gap: 16px; width: 100%; animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .ica-chat-scroll { flex: 1; overflow-y: auto; padding: 24px; }
+        .ica-messages-container { max-width: 768px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; }
+
+        /* Message Styling */
+        .ica-message-wrapper { display: flex; gap: 16px; width: 100%; }
         .ica-message-wrapper.is-user { flex-direction: row-reverse; }
-        
-        .ica-message-avatar { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; background: var(--bg-active); color: var(--text-secondary); flex-shrink: 0; }
-        .ica-message-wrapper.is-assistant .ica-message-avatar { background: var(--accent-color); color: white; }
+        .ica-message-avatar { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; background: var(--bg-active); flex-shrink: 0; }
+        .is-assistant .ica-message-avatar { background: var(--accent-color); color: white; }
+        .ica-message { padding: 12px 16px; font-size: 0.95rem; line-height: 1.6; max-width: 85%; }
+        .is-user .ica-message { background: var(--bg-msg-user); border-radius: 18px 18px 4px 18px; }
 
-        .ica-message-block { display: flex; flex-direction: column; gap: 6px; max-width: 85%; min-width: 0; }
-        .ica-message-wrapper.is-user .ica-message-block { align-items: flex-end; }
-        
-        .ica-message-meta { display: none; } 
-
-        .ica-message { padding: 14px 18px; font-size: 0.95rem; line-height: 1.6; color: var(--text-primary); word-break: break-word; }
-        .ica-message.is-user { background-color: var(--bg-msg-user); border-radius: 20px 20px 4px 20px; }
-        .ica-message.is-assistant { background-color: transparent; padding-left: 0; padding-top: 4px; }
-
-        .ica-message-actions { display: flex; gap: 8px; margin-top: 4px; opacity: 0; transition: opacity 0.2s ease; }
-        .ica-message-wrapper:hover .ica-message-actions { opacity: 1; }
-        .ica-copy-btn { font-size: 0.75rem; font-weight: 500; color: var(--text-muted); background: transparent; padding: 4px 8px; border-radius: 6px; transition: 0.2s; border: 1px solid transparent; }
-        .ica-copy-btn:hover { color: var(--text-primary); background: var(--bg-hover); border-color: var(--border-color); }
-
-        /* --- Inline Edit --- */
-        .ica-inline-edit-wrap { width: 100%; display: flex; flex-direction: column; gap: 8px; background: var(--bg-app); padding: 12px; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); }
-        .ica-inline-edit-textarea { width: 100%; min-width: 250px; padding: 8px; border-radius: 8px; border: none; background: transparent; font-size: 0.95rem; line-height: 1.5; resize: none; }
-        .ica-inline-edit-textarea:focus { outline: none; }
-
-        /* --- Markdown Styles inside Assistant Message --- */
-        .ica-message.is-assistant p { margin-bottom: 1em; }
-        .ica-message.is-assistant p:last-child { margin-bottom: 0; }
-        .ica-message.is-assistant strong { font-weight: 600; color: var(--text-primary); }
-        .ica-message.is-assistant ul, .ica-message.is-assistant ol { margin: 0.5em 0 1em 1.5em; padding: 0; }
-        .ica-message.is-assistant li { margin-bottom: 0.35em; }
-        .ica-message.is-assistant pre { background: var(--bg-sidebar); padding: 16px; border-radius: 12px; overflow-x: auto; margin: 1.5em 0; border: 1px solid var(--border-color); font-size: 0.85em; }
-        .ica-message.is-assistant code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; background: var(--bg-hover); padding: 3px 6px; border-radius: 6px; font-size: 0.85em; }
-        .ica-message.is-assistant pre code { background: none; padding: 0; border-radius: 0; }
-        .ica-message.is-assistant blockquote { border-left: 3px solid var(--accent-color); padding-left: 16px; margin: 1.5em 0; color: var(--text-secondary); font-style: italic; background: var(--bg-hover); padding: 12px 12px 12px 16px; border-radius: 0 8px 8px 0; }
-
-        /* --- Empty State --- */
-        .ica-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; max-width: 640px; margin: 0 auto; text-align: center; animation: fadeIn 0.6s ease-out; }
-        .ica-empty-logo { width: 56px; height: 56px; color: var(--accent-color); margin-bottom: 24px; padding: 12px; background: rgba(15, 118, 110, 0.08); border-radius: 20px; }
-        .ica-welcome-title { font-size: 1.75rem; font-weight: 600; margin-bottom: 12px; letter-spacing: -0.02em; }
-        .ica-welcome-sub { color: var(--text-secondary); margin-bottom: 40px; font-size: 1rem; line-height: 1.6; max-width: 80%; }
-        .ica-suggestions { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; width: 100%; }
-        .ica-prompt-chip { background: var(--bg-app); border: 1px solid var(--border-color); padding: 16px; border-radius: 16px; font-size: 0.9rem; color: var(--text-secondary); text-align: left; transition: all 0.2s ease; box-shadow: var(--shadow-sm); }
-        .ica-prompt-chip:hover { border-color: var(--accent-color); color: var(--text-primary); transform: translateY(-2px); box-shadow: var(--shadow-md); }
-
-        /* --- Input Area (Premium Pill Design) --- */
-        .ica-input-container { padding: 0 24px 16px; max-width: 768px; margin: 0 auto; width: 100%; position: relative; background: linear-gradient(180deg, rgba(255,255,255,0) 0%, var(--bg-chat) 20%); flex-shrink: 0; }
+        /* Input Pill */
+        .ica-input-container { padding: 0 24px 12px; max-width: 768px; margin: 0 auto; width: 100%; }
         .ica-input-box { 
             background: var(--bg-input); border: 1px solid var(--border-color); 
-            border-radius: 28px; 
-            padding: 8px 12px 8px 16px; 
-            box-shadow: var(--shadow-md); 
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
-            position: relative; display: flex; flex-direction: column;
+            border-radius: 28px; padding: 8px 16px; 
+            box-shadow: var(--shadow-md); display: flex; flex-direction: column;
         }
-        .ica-input-box:focus-within { border-color: var(--accent-color); box-shadow: var(--shadow-lg), 0 0 0 4px rgba(15, 118, 110, 0.05); }
-
-        .ica-doc-chip { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: var(--bg-hover); border-radius: 16px; margin-bottom: 8px; width: fit-content; border: 1px solid var(--border-color); animation: fadeIn 0.2s ease; }
-        .ica-doc-chip svg { width: 14px; height: 14px; color: var(--accent-color); }
-        .ica-doc-chip-text { font-size: 0.8rem; font-weight: 500; }
-        .ica-icon-btn.small { width: 24px; height: 24px; }
-
         .ica-input-row { display: flex; align-items: flex-end; gap: 12px; }
+        .ica-textarea { flex: 1; max-height: 150px; padding: 10px 0; resize: none; font-size: 1rem; border: none; outline: none; }
         
-        .ica-upload-label { cursor: pointer; color: var(--text-muted); padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.2s; margin-bottom: 2px;}
-        .ica-upload-label:hover { background: var(--bg-hover); color: var(--text-primary); }
-        .ica-upload-label svg { width: 20px; height: 20px; }
+        .ica-send-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--accent-color); color: white; display: flex; align-items: center; justify-content: center; }
+        .ica-send-btn:disabled { background: var(--bg-active); color: var(--text-muted); }
 
-        .ica-textarea { flex: 1; max-height: 150px; padding: 12px 0; resize: none; overflow-y: auto; font-size: 1rem; line-height: 1.5; margin-bottom: 2px; }
-        .ica-textarea::placeholder { color: var(--text-muted); }
+        .ica-footer-legal { text-align: center; font-size: 0.65rem; color: var(--text-muted); padding: 8px 0; }
 
-        .ica-input-actions { display: flex; gap: 4px; align-items: center; margin-bottom: 4px; }
-        
-        .ica-send-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--accent-color); color: white; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; }
-        .ica-send-btn:hover { background: var(--accent-hover); transform: scale(1.05); box-shadow: 0 2px 8px rgba(15, 118, 110, 0.3); }
-        .ica-send-btn:disabled { background: var(--bg-active); color: var(--text-muted); cursor: not-allowed; transform: none; box-shadow: none; }
-        .ica-send-btn svg { width: 16px; height: 16px; margin-left: -2px; }
-        .ica-send-btn.is-loading svg { animation: spin 1s linear infinite; margin-left: 0; }
+        /* --- Mobile Logic --- */
+        .ica-sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(2px); z-index: 35; }
 
-        /* --- Footer Meta Data / Legal - Hyper Compact --- */
-        .ica-input-under { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px 0; font-size: 0.75rem; color: var(--text-muted); }
-        .ica-text-btn { font-size: 0.75rem; color: var(--text-muted); transition: color 0.2s; }
-        .ica-text-btn:hover { color: var(--text-primary); text-decoration: none; }
-
-        .ica-footer-legal { 
-            text-align: center; font-size: 0.65rem; color: var(--text-muted); 
-            padding-top: 6px; display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap; 
-            padding-bottom: env(safe-area-inset-bottom); /* iOS Safe Area */
-        }
-
-        /* --- Mic Recording State --- */
-        #micBtn { margin-bottom: 2px; }
-        #micBtn.is-recording { color: var(--danger-color); animation: pulse-red 1.5s infinite; background: rgba(239, 68, 68, 0.1); }
-        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-
-        /* --- Premium Typing Indicator --- */
-        .ica-typing-dots { display: flex; gap: 5px; padding: 12px 16px; background: var(--bg-hover); border-radius: 16px; width: fit-content; }
-        .ica-typing-dots span { width: 6px; height: 6px; background: var(--accent-color); border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; opacity: 0.6; }
-        .ica-typing-dots span:nth-child(1) { animation-delay: -0.32s; }
-        .ica-typing-dots span:nth-child(2) { animation-delay: -0.16s; }
-        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
-
-        /* --- Status Banner --- */
-        .ica-status-banner { position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-150%); background: var(--bg-sidebar); border: 1px solid var(--border-color); padding: 12px 24px; border-radius: var(--radius-full); box-shadow: var(--shadow-lg); z-index: 100; display: flex; align-items: center; gap: 10px; font-size: 0.875rem; font-weight: 500; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); opacity: 0; }
-        .ica-status-banner.is-show { transform: translateX(-50%) translateY(0); opacity: 1; }
-        .ica-status-banner svg { width: 18px; height: 18px; }
-        .ica-status-banner.is-success svg { color: var(--accent-color); }
-        .ica-status-banner.is-error svg { color: var(--danger-color); }
-        .ica-status-banner.is-warn svg { color: #f59e0b; }
-
-        /* --- Mobile Responsiveness --- */
-        .ica-desktop-only { display: flex; }
-        .ica-mobile-only { display: none; }
-        .ica-sidebar-backdrop { display: none; position: absolute; inset: 0; background: rgba(17, 24, 39, 0.4); backdrop-filter: blur(2px); z-index: 30; opacity: 0; transition: opacity 0.3s ease; }
-
-        @media (max-width: 980px) {
-            .ica-desktop-only { display: none; }
-            .ica-mobile-only { display: flex; }
+        @media (max-width: 768px) {
+            .ica-sidebar { 
+                position: fixed; left: 0; top: 0; bottom: 0; 
+                width: 0; transform: translateX(-100%); 
+            }
+            .is-sidebar-open .ica-sidebar { width: 280px; transform: translateX(0); }
+            .is-sidebar-open .ica-sidebar-backdrop { display: block; }
+            .ica-nav-rail { display: none; }
+            .ica-sidebar-content { opacity: 1; pointer-events: auto; }
             .ica-header { padding: 0 16px; }
-            .ica-header-title { display: block; }
-            
-            .ica-sidebar { position: absolute; left: 0; top: 0; bottom: 0; transform: translateX(-100%); box-shadow: var(--shadow-lg); }
-            .is-sidebar-open .ica-sidebar { transform: translateX(0); }
-            .is-sidebar-open .ica-sidebar-backdrop { display: block; opacity: 1; }
-            
-            .ica-chat-scroll { padding: 16px 12px; }
-            .ica-message-wrapper { gap: 10px; }
-            .ica-message-block { max-width: 90%; }
-            .ica-message { padding: 12px 14px; font-size: 0.9rem; }
-            
-            .ica-input-container { padding: 0 12px 12px; }
-            .ica-input-box { border-radius: 24px; padding: 6px 8px 6px 12px; }
-            .ica-textarea { font-size: 0.95rem; }
-            
-            .ica-empty-state { padding: 0 12px; }
-            .ica-welcome-title { font-size: 1.5rem; }
-            .ica-welcome-sub { max-width: 100%; font-size: 0.95rem; }
-            
-            /* Stack chips on small mobile */
-            .ica-suggestions { grid-template-columns: 1fr; gap: 8px; }
-            .ica-prompt-chip { padding: 14px; }
-            
-            /* Ultra compact footer on mobile */
-            .ica-footer-legal { font-size: 0.6rem; }
-            #footerCopyright { display: none; /* Hide copyright on mobile */ }
-            
-            /* Show actions immediately on touch devices */
-            .ica-message-actions { opacity: 1; }
         }
+
+        /* UI Animations */
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .is-loading svg { animation: spin 1s linear infinite; }
     </style>
 </head>
-<body>
+<body class="theme-light">
 
     <div id="statusBanner" class="ica-status-banner"></div>
+    <div id="sidebarBackdrop" class="ica-sidebar-backdrop"></div>
 
     <div id="assistantShell" class="ica-shell">
-        <div id="sidebarBackdrop" class="ica-sidebar-backdrop"></div>
-
+        
         <aside class="ica-sidebar">
             <div class="ica-sidebar-header">
+                <button id="sidebarToggle" class="ica-icon-btn" title="Toggle Menu">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+                <span style="font-weight: 600; font-size: 1.1rem; color: var(--accent-color);">IndiCare</span>
+            </div>
+
+            <div class="ica-nav-rail">
+                <button class="rail-icon active" title="Assistant (Engine 1)">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                </button>
+                <button class="rail-icon" title="I-Notes (Engine 2)">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                </button>
+            </div>
+
+            <div class="ica-sidebar-content">
                 <button id="newConversationBtn" class="ica-btn-primary">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     New Chat
                 </button>
-                <button id="sidebarCollapseBtn" class="ica-icon-btn ica-desktop-only" aria-label="Collapse sidebar" title="Collapse sidebar">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
-                </button>
-            </div>
-            
-            <div class="ica-sidebar-search-wrap">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ica-search-icon"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <input type="text" id="historySearch" class="ica-search-input" placeholder="Search history... (Ctrl+K)">
-            </div>
-
-            <div class="ica-sidebar-list-header">
-                Conversations (<span id="historyCount">0</span>)
-            </div>
-            
-            <div id="conversationList" class="ica-sidebar-list">
+                
+                <div class="ica-sidebar-search-wrap">
+                    <svg class="ica-search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="historySearch" class="ica-search-input" placeholder="Search history...">
                 </div>
 
-            <div class="ica-sidebar-footer">
-                <select id="responseMode" class="ica-select" aria-label="Response Mode">
-                    <option value="balanced" selected>⚖️ Balanced</option>
-                    <option value="quick">⚡ Quick</option>
-                    <option value="deep">🧠 Deep review</option>
-                </select>
-                <button id="logoutBtn" class="ica-btn-secondary">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                    Logout
-                </button>
+                <div id="conversationList" class="ica-sidebar-list"></div>
+
+                <div class="ica-sidebar-footer">
+                    <select id="responseMode" class="ica-select">
+                        <option value="balanced">⚖️ Balanced</option>
+                        <option value="quick">⚡ Quick</option>
+                        <option value="deep">🧠 Deep Review</option>
+                    </select>
+                    <button id="logoutBtn" class="ica-btn-secondary" style="display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary);">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        Sign out
+                    </button>
+                </div>
             </div>
         </aside>
 
         <main class="ica-main">
             <header class="ica-header">
-                <div class="ica-header-left">
-                    <button id="sidebarToggle" class="ica-icon-btn ica-mobile-only" aria-label="Open Menu">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-                    </button>
-                    <h1 id="conversationHeading" class="ica-header-title">New conversation</h1>
-                </div>
-                <div class="ica-header-right">
-                    <button id="headerNewChatBtn" class="ica-icon-btn ica-mobile-only" title="New Chat">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                    </button>
-                </div>
+                <h2 id="conversationHeading" style="font-size: 1rem; font-weight: 500;">New Conversation</h2>
             </header>
 
             <div id="chat" class="ica-chat-scroll">
-                
                 <div id="chatEmpty" class="ica-empty-state">
-                    <div class="ica-empty-logo">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><path d="M12 12V2.25A9.96 9.96 0 0 1 22 12h-9.75z"></path></svg>
-                    </div>
-                    <h2 id="welcomeHeading" class="ica-welcome-title">Good morning</h2>
-                    <p id="welcomeSubtext" class="ica-welcome-sub">How can I help today?</p>
-                    
+                    <h1 id="welcomeHeading" style="font-size: 1.75rem; margin-bottom: 8px;">Good morning</h1>
+                    <p id="welcomeSubtext" style="color: var(--text-secondary); margin-bottom: 32px;">How can I help you today?</p>
                     <div class="ica-suggestions">
-                        <button class="ica-prompt-chip"><strong>Draft a support plan</strong><br/><span style="font-size: 0.8em; color: var(--text-muted)">Create a structured behaviour outline</span></button>
-                        <button class="ica-prompt-chip"><strong>Review wording</strong><br/><span style="font-size: 0.8em; color: var(--text-muted)">Check a safeguarding log for neutrality</span></button>
-                        <button class="ica-prompt-chip"><strong>Key work ideas</strong><br/><span style="font-size: 0.8em; color: var(--text-muted)">Activities for teenagers</span></button>
-                        <button class="ica-prompt-chip"><strong>Reflect on an incident</strong><br/><span style="font-size: 0.8em; color: var(--text-muted)">Debrief a recent challenging situation</span></button>
+                        <button class="ica-prompt-chip"><strong>Draft a support plan</strong></button>
+                        <button class="ica-prompt-chip"><strong>Review safeguarding wording</strong></button>
                     </div>
                 </div>
-
                 <div id="messages" class="ica-messages-container" hidden></div>
-
-                <div id="typingRow" class="ica-message-wrapper is-assistant" hidden>
+                <div id="typingRow" class="ica-message-wrapper is-assistant" hidden style="margin-top: 20px;">
                     <div class="ica-message-avatar">IC</div>
-                    <div class="ica-message-block">
-                        <div class="ica-typing-dots"><span></span><span></span><span></span></div>
-                    </div>
+                    <div class="ica-message-block"><div class="ica-typing-dots"><span></span><span></span><span></span></div></div>
                 </div>
-                
             </div>
 
             <div class="ica-input-container">
                 <div class="ica-input-box">
-                    
                     <div id="documentChip" class="ica-doc-chip ica-hidden">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-                        <span id="documentChipText" class="ica-doc-chip-text"></span>
-                        <button id="clearDocumentBtn" class="ica-icon-btn small">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                        </button>
+                        <span id="documentChipText"></span>
+                        <button id="clearDocumentBtn">×</button>
                     </div>
-
                     <div class="ica-input-row">
-                        <label for="documentUpload" class="ica-upload-label" title="Attach Document">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                        <label for="documentUpload" class="ica-upload-label" style="cursor: pointer; color: var(--text-muted);">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
                             <input type="file" id="documentUpload" hidden>
                         </label>
-                        
-                        <textarea id="chat-input" class="ica-textarea" placeholder="Message IndiCare..." rows="1"></textarea>
-                        
-                        <div class="ica-input-actions">
-                            <button id="micBtn" class="ica-icon-btn" title="Start voice input">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                            </button>
-                            <button id="send-btn" class="ica-send-btn" title="Send message">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                            </button>
-                        </div>
+                        <textarea id="chat-input" class="ica-textarea" placeholder="Ask IndiCare..."></textarea>
+                        <button id="micBtn" class="ica-icon-btn">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line></svg>
+                        </button>
+                        <button id="send-btn" class="ica-send-btn">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="transform: rotate(45deg);"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        </button>
                     </div>
                 </div>
-                
-                <div class="ica-input-under">
-                    <span id="uploadStatus"></span>
-                    <button id="clearChatBtn" class="ica-text-btn">Clear draft</button>
-                </div>
-
                 <div class="ica-footer-legal">
-                    <span id="footerWarning"></span>
-                    <span id="footerCopyright"></span>
+                    <span id="footerWarning">Verify AI outputs against guidance.</span> • <span id="footerCopyright">© 2026 IndiCare.</span>
                 </div>
             </div>
         </main>
     </div>
 
     <script>
+        // --- CORE JAVASCRIPT ---
         window.conversationId = null;
         window.currentDocumentText = null;
         window.currentDocumentName = null;
 
         const chatState = {
             historyRows: [],
-            theme: localStorage.getItem("indicare-theme") || "light",
-            recognition: null,
             isRecording: false,
-            speechSupported: false,
-            draftKeyPrefix: "indicare-chat-draft:",
             isStreamingResponse: false
         };
 
-        function initChat() {
-            applyTheme(chatState.theme);
-            bindChatInput();
-            bindConversationButtons();
-            bindDocumentUpload();
-            bindLogout();
-            bindHistorySearch();
-            bindSidebarControls();
-            bindSidebarCollapse();
-            bindThemeToggle();
-            bindGlobalMessageActions();
-            bindResponseMode();
-            initSpeechToText();
-            applyWelcomeMessage();
-            applyFooterMeta();
-            refreshUploadStatus();
-            restoreDraft();
-            loadConversations(true);
-        }
+        // DOM Elements
+        const shell = document.getElementById('assistantShell');
+        const toggle = document.getElementById('sidebarToggle');
+        const backdrop = document.getElementById('sidebarBackdrop');
+        const input = document.getElementById('chat-input');
 
-        window.initChat = initChat;
+        // Sidebar Toggle Logic (Desktop Rail vs Mobile Modal)
+        toggle.addEventListener('click', () => {
+            shell.classList.toggle('is-sidebar-open');
+        });
+
+        backdrop.addEventListener('click', () => {
+            shell.classList.remove('is-sidebar-open');
+        });
+
+        // Initialize App
+        function initChat() {
+            bindChatInput();
+            bindDocumentUpload();
+            loadConversations();
+            applyWelcomeMessage();
+        }
 
         function bindChatInput() {
-            const sendBtn = document.getElementById("send-btn");
-            const input = document.getElementById("chat-input");
-            const clearBtn = document.getElementById("clearChatBtn");
-
-            if (!sendBtn || !input) return;
-
-            autoResizeTextarea(input);
-
-            sendBtn.addEventListener("click", sendMessage);
-
-            input.addEventListener("input", () => {
-                autoResizeTextarea(input);
-                saveDraft();
-                
-                if(input.value.trim().length > 0) {
-                    sendBtn.style.opacity = "1";
-                } else {
-                    sendBtn.style.opacity = "0.7";
-                }
-            });
-
-            input.addEventListener("keydown", (e) => {
-                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+            const sendBtn = document.getElementById('send-btn');
+            input.addEventListener('input', () => autoResizeTextarea(input));
+            sendBtn.addEventListener('click', sendMessage);
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey && window.innerWidth > 768) {
                     e.preventDefault();
-                    document.getElementById("historySearch")?.focus();
-                    return;
-                }
-
-                if (e.key === "Enter" && !e.shiftKey) {
-                    // Prevent default enter key behavior on mobile to avoid jumping, submit instead
-                    if(window.innerWidth > 768) {
-                        e.preventDefault();
-                        sendMessage();
-                    }
-                }
-            });
-
-            clearBtn?.addEventListener("click", () => {
-                input.value = "";
-                autoResizeTextarea(input);
-                saveDraft();
-                input.focus();
-                sendBtn.style.opacity = "0.7";
-            });
-
-            document.querySelectorAll(".ica-prompt-chip").forEach((chip) => {
-                chip.addEventListener("click", () => {
-                    const strongText = chip.querySelector('strong')?.textContent;
-                    input.value = strongText || chip.textContent?.trim() || "";
-                    autoResizeTextarea(input);
-                    saveDraft();
-                    sendBtn.style.opacity = "1";
-                    input.focus();
-                });
-            });
-        }
-
-        function bindConversationButtons() {
-            document.getElementById("newConversationBtn")?.addEventListener("click", startNewConversation);
-            document.getElementById("headerNewChatBtn")?.addEventListener("click", startNewConversation);
-        }
-
-        function bindHistorySearch() {
-            const search = document.getElementById("historySearch");
-            if (!search) return;
-
-            search.addEventListener("input", () => {
-                renderConversationList(chatState.historyRows, search.value.trim());
-            });
-        }
-
-        function bindSidebarControls() {
-            const shell = document.getElementById("assistantShell");
-            const toggle = document.getElementById("sidebarToggle");
-            const backdrop = document.getElementById("sidebarBackdrop");
-
-            if (!shell) return;
-
-            toggle?.addEventListener("click", () => {
-                shell.classList.toggle("is-sidebar-open");
-                toggle.setAttribute("aria-expanded", String(shell.classList.contains("is-sidebar-open")));
-            });
-
-            backdrop?.addEventListener("click", closeSidebar);
-
-            window.addEventListener("resize", () => {
-                if (window.innerWidth > 980) {
-                    closeSidebar();
+                    sendMessage();
                 }
             });
         }
 
-        function bindSidebarCollapse() {
-            const shell = document.getElementById("assistantShell");
-            const collapseBtn = document.getElementById("sidebarCollapseBtn");
-
-            if (!shell || !collapseBtn) return;
-
-            const savedState = localStorage.getItem("indicare-sidebar-collapsed");
-            if (savedState === "true" && window.innerWidth > 980) {
-                shell.classList.add("is-sidebar-collapsed");
-                collapseBtn.setAttribute("aria-label", "Expand sidebar");
-                collapseBtn.setAttribute("title", "Expand sidebar");
-            }
-
-            collapseBtn.addEventListener("click", () => {
-                if (window.innerWidth <= 980) return;
-
-                shell.classList.toggle("is-sidebar-collapsed");
-                const collapsed = shell.classList.contains("is-sidebar-collapsed");
-
-                localStorage.setItem("indicare-sidebar-collapsed", String(collapsed));
-                collapseBtn.setAttribute("aria-label", collapsed ? "Expand sidebar" : "Collapse sidebar");
-                collapseBtn.setAttribute("title", collapsed ? "Expand sidebar" : "Collapse sidebar");
-            });
-
-            window.addEventListener("resize", () => {
-                if (window.innerWidth <= 980) {
-                    shell.classList.remove("is-sidebar-collapsed");
-                } else {
-                    const shouldCollapse = localStorage.getItem("indicare-sidebar-collapsed") === "true";
-                    shell.classList.toggle("is-sidebar-collapsed", shouldCollapse);
-                    collapseBtn.setAttribute("aria-label", shouldCollapse ? "Expand sidebar" : "Collapse sidebar");
-                    collapseBtn.setAttribute("title", shouldCollapse ? "Expand sidebar" : "Collapse sidebar");
-                }
-            });
-        }
-
-        function bindThemeToggle() {
-            document.getElementById("themeToggle")?.addEventListener("click", () => {
-                applyTheme(chatState.theme === "dark" ? "light" : "dark");
-            });
-        }
-
-        function bindResponseMode() {
-            const select = document.getElementById("responseMode");
-            if (!select) return;
-
-            const saved = localStorage.getItem("indicare-response-mode");
-            if (saved && ["quick", "balanced", "deep"].includes(saved)) {
-                select.value = saved;
-            }
-
-            select.addEventListener("change", () => {
-                const value = getResponseMode();
-                localStorage.setItem("indicare-response-mode", value);
-                showStatusBanner("success", `Response mode set to ${labelForResponseMode(value)}.`);
-            });
-        }
-
-        function getResponseMode() {
-            const select = document.getElementById("responseMode");
-            const value = select?.value || localStorage.getItem("indicare-response-mode") || "balanced";
-            return ["quick", "balanced", "deep"].includes(value) ? value : "balanced";
-        }
-
-        function labelForResponseMode(value) {
-            if (value === "quick") return "Quick";
-            if (value === "deep") return "Deep review";
-            return "Balanced";
-        }
-
-        function bindGlobalMessageActions() {
-            const messages = document.getElementById("messages");
-            if (!messages) return;
-
-            messages.addEventListener("click", async (event) => {
-                const copyBtn = event.target.closest("[data-copy-text]");
-                if (copyBtn) {
-                    const text = copyBtn.getAttribute("data-copy-text") || "";
-                    try {
-                        await navigator.clipboard.writeText(text);
-                        const original = copyBtn.innerHTML;
-                        copyBtn.innerHTML = `Copied ✓`;
-                        setTimeout(() => {
-                            copyBtn.innerHTML = original;
-                        }, 1500);
-                    } catch (err) {
-                        console.error("Copy failed:", err);
-                    }
-                    return;
-                }
-
-                const editBtn = event.target.closest("[data-edit-message-id]");
-                if (editBtn) {
-                    const messageId = editBtn.getAttribute("data-edit-message-id");
-                    const currentText = decodeURIComponent(editBtn.getAttribute("data-current-text") || "");
-                    if (messageId) await startInlineMessageEdit(messageId, currentText);
-                    return;
-                }
-
-                const cancelBtn = event.target.closest("[data-cancel-edit-message-id]");
-                if (cancelBtn) {
-                    const messageId = cancelBtn.getAttribute("data-cancel-edit-message-id");
-                    if (messageId) cancelInlineMessageEdit(messageId);
-                    return;
-                }
-
-                const saveBtn = event.target.closest("[data-save-edit-message-id]");
-                if (saveBtn) {
-                    const messageId = saveBtn.getAttribute("data-save-edit-message-id");
-                    if (messageId) await submitInlineMessageEdit(messageId);
-                }
-            });
-
-            messages.addEventListener("keydown", async (event) => {
-                const textarea = event.target.closest(".ica-inline-edit-textarea");
-                if (!textarea) return;
-
-                const messageId = textarea.getAttribute("data-editing-message-id");
-                if (!messageId) return;
-
-                if (event.key === "Escape") {
-                    event.preventDefault();
-                    cancelInlineMessageEdit(messageId);
-                }
-
-                if (event.key === "Enter" && !event.shiftKey) {
-                    event.preventDefault();
-                    await submitInlineMessageEdit(messageId);
-                }
-            });
-
-            messages.addEventListener("input", (event) => {
-                const textarea = event.target.closest(".ica-inline-edit-textarea");
-                if (!textarea) return;
-                autoResizeTextarea(textarea);
-            });
-        }
-
-        function applyTheme(theme) {
-            chatState.theme = theme;
-            localStorage.setItem("indicare-theme", theme);
-            document.body.classList.toggle("theme-dark", theme === "dark");
-        }
-
-        function closeSidebar() {
-            const shell = document.getElementById("assistantShell");
-            const toggle = document.getElementById("sidebarToggle");
-            if (!shell) return;
-
-            shell.classList.remove("is-sidebar-open");
-            toggle?.setAttribute("aria-expanded", "false");
-        }
-
-        function bindDocumentUpload() {
-            const uploadInput = document.getElementById("documentUpload");
-            const clearBtn = document.getElementById("clearDocumentBtn");
-
-            uploadInput?.addEventListener("change", async () => {
-                const file = uploadInput.files?.[0];
-                if (!file) return;
-
-                const formData = new FormData();
-                formData.append("file", file);
-
-                if (window.conversationId) {
-                    formData.append("conversation_id", String(window.conversationId));
-                }
-
-                setUploadStatus(`Uploading ${file.name}...`);
-                showStatusBanner("success", `Uploading ${file.name}...`);
-
-                try {
-                    const token = localStorage.getItem("access_token");
-
-                    const response = await fetch("/chat/upload", {
-                        method: "POST",
-                        headers: {
-                            ...(token ? { Authorization: `Bearer ${token}` } : {})
-                        },
-                        credentials: "include",
-                        body: formData
-                    });
-
-                    const data = await response.json();
-
-                    if (!response.ok) {
-                        if (response.status === 401) {
-                            localStorage.removeItem("access_token");
-                            localStorage.removeItem("current_user");
-                            window.location.href = "/login";
-                            return;
-                        }
-
-                        setUploadStatus(data.detail || "Upload failed.");
-                        showStatusBanner("error", data.detail || "Upload failed.");
-                        return;
-                    }
-
-                    window.currentDocumentText = data.text || "";
-                    window.currentDocumentName = data.filename || file.name;
-                    refreshUploadStatus();
-                    showStatusBanner("success", "Document attached.");
-                } catch (error) {
-                    console.error("Upload failed:", error);
-                    setUploadStatus("Could not upload the document.");
-                    showStatusBanner("error", "Could not upload the document.");
-                } finally {
-                    uploadInput.value = "";
-                }
-            });
-
-            clearBtn?.addEventListener("click", async () => {
-                if (window.conversationId) {
-                    try {
-                        await fetch(`/chat/conversations/${window.conversationId}/document`, {
-                            method: "DELETE"
-                        });
-                    } catch (error) {
-                        console.error("Failed to clear stored document:", error);
-                    }
-                }
-
-                window.currentDocumentText = null;
-                window.currentDocumentName = null;
-                refreshUploadStatus();
-                showStatusBanner("warn", "Document removed.");
-            });
-        }
-
-        function setUploadStatus(text) {
-            const uploadStatus = document.getElementById("uploadStatus");
-            if (uploadStatus) uploadStatus.textContent = text || "";
-        }
-
-        function refreshUploadStatus() {
-            const chip = document.getElementById("documentChip");
-            const chipText = document.getElementById("documentChipText");
-
-            if (window.currentDocumentName && window.currentDocumentText) {
-                chip?.classList.remove("ica-hidden");
-                if (chipText) chipText.textContent = window.currentDocumentName;
-                setUploadStatus("Document attached.");
-            } else {
-                chip?.classList.add("ica-hidden");
-                if (chipText) chipText.textContent = "";
-                setUploadStatus("");
-            }
-        }
-
-        function showStatusBanner(type, message) {
-            const banner = document.getElementById("statusBanner");
-            if (!banner) return;
-
-            const icons = {
-                success: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`,
-                warn: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`,
-                error: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`
-            };
-
-            banner.className = `ica-status-banner is-show is-${type}`;
-            banner.innerHTML = `${icons[type] || ""}<span>${escapeHtml(message)}</span>`;
-
-            clearTimeout(showStatusBanner._timer);
-            showStatusBanner._timer = setTimeout(() => {
-                banner.className = "ica-status-banner";
-                banner.innerHTML = "";
-            }, 3000);
-        }
-
-        function bindLogout() {
-            const logoutBtn = document.getElementById("logoutBtn");
-            if (!logoutBtn) return;
-
-            logoutBtn.addEventListener("click", async () => {
-                try {
-                    localStorage.removeItem("access_token");
-                    localStorage.removeItem("current_user");
-
-                    try {
-                        await fetch("/auth/logout", { method: "POST" });
-                    } catch (_) {}
-
-                    window.location.href = "/login";
-                } catch (_) {
-                    window.location.href = "/login";
-                }
-            });
-        }
-
-        function getAdultFirstName() {
-            try {
-                const raw = localStorage.getItem("current_user");
-                if (!raw) return "";
-                const parsed = JSON.parse(raw);
-
-                if (parsed?.first_name) return String(parsed.first_name).trim();
-                if (parsed?.user?.first_name) return String(parsed.user.first_name).trim();
-                if (parsed?.adult?.first_name) return String(parsed.adult.first_name).trim();
-
-                return "";
-            } catch (error) {
-                console.error("Could not read first_name from current_user:", error);
-                return "";
-            }
-        }
-
-        function getUserInitials() {
-            try {
-                const raw = localStorage.getItem("current_user");
-                if (!raw) return "Y";
-                const parsed = JSON.parse(raw);
-
-                const firstName = parsed?.first_name || parsed?.user?.first_name || parsed?.adult?.first_name || "";
-                const lastName = parsed?.last_name || parsed?.user?.last_name || parsed?.adult?.last_name || "";
-
-                const firstInitial = String(firstName).trim().slice(0, 1).toUpperCase();
-                const lastInitial = String(lastName).trim().slice(0, 1).toUpperCase();
-
-                const initials = `${firstInitial}${lastInitial}`.trim();
-                return initials || firstInitial || "Y";
-            } catch {
-                return "Y";
-            }
-        }
-
-        function getTimeGreeting() {
-            const hour = new Date().getHours();
-            if (hour < 12) return "Good morning";
-            if (hour < 18) return "Good afternoon";
-            return "Good evening";
-        }
-
-        function applyWelcomeMessage() {
-            const heading = document.getElementById("welcomeHeading");
-            const subtext = document.getElementById("welcomeSubtext");
-
-            if (!heading || !subtext) return;
-
-            const firstName = getAdultFirstName();
-            const greeting = getTimeGreeting();
-
-            heading.textContent = firstName ? `${greeting}, ${firstName}` : greeting;
-            subtext.textContent = firstName
-                ? `How can I help with support for ${firstName} today?`
-                : `How can I help today?`;
-        }
-
-        function applyFooterMeta() {
-            const warning = document.getElementById("footerWarning");
-            const copyright = document.getElementById("footerCopyright");
-
-            if (warning) {
-                warning.innerHTML = `<span>Important: Verify AI outputs against guidance and policy.</span>`;
-            }
-
-            if (copyright) {
-                copyright.textContent = `© ${new Date().getFullYear()} IndiCare.`;
-            }
-        }
-
-        function initSpeechToText() {
-            const micBtn = document.getElementById("micBtn");
-            const input = document.getElementById("chat-input");
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-            if (!micBtn || !input || !SpeechRecognition) {
-                if (micBtn) {
-                    micBtn.style.display = "none";
-                }
-                return;
-            }
-
-            chatState.speechSupported = true;
-
-            const recognition = new SpeechRecognition();
-            recognition.lang = "en-GB";
-            recognition.interimResults = true;
-            recognition.continuous = false;
-            recognition.maxAlternatives = 1;
-
-            let baseTextBeforeRecording = "";
-            let micBusy = false;
-
-            recognition.onstart = () => {
-                chatState.isRecording = true;
-                baseTextBeforeRecording = input.value.trim();
-                micBtn.classList.add("is-recording");
-                micBtn.setAttribute("aria-label", "Stop voice input");
-                micBtn.title = "Listening… click to stop";
-            };
-
-            recognition.onresult = (event) => {
-                const results = Array.from(event.results);
-                const transcript = results.map((r) => r[0].transcript).join(" ").trim();
-
-                input.value = [baseTextBeforeRecording, transcript].filter(Boolean).join(baseTextBeforeRecording ? " " : "");
-                autoResizeTextarea(input);
-                saveDraft();
-            };
-
-            recognition.onerror = (event) => {
-                console.error("Speech recognition error:", event.error);
-
-                if (event.error === "aborted") {
-                    stopMicVisualState();
-                    return;
-                }
-
-                if (event.error === "no-speech") {
-                    stopMicVisualState();
-                    showStatusBanner("warn", "No speech was detected.");
-                    return;
-                }
-
-                if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-                    stopMicVisualState();
-                    showStatusBanner("error", "Microphone access was not allowed.");
-                    return;
-                }
-
-                stopMicVisualState();
-                showStatusBanner("error", "Voice input could not be completed.");
-            };
-
-            recognition.onend = () => {
-                stopMicVisualState();
-                input.focus();
-                saveDraft();
-            };
-
-            micBtn.addEventListener("click", () => {
-                if (micBusy) return;
-
-                if (!chatState.isRecording) {
-                    try {
-                        micBusy = true;
-                        recognition.start();
-                        setTimeout(() => {
-                            micBusy = false;
-                        }, 400);
-                    } catch (error) {
-                        micBusy = false;
-                        console.error("Could not start speech recognition:", error);
-                    }
-                } else {
-                    micBusy = true;
-                    recognition.stop();
-                    setTimeout(() => {
-                        micBusy = false;
-                    }, 400);
-                }
-            });
-
-            chatState.recognition = recognition;
-        }
-
-        function stopMicVisualState() {
-            const micBtn = document.getElementById("micBtn");
-            chatState.isRecording = false;
-
-            if (micBtn) {
-                micBtn.classList.remove("is-recording");
-                micBtn.setAttribute("aria-label", "Start voice input");
-                micBtn.title = "Start voice input";
-            }
-        }
-
-        function getDraftStorageKey() {
-            return `${chatState.draftKeyPrefix}${window.conversationId || "new"}`;
-        }
-
-        function saveDraft() {
-            const input = document.getElementById("chat-input");
-            if (!input) return;
-            localStorage.setItem(getDraftStorageKey(), input.value || "");
-        }
-
-        function restoreDraft() {
-            const input = document.getElementById("chat-input");
-            if (!input) return;
-
-            const draft = localStorage.getItem(getDraftStorageKey()) || "";
-            input.value = draft;
+        async function sendMessage() {
+            const text = input.value.trim();
+            if (!text || chatState.isStreamingResponse) return;
+
+            document.getElementById('chatEmpty').hidden = true;
+            const messages = document.getElementById('messages');
+            messages.hidden = false;
+
+            appendMessage('user', text);
+            input.value = '';
             autoResizeTextarea(input);
-            
-            const sendBtn = document.getElementById("send-btn");
-            if(sendBtn) sendBtn.style.opacity = draft.trim().length > 0 ? "1" : "0.7";
-        }
 
-        function clearDraft() {
-            localStorage.removeItem(getDraftStorageKey());
+            chatState.isStreamingResponse = true;
+            document.getElementById('typingRow').hidden = false;
+
+            try {
+                await streamAssistantResponse("/chat/", {
+                    message: text,
+                    conversation_id: window.conversationId,
+                    response_mode: document.getElementById('responseMode').value
+                });
+            } finally {
+                chatState.isStreamingResponse = false;
+                document.getElementById('typingRow').hidden = true;
+            }
         }
 
         async function streamAssistantResponse(url, bodyData) {
             try {
-                const token = localStorage.getItem("access_token");
-
                 const response = await fetch(url, {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        ...(token ? { Authorization: `Bearer ${token}` } : {})
-                    },
-                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(bodyData)
                 });
 
-                if (!response.ok || !response.body) {
-                    let data = {};
-                    try { data = await response.json(); } catch { data = {}; }
-
-                    if (response.status === 401) {
-                        localStorage.removeItem("access_token");
-                        localStorage.removeItem("current_user");
-                        window.location.href = "/login";
-                        return;
-                    }
-
-                    appendMessage("assistant", data.detail || `Request failed (${response.status}).`);
-                    showStatusBanner("error", data.detail || `Request failed (${response.status}).`);
-                    return;
-                }
-
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
-
                 let fullText = "";
-                let receivedAnyChunk = false;
-                let buffer = ""; 
+                let buffer = "";
 
-                createOrResetStreamingAssistantMessage();
+                createOrResetStreamingMessage();
 
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
 
                     buffer += decoder.decode(value, { stream: true });
-                    const messages = buffer.split(/\n\n/);
-                    
-                    buffer = messages.pop() || "";
+                    const parts = buffer.split('\n\n');
+                    buffer = parts.pop();
 
-                    for (const message of messages) {
-                        if (!message.trim()) continue;
-
-                        const lines = message.split('\n');
-                        for (const line of lines) {
-                            if (line.startsWith('data:')) {
-                                let chunkData = line.slice(5);
-                                
-                                if (chunkData.startsWith(' ')) {
-                                    chunkData = chunkData.slice(1);
-                                }
-                                
-                                if (chunkData === '[DONE]') continue;
-
-                                receivedAnyChunk = true;
-                                fullText += chunkData;
-                                
-                                updateAssistantMessage(fullText);
-                            }
+                    for (const part of parts) {
+                        const line = part.split('\n').find(l => l.startsWith('data: '));
+                        if (line) {
+                            const chunk = line.slice(6);
+                            if (chunk === '[DONE]') continue;
+                            fullText += chunk;
+                            updateAssistantMessage(fullText);
                         }
                     }
                 }
-
-                if (!receivedAnyChunk && !fullText.trim()) {
-                    updateAssistantMessage("Sorry, something went wrong.");
-                }
-            } catch (error) {
-                console.error("Stream failed:", error);
-
-                const isNetworkDrop =
-                    error instanceof TypeError &&
-                    /load failed|network connection was lost|fetch/i.test(String(error.message || error));
-
-                if (isNetworkDrop) {
-                    appendMessage("assistant", "The connection dropped while waiting for a response. Please try again.");
-                    showStatusBanner("error", "The connection was lost while generating the reply.");
-                    return;
-                }
-
-                appendMessage("assistant", `Connection error: ${error?.message || "Unknown error"}`);
-                showStatusBanner("error", "The connection was lost while generating the reply.");
+            } catch (err) {
+                console.error(err);
+                appendMessage('assistant', 'Connection error.');
             }
         }
 
-        async function sendMessage() {
-            const input = document.getElementById("chat-input");
-            if (!input || chatState.isStreamingResponse) return;
-
-            const message = input.value.trim();
-            if (!message) return;
-
-            removeChatEmptyState();
-            ensureMessagesContainer();
-            appendMessage("user", message);
-            input.value = "";
-            autoResizeTextarea(input);
-            clearDraft();
-            
-            const sendBtn = document.getElementById("send-btn");
-            if(sendBtn) sendBtn.style.opacity = "0.7";
-
-            setSendLoading(true);
-            showTypingIndicator(true);
-            chatState.isStreamingResponse = true;
-
-            try {
-                await streamAssistantResponse("/chat/", {
-                    message,
-                    conversation_id: window.conversationId || null,
-                    document_text: window.currentDocumentText,
-                    document_name: window.currentDocumentName,
-                    response_mode: getResponseMode()
-                });
-
-                await loadConversations(true);
-            } finally {
-                chatState.isStreamingResponse = false;
-                showTypingIndicator(false);
-                setSendLoading(false);
-            }
-        }
-
-        function createMessageElement(role, text = "", messageId = null, timestamp = null) {
-            const wrapper = document.createElement("div");
-            wrapper.className = `ica-message-wrapper ${role === "user" ? "is-user" : "is-assistant"}`;
-            if (messageId) wrapper.dataset.messageId = messageId;
-
-            const avatar = document.createElement("div");
-            avatar.className = "ica-message-avatar";
-            avatar.textContent = role === "assistant" ? "IC" : getUserInitials();
-
-            const block = document.createElement("div");
-            block.className = "ica-message-block";
-
-            const meta = document.createElement("div");
-            meta.className = "ica-message-meta";
-
-            const roleLabel = role === "assistant" ? "IndiCare" : "You";
-            const displayTime = formatTime(timestamp ? new Date(timestamp) : new Date());
-
-            meta.textContent = `${roleLabel} · ${displayTime}`;
-
-            const msg = document.createElement("div");
-            msg.className = `ica-message ${role === "user" ? "is-user" : "is-assistant"}`;
-
-            block._messageEl = msg;
-            block._rawText = text;
-            block._messageId = messageId;
-
-            if (role === "assistant") {
-                msg.innerHTML = renderMarkdown(text);
-
-                const actions = document.createElement("div");
-                actions.className = "ica-message-actions";
-
-                const copyBtn = document.createElement("button");
-                copyBtn.className = "ica-copy-btn";
-                copyBtn.type = "button";
-                copyBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;margin-right:4px;vertical-align:middle;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>Copy`;
-                copyBtn.setAttribute("data-copy-text", text);
-
-                actions.appendChild(copyBtn);
-                block.appendChild(meta);
-                block.appendChild(msg);
-                block.appendChild(actions);
-            } else {
-                msg.textContent = text;
-
-                const actions = document.createElement("div");
-                actions.className = "ica-message-actions";
-
-                if (messageId) {
-                    const editBtn = document.createElement("button");
-                    editBtn.className = "ica-copy-btn";
-                    editBtn.type = "button";
-                    editBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;margin-right:4px;vertical-align:middle;"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>Edit`;
-                    editBtn.setAttribute("data-edit-message-id", messageId);
-                    editBtn.setAttribute("data-current-text", encodeURIComponent(text));
-                    actions.appendChild(editBtn);
-                }
-
-                block.appendChild(meta);
-                block.appendChild(msg);
-                if (messageId) block.appendChild(actions);
-            }
-
-            if (role === "user") {
-                wrapper.appendChild(block);
-            } else {
-                wrapper.appendChild(avatar);
-                wrapper.appendChild(block);
-            }
-
-            return wrapper;
-        }
-
-        function appendMessage(role, text, messageId = null, timestamp = null) {
-            const messages = ensureMessagesContainer();
-            if (!messages) return;
-
-            const el = createMessageElement(role, text, messageId, timestamp);
-            messages.appendChild(el);
+        function appendMessage(role, text) {
+            const container = document.getElementById('messages');
+            const wrapper = document.createElement('div');
+            wrapper.className = `ica-message-wrapper is-${role}`;
+            wrapper.innerHTML = `
+                ${role === 'assistant' ? '<div class="ica-message-avatar">IC</div>' : ''}
+                <div class="ica-message">${role === 'user' ? escapeHtml(text) : renderMarkdown(text)}</div>
+            `;
+            container.appendChild(wrapper);
             scrollChatToBottom();
         }
 
-        function createOrResetStreamingAssistantMessage() {
-            const messages = ensureMessagesContainer();
-            if (!messages) return;
+        function createOrResetStreamingMessage() {
+            const container = document.getElementById('messages');
+            const existing = document.getElementById('streaming-msg');
+            if (existing) existing.remove();
 
-            const existingStreaming = messages.querySelector('.ica-message-wrapper.is-assistant[data-streaming="true"]');
-            if (existingStreaming) existingStreaming.remove();
-
-            const wrapper = createMessageElement("assistant", "");
-            wrapper.dataset.streaming = "true";
-            messages.appendChild(wrapper);
-            scrollChatToBottom();
+            const wrapper = document.createElement('div');
+            wrapper.id = 'streaming-msg';
+            wrapper.className = 'ica-message-wrapper is-assistant';
+            wrapper.innerHTML = '<div class="ica-message-avatar">IC</div><div class="ica-message"></div>';
+            container.appendChild(wrapper);
         }
 
         function updateAssistantMessage(text) {
-            const messages = document.getElementById("messages");
-            if (!messages) return;
-
-            const streamingWrappers = messages.querySelectorAll('.ica-message-wrapper.is-assistant[data-streaming="true"]');
-            const lastStreaming = streamingWrappers[streamingWrappers.length - 1];
-            const lastAssistant = lastStreaming || messages.querySelector(".ica-message-wrapper.is-assistant:last-of-type");
-
-            if (!lastAssistant) {
-                appendMessage("assistant", text);
-                return;
-            }
-
-            const block = lastAssistant.querySelector(".ica-message-block");
-            const msg = block?.querySelector(".ica-message.is-assistant");
-            const copyBtn = block?.querySelector("[data-copy-text]");
-
+            const msg = document.querySelector('#streaming-msg .ica-message');
             if (msg) msg.innerHTML = renderMarkdown(text);
-            if (block) block._rawText = text;
-            if (copyBtn) copyBtn.setAttribute("data-copy-text", text);
-
             scrollChatToBottom();
         }
 
-        function renderMarkdown(text) {
-            const source = String(text || "").replace(/\r\n/g, "\n");
-            const escaped = escapeHtml(source);
-            const lines = escaped.split("\n");
-
-            let html = "";
-            let inCodeBlock = false;
-            let inUl = false;
-            let inOl = false;
-            let inBlockquote = false;
-            let paragraphBuffer = [];
-
-            function flushParagraph() {
-                if (!paragraphBuffer.length) return;
-                html += `<p>${paragraphBuffer.join("<br>")}</p>`;
-                paragraphBuffer = [];
-            }
-
-            function closeLists() {
-                if (inUl) { html += "</ul>"; inUl = false; }
-                if (inOl) { html += "</ol>"; inOl = false; }
-            }
-
-            function closeBlockquote() {
-                if (inBlockquote) { html += "</blockquote>"; inBlockquote = false; }
-            }
-
-            for (const rawLine of lines) {
-                const line = rawLine;
-
-                if (line.trim().startsWith("```")) {
-                    flushParagraph(); closeLists(); closeBlockquote();
-                    if (!inCodeBlock) { inCodeBlock = true; html += "<pre><code>"; } else { inCodeBlock = false; html += "</code></pre>"; }
-                    continue;
-                }
-
-                if (inCodeBlock) { html += `${line}\n`; continue; }
-
-                if (!line.trim()) { flushParagraph(); closeLists(); closeBlockquote(); continue; }
-
-                const headingMatch = line.match(/^(#{1,6})\s+(.*)$/);
-                if (headingMatch) {
-                    flushParagraph(); closeLists(); closeBlockquote();
-                    const level = headingMatch[1].length;
-                    html += `<h${level} style="margin-top: 1.5em; margin-bottom: 0.5em; font-weight: 600; color: var(--text-primary);">${applyInlineMarkdown(headingMatch[2])}</h${level}>`;
-                    continue;
-                }
-
-                const blockquoteMatch = line.match(/^&gt;\s?(.*)$/);
-                if (blockquoteMatch) {
-                    flushParagraph(); closeLists();
-                    if (!inBlockquote) { html += "<blockquote>"; inBlockquote = true; }
-                    html += `<p>${applyInlineMarkdown(blockquoteMatch[1])}</p>`;
-                    continue;
-                } else { closeBlockquote(); }
-
-                const ulMatch = line.match(/^[-*]\s+(.*)$/);
-                if (ulMatch) {
-                    flushParagraph();
-                    if (inOl) { html += "</ol>"; inOl = false; }
-                    if (!inUl) { html += "<ul>"; inUl = true; }
-                    html += `<li>${applyInlineMarkdown(ulMatch[1])}</li>`;
-                    continue;
-                }
-
-                const olMatch = line.match(/^\d+\.\s+(.*)$/);
-                if (olMatch) {
-                    flushParagraph();
-                    if (inUl) { html += "</ul>"; inUl = false; }
-                    if (!inOl) { html += "<ol>"; inOl = true; }
-                    html += `<li>${applyInlineMarkdown(olMatch[1])}</li>`;
-                    continue;
-                }
-
-                closeLists();
-                paragraphBuffer.push(applyInlineMarkdown(line));
-            }
-
-            flushParagraph(); closeLists(); closeBlockquote();
-            if (inCodeBlock) html += "</code></pre>";
-
-            return html;
-        }
-
-        function applyInlineMarkdown(text) {
-            return String(text)
-                .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                .replace(/__(.*?)__/g, "<strong>$1</strong>")
-                .replace(/\*(.*?)\*/g, "<em>$1</em>")
-                .replace(/_(.*?)_/g, "<em>$1</em>")
-                .replace(/`([^`]+)`/g, "<code>$1</code>");
-        }
-
-        function removeChatEmptyState() {
-            const empty = document.getElementById("chatEmpty");
-            if (empty) empty.hidden = true;
-        }
-
-        function clearChatWindow() {
-            const messages = document.getElementById("messages");
-            const empty = document.getElementById("chatEmpty");
-
-            if (messages) {
-                messages.innerHTML = "";
-                messages.hidden = true;
-            }
-
-            if (empty) empty.hidden = false;
-
-            showTypingIndicator(false);
-            applyWelcomeMessage();
-        }
-
-        function ensureMessagesContainer() {
-            const messages = document.getElementById("messages");
-            if (!messages) return null;
-
-            messages.hidden = false;
-            removeChatEmptyState();
-            return messages;
-        }
-
-        function startNewConversation() {
-            window.conversationId = null;
-            window.currentDocumentText = null;
-            window.currentDocumentName = null;
-            clearChatWindow();
-            setConversationHeading("New conversation");
-            renderConversationSelection();
-            refreshUploadStatus();
-            restoreDraft();
-            closeSidebar();
-        }
-
-        function setConversationHeading(text) {
-            const heading = document.getElementById("conversationHeading");
-            if (heading) heading.textContent = text || "New conversation";
-        }
-
-        function setSendLoading(isLoading) {
-            const sendBtn = document.getElementById("send-btn");
-            if (!sendBtn) return;
-
-            sendBtn.classList.toggle("is-loading", isLoading);
-            sendBtn.disabled = isLoading;
-        }
-
-        function showTypingIndicator(show) {
-            const typingRow = document.getElementById("typingRow");
-            if (!typingRow) return;
-
-            typingRow.hidden = !show;
-            if (show) scrollChatToBottom();
-        }
-
-        async function apiRequest(url, options = {}) {
-            try {
-                const token = localStorage.getItem("access_token");
-                const response = await fetch(url, {
-                    ...options,
-                    headers: {
-                        "Content-Type": "application/json",
-                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                        ...options.headers
-                    }
-                });
-
-                if (!response.ok) {
-                    if (response.status === 401) {
-                        localStorage.removeItem("access_token");
-                        window.location.href = "/login";
-                        throw new Error("Unauthorized");
-                    }
-                    throw new Error(`API error: ${response.status}`);
-                }
-                return await response.json();
-            } catch (error) {
-                console.warn("API request ignored for local test viewing:", error);
-                return []; 
-            }
-        }
-
-        async function loadConversations(autoOpenLatest = false) {
-            const list = document.getElementById("conversationList");
-            if (!list) return;
-
-            try {
-                const rows = await apiRequest("/chat/conversations");
-                chatState.historyRows = Array.isArray(rows) ? rows : [];
-
-                if (!chatState.historyRows.length) {
-                    list.innerHTML = `<div class="ica-history-empty" style="padding:16px; font-size: 0.8rem; color: #9ca3af;">No history yet.</div>`;
-                    updateHistoryCount(0);
-                    if (!window.conversationId) setConversationHeading("New conversation");
-                    return;
-                }
-
-                if (autoOpenLatest && !window.conversationId) {
-                    await openConversation(chatState.historyRows[0].id, chatState.historyRows[0].title || "Conversation", false);
-                }
-
-                const searchValue = document.getElementById("historySearch")?.value?.trim() || "";
-                renderConversationList(chatState.historyRows, searchValue);
-            } catch (error) {
-                console.error("Failed to load conversations:", error);
-                list.innerHTML = `<div class="ica-history-empty" style="padding:16px; font-size: 0.8rem; color: #9ca3af;">Could not load history.</div>`;
-                updateHistoryCount(0);
-            }
-        }
-
-        function renderConversationList(rows, filter = "") {
-            const list = document.getElementById("conversationList");
-            if (!list) return;
-
-            const query = filter.toLowerCase();
-            const filteredRows = rows.filter((row) => {
-                const title = String(row.title || "New chat").toLowerCase();
-                return !query || title.includes(query);
-            });
-
-            updateHistoryCount(filteredRows.length);
-
-            if (!filteredRows.length) {
-                list.innerHTML = `<div class="ica-history-empty" style="padding:16px; font-size: 0.8rem; color: #9ca3af;">No matching conversations.</div>`;
-                return;
-            }
-
-            list.innerHTML = filteredRows.map((row) => `
-                <article class="ica-history-item ${String(window.conversationId) === String(row.id) ? "is-active" : ""}" data-row-id="${row.id}" tabindex="0">
-                    <div class="ica-history-item-top">
-                        <div class="ica-history-item-title">${escapeHtml(row.title || "New chat")}</div>
-                        <div class="ica-history-actions">
-                            <button class="ica-history-icon-btn" type="button" data-rename-id="${row.id}" data-title="${escapeHtmlAttr(row.title || "Conversation")}" aria-label="Rename conversation" title="Rename">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                            </button>
-                            <button class="ica-history-icon-btn" type="button" data-delete-id="${row.id}" aria-label="Delete conversation" title="Delete">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                            </button>
-                        </div>
-                    </div>
-                </article>
-            `).join("");
-
-            list.querySelectorAll("[data-rename-id]").forEach((btn) => {
-                btn.addEventListener("click", async (e) => {
-                    e.stopPropagation();
-                    await renameConversationInline(btn.dataset.renameId, btn.dataset.title || "");
-                });
-            });
-
-            list.querySelectorAll("[data-delete-id]").forEach((btn) => {
-                btn.addEventListener("click", async (e) => {
-                    e.stopPropagation();
-                    await deleteConversation(btn.dataset.deleteId);
-                });
-            });
-
-            list.querySelectorAll(".ica-history-item").forEach((item) => {
-                item.addEventListener("click", async () => {
-                    await openConversation(item.dataset.rowId, item.querySelector('.ica-history-item-title').textContent);
-                });
-
-                item.addEventListener("keydown", async (e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        await openConversation(item.dataset.rowId, item.querySelector('.ica-history-item-title').textContent);
-                    }
-                });
-            });
-        }
-
-        function updateHistoryCount(count) {
-            const countEl = document.getElementById("historyCount");
-            if (countEl) countEl.textContent = String(count);
-        }
-
-        function renderConversationSelection() {
-            document.querySelectorAll(".ica-history-item").forEach((item) => {
-                item.classList.remove("is-active");
-            });
-        }
-
-        async function openConversation(conversationId, title = "Conversation", reloadList = true) {
-            try {
-                const payload = await apiRequest(`/chat/conversations/${conversationId}`);
-                window.conversationId = conversationId;
-
-                const rows = Array.isArray(payload.messages) ? payload.messages : [];
-                const documentInfo = payload.document || null;
-
-                window.currentDocumentText = documentInfo?.text || null;
-                window.currentDocumentName = documentInfo?.filename || null;
-                refreshUploadStatus();
-
-                clearChatWindow();
-
-                if (rows.length) {
-                    ensureMessagesContainer();
-                    rows.forEach((row) => {
-                        appendMessage(row.role, row.message || "", row.id || null, row.created_at || null);
-                    });
-                }
-
-                setConversationHeading(title || "Conversation");
-
-                if (reloadList) {
-                    await loadConversations(false);
-                }
-
-                restoreDraft();
-                closeSidebar();
-            } catch (error) {
-                console.error("Failed to open conversation:", error);
-                showStatusBanner("error", "Failed to open conversation.");
-            }
-        }
-
-        async function renameConversationInline(conversationId, currentTitle = "") {
-            const button = document.querySelector(`.ica-history-item [data-rename-id="${cssEscapeSafe(String(conversationId))}"]`);
-            const item = button?.closest(".ica-history-item");
-            if (!item) return;
-
-            const titleEl = item.querySelector(".ica-history-item-title");
-            if (!titleEl) return;
-            if (item.querySelector(".ica-rename-input")) return;
-
-            const input = document.createElement("input");
-            input.className = "ica-rename-input";
-            input.value = currentTitle;
-            input.type = "text";
-            input.maxLength = 120;
-
-            titleEl.replaceWith(input);
-            input.focus();
-            input.select();
-
-            const commit = async () => {
-                const newTitle = input.value.trim();
-                if (!newTitle) {
-                    renderConversationList(chatState.historyRows, document.getElementById("historySearch")?.value?.trim() || "");
-                    return;
-                }
-
-                try {
-                    await apiRequest(`/chat/conversations/${conversationId}/rename`, {
-                        method: "POST",
-                        body: JSON.stringify({ title: newTitle })
-                    });
-
-                    if (String(window.conversationId) === String(conversationId)) {
-                        setConversationHeading(newTitle);
-                    }
-
-                    await loadConversations(false);
-                } catch (error) {
-                    console.error("Failed to rename conversation:", error);
-                    showStatusBanner("error", "Failed to rename conversation.");
-                    await loadConversations(false);
-                }
-            };
-
-            input.addEventListener("keydown", async (e) => {
-                if (e.key === "Enter") {
-                    e.preventDefault();
-                    await commit();
-                }
-                if (e.key === "Escape") {
-                    renderConversationList(chatState.historyRows, document.getElementById("historySearch")?.value?.trim() || "");
-                }
-            });
-
-            input.addEventListener("blur", commit, { once: true });
-        }
-
-        async function deleteConversation(conversationId) {
-            const confirmed = window.confirm("Are you sure you want to delete this conversation?");
-            if (!confirmed) return;
-
-            try {
-                await apiRequest(`/chat/conversations/${conversationId}`, {
-                    method: "DELETE"
-                });
-
-                if (String(window.conversationId) === String(conversationId)) {
-                    startNewConversation();
-                }
-
-                await loadConversations(false);
-            } catch (error) {
-                console.error("Failed to delete conversation:", error);
-                showStatusBanner("error", "Failed to delete conversation.");
-            }
-        }
-
-        async function startInlineMessageEdit(messageId, currentText) {
-            const wrapper = document.querySelector(`.ica-message-wrapper.is-user[data-message-id="${cssEscapeSafe(String(messageId))}"]`);
-            if (!wrapper) return;
-
-            const messageEl = wrapper.querySelector(".ica-message.is-user");
-            const actionsEl = wrapper.querySelector(".ica-message-actions");
-            if (!messageEl || !actionsEl) return;
-            if (wrapper.querySelector(".ica-inline-edit-wrap")) return;
-
-            messageEl.hidden = true;
-            actionsEl.hidden = true;
-
-            const editWrap = document.createElement("div");
-            editWrap.className = "ica-inline-edit-wrap";
-            editWrap.innerHTML = `
-                <textarea
-                    class="ica-inline-edit-textarea"
-                    data-editing-message-id="${escapeHtmlAttr(String(messageId))}"
-                    rows="1"
-                    aria-label="Edit message"
-                >${escapeHtml(currentText)}</textarea>
-                <div class="ica-message-actions" style="opacity:1;">
-                    <button class="ica-btn-primary" style="padding: 6px 12px; font-size: 0.8rem;" type="button" data-save-edit-message-id="${escapeHtmlAttr(String(messageId))}">Save & Submit</button>
-                    <button class="ica-btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; width: auto;" type="button" data-cancel-edit-message-id="${escapeHtmlAttr(String(messageId))}">Cancel</button>
-                </div>
-            `;
-
-            wrapper.querySelector(".ica-message-block")?.appendChild(editWrap);
-
-            const textarea = editWrap.querySelector(".ica-inline-edit-textarea");
-            if (textarea) {
-                textarea.value = currentText;
-                autoResizeTextarea(textarea);
-                textarea.focus();
-                textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-            }
-        }
-
-        function cancelInlineMessageEdit(messageId) {
-            const wrapper = document.querySelector(`.ica-message-wrapper.is-user[data-message-id="${cssEscapeSafe(String(messageId))}"]`);
-            if (!wrapper) return;
-
-            wrapper.querySelector(".ica-inline-edit-wrap")?.remove();
-
-            const messageEl = wrapper.querySelector(".ica-message.is-user");
-            const actionsEl = wrapper.querySelector(".ica-message-actions");
-
-            if (messageEl) messageEl.hidden = false;
-            if (actionsEl) actionsEl.hidden = false;
-        }
-
-        async function submitInlineMessageEdit(messageId) {
-            const wrapper = document.querySelector(`.ica-message-wrapper.is-user[data-message-id="${cssEscapeSafe(String(messageId))}"]`);
-            if (!wrapper) return;
-
-            const textarea = wrapper.querySelector(`.ica-inline-edit-textarea[data-editing-message-id="${cssEscapeSafe(String(messageId))}"]`);
-            if (!textarea) return;
-
-            const newText = textarea.value.trim();
-            const originalText = wrapper.querySelector(".ica-message.is-user")?.textContent?.trim() || "";
-
-            if (!newText) {
-                cancelInlineMessageEdit(messageId);
-                return;
-            }
-
-            if (newText === originalText) {
-                cancelInlineMessageEdit(messageId);
-                return;
-            }
-
-            let current = wrapper;
-            while (current) {
-                const next = current.nextElementSibling;
-                current.remove();
-                current = next;
-            }
-
-            appendMessage("user", newText, messageId);
-            showTypingIndicator(true);
-            setSendLoading(true);
-
-            await streamAssistantResponse(`/chat/messages/${messageId}/edit`, {
-                message: newText,
-                document_text: window.currentDocumentText,
-                document_name: window.currentDocumentName,
-                response_mode: getResponseMode()
-            });
-
-            showTypingIndicator(false);
-            setSendLoading(false);
-
-            if (window.conversationId) {
-                await openConversation(
-                    window.conversationId,
-                    document.getElementById("conversationHeading")?.textContent || "Conversation",
-                    false
-                );
-            }
-
-            await loadConversations(false);
-        }
-
-        function formatDate(value) {
-            if (!value) return "-";
-            const date = new Date(value);
-            if (Number.isNaN(date.getTime())) return String(value);
-            return date.toLocaleString("en-GB");
-        }
-
-        function formatTime(date) {
-            return new Intl.DateTimeFormat("en-GB", {
-                hour: "2-digit",
-                minute: "2-digit"
-            }).format(date);
-        }
-
         function autoResizeTextarea(el) {
-            if (!el) return;
-            el.style.height = "auto";
-            el.style.height = Math.min(el.scrollHeight, 150) + "px";
+            el.style.height = 'auto';
+            el.style.height = el.scrollHeight + 'px';
         }
 
         function scrollChatToBottom() {
-            const chat = document.getElementById("chat");
-            if (!chat) return;
-            requestAnimationFrame(() => {
-                chat.scrollTop = chat.scrollHeight;
+            const chat = document.getElementById('chat');
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function renderMarkdown(text) {
+            // Simple markdown logic for the example
+            return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+        }
+
+        function applyWelcomeMessage() {
+            const hour = new Date().getHours();
+            const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+            document.getElementById('welcomeHeading').textContent = greeting;
+        }
+
+        function bindDocumentUpload() {
+            const up = document.getElementById('documentUpload');
+            up.addEventListener('change', () => {
+                const file = up.files[0];
+                if (file) {
+                    const chip = document.getElementById('documentChip');
+                    chip.classList.remove('ica-hidden');
+                    document.getElementById('documentChipText').textContent = file.name;
+                }
+            });
+            document.getElementById('clearDocumentBtn').addEventListener('click', () => {
+                document.getElementById('documentChip').classList.add('ica-hidden');
+                up.value = '';
             });
         }
 
-        function cssEscapeSafe(value) {
-            if (window.CSS && typeof window.CSS.escape === "function") {
-                return window.CSS.escape(value);
-            }
-            return String(value).replace(/["\\]/g, "\\$&");
+        async function loadConversations() {
+            // Placeholder for actual API call
+            const list = document.getElementById('conversationList');
+            list.innerHTML = '<div style="padding:10px; font-size:0.8rem; color:gray;">Recent chats will appear here.</div>';
         }
 
-        function escapeHtml(value) {
-            return String(value ?? "")
-                .replaceAll("&", "&amp;")
-                .replaceAll("<", "&lt;")
-                .replaceAll(">", "&gt;")
-                .replaceAll('"', "&quot;")
-                .replaceAll("'", "&#039;");
-        }
-
-        function escapeHtmlAttr(value) {
-            return escapeHtml(value);
-        }
-
-        document.addEventListener("DOMContentLoaded", () => {
-            initChat();
-        });
+        document.addEventListener('DOMContentLoaded', initChat);
     </script>
 </body>
 </html>
