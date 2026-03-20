@@ -155,28 +155,30 @@
                     <div class="ica-composer-inner">
                         <div class="ica-status-banner" id="statusBanner" role="status" aria-live="polite" aria-atomic="true"></div>
 
-                        <div class="ica-document-row">
-                            <div id="documentChip" class="ica-document-chip ica-hidden">
-                                <span id="documentChipText"></span>
-                                <button
-                                    id="clearDocumentBtn"
-                                    class="ica-chip-remove"
-                                    type="button"
-                                    aria-label="Remove uploaded document"
-                                >×</button>
+                        <div class="ica-composer-topbar">
+                            <div class="ica-document-row">
+                                <div id="documentChip" class="ica-document-chip ica-hidden">
+                                    <span id="documentChipText"></span>
+                                    <button
+                                        id="clearDocumentBtn"
+                                        class="ica-chip-remove"
+                                        type="button"
+                                        aria-label="Remove uploaded document"
+                                    >×</button>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="ica-response-mode" aria-label="Response mode selection">
-                            <label for="responseMode" class="ica-response-mode-label">Response mode</label>
-                            <select id="responseMode" class="ica-response-mode-select" aria-describedby="responseModeHint">
-                                <option value="quick">Quick</option>
-                                <option value="balanced" selected>Balanced</option>
-                                <option value="deep">Deep review</option>
-                            </select>
-                            <span id="responseModeHint" class="ica-sr-only">
-                                Quick gives faster replies, Balanced suits most tasks, and Deep review gives more detail.
-                            </span>
+                            <div class="ica-response-mode" aria-label="Response mode selection">
+                                <label for="responseMode" class="ica-response-mode-label">Mode</label>
+                                <select id="responseMode" class="ica-response-mode-select" aria-describedby="responseModeHint">
+                                    <option value="quick">Quick</option>
+                                    <option value="balanced" selected>Balanced</option>
+                                    <option value="deep">Deep review</option>
+                                </select>
+                                <span id="responseModeHint" class="ica-sr-only">
+                                    Quick gives faster replies, Balanced suits most tasks, and Deep review gives more detail.
+                                </span>
+                            </div>
                         </div>
 
                         <div class="ica-chatbar">
