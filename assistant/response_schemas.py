@@ -6,16 +6,16 @@ from typing import Any
 SCHEMAS = {
     "handover": {
         "title": "Shift Handover",
-        "purpose": "A concise but useful operational handover for the next staff team.",
+        "purpose": "A concise, useful operational handover for the next staff team.",
         "sections": [
             "Key events on shift",
             "Presentation and wellbeing",
-            "Important conversations or disclosures",
-            "Incidents / concerns",
-            "Actions taken",
-            "Medication / health / appointments",
+            "Important conversations, disclosures, or notable comments",
+            "Incidents, concerns, or changes",
+            "Actions taken by staff",
+            "Health, medication, appointments, or routine issues",
             "What the next shift needs to know",
-            "What needs monitoring / follow-up",
+            "What needs monitoring, follow-up, or escalation",
         ],
         "style_notes": [
             "Keep it concise, clear, and practical.",
@@ -31,10 +31,10 @@ SCHEMAS = {
             "Incident overview",
             "What was observed",
             "What the child said",
-            "Staff actions taken",
+            "What staff did",
             "Outcome / current presentation",
             "Who was informed",
-            "Recording / follow-up required",
+            "Recording, review, or follow-up required",
         ],
         "style_notes": [
             "Separate observation from interpretation.",
@@ -60,12 +60,12 @@ SCHEMAS = {
     },
     "manager_update": {
         "title": "Manager Update",
-        "purpose": "A concise management-facing summary with oversight and next steps.",
+        "purpose": "A concise management-facing summary with oversight, risks, and next steps.",
         "sections": [
             "Brief overview",
             "Key concerns / issues",
             "Actions already taken",
-            "Outstanding risks or gaps",
+            "Outstanding risks, contradictions, or gaps",
             "What may need management review",
             "Recommended next steps",
         ],
@@ -82,7 +82,7 @@ SCHEMAS = {
             "Presenting needs / context",
             "What staff are noticing",
             "Known triggers / patterns",
-            "What helps",
+            "What appears to help",
             "What staff should do",
             "What staff should avoid",
             "What should be recorded",
@@ -97,27 +97,28 @@ SCHEMAS = {
     },
     "reflective_debrief": {
         "title": "Reflective Debrief",
-        "purpose": "A structured debrief focused on staff reflection and learning.",
+        "purpose": "A structured debrief focused on staff reflection, learning, and supervision usefulness.",
         "sections": [
             "What happened from the staff perspective",
             "What stood out",
-            "What felt difficult or uncertain",
-            "What may have influenced decision-making",
-            "What may be useful to think about further",
+            "What felt difficult, uncertain, or emotionally loaded",
+            "What may have shaped decision-making",
+            "What may need more thought",
             "Possible learning / supervision points",
         ],
         "style_notes": [
             "Do not over-analyse children.",
             "Keep the tone reflective but grounded.",
             "Support learning without blame.",
+            "Do not let reflection replace practical follow-up where it is needed.",
         ],
     },
     "safeguarding_note": {
         "title": "Safeguarding Note",
-        "purpose": "A factual note that helps staff organise concerns clearly and safely.",
+        "purpose": "A factual note that helps staff organise concerns clearly, safely, and defensibly.",
         "sections": [
             "Nature of concern",
-            "What was observed / disclosed",
+            "What was observed or disclosed",
             "Relevant context",
             "Immediate actions taken",
             "Who was informed",
@@ -149,6 +150,33 @@ SCHEMAS = {
             "Make the child’s day visible without speculation.",
         ],
     },
+    "professional_rewrite": {
+        "title": "Professional Rewrite",
+        "purpose": "A clearer, more professional version of the user's wording while staying true to the facts.",
+        "sections": [
+            "Rewritten version",
+            "Optional notes on wording improvements or remaining gaps",
+        ],
+        "style_notes": [
+            "Keep the meaning anchored to the original content.",
+            "Do not invent facts or outcomes.",
+            "Use clear, professional, defensible language.",
+        ],
+    },
+    "practical_response": {
+        "title": "Practical Response",
+        "purpose": "A direct, useful response for residential care staff when no more specific schema is a better fit.",
+        "sections": [
+            "What matters most here",
+            "Suggested staff response / next steps",
+            "What should be recorded / handed over / reviewed if relevant",
+        ],
+        "style_notes": [
+            "Keep the answer practical and relevant.",
+            "Do not become generic if the user has given specific details.",
+            "Use headings only where they improve clarity.",
+        ],
+    },
 }
 
 
@@ -161,7 +189,11 @@ MODE_TO_SCHEMA = {
     "manager_review": "manager_update",
     "reflective": "reflective_debrief",
     "supervision": "reflective_debrief",
+    "rewrite": "professional_rewrite",
     "safeguarding": "safeguarding_note",
+    "practical": "practical_response",
+    "general_practice": "practical_response",
+    "factual": "practical_response",
 }
 
 
@@ -184,13 +216,16 @@ def get_schema_for_mode(mode: str, safeguarding_level: str = "normal") -> dict[s
     """
     mode = _safe_string(mode)
 
-    if safeguarding_level in {"heightened", "urgent"} and mode in {"recording", "incident_summary", "practical"}:
+    # Heightened safeguarding should override operational recording-style tasks
+    if safeguarding_level in {"heightened", "urgent"} and mode in {
+        "recording",
+        "incident_summary",
+        "practical",
+        "general_practice",
+    }:
         return SCHEMAS.get("safeguarding_note")
 
-    schema_name = MODE_TO_SCHEMA.get(mode)
-    if not schema_name:
-        return None
-
+    schema_name = MODE_TO_SCHEMA.get(mode, "practical_response")
     return SCHEMAS.get(schema_name)
 
 
@@ -227,5 +262,8 @@ def schema_to_prompt_block(schema: dict[str, Any] | None) -> str:
         lines.append("Style notes:")
         for note in style_notes:
             lines.append(f"• {note}")
+
+    lines.append("")
+    lines.append("Use this structure flexibly. Keep the answer relevant to the actual request rather than forcing every section in.")
 
     return "\n".join(lines).strip()
