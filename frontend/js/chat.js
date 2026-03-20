@@ -382,6 +382,14 @@ function getAdultFirstName() {
     }
 }
 
+function getUserInitials() {
+    const firstName = getAdultFirstName();
+    if (firstName) {
+        return firstName.trim().slice(0, 1).toUpperCase();
+    }
+    return "Y";
+}
+
 function getTimeGreeting() {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
@@ -667,13 +675,17 @@ function createMessageElement(role, text = "", messageId = null, timestamp = nul
     wrapper.className = `ica-message-wrapper ${role === "user" ? "is-user" : "is-assistant"}`;
     if (messageId) wrapper.dataset.messageId = messageId;
 
+    const avatar = document.createElement("div");
+    avatar.className = "ica-message-avatar";
+    avatar.textContent = role === "assistant" ? "IC" : getUserInitials();
+
     const block = document.createElement("div");
     block.className = "ica-message-block";
 
     const meta = document.createElement("div");
     meta.className = "ica-message-meta";
 
-    const roleLabel = role === "assistant" ? "Assistant" : "You";
+    const roleLabel = role === "assistant" ? "IndiCare" : "You";
     const displayTime = formatTime(timestamp ? new Date(timestamp) : new Date());
 
     if (role === "assistant") {
@@ -726,7 +738,14 @@ function createMessageElement(role, text = "", messageId = null, timestamp = nul
         if (messageId) block.appendChild(actions);
     }
 
-    wrapper.appendChild(block);
+    if (role === "user") {
+        wrapper.appendChild(block);
+        wrapper.appendChild(avatar);
+    } else {
+        wrapper.appendChild(avatar);
+        wrapper.appendChild(block);
+    }
+
     return wrapper;
 }
 
