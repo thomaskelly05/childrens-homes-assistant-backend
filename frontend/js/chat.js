@@ -4,7 +4,11 @@ window.currentDocumentName = null;
 
 const chatState = {
     historyRows: [],
-    theme: localStorage.getItem("indicare-theme") || "light"
+    theme: localStorage.getItem("indicare-theme") || "light",
+    recognition: null,
+    isRecording: false,
+    speechSupported: false,
+    draftKeyPrefix: "indicare-chat-draft:"
 };
 
 function initChat() {
@@ -17,8 +21,11 @@ function initChat() {
     bindSidebarControls();
     bindThemeToggle();
     bindGlobalMessageActions();
+    initSpeechToText();
     applyWelcomeMessage();
+    applyFooterMeta();
     refreshUploadStatus();
+    restoreDraft();
     loadConversations(true);
 }
 
@@ -37,9 +44,16 @@ function bindChatInput() {
 
     input.addEventListener("input", () => {
         autoResizeTextarea(input);
+        saveDraft();
     });
 
     input.addEventListener("keydown", (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+            e.preventDefault();
+            document.getElementById("historySearch")?.focus();
+            return;
+        }
+
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             sendMessage();
@@ -49,6 +63,7 @@ function bindChatInput() {
     clearBtn?.addEventListener("click", () => {
         input.value = "";
         autoResizeTextarea(input);
+        saveDraft();
         input.focus();
     });
 
@@ -56,6 +71,7 @@ function bindChatInput() {
         chip.addEventListener("click", () => {
             input.value = chip.textContent?.trim() || "";
             autoResizeTextarea(input);
+            saveDraft();
             input.focus();
         });
     });
@@ -352,13 +368,129 @@ function applyWelcomeMessage() {
     const firstName = getAdultFirstName();
     const greeting = getTimeGreeting();
 
-    heading.textContent = firstName
-        ? `${greeting}, ${firstName}`
-        : `${greeting}`;
+    heading.textContent = firstName ? `${greeting}, ${firstName}` : greeting;
 
     subtext.textContent = firstName
         ? `How can I help with support for ${firstName} today? Ask for help with care records, professional wording, reflection, planning, behaviour support, key work ideas, incident follow-up, or day-to-day residential practice.`
         : `How can I help today? Ask for help with care records, professional wording, reflection, planning, behaviour support, key work ideas, incident follow-up, or day-to-day residential practice.`;
+}
+
+function applyFooterMeta() {
+    const warning = document.getElementById("footerWarning");
+    const copyright = document.getElementById("footerCopyright");
+
+    if (warning) {
+        warning.textContent = "Important: Always accuracy-check AI outputs against the facts provided, current guidance, and your organisation’s policy before use.";
+    }
+
+    if (copyright) {
+        copyright.textContent = `© ${new Date().getFullYear()} IndiCare. All rights reserved.`;
+    }
+}
+
+function initSpeechToText() {
+    const micBtn = document.getElementById("micBtn");
+    const input = document.getElementById("chat-input");
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!micBtn || !input || !SpeechRecognition) {
+        if (micBtn) {
+            micBtn.disabled = true;
+            micBtn.title = "Speech to text not supported in this browser";
+            micBtn.setAttribute("aria-label", "Speech to text not supported");
+        }
+        return;
+    }
+
+    chatState.speechSupported = true;
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-GB";
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.maxAlternatives = 1;
+
+    let baseTextBeforeRecording = "";
+
+    recognition.onstart = () => {
+        chatState.isRecording = true;
+        baseTextBeforeRecording = input.value.trim();
+        micBtn.classList.add("is-recording");
+        micBtn.setAttribute("aria-label", "Stop voice input");
+        micBtn.title = "Listening… click to stop";
+        showStatusBanner("success", "Listening…");
+    };
+
+    recognition.onresult = (event) => {
+        const results = Array.from(event.results);
+        const transcript = results.map((r) => r[0].transcript).join(" ").trim();
+
+        input.value = [baseTextBeforeRecording, transcript].filter(Boolean).join(baseTextBeforeRecording ? " " : "");
+        autoResizeTextarea(input);
+        saveDraft();
+    };
+
+    recognition.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+        stopMicVisualState();
+        showStatusBanner("error", "Voice input could not be completed.");
+    };
+
+    recognition.onend = () => {
+        stopMicVisualState();
+        input.focus();
+        saveDraft();
+    };
+
+    micBtn.addEventListener("click", () => {
+        if (!chatState.isRecording) {
+            try {
+                recognition.start();
+            } catch (error) {
+                console.error("Could not start speech recognition:", error);
+            }
+        } else {
+            recognition.stop();
+        }
+    });
+
+    chatState.recognition = recognition;
+}
+
+function stopMicVisualState() {
+    const micBtn = document.getElementById("micBtn");
+    chatState.isRecording = false;
+
+    if (micBtn) {
+        micBtn.classList.remove("is-recording");
+        micBtn.setAttribute("aria-label", "Start voice input");
+        micBtn.title = "Start voice input";
+    }
+}
+
+function getDraftStorageKey() {
+    return `${chatState.draftKeyPrefix}${window.conversationId || "new"}`;
+}
+
+function saveDraft() {
+    const input = document.getElementById("chat-input");
+    if (!input) return;
+    localStorage.setItem(getDraftStorageKey(), input.value || "");
+}
+
+function restoreDraft() {
+    const input = document.getElementById("chat-input");
+    if (!input) return;
+
+    const draft = localStorage.getItem(getDraftStorageKey()) || "";
+    if (draft) {
+        input.value = draft;
+        autoResizeTextarea(input);
+    }
+}
+
+function clearDraft() {
+    localStorage.removeItem(getDraftStorageKey());
 }
 
 async function sendMessage() {
@@ -373,6 +505,7 @@ async function sendMessage() {
     appendMessage("user", message);
     input.value = "";
     autoResizeTextarea(input);
+    clearDraft();
 
     setSendLoading(true);
     showTypingIndicator(true);
@@ -733,6 +866,7 @@ function startNewConversation() {
     setConversationHeading("New conversation");
     renderConversationSelection();
     refreshUploadStatus();
+    restoreDraft();
     closeSidebar();
 }
 
@@ -899,6 +1033,7 @@ async function openConversation(conversationId, title = "Conversation", reloadLi
             await loadConversations(false);
         }
 
+        restoreDraft();
         closeSidebar();
     } catch (error) {
         console.error("Failed to open conversation:", error);
