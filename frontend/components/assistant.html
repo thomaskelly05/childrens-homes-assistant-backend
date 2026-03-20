@@ -198,7 +198,7 @@
             <div id="chat" class="ica-chat-scroll">
                 <div id="chatEmpty" class="ica-empty-state" style="text-align: center; margin-top: 100px;">
                     <h1 id="welcomeHeading" style="font-size: 1.8rem; margin-bottom: 8px;">Good morning</h1>
-                    <p style="color: var(--text-secondary); margin-bottom: 32px;">How can I help you support your home today?</p>
+                    <p id="welcomeSubtext" style="color: var(--text-secondary); margin-bottom: 32px;">How can I help you support your home today?</p>
                 </div>
                 <div id="messages" class="ica-messages-container" hidden></div>
                 <div id="typingRow" class="ica-message-wrapper is-assistant" hidden>
@@ -236,19 +236,43 @@
 
         const chatState = {
             historyRows: [],
-            isStreamingResponse: false
+            isStreamingResponse: false,
+            recognition: null,
+            isRecording: false
         };
+
+        // --- BACKEND API HANDLER ---
+        async function apiRequest(url, options = {}) {
+            const token = localStorage.getItem("access_token");
+            const headers = { 
+                "Content-Type": "application/json",
+                ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+                ...options.headers 
+            };
+
+            const response = await fetch(url, { ...options, headers });
+            
+            if (response.status === 401) {
+                localStorage.removeItem("access_token");
+                window.location.href = "/login";
+                return;
+            }
+            
+            return response.json();
+        }
 
         // --- BRAIN: SSE STREAM PARSER ---
         async function streamAssistantResponse(url, bodyData) {
             try {
+                const token = localStorage.getItem("access_token");
                 const response = await fetch(url, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { 
+                        "Content-Type": "application/json",
+                        ...(token ? { "Authorization": `Bearer ${token}` } : {})
+                    },
                     body: JSON.stringify(bodyData)
                 });
-
-                if (!response.ok) throw new Error("Network response was not ok");
 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
@@ -280,16 +304,16 @@
                 }
             } catch (err) {
                 console.error("Stream failed:", err);
-                appendMessage("assistant", "Sorry, the connection was lost.");
+                appendMessage("assistant", "The connection was lost.");
             }
         }
 
-        // --- UI LOGIC ---
+        // --- CORE UI LOGIC ---
         function initChat() {
             const shell = document.getElementById('assistantShell');
             const input = document.getElementById('chat-input');
             
-            // Sidebar Toggles
+            // Sidebar expand/collapse
             document.getElementById('sidebarToggle').onclick = () => shell.classList.toggle('is-sidebar-open');
             document.getElementById('sidebarBackdrop').onclick = () => shell.classList.remove('is-sidebar-open');
 
@@ -306,25 +330,47 @@
                 }
             };
 
-            // Document Upload
-            document.getElementById('documentUpload').onchange = (e) => {
+            // Document Logic
+            document.getElementById('documentUpload').onchange = async (e) => {
                 const file = e.target.files[0];
-                if (file) {
-                    window.currentDocumentName = file.name;
-                    window.currentDocumentText = "file_attached_placeholder"; // Backend handles actual read
-                    document.getElementById('documentChip').classList.remove('ica-hidden');
-                    document.getElementById('documentChipText').textContent = file.name;
+                if (!file) return;
+                
+                showStatusBanner("Uploading file...");
+                const formData = new FormData();
+                formData.append("file", file);
+                if (window.conversationId) formData.append("conversation_id", window.conversationId);
+
+                try {
+                    const token = localStorage.getItem("access_token");
+                    const res = await fetch("/chat/upload", {
+                        method: "POST",
+                        headers: { ...(token ? { "Authorization": `Bearer ${token}` } : {}) },
+                        body: formData
+                    });
+                    const data = await res.json();
+                    window.currentDocumentText = data.text;
+                    window.currentDocumentName = data.filename || file.name;
+                    refreshUploadStatus();
+                } catch (err) {
+                    showStatusBanner("Upload failed.");
                 }
             };
+
             document.getElementById('clearDocumentBtn').onclick = () => {
+                window.currentDocumentText = null;
                 window.currentDocumentName = null;
-                document.getElementById('documentChip').classList.add('ica-hidden');
+                refreshUploadStatus();
             };
 
-            // Init State
+            document.getElementById('newConversationBtn').onclick = startNewConversation;
+            document.getElementById('logoutBtn').onclick = () => {
+                localStorage.clear();
+                window.location.href = "/login";
+            };
+
             applyWelcomeMessage();
             loadConversations();
-            bindMessageActions();
+            initSpeechToText();
         }
 
         async function sendMessage() {
@@ -354,28 +400,6 @@
             loadConversations();
         }
 
-        function createOrResetStreamingMessage() {
-            const container = document.getElementById('messages');
-            const old = document.getElementById('streaming-msg');
-            if (old) old.remove();
-
-            const wrapper = document.createElement("div");
-            wrapper.id = 'streaming-msg';
-            wrapper.className = 'ica-message-wrapper is-assistant';
-            wrapper.innerHTML = `
-                <div class="ica-message-avatar">IC</div>
-                <div class="ica-message-block"><div class="ica-message"></div></div>
-            `;
-            container.appendChild(wrapper);
-            scrollChatToBottom();
-        }
-
-        function updateAssistantMessage(text) {
-            const msgEl = document.querySelector('#streaming-msg .ica-message');
-            if (msgEl) msgEl.innerHTML = renderMarkdown(text);
-            scrollChatToBottom();
-        }
-
         function appendMessage(role, text, id) {
             const container = document.getElementById('messages');
             const wrapper = document.createElement("div");
@@ -397,7 +421,23 @@
             scrollChatToBottom();
         }
 
-        // --- BRAIN: MARKDOWN RENDERER ---
+        function createOrResetStreamingMessage() {
+            const container = document.getElementById('messages');
+            const old = document.getElementById('streaming-msg');
+            if (old) old.remove();
+            const wrapper = document.createElement("div");
+            wrapper.id = 'streaming-msg';
+            wrapper.className = 'ica-message-wrapper is-assistant';
+            wrapper.innerHTML = `<div class="ica-message-avatar">IC</div><div class="ica-message-block"><div class="ica-message"></div></div>`;
+            container.appendChild(wrapper);
+        }
+
+        function updateAssistantMessage(text) {
+            const msgEl = document.querySelector('#streaming-msg .ica-message');
+            if (msgEl) msgEl.innerHTML = renderMarkdown(text);
+            scrollChatToBottom();
+        }
+
         function renderMarkdown(text) {
             return text
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -423,35 +463,53 @@
             document.getElementById('welcomeHeading').textContent = greeting;
         }
 
+        function refreshUploadStatus() {
+            const chip = document.getElementById('documentChip');
+            const chipText = document.getElementById('documentChipText');
+            if (window.currentDocumentName) {
+                chip.classList.remove('ica-hidden');
+                chipText.textContent = window.currentDocumentName;
+            } else {
+                chip.classList.add('ica-hidden');
+            }
+        }
+
         async function loadConversations() {
             const list = document.getElementById('conversationList');
-            // Mock fetch - replace with your real API call
-            const mockHistory = [{id: 1, title: "Support for Home A"}, {id: 2, title: "Staff Reflection"}];
-            list.innerHTML = mockHistory.map(h => `
-                <div class="ica-history-item">
-                    <div class="ica-history-item-title">${h.title}</div>
-                    <div class="ica-history-actions">
-                        <button class="ica-history-icon-btn">×</button>
-                    </div>
+            const rows = await apiRequest("/chat/conversations");
+            if (!rows) return;
+            list.innerHTML = rows.map(row => `
+                <div class="ica-history-item" onclick="openConversation('${row.id}')">
+                    <div class="ica-history-item-title">${row.title || "New Chat"}</div>
                 </div>
             `).join('');
         }
 
-        function bindMessageActions() {
-            window.startEdit = (id) => {
-                const wrapper = document.querySelector(`[data-message-id="${id}"]`);
-                const msgEl = wrapper.querySelector('.ica-message');
-                const originalText = msgEl.textContent;
-                msgEl.innerHTML = `<textarea class="ica-edit-textarea" style="width:100%; border:1px solid var(--accent-color); border-radius:8px; padding:5px;">${originalText}</textarea>
-                <div style="display:flex; gap:5px; margin-top:5px;">
-                    <button style="font-size:0.7rem; color:var(--accent-color);" onclick="submitEdit('${id}')">Save</button>
-                    <button style="font-size:0.7rem;" onclick="cancelEdit('${id}', '${originalText}')">Cancel</button>
-                </div>`;
-            };
-            window.cancelEdit = (id, text) => {
-                const wrapper = document.querySelector(`[data-message-id="${id}"]`);
-                wrapper.querySelector('.ica-message').textContent = text;
-            };
+        function startNewConversation() {
+            window.conversationId = null;
+            window.currentDocumentText = null;
+            window.currentDocumentName = null;
+            document.getElementById('messages').innerHTML = '';
+            document.getElementById('chatEmpty').hidden = false;
+            refreshUploadStatus();
+        }
+
+        function showStatusBanner(msg) {
+            const b = document.getElementById('statusBanner');
+            b.textContent = msg;
+            b.classList.add('is-show');
+            setTimeout(() => b.classList.remove('is-show'), 3000);
+        }
+
+        function initSpeechToText() {
+            const mic = document.getElementById('micBtn');
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) return;
+            const rec = new SpeechRecognition();
+            rec.onstart = () => mic.style.color = "red";
+            rec.onend = () => mic.style.color = "inherit";
+            rec.onresult = (e) => document.getElementById('chat-input').value += e.results[0][0].transcript;
+            mic.onclick = () => rec.start();
         }
 
         document.addEventListener("DOMContentLoaded", initChat);
