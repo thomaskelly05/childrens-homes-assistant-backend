@@ -8,9 +8,7 @@ from assistant.web_search import web_search
 
 logger = logging.getLogger(__name__)
 
-client = AsyncOpenAI(
-    api_key=os.environ.get("OPENAI_API_KEY")
-)
+client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 GUIDANCE_KEYWORDS = [
     "regulation",
@@ -22,16 +20,38 @@ GUIDANCE_KEYWORDS = [
     "statutory",
     "ofsted",
     "inspection",
-    "safeguarding",
     "framework",
     "standard",
     "procedure",
+    "quality standard",
+    "sccif",
 ]
 
 
-def should_search_guidance(message: str) -> bool:
-    text = message.lower()
+def should_search_guidance(message: str, mode: str, safeguarding_level: str) -> bool:
+    text = (message or "").lower()
+
+    # Skip live web search for most fast operational tasks
+    if safeguarding_level in {"heightened", "urgent"}:
+        return False
+
+    if mode in {"handover", "recording", "incident_summary", "rewrite", "chronology"}:
+        return False
+
     return any(keyword in text for keyword in GUIDANCE_KEYWORDS)
+
+
+def choose_model(mode: str, safeguarding_level: str, speed: str) -> str:
+    if speed == "slow":
+        return "gpt-4o"
+
+    if mode in {"support_planning", "manager_review", "supervision"}:
+        return "gpt-4o"
+
+    if safeguarding_level in {"heightened", "urgent"}:
+        return "gpt-4o-mini"
+
+    return "gpt-4o-mini"
 
 
 async def generate_ai_stream(
@@ -49,19 +69,11 @@ async def generate_ai_stream(
     history = history or []
     user_context = user_context or {}
 
-    search_results = ""
-    try:
-        if should_search_guidance(message):
-            search_results = web_search(message)
-    except Exception as e:
-        logger.exception("Guidance search failed for session %s: %s", session_id, e)
-        search_results = ""
-
     prompt_package = build_assistant_prompt_package(
         AssistantRequest(
             message=message,
             session_id=session_id,
-            history=history,
+            history=history[-6:],
             role=role,
             document_text=document_text,
             document_name=document_name,
@@ -74,6 +86,16 @@ async def generate_ai_stream(
 
     system_prompt = prompt_package.system_prompt
     user_message = prompt_package.user_message
+    mode = prompt_package.runtime.mode
+    safeguarding_level = prompt_package.runtime.safeguarding_level
+
+    search_results = ""
+    if should_search_guidance(message, mode, safeguarding_level):
+        try:
+            search_results = web_search(message)
+        except Exception as e:
+            logger.exception("Guidance search failed for session %s: %s", session_id, e)
+            search_results = ""
 
     if search_results:
         system_prompt += f"""
@@ -92,9 +114,9 @@ Do not let this stop you completing practical drafting tasks directly.
 
     messages = [{"role": "system", "content": system_prompt}]
 
-    history_to_use = history
-    if history and history[-1].get("role") == "user":
-        history_to_use = history[:-1]
+    history_to_use = history[-6:]
+    if history_to_use and history_to_use[-1].get("role") == "user":
+        history_to_use = history_to_use[:-1]
 
     for m in history_to_use:
         role_name = m.get("role")
@@ -106,22 +128,23 @@ Do not let this stop you completing practical drafting tasks directly.
                 "content": content
             })
 
-    messages.append({
-        "role": "user",
-        "content": user_message
-    })
+    messages.append({"role": "user", "content": user_message})
+
+    model = choose_model(mode, safeguarding_level, speed)
 
     logger.info(
-        "Starting OpenAI stream for session %s | mode=%s | safeguarding=%s",
+        "Starting OpenAI stream for session %s | mode=%s | safeguarding=%s | model=%s",
         session_id,
-        prompt_package.runtime.mode,
-        prompt_package.runtime.safeguarding_level,
+        mode,
+        safeguarding_level,
+        model,
     )
 
     stream = await client.chat.completions.create(
-        model="gpt-4o",
+        model=model,
         messages=messages,
         stream=True,
+        temperature=0.4,
     )
 
     async for chunk in stream:
