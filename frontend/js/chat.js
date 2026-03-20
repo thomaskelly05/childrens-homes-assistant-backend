@@ -20,6 +20,7 @@ function initChat() {
     bindLogout();
     bindHistorySearch();
     bindSidebarControls();
+    bindSidebarCollapse();
     bindThemeToggle();
     bindGlobalMessageActions();
     bindResponseMode();
@@ -109,6 +110,42 @@ function bindSidebarControls() {
 
     window.addEventListener("resize", () => {
         if (window.innerWidth > 980) closeSidebar();
+    });
+}
+
+function bindSidebarCollapse() {
+    const shell = document.getElementById("assistantShell");
+    const collapseBtn = document.getElementById("sidebarCollapseBtn");
+
+    if (!shell || !collapseBtn) return;
+
+    const savedState = localStorage.getItem("indicare-sidebar-collapsed");
+    if (savedState === "true" && window.innerWidth > 980) {
+        shell.classList.add("is-sidebar-collapsed");
+        collapseBtn.setAttribute("aria-label", "Expand sidebar");
+        collapseBtn.setAttribute("title", "Expand sidebar");
+    }
+
+    collapseBtn.addEventListener("click", () => {
+        if (window.innerWidth <= 980) return;
+
+        shell.classList.toggle("is-sidebar-collapsed");
+        const collapsed = shell.classList.contains("is-sidebar-collapsed");
+
+        localStorage.setItem("indicare-sidebar-collapsed", String(collapsed));
+        collapseBtn.setAttribute("aria-label", collapsed ? "Expand sidebar" : "Collapse sidebar");
+        collapseBtn.setAttribute("title", collapsed ? "Expand sidebar" : "Collapse sidebar");
+    });
+
+    window.addEventListener("resize", () => {
+        if (window.innerWidth <= 980) {
+            shell.classList.remove("is-sidebar-collapsed");
+        } else {
+            const shouldCollapse = localStorage.getItem("indicare-sidebar-collapsed") === "true";
+            shell.classList.toggle("is-sidebar-collapsed", shouldCollapse);
+            collapseBtn.setAttribute("aria-label", shouldCollapse ? "Expand sidebar" : "Collapse sidebar");
+            collapseBtn.setAttribute("title", shouldCollapse ? "Expand sidebar" : "Collapse sidebar");
+        }
     });
 }
 
@@ -383,9 +420,22 @@ function getAdultFirstName() {
 }
 
 function getUserInitials() {
-    const firstName = getAdultFirstName();
-    if (firstName) return firstName.trim().slice(0, 1).toUpperCase();
-    return "Y";
+    try {
+        const raw = localStorage.getItem("current_user");
+        if (!raw) return "Y";
+        const parsed = JSON.parse(raw);
+
+        const firstName = parsed?.first_name || parsed?.user?.first_name || parsed?.adult?.first_name || "";
+        const lastName = parsed?.last_name || parsed?.user?.last_name || parsed?.adult?.last_name || "";
+
+        const firstInitial = String(firstName).trim().slice(0, 1).toUpperCase();
+        const lastInitial = String(lastName).trim().slice(0, 1).toUpperCase();
+
+        const initials = `${firstInitial}${lastInitial}`.trim();
+        return initials || firstInitial || "Y";
+    } catch {
+        return "Y";
+    }
 }
 
 function getTimeGreeting() {
@@ -549,13 +599,8 @@ function restoreDraft() {
     if (!input) return;
 
     const draft = localStorage.getItem(getDraftStorageKey()) || "";
-    if (draft) {
-        input.value = draft;
-        autoResizeTextarea(input);
-    } else {
-        input.value = "";
-        autoResizeTextarea(input);
-    }
+    input.value = draft;
+    autoResizeTextarea(input);
 }
 
 function clearDraft() {
@@ -798,9 +843,7 @@ function createOrResetStreamingAssistantMessage() {
     if (!messages) return;
 
     const existingStreaming = messages.querySelector('.ica-message-wrapper.is-assistant[data-streaming="true"]');
-    if (existingStreaming) {
-        existingStreaming.remove();
-    }
+    if (existingStreaming) existingStreaming.remove();
 
     const wrapper = createMessageElement("assistant", "");
     wrapper.dataset.streaming = "true";
