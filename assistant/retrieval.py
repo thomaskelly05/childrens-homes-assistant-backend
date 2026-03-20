@@ -1,5 +1,3 @@
-# assistant/retrieval.py
-
 from __future__ import annotations
 
 import logging
@@ -14,10 +12,6 @@ logger = logging.getLogger("indicare.retrieval")
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 
-# ---------------------------------------------------------
-# Database
-# ---------------------------------------------------------
-
 def get_db_connection():
     return psycopg2.connect(
         host=os.environ.get("DB_HOST", "localhost"),
@@ -27,10 +21,6 @@ def get_db_connection():
     )
 
 
-# ---------------------------------------------------------
-# Embeddings
-# ---------------------------------------------------------
-
 def embed_query(text: str) -> list[float]:
     response = client.embeddings.create(
         model="text-embedding-3-small",
@@ -39,104 +29,21 @@ def embed_query(text: str) -> list[float]:
     return response.data[0].embedding
 
 
-# ---------------------------------------------------------
-# Query shaping
-# ---------------------------------------------------------
-
 MODE_HINTS = {
-    "factual": [
-        "children's homes regulations",
-        "quality standards",
-        "ofsted",
-        "statutory guidance",
-        "policy expectations",
-    ],
-    "handover": [
-        "handover structure",
-        "shift information",
-        "practical next steps",
-        "what needs passing on",
-    ],
-    "recording": [
-        "factual recording",
-        "neutral wording",
-        "injury recording",
-        "body map wording",
-        "defensible documentation",
-        "safe recording",
-    ],
-    "incident_summary": [
-        "incident structure",
-        "neutral summary",
-        "what happened",
-        "actions taken",
-        "follow-up required",
-    ],
-    "chronology": [
-        "timeline",
-        "sequence of events",
-        "chronology structure",
-        "dated record",
-    ],
-    "support_planning": [
-        "support plan",
-        "care planning",
-        "staff actions",
-        "review points",
-        "child-specific support",
-    ],
-    "manager_review": [
-        "manager oversight",
-        "audit lens",
-        "quality assurance",
-        "practice review",
-        "inspection readiness",
-    ],
-    "rewrite": [
-        "professional wording",
-        "care phrasing",
-        "neutral tone",
-        "clearer recording",
-    ],
-    "reflective": [
-        "reflective practice",
-        "supervision",
-        "learning",
-        "what to notice",
-    ],
-    "general_practice": [
-        "residential childcare practice",
-        "children's home staff guidance",
-    ],
-    "practical": [
-        "residential childcare practice",
-        "children's home staff guidance",
-    ],
+    "factual": ["children's homes regulations", "quality standards", "ofsted", "statutory guidance"],
+    "support_planning": ["support plan", "care planning", "staff actions", "review points"],
+    "manager_review": ["manager oversight", "audit lens", "quality assurance"],
+    "reflective": ["reflective practice", "supervision", "learning"],
+    "supervision": ["supervision", "reflection", "learning"],
+    "general_practice": ["residential childcare practice"],
+    "practical": ["residential childcare practice"],
 }
-
 
 SAFEGUARDING_HINTS = {
     "normal": [],
-    "watchful": [
-        "early safeguarding indicators",
-        "record factually",
-        "monitor and review",
-        "unexplained injury",
-        "concern wording",
-    ],
-    "heightened": [
-        "safeguarding concern",
-        "escalation",
-        "clear factual recording",
-        "management oversight",
-        "child protection",
-    ],
-    "urgent": [
-        "immediate safety",
-        "urgent safeguarding response",
-        "emergency escalation",
-        "clear factual chronology",
-    ],
+    "watchful": ["early safeguarding indicators", "record factually"],
+    "heightened": ["safeguarding concern", "clear factual recording"],
+    "urgent": ["immediate safety", "urgent safeguarding response"],
 }
 
 
@@ -163,15 +70,11 @@ def _build_query_text(
 
     if message:
         parts.append(message)
-
     if role:
         parts.append(f"User role: {role}")
 
-    for hint in MODE_HINTS.get(mode, []):
-        parts.append(hint)
-
-    for hint in SAFEGUARDING_HINTS.get(safeguarding_level, []):
-        parts.append(hint)
+    parts.extend(MODE_HINTS.get(mode, []))
+    parts.extend(SAFEGUARDING_HINTS.get(safeguarding_level, []))
 
     if document_name:
         parts.append(f"Uploaded document name: {document_name}")
@@ -179,11 +82,7 @@ def _build_query_text(
     return "\n".join(parts).strip()
 
 
-# ---------------------------------------------------------
-# Retrieval
-# ---------------------------------------------------------
-
-def _fetch_knowledge_rows(embedding: list[float], limit: int = 6):
+def _fetch_knowledge_rows(embedding: list[float], limit: int = 3):
     conn = None
     cur = None
 
@@ -232,13 +131,8 @@ def _format_rows(rows: list[tuple]) -> str:
         if not content:
             continue
 
-        context_blocks.append(
-            f"[{i}] {content}"
-        )
-
-        source_blocks.append(
-            f"[{i}] {doc} — {section} (p.{page})"
-        )
+        context_blocks.append(f"[{i}] {content}")
+        source_blocks.append(f"[{i}] {doc} — {section} (p.{page})")
 
     if not context_blocks:
         return ""
@@ -248,7 +142,6 @@ RETRIEVED INTERNAL KNOWLEDGE
 
 Use the following internal knowledge selectively where it genuinely helps improve the answer.
 Prefer the most relevant excerpts.
-Do not force irrelevant guidance into the response.
 
 Knowledge excerpts:
 {chr(10).join(chr(10) + block for block in context_blocks)}
@@ -265,20 +158,8 @@ def retrieve_context(
     document_text: str | None = None,
     document_name: str | None = None,
     role: str = "",
-    limit: int = 6,
+    limit: int = 3,
 ) -> str:
-    """
-    Retrieve relevant internal knowledge for the current request.
-
-    This is retrieval for the assistant runtime, not just raw semantic search.
-    It uses:
-    - user message
-    - detected mode
-    - safeguarding level
-    - user role
-    - optional uploaded document name
-    """
-
     try:
         shaped_query = _build_query_text(
             message=message,
@@ -290,15 +171,13 @@ def retrieve_context(
 
         embedding = embed_query(shaped_query)
         rows = _fetch_knowledge_rows(embedding, limit=limit)
-
         context = _format_rows(rows)
 
-        # light extra steer if a document is present
         if context and document_text:
             context += """
 
 Document note:
-An uploaded document is also present in this request. Use retrieved knowledge alongside the uploaded document where relevant, but do not invent facts beyond the document and the user’s instructions.
+An uploaded document is also present in this request. Use retrieved knowledge alongside the uploaded document where relevant.
 """.rstrip()
 
         return context
@@ -308,14 +187,7 @@ An uploaded document is also present in this request. Use retrieved knowledge al
         return ""
 
 
-# ---------------------------------------------------------
-# Backwards compatibility
-# ---------------------------------------------------------
-
-def retrieve_knowledge(query: str, limit: int = 5) -> str:
-    """
-    Backwards-compatible wrapper for older code.
-    """
+def retrieve_knowledge(query: str, limit: int = 3) -> str:
     return retrieve_context(
         message=query,
         mode="general_practice",
