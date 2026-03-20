@@ -20,7 +20,6 @@
 
             <aside class="ica-sidebar" aria-label="Conversation sidebar">
                 <div class="ica-brand">
-                    <img src="/assets/logo.svg" alt="IndiCare logo" />
                     <div>
                         <h1>IndiCare</h1>
                         <p>Assistant</p>
@@ -143,56 +142,62 @@
                             </div>
                         </div>
 
-                        <div class="ica-composer-box">
-                            <div class="ica-composer-main">
-                                <label for="documentUpload" class="ica-upload-btn" title="Upload document" aria-label="Upload document">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                        <path d="M12 16V4"></path>
-                                        <path d="M7 9l5-5 5 5"></path>
-                                        <path d="M20 16.5v2A1.5 1.5 0 0 1 18.5 20h-13A1.5 1.5 0 0 1 4 18.5v-2"></path>
-                                    </svg>
-                                </label>
-                                <input id="documentUpload" type="file" accept=".txt,.docx,.pdf" hidden />
+                        <div class="ica-chatbar">
+                            <label for="documentUpload" class="ica-chatbar-icon-btn" title="Upload document" aria-label="Upload document">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <path d="M12 16V4"></path>
+                                    <path d="M7 9l5-5 5 5"></path>
+                                    <path d="M20 16.5v2A1.5 1.5 0 0 1 18.5 20h-13A1.5 1.5 0 0 1 4 18.5v-2"></path>
+                                </svg>
+                            </label>
+                            <input id="documentUpload" type="file" accept=".txt,.docx,.pdf" hidden />
 
-                                <div class="ica-composer-fields">
-                                    <div class="ica-textarea-wrap">
-                                        <label for="chat-input" class="ica-sr-only">Type your message</label>
-                                        <textarea
-                                            id="chat-input"
-                                            class="ica-textarea"
-                                            rows="1"
-                                            placeholder="Message IndiCare..."
-                                            aria-label="Message IndiCare"
-                                        ></textarea>
-                                    </div>
+                            <button
+                                id="micBtn"
+                                class="ica-chatbar-icon-btn"
+                                type="button"
+                                aria-label="Start voice input"
+                                title="Start voice input"
+                            >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <rect x="9" y="2" width="6" height="12" rx="3"></rect>
+                                    <path d="M5 10a7 7 0 0 0 14 0"></path>
+                                    <path d="M12 19v3"></path>
+                                    <path d="M8 22h8"></path>
+                                </svg>
+                            </button>
 
-                                    <div class="ica-composer-actions">
-                                        <div class="ica-composer-hint">
-                                            Press <strong>Enter</strong> to send, <strong>Shift + Enter</strong> for a new line
-                                        </div>
-
-                                        <div class="ica-composer-buttons">
-                                            <button id="clearChatBtn" class="ica-btn ica-btn--ghost" type="button">Clear</button>
-
-                                            <button id="send-btn" class="ica-btn ica-btn--primary ica-send-btn" type="button">
-                                                <span class="ica-send-label">Send</span>
-                                                <span class="ica-send-spinner" aria-hidden="true">
-                                                    <span class="ica-send-spinner-dot"></span>
-                                                    <span class="ica-send-spinner-dot"></span>
-                                                    <span class="ica-send-spinner-dot"></span>
-                                                </span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div class="ica-chatbar-input-wrap">
+                                <label for="chat-input" class="ica-sr-only">Type your message</label>
+                                <textarea
+                                    id="chat-input"
+                                    class="ica-chatbar-input"
+                                    rows="1"
+                                    placeholder="Message IndiCare..."
+                                    aria-label="Message IndiCare"
+                                ></textarea>
                             </div>
+
+                            <button id="clearChatBtn" class="ica-btn ica-btn--ghost ica-chatbar-btn" type="button">Clear</button>
+
+                            <button id="send-btn" class="ica-btn ica-btn--primary ica-chatbar-btn ica-send-btn" type="button">
+                                <span class="ica-send-label">Send</span>
+                                <span class="ica-send-spinner" aria-hidden="true">
+                                    <span class="ica-send-spinner-dot"></span>
+                                    <span class="ica-send-spinner-dot"></span>
+                                    <span class="ica-send-spinner-dot"></span>
+                                </span>
+                            </button>
                         </div>
 
                         <div id="uploadStatus" class="ica-upload-status" aria-live="polite"></div>
 
-                        <div class="ica-note">
-                            <strong>Important:</strong> Always accuracy-check AI outputs against the facts provided,
-                            current guidance, and your organisation’s policy before use.
+                        <div class="ica-footer-meta">
+                            <div id="footerWarning" class="ica-note">
+                                <strong>Important:</strong> Always accuracy-check AI outputs against the facts provided,
+                                current guidance, and your organisation’s policy before use.
+                            </div>
+                            <div id="footerCopyright" class="ica-copyright"></div>
                         </div>
                     </div>
                 </div>
