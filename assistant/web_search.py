@@ -1,8 +1,10 @@
 import os
+import logging
 from tavily import TavilyClient
 
-client = TavilyClient(api_key=os.environ.get("TAVILY_API_KEY"))
+logger = logging.getLogger(__name__)
 
+client = TavilyClient(api_key=os.environ.get("TAVILY_API_KEY"))
 
 PRIMARY_SITES = [
     "gov.uk",
@@ -56,24 +58,27 @@ def format_results(results: list[dict], authority_label: str) -> str:
 
 
 def search_sites(query: str, sites: list[str], limit: int) -> list[dict]:
-    safe_query = build_site_query(query, sites)
+    try:
+        safe_query = build_site_query(query, sites)
 
-    results = client.search(
-        query=safe_query,
-        search_depth="advanced",
-        max_results=limit,
-    )
+        results = client.search(
+            query=safe_query,
+            search_depth="advanced",
+            max_results=limit,
+        )
 
-    if not results or "results" not in results:
+        if not results or "results" not in results:
+            return []
+
+        return results["results"]
+    except Exception as e:
+        logger.exception("Tavily search failed: %s", e)
         return []
-
-    return results["results"]
 
 
 def web_search(query: str, primary_limit: int = 3, secondary_limit: int = 2) -> str:
     primary_results = search_sites(query, PRIMARY_SITES, primary_limit)
 
-    # If primary sources already returned enough useful results, use those only
     if len(primary_results) >= 2:
         return format_results(primary_results, "Primary")
 
