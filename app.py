@@ -1,11 +1,16 @@
 import os
 import importlib
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+# PRODUCTION FIX 1: Import Rate Limiting (slowapi) and Sentry
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+import sentry_sdk
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
@@ -13,7 +18,6 @@ CSS_DIR = os.path.join(FRONTEND_DIR, "css")
 JS_DIR = os.path.join(FRONTEND_DIR, "js")
 ASSETS_DIR = os.path.join(FRONTEND_DIR, "assets")
 COMPONENTS_DIR = os.path.join(FRONTEND_DIR, "components")
-
 
 REQUIRED_ENV_VARS = [
     "SESSION_SECRET",
@@ -24,9 +28,23 @@ missing = [key for key in REQUIRED_ENV_VARS if not os.getenv(key)]
 if missing:
     raise RuntimeError(f"Missing required environment variables: {', '.join(missing)}")
 
+# PRODUCTION FIX 2: Initialize Sentry for Crash Reporting
+# Go to sentry.io, make a free account, and put your DSN link here later.
+# This will email you if the server ever crashes at 3AM.
+SENTRY_DSN = os.getenv("SENTRY_DSN")
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        traces_sample_rate=1.0,
+        profiles_sample_rate=1.0,
+    )
 
 app = FastAPI(title="IndiCare API")
 
+# PRODUCTION FIX 3: Add Rate Limiter to App
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
@@ -40,7 +58,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 def include_router(module_path: str):
     module = importlib.import_module(module_path)
     router = getattr(module, "router", None)
@@ -50,7 +67,6 @@ def include_router(module_path: str):
 
     app.include_router(router)
     print(f"[IndiCare] Loaded router: {module_path}")
-
 
 ROUTERS = [
     "routers.auth_routes",
@@ -101,20 +117,17 @@ ROUTERS = [
 for route in ROUTERS:
     include_router(route)
 
-
 app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
 app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
 app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
 app.mount("/components", StaticFiles(directory=COMPONENTS_DIR), name="components")
 
-
 @app.get("/health")
 def health():
     return {"ok": True}
 
-
 @app.exception_handler(Exception)
-async def global_exception_handler(request, exc):
+async def global_exception_handler(request: Request, exc: Exception):
     print(f"[GLOBAL ERROR] {str(exc)}")
     return JSONResponse(
         status_code=500,
@@ -133,111 +146,89 @@ def serve_page(file_name: str):
         return JSONResponse(status_code=404, content={"error": "Page not found"})
     return FileResponse(path)
 
-
 @app.get("/")
 def serve_index():
     return serve_page("index.html")
-
 
 @app.get("/login")
 def serve_login():
     return serve_page("login.html")
 
-
 @app.get("/login.html")
 def serve_login_html():
     return serve_page("login.html")
-
 
 @app.get("/oslogin")
 def serve_oslogin():
     return serve_page("oslogin.html")
 
-
 @app.get("/oslogin.html")
 def serve_oslogin_html():
     return serve_page("oslogin.html")
-
 
 @app.get("/assistant")
 def serve_assistant():
     return FileResponse(os.path.join(COMPONENTS_DIR, "assistant.html"))
 
-
 @app.get("/journal")
 def serve_journal():
     return serve_page("journal.html")
-
 
 @app.get("/journal.html")
 def serve_journal_html():
     return serve_page("journal.html")
 
-
 @app.get("/supervision")
 def serve_supervision():
     return serve_page("supervision.html")
-
 
 @app.get("/supervision.html")
 def serve_supervision_html():
     return serve_page("supervision.html")
 
-
 @app.get("/ai-notes")
 def serve_ai_notes():
     return serve_page("ai-note.html")
-
 
 @app.get("/ai-note.html")
 def serve_ai_note_html():
     return serve_page("ai-note.html")
 
-
 @app.get("/ai-notes.css")
 def serve_ai_notes_css():
     return FileResponse(os.path.join(FRONTEND_DIR, "ai-notes.css"))
-
 
 @app.get("/ai-notes.js")
 def serve_ai_notes_js():
     return FileResponse(os.path.join(FRONTEND_DIR, "ai-notes.js"))
 
-
 @app.get("/young-people-page")
 def serve_young_people():
     return serve_page("young-people.html")
-
 
 @app.get("/young-people-page.html")
 def serve_young_people_html():
     return serve_page("young-people.html")
 
-
 @app.get("/young-people-shell")
 def serve_young_people_shell():
     return serve_page("young-people-shell.html")
-
 
 @app.get("/young-people-shell.html")
 def serve_young_people_shell_html():
     return serve_page("young-people-shell.html")
 
-
 @app.get("/childrens-home-os")
 def serve_childrens_home_os():
     return serve_page("young-people-shell.html")
-
 
 @app.get("/childrens-home-os.html")
 def serve_childrens_home_os_html():
     return serve_page("young-people-shell.html")
 
-
 @app.get("/rostering")
 def serve_rostering():
     return serve_page("rostering.html")
-
 
 @app.get("/rostering.html")
 def serve_rostering_html():
