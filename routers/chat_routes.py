@@ -299,11 +299,8 @@ def extract_document_text(filename: str, file_bytes: bytes) -> str:
 # SSE HELPERS
 # ---------------------------------------------------------
 def sse_data(payload: str) -> str:
-    return f"data: {payload}\n\n"
-
-
-def sse_json(data: dict) -> str:
-    return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+    safe_payload = payload.replace("\r\n", "\n").replace("\r", "\n")
+    return "".join(f"data: {line}\n" for line in safe_payload.split("\n")) + "\n"
 
 
 def sse_done() -> str:
