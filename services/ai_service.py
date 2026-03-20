@@ -28,10 +28,12 @@ GUIDANCE_KEYWORDS = [
 ]
 
 
-def should_search_guidance(message: str, mode: str, safeguarding_level: str) -> bool:
+def should_search_guidance(message: str, mode: str, safeguarding_level: str, response_mode: str) -> bool:
     text = (message or "").lower()
 
-    # Skip live web search for most fast operational tasks
+    if response_mode == "quick":
+        return False
+
     if safeguarding_level in {"heightened", "urgent"}:
         return False
 
@@ -41,15 +43,18 @@ def should_search_guidance(message: str, mode: str, safeguarding_level: str) -> 
     return any(keyword in text for keyword in GUIDANCE_KEYWORDS)
 
 
-def choose_model(mode: str, safeguarding_level: str, speed: str) -> str:
-    if speed == "slow":
+def choose_model(mode: str, safeguarding_level: str, response_mode: str) -> str:
+    if safeguarding_level == "urgent":
+        return "gpt-4o-mini"
+
+    if response_mode == "quick":
+        return "gpt-4o-mini"
+
+    if response_mode == "deep":
         return "gpt-4o"
 
     if mode in {"support_planning", "manager_review", "supervision"}:
         return "gpt-4o"
-
-    if safeguarding_level in {"heightened", "urgent"}:
-        return "gpt-4o-mini"
 
     return "gpt-4o-mini"
 
@@ -63,11 +68,16 @@ async def generate_ai_stream(
     role: str = "residential care staff",
     ld_lens: bool = False,
     training_mode: bool = False,
-    speed: str = "normal",
+    speed: str = "balanced",
     user_context: dict | None = None,
+    response_mode: str = "balanced",
 ):
     history = history or []
     user_context = user_context or {}
+
+    selected_mode = response_mode if response_mode in {"quick", "balanced", "deep"} else speed
+    if selected_mode not in {"quick", "balanced", "deep"}:
+        selected_mode = "balanced"
 
     prompt_package = build_assistant_prompt_package(
         AssistantRequest(
@@ -79,7 +89,7 @@ async def generate_ai_stream(
             document_name=document_name,
             ld_lens=ld_lens,
             training_mode=training_mode,
-            speed=speed,
+            speed=selected_mode,
             user_context=user_context,
         )
     )
@@ -90,7 +100,7 @@ async def generate_ai_stream(
     safeguarding_level = prompt_package.runtime.safeguarding_level
 
     search_results = ""
-    if should_search_guidance(message, mode, safeguarding_level):
+    if should_search_guidance(message, mode, safeguarding_level, selected_mode):
         try:
             search_results = web_search(message)
         except Exception as e:
@@ -128,15 +138,19 @@ Do not let this stop you completing practical drafting tasks directly.
                 "content": content
             })
 
-    messages.append({"role": "user", "content": user_message})
+    messages.append({
+        "role": "user",
+        "content": user_message
+    })
 
-    model = choose_model(mode, safeguarding_level, speed)
+    model = choose_model(mode, safeguarding_level, selected_mode)
 
     logger.info(
-        "Starting OpenAI stream for session %s | mode=%s | safeguarding=%s | model=%s",
+        "Starting OpenAI stream for session %s | mode=%s | safeguarding=%s | response_mode=%s | model=%s",
         session_id,
         mode,
         safeguarding_level,
+        selected_mode,
         model,
     )
 
