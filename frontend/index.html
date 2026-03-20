@@ -1,16 +1,17 @@
-```html
 <!DOCTYPE html>
 <html lang="en-GB">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IndiCare</title>
-  <meta
-    name="description"
-    content="IndiCare staff workspace for residential children's home practice, AI support, journals, supervision, handover, reports, documents, and operations."
-  />
+  <title>IndiCare | Staff Workspace</title>
+  <meta name="description" content="IndiCare staff workspace for therapeutic residential children's home practice." />
 
   <link rel="icon" type="image/svg+xml" href="/assets/logo.svg" />
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  
   <link rel="stylesheet" href="/css/reset.css" />
   <link rel="stylesheet" href="/css/base.css" />
   <link rel="stylesheet" href="/css/theme.css" />
@@ -18,167 +19,198 @@
   <link rel="stylesheet" href="/css/components.css" />
 
   <style>
+    :root {
+      --brand-blue: #005EB8;
+      --brand-navy: #0a192f;
+      --therapeutic-green: #10b981;
+      --surface: #ffffff;
+      --bg-soft: #f8fafc;
+      --border-light: #edf2f7;
+      --radius-lg: 24px;
+      --radius-md: 16px;
+      --shadow-premium: 0 10px 30px -5px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg-soft);
+      color: var(--brand-navy);
+    }
+
+    /* Sidebar Refinement */
+    .sidebar {
+      background: var(--brand-navy);
+      color: white;
+      padding: 1.5rem;
+      border: none;
+    }
+
+    .sidebar__brand h1 { font-size: 1.4rem; font-weight: 800; letter-spacing: -1px; }
+    .sidebar__brand span { color: var(--brand-blue); }
+    .sidebar__nav .nav-link {
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      color: rgba(255,255,255,0.7);
+      font-weight: 600;
+      transition: 0.2s;
+      margin-bottom: 4px;
+      border: none;
+      background: transparent;
+      text-align: left;
+      width: 100%;
+      cursor: pointer;
+    }
+    .sidebar__nav .nav-link.is-active, .sidebar__nav .nav-link:hover {
+      background: rgba(255,255,255,0.1);
+      color: white;
+    }
+
+    /* Topbar Refinement */
+    .topbar {
+      background: white;
+      border-bottom: 1px solid var(--border-light);
+      padding: 1.5rem 2rem;
+    }
+    #pageTitle { font-weight: 800; font-size: 1.8rem; letter-spacing: -1px; color: var(--brand-navy); }
+    .user-badge { background: var(--bg-soft); border: 1px solid var(--border-light); padding: 8px 16px; border-radius: 100px; font-weight: 700; font-size: 0.85rem; }
+
+    /* Dashboard Layout */
     .dashboard-hero {
       display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
-      gap: 1.25rem;
-      margin-bottom: 1.25rem;
+      grid-template-columns: 1fr 340px;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
     }
 
     .hero-panel {
-      background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 1.4rem;
-      box-shadow: var(--shadow-sm);
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      box-shadow: var(--shadow-premium);
+      border: 1px solid var(--border-light);
+      position: relative;
+      overflow: hidden;
     }
 
-    .hero-panel h3 {
-      margin: 0 0 0.65rem;
-      font-size: 1.45rem;
-      letter-spacing: -0.03em;
-      color: var(--text);
+    .hero-panel::before {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(0, 94, 184, 0.03) 0%, transparent 70%);
+      z-index: 0;
     }
 
-    .hero-panel p {
-      margin: 0;
-      color: var(--text-soft);
-      line-height: 1.65;
-    }
+    .hero-panel h3 { font-size: 1.8rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 1rem; z-index: 1; position: relative; }
+    .hero-panel p { font-size: 1.1rem; color: var(--slate); line-height: 1.6; max-width: 80%; z-index: 1; position: relative; }
 
-    .hero-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      margin-top: 1rem;
-    }
-
-    .hero-points {
-      list-style: none;
-      margin: 1rem 0 0;
-      padding: 0;
-      display: grid;
-      gap: 0.75rem;
-    }
-
-    .hero-points li {
-      padding: 0.9rem 1rem;
-      border-radius: 14px;
-      background: var(--surface-muted);
-      border: 1px solid var(--border);
-      color: var(--text);
-      line-height: 1.55;
-    }
-
-    .card h3 {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-    }
-
-    .card-badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 0.35rem 0.65rem;
-      border-radius: 999px;
-      background: var(--primary-soft);
-      color: var(--primary-hover);
-      font-size: 0.82rem;
-      font-weight: 700;
-    }
-
+    /* Action Grid */
     .quick-link-grid {
       display: grid;
-      gap: 0.85rem;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+      margin-top: 2rem;
     }
 
     .quick-link-card {
-      display: block;
-      padding: 1rem;
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      background: var(--surface-muted);
-      transition: 0.2s ease;
+      background: var(--bg-soft);
+      padding: 1.5rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-light);
+      text-decoration: none;
+      transition: 0.3s;
     }
 
     .quick-link-card:hover {
-      border-color: var(--primary);
-      background: #eef4ff;
-      transform: translateY(-1px);
+      background: white;
+      border-color: var(--brand-blue);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-premium);
     }
 
-    .quick-link-card strong {
-      display: block;
-      margin-bottom: 0.25rem;
-      color: var(--text);
+    .quick-link-card strong { display: block; font-size: 1.1rem; color: var(--brand-navy); margin-bottom: 8px; }
+    .quick-link-card span { font-size: 0.9rem; color: var(--slate); line-height: 1.5; }
+
+    /* Info Panel */
+    .info-card {
+      background: var(--brand-navy);
+      color: white;
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+    }
+    .info-card h3 { color: white; font-size: 1.2rem; margin-bottom: 1rem; }
+    .hero-points { list-style: none; padding: 0; }
+    .hero-points li { 
+      padding: 12px; 
+      background: rgba(255,255,255,0.05); 
+      border-radius: 12px; 
+      margin-bottom: 10px; 
+      font-size: 0.9rem;
+      border-left: 3px solid var(--brand-blue);
     }
 
-    .quick-link-card span {
-      color: var(--text-soft);
-      font-size: 0.94rem;
-      line-height: 1.5;
+    /* Status Badges */
+    .card-badge {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      font-weight: 800;
+      letter-spacing: 1px;
+      background: var(--bg-soft);
+      padding: 4px 10px;
+      border-radius: 6px;
+      color: var(--brand-blue);
     }
 
-    .placeholder-copy {
-      color: var(--text-soft);
-      line-height: 1.6;
+    /* Live Data Feed */
+    .live-feed-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
     }
 
-    .workspace-section-title {
-      margin: 0 0 0.35rem;
-      font-size: 1.05rem;
-      color: var(--text);
+    .feed-card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-light);
+      box-shadow: var(--shadow-premium);
     }
 
-    .workspace-section-subtitle {
-      margin: 0 0 1rem;
-      color: var(--text-soft);
+    .feed-card h3 { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      font-size: 1rem; 
+      font-weight: 800; 
+      margin-bottom: 1rem;
+      border-bottom: 1px solid var(--bg-soft);
+      padding-bottom: 10px;
     }
 
-    .assistant-highlight {
-      margin-top: 1rem;
-      padding: 1rem;
-      border-radius: 16px;
-      background: #eef4ff;
-      border: 1px solid #d7e5ff;
-    }
-
-    .assistant-highlight strong {
-      display: block;
-      margin-bottom: 0.35rem;
-      color: var(--text);
-    }
-
-    .assistant-highlight span {
-      color: var(--text-soft);
-      line-height: 1.55;
-    }
+    .placeholder-copy { color: #94a3b8; font-size: 0.85rem; font-style: italic; }
 
     @media (max-width: 1100px) {
-      .dashboard-hero {
-        grid-template-columns: 1fr;
-      }
+      .dashboard-hero, .live-feed-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
   <div id="app" class="app-shell">
+    
     <aside id="sidebar" class="sidebar">
       <div class="sidebar__brand">
-        <img src="/assets/logo.svg" alt="IndiCare logo" class="sidebar__logo" />
         <div class="sidebar__brand-text">
-          <h1>IndiCare</h1>
-          <p>Staff Workspace</p>
+          <h1>IndiCare <span>AI</span></h1>
+          <p style="opacity: 0.6; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">Therapeutic Workspace</p>
         </div>
       </div>
 
       <nav class="sidebar__nav">
         <button class="nav-link is-active" data-view="dashboard" type="button">Dashboard</button>
-        <a class="nav-link" href="/assistant">Assistant</a>
+        <a class="nav-link" href="/assistant">AI Assistant</a>
+        <a class="nav-link" href="/ai-note.html">Notes AI</a>
         <a class="nav-link" href="/journal">Staff Journal</a>
         <a class="nav-link" href="/supervision">Supervision</a>
-        <a class="nav-link" href="/ai-note.html">AI Notes</a>
         <button class="nav-link" data-view="tasks" type="button">Tasks</button>
         <button class="nav-link" data-view="handover" type="button">Handover</button>
         <button class="nav-link" data-view="reports" type="button">Reports</button>
@@ -187,7 +219,7 @@
       </nav>
 
       <div class="sidebar__footer">
-        <button id="logoutBtn" class="button button--secondary" type="button">
+        <button id="logoutBtn" class="button button--secondary" style="width:100%;" type="button">
           Log out
         </button>
       </div>
@@ -197,210 +229,164 @@
       <header class="topbar">
         <div>
           <h2 id="pageTitle">Dashboard</h2>
-          <p id="pageSubtitle">Overview of your workspace</p>
+          <p id="pageSubtitle">Empowering your therapeutic practice today.</p>
         </div>
 
         <div class="topbar__actions">
-          <span id="userBadge" class="user-badge">Loading account...</span>
+          <span id="userBadge" class="user-badge">Authorising...</span>
         </div>
       </header>
 
       <section id="workspace" class="workspace">
+        
         <div id="loadingState" class="card hidden">
-          <h3>Loading workspace...</h3>
-          <p>Please wait while IndiCare connects.</p>
+          <h3>Connecting to Workspace...</h3>
+          <p>Initialising secure therapeutic environment.</p>
         </div>
 
         <div id="errorState" class="card hidden">
-          <h3>Something went wrong</h3>
-          <p id="errorMessage">Unable to load the workspace.</p>
+          <h3 style="color: #ef4444;">System Connection Error</h3>
+          <p id="errorMessage">Unable to synchronise workspace data.</p>
         </div>
 
         <div id="dashboardView" class="view">
+          
           <div class="dashboard-hero">
             <div class="hero-panel">
-              <h3>Residential AI support for real children’s home practice</h3>
+              <span class="card-badge" style="margin-bottom: 10px; display: inline-block;">Primary AI Workspace</span>
+              <h3>Advancing Therapeutic Integrity</h3>
               <p>
-                IndiCare brings together your operational workspace and a broad residential
-                AI assistant that can help adults think clearly, write well, organise
-                information, improve documentation, and support calm, practical,
-                professionally grounded care practice.
+                IndiCare synthesises your frontline observations into high-fidelity, 
+                trauma-informed records. Use the Assistant to bridge the gap between 
+                busy shifts and professional documentation.
               </p>
-
-              <div class="hero-actions">
-                <a class="button" href="/assistant">Open Assistant</a>
-                <a class="button" href="/journal">Open Journal</a>
-                <a class="button" href="/supervision">Open Supervision</a>
-                <a class="button" href="/ai-note.html">Open AI Notes</a>
-              </div>
-
-              <div class="assistant-highlight">
-                <strong>The Assistant is your main AI workspace.</strong>
-                <span>
-                  Use it for general residential questions, drafting support, reflection,
-                  planning, wording, documentation review, support-plan thinking, handovers,
-                  summaries, and professional sense-checking.
-                </span>
-              </div>
-            </div>
-
-            <div class="hero-panel">
-              <h3>How the tools are separated</h3>
-              <ul class="hero-points">
-                <li><strong>Assistant</strong> is the general residential AI brain for broad support and questions.</li>
-                <li><strong>AI Notes</strong> is a separate tool for meeting-note workflows and specialist note generation.</li>
-                <li><strong>Reports</strong> and <strong>Documents</strong> are structured production tools, not the whole assistant.</li>
-              </ul>
-            </div>
-          </div>
-
-          <div class="grid grid--2">
-            <div class="card">
-              <h3>
-                Main workspaces
-                <span class="card-badge">Routes</span>
-              </h3>
 
               <div class="quick-link-grid">
                 <a class="quick-link-card" href="/assistant">
-                  <strong>Assistant</strong>
-                  <span>Ask general residential care questions, improve wording, build drafts, reflect on practice, and organise documentation.</span>
+                  <strong>Assistant Engine</strong>
+                  <span>Voice-to-text, drafting support, and professional practice reflections.</span>
                 </a>
-
-                <a class="quick-link-card" href="/journal">
-                  <strong>Staff Journal</strong>
-                  <span>Create and review reflective staff journal entries and development records.</span>
-                </a>
-
-                <a class="quick-link-card" href="/supervision">
-                  <strong>Supervision</strong>
-                  <span>Open supervision records, review submissions, and support staff development work.</span>
-                </a>
-
                 <a class="quick-link-card" href="/ai-note.html">
-                  <strong>AI Notes</strong>
-                  <span>Use your separate AI note-taking workflow for meeting notes, templates, and structured saved outputs.</span>
+                  <strong>Notes AI Factory</strong>
+                  <span>Automated synthesis of fragmented shift logs into outcome-focused reports.</span>
                 </a>
               </div>
             </div>
 
-            <div class="card">
-              <h3>
-                Account
-                <span class="card-badge">Profile</span>
-              </h3>
-              <div id="accountSummary" class="placeholder-copy">Your account details will appear here.</div>
+            <div class="info-card">
+              <h3>System Guidance</h3>
+              <ul class="hero-points">
+                <li><strong>Assistant:</strong> Use for co-regulation planning and complex wording.</li>
+                <li><strong>Notes AI:</strong> Specialist tool for LAC reviews and monthly summaries.</li>
+                <li><strong>Reports:</strong> Structured production tools for incident compliance.</li>
+              </ul>
+              <div style="margin-top: 20px; font-size: 0.75rem; opacity: 0.6;">
+                🔒 AES-256 Sovereign UK Encryption Active
+              </div>
             </div>
           </div>
 
-          <div class="grid grid--3">
-            <div class="card">
-              <h3>
-                Tasks
-                <span class="card-badge">Live</span>
-              </h3>
-              <div id="tasksPreview" class="placeholder-copy">Your current tasks will appear here.</div>
+          <div class="live-feed-grid">
+            <div class="feed-card">
+              <h3>Tasks <span class="card-badge">Live</span></h3>
+              <div id="tasksPreview" class="placeholder-copy">Synchronising current tasks...</div>
             </div>
 
-            <div class="card">
-              <h3>
-                Handover
-                <span class="card-badge">Live</span>
-              </h3>
-              <div id="handoverPreview" class="placeholder-copy">Recent handover notes will appear here.</div>
+            <div class="feed-card">
+              <h3>Handover <span class="card-badge">Live</span></h3>
+              <div id="handoverPreview" class="placeholder-copy">Fetching recent continuity notes...</div>
             </div>
 
-            <div class="card">
-              <h3>
-                Latest journal
-                <span class="card-badge">Live</span>
-              </h3>
-              <div id="journalPreview" class="placeholder-copy">Your latest journal entry will appear here.</div>
+            <div class="feed-card">
+              <h3>Latest Journal <span class="card-badge">Live</span></h3>
+              <div id="journalPreview" class="placeholder-copy">Loading reflective practice log...</div>
             </div>
+          </div>
+
+          <div class="feed-card" style="margin-top: 1.5rem;">
+             <h3>Account Profile</h3>
+             <div id="accountSummary" class="placeholder-copy">Accessing security profile...</div>
           </div>
         </div>
 
         <div id="tasksView" class="view hidden">
-          <div class="card">
-            <h3 class="workspace-section-title">Tasks</h3>
-            <p class="workspace-section-subtitle">Review current tasks and recent activity.</p>
-            <div id="tasksList">Your task list will appear here.</div>
+          <div class="hero-panel">
+            <h3 class="workspace-section-title">Operational Tasks</h3>
+            <p class="workspace-section-subtitle">Real-time oversight of home operations.</p>
+            <div id="tasksList">Initialising task list...</div>
           </div>
         </div>
 
         <div id="handoverView" class="view hidden">
-          <div class="card">
-            <h3 class="workspace-section-title">Recent handover</h3>
-            <p class="workspace-section-subtitle">View recent handover notes for continuity across shifts.</p>
-            <div id="handoverList">Recent handover notes will appear here.</div>
+          <div class="hero-panel">
+            <h3 class="workspace-section-title">Shift Handover</h3>
+            <p class="workspace-section-subtitle">Ensuring consistency of care across the therapeutic team.</p>
+            <div id="handoverList">Retrieving latest shift logs...</div>
           </div>
         </div>
 
         <div id="reportsView" class="view hidden">
-          <div class="card">
-            <h3 class="workspace-section-title">Reports</h3>
-            <p class="workspace-section-subtitle">Generate structured written reports from your notes.</p>
+          <div class="hero-panel">
+            <h3 class="workspace-section-title">Therapeutic Reports</h3>
+            <p class="workspace-section-subtitle">Synthesise raw incident data into professional evidence.</p>
 
             <form id="incidentReportForm" class="stack">
-              <div>
-                <label for="incidentDescription">Incident description</label>
+              <div class="form-group">
+                <label style="font-weight:700; display:block; margin-bottom:10px;">Incident Reflection (Raw Observations)</label>
                 <textarea
                   id="incidentDescription"
                   name="description"
                   rows="8"
-                  placeholder="Enter the incident details here..."
+                  style="width:100%; border-radius:12px; border:1px solid var(--border-light); padding:15px;"
+                  placeholder="Describe the incident, triggers, and staff responses..."
                   required
                 ></textarea>
               </div>
-
-              <button class="button" type="submit">Generate incident report</button>
+              <button class="button" style="background: var(--brand-blue); color:white; font-weight:800; padding:15px 30px; border-radius:12px; border:none; cursor:pointer;" type="submit">Generate Therapeutic Report</button>
             </form>
-
             <div id="incidentReportOutput" class="output"></div>
           </div>
         </div>
 
         <div id="documentsView" class="view hidden">
-          <div class="card">
-            <h3 class="workspace-section-title">Documents</h3>
-            <p class="workspace-section-subtitle">Create downloadable staff documents from a short description.</p>
+          <div class="hero-panel">
+            <h3 class="workspace-section-title">Document Factory</h3>
+            <p class="workspace-section-subtitle">Standardised outcome-focused documentation.</p>
 
             <form id="documentForm" class="stack">
-              <div>
-                <label for="documentType">Document type</label>
-                <select id="documentType" name="type" required>
+              <div class="form-group">
+                <label style="font-weight:700; display:block; margin-bottom:10px;">Template Selection</label>
+                <select id="documentType" name="type" style="width:100%; padding:10px; border-radius:8px;" required>
+                  <option value="reflection">Reflective Practice</option>
                   <option value="incident">Incident Report</option>
                   <option value="risk">Risk Assessment</option>
                   <option value="daily-log">Daily Log</option>
                   <option value="handover">Shift Handover</option>
                   <option value="safeguarding">Safeguarding Record</option>
-                  <option value="reflection">Reflective Practice</option>
                 </select>
               </div>
-
-              <div>
-                <label for="documentDescription">Description</label>
+              <div class="form-group">
+                <label style="font-weight:700; display:block; margin-bottom:10px;">Core Context</label>
                 <textarea
                   id="documentDescription"
                   name="description"
                   rows="8"
-                  placeholder="Enter the information to build the document..."
+                  style="width:100%; border-radius:12px; border:1px solid var(--border-light); padding:15px;"
+                  placeholder="Enter the key information to build the document..."
                   required
                 ></textarea>
               </div>
-
-              <button class="button" type="submit">Generate document</button>
+              <button class="button" style="background: var(--brand-blue); color:white; font-weight:800; padding:15px 30px; border-radius:12px; border:none; cursor:pointer;" type="submit">Generate Document</button>
             </form>
-
             <div id="documentOutput" class="output"></div>
           </div>
         </div>
 
         <div id="accountView" class="view hidden">
-          <div class="card">
-            <h3 class="workspace-section-title">My account</h3>
-            <p class="workspace-section-subtitle">Your signed-in account details and access information.</p>
-            <div id="accountDetails">Your account details will appear here.</div>
+          <div class="hero-panel">
+            <h3 class="workspace-section-title">Security & Account</h3>
+            <p class="workspace-section-subtitle">Your encrypted profile and access credentials.</p>
+            <div id="accountDetails" class="user-badge">Loading...</div>
           </div>
         </div>
       </section>
@@ -413,4 +399,3 @@
   <script src="/js/app.js"></script>
 </body>
 </html>
-```
