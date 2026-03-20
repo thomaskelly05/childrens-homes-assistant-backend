@@ -619,11 +619,6 @@ async function streamAssistantResponse(url, bodyData) {
                 data = {};
             }
 
-            console.error("Chat request failed:", {
-                status: response.status,
-                data
-            });
-
             if (response.status === 401) {
                 localStorage.removeItem("access_token");
                 localStorage.removeItem("current_user");
@@ -639,50 +634,58 @@ async function streamAssistantResponse(url, bodyData) {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
 
-        let fullAssistantMessage = "";
-        let renderBuffer = "";
-        let isRendering = false;
-        let streamFinished = false;
+        let fullText = "";
+        let partial = "";
 
         createOrResetStreamingAssistantMessage();
 
-        async function flushRenderBuffer() {
-            if (isRendering) return;
-            isRendering = true;
-
-            while (renderBuffer.length > 0) {
-                fullAssistantMessage += renderBuffer[0];
-                renderBuffer = renderBuffer.slice(1);
-
-                updateAssistantMessage(fullAssistantMessage);
-
-                await new Promise((resolve) => setTimeout(resolve, 8));
-            }
-
-            isRendering = false;
-        }
-
         while (true) {
             const { done, value } = await reader.read();
-            if (done) {
-                streamFinished = true;
-                break;
-            }
+            if (done) break;
 
-            const chunk = decoder.decode(value, { stream: true });
-            renderBuffer += chunk;
-            flushRenderBuffer();
+            partial += decoder.decode(value, { stream: true });
+
+            const events = partial.split("\n\n");
+            partial = events.pop() || "";
+
+            for (const eventBlock of events) {
+                const lines = eventBlock.split("\n");
+
+                let eventName = "message";
+                const dataLines = [];
+
+                for (const line of lines) {
+                    if (line.startsWith("event:")) {
+                        eventName = line.slice(6).trim();
+                    } else if (line.startsWith("data:")) {
+                        dataLines.push(line.slice(5).trimStart());
+                    }
+                }
+
+                const data = dataLines.join("\n");
+
+                if (eventName === "done" || data === "[DONE]") {
+                    updateAssistantMessage(fullText);
+                    return;
+                }
+
+                if (data) {
+                    fullText += data;
+                    updateAssistantMessage(fullText);
+                }
+            }
         }
 
-        while (!streamFinished || renderBuffer.length > 0 || isRendering) {
-            await new Promise((resolve) => setTimeout(resolve, 10));
+        if (partial.trim()) {
+            const lines = partial.split("\n");
+            const dataLines = lines
+                .filter((line) => line.startsWith("data:"))
+                .map((line) => line.slice(5).trimStart());
 
-            if (!isRendering && renderBuffer.length > 0) {
-                flushRenderBuffer();
-            }
-
-            if (streamFinished && renderBuffer.length === 0 && !isRendering) {
-                break;
+            const data = dataLines.join("\n");
+            if (data && data !== "[DONE]") {
+                fullText += data;
+                updateAssistantMessage(fullText);
             }
         }
     } catch (error) {
@@ -794,6 +797,11 @@ function appendMessage(role, text, messageId = null, timestamp = null) {
 function createOrResetStreamingAssistantMessage() {
     const messages = ensureMessagesContainer();
     if (!messages) return;
+
+    const existingStreaming = messages.querySelector('.ica-message-wrapper.is-assistant[data-streaming="true"]');
+    if (existingStreaming) {
+        existingStreaming.remove();
+    }
 
     const wrapper = createMessageElement("assistant", "");
     wrapper.dataset.streaming = "true";
