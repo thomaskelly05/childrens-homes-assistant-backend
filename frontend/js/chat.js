@@ -8,7 +8,8 @@ const chatState = {
     recognition: null,
     isRecording: false,
     speechSupported: false,
-    draftKeyPrefix: "indicare-chat-draft:"
+    draftKeyPrefix: "indicare-chat-draft:",
+    isStreamingResponse: false
 };
 
 function initChat() {
@@ -21,6 +22,7 @@ function initChat() {
     bindSidebarControls();
     bindThemeToggle();
     bindGlobalMessageActions();
+    bindResponseMode();
     initSpeechToText();
     applyWelcomeMessage();
     applyFooterMeta();
@@ -114,6 +116,34 @@ function bindThemeToggle() {
     document.getElementById("themeToggle")?.addEventListener("click", () => {
         applyTheme(chatState.theme === "dark" ? "light" : "dark");
     });
+}
+
+function bindResponseMode() {
+    const select = document.getElementById("responseMode");
+    if (!select) return;
+
+    const saved = localStorage.getItem("indicare-response-mode");
+    if (saved && ["quick", "balanced", "deep"].includes(saved)) {
+        select.value = saved;
+    }
+
+    select.addEventListener("change", () => {
+        const value = getResponseMode();
+        localStorage.setItem("indicare-response-mode", value);
+        showStatusBanner("success", `Response mode set to ${labelForResponseMode(value)}.`);
+    });
+}
+
+function getResponseMode() {
+    const select = document.getElementById("responseMode");
+    const value = select?.value || localStorage.getItem("indicare-response-mode") || "balanced";
+    return ["quick", "balanced", "deep"].includes(value) ? value : "balanced";
+}
+
+function labelForResponseMode(value) {
+    if (value === "quick") return "Quick";
+    if (value === "deep") return "Deep review";
+    return "Balanced";
 }
 
 function bindGlobalMessageActions() {
@@ -411,6 +441,7 @@ function initSpeechToText() {
     recognition.maxAlternatives = 1;
 
     let baseTextBeforeRecording = "";
+    let micBusy = false;
 
     recognition.onstart = () => {
         chatState.isRecording = true;
@@ -432,6 +463,24 @@ function initSpeechToText() {
 
     recognition.onerror = (event) => {
         console.error("Speech recognition error:", event.error);
+
+        if (event.error === "aborted") {
+            stopMicVisualState();
+            return;
+        }
+
+        if (event.error === "no-speech") {
+            stopMicVisualState();
+            showStatusBanner("warn", "No speech was detected.");
+            return;
+        }
+
+        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+            stopMicVisualState();
+            showStatusBanner("error", "Microphone access was not allowed.");
+            return;
+        }
+
         stopMicVisualState();
         showStatusBanner("error", "Voice input could not be completed.");
     };
@@ -443,14 +492,25 @@ function initSpeechToText() {
     };
 
     micBtn.addEventListener("click", () => {
+        if (micBusy) return;
+
         if (!chatState.isRecording) {
             try {
+                micBusy = true;
                 recognition.start();
+                setTimeout(() => {
+                    micBusy = false;
+                }, 400);
             } catch (error) {
+                micBusy = false;
                 console.error("Could not start speech recognition:", error);
             }
         } else {
+            micBusy = true;
             recognition.stop();
+            setTimeout(() => {
+                micBusy = false;
+            }, 400);
         }
     });
 
@@ -486,6 +546,9 @@ function restoreDraft() {
     if (draft) {
         input.value = draft;
         autoResizeTextarea(input);
+    } else {
+        input.value = "";
+        autoResizeTextarea(input);
     }
 }
 
@@ -495,7 +558,7 @@ function clearDraft() {
 
 async function sendMessage() {
     const input = document.getElementById("chat-input");
-    if (!input) return;
+    if (!input || chatState.isStreamingResponse) return;
 
     const message = input.value.trim();
     if (!message) return;
@@ -509,18 +572,23 @@ async function sendMessage() {
 
     setSendLoading(true);
     showTypingIndicator(true);
+    chatState.isStreamingResponse = true;
 
-    await streamAssistantResponse("/chat/", {
-        message,
-        conversation_id: window.conversationId || null,
-        document_text: window.currentDocumentText,
-        document_name: window.currentDocumentName
-    });
+    try {
+        await streamAssistantResponse("/chat/", {
+            message,
+            conversation_id: window.conversationId || null,
+            document_text: window.currentDocumentText,
+            document_name: window.currentDocumentName,
+            response_mode: getResponseMode()
+        });
 
-    showTypingIndicator(false);
-    setSendLoading(false);
-
-    await loadConversations(true);
+        await loadConversations(true);
+    } finally {
+        chatState.isStreamingResponse = false;
+        showTypingIndicator(false);
+        setSendLoading(false);
+    }
 }
 
 async function streamAssistantResponse(url, bodyData) {
@@ -545,6 +613,11 @@ async function streamAssistantResponse(url, bodyData) {
                 data = {};
             }
 
+            console.error("Chat request failed:", {
+                status: response.status,
+                data
+            });
+
             if (response.status === 401) {
                 localStorage.removeItem("access_token");
                 localStorage.removeItem("current_user");
@@ -552,7 +625,8 @@ async function streamAssistantResponse(url, bodyData) {
                 return;
             }
 
-            appendMessage("assistant", data.detail || "Sorry, something went wrong.");
+            appendMessage("assistant", data.detail || `Request failed (${response.status}).`);
+            showStatusBanner("error", data.detail || `Request failed (${response.status}).`);
             return;
         }
 
@@ -572,7 +646,19 @@ async function streamAssistantResponse(url, bodyData) {
         }
     } catch (error) {
         console.error("Stream failed:", error);
-        appendMessage("assistant", "Sorry, something went wrong.");
+
+        const isNetworkDrop =
+            error instanceof TypeError &&
+            /load failed|network connection was lost|fetch/i.test(String(error.message || error));
+
+        if (isNetworkDrop) {
+            appendMessage("assistant", "The connection dropped while waiting for a response. Please try again.");
+            showStatusBanner("error", "The connection was lost while generating the reply.");
+            return;
+        }
+
+        appendMessage("assistant", `Connection error: ${error?.message || "Unknown error"}`);
+        showStatusBanner("error", "The connection was lost while generating the reply.");
     }
 }
 
@@ -1205,7 +1291,8 @@ async function submitInlineMessageEdit(messageId) {
     await streamAssistantResponse(`/chat/messages/${messageId}/edit`, {
         message: newText,
         document_text: window.currentDocumentText,
-        document_name: window.currentDocumentName
+        document_name: window.currentDocumentName,
+        response_mode: getResponseMode()
     });
 
     showTypingIndicator(false);
