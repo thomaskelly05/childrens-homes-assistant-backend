@@ -5,36 +5,44 @@ from typing import Any
 
 SUPERVISION_THEMES = {
     "emotional_impact": [
-        "emotional impact of the work",
-        "how the experience sat with the staff member",
-        "what may still feel unresolved",
+        "the emotional impact of the work on the staff member",
+        "what may still feel unresolved or sit heavily afterwards",
+        "whether the staff member may need space to think, debrief, or feel supported",
     ],
     "decision_making": [
         "decision-making under pressure",
         "what informed the response at the time",
-        "what felt clear and what felt uncertain",
+        "what felt clear and what felt uncertain in the moment",
     ],
     "relationship_based_practice": [
         "relationship-based practice",
-        "how the interaction may have affected trust, safety, or connection",
-        "whether the response matched the child’s known needs and communication style",
+        "how the interaction may have affected trust, safety, connection, or repair",
+        "whether the response matched the child’s known needs, developmental presentation, and communication style",
     ],
     "team_consistency": [
         "consistency of team response",
-        "whether there were shared expectations and follow-through",
-        "whether handover or planning gaps were present",
+        "whether expectations, boundaries, and follow-through were shared",
+        "whether handover, planning, or communication gaps were present",
     ],
     "recording_and_accountability": [
         "quality of recording",
         "whether facts, concerns, and actions were clearly separated",
-        "what might need stronger management or safeguarding oversight",
+        "what might need stronger management oversight, safeguarding oversight, or clearer follow-up",
+    ],
+    "leadership_oversight": [
+        "whether management oversight was strong enough",
+        "whether support, review, direction, or escalation pathways were clear",
+        "whether the home’s response reflected good leadership and management oversight",
     ],
     "learning_and_next_steps": [
-        "what can be carried forward",
+        "what can be carried forward into future practice",
         "what may need review in plans, routines, risk tools, or team communication",
-        "what support the staff member may need next",
+        "what support, learning, or follow-up may be needed next",
     ],
 }
+
+
+REFLECTIVE_MODES = {"supervision", "manager_review", "reflective"}
 
 
 def _safe_string(value: Any) -> str:
@@ -45,29 +53,42 @@ def _safe_string(value: Any) -> str:
     return str(value).strip()
 
 
+def _contains_any(text: str, words: list[str]) -> bool:
+    return any(word in text for word in words)
+
+
 def _select_supervision_themes(message: str, mode: str, safeguarding_level: str) -> list[str]:
     text = _safe_string(message).lower()
-    selected = []
+    selected: list[str] = []
 
-    if mode in {"supervision", "manager_review", "reflective"}:
+    if mode in {"supervision", "reflective"}:
         selected.extend([
             "emotional_impact",
             "decision_making",
             "learning_and_next_steps",
         ])
 
-    if any(word in text for word in ["team", "handover", "inconsistent", "consistency", "staff response"]):
+    if mode == "manager_review":
+        selected.extend([
+            "decision_making",
+            "recording_and_accountability",
+            "leadership_oversight",
+            "learning_and_next_steps",
+        ])
+
+    if _contains_any(text, ["team", "handover", "inconsistent", "consistency", "staff response", "mixed messages"]):
         selected.append("team_consistency")
 
-    if any(word in text for word in ["record", "write up", "incident", "chronology", "factual", "log"]):
+    if _contains_any(text, ["record", "write up", "incident", "chronology", "factual", "log", "body map", "daily log"]):
         selected.append("recording_and_accountability")
 
-    if any(word in text for word in ["relationship", "attachment", "trust", "repair", "communication"]):
+    if _contains_any(text, ["relationship", "attachment", "trust", "repair", "communication", "connection"]):
         selected.append("relationship_based_practice")
 
     if safeguarding_level in {"heightened", "urgent"}:
         selected.append("recording_and_accountability")
         selected.append("decision_making")
+        selected.append("leadership_oversight")
 
     # preserve order, remove duplicates
     seen = set()
@@ -80,7 +101,7 @@ def _select_supervision_themes(message: str, mode: str, safeguarding_level: str)
     if not ordered:
         ordered = ["decision_making", "learning_and_next_steps"]
 
-    return ordered[:4]
+    return ordered[:5]
 
 
 def maybe_build_supervision_context(
@@ -94,14 +115,14 @@ def maybe_build_supervision_context(
     Returns empty string unless supervision-style framing is likely to help.
     """
 
-    if mode not in {"supervision", "manager_review", "reflective"}:
+    if mode not in REFLECTIVE_MODES:
         return ""
 
     themes = _select_supervision_themes(message, mode, safeguarding_level)
 
     lines = [
-        "Where useful, shape part of the response so it could support reflective supervision or management discussion.",
-        "Keep the tone neutral, professionally grounded, and non-accusatory.",
+        "Where useful, shape part of the response so it could support reflective supervision, management discussion, or practice oversight.",
+        "Keep the tone calm, professionally grounded, and non-accusatory.",
         "Do not diagnose, over-interpret, or speculate beyond the information provided.",
         "Do not let supervision framing replace practical task completion if the user has asked for a concrete output.",
         "",
@@ -118,6 +139,7 @@ def maybe_build_supervision_context(
         lines.append("")
         lines.append("Additional caution:")
         lines.append("• Keep safeguarding responsibilities, escalation, and factual recording clear.")
-        lines.append("• Reflective or supervisory thinking must not blur immediate action or accountability.")
+        lines.append("• Reflective or supervisory thinking must not blur immediate action, reporting, or accountability.")
+        lines.append("• Where there may be risk, allegation, injury, or significant concern, practical safeguarding action takes priority over reflective exploration.")
 
     return "\n".join(lines).strip()
