@@ -384,9 +384,7 @@ function getAdultFirstName() {
 
 function getUserInitials() {
     const firstName = getAdultFirstName();
-    if (firstName) {
-        return firstName.trim().slice(0, 1).toUpperCase();
-    }
+    if (firstName) return firstName.trim().slice(0, 1).toUpperCase();
     return "Y";
 }
 
@@ -640,17 +638,52 @@ async function streamAssistantResponse(url, bodyData) {
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        let assistantMessage = "";
+
+        let fullAssistantMessage = "";
+        let renderBuffer = "";
+        let isRendering = false;
+        let streamFinished = false;
 
         createOrResetStreamingAssistantMessage();
 
+        async function flushRenderBuffer() {
+            if (isRendering) return;
+            isRendering = true;
+
+            while (renderBuffer.length > 0) {
+                fullAssistantMessage += renderBuffer[0];
+                renderBuffer = renderBuffer.slice(1);
+
+                updateAssistantMessage(fullAssistantMessage);
+
+                await new Promise((resolve) => setTimeout(resolve, 8));
+            }
+
+            isRendering = false;
+        }
+
         while (true) {
             const { done, value } = await reader.read();
-            if (done) break;
+            if (done) {
+                streamFinished = true;
+                break;
+            }
 
             const chunk = decoder.decode(value, { stream: true });
-            assistantMessage += chunk;
-            updateAssistantMessage(assistantMessage);
+            renderBuffer += chunk;
+            flushRenderBuffer();
+        }
+
+        while (!streamFinished || renderBuffer.length > 0 || isRendering) {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+
+            if (!isRendering && renderBuffer.length > 0) {
+                flushRenderBuffer();
+            }
+
+            if (streamFinished && renderBuffer.length === 0 && !isRendering) {
+                break;
+            }
         }
     } catch (error) {
         console.error("Stream failed:", error);
