@@ -18,6 +18,9 @@ logger = logging.getLogger("indicare.engine")
 FAST_MODES_SKIP_RETRIEVAL = {
     "handover",
     "rewrite",
+    "recording",
+    "incident_summary",
+    "chronology",
 }
 
 FAST_MODES_LIGHT_MEMORY = {
@@ -26,12 +29,38 @@ FAST_MODES_LIGHT_MEMORY = {
     "incident_summary",
     "rewrite",
     "chronology",
+    "practical",
 }
 
 REFLECTIVE_MODES = {
     "reflective",
     "supervision",
     "manager_review",
+}
+
+GUIDANCE_TRIGGER_WORDS = {
+    "how often",
+    "regulation",
+    "regulations",
+    "statutory",
+    "ofsted",
+    "quality standard",
+    "quality standards",
+    "sccif",
+    "children's homes regulations",
+    "childrens homes regulations",
+    "law",
+    "legal",
+    "guidance",
+    "framework",
+    "policy",
+}
+
+DOCUMENT_HEAVY_MODES = {
+    "rewrite",
+    "document_review",
+    "manager_review",
+    "support_planning",
 }
 
 
@@ -88,6 +117,13 @@ def _append_section(base: str, title: str, content: str) -> str:
     )
 
 
+def _normalise_speed(speed: str | None) -> str:
+    value = _safe_string(speed).lower()
+    if value in {"quick", "balanced", "deep"}:
+        return value
+    return "balanced"
+
+
 def _normalise_history(history: list[dict[str, Any]], max_messages: int = 6) -> list[dict[str, Any]]:
     cleaned: list[dict[str, Any]] = []
 
@@ -110,6 +146,29 @@ def _normalise_history(history: list[dict[str, Any]], max_messages: int = 6) -> 
     return cleaned[-max_messages:]
 
 
+def _document_trim_limit(mode: str, speed: str) -> int:
+    if speed == "quick":
+        return 8000
+    if speed == "deep":
+        return 18000
+    if mode in DOCUMENT_HEAVY_MODES:
+        return 15000
+    return 12000
+
+
+def _history_limit_for_speed(speed: str) -> int:
+    if speed == "quick":
+        return 4
+    if speed == "deep":
+        return 8
+    return 6
+
+
+def _contains_guidance_trigger(message: str) -> bool:
+    text = (message or "").lower()
+    return any(word in text for word in GUIDANCE_TRIGGER_WORDS)
+
+
 def _should_use_retrieval(
     mode: str,
     safeguarding_level: str,
@@ -117,8 +176,6 @@ def _should_use_retrieval(
     document_text: str | None,
     response_mode: str,
 ) -> bool:
-    text = (message or "").lower()
-
     if document_text:
         return False
 
@@ -131,10 +188,17 @@ def _should_use_retrieval(
     if safeguarding_level in {"heightened", "urgent"} and mode in {"recording", "incident_summary", "practical"}:
         return False
 
-    if any(kw in text for kw in ["how often", "regulation", "statutory", "ofsted", "quality standard", "sccif"]):
+    if _contains_guidance_trigger(message):
         return True
 
-    return mode in {"factual", "support_planning", "manager_review", "reflective", "supervision", "general_practice"}
+    return mode in {
+        "factual",
+        "support_planning",
+        "manager_review",
+        "reflective",
+        "supervision",
+        "general_practice",
+    }
 
 
 def _should_use_memory(mode: str, response_mode: str) -> bool:
@@ -143,9 +207,28 @@ def _should_use_memory(mode: str, response_mode: str) -> bool:
     return mode not in FAST_MODES_LIGHT_MEMORY
 
 
+def _should_use_reflection(mode: str, response_mode: str) -> bool:
+    return mode in REFLECTIVE_MODES and response_mode == "deep"
+
+
+def _build_runtime_mode_context(runtime: AssistantRuntimeContext, speed: str) -> str:
+    return (
+        f"Detected task mode: {runtime.mode}\n"
+        f"Safeguarding level: {runtime.safeguarding_level}\n"
+        f"Selected response mode: {speed}\n\n"
+        f"Use these as working signals for tone, structure, caution level, and practical focus.\n"
+        f"Complete the user's task directly unless doing so would be unsafe or dishonest."
+    )
+
+
 def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPackage:
     message = _safe_string(req.message)
-    history = _normalise_history(req.history, max_messages=6)
+    speed = _normalise_speed(req.speed)
+
+    history = _normalise_history(
+        req.history,
+        max_messages=_history_limit_for_speed(speed),
+    )
 
     runtime = AssistantRuntimeContext()
 
@@ -184,7 +267,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         runtime.schema_context = ""
 
     # 4. Memory
-    if _should_use_memory(runtime.mode, req.speed):
+    if _should_use_memory(runtime.mode, speed):
         try:
             runtime.memory_context = _safe_string(
                 get_memory_context(
@@ -192,7 +275,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
                     user_context=req.user_context,
                     message=message,
                     mode=runtime.mode,
-                    recent_limit=4,
+                    recent_limit=3 if speed == "balanced" else 4,
                 )
             )
         except TypeError:
@@ -206,7 +289,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
             runtime.memory_context = ""
 
     # 5. Retrieval
-    if _should_use_retrieval(runtime.mode, runtime.safeguarding_level, message, req.document_text, req.speed):
+    if _should_use_retrieval(runtime.mode, runtime.safeguarding_level, message, req.document_text, speed):
         try:
             runtime.retrieval_context = _safe_string(
                 retrieve_context(
@@ -216,7 +299,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
                     document_text=req.document_text,
                     document_name=req.document_name,
                     role=req.role,
-                    limit=3,
+                    limit=2 if speed == "balanced" else 3,
                 )
             )
         except TypeError:
@@ -229,8 +312,8 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
             logger.exception("Retrieval failed: %s", e)
             runtime.retrieval_context = ""
 
-    # 6. Reflection / supervision only when useful and not quick
-    if runtime.mode in REFLECTIVE_MODES and req.speed == "deep":
+    # 6. Reflection / supervision only when useful
+    if _should_use_reflection(runtime.mode, speed):
         try:
             runtime.reflection_context = _safe_string(
                 maybe_build_reflection_context(
@@ -275,25 +358,20 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         role=req.role,
         ld_lens=req.ld_lens,
         training_mode=req.training_mode,
-        speed=req.speed,
+        speed=speed,
     )
 
     # 8. Runtime mode context
     system_prompt = _append_section(
         system_prompt,
         "RUNTIME MODE CONTEXT",
-        (
-            f"Detected task mode: {runtime.mode}\n"
-            f"Safeguarding level: {runtime.safeguarding_level}\n"
-            f"Selected response mode: {req.speed}\n\n"
-            f"Use these as working signals for tone, structure, caution level, and practical focus."
-        ),
+        _build_runtime_mode_context(runtime, speed),
     )
 
     # 9. Response structure
     system_prompt = _append_section(system_prompt, "RESPONSE STRUCTURE", runtime.schema_context)
 
-    # 10. Attach runtime contexts
+    # 10. Attach only useful runtime contexts
     system_prompt = _append_section(system_prompt, "MEMORY CONTEXT", runtime.memory_context)
     system_prompt = _append_section(system_prompt, "RETRIEVED CONTEXT", runtime.retrieval_context)
     system_prompt = _append_section(system_prompt, "REFLECTION CONTEXT", runtime.reflection_context)
@@ -301,14 +379,15 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
 
     # 11. Uploaded document context
     if req.document_text:
-        trimmed_document_text = req.document_text[:12000]
+        trimmed_document_text = req.document_text[:_document_trim_limit(runtime.mode, speed)]
         system_prompt = _append_section(
             system_prompt,
             "UPLOADED DOCUMENT CONTEXT",
             (
                 f"Document name: {req.document_name or 'Uploaded document'}\n\n"
                 f"Use this document as working source material where relevant.\n"
-                f"Do not invent facts beyond the document and the user's instructions.\n\n"
+                f"Do not invent facts beyond the document and the user's instructions.\n"
+                f"If information is missing, label gaps clearly.\n\n"
                 f"Document text:\n{trimmed_document_text}"
             ),
         )
@@ -318,7 +397,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         req.session_id,
         runtime.mode,
         runtime.safeguarding_level,
-        req.speed,
+        speed,
     )
 
     return AssistantPromptPackage(
