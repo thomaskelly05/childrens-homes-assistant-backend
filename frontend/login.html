@@ -3,313 +3,237 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IndiCare | Sign in</title>
-  <meta
-    name="description"
-    content="Sign in to IndiCare, the staff workspace for children's home operations, records, supervision, and AI support."
-  />
+  <title>IndiCare | Professional Portal</title>
+  <meta name="description" content="Access the IndiCare staff workspace for therapeutic recording, reflective practice, and operational oversight." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
 
   <link rel="icon" type="image/svg+xml" href="/assets/logo.svg" />
-
   <link rel="stylesheet" href="/css/reset.css" />
   <link rel="stylesheet" href="/css/base.css" />
   <link rel="stylesheet" href="/css/theme.css" />
-  <link rel="stylesheet" href="/css/layout.css" />
-  <link rel="stylesheet" href="/css/components.css" />
 
   <style>
+    :root {
+      --brand-blue: #005EB8;
+      --deep-navy: #0a192f;
+      --therapeutic-green: #10b981;
+      --slate: #475569;
+      --glass: rgba(255, 255, 255, 0.85);
+    }
+
     body.login-page {
       margin: 0;
       min-height: 100vh;
       display: grid;
       grid-template-columns: 1.1fr 0.9fr;
-      background:
-        radial-gradient(circle at top left, rgba(78, 110, 255, 0.14), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(29, 78, 216, 0.1), transparent 30%),
-        linear-gradient(135deg, #f7f9fc 0%, #eef3f9 100%);
-      color: #132033;
-      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: 
+        radial-gradient(circle at 0% 0%, rgba(0, 94, 184, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.05) 0%, transparent 40%),
+        #f8fafc;
+      color: var(--deep-navy);
+      font-family: 'Plus Jakarta Sans', sans-serif;
     }
 
-    .login-shell {
-      display: contents;
-    }
-
+    /* Left Panel: Branding & Marketing Influence */
     .login-panel {
       display: flex;
       flex-direction: column;
       justify-content: center;
-      padding: 4rem 5rem;
+      padding: 4rem;
+      border-right: 1px solid rgba(0,0,0,0.05);
     }
 
-    .login-brand {
-      max-width: 560px;
-    }
+    .login-brand { max-width: 600px; }
 
-    .login-brand__badge {
+    .brand-badge {
       display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.45rem 0.8rem;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.8);
-      border: 1px solid rgba(19, 32, 51, 0.08);
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: #2a3d59;
-      margin-bottom: 1.25rem;
+      gap: 8px;
+      padding: 8px 16px;
+      background: white;
+      border: 1px solid rgba(0, 94, 184, 0.15);
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: var(--brand-blue);
+      margin-bottom: 2rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
 
     .login-brand h1 {
-      margin: 0 0 1rem;
-      font-size: clamp(2.4rem, 4vw, 4rem);
-      line-height: 1.05;
-      letter-spacing: -0.03em;
-      color: #0f172a;
+      font-size: clamp(2.2rem, 4vw, 3.5rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -2px;
+      margin-bottom: 1.5rem;
+      color: var(--deep-navy);
     }
 
     .login-brand p {
-      margin: 0;
-      font-size: 1.08rem;
-      line-height: 1.7;
-      color: #42526b;
-      max-width: 48ch;
+      font-size: 1.2rem;
+      line-height: 1.6;
+      color: var(--slate);
+      margin-bottom: 3rem;
     }
 
-    .login-highlights {
-      margin-top: 2rem;
-      display: grid;
-      gap: 0.9rem;
-      max-width: 34rem;
-    }
+    /* High-Skill Feature Highlights */
+    .feature-list { display: grid; gap: 1.5rem; }
 
-    .login-highlight {
+    .feature-card {
       display: flex;
-      gap: 0.9rem;
-      align-items: flex-start;
-      padding: 1rem 1.1rem;
-      border-radius: 18px;
-      background: rgba(255, 255, 255, 0.72);
-      border: 1px solid rgba(19, 32, 51, 0.08);
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+      gap: 20px;
+      padding: 20px;
+      background: var(--glass);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,1);
+      border-radius: 24px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.03);
+      transition: transform 0.3s ease;
     }
 
-    .login-highlight__icon {
-      width: 2.2rem;
-      height: 2.2rem;
-      border-radius: 12px;
+    .feature-card:hover { transform: translateX(10px); border-color: var(--brand-blue); }
+
+    .icon-box {
+      width: 48px;
+      height: 48px;
+      background: #eef6ff;
+      border-radius: 14px;
       display: grid;
       place-items: center;
-      background: #e8efff;
-      color: #2447d5;
-      font-size: 1rem;
-      font-weight: 700;
+      font-size: 1.2rem;
       flex-shrink: 0;
     }
 
-    .login-highlight h3 {
-      margin: 0 0 0.25rem;
-      font-size: 0.98rem;
-      color: #132033;
-    }
+    .feature-card h3 { font-size: 1.1rem; font-weight: 800; margin-bottom: 4px; }
+    .feature-card p { font-size: 0.95rem; color: var(--slate); margin: 0; line-height: 1.5; }
 
-    .login-highlight p {
-      margin: 0;
-      font-size: 0.94rem;
-      color: #52637d;
-      line-height: 1.5;
-    }
-
+    /* Right Panel: The Secure Portal */
     .login-form-panel {
       display: flex;
       align-items: center;
       justify-content: center;
+      background: white;
       padding: 2rem;
-      background: rgba(255, 255, 255, 0.5);
-      backdrop-filter: blur(8px);
+      position: relative;
     }
 
     .login-card {
       width: 100%;
-      max-width: 430px;
-      padding: 2rem;
-      border-radius: 28px;
-      background: rgba(255, 255, 255, 0.92);
-      border: 1px solid rgba(19, 32, 51, 0.08);
-      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+      max-width: 420px;
+      padding: 3rem;
+      background: white;
+      border-radius: 32px;
+      box-shadow: 0 40px 80px rgba(10, 25, 47, 0.08);
+      border: 1px solid #f1f5f9;
     }
 
-    .login-card__header {
-      text-align: left;
-      margin-bottom: 1.5rem;
-    }
+    .login-header { margin-bottom: 2.5rem; text-align: left; }
+    .logo-container { margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; }
+    .logo-container span { font-weight: 900; font-size: 1.4rem; letter-spacing: -1px; }
+    .logo-img { width: 42px; height: 42px; background: var(--deep-navy); border-radius: 10px; }
 
-    .login-card__logo {
-      width: 54px;
-      height: 54px;
-      object-fit: contain;
-      margin-bottom: 1rem;
-    }
+    .login-card h2 { font-size: 1.8rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 8px; }
+    .login-card p.subtitle { color: var(--slate); font-size: 1rem; }
 
-    .login-card__title {
-      margin: 0 0 0.5rem;
-      font-size: 1.8rem;
-      color: #0f172a;
-      letter-spacing: -0.02em;
-    }
-
-    .login-card__subtitle {
-      margin: 0;
-      color: #5b6b83;
-      line-height: 1.6;
-      font-size: 0.98rem;
-    }
-
-    .login-form {
-      display: grid;
-      gap: 1rem;
-    }
-
-    .form-group {
-      display: grid;
-      gap: 0.45rem;
-    }
-
-    .form-group label {
-      font-size: 0.92rem;
-      font-weight: 600;
-      color: #24364f;
-    }
-
+    /* Forms */
+    .form-group { margin-bottom: 1.2rem; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 8px; color: var(--deep-navy); }
+    
     .form-group input {
       width: 100%;
-      box-sizing: border-box;
-      border: 1px solid #d8e1ec;
+      padding: 14px 18px;
+      border: 2px solid #f1f5f9;
       border-radius: 14px;
-      padding: 0.95rem 1rem;
       font-size: 1rem;
-      background: #fff;
-      color: #132033;
-      outline: none;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+      font-family: inherit;
+      transition: all 0.2s ease;
+      background: #f8fafc;
     }
 
     .form-group input:focus {
-      border-color: #4f74ff;
-      box-shadow: 0 0 0 4px rgba(79, 116, 255, 0.12);
-    }
-
-    .login-actions {
-      display: grid;
-      gap: 0.8rem;
-      margin-top: 0.35rem;
+      outline: none;
+      border-color: var(--brand-blue);
+      background: white;
+      box-shadow: 0 0 0 4px rgba(0, 94, 184, 0.1);
     }
 
     .login-button {
       width: 100%;
+      background: var(--brand-blue);
+      color: white;
       border: none;
+      padding: 16px;
       border-radius: 14px;
-      padding: 0.95rem 1rem;
-      font-size: 1rem;
-      font-weight: 700;
-      color: #fff;
-      background: linear-gradient(135deg, #315efb 0%, #2447d5 100%);
+      font-size: 1.1rem;
+      font-weight: 800;
       cursor: pointer;
-      box-shadow: 0 14px 28px rgba(36, 71, 213, 0.22);
-      transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
-    }
-
-    .login-button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 18px 30px rgba(36, 71, 213, 0.26);
-    }
-
-    .login-button:disabled {
-      opacity: 0.7;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: 0 10px 20px rgba(36, 71, 213, 0.16);
-    }
-
-    .login-footnote {
+      transition: all 0.3s ease;
       margin-top: 1rem;
-      font-size: 0.9rem;
+      box-shadow: 0 10px 20px rgba(0, 94, 184, 0.2);
+    }
+
+    .login-button:hover { transform: translateY(-2px); box-shadow: 0 15px 30px rgba(0, 94, 184, 0.3); }
+
+    .secure-footer {
+      margin-top: 2.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #f1f5f9;
+      font-size: 0.8rem;
+      color: var(--slate);
       line-height: 1.5;
-      color: #66768d;
     }
 
-    .login-footer {
-      margin-top: 1.25rem;
-      padding-top: 1rem;
-      border-top: 1px solid rgba(19, 32, 51, 0.08);
-      font-size: 0.88rem;
-      color: #7a8799;
+    .security-badge { 
+      display: inline-flex; 
+      align-items: center; 
+      gap: 6px; 
+      color: var(--therapeutic-green); 
+      font-weight: 700; 
+      margin-bottom: 10px;
     }
 
-    @media (max-width: 980px) {
-      body.login-page {
-        grid-template-columns: 1fr;
-      }
-
-      .login-panel {
-        padding: 2.25rem 1.25rem 1rem;
-      }
-
-      .login-form-panel {
-        padding: 1.25rem;
-        align-items: start;
-      }
-
-      .login-brand {
-        max-width: none;
-      }
-    }
-
-    @media (max-width: 640px) {
-      .login-card {
-        padding: 1.4rem;
-        border-radius: 22px;
-      }
-
-      .login-brand h1 {
-        font-size: 2.1rem;
-      }
+    @media (max-width: 1024px) {
+      body.login-page { grid-template-columns: 1fr; }
+      .login-panel { display: none; } /* Hide marketing for mobile login focus */
+      .login-form-panel { padding: 1.5rem; background: var(--bg-light); }
     }
   </style>
 </head>
 <body class="login-page">
   <div class="login-shell">
+    
     <section class="login-panel">
       <div class="login-brand">
-        <div class="login-brand__badge">IndiCare Platform</div>
-        <h1>Professional digital support for children's home teams.</h1>
-        <p>
-          Manage day-to-day practice, staff journals, supervision, reports,
-          handover notes, and AI-assisted documents in one secure workspace.
-        </p>
+        <div class="brand-badge">🇬🇧 UK Care Sector Enterprise</div>
+        <h1>Advancing <span style="color:var(--brand-blue)">Therapeutic Excellence</span> at the Frontline.</h1>
+        <p>IndiCare bridges the gap between high-intensity shifts and the high-fidelity documentation required by modern care standards.</p>
 
-        <div class="login-highlights">
-          <div class="login-highlight">
-            <div class="login-highlight__icon">AI</div>
+        <div class="feature-list">
+          <div class="feature-card">
+            <div class="icon-box">🎙️</div>
             <div>
-              <h3>AI support for practice</h3>
-              <p>Generate structured reports, records, reflections, and operational documents faster.</p>
+              <h3>Therapeutic Assistant Engine</h3>
+              <p>Turn verbal reflections into structured, trauma-informed evidence in real-time.</p>
             </div>
           </div>
 
-          <div class="login-highlight">
-            <div class="login-highlight__icon">SJ</div>
+          <div class="feature-card">
+            <div class="icon-box">📊</div>
             <div>
-              <h3>Staff journal and supervision</h3>
-              <p>Keep development notes, prepare supervision packs, and support stronger reflective practice.</p>
+              <h3>Notes AI Synthesis</h3>
+              <p>Automated outcome mapping for LAC reviews and monthly reports.</p>
             </div>
           </div>
 
-          <div class="login-highlight">
-            <div class="login-highlight__icon">HQ</div>
+          <div class="feature-card">
+            <div class="icon-box">🔒</div>
             <div>
-              <h3>Clear daily oversight</h3>
-              <p>Review tasks, handover information, and key operational updates in one place.</p>
+              <h3>Regulatory Integrity</h3>
+              <p>Built for UK GDPR compliance with AES-256 sovereign data protection.</p>
             </div>
           </div>
         </div>
@@ -318,22 +242,24 @@
 
     <section class="login-form-panel">
       <div class="login-card">
-        <div class="login-card__header">
-          <img src="/assets/logo.svg" alt="IndiCare logo" class="login-card__logo" />
-          <h2 class="login-card__title">Sign in to IndiCare</h2>
-          <p class="login-card__subtitle">
-            Use your work account to access the staff workspace.
-          </p>
+        <div class="login-header">
+          <div class="logo-container">
+            <div class="logo-img"></div>
+            <span>IndiCare <span>AI</span></span>
+          </div>
+          <h2>Staff Portal</h2>
+          <p class="subtitle">Enter your credentials to access your secure workspace.</p>
         </div>
 
-        <div class="login-form">
+        <form class="login-form">
           <div class="form-group">
-            <label for="email">Email address</label>
+            <label for="email">Email Address</label>
             <input
               id="email"
               type="email"
               placeholder="name@indicare.co.uk"
               autocomplete="email"
+              required
             />
           </div>
 
@@ -342,25 +268,25 @@
             <input
               id="password"
               type="password"
-              placeholder="Enter your password"
+              placeholder="••••••••••••"
               autocomplete="current-password"
+              required
             />
           </div>
 
           <div class="login-actions">
             <button id="loginBtn" class="login-button" type="button">
-              Sign in
+              Sign In to Workspace
             </button>
           </div>
-        </div>
+        </form>
 
-        <p class="login-footnote">
-          This secure workspace is designed to support good recording, reflective
-          practice, and safer operational oversight across residential care.
-        </p>
-
-        <div class="login-footer">
-          © IndiCare
+        <div class="secure-footer">
+          <div class="security-badge">🔒 Secure Sovereign Connection</div>
+          <p>
+            This system is for authorised personnel only. All access is monitored and encrypted to protect sensitive child data and professional records.
+          </p>
+          <div style="margin-top:15px; font-weight:800; font-size: 0.75rem;">© 2026 IndiCare AI</div>
         </div>
       </div>
     </section>
