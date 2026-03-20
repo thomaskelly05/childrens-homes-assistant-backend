@@ -5,6 +5,7 @@ import os
 from typing import Any
 
 import psycopg2
+from psycopg2.extras import RealDictCursor
 from openai import OpenAI
 
 logger = logging.getLogger("indicare.retrieval")
@@ -12,6 +13,9 @@ logger = logging.getLogger("indicare.retrieval")
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 
+# ---------------------------------------------------------
+# DATABASE
+# ---------------------------------------------------------
 def get_db_connection():
     return psycopg2.connect(
         host=os.environ.get("DB_HOST", "localhost"),
@@ -21,38 +25,116 @@ def get_db_connection():
     )
 
 
+# ---------------------------------------------------------
+# EMBEDDINGS
+# ---------------------------------------------------------
 def embed_query(text: str) -> list[float]:
     response = client.embeddings.create(
         model="text-embedding-3-small",
-        input=text
+        input=text,
     )
     return response.data[0].embedding
 
 
+# ---------------------------------------------------------
+# RETRIEVAL HINTS
+# ---------------------------------------------------------
 MODE_HINTS = {
-    "factual": ["children's homes regulations", "quality standards", "ofsted", "statutory guidance"],
-    "support_planning": ["support plan", "care planning", "staff actions", "review points"],
-    "manager_review": ["manager oversight", "audit lens", "quality assurance"],
-    "reflective": ["reflective practice", "supervision", "learning"],
-    "supervision": ["supervision", "reflection", "learning"],
-    "general_practice": ["residential childcare practice"],
-    "practical": ["residential childcare practice"],
+    "factual": [
+        "children's homes regulations",
+        "quality standards",
+        "ofsted",
+        "statutory guidance",
+    ],
+    "support_planning": [
+        "support plan",
+        "care planning",
+        "staff actions",
+        "review points",
+    ],
+    "manager_review": [
+        "manager oversight",
+        "audit lens",
+        "quality assurance",
+    ],
+    "reflective": [
+        "reflective practice",
+        "supervision",
+        "learning",
+    ],
+    "supervision": [
+        "supervision",
+        "reflection",
+        "learning",
+    ],
+    "general_practice": [
+        "residential childcare practice",
+    ],
+    "practical": [
+        "residential childcare practice",
+    ],
+    "recording": [
+        "factual recording",
+        "neutral language",
+        "clear record",
+    ],
+    "incident_summary": [
+        "incident summary",
+        "factual sequence",
+        "clear documentation",
+    ],
+    "chronology": [
+        "chronology",
+        "timeline",
+        "sequence of events",
+    ],
+    "handover": [
+        "handover",
+        "key information",
+        "shift continuity",
+    ],
+    "rewrite": [
+        "professional wording",
+        "clear wording",
+        "neutral wording",
+    ],
 }
 
 SAFEGUARDING_HINTS = {
     "normal": [],
-    "watchful": ["early safeguarding indicators", "record factually"],
-    "heightened": ["safeguarding concern", "clear factual recording"],
-    "urgent": ["immediate safety", "urgent safeguarding response"],
+    "watchful": [
+        "early safeguarding indicators",
+        "record factually",
+    ],
+    "heightened": [
+        "safeguarding concern",
+        "clear factual recording",
+        "escalation",
+    ],
+    "urgent": [
+        "immediate safety",
+        "urgent safeguarding response",
+        "clear escalation",
+    ],
 }
 
 
+# ---------------------------------------------------------
+# HELPERS
+# ---------------------------------------------------------
 def _safe_string(value: Any) -> str:
     if value is None:
         return ""
     if isinstance(value, str):
         return value.strip()
     return str(value).strip()
+
+
+def _trim_text(value: str, limit: int) -> str:
+    value = _safe_string(value)
+    if len(value) <= limit:
+        return value
+    return value[:limit].rsplit(" ", 1)[0].strip()
 
 
 def _build_query_text(
@@ -62,95 +144,108 @@ def _build_query_text(
     role: str = "",
     document_name: str | None = None,
 ) -> str:
+    """
+    Build a compact shaped retrieval query.
+    Keep it lean so embeddings reflect the actual need, not prompt noise.
+    """
     parts: list[str] = []
 
-    message = _safe_string(message)
-    role = _safe_string(role)
-    document_name = _safe_string(document_name)
+    clean_message = _trim_text(message, 700)
+    clean_role = _trim_text(role, 120)
+    clean_document_name = _trim_text(document_name or "", 120)
 
-    if message:
-        parts.append(message)
-    if role:
-        parts.append(f"User role: {role}")
+    if clean_message:
+        parts.append(f"User request: {clean_message}")
 
-    parts.extend(MODE_HINTS.get(mode, []))
-    parts.extend(SAFEGUARDING_HINTS.get(safeguarding_level, []))
+    if clean_role:
+        parts.append(f"Role: {clean_role}")
 
-    if document_name:
-        parts.append(f"Uploaded document name: {document_name}")
+    mode_hints = MODE_HINTS.get(mode, [])
+    if mode_hints:
+        parts.append(f"Mode hints: {', '.join(mode_hints[:4])}")
+
+    safeguarding_hints = SAFEGUARDING_HINTS.get(safeguarding_level, [])
+    if safeguarding_hints:
+        parts.append(f"Safeguarding hints: {', '.join(safeguarding_hints[:3])}")
+
+    if clean_document_name:
+        parts.append(f"Document: {clean_document_name}")
 
     return "\n".join(parts).strip()
 
 
-def _fetch_knowledge_rows(embedding: list[float], limit: int = 3):
+def _fetch_knowledge_rows(embedding: list[float], limit: int = 3) -> list[dict[str, Any]]:
     conn = None
-    cur = None
 
     try:
         conn = get_db_connection()
-        cur = conn.cursor()
 
-        cur.execute(
-            """
-            SELECT
-                content,
-                document_title,
-                section,
-                page_number
-            FROM indicare_knowledge
-            ORDER BY embedding <-> %s
-            LIMIT %s
-            """,
-            (embedding, limit)
-        )
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT
+                    content,
+                    document_title,
+                    section,
+                    page_number
+                FROM indicare_knowledge
+                ORDER BY embedding <-> %s
+                LIMIT %s
+                """,
+                (embedding, limit)
+            )
+            rows = cur.fetchall()
 
-        return cur.fetchall()
+        return rows or []
 
     finally:
-        if cur:
-            cur.close()
         if conn:
             conn.close()
 
 
-def _format_rows(rows: list[tuple]) -> str:
+def _format_rows(rows: list[dict[str, Any]]) -> str:
     if not rows:
         return ""
 
-    context_blocks = []
-    source_blocks = []
+    excerpt_blocks: list[str] = []
+    source_blocks: list[str] = []
 
     for i, row in enumerate(rows, start=1):
-        content, doc, section, page = row
-
-        content = _safe_string(content)
-        doc = _safe_string(doc) or "Unknown document"
-        section = _safe_string(section) or "Unknown section"
-        page = page if page is not None else "?"
+        content = _trim_text(row.get("content") or "", 900)
+        doc = _safe_string(row.get("document_title")) or "Unknown document"
+        section = _safe_string(row.get("section")) or "Unknown section"
+        page = row.get("page_number")
+        page_display = page if page is not None else "?"
 
         if not content:
             continue
 
-        context_blocks.append(f"[{i}] {content}")
-        source_blocks.append(f"[{i}] {doc} — {section} (p.{page})")
+        excerpt_blocks.append(f"[{i}] {content}")
+        source_blocks.append(f"[{i}] {doc} — {section} (p.{page_display})")
 
-    if not context_blocks:
+    if not excerpt_blocks:
         return ""
+
+    excerpts = "\n\n".join(excerpt_blocks)
+    sources = "\n".join(source_blocks)
 
     return f"""
 RETRIEVED INTERNAL KNOWLEDGE
 
-Use the following internal knowledge selectively where it genuinely helps improve the answer.
-Prefer the most relevant excerpts.
+Use the following internal knowledge selectively where it genuinely improves the answer.
+Prefer the most relevant excerpts and do not force all of them into the response.
 
 Knowledge excerpts:
-{chr(10).join(chr(10) + block for block in context_blocks)}
+{excerpts}
 
 Knowledge sources:
-{chr(10).join(source_blocks)}
+{sources}
 """.strip()
 
 
+# ---------------------------------------------------------
+# PUBLIC API
+# ---------------------------------------------------------
 def retrieve_context(
     message: str,
     mode: str = "general_practice",
@@ -161,6 +256,8 @@ def retrieve_context(
     limit: int = 3,
 ) -> str:
     try:
+        safe_limit = max(1, min(int(limit), 5))
+
         shaped_query = _build_query_text(
             message=message,
             mode=mode,
@@ -169,8 +266,11 @@ def retrieve_context(
             document_name=document_name,
         )
 
+        if not shaped_query:
+            return ""
+
         embedding = embed_query(shaped_query)
-        rows = _fetch_knowledge_rows(embedding, limit=limit)
+        rows = _fetch_knowledge_rows(embedding, limit=safe_limit)
         context = _format_rows(rows)
 
         if context and document_text:
