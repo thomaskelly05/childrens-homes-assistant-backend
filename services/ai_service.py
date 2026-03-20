@@ -1,9 +1,12 @@
 import os
+import logging
 
 from openai import AsyncOpenAI
 
 from assistant.prompts import build_chat_prompt
 from assistant.web_search import web_search
+
+logger = logging.getLogger(__name__)
 
 client = AsyncOpenAI(
     api_key=os.environ.get("OPENAI_API_KEY")
@@ -22,7 +25,7 @@ GUIDANCE_KEYWORDS = [
     "safeguarding",
     "framework",
     "standard",
-    "procedure"
+    "procedure",
 ]
 
 
@@ -41,8 +44,12 @@ async def generate_ai_stream(
     history = history or []
 
     search_results = ""
-    if should_search_guidance(message):
-        search_results = web_search(message)
+    try:
+        if should_search_guidance(message):
+            search_results = web_search(message)
+    except Exception as e:
+        logger.exception("Guidance search failed for session %s: %s", session_id, e)
+        search_results = ""
 
     system_prompt, user_message = build_chat_prompt(
         message=message,
@@ -102,11 +109,19 @@ Uploaded document text:
 
     messages = [{"role": "system", "content": system_prompt}]
 
-    for m in history:
-        if m["role"] in {"user", "assistant"} and m["message"].strip():
+    # Avoid duplicating the current user message if it is already the last entry in history
+    history_to_use = history
+    if history and history[-1].get("role") == "user":
+        history_to_use = history[:-1]
+
+    for m in history_to_use:
+        role = m.get("role")
+        content = (m.get("message") or "").strip()
+
+        if role in {"user", "assistant"} and content:
             messages.append({
-                "role": m["role"],
-                "content": m["message"]
+                "role": role,
+                "content": content
             })
 
     messages.append({
@@ -114,13 +129,22 @@ Uploaded document text:
         "content": user_message
     })
 
+    logger.info("Starting OpenAI stream for session %s", session_id)
+
     stream = await client.chat.completions.create(
         model="gpt-4o",
         messages=messages,
-        stream=True
+        stream=True,
     )
 
     async for chunk in stream:
-        content = chunk.choices[0].delta.content
+        if not chunk.choices:
+            continue
+
+        delta = chunk.choices[0].delta
+        content = getattr(delta, "content", None)
+
         if content:
             yield content
+
+    logger.info("Completed OpenAI stream for session %s", session_id)
