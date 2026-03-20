@@ -39,6 +39,7 @@ class EditMessagePayload(BaseModel):
     message: str
     document_text: str | None = None
     document_name: str | None = None
+    response_mode: str | None = "balanced"
 
 
 # ---------------------------------------------------------
@@ -63,8 +64,10 @@ def get_conversation_history(conn, conversation_id: int):
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
-            SELECT id, role, message, created_at FROM messages
-            WHERE conversation_id = %s ORDER BY created_at ASC, id ASC
+            SELECT id, role, message, created_at
+            FROM messages
+            WHERE conversation_id = %s
+            ORDER BY created_at ASC, id ASC
             """,
             (conversation_id,)
         )
@@ -78,7 +81,8 @@ def get_conversation_document(conn, conversation_id: int):
             """
             SELECT id, filename, document_text, created_at
             FROM conversation_documents
-            WHERE conversation_id = %s ORDER BY created_at DESC, id DESC LIMIT 1
+            WHERE conversation_id = %s
+            ORDER BY created_at DESC, id DESC LIMIT 1
             """,
             (conversation_id,)
         )
@@ -91,7 +95,8 @@ def upsert_conversation_document(conn, conversation_id: int, filename: str, docu
         cur.execute(
             """
             SELECT id FROM conversation_documents
-            WHERE conversation_id = %s ORDER BY created_at DESC, id DESC LIMIT 1
+            WHERE conversation_id = %s
+            ORDER BY created_at DESC, id DESC LIMIT 1
             """,
             (conversation_id,)
         )
@@ -102,7 +107,8 @@ def upsert_conversation_document(conn, conversation_id: int, filename: str, docu
                 """
                 UPDATE conversation_documents
                 SET filename = %s, document_text = %s, created_at = NOW()
-                WHERE id = %s RETURNING id, filename, document_text, created_at
+                WHERE id = %s
+                RETURNING id, filename, document_text, created_at
                 """,
                 (filename, document_text, existing["id"])
             )
@@ -111,7 +117,8 @@ def upsert_conversation_document(conn, conversation_id: int, filename: str, docu
             cur.execute(
                 """
                 INSERT INTO conversation_documents (conversation_id, filename, document_text)
-                VALUES (%s, %s, %s) RETURNING id, filename, document_text, created_at
+                VALUES (%s, %s, %s)
+                RETURNING id, filename, document_text, created_at
                 """,
                 (conversation_id, filename, document_text)
             )
@@ -123,7 +130,10 @@ def upsert_conversation_document(conn, conversation_id: int, filename: str, docu
 
 def delete_conversation_document(conn, conversation_id: int):
     with conn.cursor() as cur:
-        cur.execute("DELETE FROM conversation_documents WHERE conversation_id = %s", (conversation_id,))
+        cur.execute(
+            "DELETE FROM conversation_documents WHERE conversation_id = %s",
+            (conversation_id,)
+        )
     conn.commit()
 
 
@@ -234,10 +244,12 @@ def extract_text_from_docx(file_bytes: bytes) -> str:
         raise HTTPException(status_code=500, detail="DOCX support is not installed on the server")
     document = Document(io.BytesIO(file_bytes))
     parts = []
+
     for paragraph in document.paragraphs:
         text = (paragraph.text or "").strip()
         if text:
             parts.append(text)
+
     for table in document.tables:
         for row in table.rows:
             cells = []
@@ -247,6 +259,7 @@ def extract_text_from_docx(file_bytes: bytes) -> str:
                     cells.append(value)
             if cells:
                 parts.append(" | ".join(cells))
+
     return "\n".join(parts).strip()
 
 
@@ -255,23 +268,30 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
         raise HTTPException(status_code=500, detail="PDF support is not installed on the server")
     reader = PdfReader(io.BytesIO(file_bytes))
     parts = []
+
     for page in reader.pages:
         text = page.extract_text() or ""
         text = text.strip()
         if text:
             parts.append(text)
+
     return "\n\n".join(parts).strip()
 
 
 def extract_document_text(filename: str, file_bytes: bytes) -> str:
     lower = (filename or "").lower()
+
     if lower.endswith(".txt"):
         return extract_text_from_txt(file_bytes)
     if lower.endswith(".docx"):
         return extract_text_from_docx(file_bytes)
     if lower.endswith(".pdf"):
         return extract_text_from_pdf(file_bytes)
-    raise HTTPException(status_code=400, detail="Unsupported file type. Please upload a .txt, .docx, or .pdf file.")
+
+    raise HTTPException(
+        status_code=400,
+        detail="Unsupported file type. Please upload a .txt, .docx, or .pdf file."
+    )
 
 
 # ---------------------------------------------------------
@@ -290,7 +310,10 @@ async def upload_chat_document(
     contents = await file.read()
 
     if len(contents) > MAX_FILE_SIZE:
-        raise HTTPException(status_code=413, detail="File too large. Maximum size is 5MB to protect the server.")
+        raise HTTPException(
+            status_code=413,
+            detail="File too large. Maximum size is 5MB to protect the server."
+        )
 
     filename = file.filename or "document"
     if not contents:
@@ -322,12 +345,19 @@ async def upload_chat_document(
 @router.get("/conversations")
 def list_conversations(conn=Depends(get_db), current_user=Depends(get_current_user)):
     user_id = current_user["user_id"]
+
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
-            "SELECT id, title, created_at FROM conversations WHERE user_id = %s ORDER BY created_at DESC",
+            """
+            SELECT id, title, created_at
+            FROM conversations
+            WHERE user_id = %s
+            ORDER BY created_at DESC
+            """,
             (user_id,)
         )
         rows = cur.fetchall()
+
     return rows
 
 
@@ -338,12 +368,18 @@ def load_conversation(conversation_id: int, conn=Depends(get_db), current_user=D
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
-            "SELECT id, role, message, created_at FROM messages WHERE conversation_id = %s ORDER BY created_at ASC, id ASC",
+            """
+            SELECT id, role, message, created_at
+            FROM messages
+            WHERE conversation_id = %s
+            ORDER BY created_at ASC, id ASC
+            """,
             (conversation_id,)
         )
         rows = cur.fetchall()
 
     document = get_conversation_document(conn, conversation_id)
+
     return {
         "messages": rows,
         "document": {
@@ -366,10 +402,15 @@ def remove_conversation_document(conversation_id: int, conn=Depends(get_db), cur
 async def chat(request: Request, conn=Depends(get_db), current_user=Depends(get_current_user)):
     user_id = current_user["user_id"]
     body = await request.json()
+
     message = (body.get("message") or "").strip()
     conversation_id = body.get("conversation_id")
     document_text = (body.get("document_text") or "").strip() or None
     document_name = (body.get("document_name") or "").strip() or None
+
+    response_mode = (body.get("response_mode") or "balanced").strip().lower()
+    if response_mode not in {"quick", "balanced", "deep"}:
+        response_mode = "balanced"
 
     logger.info("Chat request received for user_id=%s", user_id)
 
@@ -402,6 +443,7 @@ async def chat(request: Request, conn=Depends(get_db), current_user=Depends(get_
                 history=history,
                 document_text=doc_text,
                 document_name=doc_name,
+                response_mode=response_mode,
             ):
                 if token:
                     ai_text += token
@@ -437,20 +479,28 @@ async def chat(request: Request, conn=Depends(get_db), current_user=Depends(get_
 def rename_conversation(conversation_id: int, payload: RenameConversation, conn=Depends(get_db), current_user=Depends(get_current_user)):
     ensure_conversation_owner(conn, conversation_id, current_user["user_id"])
     title = payload.title.strip()
+
     if not title:
         raise HTTPException(status_code=400, detail="Title is required")
+
     with conn.cursor() as cur:
-        cur.execute("UPDATE conversations SET title = %s WHERE id = %s", (title, conversation_id))
+        cur.execute(
+            "UPDATE conversations SET title = %s WHERE id = %s",
+            (title, conversation_id)
+        )
         conn.commit()
+
     return {"ok": True, "message": "Conversation renamed"}
 
 
 @router.delete("/conversations/{conversation_id}")
 def delete_conversation(conversation_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
     ensure_conversation_owner(conn, conversation_id, current_user["user_id"])
+
     with conn.cursor() as cur:
         cur.execute("DELETE FROM conversations WHERE id = %s", (conversation_id,))
         conn.commit()
+
     return {"ok": True, "message": "Conversation deleted"}
 
 
@@ -465,6 +515,10 @@ async def edit_message_and_regenerate(
 ):
     user_id = current_user["user_id"]
     new_message = payload.message.strip()
+
+    response_mode = (payload.response_mode or "balanced").strip().lower()
+    if response_mode not in {"quick", "balanced", "deep"}:
+        response_mode = "balanced"
 
     if not new_message:
         raise HTTPException(status_code=400, detail="Message is required")
@@ -493,6 +547,7 @@ async def edit_message_and_regenerate(
                 history=history,
                 document_text=document_text,
                 document_name=document_name,
+                response_mode=response_mode,
             ):
                 if token:
                     ai_text += token
