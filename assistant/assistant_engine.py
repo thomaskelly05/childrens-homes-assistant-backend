@@ -15,7 +15,6 @@ from assistant.response_schemas import get_schema_for_mode, schema_to_prompt_blo
 
 logger = logging.getLogger("indicare.engine")
 
-
 FAST_MODES_SKIP_RETRIEVAL = {
     "handover",
     "rewrite",
@@ -46,7 +45,7 @@ class AssistantRequest:
     document_name: str | None = None
     ld_lens: bool = False
     training_mode: bool = False
-    speed: str = "normal"
+    speed: str = "balanced"
     user_context: dict[str, Any] = field(default_factory=dict)
 
 
@@ -116,10 +115,14 @@ def _should_use_retrieval(
     safeguarding_level: str,
     message: str,
     document_text: str | None,
+    response_mode: str,
 ) -> bool:
     text = (message or "").lower()
 
     if document_text:
+        return False
+
+    if response_mode == "quick":
         return False
 
     if mode in FAST_MODES_SKIP_RETRIEVAL:
@@ -134,7 +137,9 @@ def _should_use_retrieval(
     return mode in {"factual", "support_planning", "manager_review", "reflective", "supervision", "general_practice"}
 
 
-def _should_use_memory(mode: str) -> bool:
+def _should_use_memory(mode: str, response_mode: str) -> bool:
+    if response_mode == "quick":
+        return False
     return mode not in FAST_MODES_LIGHT_MEMORY
 
 
@@ -144,22 +149,33 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
 
     runtime = AssistantRuntimeContext()
 
+    # 1. Task / mode detection
     try:
         runtime.mode = detect_mode(message=message, history=history)
     except TypeError:
-        runtime.mode = detect_mode(message)
+        try:
+            runtime.mode = detect_mode(message)
+        except Exception as e:
+            logger.exception("Mode detection failed: %s", e)
+            runtime.mode = "general_practice"
     except Exception as e:
         logger.exception("Mode detection failed: %s", e)
         runtime.mode = "general_practice"
 
+    # 2. Safeguarding level
     try:
         runtime.safeguarding_level = assess_safeguarding_level(message=message, history=history)
     except TypeError:
-        runtime.safeguarding_level = assess_safeguarding_level(message)
+        try:
+            runtime.safeguarding_level = assess_safeguarding_level(message)
+        except Exception as e:
+            logger.exception("Safeguarding assessment failed: %s", e)
+            runtime.safeguarding_level = "normal"
     except Exception as e:
         logger.exception("Safeguarding assessment failed: %s", e)
         runtime.safeguarding_level = "normal"
 
+    # 3. Response schema
     try:
         schema = get_schema_for_mode(runtime.mode, runtime.safeguarding_level)
         runtime.schema_context = _safe_string(schema_to_prompt_block(schema))
@@ -167,7 +183,8 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         logger.exception("Schema selection failed: %s", e)
         runtime.schema_context = ""
 
-    if _should_use_memory(runtime.mode):
+    # 4. Memory
+    if _should_use_memory(runtime.mode, req.speed):
         try:
             runtime.memory_context = _safe_string(
                 get_memory_context(
@@ -178,11 +195,18 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
                     recent_limit=4,
                 )
             )
+        except TypeError:
+            try:
+                runtime.memory_context = _safe_string(get_memory_context(req.session_id, req.user_context))
+            except Exception as e:
+                logger.exception("Memory lookup failed: %s", e)
+                runtime.memory_context = ""
         except Exception as e:
             logger.exception("Memory lookup failed: %s", e)
             runtime.memory_context = ""
 
-    if _should_use_retrieval(runtime.mode, runtime.safeguarding_level, message, req.document_text):
+    # 5. Retrieval
+    if _should_use_retrieval(runtime.mode, runtime.safeguarding_level, message, req.document_text, req.speed):
         try:
             runtime.retrieval_context = _safe_string(
                 retrieve_context(
@@ -195,11 +219,18 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
                     limit=3,
                 )
             )
+        except TypeError:
+            try:
+                runtime.retrieval_context = _safe_string(retrieve_context(message))
+            except Exception as e:
+                logger.exception("Retrieval failed: %s", e)
+                runtime.retrieval_context = ""
         except Exception as e:
             logger.exception("Retrieval failed: %s", e)
             runtime.retrieval_context = ""
 
-    if runtime.mode in REFLECTIVE_MODES:
+    # 6. Reflection / supervision only when useful and not quick
+    if runtime.mode in REFLECTIVE_MODES and req.speed == "deep":
         try:
             runtime.reflection_context = _safe_string(
                 maybe_build_reflection_context(
@@ -209,6 +240,12 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
                     history=history,
                 )
             )
+        except TypeError:
+            try:
+                runtime.reflection_context = _safe_string(maybe_build_reflection_context(message, runtime.mode))
+            except Exception as e:
+                logger.exception("Reflection context failed: %s", e)
+                runtime.reflection_context = ""
         except Exception as e:
             logger.exception("Reflection context failed: %s", e)
             runtime.reflection_context = ""
@@ -222,10 +259,17 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
                     history=history,
                 )
             )
+        except TypeError:
+            try:
+                runtime.supervision_context = _safe_string(maybe_build_supervision_context(message, runtime.mode))
+            except Exception as e:
+                logger.exception("Supervision context failed: %s", e)
+                runtime.supervision_context = ""
         except Exception as e:
             logger.exception("Supervision context failed: %s", e)
             runtime.supervision_context = ""
 
+    # 7. Base prompt
     system_prompt, user_message = build_chat_prompt(
         message=message,
         role=req.role,
@@ -234,22 +278,28 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         speed=req.speed,
     )
 
+    # 8. Runtime mode context
     system_prompt = _append_section(
         system_prompt,
         "RUNTIME MODE CONTEXT",
         (
             f"Detected task mode: {runtime.mode}\n"
-            f"Safeguarding level: {runtime.safeguarding_level}\n\n"
+            f"Safeguarding level: {runtime.safeguarding_level}\n"
+            f"Selected response mode: {req.speed}\n\n"
             f"Use these as working signals for tone, structure, caution level, and practical focus."
         ),
     )
 
+    # 9. Response structure
     system_prompt = _append_section(system_prompt, "RESPONSE STRUCTURE", runtime.schema_context)
+
+    # 10. Attach runtime contexts
     system_prompt = _append_section(system_prompt, "MEMORY CONTEXT", runtime.memory_context)
     system_prompt = _append_section(system_prompt, "RETRIEVED CONTEXT", runtime.retrieval_context)
     system_prompt = _append_section(system_prompt, "REFLECTION CONTEXT", runtime.reflection_context)
     system_prompt = _append_section(system_prompt, "SUPERVISION CONTEXT", runtime.supervision_context)
 
+    # 11. Uploaded document context
     if req.document_text:
         trimmed_document_text = req.document_text[:12000]
         system_prompt = _append_section(
@@ -264,10 +314,11 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         )
 
     logger.info(
-        "Assistant prompt package built | session_id=%s | mode=%s | safeguarding=%s",
+        "Assistant prompt package built | session_id=%s | mode=%s | safeguarding=%s | response_mode=%s",
         req.session_id,
         runtime.mode,
         runtime.safeguarding_level,
+        req.speed,
     )
 
     return AssistantPromptPackage(
