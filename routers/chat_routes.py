@@ -1,13 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
-# PRODUCTION FIX 1: Import run_in_threadpool to solve the async/sync freezing trap
-from fastapi.concurrency import run_in_threadpool
 from psycopg2.extras import RealDictCursor
 from pydantic import BaseModel
 import logging
 import io
 
-# PRODUCTION FIX 2: Import limiter
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -31,17 +28,18 @@ router = APIRouter(
 )
 
 logger = logging.getLogger(__name__)
-
-# Setup Rate Limiter for this route
 limiter = Limiter(key_func=get_remote_address)
+
 
 class RenameConversation(BaseModel):
     title: str
+
 
 class EditMessagePayload(BaseModel):
     message: str
     document_text: str | None = None
     document_name: str | None = None
+
 
 # ---------------------------------------------------------
 # DATABASE HELPER FUNCTIONS
@@ -60,17 +58,19 @@ def ensure_conversation_owner(conn, conversation_id: int, user_id: int) -> None:
     if not row:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
+
 def get_conversation_history(conn, conversation_id: int):
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
-            SELECT id, role, message FROM messages
+            SELECT id, role, message, created_at FROM messages
             WHERE conversation_id = %s ORDER BY created_at ASC, id ASC
             """,
             (conversation_id,)
         )
         rows = cur.fetchall()
     return rows
+
 
 def get_conversation_document(conn, conversation_id: int):
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -84,6 +84,7 @@ def get_conversation_document(conn, conversation_id: int):
         )
         row = cur.fetchone()
     return row
+
 
 def upsert_conversation_document(conn, conversation_id: int, filename: str, document_text: str):
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -119,10 +120,12 @@ def upsert_conversation_document(conn, conversation_id: int, filename: str, docu
     conn.commit()
     return row
 
+
 def delete_conversation_document(conn, conversation_id: int):
     with conn.cursor() as cur:
         cur.execute("DELETE FROM conversation_documents WHERE conversation_id = %s", (conversation_id,))
     conn.commit()
+
 
 def generate_title(message: str) -> str:
     cleaned = (message or "").strip()
@@ -130,9 +133,7 @@ def generate_title(message: str) -> str:
         cleaned = cleaned[:60]
     return cleaned or "New chat"
 
-# PRODUCTION FIX 3: Isolated Database Writing
-# By grouping all database writes into this single function, we can pass it to 
-# run_in_threadpool() below, completely eliminating the async freezing bug.
+
 def prep_chat_db_sync(conn, user_id, message, conversation_id, document_text, document_name):
     if conversation_id is None:
         title = generate_title(message)
@@ -167,6 +168,7 @@ def prep_chat_db_sync(conn, user_id, message, conversation_id, document_text, do
     history = get_conversation_history(conn, conversation_id)
     return conversation_id, history, doc_text, doc_name
 
+
 def save_ai_message_sync(conn, conversation_id, ai_text):
     try:
         with conn.cursor() as cur:
@@ -179,6 +181,44 @@ def save_ai_message_sync(conn, conversation_id, ai_text):
         conn.rollback()
         logger.exception("Failed to save assistant message for conversation %s", conversation_id)
 
+
+def prep_edit_db_sync(conn, user_id, message_id, new_message, document_text, document_name):
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT m.id, m.conversation_id, m.role
+            FROM messages m
+            JOIN conversations c ON c.id = m.conversation_id
+            WHERE m.id = %s AND c.user_id = %s LIMIT 1
+            """,
+            (message_id, user_id)
+        )
+        row = cur.fetchone()
+
+    if not row:
+        raise ValueError("Message not found")
+    if row["role"] != "user":
+        raise ValueError("Only user messages can be edited")
+
+    conversation_id = row["conversation_id"]
+    ensure_conversation_owner(conn, conversation_id, user_id)
+
+    if document_text and document_name:
+        upsert_conversation_document(conn, conversation_id, document_name, document_text)
+
+    stored_document = get_conversation_document(conn, conversation_id)
+    doc_text = stored_document["document_text"] if stored_document else None
+    doc_name = stored_document["filename"] if stored_document else None
+
+    with conn.cursor() as cur:
+        cur.execute("UPDATE messages SET message = %s WHERE id = %s", (new_message, message_id))
+        cur.execute("DELETE FROM messages WHERE conversation_id = %s AND id > %s", (conversation_id, message_id))
+    conn.commit()
+
+    history = get_conversation_history(conn, conversation_id)
+    return conversation_id, history, doc_text, doc_name
+
+
 # ---------------------------------------------------------
 # DOCUMENT EXTRACTION
 # ---------------------------------------------------------
@@ -188,6 +228,7 @@ def extract_text_from_txt(file_bytes: bytes) -> str:
     except UnicodeDecodeError:
         return file_bytes.decode("latin-1", errors="ignore")
 
+
 def extract_text_from_docx(file_bytes: bytes) -> str:
     if Document is None:
         raise HTTPException(status_code=500, detail="DOCX support is not installed on the server")
@@ -195,15 +236,19 @@ def extract_text_from_docx(file_bytes: bytes) -> str:
     parts = []
     for paragraph in document.paragraphs:
         text = (paragraph.text or "").strip()
-        if text: parts.append(text)
+        if text:
+            parts.append(text)
     for table in document.tables:
         for row in table.rows:
             cells = []
             for cell in row.cells:
                 value = (cell.text or "").strip()
-                if value: cells.append(value)
-            if cells: parts.append(" | ".join(cells))
+                if value:
+                    cells.append(value)
+            if cells:
+                parts.append(" | ".join(cells))
     return "\n".join(parts).strip()
+
 
 def extract_text_from_pdf(file_bytes: bytes) -> str:
     if PdfReader is None:
@@ -213,22 +258,27 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
     for page in reader.pages:
         text = page.extract_text() or ""
         text = text.strip()
-        if text: parts.append(text)
+        if text:
+            parts.append(text)
     return "\n\n".join(parts).strip()
+
 
 def extract_document_text(filename: str, file_bytes: bytes) -> str:
     lower = (filename or "").lower()
-    if lower.endswith(".txt"): return extract_text_from_txt(file_bytes)
-    if lower.endswith(".docx"): return extract_text_from_docx(file_bytes)
-    if lower.endswith(".pdf"): return extract_text_from_pdf(file_bytes)
+    if lower.endswith(".txt"):
+        return extract_text_from_txt(file_bytes)
+    if lower.endswith(".docx"):
+        return extract_text_from_docx(file_bytes)
+    if lower.endswith(".pdf"):
+        return extract_text_from_pdf(file_bytes)
     raise HTTPException(status_code=400, detail="Unsupported file type. Please upload a .txt, .docx, or .pdf file.")
+
 
 # ---------------------------------------------------------
 # ROUTE ENDPOINTS
 # ---------------------------------------------------------
-
 @router.post("/upload")
-@limiter.limit("10/minute") # Rate Limiting: Max 10 uploads per minute per user
+@limiter.limit("10/minute")
 async def upload_chat_document(
     request: Request,
     file: UploadFile = File(...),
@@ -236,10 +286,9 @@ async def upload_chat_document(
     conn=Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    # PRODUCTION FIX 4: File Size Limits (Max 5MB)
-    MAX_FILE_SIZE = 5 * 1024 * 1024 
+    MAX_FILE_SIZE = 5 * 1024 * 1024
     contents = await file.read()
-    
+
     if len(contents) > MAX_FILE_SIZE:
         raise HTTPException(status_code=413, detail="File too large. Maximum size is 5MB to protect the server.")
 
@@ -259,8 +308,8 @@ async def upload_chat_document(
         raise HTTPException(status_code=400, detail="No readable text was found in the uploaded document")
 
     if conversation_id is not None:
-        await run_in_threadpool(ensure_conversation_owner, conn, conversation_id, current_user["user_id"])
-        await run_in_threadpool(upsert_conversation_document, conn, conversation_id, filename, extracted_text)
+        ensure_conversation_owner(conn, conversation_id, current_user["user_id"])
+        upsert_conversation_document(conn, conversation_id, filename, extracted_text)
 
     return {
         "ok": True,
@@ -289,7 +338,7 @@ def load_conversation(conversation_id: int, conn=Depends(get_db), current_user=D
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
-            "SELECT id, role, message FROM messages WHERE conversation_id = %s ORDER BY created_at ASC, id ASC",
+            "SELECT id, role, message, created_at FROM messages WHERE conversation_id = %s ORDER BY created_at ASC, id ASC",
             (conversation_id,)
         )
         rows = cur.fetchall()
@@ -313,7 +362,7 @@ def remove_conversation_document(conversation_id: int, conn=Depends(get_db), cur
 
 
 @router.post("/")
-@limiter.limit("20/minute") # Rate Limiting: Prevent OpenAI API bankruptcy
+@limiter.limit("20/minute")
 async def chat(request: Request, conn=Depends(get_db), current_user=Depends(get_current_user)):
     user_id = current_user["user_id"]
     body = await request.json()
@@ -322,24 +371,31 @@ async def chat(request: Request, conn=Depends(get_db), current_user=Depends(get_
     document_text = (body.get("document_text") or "").strip() or None
     document_name = (body.get("document_name") or "").strip() or None
 
+    logger.info("Chat request received for user_id=%s", user_id)
+
     if not message:
         raise HTTPException(status_code=400, detail="Message required")
 
     if conversation_id in ("", None):
         conversation_id = None
 
-    # USING run_in_threadpool TO PREVENT SERVER FREEZING
     try:
-        conversation_id, history, doc_text, doc_name = await run_in_threadpool(
-            prep_chat_db_sync, conn, user_id, message, conversation_id, document_text, document_name
+        conversation_id, history, doc_text, doc_name = prep_chat_db_sync(
+            conn, user_id, message, conversation_id, document_text, document_name
         )
+        logger.info("Prepared chat DB state for conversation_id=%s", conversation_id)
     except ValueError as e:
+        logger.warning("Invalid chat request: %s", e)
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Failed preparing chat DB state: %s", e)
+        raise HTTPException(status_code=500, detail="Could not prepare chat request")
 
     async def stream():
         ai_text = ""
         try:
-            yield ""
+            logger.info("Starting AI stream for conversation_id=%s", conversation_id)
+
             async for token in generate_ai_stream(
                 message=message,
                 session_id=str(conversation_id),
@@ -350,17 +406,31 @@ async def chat(request: Request, conn=Depends(get_db), current_user=Depends(get_
                 if token:
                     ai_text += token
                     yield token
+
+            logger.info("Finished AI stream for conversation_id=%s", conversation_id)
+
         except Exception as e:
             logger.exception("AI stream failed for conversation %s: %s", conversation_id, e)
             fallback = "\n\nSorry, something went wrong while generating the response. Please try again."
             ai_text += fallback
             yield fallback
+
         finally:
             if ai_text.strip():
-                # Save the final text in a threadpool to prevent freezing
-                await run_in_threadpool(save_ai_message_sync, conn, conversation_id, ai_text)
+                try:
+                    save_ai_message_sync(conn, conversation_id, ai_text)
+                    logger.info("Saved assistant message for conversation_id=%s", conversation_id)
+                except Exception as e:
+                    logger.exception("Failed saving assistant message for conversation %s: %s", conversation_id, e)
 
-    return StreamingResponse(stream(), media_type="text/plain; charset=utf-8")
+    return StreamingResponse(
+        stream(),
+        media_type="text/plain; charset=utf-8",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.post("/conversations/{conversation_id}/rename")
@@ -384,45 +454,15 @@ def delete_conversation(conversation_id: int, conn=Depends(get_db), current_user
     return {"ok": True, "message": "Conversation deleted"}
 
 
-# PRODUCTION FIX 5: We also wrapped the edit message regenerator in threadpool for safety
-def prep_edit_db_sync(conn, user_id, message_id, new_message, document_text, document_name):
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(
-            """
-            SELECT m.id, m.conversation_id, m.role
-            FROM messages m
-            JOIN conversations c ON c.id = m.conversation_id
-            WHERE m.id = %s AND c.user_id = %s LIMIT 1
-            """,
-            (message_id, user_id)
-        )
-        row = cur.fetchone()
-
-    if not row: raise ValueError("Message not found")
-    if row["role"] != "user": raise ValueError("Only user messages can be edited")
-
-    conversation_id = row["conversation_id"]
-    ensure_conversation_owner(conn, conversation_id, user_id)
-
-    if document_text and document_name:
-        upsert_conversation_document(conn, conversation_id, document_name, document_text)
-
-    stored_document = get_conversation_document(conn, conversation_id)
-    doc_text = stored_document["document_text"] if stored_document else None
-    doc_name = stored_document["filename"] if stored_document else None
-
-    with conn.cursor() as cur:
-        cur.execute("UPDATE messages SET message = %s WHERE id = %s", (new_message, message_id))
-        cur.execute("DELETE FROM messages WHERE conversation_id = %s AND id > %s", (conversation_id, message_id))
-    conn.commit()
-
-    history = get_conversation_history(conn, conversation_id)
-    return conversation_id, history, doc_text, doc_name
-
-
 @router.post("/messages/{message_id}/edit")
 @limiter.limit("20/minute")
-async def edit_message_and_regenerate(request: Request, message_id: int, payload: EditMessagePayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
+async def edit_message_and_regenerate(
+    request: Request,
+    message_id: int,
+    payload: EditMessagePayload,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user)
+):
     user_id = current_user["user_id"]
     new_message = payload.message.strip()
 
@@ -430,18 +470,23 @@ async def edit_message_and_regenerate(request: Request, message_id: int, payload
         raise HTTPException(status_code=400, detail="Message is required")
 
     try:
-        conversation_id, history, document_text, document_name = await run_in_threadpool(
-            prep_edit_db_sync, conn, user_id, message_id, new_message, payload.document_text, payload.document_name
+        conversation_id, history, document_text, document_name = prep_edit_db_sync(
+            conn, user_id, message_id, new_message, payload.document_text, payload.document_name
         )
+        logger.info("Prepared edit/regenerate DB state for conversation_id=%s", conversation_id)
     except ValueError as e:
         if str(e) == "Message not found":
             raise HTTPException(status_code=404, detail=str(e))
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Failed preparing edit/regenerate DB state: %s", e)
+        raise HTTPException(status_code=500, detail="Could not prepare message regeneration")
 
     async def stream():
         ai_text = ""
         try:
-            yield ""
+            logger.info("Starting regenerate AI stream for conversation_id=%s", conversation_id)
+
             async for token in generate_ai_stream(
                 message=new_message,
                 session_id=str(conversation_id),
@@ -452,13 +497,28 @@ async def edit_message_and_regenerate(request: Request, message_id: int, payload
                 if token:
                     ai_text += token
                     yield token
+
+            logger.info("Finished regenerate AI stream for conversation_id=%s", conversation_id)
+
         except Exception as e:
-            logger.exception("AI regenerate failed: %s", e)
+            logger.exception("AI regenerate failed for conversation %s: %s", conversation_id, e)
             fallback = "\n\nSorry, something went wrong while regenerating. Please try again."
             ai_text += fallback
             yield fallback
+
         finally:
             if ai_text.strip():
-                await run_in_threadpool(save_ai_message_sync, conn, conversation_id, ai_text)
+                try:
+                    save_ai_message_sync(conn, conversation_id, ai_text)
+                    logger.info("Saved regenerated assistant message for conversation_id=%s", conversation_id)
+                except Exception as e:
+                    logger.exception("Failed saving regenerated assistant message for conversation %s: %s", conversation_id, e)
 
-    return StreamingResponse(stream(), media_type="text/plain; charset=utf-8")
+    return StreamingResponse(
+        stream(),
+        media_type="text/plain; charset=utf-8",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
