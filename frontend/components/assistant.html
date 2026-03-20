@@ -1,245 +1,208 @@
-<!DOCTYPE html>
-<html lang="en-GB">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>IndiCare | Assistant</title>
+/* --- THE MAGIC CORE --- */
+:root {
+  --primary-magic: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+  --bg-dark: #020617;
+  --bg-panel: rgba(15, 23, 42, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --text-main: #f8fafc;
+  --text-dim: #94a3b8;
+  --accent-glow: 0 0 20px rgba(168, 85, 247, 0.3);
+  --radius-lg: 16px;
+}
 
-    <link rel="icon" type="image/svg+xml" href="/assets/logo.svg" />
-    <link rel="stylesheet" href="/css/reset.css" />
-    <link rel="stylesheet" href="/css/base.css" />
-    <link rel="stylesheet" href="/css/theme.css" />
-    <link rel="stylesheet" href="/css/layout.css" />
-    <link rel="stylesheet" href="/css/components.css" />
-    <link rel="stylesheet" href="/css/assistant-isolated.css" />
-</head>
-<body class="indicare-assistant">
-    <div class="ica-app" id="assistantApp">
-        <div class="ica-shell" id="assistantShell">
-            <div class="ica-sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
+body.notes-page {
+  background-color: var(--bg-dark);
+  background-image: 
+    radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.1) 0%, transparent 40%),
+    radial-gradient(circle at 100% 100%, rgba(236, 72, 153, 0.05) 0%, transparent 40%);
+  color: var(--text-main);
+  margin: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  height: 100vh;
+  overflow: hidden;
+}
 
-            <!-- SIDEBAR -->
-            <aside class="ica-sidebar" id="assistantSidebar" aria-label="Conversation sidebar">
-                <div class="ica-sidebar-inner">
-                    <div class="ica-sidebar-top">
-                        <div class="ica-sidebar-brand-row">
-                            <div class="ica-brand">
-                                <div class="ica-brand-copy">
-                                    <h1>IndiCare</h1>
-                                    <p>Assistant</p>
-                                </div>
-                            </div>
+.app-shell {
+  display: flex;
+  height: 100vh;
+}
 
-                            <button
-                                id="sidebarCollapseBtn"
-                                class="ica-icon-btn ica-sidebar-collapse-btn"
-                                type="button"
-                                aria-label="Collapse sidebar"
-                                title="Collapse sidebar"
-                            >
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                    <path d="M15 18l-6-6 6-6"></path>
-                                </svg>
-                            </button>
-                        </div>
+/* --- SIDEBAR MAGIC --- */
+.sidebar {
+  width: 280px;
+  background: rgba(0, 0, 0, 0.3);
+  border-right: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
 
-                        <button id="newConversationBtn" class="ica-btn ica-btn--primary ica-btn--full" type="button">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <path d="M12 5v14M5 12h14"></path>
-                            </svg>
-                            <span>New chat</span>
-                        </button>
+.brand-mark img {
+  width: 32px;
+  filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.5));
+}
 
-                        <div class="ica-search-wrap">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <circle cx="11" cy="11" r="7"></circle>
-                                <path d="M20 20l-3.5-3.5"></path>
-                            </svg>
-                            <label for="historySearch" class="ica-sr-only">Search conversations</label>
-                            <input id="historySearch" class="ica-input" type="text" placeholder="Search chats" />
-                        </div>
-                    </div>
+/* --- THE MAIN WORKSPACE (HERO) --- */
+.main {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 60px;
+}
 
-                    <div class="ica-sidebar-history">
-                        <div class="ica-sidebar-heading">
-                            <h3>Recent chats</h3>
-                            <span id="historyCount" class="ica-count-pill">0</span>
-                        </div>
+.hero {
+  padding: 40px;
+  background: linear-gradient(to bottom, rgba(99, 102, 241, 0.05), transparent);
+  border-bottom: 1px solid var(--glass-border);
+}
 
-                        <div id="conversationList" class="ica-history-list" aria-live="polite">
-                            <div class="ica-history-empty">No conversations yet.</div>
-                        </div>
-                    </div>
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 11px;
+  font-weight: 700;
+  color: #a855f7;
+  margin-bottom: 8px;
+}
 
-                    <div class="ica-sidebar-footer">
-                        <a href="/" class="ica-btn ica-btn--sidebar">Back to dashboard</a>
-                        <button id="logoutBtn" class="ica-btn ica-btn--sidebar" type="button">Log out</button>
-                    </div>
-                </div>
-            </aside>
+/* --- GRID & CARDS --- */
+.workspace-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  padding: 24px;
+}
 
-            <!-- MAIN -->
-            <main class="ica-main">
-                <header class="ica-topbar">
-                    <div class="ica-topbar-left">
-                        <button
-                            id="sidebarToggle"
-                            class="ica-icon-btn ica-mobile-only"
-                            type="button"
-                            aria-label="Open chat history"
-                            aria-expanded="false"
-                            aria-controls="conversationList"
-                        >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <path d="M3 6h18M3 12h18M3 18h18"></path>
-                            </svg>
-                        </button>
+/* This maps to your .app-card class */
+.app-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+}
 
-                        <div class="ica-topbar-copy">
-                            <h2 id="conversationHeading">New conversation</h2>
-                            <p id="topbarSubtext">Residential care support, drafting, reflection, and recording</p>
-                        </div>
-                    </div>
+.app-card:hover {
+  border-color: rgba(168, 85, 247, 0.4);
+  box-shadow: var(--accent-glow);
+}
 
-                    <div class="ica-topbar-actions">
-                        <label for="responseMode" class="ica-sr-only">Response mode</label>
-                        <select id="responseMode" class="ica-mode-select" aria-label="Response mode">
-                            <option value="quick">Quick</option>
-                            <option value="balanced" selected>Balanced</option>
-                            <option value="deep">Deep review</option>
-                        </select>
+.panel-head {
+  padding: 20px;
+  border-bottom: 1px solid var(--glass-border);
+}
 
-                        <button id="themeToggle" class="ica-icon-btn" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                            </svg>
-                        </button>
+/* --- THE MAGIC EDITOR AREA --- */
+.note-ai-inline {
+  margin: 15px;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 12px;
+}
 
-                        <button id="headerNewChatBtn" class="ica-icon-btn" type="button" aria-label="Start new chat" title="Start new chat">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <path d="M12 5v14M5 12h14"></path>
-                            </svg>
-                        </button>
-                    </div>
-                </header>
+.editor-box {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #e2e8f0;
+  padding: 20px;
+  font-size: 15px;
+  line-height: 1.7;
+  outline: none;
+  resize: none;
+  min-height: 300px;
+}
 
-                <section id="chat" class="ica-chat" aria-label="Chat conversation">
-                    <div class="ica-chat-inner">
-                        <div class="ica-empty-state" id="chatEmpty">
-                            <div class="ica-empty-card">
-                                <div class="ica-empty-badge">Professional support for residential care</div>
+/* --- BUTTONS --- */
+.btn {
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
 
-                                <h3 id="welcomeHeading">Welcome</h3>
+.btn-primary {
+  background: var(--primary-magic);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.2);
+}
 
-                                <p id="welcomeSubtext">
-                                    Ask for help with care records, safeguarding wording, support planning,
-                                    reflection, behaviour support, key work ideas, and day-to-day
-                                    residential practice.
-                                </p>
+.btn-light {
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  border-color: var(--glass-border);
+}
 
-                                <div class="ica-prompt-chips">
-                                    <button class="ica-prompt-chip" type="button">Write a professional daily log entry</button>
-                                    <button class="ica-prompt-chip" type="button">Help me phrase a safeguarding concern</button>
-                                    <button class="ica-prompt-chip" type="button">Summarise this incident clearly</button>
-                                    <button class="ica-prompt-chip" type="button">Create a key work session plan</button>
-                                </div>
-                            </div>
-                        </div>
+.btn-light:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
 
-                        <div class="ica-messages" id="messages" hidden></div>
+/* --- RECORDING MODAL (THE MAGIC ORB) --- */
+.recording-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.9);
+  backdrop-filter: blur(15px);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+}
 
-                        <div class="ica-typing-row" id="typingRow" hidden>
-                            <div class="ica-typing-indicator" aria-live="polite">
-                                <span>IndiCare is thinking</span>
-                                <span class="ica-typing-dots" aria-hidden="true">
-                                    <span></span>
-                                    <span></span>
-                                    <span></span>
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </section>
+.recording-modal.hide { display: none; }
 
-                <footer class="ica-composer">
-                    <div class="ica-composer-inner">
-                        <div class="ica-status-banner" id="statusBanner" role="status" aria-live="polite"></div>
+.mic-orb {
+  width: 120px;
+  height: 120px;
+  background: var(--primary-magic);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 40px;
+  box-shadow: 0 0 30px rgba(168, 85, 247, 0.5);
+  animation: pulse 2s infinite;
+}
 
-                        <div class="ica-document-row">
-                            <div id="documentChip" class="ica-document-chip ica-hidden">
-                                <span id="documentChipText"></span>
-                                <button id="clearDocumentBtn" class="ica-chip-remove" type="button" aria-label="Remove uploaded document">×</button>
-                            </div>
-                        </div>
+@keyframes pulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.4); }
+  70% { transform: scale(1.05); box-shadow: 0 0 0 30px rgba(168, 85, 247, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(168, 85, 247, 0); }
+}
 
-                        <div class="ica-chatbar">
-                            <label for="documentUpload" class="ica-chatbar-icon-btn" title="Upload document" aria-label="Upload document">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                    <path d="M12 16V4"></path>
-                                    <path d="M7 9l5-5 5 5"></path>
-                                    <path d="M20 16.5v2A1.5 1.5 0 0 1 18.5 20h-13A1.5 1.5 0 0 1 4 18.5v-2"></path>
-                                </svg>
-                            </label>
-                            <input id="documentUpload" type="file" accept=".txt,.docx,.pdf" hidden />
+.recording-timer {
+  font-size: 48px;
+  font-weight: 800;
+  margin: 20px 0;
+  font-variant-numeric: tabular-nums;
+}
 
-                            <button
-                                id="micBtn"
-                                class="ica-chatbar-icon-btn"
-                                type="button"
-                                aria-label="Start voice input"
-                                title="Start voice input"
-                            >
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                    <rect x="9" y="2" width="6" height="12" rx="3"></rect>
-                                    <path d="M5 10a7 7 0 0 0 14 0"></path>
-                                    <path d="M12 19v3"></path>
-                                    <path d="M8 22h8"></path>
-                                </svg>
-                            </button>
+/* --- TABS --- */
+.page-tabs {
+  display: flex;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--glass-border);
+}
 
-                            <div class="ica-chatbar-input-wrap">
-                                <label for="chat-input" class="ica-sr-only">Type your message</label>
-                                <textarea
-                                    id="chat-input"
-                                    class="ica-chatbar-input"
-                                    rows="1"
-                                    placeholder="Message IndiCare..."
-                                    aria-label="Message IndiCare"
-                                ></textarea>
-                            </div>
+.page-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  padding: 16px 24px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
 
-                            <button id="clearChatBtn" class="ica-btn ica-btn--ghost ica-chatbar-btn ica-chatbar-btn--desktop" type="button">
-                                Clear
-                            </button>
+.page-tab.active {
+  color: #a855f7;
+  border-bottom-color: #a855f7;
+}
 
-                            <button id="send-btn" class="ica-btn ica-btn--primary ica-chatbar-btn ica-send-btn" type="button">
-                                <span class="ica-send-label">Send</span>
-                                <span class="ica-send-spinner" aria-hidden="true">
-                                    <span class="ica-send-spinner-dot"></span>
-                                    <span class="ica-send-spinner-dot"></span>
-                                    <span class="ica-send-spinner-dot"></span>
-                                </span>
-                            </button>
-                        </div>
-
-                        <div id="uploadStatus" class="ica-upload-status" aria-live="polite"></div>
-
-                        <div class="ica-footer-meta ica-desktop-meta">
-                            <div id="footerWarning" class="ica-note">
-                                <strong>Important:</strong> Always accuracy-check AI outputs against the facts provided,
-                                current guidance, and your organisation’s policy before use.
-                            </div>
-                            <div id="footerCopyright" class="ica-copyright"></div>
-                        </div>
-                    </div>
-                </footer>
-            </main>
-        </div>
-    </div>
-
-    <script src="/js/api.js"></script>
-    <script src="/js/auth.js"></script>
-    <script src="/js/ui.js"></script>
-    <script src="/js/chat.js"></script>
-</body>
-</html>
+/* --- UTILS --- */
+.hide { display: none !important; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
