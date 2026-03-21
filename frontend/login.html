@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IndiCare | Sign in</title>
+  <title>IndiCare | Secure sign in</title>
   <meta
     name="description"
-    content="Sign in to IndiCare, the staff workspace for children's home operations, records, supervision, and AI support."
+    content="Secure sign in to IndiCare, the professional digital workspace for children’s residential home teams."
   />
+  <meta name="theme-color" content="#18357f" />
 
   <link rel="icon" type="image/svg+xml" href="/assets/logo.svg" />
 
@@ -19,26 +20,31 @@
 
   <style>
     :root {
-      --bg-1: #f7f9fc;
-      --bg-2: #eef3f9;
-      --surface: rgba(255, 255, 255, 0.92);
-      --surface-soft: rgba(255, 255, 255, 0.72);
-      --surface-panel: rgba(255, 255, 255, 0.5);
-      --text: #132033;
+      --bg-main: #edf3f9;
+      --bg-soft: #f8fbfe;
+      --panel: rgba(255, 255, 255, 0.92);
+      --panel-solid: #ffffff;
+      --panel-muted: rgba(255, 255, 255, 0.74);
+      --text: #18263b;
       --text-strong: #0f172a;
-      --text-muted: #52637d;
-      --text-soft: #6b7a90;
-      --border: rgba(19, 32, 51, 0.08);
-      --border-strong: #d8e1ec;
-      --primary: #315efb;
-      --primary-dark: #2447d5;
-      --primary-soft: #e8efff;
-      --shadow-lg: 0 24px 60px rgba(15, 23, 42, 0.12);
-      --shadow-md: 0 10px 30px rgba(15, 23, 42, 0.05);
-      --radius-xl: 28px;
-      --radius-lg: 18px;
-      --radius-md: 14px;
-      --focus: 0 0 0 4px rgba(79, 116, 255, 0.14);
+      --text-muted: #53657e;
+      --text-soft: #708097;
+      --border: rgba(15, 23, 42, 0.08);
+      --border-strong: #d6dfeb;
+      --primary: #2348a5;
+      --primary-strong: #18357f;
+      --primary-soft: #e8effc;
+      --success-bg: #eef8f1;
+      --success-text: #2b4d39;
+      --shadow-xl: 0 30px 80px rgba(15, 23, 42, 0.14);
+      --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.08);
+      --shadow-sm: 0 8px 20px rgba(15, 23, 42, 0.04);
+      --radius-xl: 30px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+      --focus-ring: 0 0 0 4px rgba(35, 72, 165, 0.14);
+      --max-width: 1440px;
     }
 
     * {
@@ -46,24 +52,28 @@
     }
 
     html {
+      -webkit-text-size-adjust: 100%;
       scroll-behaviour: smooth;
     }
 
-    body.login-page {
+    body {
       margin: 0;
       min-height: 100vh;
-      display: grid;
-      grid-template-columns: 1.08fr 0.92fr;
-      background:
-        radial-gradient(circle at top left, rgba(78, 110, 255, 0.14), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(29, 78, 216, 0.10), transparent 30%),
-        linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 100%);
-      color: var(--text);
       font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(35, 72, 165, 0.09), transparent 24%),
+        radial-gradient(circle at bottom right, rgba(24, 53, 127, 0.08), transparent 26%),
+        linear-gradient(135deg, var(--bg-soft) 0%, var(--bg-main) 100%);
+    }
+
+    img {
+      max-width: 100%;
+      display: block;
     }
 
     a {
-      color: var(--primary-dark);
+      color: var(--primary);
       text-decoration: none;
     }
 
@@ -71,148 +81,231 @@
       text-decoration: underline;
     }
 
-    .login-shell {
-      display: contents;
+    a:focus-visible,
+    button:focus-visible,
+    input:focus-visible {
+      outline: none;
     }
 
-    .login-panel,
-    .login-form-panel {
+    .page {
       min-height: 100vh;
-    }
-
-    .login-panel {
       display: flex;
-      flex-direction: column;
       justify-content: center;
-      padding: 4rem 5rem;
     }
 
-    .login-brand {
-      max-width: 580px;
+    .shell {
+      width: 100%;
+      max-width: var(--max-width);
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(420px, 0.85fr);
+      position: relative;
+      overflow: hidden;
     }
 
-    .login-brand__badge {
+    .brand-panel {
+      position: relative;
+      display: flex;
+      align-items: center;
+      padding: 4.5rem 5rem;
+    }
+
+    .brand-panel::before {
+      content: "";
+      position: absolute;
+      inset: 2rem 2rem 2rem 2rem;
+      border-radius: 36px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.12));
+      border: 1px solid rgba(255, 255, 255, 0.45);
+      pointer-events: none;
+    }
+
+    .brand-content {
+      position: relative;
+      z-index: 1;
+      max-width: 660px;
+    }
+
+    .brand-badge {
       display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.5rem 0.85rem;
+      gap: 0.8rem;
+      padding: 0.6rem 0.95rem;
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.84);
       border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 1.5rem;
+      color: #32465f;
       font-size: 0.92rem;
       font-weight: 700;
-      color: #2a3d59;
-      margin-bottom: 1.25rem;
-      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+      letter-spacing: 0.01em;
     }
 
-    .login-brand h1 {
-      margin: 0 0 1rem;
-      font-size: clamp(2.4rem, 4vw, 4.2rem);
-      line-height: 1.02;
-      letter-spacing: -0.035em;
-      color: var(--text-strong);
-    }
-
-    .login-brand p {
-      margin: 0;
-      font-size: 1.06rem;
-      line-height: 1.75;
-      color: #42526b;
-      max-width: 50ch;
-    }
-
-    .login-highlights {
-      margin-top: 2rem;
-      display: grid;
-      gap: 0.95rem;
-      max-width: 35rem;
-    }
-
-    .login-highlight {
-      display: flex;
-      gap: 0.95rem;
-      align-items: flex-start;
-      padding: 1rem 1.1rem;
-      border-radius: var(--radius-lg);
-      background: var(--surface-soft);
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow-md);
-    }
-
-    .login-highlight__icon {
-      width: 2.4rem;
-      height: 2.4rem;
-      border-radius: 12px;
+    .brand-badge__mark {
+      width: 1.7rem;
+      height: 1.7rem;
+      border-radius: 999px;
       display: grid;
       place-items: center;
       background: var(--primary-soft);
-      color: var(--primary-dark);
-      font-size: 0.92rem;
+      color: var(--primary);
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
+    .brand-title {
+      margin: 0 0 1rem;
+      max-width: 11ch;
+      font-size: clamp(2.7rem, 4.5vw, 4.6rem);
+      line-height: 0.98;
+      letter-spacing: -0.045em;
+      color: var(--text-strong);
+    }
+
+    .brand-copy {
+      margin: 0;
+      max-width: 53ch;
+      font-size: 1.08rem;
+      line-height: 1.8;
+      color: var(--text-muted);
+    }
+
+    .feature-list {
+      margin-top: 2.25rem;
+      display: grid;
+      gap: 1rem;
+      max-width: 40rem;
+    }
+
+    .feature-card {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 1rem;
+      align-items: start;
+      padding: 1.05rem 1.1rem;
+      border-radius: var(--radius-lg);
+      background: var(--panel-muted);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-lg);
+      backdrop-filter: blur(6px);
+    }
+
+    .feature-card__icon {
+      width: 2.7rem;
+      height: 2.7rem;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 0.95rem;
       font-weight: 800;
       letter-spacing: 0.02em;
       flex-shrink: 0;
     }
 
-    .login-highlight h3 {
-      margin: 0 0 0.25rem;
+    .feature-card__title {
+      margin: 0 0 0.28rem;
       font-size: 1rem;
       color: var(--text);
     }
 
-    .login-highlight p {
+    .feature-card__text {
       margin: 0;
-      font-size: 0.94rem;
       color: var(--text-muted);
-      line-height: 1.55;
+      font-size: 0.95rem;
+      line-height: 1.6;
     }
 
-    .login-form-panel {
+    .trust-strip {
+      margin-top: 1.75rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .trust-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.7rem 0.9rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid var(--border);
+      color: #3a4e68;
+      font-size: 0.9rem;
+      font-weight: 600;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .trust-pill__dot {
+      width: 0.55rem;
+      height: 0.55rem;
+      border-radius: 999px;
+      background: #3f7f5c;
+      box-shadow: 0 0 0 4px rgba(63, 127, 92, 0.08);
+    }
+
+    .form-panel {
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 2rem;
-      background: var(--surface-panel);
-      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.36);
+      backdrop-filter: blur(12px);
+      border-left: 1px solid rgba(15, 23, 42, 0.05);
     }
 
-    .login-card {
+    .signin-card {
       width: 100%;
-      max-width: 440px;
+      max-width: 470px;
       padding: 2rem;
-      border-radius: var(--radius-xl);
-      background: var(--surface);
+      background: var(--panel);
       border: 1px solid var(--border);
-      box-shadow: var(--shadow-lg);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-xl);
     }
 
-    .login-card__header {
-      text-align: left;
+    .signin-header {
       margin-bottom: 1.5rem;
     }
 
-    .login-card__logo {
-      width: 54px;
-      height: 54px;
+    .signin-logo {
+      width: 60px;
+      height: 60px;
       object-fit: contain;
       margin-bottom: 1rem;
     }
 
-    .login-card__title {
+    .signin-eyebrow {
+      display: inline-block;
+      margin-bottom: 0.65rem;
+      color: var(--primary);
+      font-size: 0.84rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .signin-title {
       margin: 0 0 0.45rem;
-      font-size: 1.8rem;
       color: var(--text-strong);
-      letter-spacing: -0.02em;
+      font-size: 1.95rem;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
     }
 
-    .login-card__subtitle {
+    .signin-subtitle {
       margin: 0;
-      color: #5b6b83;
-      line-height: 1.65;
+      max-width: 34ch;
+      color: var(--text-muted);
       font-size: 0.98rem;
+      line-height: 1.65;
     }
 
-    .login-form {
+    .signin-form {
       display: grid;
       gap: 1rem;
     }
@@ -222,73 +315,79 @@
       gap: 0.45rem;
     }
 
-    .form-group label {
-      font-size: 0.92rem;
-      font-weight: 600;
-      color: #24364f;
+    .form-label {
+      color: #233550;
+      font-size: 0.93rem;
+      font-weight: 700;
     }
 
     .input-wrap {
       position: relative;
     }
 
-    .form-group input {
+    .form-input {
       width: 100%;
+      min-height: 3.25rem;
       border: 1px solid var(--border-strong);
       border-radius: var(--radius-md);
       padding: 0.95rem 1rem;
-      font-size: 1rem;
-      background: #fff;
+      background: var(--panel-solid);
       color: var(--text);
-      outline: none;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+      font-size: 1rem;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
     }
 
-    .form-group input::placeholder {
-      color: #8a97aa;
+    .form-input::placeholder {
+      color: #8a98ab;
     }
 
-    .form-group input:focus {
+    .form-input:hover {
+      border-color: #c9d4e4;
+    }
+
+    .form-input:focus {
       border-color: var(--primary);
-      box-shadow: var(--focus);
+      box-shadow: var(--focus-ring);
+      background: #ffffff;
     }
 
     .password-toggle {
       position: absolute;
       top: 50%;
-      right: 0.75rem;
+      right: 0.65rem;
       transform: translateY(-50%);
       border: none;
       background: transparent;
-      color: #5f7088;
+      color: #5d6f87;
       font-size: 0.9rem;
       font-weight: 700;
-      cursor: pointer;
-      padding: 0.35rem 0.45rem;
+      padding: 0.42rem 0.55rem;
       border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease;
     }
 
     .password-toggle:hover,
     .password-toggle:focus-visible {
-      background: rgba(49, 94, 251, 0.08);
-      outline: none;
+      background: rgba(35, 72, 165, 0.08);
+      color: var(--primary);
     }
 
-    .login-row {
+    .form-meta {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 1rem;
-      margin-top: -0.15rem;
+      margin-top: -0.1rem;
     }
 
     .checkbox {
       display: inline-flex;
       align-items: center;
       gap: 0.55rem;
-      font-size: 0.92rem;
-      color: #42526b;
       cursor: pointer;
+      color: var(--text-muted);
+      font-size: 0.92rem;
     }
 
     .checkbox input {
@@ -297,65 +396,69 @@
       accent-color: var(--primary);
     }
 
-    .login-actions {
-      display: grid;
-      gap: 0.8rem;
-      margin-top: 0.35rem;
-    }
-
-    .login-button {
+    .signin-button {
       width: 100%;
+      min-height: 3.35rem;
       border: none;
       border-radius: var(--radius-md);
-      padding: 1rem 1rem;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-strong) 100%);
+      color: #ffffff;
       font-size: 1rem;
-      font-weight: 700;
-      color: #fff;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      font-weight: 800;
+      letter-spacing: 0.01em;
       cursor: pointer;
-      box-shadow: 0 14px 28px rgba(36, 71, 213, 0.22);
-      transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+      box-shadow: 0 16px 30px rgba(24, 53, 127, 0.22);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
     }
 
-    .login-button:hover {
+    .signin-button:hover {
       transform: translateY(-1px);
-      box-shadow: 0 18px 30px rgba(36, 71, 213, 0.26);
+      box-shadow: 0 20px 34px rgba(24, 53, 127, 0.26);
     }
 
-    .login-button:focus-visible {
-      outline: none;
-      box-shadow: var(--focus), 0 18px 30px rgba(36, 71, 213, 0.20);
-    }
-
-    .login-button:disabled {
+    .signin-button:disabled {
       opacity: 0.72;
       cursor: not-allowed;
       transform: none;
-      box-shadow: 0 10px 20px rgba(36, 71, 213, 0.16);
+      box-shadow: 0 10px 20px rgba(24, 53, 127, 0.16);
     }
 
-    .login-status {
-      min-height: 1.2rem;
-      font-size: 0.9rem;
+    .signin-button:focus-visible {
+      box-shadow: var(--focus-ring), 0 20px 34px rgba(24, 53, 127, 0.22);
+    }
+
+    .status {
+      min-height: 1.25rem;
       color: var(--text-soft);
-    }
-
-    .login-footnote {
-      margin-top: 1rem;
       font-size: 0.9rem;
-      line-height: 1.6;
-      color: #66768d;
     }
 
-    .login-footer {
-      margin-top: 1.25rem;
+    .reassurance {
+      margin-top: 1.2rem;
+      padding: 1rem 1rem;
+      border-radius: 18px;
+      background: var(--success-bg);
+      border: 1px solid rgba(43, 77, 57, 0.08);
+      color: var(--success-text);
+      font-size: 0.92rem;
+      line-height: 1.6;
+    }
+
+    .card-footer {
+      margin-top: 1.3rem;
       padding-top: 1rem;
       border-top: 1px solid var(--border);
-      font-size: 0.88rem;
-      color: #7a8799;
       display: flex;
       justify-content: space-between;
       gap: 1rem;
+      flex-wrap: wrap;
+      color: var(--text-soft);
+      font-size: 0.88rem;
+    }
+
+    .footer-links {
+      display: inline-flex;
+      gap: 0.9rem;
       flex-wrap: wrap;
     }
 
@@ -363,180 +466,240 @@
       position: absolute;
       width: 1px;
       height: 1px;
-      padding: 0;
       margin: -1px;
+      padding: 0;
       overflow: hidden;
-      clip: rect(0, 0, 0, 0);
+      clip: rect(0 0 0 0);
       white-space: nowrap;
       border: 0;
     }
 
-    @media (max-width: 980px) {
-      body.login-page {
+    @media (max-width: 1100px) {
+      .shell {
         grid-template-columns: 1fr;
       }
 
-      .login-panel,
-      .login-form-panel {
+      .brand-panel,
+      .form-panel {
         min-height: auto;
       }
 
-      .login-panel {
+      .brand-panel {
         padding: 2.5rem 1.25rem 1rem;
       }
 
-      .login-form-panel {
-        padding: 1.25rem;
-        align-items: start;
+      .brand-panel::before {
+        inset: 0.75rem;
       }
 
-      .login-brand {
+      .form-panel {
+        padding: 1.25rem;
+        border-left: none;
+      }
+
+      .brand-title,
+      .brand-copy,
+      .brand-content,
+      .feature-list {
         max-width: none;
+      }
+
+      .brand-title {
+        max-width: 13ch;
       }
     }
 
     @media (max-width: 640px) {
-      .login-card {
+      .signin-card {
         padding: 1.4rem;
-        border-radius: 22px;
+        border-radius: 24px;
       }
 
-      .login-brand h1 {
-        font-size: 2.1rem;
+      .brand-title {
+        font-size: 2.3rem;
+        max-width: none;
       }
 
-      .login-row {
+      .form-meta,
+      .card-footer {
         flex-direction: column;
         align-items: flex-start;
       }
 
-      .login-footer {
-        flex-direction: column;
+      .trust-strip {
+        gap: 0.6rem;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation: none !important;
+        transition: none !important;
+        scroll-behaviour: auto !important;
       }
     }
   </style>
 </head>
-<body class="login-page">
-  <div class="login-shell">
-    <section class="login-panel" aria-labelledby="welcome-title">
-      <div class="login-brand">
-        <div class="login-brand__badge">IndiCare Platform</div>
-
-        <h1 id="welcome-title">Professional digital support for children's home teams.</h1>
-
-        <p>
-          Manage day-to-day practice, staff journals, supervision, reports,
-          handover notes, and AI-assisted documents in one secure workspace.
-        </p>
-
-        <div class="login-highlights" aria-label="Platform highlights">
-          <div class="login-highlight">
-            <div class="login-highlight__icon" aria-hidden="true">AI</div>
-            <div>
-              <h3>AI support for practice</h3>
-              <p>Generate structured reports, records, reflections, and operational documents faster.</p>
-            </div>
+<body>
+  <div class="page">
+    <div class="shell">
+      <section class="brand-panel" aria-labelledby="page-title">
+        <div class="brand-content">
+          <div class="brand-badge">
+            <span class="brand-badge__mark" aria-hidden="true">IC</span>
+            <span>IndiCare for Children’s Residential Homes</span>
           </div>
 
-          <div class="login-highlight">
-            <div class="login-highlight__icon" aria-hidden="true">SJ</div>
-            <div>
-              <h3>Staff journal and supervision</h3>
-              <p>Keep development notes, prepare supervision packs, and support stronger reflective practice.</p>
-            </div>
-          </div>
+          <h1 id="page-title" class="brand-title">
+            A secure digital workspace for residential care teams.
+          </h1>
 
-          <div class="login-highlight">
-            <div class="login-highlight__icon" aria-hidden="true">HQ</div>
-            <div>
-              <h3>Clear daily oversight</h3>
-              <p>Review tasks, handover information, and key operational updates in one place.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <main class="login-form-panel">
-      <div class="login-card">
-        <div class="login-card__header">
-          <img src="/assets/logo.svg" alt="IndiCare logo" class="login-card__logo" />
-          <h2 class="login-card__title">Sign in to IndiCare</h2>
-          <p class="login-card__subtitle">
-            Use your work account to access the staff workspace.
+          <p class="brand-copy">
+            Support safer recording, clearer oversight, reflective supervision,
+            handovers, and day-to-day operational practice in one professional
+            system built for children’s residential homes.
           </p>
-        </div>
 
-        <form class="login-form" id="loginForm" novalidate>
-          <div class="form-group">
-            <label for="email">Email address</label>
-            <div class="input-wrap">
+          <div class="feature-list" aria-label="Platform strengths">
+            <article class="feature-card">
+              <div class="feature-card__icon" aria-hidden="true">01</div>
+              <div>
+                <h2 class="feature-card__title">Support good recording and accountability</h2>
+                <p class="feature-card__text">
+                  Keep key records, staff notes, handovers, and operational
+                  information organised, consistent, and easier to review.
+                </p>
+              </div>
+            </article>
+
+            <article class="feature-card">
+              <div class="feature-card__icon" aria-hidden="true">02</div>
+              <div>
+                <h2 class="feature-card__title">Strengthen supervision and reflective practice</h2>
+                <p class="feature-card__text">
+                  Capture development points, prepare supervision discussions,
+                  and support stronger professional reflection across the team.
+                </p>
+              </div>
+            </article>
+
+            <article class="feature-card">
+              <div class="feature-card__icon" aria-hidden="true">03</div>
+              <div>
+                <h2 class="feature-card__title">Improve daily oversight</h2>
+                <p class="feature-card__text">
+                  Bring together updates, tasks, documents, and practice support
+                  so leaders and staff can work with more clarity and confidence.
+                </p>
+              </div>
+            </article>
+          </div>
+
+          <div class="trust-strip" aria-label="Trust messages">
+            <div class="trust-pill">
+              <span class="trust-pill__dot" aria-hidden="true"></span>
+              <span>Built for professional care settings</span>
+            </div>
+            <div class="trust-pill">
+              <span class="trust-pill__dot" aria-hidden="true"></span>
+              <span>Supports safer operational oversight</span>
+            </div>
+            <div class="trust-pill">
+              <span class="trust-pill__dot" aria-hidden="true"></span>
+              <span>Clear, structured daily practice</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <main class="form-panel">
+        <div class="signin-card">
+          <header class="signin-header">
+            <img src="/assets/logo.svg" alt="IndiCare logo" class="signin-logo" />
+            <div class="signin-eyebrow">Secure access</div>
+            <h2 class="signin-title">Sign in to IndiCare</h2>
+            <p class="signin-subtitle">
+              Use your work account to access the platform.
+            </p>
+          </header>
+
+          <form class="signin-form" id="loginForm" novalidate>
+            <div class="form-group">
+              <label class="form-label" for="email">Work email address</label>
               <input
+                class="form-input"
                 id="email"
                 name="email"
                 type="email"
                 inputmode="email"
-                placeholder="name@indicare.co.uk"
                 autocomplete="email"
+                placeholder="name@organisation.co.uk"
                 required
-                aria-describedby="emailHint"
+                aria-describedby="emailHelp"
               />
+              <span id="emailHelp" class="visually-hidden">
+                Enter the work email address linked to your account
+              </span>
             </div>
-            <span id="emailHint" class="visually-hidden">Enter your work email address</span>
-          </div>
 
-          <div class="form-group">
-            <label for="password">Password</label>
-            <div class="input-wrap">
-              <input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="Enter your password"
-                autocomplete="current-password"
-                required
-              />
-              <button
-                type="button"
-                class="password-toggle"
-                id="togglePassword"
-                aria-label="Show password"
-                aria-controls="password"
-                aria-pressed="false"
-              >
-                Show
-              </button>
+            <div class="form-group">
+              <label class="form-label" for="password">Password</label>
+              <div class="input-wrap">
+                <input
+                  class="form-input"
+                  id="password"
+                  name="password"
+                  type="password"
+                  autocomplete="current-password"
+                  placeholder="Enter your password"
+                  required
+                />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  id="togglePassword"
+                  aria-label="Show password"
+                  aria-controls="password"
+                  aria-pressed="false"
+                >
+                  Show
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div class="login-row">
-            <label class="checkbox" for="rememberMe">
-              <input id="rememberMe" name="rememberMe" type="checkbox" />
-              <span>Remember me</span>
-            </label>
+            <div class="form-meta">
+              <label class="checkbox" for="rememberMe">
+                <input id="rememberMe" name="rememberMe" type="checkbox" />
+                <span>Keep me signed in</span>
+              </label>
 
-            <a href="/forgot-password">Forgot password?</a>
-          </div>
+              <a href="/forgot-password">Forgot password?</a>
+            </div>
 
-          <div class="login-actions">
-            <button id="loginBtn" class="login-button" type="submit">
+            <button class="signin-button" id="loginBtn" type="submit">
               Sign in
             </button>
-            <div id="loginStatus" class="login-status" aria-live="polite"></div>
+
+            <div class="status" id="loginStatus" aria-live="polite"></div>
+          </form>
+
+          <div class="reassurance">
+            IndiCare is designed to support professional practice, clear
+            recording, and safer operational oversight across children’s
+            residential care settings.
           </div>
-        </form>
 
-        <p class="login-footnote">
-          This secure workspace is designed to support good recording, reflective
-          practice, and safer operational oversight across residential care.
-        </p>
-
-        <div class="login-footer">
-          <span>© IndiCare</span>
-          <span><a href="/privacy">Privacy</a> · <a href="/support">Support</a></span>
+          <footer class="card-footer">
+            <span>© IndiCare</span>
+            <div class="footer-links">
+              <a href="/privacy">Privacy</a>
+              <a href="/support">Support</a>
+              <a href="/terms">Terms</a>
+            </div>
+          </footer>
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   </div>
 
   <script src="/js/api.js"></script>
@@ -547,16 +710,26 @@
       const form = document.getElementById("loginForm");
       const email = document.getElementById("email");
       const password = document.getElementById("password");
+      const togglePassword = document.getElementById("togglePassword");
       const loginBtn = document.getElementById("loginBtn");
       const loginStatus = document.getElementById("loginStatus");
-      const togglePassword = document.getElementById("togglePassword");
+      const rememberMe = document.getElementById("rememberMe");
+
+      function setStatus(message) {
+        loginStatus.textContent = message || "";
+      }
+
+      function setLoading(isLoading) {
+        loginBtn.disabled = isLoading;
+        loginBtn.textContent = isLoading ? "Signing in..." : "Sign in";
+      }
 
       togglePassword.addEventListener("click", function () {
-        const isPassword = password.type === "password";
-        password.type = isPassword ? "text" : "password";
-        togglePassword.textContent = isPassword ? "Hide" : "Show";
-        togglePassword.setAttribute("aria-label", isPassword ? "Hide password" : "Show password");
-        togglePassword.setAttribute("aria-pressed", String(isPassword));
+        const isHidden = password.type === "password";
+        password.type = isHidden ? "text" : "password";
+        togglePassword.textContent = isHidden ? "Hide" : "Show";
+        togglePassword.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
+        togglePassword.setAttribute("aria-pressed", String(isHidden));
       });
 
       form.addEventListener("submit", async function (event) {
@@ -566,34 +739,38 @@
         const passwordValue = password.value;
 
         if (!emailValue || !passwordValue) {
-          loginStatus.textContent = "Please enter your email address and password.";
+          setStatus("Please enter your work email address and password.");
+          if (!emailValue) {
+            email.focus();
+          } else {
+            password.focus();
+          }
           return;
         }
 
-        loginBtn.disabled = true;
-        loginBtn.textContent = "Signing in...";
-        loginStatus.textContent = "Checking your details...";
+        setLoading(true);
+        setStatus("Checking your details...");
 
         try {
           if (window.auth && typeof window.auth.login === "function") {
             await window.auth.login({
               email: emailValue,
               password: passwordValue,
-              remember: document.getElementById("rememberMe").checked
+              remember: rememberMe.checked
             });
           } else {
-            await new Promise((resolve) => setTimeout(resolve, 700));
+            await new Promise((resolve) => setTimeout(resolve, 600));
           }
 
-          loginStatus.textContent = "Sign-in successful. Redirecting...";
+          setStatus("Sign-in successful. Redirecting...");
         } catch (error) {
-          loginStatus.textContent =
+          setStatus(
             error && error.message
               ? error.message
-              : "We could not sign you in. Please check your details and try again.";
+              : "We could not sign you in. Please check your details and try again."
+          );
         } finally {
-          loginBtn.disabled = false;
-          loginBtn.textContent = "Sign in";
+          setLoading(false);
         }
       });
     })();
