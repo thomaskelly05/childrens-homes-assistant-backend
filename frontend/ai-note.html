@@ -9,7 +9,7 @@
 </head>
 <body class="notes-page">
   <div class="app-shell">
-    
+
     <aside class="sidebar">
       <div class="sidebar-top">
         <div class="brand">
@@ -35,12 +35,14 @@
         </div>
 
         <div class="sidebar-section mt-24">
-          <span class="section-label">Care Sector Prompts</span>
+          <span class="section-label">Quick AI Prompts</span>
           <div class="prompt-stack">
             <button class="prompt-btn" data-fill="Format this into a formal Staff Supervision record, highlighting well-being, current caseloads, and agreed actions.">Supervision Record</button>
             <button class="prompt-btn" data-fill="Extract and summarise all safeguarding concerns, risks, and immediate actions required. Use factual, objective language.">Safeguarding Summary</button>
             <button class="prompt-btn" data-fill="Review this meeting and structure it as a Personal Education Plan (PEP) update, focusing on educational milestones and support needed.">PEP Update</button>
             <button class="prompt-btn" data-fill="Remove all emotive language and rewrite this incident report to be strictly objective, chronological, and factual.">Make Objective & Factual</button>
+            <button class="prompt-btn" data-fill="Rewrite this note in a clear professional tone suitable for management review.">Professional Tone</button>
+            <button class="prompt-btn" data-fill="Summarise the key points, decisions, and next actions from this note.">Summarise Key Points</button>
           </div>
         </div>
       </div>
@@ -67,10 +69,12 @@
         <div class="topbar-left">
           <h2 class="page-title">Workspace</h2>
         </div>
+
         <div class="page-tabs">
           <button id="workspaceTabBtn" class="page-tab active" type="button">Editor</button>
           <button id="savedTabBtn" class="page-tab" type="button">Saved Records</button>
         </div>
+
         <div class="topbar-right">
           <button id="recordBtn" class="btn btn-primary">Start New Recording</button>
         </div>
@@ -78,51 +82,44 @@
 
       <section id="workspacePanel" class="tab-panel active">
         <div class="workspace-layout">
-          
-          <aside class="context-panel">
-            
-            <div class="context-card flex-col">
-              <div class="card-header between">
-                <span class="card-title">Source Audio Transcript</span>
-                <button id="transcribeBtn" class="btn btn-ghost btn-sm" disabled>Transcribe</button>
-              </div>
-              <textarea id="transcript" class="source-box" placeholder="Raw transcript will appear here after the session is recorded..."></textarea>
-              <div class="card-actions border-top">
-                <button id="useTranscriptForAiBtn" class="btn btn-secondary w-full">Push to Editor</button>
-              </div>
-            </div>
 
+          <aside class="context-panel">
             <div class="context-card">
               <div class="card-header between">
                 <span class="card-title">Meeting Participants (<span id="speakerCountBadge">0</span>)</span>
                 <button id="renameSpeakersBtn" class="btn btn-ghost btn-sm">Refresh</button>
               </div>
               <div class="card-body">
-                <div id="speakerMapList" class="data-list"><div class="empty-text">No participants detected.</div></div>
-                
+                <div id="speakerMapList" class="data-list">
+                  <div class="empty-text">No participants detected.</div>
+                </div>
+
                 <span class="card-title mt-16 mb-8 block">Speaking Timeline</span>
-                <div id="speakerTimeline" class="data-list timeline-list"><div class="empty-text">No timeline yet.</div></div>
+                <div id="speakerTimeline" class="data-list timeline-list">
+                  <div class="empty-text">No timeline yet.</div>
+                </div>
               </div>
             </div>
 
             <div class="context-card">
               <div class="card-header between">
-                <span class="card-title">Extracted Actions (<span id="actionCountBadge">0</span>)</span>
-                <button id="extractActionsBtn" class="btn btn-ghost btn-sm">Extract</button>
+                <span class="card-title">AI Actions</span>
+                <button id="transcribeBtn" class="btn btn-ghost btn-sm" disabled>Transcribe</button>
               </div>
               <div class="card-body">
-                <div id="actionsList" class="data-list"><div class="empty-text">No actions identified yet.</div></div>
+                <div class="stack-actions">
+                  <button id="useTranscriptForAiBtn" class="btn btn-secondary w-full">Copy Transcript to Final Note</button>
+                  <button id="extractActionsBtn" class="btn btn-secondary w-full">Extract Actions</button>
+                </div>
               </div>
             </div>
-
           </aside>
 
           <div class="editor-panel">
             <div class="editor-card">
-              
               <div class="editor-header">
                 <input id="title" type="text" class="document-title-input" placeholder="Untitled Record" />
-                
+
                 <div class="document-meta-grid">
                   <div class="meta-item">
                     <label for="meetingFormat">Record Type</label>
@@ -135,7 +132,7 @@
                       <option value="Review">Care Review</option>
                     </select>
                   </div>
-                  
+
                   <div class="meta-item">
                     <label for="documentTemplate">Framework Template</label>
                     <select id="documentTemplate" class="meta-select">
@@ -146,7 +143,6 @@
                         <option value="custom_1">Our Home: Monthly Summary</option>
                         <option value="custom_2">Our Home: Incident Report</option>
                       </optgroup>
-                      <option value="create_new">+ Create New Template...</option>
                     </select>
                   </div>
 
@@ -161,23 +157,60 @@
                 </div>
               </div>
 
-              <div class="ai-command-bar">
-                <div class="ai-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+              <div class="note-workspace">
+                <div class="note-view-switcher">
+                  <button id="viewFinalBtn" class="page-tab active" type="button">Final Note</button>
+                  <button id="viewSourceBtn" class="page-tab" type="button">Original Transcript</button>
+                  <button id="viewActionsBtn" class="page-tab" type="button">Actions</button>
                 </div>
-                <input id="prompt" type="text" class="ai-command-input" placeholder="Instruct the assistant to structure, summarise, or anonymise this document..." />
-                <button id="aiBtn" class="btn btn-primary btn-sm">Process Document</button>
-              </div>
 
-              <div class="document-area">
-                <textarea id="note" class="document-box" placeholder="Your compliant, refined document will be generated here."></textarea>
+                <section id="finalViewPanel" class="note-subpanel active">
+                  <div class="ai-command-bar">
+                    <div class="ai-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+                        <path d="M21 3v5h-5"/>
+                      </svg>
+                    </div>
+                    <input id="prompt" type="text" class="ai-command-input" placeholder="Instruct the assistant to structure, summarise, anonymise, or refine this document..." />
+                    <button id="aiBtn" class="btn btn-primary btn-sm">Apply AI</button>
+                  </div>
+
+                  <div class="document-area">
+                    <textarea id="note" class="document-box" placeholder="Your professional refined document will appear here. You can edit it manually at any time."></textarea>
+                  </div>
+                </section>
+
+                <section id="sourceViewPanel" class="note-subpanel">
+                  <div class="context-card full-height">
+                    <div class="card-header between">
+                      <span class="card-title">Original Transcript</span>
+                      <button id="copyTranscriptBtn" class="btn btn-secondary btn-sm">Copy to Final Note</button>
+                    </div>
+                    <textarea id="transcript" class="source-box" placeholder="Raw transcript will appear here after the session is recorded or transcribed..."></textarea>
+                  </div>
+                </section>
+
+                <section id="actionsViewPanel" class="note-subpanel">
+                  <div class="context-card full-height">
+                    <div class="card-header between">
+                      <span class="card-title">Extracted Actions (<span id="actionCountBadge">0</span>)</span>
+                      <button id="extractActionsBtnInline" class="btn btn-secondary btn-sm">Extract Actions</button>
+                    </div>
+                    <div class="card-body">
+                      <div id="actionsList" class="data-list">
+                        <div class="empty-text">No actions identified yet.</div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
               </div>
 
               <div class="editor-footer">
                 <div class="footer-left">
                   <button id="saveBtn" class="btn btn-success">Save to File</button>
                   <button id="versionsBtn" class="btn btn-secondary">Audit History</button>
-                  <button id="resetBtn" class="btn btn-ghost">Revert to Original</button>
+                  <button id="resetBtn" class="btn btn-ghost">Revert to Transcript</button>
                 </div>
                 <div class="footer-right">
                   <button id="printBtn" class="btn btn-secondary">Print</button>
@@ -187,7 +220,6 @@
                   <button id="clearBtn" class="btn btn-danger-ghost">Clear Editor</button>
                 </div>
               </div>
-
             </div>
           </div>
 
@@ -203,14 +235,20 @@
             </div>
             <button id="refreshBtn" class="btn btn-secondary">Refresh Archive</button>
           </div>
-          
+
           <div class="search-bar">
-            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input id="searchInput" type="text" class="search-input" placeholder="Search by resident, staff name, content, or record type..." />
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.3-4.3"/>
+            </svg>
+            <input id="searchInput" type="text" class="search-input" placeholder="Search by title, content, status, or record type..." />
           </div>
 
           <div id="empty" class="empty-state large">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <line x1="9" y1="3" x2="9" y2="21"/>
+            </svg>
             <strong>No records found</strong>
             <span>Your securely saved clinical and professional notes will appear here.</span>
           </div>
@@ -230,7 +268,6 @@
           </div>
         </div>
       </section>
-
     </main>
   </div>
 
@@ -238,13 +275,15 @@
     <div class="modal-content text-center">
       <div class="live-badge">Session Recording Live</div>
       <h3 class="modal-title">Capturing Audio</h3>
-      
+
       <div class="mic-container">
         <div id="mic" class="mic-pulsing-orb">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
         </div>
       </div>
-      
+
       <div id="timer" class="timer-huge">00:00</div>
       <div id="recState" class="status-indicator-text">Recording in progress. Maintain confidentiality.</div>
 
@@ -252,7 +291,7 @@
         <button id="pauseBtn" class="btn btn-secondary" disabled>Pause</button>
         <button id="resumeBtn" class="btn btn-secondary" disabled>Resume</button>
         <button id="cancelBtn" class="btn btn-danger-ghost" disabled>Discard</button>
-        <button id="stopBtn" class="btn btn-primary" disabled>End & Transcribe</button>
+        <button id="stopBtn" class="btn btn-primary" disabled>End &amp; Transcribe</button>
       </div>
     </div>
   </div>
@@ -261,7 +300,7 @@
     <div class="modal-content large">
       <div class="modal-header">
         <h3 class="modal-title">Audit History</h3>
-        <button id="closeVersionsBtn" class="btn btn-ghost btn-icon">✕</button>
+        <button id="closeVersionsBtn" class="btn btn-ghost btn-icon" type="button">✕</button>
       </div>
       <div id="versionsList" class="versions-scroll-area">
         <div class="empty-text text-center mt-24">No previous audit versions available.</div>
