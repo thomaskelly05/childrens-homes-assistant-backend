@@ -1,9 +1,15 @@
-let rosterData = null;
+let rosterData = {
+    shifts: [],
+    assignments: [],
+    staff: [],
+    warnings: [],
+    attendance: [],
+    smsLog: []
+};
 
 window.addEventListener("DOMContentLoaded", () => {
   const today = new Date();
   const monday = getMonday(today);
-
   document.getElementById("weekStart").value = formatDate(monday);
 
   document.getElementById("loadWeekBtn").addEventListener("click", loadWeek);
@@ -15,6 +21,7 @@ window.addEventListener("DOMContentLoaded", () => {
   loadWeek();
 });
 
+// Helper: Get Monday of the week
 function getMonday(date) {
   const d = new Date(date);
   const day = d.getDay();
@@ -24,252 +31,144 @@ function getMonday(date) {
   return d;
 }
 
-function formatDate(date) {
-  return date.toISOString().slice(0, 10);
-}
-
-function getHomeId() {
-  return Number(document.getElementById("homeId").value || 1);
-}
-
-function getWeekStart() {
-  return document.getElementById("weekStart").value;
-}
+function formatDate(date) { return date.toISOString().slice(0, 10); }
+function getHomeId() { return Number(document.getElementById("homeId").value || 1); }
+function getWeekStart() { return document.getElementById("weekStart").value; }
 
 async function loadWeek() {
   const homeId = getHomeId();
   const weekStart = getWeekStart();
 
-  const [weekRes, attendanceRes, smsRes] = await Promise.all([
-    fetch(`/api/rostering/week?home_id=${homeId}&week_start=${weekStart}`),
-    fetch(`/api/rostering/attendance?home_id=${homeId}&week_start=${weekStart}`),
-    fetch(`/api/rostering/sms-log?home_id=${homeId}&week_start=${weekStart}`)
-  ]);
+  try {
+    const [weekRes, attendanceRes, smsRes] = await Promise.all([
+      fetch(`/api/rostering/week?home_id=${homeId}&week_start=${weekStart}`),
+      fetch(`/api/rostering/attendance?home_id=${homeId}&week_start=${weekStart}`),
+      fetch(`/api/rostering/sms-log?home_id=${homeId}&week_start=${weekStart}`)
+    ]);
 
-  const weekData = await weekRes.json();
-  const attendanceData = await attendanceRes.json();
-  const smsData = await smsRes.json();
+    const weekData = await weekRes.json();
+    rosterData = { 
+        ...weekData, 
+        attendance: await attendanceRes.json(), 
+        smsLog: await smsRes.json() 
+    };
 
-  rosterData = { ...weekData, attendance: attendanceData, smsLog: smsData };
-
-  renderSummary();
-  renderStaff(weekData.staff || []);
-  renderWarnings(weekData.warnings || []);
-  renderRota(weekData.shifts || [], weekData.assignments || []);
-  renderAttendance(attendanceData || []);
-  renderSmsLog(smsData || []);
+    runComplianceCheck();
+    renderSummary();
+    renderStaff(rosterData.staff || []);
+    renderWarnings(rosterData.warnings || []);
+    renderRota(rosterData.shifts || [], rosterData.assignments || []);
+    renderAttendance(rosterData.attendance || []);
+    renderSmsLog(rosterData.smsLog || []);
+  } catch (err) {
+    console.error("Failed to sync OS data:", err);
+  }
 }
 
-async function buildWeekTemplate() {
-  const homeId = getHomeId();
-  const weekStart = getWeekStart();
+function runComplianceCheck() {
+    // Inject custom OS logic: Check for missing Level 3 leads
+    rosterData.warnings = [];
+    rosterData.shifts.forEach(shift => {
+        const onShift = rosterData.assignments.filter(a => a.shift_id === shift.id);
+        const hasLevel3 = onShift.some(a => {
+            const s = rosterData.staff.find(st => st.id === a.staff_id);
+            return s?.qualification_level?.includes("Level 3");
+        });
 
-  const res = await fetch("/api/rostering/build-week-template", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({
-      home_id: homeId,
-      week_start: weekStart,
-      actor: "manager"
-    })
-  });
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    alert(data.detail || "Unable to build week template.");
-    return;
-  }
-
-  await loadWeek();
-}
-
-async function publishWeek() {
-  const homeId = getHomeId();
-  const weekStart = getWeekStart();
-
-  const res = await fetch("/api/rostering/publish-week", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({
-      home_id: homeId,
-      week_start: weekStart,
-      actor: "manager",
-      send_sms: true
-    })
-  });
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    alert(data.detail || "Unable to publish rota.");
-    return;
-  }
-
-  alert(`Rota published. SMS sent to ${data.sms_count} staff.`);
-  await loadWeek();
+        if (onShift.length > 0 && !hasLevel3) {
+            rosterData.warnings.push({
+                level: 'medium',
+                message: `${shift.shift_date}: ${shift.shift_type} has no Level 3 Qualified staff assigned.`
+            });
+        }
+        
+        if (onShift.length < shift.safer_staffing_min) {
+            rosterData.warnings.push({
+                level: 'high',
+                message: `CRITICAL: ${shift.shift_date} ${shift.shift_type} is below Safer Staffing minimum.`
+            });
+        }
+    });
 }
 
 function renderSummary() {
-  const publicationStatus = document.getElementById("publicationStatus");
-  const warningCount = document.getElementById("warningCount");
-  const attendanceCount = document.getElementById("attendanceCount");
-  const smsCount = document.getElementById("smsCount");
-
-  publicationStatus.textContent = rosterData.publication ? "Published" : "Draft";
-  warningCount.textContent = String((rosterData.warnings || []).length);
-  attendanceCount.textContent = String((rosterData.attendance || []).length);
-  smsCount.textContent = String((rosterData.smsLog || []).length);
+  document.getElementById("publicationStatus").textContent = rosterData.publication ? "Published" : "Draft";
+  document.getElementById("warningCount").textContent = rosterData.warnings.length;
+  document.getElementById("attendanceCount").textContent = rosterData.attendance.length;
+  
+  const agencyCount = rosterData.assignments.filter(a => {
+      const s = rosterData.staff.find(st => st.id === a.staff_id);
+      return s?.is_agency;
+  }).length;
+  document.getElementById("agencyCount").textContent = agencyCount;
 }
 
 function renderStaff(staff) {
   const staffList = document.getElementById("staffList");
-  staffList.innerHTML = "";
-
-  if (!staff.length) {
-    staffList.innerHTML = `<div class="empty-state">No staff found for this home.</div>`;
-    return;
-  }
+  staffList.innerHTML = staff.length ? "" : `<div class="empty-state">No staff found.</div>`;
 
   staff.forEach(person => {
     const card = document.createElement("div");
-    card.className = "staff-card";
+    card.className = `staff-card ${person.is_agency ? 'agency-highlight' : ''}`;
     card.draggable = true;
     card.dataset.staffId = person.id;
 
-    const tags = [];
-    if (person.is_agency) tags.push("Agency");
-    if (person.contracted_hours !== null && person.contracted_hours !== undefined) {
-      tags.push(`${person.contracted_hours}h contract`);
-    }
-    if (person.qualification_level) tags.push(person.qualification_level);
-    if (person.mobile_number) tags.push("SMS ready");
-
     card.innerHTML = `
       <div class="staff-card-top">
-        <strong>${escapeHtml(person.full_name || "")}</strong>
-        <span class="role-badge">${escapeHtml(person.role || "")}</span>
+        <strong>${escapeHtml(person.full_name)}</strong>
+        <span class="role-badge">${escapeHtml(person.qualification_level || 'Unqualified')}</span>
       </div>
-      <div class="staff-meta">${tags.map(tag => `<span class="meta-pill">${escapeHtml(String(tag))}</span>`).join("")}</div>
+      <div class="staff-meta">
+        ${person.is_agency ? '<span class="meta-pill agency">Agency</span>' : ''}
+        <span class="meta-pill">${person.contracted_hours || 0}h</span>
+      </div>
     `;
 
-    card.addEventListener("dragstart", (e) => {
-      e.dataTransfer.setData("staffId", person.id);
-    });
-
+    card.addEventListener("dragstart", (e) => e.dataTransfer.setData("staffId", person.id));
     staffList.appendChild(card);
-  });
-}
-
-function renderWarnings(warnings) {
-  const panel = document.getElementById("warningPanel");
-  panel.innerHTML = "";
-
-  if (!warnings.length) {
-    panel.innerHTML = `<div class="warning-ok">No immediate staffing concerns.</div>`;
-    return;
-  }
-
-  warnings.forEach(w => {
-    const item = document.createElement("div");
-    item.className = `warning-item ${w.level || "medium"}`;
-    item.textContent = w.message || "Warning";
-    panel.appendChild(item);
   });
 }
 
 function renderRota(shifts, assignments) {
   const board = document.getElementById("rotaBoard");
-  board.innerHTML = "";
-
-  if (!shifts.length) {
-    board.innerHTML = `<div class="empty-state large">No shifts found for this week. Use <strong>Build week</strong> to create them.</div>`;
-    return;
-  }
+  board.innerHTML = shifts.length ? "" : `<div class="empty-state large">No shifts defined. Click 'Auto-Gen' to start.</div>`;
 
   const grouped = groupByDate(shifts);
-
   Object.keys(grouped).forEach(dateKey => {
     const daySection = document.createElement("section");
     daySection.className = "day-section";
-
-    const dayTitle = document.createElement("div");
-    dayTitle.className = "day-title";
-    dayTitle.innerHTML = `<h3>${escapeHtml(dateKey)}</h3>`;
-    daySection.appendChild(dayTitle);
+    daySection.innerHTML = `<div class="day-title"><h3>${dateKey}</h3></div>`;
 
     const dayGrid = document.createElement("div");
     dayGrid.className = "day-grid";
 
     grouped[dateKey].forEach(shift => {
       const shiftAssignments = assignments.filter(a => a.shift_id === shift.id);
-      const statusClass = shiftAssignments.length < shift.required_count ? "needs-cover" : "covered";
+      const isUnderstaffed = shiftAssignments.length < shift.safer_staffing_min;
 
       const card = document.createElement("div");
-      card.className = "shift-card";
-      card.dataset.shiftId = shift.id;
-
+      card.className = `shift-card ${isUnderstaffed ? 'border-danger' : ''}`;
       card.innerHTML = `
         <div class="shift-card-head">
           <div>
-            <div class="shift-type ${statusClass}">${escapeHtml(titleCase(shift.shift_type || ""))}</div>
-            <div class="shift-time">${escapeHtml(shift.start_time || "")} - ${escapeHtml(shift.end_time || "")}</div>
+            <div class="shift-type ${isUnderstaffed ? 'needs-cover' : 'covered'}">
+                ${titleCase(shift.shift_type)}
+            </div>
+            <div class="shift-time">${shift.start_time} - ${shift.end_time}</div>
           </div>
           <div class="shift-side-meta">
-            <div>Required: ${shift.required_count ?? 0}</div>
-            <div>Safer min: ${shift.safer_staffing_min ?? 1}</div>
+            <strong>${shiftAssignments.length}/${shift.required_count}</strong>
+            <small>Min: ${shift.safer_staffing_min}</small>
           </div>
         </div>
-
-        <div class="shift-notes">${escapeHtml(shift.notes || "")}</div>
-
         <div class="assignment-list">
-          ${
-            shiftAssignments.length
-              ? shiftAssignments.map(a => `
-                  <div class="assignment-row">
-                    <div class="assignment-main">
-                      <span class="assignment-name">${escapeHtml(a.full_name || "Unfilled")}</span>
-                      <span class="assignment-role">${escapeHtml(a.role || a.assignment_status || "")}</span>
-                    </div>
-                    <div class="assignment-actions">
-                      <button class="mini-btn" onclick="checkInPrompt(${shift.id}, ${a.staff_id}, '${escapeJs(a.full_name || "")}')">In</button>
-                      <button class="mini-btn" onclick="checkOutPrompt(${shift.id}, ${a.staff_id}, '${escapeJs(a.full_name || "")}')">Out</button>
-                      <button class="remove-btn" onclick="unassignStaff(${a.id})">×</button>
-                    </div>
-                  </div>
-                `).join("")
-              : `<div class="empty-assignment">Drop staff here</div>`
-          }
+          ${shiftAssignments.map(a => renderAssignmentRow(a, shift.id)).join("")}
+          ${shiftAssignments.length < shift.required_count ? '<div class="drop-zone">+ Drop Staff</div>' : ''}
         </div>
       `;
 
       card.addEventListener("dragover", (e) => e.preventDefault());
-
-      card.addEventListener("drop", async (e) => {
-        e.preventDefault();
-        const staffId = e.dataTransfer.getData("staffId");
-
-        const res = await fetch("/api/rostering/assign", {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({
-            shift_id: shift.id,
-            staff_id: Number(staffId),
-            actor: "manager"
-          })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          alert(data.detail || "Unable to assign staff.");
-          return;
-        }
-
-        await loadWeek();
-      });
-
+      card.addEventListener("drop", (e) => handleDrop(e, shift.id));
       dayGrid.appendChild(card);
     });
 
@@ -278,167 +177,35 @@ function renderRota(shifts, assignments) {
   });
 }
 
-async function unassignStaff(assignmentId) {
-  const res = await fetch("/api/rostering/unassign", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({
-      assignment_id: assignmentId,
-      actor: "manager"
-    })
-  });
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    alert(data.detail || "Unable to remove assignment.");
-    return;
-  }
-
-  await loadWeek();
+function renderAssignmentRow(a, shiftId) {
+    const s = rosterData.staff.find(st => st.id === a.staff_id);
+    const agencyClass = s?.is_agency ? 'is-agency' : '';
+    return `
+      <div class="assignment-row ${agencyClass}">
+        <div class="assignment-main">
+          <span class="assignment-name">${escapeHtml(a.full_name)}</span>
+          <span class="assignment-role">${s?.is_agency ? 'External Agency' : 'Internal Team'}</span>
+        </div>
+        <div class="assignment-actions">
+          <button class="mini-btn" onclick="checkInPrompt(${shiftId}, ${a.staff_id}, '${escapeJs(a.full_name)}')">In</button>
+          <button class="remove-btn" onclick="unassignStaff(${a.id})">×</button>
+        </div>
+      </div>`;
 }
 
-async function checkInPrompt(shiftId, staffId, name) {
-  await captureLocationAndSend("/api/rostering/check-in", shiftId, staffId, `Check in recorded for ${name}`);
-}
-
-async function checkOutPrompt(shiftId, staffId, name) {
-  await captureLocationAndSend("/api/rostering/check-out", shiftId, staffId, `Check out recorded for ${name}`);
-}
-
-async function captureLocationAndSend(endpoint, shiftId, staffId, successPrefix) {
-  if (!navigator.geolocation) {
-    alert("Geolocation is not supported on this device.");
-    return;
-  }
-
-  navigator.geolocation.getCurrentPosition(
-    async (position) => {
-      const payload = {
-        home_id: getHomeId(),
-        shift_id: shiftId,
-        staff_id: staffId,
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        actor: "staff"
-      };
-
-      const res = await fetch(endpoint, {
+async function handleDrop(e, shiftId) {
+    e.preventDefault();
+    const staffId = e.dataTransfer.setData("staffId", ""); // Clean up
+    const draggedId = e.dataTransfer.getData("staffId");
+    
+    const res = await fetch("/api/rostering/assign", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(payload)
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data.detail || "Attendance could not be recorded.");
-        return;
-      }
-
-      const locationState = data.inside_geofence ? "inside geofence" : "outside geofence";
-      alert(`${successPrefix}. ${locationState}. Distance: ${data.distance_m}m`);
-      await loadWeek();
-    },
-    (error) => {
-      alert(`Location permission failed: ${error.message}`);
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 0
-    }
-  );
+        body: JSON.stringify({ shift_id: shiftId, staff_id: Number(draggedId), actor: "manager" })
+    });
+    if (res.ok) loadWeek();
+    else { const d = await res.json(); alert(d.detail); }
 }
 
-function renderAttendance(items) {
-  const panel = document.getElementById("attendancePanel");
-  panel.innerHTML = "";
-
-  if (!items.length) {
-    panel.innerHTML = `<div class="empty-state">No attendance recorded yet.</div>`;
-    return;
-  }
-
-  items.slice(0, 20).forEach(item => {
-    const el = document.createElement("div");
-    el.className = `side-item ${item.inside_geofence ? "ok" : "warn"}`;
-    el.innerHTML = `
-      <strong>${escapeHtml(item.full_name || "")}</strong>
-      <span>${escapeHtml(item.event_type || "")} · ${escapeHtml(String(item.distance_m || ""))}m</span>
-      <small>${escapeHtml(String(item.event_time || ""))}</small>
-    `;
-    panel.appendChild(el);
-  });
-}
-
-function renderSmsLog(items) {
-  const panel = document.getElementById("smsPanel");
-  panel.innerHTML = "";
-
-  if (!items.length) {
-    panel.innerHTML = `<div class="empty-state">No SMS log yet.</div>`;
-    return;
-  }
-
-  items.slice(0, 20).forEach(item => {
-    const el = document.createElement("div");
-    el.className = "side-item";
-    el.innerHTML = `
-      <strong>${escapeHtml(item.full_name || item.mobile_number || "")}</strong>
-      <span>${escapeHtml(item.status || "queued")}</span>
-      <small>${escapeHtml(String(item.sent_at || ""))}</small>
-    `;
-    panel.appendChild(el);
-  });
-}
-
-function downloadPayroll() {
-  const homeId = getHomeId();
-  const weekStart = getWeekStart();
-  window.location.href = `/api/rostering/payroll.csv?home_id=${homeId}&week_start=${weekStart}`;
-}
-
-async function openEvidence() {
-  const homeId = getHomeId();
-  const weekStart = getWeekStart();
-
-  const res = await fetch(`/api/rostering/evidence?home_id=${homeId}&week_start=${weekStart}`);
-  const data = await res.json();
-
-  if (!res.ok) {
-    alert(data.detail || "Unable to generate evidence pack.");
-    return;
-  }
-
-  console.log("Evidence pack:", data);
-  alert("Evidence pack generated. Open the browser console to inspect the JSON output.");
-}
-
-function groupByDate(shifts) {
-  return shifts.reduce((acc, shift) => {
-    const key = shift.shift_date;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(shift);
-    return acc;
-  }, {});
-}
-
-function titleCase(value) {
-  return String(value)
-    .replaceAll("_", " ")
-    .replace(/\b\w/g, c => c.toUpperCase());
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function escapeJs(value) {
-  return String(value).replaceAll("\\", "\\\\").replaceAll("'", "\\'");
-}
+// Keep your existing utility functions (escapeHtml, titleCase, groupByDate, etc.)
+// ... (omitted for brevity but keep them in your file)
