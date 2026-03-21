@@ -7,7 +7,9 @@ document.addEventListener("DOMContentLoaded", () => {
     transcribeBtn: $("transcribeBtn"),
     renameSpeakersBtn: $("renameSpeakersBtn"),
     extractActionsBtn: $("extractActionsBtn"),
+    extractActionsBtnInline: $("extractActionsBtnInline"),
     useTranscriptForAiBtn: $("useTranscriptForAiBtn"),
+    copyTranscriptBtn: $("copyTranscriptBtn"),
     aiBtn: $("aiBtn"),
     saveBtn: $("saveBtn"),
     printBtn: $("printBtn"),
@@ -24,12 +26,20 @@ document.addEventListener("DOMContentLoaded", () => {
     workspacePanel: $("workspacePanel"),
     savedPanel: $("savedPanel"),
 
+    viewFinalBtn: $("viewFinalBtn"),
+    viewSourceBtn: $("viewSourceBtn"),
+    viewActionsBtn: $("viewActionsBtn"),
+    finalViewPanel: $("finalViewPanel"),
+    sourceViewPanel: $("sourceViewPanel"),
+    actionsViewPanel: $("actionsViewPanel"),
+
     title: $("title"),
     prompt: $("prompt"),
     transcript: $("transcript"),
     note: $("note"),
     meetingFormat: $("meetingFormat"),
     noteStatus: $("noteStatus"),
+    documentTemplate: $("documentTemplate"),
 
     status: $("status"),
     saveState: $("saveState"),
@@ -84,14 +94,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const headers = (extra = {}) =>
     token() ? { ...extra, Authorization: `Bearer ${token()}` } : { ...extra };
 
-  const showToast = message => {
-    if (!els.toast) return;
-    els.toast.textContent = message;
-    els.toast.classList.add("show");
-    clearTimeout(showToast._timer);
-    showToast._timer = setTimeout(() => els.toast.classList.remove("show"), 2200);
-  };
-
   const safeJson = async response => {
     const text = await response.text();
     try {
@@ -106,18 +108,26 @@ document.addEventListener("DOMContentLoaded", () => {
     window.location.href = "/login";
   };
 
+  const showToast = message => {
+    if (!els.toast) return;
+    els.toast.textContent = message;
+    els.toast.classList.add("show");
+    clearTimeout(showToast._timer);
+    showToast._timer = setTimeout(() => els.toast.classList.remove("show"), 2200);
+  };
+
   const statusText = value => {
     if (els.status) els.status.textContent = value;
   };
 
   const setStatusMode = mode => {
     if (!els.statusDot) return;
-    els.statusDot.className = `status-dot ${mode}`;
+    els.statusDot.className = `dot ${mode}`;
   };
 
   const setSaveState = (mode, text) => {
     if (!els.saveState) return;
-    els.saveState.className = `save-badge ${mode}`;
+    els.saveState.className = `save-state ${mode}`;
     els.saveState.textContent = text;
   };
 
@@ -178,6 +188,48 @@ document.addEventListener("DOMContentLoaded", () => {
     const speakers = state.speakerSegments.map(x => x.speaker).filter(Boolean);
     return [...new Set(speakers)];
   };
+
+  function setActiveTab(tab) {
+    const workspace = tab === "workspace";
+    els.workspaceTabBtn?.classList.toggle("active", workspace);
+    els.savedTabBtn?.classList.toggle("active", !workspace);
+    els.workspacePanel?.classList.toggle("active", workspace);
+    els.savedPanel?.classList.toggle("active", !workspace);
+  }
+
+  function setNoteView(view) {
+    const isFinal = view === "final";
+    const isSource = view === "source";
+    const isActions = view === "actions";
+
+    els.viewFinalBtn?.classList.toggle("active", isFinal);
+    els.viewSourceBtn?.classList.toggle("active", isSource);
+    els.viewActionsBtn?.classList.toggle("active", isActions);
+
+    els.finalViewPanel?.classList.toggle("active", isFinal);
+    els.sourceViewPanel?.classList.toggle("active", isSource);
+    els.actionsViewPanel?.classList.toggle("active", isActions);
+  }
+
+  function updateLockState() {
+    const locked = els.noteStatus?.value === "approved";
+
+    [els.title, els.prompt, els.note, els.meetingFormat, els.documentTemplate].forEach(el => {
+      if (el) el.disabled = locked;
+    });
+
+    [els.aiBtn, els.useTranscriptForAiBtn, els.copyTranscriptBtn].forEach(el => {
+      if (el) el.disabled = locked;
+    });
+
+    if (locked) {
+      statusText("Approved and locked");
+      setStatusMode("success");
+    } else if (!state.dirty) {
+      statusText("Ready");
+      setStatusMode("idle");
+    }
+  }
 
   function buildSpeakerAwareTranscript() {
     if (!state.speakerSegments.length) {
@@ -242,6 +294,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderActions() {
     if (!els.actionsList) return;
     els.actionsList.innerHTML = "";
+
     if (els.actionCountBadge) {
       els.actionCountBadge.textContent = String(state.extractedActions.length);
     }
@@ -290,14 +343,6 @@ document.addEventListener("DOMContentLoaded", () => {
       alert("Could not connect to authentication service.");
       return false;
     }
-  }
-
-  function setActiveTab(tab) {
-    const workspace = tab === "workspace";
-    els.workspaceTabBtn?.classList.toggle("active", workspace);
-    els.savedTabBtn?.classList.toggle("active", !workspace);
-    els.workspacePanel?.classList.toggle("active", workspace);
-    els.savedPanel?.classList.toggle("active", !workspace);
   }
 
   function openModal() {
@@ -450,6 +495,7 @@ document.addEventListener("DOMContentLoaded", () => {
       state.mediaRecorder.onstop = null;
       state.mediaRecorder.stop();
     }
+
     if (state.stream) {
       state.stream.getTracks().forEach(track => track.stop());
     }
@@ -534,6 +580,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function applyAI(silent = false) {
+    if (els.noteStatus?.value === "approved") {
+      alert("Approved notes are locked.");
+      return;
+    }
+
     const sourceText = (els.note?.value || buildSpeakerAwareTranscript()).trim();
     const instruction = (els.prompt?.value || "").trim()
       || "Turn this into a professional meeting note using clear, factual language.";
@@ -577,6 +628,7 @@ document.addEventListener("DOMContentLoaded", () => {
       markDirty();
       statusText("Note ready");
       setStatusMode("success");
+      setNoteView("final");
       if (!silent) showToast("AI update applied.");
     } catch (error) {
       console.error(error);
@@ -623,6 +675,7 @@ document.addEventListener("DOMContentLoaded", () => {
       renderActions();
       statusText("Note ready");
       setStatusMode("success");
+      setNoteView("actions");
       showToast("Actions extracted.");
     } catch (error) {
       console.error(error);
@@ -643,7 +696,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (!finalNote) {
-      alert("Note is required.");
+      alert("Final note is required.");
       return;
     }
 
@@ -653,6 +706,7 @@ document.addEventListener("DOMContentLoaded", () => {
     form.append("final_note", finalNote);
     form.append("title", title);
     form.append("meeting_format", els.meetingFormat?.value || "");
+    form.append("template_name", els.documentTemplate?.value || "");
     form.append("note_status", els.noteStatus?.value || "draft");
     form.append("speaker_segments_json", JSON.stringify(state.speakerSegments || []));
     form.append("speaker_map_json", JSON.stringify(state.speakerMap || {}));
@@ -734,7 +788,9 @@ document.addEventListener("DOMContentLoaded", () => {
         note.title,
         note.transcript,
         note.final_note,
-        note.note_status
+        note.note_status,
+        note.meeting_format,
+        note.template_name
       ].join(" ").toLowerCase();
 
       return !query || haystack.includes(query);
@@ -782,6 +838,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (els.transcript) els.transcript.value = note.transcript || "";
     if (els.note) els.note.value = note.final_note || "";
     if (els.meetingFormat) els.meetingFormat.value = note.meeting_format || "";
+    if (els.documentTemplate) els.documentTemplate.value = note.template_name || "blank";
     if (els.noteStatus) els.noteStatus.value = note.note_status || "draft";
 
     renderSpeakerMap();
@@ -793,6 +850,8 @@ document.addEventListener("DOMContentLoaded", () => {
     statusText("Editing saved note");
     setStatusMode("success");
     setActiveTab("workspace");
+    setNoteView("final");
+    updateLockState();
     showToast("Saved note loaded.");
   }
 
@@ -913,9 +972,26 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
+      const restored = data.record;
+      if (restored) {
+        state.noteId = restored.id;
+        if (els.title) els.title.value = restored.title || "";
+        if (els.transcript) els.transcript.value = restored.transcript || "";
+        if (els.note) els.note.value = restored.final_note || "";
+        if (els.meetingFormat) els.meetingFormat.value = restored.meeting_format || "";
+        if (els.documentTemplate) els.documentTemplate.value = restored.template_name || "blank";
+        if (els.noteStatus) els.noteStatus.value = restored.note_status || "draft";
+        state.speakerSegments = Array.isArray(restored.speaker_segments) ? restored.speaker_segments : [];
+        state.speakerMap = restored.speaker_map || {};
+      }
+
+      renderSpeakerMap();
+      renderSpeakerTimeline();
       closeVersionsModal();
-      loadIntoEditor(state.noteId);
       await loadSavedNotes();
+      markDirty();
+      updateLockState();
+      setNoteView("final");
       showToast("Version restored.");
     } catch (error) {
       console.error(error);
@@ -935,7 +1011,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const form = new FormData();
     form.append("title", title);
     form.append("final_note", finalNote);
-    form.append("template_name", "Meeting note");
+    form.append("template_name", els.documentTemplate?.value || "");
 
     try {
       const response = await fetch(`/ai-notes/export/${format}`, {
@@ -1012,6 +1088,7 @@ document.addEventListener("DOMContentLoaded", () => {
     markDirty();
     statusText("Note reset");
     setStatusMode("success");
+    setNoteView("final");
     showToast("Note reset from transcript.");
   }
 
@@ -1030,7 +1107,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (els.transcript) els.transcript.value = "";
     if (els.note) els.note.value = "";
     if (els.meetingFormat) els.meetingFormat.value = "";
+    if (els.documentTemplate) els.documentTemplate.value = "blank";
     if (els.noteStatus) els.noteStatus.value = "draft";
+    if (els.transcribeBtn) els.transcribeBtn.disabled = true;
+    if (els.audio) els.audio.removeAttribute("src");
 
     renderSpeakerMap();
     renderSpeakerTimeline();
@@ -1040,10 +1120,16 @@ document.addEventListener("DOMContentLoaded", () => {
     statusText("Ready");
     setStatusMode("idle");
     setSaveState("idle", "Not saved");
+    updateLockState();
     showToast("Editor cleared.");
   }
 
   function useTranscriptForAi() {
+    if (els.noteStatus?.value === "approved") {
+      alert("Approved notes are locked.");
+      return;
+    }
+
     const transcript = buildSpeakerAwareTranscript() || (els.transcript?.value || "").trim();
     if (!transcript) {
       alert("There is no transcript available.");
@@ -1051,6 +1137,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (els.note) els.note.value = transcript;
     markDirty();
+    setNoteView("final");
     showToast("Transcript copied into final note.");
   }
 
@@ -1059,25 +1146,46 @@ document.addEventListener("DOMContentLoaded", () => {
       btn.addEventListener("click", () => {
         const value = btn.getAttribute("data-fill") || "";
         if (els.prompt) els.prompt.value = value;
+        markDirty();
+        setNoteView("final");
       });
     });
   }
 
   function bindDirtyTracking() {
-    [els.title, els.prompt, els.transcript, els.note, els.meetingFormat, els.noteStatus].forEach(el => {
+    [
+      els.title,
+      els.prompt,
+      els.transcript,
+      els.note,
+      els.meetingFormat,
+      els.noteStatus,
+      els.documentTemplate
+    ].forEach(el => {
       el?.addEventListener("input", markDirty);
-      el?.addEventListener("change", markDirty);
+      el?.addEventListener("change", () => {
+        markDirty();
+        if (el === els.noteStatus) updateLockState();
+      });
     });
   }
 
   function bindSpeakerMapInputs() {
     els.speakerMapList?.addEventListener("input", event => {
-      const key = event.target.getAttribute("data-speaker-key");
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement)) return;
+      const key = target.getAttribute("data-speaker-key");
       if (!key) return;
-      state.speakerMap[key] = event.target.value.trim();
+      state.speakerMap[key] = target.value.trim();
       renderSpeakerTimeline();
       markDirty();
     });
+  }
+
+  function bindViewSwitcher() {
+    els.viewFinalBtn?.addEventListener("click", () => setNoteView("final"));
+    els.viewSourceBtn?.addEventListener("click", () => setNoteView("source"));
+    els.viewActionsBtn?.addEventListener("click", () => setNoteView("actions"));
   }
 
   function bindEvents() {
@@ -1098,8 +1206,13 @@ document.addEventListener("DOMContentLoaded", () => {
       renderSpeakerTimeline();
       showToast("Speaker view refreshed.");
     });
+
     els.extractActionsBtn?.addEventListener("click", extractActionsFromNote);
+    els.extractActionsBtnInline?.addEventListener("click", extractActionsFromNote);
+
     els.useTranscriptForAiBtn?.addEventListener("click", useTranscriptForAi);
+    els.copyTranscriptBtn?.addEventListener("click", useTranscriptForAi);
+
     els.aiBtn?.addEventListener("click", () => applyAI(false));
     els.saveBtn?.addEventListener("click", saveNote);
     els.refreshBtn?.addEventListener("click", loadSavedNotes);
@@ -1113,20 +1226,25 @@ document.addEventListener("DOMContentLoaded", () => {
     els.searchInput?.addEventListener("input", applySearch);
 
     els.list?.addEventListener("click", event => {
-      const editId = event.target.getAttribute("data-edit");
-      const delId = event.target.getAttribute("data-del");
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const editId = target.getAttribute("data-edit");
+      const delId = target.getAttribute("data-del");
       if (editId) loadIntoEditor(editId);
       if (delId) deleteNote(delId);
     });
 
     els.versionsList?.addEventListener("click", event => {
-      const versionId = event.target.getAttribute("data-restore-version");
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const versionId = target.getAttribute("data-restore-version");
       if (versionId) restoreVersion(versionId);
     });
 
     bindPromptButtons();
     bindDirtyTracking();
     bindSpeakerMapInputs();
+    bindViewSwitcher();
 
     window.addEventListener("beforeunload", event => {
       if (!state.dirty) return;
@@ -1144,9 +1262,11 @@ document.addEventListener("DOMContentLoaded", () => {
     renderSpeakerTimeline();
     renderActions();
     setActiveTab("workspace");
+    setNoteView("final");
     statusText("Ready");
     setStatusMode("idle");
     setSaveState("idle", "Not saved");
+    updateLockState();
     await loadSavedNotes();
   }
 
