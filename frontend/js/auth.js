@@ -1,24 +1,3 @@
-function setAccessToken(token, remember = false) {
-  if (!token) return;
-
-  if (remember) {
-    localStorage.setItem("access_token", token);
-    sessionStorage.removeItem("access_token");
-  } else {
-    sessionStorage.setItem("access_token", token);
-    localStorage.removeItem("access_token");
-  }
-}
-
-function getAccessToken() {
-  return sessionStorage.getItem("access_token") || localStorage.getItem("access_token");
-}
-
-function clearAccessToken() {
-  sessionStorage.removeItem("access_token");
-  localStorage.removeItem("access_token");
-}
-
 function setStoredUser(user, remember = false) {
   if (!user) return;
 
@@ -87,11 +66,9 @@ async function login(credentialsArg = null) {
       body: JSON.stringify({ email, password })
     });
 
-    if (!data || !data.access_token) {
-      throw new Error("Login succeeded but no access token was returned");
+    if (!data || !data.ok) {
+      throw new Error("Login failed");
     }
-
-    setAccessToken(data.access_token, remember);
 
     if (data.user) {
       setStoredUser(data.user, remember);
@@ -104,17 +81,9 @@ async function login(credentialsArg = null) {
     window.location.href = "/";
     return data;
   } catch (error) {
-    console.error("Login failed:", error);
-
-    clearAccessToken();
     clearStoredUser();
-
     const message = error?.message || "Login failed";
-
-    if (loginStatus) {
-      loginStatus.textContent = message;
-    }
-
+    if (loginStatus) loginStatus.textContent = message;
     throw error;
   } finally {
     if (loginButton) {
@@ -127,11 +96,8 @@ async function login(credentialsArg = null) {
 async function logoutUser() {
   try {
     await apiRequest("/auth/logout", { method: "POST" });
-  } catch (_) {
-    // ignore API logout failure
-  }
+  } catch (_) {}
 
-  clearAccessToken();
   clearStoredUser();
   window.location.replace("/login");
 }
@@ -141,29 +107,20 @@ function logout() {
 }
 
 async function validateSession() {
-  const token = getAccessToken();
-
-  if (!token) {
-    clearAccessToken();
-    clearStoredUser();
-    return false;
-  }
-
   try {
-    const data = await apiFetchJson("/auth/check", {
-      method: "GET"
-    });
+    const data = await apiFetchJson("/auth/check", { method: "GET" });
 
     if (!data || data.authenticated !== true) {
-      clearAccessToken();
       clearStoredUser();
       return false;
     }
 
-    const existingUser = getStoredUser() || {};
+    const existing = getStoredUser() || {};
+    const remember = !!localStorage.getItem("current_user");
+
     setStoredUser(
       {
-        ...existingUser,
+        ...existing,
         id: data.user_id,
         email: data.email,
         role: data.role,
@@ -172,12 +129,11 @@ async function validateSession() {
         subscription_status: data.subscription_status,
         plan_name: data.plan_name
       },
-      !!localStorage.getItem("access_token")
+      remember
     );
 
     return true;
   } catch (_) {
-    clearAccessToken();
     clearStoredUser();
     return false;
   }
@@ -185,18 +141,15 @@ async function validateSession() {
 
 async function requireAuth() {
   const ok = await validateSession();
-
   if (!ok) {
     window.location.replace("/login");
     return false;
   }
-
   return true;
 }
 
 document.addEventListener("DOMContentLoaded", () => {
   const logoutButton = document.getElementById("logoutBtn");
-
   if (logoutButton) {
     logoutButton.addEventListener("click", logout);
   }
@@ -208,6 +161,5 @@ window.auth = {
   logoutUser,
   requireAuth,
   validateSession,
-  getAccessToken,
   getStoredUser
 };
