@@ -13,7 +13,6 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 SESSION_COOKIE_NAME = "indicare_session"
 COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "true").lower() == "true"
 COOKIE_SAMESITE = os.environ.get("COOKIE_SAMESITE", "lax")
-COOKIE_DOMAIN = os.environ.get("COOKIE_DOMAIN") or None
 COOKIE_MAX_AGE = 60 * 30
 
 
@@ -75,7 +74,6 @@ def _set_session_cookie(response: Response, token: str):
         secure=COOKIE_SECURE,
         samesite=COOKIE_SAMESITE,
         max_age=COOKIE_MAX_AGE,
-        domain=COOKIE_DOMAIN,
         path="/",
     )
 
@@ -83,7 +81,6 @@ def _set_session_cookie(response: Response, token: str):
 def _clear_session_cookie(response: Response):
     response.delete_cookie(
         key=SESSION_COOKIE_NAME,
-        domain=COOKIE_DOMAIN,
         path="/",
     )
 
@@ -176,7 +173,7 @@ def check_auth(
     payload = decode_session_token(token) if token else None
 
     if not payload:
-      return {"authenticated": False}
+        return {"authenticated": False}
 
     raw_user_id = payload.get("sub")
     try:
