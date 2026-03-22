@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IndiCare OS</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
 <style>
 :root{
@@ -19,22 +19,25 @@
 
 *{margin:0;padding:0;box-sizing:border-box;font-family:Inter,sans-serif}
 
-body{display:flex;height:100vh;background:var(--bg)}
+body{background:var(--bg);color:var(--text);height:100vh;display:flex}
 
 .sidebar{
-  width:240px;
-  background:#fff;
+  width:260px;
+  background:var(--panel);
   border-right:1px solid var(--border);
-  padding:10px;
+  padding:12px;
+  display:flex;
+  flex-direction:column;
 }
 
-.history{margin-top:10px;overflow:auto;height:90%}
+.history{flex:1;overflow:auto;margin-top:12px}
 
 .history-item{
-  padding:8px;
-  border-radius:6px;
+  padding:10px;
+  border-radius:8px;
   cursor:pointer;
 }
+
 .history-item:hover{background:#eef2ff}
 
 .main{flex:1;display:flex;flex-direction:column}
@@ -48,64 +51,61 @@ body{display:flex;height:100vh;background:var(--bg)}
   font-weight:600;
 }
 
-.chat{flex:1;overflow:auto;padding:16px}
-.messages{max-width:700px;margin:auto;display:flex;flex-direction:column;gap:16px}
+.chat{
+  flex:1;
+  overflow:auto;
+  padding:16px;
+}
 
-.msg{line-height:1.7}
+.messages{
+  max-width:700px;
+  margin:auto;
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+}
+
+.msg{
+  line-height:1.7;
+}
+
 .user{
   align-self:flex-end;
   background:#e0e7ff;
-  padding:12px;
-  border-radius:16px;
+  padding:12px 14px;
+  border-radius:18px 18px 4px 18px;
 }
 
-.msg h3{color:var(--accent);margin:10px 0}
+.assistant{}
+
+.msg h3{
+  color:var(--accent);
+  margin:12px 0 6px;
+}
+
 .msg ul{margin-left:20px}
 
-.actions{display:flex;gap:6px;margin-top:6px}
-.actions button{
-  font-size:0.7rem;
-  padding:4px 8px;
-  border-radius:6px;
-  border:1px solid var(--border);
-  cursor:pointer;
+.input{
+  padding:12px;
+  border-top:1px solid var(--border);
 }
-
-/* TOOL BAR */
-.tools{
-  display:flex;
-  gap:6px;
-  flex-wrap:wrap;
-  margin-bottom:8px;
-}
-
-.tools button{
-  font-size:0.75rem;
-  padding:6px 10px;
-  border-radius:8px;
-  border:1px solid var(--border);
-  background:#fff;
-  cursor:pointer;
-}
-
-/* INPUT */
-.input{padding:10px;border-top:1px solid var(--border)}
 
 textarea{
   width:100%;
   border:1px solid var(--border);
-  border-radius:14px;
+  border-radius:20px;
   padding:10px;
+  resize:none;
 }
 
-.send{
-  margin-top:6px;
-  width:100%;
+button{
+  margin-top:8px;
   padding:10px;
   background:var(--accent);
   color:#fff;
   border:none;
   border-radius:10px;
+  cursor:pointer;
 }
 </style>
 </head>
@@ -125,80 +125,40 @@ textarea{
   </div>
 
   <div class="input">
-
-    <div class="tools">
-      <button onclick="quick('log')">Daily Log</button>
-      <button onclick="quick('incident')">Incident</button>
-      <button onclick="quick('risk')">Risk</button>
-      <button onclick="quick('ofsted')">Ofsted</button>
-      <button onclick="voice()">🎤</button>
-    </div>
-
-    <textarea id="input" rows="1" placeholder="Describe situation..."></textarea>
-    <button class="send" onclick="send()">Send</button>
-
+    <textarea id="input" rows="1" placeholder="Type..."></textarea>
+    <button onclick="send()">Send</button>
   </div>
 </div>
 
 <script>
-let conversationId=null
-let streaming=false
+let conversationId = null
+let streaming = false
 
-/* -------- STRUCTURED PROMPTS -------- */
-function quick(type){
-  const input=document.getElementById("input")
-
-  if(type==="log"){
-    input.value="Write a professional daily log for a children's home."
-  }
-
-  if(type==="incident"){
-    input.value="Write a structured incident report including chronology, risk and actions."
-  }
-
-  if(type==="risk"){
-    input.value="Create a risk assessment including hazards, controls and actions."
-  }
-
-  if(type==="ofsted"){
-    input.value="Rewrite the above so it aligns with Ofsted standards."
-  }
-}
-
-/* -------- VOICE -------- */
-function voice(){
-  const rec=new(window.SpeechRecognition||window.webkitSpeechRecognition)()
-  rec.start()
-  rec.onresult=e=>{
-    document.getElementById("input").value=e.results[0][0].transcript
-  }
-}
-
-/* -------- FORMAT -------- */
 function format(text){
-  text=text.replace(/\[SYSTEM[\s\S]*/,"")
+  text = text.replace(/\[SYSTEM[\s\S]*/,"")
 
-  text=text.replace(/([a-z]):(?=[A-Z])/g,"$1:\n")
+  text = text.replace(/([a-z]):(?=[A-Z])/g,"$1:\n")
 
-  text=text.replace(/What matters most here:/gi,"### What matters most here")
-  text=text.replace(/Key points:/gi,"### Key points")
-  text=text.replace(/Suggested staff response/gi,"### Next steps")
-  text=text.replace(/What should be recorded/gi,"### Recording")
+  text = text.replace(/What matters most here:/gi,"### What matters most here")
+  text = text.replace(/Key points:/gi,"### Key points")
+  text = text.replace(/Suggested staff response \/ next steps:/gi,"### Next steps")
+  text = text.replace(/What should be recorded \/ handed over \/ reviewed if relevant:/gi,"### Recording")
 
-  text=text.replace(/- /g,"\n- ")
-  text=text.replace(/\.\s+/g,".\n\n")
+  text = text.replace(/- /g,"\n- ")
+  text = text.replace(/\.\s+/g,".\n\n")
 
   return text
 }
 
 function md(text){
-  text=format(text)
+  text = format(text)
 
-  let html="",list=false
+  let html = ""
+  let list = false
 
   text.split("\n").forEach(l=>{
     if(l.startsWith("###")){
-      html+=`<h3>${l.replace("###","")}</h3>`
+      html += `<h3>${l.replace("###","")}</h3>`
     }
     else if(l.startsWith("- ")){
       if(!list){html+="<ul>";list=true}
@@ -210,47 +170,53 @@ function md(text){
     }
   })
 
+  if(list) html+="</ul"
   return html
 }
 
-/* -------- MESSAGE -------- */
-function append(role,text){
+function append(role,text,id){
   const div=document.createElement("div")
   div.className="msg "+role
 
-  div.innerHTML=role==="assistant"?md(text):text
+  div.innerHTML = role==="assistant" ? md(text) : text
 
   if(role==="assistant"){
-    const actions=document.createElement("div")
-    actions.className="actions"
-
     const copy=document.createElement("button")
     copy.innerText="Copy"
     copy.onclick=()=>navigator.clipboard.writeText(text)
-
-    const save=document.createElement("button")
-    save.innerText="Save"
-    save.onclick=()=>{
-      window.open("https://app.indicare.co.uk/ai-note.html?text="+encodeURIComponent(text))
-    }
-
-    actions.append(copy,save)
-    div.appendChild(actions)
+    div.appendChild(copy)
   }
 
   document.getElementById("messages").appendChild(div)
   document.getElementById("chat").scrollTop=999999
 }
 
-/* -------- STREAM -------- */
+function stream(el){
+  let q=[]
+  let txt=""
+
+  return char=>{
+    if(char){
+      q.push(char)
+    }
+
+    if(q.length){
+      txt+=q.shift()
+      el.innerHTML=md(txt)
+      setTimeout(()=>stream(el)(),3)
+    }
+  }
+}
+
 async function send(){
-  if(streaming)return
+  if(streaming) return
 
   const input=document.getElementById("input")
   const text=input.value.trim()
-  if(!text)return
+  if(!text) return
 
   append("user",text)
+
   input.value=""
   streaming=true
 
@@ -273,21 +239,18 @@ async function send(){
   msg.className="msg assistant"
   document.getElementById("messages").appendChild(msg)
 
-  let buffer=""
-  msg.innerHTML="..."
+  const writer=stream(msg)
+  writer("...") // instant feedback
 
   while(true){
     const {done,value}=await reader.read()
-    if(done)break
+    if(done) break
 
     const chunk=dec.decode(value)
     chunk.split("\n").forEach(l=>{
       if(l.startsWith("data:")){
         const t=l.replace("data:","").trim()
-        if(t!=="[DONE]"){
-          buffer+=t
-          msg.innerHTML=md(buffer)
-        }
+        if(t!=="[DONE]") writer(t)
       }
     })
   }
@@ -295,56 +258,18 @@ async function send(){
   streaming=false
 }
 
-/* -------- ENTER -------- */
+function newChat(){
+  conversationId=null
+  document.getElementById("messages").innerHTML=""
+  document.getElementById("title").innerText="New Chat"
+}
+
 document.getElementById("input").addEventListener("keydown",e=>{
-  if(e.key==="Enter"&&!e.shiftKey){
+  if(e.key==="Enter" && !e.shiftKey){
     e.preventDefault()
     send()
   }
 })
-
-/* -------- BASIC NAV -------- */
-function newChat(){
-  conversationId=null
-  document.getElementById("messages").innerHTML=""
-}
-
-/* INIT */
-load()
-
-async function load(){
-  try{
-    const res=await fetch("/chat/conversations",{
-      headers:{Authorization:"Bearer "+localStorage.getItem("access_token")}
-    })
-    const data=await res.json()
-
-    const h=document.getElementById("history")
-    data.forEach(c=>{
-      const d=document.createElement("div")
-      d.className="history-item"
-      d.innerText=c.title
-      d.onclick=()=>open(c.id)
-      h.appendChild(d)
-    })
-  }catch{}
-}
-
-async function open(id){
-  conversationId=id
-
-  const res=await fetch(`/chat/conversations/${id}`,{
-    headers:{Authorization:"Bearer "+localStorage.getItem("access_token")}
-  })
-
-  const data=await res.json()
-
-  document.getElementById("messages").innerHTML=""
-
-  data.messages.forEach(m=>{
-    append(m.role,m.message)
-  })
-}
 </script>
 
 </body>
