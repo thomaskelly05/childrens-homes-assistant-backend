@@ -1,15 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, Header, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from psycopg2.extras import RealDictCursor
 import bcrypt
 import json
 
 from db.connection import get_db
-from auth.tokens import decode_session_token
+from auth.current_user import get_current_user
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
-ALLOWED_ROLES = {"admin", "manager", "staff"}
+ALLOWED_ROLES = {"admin", "provider_admin", "manager", "staff"}
 
 
 class CreateUserRequest(BaseModel):
@@ -122,24 +122,13 @@ class UpdateDocumentRequest(BaseModel):
     confidentiality_level: str | None = None
 
 
-def get_current_admin(authorization: str | None = Header(default=None)):
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Missing authorization header")
+def get_current_admin(current_user=Depends(get_current_user)):
+    role = (current_user.get("role") or "").strip().lower()
 
-    parts = authorization.split(" ", 1)
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise HTTPException(status_code=401, detail="Invalid authorization header")
-
-    token = parts[1].strip()
-    payload = decode_session_token(token)
-
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-
-    if payload.get("role") != "admin":
+    if role not in {"admin", "provider_admin"}:
         raise HTTPException(status_code=403, detail="Admin access required")
 
-    return payload
+    return current_user
 
 
 def normalise_role(role: str) -> str:
@@ -259,7 +248,7 @@ def create_user(
     admin=Depends(get_current_admin),
     conn=Depends(get_db)
 ):
-    admin_user_id = int(admin.get("sub")) if admin.get("sub") else None
+    admin_user_id = int(admin.get("user_id")) if admin.get("user_id") else None
     email = validate_email(payload.email)
     role = normalise_role(payload.role)
 
@@ -271,7 +260,7 @@ def create_user(
         raise HTTPException(status_code=400, detail="Password is required")
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute("SELECT id FROM users WHERE email = %s LIMIT 1", (email,))
+        cur.execute("SELECT id FROM users WHERE lower(email) = %s LIMIT 1", (email,))
         existing = cur.fetchone()
         if existing:
             raise HTTPException(status_code=400, detail="Email already exists")
@@ -341,7 +330,7 @@ def update_user(
     admin=Depends(get_current_admin),
     conn=Depends(get_db)
 ):
-    admin_user_id = admin.get("sub")
+    admin_user_id = admin.get("user_id")
     try:
         admin_user_id = int(admin_user_id)
     except (TypeError, ValueError):
@@ -368,7 +357,7 @@ def update_user(
         new_email = validate_email(payload.email)
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                "SELECT id FROM users WHERE email = %s AND id != %s LIMIT 1",
+                "SELECT id FROM users WHERE lower(email) = %s AND id != %s LIMIT 1",
                 (new_email, user_id)
             )
             existing = cur.fetchone()
@@ -379,8 +368,11 @@ def update_user(
 
     if payload.role is not None:
         new_role = normalise_role(payload.role)
-        if admin_user_id == user_id and new_role != "admin":
-            raise HTTPException(status_code=400, detail="You cannot remove your own admin role")
+        if admin_user_id == user_id and new_role not in {"admin", "provider_admin"}:
+            raise HTTPException(
+                status_code=400,
+                detail="You cannot remove your own admin role"
+            )
         fields.append("role = %s")
         values.append(new_role)
 
@@ -390,13 +382,19 @@ def update_user(
 
     if payload.is_active is not None:
         if admin_user_id == user_id and payload.is_active is False:
-            raise HTTPException(status_code=400, detail="You cannot deactivate your own account")
+            raise HTTPException(
+                status_code=400,
+                detail="You cannot deactivate your own account"
+            )
         fields.append("is_active = %s")
         values.append(payload.is_active)
 
     if payload.archived is not None:
         if admin_user_id == user_id and payload.archived is True:
-            raise HTTPException(status_code=400, detail="You cannot archive your own account")
+            raise HTTPException(
+                status_code=400,
+                detail="You cannot archive your own account"
+            )
         fields.append("archived = %s")
         values.append(payload.archived)
 
@@ -451,7 +449,7 @@ def reset_password(
     admin=Depends(get_current_admin),
     conn=Depends(get_db)
 ):
-    admin_user_id = int(admin.get("sub")) if admin.get("sub") else None
+    admin_user_id = int(admin.get("user_id")) if admin.get("user_id") else None
 
     if not payload.password.strip():
         raise HTTPException(status_code=400, detail="Password is required")
@@ -546,7 +544,7 @@ def create_home(
     admin=Depends(get_current_admin),
     conn=Depends(get_db)
 ):
-    admin_user_id = int(admin.get("sub")) if admin.get("sub") else None
+    admin_user_id = int(admin.get("user_id")) if admin.get("user_id") else None
 
     if not payload.name.strip():
         raise HTTPException(status_code=400, detail="Home name is required")
@@ -626,7 +624,7 @@ def update_home(
     admin=Depends(get_current_admin),
     conn=Depends(get_db)
 ):
-    admin_user_id = int(admin.get("sub")) if admin.get("sub") else None
+    admin_user_id = int(admin.get("user_id")) if admin.get("user_id") else None
     fields = []
     values = []
 
@@ -779,7 +777,7 @@ def create_provider(
     admin=Depends(get_current_admin),
     conn=Depends(get_db)
 ):
-    admin_user_id = int(admin.get("sub")) if admin.get("sub") else None
+    admin_user_id = int(admin.get("user_id")) if admin.get("user_id") else None
 
     if not payload.name.strip():
         raise HTTPException(status_code=400, detail="Provider name is required")
@@ -827,7 +825,14 @@ def create_provider(
         provider = cur.fetchone()
 
     conn.commit()
-    log_admin_action(conn, admin_user_id, "create_provider", "provider", provider["id"], {"name": provider["name"]})
+    log_admin_action(
+        conn,
+        admin_user_id,
+        "create_provider",
+        "provider",
+        provider["id"],
+        {"name": provider["name"]}
+    )
     conn.commit()
 
     return {"ok": True, "provider": provider}
@@ -840,7 +845,7 @@ def update_provider(
     admin=Depends(get_current_admin),
     conn=Depends(get_db)
 ):
-    admin_user_id = int(admin.get("sub")) if admin.get("sub") else None
+    admin_user_id = int(admin.get("user_id")) if admin.get("user_id") else None
     fields = []
     values = []
 
@@ -911,7 +916,14 @@ def update_provider(
         raise HTTPException(status_code=404, detail="Provider not found")
 
     conn.commit()
-    log_admin_action(conn, admin_user_id, "update_provider", "provider", provider_id, {"name": provider["name"]})
+    log_admin_action(
+        conn,
+        admin_user_id,
+        "update_provider",
+        "provider",
+        provider_id,
+        {"name": provider["name"]}
+    )
     conn.commit()
 
     return {"ok": True, "provider": provider}
@@ -985,7 +997,7 @@ def create_document(
     admin=Depends(get_current_admin),
     conn=Depends(get_db)
 ):
-    admin_user_id = int(admin.get("sub")) if admin.get("sub") else None
+    admin_user_id = int(admin.get("user_id")) if admin.get("user_id") else None
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
@@ -1068,7 +1080,7 @@ def update_document(
     admin=Depends(get_current_admin),
     conn=Depends(get_db)
 ):
-    admin_user_id = int(admin.get("sub")) if admin.get("sub") else None
+    admin_user_id = int(admin.get("user_id")) if admin.get("user_id") else None
     fields = []
     values = []
 
