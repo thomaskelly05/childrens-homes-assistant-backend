@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from psycopg2.extras import RealDictCursor
 import bcrypt
 
@@ -14,7 +14,7 @@ ALLOWED_ROLES = {"admin", "manager", "staff"}
 class CreateUserRequest(BaseModel):
     first_name: str
     last_name: str
-    email: EmailStr
+    email: str
     password: str
     role: str
     home_id: int
@@ -24,7 +24,7 @@ class CreateUserRequest(BaseModel):
 class UpdateUserRequest(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
-    email: EmailStr | None = None
+    email: str | None = None
     role: str | None = None
     home_id: int | None = None
     is_active: bool | None = None
@@ -65,6 +65,13 @@ def normalise_role(role: str) -> str:
     return value
 
 
+def validate_email(email: str) -> str:
+    value = email.strip().lower()
+    if not value or "@" not in value or "." not in value.split("@")[-1]:
+        raise HTTPException(status_code=400, detail="Invalid email address")
+    return value
+
+
 @router.get("/users")
 def list_users(
     admin=Depends(get_current_admin),
@@ -102,8 +109,14 @@ def create_user(
     admin=Depends(get_current_admin),
     conn=Depends(get_db)
 ):
-    email = payload.email.strip().lower()
+    email = validate_email(payload.email)
     role = normalise_role(payload.role)
+
+    if not payload.first_name.strip():
+        raise HTTPException(status_code=400, detail="First name is required")
+
+    if not payload.last_name.strip():
+        raise HTTPException(status_code=400, detail="Last name is required")
 
     if not payload.password.strip():
         raise HTTPException(status_code=400, detail="Password is required")
@@ -187,21 +200,28 @@ def update_user(
     values = []
 
     if payload.first_name is not None:
+        first_name = payload.first_name.strip()
+        if not first_name:
+            raise HTTPException(status_code=400, detail="First name cannot be empty")
         fields.append("first_name = %s")
-        values.append(payload.first_name.strip())
+        values.append(first_name)
 
     if payload.last_name is not None:
+        last_name = payload.last_name.strip()
+        if not last_name:
+            raise HTTPException(status_code=400, detail="Last name cannot be empty")
         fields.append("last_name = %s")
-        values.append(payload.last_name.strip())
+        values.append(last_name)
 
     if payload.email is not None:
-        new_email = payload.email.strip().lower()
+        new_email = validate_email(payload.email)
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 "SELECT id FROM users WHERE email = %s AND id != %s LIMIT 1",
                 (new_email, user_id)
             )
             existing = cur.fetchone()
+
         if existing:
             raise HTTPException(status_code=400, detail="Email already exists")
 
