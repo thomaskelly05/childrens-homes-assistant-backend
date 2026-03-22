@@ -27,7 +27,7 @@
     .side-inner{width:var(--full);height:100%;display:flex;flex-direction:column;padding:12px}
     .side-top{display:flex;align-items:center;gap:12px;height:48px}
     .brand{font-weight:600;color:var(--accent);white-space:nowrap}
-    .icon{width:40px;height:40px;border-radius:10px;color:var(--muted)}
+    .icon{width:40px;height:40px;border-radius:10px;color:var(--muted);display:flex;align-items:center;justify-content:center}
     .icon:hover{background:rgba(37,99,235,.08);color:var(--accent)}
     .side-content{opacity:0;pointer-events:none;transition:.15s;display:flex;flex-direction:column;height:100%}
     .sidebar.open .side-content{opacity:1;pointer-events:auto}
@@ -43,7 +43,7 @@
     .mainbtn{flex:1;text-align:left;padding:6px 8px;border-radius:8px}
     .mainbtn:hover{background:rgba(37,99,235,.06)}
     .ttl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.9rem}
-    .mini{width:28px;height:28px;border-radius:8px;color:var(--muted)}
+    .mini{width:28px;height:28px;border-radius:8px;color:var(--muted);display:flex;align-items:center;justify-content:center}
     .mini:hover{background:rgba(37,99,235,.08);color:var(--accent)}
     .danger:hover{background:rgba(220,38,38,.08);color:#dc2626}
     .workspace{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--chat)}
@@ -61,7 +61,7 @@
     .avatar{width:32px;height:32px;border-radius:8px;background:var(--line);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:600;flex-shrink:0}
     .wrap.assistant .avatar{background:var(--accent);color:#fff}
     .block{display:flex;flex-direction:column;gap:6px;max-width:86%}
-    .msg{line-height:1.7;overflow-wrap:anywhere}
+    .msg{line-height:1.7;overflow-wrap:anywhere;word-break:normal;white-space:normal}
     .wrap.user .msg{background:var(--user);padding:12px 16px;border-radius:18px 18px 4px 18px;color:#0f172a}
     body.theme-dark .wrap.user .msg{color:#f8fafc}
     .msg h3{font-size:1.05rem;margin:16px 0 8px;color:var(--accent);font-weight:600}
@@ -79,7 +79,7 @@
     .ibox{background:var(--input);border:1px solid var(--line);border-radius:24px;padding:8px 12px;box-shadow:var(--shadow)}
     .irow{display:flex;align-items:flex-end;gap:8px}
     .ta{flex:1;resize:none;max-height:120px;padding:8px 4px;background:transparent;color:var(--text)}
-    .send{width:42px;height:42px;border-radius:50%;background:var(--accent);color:#fff}
+    .send{width:42px;height:42px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center}
     .send:disabled{opacity:.35;cursor:not-allowed}
     .helper{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:.76rem;padding:8px 6px 0}
     .overlay,.so{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:30}
@@ -239,6 +239,15 @@
                 <input id="upload" type="file" hidden accept=".txt,.docx,.pdf">
               </label>
 
+              <button id="mic" class="icon" type="button" title="Speech to text" aria-label="Speech to text">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                  <line x1="12" y1="19" x2="12" y2="23"></line>
+                  <line x1="8" y1="23" x2="16" y2="23"></line>
+                </svg>
+              </button>
+
               <textarea id="input" class="ta" rows="1" placeholder="Describe situation..."></textarea>
 
               <button id="send" class="send" type="button" aria-label="Send">
@@ -277,8 +286,25 @@
 
     function banner(t, ms=2400){ const e=$("status"); e.textContent=t; e.style.display="block"; clearTimeout(banner.t); banner.t=setTimeout(()=>e.style.display="none",ms); }
     function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
-    function firstName(){ return window.currentUser?.first_name || localStorage.getItem("first_name") || localStorage.getItem("adult_first_name") || "there"; }
+    function firstName(){ return window.currentUser?.first_name || localStorage.getItem("first_name") || localStorage.getItem("adult_first_name") || localStorage.getItem("user_first_name") || "there"; }
+    function userInitials(){
+      const full = window.currentUser?.full_name || localStorage.getItem("full_name") || localStorage.getItem("user_name") || firstName();
+      const parts = String(full).trim().split(/\s+/).filter(Boolean);
+      if(!parts.length) return "Y";
+      if(parts.length===1) return parts[0].slice(0,2).toUpperCase();
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
     function setWelcome(){ $("welcomeTitle").textContent = GREET[Math.floor(Math.random()*GREET.length)](firstName()); }
+
+    function selectedLang(){ return $("lang").value || DEFAULT_LANGUAGE; }
+    function selectedMode(){ return $("mode").value || "balanced"; }
+
+    function syncHelpers(){
+      $("langHelp").textContent = `Assistant replies in ${LANG[selectedLang()] || "English"}.`;
+      $("modeHelp").textContent = `Mode: ${RESP[selectedMode()]}`;
+      $("theme").classList.toggle("active", document.body.classList.contains("theme-dark"));
+      $("privacy").classList.toggle("active", $("app").classList.contains("privacy-active"));
+    }
 
     function stripSystem(s){ return String(s||"").replace(/\s*\[SYSTEM:[\s\S]*$/i,"").trim(); }
 
@@ -287,7 +313,8 @@
       if(!clean) return "New Log";
       const stop = new Set(["the","a","an","and","or","but","for","with","from","about","who","what","when","where","why","how","are","is","do","does","did","please","tell","write","good","morning","indicare"]);
       const words = clean.split(" ").filter(Boolean);
-      const picked = (words.filter(w=>!stop.has(w.toLowerCase())).length ? words.filter(w=>!stop.has(w.toLowerCase())) : words).slice(0,3);
+      const pool = words.filter(w=>!stop.has(w.toLowerCase()));
+      const picked = (pool.length ? pool : words).slice(0,3);
       return picked.map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(" ") || "New Log";
     }
 
@@ -329,24 +356,10 @@
     function docShow(name){ $("docText").textContent=name; $("doc").classList.add("show"); }
     function docHide(){ $("docText").textContent=""; $("doc").classList.remove("show"); }
     function setTitle(t="Intelligence for Care"){ $("title").textContent=t; }
+    function buildLangInstruction(){ return selectedLang()===DEFAULT_LANGUAGE ? "" : ` [SYSTEM: Reply in ${LANG[selectedLang()]}. Keep safeguarding, care, and formal documentation wording clear and professional.]`; }
 
     function openSettings(){ $("settingsOverlay").classList.add("show"); $("settings").classList.add("open"); }
     function closeSettings(){ $("settingsOverlay").classList.remove("show"); $("settings").classList.remove("open"); }
-
-    function selectedLang(){ return $("lang").value || DEFAULT_LANGUAGE; }
-    function selectedMode(){ return $("mode").value || "balanced"; }
-
-    function syncHelpers(){
-      $("langHelp").textContent = `Assistant replies in ${LANG[selectedLang()] || "English"}.`;
-      $("modeHelp").textContent = `Mode: ${RESP[selectedMode()]}`;
-      $("theme").classList.toggle("active", document.body.classList.contains("theme-dark"));
-      $("privacy").classList.toggle("active", $("app").classList.contains("privacy-active"));
-    }
-
-    function buildLangInstruction(){
-      if(selectedLang()===DEFAULT_LANGUAGE) return "";
-      return ` [SYSTEM: Reply in ${LANG[selectedLang()]}. Keep safeguarding, care, and formal documentation wording clear and professional.]`;
-    }
 
     async function api(url, options={}){
       const res = await fetch(url, {
@@ -412,7 +425,7 @@
 
       const avatar = document.createElement("div");
       avatar.className = "avatar";
-      avatar.textContent = role==="assistant" ? "IC" : "Y";
+      avatar.textContent = role==="assistant" ? "IC" : userInitials();
 
       const block = document.createElement("div");
       block.className = "block";
@@ -420,7 +433,6 @@
       const msg = document.createElement("div");
       msg.className = "msg";
       msg.innerHTML = role==="assistant" ? render(shown, "assistant") : esc(shown);
-
       block.appendChild(msg);
 
       if(opts.meta){
@@ -493,7 +505,7 @@
           typing = false;
           el.classList.remove("typing");
         }
-      }, 3);
+      }, 2);
     }
 
     async function stream(url, body){
@@ -523,7 +535,7 @@
       let buffer = "";
 
       createStreamMsg();
-      queue.push(".");
+      queue.push(" ");
       startTyping();
 
       while(true){
@@ -532,10 +544,12 @@
         buffer += dec.decode(value, {stream:true});
         const parts = buffer.split("\n");
         buffer = parts.pop() || "";
+
         for(const line of parts){
           if(!line.startsWith("data:")) continue;
-          const payload = line.slice(5).trim();
-          if(payload==="[DONE]") continue;
+          let payload = line.slice(5);
+          if(payload.startsWith(" ")) payload = payload.slice(1);
+          if(payload === "[DONE]") continue;
           for(const ch of payload) queue.push(ch);
           startTyping();
         }
@@ -550,11 +564,12 @@
 
     async function renameShort(id, prompt){
       try{
+        const short = summariseTitle(prompt);
         await api(`/chat/conversations/${id}/rename`, {
           method:"POST",
-          body:JSON.stringify({title: summariseTitle(prompt)})
+          body:JSON.stringify({title: short})
         });
-        setTitle(summariseTitle(prompt));
+        setTitle(short);
         await loadConversations();
       } catch(e){ console.error(e); }
     }
@@ -699,6 +714,25 @@
       sendMessage();
     }
 
+    function startSpeech(){
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if(!SR) return banner("Speech to text is not supported on this device");
+      const rec = new SR();
+      rec.lang = selectedLang() || "en-GB";
+      rec.interimResults = true;
+      rec.continuous = false;
+      $("mic").style.color = "var(--accent)";
+      rec.onresult = e => {
+        let text = "";
+        for(let i=0;i<e.results.length;i++) text += e.results[i][0].transcript + " ";
+        $("input").value = text.trim();
+        resize();
+      };
+      rec.onerror = () => banner("Speech input failed");
+      rec.onend = () => { $("mic").style.color = ""; };
+      rec.start();
+    }
+
     function bind(){
       $("sideToggle").onclick = () => $("sidebar").classList.toggle("open");
       $("mobileMenu").onclick = () => { $("sidebar").classList.add("open"); $("overlay").classList.add("show"); };
@@ -724,13 +758,14 @@
         syncHelpers();
       };
 
-      $("lang").onchange = () => { localStorage.setItem("indicare_reply_language", selectedLang()); syncHelpers(); banner(`Reply language set to ${LANG[selectedLang()]||"English"}`); };
-      $("mode").onchange = () => { localStorage.setItem("indicare_response_mode", selectedMode()); syncHelpers(); banner(`Response mode set to ${RESP[selectedMode()]}`); };
+      $("lang").onchange = () => { localStorage.setItem("indicare_reply_language", selectedLang()); syncHelpers(); };
+      $("mode").onchange = () => { localStorage.setItem("indicare_response_mode", selectedMode()); syncHelpers(); };
 
       $("search").oninput = filterConversations;
       $("input").addEventListener("keydown", e => { if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); sendMessage(); } });
       $("input").addEventListener("input", resize);
       $("send").onclick = sendMessage;
+      $("mic").onclick = startSpeech;
 
       $("upload").onchange = async e => {
         const file = e.target.files?.[0];
