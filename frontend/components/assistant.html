@@ -11,13 +11,13 @@
     :root{
       --bg:#f4f7fb; --panel:#fff; --chat:#fff; --input:#fff; --user:#e0e9f5;
       --text:#1e293b; --muted:#64748b; --line:#e2e8f0; --accent:#2563eb;
-      --shadow:0 10px 25px -3px rgb(0 0 0 / 0.08); --mini:68px; --full:310px;
-      --danger:#dc2626; --success:#16a34a;
+      --shadow:0 10px 25px -3px rgb(0 0 0 / 0.08); --mini:68px; --full:320px;
+      --danger:#dc2626; --success:#16a34a; --warn:#d97706;
     }
     body.theme-dark{
       --bg:#0f172a; --panel:#1e293b; --chat:#0f172a; --input:#0a0f1d; --user:#1e293b;
       --text:#f1f5f9; --muted:#94a3b8; --line:#334155; --accent:#3b82f6;
-      --danger:#ef4444; --success:#22c55e;
+      --danger:#ef4444; --success:#22c55e; --warn:#f59e0b;
     }
     *{box-sizing:border-box;margin:0;padding:0;font-family:Inter,sans-serif}
     body{background:var(--bg);color:var(--text);height:100dvh;overflow:hidden}
@@ -55,7 +55,7 @@
     .header-left{display:flex;align-items:center;gap:12px;min-width:0}
     .title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .panel{flex:1;overflow:auto;padding:24px 16px}
-    .panel-inner{max-width:1100px;margin:0 auto}
+    .panel-inner{max-width:1160px;margin:0 auto}
     .welcome{text-align:center;margin-top:13vh}
     .welcome h1{font-size:2.2rem;letter-spacing:-.04em}
     .welcome p{color:var(--muted);margin-top:8px}
@@ -107,10 +107,15 @@
     .status{display:none;position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:50;padding:10px 14px;border-radius:10px;background:#111827;color:#fff;font-size:.85rem;box-shadow:var(--shadow);max-width:calc(100vw - 24px);text-align:center}
     body.theme-dark .status{background:#f8fafc;color:#0f172a}
     .typing:after{content:"▊";color:var(--accent);animation:blink 1s infinite;margin-left:2px}
-    .admin-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+    .admin-top{display:flex;flex-direction:column;gap:16px}
+    .admin-tabs{display:flex;gap:8px;flex-wrap:wrap}
     .tabbtn{padding:10px 14px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--muted);font-weight:600}
     .tabbtn.active,.tabbtn:hover{color:var(--accent);border-color:var(--accent);background:rgba(37,99,235,.06)}
-    .admin-grid{display:grid;grid-template-columns:360px 1fr;gap:16px}
+    .summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    .summary .s{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:14px}
+    .summary .n{font-size:1.35rem;font-weight:700}
+    .summary .l{font-size:.82rem;color:var(--muted);margin-top:4px}
+    .admin-grid{display:grid;grid-template-columns:380px 1fr;gap:16px}
     .users-list,.homes-list,.providers-list,.docs-list,.audit-list,.billing-list{display:flex;flex-direction:column;gap:10px}
     .entity-row{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:14px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
     .entity-title{font-weight:600}
@@ -121,14 +126,15 @@
     .stat{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:14px}
     .stat .n{font-size:1.4rem;font-weight:700}
     .stat .l{font-size:.82rem;color:var(--muted);margin-top:4px}
-    .tag{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:.72rem;font-weight:700}
+    .tag{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:.72rem;font-weight:700;margin-right:6px}
     .tag.ok{background:rgba(22,163,74,.12);color:var(--success)}
     .tag.bad{background:rgba(220,38,38,.12);color:var(--danger)}
+    .tag.warn{background:rgba(217,119,6,.12);color:var(--warn)}
     .tag.neutral{background:rgba(100,116,139,.12);color:var(--muted)}
     @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
     @media (max-width:1000px){
       .admin-grid{grid-template-columns:1fr}
-      .filters,.stats{grid-template-columns:1fr 1fr}
+      .filters,.summary,.stats{grid-template-columns:1fr 1fr}
     }
     @media (max-width:768px){
       .sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);width:86vw!important;max-width:300px}
@@ -141,7 +147,7 @@
       .welcome{margin-top:8vh}
       .welcome h1{font-size:1.85rem}
       .input-wrap{padding:10px}
-      .filters,.stats{grid-template-columns:1fr}
+      .filters,.summary,.stats{grid-template-columns:1fr}
     }
     @media (min-width:769px){.mobile{display:none!important}}
   </style>
@@ -263,16 +269,24 @@
 
       <section id="adminPanel" class="panel hidden">
         <div class="panel-inner">
-          <div class="admin-tabs">
-            <button class="tabbtn active" data-tab="users">Users</button>
-            <button class="tabbtn" data-tab="homes">Homes</button>
-            <button class="tabbtn" data-tab="providers">Providers</button>
-            <button class="tabbtn" data-tab="documents">Policies</button>
-            <button class="tabbtn" data-tab="billing">Billing</button>
-            <button class="tabbtn" data-tab="audit">Audit</button>
+          <div class="admin-top">
+            <div class="summary" id="adminSummary">
+              <div class="s"><div class="n" id="sumUsers">0</div><div class="l">Users</div></div>
+              <div class="s"><div class="n" id="sumHomes">0</div><div class="l">Homes</div></div>
+              <div class="s"><div class="n" id="sumProviders">0</div><div class="l">Providers</div></div>
+              <div class="s"><div class="n" id="sumDocs">0</div><div class="l">Policies / Documents</div></div>
+            </div>
+
+            <div class="admin-tabs">
+              <button class="tabbtn active" data-tab="users">Users</button>
+              <button class="tabbtn" data-tab="homes">Homes</button>
+              <button class="tabbtn" data-tab="providers">Providers</button>
+              <button class="tabbtn" data-tab="documents">Policies</button>
+              <button class="tabbtn" data-tab="billing">Billing</button>
+              <button class="tabbtn" data-tab="audit">Audit</button>
+            </div>
           </div>
 
-          <!-- USERS -->
           <div id="tab-users" class="admin-tab">
             <div class="filters">
               <input id="userSearch" class="field" placeholder="Search user name or email">
@@ -282,10 +296,12 @@
                 <option value="manager">manager</option>
                 <option value="staff">staff</option>
               </select>
-              <input id="userHomeFilter" class="field" type="number" placeholder="Home ID">
+              <select id="userHomeFilter" class="sel">
+                <option value="">All homes</option>
+              </select>
               <select id="userArchivedFilter" class="sel">
                 <option value="">All status</option>
-                <option value="false">Active list</option>
+                <option value="false">Live only</option>
                 <option value="true">Archived only</option>
               </select>
             </div>
@@ -304,7 +320,7 @@
                     <option value="admin">admin</option>
                   </select>
                 </div>
-                <div><label for="adminHomeId">Home ID</label><input id="adminHomeId" class="field" type="number" placeholder="Home ID"></div>
+                <div><label for="adminHomeId">Home</label><select id="adminHomeId" class="sel"><option value="">Select home</option></select></div>
                 <div class="rowset">
                   <div><div style="font-weight:600">Active user</div><div style="font-size:.8rem;color:var(--muted)">Allow account login</div></div>
                   <button id="adminActiveToggle" class="toggle active" type="button"></button>
@@ -322,7 +338,6 @@
             </div>
           </div>
 
-          <!-- HOMES -->
           <div id="tab-homes" class="admin-tab hidden">
             <div class="admin-grid">
               <div class="card">
@@ -333,8 +348,8 @@
                 <div><label for="homeRegion">Region</label><input id="homeRegion" class="field" placeholder="Region"></div>
                 <div><label for="homeLocalAuthority">Local authority</label><input id="homeLocalAuthority" class="field" placeholder="Local authority"></div>
                 <div><label for="homeOfstedUrn">Ofsted URN</label><input id="homeOfstedUrn" class="field" placeholder="Ofsted URN"></div>
-                <div><label for="homeProviderId">Provider ID</label><input id="homeProviderId" class="field" type="number" placeholder="Provider ID"></div>
-                <div><label for="homeRegisteredManagerId">Registered manager ID</label><input id="homeRegisteredManagerId" class="field" type="number" placeholder="User ID"></div>
+                <div><label for="homeProviderId">Provider</label><select id="homeProviderId" class="sel"><option value="">Select provider</option></select></div>
+                <div><label for="homeRegisteredManagerId">Registered manager</label><select id="homeRegisteredManagerId" class="sel"><option value="">Select manager</option></select></div>
                 <div><label for="homeGeofence">Geofence radius (m)</label><input id="homeGeofence" class="field" type="number" placeholder="Geofence radius"></div>
                 <button id="createHomeBtn" class="action" type="button">Create home</button>
               </div>
@@ -349,7 +364,6 @@
             </div>
           </div>
 
-          <!-- PROVIDERS -->
           <div id="tab-providers" class="admin-tab hidden">
             <div class="admin-grid">
               <div class="card">
@@ -374,27 +388,58 @@
             </div>
           </div>
 
-          <!-- DOCUMENTS -->
           <div id="tab-documents" class="admin-tab hidden">
             <div class="filters">
               <input id="docSearch" class="field" placeholder="Search title or type">
-              <input id="docHomeFilter" class="field" type="number" placeholder="Home ID">
-              <input id="docTypeFilter" class="field" placeholder="Document type e.g. policy">
-              <input id="docApprovalFilter" class="field" placeholder="Approval status">
+              <select id="docHomeFilter" class="sel"><option value="">All homes</option></select>
+              <select id="docTypeFilter" class="sel">
+                <option value="">All document types</option>
+                <option value="policy">policy</option>
+                <option value="procedure">procedure</option>
+                <option value="guidance">guidance</option>
+                <option value="template">template</option>
+                <option value="home_document">home_document</option>
+              </select>
+              <select id="docApprovalFilter" class="sel">
+                <option value="">All approval states</option>
+                <option value="not_required">not_required</option>
+                <option value="pending">pending</option>
+                <option value="approved">approved</option>
+              </select>
             </div>
 
             <div class="admin-grid">
               <div class="card">
                 <strong>Create policy / document</strong>
                 <div><label for="docTitle">Title</label><input id="docTitle" class="field" placeholder="Title"></div>
-                <div><label for="docType">Document type</label><input id="docType" class="field" placeholder="policy / procedure / guidance"></div>
-                <div><label for="docHomeId">Home ID</label><input id="docHomeId" class="field" type="number" placeholder="Home ID"></div>
-                <div><label for="docOwnerId">Owner ID</label><input id="docOwnerId" class="field" type="number" placeholder="Owner user ID"></div>
+                <div><label for="docType">Document type</label>
+                  <select id="docType" class="sel">
+                    <option value="policy">policy</option>
+                    <option value="procedure">procedure</option>
+                    <option value="guidance">guidance</option>
+                    <option value="template">template</option>
+                    <option value="home_document">home_document</option>
+                  </select>
+                </div>
+                <div><label for="docHomeId">Home</label><select id="docHomeId" class="sel"><option value="">Select home</option></select></div>
+                <div><label for="docOwnerId">Owner</label><select id="docOwnerId" class="sel"><option value="">Select owner</option></select></div>
                 <div><label for="docIssueDate">Issue date</label><input id="docIssueDate" class="field" type="date"></div>
                 <div><label for="docReviewDate">Review date</label><input id="docReviewDate" class="field" type="date"></div>
                 <div><label for="docExpiryDate">Expiry date</label><input id="docExpiryDate" class="field" type="date"></div>
-                <div><label for="docApprovalStatus">Approval status</label><input id="docApprovalStatus" class="field" placeholder="not_required / pending / approved"></div>
-                <div><label for="docConfLevel">Confidentiality level</label><input id="docConfLevel" class="field" placeholder="standard"></div>
+                <div><label for="docApprovalStatus">Approval status</label>
+                  <select id="docApprovalStatus" class="sel">
+                    <option value="not_required">not_required</option>
+                    <option value="pending">pending</option>
+                    <option value="approved">approved</option>
+                  </select>
+                </div>
+                <div><label for="docConfLevel">Confidentiality</label>
+                  <select id="docConfLevel" class="sel">
+                    <option value="standard">standard</option>
+                    <option value="restricted">restricted</option>
+                    <option value="confidential">confidential</option>
+                  </select>
+                </div>
                 <div><label for="docInputText">Input text / policy content</label><textarea id="docInputText" class="area" placeholder="Document text"></textarea></div>
                 <button id="createDocBtn" class="action" type="button">Create document</button>
               </div>
@@ -409,7 +454,6 @@
             </div>
           </div>
 
-          <!-- BILLING -->
           <div id="tab-billing" class="admin-tab hidden">
             <div id="billingStats" class="stats"></div>
             <div class="card">
@@ -421,7 +465,6 @@
             </div>
           </div>
 
-          <!-- AUDIT -->
           <div id="tab-audit" class="admin-tab hidden">
             <div class="card">
               <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
@@ -498,6 +541,7 @@
     function setWelcome(){ $("welcomeTitle").textContent = GREET[Math.floor(Math.random()*GREET.length)](firstName()); }
     function selectedLang(){ return $("lang").value || DEFAULT_LANGUAGE; }
     function selectedMode(){ return $("mode").value || "balanced"; }
+    function stripSystem(s){ return String(s||"").replace(/\s*\[SYSTEM:[\s\S]*$/i,"").trim(); }
 
     function syncHelpers(){
       $("langHelp").textContent = `Assistant replies in ${LANG[selectedLang()] || "English"}.`;
@@ -507,7 +551,6 @@
       $("adminActiveToggle").classList.toggle("active", adminCreateActive);
     }
 
-    function stripSystem(s){ return String(s||"").replace(/\s*\[SYSTEM:[\s\S]*$/i,"").trim(); }
     function summariseTitle(text){
       const clean = stripSystem(text).replace(/[^\p{L}\p{N}\s'-]/gu," ").replace(/\s+/g," ").trim();
       if(!clean) return "New Log";
@@ -576,7 +619,7 @@
       $("navAssistant").classList.remove("active");
       $("navAdmin").classList.add("active");
       setTitle("Admin");
-      loadActiveAdminTab();
+      loadAdminReferenceData().then(loadActiveAdminTab);
     }
 
     function setAdminTab(name){
@@ -778,7 +821,6 @@
         buffer += dec.decode(value, {stream:true});
         const parts = buffer.split("\n");
         buffer = parts.pop() || "";
-
         for(const line of parts){
           if(!line.startsWith("data:")) continue;
           let payload = line.slice(5);
@@ -821,25 +863,20 @@
       rows.forEach(r => {
         const item = document.createElement("div");
         item.className = `item ${Number(r.id)===Number(conversationId) ? "active" : ""}`;
-
         const row = document.createElement("div");
         row.className = "row";
-
         const main = document.createElement("button");
         main.className = "mainbtn";
         main.innerHTML = `<div class="ttl">${esc(stripSystem(r.title || "Observation"))}</div>`;
         main.onclick = () => { showAssistantView(); openConversation(r.id, stripSystem(r.title || "Observation")); };
-
         const copy = document.createElement("button");
         copy.className = "mini";
         copy.textContent = "⧉";
         copy.onclick = e => { e.stopPropagation(); copyText(stripSystem(r.title || "Observation")); };
-
         const del = document.createElement("button");
         del.className = "mini danger";
         del.textContent = "🗑";
         del.onclick = e => { e.stopPropagation(); deleteConversation(r.id); };
-
         row.append(main, copy, del);
         item.appendChild(row);
         host.appendChild(item);
@@ -958,21 +995,48 @@
       rec.start();
     }
 
-    /* ADMIN HELPERS */
-    function boolFromSelect(val){
-      if(val === "true") return true;
-      if(val === "false") return false;
-      return undefined;
+    function fillSelect(selectId, rows, placeholder, valueKey="id", labelFn=(r)=>r.name){
+      const sel = $(selectId);
+      const current = sel.value;
+      sel.innerHTML = `<option value="">${placeholder}</option>`;
+      rows.forEach(r => {
+        const opt = document.createElement("option");
+        opt.value = r[valueKey];
+        opt.textContent = labelFn(r);
+        sel.appendChild(opt);
+      });
+      if([...sel.options].some(o => o.value === current)) sel.value = current;
     }
 
-    async function loadActiveAdminTab(){
-      const tab = activeAdminTab();
-      if(tab === "users") await loadAdminUsers();
-      if(tab === "homes") await loadHomes();
-      if(tab === "providers") await loadProviders();
-      if(tab === "documents") await loadDocuments();
-      if(tab === "billing") await loadBilling();
-      if(tab === "audit") await loadAudit();
+    function updateAdminSummary(){
+      $("sumUsers").textContent = String(adminUsers.length || 0);
+      $("sumHomes").textContent = String(homes.length || 0);
+      $("sumProviders").textContent = String(providers.length || 0);
+      $("sumDocs").textContent = String(docs.length || 0);
+    }
+
+    async function loadAdminReferenceData(){
+      try{
+        const [h, p, u] = await Promise.all([
+          api("/admin/homes"),
+          api("/admin/providers"),
+          api("/admin/users")
+        ]);
+        homes = h?.homes || homes;
+        providers = p?.providers || providers;
+        adminUsers = u?.users || adminUsers;
+
+        fillSelect("adminHomeId", homes, "Select home", "id", r => r.name);
+        fillSelect("userHomeFilter", homes, "All homes", "id", r => r.name);
+        fillSelect("docHomeFilter", homes, "All homes", "id", r => r.name);
+        fillSelect("docHomeId", homes, "Select home", "id", r => r.name);
+        fillSelect("homeProviderId", providers, "Select provider", "id", r => r.name);
+
+        const managers = adminUsers.filter(u => ["manager", "admin"].includes((u.role || "").toLowerCase()));
+        fillSelect("homeRegisteredManagerId", managers, "Select manager", "id", r => `${r.first_name || ""} ${r.last_name || ""}`.trim() || r.email);
+        fillSelect("docOwnerId", adminUsers, "Select owner", "id", r => `${r.first_name || ""} ${r.last_name || ""}`.trim() || r.email);
+        updateAdminSummary();
+      } catch(e){}
     }
 
     function clearAdminForm(){
@@ -1007,6 +1071,7 @@
         await api("/admin/users", { method:"POST", body:JSON.stringify(payload) });
         clearAdminForm();
         await loadAdminUsers();
+        await loadAdminReferenceData();
         banner("User created");
       } catch(e){ banner(e.message || "Could not create user"); }
     }
@@ -1024,6 +1089,7 @@
         if(archived) params.set("archived", archived);
         adminUsers = (await api("/admin/users" + (params.toString() ? `?${params.toString()}` : "")))?.users || [];
         renderAdminUsers();
+        updateAdminSummary();
       } catch(e){ banner(e.message || "Could not load users"); }
     }
 
@@ -1083,7 +1149,8 @@
         changeHome.className = "chip";
         changeHome.textContent = "Home";
         changeHome.onclick = async () => {
-          const home_id = prompt(`Set home id for ${user.email}`, String(user.home_id ?? ""));
+          const homeChoices = homes.map(h => `${h.id}: ${h.name}`).join("\n");
+          const home_id = prompt(`Set home id for ${user.email}\n\n${homeChoices}`, String(user.home_id ?? ""));
           if(home_id === null) return;
           try{
             await api(`/admin/users/${user.id}`, { method:"PATCH", body:JSON.stringify({ home_id: Number(home_id) }) });
@@ -1118,15 +1185,19 @@
         region: $("homeRegion").value.trim() || null,
         local_authority: $("homeLocalAuthority").value.trim() || null,
         ofsted_urn: $("homeOfstedUrn").value.trim() || null,
-        provider_id: $("homeProviderId").value.trim() ? Number($("homeProviderId").value) : null,
-        registered_manager_id: $("homeRegisteredManagerId").value.trim() ? Number($("homeRegisteredManagerId").value) : null,
+        provider_id: $("homeProviderId").value ? Number($("homeProviderId").value) : null,
+        registered_manager_id: $("homeRegisteredManagerId").value ? Number($("homeRegisteredManagerId").value) : null,
         geofence_radius_m: $("homeGeofence").value.trim() ? Number($("homeGeofence").value) : null
       };
       if(!payload.name) return banner("Home name is required");
       try{
         await api("/admin/homes", { method:"POST", body:JSON.stringify(payload) });
-        ["homeName","homeAddress","homePostcode","homeRegion","homeLocalAuthority","homeOfstedUrn","homeProviderId","homeRegisteredManagerId","homeGeofence"].forEach(id => $(id).value = "");
-        await loadHomes(); banner("Home created");
+        ["homeName","homeAddress","homePostcode","homeRegion","homeLocalAuthority","homeOfstedUrn","homeGeofence"].forEach(id => $(id).value = "");
+        $("homeProviderId").value = "";
+        $("homeRegisteredManagerId").value = "";
+        await loadHomes();
+        await loadAdminReferenceData();
+        banner("Home created");
       } catch(e){ banner(e.message || "Could not create home"); }
     }
 
@@ -1134,6 +1205,7 @@
       try{
         homes = (await api("/admin/homes"))?.homes || [];
         renderHomes();
+        updateAdminSummary();
       } catch(e){ banner(e.message || "Could not load homes"); }
     }
 
@@ -1195,7 +1267,9 @@
       try{
         await api("/admin/providers", { method:"POST", body:JSON.stringify(payload) });
         ["providerName","providerRegion","providerAddress","providerPostcode","providerLA","providerLeadName","providerLeadEmail"].forEach(id => $(id).value = "");
-        await loadProviders(); banner("Provider created");
+        await loadProviders();
+        await loadAdminReferenceData();
+        banner("Provider created");
       } catch(e){ banner(e.message || "Could not create provider"); }
     }
 
@@ -1203,6 +1277,7 @@
       try{
         providers = (await api("/admin/providers"))?.providers || [];
         renderProviders();
+        updateAdminSummary();
       } catch(e){ banner(e.message || "Could not load providers"); }
     }
 
@@ -1251,8 +1326,8 @@
       const payload = {
         title: $("docTitle").value.trim() || null,
         document_type: $("docType").value.trim() || null,
-        home_id: $("docHomeId").value.trim() ? Number($("docHomeId").value) : null,
-        owner_id: $("docOwnerId").value.trim() ? Number($("docOwnerId").value) : null,
+        home_id: $("docHomeId").value ? Number($("docHomeId").value) : null,
+        owner_id: $("docOwnerId").value ? Number($("docOwnerId").value) : null,
         issue_date: $("docIssueDate").value || null,
         review_date: $("docReviewDate").value || null,
         expiry_date: $("docExpiryDate").value || null,
@@ -1262,8 +1337,15 @@
       };
       try{
         await api("/admin/documents", { method:"POST", body:JSON.stringify(payload) });
-        ["docTitle","docType","docHomeId","docOwnerId","docIssueDate","docReviewDate","docExpiryDate","docApprovalStatus","docConfLevel","docInputText"].forEach(id => $(id).value = "");
-        await loadDocuments(); banner("Document created");
+        ["docTitle","docIssueDate","docReviewDate","docExpiryDate","docInputText"].forEach(id => $(id).value = "");
+        $("docType").value = "policy";
+        $("docHomeId").value = "";
+        $("docOwnerId").value = "";
+        $("docApprovalStatus").value = "not_required";
+        $("docConfLevel").value = "standard";
+        await loadDocuments();
+        await loadAdminReferenceData();
+        banner("Document created");
       } catch(e){ banner(e.message || "Could not create document"); }
     }
 
@@ -1276,6 +1358,7 @@
         if($("docApprovalFilter").value.trim()) params.set("approval_status", $("docApprovalFilter").value.trim());
         docs = (await api("/admin/documents" + (params.toString()?`?${params.toString()}`:"")))?.documents || [];
         renderDocuments();
+        updateAdminSummary();
       } catch(e){ banner(e.message || "Could not load documents"); }
     }
 
@@ -1387,6 +1470,16 @@
       });
     }
 
+    async function loadActiveAdminTab(){
+      const tab = activeAdminTab();
+      if(tab === "users") await loadAdminUsers();
+      if(tab === "homes") await loadHomes();
+      if(tab === "providers") await loadProviders();
+      if(tab === "documents") await loadDocuments();
+      if(tab === "billing") await loadBilling();
+      if(tab === "audit") await loadAudit();
+    }
+
     function restorePrefs(){
       document.body.classList.toggle("theme-dark", (localStorage.getItem("indicare_theme") || "light") === "dark");
       $("lang").value = localStorage.getItem("indicare_reply_language") || DEFAULT_LANGUAGE;
@@ -1448,7 +1541,7 @@
       $("refreshUsersBtn").onclick = loadAdminUsers;
       $("userSearch").oninput = loadAdminUsers;
       $("userRoleFilter").onchange = loadAdminUsers;
-      $("userHomeFilter").oninput = loadAdminUsers;
+      $("userHomeFilter").onchange = loadAdminUsers;
       $("userArchivedFilter").onchange = loadAdminUsers;
 
       $("createHomeBtn").onclick = createHome;
@@ -1460,9 +1553,9 @@
       $("createDocBtn").onclick = createDocumentRecord;
       $("refreshDocsBtn").onclick = loadDocuments;
       $("docSearch").oninput = loadDocuments;
-      $("docHomeFilter").oninput = loadDocuments;
-      $("docTypeFilter").oninput = loadDocuments;
-      $("docApprovalFilter").oninput = loadDocuments;
+      $("docHomeFilter").onchange = loadDocuments;
+      $("docTypeFilter").onchange = loadDocuments;
+      $("docApprovalFilter").onchange = loadDocuments;
 
       $("refreshBillingBtn").onclick = loadBilling;
       $("refreshAuditBtn").onclick = loadAudit;
@@ -1475,6 +1568,7 @@
       await loadMe();
       setWelcome();
       await loadConversations();
+      await loadAdminReferenceData();
     }
 
     document.addEventListener("DOMContentLoaded", init);
