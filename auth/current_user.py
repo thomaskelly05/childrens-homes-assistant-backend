@@ -1,5 +1,6 @@
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from psycopg2.extras import RealDictCursor
 
 from db.connection import get_db
 from db.billing_db import ensure_billing_columns, get_user_billing_by_user_id
@@ -21,13 +22,23 @@ def get_bearer_token(
 
 
 def _get_user_by_id(conn, user_id: int):
-    with conn.cursor() as cur:
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
-            SELECT *
+            SELECT
+                id,
+                email,
+                role,
+                home_id,
+                first_name,
+                last_name,
+                is_active,
+                archived,
+                created_at,
+                updated_at
             FROM users
             WHERE id = %s
-            LIMIT 1;
+            LIMIT 1
             """,
             (user_id,)
         )
@@ -75,6 +86,18 @@ def get_current_user(
             detail="User not found"
         )
 
+    if user.get("archived") is True:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is archived"
+        )
+
+    if user.get("is_active") is False:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is inactive"
+        )
+
     ensure_billing_columns(conn)
     billing = get_user_billing_by_user_id(conn, user_id)
 
@@ -96,8 +119,8 @@ def get_current_user(
     is_exempt = any(request_path.startswith(prefix) for prefix in billing_exempt_prefixes)
 
     if not is_exempt:
-        is_active = bool(billing and billing.get("is_active"))
-        if not is_active:
+        subscription_active = bool(billing and billing.get("is_active"))
+        if not subscription_active:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Subscription required"
@@ -105,11 +128,11 @@ def get_current_user(
 
     enriched_user = {
         **user,
-        "user_id": user.get("id"),
-        "email": payload.get("email") or user.get("email"),
-        "role": payload.get("role") or user.get("role"),
-        "home_id": payload.get("home_id") if payload.get("home_id") is not None else user.get("home_id"),
-        "is_active": bool(billing and billing.get("is_active")),
+        "user_id": user["id"],
+        "email": user.get("email"),
+        "role": user.get("role"),
+        "home_id": user.get("home_id"),
+        "subscription_active": bool(billing and billing.get("is_active")),
         "subscription_status": billing.get("subscription_status") if billing else "inactive",
         "plan_name": billing.get("plan_name") if billing else None,
     }
