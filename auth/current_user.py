@@ -7,6 +7,7 @@ from db.billing_db import ensure_billing_columns, get_user_billing_by_user_id
 from auth.tokens import decode_session_token
 
 security = HTTPBearer(auto_error=False)
+SESSION_COOKIE_NAME = "indicare_session"
 
 
 def get_bearer_token(
@@ -48,9 +49,12 @@ def _get_user_by_id(conn, user_id: int):
 
 def get_current_user(
     request: Request,
-    token: str | None = Depends(get_bearer_token),
+    bearer_token: str | None = Depends(get_bearer_token),
     conn=Depends(get_db)
 ):
+    cookie_token = request.cookies.get(SESSION_COOKIE_NAME)
+    token = cookie_token or bearer_token
+
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
