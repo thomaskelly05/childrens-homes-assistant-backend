@@ -1,413 +1,766 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IndiCare OS</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-
-<style>
-:root{
-  --bg:#f6f8fc;
-  --panel:#fff;
-  --text:#1e293b;
-  --muted:#64748b;
-  --accent:#2563eb;
-  --border:#e2e8f0;
-}
-
-*{margin:0;padding:0;box-sizing:border-box;font-family:Inter,sans-serif}
-
-body{display:flex;height:100vh;background:var(--bg)}
-
-/* SIDEBAR */
-.sidebar{
-  width:250px;
-  background:#fff;
-  border-right:1px solid var(--border);
-  padding:10px;
-  display:flex;
-  flex-direction:column;
-}
-
-.sidebar button{
-  padding:10px;
-  border-radius:8px;
-  border:none;
-  background:var(--accent);
-  color:#fff;
-  cursor:pointer;
-  margin-bottom:6px;
-}
-
-.history{flex:1;overflow:auto}
-
-.history-item{
-  padding:8px;
-  border-radius:6px;
-  cursor:pointer;
-  display:flex;
-  justify-content:space-between;
-}
-
-.history-item:hover{background:#eef2ff}
-
-/* MAIN */
-.main{flex:1;display:flex;flex-direction:column}
-
-.header{
-  height:60px;
-  display:flex;
-  align-items:center;
-  padding:0 16px;
-  border-bottom:1px solid var(--border);
-  font-weight:600;
-}
-
-/* CHAT */
-.chat{flex:1;overflow:auto;padding:16px}
-.messages{max-width:720px;margin:auto;display:flex;flex-direction:column;gap:18px}
-
-.msg{line-height:1.7}
-
-.user{
-  align-self:flex-end;
-  background:#e0e7ff;
-  padding:12px;
-  border-radius:16px;
-}
-
-.msg h3{color:var(--accent);margin:10px 0}
-.msg ul{margin-left:20px}
-
-/* ACTIONS */
-.actions{display:flex;gap:6px;margin-top:6px}
-.actions button{
-  font-size:0.7rem;
-  padding:4px 8px;
-  border-radius:6px;
-  border:1px solid var(--border);
-  cursor:pointer;
-}
-
-/* TOOLBAR */
-.tools{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
-.tools button{
-  font-size:0.75rem;
-  padding:6px 10px;
-  border-radius:6px;
-  border:1px solid var(--border);
-  background:#fff;
-  cursor:pointer;
-}
-
-/* INPUT */
-.input{padding:10px;border-top:1px solid var(--border)}
-textarea{
-  width:100%;
-  border:1px solid var(--border);
-  border-radius:14px;
-  padding:10px;
-}
-
-.send{
-  margin-top:6px;
-  width:100%;
-  padding:10px;
-  background:var(--accent);
-  color:#fff;
-  border:none;
-  border-radius:8px;
-}
-
-/* DASHBOARD */
-.dashboard{
-  display:none;
-  padding:20px;
-}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>IndiCare OS | Command Centre</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#f4f7fb; --panel:#fff; --chat:#fff; --input:#fff; --user:#e0e9f5;
+      --text:#1e293b; --muted:#64748b; --line:#e2e8f0; --accent:#2563eb;
+      --shadow:0 10px 25px -3px rgb(0 0 0 / 0.08); --mini:68px; --full:280px;
+    }
+    body.theme-dark{
+      --bg:#0f172a; --panel:#1e293b; --chat:#0f172a; --input:#0a0f1d; --user:#1e293b;
+      --text:#f1f5f9; --muted:#94a3b8; --line:#334155; --accent:#3b82f6;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;font-family:Inter,sans-serif}
+    body{background:var(--bg);color:var(--text);height:100dvh;overflow:hidden}
+    button,input,select,textarea{font:inherit;border:none;outline:none;background:none;color:inherit}
+    button{cursor:pointer}
+    .shell{display:flex;height:100%}
+    .sidebar{width:var(--mini);background:var(--panel);border-right:1px solid var(--line);overflow:hidden;transition:.25s;z-index:20}
+    .sidebar.open{width:var(--full)}
+    .side-inner{width:var(--full);height:100%;display:flex;flex-direction:column;padding:12px}
+    .side-top{display:flex;align-items:center;gap:12px;height:48px}
+    .brand{font-weight:600;color:var(--accent);white-space:nowrap}
+    .icon{width:40px;height:40px;border-radius:10px;color:var(--muted)}
+    .icon:hover{background:rgba(37,99,235,.08);color:var(--accent)}
+    .side-content{opacity:0;pointer-events:none;transition:.15s;display:flex;flex-direction:column;height:100%}
+    .sidebar.open .side-content{opacity:1;pointer-events:auto}
+    .primary{margin-top:12px;background:var(--accent);color:#fff;padding:12px;border-radius:10px;font-weight:600;width:100%}
+    .nav{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+    .navbtn{display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;color:var(--muted);text-decoration:none}
+    .navbtn.active,.navbtn:hover{background:rgba(37,99,235,.08);color:var(--accent)}
+    .search{margin-top:12px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--bg);color:var(--text)}
+    .history{flex:1;overflow:auto;margin-top:12px;display:flex;flex-direction:column;gap:8px}
+    .item{border:1px solid transparent;border-radius:10px;padding:8px}
+    .item.active,.item:hover{background:rgba(37,99,235,.06);border-color:var(--line)}
+    .row{display:flex;align-items:center;gap:6px}
+    .mainbtn{flex:1;text-align:left;padding:6px 8px;border-radius:8px}
+    .mainbtn:hover{background:rgba(37,99,235,.06)}
+    .ttl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.9rem}
+    .mini{width:28px;height:28px;border-radius:8px;color:var(--muted)}
+    .mini:hover{background:rgba(37,99,235,.08);color:var(--accent)}
+    .danger:hover{background:rgba(220,38,38,.08);color:#dc2626}
+    .workspace{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--chat)}
+    .header{height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--line)}
+    .header-left{display:flex;align-items:center;gap:12px;min-width:0}
+    .title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .chat{flex:1;overflow:auto;padding:24px 16px}
+    .chat-inner{max-width:820px;margin:0 auto}
+    .welcome{text-align:center;margin-top:13vh}
+    .welcome h1{font-size:2.2rem;letter-spacing:-.04em}
+    .welcome p{color:var(--muted);margin-top:8px}
+    .messages{display:flex;flex-direction:column;gap:24px}
+    .wrap{display:flex;gap:12px;width:100%}
+    .wrap.user{flex-direction:row-reverse}
+    .avatar{width:32px;height:32px;border-radius:8px;background:var(--line);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:600;flex-shrink:0}
+    .wrap.assistant .avatar{background:var(--accent);color:#fff}
+    .block{display:flex;flex-direction:column;gap:6px;max-width:86%}
+    .msg{line-height:1.7;overflow-wrap:anywhere}
+    .wrap.user .msg{background:var(--user);padding:12px 16px;border-radius:18px 18px 4px 18px;color:#0f172a}
+    body.theme-dark .wrap.user .msg{color:#f8fafc}
+    .msg h3{font-size:1.05rem;margin:16px 0 8px;color:var(--accent);font-weight:600}
+    .msg p{margin:0 0 10px}
+    .msg ul{margin:8px 0 14px 20px}
+    .meta{font-size:.74rem;color:var(--muted)}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;opacity:0;transition:.2s}
+    .wrap:hover .actions{opacity:1}
+    .chip{padding:7px 12px;border:1px solid var(--line);border-radius:999px;background:var(--bg);color:var(--accent);font-size:.74rem;font-weight:600}
+    .chip:hover{background:var(--accent);color:#fff}
+    .doc{max-width:820px;margin:0 auto 10px;display:none;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shadow);color:var(--muted);font-size:.85rem}
+    .doc.show{display:flex}
+    .input-wrap{padding:12px 16px}
+    .input-inner{max-width:820px;margin:0 auto}
+    .ibox{background:var(--input);border:1px solid var(--line);border-radius:24px;padding:8px 12px;box-shadow:var(--shadow)}
+    .irow{display:flex;align-items:flex-end;gap:8px}
+    .ta{flex:1;resize:none;max-height:120px;padding:8px 4px;background:transparent;color:var(--text)}
+    .send{width:42px;height:42px;border-radius:50%;background:var(--accent);color:#fff}
+    .send:disabled{opacity:.35;cursor:not-allowed}
+    .helper{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:.76rem;padding:8px 6px 0}
+    .overlay,.so{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:30}
+    .overlay.show,.so.show{display:block}
+    .settings{position:fixed;right:-100%;top:0;bottom:0;width:340px;max-width:100vw;background:var(--panel);border-left:1px solid var(--line);box-shadow:var(--shadow);z-index:40;transition:.25s;padding:18px;display:flex;flex-direction:column;gap:14px}
+    .settings.open{right:0}
+    .card{border:1px solid var(--line);background:var(--bg);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
+    .card label{font-size:.82rem;color:var(--muted);font-weight:600}
+    .sel{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:10px 12px;color:var(--text)}
+    .rowset{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .toggle{width:48px;height:28px;border-radius:999px;background:var(--line);position:relative}
+    .toggle:after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s}
+    .toggle.active{background:var(--accent)}
+    .toggle.active:after{left:23px}
+    .ghost,.logout{width:100%;padding:12px;border-radius:12px;font-weight:600}
+    .ghost{border:1px solid var(--line);background:var(--panel)}
+    .logout{background:#dc2626;color:#fff}
+    .status{display:none;position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:50;padding:10px 14px;border-radius:10px;background:#111827;color:#fff;font-size:.85rem;box-shadow:var(--shadow);max-width:calc(100vw - 24px);text-align:center}
+    body.theme-dark .status{background:#f8fafc;color:#0f172a}
+    .typing:after{content:"▊";color:var(--accent);animation:blink 1s infinite;margin-left:2px}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+    @media (max-width:768px){
+      .sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);width:86vw!important;max-width:300px}
+      .sidebar.open{transform:translateX(0)}
+      .mobile{display:flex!important}
+      .actions{opacity:1}
+      .block{max-width:92%}
+      .header{padding:0 10px}
+      .chat{padding:16px 10px 8px}
+      .welcome{margin-top:8vh}
+      .welcome h1{font-size:1.85rem}
+      .input-wrap{padding:10px}
+    }
+    @media (min-width:769px){.mobile{display:none!important}}
+  </style>
 </head>
-
 <body>
+  <div id="status" class="status"></div>
+  <div id="overlay" class="overlay"></div>
+  <div id="settingsOverlay" class="so"></div>
 
-<div class="sidebar">
-  <button onclick="newChat()">+ New</button>
-  <button onclick="openDashboard()">📊 Manager</button>
-  <div id="history" class="history"></div>
-</div>
-
-<div class="main">
-
-  <div id="title" class="header">IndiCare</div>
-
-  <!-- CHAT -->
-  <div id="chat" class="chat">
-    <div id="messages" class="messages"></div>
-  </div>
-
-  <!-- DASHBOARD -->
-  <div id="dashboard" class="dashboard">
-    <h2>Manager Dashboard</h2>
-
-    <p style="color:#64748b;margin:10px 0;">
-      Upload policies and documents for AI reference.
-    </p>
-
-    <input type="file" id="fileUpload">
-    <button onclick="uploadDoc()">Upload</button>
-
-    <div id="docList" style="margin-top:20px;"></div>
-
-    <button onclick="backChat()" style="margin-top:20px;">← Back</button>
-  </div>
-
-  <!-- INPUT -->
-  <div class="input">
-
-    <div class="tools">
-      <button onclick="quick('log')">Log</button>
-      <button onclick="quick('incident')">Incident</button>
-      <button onclick="quick('risk')">Risk</button>
-      <button onclick="quick('ofsted')">Ofsted</button>
-      <button onclick="voice()">🎤</button>
+  <aside id="settings" class="settings">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong>Settings</strong>
+      <button id="closeSettings" class="icon" type="button">✕</button>
     </div>
 
-    <textarea id="input" rows="1" placeholder="Describe situation..."></textarea>
-    <button class="send" onclick="send()">Send</button>
+    <div class="card">
+      <label for="lang">Reply language</label>
+      <select id="lang" class="sel">
+        <option value="en-GB">English</option>
+        <option value="pl-PL">Polski</option>
+        <option value="ro-RO">Română</option>
+        <option value="ur-PK">اردو</option>
+        <option value="ar">العربية</option>
+      </select>
+    </div>
 
+    <div class="card">
+      <label for="mode">Response mode</label>
+      <select id="mode" class="sel">
+        <option value="quick">Quick</option>
+        <option value="balanced">Balanced</option>
+        <option value="deep">Deep</option>
+      </select>
+    </div>
+
+    <div class="card">
+      <div class="rowset">
+        <div><div style="font-weight:600">Privacy mode</div><div style="font-size:.8rem;color:var(--muted)">Blur chat until hover</div></div>
+        <button id="privacy" class="toggle" type="button"></button>
+      </div>
+      <div class="rowset">
+        <div><div style="font-weight:600">Dark mode</div><div style="font-size:.8rem;color:var(--muted)">Switch appearance</div></div>
+        <button id="theme" class="toggle" type="button"></button>
+      </div>
+    </div>
+
+    <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px">
+      <button id="backWelcome" class="ghost" type="button">Back to welcome screen</button>
+      <button id="logout" class="logout" type="button">Log out</button>
+    </div>
+  </aside>
+
+  <div id="app" class="shell">
+    <aside id="sidebar" class="sidebar">
+      <div class="side-inner">
+        <div class="side-top">
+          <button id="sideToggle" class="icon" type="button" aria-label="Toggle sidebar">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <div class="brand">IndiCare Command</div>
+        </div>
+
+        <div class="side-content">
+          <button id="newChat" class="primary" type="button">+ New Log</button>
+
+          <div class="nav">
+            <button class="navbtn active" type="button">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+              Assistant OS
+            </button>
+            <a class="navbtn" href="https://app.indicare.co.uk/ai-note.html" target="_blank" rel="noopener noreferrer">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line>
+              </svg>
+              I-Notes
+            </a>
+          </div>
+
+          <input id="search" class="search" type="text" placeholder="Search conversations...">
+          <div id="history" class="history"></div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="header">
+        <div class="header-left">
+          <button id="mobileMenu" class="icon mobile" type="button">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <div id="title" class="title">Intelligence for Care</div>
+        </div>
+        <button id="openSettings" class="icon" type="button">⚙</button>
+      </header>
+
+      <section id="chat" class="chat">
+        <div class="chat-inner">
+          <div id="empty" class="welcome">
+            <h1 id="welcomeTitle">Ready.</h1>
+            <p id="welcomeText">Your assistant is ready to help with documentation, guidance, and drafting.</p>
+          </div>
+          <div id="messages" class="messages" hidden></div>
+        </div>
+      </section>
+
+      <section class="input-wrap">
+        <div class="input-inner">
+          <div id="doc" class="doc">
+            <span id="docText"></span>
+            <button id="clearDoc" class="icon" type="button">✕</button>
+          </div>
+
+          <div class="ibox">
+            <div class="irow">
+              <label for="upload" class="icon" style="cursor:pointer;color:var(--muted)">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                </svg>
+                <input id="upload" type="file" hidden accept=".txt,.docx,.pdf">
+              </label>
+
+              <textarea id="input" class="ta" rows="1" placeholder="Describe situation..."></textarea>
+
+              <button id="send" class="send" type="button" aria-label="Send">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" style="transform:rotate(45deg);margin-right:2px">
+                  <line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="helper">
+            <span id="langHelp">Assistant replies in English.</span>
+            <span id="modeHelp">Mode: Balanced</span>
+            <span>Review final records before saving or export.</span>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
 
-</div>
+  <script>
+    let conversationId = null, currentDocumentText = null, currentDocumentName = null, isStreaming = false;
+    let queue = [], typing = false, lastPrompt = "", cache = [];
+    const DEFAULT_LANGUAGE = "en-GB";
+    const REG_PROMPT = " [SYSTEM: Verify response against Ofsted SCCIF and Quality Standards for Children's Homes]";
+    const RESP = {quick:"Quick", balanced:"Balanced", deep:"Deep"};
+    const LANG = {"en-GB":"English","pl-PL":"Polish","ro-RO":"Romanian","ur-PK":"Urdu","ar":"Arabic"};
+    const GREET = [
+      n => `Good morning, ${n}.`,
+      n => `Welcome back, ${n}.`,
+      n => `Ready when you are, ${n}.`,
+      n => `Good to see you, ${n}.`
+    ];
 
-<script>
-let conversationId=null
-let streaming=false
+    const $ = id => document.getElementById(id);
 
-/* QUICK PROMPTS */
-function quick(type){
-  const input=document.getElementById("input")
+    function banner(t, ms=2400){ const e=$("status"); e.textContent=t; e.style.display="block"; clearTimeout(banner.t); banner.t=setTimeout(()=>e.style.display="none",ms); }
+    function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+    function firstName(){ return window.currentUser?.first_name || localStorage.getItem("first_name") || localStorage.getItem("adult_first_name") || "there"; }
+    function setWelcome(){ $("welcomeTitle").textContent = GREET[Math.floor(Math.random()*GREET.length)](firstName()); }
 
-  if(type==="log") input.value="Write a daily log for a children's home."
-  if(type==="incident") input.value="Write a structured incident report."
-  if(type==="risk") input.value="Create a risk assessment."
-  if(type==="ofsted") input.value="Rewrite to Ofsted standards."
-}
+    function stripSystem(s){ return String(s||"").replace(/\s*\[SYSTEM:[\s\S]*$/i,"").trim(); }
 
-/* VOICE */
-function voice(){
-  const rec=new(window.SpeechRecognition||window.webkitSpeechRecognition)()
-  rec.start()
-  rec.onresult=e=>{
-    document.getElementById("input").value=e.results[0][0].transcript
-  }
-}
-
-/* FORMAT */
-function format(text){
-  text=text.replace(/\[SYSTEM[\s\S]*/,"")
-  text=text.replace(/([a-z]):(?=[A-Z])/g,"$1:\n")
-  text=text.replace(/What matters most here:/gi,"### What matters most here")
-  text=text.replace(/Key points:/gi,"### Key points")
-  text=text.replace(/Suggested/g,"### Next steps")
-  text=text.replace(/- /g,"\n- ")
-  text=text.replace(/\.\s+/g,".\n\n")
-  return text
-}
-
-function md(text){
-  text=format(text)
-  let html="",list=false
-
-  text.split("\n").forEach(l=>{
-    if(l.startsWith("###")){
-      html+=`<h3>${l.replace("###","")}</h3>`
-    }
-    else if(l.startsWith("- ")){
-      if(!list){html+="<ul>";list=true}
-      html+=`<li>${l.slice(2)}</li>`
-    }
-    else{
-      if(list){html+="</ul>";list=false}
-      if(l.trim()) html+=`<p>${l}</p>`
-    }
-  })
-
-  return html
-}
-
-/* MESSAGE */
-function append(role,text){
-  const div=document.createElement("div")
-  div.className="msg "+role
-
-  div.innerHTML=role==="assistant"?md(text):text
-
-  if(role==="assistant"){
-    const actions=document.createElement("div")
-    actions.className="actions"
-
-    const copy=document.createElement("button")
-    copy.innerText="Copy"
-    copy.onclick=()=>navigator.clipboard.writeText(text)
-
-    const save=document.createElement("button")
-    save.innerText="Save"
-    save.onclick=()=>{
-      window.open("https://app.indicare.co.uk/ai-note.html?text="+encodeURIComponent(text))
+    function summariseTitle(text){
+      const clean = stripSystem(text).replace(/[^\p{L}\p{N}\s'-]/gu," ").replace(/\s+/g," ").trim();
+      if(!clean) return "New Log";
+      const stop = new Set(["the","a","an","and","or","but","for","with","from","about","who","what","when","where","why","how","are","is","do","does","did","please","tell","write","good","morning","indicare"]);
+      const words = clean.split(" ").filter(Boolean);
+      const picked = (words.filter(w=>!stop.has(w.toLowerCase())).length ? words.filter(w=>!stop.has(w.toLowerCase())) : words).slice(0,3);
+      return picked.map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(" ") || "New Log";
     }
 
-    actions.append(copy,save)
-    div.appendChild(actions)
-  }
+    function beautify(text){
+      let out = String(text||"").trim();
+      out = out.replace(/([a-z]):(?=[A-Z])/g, "$1:\n");
+      out = out.replace(/What matters most here:/gi, "### What matters most here");
+      out = out.replace(/Key points:/gi, "### Key points");
+      out = out.replace(/Suggested staff response \/ next steps:/gi, "### Suggested next steps");
+      out = out.replace(/What should be recorded \/ handed over \/ reviewed if relevant:/gi, "### Recording and handover");
+      out = out.replace(/- /g, "\n- ");
+      out = out.replace(/\.\s+(?=[A-Z])/g, ".\n\n");
+      out = out.replace(/\n{3,}/g, "\n\n");
+      return out;
+    }
 
-  document.getElementById("messages").appendChild(div)
-  document.getElementById("chat").scrollTop=999999
-}
-
-/* SEND */
-async function send(){
-  if(streaming)return
-
-  const input=document.getElementById("input")
-  const text=input.value.trim()
-  if(!text)return
-
-  append("user",text)
-  input.value=""
-  streaming=true
-
-  const res=await fetch("/chat/",{
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json",
-      "Authorization":"Bearer "+localStorage.getItem("access_token")
-    },
-    body:JSON.stringify({
-      message:text,
-      conversation_id:conversationId
-    })
-  })
-
-  const reader=res.body.getReader()
-  const dec=new TextDecoder()
-
-  const msg=document.createElement("div")
-  msg.className="msg assistant"
-  document.getElementById("messages").appendChild(msg)
-
-  let buffer=""
-  msg.innerHTML="..."
-
-  while(true){
-    const {done,value}=await reader.read()
-    if(done)break
-
-    const chunk=dec.decode(value)
-    chunk.split("\n").forEach(l=>{
-      if(l.startsWith("data:")){
-        const t=l.replace("data:","").trim()
-        if(t!=="[DONE]"){
-          buffer+=t
-          msg.innerHTML=md(buffer)
+    function render(text, role="assistant"){
+      let safe = esc(role==="assistant" ? beautify(text) : text);
+      safe = safe.replace(/^### (.*)$/gm, "<h3>$1</h3>");
+      safe = safe.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+      const lines = safe.split("\n");
+      let html="", list=false;
+      for(const line of lines){
+        if(/^\s*-\s+/.test(line)){
+          if(!list){ html += "<ul>"; list = true; }
+          html += `<li>${line.replace(/^\s*-\s+/,"")}</li>`;
+        } else {
+          if(list){ html += "</ul>"; list = false; }
+          if(line.trim()==="") html += "<br>";
+          else if(!/^<h3>.*<\/h3>$/.test(line)) html += `<p>${line}</p>`;
+          else html += line;
         }
       }
-    })
-  }
+      if(list) html += "</ul>";
+      return html;
+    }
 
-  streaming=false
-}
+    function resize(){ const t=$("input"); t.style.height="auto"; t.style.height=Math.min(t.scrollHeight,120)+"px"; }
+    function docShow(name){ $("docText").textContent=name; $("doc").classList.add("show"); }
+    function docHide(){ $("docText").textContent=""; $("doc").classList.remove("show"); }
+    function setTitle(t="Intelligence for Care"){ $("title").textContent=t; }
 
-/* ENTER */
-document.getElementById("input").addEventListener("keydown",e=>{
-  if(e.key==="Enter"&&!e.shiftKey){
-    e.preventDefault()
-    send()
-  }
-})
+    function openSettings(){ $("settingsOverlay").classList.add("show"); $("settings").classList.add("open"); }
+    function closeSettings(){ $("settingsOverlay").classList.remove("show"); $("settings").classList.remove("open"); }
 
-/* DASHBOARD */
-function openDashboard(){
-  document.getElementById("chat").style.display="none"
-  document.getElementById("dashboard").style.display="block"
-}
+    function selectedLang(){ return $("lang").value || DEFAULT_LANGUAGE; }
+    function selectedMode(){ return $("mode").value || "balanced"; }
 
-function backChat(){
-  document.getElementById("chat").style.display="block"
-  document.getElementById("dashboard").style.display="none"
-}
+    function syncHelpers(){
+      $("langHelp").textContent = `Assistant replies in ${LANG[selectedLang()] || "English"}.`;
+      $("modeHelp").textContent = `Mode: ${RESP[selectedMode()]}`;
+      $("theme").classList.toggle("active", document.body.classList.contains("theme-dark"));
+      $("privacy").classList.toggle("active", $("app").classList.contains("privacy-active"));
+    }
 
-async function uploadDoc(){
-  const file=document.getElementById("fileUpload").files[0]
-  if(!file)return alert("Select file")
+    function buildLangInstruction(){
+      if(selectedLang()===DEFAULT_LANGUAGE) return "";
+      return ` [SYSTEM: Reply in ${LANG[selectedLang()]}. Keep safeguarding, care, and formal documentation wording clear and professional.]`;
+    }
 
-  const form=new FormData()
-  form.append("file",file)
+    async function api(url, options={}){
+      const res = await fetch(url, {
+        ...options,
+        headers:{
+          ...(options.headers||{}),
+          "Authorization":"Bearer "+localStorage.getItem("access_token"),
+          ...(options.body && !(options.body instanceof FormData) ? {"Content-Type":"application/json"} : {})
+        }
+      });
+      if(res.status===401){ location.href="/login"; return null; }
+      if(!res.ok){
+        let msg="Request failed";
+        try{ const j=await res.json(); msg=j.detail||j.error||msg; }catch{}
+        throw new Error(msg);
+      }
+      const type = res.headers.get("content-type") || "";
+      return type.includes("application/json") ? res.json() : null;
+    }
 
-  const res=await fetch("/chat/upload",{
-    method:"POST",
-    headers:{
-      "Authorization":"Bearer "+localStorage.getItem("access_token")
-    },
-    body:form
-  })
+    async function uploadDoc(file){
+      const fd = new FormData();
+      fd.append("file", file);
+      if(conversationId) fd.append("conversation_id", conversationId);
+      const data = await api("/chat/upload", {method:"POST", body:fd});
+      currentDocumentText = data.text;
+      currentDocumentName = data.filename;
+      docShow(data.filename);
+      banner(`Document attached: ${data.filename}`);
+    }
 
-  const data=await res.json()
+    function copyText(text){
+      navigator.clipboard.writeText(text).then(()=>banner("Copied")).catch(()=>banner("Could not copy"));
+    }
 
-  document.getElementById("docList").innerHTML=`
-    <div style="padding:10px;border:1px solid #e2e8f0;border-radius:6px;">
-      ${data.filename}
-    </div>
-  `
-}
+    async function editMessage(messageId, currentText){
+      const edited = prompt("Edit message", currentText);
+      if(edited===null) return;
+      const cleaned = stripSystem(edited).trim();
+      if(!cleaned) return banner("Message cannot be empty");
 
-/* CONVERSATIONS */
-async function load(){
-  try{
-    const res=await fetch("/chat/conversations",{
-      headers:{Authorization:"Bearer "+localStorage.getItem("access_token")}
-    })
-    const data=await res.json()
+      isStreaming = true; $("send").disabled = true;
+      try{
+        await stream(`/chat/messages/${messageId}/edit`, {
+          message: cleaned,
+          document_text: currentDocumentText,
+          document_name: currentDocumentName,
+          response_mode: selectedMode()
+        });
+        if(conversationId) await openConversation(conversationId, $("title").textContent);
+        banner("Updated");
+      } catch(e){
+        banner(e.message || "Edit failed");
+      } finally {
+        isStreaming = false; $("send").disabled = false;
+      }
+    }
 
-    const h=document.getElementById("history")
-    data.forEach(c=>{
-      const d=document.createElement("div")
-      d.className="history-item"
-      d.innerHTML=`${c.title} <span onclick="del(${c.id})">🗑</span>`
-      d.onclick=()=>open(c.id)
-      h.appendChild(d)
-    })
-  }catch{}
-}
+    function appendMessage(role, text, opts={}){
+      const shown = role==="user" ? stripSystem(text) : text;
+      const wrap = document.createElement("div");
+      wrap.className = `wrap ${role}`;
 
-async function open(id){
-  conversationId=id
+      const avatar = document.createElement("div");
+      avatar.className = "avatar";
+      avatar.textContent = role==="assistant" ? "IC" : "Y";
 
-  const res=await fetch(`/chat/conversations/${id}`,{
-    headers:{Authorization:"Bearer "+localStorage.getItem("access_token")}
-  })
+      const block = document.createElement("div");
+      block.className = "block";
 
-  const data=await res.json()
+      const msg = document.createElement("div");
+      msg.className = "msg";
+      msg.innerHTML = role==="assistant" ? render(shown, "assistant") : esc(shown);
 
-  document.getElementById("messages").innerHTML=""
-  data.messages.forEach(m=>append(m.role,m.message))
-}
+      block.appendChild(msg);
 
-async function del(id){
-  await fetch(`/chat/conversations/${id}`,{
-    method:"DELETE",
-    headers:{Authorization:"Bearer "+localStorage.getItem("access_token")}
-  })
-  location.reload()
-}
+      if(opts.meta){
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        meta.textContent = opts.meta;
+        block.appendChild(meta);
+      }
 
-function newChat(){
-  conversationId=null
-  document.getElementById("messages").innerHTML=""
-}
+      const actions = document.createElement("div");
+      actions.className = "actions";
 
-load()
-</script>
+      const copy = document.createElement("button");
+      copy.className = "chip";
+      copy.textContent = "Copy";
+      copy.onclick = () => copyText(shown);
+      actions.appendChild(copy);
 
+      if(role==="assistant"){
+        const a = document.createElement("button");
+        a.className = "chip";
+        a.textContent = "Format for Ofsted";
+        a.onclick = () => quick("ofsted");
+        const b = document.createElement("button");
+        b.className = "chip";
+        b.textContent = "Draft Risk Assess";
+        b.onclick = () => quick("risk");
+        actions.append(a,b);
+      }
+
+      if(role==="user" && opts.messageId){
+        const e = document.createElement("button");
+        e.className = "chip";
+        e.textContent = "Edit";
+        e.onclick = () => editMessage(opts.messageId, shown);
+        actions.appendChild(e);
+      }
+
+      block.appendChild(actions);
+      wrap.append(avatar, block);
+      $("messages").appendChild(wrap);
+      $("chat").scrollTop = $("chat").scrollHeight;
+    }
+
+    function createStreamMsg(){
+      const old = $("streaming");
+      if(old) old.remove();
+      const wrap = document.createElement("div");
+      wrap.id = "streaming";
+      wrap.className = "wrap assistant";
+      wrap.innerHTML = `<div class="avatar">IC</div><div class="block"><div class="msg typing" data-raw=""></div><div class="meta">Reply language: ${LANG[selectedLang()]||"English"} · Mode: ${RESP[selectedMode()]}</div></div>`;
+      $("messages").appendChild(wrap);
+      $("chat").scrollTop = $("chat").scrollHeight;
+    }
+
+    function startTyping(){
+      if(typing) return;
+      typing = true;
+      const el = document.querySelector("#streaming .msg");
+      if(!el){ typing=false; return; }
+      let raw = el.getAttribute("data-raw") || "";
+      const tick = setInterval(() => {
+        if(queue.length){
+          raw += queue.shift();
+          el.innerHTML = render(raw, "assistant");
+          el.setAttribute("data-raw", raw);
+          $("chat").scrollTop = $("chat").scrollHeight;
+        } else if(!isStreaming){
+          clearInterval(tick);
+          typing = false;
+          el.classList.remove("typing");
+        }
+      }, 3);
+    }
+
+    async function stream(url, body){
+      body.message += REG_PROMPT + buildLangInstruction();
+      body.reply_language = selectedLang();
+      body.reply_language_label = LANG[selectedLang()] || "English";
+      body.response_mode = selectedMode();
+
+      const res = await fetch(url, {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "Authorization":"Bearer "+localStorage.getItem("access_token")
+        },
+        body:JSON.stringify(body)
+      });
+
+      if(res.status===401){ location.href="/login"; return; }
+      if(!res.ok){
+        let msg=`Chat request failed (${res.status})`;
+        try{ msg = await res.text() || msg; }catch{}
+        throw new Error(msg);
+      }
+
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buffer = "";
+
+      createStreamMsg();
+      queue.push(".");
+      startTyping();
+
+      while(true){
+        const {done, value} = await reader.read();
+        if(done) break;
+        buffer += dec.decode(value, {stream:true});
+        const parts = buffer.split("\n");
+        buffer = parts.pop() || "";
+        for(const line of parts){
+          if(!line.startsWith("data:")) continue;
+          const payload = line.slice(5).trim();
+          if(payload==="[DONE]") continue;
+          for(const ch of payload) queue.push(ch);
+          startTyping();
+        }
+      }
+    }
+
+    function resetWelcome(){
+      conversationId = null; currentDocumentText = null; currentDocumentName = null;
+      $("messages").innerHTML = ""; $("messages").hidden = true; $("empty").hidden = false;
+      $("input").value = ""; resize(); docHide(); setTitle(); setWelcome(); filterConversations(); closeSettings();
+    }
+
+    async function renameShort(id, prompt){
+      try{
+        await api(`/chat/conversations/${id}/rename`, {
+          method:"POST",
+          body:JSON.stringify({title: summariseTitle(prompt)})
+        });
+        setTitle(summariseTitle(prompt));
+        await loadConversations();
+      } catch(e){ console.error(e); }
+    }
+
+    async function deleteConversation(id){
+      if(!confirm("Delete this conversation?")) return;
+      try{
+        await api(`/chat/conversations/${id}`, {method:"DELETE"});
+        if(Number(conversationId)===Number(id)) resetWelcome();
+        await loadConversations();
+        banner("Conversation deleted");
+      } catch(e){ banner(e.message || "Delete failed"); }
+    }
+
+    function renderHistory(rows){
+      const host = $("history");
+      host.innerHTML = "";
+      rows.forEach(r => {
+        const item = document.createElement("div");
+        item.className = `item ${Number(r.id)===Number(conversationId) ? "active" : ""}`;
+
+        const row = document.createElement("div");
+        row.className = "row";
+
+        const main = document.createElement("button");
+        main.className = "mainbtn";
+        main.innerHTML = `<div class="ttl">${esc(stripSystem(r.title || "Observation"))}</div>`;
+        main.onclick = () => openConversation(r.id, stripSystem(r.title || "Observation"));
+
+        const copy = document.createElement("button");
+        copy.className = "mini";
+        copy.textContent = "⧉";
+        copy.onclick = e => { e.stopPropagation(); copyText(stripSystem(r.title || "Observation")); };
+
+        const del = document.createElement("button");
+        del.className = "mini danger";
+        del.textContent = "🗑";
+        del.onclick = e => { e.stopPropagation(); deleteConversation(r.id); };
+
+        row.append(main, copy, del);
+        item.appendChild(row);
+        host.appendChild(item);
+      });
+    }
+
+    function filterConversations(){
+      const q = $("search").value.trim().toLowerCase();
+      const rows = q ? cache.filter(r => stripSystem(r.title||"").toLowerCase().includes(q)) : cache;
+      renderHistory(rows);
+    }
+
+    async function loadConversations(){
+      try{
+        cache = await api("/chat/conversations") || [];
+        filterConversations();
+        return cache;
+      } catch(e){
+        banner("Could not load conversations");
+        return [];
+      }
+    }
+
+    async function openConversation(id, title){
+      try{
+        const data = await api(`/chat/conversations/${id}`);
+        if(!data) return;
+        conversationId = id;
+        $("messages").innerHTML = "";
+        $("empty").hidden = true;
+        $("messages").hidden = false;
+
+        data.messages.forEach(m => appendMessage(m.role, m.message, {messageId:m.id}));
+        if(data.document){
+          currentDocumentText = data.document.text;
+          currentDocumentName = data.document.filename;
+          docShow(data.document.filename);
+        } else {
+          currentDocumentText = null;
+          currentDocumentName = null;
+          docHide();
+        }
+
+        setTitle(title || "Observation");
+        filterConversations();
+        if(window.innerWidth <= 768){
+          $("sidebar").classList.remove("open");
+          $("overlay").classList.remove("show");
+        }
+      } catch(e){
+        banner(e.message || "Could not open conversation");
+      }
+    }
+
+    async function sendMessage(){
+      const raw = $("input").value.trim();
+      const text = stripSystem(raw);
+      if(!text || isStreaming) return;
+
+      const prev = conversationId;
+      lastPrompt = text;
+      isStreaming = true;
+      $("send").disabled = true;
+      $("empty").hidden = true;
+      $("messages").hidden = false;
+
+      appendMessage("user", text, {meta:`Mode: ${RESP[selectedMode()]}`});
+      $("input").value = ""; resize();
+
+      try{
+        await stream("/chat/", {
+          message:text,
+          conversation_id:conversationId,
+          document_text:currentDocumentText,
+          document_name:currentDocumentName
+        });
+      } catch(e){
+        const streamEl = document.querySelector("#streaming .msg");
+        if(streamEl){
+          streamEl.classList.remove("typing");
+          streamEl.innerHTML = render(`Sorry, there was a problem: ${e.message}`, "assistant");
+        } else {
+          appendMessage("assistant", `Sorry, there was a problem: ${e.message}`);
+        }
+      } finally {
+        isStreaming = false;
+        $("send").disabled = false;
+        const rows = await loadConversations();
+        if(!prev && !conversationId && rows.length){
+          conversationId = rows[0].id;
+          await renameShort(conversationId, lastPrompt);
+        }
+      }
+    }
+
+    function quick(type){
+      if(type==="ofsted"){
+        $("input").value = "Rewrite the above documentation so it aligns with Ofsted Quality Standards and is ready for professional review.";
+      } else if(type==="risk"){
+        $("input").value = "Generate a formal risk assessment based on this situation. Include presenting risks, protective factors, staff actions, and follow-up actions.";
+      }
+      resize();
+      sendMessage();
+    }
+
+    function bind(){
+      $("sideToggle").onclick = () => $("sidebar").classList.toggle("open");
+      $("mobileMenu").onclick = () => { $("sidebar").classList.add("open"); $("overlay").classList.add("show"); };
+      $("overlay").onclick = () => { $("sidebar").classList.remove("open"); $("overlay").classList.remove("show"); };
+
+      $("openSettings").onclick = openSettings;
+      $("closeSettings").onclick = closeSettings;
+      $("settingsOverlay").onclick = closeSettings;
+
+      $("newChat").onclick = resetWelcome;
+      $("backWelcome").onclick = resetWelcome;
+
+      $("logout").onclick = () => { localStorage.removeItem("access_token"); location.href="/login"; };
+
+      $("theme").onclick = () => {
+        document.body.classList.toggle("theme-dark");
+        localStorage.setItem("indicare_theme", document.body.classList.contains("theme-dark") ? "dark" : "light");
+        syncHelpers();
+      };
+
+      $("privacy").onclick = () => {
+        $("app").classList.toggle("privacy-active");
+        syncHelpers();
+      };
+
+      $("lang").onchange = () => { localStorage.setItem("indicare_reply_language", selectedLang()); syncHelpers(); banner(`Reply language set to ${LANG[selectedLang()]||"English"}`); };
+      $("mode").onchange = () => { localStorage.setItem("indicare_response_mode", selectedMode()); syncHelpers(); banner(`Response mode set to ${RESP[selectedMode()]}`); };
+
+      $("search").oninput = filterConversations;
+      $("input").addEventListener("keydown", e => { if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); sendMessage(); } });
+      $("input").addEventListener("input", resize);
+      $("send").onclick = sendMessage;
+
+      $("upload").onchange = async e => {
+        const file = e.target.files?.[0];
+        if(!file) return;
+        try{ await uploadDoc(file); } catch(err){ banner(err.message || "Upload failed"); }
+        e.target.value = "";
+      };
+
+      $("clearDoc").onclick = async () => {
+        try{ if(conversationId) await api(`/chat/conversations/${conversationId}/document`, {method:"DELETE"}); } catch(e){}
+        currentDocumentText = null; currentDocumentName = null; docHide(); banner("Document removed");
+      };
+    }
+
+    function restorePrefs(){
+      document.body.classList.toggle("theme-dark", (localStorage.getItem("indicare_theme") || "light") === "dark");
+      $("lang").value = localStorage.getItem("indicare_reply_language") || DEFAULT_LANGUAGE;
+      $("mode").value = localStorage.getItem("indicare_response_mode") || "balanced";
+      syncHelpers();
+    }
+
+    async function init(){
+      bind();
+      restorePrefs();
+      resize();
+      setWelcome();
+      await loadConversations();
+    }
+
+    document.addEventListener("DOMContentLoaded", init);
+  </script>
 </body>
 </html>
