@@ -99,16 +99,15 @@
     .toggle:after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s}
     .toggle.active{background:var(--accent)}
     .toggle.active:after{left:23px}
-    .ghost,.logout,.action,.soft{padding:12px;border-radius:12px;font-weight:600}
+    .ghost,.logout,.action{padding:12px;border-radius:12px;font-weight:600}
     .ghost{border:1px solid var(--line);background:var(--panel)}
-    .soft{border:1px solid var(--line);background:var(--panel);padding:8px 12px}
     .logout{background:var(--danger);color:#fff}
     .action{background:var(--accent);color:#fff}
     .status{display:none;position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:50;padding:10px 14px;border-radius:10px;background:#111827;color:#fff;font-size:.85rem;box-shadow:var(--shadow);max-width:calc(100vw - 24px);text-align:center}
     body.theme-dark .status{background:#f8fafc;color:#0f172a}
     .typing:after{content:"▊";color:var(--accent);animation:blink 1s infinite;margin-left:2px}
     .admin-top{display:flex;flex-direction:column;gap:16px}
-    .admin-tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .admin-tabs,.library-tabs{display:flex;gap:8px;flex-wrap:wrap}
     .tabbtn{padding:10px 14px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--muted);font-weight:600}
     .tabbtn.active,.tabbtn:hover{color:var(--accent);border-color:var(--accent);background:rgba(37,99,235,.06)}
     .summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
@@ -116,7 +115,8 @@
     .summary .n{font-size:1.35rem;font-weight:700}
     .summary .l{font-size:.82rem;color:var(--muted);margin-top:4px}
     .admin-grid{display:grid;grid-template-columns:380px 1fr;gap:16px}
-    .users-list,.homes-list,.providers-list,.docs-list,.audit-list,.billing-list{display:flex;flex-direction:column;gap:10px}
+    .library-grid{display:grid;grid-template-columns:360px 1fr;gap:16px}
+    .users-list,.homes-list,.providers-list,.docs-list,.audit-list,.billing-list,.library-list{display:flex;flex-direction:column;gap:10px}
     .entity-row{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:14px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
     .entity-title{font-weight:600}
     .entity-meta{font-size:.86rem;color:var(--muted);margin-top:6px}
@@ -131,9 +131,12 @@
     .tag.bad{background:rgba(220,38,38,.12);color:var(--danger)}
     .tag.warn{background:rgba(217,119,6,.12);color:var(--warn)}
     .tag.neutral{background:rgba(100,116,139,.12);color:var(--muted)}
+    .viewbox{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:16px;min-height:220px}
+    .viewbox h3{color:var(--accent);margin-bottom:10px}
+    .viewbox p{line-height:1.7;margin-bottom:10px}
     @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
     @media (max-width:1000px){
-      .admin-grid{grid-template-columns:1fr}
+      .admin-grid,.library-grid{grid-template-columns:1fr}
       .filters,.summary,.stats{grid-template-columns:1fr 1fr}
     }
     @media (max-width:768px){
@@ -223,6 +226,14 @@
               Assistant OS
             </button>
 
+            <button id="navLibrary" class="navbtn hidden" type="button">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+              </svg>
+              Policies
+            </button>
+
             <button id="navAdmin" class="navbtn hidden" type="button">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 2l3 6 6 .9-4.5 4.4 1.1 6.2L12 16.8 6.4 19.5l1.1-6.2L3 8.9 9 8z"></path>
@@ -264,6 +275,98 @@
             <p id="welcomeText">Your assistant is ready to help with documentation, guidance, and drafting.</p>
           </div>
           <div id="messages" class="messages hidden"></div>
+        </div>
+      </section>
+
+      <section id="libraryPanel" class="panel hidden">
+        <div class="panel-inner">
+          <div class="library-tabs" style="margin-bottom:16px;">
+            <button class="tabbtn active" data-library-tab="list">Library</button>
+            <button id="managerEditorTab" class="tabbtn hidden" data-library-tab="editor">Manage</button>
+          </div>
+
+          <div id="library-list-tab">
+            <div class="filters">
+              <input id="librarySearch" class="field" placeholder="Search title, type, content">
+              <select id="libraryTypeFilter" class="sel">
+                <option value="">All types</option>
+                <option value="policy">policy</option>
+                <option value="procedure">procedure</option>
+                <option value="guidance">guidance</option>
+                <option value="template">template</option>
+                <option value="home_document">home_document</option>
+              </select>
+              <select id="libraryApprovalFilter" class="sel">
+                <option value="">All approval states</option>
+                <option value="not_required">not_required</option>
+                <option value="pending">pending</option>
+                <option value="approved">approved</option>
+              </select>
+              <button id="refreshLibraryBtn" class="ghost" type="button">Refresh library</button>
+            </div>
+
+            <div class="library-grid">
+              <div class="card">
+                <strong>Documents for your home</strong>
+                <div id="libraryList" class="library-list"></div>
+              </div>
+
+              <div class="viewbox" id="libraryViewer">
+                <h3>Select a document</h3>
+                <p>Open a policy or document from the list to read it here.</p>
+              </div>
+            </div>
+          </div>
+
+          <div id="library-editor-tab" class="hidden">
+            <div class="library-grid">
+              <div class="card">
+                <strong id="libraryFormTitle">Create document</strong>
+                <div><label for="libraryDocTitle">Title</label><input id="libraryDocTitle" class="field" placeholder="Document title"></div>
+                <div><label for="libraryDocType">Document type</label>
+                  <select id="libraryDocType" class="sel">
+                    <option value="policy">policy</option>
+                    <option value="procedure">procedure</option>
+                    <option value="guidance">guidance</option>
+                    <option value="template">template</option>
+                    <option value="home_document">home_document</option>
+                  </select>
+                </div>
+                <div><label for="libraryIssueDate">Issue date</label><input id="libraryIssueDate" class="field" type="date"></div>
+                <div><label for="libraryReviewDate">Review date</label><input id="libraryReviewDate" class="field" type="date"></div>
+                <div><label for="libraryExpiryDate">Expiry date</label><input id="libraryExpiryDate" class="field" type="date"></div>
+                <div><label for="libraryApprovalStatus">Approval status</label>
+                  <select id="libraryApprovalStatus" class="sel">
+                    <option value="not_required">not_required</option>
+                    <option value="pending">pending</option>
+                    <option value="approved">approved</option>
+                  </select>
+                </div>
+                <div><label for="libraryConfidentiality">Confidentiality</label>
+                  <select id="libraryConfidentiality" class="sel">
+                    <option value="standard">standard</option>
+                    <option value="restricted">restricted</option>
+                    <option value="confidential">confidential</option>
+                  </select>
+                </div>
+                <div><label for="libraryOwnerId">Owner</label><select id="libraryOwnerId" class="sel"><option value="">Select owner</option></select></div>
+                <div><label for="libraryInputText">Document content</label><textarea id="libraryInputText" class="area" placeholder="Write or paste the policy/document content"></textarea></div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                  <button id="saveLibraryDocBtn" class="action" type="button">Save document</button>
+                  <button id="resetLibraryDocBtn" class="ghost" type="button">Clear form</button>
+                  <button id="deleteLibraryDocBtn" class="logout hidden" type="button">Delete</button>
+                </div>
+              </div>
+
+              <div class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+                  <strong>Manage home documents</strong>
+                  <button id="refreshManagerLibraryBtn" class="ghost" type="button" style="padding:8px 12px;">Refresh</button>
+                </div>
+                <div id="managerLibraryList" class="library-list"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -523,25 +626,79 @@
   </div>
 
   <script>
-    let conversationId = null, currentDocumentText = null, currentDocumentName = null, isStreaming = false;
-    let queue = [], typing = false, lastPrompt = "", cache = [], currentUser = null;
+    let conversationId = null;
+    let currentDocumentText = null;
+    let currentDocumentName = null;
+    let isStreaming = false;
+    let queue = [];
+    let typing = false;
+    let lastPrompt = "";
+    let cache = [];
+    let currentUser = null;
     let adminCreateActive = true;
-    let adminUsers = [], homes = [], providers = [], docs = [], billing = null, audit = [];
+    let adminUsers = [];
+    let homes = [];
+    let providers = [];
+    let docs = [];
+    let billing = null;
+    let audit = [];
+    let libraryDocs = [];
+    let selectedLibraryDoc = null;
+    let editingLibraryDocId = null;
+
     const DEFAULT_LANGUAGE = "en-GB";
     const REG_PROMPT = " [SYSTEM: Verify response against Ofsted SCCIF and Quality Standards for Children's Homes]";
     const RESP = {quick:"Quick", balanced:"Balanced", deep:"Deep"};
     const LANG = {"en-GB":"English","pl-PL":"Polish","ro-RO":"Romanian","ur-PK":"Urdu","ar":"Arabic"};
-    const GREET = [n=>`Good morning, ${n}.`, n=>`Welcome back, ${n}.`, n=>`Ready when you are, ${n}.`, n=>`Good to see you, ${n}.`];
+    const GREET = [
+      n => `Good morning, ${n}.`,
+      n => `Welcome back, ${n}.`,
+      n => `Ready when you are, ${n}.`,
+      n => `Good to see you, ${n}.`
+    ];
+
     const $ = id => document.getElementById(id);
 
-    function banner(t, ms=2400){ const e=$("status"); e.textContent=t; e.style.display="block"; clearTimeout(banner.t); banner.t=setTimeout(()=>e.style.display="none",ms); }
-    function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
-    function firstName(){ return currentUser?.first_name || localStorage.getItem("first_name") || localStorage.getItem("user_first_name") || "there"; }
-    function userInitials(){ const full=[currentUser?.first_name,currentUser?.last_name].filter(Boolean).join(" ")||localStorage.getItem("user_name")||firstName(); const p=String(full).trim().split(/\s+/).filter(Boolean); if(!p.length) return "Y"; if(p.length===1) return p[0].slice(0,2).toUpperCase(); return (p[0][0]+p[1][0]).toUpperCase(); }
-    function setWelcome(){ $("welcomeTitle").textContent = GREET[Math.floor(Math.random()*GREET.length)](firstName()); }
+    function banner(t, ms=2400){
+      const e = $("status");
+      e.textContent = t;
+      e.style.display = "block";
+      clearTimeout(banner.t);
+      banner.t = setTimeout(() => e.style.display = "none", ms);
+    }
+
+    function esc(s){
+      return String(s || "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
+    }
+
+    function firstName(){
+      return currentUser?.first_name || localStorage.getItem("first_name") || localStorage.getItem("user_first_name") || "there";
+    }
+
+    function userInitials(){
+      const full = [currentUser?.first_name, currentUser?.last_name].filter(Boolean).join(" ") || localStorage.getItem("user_name") || firstName();
+      const parts = String(full).trim().split(/\s+/).filter(Boolean);
+      if(!parts.length) return "Y";
+      if(parts.length === 1) return parts[0].slice(0,2).toUpperCase();
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+
+    function setWelcome(){
+      $("welcomeTitle").textContent = GREET[Math.floor(Math.random() * GREET.length)](firstName());
+    }
+
     function selectedLang(){ return $("lang").value || DEFAULT_LANGUAGE; }
     function selectedMode(){ return $("mode").value || "balanced"; }
-    function stripSystem(s){ return String(s||"").replace(/\s*\[SYSTEM:[\s\S]*$/i,"").trim(); }
+    function role(){ return (currentUser?.role || "").toLowerCase(); }
+    function isAdmin(){ return role() === "admin"; }
+    function isManager(){ return role() === "manager"; }
+    function isStaff(){ return role() === "staff"; }
+    function canManageLibrary(){ return isAdmin() || isManager(); }
 
     function syncHelpers(){
       $("langHelp").textContent = `Assistant replies in ${LANG[selectedLang()] || "English"}.`;
@@ -551,18 +708,22 @@
       $("adminActiveToggle").classList.toggle("active", adminCreateActive);
     }
 
+    function stripSystem(s){
+      return String(s || "").replace(/\s*\[SYSTEM:[\s\S]*$/i, "").trim();
+    }
+
     function summariseTitle(text){
       const clean = stripSystem(text).replace(/[^\p{L}\p{N}\s'-]/gu," ").replace(/\s+/g," ").trim();
       if(!clean) return "New Log";
       const stop = new Set(["the","a","an","and","or","but","for","with","from","about","who","what","when","where","why","how","are","is","do","does","did","please","tell","write","good","morning","indicare"]);
       const words = clean.split(" ").filter(Boolean);
-      const pool = words.filter(w=>!stop.has(w.toLowerCase()));
+      const pool = words.filter(w => !stop.has(w.toLowerCase()));
       const picked = (pool.length ? pool : words).slice(0,3);
-      return picked.map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(" ") || "New Log";
+      return picked.map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(" ") || "New Log";
     }
 
     function beautify(text){
-      let out = String(text||"").trim();
+      let out = String(text || "").trim();
       out = out.replace(/([a-z]):(?=[A-Z])/g, "$1:\n");
       out = out.replace(/What matters most here:/gi, "### What matters most here");
       out = out.replace(/Key points:/gi, "### Key points");
@@ -574,19 +735,20 @@
       return out;
     }
 
-    function render(text, role="assistant"){
-      let safe = esc(role==="assistant" ? beautify(text) : text);
+    function render(text, roleName="assistant"){
+      let safe = esc(roleName === "assistant" ? beautify(text) : text);
       safe = safe.replace(/^### (.*)$/gm, "<h3>$1</h3>");
       safe = safe.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
       const lines = safe.split("\n");
-      let html="", list=false;
+      let html = "", list = false;
+
       for(const line of lines){
         if(/^\s*-\s+/.test(line)){
           if(!list){ html += "<ul>"; list = true; }
           html += `<li>${line.replace(/^\s*-\s+/,"")}</li>`;
         } else {
           if(list){ html += "</ul>"; list = false; }
-          if(line.trim()==="") html += "<br>";
+          if(line.trim() === "") html += "<br>";
           else if(!/^<h3>.*<\/h3>$/.test(line)) html += `<p>${line}</p>`;
           else html += line;
         }
@@ -595,58 +757,120 @@
       return html;
     }
 
-    function resize(){ const t=$("input"); t.style.height="auto"; t.style.height=Math.min(t.scrollHeight,120)+"px"; }
-    function docShow(name){ $("docText").textContent=name; $("doc").classList.add("show"); }
-    function docHide(){ $("docText").textContent=""; $("doc").classList.remove("show"); }
-    function setTitle(t="Intelligence for Care"){ $("title").textContent=t; }
-    function buildLangInstruction(){ return selectedLang()===DEFAULT_LANGUAGE ? "" : ` [SYSTEM: Reply in ${LANG[selectedLang()]}. Keep safeguarding, care, and formal documentation wording clear and professional.]`; }
-    function openSettings(){ $("settingsOverlay").classList.add("show"); $("settings").classList.add("open"); }
-    function closeSettings(){ $("settingsOverlay").classList.remove("show"); $("settings").classList.remove("open"); }
+    function resize(){
+      const t = $("input");
+      t.style.height = "auto";
+      t.style.height = Math.min(t.scrollHeight, 120) + "px";
+    }
+
+    function docShow(name){
+      $("docText").textContent = name;
+      $("doc").classList.add("show");
+    }
+
+    function docHide(){
+      $("docText").textContent = "";
+      $("doc").classList.remove("show");
+    }
+
+    function setTitle(t="Intelligence for Care"){
+      $("title").textContent = t;
+    }
+
+    function buildLangInstruction(){
+      return selectedLang() === DEFAULT_LANGUAGE
+        ? ""
+        : ` [SYSTEM: Reply in ${LANG[selectedLang()]}. Keep safeguarding, care, and formal documentation wording clear and professional.]`;
+    }
+
+    function openSettings(){
+      $("settingsOverlay").classList.add("show");
+      $("settings").classList.add("open");
+    }
+
+    function closeSettings(){
+      $("settingsOverlay").classList.remove("show");
+      $("settings").classList.remove("open");
+    }
 
     function showAssistantView(){
       $("assistantPanel").classList.remove("hidden");
+      $("libraryPanel").classList.add("hidden");
       $("adminPanel").classList.add("hidden");
       $("inputWrap").classList.remove("hidden");
       $("navAssistant").classList.add("active");
+      $("navLibrary").classList.remove("active");
       $("navAdmin").classList.remove("active");
       setTitle(conversationId ? $("title").textContent : "Intelligence for Care");
     }
 
+    function showLibraryView(){
+      $("assistantPanel").classList.add("hidden");
+      $("libraryPanel").classList.remove("hidden");
+      $("adminPanel").classList.add("hidden");
+      $("inputWrap").classList.add("hidden");
+      $("navAssistant").classList.remove("active");
+      $("navLibrary").classList.add("active");
+      $("navAdmin").classList.remove("active");
+      setTitle("Policies");
+      loadLibrary();
+    }
+
     function showAdminView(){
       $("assistantPanel").classList.add("hidden");
+      $("libraryPanel").classList.add("hidden");
       $("adminPanel").classList.remove("hidden");
       $("inputWrap").classList.add("hidden");
       $("navAssistant").classList.remove("active");
+      $("navLibrary").classList.remove("active");
       $("navAdmin").classList.add("active");
       setTitle("Admin");
       loadAdminReferenceData().then(loadActiveAdminTab);
     }
 
     function setAdminTab(name){
-      document.querySelectorAll(".tabbtn").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+      document.querySelectorAll(".tabbtn[data-tab]").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
       document.querySelectorAll(".admin-tab").forEach(tab => tab.classList.add("hidden"));
       $("tab-" + name).classList.remove("hidden");
       localStorage.setItem("indicare_admin_tab", name);
       loadActiveAdminTab();
     }
 
-    function activeAdminTab(){ return localStorage.getItem("indicare_admin_tab") || "users"; }
+    function setLibraryTab(name){
+      document.querySelectorAll(".tabbtn[data-library-tab]").forEach(b => b.classList.toggle("active", b.dataset.libraryTab === name));
+      $("library-list-tab").classList.toggle("hidden", name !== "list");
+      $("library-editor-tab").classList.toggle("hidden", name !== "editor");
+      if(name === "editor" && !canManageLibrary()) setLibraryTab("list");
+    }
+
+    function activeAdminTab(){
+      return localStorage.getItem("indicare_admin_tab") || "users";
+    }
 
     async function api(url, options={}){
       const res = await fetch(url, {
         ...options,
         headers:{
-          ...(options.headers||{}),
-          "Authorization":"Bearer "+localStorage.getItem("access_token"),
+          ...(options.headers || {}),
+          "Authorization":"Bearer " + localStorage.getItem("access_token"),
           ...(options.body && !(options.body instanceof FormData) ? {"Content-Type":"application/json"} : {})
         }
       });
-      if(res.status===401){ location.href="/login"; return null; }
+
+      if(res.status === 401){
+        location.href = "/login";
+        return null;
+      }
+
       if(!res.ok){
-        let msg="Request failed";
-        try{ const j=await res.json(); msg=j.detail||j.error||msg; }catch{}
+        let msg = "Request failed";
+        try{
+          const j = await res.json();
+          msg = j.detail || j.error || msg;
+        }catch{}
         throw new Error(msg);
       }
+
       const type = res.headers.get("content-type") || "";
       return type.includes("application/json") ? res.json() : null;
     }
@@ -658,9 +882,13 @@
           currentUser = data.user;
           localStorage.setItem("first_name", currentUser.first_name || "");
           localStorage.setItem("user_name", [currentUser.first_name, currentUser.last_name].filter(Boolean).join(" "));
-          if(currentUser.role === "admin") $("navAdmin").classList.remove("hidden");
+          if(isAdmin()) $("navAdmin").classList.remove("hidden");
+          if(isAdmin() || isManager() || isStaff()) $("navLibrary").classList.remove("hidden");
+          if(canManageLibrary()) $("managerEditorTab").classList.remove("hidden");
         }
-      } catch(e){ console.error(e); }
+      }catch(e){
+        console.error(e);
+      }
     }
 
     async function uploadDoc(file){
@@ -675,18 +903,19 @@
     }
 
     function copyText(text){
-      navigator.clipboard.writeText(text).then(()=>banner("Copied")).catch(()=>banner("Could not copy"));
+      navigator.clipboard.writeText(text).then(() => banner("Copied")).catch(() => banner("Could not copy"));
     }
 
     async function editMessage(messageId, currentText){
       const edited = prompt("Edit message", currentText);
-      if(edited===null) return;
+      if(edited === null) return;
       const cleaned = stripSystem(edited).trim();
       if(!cleaned) return banner("Message cannot be empty");
 
-      isStreaming = true; $("send").disabled = true;
+      isStreaming = true;
+      $("send").disabled = true;
       try{
-        await stream(`/chat/messages/${messageId}/edit`, {
+        await stream("/chat/messages/" + messageId + "/edit", {
           message: cleaned,
           document_text: currentDocumentText,
           document_name: currentDocumentName,
@@ -694,25 +923,29 @@
         });
         if(conversationId) await openConversation(conversationId, $("title").textContent);
         banner("Updated");
-      } catch(e){ banner(e.message || "Edit failed"); }
-      finally { isStreaming = false; $("send").disabled = false; }
+      }catch(e){
+        banner(e.message || "Edit failed");
+      }finally{
+        isStreaming = false;
+        $("send").disabled = false;
+      }
     }
 
-    function appendMessage(role, text, opts={}){
-      const shown = role==="user" ? stripSystem(text) : text;
+    function appendMessage(roleName, text, opts={}){
+      const shown = roleName === "user" ? stripSystem(text) : text;
       const wrap = document.createElement("div");
-      wrap.className = `wrap ${role}`;
+      wrap.className = `wrap ${roleName}`;
 
       const avatar = document.createElement("div");
       avatar.className = "avatar";
-      avatar.textContent = role==="assistant" ? "IC" : userInitials();
+      avatar.textContent = roleName === "assistant" ? "IC" : userInitials();
 
       const block = document.createElement("div");
       block.className = "block";
 
       const msg = document.createElement("div");
       msg.className = "msg";
-      msg.innerHTML = role==="assistant" ? render(shown, "assistant") : esc(shown);
+      msg.innerHTML = roleName === "assistant" ? render(shown, "assistant") : esc(shown);
       block.appendChild(msg);
 
       if(opts.meta){
@@ -731,19 +964,21 @@
       copy.onclick = () => copyText(shown);
       actions.appendChild(copy);
 
-      if(role==="assistant"){
+      if(roleName === "assistant"){
         const a = document.createElement("button");
         a.className = "chip";
         a.textContent = "Format for Ofsted";
         a.onclick = () => quick("ofsted");
+
         const b = document.createElement("button");
         b.className = "chip";
         b.textContent = "Draft Risk Assess";
         b.onclick = () => quick("risk");
-        actions.append(a,b);
+
+        actions.append(a, b);
       }
 
-      if(role==="user" && opts.messageId){
+      if(roleName === "user" && opts.messageId){
         const e = document.createElement("button");
         e.className = "chip";
         e.textContent = "Edit";
@@ -763,7 +998,7 @@
       const wrap = document.createElement("div");
       wrap.id = "streaming";
       wrap.className = "wrap assistant";
-      wrap.innerHTML = `<div class="avatar">IC</div><div class="block"><div class="msg typing" data-raw=""></div><div class="meta">Reply language: ${LANG[selectedLang()]||"English"} · Mode: ${RESP[selectedMode()]}</div></div>`;
+      wrap.innerHTML = `<div class="avatar">IC</div><div class="block"><div class="msg typing" data-raw=""></div><div class="meta">Reply language: ${LANG[selectedLang()] || "English"} · Mode: ${RESP[selectedMode()]}</div></div>`;
       $("messages").appendChild(wrap);
       $("assistantPanel").scrollTop = $("assistantPanel").scrollHeight;
     }
@@ -772,7 +1007,7 @@
       if(typing) return;
       typing = true;
       const el = document.querySelector("#streaming .msg");
-      if(!el){ typing=false; return; }
+      if(!el){ typing = false; return; }
       let raw = el.getAttribute("data-raw") || "";
       const tick = setInterval(() => {
         if(queue.length){
@@ -796,13 +1031,20 @@
 
       const res = await fetch(url, {
         method:"POST",
-        headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+localStorage.getItem("access_token") },
+        headers:{
+          "Content-Type":"application/json",
+          "Authorization":"Bearer " + localStorage.getItem("access_token")
+        },
         body:JSON.stringify(body)
       });
 
-      if(res.status===401){ location.href="/login"; return; }
+      if(res.status === 401){
+        location.href = "/login";
+        return;
+      }
+
       if(!res.ok){
-        let msg=`Chat request failed (${res.status})`;
+        let msg = `Chat request failed (${res.status})`;
         try{ msg = await res.text() || msg; }catch{}
         throw new Error(msg);
       }
@@ -821,6 +1063,7 @@
         buffer += dec.decode(value, {stream:true});
         const parts = buffer.split("\n");
         buffer = parts.pop() || "";
+
         for(const line of parts){
           if(!line.startsWith("data:")) continue;
           let payload = line.slice(5);
@@ -833,28 +1076,46 @@
     }
 
     function resetWelcome(){
-      conversationId = null; currentDocumentText = null; currentDocumentName = null;
-      $("messages").innerHTML = ""; $("messages").classList.add("hidden"); $("empty").classList.remove("hidden");
-      $("input").value = ""; resize(); docHide(); setTitle(); setWelcome(); filterConversations(); closeSettings(); showAssistantView();
+      conversationId = null;
+      currentDocumentText = null;
+      currentDocumentName = null;
+      $("messages").innerHTML = "";
+      $("messages").classList.add("hidden");
+      $("empty").classList.remove("hidden");
+      $("input").value = "";
+      resize();
+      docHide();
+      setTitle();
+      setWelcome();
+      filterConversations();
+      closeSettings();
+      showAssistantView();
     }
 
     async function renameShort(id, prompt){
       try{
         const short = summariseTitle(prompt);
-        await api(`/chat/conversations/${id}/rename`, { method:"POST", body:JSON.stringify({title: short}) });
+        await api(`/chat/conversations/${id}/rename`, {
+          method:"POST",
+          body:JSON.stringify({title: short})
+        });
         setTitle(short);
         await loadConversations();
-      } catch(e){ console.error(e); }
+      }catch(e){
+        console.error(e);
+      }
     }
 
     async function deleteConversation(id){
       if(!confirm("Delete this conversation?")) return;
       try{
         await api(`/chat/conversations/${id}`, {method:"DELETE"});
-        if(Number(conversationId)===Number(id)) resetWelcome();
+        if(Number(conversationId) === Number(id)) resetWelcome();
         await loadConversations();
         banner("Conversation deleted");
-      } catch(e){ banner(e.message || "Delete failed"); }
+      }catch(e){
+        banner(e.message || "Delete failed");
+      }
     }
 
     function renderHistory(rows){
@@ -862,21 +1123,26 @@
       host.innerHTML = "";
       rows.forEach(r => {
         const item = document.createElement("div");
-        item.className = `item ${Number(r.id)===Number(conversationId) ? "active" : ""}`;
+        item.className = `item ${Number(r.id) === Number(conversationId) ? "active" : ""}`;
+
         const row = document.createElement("div");
         row.className = "row";
+
         const main = document.createElement("button");
         main.className = "mainbtn";
         main.innerHTML = `<div class="ttl">${esc(stripSystem(r.title || "Observation"))}</div>`;
         main.onclick = () => { showAssistantView(); openConversation(r.id, stripSystem(r.title || "Observation")); };
+
         const copy = document.createElement("button");
         copy.className = "mini";
         copy.textContent = "⧉";
         copy.onclick = e => { e.stopPropagation(); copyText(stripSystem(r.title || "Observation")); };
+
         const del = document.createElement("button");
         del.className = "mini danger";
         del.textContent = "🗑";
         del.onclick = e => { e.stopPropagation(); deleteConversation(r.id); };
+
         row.append(main, copy, del);
         item.appendChild(row);
         host.appendChild(item);
@@ -885,7 +1151,7 @@
 
     function filterConversations(){
       const q = $("search").value.trim().toLowerCase();
-      const rows = q ? cache.filter(r => stripSystem(r.title||"").toLowerCase().includes(q)) : cache;
+      const rows = q ? cache.filter(r => stripSystem(r.title || "").toLowerCase().includes(q)) : cache;
       renderHistory(rows);
     }
 
@@ -894,7 +1160,7 @@
         cache = await api("/chat/conversations") || [];
         filterConversations();
         return cache;
-      } catch(e){
+      }catch(e){
         banner("Could not load conversations");
         return [];
       }
@@ -910,6 +1176,7 @@
         $("messages").classList.remove("hidden");
 
         data.messages.forEach(m => appendMessage(m.role, m.message, {messageId:m.id}));
+
         if(data.document){
           currentDocumentText = data.document.text;
           currentDocumentName = data.document.filename;
@@ -922,11 +1189,14 @@
 
         setTitle(title || "Observation");
         filterConversations();
+
         if(window.innerWidth <= 768){
           $("sidebar").classList.remove("open");
           $("overlay").classList.remove("show");
         }
-      } catch(e){ banner(e.message || "Could not open conversation"); }
+      }catch(e){
+        banner(e.message || "Could not open conversation");
+      }
     }
 
     async function sendMessage(){
@@ -942,7 +1212,8 @@
       $("messages").classList.remove("hidden");
 
       appendMessage("user", text, {meta:`Mode: ${RESP[selectedMode()]}`});
-      $("input").value = ""; resize();
+      $("input").value = "";
+      resize();
 
       try{
         await stream("/chat/", {
@@ -951,11 +1222,15 @@
           document_text:currentDocumentText,
           document_name:currentDocumentName
         });
-      } catch(e){
+      }catch(e){
         const streamEl = document.querySelector("#streaming .msg");
-        if(streamEl){ streamEl.classList.remove("typing"); streamEl.innerHTML = render(`Sorry, there was a problem: ${e.message}`, "assistant"); }
-        else appendMessage("assistant", `Sorry, there was a problem: ${e.message}`);
-      } finally {
+        if(streamEl){
+          streamEl.classList.remove("typing");
+          streamEl.innerHTML = render(`Sorry, there was a problem: ${e.message}`, "assistant");
+        } else {
+          appendMessage("assistant", `Sorry, there was a problem: ${e.message}`);
+        }
+      }finally{
         isStreaming = false;
         $("send").disabled = false;
         const rows = await loadConversations();
@@ -967,9 +1242,9 @@
     }
 
     function quick(type){
-      if(type==="ofsted"){
+      if(type === "ofsted"){
         $("input").value = "Rewrite the above documentation so it aligns with Ofsted Quality Standards and is ready for professional review.";
-      } else if(type==="risk"){
+      } else if(type === "risk"){
         $("input").value = "Generate a formal risk assessment based on this situation. Include presenting risks, protective factors, staff actions, and follow-up actions.";
       }
       resize();
@@ -986,7 +1261,7 @@
       $("mic").style.color = "var(--accent)";
       rec.onresult = e => {
         let text = "";
-        for(let i=0;i<e.results.length;i++) text += e.results[i][0].transcript + " ";
+        for(let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript + " ";
         $("input").value = text.trim();
         resize();
       };
@@ -997,6 +1272,7 @@
 
     function fillSelect(selectId, rows, placeholder, valueKey="id", labelFn=(r)=>r.name){
       const sel = $(selectId);
+      if(!sel) return;
       const current = sel.value;
       sel.innerHTML = `<option value="">${placeholder}</option>`;
       rows.forEach(r => {
@@ -1022,9 +1298,10 @@
           api("/admin/providers"),
           api("/admin/users")
         ]);
-        homes = h?.homes || homes;
-        providers = p?.providers || providers;
-        adminUsers = u?.users || adminUsers;
+
+        if(h?.homes) homes = h.homes;
+        if(p?.providers) providers = p.providers;
+        if(u?.users) adminUsers = u.users;
 
         fillSelect("adminHomeId", homes, "Select home", "id", r => r.name);
         fillSelect("userHomeFilter", homes, "All homes", "id", r => r.name);
@@ -1032,11 +1309,22 @@
         fillSelect("docHomeId", homes, "Select home", "id", r => r.name);
         fillSelect("homeProviderId", providers, "Select provider", "id", r => r.name);
 
-        const managers = adminUsers.filter(u => ["manager", "admin"].includes((u.role || "").toLowerCase()));
+        const managers = adminUsers.filter(u => ["manager","admin"].includes((u.role || "").toLowerCase()));
         fillSelect("homeRegisteredManagerId", managers, "Select manager", "id", r => `${r.first_name || ""} ${r.last_name || ""}`.trim() || r.email);
         fillSelect("docOwnerId", adminUsers, "Select owner", "id", r => `${r.first_name || ""} ${r.last_name || ""}`.trim() || r.email);
+        fillSelect("libraryOwnerId", adminUsers, "Select owner", "id", r => `${r.first_name || ""} ${r.last_name || ""}`.trim() || r.email);
         updateAdminSummary();
-      } catch(e){}
+      }catch(e){}
+    }
+
+    async function loadActiveAdminTab(){
+      const tab = activeAdminTab();
+      if(tab === "users") await loadAdminUsers();
+      if(tab === "homes") await loadHomes();
+      if(tab === "providers") await loadProviders();
+      if(tab === "documents") await loadDocuments();
+      if(tab === "billing") await loadBilling();
+      if(tab === "audit") await loadAudit();
     }
 
     function clearAdminForm(){
@@ -1068,39 +1356,49 @@
         return banner("Complete all user fields");
       }
       try{
-        await api("/admin/users", { method:"POST", body:JSON.stringify(payload) });
+        await api("/admin/users", {method:"POST", body:JSON.stringify(payload)});
         clearAdminForm();
         await loadAdminUsers();
         await loadAdminReferenceData();
         banner("User created");
-      } catch(e){ banner(e.message || "Could not create user"); }
+      }catch(e){
+        banner(e.message || "Could not create user");
+      }
     }
 
     async function loadAdminUsers(){
       try{
         const q = $("userSearch").value.trim();
-        const role = $("userRoleFilter").value;
+        const roleVal = $("userRoleFilter").value;
         const home = $("userHomeFilter").value.trim();
         const archived = $("userArchivedFilter").value;
         const params = new URLSearchParams();
+
         if(q) params.set("q", q);
-        if(role) params.set("role", role);
+        if(roleVal) params.set("role", roleVal);
         if(home) params.set("home_id", home);
         if(archived) params.set("archived", archived);
+
         adminUsers = (await api("/admin/users" + (params.toString() ? `?${params.toString()}` : "")))?.users || [];
         renderAdminUsers();
         updateAdminSummary();
-      } catch(e){ banner(e.message || "Could not load users"); }
+      }catch(e){
+        banner(e.message || "Could not load users");
+      }
     }
 
     function renderAdminUsers(){
       const host = $("adminUsersList");
       host.innerHTML = "";
-      if(!adminUsers.length){ host.innerHTML = `<div class="entity-row"><div>No users found.</div></div>`; return; }
+      if(!adminUsers.length){
+        host.innerHTML = `<div class="entity-row"><div>No users found.</div></div>`;
+        return;
+      }
 
       adminUsers.forEach(user => {
         const row = document.createElement("div");
         row.className = "entity-row";
+
         const left = document.createElement("div");
         left.innerHTML = `
           <div class="entity-title">${esc([user.first_name, user.last_name].filter(Boolean).join(" ") || user.email)}</div>
@@ -1110,6 +1408,7 @@
             <span class="tag ${user.archived ? "bad":"neutral"}">${user.archived ? "archived":"live"}</span>
           </div>
         `;
+
         const right = document.createElement("div");
         right.className = "entity-actions";
 
@@ -1118,9 +1417,12 @@
         toggleActive.textContent = user.is_active ? "Deactivate" : "Activate";
         toggleActive.onclick = async () => {
           try{
-            await api(`/admin/users/${user.id}`, { method:"PATCH", body:JSON.stringify({ is_active: !user.is_active }) });
-            await loadAdminUsers(); banner("User updated");
-          } catch(e){ banner(e.message || "Update failed"); }
+            await api(`/admin/users/${user.id}`, {method:"PATCH", body:JSON.stringify({is_active: !user.is_active})});
+            await loadAdminUsers();
+            banner("User updated");
+          }catch(e){
+            banner(e.message || "Update failed");
+          }
         };
 
         const toggleArchive = document.createElement("button");
@@ -1128,21 +1430,27 @@
         toggleArchive.textContent = user.archived ? "Unarchive" : "Archive";
         toggleArchive.onclick = async () => {
           try{
-            await api(`/admin/users/${user.id}`, { method:"PATCH", body:JSON.stringify({ archived: !user.archived }) });
-            await loadAdminUsers(); banner("User updated");
-          } catch(e){ banner(e.message || "Update failed"); }
+            await api(`/admin/users/${user.id}`, {method:"PATCH", body:JSON.stringify({archived: !user.archived})});
+            await loadAdminUsers();
+            banner("User updated");
+          }catch(e){
+            banner(e.message || "Update failed");
+          }
         };
 
         const changeRole = document.createElement("button");
         changeRole.className = "chip";
         changeRole.textContent = "Role";
         changeRole.onclick = async () => {
-          const role = prompt(`Set role for ${user.email}`, user.role || "staff");
-          if(role === null) return;
+          const newRole = prompt(`Set role for ${user.email}`, user.role || "staff");
+          if(newRole === null) return;
           try{
-            await api(`/admin/users/${user.id}`, { method:"PATCH", body:JSON.stringify({ role }) });
-            await loadAdminUsers(); banner("Role updated");
-          } catch(e){ banner(e.message || "Role update failed"); }
+            await api(`/admin/users/${user.id}`, {method:"PATCH", body:JSON.stringify({role: newRole})});
+            await loadAdminUsers();
+            banner("Role updated");
+          }catch(e){
+            banner(e.message || "Role update failed");
+          }
         };
 
         const changeHome = document.createElement("button");
@@ -1150,12 +1458,15 @@
         changeHome.textContent = "Home";
         changeHome.onclick = async () => {
           const homeChoices = homes.map(h => `${h.id}: ${h.name}`).join("\n");
-          const home_id = prompt(`Set home id for ${user.email}\n\n${homeChoices}`, String(user.home_id ?? ""));
-          if(home_id === null) return;
+          const homeId = prompt(`Set home id for ${user.email}\n\n${homeChoices}`, String(user.home_id ?? ""));
+          if(homeId === null) return;
           try{
-            await api(`/admin/users/${user.id}`, { method:"PATCH", body:JSON.stringify({ home_id: Number(home_id) }) });
-            await loadAdminUsers(); banner("Home updated");
-          } catch(e){ banner(e.message || "Home update failed"); }
+            await api(`/admin/users/${user.id}`, {method:"PATCH", body:JSON.stringify({home_id: Number(homeId)})});
+            await loadAdminUsers();
+            banner("Home updated");
+          }catch(e){
+            banner(e.message || "Home update failed");
+          }
         };
 
         const reset = document.createElement("button");
@@ -1166,9 +1477,11 @@
           if(password === null) return;
           if(!password.trim()) return banner("Password cannot be empty");
           try{
-            await api(`/admin/users/${user.id}/reset-password`, { method:"POST", body:JSON.stringify({ password }) });
+            await api(`/admin/users/${user.id}/reset-password`, {method:"POST", body:JSON.stringify({password})});
             banner("Password reset");
-          } catch(e){ banner(e.message || "Password reset failed"); }
+          }catch(e){
+            banner(e.message || "Password reset failed");
+          }
         };
 
         right.append(toggleActive, toggleArchive, changeRole, changeHome, reset);
@@ -1189,16 +1502,20 @@
         registered_manager_id: $("homeRegisteredManagerId").value ? Number($("homeRegisteredManagerId").value) : null,
         geofence_radius_m: $("homeGeofence").value.trim() ? Number($("homeGeofence").value) : null
       };
+
       if(!payload.name) return banner("Home name is required");
+
       try{
-        await api("/admin/homes", { method:"POST", body:JSON.stringify(payload) });
+        await api("/admin/homes", {method:"POST", body:JSON.stringify(payload)});
         ["homeName","homeAddress","homePostcode","homeRegion","homeLocalAuthority","homeOfstedUrn","homeGeofence"].forEach(id => $(id).value = "");
         $("homeProviderId").value = "";
         $("homeRegisteredManagerId").value = "";
         await loadHomes();
         await loadAdminReferenceData();
         banner("Home created");
-      } catch(e){ banner(e.message || "Could not create home"); }
+      }catch(e){
+        banner(e.message || "Could not create home");
+      }
     }
 
     async function loadHomes(){
@@ -1206,22 +1523,30 @@
         homes = (await api("/admin/homes"))?.homes || [];
         renderHomes();
         updateAdminSummary();
-      } catch(e){ banner(e.message || "Could not load homes"); }
+      }catch(e){
+        banner(e.message || "Could not load homes");
+      }
     }
 
     function renderHomes(){
       const host = $("homesList");
       host.innerHTML = "";
-      if(!homes.length){ host.innerHTML = `<div class="entity-row"><div>No homes found.</div></div>`; return; }
+      if(!homes.length){
+        host.innerHTML = `<div class="entity-row"><div>No homes found.</div></div>`;
+        return;
+      }
+
       homes.forEach(home => {
         const row = document.createElement("div");
         row.className = "entity-row";
+
         const left = document.createElement("div");
         left.innerHTML = `
           <div class="entity-title">${esc(home.name)}</div>
           <div class="entity-meta">${esc(home.postcode || "")} · ${esc(home.region || "")} · ${esc(home.local_authority || "")}</div>
           <div class="entity-meta">URN: ${esc(home.ofsted_urn || "—")} · users: ${esc(String(home.user_count ?? 0))}</div>
         `;
+
         const right = document.createElement("div");
         right.className = "entity-actions";
 
@@ -1232,9 +1557,12 @@
           const name = prompt("Home name", home.name || "");
           if(name === null) return;
           try{
-            await api(`/admin/homes/${home.id}`, { method:"PATCH", body:JSON.stringify({ name }) });
-            await loadHomes(); banner("Home updated");
-          } catch(e){ banner(e.message || "Update failed"); }
+            await api(`/admin/homes/${home.id}`, {method:"PATCH", body:JSON.stringify({name})});
+            await loadHomes();
+            banner("Home updated");
+          }catch(e){
+            banner(e.message || "Update failed");
+          }
         };
 
         const archive = document.createElement("button");
@@ -1242,9 +1570,12 @@
         archive.textContent = home.archived ? "Unarchive" : "Archive";
         archive.onclick = async () => {
           try{
-            await api(`/admin/homes/${home.id}`, { method:"PATCH", body:JSON.stringify({ archived: !home.archived }) });
-            await loadHomes(); banner("Home updated");
-          } catch(e){ banner(e.message || "Update failed"); }
+            await api(`/admin/homes/${home.id}`, {method:"PATCH", body:JSON.stringify({archived: !home.archived})});
+            await loadHomes();
+            banner("Home updated");
+          }catch(e){
+            banner(e.message || "Update failed");
+          }
         };
 
         right.append(edit, archive);
@@ -1263,14 +1594,18 @@
         safeguarding_lead_name: $("providerLeadName").value.trim() || null,
         safeguarding_lead_email: $("providerLeadEmail").value.trim() || null
       };
+
       if(!payload.name) return banner("Provider name is required");
+
       try{
-        await api("/admin/providers", { method:"POST", body:JSON.stringify(payload) });
+        await api("/admin/providers", {method:"POST", body:JSON.stringify(payload)});
         ["providerName","providerRegion","providerAddress","providerPostcode","providerLA","providerLeadName","providerLeadEmail"].forEach(id => $(id).value = "");
         await loadProviders();
         await loadAdminReferenceData();
         banner("Provider created");
-      } catch(e){ banner(e.message || "Could not create provider"); }
+      }catch(e){
+        banner(e.message || "Could not create provider");
+      }
     }
 
     async function loadProviders(){
@@ -1278,24 +1613,33 @@
         providers = (await api("/admin/providers"))?.providers || [];
         renderProviders();
         updateAdminSummary();
-      } catch(e){ banner(e.message || "Could not load providers"); }
+      }catch(e){
+        banner(e.message || "Could not load providers");
+      }
     }
 
     function renderProviders(){
       const host = $("providersList");
       host.innerHTML = "";
-      if(!providers.length){ host.innerHTML = `<div class="entity-row"><div>No providers found.</div></div>`; return; }
+      if(!providers.length){
+        host.innerHTML = `<div class="entity-row"><div>No providers found.</div></div>`;
+        return;
+      }
+
       providers.forEach(provider => {
         const row = document.createElement("div");
         row.className = "entity-row";
+
         const left = document.createElement("div");
         left.innerHTML = `
           <div class="entity-title">${esc(provider.name)}</div>
           <div class="entity-meta">${esc(provider.region || "")} · homes: ${esc(String(provider.home_count ?? 0))}</div>
           <div class="entity-meta">${esc(provider.safeguarding_lead_name || "No safeguarding lead")} ${provider.safeguarding_lead_email ? "· " + esc(provider.safeguarding_lead_email) : ""}</div>
         `;
+
         const right = document.createElement("div");
         right.className = "entity-actions";
+
         const edit = document.createElement("button");
         edit.className = "chip";
         edit.textContent = "Edit";
@@ -1303,19 +1647,27 @@
           const name = prompt("Provider name", provider.name || "");
           if(name === null) return;
           try{
-            await api(`/admin/providers/${provider.id}`, { method:"PATCH", body:JSON.stringify({ name }) });
-            await loadProviders(); banner("Provider updated");
-          } catch(e){ banner(e.message || "Update failed"); }
+            await api(`/admin/providers/${provider.id}`, {method:"PATCH", body:JSON.stringify({name})});
+            await loadProviders();
+            banner("Provider updated");
+          }catch(e){
+            banner(e.message || "Update failed");
+          }
         };
+
         const archive = document.createElement("button");
         archive.className = "chip";
         archive.textContent = provider.archived ? "Unarchive" : "Archive";
         archive.onclick = async () => {
           try{
-            await api(`/admin/providers/${provider.id}`, { method:"PATCH", body:JSON.stringify({ archived: !provider.archived }) });
-            await loadProviders(); banner("Provider updated");
-          } catch(e){ banner(e.message || "Update failed"); }
+            await api(`/admin/providers/${provider.id}`, {method:"PATCH", body:JSON.stringify({archived: !provider.archived})});
+            await loadProviders();
+            banner("Provider updated");
+          }catch(e){
+            banner(e.message || "Update failed");
+          }
         };
+
         right.append(edit, archive);
         row.append(left, right);
         host.appendChild(row);
@@ -1335,8 +1687,9 @@
         confidentiality_level: $("docConfLevel").value.trim() || "standard",
         input_text: $("docInputText").value.trim() || null
       };
+
       try{
-        await api("/admin/documents", { method:"POST", body:JSON.stringify(payload) });
+        await api("/admin/documents", {method:"POST", body:JSON.stringify(payload)});
         ["docTitle","docIssueDate","docReviewDate","docExpiryDate","docInputText"].forEach(id => $(id).value = "");
         $("docType").value = "policy";
         $("docHomeId").value = "";
@@ -1346,7 +1699,9 @@
         await loadDocuments();
         await loadAdminReferenceData();
         banner("Document created");
-      } catch(e){ banner(e.message || "Could not create document"); }
+      }catch(e){
+        banner(e.message || "Could not create document");
+      }
     }
 
     async function loadDocuments(){
@@ -1356,36 +1711,49 @@
         if($("docHomeFilter").value.trim()) params.set("home_id", $("docHomeFilter").value.trim());
         if($("docTypeFilter").value.trim()) params.set("document_type", $("docTypeFilter").value.trim());
         if($("docApprovalFilter").value.trim()) params.set("approval_status", $("docApprovalFilter").value.trim());
-        docs = (await api("/admin/documents" + (params.toString()?`?${params.toString()}`:"")))?.documents || [];
+        docs = (await api("/admin/documents" + (params.toString() ? `?${params.toString()}` : "")))?.documents || [];
         renderDocuments();
         updateAdminSummary();
-      } catch(e){ banner(e.message || "Could not load documents"); }
+      }catch(e){
+        banner(e.message || "Could not load documents");
+      }
     }
 
     function renderDocuments(){
       const host = $("docsList");
       host.innerHTML = "";
-      if(!docs.length){ host.innerHTML = `<div class="entity-row"><div>No documents found.</div></div>`; return; }
+      if(!docs.length){
+        host.innerHTML = `<div class="entity-row"><div>No documents found.</div></div>`;
+        return;
+      }
+
       docs.forEach(doc => {
         const row = document.createElement("div");
         row.className = "entity-row";
+
         const left = document.createElement("div");
         left.innerHTML = `
           <div class="entity-title">${esc(doc.title || "Untitled document")}</div>
           <div class="entity-meta">${esc(doc.document_type || "—")} · ${esc(doc.home_name || ("home " + (doc.home_id ?? "—")))}</div>
           <div class="entity-meta">approval: ${esc(doc.approval_status || "not_required")} · review: ${esc(doc.review_date || "—")} · expiry: ${esc(doc.expiry_date || "—")}</div>
         `;
+
         const right = document.createElement("div");
         right.className = "entity-actions";
+
         const review = document.createElement("button");
         review.className = "chip";
         review.textContent = "Set approved";
         review.onclick = async () => {
           try{
-            await api(`/admin/documents/${doc.id}`, { method:"PATCH", body:JSON.stringify({ approval_status:"approved" }) });
-            await loadDocuments(); banner("Document updated");
-          } catch(e){ banner(e.message || "Update failed"); }
+            await api(`/admin/documents/${doc.id}`, {method:"PATCH", body:JSON.stringify({approval_status:"approved"})});
+            await loadDocuments();
+            banner("Document updated");
+          }catch(e){
+            banner(e.message || "Update failed");
+          }
         };
+
         const titleBtn = document.createElement("button");
         titleBtn.className = "chip";
         titleBtn.textContent = "Edit title";
@@ -1393,10 +1761,14 @@
           const title = prompt("Document title", doc.title || "");
           if(title === null) return;
           try{
-            await api(`/admin/documents/${doc.id}`, { method:"PATCH", body:JSON.stringify({ title }) });
-            await loadDocuments(); banner("Document updated");
-          } catch(e){ banner(e.message || "Update failed"); }
+            await api(`/admin/documents/${doc.id}`, {method:"PATCH", body:JSON.stringify({title})});
+            await loadDocuments();
+            banner("Document updated");
+          }catch(e){
+            banner(e.message || "Update failed");
+          }
         };
+
         right.append(review, titleBtn);
         row.append(left, right);
         host.appendChild(row);
@@ -1407,13 +1779,16 @@
       try{
         billing = await api("/admin/billing/overview");
         renderBilling();
-      } catch(e){ banner(e.message || "Could not load billing overview"); }
+      }catch(e){
+        banner(e.message || "Could not load billing overview");
+      }
     }
 
     function renderBilling(){
       $("billingStats").innerHTML = "";
       $("billingList").innerHTML = "";
       if(!billing) return;
+
       const totals = billing.totals || {};
       const stats = [
         ["Total users", totals.total_users ?? 0],
@@ -1422,6 +1797,7 @@
         ["Active subscriptions", totals.active_subscriptions ?? 0],
         ["Inactive subscriptions", totals.inactive_subscriptions ?? 0]
       ];
+
       stats.forEach(([l,n]) => {
         const card = document.createElement("div");
         card.className = "stat";
@@ -1430,7 +1806,11 @@
       });
 
       const users = billing.users || [];
-      if(!users.length){ $("billingList").innerHTML = `<div class="entity-row"><div>No billing rows found.</div></div>`; return; }
+      if(!users.length){
+        $("billingList").innerHTML = `<div class="entity-row"><div>No billing rows found.</div></div>`;
+        return;
+      }
+
       users.forEach(user => {
         const row = document.createElement("div");
         row.className = "entity-row";
@@ -1449,13 +1829,19 @@
       try{
         audit = (await api("/admin/audit"))?.audit || [];
         renderAudit();
-      } catch(e){ banner(e.message || "Could not load audit"); }
+      }catch(e){
+        banner(e.message || "Could not load audit");
+      }
     }
 
     function renderAudit(){
       const host = $("auditList");
       host.innerHTML = "";
-      if(!audit.length){ host.innerHTML = `<div class="entity-row"><div>No audit entries found.</div></div>`; return; }
+      if(!audit.length){
+        host.innerHTML = `<div class="entity-row"><div>No audit entries found.</div></div>`;
+        return;
+      }
+
       audit.forEach(a => {
         const row = document.createElement("div");
         row.className = "entity-row";
@@ -1470,14 +1856,214 @@
       });
     }
 
-    async function loadActiveAdminTab(){
-      const tab = activeAdminTab();
-      if(tab === "users") await loadAdminUsers();
-      if(tab === "homes") await loadHomes();
-      if(tab === "providers") await loadProviders();
-      if(tab === "documents") await loadDocuments();
-      if(tab === "billing") await loadBilling();
-      if(tab === "audit") await loadAudit();
+    async function loadLibrary(){
+      try{
+        const params = new URLSearchParams();
+        if($("librarySearch").value.trim()) params.set("q", $("librarySearch").value.trim());
+        if($("libraryTypeFilter").value) params.set("document_type", $("libraryTypeFilter").value);
+        if($("libraryApprovalFilter").value) params.set("approval_status", $("libraryApprovalFilter").value);
+
+        libraryDocs = (await api("/documents/library" + (params.toString() ? `?${params.toString()}` : "")))?.documents || [];
+        renderLibraryList();
+        renderManagerLibraryList();
+        if(selectedLibraryDoc){
+          const fresh = libraryDocs.find(d => Number(d.id) === Number(selectedLibraryDoc.id));
+          if(fresh) openLibraryDocument(fresh.id);
+        }
+      }catch(e){
+        banner(e.message || "Could not load library");
+      }
+    }
+
+    function renderLibraryList(){
+      const host = $("libraryList");
+      host.innerHTML = "";
+      if(!libraryDocs.length){
+        host.innerHTML = `<div class="entity-row"><div>No documents available for your home.</div></div>`;
+        return;
+      }
+
+      libraryDocs.forEach(doc => {
+        const row = document.createElement("div");
+        row.className = "entity-row";
+
+        const left = document.createElement("div");
+        left.innerHTML = `
+          <div class="entity-title">${esc(doc.title || "Untitled document")}</div>
+          <div class="entity-meta">${esc(doc.document_type || "—")} · ${esc(doc.home_name || "Your home")}</div>
+          <div class="entity-meta">
+            <span class="tag ${doc.approval_status === "approved" ? "ok" : doc.approval_status === "pending" ? "warn" : "neutral"}">${esc(doc.approval_status || "not_required")}</span>
+            <span class="tag neutral">${esc(doc.confidentiality_level || "standard")}</span>
+          </div>
+        `;
+
+        const right = document.createElement("div");
+        right.className = "entity-actions";
+
+        const openBtn = document.createElement("button");
+        openBtn.className = "chip";
+        openBtn.textContent = "Open";
+        openBtn.onclick = () => openLibraryDocument(doc.id);
+
+        right.append(openBtn);
+
+        if(canManageLibrary()){
+          const editBtn = document.createElement("button");
+          editBtn.className = "chip";
+          editBtn.textContent = "Edit";
+          editBtn.onclick = () => populateLibraryEditor(doc);
+          right.append(editBtn);
+        }
+
+        row.append(left, right);
+        host.appendChild(row);
+      });
+    }
+
+    function renderManagerLibraryList(){
+      const host = $("managerLibraryList");
+      if(!host) return;
+      host.innerHTML = "";
+
+      if(!canManageLibrary()){
+        host.innerHTML = `<div class="entity-row"><div>Read-only access.</div></div>`;
+        return;
+      }
+
+      if(!libraryDocs.length){
+        host.innerHTML = `<div class="entity-row"><div>No home documents found.</div></div>`;
+        return;
+      }
+
+      libraryDocs.forEach(doc => {
+        const row = document.createElement("div");
+        row.className = "entity-row";
+        row.innerHTML = `
+          <div>
+            <div class="entity-title">${esc(doc.title || "Untitled document")}</div>
+            <div class="entity-meta">${esc(doc.document_type || "—")} · review ${esc(doc.review_date || "—")}</div>
+          </div>
+        `;
+
+        const right = document.createElement("div");
+        right.className = "entity-actions";
+
+        const editBtn = document.createElement("button");
+        editBtn.className = "chip";
+        editBtn.textContent = "Edit";
+        editBtn.onclick = () => populateLibraryEditor(doc);
+
+        right.append(editBtn);
+        row.appendChild(right);
+        host.appendChild(row);
+      });
+    }
+
+    async function openLibraryDocument(id){
+      try{
+        const data = await api(`/documents/library/${id}`);
+        const doc = data?.document;
+        if(!doc) return;
+        selectedLibraryDoc = doc;
+        $("libraryViewer").innerHTML = `
+          <h3>${esc(doc.title || "Untitled document")}</h3>
+          <p><strong>Type:</strong> ${esc(doc.document_type || "—")}</p>
+          <p><strong>Approval:</strong> ${esc(doc.approval_status || "not_required")} · <strong>Confidentiality:</strong> ${esc(doc.confidentiality_level || "standard")}</p>
+          <p><strong>Issue date:</strong> ${esc(doc.issue_date || "—")} · <strong>Review date:</strong> ${esc(doc.review_date || "—")} · <strong>Expiry date:</strong> ${esc(doc.expiry_date || "—")}</p>
+          <hr style="border:none;border-top:1px solid var(--line);margin:14px 0;">
+          <div>${render(doc.input_text || doc.generated_text || "No content available.", "assistant")}</div>
+        `;
+      }catch(e){
+        banner(e.message || "Could not open document");
+      }
+    }
+
+    function resetLibraryEditor(){
+      editingLibraryDocId = null;
+      $("libraryFormTitle").textContent = "Create document";
+      $("libraryDocTitle").value = "";
+      $("libraryDocType").value = "policy";
+      $("libraryIssueDate").value = "";
+      $("libraryReviewDate").value = "";
+      $("libraryExpiryDate").value = "";
+      $("libraryApprovalStatus").value = "not_required";
+      $("libraryConfidentiality").value = "standard";
+      $("libraryOwnerId").value = "";
+      $("libraryInputText").value = "";
+      $("deleteLibraryDocBtn").classList.add("hidden");
+    }
+
+    function populateLibraryEditor(doc){
+      if(!canManageLibrary()) return;
+      editingLibraryDocId = doc.id;
+      $("libraryFormTitle").textContent = "Edit document";
+      $("libraryDocTitle").value = doc.title || "";
+      $("libraryDocType").value = doc.document_type || "policy";
+      $("libraryIssueDate").value = doc.issue_date || "";
+      $("libraryReviewDate").value = doc.review_date || "";
+      $("libraryExpiryDate").value = doc.expiry_date || "";
+      $("libraryApprovalStatus").value = doc.approval_status || "not_required";
+      $("libraryConfidentiality").value = doc.confidentiality_level || "standard";
+      $("libraryOwnerId").value = doc.owner_id || "";
+      $("libraryInputText").value = doc.input_text || doc.generated_text || "";
+      $("deleteLibraryDocBtn").classList.remove("hidden");
+      setLibraryTab("editor");
+    }
+
+    async function saveLibraryDocument(){
+      if(!canManageLibrary()) return banner("Manager or admin access required");
+
+      const payload = {
+        title: $("libraryDocTitle").value.trim(),
+        document_type: $("libraryDocType").value,
+        issue_date: $("libraryIssueDate").value || null,
+        review_date: $("libraryReviewDate").value || null,
+        expiry_date: $("libraryExpiryDate").value || null,
+        approval_status: $("libraryApprovalStatus").value,
+        confidentiality_level: $("libraryConfidentiality").value,
+        owner_id: $("libraryOwnerId").value ? Number($("libraryOwnerId").value) : null,
+        input_text: $("libraryInputText").value.trim() || null
+      };
+
+      if(!payload.title) return banner("Title is required");
+
+      try{
+        if(editingLibraryDocId){
+          await api(`/documents/library/${editingLibraryDocId}`, {
+            method:"PATCH",
+            body:JSON.stringify(payload)
+          });
+          banner("Document updated");
+        } else {
+          await api("/documents/library", {
+            method:"POST",
+            body:JSON.stringify(payload)
+          });
+          banner("Document created");
+        }
+
+        resetLibraryEditor();
+        await loadLibrary();
+        setLibraryTab("list");
+      }catch(e){
+        banner(e.message || "Could not save document");
+      }
+    }
+
+    async function deleteLibraryDocument(){
+      if(!editingLibraryDocId) return;
+      if(!confirm("Delete this document?")) return;
+
+      try{
+        await api(`/documents/library/${editingLibraryDocId}`, {method:"DELETE"});
+        banner("Document deleted");
+        resetLibraryEditor();
+        $("libraryViewer").innerHTML = `<h3>Select a document</h3><p>Open a policy or document from the list to read it here.</p>`;
+        await loadLibrary();
+        setLibraryTab("list");
+      }catch(e){
+        banner(e.message || "Could not delete document");
+      }
     }
 
     function restorePrefs(){
@@ -1486,6 +2072,7 @@
       $("mode").value = localStorage.getItem("indicare_response_mode") || "balanced";
       syncHelpers();
       setAdminTab(activeAdminTab());
+      setLibraryTab("list");
     }
 
     function bind(){
@@ -1497,7 +2084,7 @@
       $("settingsOverlay").onclick = closeSettings;
       $("newChat").onclick = resetWelcome;
       $("backWelcome").onclick = resetWelcome;
-      $("logout").onclick = () => { localStorage.removeItem("access_token"); location.href="/login"; };
+      $("logout").onclick = () => { localStorage.removeItem("access_token"); location.href = "/login"; };
 
       $("theme").onclick = () => {
         document.body.classList.toggle("theme-dark");
@@ -1514,12 +2101,19 @@
       $("mode").onchange = () => { localStorage.setItem("indicare_response_mode", selectedMode()); syncHelpers(); };
 
       $("navAssistant").onclick = () => showAssistantView();
+      $("navLibrary").onclick = () => showLibraryView();
       $("navAdmin").onclick = () => showAdminView();
 
-      document.querySelectorAll(".tabbtn").forEach(btn => btn.onclick = () => setAdminTab(btn.dataset.tab));
+      document.querySelectorAll(".tabbtn[data-tab]").forEach(btn => btn.onclick = () => setAdminTab(btn.dataset.tab));
+      document.querySelectorAll(".tabbtn[data-library-tab]").forEach(btn => btn.onclick = () => setLibraryTab(btn.dataset.libraryTab));
 
       $("search").oninput = filterConversations;
-      $("input").addEventListener("keydown", e => { if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); sendMessage(); } });
+      $("input").addEventListener("keydown", e => {
+        if(e.key === "Enter" && !e.shiftKey){
+          e.preventDefault();
+          sendMessage();
+        }
+      });
       $("input").addEventListener("input", resize);
       $("send").onclick = sendMessage;
       $("mic").onclick = startSpeech;
@@ -1527,13 +2121,22 @@
       $("upload").onchange = async e => {
         const file = e.target.files?.[0];
         if(!file) return;
-        try{ await uploadDoc(file); } catch(err){ banner(err.message || "Upload failed"); }
+        try{
+          await uploadDoc(file);
+        }catch(err){
+          banner(err.message || "Upload failed");
+        }
         e.target.value = "";
       };
 
       $("clearDoc").onclick = async () => {
-        try{ if(conversationId) await api(`/chat/conversations/${conversationId}/document`, {method:"DELETE"}); } catch(e){}
-        currentDocumentText = null; currentDocumentName = null; docHide(); banner("Document removed");
+        try{
+          if(conversationId) await api(`/chat/conversations/${conversationId}/document`, {method:"DELETE"});
+        }catch(e){}
+        currentDocumentText = null;
+        currentDocumentName = null;
+        docHide();
+        banner("Document removed");
       };
 
       $("adminActiveToggle").onclick = () => { adminCreateActive = !adminCreateActive; syncHelpers(); };
@@ -1559,6 +2162,15 @@
 
       $("refreshBillingBtn").onclick = loadBilling;
       $("refreshAuditBtn").onclick = loadAudit;
+
+      $("refreshLibraryBtn").onclick = loadLibrary;
+      $("refreshManagerLibraryBtn").onclick = loadLibrary;
+      $("librarySearch").oninput = loadLibrary;
+      $("libraryTypeFilter").onchange = loadLibrary;
+      $("libraryApprovalFilter").onchange = loadLibrary;
+      $("saveLibraryDocBtn").onclick = saveLibraryDocument;
+      $("resetLibraryDocBtn").onclick = resetLibraryEditor;
+      $("deleteLibraryDocBtn").onclick = deleteLibraryDocument;
     }
 
     async function init(){
