@@ -591,423 +591,1319 @@
   </div>
 
   <script>
-    let conversationId=null,currentDocumentText=null,currentDocumentName=null,isStreaming=false,queue=[],typing=false,lastPrompt="",cache=[];
-    let currentUser=null,adminCreateActive=true,adminUsers=[],homes=[],providers=[],docs=[],billing=null,audit=[],libraryDocs=[],selectedLibraryDoc=null,editingLibraryDocId=null;
-    const DEFAULT_LANGUAGE="en-GB",REG_PROMPT=" [SYSTEM: Verify response against Ofsted SCCIF and Quality Standards for Children's Homes]";
-    const RESP={quick:"Quick",balanced:"Balanced",deep:"Deep"},LANG={"en-GB":"English","pl-PL":"Polish","ro-RO":"Romanian","ur-PK":"Urdu","ar":"Arabic"};
-    const GREET=[n=>`Good morning, ${n}.`,n=>`Welcome back, ${n}.`,n=>`Ready when you are, ${n}.`,n=>`Good to see you, ${n}.`];
-    const $=id=>document.getElementById(id);
+    window.onerror = function(message, source, line, col, error) {
+      console.error("window.onerror", { message, source, line, col, error });
+    };
 
-    const safe=s=>String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
-    const role=()=>String(currentUser?.role||"").toLowerCase();
-    const isAdmin=()=>["admin","provider_admin"].includes(role());
-    const isManager=()=>role()==="manager";
-    const isStaff=()=>role()==="staff";
-    const canManageLibrary=()=>isAdmin()||isManager();
-    const selectedLang=()=>$("lang").value||DEFAULT_LANGUAGE;
-    const selectedMode=()=>$("mode").value||"balanced";
-    const firstName=()=>currentUser?.first_name||localStorage.getItem("first_name")||"there";
+    window.onunhandledrejection = function(event) {
+      console.error("unhandledrejection", event.reason);
+    };
 
-    function banner(t,ms=2400){const e=$("status");e.textContent=t;e.style.display="block";clearTimeout(banner.t);banner.t=setTimeout(()=>e.style.display="none",ms)}
-    function stripSystem(s){return String(s||"").replace(/\s*\[SYSTEM:[\s\S]*$/i,"").trim()}
-    function setTitle(t="Intelligence for Care"){$("title").textContent=t}
-    function resize(){const t=$("input");t.style.height="auto";t.style.height=Math.min(t.scrollHeight,120)+"px"}
-    function docShow(name){$("docText").textContent=name;$("doc").classList.add("show")}
-    function docHide(){$("docText").textContent="";$("doc").classList.remove("show")}
-    function syncHelpers(){
-      $("langHelp").textContent=`Assistant replies in ${LANG[selectedLang()]||"English"}.`;
-      $("modeHelp").textContent=`Mode: ${RESP[selectedMode()]}`;
-      $("theme").classList.toggle("active",document.body.classList.contains("theme-dark"));
-      $("privacy").classList.toggle("active",$("app").classList.contains("privacy-active"));
-      $("adminActiveToggle").classList.toggle("active",adminCreateActive)
+    let conversationId = null;
+    let currentDocumentText = null;
+    let currentDocumentName = null;
+    let isStreaming = false;
+    let queue = [];
+    let typing = false;
+    let lastPrompt = "";
+    let cache = [];
+
+    let currentUser = null;
+    let adminCreateActive = true;
+    let adminUsers = [];
+    let homes = [];
+    let providers = [];
+    let docs = [];
+    let billing = null;
+    let audit = [];
+    let libraryDocs = [];
+    let selectedLibraryDoc = null;
+    let editingLibraryDocId = null;
+
+    const DEFAULT_LANGUAGE = "en-GB";
+    const REG_PROMPT = " [SYSTEM: Verify response against Ofsted SCCIF and Quality Standards for Children's Homes]";
+    const RESP = { quick:"Quick", balanced:"Balanced", deep:"Deep" };
+    const LANG = { "en-GB":"English", "pl-PL":"Polish", "ro-RO":"Romanian", "ur-PK":"Urdu", "ar":"Arabic" };
+    const GREET = [
+      n => `Good morning, ${n}.`,
+      n => `Welcome back, ${n}.`,
+      n => `Ready when you are, ${n}.`,
+      n => `Good to see you, ${n}.`
+    ];
+
+    const $ = id => document.getElementById(id);
+
+    const safe = s => String(s || "")
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;")
+      .replace(/'/g,"&#039;");
+
+    const role = () => String(currentUser?.role || "").toLowerCase();
+    const isAdmin = () => ["admin", "provider_admin"].includes(role());
+    const isManager = () => role() === "manager";
+    const isStaff = () => role() === "staff";
+    const canManageLibrary = () => isAdmin() || isManager();
+    const selectedLang = () => $("lang").value || DEFAULT_LANGUAGE;
+    const selectedMode = () => $("mode").value || "balanced";
+    const firstName = () => currentUser?.first_name || localStorage.getItem("first_name") || "there";
+
+    function banner(t, ms = 2400) {
+      const e = $("status");
+      e.textContent = t;
+      e.style.display = "block";
+      clearTimeout(banner.t);
+      banner.t = setTimeout(() => e.style.display = "none", ms);
     }
-    function userInitials(){
-      const full=[currentUser?.first_name,currentUser?.last_name].filter(Boolean).join(" ")||firstName();
-      const p=String(full).trim().split(/\s+/).filter(Boolean);
-      if(!p.length) return "Y";
-      if(p.length===1) return p[0].slice(0,2).toUpperCase();
-      return (p[0][0]+p[1][0]).toUpperCase()
+
+    function stripSystem(s) {
+      return String(s || "").replace(/\s*\[SYSTEM:[\s\S]*$/i, "").trim();
     }
-    function setWelcome(){$("welcomeTitle").textContent=GREET[Math.floor(Math.random()*GREET.length)](firstName())}
-    function buildLangInstruction(){return selectedLang()===DEFAULT_LANGUAGE?"":` [SYSTEM: Reply in ${LANG[selectedLang()]}. Keep safeguarding, care, and formal documentation wording clear and professional.]`}
-    function openSettings(){$("settingsOverlay").classList.add("show");$("settings").classList.add("open")}
-    function closeSettings(){$("settingsOverlay").classList.remove("show");$("settings").classList.remove("open")}
-    function summariseTitle(text){
-      const clean=stripSystem(text).replace(/[^\p{L}\p{N}\s'-]/gu," ").replace(/\s+/g," ").trim();
-      if(!clean) return "New Log";
-      const stop=new Set(["the","a","an","and","or","but","for","with","from","about","who","what","when","where","why","how","are","is","do","does","did","please","tell","write","good","morning","indicare"]);
-      const words=clean.split(" ").filter(Boolean),pool=words.filter(w=>!stop.has(w.toLowerCase())),picked=(pool.length?pool:words).slice(0,3);
-      return picked.map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(" ")||"New Log"
+
+    function setTitle(t = "Intelligence for Care") {
+      $("title").textContent = t;
     }
-    function beautify(text){
-      let out=String(text||"").trim();
-      out=out.replace(/([a-z]):(?=[A-Z])/g,"$1:\n").replace(/What matters most here:/gi,"### What matters most here").replace(/Key points:/gi,"### Key points").replace(/Suggested staff response \/ next steps:/gi,"### Suggested next steps").replace(/What should be recorded \/ handed over \/ reviewed if relevant:/gi,"### Recording and handover").replace(/- /g,"\n- ").replace(/\.\s+(?=[A-Z])/g,".\n\n").replace(/\n{3,}/g,"\n\n");
-      return out
+
+    function resize() {
+      const t = $("input");
+      t.style.height = "auto";
+      t.style.height = Math.min(t.scrollHeight, 120) + "px";
     }
-    function render(text,roleName="assistant"){
-      let s=safe(roleName==="assistant"?beautify(text):text).replace(/^### (.*)$/gm,"<h3>$1</h3>").replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>");
-      const lines=s.split("\n"); let html="",list=false;
-      for(const line of lines){
-        if(/^\s*-\s+/.test(line)){if(!list){html+="<ul>";list=true} html+=`<li>${line.replace(/^\s*-\s+/,"")}</li>`}
-        else{if(list){html+="</ul>";list=false} html+=line.trim()===""?"<br>":/^<h3>.*<\/h3>$/.test(line)?line:`<p>${line}</p>`}
+
+    function docShow(name) {
+      $("docText").textContent = name;
+      $("doc").classList.add("show");
+    }
+
+    function docHide() {
+      $("docText").textContent = "";
+      $("doc").classList.remove("show");
+    }
+
+    function syncHelpers() {
+      $("langHelp").textContent = `Assistant replies in ${LANG[selectedLang()] || "English"}.`;
+      $("modeHelp").textContent = `Mode: ${RESP[selectedMode()]}`;
+      $("theme").classList.toggle("active", document.body.classList.contains("theme-dark"));
+      $("privacy").classList.toggle("active", $("app").classList.contains("privacy-active"));
+      $("adminActiveToggle").classList.toggle("active", adminCreateActive);
+    }
+
+    function userInitials() {
+      const full = [currentUser?.first_name, currentUser?.last_name].filter(Boolean).join(" ") || firstName();
+      const p = String(full).trim().split(/\s+/).filter(Boolean);
+      if (!p.length) return "Y";
+      if (p.length === 1) return p[0].slice(0, 2).toUpperCase();
+      return (p[0][0] + p[1][0]).toUpperCase();
+    }
+
+    function setWelcome() {
+      $("welcomeTitle").textContent = GREET[Math.floor(Math.random() * GREET.length)](firstName());
+    }
+
+    function buildLangInstruction() {
+      return selectedLang() === DEFAULT_LANGUAGE
+        ? ""
+        : ` [SYSTEM: Reply in ${LANG[selectedLang()]}. Keep safeguarding, care, and formal documentation wording clear and professional.]`;
+    }
+
+    function openSettings() {
+      $("settingsOverlay").classList.add("show");
+      $("settings").classList.add("open");
+    }
+
+    function closeSettings() {
+      $("settingsOverlay").classList.remove("show");
+      $("settings").classList.remove("open");
+    }
+
+    function summariseTitle(text) {
+      const clean = stripSystem(text).replace(/[^\p{L}\p{N}\s'-]/gu, " ").replace(/\s+/g, " ").trim();
+      if (!clean) return "New Log";
+      const stop = new Set(["the","a","an","and","or","but","for","with","from","about","who","what","when","where","why","how","are","is","do","does","did","please","tell","write","good","morning","indicare"]);
+      const words = clean.split(" ").filter(Boolean);
+      const pool = words.filter(w => !stop.has(w.toLowerCase()));
+      const picked = (pool.length ? pool : words).slice(0, 3);
+      return picked.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") || "New Log";
+    }
+
+    function beautify(text) {
+      let out = String(text || "").trim();
+      out = out
+        .replace(/([a-z]):(?=[A-Z])/g, "$1:\n")
+        .replace(/What matters most here:/gi, "### What matters most here")
+        .replace(/Key points:/gi, "### Key points")
+        .replace(/Suggested staff response \/ next steps:/gi, "### Suggested next steps")
+        .replace(/What should be recorded \/ handed over \/ reviewed if relevant:/gi, "### Recording and handover")
+        .replace(/- /g, "\n- ")
+        .replace(/\.\s+(?=[A-Z])/g, ".\n\n")
+        .replace(/\n{3,}/g, "\n\n");
+      return out;
+    }
+
+    function render(text, roleName = "assistant") {
+      let s = safe(roleName === "assistant" ? beautify(text) : text)
+        .replace(/^### (.*)$/gm, "<h3>$1</h3>")
+        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+      const lines = s.split("\n");
+      let html = "", list = false;
+      for (const line of lines) {
+        if (/^\s*-\s+/.test(line)) {
+          if (!list) {
+            html += "<ul>";
+            list = true;
+          }
+          html += `<li>${line.replace(/^\s*-\s+/, "")}</li>`;
+        } else {
+          if (list) {
+            html += "</ul>";
+            list = false;
+          }
+          html += line.trim() === "" ? "<br>" : /^<h3>.*<\/h3>$/.test(line) ? line : `<p>${line}</p>`;
+        }
       }
-      if(list) html+="</ul>";
-      return html
+      if (list) html += "</ul>";
+      return html;
     }
 
-    async function api(url,options={}){
-      const res=await fetch(url,{
+    async function api(url, options = {}) {
+      const res = await fetch(url, {
         ...options,
-        credentials:"include",
-        headers:{...(options.headers||{}),...(options.body&&!(options.body instanceof FormData)?{"Content-Type":"application/json"}:{})}
+        credentials: "include",
+        headers: {
+          ...(options.headers || {}),
+          ...(options.body && !(options.body instanceof FormData) ? { "Content-Type":"application/json" } : {})
+        }
       });
-      if(res.status===401){location.href="/login";return null}
-      const type=res.headers.get("content-type")||"";
-      let data=null;
-      if(type.includes("application/json")){try{data=await res.json()}catch{}}
-      else{try{const text=await res.text();data=text?{detail:text}:null}catch{}}
-      if(!res.ok) throw new Error(data?.detail||data?.error||"Request failed");
-      return data
+
+      if (res.status === 401) {
+        location.href = "/login";
+        return null;
+      }
+
+      const type = res.headers.get("content-type") || "";
+      let data = null;
+
+      if (type.includes("application/json")) {
+        try { data = await res.json(); } catch {}
+      } else {
+        try {
+          const text = await res.text();
+          data = text ? { detail: text } : null;
+        } catch {}
+      }
+
+      if (!res.ok) {
+        throw new Error(data?.detail || data?.error || "Request failed");
+      }
+
+      return data;
     }
 
-    async function logoutNow(){
-      try{await fetch("/auth/logout",{method:"POST",credentials:"include"})}catch{}
-      localStorage.removeItem("current_user");sessionStorage.removeItem("current_user");localStorage.removeItem("first_name");location.href="/login"
+    async function logoutNow() {
+      try {
+        await fetch("/auth/logout", { method:"POST", credentials:"include" });
+      } catch {}
+      localStorage.removeItem("current_user");
+      sessionStorage.removeItem("current_user");
+      localStorage.removeItem("first_name");
+      location.href = "/login";
     }
 
-    async function loadMe(){
-      const data=await api("/auth/me");
-      if(!data?.user) throw new Error("No user");
-      currentUser=data.user;
-      localStorage.setItem("first_name",currentUser.first_name||"");
-      if(isAdmin()) $("navAdmin").classList.remove("hidden");
-      if(isAdmin()||isManager()||isStaff()) $("navLibrary").classList.remove("hidden");
-      if(canManageLibrary()) $("managerEditorTab").classList.remove("hidden")
+    async function loadMe() {
+      const data = await api("/auth/me");
+      if (!data?.user) throw new Error("No user");
+      currentUser = data.user;
+      localStorage.setItem("first_name", currentUser.first_name || "");
+      if (isAdmin()) $("navAdmin").classList.remove("hidden");
+      if (isAdmin() || isManager() || isStaff()) $("navLibrary").classList.remove("hidden");
+      if (canManageLibrary()) $("managerEditorTab").classList.remove("hidden");
     }
 
-    function showAssistantView(){$("assistantPanel").classList.remove("hidden");$("libraryPanel").classList.add("hidden");$("adminPanel").classList.add("hidden");$("inputWrap").classList.remove("hidden");$("navAssistant").classList.add("active");$("navLibrary").classList.remove("active");$("navAdmin").classList.remove("active");setTitle(conversationId?$("title").textContent:"Intelligence for Care")}
-    function showLibraryView(){$("assistantPanel").classList.add("hidden");$("libraryPanel").classList.remove("hidden");$("adminPanel").classList.add("hidden");$("inputWrap").classList.add("hidden");$("navAssistant").classList.remove("active");$("navLibrary").classList.add("active");$("navAdmin").classList.remove("active");setTitle("Policies");loadLibrary()}
-    function showAdminView(){$("assistantPanel").classList.add("hidden");$("libraryPanel").classList.add("hidden");$("adminPanel").classList.remove("hidden");$("inputWrap").classList.add("hidden");$("navAssistant").classList.remove("active");$("navLibrary").classList.remove("active");$("navAdmin").classList.add("active");setTitle("Admin");loadAdminReferenceData().then(loadActiveAdminTab)}
-
-    function resetWelcome(){
-      conversationId=null;currentDocumentText=null;currentDocumentName=null;
-      $("messages").innerHTML="";$("messages").classList.add("hidden");$("empty").classList.remove("hidden");
-      $("input").value="";resize();docHide();setTitle();setWelcome();filterConversations();closeSettings();showAssistantView()
+    function showAssistantView() {
+      $("assistantPanel").classList.remove("hidden");
+      $("libraryPanel").classList.add("hidden");
+      $("adminPanel").classList.add("hidden");
+      $("inputWrap").classList.remove("hidden");
+      $("navAssistant").classList.add("active");
+      $("navLibrary").classList.remove("active");
+      $("navAdmin").classList.remove("active");
+      setTitle(conversationId ? $("title").textContent : "Intelligence for Care");
     }
 
-    function renderHistory(rows){
-      const host=$("history");host.innerHTML="";
-      rows.forEach(r=>{
-        const item=document.createElement("div");item.className=`item ${Number(r.id)===Number(conversationId)?"active":""}`;
-        item.innerHTML=`<div class="row"><button class="mainbtn"><div class="ttl">${safe(stripSystem(r.title||"Observation"))}</div></button><button class="mini">⧉</button><button class="mini danger">🗑</button></div>`;
-        const [main,copy,del]=item.querySelectorAll("button");
-        main.onclick=()=>{showAssistantView();openConversation(r.id,stripSystem(r.title||"Observation"))};
-        copy.onclick=e=>{e.stopPropagation();navigator.clipboard.writeText(stripSystem(r.title||"Observation"));banner("Copied")};
-        del.onclick=e=>{e.stopPropagation();deleteConversation(r.id)};
-        host.appendChild(item)
-      })
-    }
-    function filterConversations(){const q=$("search").value.trim().toLowerCase();renderHistory(q?cache.filter(r=>stripSystem(r.title||"").toLowerCase().includes(q)):cache)}
-    async function loadConversations(){cache=await api("/chat/conversations")||[];filterConversations();return cache}
-    async function openConversation(id,title){
-      const data=await api(`/chat/conversations/${id}`); if(!data) return;
-      conversationId=id;$("messages").innerHTML="";$("empty").classList.add("hidden");$("messages").classList.remove("hidden");
-      data.messages.forEach(m=>appendMessage(m.role,m.message,{messageId:m.id}));
-      if(data.document){currentDocumentText=data.document.text;currentDocumentName=data.document.filename;docShow(data.document.filename)} else {currentDocumentText=null;currentDocumentName=null;docHide()}
-      setTitle(title||"Observation");filterConversations();
-      if(window.innerWidth<=768){$("sidebar").classList.remove("open");$("overlay").classList.remove("show")}
-    }
-    async function renameShort(id,prompt){const short=summariseTitle(prompt);await api(`/chat/conversations/${id}/rename`,{method:"POST",body:JSON.stringify({title:short})});setTitle(short);await loadConversations()}
-    async function deleteConversation(id){if(!confirm("Delete this conversation?")) return;await api(`/chat/conversations/${id}`,{method:"DELETE"});if(Number(conversationId)===Number(id)) resetWelcome();await loadConversations();banner("Conversation deleted")}
-
-    function appendMessage(roleName,text,opts={}){
-      const shown=roleName==="user"?stripSystem(text):text;
-      const wrap=document.createElement("div");wrap.className=`wrap ${roleName}`;
-      wrap.innerHTML=`<div class="avatar">${roleName==="assistant"?"IC":userInitials()}</div><div class="block"><div class="msg">${roleName==="assistant"?render(shown,"assistant"):safe(shown)}</div>${opts.meta?`<div class="meta">${safe(opts.meta)}</div>`:""}<div class="actions"></div></div>`;
-      const actions=wrap.querySelector(".actions");
-      const addChip=(label,fn)=>{const b=document.createElement("button");b.className="chip";b.textContent=label;b.onclick=fn;actions.appendChild(b)};
-      addChip("Copy",()=>navigator.clipboard.writeText(shown).then(()=>banner("Copied")).catch(()=>banner("Could not copy")));
-      if(roleName==="assistant"){addChip("Format for Ofsted",()=>quick("ofsted"));addChip("Draft Risk Assess",()=>quick("risk"))}
-      if(roleName==="user"&&opts.messageId){addChip("Edit",()=>editMessage(opts.messageId,shown))}
-      $("messages").appendChild(wrap);$("assistantPanel").scrollTop=$("assistantPanel").scrollHeight
+    function showLibraryView() {
+      $("assistantPanel").classList.add("hidden");
+      $("libraryPanel").classList.remove("hidden");
+      $("adminPanel").classList.add("hidden");
+      $("inputWrap").classList.add("hidden");
+      $("navAssistant").classList.remove("active");
+      $("navLibrary").classList.add("active");
+      $("navAdmin").classList.remove("active");
+      setTitle("Policies");
+      loadLibrary().catch(e => {
+        console.error("showLibraryView failed", e);
+        banner("Could not load library");
+      });
     }
 
-    function createStreamMsg(){
-      const old=$("streaming"); if(old) old.remove();
-      const wrap=document.createElement("div");
-      wrap.id="streaming";wrap.className="wrap assistant";
-      wrap.innerHTML=`<div class="avatar">IC</div><div class="block"><div class="msg typing" data-raw=""></div><div class="meta">Reply language: ${LANG[selectedLang()]||"English"} · Mode: ${RESP[selectedMode()]}</div></div>`;
-      $("messages").appendChild(wrap);$("assistantPanel").scrollTop=$("assistantPanel").scrollHeight
+    async function showAdminView() {
+      if (!isAdmin()) {
+        banner("Admin access required");
+        return;
+      }
+
+      $("assistantPanel").classList.add("hidden");
+      $("libraryPanel").classList.add("hidden");
+      $("adminPanel").classList.remove("hidden");
+      $("inputWrap").classList.add("hidden");
+      $("navAssistant").classList.remove("active");
+      $("navLibrary").classList.remove("active");
+      $("navAdmin").classList.add("active");
+      setTitle("Admin");
+
+      try {
+        await loadAdminReferenceData();
+        await loadActiveAdminTab();
+      } catch (e) {
+        console.error("showAdminView failed", e);
+        banner("Could not load admin panel");
+      }
     }
 
-    function startTyping(){
-      if(typing) return; typing=true;
-      const el=document.querySelector("#streaming .msg"); if(!el){typing=false;return}
-      let raw=el.getAttribute("data-raw")||"";
-      const tick=setInterval(()=>{
-        if(queue.length){raw+=queue.shift();el.innerHTML=render(raw,"assistant");el.setAttribute("data-raw",raw);$("assistantPanel").scrollTop=$("assistantPanel").scrollHeight}
-        else if(!isStreaming){clearInterval(tick);typing=false;el.classList.remove("typing")}
-      },2)
+    function resetWelcome() {
+      conversationId = null;
+      currentDocumentText = null;
+      currentDocumentName = null;
+      $("messages").innerHTML = "";
+      $("messages").classList.add("hidden");
+      $("empty").classList.remove("hidden");
+      $("input").value = "";
+      resize();
+      docHide();
+      setTitle();
+      setWelcome();
+      filterConversations();
+      closeSettings();
+      showAssistantView();
     }
 
-    async function stream(url,body){
-      body.message+=REG_PROMPT+buildLangInstruction();
-      body.reply_language=selectedLang();body.reply_language_label=LANG[selectedLang()]||"English";body.response_mode=selectedMode();
-      const res=await fetch(url,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-      if(res.status===401){location.href="/login";return}
-      if(!res.ok) throw new Error(await res.text()||`Chat request failed (${res.status})`);
-      const reader=res.body.getReader(),dec=new TextDecoder(); let buffer="";
-      createStreamMsg(); queue.push(" "); startTyping();
-      while(true){
-        const {done,value}=await reader.read(); if(done) break;
-        buffer+=dec.decode(value,{stream:true}); const parts=buffer.split("\n"); buffer=parts.pop()||"";
-        for(const line of parts){
-          if(!line.startsWith("data:")) continue;
-          let payload=line.slice(5); if(payload.startsWith(" ")) payload=payload.slice(1); if(payload==="[DONE]") continue;
-          for(const ch of payload) queue.push(ch); startTyping()
+    function renderHistory(rows) {
+      const host = $("history");
+      host.innerHTML = "";
+      rows.forEach(r => {
+        const item = document.createElement("div");
+        item.className = `item ${Number(r.id) === Number(conversationId) ? "active" : ""}`;
+        item.innerHTML = `<div class="row"><button class="mainbtn"><div class="ttl">${safe(stripSystem(r.title || "Observation"))}</div></button><button class="mini">⧉</button><button class="mini danger">🗑</button></div>`;
+        const [main, copy, del] = item.querySelectorAll("button");
+        main.onclick = () => { showAssistantView(); openConversation(r.id, stripSystem(r.title || "Observation")); };
+        copy.onclick = e => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(stripSystem(r.title || "Observation"));
+          banner("Copied");
+        };
+        del.onclick = e => {
+          e.stopPropagation();
+          deleteConversation(r.id);
+        };
+        host.appendChild(item);
+      });
+    }
+
+    function filterConversations() {
+      const q = $("search").value.trim().toLowerCase();
+      renderHistory(q ? cache.filter(r => stripSystem(r.title || "").toLowerCase().includes(q)) : cache);
+    }
+
+    async function loadConversations() {
+      cache = await api("/chat/conversations") || [];
+      filterConversations();
+      return cache;
+    }
+
+    async function openConversation(id, title) {
+      const data = await api(`/chat/conversations/${id}`);
+      if (!data) return;
+      conversationId = id;
+      $("messages").innerHTML = "";
+      $("empty").classList.add("hidden");
+      $("messages").classList.remove("hidden");
+
+      data.messages.forEach(m => appendMessage(m.role, m.message, { messageId: m.id }));
+
+      if (data.document) {
+        currentDocumentText = data.document.text;
+        currentDocumentName = data.document.filename;
+        docShow(data.document.filename);
+      } else {
+        currentDocumentText = null;
+        currentDocumentName = null;
+        docHide();
+      }
+
+      setTitle(title || "Observation");
+      filterConversations();
+
+      if (window.innerWidth <= 768) {
+        $("sidebar").classList.remove("open");
+        $("overlay").classList.remove("show");
+      }
+    }
+
+    async function renameShort(id, prompt) {
+      const short = summariseTitle(prompt);
+      await api(`/chat/conversations/${id}/rename`, { method:"POST", body: JSON.stringify({ title: short }) });
+      setTitle(short);
+      await loadConversations();
+    }
+
+    async function deleteConversation(id) {
+      if (!confirm("Delete this conversation?")) return;
+      await api(`/chat/conversations/${id}`, { method:"DELETE" });
+      if (Number(conversationId) === Number(id)) resetWelcome();
+      await loadConversations();
+      banner("Conversation deleted");
+    }
+
+    function appendMessage(roleName, text, opts = {}) {
+      const shown = roleName === "user" ? stripSystem(text) : text;
+      const wrap = document.createElement("div");
+      wrap.className = `wrap ${roleName}`;
+      wrap.innerHTML = `<div class="avatar">${roleName === "assistant" ? "IC" : userInitials()}</div><div class="block"><div class="msg">${roleName === "assistant" ? render(shown, "assistant") : safe(shown)}</div>${opts.meta ? `<div class="meta">${safe(opts.meta)}</div>` : ""}<div class="actions"></div></div>`;
+      const actions = wrap.querySelector(".actions");
+
+      const addChip = (label, fn) => {
+        const b = document.createElement("button");
+        b.className = "chip";
+        b.textContent = label;
+        b.onclick = fn;
+        actions.appendChild(b);
+      };
+
+      addChip("Copy", () => navigator.clipboard.writeText(shown).then(() => banner("Copied")).catch(() => banner("Could not copy")));
+      if (roleName === "assistant") {
+        addChip("Format for Ofsted", () => quick("ofsted"));
+        addChip("Draft Risk Assess", () => quick("risk"));
+      }
+      if (roleName === "user" && opts.messageId) {
+        addChip("Edit", () => editMessage(opts.messageId, shown));
+      }
+
+      $("messages").appendChild(wrap);
+      $("assistantPanel").scrollTop = $("assistantPanel").scrollHeight;
+    }
+
+    function createStreamMsg() {
+      const old = $("streaming");
+      if (old) old.remove();
+
+      const wrap = document.createElement("div");
+      wrap.id = "streaming";
+      wrap.className = "wrap assistant";
+      wrap.innerHTML = `<div class="avatar">IC</div><div class="block"><div class="msg typing" data-raw=""></div><div class="meta">Reply language: ${LANG[selectedLang()] || "English"} · Mode: ${RESP[selectedMode()]}</div></div>`;
+      $("messages").appendChild(wrap);
+      $("assistantPanel").scrollTop = $("assistantPanel").scrollHeight;
+    }
+
+    function startTyping() {
+      if (typing) return;
+      typing = true;
+      const el = document.querySelector("#streaming .msg");
+      if (!el) {
+        typing = false;
+        return;
+      }
+      let raw = el.getAttribute("data-raw") || "";
+      const tick = setInterval(() => {
+        if (queue.length) {
+          raw += queue.shift();
+          el.innerHTML = render(raw, "assistant");
+          el.setAttribute("data-raw", raw);
+          $("assistantPanel").scrollTop = $("assistantPanel").scrollHeight;
+        } else if (!isStreaming) {
+          clearInterval(tick);
+          typing = false;
+          el.classList.remove("typing");
+        }
+      }, 2);
+    }
+
+    async function stream(url, body) {
+      body.message += REG_PROMPT + buildLangInstruction();
+      body.reply_language = selectedLang();
+      body.reply_language_label = LANG[selectedLang()] || "English";
+      body.response_mode = selectedMode();
+
+      const res = await fetch(url, {
+        method:"POST",
+        credentials:"include",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify(body)
+      });
+
+      if (res.status === 401) {
+        location.href = "/login";
+        return;
+      }
+
+      if (!res.ok) throw new Error(await res.text() || `Chat request failed (${res.status})`);
+
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buffer = "";
+
+      createStreamMsg();
+      queue.push(" ");
+      startTyping();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += dec.decode(value, { stream:true });
+        const parts = buffer.split("\n");
+        buffer = parts.pop() || "";
+        for (const line of parts) {
+          if (!line.startsWith("data:")) continue;
+          let payload = line.slice(5);
+          if (payload.startsWith(" ")) payload = payload.slice(1);
+          if (payload === "[DONE]") continue;
+          for (const ch of payload) queue.push(ch);
+          startTyping();
         }
       }
     }
 
-    async function uploadDoc(file){
-      const fd=new FormData(); fd.append("file",file); if(conversationId) fd.append("conversation_id",conversationId);
-      const data=await api("/chat/upload",{method:"POST",body:fd});
-      currentDocumentText=data.text; currentDocumentName=data.filename; docShow(data.filename); banner(`Document attached: ${data.filename}`)
+    async function uploadDoc(file) {
+      const fd = new FormData();
+      fd.append("file", file);
+      if (conversationId) fd.append("conversation_id", conversationId);
+      const data = await api("/chat/upload", { method:"POST", body: fd });
+      currentDocumentText = data.text;
+      currentDocumentName = data.filename;
+      docShow(data.filename);
+      banner(`Document attached: ${data.filename}`);
     }
 
-    async function editMessage(messageId,currentText){
-      const edited=prompt("Edit message",currentText); if(edited===null) return;
-      const cleaned=stripSystem(edited).trim(); if(!cleaned) return banner("Message cannot be empty");
-      isStreaming=true;$("send").disabled=true;
-      try{await stream(`/chat/messages/${messageId}/edit`,{message:cleaned,document_text:currentDocumentText,document_name:currentDocumentName,response_mode:selectedMode()});if(conversationId) await openConversation(conversationId,$("title").textContent);banner("Updated")}
-      catch(e){banner(e.message||"Edit failed")}
-      finally{isStreaming=false;$("send").disabled=false}
-    }
+    async function editMessage(messageId, currentText) {
+      const edited = prompt("Edit message", currentText);
+      if (edited === null) return;
 
-    async function sendMessage(){
-      const raw=$("input").value.trim(),text=stripSystem(raw); if(!text||isStreaming) return;
-      const prev=conversationId; lastPrompt=text; isStreaming=true; $("send").disabled=true; $("empty").classList.add("hidden"); $("messages").classList.remove("hidden");
-      appendMessage("user",text,{meta:`Mode: ${RESP[selectedMode()]}`}); $("input").value=""; resize();
-      try{await stream("/chat/",{message:text,conversation_id:conversationId,document_text:currentDocumentText,document_name:currentDocumentName})}
-      catch(e){const streamEl=document.querySelector("#streaming .msg"); if(streamEl){streamEl.classList.remove("typing");streamEl.innerHTML=render(`Sorry, there was a problem: ${e.message}`,"assistant")}else appendMessage("assistant",`Sorry, there was a problem: ${e.message}`)}
-      finally{isStreaming=false;$("send").disabled=false; const rows=await loadConversations(); if(!prev&&!conversationId&&rows.length){conversationId=rows[0].id;await renameShort(conversationId,lastPrompt)}}
-    }
+      const cleaned = stripSystem(edited).trim();
+      if (!cleaned) return banner("Message cannot be empty");
 
-    function quick(type){$("input").value=type==="ofsted"?"Rewrite the above documentation so it aligns with Ofsted Quality Standards and is ready for professional review.":"Generate a formal risk assessment based on this situation. Include presenting risks, protective factors, staff actions, and follow-up actions.";resize();sendMessage()}
-    function startSpeech(){
-      const SR=window.SpeechRecognition||window.webkitSpeechRecognition; if(!SR) return banner("Speech to text is not supported on this device");
-      const rec=new SR(); rec.lang=selectedLang()||"en-GB"; rec.interimResults=true; rec.continuous=false; $("mic").style.color="var(--accent)";
-      rec.onresult=e=>{let text="";for(let i=0;i<e.results.length;i++) text+=e.results[i][0].transcript+" ";$("input").value=text.trim();resize()};
-      rec.onerror=()=>banner("Speech input failed"); rec.onend=()=>{$("mic").style.color=""}; rec.start()
-    }
+      isStreaming = true;
+      $("send").disabled = true;
 
-    function fillSelect(id,rows,placeholder,valueKey="id",labelFn=r=>r.name){
-      const sel=$(id); if(!sel) return; const current=sel.value; sel.innerHTML=`<option value="">${placeholder}</option>`;
-      rows.forEach(r=>{const opt=document.createElement("option");opt.value=r[valueKey];opt.textContent=labelFn(r);sel.appendChild(opt)});
-      if([...sel.options].some(o=>String(o.value)===String(current))) sel.value=current
-    }
-
-    function updateAdminSummary(){$("sumUsers").textContent=String(adminUsers.length||0);$("sumHomes").textContent=String(homes.length||0);$("sumProviders").textContent=String(providers.length||0);$("sumDocs").textContent=String(docs.length||0)}
-    function activeAdminTab(){return localStorage.getItem("indicare_admin_tab")||"users"}
-    function setAdminTab(name){
-      document.querySelectorAll(".tabbtn[data-tab]").forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
-      document.querySelectorAll(".admin-tab").forEach(t=>t.classList.add("hidden")); $("tab-"+name).classList.remove("hidden");
-      localStorage.setItem("indicare_admin_tab",name); loadActiveAdminTab()
-    }
-    function setLibraryTab(name){
-      document.querySelectorAll(".tabbtn[data-library-tab]").forEach(b=>b.classList.toggle("active",b.dataset.libraryTab===name));
-      $("library-list-tab").classList.toggle("hidden",name!=="list"); $("library-editor-tab").classList.toggle("hidden",name!=="editor");
-      if(name==="editor"&&!canManageLibrary()) setLibraryTab("list")
-    }
-
-    async function loadAdminReferenceData(){
-      const [h,p,u]=await Promise.all([api("/admin/homes"),api("/admin/providers"),api("/admin/users")]);
-      homes=h?.homes||[]; providers=p?.providers||[]; adminUsers=u?.users||[];
-      fillSelect("adminHomeId",homes,"Select home"); fillSelect("userHomeFilter",homes,"All homes"); fillSelect("docHomeFilter",homes,"All homes"); fillSelect("docHomeId",homes,"Select home");
-      fillSelect("homeProviderId",providers,"Select provider");
-      const managers=adminUsers.filter(u=>["manager","admin","provider_admin"].includes((u.role||"").toLowerCase()));
-      fillSelect("homeRegisteredManagerId",managers,"Select manager","id",r=>`${r.first_name||""} ${r.last_name||""}`.trim()||r.email);
-      fillSelect("docOwnerId",adminUsers,"Select owner","id",r=>`${r.first_name||""} ${r.last_name||""}`.trim()||r.email);
-      fillSelect("libraryOwnerId",adminUsers,"Select owner","id",r=>`${r.first_name||""} ${r.last_name||""}`.trim()||r.email);
-      updateAdminSummary()
-    }
-    async function loadActiveAdminTab(){const t=activeAdminTab(); if(t==="users") await loadAdminUsers(); if(t==="homes") await loadHomes(); if(t==="providers") await loadProviders(); if(t==="documents") await loadDocuments(); if(t==="billing") await loadBilling(); if(t==="audit") await loadAudit()}
-
-    function clearAdminForm(){$("adminFirstName").value="";$("adminLastName").value="";$("adminEmail").value="";$("adminPassword").value="";$("adminRole").value="staff";$("adminHomeId").value="";adminCreateActive=true;syncHelpers()}
-    function adminPayloadFromForm(){return{first_name:$("adminFirstName").value.trim(),last_name:$("adminLastName").value.trim(),email:$("adminEmail").value.trim(),password:$("adminPassword").value,role:$("adminRole").value,home_id:Number($("adminHomeId").value),is_active:adminCreateActive}}
-    async function createAdminUser(){const p=adminPayloadFromForm(); if(!p.first_name||!p.last_name||!p.email||!p.password||!p.role||!p.home_id) return banner("Complete all user fields"); await api("/admin/users",{method:"POST",body:JSON.stringify(p)}); clearAdminForm(); await loadAdminUsers(); await loadAdminReferenceData(); banner("User created")}
-    async function loadAdminUsers(){
-      const params=new URLSearchParams(); if($("userSearch").value.trim()) params.set("q",$("userSearch").value.trim()); if($("userRoleFilter").value) params.set("role",$("userRoleFilter").value); if($("userHomeFilter").value.trim()) params.set("home_id",$("userHomeFilter").value.trim()); if($("userArchivedFilter").value) params.set("archived",$("userArchivedFilter").value);
-      adminUsers=(await api("/admin/users"+(params.toString()?`?${params}`:"")))?.users||[]; renderAdminUsers(); updateAdminSummary()
-    }
-    function renderAdminUsers(){
-      const host=$("adminUsersList"); host.innerHTML="";
-      if(!adminUsers.length) return host.innerHTML=`<div class="entity-row"><div>No users found.</div></div>`;
-      adminUsers.forEach(user=>{
-        const row=document.createElement("div"); row.className="entity-row";
-        row.innerHTML=`<div><div class="entity-title">${safe([user.first_name,user.last_name].filter(Boolean).join(" ")||user.email)}</div><div class="entity-meta">${safe(user.email)} · ${safe(user.role)} · home ${safe(String(user.home_id??""))}</div><div class="entity-meta"><span class="tag ${user.is_active?"ok":"bad"}">${user.is_active?"active":"inactive"}</span><span class="tag ${user.archived?"bad":"neutral"}">${user.archived?"archived":"live"}</span></div></div><div class="entity-actions"></div>`;
-        const right=row.querySelector(".entity-actions");
-        const add=(label,fn)=>{const b=document.createElement("button");b.className="chip";b.textContent=label;b.onclick=fn;right.appendChild(b)};
-        add(user.is_active?"Deactivate":"Activate",async()=>{await api(`/admin/users/${user.id}`,{method:"PATCH",body:JSON.stringify({is_active:!user.is_active})});await loadAdminUsers();banner("User updated")});
-        add(user.archived?"Unarchive":"Archive",async()=>{await api(`/admin/users/${user.id}`,{method:"PATCH",body:JSON.stringify({archived:!user.archived})});await loadAdminUsers();banner("User updated")});
-        add("Role",async()=>{const newRole=prompt(`Set role for ${user.email}`,user.role||"staff");if(newRole===null) return; await api(`/admin/users/${user.id}`,{method:"PATCH",body:JSON.stringify({role:newRole})});await loadAdminUsers();banner("Role updated")});
-        add("Home",async()=>{const choices=homes.map(h=>`${h.id}: ${h.name}`).join("\n");const homeId=prompt(`Set home id for ${user.email}\n\n${choices}`,String(user.home_id??""));if(homeId===null) return; await api(`/admin/users/${user.id}`,{method:"PATCH",body:JSON.stringify({home_id:Number(homeId)})});await loadAdminUsers();banner("Home updated")});
-        add("Reset password",async()=>{const password=prompt(`Set new password for ${user.email}`);if(password===null||!password.trim()) return banner("Password cannot be empty"); await api(`/admin/users/${user.id}/reset-password`,{method:"POST",body:JSON.stringify({password})});banner("Password reset")});
-        host.appendChild(row)
-      })
-    }
-
-    async function createHome(){
-      const p={name:$("homeName").value.trim(),address:$("homeAddress").value.trim()||null,postcode:$("homePostcode").value.trim()||null,region:$("homeRegion").value.trim()||null,local_authority:$("homeLocalAuthority").value.trim()||null,ofsted_urn:$("homeOfstedUrn").value.trim()||null,provider_id:$("homeProviderId").value?Number($("homeProviderId").value):null,registered_manager_id:$("homeRegisteredManagerId").value?Number($("homeRegisteredManagerId").value):null,geofence_radius_m:$("homeGeofence").value.trim()?Number($("homeGeofence").value):null};
-      if(!p.name) return banner("Home name is required"); await api("/admin/homes",{method:"POST",body:JSON.stringify(p)}); ["homeName","homeAddress","homePostcode","homeRegion","homeLocalAuthority","homeOfstedUrn","homeGeofence"].forEach(id=>$(id).value=""); $("homeProviderId").value="";$("homeRegisteredManagerId").value=""; await loadHomes(); await loadAdminReferenceData(); banner("Home created")
-    }
-    async function loadHomes(){homes=(await api("/admin/homes"))?.homes||[];renderHomes();updateAdminSummary()}
-    function renderHomes(){
-      const host=$("homesList"); host.innerHTML="";
-      if(!homes.length) return host.innerHTML=`<div class="entity-row"><div>No homes found.</div></div>`;
-      homes.forEach(home=>{
-        const row=document.createElement("div"); row.className="entity-row";
-        row.innerHTML=`<div><div class="entity-title">${safe(home.name)}</div><div class="entity-meta">${safe(home.postcode||"")} · ${safe(home.region||"")} · ${safe(home.local_authority||"")}</div><div class="entity-meta">URN: ${safe(home.ofsted_urn||"—")} · users: ${safe(String(home.user_count??0))}</div></div><div class="entity-actions"></div>`;
-        const right=row.querySelector(".entity-actions");
-        [["Edit",async()=>{const name=prompt("Home name",home.name||"");if(name===null) return; await api(`/admin/homes/${home.id}`,{method:"PATCH",body:JSON.stringify({name})});await loadHomes();banner("Home updated")}],[home.archived?"Unarchive":"Archive",async()=>{await api(`/admin/homes/${home.id}`,{method:"PATCH",body:JSON.stringify({archived:!home.archived})});await loadHomes();banner("Home updated")}]].forEach(([label,fn])=>{const b=document.createElement("button");b.className="chip";b.textContent=label;b.onclick=fn;right.appendChild(b)});
-        host.appendChild(row)
-      })
-    }
-
-    async function createProvider(){
-      const p={name:$("providerName").value.trim(),region:$("providerRegion").value.trim()||null,address:$("providerAddress").value.trim()||null,postcode:$("providerPostcode").value.trim()||null,local_authority:$("providerLA").value.trim()||null,safeguarding_lead_name:$("providerLeadName").value.trim()||null,safeguarding_lead_email:$("providerLeadEmail").value.trim()||null};
-      if(!p.name) return banner("Provider name is required"); await api("/admin/providers",{method:"POST",body:JSON.stringify(p)}); ["providerName","providerRegion","providerAddress","providerPostcode","providerLA","providerLeadName","providerLeadEmail"].forEach(id=>$(id).value=""); await loadProviders(); await loadAdminReferenceData(); banner("Provider created")
-    }
-    async function loadProviders(){providers=(await api("/admin/providers"))?.providers||[];renderProviders();updateAdminSummary()}
-    function renderProviders(){
-      const host=$("providersList"); host.innerHTML="";
-      if(!providers.length) return host.innerHTML=`<div class="entity-row"><div>No providers found.</div></div>`;
-      providers.forEach(provider=>{
-        const row=document.createElement("div"); row.className="entity-row";
-        row.innerHTML=`<div><div class="entity-title">${safe(provider.name)}</div><div class="entity-meta">${safe(provider.region||"")} · homes: ${safe(String(provider.home_count??0))}</div><div class="entity-meta">${safe(provider.safeguarding_lead_name||"No safeguarding lead")}${provider.safeguarding_lead_email?" · "+safe(provider.safeguarding_lead_email):""}</div></div><div class="entity-actions"></div>`;
-        const right=row.querySelector(".entity-actions");
-        [["Edit",async()=>{const name=prompt("Provider name",provider.name||"");if(name===null) return; await api(`/admin/providers/${provider.id}`,{method:"PATCH",body:JSON.stringify({name})});await loadProviders();banner("Provider updated")}],[provider.archived?"Unarchive":"Archive",async()=>{await api(`/admin/providers/${provider.id}`,{method:"PATCH",body:JSON.stringify({archived:!provider.archived})});await loadProviders();banner("Provider updated")}]].forEach(([label,fn])=>{const b=document.createElement("button");b.className="chip";b.textContent=label;b.onclick=fn;right.appendChild(b)});
-        host.appendChild(row)
-      })
-    }
-
-    async function createDocumentRecord(){
-      const p={title:$("docTitle").value.trim()||null,document_type:$("docType").value.trim()||null,home_id:$("docHomeId").value?Number($("docHomeId").value):null,owner_id:$("docOwnerId").value?Number($("docOwnerId").value):null,issue_date:$("docIssueDate").value||null,review_date:$("docReviewDate").value||null,expiry_date:$("docExpiryDate").value||null,approval_status:$("docApprovalStatus").value.trim()||"not_required",confidentiality_level:$("docConfLevel").value.trim()||"standard",input_text:$("docInputText").value.trim()||null};
-      await api("/admin/documents",{method:"POST",body:JSON.stringify(p)}); ["docTitle","docIssueDate","docReviewDate","docExpiryDate","docInputText"].forEach(id=>$(id).value=""); $("docType").value="policy";$("docHomeId").value="";$("docOwnerId").value="";$("docApprovalStatus").value="not_required";$("docConfLevel").value="standard"; await loadDocuments(); await loadAdminReferenceData(); banner("Document created")
-    }
-    async function loadDocuments(){
-      const params=new URLSearchParams(); if($("docSearch").value.trim()) params.set("q",$("docSearch").value.trim()); if($("docHomeFilter").value.trim()) params.set("home_id",$("docHomeFilter").value.trim()); if($("docTypeFilter").value.trim()) params.set("document_type",$("docTypeFilter").value.trim()); if($("docApprovalFilter").value.trim()) params.set("approval_status",$("docApprovalFilter").value.trim());
-      docs=(await api("/admin/documents"+(params.toString()?`?${params}`:"")))?.documents||[];renderDocuments();updateAdminSummary()
-    }
-    function renderDocuments(){
-      const host=$("docsList"); host.innerHTML="";
-      if(!docs.length) return host.innerHTML=`<div class="entity-row"><div>No documents found.</div></div>`;
-      docs.forEach(doc=>{
-        const row=document.createElement("div"); row.className="entity-row";
-        row.innerHTML=`<div><div class="entity-title">${safe(doc.title||"Untitled document")}</div><div class="entity-meta">${safe(doc.document_type||"—")} · ${safe(doc.home_name||("home "+(doc.home_id??"—")))}</div><div class="entity-meta">approval: ${safe(doc.approval_status||"not_required")} · review: ${safe(doc.review_date||"—")} · expiry: ${safe(doc.expiry_date||"—")}</div></div><div class="entity-actions"></div>`;
-        const right=row.querySelector(".entity-actions");
-        [["Set approved",async()=>{await api(`/admin/documents/${doc.id}`,{method:"PATCH",body:JSON.stringify({approval_status:"approved"})});await loadDocuments();banner("Document updated")}],["Edit title",async()=>{const title=prompt("Document title",doc.title||"");if(title===null) return; await api(`/admin/documents/${doc.id}`,{method:"PATCH",body:JSON.stringify({title})});await loadDocuments();banner("Document updated")}]].forEach(([label,fn])=>{const b=document.createElement("button");b.className="chip";b.textContent=label;b.onclick=fn;right.appendChild(b)});
-        host.appendChild(row)
-      })
-    }
-
-    async function loadBilling(){billing=await api("/admin/billing/overview");renderBilling()}
-    function renderBilling(){
-      $("billingStats").innerHTML=""; $("billingList").innerHTML=""; if(!billing) return;
-      [["Total users",billing.totals?.total_users??0],["Active users",billing.totals?.active_users??0],["Archived users",billing.totals?.archived_users??0],["Active subscriptions",billing.totals?.active_subscriptions??0],["Inactive subscriptions",billing.totals?.inactive_subscriptions??0]].forEach(([l,n])=>{$("billingStats").insertAdjacentHTML("beforeend",`<div class="stat"><div class="n">${safe(String(n))}</div><div class="l">${safe(l)}</div></div>`)});
-      const users=billing.users||[]; if(!users.length) return $("billingList").innerHTML=`<div class="entity-row"><div>No billing rows found.</div></div>`;
-      users.forEach(user=>{$("billingList").insertAdjacentHTML("beforeend",`<div class="entity-row"><div><div class="entity-title">${safe([user.first_name,user.last_name].filter(Boolean).join(" ")||user.email)}</div><div class="entity-meta">${safe(user.email)} · ${safe(user.plan_name||"No plan")}</div><div class="entity-meta">status: ${safe(user.subscription_status||"inactive")} · period end: ${safe(user.current_period_end||"—")}</div></div></div>`)})
-    }
-
-    async function loadAudit(){audit=(await api("/admin/audit"))?.audit||[];renderAudit()}
-    function renderAudit(){
-      const host=$("auditList"); host.innerHTML="";
-      if(!audit.length) return host.innerHTML=`<div class="entity-row"><div>No audit entries found.</div></div>`;
-      audit.forEach(a=>host.insertAdjacentHTML("beforeend",`<div class="entity-row"><div><div class="entity-title">${safe(a.action)} · ${safe(a.target_type)} ${safe(String(a.target_id??""))}</div><div class="entity-meta">${safe([a.first_name,a.last_name].filter(Boolean).join(" ")||a.email||"Unknown admin")} · ${safe(a.created_at||"")}</div><div class="entity-meta">${safe(JSON.stringify(a.details||{}))}</div></div></div>`))
-    }
-
-    async function loadLibrary(){
-      const params=new URLSearchParams(); if($("librarySearch").value.trim()) params.set("q",$("librarySearch").value.trim()); if($("libraryTypeFilter").value) params.set("document_type",$("libraryTypeFilter").value); if($("libraryApprovalFilter").value) params.set("approval_status",$("libraryApprovalFilter").value);
-      libraryDocs=(await api("/documents/library"+(params.toString()?`?${params}`:"")))?.documents||[]; renderLibraryList(); renderManagerLibraryList();
-      if(selectedLibraryDoc){const fresh=libraryDocs.find(d=>Number(d.id)===Number(selectedLibraryDoc.id)); if(fresh) openLibraryDocument(fresh.id)}
-    }
-    function renderLibraryList(){
-      const host=$("libraryList"); host.innerHTML="";
-      if(!libraryDocs.length) return host.innerHTML=`<div class="entity-row"><div>No documents available for your home.</div></div>`;
-      libraryDocs.forEach(doc=>{
-        const row=document.createElement("div"); row.className="entity-row";
-        row.innerHTML=`<div><div class="entity-title">${safe(doc.title||"Untitled document")}</div><div class="entity-meta">${safe(doc.document_type||"—")} · ${safe(doc.home_name||"Your home")}</div><div class="entity-meta"><span class="tag ${doc.approval_status==="approved"?"ok":doc.approval_status==="pending"?"warn":"neutral"}">${safe(doc.approval_status||"not_required")}</span><span class="tag neutral">${safe(doc.confidentiality_level||"standard")}</span></div></div><div class="entity-actions"></div>`;
-        const right=row.querySelector(".entity-actions");
-        [["Open",()=>openLibraryDocument(doc.id)],...(canManageLibrary()?[["Edit",()=>populateLibraryEditor(doc)]]:[])].forEach(([label,fn])=>{const b=document.createElement("button");b.className="chip";b.textContent=label;b.onclick=fn;right.appendChild(b)});
-        host.appendChild(row)
-      })
-    }
-    function renderManagerLibraryList(){
-      const host=$("managerLibraryList"); if(!host) return; host.innerHTML="";
-      if(!canManageLibrary()) return host.innerHTML=`<div class="entity-row"><div>Read-only access.</div></div>`;
-      if(!libraryDocs.length) return host.innerHTML=`<div class="entity-row"><div>No home documents found.</div></div>`;
-      libraryDocs.forEach(doc=>host.insertAdjacentHTML("beforeend",`<div class="entity-row"><div><div class="entity-title">${safe(doc.title||"Untitled document")}</div><div class="entity-meta">${safe(doc.document_type||"—")} · review ${safe(doc.review_date||"—")}</div></div><div class="entity-actions"><button class="chip" data-doc-edit="${doc.id}">Edit</button></div></div>`));
-      host.querySelectorAll("[data-doc-edit]").forEach(b=>b.onclick=()=>populateLibraryEditor(libraryDocs.find(d=>Number(d.id)===Number(b.dataset.docEdit))))
-    }
-    async function openLibraryDocument(id){
-      const data=await api(`/documents/library/${id}`),doc=data?.document; if(!doc) return;
-      selectedLibraryDoc=doc;
-      $("libraryViewer").innerHTML=`<h3>${safe(doc.title||"Untitled document")}</h3><p><strong>Type:</strong> ${safe(doc.document_type||"—")}</p><p><strong>Approval:</strong> ${safe(doc.approval_status||"not_required")} · <strong>Confidentiality:</strong> ${safe(doc.confidentiality_level||"standard")}</p><p><strong>Issue date:</strong> ${safe(doc.issue_date||"—")} · <strong>Review date:</strong> ${safe(doc.review_date||"—")} · <strong>Expiry date:</strong> ${safe(doc.expiry_date||"—")}</p><hr style="border:none;border-top:1px solid var(--line);margin:14px 0;"><div>${render(doc.input_text||doc.generated_text||"No content available.","assistant")}</div>`
-    }
-    function resetLibraryEditor(){editingLibraryDocId=null;$("libraryFormTitle").textContent="Create document";["libraryDocTitle","libraryIssueDate","libraryReviewDate","libraryExpiryDate","libraryInputText"].forEach(id=>$(id).value="");$("libraryDocType").value="policy";$("libraryApprovalStatus").value="not_required";$("libraryConfidentiality").value="standard";$("libraryOwnerId").value="";$("deleteLibraryDocBtn").classList.add("hidden")}
-    function populateLibraryEditor(doc){if(!canManageLibrary()) return; editingLibraryDocId=doc.id;$("libraryFormTitle").textContent="Edit document";$("libraryDocTitle").value=doc.title||"";$("libraryDocType").value=doc.document_type||"policy";$("libraryIssueDate").value=doc.issue_date||"";$("libraryReviewDate").value=doc.review_date||"";$("libraryExpiryDate").value=doc.expiry_date||"";$("libraryApprovalStatus").value=doc.approval_status||"not_required";$("libraryConfidentiality").value=doc.confidentiality_level||"standard";$("libraryOwnerId").value=doc.owner_id||"";$("libraryInputText").value=doc.input_text||doc.generated_text||"";$("deleteLibraryDocBtn").classList.remove("hidden");setLibraryTab("editor")}
-    async function saveLibraryDocument(){
-      if(!canManageLibrary()) return banner("Manager or admin access required");
-      const p={title:$("libraryDocTitle").value.trim(),document_type:$("libraryDocType").value,issue_date:$("libraryIssueDate").value||null,review_date:$("libraryReviewDate").value||null,expiry_date:$("libraryExpiryDate").value||null,approval_status:$("libraryApprovalStatus").value,confidentiality_level:$("libraryConfidentiality").value,owner_id:$("libraryOwnerId").value?Number($("libraryOwnerId").value):null,input_text:$("libraryInputText").value.trim()||null};
-      if(!p.title) return banner("Title is required");
-      if(editingLibraryDocId){await api(`/documents/library/${editingLibraryDocId}`,{method:"PATCH",body:JSON.stringify(p)});banner("Document updated")} else {await api("/documents/library",{method:"POST",body:JSON.stringify(p)});banner("Document created")}
-      resetLibraryEditor(); await loadLibrary(); setLibraryTab("list")
-    }
-    async function deleteLibraryDocument(){if(!editingLibraryDocId||!confirm("Delete this document?")) return; await api(`/documents/library/${editingLibraryDocId}`,{method:"DELETE"}); banner("Document deleted"); resetLibraryEditor(); $("libraryViewer").innerHTML=`<h3>Select a document</h3><p>Open a policy or document from the list to read it here.</p>`; await loadLibrary(); setLibraryTab("list")}
-
-    function restorePrefs(){
-      document.body.classList.toggle("theme-dark",(localStorage.getItem("indicare_theme")||"light")==="dark");
-      $("lang").value=localStorage.getItem("indicare_reply_language")||DEFAULT_LANGUAGE;
-      $("mode").value=localStorage.getItem("indicare_response_mode")||"balanced";
-      syncHelpers(); setAdminTab(activeAdminTab()); setLibraryTab("list")
-    }
-
-    function bind(){
-      $("sideToggle").onclick=()=>$("sidebar").classList.toggle("open");
-      $("mobileMenu").onclick=()=>{$("sidebar").classList.add("open");$("overlay").classList.add("show")};
-      $("overlay").onclick=()=>{$("sidebar").classList.remove("open");$("overlay").classList.remove("show")};
-      $("openSettings").onclick=openSettings; $("closeSettings").onclick=closeSettings; $("settingsOverlay").onclick=closeSettings;
-      $("newChat").onclick=resetWelcome; $("backWelcome").onclick=resetWelcome; $("logout").onclick=logoutNow;
-      $("theme").onclick=()=>{document.body.classList.toggle("theme-dark");localStorage.setItem("indicare_theme",document.body.classList.contains("theme-dark")?"dark":"light");syncHelpers()};
-      $("privacy").onclick=()=>{$("app").classList.toggle("privacy-active");syncHelpers()};
-      $("lang").onchange=()=>{localStorage.setItem("indicare_reply_language",selectedLang());syncHelpers()};
-      $("mode").onchange=()=>{localStorage.setItem("indicare_response_mode",selectedMode());syncHelpers()};
-      $("navAssistant").onclick=showAssistantView; $("navLibrary").onclick=showLibraryView; $("navAdmin").onclick=showAdminView;
-      document.querySelectorAll(".tabbtn[data-tab]").forEach(btn=>btn.onclick=()=>setAdminTab(btn.dataset.tab));
-      document.querySelectorAll(".tabbtn[data-library-tab]").forEach(btn=>btn.onclick=()=>setLibraryTab(btn.dataset.libraryTab));
-      $("search").oninput=filterConversations;
-      $("input").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage()}});
-      $("input").addEventListener("input",resize); $("send").onclick=sendMessage; $("mic").onclick=startSpeech;
-      $("upload").onchange=async e=>{const file=e.target.files?.[0]; if(!file) return; try{await uploadDoc(file)}catch(err){banner(err.message||"Upload failed")} e.target.value=""};
-      $("clearDoc").onclick=async()=>{try{if(conversationId) await api(`/chat/conversations/${conversationId}/document`,{method:"DELETE"})}catch{} currentDocumentText=null;currentDocumentName=null;docHide();banner("Document removed")};
-      $("adminActiveToggle").onclick=()=>{adminCreateActive=!adminCreateActive;syncHelpers()};
-      $("createUserBtn").onclick=createAdminUser; $("refreshUsersBtn").onclick=loadAdminUsers; $("userSearch").oninput=loadAdminUsers; $("userRoleFilter").onchange=loadAdminUsers; $("userHomeFilter").onchange=loadAdminUsers; $("userArchivedFilter").onchange=loadAdminUsers;
-      $("createHomeBtn").onclick=createHome; $("refreshHomesBtn").onclick=loadHomes;
-      $("createProviderBtn").onclick=createProvider; $("refreshProvidersBtn").onclick=loadProviders;
-      $("createDocBtn").onclick=createDocumentRecord; $("refreshDocsBtn").onclick=loadDocuments; $("docSearch").oninput=loadDocuments; $("docHomeFilter").onchange=loadDocuments; $("docTypeFilter").onchange=loadDocuments; $("docApprovalFilter").onchange=loadDocuments;
-      $("refreshBillingBtn").onclick=loadBilling; $("refreshAuditBtn").onclick=loadAudit;
-      $("refreshLibraryBtn").onclick=loadLibrary; $("refreshManagerLibraryBtn").onclick=loadLibrary; $("librarySearch").oninput=loadLibrary; $("libraryTypeFilter").onchange=loadLibrary; $("libraryApprovalFilter").onchange=loadLibrary;
-      $("saveLibraryDocBtn").onclick=saveLibraryDocument; $("resetLibraryDocBtn").onclick=resetLibraryEditor; $("deleteLibraryDocBtn").onclick=deleteLibraryDocument
-    }
-
-    async function init(){
-      try{
-        bind(); restorePrefs(); resize(); await loadMe(); setWelcome(); await loadConversations(); await loadAdminReferenceData(); showAssistantView()
-      }catch(e){
-        console.error(e); location.href="/login"
+      try {
+        await stream(`/chat/messages/${messageId}/edit`, {
+          message: cleaned,
+          document_text: currentDocumentText,
+          document_name: currentDocumentName,
+          response_mode: selectedMode()
+        });
+        if (conversationId) await openConversation(conversationId, $("title").textContent);
+        banner("Updated");
+      } catch (e) {
+        banner(e.message || "Edit failed");
+      } finally {
+        isStreaming = false;
+        $("send").disabled = false;
       }
     }
-    document.addEventListener("DOMContentLoaded",init);
+
+    async function sendMessage() {
+      const raw = $("input").value.trim();
+      const text = stripSystem(raw);
+      if (!text || isStreaming) return;
+
+      const prev = conversationId;
+      lastPrompt = text;
+      isStreaming = true;
+      $("send").disabled = true;
+      $("empty").classList.add("hidden");
+      $("messages").classList.remove("hidden");
+
+      appendMessage("user", text, { meta:`Mode: ${RESP[selectedMode()]}` });
+      $("input").value = "";
+      resize();
+
+      try {
+        await stream("/chat/", {
+          message: text,
+          conversation_id: conversationId,
+          document_text: currentDocumentText,
+          document_name: currentDocumentName
+        });
+      } catch (e) {
+        const streamEl = document.querySelector("#streaming .msg");
+        if (streamEl) {
+          streamEl.classList.remove("typing");
+          streamEl.innerHTML = render(`Sorry, there was a problem: ${e.message}`, "assistant");
+        } else {
+          appendMessage("assistant", `Sorry, there was a problem: ${e.message}`);
+        }
+      } finally {
+        isStreaming = false;
+        $("send").disabled = false;
+        const rows = await loadConversations();
+        if (!prev && !conversationId && rows.length) {
+          conversationId = rows[0].id;
+          await renameShort(conversationId, lastPrompt);
+        }
+      }
+    }
+
+    function quick(type) {
+      $("input").value = type === "ofsted"
+        ? "Rewrite the above documentation so it aligns with Ofsted Quality Standards and is ready for professional review."
+        : "Generate a formal risk assessment based on this situation. Include presenting risks, protective factors, staff actions, and follow-up actions.";
+      resize();
+      sendMessage();
+    }
+
+    function startSpeech() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) return banner("Speech to text is not supported on this device");
+
+      const rec = new SR();
+      rec.lang = selectedLang() || "en-GB";
+      rec.interimResults = true;
+      rec.continuous = false;
+      $("mic").style.color = "var(--accent)";
+
+      rec.onresult = e => {
+        let text = "";
+        for (let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript + " ";
+        $("input").value = text.trim();
+        resize();
+      };
+
+      rec.onerror = () => banner("Speech input failed");
+      rec.onend = () => { $("mic").style.color = ""; };
+      rec.start();
+    }
+
+    function fillSelect(id, rows, placeholder, valueKey = "id", labelFn = r => r.name) {
+      const sel = $(id);
+      if (!sel) return;
+      const current = sel.value;
+      sel.innerHTML = `<option value="">${placeholder}</option>`;
+      rows.forEach(r => {
+        const opt = document.createElement("option");
+        opt.value = r[valueKey];
+        opt.textContent = labelFn(r);
+        sel.appendChild(opt);
+      });
+      if ([...sel.options].some(o => String(o.value) === String(current))) sel.value = current;
+    }
+
+    function updateAdminSummary() {
+      $("sumUsers").textContent = String(adminUsers.length || 0);
+      $("sumHomes").textContent = String(homes.length || 0);
+      $("sumProviders").textContent = String(providers.length || 0);
+      $("sumDocs").textContent = String(docs.length || 0);
+    }
+
+    function activeAdminTab() {
+      return localStorage.getItem("indicare_admin_tab") || "users";
+    }
+
+    function setAdminTab(name) {
+      document.querySelectorAll(".tabbtn[data-tab]").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+      document.querySelectorAll(".admin-tab").forEach(t => t.classList.add("hidden"));
+      $("tab-" + name).classList.remove("hidden");
+      localStorage.setItem("indicare_admin_tab", name);
+    }
+
+    function setLibraryTab(name) {
+      document.querySelectorAll(".tabbtn[data-library-tab]").forEach(b => b.classList.toggle("active", b.dataset.libraryTab === name));
+      $("library-list-tab").classList.toggle("hidden", name !== "list");
+      $("library-editor-tab").classList.toggle("hidden", name !== "editor");
+      if (name === "editor" && !canManageLibrary()) setLibraryTab("list");
+    }
+
+    async function loadAdminReferenceData() {
+      const [h, p, u] = await Promise.all([api("/admin/homes"), api("/admin/providers"), api("/admin/users")]);
+      homes = h?.homes || [];
+      providers = p?.providers || [];
+      adminUsers = u?.users || [];
+
+      fillSelect("adminHomeId", homes, "Select home");
+      fillSelect("userHomeFilter", homes, "All homes");
+      fillSelect("docHomeFilter", homes, "All homes");
+      fillSelect("docHomeId", homes, "Select home");
+      fillSelect("homeProviderId", providers, "Select provider");
+
+      const managers = adminUsers.filter(u => ["manager","admin","provider_admin"].includes((u.role || "").toLowerCase()));
+      fillSelect("homeRegisteredManagerId", managers, "Select manager", "id", r => `${r.first_name || ""} ${r.last_name || ""}`.trim() || r.email);
+      fillSelect("docOwnerId", adminUsers, "Select owner", "id", r => `${r.first_name || ""} ${r.last_name || ""}`.trim() || r.email);
+      fillSelect("libraryOwnerId", adminUsers, "Select owner", "id", r => `${r.first_name || ""} ${r.last_name || ""}`.trim() || r.email);
+
+      updateAdminSummary();
+    }
+
+    async function loadActiveAdminTab() {
+      const t = activeAdminTab();
+      if (t === "users") await loadAdminUsers();
+      if (t === "homes") await loadHomes();
+      if (t === "providers") await loadProviders();
+      if (t === "documents") await loadDocuments();
+      if (t === "billing") await loadBilling();
+      if (t === "audit") await loadAudit();
+    }
+
+    function clearAdminForm() {
+      $("adminFirstName").value = "";
+      $("adminLastName").value = "";
+      $("adminEmail").value = "";
+      $("adminPassword").value = "";
+      $("adminRole").value = "staff";
+      $("adminHomeId").value = "";
+      adminCreateActive = true;
+      syncHelpers();
+    }
+
+    function adminPayloadFromForm() {
+      return {
+        first_name: $("adminFirstName").value.trim(),
+        last_name: $("adminLastName").value.trim(),
+        email: $("adminEmail").value.trim(),
+        password: $("adminPassword").value,
+        role: $("adminRole").value,
+        home_id: Number($("adminHomeId").value),
+        is_active: adminCreateActive
+      };
+    }
+
+    async function createAdminUser() {
+      const p = adminPayloadFromForm();
+      if (!p.first_name || !p.last_name || !p.email || !p.password || !p.role || !p.home_id) {
+        return banner("Complete all user fields");
+      }
+      await api("/admin/users", { method:"POST", body: JSON.stringify(p) });
+      clearAdminForm();
+      await loadAdminUsers();
+      await loadAdminReferenceData();
+      banner("User created");
+    }
+
+    async function loadAdminUsers() {
+      const params = new URLSearchParams();
+      if ($("userSearch").value.trim()) params.set("q", $("userSearch").value.trim());
+      if ($("userRoleFilter").value) params.set("role", $("userRoleFilter").value);
+      if ($("userHomeFilter").value.trim()) params.set("home_id", $("userHomeFilter").value.trim());
+      if ($("userArchivedFilter").value) params.set("archived", $("userArchivedFilter").value);
+      adminUsers = (await api("/admin/users" + (params.toString() ? `?${params}` : "")))?.users || [];
+      renderAdminUsers();
+      updateAdminSummary();
+    }
+
+    function renderAdminUsers() {
+      const host = $("adminUsersList");
+      host.innerHTML = "";
+      if (!adminUsers.length) {
+        host.innerHTML = `<div class="entity-row"><div>No users found.</div></div>`;
+        return;
+      }
+
+      adminUsers.forEach(user => {
+        const row = document.createElement("div");
+        row.className = "entity-row";
+        row.innerHTML = `<div><div class="entity-title">${safe([user.first_name,user.last_name].filter(Boolean).join(" ") || user.email)}</div><div class="entity-meta">${safe(user.email)} · ${safe(user.role)} · home ${safe(String(user.home_id ?? ""))}</div><div class="entity-meta"><span class="tag ${user.is_active ? "ok" : "bad"}">${user.is_active ? "active" : "inactive"}</span><span class="tag ${user.archived ? "bad" : "neutral"}">${user.archived ? "archived" : "live"}</span></div></div><div class="entity-actions"></div>`;
+        const right = row.querySelector(".entity-actions");
+
+        const add = (label, fn) => {
+          const b = document.createElement("button");
+          b.className = "chip";
+          b.textContent = label;
+          b.onclick = fn;
+          right.appendChild(b);
+        };
+
+        add(user.is_active ? "Deactivate" : "Activate", async () => {
+          await api(`/admin/users/${user.id}`, { method:"PATCH", body: JSON.stringify({ is_active: !user.is_active }) });
+          await loadAdminUsers();
+          banner("User updated");
+        });
+
+        add(user.archived ? "Unarchive" : "Archive", async () => {
+          await api(`/admin/users/${user.id}`, { method:"PATCH", body: JSON.stringify({ archived: !user.archived }) });
+          await loadAdminUsers();
+          banner("User updated");
+        });
+
+        add("Role", async () => {
+          const newRole = prompt(`Set role for ${user.email}`, user.role || "staff");
+          if (newRole === null) return;
+          await api(`/admin/users/${user.id}`, { method:"PATCH", body: JSON.stringify({ role: newRole }) });
+          await loadAdminUsers();
+          banner("Role updated");
+        });
+
+        add("Home", async () => {
+          const choices = homes.map(h => `${h.id}: ${h.name}`).join("\n");
+          const homeId = prompt(`Set home id for ${user.email}\n\n${choices}`, String(user.home_id ?? ""));
+          if (homeId === null) return;
+          await api(`/admin/users/${user.id}`, { method:"PATCH", body: JSON.stringify({ home_id: Number(homeId) }) });
+          await loadAdminUsers();
+          banner("Home updated");
+        });
+
+        add("Reset password", async () => {
+          const password = prompt(`Set new password for ${user.email}`);
+          if (password === null || !password.trim()) return banner("Password cannot be empty");
+          await api(`/admin/users/${user.id}/reset-password`, { method:"POST", body: JSON.stringify({ password }) });
+          banner("Password reset");
+        });
+
+        host.appendChild(row);
+      });
+    }
+
+    async function createHome() {
+      const p = {
+        name: $("homeName").value.trim(),
+        address: $("homeAddress").value.trim() || null,
+        postcode: $("homePostcode").value.trim() || null,
+        region: $("homeRegion").value.trim() || null,
+        local_authority: $("homeLocalAuthority").value.trim() || null,
+        ofsted_urn: $("homeOfstedUrn").value.trim() || null,
+        provider_id: $("homeProviderId").value ? Number($("homeProviderId").value) : null,
+        registered_manager_id: $("homeRegisteredManagerId").value ? Number($("homeRegisteredManagerId").value) : null,
+        geofence_radius_m: $("homeGeofence").value.trim() ? Number($("homeGeofence").value) : null
+      };
+
+      if (!p.name) return banner("Home name is required");
+
+      await api("/admin/homes", { method:"POST", body: JSON.stringify(p) });
+      ["homeName","homeAddress","homePostcode","homeRegion","homeLocalAuthority","homeOfstedUrn","homeGeofence"].forEach(id => $(id).value = "");
+      $("homeProviderId").value = "";
+      $("homeRegisteredManagerId").value = "";
+      await loadHomes();
+      await loadAdminReferenceData();
+      banner("Home created");
+    }
+
+    async function loadHomes() {
+      homes = (await api("/admin/homes"))?.homes || [];
+      renderHomes();
+      updateAdminSummary();
+    }
+
+    function renderHomes() {
+      const host = $("homesList");
+      host.innerHTML = "";
+      if (!homes.length) return host.innerHTML = `<div class="entity-row"><div>No homes found.</div></div>`;
+
+      homes.forEach(home => {
+        const row = document.createElement("div");
+        row.className = "entity-row";
+        row.innerHTML = `<div><div class="entity-title">${safe(home.name)}</div><div class="entity-meta">${safe(home.postcode || "")} · ${safe(home.region || "")} · ${safe(home.local_authority || "")}</div><div class="entity-meta">URN: ${safe(home.ofsted_urn || "—")} · users: ${safe(String(home.user_count ?? 0))}</div></div><div class="entity-actions"></div>`;
+        const right = row.querySelector(".entity-actions");
+
+        [["Edit", async () => {
+          const name = prompt("Home name", home.name || "");
+          if (name === null) return;
+          await api(`/admin/homes/${home.id}`, { method:"PATCH", body: JSON.stringify({ name }) });
+          await loadHomes();
+          banner("Home updated");
+        }],[home.archived ? "Unarchive" : "Archive", async () => {
+          await api(`/admin/homes/${home.id}`, { method:"PATCH", body: JSON.stringify({ archived: !home.archived }) });
+          await loadHomes();
+          banner("Home updated");
+        }]].forEach(([label, fn]) => {
+          const b = document.createElement("button");
+          b.className = "chip";
+          b.textContent = label;
+          b.onclick = fn;
+          right.appendChild(b);
+        });
+
+        host.appendChild(row);
+      });
+    }
+
+    async function createProvider() {
+      const p = {
+        name: $("providerName").value.trim(),
+        region: $("providerRegion").value.trim() || null,
+        address: $("providerAddress").value.trim() || null,
+        postcode: $("providerPostcode").value.trim() || null,
+        local_authority: $("providerLA").value.trim() || null,
+        safeguarding_lead_name: $("providerLeadName").value.trim() || null,
+        safeguarding_lead_email: $("providerLeadEmail").value.trim() || null
+      };
+
+      if (!p.name) return banner("Provider name is required");
+
+      await api("/admin/providers", { method:"POST", body: JSON.stringify(p) });
+      ["providerName","providerRegion","providerAddress","providerPostcode","providerLA","providerLeadName","providerLeadEmail"].forEach(id => $(id).value = "");
+      await loadProviders();
+      await loadAdminReferenceData();
+      banner("Provider created");
+    }
+
+    async function loadProviders() {
+      providers = (await api("/admin/providers"))?.providers || [];
+      renderProviders();
+      updateAdminSummary();
+    }
+
+    function renderProviders() {
+      const host = $("providersList");
+      host.innerHTML = "";
+      if (!providers.length) return host.innerHTML = `<div class="entity-row"><div>No providers found.</div></div>`;
+
+      providers.forEach(provider => {
+        const row = document.createElement("div");
+        row.className = "entity-row";
+        row.innerHTML = `<div><div class="entity-title">${safe(provider.name)}</div><div class="entity-meta">${safe(provider.region || "")} · homes: ${safe(String(provider.home_count ?? 0))}</div><div class="entity-meta">${safe(provider.safeguarding_lead_name || "No safeguarding lead")}${provider.safeguarding_lead_email ? " · " + safe(provider.safeguarding_lead_email) : ""}</div></div><div class="entity-actions"></div>`;
+        const right = row.querySelector(".entity-actions");
+
+        [["Edit", async () => {
+          const name = prompt("Provider name", provider.name || "");
+          if (name === null) return;
+          await api(`/admin/providers/${provider.id}`, { method:"PATCH", body: JSON.stringify({ name }) });
+          await loadProviders();
+          banner("Provider updated");
+        }],[provider.archived ? "Unarchive" : "Archive", async () => {
+          await api(`/admin/providers/${provider.id}`, { method:"PATCH", body: JSON.stringify({ archived: !provider.archived }) });
+          await loadProviders();
+          banner("Provider updated");
+        }]].forEach(([label, fn]) => {
+          const b = document.createElement("button");
+          b.className = "chip";
+          b.textContent = label;
+          b.onclick = fn;
+          right.appendChild(b);
+        });
+
+        host.appendChild(row);
+      });
+    }
+
+    async function createDocumentRecord() {
+      const p = {
+        title: $("docTitle").value.trim() || null,
+        document_type: $("docType").value.trim() || null,
+        home_id: $("docHomeId").value ? Number($("docHomeId").value) : null,
+        owner_id: $("docOwnerId").value ? Number($("docOwnerId").value) : null,
+        issue_date: $("docIssueDate").value || null,
+        review_date: $("docReviewDate").value || null,
+        expiry_date: $("docExpiryDate").value || null,
+        approval_status: $("docApprovalStatus").value.trim() || "not_required",
+        confidentiality_level: $("docConfLevel").value.trim() || "standard",
+        input_text: $("docInputText").value.trim() || null
+      };
+
+      await api("/admin/documents", { method:"POST", body: JSON.stringify(p) });
+      ["docTitle","docIssueDate","docReviewDate","docExpiryDate","docInputText"].forEach(id => $(id).value = "");
+      $("docType").value = "policy";
+      $("docHomeId").value = "";
+      $("docOwnerId").value = "";
+      $("docApprovalStatus").value = "not_required";
+      $("docConfLevel").value = "standard";
+      await loadDocuments();
+      await loadAdminReferenceData();
+      banner("Document created");
+    }
+
+    async function loadDocuments() {
+      const params = new URLSearchParams();
+      if ($("docSearch").value.trim()) params.set("q", $("docSearch").value.trim());
+      if ($("docHomeFilter").value.trim()) params.set("home_id", $("docHomeFilter").value.trim());
+      if ($("docTypeFilter").value.trim()) params.set("document_type", $("docTypeFilter").value.trim());
+      if ($("docApprovalFilter").value.trim()) params.set("approval_status", $("docApprovalFilter").value.trim());
+
+      docs = (await api("/admin/documents" + (params.toString() ? `?${params}` : "")))?.documents || [];
+      renderDocuments();
+      updateAdminSummary();
+    }
+
+    function renderDocuments() {
+      const host = $("docsList");
+      host.innerHTML = "";
+      if (!docs.length) return host.innerHTML = `<div class="entity-row"><div>No documents found.</div></div>`;
+
+      docs.forEach(doc => {
+        const row = document.createElement("div");
+        row.className = "entity-row";
+        row.innerHTML = `<div><div class="entity-title">${safe(doc.title || "Untitled document")}</div><div class="entity-meta">${safe(doc.document_type || "—")} · ${safe(doc.home_name || ("home " + (doc.home_id ?? "—")))}</div><div class="entity-meta">approval: ${safe(doc.approval_status || "not_required")} · review: ${safe(doc.review_date || "—")} · expiry: ${safe(doc.expiry_date || "—")}</div></div><div class="entity-actions"></div>`;
+        const right = row.querySelector(".entity-actions");
+
+        [["Set approved", async () => {
+          await api(`/admin/documents/${doc.id}`, { method:"PATCH", body: JSON.stringify({ approval_status:"approved" }) });
+          await loadDocuments();
+          banner("Document updated");
+        }],["Edit title", async () => {
+          const title = prompt("Document title", doc.title || "");
+          if (title === null) return;
+          await api(`/admin/documents/${doc.id}`, { method:"PATCH", body: JSON.stringify({ title }) });
+          await loadDocuments();
+          banner("Document updated");
+        }]].forEach(([label, fn]) => {
+          const b = document.createElement("button");
+          b.className = "chip";
+          b.textContent = label;
+          b.onclick = fn;
+          right.appendChild(b);
+        });
+
+        host.appendChild(row);
+      });
+    }
+
+    async function loadBilling() {
+      billing = await api("/admin/billing/overview");
+      renderBilling();
+    }
+
+    function renderBilling() {
+      $("billingStats").innerHTML = "";
+      $("billingList").innerHTML = "";
+      if (!billing) return;
+
+      [["Total users",billing.totals?.total_users ?? 0],["Active users",billing.totals?.active_users ?? 0],["Archived users",billing.totals?.archived_users ?? 0],["Active subscriptions",billing.totals?.active_subscriptions ?? 0],["Inactive subscriptions",billing.totals?.inactive_subscriptions ?? 0]]
+        .forEach(([l, n]) => {
+          $("billingStats").insertAdjacentHTML("beforeend", `<div class="stat"><div class="n">${safe(String(n))}</div><div class="l">${safe(l)}</div></div>`);
+        });
+
+      const users = billing.users || [];
+      if (!users.length) return $("billingList").innerHTML = `<div class="entity-row"><div>No billing rows found.</div></div>`;
+
+      users.forEach(user => {
+        $("billingList").insertAdjacentHTML("beforeend",
+          `<div class="entity-row"><div><div class="entity-title">${safe([user.first_name,user.last_name].filter(Boolean).join(" ") || user.email)}</div><div class="entity-meta">${safe(user.email)} · ${safe(user.plan_name || "No plan")}</div><div class="entity-meta">status: ${safe(user.subscription_status || "inactive")} · period end: ${safe(user.current_period_end || "—")}</div></div></div>`
+        );
+      });
+    }
+
+    async function loadAudit() {
+      audit = (await api("/admin/audit"))?.audit || [];
+      renderAudit();
+    }
+
+    function renderAudit() {
+      const host = $("auditList");
+      host.innerHTML = "";
+      if (!audit.length) return host.innerHTML = `<div class="entity-row"><div>No audit entries found.</div></div>`;
+      audit.forEach(a => {
+        host.insertAdjacentHTML("beforeend",
+          `<div class="entity-row"><div><div class="entity-title">${safe(a.action)} · ${safe(a.target_type)} ${safe(String(a.target_id ?? ""))}</div><div class="entity-meta">${safe([a.first_name,a.last_name].filter(Boolean).join(" ") || a.email || "Unknown admin")} · ${safe(a.created_at || "")}</div><div class="entity-meta">${safe(JSON.stringify(a.details || {}))}</div></div></div>`
+        );
+      });
+    }
+
+    async function loadLibrary() {
+      const params = new URLSearchParams();
+      if ($("librarySearch").value.trim()) params.set("q", $("librarySearch").value.trim());
+      if ($("libraryTypeFilter").value) params.set("document_type", $("libraryTypeFilter").value);
+      if ($("libraryApprovalFilter").value) params.set("approval_status", $("libraryApprovalFilter").value);
+
+      libraryDocs = (await api("/documents/library" + (params.toString() ? `?${params}` : "")))?.documents || [];
+      renderLibraryList();
+      renderManagerLibraryList();
+
+      if (selectedLibraryDoc) {
+        const fresh = libraryDocs.find(d => Number(d.id) === Number(selectedLibraryDoc.id));
+        if (fresh) openLibraryDocument(fresh.id);
+      }
+    }
+
+    function renderLibraryList() {
+      const host = $("libraryList");
+      host.innerHTML = "";
+      if (!libraryDocs.length) return host.innerHTML = `<div class="entity-row"><div>No documents available for your home.</div></div>`;
+
+      libraryDocs.forEach(doc => {
+        const row = document.createElement("div");
+        row.className = "entity-row";
+        row.innerHTML = `<div><div class="entity-title">${safe(doc.title || "Untitled document")}</div><div class="entity-meta">${safe(doc.document_type || "—")} · ${safe(doc.home_name || "Your home")}</div><div class="entity-meta"><span class="tag ${doc.approval_status === "approved" ? "ok" : doc.approval_status === "pending" ? "warn" : "neutral"}">${safe(doc.approval_status || "not_required")}</span><span class="tag neutral">${safe(doc.confidentiality_level || "standard")}</span></div></div><div class="entity-actions"></div>`;
+        const right = row.querySelector(".entity-actions");
+
+        [["Open", () => openLibraryDocument(doc.id)], ...(canManageLibrary() ? [["Edit", () => populateLibraryEditor(doc)]] : [])]
+          .forEach(([label, fn]) => {
+            const b = document.createElement("button");
+            b.className = "chip";
+            b.textContent = label;
+            b.onclick = fn;
+            right.appendChild(b);
+          });
+
+        host.appendChild(row);
+      });
+    }
+
+    function renderManagerLibraryList() {
+      const host = $("managerLibraryList");
+      if (!host) return;
+      host.innerHTML = "";
+
+      if (!canManageLibrary()) return host.innerHTML = `<div class="entity-row"><div>Read-only access.</div></div>`;
+      if (!libraryDocs.length) return host.innerHTML = `<div class="entity-row"><div>No home documents found.</div></div>`;
+
+      libraryDocs.forEach(doc => {
+        host.insertAdjacentHTML("beforeend",
+          `<div class="entity-row"><div><div class="entity-title">${safe(doc.title || "Untitled document")}</div><div class="entity-meta">${safe(doc.document_type || "—")} · review ${safe(doc.review_date || "—")}</div></div><div class="entity-actions"><button class="chip" data-doc-edit="${doc.id}">Edit</button></div></div>`
+        );
+      });
+
+      host.querySelectorAll("[data-doc-edit]").forEach(b => {
+        b.onclick = () => populateLibraryEditor(libraryDocs.find(d => Number(d.id) === Number(b.dataset.docEdit)));
+      });
+    }
+
+    async function openLibraryDocument(id) {
+      const data = await api(`/documents/library/${id}`);
+      const doc = data?.document;
+      if (!doc) return;
+      selectedLibraryDoc = doc;
+      $("libraryViewer").innerHTML =
+        `<h3>${safe(doc.title || "Untitled document")}</h3>
+         <p><strong>Type:</strong> ${safe(doc.document_type || "—")}</p>
+         <p><strong>Approval:</strong> ${safe(doc.approval_status || "not_required")} · <strong>Confidentiality:</strong> ${safe(doc.confidentiality_level || "standard")}</p>
+         <p><strong>Issue date:</strong> ${safe(doc.issue_date || "—")} · <strong>Review date:</strong> ${safe(doc.review_date || "—")} · <strong>Expiry date:</strong> ${safe(doc.expiry_date || "—")}</p>
+         <hr style="border:none;border-top:1px solid var(--line);margin:14px 0;">
+         <div>${render(doc.input_text || doc.generated_text || "No content available.", "assistant")}</div>`;
+    }
+
+    function resetLibraryEditor() {
+      editingLibraryDocId = null;
+      $("libraryFormTitle").textContent = "Create document";
+      ["libraryDocTitle","libraryIssueDate","libraryReviewDate","libraryExpiryDate","libraryInputText"].forEach(id => $(id).value = "");
+      $("libraryDocType").value = "policy";
+      $("libraryApprovalStatus").value = "not_required";
+      $("libraryConfidentiality").value = "standard";
+      $("libraryOwnerId").value = "";
+      $("deleteLibraryDocBtn").classList.add("hidden");
+    }
+
+    function populateLibraryEditor(doc) {
+      if (!canManageLibrary()) return;
+      editingLibraryDocId = doc.id;
+      $("libraryFormTitle").textContent = "Edit document";
+      $("libraryDocTitle").value = doc.title || "";
+      $("libraryDocType").value = doc.document_type || "policy";
+      $("libraryIssueDate").value = doc.issue_date || "";
+      $("libraryReviewDate").value = doc.review_date || "";
+      $("libraryExpiryDate").value = doc.expiry_date || "";
+      $("libraryApprovalStatus").value = doc.approval_status || "not_required";
+      $("libraryConfidentiality").value = doc.confidentiality_level || "standard";
+      $("libraryOwnerId").value = doc.owner_id || "";
+      $("libraryInputText").value = doc.input_text || doc.generated_text || "";
+      $("deleteLibraryDocBtn").classList.remove("hidden");
+      setLibraryTab("editor");
+    }
+
+    async function saveLibraryDocument() {
+      if (!canManageLibrary()) return banner("Manager or admin access required");
+
+      const p = {
+        title: $("libraryDocTitle").value.trim(),
+        document_type: $("libraryDocType").value,
+        issue_date: $("libraryIssueDate").value || null,
+        review_date: $("libraryReviewDate").value || null,
+        expiry_date: $("libraryExpiryDate").value || null,
+        approval_status: $("libraryApprovalStatus").value,
+        confidentiality_level: $("libraryConfidentiality").value,
+        owner_id: $("libraryOwnerId").value ? Number($("libraryOwnerId").value) : null,
+        input_text: $("libraryInputText").value.trim() || null
+      };
+
+      if (!p.title) return banner("Title is required");
+
+      if (editingLibraryDocId) {
+        await api(`/documents/library/${editingLibraryDocId}`, { method:"PATCH", body: JSON.stringify(p) });
+        banner("Document updated");
+      } else {
+        await api("/documents/library", { method:"POST", body: JSON.stringify(p) });
+        banner("Document created");
+      }
+
+      resetLibraryEditor();
+      await loadLibrary();
+      setLibraryTab("list");
+    }
+
+    async function deleteLibraryDocument() {
+      if (!editingLibraryDocId || !confirm("Delete this document?")) return;
+      await api(`/documents/library/${editingLibraryDocId}`, { method:"DELETE" });
+      banner("Document deleted");
+      resetLibraryEditor();
+      $("libraryViewer").innerHTML = `<h3>Select a document</h3><p>Open a policy or document from the list to read it here.</p>`;
+      await loadLibrary();
+      setLibraryTab("list");
+    }
+
+    function restorePrefs() {
+      document.body.classList.toggle("theme-dark", (localStorage.getItem("indicare_theme") || "light") === "dark");
+      $("lang").value = localStorage.getItem("indicare_reply_language") || DEFAULT_LANGUAGE;
+      $("mode").value = localStorage.getItem("indicare_response_mode") || "balanced";
+      syncHelpers();
+      setLibraryTab("list");
+    }
+
+    function bind() {
+      $("sideToggle").onclick = () => $("sidebar").classList.toggle("open");
+      $("mobileMenu").onclick = () => { $("sidebar").classList.add("open"); $("overlay").classList.add("show"); };
+      $("overlay").onclick = () => { $("sidebar").classList.remove("open"); $("overlay").classList.remove("show"); };
+
+      $("openSettings").onclick = openSettings;
+      $("closeSettings").onclick = closeSettings;
+      $("settingsOverlay").onclick = closeSettings;
+
+      $("newChat").onclick = resetWelcome;
+      $("backWelcome").onclick = resetWelcome;
+      $("logout").onclick = logoutNow;
+
+      $("theme").onclick = () => {
+        document.body.classList.toggle("theme-dark");
+        localStorage.setItem("indicare_theme", document.body.classList.contains("theme-dark") ? "dark" : "light");
+        syncHelpers();
+      };
+
+      $("privacy").onclick = () => {
+        $("app").classList.toggle("privacy-active");
+        syncHelpers();
+      };
+
+      $("lang").onchange = () => {
+        localStorage.setItem("indicare_reply_language", selectedLang());
+        syncHelpers();
+      };
+
+      $("mode").onchange = () => {
+        localStorage.setItem("indicare_response_mode", selectedMode());
+        syncHelpers();
+      };
+
+      $("navAssistant").onclick = showAssistantView;
+      $("navLibrary").onclick = showLibraryView;
+      $("navAdmin").onclick = showAdminView;
+
+      document.querySelectorAll(".tabbtn[data-tab]").forEach(btn => btn.onclick = async () => {
+        setAdminTab(btn.dataset.tab);
+        await loadActiveAdminTab();
+      });
+
+      document.querySelectorAll(".tabbtn[data-library-tab]").forEach(btn => btn.onclick = () => setLibraryTab(btn.dataset.libraryTab));
+
+      $("search").oninput = filterConversations;
+      $("input").addEventListener("keydown", e => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+
+      $("input").addEventListener("input", resize);
+      $("send").onclick = sendMessage;
+      $("mic").onclick = startSpeech;
+
+      $("upload").onchange = async e => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+          await uploadDoc(file);
+        } catch (err) {
+          banner(err.message || "Upload failed");
+        }
+        e.target.value = "";
+      };
+
+      $("clearDoc").onclick = async () => {
+        try {
+          if (conversationId) await api(`/chat/conversations/${conversationId}/document`, { method:"DELETE" });
+        } catch {}
+        currentDocumentText = null;
+        currentDocumentName = null;
+        docHide();
+        banner("Document removed");
+      };
+
+      $("adminActiveToggle").onclick = () => {
+        adminCreateActive = !adminCreateActive;
+        syncHelpers();
+      };
+
+      $("createUserBtn").onclick = createAdminUser;
+      $("refreshUsersBtn").onclick = loadAdminUsers;
+      $("userSearch").oninput = loadAdminUsers;
+      $("userRoleFilter").onchange = loadAdminUsers;
+      $("userHomeFilter").onchange = loadAdminUsers;
+      $("userArchivedFilter").onchange = loadAdminUsers;
+
+      $("createHomeBtn").onclick = createHome;
+      $("refreshHomesBtn").onclick = loadHomes;
+
+      $("createProviderBtn").onclick = createProvider;
+      $("refreshProvidersBtn").onclick = loadProviders;
+
+      $("createDocBtn").onclick = createDocumentRecord;
+      $("refreshDocsBtn").onclick = loadDocuments;
+      $("docSearch").oninput = loadDocuments;
+      $("docHomeFilter").onchange = loadDocuments;
+      $("docTypeFilter").onchange = loadDocuments;
+      $("docApprovalFilter").onchange = loadDocuments;
+
+      $("refreshBillingBtn").onclick = loadBilling;
+      $("refreshAuditBtn").onclick = loadAudit;
+
+      $("refreshLibraryBtn").onclick = loadLibrary;
+      $("refreshManagerLibraryBtn").onclick = loadLibrary;
+      $("librarySearch").oninput = loadLibrary;
+      $("libraryTypeFilter").onchange = loadLibrary;
+      $("libraryApprovalFilter").onchange = loadLibrary;
+      $("saveLibraryDocBtn").onclick = saveLibraryDocument;
+      $("resetLibraryDocBtn").onclick = resetLibraryEditor;
+      $("deleteLibraryDocBtn").onclick = deleteLibraryDocument;
+    }
+
+    async function init() {
+      bind();
+      restorePrefs();
+      resize();
+
+      try {
+        await loadMe();
+      } catch (e) {
+        console.error("loadMe failed", e);
+        location.href = "/login";
+        return;
+      }
+
+      if (isAdmin()) {
+        setAdminTab(activeAdminTab());
+      }
+
+      setWelcome();
+
+      try {
+        await loadConversations();
+      } catch (e) {
+        console.error("loadConversations failed", e);
+        banner("Could not load conversations");
+      }
+
+      if (isAdmin()) {
+        try {
+          await loadAdminReferenceData();
+          await loadActiveAdminTab();
+        } catch (e) {
+          console.error("loadAdminReferenceData failed", e);
+          banner("Could not load admin data");
+        }
+      }
+
+      try {
+        await loadLibrary();
+      } catch (e) {
+        console.error("loadLibrary failed", e);
+      }
+
+      showAssistantView();
+    }
+
+    document.addEventListener("DOMContentLoaded", init);
   </script>
 </body>
 </html>
