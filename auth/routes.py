@@ -15,26 +15,59 @@ class LoginRequest(BaseModel):
     password: str
 
 
+def _normalise_email(email: str) -> str:
+    return (email or "").strip().lower()
+
+
 def _get_bearer_payload(authorization: str | None):
     if not authorization:
         return None
 
     parts = authorization.split(" ", 1)
-
     if len(parts) != 2 or parts[0].lower() != "bearer":
         return None
 
     token = parts[1].strip()
-
     if not token:
         return None
 
     return decode_session_token(token)
 
 
+def _get_user_by_id(conn, user_id: int):
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT
+                id,
+                email,
+                role,
+                home_id,
+                first_name,
+                last_name,
+                is_active,
+                archived,
+                password_hash,
+                updated_at,
+                created_at
+            FROM users
+            WHERE id = %s
+            LIMIT 1
+            """,
+            (user_id,)
+        )
+        return cur.fetchone()
+
+
 @router.post("/login")
 def login(payload: LoginRequest, conn=Depends(get_db)):
     ensure_billing_columns(conn)
+
+    email = _normalise_email(payload.email)
+    password = payload.password or ""
+
+    if not email or not password:
+        raise HTTPException(status_code=400, detail="Email and password are required")
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
@@ -47,12 +80,13 @@ def login(payload: LoginRequest, conn=Depends(get_db)):
                 home_id,
                 first_name,
                 last_name,
+                is_active,
                 archived
             FROM users
-            WHERE email = %s
+            WHERE lower(email) = %s
             LIMIT 1
             """,
-            (payload.email.strip(),)
+            (email,)
         )
         user = cur.fetchone()
 
@@ -62,21 +96,17 @@ def login(payload: LoginRequest, conn=Depends(get_db)):
     if user.get("archived") is True:
         raise HTTPException(status_code=403, detail="User is archived")
 
+    if user.get("is_active") is False:
+        raise HTTPException(status_code=403, detail="User account is inactive")
+
     password_hash = user["password_hash"]
-
     if isinstance(password_hash, str):
-        password_hash = password_hash.encode()
+        password_hash = password_hash.encode("utf-8")
 
-    if not bcrypt.checkpw(payload.password.encode(), password_hash):
+    if not bcrypt.checkpw(password.encode("utf-8"), password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    token = create_session_token(
-        user["id"],
-        user["email"],
-        user["role"],
-        user.get("home_id")
-    )
-
+    token = create_session_token(user["id"])
     billing = get_user_billing_by_user_id(conn, user["id"])
 
     return {
@@ -111,30 +141,29 @@ def check_auth(
     conn=Depends(get_db)
 ):
     payload = _get_bearer_payload(authorization)
-
     if not payload:
-        return {
-            "authenticated": False
-        }
+        return {"authenticated": False}
 
-    user_id = payload.get("sub")
-
+    raw_user_id = payload.get("sub")
     try:
-        user_id = int(user_id)
+        user_id = int(raw_user_id)
     except (TypeError, ValueError):
-        return {
-            "authenticated": False
-        }
+        return {"authenticated": False}
 
     ensure_billing_columns(conn)
+    user = _get_user_by_id(conn, user_id)
+
+    if not user or user.get("archived") is True or user.get("is_active") is False:
+        return {"authenticated": False}
+
     billing = get_user_billing_by_user_id(conn, user_id)
 
     return {
         "authenticated": True,
-        "user_id": payload.get("sub"),
-        "email": payload.get("email"),
-        "role": payload.get("role"),
-        "home_id": payload.get("home_id"),
+        "user_id": user["id"],
+        "email": user["email"],
+        "role": user["role"],
+        "home_id": user.get("home_id"),
         "is_active": bool(billing and billing.get("is_active")),
         "subscription_status": billing.get("subscription_status") if billing else "inactive",
         "plan_name": billing.get("plan_name") if billing else None,
@@ -147,45 +176,20 @@ def get_me(
     conn=Depends(get_db)
 ):
     payload = _get_bearer_payload(authorization)
-
     if not payload:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    user_id = payload.get("sub")
-
-    if user_id is None:
+    raw_user_id = payload.get("sub")
+    if raw_user_id is None:
         raise HTTPException(status_code=401, detail="Invalid session")
 
     try:
-        user_id = int(user_id)
+        user_id = int(raw_user_id)
     except (TypeError, ValueError):
         raise HTTPException(status_code=401, detail="Invalid session")
 
     ensure_billing_columns(conn)
-
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(
-            """
-            SELECT
-                u.id,
-                u.email,
-                u.role,
-                u.home_id,
-                u.first_name,
-                u.last_name,
-                u.archived,
-                u.updated_at,
-                u.created_at,
-                h.name AS home_name
-            FROM users u
-            LEFT JOIN homes h
-                ON h.id = u.home_id
-            WHERE u.id = %s
-            LIMIT 1
-            """,
-            (user_id,)
-        )
-        user = cur.fetchone()
+    user = _get_user_by_id(conn, user_id)
 
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
@@ -193,12 +197,23 @@ def get_me(
     if user.get("archived") is True:
         raise HTTPException(status_code=403, detail="User is archived")
 
+    if user.get("is_active") is False:
+        raise HTTPException(status_code=403, detail="User account is inactive")
+
     billing = get_user_billing_by_user_id(conn, user_id)
 
     return {
         "ok": True,
         "user": {
-            **dict(user),
+            "id": user["id"],
+            "email": user["email"],
+            "role": user["role"],
+            "home_id": user.get("home_id"),
+            "first_name": user.get("first_name"),
+            "last_name": user.get("last_name"),
+            "archived": user.get("archived"),
+            "updated_at": user.get("updated_at"),
+            "created_at": user.get("created_at"),
             "is_active": bool(billing and billing.get("is_active")),
             "subscription_status": billing.get("subscription_status") if billing else "inactive",
             "plan_name": billing.get("plan_name") if billing else None,
