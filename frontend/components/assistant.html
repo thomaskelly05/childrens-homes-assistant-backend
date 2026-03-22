@@ -9,22 +9,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root{
-      --bg:#f4f7fb; --panel:#fff; --chat:#fff; --input:#fff; --user:#e0e9f5;
-      --text:#1e293b; --muted:#64748b; --line:#e2e8f0; --accent:#2563eb;
-      --shadow:0 10px 25px -3px rgb(0 0 0 / 0.08); --mini:68px; --full:320px;
-      --danger:#dc2626; --success:#16a34a; --warn:#d97706;
+      --bg:#f4f7fb;--panel:#fff;--chat:#fff;--input:#fff;--user:#e0e9f5;--text:#1e293b;--muted:#64748b;--line:#e2e8f0;--accent:#2563eb;--danger:#dc2626;--success:#16a34a;--warn:#d97706;--shadow:0 10px 25px -3px rgb(0 0 0 / .08);--mini:68px;--full:320px
     }
-    body.theme-dark{
-      --bg:#0f172a; --panel:#1e293b; --chat:#0f172a; --input:#0a0f1d; --user:#1e293b;
-      --text:#f1f5f9; --muted:#94a3b8; --line:#334155; --accent:#3b82f6;
-      --danger:#ef4444; --success:#22c55e; --warn:#f59e0b;
-    }
+    body.theme-dark{--bg:#0f172a;--panel:#1e293b;--chat:#0f172a;--input:#0a0f1d;--user:#1e293b;--text:#f1f5f9;--muted:#94a3b8;--line:#334155;--accent:#3b82f6;--danger:#ef4444;--success:#22c55e;--warn:#f59e0b}
     *{box-sizing:border-box;margin:0;padding:0;font-family:Inter,sans-serif}
     body{background:var(--bg);color:var(--text);height:100dvh;overflow:hidden}
     button,input,select,textarea{font:inherit;border:none;outline:none;background:none;color:inherit}
-    button{cursor:pointer}
-    a{text-decoration:none;color:inherit}
-    .hidden{display:none!important}
+    button{cursor:pointer} a{text-decoration:none;color:inherit} .hidden{display:none!important}
     .shell{display:flex;height:100%}
     .sidebar{width:var(--mini);background:var(--panel);border-right:1px solid var(--line);overflow:hidden;transition:.25s;z-index:20}
     .sidebar.open{width:var(--full)}
@@ -37,7 +28,7 @@
     .sidebar.open .side-content{opacity:1;pointer-events:auto}
     .primary{margin-top:12px;background:var(--accent);color:#fff;padding:12px;border-radius:10px;font-weight:600;width:100%}
     .nav{display:flex;flex-direction:column;gap:8px;margin-top:14px}
-    .navbtn{display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;color:var(--muted);text-decoration:none}
+    .navbtn{display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;color:var(--muted)}
     .navbtn.active,.navbtn:hover{background:rgba(37,99,235,.08);color:var(--accent)}
     .search{margin-top:12px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--bg);color:var(--text)}
     .history{flex:1;overflow:auto;margin-top:12px;display:flex;flex-direction:column;gap:8px}
@@ -65,7 +56,7 @@
     .avatar{width:32px;height:32px;border-radius:8px;background:var(--line);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:600;flex-shrink:0}
     .wrap.assistant .avatar{background:var(--accent);color:#fff}
     .block{display:flex;flex-direction:column;gap:6px;max-width:86%}
-    .msg{line-height:1.7;overflow-wrap:anywhere;word-break:normal;white-space:normal}
+    .msg{line-height:1.7;overflow-wrap:anywhere;white-space:normal}
     .wrap.user .msg{background:var(--user);padding:12px 16px;border-radius:18px 18px 4px 18px;color:#0f172a}
     body.theme-dark .wrap.user .msg{color:#f8fafc}
     .msg h3{font-size:1.05rem;margin:16px 0 8px;color:var(--accent);font-weight:600}
@@ -106,26 +97,23 @@
     .status{display:none;position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:50;padding:10px 14px;border-radius:10px;background:#111827;color:#fff;font-size:.85rem;box-shadow:var(--shadow);max-width:calc(100vw - 24px);text-align:center}
     body.theme-dark .status{background:#f8fafc;color:#0f172a}
     .typing:after{content:"▊";color:var(--accent);animation:blink 1s infinite;margin-left:2px}
-    .admin-top{display:flex;flex-direction:column;gap:16px}
     .admin-tabs,.library-tabs{display:flex;gap:8px;flex-wrap:wrap}
     .tabbtn{padding:10px 14px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--muted);font-weight:600}
     .tabbtn.active,.tabbtn:hover{color:var(--accent);border-color:var(--accent);background:rgba(37,99,235,.06)}
-    .summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-    .summary .s{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:14px}
-    .summary .n{font-size:1.35rem;font-weight:700}
-    .summary .l{font-size:.82rem;color:var(--muted);margin-top:4px}
-    .admin-grid{display:grid;grid-template-columns:380px 1fr;gap:16px}
-    .library-grid{display:grid;grid-template-columns:360px 1fr;gap:16px}
+    .summary,.filters,.stats{display:grid;gap:10px}
+    .summary{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .filters{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:12px}
+    .stats{grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:14px}
+    .summary .s,.stat{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:14px}
+    .summary .n,.stat .n{font-size:1.35rem;font-weight:700}
+    .summary .l,.stat .l{font-size:.82rem;color:var(--muted);margin-top:4px}
+    .admin-grid,.library-grid{display:grid;grid-template-columns:380px 1fr;gap:16px}
+    .library-grid{grid-template-columns:360px 1fr}
     .users-list,.homes-list,.providers-list,.docs-list,.audit-list,.billing-list,.library-list{display:flex;flex-direction:column;gap:10px}
     .entity-row{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:14px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
     .entity-title{font-weight:600}
     .entity-meta{font-size:.86rem;color:var(--muted);margin-top:6px}
     .entity-actions{display:flex;gap:8px;flex-wrap:wrap}
-    .filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}
-    .stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}
-    .stat{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:14px}
-    .stat .n{font-size:1.4rem;font-weight:700}
-    .stat .l{font-size:.82rem;color:var(--muted);margin-top:4px}
     .tag{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:.72rem;font-weight:700;margin-right:6px}
     .tag.ok{background:rgba(22,163,74,.12);color:var(--success)}
     .tag.bad{background:rgba(220,38,38,.12);color:var(--danger)}
@@ -135,22 +123,12 @@
     .viewbox h3{color:var(--accent);margin-bottom:10px}
     .viewbox p{line-height:1.7;margin-bottom:10px}
     @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
-    @media (max-width:1000px){
-      .admin-grid,.library-grid{grid-template-columns:1fr}
-      .filters,.summary,.stats{grid-template-columns:1fr 1fr}
-    }
+    @media (max-width:1000px){.admin-grid,.library-grid{grid-template-columns:1fr}.filters,.summary,.stats{grid-template-columns:1fr 1fr}}
     @media (max-width:768px){
       .sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);width:86vw!important;max-width:300px}
-      .sidebar.open{transform:translateX(0)}
-      .mobile{display:flex!important}
-      .actions{opacity:1}
-      .block{max-width:92%}
-      .header{padding:0 10px}
-      .panel{padding:16px 10px 8px}
-      .welcome{margin-top:8vh}
-      .welcome h1{font-size:1.85rem}
-      .input-wrap{padding:10px}
-      .filters,.summary,.stats{grid-template-columns:1fr}
+      .sidebar.open{transform:translateX(0)} .mobile{display:flex!important} .actions{opacity:1}
+      .block{max-width:92%} .header{padding:0 10px} .panel{padding:16px 10px 8px} .welcome{margin-top:8vh}
+      .welcome h1{font-size:1.85rem} .input-wrap{padding:10px} .filters,.summary,.stats{grid-template-columns:1fr}
     }
     @media (min-width:769px){.mobile{display:none!important}}
   </style>
@@ -165,7 +143,6 @@
       <strong>Settings</strong>
       <button id="closeSettings" class="icon" type="button">✕</button>
     </div>
-
     <div class="card">
       <label for="lang">Reply language</label>
       <select id="lang" class="sel">
@@ -176,7 +153,6 @@
         <option value="ar">العربية</option>
       </select>
     </div>
-
     <div class="card">
       <label for="mode">Response mode</label>
       <select id="mode" class="sel">
@@ -185,7 +161,6 @@
         <option value="deep">Deep</option>
       </select>
     </div>
-
     <div class="card">
       <div class="rowset">
         <div><div style="font-weight:600">Privacy mode</div><div style="font-size:.8rem;color:var(--muted)">Blur chat until hover</div></div>
@@ -196,7 +171,6 @@
         <button id="theme" class="toggle" type="button"></button>
       </div>
     </div>
-
     <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px">
       <button id="backWelcome" class="ghost" type="button">Back to welcome screen</button>
       <button id="logout" class="logout" type="button">Log out</button>
@@ -272,7 +246,7 @@
         <div class="panel-inner">
           <div id="empty" class="welcome">
             <h1 id="welcomeTitle">Ready.</h1>
-            <p id="welcomeText">Your assistant is ready to help with documentation, guidance, and drafting.</p>
+            <p>Your assistant is ready to help with documentation, guidance, and drafting.</p>
           </div>
           <div id="messages" class="messages hidden"></div>
         </div>
@@ -310,7 +284,6 @@
                 <strong>Documents for your home</strong>
                 <div id="libraryList" class="library-list"></div>
               </div>
-
               <div class="viewbox" id="libraryViewer">
                 <h3>Select a document</h3>
                 <p>Open a policy or document from the list to read it here.</p>
@@ -357,7 +330,6 @@
                   <button id="deleteLibraryDocBtn" class="logout hidden" type="button">Delete</button>
                 </div>
               </div>
-
               <div class="card">
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
                   <strong>Manage home documents</strong>
@@ -372,22 +344,20 @@
 
       <section id="adminPanel" class="panel hidden">
         <div class="panel-inner">
-          <div class="admin-top">
-            <div class="summary" id="adminSummary">
-              <div class="s"><div class="n" id="sumUsers">0</div><div class="l">Users</div></div>
-              <div class="s"><div class="n" id="sumHomes">0</div><div class="l">Homes</div></div>
-              <div class="s"><div class="n" id="sumProviders">0</div><div class="l">Providers</div></div>
-              <div class="s"><div class="n" id="sumDocs">0</div><div class="l">Policies / Documents</div></div>
-            </div>
+          <div class="summary">
+            <div class="s"><div class="n" id="sumUsers">0</div><div class="l">Users</div></div>
+            <div class="s"><div class="n" id="sumHomes">0</div><div class="l">Homes</div></div>
+            <div class="s"><div class="n" id="sumProviders">0</div><div class="l">Providers</div></div>
+            <div class="s"><div class="n" id="sumDocs">0</div><div class="l">Policies / Documents</div></div>
+          </div>
 
-            <div class="admin-tabs">
-              <button class="tabbtn active" data-tab="users">Users</button>
-              <button class="tabbtn" data-tab="homes">Homes</button>
-              <button class="tabbtn" data-tab="providers">Providers</button>
-              <button class="tabbtn" data-tab="documents">Policies</button>
-              <button class="tabbtn" data-tab="billing">Billing</button>
-              <button class="tabbtn" data-tab="audit">Audit</button>
-            </div>
+          <div class="admin-tabs" style="margin:16px 0">
+            <button class="tabbtn active" data-tab="users">Users</button>
+            <button class="tabbtn" data-tab="homes">Homes</button>
+            <button class="tabbtn" data-tab="providers">Providers</button>
+            <button class="tabbtn" data-tab="documents">Policies</button>
+            <button class="tabbtn" data-tab="billing">Billing</button>
+            <button class="tabbtn" data-tab="audit">Audit</button>
           </div>
 
           <div id="tab-users" class="admin-tab">
@@ -396,12 +366,11 @@
               <select id="userRoleFilter" class="sel">
                 <option value="">All roles</option>
                 <option value="admin">admin</option>
+                <option value="provider_admin">provider_admin</option>
                 <option value="manager">manager</option>
                 <option value="staff">staff</option>
               </select>
-              <select id="userHomeFilter" class="sel">
-                <option value="">All homes</option>
-              </select>
+              <select id="userHomeFilter" class="sel"><option value="">All homes</option></select>
               <select id="userArchivedFilter" class="sel">
                 <option value="">All status</option>
                 <option value="false">Live only</option>
@@ -412,14 +381,15 @@
             <div class="admin-grid">
               <div class="card">
                 <strong>Create user</strong>
-                <div><label for="adminFirstName">First name</label><input id="adminFirstName" class="field" type="text" placeholder="First name"></div>
-                <div><label for="adminLastName">Last name</label><input id="adminLastName" class="field" type="text" placeholder="Last name"></div>
+                <div><label for="adminFirstName">First name</label><input id="adminFirstName" class="field" placeholder="First name"></div>
+                <div><label for="adminLastName">Last name</label><input id="adminLastName" class="field" placeholder="Last name"></div>
                 <div><label for="adminEmail">Email</label><input id="adminEmail" class="field" type="email" placeholder="Email"></div>
                 <div><label for="adminPassword">Temporary password</label><input id="adminPassword" class="field" type="password" placeholder="Temporary password"></div>
                 <div><label for="adminRole">Role</label>
                   <select id="adminRole" class="sel">
                     <option value="staff">staff</option>
                     <option value="manager">manager</option>
+                    <option value="provider_admin">provider_admin</option>
                     <option value="admin">admin</option>
                   </select>
                 </div>
@@ -456,7 +426,6 @@
                 <div><label for="homeGeofence">Geofence radius (m)</label><input id="homeGeofence" class="field" type="number" placeholder="Geofence radius"></div>
                 <button id="createHomeBtn" class="action" type="button">Create home</button>
               </div>
-
               <div class="card">
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
                   <strong>Homes</strong>
@@ -480,7 +449,6 @@
                 <div><label for="providerLeadEmail">Safeguarding lead email</label><input id="providerLeadEmail" class="field" placeholder="Lead email"></div>
                 <button id="createProviderBtn" class="action" type="button">Create provider</button>
               </div>
-
               <div class="card">
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
                   <strong>Providers</strong>
@@ -546,7 +514,6 @@
                 <div><label for="docInputText">Input text / policy content</label><textarea id="docInputText" class="area" placeholder="Document text"></textarea></div>
                 <button id="createDocBtn" class="action" type="button">Create document</button>
               </div>
-
               <div class="card">
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
                   <strong>Policies / documents</strong>
@@ -586,7 +553,6 @@
             <span id="docText"></span>
             <button id="clearDoc" class="icon" type="button">✕</button>
           </div>
-
           <div class="ibox">
             <div class="irow">
               <label for="upload" class="icon" style="cursor:pointer;color:var(--muted)">
@@ -614,7 +580,6 @@
               </button>
             </div>
           </div>
-
           <div class="helper">
             <span id="langHelp">Assistant replies in English.</span>
             <span id="modeHelp">Mode: Balanced</span>
@@ -626,1564 +591,423 @@
   </div>
 
   <script>
-    let conversationId = null;
-    let currentDocumentText = null;
-    let currentDocumentName = null;
-    let isStreaming = false;
-    let queue = [];
-    let typing = false;
-    let lastPrompt = "";
-    let cache = [];
-    let currentUser = null;
-    let adminCreateActive = true;
-    let adminUsers = [];
-    let homes = [];
-    let providers = [];
-    let docs = [];
-    let billing = null;
-    let audit = [];
-    let libraryDocs = [];
-    let selectedLibraryDoc = null;
-    let editingLibraryDocId = null;
+    let conversationId=null,currentDocumentText=null,currentDocumentName=null,isStreaming=false,queue=[],typing=false,lastPrompt="",cache=[];
+    let currentUser=null,adminCreateActive=true,adminUsers=[],homes=[],providers=[],docs=[],billing=null,audit=[],libraryDocs=[],selectedLibraryDoc=null,editingLibraryDocId=null;
+    const DEFAULT_LANGUAGE="en-GB",REG_PROMPT=" [SYSTEM: Verify response against Ofsted SCCIF and Quality Standards for Children's Homes]";
+    const RESP={quick:"Quick",balanced:"Balanced",deep:"Deep"},LANG={"en-GB":"English","pl-PL":"Polish","ro-RO":"Romanian","ur-PK":"Urdu","ar":"Arabic"};
+    const GREET=[n=>`Good morning, ${n}.`,n=>`Welcome back, ${n}.`,n=>`Ready when you are, ${n}.`,n=>`Good to see you, ${n}.`];
+    const $=id=>document.getElementById(id);
 
-    const DEFAULT_LANGUAGE = "en-GB";
-    const REG_PROMPT = " [SYSTEM: Verify response against Ofsted SCCIF and Quality Standards for Children's Homes]";
-    const RESP = {quick:"Quick", balanced:"Balanced", deep:"Deep"};
-    const LANG = {"en-GB":"English","pl-PL":"Polish","ro-RO":"Romanian","ur-PK":"Urdu","ar":"Arabic"};
-    const GREET = [
-      n => `Good morning, ${n}.`,
-      n => `Welcome back, ${n}.`,
-      n => `Ready when you are, ${n}.`,
-      n => `Good to see you, ${n}.`
-    ];
+    const safe=s=>String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+    const role=()=>String(currentUser?.role||"").toLowerCase();
+    const isAdmin=()=>["admin","provider_admin"].includes(role());
+    const isManager=()=>role()==="manager";
+    const isStaff=()=>role()==="staff";
+    const canManageLibrary=()=>isAdmin()||isManager();
+    const selectedLang=()=>$("lang").value||DEFAULT_LANGUAGE;
+    const selectedMode=()=>$("mode").value||"balanced";
+    const firstName=()=>currentUser?.first_name||localStorage.getItem("first_name")||"there";
 
-    const $ = id => document.getElementById(id);
-
-    function banner(t, ms=2400){
-      const e = $("status");
-      e.textContent = t;
-      e.style.display = "block";
-      clearTimeout(banner.t);
-      banner.t = setTimeout(() => e.style.display = "none", ms);
-    }
-
-    function esc(s){
-      return String(s || "")
-        .replace(/&/g,"&amp;")
-        .replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;")
-        .replace(/"/g,"&quot;")
-        .replace(/'/g,"&#039;");
-    }
-
-    function firstName(){
-      return currentUser?.first_name || localStorage.getItem("first_name") || localStorage.getItem("user_first_name") || "there";
-    }
-
-    function userInitials(){
-      const full = [currentUser?.first_name, currentUser?.last_name].filter(Boolean).join(" ") || localStorage.getItem("user_name") || firstName();
-      const parts = String(full).trim().split(/\s+/).filter(Boolean);
-      if(!parts.length) return "Y";
-      if(parts.length === 1) return parts[0].slice(0,2).toUpperCase();
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-
-    function setWelcome(){
-      $("welcomeTitle").textContent = GREET[Math.floor(Math.random() * GREET.length)](firstName());
-    }
-
-    function selectedLang(){ return $("lang").value || DEFAULT_LANGUAGE; }
-    function selectedMode(){ return $("mode").value || "balanced"; }
-    function role(){ return (currentUser?.role || "").toLowerCase(); }
-    function isAdmin(){ return role() === "admin"; }
-    function isManager(){ return role() === "manager"; }
-    function isStaff(){ return role() === "staff"; }
-    function canManageLibrary(){ return isAdmin() || isManager(); }
-
+    function banner(t,ms=2400){const e=$("status");e.textContent=t;e.style.display="block";clearTimeout(banner.t);banner.t=setTimeout(()=>e.style.display="none",ms)}
+    function stripSystem(s){return String(s||"").replace(/\s*\[SYSTEM:[\s\S]*$/i,"").trim()}
+    function setTitle(t="Intelligence for Care"){$("title").textContent=t}
+    function resize(){const t=$("input");t.style.height="auto";t.style.height=Math.min(t.scrollHeight,120)+"px"}
+    function docShow(name){$("docText").textContent=name;$("doc").classList.add("show")}
+    function docHide(){$("docText").textContent="";$("doc").classList.remove("show")}
     function syncHelpers(){
-      $("langHelp").textContent = `Assistant replies in ${LANG[selectedLang()] || "English"}.`;
-      $("modeHelp").textContent = `Mode: ${RESP[selectedMode()]}`;
-      $("theme").classList.toggle("active", document.body.classList.contains("theme-dark"));
-      $("privacy").classList.toggle("active", $("app").classList.contains("privacy-active"));
-      $("adminActiveToggle").classList.toggle("active", adminCreateActive);
+      $("langHelp").textContent=`Assistant replies in ${LANG[selectedLang()]||"English"}.`;
+      $("modeHelp").textContent=`Mode: ${RESP[selectedMode()]}`;
+      $("theme").classList.toggle("active",document.body.classList.contains("theme-dark"));
+      $("privacy").classList.toggle("active",$("app").classList.contains("privacy-active"));
+      $("adminActiveToggle").classList.toggle("active",adminCreateActive)
     }
-
-    function stripSystem(s){
-      return String(s || "").replace(/\s*\[SYSTEM:[\s\S]*$/i, "").trim();
+    function userInitials(){
+      const full=[currentUser?.first_name,currentUser?.last_name].filter(Boolean).join(" ")||firstName();
+      const p=String(full).trim().split(/\s+/).filter(Boolean);
+      if(!p.length) return "Y";
+      if(p.length===1) return p[0].slice(0,2).toUpperCase();
+      return (p[0][0]+p[1][0]).toUpperCase()
     }
-
+    function setWelcome(){$("welcomeTitle").textContent=GREET[Math.floor(Math.random()*GREET.length)](firstName())}
+    function buildLangInstruction(){return selectedLang()===DEFAULT_LANGUAGE?"":` [SYSTEM: Reply in ${LANG[selectedLang()]}. Keep safeguarding, care, and formal documentation wording clear and professional.]`}
+    function openSettings(){$("settingsOverlay").classList.add("show");$("settings").classList.add("open")}
+    function closeSettings(){$("settingsOverlay").classList.remove("show");$("settings").classList.remove("open")}
     function summariseTitle(text){
-      const clean = stripSystem(text).replace(/[^\p{L}\p{N}\s'-]/gu," ").replace(/\s+/g," ").trim();
+      const clean=stripSystem(text).replace(/[^\p{L}\p{N}\s'-]/gu," ").replace(/\s+/g," ").trim();
       if(!clean) return "New Log";
-      const stop = new Set(["the","a","an","and","or","but","for","with","from","about","who","what","when","where","why","how","are","is","do","does","did","please","tell","write","good","morning","indicare"]);
-      const words = clean.split(" ").filter(Boolean);
-      const pool = words.filter(w => !stop.has(w.toLowerCase()));
-      const picked = (pool.length ? pool : words).slice(0,3);
-      return picked.map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(" ") || "New Log";
+      const stop=new Set(["the","a","an","and","or","but","for","with","from","about","who","what","when","where","why","how","are","is","do","does","did","please","tell","write","good","morning","indicare"]);
+      const words=clean.split(" ").filter(Boolean),pool=words.filter(w=>!stop.has(w.toLowerCase())),picked=(pool.length?pool:words).slice(0,3);
+      return picked.map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(" ")||"New Log"
     }
-
     function beautify(text){
-      let out = String(text || "").trim();
-      out = out.replace(/([a-z]):(?=[A-Z])/g, "$1:\n");
-      out = out.replace(/What matters most here:/gi, "### What matters most here");
-      out = out.replace(/Key points:/gi, "### Key points");
-      out = out.replace(/Suggested staff response \/ next steps:/gi, "### Suggested next steps");
-      out = out.replace(/What should be recorded \/ handed over \/ reviewed if relevant:/gi, "### Recording and handover");
-      out = out.replace(/- /g, "\n- ");
-      out = out.replace(/\.\s+(?=[A-Z])/g, ".\n\n");
-      out = out.replace(/\n{3,}/g, "\n\n");
-      return out;
+      let out=String(text||"").trim();
+      out=out.replace(/([a-z]):(?=[A-Z])/g,"$1:\n").replace(/What matters most here:/gi,"### What matters most here").replace(/Key points:/gi,"### Key points").replace(/Suggested staff response \/ next steps:/gi,"### Suggested next steps").replace(/What should be recorded \/ handed over \/ reviewed if relevant:/gi,"### Recording and handover").replace(/- /g,"\n- ").replace(/\.\s+(?=[A-Z])/g,".\n\n").replace(/\n{3,}/g,"\n\n");
+      return out
     }
-
-    function render(text, roleName="assistant"){
-      let safe = esc(roleName === "assistant" ? beautify(text) : text);
-      safe = safe.replace(/^### (.*)$/gm, "<h3>$1</h3>");
-      safe = safe.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-      const lines = safe.split("\n");
-      let html = "", list = false;
-
+    function render(text,roleName="assistant"){
+      let s=safe(roleName==="assistant"?beautify(text):text).replace(/^### (.*)$/gm,"<h3>$1</h3>").replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>");
+      const lines=s.split("\n"); let html="",list=false;
       for(const line of lines){
-        if(/^\s*-\s+/.test(line)){
-          if(!list){ html += "<ul>"; list = true; }
-          html += `<li>${line.replace(/^\s*-\s+/,"")}</li>`;
-        } else {
-          if(list){ html += "</ul>"; list = false; }
-          if(line.trim() === "") html += "<br>";
-          else if(!/^<h3>.*<\/h3>$/.test(line)) html += `<p>${line}</p>`;
-          else html += line;
-        }
+        if(/^\s*-\s+/.test(line)){if(!list){html+="<ul>";list=true} html+=`<li>${line.replace(/^\s*-\s+/,"")}</li>`}
+        else{if(list){html+="</ul>";list=false} html+=line.trim()===""?"<br>":/^<h3>.*<\/h3>$/.test(line)?line:`<p>${line}</p>`}
       }
-      if(list) html += "</ul>";
-      return html;
+      if(list) html+="</ul>";
+      return html
     }
 
-    function resize(){
-      const t = $("input");
-      t.style.height = "auto";
-      t.style.height = Math.min(t.scrollHeight, 120) + "px";
-    }
-
-    function docShow(name){
-      $("docText").textContent = name;
-      $("doc").classList.add("show");
-    }
-
-    function docHide(){
-      $("docText").textContent = "";
-      $("doc").classList.remove("show");
-    }
-
-    function setTitle(t="Intelligence for Care"){
-      $("title").textContent = t;
-    }
-
-    function buildLangInstruction(){
-      return selectedLang() === DEFAULT_LANGUAGE
-        ? ""
-        : ` [SYSTEM: Reply in ${LANG[selectedLang()]}. Keep safeguarding, care, and formal documentation wording clear and professional.]`;
-    }
-
-    function openSettings(){
-      $("settingsOverlay").classList.add("show");
-      $("settings").classList.add("open");
-    }
-
-    function closeSettings(){
-      $("settingsOverlay").classList.remove("show");
-      $("settings").classList.remove("open");
-    }
-
-    function showAssistantView(){
-      $("assistantPanel").classList.remove("hidden");
-      $("libraryPanel").classList.add("hidden");
-      $("adminPanel").classList.add("hidden");
-      $("inputWrap").classList.remove("hidden");
-      $("navAssistant").classList.add("active");
-      $("navLibrary").classList.remove("active");
-      $("navAdmin").classList.remove("active");
-      setTitle(conversationId ? $("title").textContent : "Intelligence for Care");
-    }
-
-    function showLibraryView(){
-      $("assistantPanel").classList.add("hidden");
-      $("libraryPanel").classList.remove("hidden");
-      $("adminPanel").classList.add("hidden");
-      $("inputWrap").classList.add("hidden");
-      $("navAssistant").classList.remove("active");
-      $("navLibrary").classList.add("active");
-      $("navAdmin").classList.remove("active");
-      setTitle("Policies");
-      loadLibrary();
-    }
-
-    function showAdminView(){
-      $("assistantPanel").classList.add("hidden");
-      $("libraryPanel").classList.add("hidden");
-      $("adminPanel").classList.remove("hidden");
-      $("inputWrap").classList.add("hidden");
-      $("navAssistant").classList.remove("active");
-      $("navLibrary").classList.remove("active");
-      $("navAdmin").classList.add("active");
-      setTitle("Admin");
-      loadAdminReferenceData().then(loadActiveAdminTab);
-    }
-
-    function setAdminTab(name){
-      document.querySelectorAll(".tabbtn[data-tab]").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
-      document.querySelectorAll(".admin-tab").forEach(tab => tab.classList.add("hidden"));
-      $("tab-" + name).classList.remove("hidden");
-      localStorage.setItem("indicare_admin_tab", name);
-      loadActiveAdminTab();
-    }
-
-    function setLibraryTab(name){
-      document.querySelectorAll(".tabbtn[data-library-tab]").forEach(b => b.classList.toggle("active", b.dataset.libraryTab === name));
-      $("library-list-tab").classList.toggle("hidden", name !== "list");
-      $("library-editor-tab").classList.toggle("hidden", name !== "editor");
-      if(name === "editor" && !canManageLibrary()) setLibraryTab("list");
-    }
-
-    function activeAdminTab(){
-      return localStorage.getItem("indicare_admin_tab") || "users";
-    }
-
-    async function api(url, options={}){
-      const res = await fetch(url, {
+    async function api(url,options={}){
+      const res=await fetch(url,{
         ...options,
-        headers:{
-          ...(options.headers || {}),
-          "Authorization":"Bearer " + localStorage.getItem("access_token"),
-          ...(options.body && !(options.body instanceof FormData) ? {"Content-Type":"application/json"} : {})
-        }
+        credentials:"include",
+        headers:{...(options.headers||{}),...(options.body&&!(options.body instanceof FormData)?{"Content-Type":"application/json"}:{})}
       });
+      if(res.status===401){location.href="/login";return null}
+      const type=res.headers.get("content-type")||"";
+      let data=null;
+      if(type.includes("application/json")){try{data=await res.json()}catch{}}
+      else{try{const text=await res.text();data=text?{detail:text}:null}catch{}}
+      if(!res.ok) throw new Error(data?.detail||data?.error||"Request failed");
+      return data
+    }
 
-      if(res.status === 401){
-        location.href = "/login";
-        return null;
-      }
-
-      if(!res.ok){
-        let msg = "Request failed";
-        try{
-          const j = await res.json();
-          msg = j.detail || j.error || msg;
-        }catch{}
-        throw new Error(msg);
-      }
-
-      const type = res.headers.get("content-type") || "";
-      return type.includes("application/json") ? res.json() : null;
+    async function logoutNow(){
+      try{await fetch("/auth/logout",{method:"POST",credentials:"include"})}catch{}
+      localStorage.removeItem("current_user");sessionStorage.removeItem("current_user");localStorage.removeItem("first_name");location.href="/login"
     }
 
     async function loadMe(){
-      try{
-        const data = await api("/auth/me");
-        if(data?.user){
-          currentUser = data.user;
-          localStorage.setItem("first_name", currentUser.first_name || "");
-          localStorage.setItem("user_name", [currentUser.first_name, currentUser.last_name].filter(Boolean).join(" "));
-          if(isAdmin()) $("navAdmin").classList.remove("hidden");
-          if(isAdmin() || isManager() || isStaff()) $("navLibrary").classList.remove("hidden");
-          if(canManageLibrary()) $("managerEditorTab").classList.remove("hidden");
+      const data=await api("/auth/me");
+      if(!data?.user) throw new Error("No user");
+      currentUser=data.user;
+      localStorage.setItem("first_name",currentUser.first_name||"");
+      if(isAdmin()) $("navAdmin").classList.remove("hidden");
+      if(isAdmin()||isManager()||isStaff()) $("navLibrary").classList.remove("hidden");
+      if(canManageLibrary()) $("managerEditorTab").classList.remove("hidden")
+    }
+
+    function showAssistantView(){$("assistantPanel").classList.remove("hidden");$("libraryPanel").classList.add("hidden");$("adminPanel").classList.add("hidden");$("inputWrap").classList.remove("hidden");$("navAssistant").classList.add("active");$("navLibrary").classList.remove("active");$("navAdmin").classList.remove("active");setTitle(conversationId?$("title").textContent:"Intelligence for Care")}
+    function showLibraryView(){$("assistantPanel").classList.add("hidden");$("libraryPanel").classList.remove("hidden");$("adminPanel").classList.add("hidden");$("inputWrap").classList.add("hidden");$("navAssistant").classList.remove("active");$("navLibrary").classList.add("active");$("navAdmin").classList.remove("active");setTitle("Policies");loadLibrary()}
+    function showAdminView(){$("assistantPanel").classList.add("hidden");$("libraryPanel").classList.add("hidden");$("adminPanel").classList.remove("hidden");$("inputWrap").classList.add("hidden");$("navAssistant").classList.remove("active");$("navLibrary").classList.remove("active");$("navAdmin").classList.add("active");setTitle("Admin");loadAdminReferenceData().then(loadActiveAdminTab)}
+
+    function resetWelcome(){
+      conversationId=null;currentDocumentText=null;currentDocumentName=null;
+      $("messages").innerHTML="";$("messages").classList.add("hidden");$("empty").classList.remove("hidden");
+      $("input").value="";resize();docHide();setTitle();setWelcome();filterConversations();closeSettings();showAssistantView()
+    }
+
+    function renderHistory(rows){
+      const host=$("history");host.innerHTML="";
+      rows.forEach(r=>{
+        const item=document.createElement("div");item.className=`item ${Number(r.id)===Number(conversationId)?"active":""}`;
+        item.innerHTML=`<div class="row"><button class="mainbtn"><div class="ttl">${safe(stripSystem(r.title||"Observation"))}</div></button><button class="mini">⧉</button><button class="mini danger">🗑</button></div>`;
+        const [main,copy,del]=item.querySelectorAll("button");
+        main.onclick=()=>{showAssistantView();openConversation(r.id,stripSystem(r.title||"Observation"))};
+        copy.onclick=e=>{e.stopPropagation();navigator.clipboard.writeText(stripSystem(r.title||"Observation"));banner("Copied")};
+        del.onclick=e=>{e.stopPropagation();deleteConversation(r.id)};
+        host.appendChild(item)
+      })
+    }
+    function filterConversations(){const q=$("search").value.trim().toLowerCase();renderHistory(q?cache.filter(r=>stripSystem(r.title||"").toLowerCase().includes(q)):cache)}
+    async function loadConversations(){cache=await api("/chat/conversations")||[];filterConversations();return cache}
+    async function openConversation(id,title){
+      const data=await api(`/chat/conversations/${id}`); if(!data) return;
+      conversationId=id;$("messages").innerHTML="";$("empty").classList.add("hidden");$("messages").classList.remove("hidden");
+      data.messages.forEach(m=>appendMessage(m.role,m.message,{messageId:m.id}));
+      if(data.document){currentDocumentText=data.document.text;currentDocumentName=data.document.filename;docShow(data.document.filename)} else {currentDocumentText=null;currentDocumentName=null;docHide()}
+      setTitle(title||"Observation");filterConversations();
+      if(window.innerWidth<=768){$("sidebar").classList.remove("open");$("overlay").classList.remove("show")}
+    }
+    async function renameShort(id,prompt){const short=summariseTitle(prompt);await api(`/chat/conversations/${id}/rename`,{method:"POST",body:JSON.stringify({title:short})});setTitle(short);await loadConversations()}
+    async function deleteConversation(id){if(!confirm("Delete this conversation?")) return;await api(`/chat/conversations/${id}`,{method:"DELETE"});if(Number(conversationId)===Number(id)) resetWelcome();await loadConversations();banner("Conversation deleted")}
+
+    function appendMessage(roleName,text,opts={}){
+      const shown=roleName==="user"?stripSystem(text):text;
+      const wrap=document.createElement("div");wrap.className=`wrap ${roleName}`;
+      wrap.innerHTML=`<div class="avatar">${roleName==="assistant"?"IC":userInitials()}</div><div class="block"><div class="msg">${roleName==="assistant"?render(shown,"assistant"):safe(shown)}</div>${opts.meta?`<div class="meta">${safe(opts.meta)}</div>`:""}<div class="actions"></div></div>`;
+      const actions=wrap.querySelector(".actions");
+      const addChip=(label,fn)=>{const b=document.createElement("button");b.className="chip";b.textContent=label;b.onclick=fn;actions.appendChild(b)};
+      addChip("Copy",()=>navigator.clipboard.writeText(shown).then(()=>banner("Copied")).catch(()=>banner("Could not copy")));
+      if(roleName==="assistant"){addChip("Format for Ofsted",()=>quick("ofsted"));addChip("Draft Risk Assess",()=>quick("risk"))}
+      if(roleName==="user"&&opts.messageId){addChip("Edit",()=>editMessage(opts.messageId,shown))}
+      $("messages").appendChild(wrap);$("assistantPanel").scrollTop=$("assistantPanel").scrollHeight
+    }
+
+    function createStreamMsg(){
+      const old=$("streaming"); if(old) old.remove();
+      const wrap=document.createElement("div");
+      wrap.id="streaming";wrap.className="wrap assistant";
+      wrap.innerHTML=`<div class="avatar">IC</div><div class="block"><div class="msg typing" data-raw=""></div><div class="meta">Reply language: ${LANG[selectedLang()]||"English"} · Mode: ${RESP[selectedMode()]}</div></div>`;
+      $("messages").appendChild(wrap);$("assistantPanel").scrollTop=$("assistantPanel").scrollHeight
+    }
+
+    function startTyping(){
+      if(typing) return; typing=true;
+      const el=document.querySelector("#streaming .msg"); if(!el){typing=false;return}
+      let raw=el.getAttribute("data-raw")||"";
+      const tick=setInterval(()=>{
+        if(queue.length){raw+=queue.shift();el.innerHTML=render(raw,"assistant");el.setAttribute("data-raw",raw);$("assistantPanel").scrollTop=$("assistantPanel").scrollHeight}
+        else if(!isStreaming){clearInterval(tick);typing=false;el.classList.remove("typing")}
+      },2)
+    }
+
+    async function stream(url,body){
+      body.message+=REG_PROMPT+buildLangInstruction();
+      body.reply_language=selectedLang();body.reply_language_label=LANG[selectedLang()]||"English";body.response_mode=selectedMode();
+      const res=await fetch(url,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+      if(res.status===401){location.href="/login";return}
+      if(!res.ok) throw new Error(await res.text()||`Chat request failed (${res.status})`);
+      const reader=res.body.getReader(),dec=new TextDecoder(); let buffer="";
+      createStreamMsg(); queue.push(" "); startTyping();
+      while(true){
+        const {done,value}=await reader.read(); if(done) break;
+        buffer+=dec.decode(value,{stream:true}); const parts=buffer.split("\n"); buffer=parts.pop()||"";
+        for(const line of parts){
+          if(!line.startsWith("data:")) continue;
+          let payload=line.slice(5); if(payload.startsWith(" ")) payload=payload.slice(1); if(payload==="[DONE]") continue;
+          for(const ch of payload) queue.push(ch); startTyping()
         }
-      }catch(e){
-        console.error(e);
       }
     }
 
     async function uploadDoc(file){
-      const fd = new FormData();
-      fd.append("file", file);
-      if(conversationId) fd.append("conversation_id", conversationId);
-      const data = await api("/chat/upload", {method:"POST", body:fd});
-      currentDocumentText = data.text;
-      currentDocumentName = data.filename;
-      docShow(data.filename);
-      banner(`Document attached: ${data.filename}`);
+      const fd=new FormData(); fd.append("file",file); if(conversationId) fd.append("conversation_id",conversationId);
+      const data=await api("/chat/upload",{method:"POST",body:fd});
+      currentDocumentText=data.text; currentDocumentName=data.filename; docShow(data.filename); banner(`Document attached: ${data.filename}`)
     }
 
-    function copyText(text){
-      navigator.clipboard.writeText(text).then(() => banner("Copied")).catch(() => banner("Could not copy"));
-    }
-
-    async function editMessage(messageId, currentText){
-      const edited = prompt("Edit message", currentText);
-      if(edited === null) return;
-      const cleaned = stripSystem(edited).trim();
-      if(!cleaned) return banner("Message cannot be empty");
-
-      isStreaming = true;
-      $("send").disabled = true;
-      try{
-        await stream("/chat/messages/" + messageId + "/edit", {
-          message: cleaned,
-          document_text: currentDocumentText,
-          document_name: currentDocumentName,
-          response_mode: selectedMode()
-        });
-        if(conversationId) await openConversation(conversationId, $("title").textContent);
-        banner("Updated");
-      }catch(e){
-        banner(e.message || "Edit failed");
-      }finally{
-        isStreaming = false;
-        $("send").disabled = false;
-      }
-    }
-
-    function appendMessage(roleName, text, opts={}){
-      const shown = roleName === "user" ? stripSystem(text) : text;
-      const wrap = document.createElement("div");
-      wrap.className = `wrap ${roleName}`;
-
-      const avatar = document.createElement("div");
-      avatar.className = "avatar";
-      avatar.textContent = roleName === "assistant" ? "IC" : userInitials();
-
-      const block = document.createElement("div");
-      block.className = "block";
-
-      const msg = document.createElement("div");
-      msg.className = "msg";
-      msg.innerHTML = roleName === "assistant" ? render(shown, "assistant") : esc(shown);
-      block.appendChild(msg);
-
-      if(opts.meta){
-        const meta = document.createElement("div");
-        meta.className = "meta";
-        meta.textContent = opts.meta;
-        block.appendChild(meta);
-      }
-
-      const actions = document.createElement("div");
-      actions.className = "actions";
-
-      const copy = document.createElement("button");
-      copy.className = "chip";
-      copy.textContent = "Copy";
-      copy.onclick = () => copyText(shown);
-      actions.appendChild(copy);
-
-      if(roleName === "assistant"){
-        const a = document.createElement("button");
-        a.className = "chip";
-        a.textContent = "Format for Ofsted";
-        a.onclick = () => quick("ofsted");
-
-        const b = document.createElement("button");
-        b.className = "chip";
-        b.textContent = "Draft Risk Assess";
-        b.onclick = () => quick("risk");
-
-        actions.append(a, b);
-      }
-
-      if(roleName === "user" && opts.messageId){
-        const e = document.createElement("button");
-        e.className = "chip";
-        e.textContent = "Edit";
-        e.onclick = () => editMessage(opts.messageId, shown);
-        actions.appendChild(e);
-      }
-
-      block.appendChild(actions);
-      wrap.append(avatar, block);
-      $("messages").appendChild(wrap);
-      $("assistantPanel").scrollTop = $("assistantPanel").scrollHeight;
-    }
-
-    function createStreamMsg(){
-      const old = $("streaming");
-      if(old) old.remove();
-      const wrap = document.createElement("div");
-      wrap.id = "streaming";
-      wrap.className = "wrap assistant";
-      wrap.innerHTML = `<div class="avatar">IC</div><div class="block"><div class="msg typing" data-raw=""></div><div class="meta">Reply language: ${LANG[selectedLang()] || "English"} · Mode: ${RESP[selectedMode()]}</div></div>`;
-      $("messages").appendChild(wrap);
-      $("assistantPanel").scrollTop = $("assistantPanel").scrollHeight;
-    }
-
-    function startTyping(){
-      if(typing) return;
-      typing = true;
-      const el = document.querySelector("#streaming .msg");
-      if(!el){ typing = false; return; }
-      let raw = el.getAttribute("data-raw") || "";
-      const tick = setInterval(() => {
-        if(queue.length){
-          raw += queue.shift();
-          el.innerHTML = render(raw, "assistant");
-          el.setAttribute("data-raw", raw);
-          $("assistantPanel").scrollTop = $("assistantPanel").scrollHeight;
-        } else if(!isStreaming){
-          clearInterval(tick);
-          typing = false;
-          el.classList.remove("typing");
-        }
-      }, 2);
-    }
-
-    async function stream(url, body){
-      body.message += REG_PROMPT + buildLangInstruction();
-      body.reply_language = selectedLang();
-      body.reply_language_label = LANG[selectedLang()] || "English";
-      body.response_mode = selectedMode();
-
-      const res = await fetch(url, {
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json",
-          "Authorization":"Bearer " + localStorage.getItem("access_token")
-        },
-        body:JSON.stringify(body)
-      });
-
-      if(res.status === 401){
-        location.href = "/login";
-        return;
-      }
-
-      if(!res.ok){
-        let msg = `Chat request failed (${res.status})`;
-        try{ msg = await res.text() || msg; }catch{}
-        throw new Error(msg);
-      }
-
-      const reader = res.body.getReader();
-      const dec = new TextDecoder();
-      let buffer = "";
-
-      createStreamMsg();
-      queue.push(" ");
-      startTyping();
-
-      while(true){
-        const {done, value} = await reader.read();
-        if(done) break;
-        buffer += dec.decode(value, {stream:true});
-        const parts = buffer.split("\n");
-        buffer = parts.pop() || "";
-
-        for(const line of parts){
-          if(!line.startsWith("data:")) continue;
-          let payload = line.slice(5);
-          if(payload.startsWith(" ")) payload = payload.slice(1);
-          if(payload === "[DONE]") continue;
-          for(const ch of payload) queue.push(ch);
-          startTyping();
-        }
-      }
-    }
-
-    function resetWelcome(){
-      conversationId = null;
-      currentDocumentText = null;
-      currentDocumentName = null;
-      $("messages").innerHTML = "";
-      $("messages").classList.add("hidden");
-      $("empty").classList.remove("hidden");
-      $("input").value = "";
-      resize();
-      docHide();
-      setTitle();
-      setWelcome();
-      filterConversations();
-      closeSettings();
-      showAssistantView();
-    }
-
-    async function renameShort(id, prompt){
-      try{
-        const short = summariseTitle(prompt);
-        await api(`/chat/conversations/${id}/rename`, {
-          method:"POST",
-          body:JSON.stringify({title: short})
-        });
-        setTitle(short);
-        await loadConversations();
-      }catch(e){
-        console.error(e);
-      }
-    }
-
-    async function deleteConversation(id){
-      if(!confirm("Delete this conversation?")) return;
-      try{
-        await api(`/chat/conversations/${id}`, {method:"DELETE"});
-        if(Number(conversationId) === Number(id)) resetWelcome();
-        await loadConversations();
-        banner("Conversation deleted");
-      }catch(e){
-        banner(e.message || "Delete failed");
-      }
-    }
-
-    function renderHistory(rows){
-      const host = $("history");
-      host.innerHTML = "";
-      rows.forEach(r => {
-        const item = document.createElement("div");
-        item.className = `item ${Number(r.id) === Number(conversationId) ? "active" : ""}`;
-
-        const row = document.createElement("div");
-        row.className = "row";
-
-        const main = document.createElement("button");
-        main.className = "mainbtn";
-        main.innerHTML = `<div class="ttl">${esc(stripSystem(r.title || "Observation"))}</div>`;
-        main.onclick = () => { showAssistantView(); openConversation(r.id, stripSystem(r.title || "Observation")); };
-
-        const copy = document.createElement("button");
-        copy.className = "mini";
-        copy.textContent = "⧉";
-        copy.onclick = e => { e.stopPropagation(); copyText(stripSystem(r.title || "Observation")); };
-
-        const del = document.createElement("button");
-        del.className = "mini danger";
-        del.textContent = "🗑";
-        del.onclick = e => { e.stopPropagation(); deleteConversation(r.id); };
-
-        row.append(main, copy, del);
-        item.appendChild(row);
-        host.appendChild(item);
-      });
-    }
-
-    function filterConversations(){
-      const q = $("search").value.trim().toLowerCase();
-      const rows = q ? cache.filter(r => stripSystem(r.title || "").toLowerCase().includes(q)) : cache;
-      renderHistory(rows);
-    }
-
-    async function loadConversations(){
-      try{
-        cache = await api("/chat/conversations") || [];
-        filterConversations();
-        return cache;
-      }catch(e){
-        banner("Could not load conversations");
-        return [];
-      }
-    }
-
-    async function openConversation(id, title){
-      try{
-        const data = await api(`/chat/conversations/${id}`);
-        if(!data) return;
-        conversationId = id;
-        $("messages").innerHTML = "";
-        $("empty").classList.add("hidden");
-        $("messages").classList.remove("hidden");
-
-        data.messages.forEach(m => appendMessage(m.role, m.message, {messageId:m.id}));
-
-        if(data.document){
-          currentDocumentText = data.document.text;
-          currentDocumentName = data.document.filename;
-          docShow(data.document.filename);
-        } else {
-          currentDocumentText = null;
-          currentDocumentName = null;
-          docHide();
-        }
-
-        setTitle(title || "Observation");
-        filterConversations();
-
-        if(window.innerWidth <= 768){
-          $("sidebar").classList.remove("open");
-          $("overlay").classList.remove("show");
-        }
-      }catch(e){
-        banner(e.message || "Could not open conversation");
-      }
+    async function editMessage(messageId,currentText){
+      const edited=prompt("Edit message",currentText); if(edited===null) return;
+      const cleaned=stripSystem(edited).trim(); if(!cleaned) return banner("Message cannot be empty");
+      isStreaming=true;$("send").disabled=true;
+      try{await stream(`/chat/messages/${messageId}/edit`,{message:cleaned,document_text:currentDocumentText,document_name:currentDocumentName,response_mode:selectedMode()});if(conversationId) await openConversation(conversationId,$("title").textContent);banner("Updated")}
+      catch(e){banner(e.message||"Edit failed")}
+      finally{isStreaming=false;$("send").disabled=false}
     }
 
     async function sendMessage(){
-      const raw = $("input").value.trim();
-      const text = stripSystem(raw);
-      if(!text || isStreaming) return;
-
-      const prev = conversationId;
-      lastPrompt = text;
-      isStreaming = true;
-      $("send").disabled = true;
-      $("empty").classList.add("hidden");
-      $("messages").classList.remove("hidden");
-
-      appendMessage("user", text, {meta:`Mode: ${RESP[selectedMode()]}`});
-      $("input").value = "";
-      resize();
-
-      try{
-        await stream("/chat/", {
-          message:text,
-          conversation_id:conversationId,
-          document_text:currentDocumentText,
-          document_name:currentDocumentName
-        });
-      }catch(e){
-        const streamEl = document.querySelector("#streaming .msg");
-        if(streamEl){
-          streamEl.classList.remove("typing");
-          streamEl.innerHTML = render(`Sorry, there was a problem: ${e.message}`, "assistant");
-        } else {
-          appendMessage("assistant", `Sorry, there was a problem: ${e.message}`);
-        }
-      }finally{
-        isStreaming = false;
-        $("send").disabled = false;
-        const rows = await loadConversations();
-        if(!prev && !conversationId && rows.length){
-          conversationId = rows[0].id;
-          await renameShort(conversationId, lastPrompt);
-        }
-      }
+      const raw=$("input").value.trim(),text=stripSystem(raw); if(!text||isStreaming) return;
+      const prev=conversationId; lastPrompt=text; isStreaming=true; $("send").disabled=true; $("empty").classList.add("hidden"); $("messages").classList.remove("hidden");
+      appendMessage("user",text,{meta:`Mode: ${RESP[selectedMode()]}`}); $("input").value=""; resize();
+      try{await stream("/chat/",{message:text,conversation_id:conversationId,document_text:currentDocumentText,document_name:currentDocumentName})}
+      catch(e){const streamEl=document.querySelector("#streaming .msg"); if(streamEl){streamEl.classList.remove("typing");streamEl.innerHTML=render(`Sorry, there was a problem: ${e.message}`,"assistant")}else appendMessage("assistant",`Sorry, there was a problem: ${e.message}`)}
+      finally{isStreaming=false;$("send").disabled=false; const rows=await loadConversations(); if(!prev&&!conversationId&&rows.length){conversationId=rows[0].id;await renameShort(conversationId,lastPrompt)}}
     }
 
-    function quick(type){
-      if(type === "ofsted"){
-        $("input").value = "Rewrite the above documentation so it aligns with Ofsted Quality Standards and is ready for professional review.";
-      } else if(type === "risk"){
-        $("input").value = "Generate a formal risk assessment based on this situation. Include presenting risks, protective factors, staff actions, and follow-up actions.";
-      }
-      resize();
-      sendMessage();
-    }
-
+    function quick(type){$("input").value=type==="ofsted"?"Rewrite the above documentation so it aligns with Ofsted Quality Standards and is ready for professional review.":"Generate a formal risk assessment based on this situation. Include presenting risks, protective factors, staff actions, and follow-up actions.";resize();sendMessage()}
     function startSpeech(){
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if(!SR) return banner("Speech to text is not supported on this device");
-      const rec = new SR();
-      rec.lang = selectedLang() || "en-GB";
-      rec.interimResults = true;
-      rec.continuous = false;
-      $("mic").style.color = "var(--accent)";
-      rec.onresult = e => {
-        let text = "";
-        for(let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript + " ";
-        $("input").value = text.trim();
-        resize();
-      };
-      rec.onerror = () => banner("Speech input failed");
-      rec.onend = () => { $("mic").style.color = ""; };
-      rec.start();
+      const SR=window.SpeechRecognition||window.webkitSpeechRecognition; if(!SR) return banner("Speech to text is not supported on this device");
+      const rec=new SR(); rec.lang=selectedLang()||"en-GB"; rec.interimResults=true; rec.continuous=false; $("mic").style.color="var(--accent)";
+      rec.onresult=e=>{let text="";for(let i=0;i<e.results.length;i++) text+=e.results[i][0].transcript+" ";$("input").value=text.trim();resize()};
+      rec.onerror=()=>banner("Speech input failed"); rec.onend=()=>{$("mic").style.color=""}; rec.start()
     }
 
-    function fillSelect(selectId, rows, placeholder, valueKey="id", labelFn=(r)=>r.name){
-      const sel = $(selectId);
-      if(!sel) return;
-      const current = sel.value;
-      sel.innerHTML = `<option value="">${placeholder}</option>`;
-      rows.forEach(r => {
-        const opt = document.createElement("option");
-        opt.value = r[valueKey];
-        opt.textContent = labelFn(r);
-        sel.appendChild(opt);
-      });
-      if([...sel.options].some(o => o.value === current)) sel.value = current;
+    function fillSelect(id,rows,placeholder,valueKey="id",labelFn=r=>r.name){
+      const sel=$(id); if(!sel) return; const current=sel.value; sel.innerHTML=`<option value="">${placeholder}</option>`;
+      rows.forEach(r=>{const opt=document.createElement("option");opt.value=r[valueKey];opt.textContent=labelFn(r);sel.appendChild(opt)});
+      if([...sel.options].some(o=>String(o.value)===String(current))) sel.value=current
     }
 
-    function updateAdminSummary(){
-      $("sumUsers").textContent = String(adminUsers.length || 0);
-      $("sumHomes").textContent = String(homes.length || 0);
-      $("sumProviders").textContent = String(providers.length || 0);
-      $("sumDocs").textContent = String(docs.length || 0);
+    function updateAdminSummary(){$("sumUsers").textContent=String(adminUsers.length||0);$("sumHomes").textContent=String(homes.length||0);$("sumProviders").textContent=String(providers.length||0);$("sumDocs").textContent=String(docs.length||0)}
+    function activeAdminTab(){return localStorage.getItem("indicare_admin_tab")||"users"}
+    function setAdminTab(name){
+      document.querySelectorAll(".tabbtn[data-tab]").forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
+      document.querySelectorAll(".admin-tab").forEach(t=>t.classList.add("hidden")); $("tab-"+name).classList.remove("hidden");
+      localStorage.setItem("indicare_admin_tab",name); loadActiveAdminTab()
+    }
+    function setLibraryTab(name){
+      document.querySelectorAll(".tabbtn[data-library-tab]").forEach(b=>b.classList.toggle("active",b.dataset.libraryTab===name));
+      $("library-list-tab").classList.toggle("hidden",name!=="list"); $("library-editor-tab").classList.toggle("hidden",name!=="editor");
+      if(name==="editor"&&!canManageLibrary()) setLibraryTab("list")
     }
 
     async function loadAdminReferenceData(){
-      try{
-        const [h, p, u] = await Promise.all([
-          api("/admin/homes"),
-          api("/admin/providers"),
-          api("/admin/users")
-        ]);
-
-        if(h?.homes) homes = h.homes;
-        if(p?.providers) providers = p.providers;
-        if(u?.users) adminUsers = u.users;
-
-        fillSelect("adminHomeId", homes, "Select home", "id", r => r.name);
-        fillSelect("userHomeFilter", homes, "All homes", "id", r => r.name);
-        fillSelect("docHomeFilter", homes, "All homes", "id", r => r.name);
-        fillSelect("docHomeId", homes, "Select home", "id", r => r.name);
-        fillSelect("homeProviderId", providers, "Select provider", "id", r => r.name);
-
-        const managers = adminUsers.filter(u => ["manager","admin"].includes((u.role || "").toLowerCase()));
-        fillSelect("homeRegisteredManagerId", managers, "Select manager", "id", r => `${r.first_name || ""} ${r.last_name || ""}`.trim() || r.email);
-        fillSelect("docOwnerId", adminUsers, "Select owner", "id", r => `${r.first_name || ""} ${r.last_name || ""}`.trim() || r.email);
-        fillSelect("libraryOwnerId", adminUsers, "Select owner", "id", r => `${r.first_name || ""} ${r.last_name || ""}`.trim() || r.email);
-        updateAdminSummary();
-      }catch(e){}
+      const [h,p,u]=await Promise.all([api("/admin/homes"),api("/admin/providers"),api("/admin/users")]);
+      homes=h?.homes||[]; providers=p?.providers||[]; adminUsers=u?.users||[];
+      fillSelect("adminHomeId",homes,"Select home"); fillSelect("userHomeFilter",homes,"All homes"); fillSelect("docHomeFilter",homes,"All homes"); fillSelect("docHomeId",homes,"Select home");
+      fillSelect("homeProviderId",providers,"Select provider");
+      const managers=adminUsers.filter(u=>["manager","admin","provider_admin"].includes((u.role||"").toLowerCase()));
+      fillSelect("homeRegisteredManagerId",managers,"Select manager","id",r=>`${r.first_name||""} ${r.last_name||""}`.trim()||r.email);
+      fillSelect("docOwnerId",adminUsers,"Select owner","id",r=>`${r.first_name||""} ${r.last_name||""}`.trim()||r.email);
+      fillSelect("libraryOwnerId",adminUsers,"Select owner","id",r=>`${r.first_name||""} ${r.last_name||""}`.trim()||r.email);
+      updateAdminSummary()
     }
+    async function loadActiveAdminTab(){const t=activeAdminTab(); if(t==="users") await loadAdminUsers(); if(t==="homes") await loadHomes(); if(t==="providers") await loadProviders(); if(t==="documents") await loadDocuments(); if(t==="billing") await loadBilling(); if(t==="audit") await loadAudit()}
 
-    async function loadActiveAdminTab(){
-      const tab = activeAdminTab();
-      if(tab === "users") await loadAdminUsers();
-      if(tab === "homes") await loadHomes();
-      if(tab === "providers") await loadProviders();
-      if(tab === "documents") await loadDocuments();
-      if(tab === "billing") await loadBilling();
-      if(tab === "audit") await loadAudit();
-    }
-
-    function clearAdminForm(){
-      $("adminFirstName").value = "";
-      $("adminLastName").value = "";
-      $("adminEmail").value = "";
-      $("adminPassword").value = "";
-      $("adminRole").value = "staff";
-      $("adminHomeId").value = "";
-      adminCreateActive = true;
-      syncHelpers();
-    }
-
-    function adminPayloadFromForm(){
-      return {
-        first_name: $("adminFirstName").value.trim(),
-        last_name: $("adminLastName").value.trim(),
-        email: $("adminEmail").value.trim(),
-        password: $("adminPassword").value,
-        role: $("adminRole").value,
-        home_id: Number($("adminHomeId").value),
-        is_active: adminCreateActive
-      };
-    }
-
-    async function createAdminUser(){
-      const payload = adminPayloadFromForm();
-      if(!payload.first_name || !payload.last_name || !payload.email || !payload.password || !payload.role || !payload.home_id){
-        return banner("Complete all user fields");
-      }
-      try{
-        await api("/admin/users", {method:"POST", body:JSON.stringify(payload)});
-        clearAdminForm();
-        await loadAdminUsers();
-        await loadAdminReferenceData();
-        banner("User created");
-      }catch(e){
-        banner(e.message || "Could not create user");
-      }
-    }
-
+    function clearAdminForm(){$("adminFirstName").value="";$("adminLastName").value="";$("adminEmail").value="";$("adminPassword").value="";$("adminRole").value="staff";$("adminHomeId").value="";adminCreateActive=true;syncHelpers()}
+    function adminPayloadFromForm(){return{first_name:$("adminFirstName").value.trim(),last_name:$("adminLastName").value.trim(),email:$("adminEmail").value.trim(),password:$("adminPassword").value,role:$("adminRole").value,home_id:Number($("adminHomeId").value),is_active:adminCreateActive}}
+    async function createAdminUser(){const p=adminPayloadFromForm(); if(!p.first_name||!p.last_name||!p.email||!p.password||!p.role||!p.home_id) return banner("Complete all user fields"); await api("/admin/users",{method:"POST",body:JSON.stringify(p)}); clearAdminForm(); await loadAdminUsers(); await loadAdminReferenceData(); banner("User created")}
     async function loadAdminUsers(){
-      try{
-        const q = $("userSearch").value.trim();
-        const roleVal = $("userRoleFilter").value;
-        const home = $("userHomeFilter").value.trim();
-        const archived = $("userArchivedFilter").value;
-        const params = new URLSearchParams();
-
-        if(q) params.set("q", q);
-        if(roleVal) params.set("role", roleVal);
-        if(home) params.set("home_id", home);
-        if(archived) params.set("archived", archived);
-
-        adminUsers = (await api("/admin/users" + (params.toString() ? `?${params.toString()}` : "")))?.users || [];
-        renderAdminUsers();
-        updateAdminSummary();
-      }catch(e){
-        banner(e.message || "Could not load users");
-      }
+      const params=new URLSearchParams(); if($("userSearch").value.trim()) params.set("q",$("userSearch").value.trim()); if($("userRoleFilter").value) params.set("role",$("userRoleFilter").value); if($("userHomeFilter").value.trim()) params.set("home_id",$("userHomeFilter").value.trim()); if($("userArchivedFilter").value) params.set("archived",$("userArchivedFilter").value);
+      adminUsers=(await api("/admin/users"+(params.toString()?`?${params}`:"")))?.users||[]; renderAdminUsers(); updateAdminSummary()
     }
-
     function renderAdminUsers(){
-      const host = $("adminUsersList");
-      host.innerHTML = "";
-      if(!adminUsers.length){
-        host.innerHTML = `<div class="entity-row"><div>No users found.</div></div>`;
-        return;
-      }
-
-      adminUsers.forEach(user => {
-        const row = document.createElement("div");
-        row.className = "entity-row";
-
-        const left = document.createElement("div");
-        left.innerHTML = `
-          <div class="entity-title">${esc([user.first_name, user.last_name].filter(Boolean).join(" ") || user.email)}</div>
-          <div class="entity-meta">${esc(user.email)} · ${esc(user.role)} · home ${esc(String(user.home_id ?? ""))}</div>
-          <div class="entity-meta">
-            <span class="tag ${user.is_active ? "ok":"bad"}">${user.is_active ? "active":"inactive"}</span>
-            <span class="tag ${user.archived ? "bad":"neutral"}">${user.archived ? "archived":"live"}</span>
-          </div>
-        `;
-
-        const right = document.createElement("div");
-        right.className = "entity-actions";
-
-        const toggleActive = document.createElement("button");
-        toggleActive.className = "chip";
-        toggleActive.textContent = user.is_active ? "Deactivate" : "Activate";
-        toggleActive.onclick = async () => {
-          try{
-            await api(`/admin/users/${user.id}`, {method:"PATCH", body:JSON.stringify({is_active: !user.is_active})});
-            await loadAdminUsers();
-            banner("User updated");
-          }catch(e){
-            banner(e.message || "Update failed");
-          }
-        };
-
-        const toggleArchive = document.createElement("button");
-        toggleArchive.className = "chip";
-        toggleArchive.textContent = user.archived ? "Unarchive" : "Archive";
-        toggleArchive.onclick = async () => {
-          try{
-            await api(`/admin/users/${user.id}`, {method:"PATCH", body:JSON.stringify({archived: !user.archived})});
-            await loadAdminUsers();
-            banner("User updated");
-          }catch(e){
-            banner(e.message || "Update failed");
-          }
-        };
-
-        const changeRole = document.createElement("button");
-        changeRole.className = "chip";
-        changeRole.textContent = "Role";
-        changeRole.onclick = async () => {
-          const newRole = prompt(`Set role for ${user.email}`, user.role || "staff");
-          if(newRole === null) return;
-          try{
-            await api(`/admin/users/${user.id}`, {method:"PATCH", body:JSON.stringify({role: newRole})});
-            await loadAdminUsers();
-            banner("Role updated");
-          }catch(e){
-            banner(e.message || "Role update failed");
-          }
-        };
-
-        const changeHome = document.createElement("button");
-        changeHome.className = "chip";
-        changeHome.textContent = "Home";
-        changeHome.onclick = async () => {
-          const homeChoices = homes.map(h => `${h.id}: ${h.name}`).join("\n");
-          const homeId = prompt(`Set home id for ${user.email}\n\n${homeChoices}`, String(user.home_id ?? ""));
-          if(homeId === null) return;
-          try{
-            await api(`/admin/users/${user.id}`, {method:"PATCH", body:JSON.stringify({home_id: Number(homeId)})});
-            await loadAdminUsers();
-            banner("Home updated");
-          }catch(e){
-            banner(e.message || "Home update failed");
-          }
-        };
-
-        const reset = document.createElement("button");
-        reset.className = "chip";
-        reset.textContent = "Reset password";
-        reset.onclick = async () => {
-          const password = prompt(`Set new password for ${user.email}`);
-          if(password === null) return;
-          if(!password.trim()) return banner("Password cannot be empty");
-          try{
-            await api(`/admin/users/${user.id}/reset-password`, {method:"POST", body:JSON.stringify({password})});
-            banner("Password reset");
-          }catch(e){
-            banner(e.message || "Password reset failed");
-          }
-        };
-
-        right.append(toggleActive, toggleArchive, changeRole, changeHome, reset);
-        row.append(left, right);
-        host.appendChild(row);
-      });
+      const host=$("adminUsersList"); host.innerHTML="";
+      if(!adminUsers.length) return host.innerHTML=`<div class="entity-row"><div>No users found.</div></div>`;
+      adminUsers.forEach(user=>{
+        const row=document.createElement("div"); row.className="entity-row";
+        row.innerHTML=`<div><div class="entity-title">${safe([user.first_name,user.last_name].filter(Boolean).join(" ")||user.email)}</div><div class="entity-meta">${safe(user.email)} · ${safe(user.role)} · home ${safe(String(user.home_id??""))}</div><div class="entity-meta"><span class="tag ${user.is_active?"ok":"bad"}">${user.is_active?"active":"inactive"}</span><span class="tag ${user.archived?"bad":"neutral"}">${user.archived?"archived":"live"}</span></div></div><div class="entity-actions"></div>`;
+        const right=row.querySelector(".entity-actions");
+        const add=(label,fn)=>{const b=document.createElement("button");b.className="chip";b.textContent=label;b.onclick=fn;right.appendChild(b)};
+        add(user.is_active?"Deactivate":"Activate",async()=>{await api(`/admin/users/${user.id}`,{method:"PATCH",body:JSON.stringify({is_active:!user.is_active})});await loadAdminUsers();banner("User updated")});
+        add(user.archived?"Unarchive":"Archive",async()=>{await api(`/admin/users/${user.id}`,{method:"PATCH",body:JSON.stringify({archived:!user.archived})});await loadAdminUsers();banner("User updated")});
+        add("Role",async()=>{const newRole=prompt(`Set role for ${user.email}`,user.role||"staff");if(newRole===null) return; await api(`/admin/users/${user.id}`,{method:"PATCH",body:JSON.stringify({role:newRole})});await loadAdminUsers();banner("Role updated")});
+        add("Home",async()=>{const choices=homes.map(h=>`${h.id}: ${h.name}`).join("\n");const homeId=prompt(`Set home id for ${user.email}\n\n${choices}`,String(user.home_id??""));if(homeId===null) return; await api(`/admin/users/${user.id}`,{method:"PATCH",body:JSON.stringify({home_id:Number(homeId)})});await loadAdminUsers();banner("Home updated")});
+        add("Reset password",async()=>{const password=prompt(`Set new password for ${user.email}`);if(password===null||!password.trim()) return banner("Password cannot be empty"); await api(`/admin/users/${user.id}/reset-password`,{method:"POST",body:JSON.stringify({password})});banner("Password reset")});
+        host.appendChild(row)
+      })
     }
 
     async function createHome(){
-      const payload = {
-        name: $("homeName").value.trim(),
-        address: $("homeAddress").value.trim() || null,
-        postcode: $("homePostcode").value.trim() || null,
-        region: $("homeRegion").value.trim() || null,
-        local_authority: $("homeLocalAuthority").value.trim() || null,
-        ofsted_urn: $("homeOfstedUrn").value.trim() || null,
-        provider_id: $("homeProviderId").value ? Number($("homeProviderId").value) : null,
-        registered_manager_id: $("homeRegisteredManagerId").value ? Number($("homeRegisteredManagerId").value) : null,
-        geofence_radius_m: $("homeGeofence").value.trim() ? Number($("homeGeofence").value) : null
-      };
-
-      if(!payload.name) return banner("Home name is required");
-
-      try{
-        await api("/admin/homes", {method:"POST", body:JSON.stringify(payload)});
-        ["homeName","homeAddress","homePostcode","homeRegion","homeLocalAuthority","homeOfstedUrn","homeGeofence"].forEach(id => $(id).value = "");
-        $("homeProviderId").value = "";
-        $("homeRegisteredManagerId").value = "";
-        await loadHomes();
-        await loadAdminReferenceData();
-        banner("Home created");
-      }catch(e){
-        banner(e.message || "Could not create home");
-      }
+      const p={name:$("homeName").value.trim(),address:$("homeAddress").value.trim()||null,postcode:$("homePostcode").value.trim()||null,region:$("homeRegion").value.trim()||null,local_authority:$("homeLocalAuthority").value.trim()||null,ofsted_urn:$("homeOfstedUrn").value.trim()||null,provider_id:$("homeProviderId").value?Number($("homeProviderId").value):null,registered_manager_id:$("homeRegisteredManagerId").value?Number($("homeRegisteredManagerId").value):null,geofence_radius_m:$("homeGeofence").value.trim()?Number($("homeGeofence").value):null};
+      if(!p.name) return banner("Home name is required"); await api("/admin/homes",{method:"POST",body:JSON.stringify(p)}); ["homeName","homeAddress","homePostcode","homeRegion","homeLocalAuthority","homeOfstedUrn","homeGeofence"].forEach(id=>$(id).value=""); $("homeProviderId").value="";$("homeRegisteredManagerId").value=""; await loadHomes(); await loadAdminReferenceData(); banner("Home created")
     }
-
-    async function loadHomes(){
-      try{
-        homes = (await api("/admin/homes"))?.homes || [];
-        renderHomes();
-        updateAdminSummary();
-      }catch(e){
-        banner(e.message || "Could not load homes");
-      }
-    }
-
+    async function loadHomes(){homes=(await api("/admin/homes"))?.homes||[];renderHomes();updateAdminSummary()}
     function renderHomes(){
-      const host = $("homesList");
-      host.innerHTML = "";
-      if(!homes.length){
-        host.innerHTML = `<div class="entity-row"><div>No homes found.</div></div>`;
-        return;
-      }
-
-      homes.forEach(home => {
-        const row = document.createElement("div");
-        row.className = "entity-row";
-
-        const left = document.createElement("div");
-        left.innerHTML = `
-          <div class="entity-title">${esc(home.name)}</div>
-          <div class="entity-meta">${esc(home.postcode || "")} · ${esc(home.region || "")} · ${esc(home.local_authority || "")}</div>
-          <div class="entity-meta">URN: ${esc(home.ofsted_urn || "—")} · users: ${esc(String(home.user_count ?? 0))}</div>
-        `;
-
-        const right = document.createElement("div");
-        right.className = "entity-actions";
-
-        const edit = document.createElement("button");
-        edit.className = "chip";
-        edit.textContent = "Edit";
-        edit.onclick = async () => {
-          const name = prompt("Home name", home.name || "");
-          if(name === null) return;
-          try{
-            await api(`/admin/homes/${home.id}`, {method:"PATCH", body:JSON.stringify({name})});
-            await loadHomes();
-            banner("Home updated");
-          }catch(e){
-            banner(e.message || "Update failed");
-          }
-        };
-
-        const archive = document.createElement("button");
-        archive.className = "chip";
-        archive.textContent = home.archived ? "Unarchive" : "Archive";
-        archive.onclick = async () => {
-          try{
-            await api(`/admin/homes/${home.id}`, {method:"PATCH", body:JSON.stringify({archived: !home.archived})});
-            await loadHomes();
-            banner("Home updated");
-          }catch(e){
-            banner(e.message || "Update failed");
-          }
-        };
-
-        right.append(edit, archive);
-        row.append(left, right);
-        host.appendChild(row);
-      });
+      const host=$("homesList"); host.innerHTML="";
+      if(!homes.length) return host.innerHTML=`<div class="entity-row"><div>No homes found.</div></div>`;
+      homes.forEach(home=>{
+        const row=document.createElement("div"); row.className="entity-row";
+        row.innerHTML=`<div><div class="entity-title">${safe(home.name)}</div><div class="entity-meta">${safe(home.postcode||"")} · ${safe(home.region||"")} · ${safe(home.local_authority||"")}</div><div class="entity-meta">URN: ${safe(home.ofsted_urn||"—")} · users: ${safe(String(home.user_count??0))}</div></div><div class="entity-actions"></div>`;
+        const right=row.querySelector(".entity-actions");
+        [["Edit",async()=>{const name=prompt("Home name",home.name||"");if(name===null) return; await api(`/admin/homes/${home.id}`,{method:"PATCH",body:JSON.stringify({name})});await loadHomes();banner("Home updated")}],[home.archived?"Unarchive":"Archive",async()=>{await api(`/admin/homes/${home.id}`,{method:"PATCH",body:JSON.stringify({archived:!home.archived})});await loadHomes();banner("Home updated")}]].forEach(([label,fn])=>{const b=document.createElement("button");b.className="chip";b.textContent=label;b.onclick=fn;right.appendChild(b)});
+        host.appendChild(row)
+      })
     }
 
     async function createProvider(){
-      const payload = {
-        name: $("providerName").value.trim(),
-        region: $("providerRegion").value.trim() || null,
-        address: $("providerAddress").value.trim() || null,
-        postcode: $("providerPostcode").value.trim() || null,
-        local_authority: $("providerLA").value.trim() || null,
-        safeguarding_lead_name: $("providerLeadName").value.trim() || null,
-        safeguarding_lead_email: $("providerLeadEmail").value.trim() || null
-      };
-
-      if(!payload.name) return banner("Provider name is required");
-
-      try{
-        await api("/admin/providers", {method:"POST", body:JSON.stringify(payload)});
-        ["providerName","providerRegion","providerAddress","providerPostcode","providerLA","providerLeadName","providerLeadEmail"].forEach(id => $(id).value = "");
-        await loadProviders();
-        await loadAdminReferenceData();
-        banner("Provider created");
-      }catch(e){
-        banner(e.message || "Could not create provider");
-      }
+      const p={name:$("providerName").value.trim(),region:$("providerRegion").value.trim()||null,address:$("providerAddress").value.trim()||null,postcode:$("providerPostcode").value.trim()||null,local_authority:$("providerLA").value.trim()||null,safeguarding_lead_name:$("providerLeadName").value.trim()||null,safeguarding_lead_email:$("providerLeadEmail").value.trim()||null};
+      if(!p.name) return banner("Provider name is required"); await api("/admin/providers",{method:"POST",body:JSON.stringify(p)}); ["providerName","providerRegion","providerAddress","providerPostcode","providerLA","providerLeadName","providerLeadEmail"].forEach(id=>$(id).value=""); await loadProviders(); await loadAdminReferenceData(); banner("Provider created")
     }
-
-    async function loadProviders(){
-      try{
-        providers = (await api("/admin/providers"))?.providers || [];
-        renderProviders();
-        updateAdminSummary();
-      }catch(e){
-        banner(e.message || "Could not load providers");
-      }
-    }
-
+    async function loadProviders(){providers=(await api("/admin/providers"))?.providers||[];renderProviders();updateAdminSummary()}
     function renderProviders(){
-      const host = $("providersList");
-      host.innerHTML = "";
-      if(!providers.length){
-        host.innerHTML = `<div class="entity-row"><div>No providers found.</div></div>`;
-        return;
-      }
-
-      providers.forEach(provider => {
-        const row = document.createElement("div");
-        row.className = "entity-row";
-
-        const left = document.createElement("div");
-        left.innerHTML = `
-          <div class="entity-title">${esc(provider.name)}</div>
-          <div class="entity-meta">${esc(provider.region || "")} · homes: ${esc(String(provider.home_count ?? 0))}</div>
-          <div class="entity-meta">${esc(provider.safeguarding_lead_name || "No safeguarding lead")} ${provider.safeguarding_lead_email ? "· " + esc(provider.safeguarding_lead_email) : ""}</div>
-        `;
-
-        const right = document.createElement("div");
-        right.className = "entity-actions";
-
-        const edit = document.createElement("button");
-        edit.className = "chip";
-        edit.textContent = "Edit";
-        edit.onclick = async () => {
-          const name = prompt("Provider name", provider.name || "");
-          if(name === null) return;
-          try{
-            await api(`/admin/providers/${provider.id}`, {method:"PATCH", body:JSON.stringify({name})});
-            await loadProviders();
-            banner("Provider updated");
-          }catch(e){
-            banner(e.message || "Update failed");
-          }
-        };
-
-        const archive = document.createElement("button");
-        archive.className = "chip";
-        archive.textContent = provider.archived ? "Unarchive" : "Archive";
-        archive.onclick = async () => {
-          try{
-            await api(`/admin/providers/${provider.id}`, {method:"PATCH", body:JSON.stringify({archived: !provider.archived})});
-            await loadProviders();
-            banner("Provider updated");
-          }catch(e){
-            banner(e.message || "Update failed");
-          }
-        };
-
-        right.append(edit, archive);
-        row.append(left, right);
-        host.appendChild(row);
-      });
+      const host=$("providersList"); host.innerHTML="";
+      if(!providers.length) return host.innerHTML=`<div class="entity-row"><div>No providers found.</div></div>`;
+      providers.forEach(provider=>{
+        const row=document.createElement("div"); row.className="entity-row";
+        row.innerHTML=`<div><div class="entity-title">${safe(provider.name)}</div><div class="entity-meta">${safe(provider.region||"")} · homes: ${safe(String(provider.home_count??0))}</div><div class="entity-meta">${safe(provider.safeguarding_lead_name||"No safeguarding lead")}${provider.safeguarding_lead_email?" · "+safe(provider.safeguarding_lead_email):""}</div></div><div class="entity-actions"></div>`;
+        const right=row.querySelector(".entity-actions");
+        [["Edit",async()=>{const name=prompt("Provider name",provider.name||"");if(name===null) return; await api(`/admin/providers/${provider.id}`,{method:"PATCH",body:JSON.stringify({name})});await loadProviders();banner("Provider updated")}],[provider.archived?"Unarchive":"Archive",async()=>{await api(`/admin/providers/${provider.id}`,{method:"PATCH",body:JSON.stringify({archived:!provider.archived})});await loadProviders();banner("Provider updated")}]].forEach(([label,fn])=>{const b=document.createElement("button");b.className="chip";b.textContent=label;b.onclick=fn;right.appendChild(b)});
+        host.appendChild(row)
+      })
     }
 
     async function createDocumentRecord(){
-      const payload = {
-        title: $("docTitle").value.trim() || null,
-        document_type: $("docType").value.trim() || null,
-        home_id: $("docHomeId").value ? Number($("docHomeId").value) : null,
-        owner_id: $("docOwnerId").value ? Number($("docOwnerId").value) : null,
-        issue_date: $("docIssueDate").value || null,
-        review_date: $("docReviewDate").value || null,
-        expiry_date: $("docExpiryDate").value || null,
-        approval_status: $("docApprovalStatus").value.trim() || "not_required",
-        confidentiality_level: $("docConfLevel").value.trim() || "standard",
-        input_text: $("docInputText").value.trim() || null
-      };
-
-      try{
-        await api("/admin/documents", {method:"POST", body:JSON.stringify(payload)});
-        ["docTitle","docIssueDate","docReviewDate","docExpiryDate","docInputText"].forEach(id => $(id).value = "");
-        $("docType").value = "policy";
-        $("docHomeId").value = "";
-        $("docOwnerId").value = "";
-        $("docApprovalStatus").value = "not_required";
-        $("docConfLevel").value = "standard";
-        await loadDocuments();
-        await loadAdminReferenceData();
-        banner("Document created");
-      }catch(e){
-        banner(e.message || "Could not create document");
-      }
+      const p={title:$("docTitle").value.trim()||null,document_type:$("docType").value.trim()||null,home_id:$("docHomeId").value?Number($("docHomeId").value):null,owner_id:$("docOwnerId").value?Number($("docOwnerId").value):null,issue_date:$("docIssueDate").value||null,review_date:$("docReviewDate").value||null,expiry_date:$("docExpiryDate").value||null,approval_status:$("docApprovalStatus").value.trim()||"not_required",confidentiality_level:$("docConfLevel").value.trim()||"standard",input_text:$("docInputText").value.trim()||null};
+      await api("/admin/documents",{method:"POST",body:JSON.stringify(p)}); ["docTitle","docIssueDate","docReviewDate","docExpiryDate","docInputText"].forEach(id=>$(id).value=""); $("docType").value="policy";$("docHomeId").value="";$("docOwnerId").value="";$("docApprovalStatus").value="not_required";$("docConfLevel").value="standard"; await loadDocuments(); await loadAdminReferenceData(); banner("Document created")
     }
-
     async function loadDocuments(){
-      try{
-        const params = new URLSearchParams();
-        if($("docSearch").value.trim()) params.set("q", $("docSearch").value.trim());
-        if($("docHomeFilter").value.trim()) params.set("home_id", $("docHomeFilter").value.trim());
-        if($("docTypeFilter").value.trim()) params.set("document_type", $("docTypeFilter").value.trim());
-        if($("docApprovalFilter").value.trim()) params.set("approval_status", $("docApprovalFilter").value.trim());
-        docs = (await api("/admin/documents" + (params.toString() ? `?${params.toString()}` : "")))?.documents || [];
-        renderDocuments();
-        updateAdminSummary();
-      }catch(e){
-        banner(e.message || "Could not load documents");
-      }
+      const params=new URLSearchParams(); if($("docSearch").value.trim()) params.set("q",$("docSearch").value.trim()); if($("docHomeFilter").value.trim()) params.set("home_id",$("docHomeFilter").value.trim()); if($("docTypeFilter").value.trim()) params.set("document_type",$("docTypeFilter").value.trim()); if($("docApprovalFilter").value.trim()) params.set("approval_status",$("docApprovalFilter").value.trim());
+      docs=(await api("/admin/documents"+(params.toString()?`?${params}`:"")))?.documents||[];renderDocuments();updateAdminSummary()
     }
-
     function renderDocuments(){
-      const host = $("docsList");
-      host.innerHTML = "";
-      if(!docs.length){
-        host.innerHTML = `<div class="entity-row"><div>No documents found.</div></div>`;
-        return;
-      }
-
-      docs.forEach(doc => {
-        const row = document.createElement("div");
-        row.className = "entity-row";
-
-        const left = document.createElement("div");
-        left.innerHTML = `
-          <div class="entity-title">${esc(doc.title || "Untitled document")}</div>
-          <div class="entity-meta">${esc(doc.document_type || "—")} · ${esc(doc.home_name || ("home " + (doc.home_id ?? "—")))}</div>
-          <div class="entity-meta">approval: ${esc(doc.approval_status || "not_required")} · review: ${esc(doc.review_date || "—")} · expiry: ${esc(doc.expiry_date || "—")}</div>
-        `;
-
-        const right = document.createElement("div");
-        right.className = "entity-actions";
-
-        const review = document.createElement("button");
-        review.className = "chip";
-        review.textContent = "Set approved";
-        review.onclick = async () => {
-          try{
-            await api(`/admin/documents/${doc.id}`, {method:"PATCH", body:JSON.stringify({approval_status:"approved"})});
-            await loadDocuments();
-            banner("Document updated");
-          }catch(e){
-            banner(e.message || "Update failed");
-          }
-        };
-
-        const titleBtn = document.createElement("button");
-        titleBtn.className = "chip";
-        titleBtn.textContent = "Edit title";
-        titleBtn.onclick = async () => {
-          const title = prompt("Document title", doc.title || "");
-          if(title === null) return;
-          try{
-            await api(`/admin/documents/${doc.id}`, {method:"PATCH", body:JSON.stringify({title})});
-            await loadDocuments();
-            banner("Document updated");
-          }catch(e){
-            banner(e.message || "Update failed");
-          }
-        };
-
-        right.append(review, titleBtn);
-        row.append(left, right);
-        host.appendChild(row);
-      });
+      const host=$("docsList"); host.innerHTML="";
+      if(!docs.length) return host.innerHTML=`<div class="entity-row"><div>No documents found.</div></div>`;
+      docs.forEach(doc=>{
+        const row=document.createElement("div"); row.className="entity-row";
+        row.innerHTML=`<div><div class="entity-title">${safe(doc.title||"Untitled document")}</div><div class="entity-meta">${safe(doc.document_type||"—")} · ${safe(doc.home_name||("home "+(doc.home_id??"—")))}</div><div class="entity-meta">approval: ${safe(doc.approval_status||"not_required")} · review: ${safe(doc.review_date||"—")} · expiry: ${safe(doc.expiry_date||"—")}</div></div><div class="entity-actions"></div>`;
+        const right=row.querySelector(".entity-actions");
+        [["Set approved",async()=>{await api(`/admin/documents/${doc.id}`,{method:"PATCH",body:JSON.stringify({approval_status:"approved"})});await loadDocuments();banner("Document updated")}],["Edit title",async()=>{const title=prompt("Document title",doc.title||"");if(title===null) return; await api(`/admin/documents/${doc.id}`,{method:"PATCH",body:JSON.stringify({title})});await loadDocuments();banner("Document updated")}]].forEach(([label,fn])=>{const b=document.createElement("button");b.className="chip";b.textContent=label;b.onclick=fn;right.appendChild(b)});
+        host.appendChild(row)
+      })
     }
 
-    async function loadBilling(){
-      try{
-        billing = await api("/admin/billing/overview");
-        renderBilling();
-      }catch(e){
-        banner(e.message || "Could not load billing overview");
-      }
-    }
-
+    async function loadBilling(){billing=await api("/admin/billing/overview");renderBilling()}
     function renderBilling(){
-      $("billingStats").innerHTML = "";
-      $("billingList").innerHTML = "";
-      if(!billing) return;
-
-      const totals = billing.totals || {};
-      const stats = [
-        ["Total users", totals.total_users ?? 0],
-        ["Active users", totals.active_users ?? 0],
-        ["Archived users", totals.archived_users ?? 0],
-        ["Active subscriptions", totals.active_subscriptions ?? 0],
-        ["Inactive subscriptions", totals.inactive_subscriptions ?? 0]
-      ];
-
-      stats.forEach(([l,n]) => {
-        const card = document.createElement("div");
-        card.className = "stat";
-        card.innerHTML = `<div class="n">${esc(String(n))}</div><div class="l">${esc(l)}</div>`;
-        $("billingStats").appendChild(card);
-      });
-
-      const users = billing.users || [];
-      if(!users.length){
-        $("billingList").innerHTML = `<div class="entity-row"><div>No billing rows found.</div></div>`;
-        return;
-      }
-
-      users.forEach(user => {
-        const row = document.createElement("div");
-        row.className = "entity-row";
-        row.innerHTML = `
-          <div>
-            <div class="entity-title">${esc([user.first_name,user.last_name].filter(Boolean).join(" ") || user.email)}</div>
-            <div class="entity-meta">${esc(user.email)} · ${esc(user.plan_name || "No plan")}</div>
-            <div class="entity-meta">status: ${esc(user.subscription_status || "inactive")} · period end: ${esc(user.current_period_end || "—")}</div>
-          </div>
-        `;
-        $("billingList").appendChild(row);
-      });
+      $("billingStats").innerHTML=""; $("billingList").innerHTML=""; if(!billing) return;
+      [["Total users",billing.totals?.total_users??0],["Active users",billing.totals?.active_users??0],["Archived users",billing.totals?.archived_users??0],["Active subscriptions",billing.totals?.active_subscriptions??0],["Inactive subscriptions",billing.totals?.inactive_subscriptions??0]].forEach(([l,n])=>{$("billingStats").insertAdjacentHTML("beforeend",`<div class="stat"><div class="n">${safe(String(n))}</div><div class="l">${safe(l)}</div></div>`)});
+      const users=billing.users||[]; if(!users.length) return $("billingList").innerHTML=`<div class="entity-row"><div>No billing rows found.</div></div>`;
+      users.forEach(user=>{$("billingList").insertAdjacentHTML("beforeend",`<div class="entity-row"><div><div class="entity-title">${safe([user.first_name,user.last_name].filter(Boolean).join(" ")||user.email)}</div><div class="entity-meta">${safe(user.email)} · ${safe(user.plan_name||"No plan")}</div><div class="entity-meta">status: ${safe(user.subscription_status||"inactive")} · period end: ${safe(user.current_period_end||"—")}</div></div></div>`)})
     }
 
-    async function loadAudit(){
-      try{
-        audit = (await api("/admin/audit"))?.audit || [];
-        renderAudit();
-      }catch(e){
-        banner(e.message || "Could not load audit");
-      }
-    }
-
+    async function loadAudit(){audit=(await api("/admin/audit"))?.audit||[];renderAudit()}
     function renderAudit(){
-      const host = $("auditList");
-      host.innerHTML = "";
-      if(!audit.length){
-        host.innerHTML = `<div class="entity-row"><div>No audit entries found.</div></div>`;
-        return;
-      }
-
-      audit.forEach(a => {
-        const row = document.createElement("div");
-        row.className = "entity-row";
-        row.innerHTML = `
-          <div>
-            <div class="entity-title">${esc(a.action)} · ${esc(a.target_type)} ${esc(String(a.target_id ?? ""))}</div>
-            <div class="entity-meta">${esc([a.first_name,a.last_name].filter(Boolean).join(" ") || a.email || "Unknown admin")} · ${esc(a.created_at || "")}</div>
-            <div class="entity-meta">${esc(JSON.stringify(a.details || {}))}</div>
-          </div>
-        `;
-        host.appendChild(row);
-      });
+      const host=$("auditList"); host.innerHTML="";
+      if(!audit.length) return host.innerHTML=`<div class="entity-row"><div>No audit entries found.</div></div>`;
+      audit.forEach(a=>host.insertAdjacentHTML("beforeend",`<div class="entity-row"><div><div class="entity-title">${safe(a.action)} · ${safe(a.target_type)} ${safe(String(a.target_id??""))}</div><div class="entity-meta">${safe([a.first_name,a.last_name].filter(Boolean).join(" ")||a.email||"Unknown admin")} · ${safe(a.created_at||"")}</div><div class="entity-meta">${safe(JSON.stringify(a.details||{}))}</div></div></div>`))
     }
 
     async function loadLibrary(){
-      try{
-        const params = new URLSearchParams();
-        if($("librarySearch").value.trim()) params.set("q", $("librarySearch").value.trim());
-        if($("libraryTypeFilter").value) params.set("document_type", $("libraryTypeFilter").value);
-        if($("libraryApprovalFilter").value) params.set("approval_status", $("libraryApprovalFilter").value);
-
-        libraryDocs = (await api("/documents/library" + (params.toString() ? `?${params.toString()}` : "")))?.documents || [];
-        renderLibraryList();
-        renderManagerLibraryList();
-        if(selectedLibraryDoc){
-          const fresh = libraryDocs.find(d => Number(d.id) === Number(selectedLibraryDoc.id));
-          if(fresh) openLibraryDocument(fresh.id);
-        }
-      }catch(e){
-        banner(e.message || "Could not load library");
-      }
+      const params=new URLSearchParams(); if($("librarySearch").value.trim()) params.set("q",$("librarySearch").value.trim()); if($("libraryTypeFilter").value) params.set("document_type",$("libraryTypeFilter").value); if($("libraryApprovalFilter").value) params.set("approval_status",$("libraryApprovalFilter").value);
+      libraryDocs=(await api("/documents/library"+(params.toString()?`?${params}`:"")))?.documents||[]; renderLibraryList(); renderManagerLibraryList();
+      if(selectedLibraryDoc){const fresh=libraryDocs.find(d=>Number(d.id)===Number(selectedLibraryDoc.id)); if(fresh) openLibraryDocument(fresh.id)}
     }
-
     function renderLibraryList(){
-      const host = $("libraryList");
-      host.innerHTML = "";
-      if(!libraryDocs.length){
-        host.innerHTML = `<div class="entity-row"><div>No documents available for your home.</div></div>`;
-        return;
-      }
-
-      libraryDocs.forEach(doc => {
-        const row = document.createElement("div");
-        row.className = "entity-row";
-
-        const left = document.createElement("div");
-        left.innerHTML = `
-          <div class="entity-title">${esc(doc.title || "Untitled document")}</div>
-          <div class="entity-meta">${esc(doc.document_type || "—")} · ${esc(doc.home_name || "Your home")}</div>
-          <div class="entity-meta">
-            <span class="tag ${doc.approval_status === "approved" ? "ok" : doc.approval_status === "pending" ? "warn" : "neutral"}">${esc(doc.approval_status || "not_required")}</span>
-            <span class="tag neutral">${esc(doc.confidentiality_level || "standard")}</span>
-          </div>
-        `;
-
-        const right = document.createElement("div");
-        right.className = "entity-actions";
-
-        const openBtn = document.createElement("button");
-        openBtn.className = "chip";
-        openBtn.textContent = "Open";
-        openBtn.onclick = () => openLibraryDocument(doc.id);
-
-        right.append(openBtn);
-
-        if(canManageLibrary()){
-          const editBtn = document.createElement("button");
-          editBtn.className = "chip";
-          editBtn.textContent = "Edit";
-          editBtn.onclick = () => populateLibraryEditor(doc);
-          right.append(editBtn);
-        }
-
-        row.append(left, right);
-        host.appendChild(row);
-      });
+      const host=$("libraryList"); host.innerHTML="";
+      if(!libraryDocs.length) return host.innerHTML=`<div class="entity-row"><div>No documents available for your home.</div></div>`;
+      libraryDocs.forEach(doc=>{
+        const row=document.createElement("div"); row.className="entity-row";
+        row.innerHTML=`<div><div class="entity-title">${safe(doc.title||"Untitled document")}</div><div class="entity-meta">${safe(doc.document_type||"—")} · ${safe(doc.home_name||"Your home")}</div><div class="entity-meta"><span class="tag ${doc.approval_status==="approved"?"ok":doc.approval_status==="pending"?"warn":"neutral"}">${safe(doc.approval_status||"not_required")}</span><span class="tag neutral">${safe(doc.confidentiality_level||"standard")}</span></div></div><div class="entity-actions"></div>`;
+        const right=row.querySelector(".entity-actions");
+        [["Open",()=>openLibraryDocument(doc.id)],...(canManageLibrary()?[["Edit",()=>populateLibraryEditor(doc)]]:[])].forEach(([label,fn])=>{const b=document.createElement("button");b.className="chip";b.textContent=label;b.onclick=fn;right.appendChild(b)});
+        host.appendChild(row)
+      })
     }
-
     function renderManagerLibraryList(){
-      const host = $("managerLibraryList");
-      if(!host) return;
-      host.innerHTML = "";
-
-      if(!canManageLibrary()){
-        host.innerHTML = `<div class="entity-row"><div>Read-only access.</div></div>`;
-        return;
-      }
-
-      if(!libraryDocs.length){
-        host.innerHTML = `<div class="entity-row"><div>No home documents found.</div></div>`;
-        return;
-      }
-
-      libraryDocs.forEach(doc => {
-        const row = document.createElement("div");
-        row.className = "entity-row";
-        row.innerHTML = `
-          <div>
-            <div class="entity-title">${esc(doc.title || "Untitled document")}</div>
-            <div class="entity-meta">${esc(doc.document_type || "—")} · review ${esc(doc.review_date || "—")}</div>
-          </div>
-        `;
-
-        const right = document.createElement("div");
-        right.className = "entity-actions";
-
-        const editBtn = document.createElement("button");
-        editBtn.className = "chip";
-        editBtn.textContent = "Edit";
-        editBtn.onclick = () => populateLibraryEditor(doc);
-
-        right.append(editBtn);
-        row.appendChild(right);
-        host.appendChild(row);
-      });
+      const host=$("managerLibraryList"); if(!host) return; host.innerHTML="";
+      if(!canManageLibrary()) return host.innerHTML=`<div class="entity-row"><div>Read-only access.</div></div>`;
+      if(!libraryDocs.length) return host.innerHTML=`<div class="entity-row"><div>No home documents found.</div></div>`;
+      libraryDocs.forEach(doc=>host.insertAdjacentHTML("beforeend",`<div class="entity-row"><div><div class="entity-title">${safe(doc.title||"Untitled document")}</div><div class="entity-meta">${safe(doc.document_type||"—")} · review ${safe(doc.review_date||"—")}</div></div><div class="entity-actions"><button class="chip" data-doc-edit="${doc.id}">Edit</button></div></div>`));
+      host.querySelectorAll("[data-doc-edit]").forEach(b=>b.onclick=()=>populateLibraryEditor(libraryDocs.find(d=>Number(d.id)===Number(b.dataset.docEdit))))
     }
-
     async function openLibraryDocument(id){
-      try{
-        const data = await api(`/documents/library/${id}`);
-        const doc = data?.document;
-        if(!doc) return;
-        selectedLibraryDoc = doc;
-        $("libraryViewer").innerHTML = `
-          <h3>${esc(doc.title || "Untitled document")}</h3>
-          <p><strong>Type:</strong> ${esc(doc.document_type || "—")}</p>
-          <p><strong>Approval:</strong> ${esc(doc.approval_status || "not_required")} · <strong>Confidentiality:</strong> ${esc(doc.confidentiality_level || "standard")}</p>
-          <p><strong>Issue date:</strong> ${esc(doc.issue_date || "—")} · <strong>Review date:</strong> ${esc(doc.review_date || "—")} · <strong>Expiry date:</strong> ${esc(doc.expiry_date || "—")}</p>
-          <hr style="border:none;border-top:1px solid var(--line);margin:14px 0;">
-          <div>${render(doc.input_text || doc.generated_text || "No content available.", "assistant")}</div>
-        `;
-      }catch(e){
-        banner(e.message || "Could not open document");
-      }
+      const data=await api(`/documents/library/${id}`),doc=data?.document; if(!doc) return;
+      selectedLibraryDoc=doc;
+      $("libraryViewer").innerHTML=`<h3>${safe(doc.title||"Untitled document")}</h3><p><strong>Type:</strong> ${safe(doc.document_type||"—")}</p><p><strong>Approval:</strong> ${safe(doc.approval_status||"not_required")} · <strong>Confidentiality:</strong> ${safe(doc.confidentiality_level||"standard")}</p><p><strong>Issue date:</strong> ${safe(doc.issue_date||"—")} · <strong>Review date:</strong> ${safe(doc.review_date||"—")} · <strong>Expiry date:</strong> ${safe(doc.expiry_date||"—")}</p><hr style="border:none;border-top:1px solid var(--line);margin:14px 0;"><div>${render(doc.input_text||doc.generated_text||"No content available.","assistant")}</div>`
     }
-
-    function resetLibraryEditor(){
-      editingLibraryDocId = null;
-      $("libraryFormTitle").textContent = "Create document";
-      $("libraryDocTitle").value = "";
-      $("libraryDocType").value = "policy";
-      $("libraryIssueDate").value = "";
-      $("libraryReviewDate").value = "";
-      $("libraryExpiryDate").value = "";
-      $("libraryApprovalStatus").value = "not_required";
-      $("libraryConfidentiality").value = "standard";
-      $("libraryOwnerId").value = "";
-      $("libraryInputText").value = "";
-      $("deleteLibraryDocBtn").classList.add("hidden");
-    }
-
-    function populateLibraryEditor(doc){
-      if(!canManageLibrary()) return;
-      editingLibraryDocId = doc.id;
-      $("libraryFormTitle").textContent = "Edit document";
-      $("libraryDocTitle").value = doc.title || "";
-      $("libraryDocType").value = doc.document_type || "policy";
-      $("libraryIssueDate").value = doc.issue_date || "";
-      $("libraryReviewDate").value = doc.review_date || "";
-      $("libraryExpiryDate").value = doc.expiry_date || "";
-      $("libraryApprovalStatus").value = doc.approval_status || "not_required";
-      $("libraryConfidentiality").value = doc.confidentiality_level || "standard";
-      $("libraryOwnerId").value = doc.owner_id || "";
-      $("libraryInputText").value = doc.input_text || doc.generated_text || "";
-      $("deleteLibraryDocBtn").classList.remove("hidden");
-      setLibraryTab("editor");
-    }
-
+    function resetLibraryEditor(){editingLibraryDocId=null;$("libraryFormTitle").textContent="Create document";["libraryDocTitle","libraryIssueDate","libraryReviewDate","libraryExpiryDate","libraryInputText"].forEach(id=>$(id).value="");$("libraryDocType").value="policy";$("libraryApprovalStatus").value="not_required";$("libraryConfidentiality").value="standard";$("libraryOwnerId").value="";$("deleteLibraryDocBtn").classList.add("hidden")}
+    function populateLibraryEditor(doc){if(!canManageLibrary()) return; editingLibraryDocId=doc.id;$("libraryFormTitle").textContent="Edit document";$("libraryDocTitle").value=doc.title||"";$("libraryDocType").value=doc.document_type||"policy";$("libraryIssueDate").value=doc.issue_date||"";$("libraryReviewDate").value=doc.review_date||"";$("libraryExpiryDate").value=doc.expiry_date||"";$("libraryApprovalStatus").value=doc.approval_status||"not_required";$("libraryConfidentiality").value=doc.confidentiality_level||"standard";$("libraryOwnerId").value=doc.owner_id||"";$("libraryInputText").value=doc.input_text||doc.generated_text||"";$("deleteLibraryDocBtn").classList.remove("hidden");setLibraryTab("editor")}
     async function saveLibraryDocument(){
       if(!canManageLibrary()) return banner("Manager or admin access required");
-
-      const payload = {
-        title: $("libraryDocTitle").value.trim(),
-        document_type: $("libraryDocType").value,
-        issue_date: $("libraryIssueDate").value || null,
-        review_date: $("libraryReviewDate").value || null,
-        expiry_date: $("libraryExpiryDate").value || null,
-        approval_status: $("libraryApprovalStatus").value,
-        confidentiality_level: $("libraryConfidentiality").value,
-        owner_id: $("libraryOwnerId").value ? Number($("libraryOwnerId").value) : null,
-        input_text: $("libraryInputText").value.trim() || null
-      };
-
-      if(!payload.title) return banner("Title is required");
-
-      try{
-        if(editingLibraryDocId){
-          await api(`/documents/library/${editingLibraryDocId}`, {
-            method:"PATCH",
-            body:JSON.stringify(payload)
-          });
-          banner("Document updated");
-        } else {
-          await api("/documents/library", {
-            method:"POST",
-            body:JSON.stringify(payload)
-          });
-          banner("Document created");
-        }
-
-        resetLibraryEditor();
-        await loadLibrary();
-        setLibraryTab("list");
-      }catch(e){
-        banner(e.message || "Could not save document");
-      }
+      const p={title:$("libraryDocTitle").value.trim(),document_type:$("libraryDocType").value,issue_date:$("libraryIssueDate").value||null,review_date:$("libraryReviewDate").value||null,expiry_date:$("libraryExpiryDate").value||null,approval_status:$("libraryApprovalStatus").value,confidentiality_level:$("libraryConfidentiality").value,owner_id:$("libraryOwnerId").value?Number($("libraryOwnerId").value):null,input_text:$("libraryInputText").value.trim()||null};
+      if(!p.title) return banner("Title is required");
+      if(editingLibraryDocId){await api(`/documents/library/${editingLibraryDocId}`,{method:"PATCH",body:JSON.stringify(p)});banner("Document updated")} else {await api("/documents/library",{method:"POST",body:JSON.stringify(p)});banner("Document created")}
+      resetLibraryEditor(); await loadLibrary(); setLibraryTab("list")
     }
-
-    async function deleteLibraryDocument(){
-      if(!editingLibraryDocId) return;
-      if(!confirm("Delete this document?")) return;
-
-      try{
-        await api(`/documents/library/${editingLibraryDocId}`, {method:"DELETE"});
-        banner("Document deleted");
-        resetLibraryEditor();
-        $("libraryViewer").innerHTML = `<h3>Select a document</h3><p>Open a policy or document from the list to read it here.</p>`;
-        await loadLibrary();
-        setLibraryTab("list");
-      }catch(e){
-        banner(e.message || "Could not delete document");
-      }
-    }
+    async function deleteLibraryDocument(){if(!editingLibraryDocId||!confirm("Delete this document?")) return; await api(`/documents/library/${editingLibraryDocId}`,{method:"DELETE"}); banner("Document deleted"); resetLibraryEditor(); $("libraryViewer").innerHTML=`<h3>Select a document</h3><p>Open a policy or document from the list to read it here.</p>`; await loadLibrary(); setLibraryTab("list")}
 
     function restorePrefs(){
-      document.body.classList.toggle("theme-dark", (localStorage.getItem("indicare_theme") || "light") === "dark");
-      $("lang").value = localStorage.getItem("indicare_reply_language") || DEFAULT_LANGUAGE;
-      $("mode").value = localStorage.getItem("indicare_response_mode") || "balanced";
-      syncHelpers();
-      setAdminTab(activeAdminTab());
-      setLibraryTab("list");
+      document.body.classList.toggle("theme-dark",(localStorage.getItem("indicare_theme")||"light")==="dark");
+      $("lang").value=localStorage.getItem("indicare_reply_language")||DEFAULT_LANGUAGE;
+      $("mode").value=localStorage.getItem("indicare_response_mode")||"balanced";
+      syncHelpers(); setAdminTab(activeAdminTab()); setLibraryTab("list")
     }
 
     function bind(){
-      $("sideToggle").onclick = () => $("sidebar").classList.toggle("open");
-      $("mobileMenu").onclick = () => { $("sidebar").classList.add("open"); $("overlay").classList.add("show"); };
-      $("overlay").onclick = () => { $("sidebar").classList.remove("open"); $("overlay").classList.remove("show"); };
-      $("openSettings").onclick = openSettings;
-      $("closeSettings").onclick = closeSettings;
-      $("settingsOverlay").onclick = closeSettings;
-      $("newChat").onclick = resetWelcome;
-      $("backWelcome").onclick = resetWelcome;
-      $("logout").onclick = () => { localStorage.removeItem("access_token"); location.href = "/login"; };
-
-      $("theme").onclick = () => {
-        document.body.classList.toggle("theme-dark");
-        localStorage.setItem("indicare_theme", document.body.classList.contains("theme-dark") ? "dark" : "light");
-        syncHelpers();
-      };
-
-      $("privacy").onclick = () => {
-        $("app").classList.toggle("privacy-active");
-        syncHelpers();
-      };
-
-      $("lang").onchange = () => { localStorage.setItem("indicare_reply_language", selectedLang()); syncHelpers(); };
-      $("mode").onchange = () => { localStorage.setItem("indicare_response_mode", selectedMode()); syncHelpers(); };
-
-      $("navAssistant").onclick = () => showAssistantView();
-      $("navLibrary").onclick = () => showLibraryView();
-      $("navAdmin").onclick = () => showAdminView();
-
-      document.querySelectorAll(".tabbtn[data-tab]").forEach(btn => btn.onclick = () => setAdminTab(btn.dataset.tab));
-      document.querySelectorAll(".tabbtn[data-library-tab]").forEach(btn => btn.onclick = () => setLibraryTab(btn.dataset.libraryTab));
-
-      $("search").oninput = filterConversations;
-      $("input").addEventListener("keydown", e => {
-        if(e.key === "Enter" && !e.shiftKey){
-          e.preventDefault();
-          sendMessage();
-        }
-      });
-      $("input").addEventListener("input", resize);
-      $("send").onclick = sendMessage;
-      $("mic").onclick = startSpeech;
-
-      $("upload").onchange = async e => {
-        const file = e.target.files?.[0];
-        if(!file) return;
-        try{
-          await uploadDoc(file);
-        }catch(err){
-          banner(err.message || "Upload failed");
-        }
-        e.target.value = "";
-      };
-
-      $("clearDoc").onclick = async () => {
-        try{
-          if(conversationId) await api(`/chat/conversations/${conversationId}/document`, {method:"DELETE"});
-        }catch(e){}
-        currentDocumentText = null;
-        currentDocumentName = null;
-        docHide();
-        banner("Document removed");
-      };
-
-      $("adminActiveToggle").onclick = () => { adminCreateActive = !adminCreateActive; syncHelpers(); };
-      $("createUserBtn").onclick = createAdminUser;
-      $("refreshUsersBtn").onclick = loadAdminUsers;
-      $("userSearch").oninput = loadAdminUsers;
-      $("userRoleFilter").onchange = loadAdminUsers;
-      $("userHomeFilter").onchange = loadAdminUsers;
-      $("userArchivedFilter").onchange = loadAdminUsers;
-
-      $("createHomeBtn").onclick = createHome;
-      $("refreshHomesBtn").onclick = loadHomes;
-
-      $("createProviderBtn").onclick = createProvider;
-      $("refreshProvidersBtn").onclick = loadProviders;
-
-      $("createDocBtn").onclick = createDocumentRecord;
-      $("refreshDocsBtn").onclick = loadDocuments;
-      $("docSearch").oninput = loadDocuments;
-      $("docHomeFilter").onchange = loadDocuments;
-      $("docTypeFilter").onchange = loadDocuments;
-      $("docApprovalFilter").onchange = loadDocuments;
-
-      $("refreshBillingBtn").onclick = loadBilling;
-      $("refreshAuditBtn").onclick = loadAudit;
-
-      $("refreshLibraryBtn").onclick = loadLibrary;
-      $("refreshManagerLibraryBtn").onclick = loadLibrary;
-      $("librarySearch").oninput = loadLibrary;
-      $("libraryTypeFilter").onchange = loadLibrary;
-      $("libraryApprovalFilter").onchange = loadLibrary;
-      $("saveLibraryDocBtn").onclick = saveLibraryDocument;
-      $("resetLibraryDocBtn").onclick = resetLibraryEditor;
-      $("deleteLibraryDocBtn").onclick = deleteLibraryDocument;
+      $("sideToggle").onclick=()=>$("sidebar").classList.toggle("open");
+      $("mobileMenu").onclick=()=>{$("sidebar").classList.add("open");$("overlay").classList.add("show")};
+      $("overlay").onclick=()=>{$("sidebar").classList.remove("open");$("overlay").classList.remove("show")};
+      $("openSettings").onclick=openSettings; $("closeSettings").onclick=closeSettings; $("settingsOverlay").onclick=closeSettings;
+      $("newChat").onclick=resetWelcome; $("backWelcome").onclick=resetWelcome; $("logout").onclick=logoutNow;
+      $("theme").onclick=()=>{document.body.classList.toggle("theme-dark");localStorage.setItem("indicare_theme",document.body.classList.contains("theme-dark")?"dark":"light");syncHelpers()};
+      $("privacy").onclick=()=>{$("app").classList.toggle("privacy-active");syncHelpers()};
+      $("lang").onchange=()=>{localStorage.setItem("indicare_reply_language",selectedLang());syncHelpers()};
+      $("mode").onchange=()=>{localStorage.setItem("indicare_response_mode",selectedMode());syncHelpers()};
+      $("navAssistant").onclick=showAssistantView; $("navLibrary").onclick=showLibraryView; $("navAdmin").onclick=showAdminView;
+      document.querySelectorAll(".tabbtn[data-tab]").forEach(btn=>btn.onclick=()=>setAdminTab(btn.dataset.tab));
+      document.querySelectorAll(".tabbtn[data-library-tab]").forEach(btn=>btn.onclick=()=>setLibraryTab(btn.dataset.libraryTab));
+      $("search").oninput=filterConversations;
+      $("input").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage()}});
+      $("input").addEventListener("input",resize); $("send").onclick=sendMessage; $("mic").onclick=startSpeech;
+      $("upload").onchange=async e=>{const file=e.target.files?.[0]; if(!file) return; try{await uploadDoc(file)}catch(err){banner(err.message||"Upload failed")} e.target.value=""};
+      $("clearDoc").onclick=async()=>{try{if(conversationId) await api(`/chat/conversations/${conversationId}/document`,{method:"DELETE"})}catch{} currentDocumentText=null;currentDocumentName=null;docHide();banner("Document removed")};
+      $("adminActiveToggle").onclick=()=>{adminCreateActive=!adminCreateActive;syncHelpers()};
+      $("createUserBtn").onclick=createAdminUser; $("refreshUsersBtn").onclick=loadAdminUsers; $("userSearch").oninput=loadAdminUsers; $("userRoleFilter").onchange=loadAdminUsers; $("userHomeFilter").onchange=loadAdminUsers; $("userArchivedFilter").onchange=loadAdminUsers;
+      $("createHomeBtn").onclick=createHome; $("refreshHomesBtn").onclick=loadHomes;
+      $("createProviderBtn").onclick=createProvider; $("refreshProvidersBtn").onclick=loadProviders;
+      $("createDocBtn").onclick=createDocumentRecord; $("refreshDocsBtn").onclick=loadDocuments; $("docSearch").oninput=loadDocuments; $("docHomeFilter").onchange=loadDocuments; $("docTypeFilter").onchange=loadDocuments; $("docApprovalFilter").onchange=loadDocuments;
+      $("refreshBillingBtn").onclick=loadBilling; $("refreshAuditBtn").onclick=loadAudit;
+      $("refreshLibraryBtn").onclick=loadLibrary; $("refreshManagerLibraryBtn").onclick=loadLibrary; $("librarySearch").oninput=loadLibrary; $("libraryTypeFilter").onchange=loadLibrary; $("libraryApprovalFilter").onchange=loadLibrary;
+      $("saveLibraryDocBtn").onclick=saveLibraryDocument; $("resetLibraryDocBtn").onclick=resetLibraryEditor; $("deleteLibraryDocBtn").onclick=deleteLibraryDocument
     }
 
     async function init(){
-      bind();
-      restorePrefs();
-      resize();
-      await loadMe();
-      setWelcome();
-      await loadConversations();
-      await loadAdminReferenceData();
+      try{
+        bind(); restorePrefs(); resize(); await loadMe(); setWelcome(); await loadConversations(); await loadAdminReferenceData(); showAssistantView()
+      }catch(e){
+        console.error(e); location.href="/login"
+      }
     }
-
-    document.addEventListener("DOMContentLoaded", init);
+    document.addEventListener("DOMContentLoaded",init);
   </script>
 </body>
 </html>
