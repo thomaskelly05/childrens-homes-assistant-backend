@@ -8,6 +8,8 @@ from auth.tokens import decode_session_token
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
+ALLOWED_ROLES = {"admin", "manager", "staff"}
+
 
 class CreateUserRequest(BaseModel):
     first_name: str
@@ -53,6 +55,16 @@ def get_current_admin(authorization: str | None = Header(default=None)):
     return payload
 
 
+def normalise_role(role: str) -> str:
+    value = role.strip().lower()
+    if value not in ALLOWED_ROLES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid role. Allowed roles: {', '.join(sorted(ALLOWED_ROLES))}"
+        )
+    return value
+
+
 @router.get("/users")
 def list_users(
     admin=Depends(get_current_admin),
@@ -90,10 +102,16 @@ def create_user(
     admin=Depends(get_current_admin),
     conn=Depends(get_db)
 ):
+    email = payload.email.strip().lower()
+    role = normalise_role(payload.role)
+
+    if not payload.password.strip():
+        raise HTTPException(status_code=400, detail="Password is required")
+
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             "SELECT id FROM users WHERE email = %s LIMIT 1",
-            (payload.email.strip().lower(),)
+            (email,)
         )
         existing = cur.fetchone()
 
@@ -135,9 +153,9 @@ def create_user(
             (
                 payload.first_name.strip(),
                 payload.last_name.strip(),
-                payload.email.strip().lower(),
+                email,
                 password_hash,
-                payload.role.strip().lower(),
+                role,
                 payload.home_id,
                 payload.is_active,
             )
@@ -159,6 +177,12 @@ def update_user(
     admin=Depends(get_current_admin),
     conn=Depends(get_db)
 ):
+    admin_user_id = admin.get("sub")
+    try:
+        admin_user_id = int(admin_user_id)
+    except (TypeError, ValueError):
+        admin_user_id = None
+
     fields = []
     values = []
 
@@ -171,22 +195,52 @@ def update_user(
         values.append(payload.last_name.strip())
 
     if payload.email is not None:
+        new_email = payload.email.strip().lower()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                "SELECT id FROM users WHERE email = %s AND id != %s LIMIT 1",
+                (new_email, user_id)
+            )
+            existing = cur.fetchone()
+        if existing:
+            raise HTTPException(status_code=400, detail="Email already exists")
+
         fields.append("email = %s")
-        values.append(payload.email.strip().lower())
+        values.append(new_email)
 
     if payload.role is not None:
+        new_role = normalise_role(payload.role)
+
+        if admin_user_id == user_id and new_role != "admin":
+            raise HTTPException(
+                status_code=400,
+                detail="You cannot remove your own admin role"
+            )
+
         fields.append("role = %s")
-        values.append(payload.role.strip().lower())
+        values.append(new_role)
 
     if payload.home_id is not None:
         fields.append("home_id = %s")
         values.append(payload.home_id)
 
     if payload.is_active is not None:
+        if admin_user_id == user_id and payload.is_active is False:
+            raise HTTPException(
+                status_code=400,
+                detail="You cannot deactivate your own account"
+            )
+
         fields.append("is_active = %s")
         values.append(payload.is_active)
 
     if payload.archived is not None:
+        if admin_user_id == user_id and payload.archived is True:
+            raise HTTPException(
+                status_code=400,
+                detail="You cannot archive your own account"
+            )
+
         fields.append("archived = %s")
         values.append(payload.archived)
 
@@ -235,6 +289,9 @@ def reset_password(
     admin=Depends(get_current_admin),
     conn=Depends(get_db)
 ):
+    if not payload.password.strip():
+        raise HTTPException(status_code=400, detail="Password is required")
+
     password_hash = bcrypt.hashpw(
         payload.password.encode("utf-8"),
         bcrypt.gensalt()
