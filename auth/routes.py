@@ -1,13 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, Request, Response
 from pydantic import BaseModel
 from psycopg2.extras import RealDictCursor
 import bcrypt
+import os
 
 from db.connection import get_db
 from db.billing_db import ensure_billing_columns, get_user_billing_by_user_id
 from auth.tokens import create_session_token, decode_session_token
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
+
+SESSION_COOKIE_NAME = "indicare_session"
+COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "true").lower() == "true"
+COOKIE_SAMESITE = os.environ.get("COOKIE_SAMESITE", "lax")
+COOKIE_DOMAIN = os.environ.get("COOKIE_DOMAIN") or None
+COOKIE_MAX_AGE = 60 * 30
 
 
 class LoginRequest(BaseModel):
@@ -19,7 +26,11 @@ def _normalise_email(email: str) -> str:
     return (email or "").strip().lower()
 
 
-def _get_bearer_payload(authorization: str | None):
+def _extract_token(request: Request, authorization: str | None = None):
+    cookie_token = request.cookies.get(SESSION_COOKIE_NAME)
+    if cookie_token:
+        return cookie_token
+
     if not authorization:
         return None
 
@@ -28,10 +39,7 @@ def _get_bearer_payload(authorization: str | None):
         return None
 
     token = parts[1].strip()
-    if not token:
-        return None
-
-    return decode_session_token(token)
+    return token or None
 
 
 def _get_user_by_id(conn, user_id: int):
@@ -59,8 +67,29 @@ def _get_user_by_id(conn, user_id: int):
         return cur.fetchone()
 
 
+def _set_session_cookie(response: Response, token: str):
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        max_age=COOKIE_MAX_AGE,
+        domain=COOKIE_DOMAIN,
+        path="/",
+    )
+
+
+def _clear_session_cookie(response: Response):
+    response.delete_cookie(
+        key=SESSION_COOKIE_NAME,
+        domain=COOKIE_DOMAIN,
+        path="/",
+    )
+
+
 @router.post("/login")
-def login(payload: LoginRequest, conn=Depends(get_db)):
+def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
     ensure_billing_columns(conn)
 
     email = _normalise_email(payload.email)
@@ -107,12 +136,13 @@ def login(payload: LoginRequest, conn=Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     token = create_session_token(user["id"])
+    _set_session_cookie(response, token)
+
     billing = get_user_billing_by_user_id(conn, user["id"])
 
     return {
         "ok": True,
         "message": "Logged in",
-        "access_token": token,
         "user": {
             "id": user["id"],
             "email": user["email"],
@@ -128,7 +158,8 @@ def login(payload: LoginRequest, conn=Depends(get_db)):
 
 
 @router.post("/logout")
-def logout():
+def logout(response: Response):
+    _clear_session_cookie(response)
     return {
         "ok": True,
         "message": "Logged out"
@@ -137,12 +168,15 @@ def logout():
 
 @router.get("/check")
 def check_auth(
+    request: Request,
     authorization: str | None = Header(default=None),
     conn=Depends(get_db)
 ):
-    payload = _get_bearer_payload(authorization)
+    token = _extract_token(request, authorization)
+    payload = decode_session_token(token) if token else None
+
     if not payload:
-        return {"authenticated": False}
+      return {"authenticated": False}
 
     raw_user_id = payload.get("sub")
     try:
@@ -172,10 +206,13 @@ def check_auth(
 
 @router.get("/me")
 def get_me(
+    request: Request,
     authorization: str | None = Header(default=None),
     conn=Depends(get_db)
 ):
-    payload = _get_bearer_payload(authorization)
+    token = _extract_token(request, authorization)
+    payload = decode_session_token(token) if token else None
+
     if not payload:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
