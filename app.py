@@ -77,6 +77,7 @@ ROUTERS = [
     "routers.ai_note_templates_routes",
     "routers.ai_note_export_routes",
     "routers.chat_routes",
+    "routers.document_library_routes",
     "routers.dashboard_routes",
     "routers.documents_routes",
     "routers.handover_routes",
