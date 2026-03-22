@@ -24,22 +24,18 @@ def create_session_token(user_id: int):
         "exp": int(expires_at.timestamp()),
     }
 
-    token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
-    return token
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
 def decode_session_token(token: str):
     try:
-        payload = jwt.decode(
+        return jwt.decode(
             token,
             JWT_SECRET,
             algorithms=[JWT_ALGORITHM],
             issuer=JWT_ISSUER,
-            options={
-                "require": ["sub", "iss", "iat", "exp"]
-            }
+            options={"require": ["sub", "iss", "iat", "exp"]},
         )
-        return payload
     except jwt.ExpiredSignatureError:
         return None
     except jwt.InvalidTokenError:
