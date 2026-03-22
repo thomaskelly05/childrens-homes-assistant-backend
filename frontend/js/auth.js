@@ -13,7 +13,9 @@ function setStoredUser(user, remember = false) {
 }
 
 function getStoredUser() {
-  const raw = sessionStorage.getItem("current_user") || localStorage.getItem("current_user");
+  const raw =
+    sessionStorage.getItem("current_user") ||
+    localStorage.getItem("current_user");
 
   if (!raw) return null;
 
@@ -40,14 +42,23 @@ async function login(credentialsArg = null) {
   const loginButton = document.getElementById("loginBtn");
   const loginStatus = document.getElementById("loginStatus");
 
-  const email = credentialsArg?.email?.trim() || (emailInput ? emailInput.value.trim() : "");
-  const password = credentialsArg?.password || (passwordInput ? passwordInput.value : "");
-  const remember = typeof credentialsArg?.remember === "boolean"
-    ? credentialsArg.remember
-    : !!(rememberInput && rememberInput.checked);
+  const email =
+    credentialsArg?.email?.trim() ||
+    (emailInput ? emailInput.value.trim() : "");
+
+  const password =
+    credentialsArg?.password ||
+    (passwordInput ? passwordInput.value : "");
+
+  const remember =
+    typeof credentialsArg?.remember === "boolean"
+      ? credentialsArg.remember
+      : !!(rememberInput && rememberInput.checked);
 
   if (!email || !password) {
-    if (loginStatus) loginStatus.textContent = "Please enter your email and password.";
+    if (loginStatus) {
+      loginStatus.textContent = "Please enter your email and password.";
+    }
     throw new Error("Please enter your email and password");
   }
 
@@ -63,7 +74,7 @@ async function login(credentialsArg = null) {
   try {
     const data = await apiFetchJson("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email, password }),
     });
 
     if (!data || !data.ok) {
@@ -78,12 +89,14 @@ async function login(credentialsArg = null) {
       loginStatus.textContent = "Sign-in successful. Redirecting...";
     }
 
-    window.location.href = "/";
+    window.location.href = "/assistant";
     return data;
   } catch (error) {
     clearStoredUser();
     const message = error?.message || "Login failed";
-    if (loginStatus) loginStatus.textContent = message;
+    if (loginStatus) {
+      loginStatus.textContent = message;
+    }
     throw error;
   } finally {
     if (loginButton) {
@@ -127,7 +140,7 @@ async function validateSession() {
         home_id: data.home_id,
         is_active: data.is_active,
         subscription_status: data.subscription_status,
-        plan_name: data.plan_name
+        plan_name: data.plan_name,
       },
       remember
     );
@@ -161,5 +174,5 @@ window.auth = {
   logoutUser,
   requireAuth,
   validateSession,
-  getStoredUser
+  getStoredUser,
 };
