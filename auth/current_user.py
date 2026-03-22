@@ -102,7 +102,6 @@ def get_current_user(
     billing = get_user_billing_by_user_id(conn, user_id)
 
     request_path = request.url.path
-
     billing_exempt_prefixes = (
         "/billing/webhook",
         "/health",
@@ -115,7 +114,6 @@ def get_current_user(
         "/assets",
         "/components"
     )
-
     is_exempt = any(request_path.startswith(prefix) for prefix in billing_exempt_prefixes)
 
     if not is_exempt:
@@ -126,7 +124,7 @@ def get_current_user(
                 detail="Subscription required"
             )
 
-    enriched_user = {
+    return {
         **user,
         "user_id": user["id"],
         "email": user.get("email"),
@@ -136,5 +134,3 @@ def get_current_user(
         "subscription_status": billing.get("subscription_status") if billing else "inactive",
         "plan_name": billing.get("plan_name") if billing else None,
     }
-
-    return enriched_user
