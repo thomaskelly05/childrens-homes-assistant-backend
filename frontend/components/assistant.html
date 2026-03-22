@@ -16,10 +16,11 @@
       --text:#1e293b;
       --muted:#64748b;
       --accent:#2563eb;
+      --danger:#dc2626;
       --user:#e8eef9;
       --shadow:0 8px 24px rgba(15,23,42,.06);
       --sidebar-mini:72px;
-      --sidebar-full:260px;
+      --sidebar-full:280px;
     }
 
     body.theme-dark{
@@ -29,6 +30,7 @@
       --text:#f1f5f9;
       --muted:#94a3b8;
       --accent:#3b82f6;
+      --danger:#ef4444;
       --user:#1e293b;
       --shadow:0 8px 24px rgba(0,0,0,.35);
     }
@@ -48,6 +50,13 @@
       outline:none;
       background:none;
       color:inherit;
+    }
+
+    button{
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
     }
 
     a{color:inherit;text-decoration:none}
@@ -87,7 +96,7 @@
       min-height:48px;
     }
 
-    .icon-btn,.nav-btn,.primary-btn,.send-btn{
+    .icon-btn,.nav-btn,.primary-btn,.send-btn,.small-btn{
       display:flex;
       align-items:center;
       justify-content:center;
@@ -172,21 +181,49 @@
     }
 
     .history-item{
-      padding:10px 12px;
-      border-radius:10px;
-      color:var(--muted);
-      cursor:pointer;
       border:1px solid transparent;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
+      border-radius:12px;
+      padding:8px;
+      transition:.2s;
+      background:transparent;
     }
 
     .history-item:hover,.history-item.active{
       background:rgba(37,99,235,.06);
       border-color:var(--line);
-      color:var(--text);
     }
+
+    .history-row{
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+
+    .history-main{
+      flex:1;
+      min-width:0;
+      justify-content:flex-start;
+      padding:6px 8px;
+      border-radius:8px;
+      color:var(--text);
+      text-align:left;
+    }
+
+    .history-main:hover{background:rgba(37,99,235,.06)}
+
+    .history-title{
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      font-size:.9rem;
+    }
+
+    .small-btn{
+      width:28px;height:28px;border-radius:8px;color:var(--muted);flex-shrink:0;
+    }
+
+    .small-btn:hover{background:rgba(37,99,235,.08);color:var(--accent)}
+    .small-btn.danger:hover{background:rgba(220,38,38,.08);color:var(--danger)}
 
     .workspace{
       flex:1;
@@ -249,7 +286,7 @@
 
     .welcome h1{
       color:var(--text);
-      font-size:2.25rem;
+      font-size:2.15rem;
       margin-bottom:10px;
       letter-spacing:-.04em;
     }
@@ -293,6 +330,7 @@
       line-height:1.65;
       color:var(--text);
       overflow-wrap:anywhere;
+      white-space:normal;
     }
 
     .msg-wrap.user .msg{
@@ -490,33 +528,26 @@
       transition:.2s;
     }
 
-    .toggle.active{
-      background:var(--accent);
-    }
+    .toggle.active{background:var(--accent)}
+    .toggle.active::after{left:23px}
 
-    .toggle.active::after{
-      left:23px;
+    .ghost-btn,.danger-btn{
+      width:100%;
+      border-radius:12px;
+      padding:12px;
+      justify-content:center;
+      font-weight:600;
     }
 
     .ghost-btn{
-      width:100%;
       border:1px solid var(--line);
-      border-radius:12px;
-      padding:12px;
-      justify-content:center;
       color:var(--text);
       background:var(--panel);
-      font-weight:600;
     }
 
     .danger-btn{
-      width:100%;
-      border-radius:12px;
-      padding:12px;
-      justify-content:center;
       color:#fff;
-      background:#dc2626;
-      font-weight:600;
+      background:var(--danger);
     }
 
     .status{
@@ -616,7 +647,7 @@
           <div style="font-weight:600;">Privacy mode</div>
           <div style="font-size:.8rem;color:var(--muted);">Blur chat until hover</div>
         </div>
-        <button id="privacyToggle" class="toggle" type="button" aria-label="Toggle privacy mode"></button>
+        <button id="privacyToggle" class="toggle" type="button"></button>
       </div>
 
       <div class="settings-row">
@@ -624,7 +655,7 @@
           <div style="font-weight:600;">Dark mode</div>
           <div style="font-size:.8rem;color:var(--muted);">Switch appearance</div>
         </div>
-        <button id="themeToggle" class="toggle" type="button" aria-label="Toggle dark mode"></button>
+        <button id="themeToggle" class="toggle" type="button"></button>
       </div>
     </div>
 
@@ -670,7 +701,6 @@
           </div>
 
           <input id="conversationSearch" class="search" type="text" placeholder="Search conversations..." />
-
           <div id="recentList" class="history"></div>
         </div>
       </div>
@@ -705,7 +735,6 @@
             <h1 id="welcomeTitle">Ready.</h1>
             <p id="welcomeSubtitle">Your assistant is ready to help with documentation, guidance, and drafting.</p>
           </div>
-
           <div id="messages" class="messages" hidden></div>
         </div>
       </section>
@@ -756,6 +785,7 @@
 
     let typewriterQueue = [];
     let isTypewriterActive = false;
+    let lastUserPrompt = "";
 
     const REG_PROMPT = " [SYSTEM: Verify response against Ofsted SCCIF and Quality Standards for Children's Homes]";
     const DEFAULT_LANGUAGE = "en-GB";
@@ -863,9 +893,52 @@
       return ` [SYSTEM: Reply in ${meta.promptLabel}. Keep safeguarding, care, and formal documentation wording clear and professional.]`;
     }
 
+    function stripSystemText(text){
+      return String(text || "")
+        .replace(/\s*\[SYSTEM:[\s\S]*$/i, "")
+        .trim();
+    }
+
+    function summariseTitle(text){
+      const clean = stripSystemText(text)
+        .replace(/[^\p{L}\p{N}\s'-]/gu, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      if (!clean) return "New Log";
+
+      const stop = new Set([
+        "the","a","an","and","or","but","for","with","from","into","onto","about",
+        "who","what","when","where","why","how","are","is","am","do","does","did",
+        "can","could","would","should","will","please","me","my","your","our","tell",
+        "write","give","good","morning","afternoon","evening","indicare"
+      ]);
+
+      const words = clean.split(" ").filter(Boolean);
+      const preferred = words.filter(w => !stop.has(w.toLowerCase()));
+      const picked = (preferred.length ? preferred : words).slice(0, 3);
+      const finalWords = picked.map(w => w.charAt(0).toUpperCase() + w.slice(1));
+      return finalWords.join(" ") || "New Log";
+    }
+
+    async function maybeRenameNewConversation(conversationId, originalPrompt){
+      const shortTitle = summariseTitle(originalPrompt);
+      try{
+        await apiRequest(`/chat/conversations/${conversationId}/rename`, {
+          method: "POST",
+          body: JSON.stringify({ title: shortTitle })
+        });
+        updateConversationHeading(shortTitle);
+        await loadConversations();
+      } catch(e){
+        console.error("Rename failed", e);
+      }
+    }
+
     function renderMarkdown(text){
       if (!text) return "";
       let safe = escapeHtml(text);
+
       safe = safe.replace(/^### (.*)$/gm, "<h3>$1</h3>");
       safe = safe.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
 
@@ -874,9 +947,9 @@
       let inList = false;
 
       for (const line of lines){
-        if (/^\- /.test(line)){
+        if (/^\s*-\s+/.test(line)){
           if (!inList){ html += "<ul>"; inList = true; }
-          html += `<li>${line.replace(/^\- /,"")}</li>`;
+          html += `<li>${line.replace(/^\s*-\s+/,"")}</li>`;
         } else {
           if (inList){ html += "</ul>"; inList = false; }
           if (line.trim() === "") html += "<br>";
@@ -985,7 +1058,55 @@
       showBanner(`Document attached: ${data.filename}`);
     }
 
+    function copyMessageText(text){
+      navigator.clipboard.writeText(text).then(() => {
+        showBanner("Copied");
+      }).catch(() => {
+        showBanner("Could not copy");
+      });
+    }
+
+    async function editUserMessage(messageId, currentText){
+      const edited = prompt("Edit message", currentText);
+      if (edited === null) return;
+
+      const cleaned = stripSystemText(edited).trim();
+      if (!cleaned){
+        showBanner("Message cannot be empty");
+        return;
+      }
+
+      window.isStreaming = true;
+      $("sendBtn").disabled = true;
+
+      try{
+        await streamAssistantResponse(
+          `/chat/messages/${messageId}/edit`,
+          {
+            message: cleaned,
+            document_text: window.currentDocumentText,
+            document_name: window.currentDocumentName,
+            response_mode: getSelectedResponseMode()
+          },
+          getSelectedLanguage()
+        );
+
+        if (window.conversationId){
+          await openConversation(window.conversationId, $("conversationHeading").textContent);
+        }
+        showBanner("Updated");
+      } catch(e){
+        console.error(e);
+        showBanner(e.message || "Edit failed");
+      } finally {
+        window.isStreaming = false;
+        $("sendBtn").disabled = false;
+      }
+    }
+
     function appendMessage(role, text, options = {}){
+      const displayText = role === "user" ? stripSystemText(text) : text;
+
       const wrap = document.createElement("div");
       wrap.className = `msg-wrap ${role}`;
       if (options.messageId) wrap.dataset.messageId = options.messageId;
@@ -1000,7 +1121,7 @@
 
       const msg = document.createElement("div");
       msg.className = "msg";
-      msg.innerHTML = role === "user" ? escapeHtml(text) : renderMarkdown(text);
+      msg.innerHTML = role === "user" ? escapeHtml(displayText) : renderMarkdown(displayText);
       block.appendChild(msg);
 
       if (options.metaText){
@@ -1010,14 +1131,50 @@
         block.appendChild(meta);
       }
 
+      const actions = document.createElement("div");
+      actions.className = "action-bar";
+
       if (role === "assistant"){
-        const actions = document.createElement("div");
-        actions.className = "action-bar";
-        actions.innerHTML = `
-          <button class="chip" type="button" onclick="quickPrompt('Ofsted')">Format for Ofsted</button>
-          <button class="chip" type="button" onclick="quickPrompt('Risk')">Draft Risk Assess</button>
-          <button class="chip" type="button" onclick="quickPrompt('TranslateEnglish')">Rewrite in English</button>
-        `;
+        const copyBtn = document.createElement("button");
+        copyBtn.className = "chip";
+        copyBtn.type = "button";
+        copyBtn.textContent = "Copy";
+        copyBtn.addEventListener("click", () => copyMessageText(displayText));
+
+        const ofstedBtn = document.createElement("button");
+        ofstedBtn.className = "chip";
+        ofstedBtn.type = "button";
+        ofstedBtn.textContent = "Format for Ofsted";
+        ofstedBtn.addEventListener("click", () => quickPrompt("Ofsted"));
+
+        const riskBtn = document.createElement("button");
+        riskBtn.className = "chip";
+        riskBtn.type = "button";
+        riskBtn.textContent = "Draft Risk Assess";
+        riskBtn.addEventListener("click", () => quickPrompt("Risk"));
+
+        actions.append(copyBtn, ofstedBtn, riskBtn);
+      }
+
+      if (role === "user"){
+        const copyBtn = document.createElement("button");
+        copyBtn.className = "chip";
+        copyBtn.type = "button";
+        copyBtn.textContent = "Copy";
+        copyBtn.addEventListener("click", () => copyMessageText(displayText));
+        actions.appendChild(copyBtn);
+
+        if (options.messageId){
+          const editBtn = document.createElement("button");
+          editBtn.className = "chip";
+          editBtn.type = "button";
+          editBtn.textContent = "Edit";
+          editBtn.addEventListener("click", () => editUserMessage(options.messageId, displayText));
+          actions.appendChild(editBtn);
+        }
+      }
+
+      if (actions.children.length){
         block.appendChild(actions);
       }
 
@@ -1067,13 +1224,13 @@
       }, 8);
     }
 
-    async function streamAssistantResponse(bodyData, languageCode){
+    async function streamAssistantResponse(url, bodyData, languageCode){
       bodyData.message += REG_PROMPT + buildLanguageInstruction();
       bodyData.reply_language = languageCode;
       bodyData.reply_language_label = getLanguageMeta(languageCode).promptLabel;
       bodyData.response_mode = getSelectedResponseMode();
 
-      const response = await fetch("/chat/", {
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1140,17 +1297,63 @@
       closeSettings();
     }
 
-    function renderConversationList(rows){
-      if (!rows.length){
-        $("recentList").innerHTML = "";
-        return;
-      }
+    async function deleteConversation(conversationId){
+      if (!confirm("Delete this conversation?")) return;
 
-      $("recentList").innerHTML = rows.map(r => `
-        <div class="history-item ${Number(r.id) === Number(window.conversationId) ? "active" : ""}" onclick="openConversation(${Number(r.id)}, ${JSON.stringify(r.title || "Observation")})">
-          ${escapeHtml(r.title || "Observation")}
-        </div>
-      `).join("");
+      try{
+        await apiRequest(`/chat/conversations/${conversationId}`, { method: "DELETE" });
+        if (Number(window.conversationId) === Number(conversationId)){
+          resetToWelcome();
+        }
+        await loadConversations();
+        showBanner("Conversation deleted");
+      } catch(e){
+        console.error(e);
+        showBanner(e.message || "Delete failed");
+      }
+    }
+
+    function renderConversationList(rows){
+      const list = $("recentList");
+      list.innerHTML = "";
+
+      for (const r of rows){
+        const item = document.createElement("div");
+        item.className = `history-item ${Number(r.id) === Number(window.conversationId) ? "active" : ""}`;
+
+        const row = document.createElement("div");
+        row.className = "history-row";
+
+        const main = document.createElement("button");
+        main.type = "button";
+        main.className = "history-main";
+        main.innerHTML = `<div class="history-title">${escapeHtml(r.title || "Observation")}</div>`;
+        main.addEventListener("click", () => openConversation(r.id, r.title || "Observation"));
+
+        const copyBtn = document.createElement("button");
+        copyBtn.type = "button";
+        copyBtn.className = "small-btn";
+        copyBtn.title = "Copy title";
+        copyBtn.textContent = "⧉";
+        copyBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          copyMessageText(r.title || "Observation");
+        });
+
+        const delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.className = "small-btn danger";
+        delBtn.title = "Delete";
+        delBtn.textContent = "🗑";
+        delBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          deleteConversation(r.id);
+        });
+
+        row.append(main, copyBtn, delBtn);
+        item.appendChild(row);
+        list.appendChild(item);
+      }
     }
 
     function applyConversationFilter(){
@@ -1213,10 +1416,12 @@
 
     async function sendMessage(){
       const input = $("chatInput");
-      const text = input.value.trim();
+      const text = stripSystemText(input.value).trim();
       if (!text || window.isStreaming) return;
 
       const selectedLanguage = getSelectedLanguage();
+      const previousConversationId = window.conversationId;
+      lastUserPrompt = text;
 
       window.isStreaming = true;
       $("sendBtn").disabled = true;
@@ -1230,10 +1435,8 @@
       input.value = "";
       autoResizeTextarea();
 
-      const previousConversationId = window.conversationId;
-
       try{
-        await streamAssistantResponse({
+        await streamAssistantResponse("/chat/", {
           message: text,
           conversation_id: window.conversationId,
           document_text: window.currentDocumentText,
@@ -1255,7 +1458,7 @@
         const rows = await loadConversations();
         if (!previousConversationId && !window.conversationId && rows.length > 0){
           window.conversationId = rows[0].id;
-          updateConversationHeading(rows[0].title || "Observation");
+          await maybeRenameNewConversation(window.conversationId, lastUserPrompt);
           applyConversationFilter();
         }
       }
@@ -1268,10 +1471,6 @@
         input.value = "Rewrite the above documentation so it aligns with Ofsted Quality Standards and is ready for professional review.";
       } else if (type === "Risk"){
         input.value = "Generate a formal risk assessment based on this situation. Include presenting risks, protective factors, staff actions, and follow-up actions.";
-      } else if (type === "TranslateEnglish"){
-        $("languageSelect").value = DEFAULT_LANGUAGE;
-        updateLanguageUi();
-        input.value = "Rewrite the above clearly in professional English suitable for a formal record.";
       }
 
       autoResizeTextarea();
@@ -1395,9 +1594,6 @@
     }
 
     document.addEventListener("DOMContentLoaded", init);
-
-    window.quickPrompt = quickPrompt;
-    window.openConversation = openConversation;
   </script>
 </body>
 </html>
