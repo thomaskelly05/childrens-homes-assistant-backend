@@ -11,24 +11,27 @@
     :root{
       --bg:#f4f7fb; --panel:#fff; --chat:#fff; --input:#fff; --user:#e0e9f5;
       --text:#1e293b; --muted:#64748b; --line:#e2e8f0; --accent:#2563eb;
-      --shadow:0 10px 25px -3px rgb(0 0 0 / 0.08); --mini:68px; --full:300px;
+      --shadow:0 10px 25px -3px rgb(0 0 0 / 0.08); --mini:68px; --full:310px;
+      --danger:#dc2626; --success:#16a34a;
     }
     body.theme-dark{
       --bg:#0f172a; --panel:#1e293b; --chat:#0f172a; --input:#0a0f1d; --user:#1e293b;
       --text:#f1f5f9; --muted:#94a3b8; --line:#334155; --accent:#3b82f6;
+      --danger:#ef4444; --success:#22c55e;
     }
     *{box-sizing:border-box;margin:0;padding:0;font-family:Inter,sans-serif}
     body{background:var(--bg);color:var(--text);height:100dvh;overflow:hidden}
     button,input,select,textarea{font:inherit;border:none;outline:none;background:none;color:inherit}
     button{cursor:pointer}
     a{text-decoration:none;color:inherit}
+    .hidden{display:none!important}
     .shell{display:flex;height:100%}
     .sidebar{width:var(--mini);background:var(--panel);border-right:1px solid var(--line);overflow:hidden;transition:.25s;z-index:20}
     .sidebar.open{width:var(--full)}
     .side-inner{width:var(--full);height:100%;display:flex;flex-direction:column;padding:12px}
     .side-top{display:flex;align-items:center;gap:12px;height:48px}
     .brand{font-weight:600;color:var(--accent);white-space:nowrap}
-    .icon{width:40px;height:40px;border-radius:10px;color:var(--muted);display:flex;align-items:center;justify-content:center}
+    .icon{width:40px;height:40px;border-radius:10px;color:var(--muted);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
     .icon:hover{background:rgba(37,99,235,.08);color:var(--accent)}
     .side-content{opacity:0;pointer-events:none;transition:.15s;display:flex;flex-direction:column;height:100%}
     .sidebar.open .side-content{opacity:1;pointer-events:auto}
@@ -46,14 +49,13 @@
     .ttl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.9rem}
     .mini{width:28px;height:28px;border-radius:8px;color:var(--muted);display:flex;align-items:center;justify-content:center}
     .mini:hover{background:rgba(37,99,235,.08);color:var(--accent)}
-    .danger:hover{background:rgba(220,38,38,.08);color:#dc2626}
+    .danger:hover{background:rgba(220,38,38,.08);color:var(--danger)}
     .workspace{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--chat)}
     .header{height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--line)}
     .header-left{display:flex;align-items:center;gap:12px;min-width:0}
     .title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .panel{flex:1;overflow:auto;padding:24px 16px}
-    .panel-inner{max-width:980px;margin:0 auto}
-    .hidden{display:none !important}
+    .panel-inner{max-width:1100px;margin:0 auto}
     .welcome{text-align:center;margin-top:13vh}
     .welcome h1{font-size:2.2rem;letter-spacing:-.04em}
     .welcome p{color:var(--muted);margin-top:8px}
@@ -90,27 +92,43 @@
     .settings.open{right:0}
     .card{border:1px solid var(--line);background:var(--bg);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px}
     .card label{font-size:.82rem;color:var(--muted);font-weight:600}
-    .sel,.field{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:10px 12px;color:var(--text);width:100%}
+    .sel,.field,.area{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:10px 12px;color:var(--text);width:100%}
+    .area{min-height:110px;resize:vertical}
     .rowset{display:flex;justify-content:space-between;align-items:center;gap:12px}
     .toggle{width:48px;height:28px;border-radius:999px;background:var(--line);position:relative}
     .toggle:after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s}
     .toggle.active{background:var(--accent)}
     .toggle.active:after{left:23px}
-    .ghost,.logout,.action{padding:12px;border-radius:12px;font-weight:600}
+    .ghost,.logout,.action,.soft{padding:12px;border-radius:12px;font-weight:600}
     .ghost{border:1px solid var(--line);background:var(--panel)}
-    .logout{background:#dc2626;color:#fff}
+    .soft{border:1px solid var(--line);background:var(--panel);padding:8px 12px}
+    .logout{background:var(--danger);color:#fff}
     .action{background:var(--accent);color:#fff}
     .status{display:none;position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:50;padding:10px 14px;border-radius:10px;background:#111827;color:#fff;font-size:.85rem;box-shadow:var(--shadow);max-width:calc(100vw - 24px);text-align:center}
     body.theme-dark .status{background:#f8fafc;color:#0f172a}
     .typing:after{content:"▊";color:var(--accent);animation:blink 1s infinite;margin-left:2px}
-    .admin-grid{display:grid;grid-template-columns:340px 1fr;gap:16px}
-    .users-list{display:flex;flex-direction:column;gap:10px}
-    .user-row{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:14px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
-    .user-meta{font-size:.86rem;color:var(--muted);margin-top:6px}
-    .user-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .admin-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+    .tabbtn{padding:10px 14px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--muted);font-weight:600}
+    .tabbtn.active,.tabbtn:hover{color:var(--accent);border-color:var(--accent);background:rgba(37,99,235,.06)}
+    .admin-grid{display:grid;grid-template-columns:360px 1fr;gap:16px}
+    .users-list,.homes-list,.providers-list,.docs-list,.audit-list,.billing-list{display:flex;flex-direction:column;gap:10px}
+    .entity-row{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:14px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .entity-title{font-weight:600}
+    .entity-meta{font-size:.86rem;color:var(--muted);margin-top:6px}
+    .entity-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}
+    .stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}
+    .stat{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:14px}
+    .stat .n{font-size:1.4rem;font-weight:700}
+    .stat .l{font-size:.82rem;color:var(--muted);margin-top:4px}
+    .tag{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:.72rem;font-weight:700}
+    .tag.ok{background:rgba(22,163,74,.12);color:var(--success)}
+    .tag.bad{background:rgba(220,38,38,.12);color:var(--danger)}
+    .tag.neutral{background:rgba(100,116,139,.12);color:var(--muted)}
     @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
-    @media (max-width:900px){
+    @media (max-width:1000px){
       .admin-grid{grid-template-columns:1fr}
+      .filters,.stats{grid-template-columns:1fr 1fr}
     }
     @media (max-width:768px){
       .sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);width:86vw!important;max-width:300px}
@@ -123,6 +141,7 @@
       .welcome{margin-top:8vh}
       .welcome h1{font-size:1.85rem}
       .input-wrap{padding:10px}
+      .filters,.stats{grid-template-columns:1fr}
     }
     @media (min-width:769px){.mobile{display:none!important}}
   </style>
@@ -238,69 +257,178 @@
             <h1 id="welcomeTitle">Ready.</h1>
             <p id="welcomeText">Your assistant is ready to help with documentation, guidance, and drafting.</p>
           </div>
-
           <div id="messages" class="messages hidden"></div>
         </div>
       </section>
 
       <section id="adminPanel" class="panel hidden">
         <div class="panel-inner">
-          <div class="admin-grid">
-            <div class="card">
-              <strong>Create user</strong>
+          <div class="admin-tabs">
+            <button class="tabbtn active" data-tab="users">Users</button>
+            <button class="tabbtn" data-tab="homes">Homes</button>
+            <button class="tabbtn" data-tab="providers">Providers</button>
+            <button class="tabbtn" data-tab="documents">Policies</button>
+            <button class="tabbtn" data-tab="billing">Billing</button>
+            <button class="tabbtn" data-tab="audit">Audit</button>
+          </div>
 
-              <div>
-                <label for="adminFirstName">First name</label>
-                <input id="adminFirstName" class="field" type="text" placeholder="First name">
-              </div>
-
-              <div>
-                <label for="adminLastName">Last name</label>
-                <input id="adminLastName" class="field" type="text" placeholder="Last name">
-              </div>
-
-              <div>
-                <label for="adminEmail">Email</label>
-                <input id="adminEmail" class="field" type="email" placeholder="Email">
-              </div>
-
-              <div>
-                <label for="adminPassword">Temporary password</label>
-                <input id="adminPassword" class="field" type="password" placeholder="Temporary password">
-              </div>
-
-              <div>
-                <label for="adminRole">Role</label>
-                <select id="adminRole" class="sel">
-                  <option value="staff">staff</option>
-                  <option value="manager">manager</option>
-                  <option value="admin">admin</option>
-                </select>
-              </div>
-
-              <div>
-                <label for="adminHomeId">Home ID</label>
-                <input id="adminHomeId" class="field" type="number" placeholder="Home ID">
-              </div>
-
-              <div class="rowset">
-                <div>
-                  <div style="font-weight:600">Active user</div>
-                  <div style="font-size:.8rem;color:var(--muted)">Allow account login</div>
-                </div>
-                <button id="adminActiveToggle" class="toggle active" type="button"></button>
-              </div>
-
-              <button id="createUserBtn" class="action" type="button">Create user</button>
+          <!-- USERS -->
+          <div id="tab-users" class="admin-tab">
+            <div class="filters">
+              <input id="userSearch" class="field" placeholder="Search user name or email">
+              <select id="userRoleFilter" class="sel">
+                <option value="">All roles</option>
+                <option value="admin">admin</option>
+                <option value="manager">manager</option>
+                <option value="staff">staff</option>
+              </select>
+              <input id="userHomeFilter" class="field" type="number" placeholder="Home ID">
+              <select id="userArchivedFilter" class="sel">
+                <option value="">All status</option>
+                <option value="false">Active list</option>
+                <option value="true">Archived only</option>
+              </select>
             </div>
 
-            <div class="card">
-              <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
-                <strong>Users</strong>
-                <button id="refreshUsersBtn" class="ghost" type="button" style="padding:8px 12px;">Refresh</button>
+            <div class="admin-grid">
+              <div class="card">
+                <strong>Create user</strong>
+                <div><label for="adminFirstName">First name</label><input id="adminFirstName" class="field" type="text" placeholder="First name"></div>
+                <div><label for="adminLastName">Last name</label><input id="adminLastName" class="field" type="text" placeholder="Last name"></div>
+                <div><label for="adminEmail">Email</label><input id="adminEmail" class="field" type="email" placeholder="Email"></div>
+                <div><label for="adminPassword">Temporary password</label><input id="adminPassword" class="field" type="password" placeholder="Temporary password"></div>
+                <div><label for="adminRole">Role</label>
+                  <select id="adminRole" class="sel">
+                    <option value="staff">staff</option>
+                    <option value="manager">manager</option>
+                    <option value="admin">admin</option>
+                  </select>
+                </div>
+                <div><label for="adminHomeId">Home ID</label><input id="adminHomeId" class="field" type="number" placeholder="Home ID"></div>
+                <div class="rowset">
+                  <div><div style="font-weight:600">Active user</div><div style="font-size:.8rem;color:var(--muted)">Allow account login</div></div>
+                  <button id="adminActiveToggle" class="toggle active" type="button"></button>
+                </div>
+                <button id="createUserBtn" class="action" type="button">Create user</button>
               </div>
 
-              <div id="adminUsersList" class="users-list"></div>
+              <div class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+                  <strong>Users</strong>
+                  <button id="refreshUsersBtn" class="ghost" type="button" style="padding:8px 12px;">Refresh</button>
+                </div>
+                <div id="adminUsersList" class="users-list"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- HOMES -->
+          <div id="tab-homes" class="admin-tab hidden">
+            <div class="admin-grid">
+              <div class="card">
+                <strong>Create home</strong>
+                <div><label for="homeName">Name</label><input id="homeName" class="field" placeholder="Home name"></div>
+                <div><label for="homeAddress">Address</label><textarea id="homeAddress" class="area" placeholder="Address"></textarea></div>
+                <div><label for="homePostcode">Postcode</label><input id="homePostcode" class="field" placeholder="Postcode"></div>
+                <div><label for="homeRegion">Region</label><input id="homeRegion" class="field" placeholder="Region"></div>
+                <div><label for="homeLocalAuthority">Local authority</label><input id="homeLocalAuthority" class="field" placeholder="Local authority"></div>
+                <div><label for="homeOfstedUrn">Ofsted URN</label><input id="homeOfstedUrn" class="field" placeholder="Ofsted URN"></div>
+                <div><label for="homeProviderId">Provider ID</label><input id="homeProviderId" class="field" type="number" placeholder="Provider ID"></div>
+                <div><label for="homeRegisteredManagerId">Registered manager ID</label><input id="homeRegisteredManagerId" class="field" type="number" placeholder="User ID"></div>
+                <div><label for="homeGeofence">Geofence radius (m)</label><input id="homeGeofence" class="field" type="number" placeholder="Geofence radius"></div>
+                <button id="createHomeBtn" class="action" type="button">Create home</button>
+              </div>
+
+              <div class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+                  <strong>Homes</strong>
+                  <button id="refreshHomesBtn" class="ghost" type="button" style="padding:8px 12px;">Refresh</button>
+                </div>
+                <div id="homesList" class="homes-list"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PROVIDERS -->
+          <div id="tab-providers" class="admin-tab hidden">
+            <div class="admin-grid">
+              <div class="card">
+                <strong>Create provider</strong>
+                <div><label for="providerName">Name</label><input id="providerName" class="field" placeholder="Provider name"></div>
+                <div><label for="providerRegion">Region</label><input id="providerRegion" class="field" placeholder="Region"></div>
+                <div><label for="providerAddress">Address</label><textarea id="providerAddress" class="area" placeholder="Address"></textarea></div>
+                <div><label for="providerPostcode">Postcode</label><input id="providerPostcode" class="field" placeholder="Postcode"></div>
+                <div><label for="providerLA">Local authority</label><input id="providerLA" class="field" placeholder="Local authority"></div>
+                <div><label for="providerLeadName">Safeguarding lead</label><input id="providerLeadName" class="field" placeholder="Lead name"></div>
+                <div><label for="providerLeadEmail">Safeguarding lead email</label><input id="providerLeadEmail" class="field" placeholder="Lead email"></div>
+                <button id="createProviderBtn" class="action" type="button">Create provider</button>
+              </div>
+
+              <div class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+                  <strong>Providers</strong>
+                  <button id="refreshProvidersBtn" class="ghost" type="button" style="padding:8px 12px;">Refresh</button>
+                </div>
+                <div id="providersList" class="providers-list"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- DOCUMENTS -->
+          <div id="tab-documents" class="admin-tab hidden">
+            <div class="filters">
+              <input id="docSearch" class="field" placeholder="Search title or type">
+              <input id="docHomeFilter" class="field" type="number" placeholder="Home ID">
+              <input id="docTypeFilter" class="field" placeholder="Document type e.g. policy">
+              <input id="docApprovalFilter" class="field" placeholder="Approval status">
+            </div>
+
+            <div class="admin-grid">
+              <div class="card">
+                <strong>Create policy / document</strong>
+                <div><label for="docTitle">Title</label><input id="docTitle" class="field" placeholder="Title"></div>
+                <div><label for="docType">Document type</label><input id="docType" class="field" placeholder="policy / procedure / guidance"></div>
+                <div><label for="docHomeId">Home ID</label><input id="docHomeId" class="field" type="number" placeholder="Home ID"></div>
+                <div><label for="docOwnerId">Owner ID</label><input id="docOwnerId" class="field" type="number" placeholder="Owner user ID"></div>
+                <div><label for="docIssueDate">Issue date</label><input id="docIssueDate" class="field" type="date"></div>
+                <div><label for="docReviewDate">Review date</label><input id="docReviewDate" class="field" type="date"></div>
+                <div><label for="docExpiryDate">Expiry date</label><input id="docExpiryDate" class="field" type="date"></div>
+                <div><label for="docApprovalStatus">Approval status</label><input id="docApprovalStatus" class="field" placeholder="not_required / pending / approved"></div>
+                <div><label for="docConfLevel">Confidentiality level</label><input id="docConfLevel" class="field" placeholder="standard"></div>
+                <div><label for="docInputText">Input text / policy content</label><textarea id="docInputText" class="area" placeholder="Document text"></textarea></div>
+                <button id="createDocBtn" class="action" type="button">Create document</button>
+              </div>
+
+              <div class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+                  <strong>Policies / documents</strong>
+                  <button id="refreshDocsBtn" class="ghost" type="button" style="padding:8px 12px;">Refresh</button>
+                </div>
+                <div id="docsList" class="docs-list"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- BILLING -->
+          <div id="tab-billing" class="admin-tab hidden">
+            <div id="billingStats" class="stats"></div>
+            <div class="card">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+                <strong>Billing overview</strong>
+                <button id="refreshBillingBtn" class="ghost" type="button" style="padding:8px 12px;">Refresh</button>
+              </div>
+              <div id="billingList" class="billing-list"></div>
+            </div>
+          </div>
+
+          <!-- AUDIT -->
+          <div id="tab-audit" class="admin-tab hidden">
+            <div class="card">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+                <strong>Audit log</strong>
+                <button id="refreshAuditBtn" class="ghost" type="button" style="padding:8px 12px;">Refresh</button>
+              </div>
+              <div id="auditList" class="audit-list"></div>
             </div>
           </div>
         </div>
@@ -353,33 +481,21 @@
 
   <script>
     let conversationId = null, currentDocumentText = null, currentDocumentName = null, isStreaming = false;
-    let queue = [], typing = false, lastPrompt = "", cache = [], currentUser = null, adminUsers = [];
+    let queue = [], typing = false, lastPrompt = "", cache = [], currentUser = null;
     let adminCreateActive = true;
+    let adminUsers = [], homes = [], providers = [], docs = [], billing = null, audit = [];
     const DEFAULT_LANGUAGE = "en-GB";
     const REG_PROMPT = " [SYSTEM: Verify response against Ofsted SCCIF and Quality Standards for Children's Homes]";
     const RESP = {quick:"Quick", balanced:"Balanced", deep:"Deep"};
     const LANG = {"en-GB":"English","pl-PL":"Polish","ro-RO":"Romanian","ur-PK":"Urdu","ar":"Arabic"};
-    const GREET = [
-      n => `Good morning, ${n}.`,
-      n => `Welcome back, ${n}.`,
-      n => `Ready when you are, ${n}.`,
-      n => `Good to see you, ${n}.`
-    ];
-
+    const GREET = [n=>`Good morning, ${n}.`, n=>`Welcome back, ${n}.`, n=>`Ready when you are, ${n}.`, n=>`Good to see you, ${n}.`];
     const $ = id => document.getElementById(id);
 
     function banner(t, ms=2400){ const e=$("status"); e.textContent=t; e.style.display="block"; clearTimeout(banner.t); banner.t=setTimeout(()=>e.style.display="none",ms); }
     function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
-    function firstName(){ return currentUser?.first_name || localStorage.getItem("first_name") || localStorage.getItem("adult_first_name") || localStorage.getItem("user_first_name") || "there"; }
-    function userInitials(){
-      const full = [currentUser?.first_name, currentUser?.last_name].filter(Boolean).join(" ") || localStorage.getItem("full_name") || localStorage.getItem("user_name") || firstName();
-      const parts = String(full).trim().split(/\s+/).filter(Boolean);
-      if(!parts.length) return "Y";
-      if(parts.length===1) return parts[0].slice(0,2).toUpperCase();
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
+    function firstName(){ return currentUser?.first_name || localStorage.getItem("first_name") || localStorage.getItem("user_first_name") || "there"; }
+    function userInitials(){ const full=[currentUser?.first_name,currentUser?.last_name].filter(Boolean).join(" ")||localStorage.getItem("user_name")||firstName(); const p=String(full).trim().split(/\s+/).filter(Boolean); if(!p.length) return "Y"; if(p.length===1) return p[0].slice(0,2).toUpperCase(); return (p[0][0]+p[1][0]).toUpperCase(); }
     function setWelcome(){ $("welcomeTitle").textContent = GREET[Math.floor(Math.random()*GREET.length)](firstName()); }
-
     function selectedLang(){ return $("lang").value || DEFAULT_LANGUAGE; }
     function selectedMode(){ return $("mode").value || "balanced"; }
 
@@ -392,7 +508,6 @@
     }
 
     function stripSystem(s){ return String(s||"").replace(/\s*\[SYSTEM:[\s\S]*$/i,"").trim(); }
-
     function summariseTitle(text){
       const clean = stripSystem(text).replace(/[^\p{L}\p{N}\s'-]/gu," ").replace(/\s+/g," ").trim();
       if(!clean) return "New Log";
@@ -442,7 +557,6 @@
     function docHide(){ $("docText").textContent=""; $("doc").classList.remove("show"); }
     function setTitle(t="Intelligence for Care"){ $("title").textContent=t; }
     function buildLangInstruction(){ return selectedLang()===DEFAULT_LANGUAGE ? "" : ` [SYSTEM: Reply in ${LANG[selectedLang()]}. Keep safeguarding, care, and formal documentation wording clear and professional.]`; }
-
     function openSettings(){ $("settingsOverlay").classList.add("show"); $("settings").classList.add("open"); }
     function closeSettings(){ $("settingsOverlay").classList.remove("show"); $("settings").classList.remove("open"); }
 
@@ -462,8 +576,18 @@
       $("navAssistant").classList.remove("active");
       $("navAdmin").classList.add("active");
       setTitle("Admin");
-      loadAdminUsers();
+      loadActiveAdminTab();
     }
+
+    function setAdminTab(name){
+      document.querySelectorAll(".tabbtn").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+      document.querySelectorAll(".admin-tab").forEach(tab => tab.classList.add("hidden"));
+      $("tab-" + name).classList.remove("hidden");
+      localStorage.setItem("indicare_admin_tab", name);
+      loadActiveAdminTab();
+    }
+
+    function activeAdminTab(){ return localStorage.getItem("indicare_admin_tab") || "users"; }
 
     async function api(url, options={}){
       const res = await fetch(url, {
@@ -493,9 +617,7 @@
           localStorage.setItem("user_name", [currentUser.first_name, currentUser.last_name].filter(Boolean).join(" "));
           if(currentUser.role === "admin") $("navAdmin").classList.remove("hidden");
         }
-      } catch(e){
-        console.error(e);
-      }
+      } catch(e){ console.error(e); }
     }
 
     async function uploadDoc(file){
@@ -529,11 +651,8 @@
         });
         if(conversationId) await openConversation(conversationId, $("title").textContent);
         banner("Updated");
-      } catch(e){
-        banner(e.message || "Edit failed");
-      } finally {
-        isStreaming = false; $("send").disabled = false;
-      }
+      } catch(e){ banner(e.message || "Edit failed"); }
+      finally { isStreaming = false; $("send").disabled = false; }
     }
 
     function appendMessage(role, text, opts={}){
@@ -634,10 +753,7 @@
 
       const res = await fetch(url, {
         method:"POST",
-        headers:{
-          "Content-Type":"application/json",
-          "Authorization":"Bearer "+localStorage.getItem("access_token")
-        },
+        headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+localStorage.getItem("access_token") },
         body:JSON.stringify(body)
       });
 
@@ -683,10 +799,7 @@
     async function renameShort(id, prompt){
       try{
         const short = summariseTitle(prompt);
-        await api(`/chat/conversations/${id}/rename`, {
-          method:"POST",
-          body:JSON.stringify({title: short})
-        });
+        await api(`/chat/conversations/${id}/rename`, { method:"POST", body:JSON.stringify({title: short}) });
         setTitle(short);
         await loadConversations();
       } catch(e){ console.error(e); }
@@ -776,9 +889,7 @@
           $("sidebar").classList.remove("open");
           $("overlay").classList.remove("show");
         }
-      } catch(e){
-        banner(e.message || "Could not open conversation");
-      }
+      } catch(e){ banner(e.message || "Could not open conversation"); }
     }
 
     async function sendMessage(){
@@ -805,12 +916,8 @@
         });
       } catch(e){
         const streamEl = document.querySelector("#streaming .msg");
-        if(streamEl){
-          streamEl.classList.remove("typing");
-          streamEl.innerHTML = render(`Sorry, there was a problem: ${e.message}`, "assistant");
-        } else {
-          appendMessage("assistant", `Sorry, there was a problem: ${e.message}`);
-        }
+        if(streamEl){ streamEl.classList.remove("typing"); streamEl.innerHTML = render(`Sorry, there was a problem: ${e.message}`, "assistant"); }
+        else appendMessage("assistant", `Sorry, there was a problem: ${e.message}`);
       } finally {
         isStreaming = false;
         $("send").disabled = false;
@@ -851,16 +958,21 @@
       rec.start();
     }
 
-    function adminPayloadFromForm(){
-      return {
-        first_name: $("adminFirstName").value.trim(),
-        last_name: $("adminLastName").value.trim(),
-        email: $("adminEmail").value.trim(),
-        password: $("adminPassword").value,
-        role: $("adminRole").value,
-        home_id: Number($("adminHomeId").value),
-        is_active: adminCreateActive
-      };
+    /* ADMIN HELPERS */
+    function boolFromSelect(val){
+      if(val === "true") return true;
+      if(val === "false") return false;
+      return undefined;
+    }
+
+    async function loadActiveAdminTab(){
+      const tab = activeAdminTab();
+      if(tab === "users") await loadAdminUsers();
+      if(tab === "homes") await loadHomes();
+      if(tab === "providers") await loadProviders();
+      if(tab === "documents") await loadDocuments();
+      if(tab === "billing") await loadBilling();
+      if(tab === "audit") await loadAudit();
     }
 
     function clearAdminForm(){
@@ -874,40 +986,74 @@
       syncHelpers();
     }
 
+    function adminPayloadFromForm(){
+      return {
+        first_name: $("adminFirstName").value.trim(),
+        last_name: $("adminLastName").value.trim(),
+        email: $("adminEmail").value.trim(),
+        password: $("adminPassword").value,
+        role: $("adminRole").value,
+        home_id: Number($("adminHomeId").value),
+        is_active: adminCreateActive
+      };
+    }
+
+    async function createAdminUser(){
+      const payload = adminPayloadFromForm();
+      if(!payload.first_name || !payload.last_name || !payload.email || !payload.password || !payload.role || !payload.home_id){
+        return banner("Complete all user fields");
+      }
+      try{
+        await api("/admin/users", { method:"POST", body:JSON.stringify(payload) });
+        clearAdminForm();
+        await loadAdminUsers();
+        banner("User created");
+      } catch(e){ banner(e.message || "Could not create user"); }
+    }
+
+    async function loadAdminUsers(){
+      try{
+        const q = $("userSearch").value.trim();
+        const role = $("userRoleFilter").value;
+        const home = $("userHomeFilter").value.trim();
+        const archived = $("userArchivedFilter").value;
+        const params = new URLSearchParams();
+        if(q) params.set("q", q);
+        if(role) params.set("role", role);
+        if(home) params.set("home_id", home);
+        if(archived) params.set("archived", archived);
+        adminUsers = (await api("/admin/users" + (params.toString() ? `?${params.toString()}` : "")))?.users || [];
+        renderAdminUsers();
+      } catch(e){ banner(e.message || "Could not load users"); }
+    }
+
     function renderAdminUsers(){
       const host = $("adminUsersList");
       host.innerHTML = "";
-
-      if(!adminUsers.length){
-        host.innerHTML = `<div class="user-row"><div>No users found.</div></div>`;
-        return;
-      }
+      if(!adminUsers.length){ host.innerHTML = `<div class="entity-row"><div>No users found.</div></div>`; return; }
 
       adminUsers.forEach(user => {
         const row = document.createElement("div");
-        row.className = "user-row";
-
+        row.className = "entity-row";
         const left = document.createElement("div");
         left.innerHTML = `
-          <div style="font-weight:600">${esc([user.first_name, user.last_name].filter(Boolean).join(" ") || user.email)}</div>
-          <div class="user-meta">${esc(user.email)} · ${esc(user.role)} · home ${esc(String(user.home_id ?? ""))}</div>
-          <div class="user-meta">active: ${user.is_active ? "yes" : "no"} · archived: ${user.archived ? "yes" : "no"}</div>
+          <div class="entity-title">${esc([user.first_name, user.last_name].filter(Boolean).join(" ") || user.email)}</div>
+          <div class="entity-meta">${esc(user.email)} · ${esc(user.role)} · home ${esc(String(user.home_id ?? ""))}</div>
+          <div class="entity-meta">
+            <span class="tag ${user.is_active ? "ok":"bad"}">${user.is_active ? "active":"inactive"}</span>
+            <span class="tag ${user.archived ? "bad":"neutral"}">${user.archived ? "archived":"live"}</span>
+          </div>
         `;
-
         const right = document.createElement("div");
-        right.className = "user-actions";
+        right.className = "entity-actions";
 
         const toggleActive = document.createElement("button");
         toggleActive.className = "chip";
         toggleActive.textContent = user.is_active ? "Deactivate" : "Activate";
         toggleActive.onclick = async () => {
           try{
-            await api(`/admin/users/${user.id}`, {
-              method:"PATCH",
-              body:JSON.stringify({ is_active: !user.is_active })
-            });
-            await loadAdminUsers();
-            banner("User updated");
+            await api(`/admin/users/${user.id}`, { method:"PATCH", body:JSON.stringify({ is_active: !user.is_active }) });
+            await loadAdminUsers(); banner("User updated");
           } catch(e){ banner(e.message || "Update failed"); }
         };
 
@@ -916,13 +1062,33 @@
         toggleArchive.textContent = user.archived ? "Unarchive" : "Archive";
         toggleArchive.onclick = async () => {
           try{
-            await api(`/admin/users/${user.id}`, {
-              method:"PATCH",
-              body:JSON.stringify({ archived: !user.archived })
-            });
-            await loadAdminUsers();
-            banner("User updated");
+            await api(`/admin/users/${user.id}`, { method:"PATCH", body:JSON.stringify({ archived: !user.archived }) });
+            await loadAdminUsers(); banner("User updated");
           } catch(e){ banner(e.message || "Update failed"); }
+        };
+
+        const changeRole = document.createElement("button");
+        changeRole.className = "chip";
+        changeRole.textContent = "Role";
+        changeRole.onclick = async () => {
+          const role = prompt(`Set role for ${user.email}`, user.role || "staff");
+          if(role === null) return;
+          try{
+            await api(`/admin/users/${user.id}`, { method:"PATCH", body:JSON.stringify({ role }) });
+            await loadAdminUsers(); banner("Role updated");
+          } catch(e){ banner(e.message || "Role update failed"); }
+        };
+
+        const changeHome = document.createElement("button");
+        changeHome.className = "chip";
+        changeHome.textContent = "Home";
+        changeHome.onclick = async () => {
+          const home_id = prompt(`Set home id for ${user.email}`, String(user.home_id ?? ""));
+          if(home_id === null) return;
+          try{
+            await api(`/admin/users/${user.id}`, { method:"PATCH", body:JSON.stringify({ home_id: Number(home_id) }) });
+            await loadAdminUsers(); banner("Home updated");
+          } catch(e){ banner(e.message || "Home update failed"); }
         };
 
         const reset = document.createElement("button");
@@ -933,62 +1099,311 @@
           if(password === null) return;
           if(!password.trim()) return banner("Password cannot be empty");
           try{
-            await api(`/admin/users/${user.id}/reset-password`, {
-              method:"POST",
-              body:JSON.stringify({ password })
-            });
+            await api(`/admin/users/${user.id}/reset-password`, { method:"POST", body:JSON.stringify({ password }) });
             banner("Password reset");
           } catch(e){ banner(e.message || "Password reset failed"); }
         };
 
-        right.append(toggleActive, toggleArchive, reset);
+        right.append(toggleActive, toggleArchive, changeRole, changeHome, reset);
         row.append(left, right);
         host.appendChild(row);
       });
     }
 
-    async function loadAdminUsers(){
-      if(currentUser?.role !== "admin") return;
+    async function createHome(){
+      const payload = {
+        name: $("homeName").value.trim(),
+        address: $("homeAddress").value.trim() || null,
+        postcode: $("homePostcode").value.trim() || null,
+        region: $("homeRegion").value.trim() || null,
+        local_authority: $("homeLocalAuthority").value.trim() || null,
+        ofsted_urn: $("homeOfstedUrn").value.trim() || null,
+        provider_id: $("homeProviderId").value.trim() ? Number($("homeProviderId").value) : null,
+        registered_manager_id: $("homeRegisteredManagerId").value.trim() ? Number($("homeRegisteredManagerId").value) : null,
+        geofence_radius_m: $("homeGeofence").value.trim() ? Number($("homeGeofence").value) : null
+      };
+      if(!payload.name) return banner("Home name is required");
       try{
-        const data = await api("/admin/users");
-        adminUsers = data?.users || [];
-        renderAdminUsers();
-      } catch(e){
-        banner(e.message || "Could not load users");
-      }
+        await api("/admin/homes", { method:"POST", body:JSON.stringify(payload) });
+        ["homeName","homeAddress","homePostcode","homeRegion","homeLocalAuthority","homeOfstedUrn","homeProviderId","homeRegisteredManagerId","homeGeofence"].forEach(id => $(id).value = "");
+        await loadHomes(); banner("Home created");
+      } catch(e){ banner(e.message || "Could not create home"); }
     }
 
-    async function createAdminUser(){
-      const payload = adminPayloadFromForm();
-      if(!payload.first_name || !payload.last_name || !payload.email || !payload.password || !payload.role || !payload.home_id){
-        return banner("Complete all user fields");
-      }
-
+    async function loadHomes(){
       try{
-        await api("/admin/users", {
-          method:"POST",
-          body:JSON.stringify(payload)
-        });
-        clearAdminForm();
-        await loadAdminUsers();
-        banner("User created");
-      } catch(e){
-        banner(e.message || "Could not create user");
-      }
+        homes = (await api("/admin/homes"))?.homes || [];
+        renderHomes();
+      } catch(e){ banner(e.message || "Could not load homes"); }
+    }
+
+    function renderHomes(){
+      const host = $("homesList");
+      host.innerHTML = "";
+      if(!homes.length){ host.innerHTML = `<div class="entity-row"><div>No homes found.</div></div>`; return; }
+      homes.forEach(home => {
+        const row = document.createElement("div");
+        row.className = "entity-row";
+        const left = document.createElement("div");
+        left.innerHTML = `
+          <div class="entity-title">${esc(home.name)}</div>
+          <div class="entity-meta">${esc(home.postcode || "")} · ${esc(home.region || "")} · ${esc(home.local_authority || "")}</div>
+          <div class="entity-meta">URN: ${esc(home.ofsted_urn || "—")} · users: ${esc(String(home.user_count ?? 0))}</div>
+        `;
+        const right = document.createElement("div");
+        right.className = "entity-actions";
+
+        const edit = document.createElement("button");
+        edit.className = "chip";
+        edit.textContent = "Edit";
+        edit.onclick = async () => {
+          const name = prompt("Home name", home.name || "");
+          if(name === null) return;
+          try{
+            await api(`/admin/homes/${home.id}`, { method:"PATCH", body:JSON.stringify({ name }) });
+            await loadHomes(); banner("Home updated");
+          } catch(e){ banner(e.message || "Update failed"); }
+        };
+
+        const archive = document.createElement("button");
+        archive.className = "chip";
+        archive.textContent = home.archived ? "Unarchive" : "Archive";
+        archive.onclick = async () => {
+          try{
+            await api(`/admin/homes/${home.id}`, { method:"PATCH", body:JSON.stringify({ archived: !home.archived }) });
+            await loadHomes(); banner("Home updated");
+          } catch(e){ banner(e.message || "Update failed"); }
+        };
+
+        right.append(edit, archive);
+        row.append(left, right);
+        host.appendChild(row);
+      });
+    }
+
+    async function createProvider(){
+      const payload = {
+        name: $("providerName").value.trim(),
+        region: $("providerRegion").value.trim() || null,
+        address: $("providerAddress").value.trim() || null,
+        postcode: $("providerPostcode").value.trim() || null,
+        local_authority: $("providerLA").value.trim() || null,
+        safeguarding_lead_name: $("providerLeadName").value.trim() || null,
+        safeguarding_lead_email: $("providerLeadEmail").value.trim() || null
+      };
+      if(!payload.name) return banner("Provider name is required");
+      try{
+        await api("/admin/providers", { method:"POST", body:JSON.stringify(payload) });
+        ["providerName","providerRegion","providerAddress","providerPostcode","providerLA","providerLeadName","providerLeadEmail"].forEach(id => $(id).value = "");
+        await loadProviders(); banner("Provider created");
+      } catch(e){ banner(e.message || "Could not create provider"); }
+    }
+
+    async function loadProviders(){
+      try{
+        providers = (await api("/admin/providers"))?.providers || [];
+        renderProviders();
+      } catch(e){ banner(e.message || "Could not load providers"); }
+    }
+
+    function renderProviders(){
+      const host = $("providersList");
+      host.innerHTML = "";
+      if(!providers.length){ host.innerHTML = `<div class="entity-row"><div>No providers found.</div></div>`; return; }
+      providers.forEach(provider => {
+        const row = document.createElement("div");
+        row.className = "entity-row";
+        const left = document.createElement("div");
+        left.innerHTML = `
+          <div class="entity-title">${esc(provider.name)}</div>
+          <div class="entity-meta">${esc(provider.region || "")} · homes: ${esc(String(provider.home_count ?? 0))}</div>
+          <div class="entity-meta">${esc(provider.safeguarding_lead_name || "No safeguarding lead")} ${provider.safeguarding_lead_email ? "· " + esc(provider.safeguarding_lead_email) : ""}</div>
+        `;
+        const right = document.createElement("div");
+        right.className = "entity-actions";
+        const edit = document.createElement("button");
+        edit.className = "chip";
+        edit.textContent = "Edit";
+        edit.onclick = async () => {
+          const name = prompt("Provider name", provider.name || "");
+          if(name === null) return;
+          try{
+            await api(`/admin/providers/${provider.id}`, { method:"PATCH", body:JSON.stringify({ name }) });
+            await loadProviders(); banner("Provider updated");
+          } catch(e){ banner(e.message || "Update failed"); }
+        };
+        const archive = document.createElement("button");
+        archive.className = "chip";
+        archive.textContent = provider.archived ? "Unarchive" : "Archive";
+        archive.onclick = async () => {
+          try{
+            await api(`/admin/providers/${provider.id}`, { method:"PATCH", body:JSON.stringify({ archived: !provider.archived }) });
+            await loadProviders(); banner("Provider updated");
+          } catch(e){ banner(e.message || "Update failed"); }
+        };
+        right.append(edit, archive);
+        row.append(left, right);
+        host.appendChild(row);
+      });
+    }
+
+    async function createDocumentRecord(){
+      const payload = {
+        title: $("docTitle").value.trim() || null,
+        document_type: $("docType").value.trim() || null,
+        home_id: $("docHomeId").value.trim() ? Number($("docHomeId").value) : null,
+        owner_id: $("docOwnerId").value.trim() ? Number($("docOwnerId").value) : null,
+        issue_date: $("docIssueDate").value || null,
+        review_date: $("docReviewDate").value || null,
+        expiry_date: $("docExpiryDate").value || null,
+        approval_status: $("docApprovalStatus").value.trim() || "not_required",
+        confidentiality_level: $("docConfLevel").value.trim() || "standard",
+        input_text: $("docInputText").value.trim() || null
+      };
+      try{
+        await api("/admin/documents", { method:"POST", body:JSON.stringify(payload) });
+        ["docTitle","docType","docHomeId","docOwnerId","docIssueDate","docReviewDate","docExpiryDate","docApprovalStatus","docConfLevel","docInputText"].forEach(id => $(id).value = "");
+        await loadDocuments(); banner("Document created");
+      } catch(e){ banner(e.message || "Could not create document"); }
+    }
+
+    async function loadDocuments(){
+      try{
+        const params = new URLSearchParams();
+        if($("docSearch").value.trim()) params.set("q", $("docSearch").value.trim());
+        if($("docHomeFilter").value.trim()) params.set("home_id", $("docHomeFilter").value.trim());
+        if($("docTypeFilter").value.trim()) params.set("document_type", $("docTypeFilter").value.trim());
+        if($("docApprovalFilter").value.trim()) params.set("approval_status", $("docApprovalFilter").value.trim());
+        docs = (await api("/admin/documents" + (params.toString()?`?${params.toString()}`:"")))?.documents || [];
+        renderDocuments();
+      } catch(e){ banner(e.message || "Could not load documents"); }
+    }
+
+    function renderDocuments(){
+      const host = $("docsList");
+      host.innerHTML = "";
+      if(!docs.length){ host.innerHTML = `<div class="entity-row"><div>No documents found.</div></div>`; return; }
+      docs.forEach(doc => {
+        const row = document.createElement("div");
+        row.className = "entity-row";
+        const left = document.createElement("div");
+        left.innerHTML = `
+          <div class="entity-title">${esc(doc.title || "Untitled document")}</div>
+          <div class="entity-meta">${esc(doc.document_type || "—")} · ${esc(doc.home_name || ("home " + (doc.home_id ?? "—")))}</div>
+          <div class="entity-meta">approval: ${esc(doc.approval_status || "not_required")} · review: ${esc(doc.review_date || "—")} · expiry: ${esc(doc.expiry_date || "—")}</div>
+        `;
+        const right = document.createElement("div");
+        right.className = "entity-actions";
+        const review = document.createElement("button");
+        review.className = "chip";
+        review.textContent = "Set approved";
+        review.onclick = async () => {
+          try{
+            await api(`/admin/documents/${doc.id}`, { method:"PATCH", body:JSON.stringify({ approval_status:"approved" }) });
+            await loadDocuments(); banner("Document updated");
+          } catch(e){ banner(e.message || "Update failed"); }
+        };
+        const titleBtn = document.createElement("button");
+        titleBtn.className = "chip";
+        titleBtn.textContent = "Edit title";
+        titleBtn.onclick = async () => {
+          const title = prompt("Document title", doc.title || "");
+          if(title === null) return;
+          try{
+            await api(`/admin/documents/${doc.id}`, { method:"PATCH", body:JSON.stringify({ title }) });
+            await loadDocuments(); banner("Document updated");
+          } catch(e){ banner(e.message || "Update failed"); }
+        };
+        right.append(review, titleBtn);
+        row.append(left, right);
+        host.appendChild(row);
+      });
+    }
+
+    async function loadBilling(){
+      try{
+        billing = await api("/admin/billing/overview");
+        renderBilling();
+      } catch(e){ banner(e.message || "Could not load billing overview"); }
+    }
+
+    function renderBilling(){
+      $("billingStats").innerHTML = "";
+      $("billingList").innerHTML = "";
+      if(!billing) return;
+      const totals = billing.totals || {};
+      const stats = [
+        ["Total users", totals.total_users ?? 0],
+        ["Active users", totals.active_users ?? 0],
+        ["Archived users", totals.archived_users ?? 0],
+        ["Active subscriptions", totals.active_subscriptions ?? 0],
+        ["Inactive subscriptions", totals.inactive_subscriptions ?? 0]
+      ];
+      stats.forEach(([l,n]) => {
+        const card = document.createElement("div");
+        card.className = "stat";
+        card.innerHTML = `<div class="n">${esc(String(n))}</div><div class="l">${esc(l)}</div>`;
+        $("billingStats").appendChild(card);
+      });
+
+      const users = billing.users || [];
+      if(!users.length){ $("billingList").innerHTML = `<div class="entity-row"><div>No billing rows found.</div></div>`; return; }
+      users.forEach(user => {
+        const row = document.createElement("div");
+        row.className = "entity-row";
+        row.innerHTML = `
+          <div>
+            <div class="entity-title">${esc([user.first_name,user.last_name].filter(Boolean).join(" ") || user.email)}</div>
+            <div class="entity-meta">${esc(user.email)} · ${esc(user.plan_name || "No plan")}</div>
+            <div class="entity-meta">status: ${esc(user.subscription_status || "inactive")} · period end: ${esc(user.current_period_end || "—")}</div>
+          </div>
+        `;
+        $("billingList").appendChild(row);
+      });
+    }
+
+    async function loadAudit(){
+      try{
+        audit = (await api("/admin/audit"))?.audit || [];
+        renderAudit();
+      } catch(e){ banner(e.message || "Could not load audit"); }
+    }
+
+    function renderAudit(){
+      const host = $("auditList");
+      host.innerHTML = "";
+      if(!audit.length){ host.innerHTML = `<div class="entity-row"><div>No audit entries found.</div></div>`; return; }
+      audit.forEach(a => {
+        const row = document.createElement("div");
+        row.className = "entity-row";
+        row.innerHTML = `
+          <div>
+            <div class="entity-title">${esc(a.action)} · ${esc(a.target_type)} ${esc(String(a.target_id ?? ""))}</div>
+            <div class="entity-meta">${esc([a.first_name,a.last_name].filter(Boolean).join(" ") || a.email || "Unknown admin")} · ${esc(a.created_at || "")}</div>
+            <div class="entity-meta">${esc(JSON.stringify(a.details || {}))}</div>
+          </div>
+        `;
+        host.appendChild(row);
+      });
+    }
+
+    function restorePrefs(){
+      document.body.classList.toggle("theme-dark", (localStorage.getItem("indicare_theme") || "light") === "dark");
+      $("lang").value = localStorage.getItem("indicare_reply_language") || DEFAULT_LANGUAGE;
+      $("mode").value = localStorage.getItem("indicare_response_mode") || "balanced";
+      syncHelpers();
+      setAdminTab(activeAdminTab());
     }
 
     function bind(){
       $("sideToggle").onclick = () => $("sidebar").classList.toggle("open");
       $("mobileMenu").onclick = () => { $("sidebar").classList.add("open"); $("overlay").classList.add("show"); };
       $("overlay").onclick = () => { $("sidebar").classList.remove("open"); $("overlay").classList.remove("show"); };
-
       $("openSettings").onclick = openSettings;
       $("closeSettings").onclick = closeSettings;
       $("settingsOverlay").onclick = closeSettings;
-
       $("newChat").onclick = resetWelcome;
       $("backWelcome").onclick = resetWelcome;
-
       $("logout").onclick = () => { localStorage.removeItem("access_token"); location.href="/login"; };
 
       $("theme").onclick = () => {
@@ -1008,6 +1423,8 @@
       $("navAssistant").onclick = () => showAssistantView();
       $("navAdmin").onclick = () => showAdminView();
 
+      document.querySelectorAll(".tabbtn").forEach(btn => btn.onclick = () => setAdminTab(btn.dataset.tab));
+
       $("search").oninput = filterConversations;
       $("input").addEventListener("keydown", e => { if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); sendMessage(); } });
       $("input").addEventListener("input", resize);
@@ -1026,20 +1443,29 @@
         currentDocumentText = null; currentDocumentName = null; docHide(); banner("Document removed");
       };
 
-      $("adminActiveToggle").onclick = () => {
-        adminCreateActive = !adminCreateActive;
-        syncHelpers();
-      };
-
+      $("adminActiveToggle").onclick = () => { adminCreateActive = !adminCreateActive; syncHelpers(); };
       $("createUserBtn").onclick = createAdminUser;
       $("refreshUsersBtn").onclick = loadAdminUsers;
-    }
+      $("userSearch").oninput = loadAdminUsers;
+      $("userRoleFilter").onchange = loadAdminUsers;
+      $("userHomeFilter").oninput = loadAdminUsers;
+      $("userArchivedFilter").onchange = loadAdminUsers;
 
-    function restorePrefs(){
-      document.body.classList.toggle("theme-dark", (localStorage.getItem("indicare_theme") || "light") === "dark");
-      $("lang").value = localStorage.getItem("indicare_reply_language") || DEFAULT_LANGUAGE;
-      $("mode").value = localStorage.getItem("indicare_response_mode") || "balanced";
-      syncHelpers();
+      $("createHomeBtn").onclick = createHome;
+      $("refreshHomesBtn").onclick = loadHomes;
+
+      $("createProviderBtn").onclick = createProvider;
+      $("refreshProvidersBtn").onclick = loadProviders;
+
+      $("createDocBtn").onclick = createDocumentRecord;
+      $("refreshDocsBtn").onclick = loadDocuments;
+      $("docSearch").oninput = loadDocuments;
+      $("docHomeFilter").oninput = loadDocuments;
+      $("docTypeFilter").oninput = loadDocuments;
+      $("docApprovalFilter").oninput = loadDocuments;
+
+      $("refreshBillingBtn").onclick = loadBilling;
+      $("refreshAuditBtn").onclick = loadAudit;
     }
 
     async function init(){
