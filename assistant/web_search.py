@@ -1,5 +1,7 @@
+import hashlib
 import logging
 import os
+import time
 from typing import Any
 
 from tavily import TavilyClient
@@ -33,6 +35,9 @@ SECONDARY_SITES = [
 
 MAX_SNIPPET_CHARS = 280
 MIN_PRIMARY_RESULTS_TO_SKIP_SECONDARY = 2
+WEB_SEARCH_CACHE_TTL_SECONDS = int(os.environ.get("WEB_SEARCH_CACHE_TTL_SECONDS", "900"))
+
+_web_search_cache: dict[str, tuple[float, str]] = {}
 
 
 def _safe_string(value: Any) -> str:
@@ -48,6 +53,45 @@ def _truncate(text: str, max_chars: int = MAX_SNIPPET_CHARS) -> str:
     if len(text) <= max_chars:
         return text
     return text[:max_chars].rsplit(" ", 1)[0].strip() + "..."
+
+
+def _cache_key(query: str, primary_limit: int, secondary_limit: int) -> str:
+    raw = f"{query}|{primary_limit}|{secondary_limit}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _cleanup_cache() -> None:
+    now = time.time()
+    expired_keys = [
+        key
+        for key, (expires_at, _value) in _web_search_cache.items()
+        if expires_at <= now
+    ]
+    for key in expired_keys:
+        _web_search_cache.pop(key, None)
+
+
+def _get_cached_value(query: str, primary_limit: int, secondary_limit: int) -> str | None:
+    _cleanup_cache()
+    key = _cache_key(query, primary_limit, secondary_limit)
+    entry = _web_search_cache.get(key)
+    if not entry:
+        return None
+
+    expires_at, value = entry
+    if expires_at <= time.time():
+        _web_search_cache.pop(key, None)
+        return None
+
+    return value
+
+
+def _set_cached_value(query: str, primary_limit: int, secondary_limit: int, value: str) -> None:
+    key = _cache_key(query, primary_limit, secondary_limit)
+    _web_search_cache[key] = (
+        time.time() + WEB_SEARCH_CACHE_TTL_SECONDS,
+        value,
+    )
 
 
 def _deduplicate_results(results: list[dict]) -> list[dict]:
@@ -122,7 +166,6 @@ def _search_sites(query: str, sites: list[str], limit: int, search_depth: str = 
         return []
 
     try:
-        # Prefer structured domain filtering where supported.
         try:
             results = client.search(
                 query=clean_query,
@@ -131,7 +174,6 @@ def _search_sites(query: str, sites: list[str], limit: int, search_depth: str = 
                 include_domains=sites,
             )
         except TypeError:
-            # Fallback if include_domains is not supported by installed Tavily SDK.
             site_filters = " OR ".join(f"site:{site}" for site in sites if _safe_string(site))
             fallback_query = f"{clean_query} ({site_filters})" if site_filters else clean_query
             results = client.search(
@@ -155,6 +197,10 @@ def web_search(query: str, primary_limit: int = 3, secondary_limit: int = 2) -> 
     if not clean_query:
         return ""
 
+    cached = _get_cached_value(clean_query, primary_limit, secondary_limit)
+    if cached is not None:
+        return cached
+
     primary_results = _search_sites(
         query=clean_query,
         sites=PRIMARY_SITES,
@@ -165,6 +211,7 @@ def web_search(query: str, primary_limit: int = 3, secondary_limit: int = 2) -> 
     primary_text = format_results(cleaned_primary, "Primary")
 
     if len(cleaned_primary) >= MIN_PRIMARY_RESULTS_TO_SKIP_SECONDARY:
+        _set_cached_value(clean_query, primary_limit, secondary_limit, primary_text)
         return primary_text
 
     secondary_results = _search_sites(
@@ -176,5 +223,6 @@ def web_search(query: str, primary_limit: int = 3, secondary_limit: int = 2) -> 
     cleaned_secondary = _clean_results(secondary_results)
     secondary_text = format_results(cleaned_secondary, "Secondary")
 
-    parts = [part for part in [primary_text, secondary_text] if part]
-    return "\n\n".join(parts)
+    result = "\n\n".join(part for part in [primary_text, secondary_text] if part)
+    _set_cached_value(clean_query, primary_limit, secondary_limit, result)
+    return result
