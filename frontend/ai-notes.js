@@ -89,10 +89,16 @@ document.addEventListener("DOMContentLoaded", () => {
     extractedActions: []
   };
 
-  const token = () => localStorage.getItem("access_token") || "";
+  const headers = (extra = {}) => ({ ...extra });
 
-  const headers = (extra = {}) =>
-    token() ? { ...extra, Authorization: `Bearer ${token()}` } : { ...extra };
+  const fetchWithSession = async (url, options = {}) => {
+    const response = await fetch(url, {
+      ...options,
+      credentials: "include",
+      headers: headers(options.headers || {})
+    });
+    return response;
+  };
 
   const safeJson = async response => {
     const text = await response.text();
@@ -104,7 +110,6 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const redirectToLogin = () => {
-    localStorage.removeItem("access_token");
     window.location.href = "/login";
   };
 
@@ -320,13 +325,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function verifyAuth() {
-    if (!token()) {
-      redirectToLogin();
-      return false;
-    }
-
     try {
-      const response = await fetch("/auth/me", { headers: headers() });
+      const response = await fetchWithSession("/auth/me");
       const data = await safeJson(response);
 
       if (!response.ok) {
@@ -530,9 +530,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 120000);
 
-      const response = await fetch("/ai-notes/transcribe", {
+      const response = await fetchWithSession("/ai-notes/transcribe", {
         method: "POST",
-        headers: headers(),
         body: form,
         signal: controller.signal
       });
@@ -603,9 +602,8 @@ document.addEventListener("DOMContentLoaded", () => {
       statusText("Applying AI...");
       setStatusMode("processing");
 
-      const response = await fetch("/ai-notes/edit", {
+      const response = await fetchWithSession("/ai-notes/edit", {
         method: "POST",
-        headers: headers(),
         body: form
       });
 
@@ -652,9 +650,8 @@ document.addEventListener("DOMContentLoaded", () => {
       statusText("Extracting actions...");
       setStatusMode("processing");
 
-      const response = await fetch("/ai-notes/extract-actions", {
+      const response = await fetchWithSession("/ai-notes/extract-actions", {
         method: "POST",
-        headers: headers(),
         body: form
       });
 
@@ -721,9 +718,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 30000);
 
-      const response = await fetch("/ai-notes/save", {
+      const response = await fetchWithSession("/ai-notes/save", {
         method: "POST",
-        headers: headers(),
         body: form,
         signal: controller.signal
       });
@@ -760,7 +756,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function loadSavedNotes() {
     try {
-      const response = await fetch("/ai-notes/history", { headers: headers() });
+      const response = await fetchWithSession("/ai-notes/history");
       const data = await safeJson(response);
 
       if (!response.ok) {
@@ -863,9 +859,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 15000);
 
-      const response = await fetch(`/ai-notes/${encodeURIComponent(id)}`, {
+      const response = await fetchWithSession(`/ai-notes/${encodeURIComponent(id)}`, {
         method: "DELETE",
-        headers: headers(),
         signal: controller.signal
       });
 
@@ -900,10 +895,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const response = await fetch(`/ai-notes/history/${encodeURIComponent(state.noteId)}/versions`, {
-        headers: headers()
-      });
-
+      const response = await fetchWithSession(`/ai-notes/history/${encodeURIComponent(state.noteId)}/versions`);
       const data = await safeJson(response);
 
       if (!response.ok) {
@@ -955,9 +947,8 @@ document.addEventListener("DOMContentLoaded", () => {
     form.append("version_id", String(versionId));
 
     try {
-      const response = await fetch(`/ai-notes/history/${encodeURIComponent(state.noteId)}/restore-version`, {
+      const response = await fetchWithSession(`/ai-notes/history/${encodeURIComponent(state.noteId)}/restore-version`, {
         method: "POST",
-        headers: headers(),
         body: form
       });
 
@@ -1014,9 +1005,8 @@ document.addEventListener("DOMContentLoaded", () => {
     form.append("template_name", els.documentTemplate?.value || "");
 
     try {
-      const response = await fetch(`/ai-notes/export/${format}`, {
+      const response = await fetchWithSession(`/ai-notes/export/${format}`, {
         method: "POST",
-        headers: headers(),
         body: form
       });
 
