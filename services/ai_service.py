@@ -31,6 +31,23 @@ GUIDANCE_KEYWORDS = [
     "sccif",
 ]
 
+LEADERSHIP_TRIGGER_KEYWORDS = [
+    "registered manager",
+    "manager review",
+    "manager oversight",
+    "audit",
+    "quality assurance",
+    "qa",
+    "inspection",
+    "ofsted",
+    "responsible individual",
+    "provider oversight",
+    "governance",
+    "action plan",
+    "service issue",
+    "pattern",
+]
+
 SEARCH_TIMEOUT_SECONDS = float(os.getenv("GUIDANCE_SEARCH_TIMEOUT_SECONDS", "3.0"))
 
 
@@ -54,7 +71,6 @@ def trim_history(history: list[dict], selected_mode: str) -> list[dict]:
 
     trimmed = history[-limit:]
 
-    # Avoid duplicating the newest user message if caller already saved it.
     if trimmed and trimmed[-1].get("role") == "user":
         trimmed = trimmed[:-1]
 
@@ -107,7 +123,19 @@ def should_search_guidance(message: str, mode: str, safeguarding_level: str, res
     return any(keyword in text for keyword in GUIDANCE_KEYWORDS)
 
 
-def choose_model(mode: str, safeguarding_level: str, response_mode: str, has_document: bool) -> str:
+def should_use_leadership_grade_reasoning(message: str, mode: str, response_mode: str) -> bool:
+    text = (message or "").lower()
+
+    if response_mode == "quick":
+        return any(keyword in text for keyword in LEADERSHIP_TRIGGER_KEYWORDS)
+
+    if mode in {"manager_review", "supervision", "support_planning", "document_review", "reflective"}:
+        return True
+
+    return any(keyword in text for keyword in LEADERSHIP_TRIGGER_KEYWORDS)
+
+
+def choose_model(mode: str, safeguarding_level: str, response_mode: str, has_document: bool, message: str) -> str:
     if safeguarding_level == "urgent":
         return "gpt-4o-mini"
 
@@ -117,7 +145,7 @@ def choose_model(mode: str, safeguarding_level: str, response_mode: str, has_doc
     if response_mode == "deep":
         return "gpt-4o"
 
-    if mode in {"support_planning", "manager_review", "supervision"}:
+    if should_use_leadership_grade_reasoning(message, mode, response_mode):
         return "gpt-4o"
 
     if has_document and mode in {"document_review", "rewrite"}:
@@ -148,6 +176,9 @@ def choose_max_tokens(mode: str, response_mode: str) -> int:
 
     if mode in {"incident_summary", "recording", "handover", "chronology"}:
         return 600
+
+    if mode in {"manager_review", "supervision", "support_planning", "document_review"}:
+        return 1000
 
     return 850
 
@@ -258,6 +289,7 @@ Do not let this stop you completing practical drafting tasks directly.
         safeguarding_level=safeguarding_level,
         response_mode=selected_mode,
         has_document=bool(trimmed_document_text),
+        message=message,
     )
     temperature = choose_temperature(mode, selected_mode)
     max_tokens = choose_max_tokens(mode, selected_mode)
