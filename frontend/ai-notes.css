@@ -15,6 +15,7 @@
   --success: #059669;
   --danger: #DC2626;
   --warning: #D97706;
+  --info: #475569;
 
   --text-main: #0F172A;
   --text-muted: #64748B;
@@ -469,6 +470,70 @@ body.notes-page {
 
 .document-box::placeholder { color: #94A3B8; }
 
+.structured-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.structured-full {
+  grid-column: 1 / -1;
+}
+
+.structured-textarea {
+  background: var(--bg-app);
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  min-height: 96px;
+  resize: vertical;
+  outline: none;
+  width: 100%;
+  font-family: var(--font-sans);
+}
+
+.structured-textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.flags-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.flag-item {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  line-height: 1.45;
+  border: 1px solid var(--border-light);
+  background: var(--bg-app);
+  color: var(--text-main);
+}
+
+.flag-item.alert {
+  background: #FEF2F2;
+  color: #991B1B;
+  border-color: #FCA5A5;
+}
+
+.flag-item.warn {
+  background: #FFFBEB;
+  color: #92400E;
+  border-color: #FCD34D;
+}
+
+.flag-item.info {
+  background: #F8FAFC;
+  color: #475569;
+  border-color: #CBD5E1;
+}
+
 .editor-footer {
   display: flex;
   justify-content: space-between;
@@ -802,6 +867,7 @@ body.notes-page {
   border: 1px solid var(--border-light);
   font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .panel-toolbar.wrap {
@@ -1027,6 +1093,10 @@ body.notes-page {
 
   .topbar {
     padding: 0 16px;
+  }
+
+  .structured-grid {
+    grid-template-columns: 1fr;
   }
 }
 
