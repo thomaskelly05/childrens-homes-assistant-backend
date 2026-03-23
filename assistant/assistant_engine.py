@@ -64,6 +64,55 @@ DOCUMENT_HEAVY_MODES = {
     "support_planning",
 }
 
+LEADERSHIP_LENS_MODES = {
+    "manager_review",
+    "supervision",
+    "support_planning",
+    "document_review",
+    "reflective",
+    "factual",
+    "general_practice",
+}
+
+RM_KEYWORDS = {
+    "manager",
+    "registered manager",
+    "deputy",
+    "oversight",
+    "quality",
+    "review",
+    "audit",
+    "action plan",
+    "monitoring",
+    "follow up",
+}
+
+OFSTED_KEYWORDS = {
+    "ofsted",
+    "inspection",
+    "inspect",
+    "sccif",
+    "quality standard",
+    "quality standards",
+    "regulation",
+    "regulations",
+    "evidence",
+    "lived experience",
+}
+
+RI_KEYWORDS = {
+    "responsible individual",
+    "provider",
+    "governance",
+    "oversight",
+    "monitoring",
+    "quality assurance",
+    "service issue",
+    "pattern",
+    "system issue",
+    "provider risk",
+}
+
 
 @dataclass
 class AssistantRequest:
@@ -88,6 +137,7 @@ class AssistantRuntimeContext:
     reflection_context: str = ""
     supervision_context: str = ""
     schema_context: str = ""
+    leadership_lens_context: str = ""
 
 
 @dataclass
@@ -172,6 +222,11 @@ def _contains_guidance_trigger(message: str) -> bool:
     return any(word in text for word in GUIDANCE_TRIGGER_WORDS)
 
 
+def _contains_any(text: str, keywords: set[str]) -> bool:
+    text = (text or "").lower()
+    return any(keyword in text for keyword in keywords)
+
+
 def _should_use_retrieval(
     mode: str,
     safeguarding_level: str,
@@ -213,6 +268,19 @@ def _should_use_reflection(mode: str, response_mode: str) -> bool:
     return mode in REFLECTIVE_MODES and response_mode == "deep"
 
 
+def _should_use_leadership_lens(mode: str, message: str, speed: str) -> bool:
+    if speed == "quick":
+        return _contains_any(message, RM_KEYWORDS | OFSTED_KEYWORDS | RI_KEYWORDS)
+
+    if mode in LEADERSHIP_LENS_MODES:
+        return True
+
+    if _contains_any(message, RM_KEYWORDS | OFSTED_KEYWORDS | RI_KEYWORDS):
+        return True
+
+    return False
+
+
 def _build_runtime_mode_context(runtime: AssistantRuntimeContext, speed: str) -> str:
     return (
         f"Detected task mode: {runtime.mode}\n"
@@ -220,6 +288,48 @@ def _build_runtime_mode_context(runtime: AssistantRuntimeContext, speed: str) ->
         f"Selected response mode: {speed}\n\n"
         f"Use these as working signals for tone, structure, caution, and practical focus."
     )
+
+
+def _build_leadership_lens_context(mode: str, safeguarding_level: str, message: str) -> str:
+    text = (message or "").lower()
+
+    emphasise_rm = mode in {"manager_review", "support_planning", "supervision", "document_review"} or _contains_any(text, RM_KEYWORDS)
+    emphasise_ofsted = _contains_any(text, OFSTED_KEYWORDS) or mode in {"manager_review", "document_review", "factual"}
+    emphasise_ri = _contains_any(text, RI_KEYWORDS) or mode in {"manager_review", "supervision"}
+
+    blocks: list[str] = []
+
+    if emphasise_rm:
+        blocks.append(
+            "REGISTERED MANAGER PRIORITIES:\n"
+            "• Check whether practice is safe, clear, defensible, and actionable.\n"
+            "• Notice what should be escalated, reviewed, followed up, or strengthened.\n"
+            "• Focus on staff consistency, care planning quality, recording quality, and management oversight."
+        )
+
+    if emphasise_ofsted:
+        blocks.append(
+            "OFSTED / INSPECTION PRIORITIES:\n"
+            "• Consider the child’s lived experience, progress, safety, and quality of support.\n"
+            "• Notice weak wording, vague evidence, inconsistencies, drift, or gaps.\n"
+            "• Strengthen clarity, impact, and evidence where relevant."
+        )
+
+    if emphasise_ri:
+        blocks.append(
+            "RESPONSIBLE INDIVIDUAL / PROVIDER OVERSIGHT PRIORITIES:\n"
+            "• Notice provider-level risks, patterns, governance concerns, or systemic weaknesses.\n"
+            "• Identify where stronger monitoring, quality assurance, or oversight may be needed.\n"
+            "• Distinguish between a one-off issue and something that may indicate a wider service concern."
+        )
+
+    if safeguarding_level in {"heightened", "urgent"}:
+        blocks.append(
+            "SAFEGUARDING LEADERSHIP PRIORITY:\n"
+            "• Keep practical safety, escalation, recording quality, and defensibility at the centre."
+        )
+
+    return "\n\n".join(blocks).strip()
 
 
 def _safe_detect_mode(message: str, history: list[dict[str, Any]]) -> str:
@@ -358,16 +468,11 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
 
     runtime = AssistantRuntimeContext()
 
-    # 1. Fastest essential signals first
     runtime.mode = _safe_detect_mode(message, history)
     runtime.safeguarding_level = _safe_assess_safeguarding(message, history)
+    runtime.schema_context = _safe_schema_context(runtime.mode, runtime.safeguarding_level)
 
-    # 2. Keep quick mode lean
-    if speed == "quick":
-        runtime.schema_context = _safe_schema_context(runtime.mode, runtime.safeguarding_level)
-    else:
-        runtime.schema_context = _safe_schema_context(runtime.mode, runtime.safeguarding_level)
-
+    if speed != "quick":
         if _should_use_memory(runtime.mode, speed):
             runtime.memory_context = _safe_memory_context(req, runtime.mode, speed)
 
@@ -388,7 +493,13 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
                 history,
             )
 
-    # 3. Base prompt
+    if _should_use_leadership_lens(runtime.mode, message, speed):
+        runtime.leadership_lens_context = _build_leadership_lens_context(
+            runtime.mode,
+            runtime.safeguarding_level,
+            message,
+        )
+
     system_prompt, user_message = build_chat_prompt(
         message=message,
         role=req.role,
@@ -397,24 +508,26 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         speed=speed,
     )
 
-    # 4. Runtime mode context
     system_prompt = _append_section(
         system_prompt,
         "RUNTIME MODE CONTEXT",
         _build_runtime_mode_context(runtime, speed),
     )
 
-    # 5. Response structure
     system_prompt = _append_section(system_prompt, "RESPONSE STRUCTURE", runtime.schema_context)
 
-    # 6. Only attach useful extra contexts
+    system_prompt = _append_section(
+        system_prompt,
+        "LEADERSHIP / INSPECTION LENS CONTEXT",
+        runtime.leadership_lens_context,
+    )
+
     if speed != "quick":
         system_prompt = _append_section(system_prompt, "MEMORY CONTEXT", runtime.memory_context)
         system_prompt = _append_section(system_prompt, "RETRIEVED CONTEXT", runtime.retrieval_context)
         system_prompt = _append_section(system_prompt, "REFLECTION CONTEXT", runtime.reflection_context)
         system_prompt = _append_section(system_prompt, "SUPERVISION CONTEXT", runtime.supervision_context)
 
-    # 7. Uploaded document context
     if req.document_text:
         trimmed_document_text = req.document_text[:_document_trim_limit(runtime.mode, speed)]
         system_prompt = _append_section(
@@ -430,7 +543,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         )
 
     logger.info(
-        "Assistant prompt package built session_id=%s mode=%s safeguarding=%s response_mode=%s memory=%s retrieval=%s reflection=%s supervision=%s",
+        "Assistant prompt package built session_id=%s mode=%s safeguarding=%s response_mode=%s memory=%s retrieval=%s reflection=%s supervision=%s leadership_lens=%s",
         req.session_id,
         runtime.mode,
         runtime.safeguarding_level,
@@ -439,6 +552,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         bool(runtime.retrieval_context),
         bool(runtime.reflection_context),
         bool(runtime.supervision_context),
+        bool(runtime.leadership_lens_context),
     )
 
     return AssistantPromptPackage(
