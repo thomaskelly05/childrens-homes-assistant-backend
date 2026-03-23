@@ -11,6 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
     useTranscriptForAiBtn: $("useTranscriptForAiBtn"),
     copyTranscriptBtn: $("copyTranscriptBtn"),
     aiBtn: $("aiBtn"),
+    runMagicBtn: $("runMagicBtn"),
     saveBtn: $("saveBtn"),
     printBtn: $("printBtn"),
     pdfBtn: $("pdfBtn"),
@@ -29,9 +30,11 @@ document.addEventListener("DOMContentLoaded", () => {
     viewFinalBtn: $("viewFinalBtn"),
     viewSourceBtn: $("viewSourceBtn"),
     viewActionsBtn: $("viewActionsBtn"),
+    viewStructuredBtn: $("viewStructuredBtn"),
     finalViewPanel: $("finalViewPanel"),
     sourceViewPanel: $("sourceViewPanel"),
     actionsViewPanel: $("actionsViewPanel"),
+    structuredViewPanel: $("structuredViewPanel"),
 
     title: $("title"),
     prompt: $("prompt"),
@@ -40,6 +43,8 @@ document.addEventListener("DOMContentLoaded", () => {
     meetingFormat: $("meetingFormat"),
     noteStatus: $("noteStatus"),
     documentTemplate: $("documentTemplate"),
+    magicOutputMode: $("magicOutputMode"),
+    incidentSeverity: $("incidentSeverity"),
 
     status: $("status"),
     saveState: $("saveState"),
@@ -52,6 +57,21 @@ document.addEventListener("DOMContentLoaded", () => {
     speakerCountBadge: $("speakerCountBadge"),
     actionCountBadge: $("actionCountBadge"),
     actionsList: $("actionsList"),
+    intelligenceFlags: $("intelligenceFlags"),
+    meetingTypeBadge: $("meetingTypeBadge"),
+
+    structuredWho: $("structuredWho"),
+    structuredWhat: $("structuredWhat"),
+    structuredStaffResponse: $("structuredStaffResponse"),
+    structuredOutcome: $("structuredOutcome"),
+    structuredInjury: $("structuredInjury"),
+    structuredFollowUp: $("structuredFollowUp"),
+    structuredBodyLocation: $("structuredBodyLocation"),
+    structuredMedicalAttention: $("structuredMedicalAttention"),
+    structuredNotifications: $("structuredNotifications"),
+    structuredMissingInfo: $("structuredMissingInfo"),
+    structuredFlags: $("structuredFlags"),
+    buildStructuredIntoNoteBtn: $("buildStructuredIntoNoteBtn"),
 
     modal: $("modal"),
     timer: $("timer"),
@@ -86,7 +106,25 @@ document.addEventListener("DOMContentLoaded", () => {
     dirty: false,
     speakerSegments: [],
     speakerMap: {},
-    extractedActions: []
+    extractedActions: [],
+    intelligenceFlags: [],
+    detectedMeetingType: "",
+    transcriptConfidence: null
+  };
+
+  const MAGIC_MODE_PROMPTS = {
+    final_note:
+      "Rewrite this as a professional children's home record. Use factual, neutral, defensible language. Separate observation from interpretation. Keep it clear, concise, and suitable for management and Ofsted review.",
+    incident_record:
+      "Rewrite this as a formal incident record for a children's home. Use chronological, factual, neutral language. Include what happened, staff response, outcome, injuries if any, notifications, and follow-up. Do not invent facts.",
+    chronology:
+      "Turn this into a chronology entry. Keep it concise, factual, date-neutral unless dates are stated, and suitable for chronology recording.",
+    safeguarding_summary:
+      "Extract and summarise all safeguarding concerns, risks, immediate actions, missing details, and follow-up needed. Use clear factual wording suitable for a manager or safeguarding lead.",
+    manager_summary:
+      "Rewrite this as a manager summary. Highlight key issues, risks, patterns, decisions, actions, follow-up, and anything requiring oversight or escalation.",
+    supervision_record:
+      "Rewrite this as a formal supervision record using professional language. Include discussion themes, well-being, performance/support issues, reflection, agreed actions, and next steps."
   };
 
   const headers = (extra = {}) => ({ ...extra });
@@ -203,27 +241,51 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function setNoteView(view) {
-    const isFinal = view === "final";
-    const isSource = view === "source";
-    const isActions = view === "actions";
+    const views = {
+      final: [els.viewFinalBtn, els.finalViewPanel],
+      source: [els.viewSourceBtn, els.sourceViewPanel],
+      actions: [els.viewActionsBtn, els.actionsViewPanel],
+      structured: [els.viewStructuredBtn, els.structuredViewPanel]
+    };
 
-    els.viewFinalBtn?.classList.toggle("active", isFinal);
-    els.viewSourceBtn?.classList.toggle("active", isSource);
-    els.viewActionsBtn?.classList.toggle("active", isActions);
-
-    els.finalViewPanel?.classList.toggle("active", isFinal);
-    els.sourceViewPanel?.classList.toggle("active", isSource);
-    els.actionsViewPanel?.classList.toggle("active", isActions);
+    Object.entries(views).forEach(([key, [btn, panel]]) => {
+      btn?.classList.toggle("active", key === view);
+      panel?.classList.toggle("active", key === view);
+    });
   }
 
   function updateLockState() {
     const locked = els.noteStatus?.value === "approved";
 
-    [els.title, els.prompt, els.note, els.meetingFormat, els.documentTemplate].forEach(el => {
+    [
+      els.title,
+      els.prompt,
+      els.note,
+      els.meetingFormat,
+      els.documentTemplate,
+      els.magicOutputMode,
+      els.incidentSeverity,
+      els.structuredWho,
+      els.structuredWhat,
+      els.structuredStaffResponse,
+      els.structuredOutcome,
+      els.structuredInjury,
+      els.structuredFollowUp,
+      els.structuredBodyLocation,
+      els.structuredMedicalAttention,
+      els.structuredNotifications,
+      els.structuredMissingInfo
+    ].forEach(el => {
       if (el) el.disabled = locked;
     });
 
-    [els.aiBtn, els.useTranscriptForAiBtn, els.copyTranscriptBtn].forEach(el => {
+    [
+      els.aiBtn,
+      els.useTranscriptForAiBtn,
+      els.copyTranscriptBtn,
+      els.runMagicBtn,
+      els.buildStructuredIntoNoteBtn
+    ].forEach(el => {
       if (el) el.disabled = locked;
     });
 
@@ -247,6 +309,143 @@ document.addEventListener("DOMContentLoaded", () => {
         return `${speaker}: ${segment.text}`;
       })
       .join("\n\n");
+  }
+
+  function buildStructuredIncidentText() {
+    return [
+      `Who was involved:\n${(els.structuredWho?.value || "").trim()}`,
+      `What happened:\n${(els.structuredWhat?.value || "").trim()}`,
+      `What staff did:\n${(els.structuredStaffResponse?.value || "").trim()}`,
+      `Outcome:\n${(els.structuredOutcome?.value || "").trim()}`,
+      `Injury details:\n${(els.structuredInjury?.value || "").trim()}`,
+      `Body location:\n${(els.structuredBodyLocation?.value || "").trim()}`,
+      `Medical attention:\n${(els.structuredMedicalAttention?.value || "").trim()}`,
+      `Notifications made:\n${(els.structuredNotifications?.value || "").trim()}`,
+      `Follow-up actions:\n${(els.structuredFollowUp?.value || "").trim()}`,
+      `Missing information:\n${(els.structuredMissingInfo?.value || "").trim()}`,
+      `Severity:\n${(els.incidentSeverity?.value || "").trim()}`
+    ].join("\n\n").trim();
+  }
+
+  function detectMeetingTypeFromContent(text) {
+    const t = String(text || "").toLowerCase();
+
+    if (t.includes("supervision")) return "Supervision";
+    if (t.includes("safeguarding")) return "Safeguarding";
+    if (t.includes("pep")) return "PEP";
+    if (t.includes("incident") || t.includes("injury") || t.includes("restraint")) return "Incident";
+    if (t.includes("review")) return "Review";
+    if (t.includes("manager")) return "Manager";
+    return "";
+  }
+
+  function buildIntelligenceFlags() {
+    const source = [
+      buildSpeakerAwareTranscript(),
+      els.note?.value || "",
+      buildStructuredIncidentText()
+    ].join("\n").toLowerCase();
+
+    const flags = [];
+
+    if (source.includes("hit") || source.includes("kicked") || source.includes("punched") || source.includes("restraint")) {
+      flags.push({
+        level: "alert",
+        text: "Possible physical incident or restrictive practice mentioned."
+      });
+    }
+
+    if (source.includes("missing") || source.includes("ran away") || source.includes("absent without")) {
+      flags.push({
+        level: "alert",
+        text: "Possible missing-from-home / absent-without-authorisation issue."
+      });
+    }
+
+    if (source.includes("injury") || source.includes("bruise") || source.includes("mark")) {
+      if (!(els.structuredInjury?.value || "").trim()) {
+        flags.push({
+          level: "warn",
+          text: "Possible injury mentioned but structured injury detail is blank."
+        });
+      }
+    }
+
+    if ((source.includes("safeguard") || source.includes("allegation") || source.includes("disclosure")) &&
+        !(els.structuredFollowUp?.value || "").trim()) {
+      flags.push({
+        level: "warn",
+        text: "Possible safeguarding concern mentioned but follow-up actions are not clearly recorded."
+      });
+    }
+
+    if ((els.structuredWhat?.value || "").trim() && !(els.structuredStaffResponse?.value || "").trim()) {
+      flags.push({
+        level: "warn",
+        text: "Incident detail present but staff response is missing."
+      });
+    }
+
+    if ((els.structuredWhat?.value || "").trim() && !(els.structuredOutcome?.value || "").trim()) {
+      flags.push({
+        level: "warn",
+        text: "Incident detail present but outcome is missing."
+      });
+    }
+
+    if ((els.structuredWhat?.value || "").trim() && !(els.structuredFollowUp?.value || "").trim()) {
+      flags.push({
+        level: "warn",
+        text: "Incident detail present but follow-up is missing."
+      });
+    }
+
+    if (!uniqueSpeakers().length && (els.transcript?.value || "").trim()) {
+      flags.push({
+        level: "info",
+        text: "Transcript available but speaker separation is not populated."
+      });
+    }
+
+    state.intelligenceFlags = flags;
+    renderIntelligenceFlags(flags);
+    renderStructuredFlags(flags);
+
+    return flags;
+  }
+
+  function renderIntelligenceFlags(flags) {
+    if (!els.intelligenceFlags) return;
+    els.intelligenceFlags.innerHTML = "";
+
+    if (!flags.length) {
+      els.intelligenceFlags.innerHTML = `<div class="empty-text">No flags yet.</div>`;
+      return;
+    }
+
+    flags.forEach(flag => {
+      const item = document.createElement("div");
+      item.className = `flag-item ${flag.level || "info"}`;
+      item.textContent = flag.text || "";
+      els.intelligenceFlags.appendChild(item);
+    });
+  }
+
+  function renderStructuredFlags(flags) {
+    if (!els.structuredFlags) return;
+    els.structuredFlags.innerHTML = "";
+
+    if (!flags.length) {
+      els.structuredFlags.innerHTML = `<div class="empty-text">No live flags yet.</div>`;
+      return;
+    }
+
+    flags.forEach(flag => {
+      const item = document.createElement("div");
+      item.className = `flag-item ${flag.level || "info"}`;
+      item.textContent = flag.text || "";
+      els.structuredFlags.appendChild(item);
+    });
   }
 
   function renderSpeakerMap() {
@@ -517,7 +716,7 @@ document.addEventListener("DOMContentLoaded", () => {
     state.mediaRecorder.stop();
   }
 
-  async function transcribeAudio(autoAi = false) {
+  async function transcribeAudio(autoMagic = false) {
     if (!state.blob) {
       alert("Please record audio first.");
       return;
@@ -552,6 +751,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       state.speakerSegments = Array.isArray(data.segments) ? data.segments : [];
       state.speakerMap = {};
+      state.transcriptConfidence = data.confidence ?? null;
+
       renderSpeakerMap();
       renderSpeakerTimeline();
 
@@ -560,13 +761,35 @@ document.addEventListener("DOMContentLoaded", () => {
       if (els.note && !els.note.value.trim()) els.note.value = transcript;
       if (els.title && !els.title.value.trim()) els.title.value = titleFrom(transcript);
 
+      const detectedType = data.detected_meeting_type || detectMeetingTypeFromContent(transcript);
+      state.detectedMeetingType = detectedType || "";
+      if (els.meetingTypeBadge) {
+        els.meetingTypeBadge.textContent = state.detectedMeetingType || "Not detected";
+      }
+      if (els.meetingFormat && !els.meetingFormat.value && state.detectedMeetingType) {
+        els.meetingFormat.value = state.detectedMeetingType;
+      }
+
+      if (Array.isArray(data.flags) && data.flags.length) {
+        state.intelligenceFlags = data.flags.map(text => ({ level: "warn", text }));
+      } else {
+        state.intelligenceFlags = [];
+      }
+
+      if (Array.isArray(data.actions)) {
+        state.extractedActions = data.actions;
+        renderActions();
+      }
+
+      buildIntelligenceFlags();
+
       markDirty();
       statusText("Transcript ready");
       setStatusMode("success");
       showToast("Transcription complete.");
 
-      if (autoAi && transcript) {
-        await applyAI(true);
+      if (autoMagic && transcript) {
+        await runMagicNotes();
       }
     } catch (error) {
       console.error("Transcription error:", error);
@@ -578,6 +801,26 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function getMagicInstruction() {
+    const selectedMode = els.magicOutputMode?.value || "final_note";
+    const base = MAGIC_MODE_PROMPTS[selectedMode] || MAGIC_MODE_PROMPTS.final_note;
+    const custom = (els.prompt?.value || "").trim();
+
+    const meetingType = els.meetingFormat?.value || state.detectedMeetingType || "";
+    const severity = els.incidentSeverity?.value || "";
+    const flags = state.intelligenceFlags.map(x => `- ${x.text}`).join("\n");
+    const structured = buildStructuredIncidentText();
+
+    return [
+      base,
+      meetingType ? `Meeting type: ${meetingType}` : "",
+      severity ? `Incident severity: ${severity}` : "",
+      flags ? `Known flags:\n${flags}` : "",
+      structured.replace(/\s/g, "") ? `Structured incident fields:\n${structured}` : "",
+      custom ? `Additional instruction:\n${custom}` : ""
+    ].filter(Boolean).join("\n\n");
+  }
+
   async function applyAI(silent = false) {
     if (els.noteStatus?.value === "approved") {
       alert("Approved notes are locked.");
@@ -586,7 +829,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const sourceText = (els.note?.value || buildSpeakerAwareTranscript()).trim();
     const instruction = (els.prompt?.value || "").trim()
-      || "Turn this into a professional meeting note using clear, factual language.";
+      || "Rewrite this as a professional children's home record. Use clear, factual, neutral language. Separate observation from interpretation. Include safeguarding awareness and ensure it is suitable for Ofsted inspection.";
 
     if (!sourceText) {
       alert("There is no text to improve.");
@@ -623,6 +866,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (els.note) els.note.value = data.text || sourceText;
       if (els.title && !els.title.value.trim()) els.title.value = titleFrom(els.note.value);
 
+      buildIntelligenceFlags();
       markDirty();
       statusText("Note ready");
       setStatusMode("success");
@@ -636,8 +880,69 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  async function runMagicNotes() {
+    if (els.noteStatus?.value === "approved") {
+      alert("Approved notes are locked.");
+      return;
+    }
+
+    const sourceText = buildSpeakerAwareTranscript() || (els.transcript?.value || "").trim() || (els.note?.value || "").trim();
+    if (!sourceText) {
+      alert("There is no transcript or note content to process.");
+      return;
+    }
+
+    buildIntelligenceFlags();
+    const instruction = getMagicInstruction();
+
+    const form = new FormData();
+    form.append("text", sourceText);
+    form.append("mode", "custom");
+    form.append("instruction", instruction);
+
+    try {
+      statusText("Running Magic Notes...");
+      setStatusMode("processing");
+
+      const response = await fetchWithSession("/ai-notes/edit", {
+        method: "POST",
+        body: form
+      });
+
+      const data = await safeJson(response);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          redirectToLogin();
+          return;
+        }
+        alert(data.detail || "Magic Notes failed.");
+        statusText("Ready");
+        setStatusMode("idle");
+        return;
+      }
+
+      if (els.note) els.note.value = data.text || sourceText;
+      if (els.title && !els.title.value.trim()) {
+        els.title.value = titleFrom(els.note.value);
+      }
+
+      markDirty();
+      buildIntelligenceFlags();
+      setNoteView("final");
+      statusText("Magic Notes ready");
+      setStatusMode("success");
+      showToast("Magic Notes output generated.");
+    } catch (error) {
+      console.error(error);
+      alert("Could not connect to AI service.");
+      statusText("Ready");
+      setStatusMode("idle");
+    }
+  }
+
   async function extractActionsFromNote() {
-    const text = (els.note?.value || "").trim();
+    const text = (els.note?.value || "").trim() || buildSpeakerAwareTranscript();
     if (!text) {
       alert("There is no note to extract actions from.");
       return;
@@ -705,8 +1010,24 @@ document.addEventListener("DOMContentLoaded", () => {
     form.append("meeting_format", els.meetingFormat?.value || "");
     form.append("template_name", els.documentTemplate?.value || "");
     form.append("note_status", els.noteStatus?.value || "draft");
+    form.append("magic_output_mode", els.magicOutputMode?.value || "final_note");
+    form.append("incident_severity", els.incidentSeverity?.value || "");
     form.append("speaker_segments_json", JSON.stringify(state.speakerSegments || []));
     form.append("speaker_map_json", JSON.stringify(state.speakerMap || {}));
+    form.append("structured_incident_json", JSON.stringify({
+      who: els.structuredWho?.value || "",
+      what: els.structuredWhat?.value || "",
+      staff_response: els.structuredStaffResponse?.value || "",
+      outcome: els.structuredOutcome?.value || "",
+      injury: els.structuredInjury?.value || "",
+      body_location: els.structuredBodyLocation?.value || "",
+      medical_attention: els.structuredMedicalAttention?.value || "",
+      notifications: els.structuredNotifications?.value || "",
+      follow_up: els.structuredFollowUp?.value || "",
+      missing_info: els.structuredMissingInfo?.value || ""
+    }));
+    form.append("flags_json", JSON.stringify(state.intelligenceFlags || []));
+    form.append("actions_json", JSON.stringify(state.extractedActions || []));
 
     if (state.noteId) form.append("note_id", String(state.noteId));
 
@@ -786,7 +1107,9 @@ document.addEventListener("DOMContentLoaded", () => {
         note.final_note,
         note.note_status,
         note.meeting_format,
-        note.template_name
+        note.template_name,
+        note.magic_output_mode,
+        note.incident_severity
       ].join(" ").toLowerCase();
 
       return !query || haystack.includes(query);
@@ -828,7 +1151,8 @@ document.addEventListener("DOMContentLoaded", () => {
     state.noteId = note.id;
     state.speakerSegments = Array.isArray(note.speaker_segments) ? note.speaker_segments : [];
     state.speakerMap = note.speaker_map || {};
-    state.extractedActions = [];
+    state.extractedActions = Array.isArray(note.actions) ? note.actions : [];
+    state.intelligenceFlags = Array.isArray(note.flags) ? note.flags : [];
 
     if (els.title) els.title.value = note.title || "";
     if (els.transcript) els.transcript.value = note.transcript || "";
@@ -836,10 +1160,29 @@ document.addEventListener("DOMContentLoaded", () => {
     if (els.meetingFormat) els.meetingFormat.value = note.meeting_format || "";
     if (els.documentTemplate) els.documentTemplate.value = note.template_name || "blank";
     if (els.noteStatus) els.noteStatus.value = note.note_status || "draft";
+    if (els.magicOutputMode) els.magicOutputMode.value = note.magic_output_mode || "final_note";
+    if (els.incidentSeverity) els.incidentSeverity.value = note.incident_severity || "";
+
+    const structured = note.structured_incident || {};
+    if (els.structuredWho) els.structuredWho.value = structured.who || "";
+    if (els.structuredWhat) els.structuredWhat.value = structured.what || "";
+    if (els.structuredStaffResponse) els.structuredStaffResponse.value = structured.staff_response || "";
+    if (els.structuredOutcome) els.structuredOutcome.value = structured.outcome || "";
+    if (els.structuredInjury) els.structuredInjury.value = structured.injury || "";
+    if (els.structuredBodyLocation) els.structuredBodyLocation.value = structured.body_location || "";
+    if (els.structuredMedicalAttention) els.structuredMedicalAttention.value = structured.medical_attention || "";
+    if (els.structuredNotifications) els.structuredNotifications.value = structured.notifications || "";
+    if (els.structuredFollowUp) els.structuredFollowUp.value = structured.follow_up || "";
+    if (els.structuredMissingInfo) els.structuredMissingInfo.value = structured.missing_info || "";
+
+    state.detectedMeetingType = note.meeting_format || "";
+    if (els.meetingTypeBadge) els.meetingTypeBadge.textContent = state.detectedMeetingType || "Not detected";
 
     renderSpeakerMap();
     renderSpeakerTimeline();
     renderActions();
+    renderIntelligenceFlags(state.intelligenceFlags);
+    renderStructuredFlags(state.intelligenceFlags);
 
     setSaveState("idle", "Loaded");
     state.dirty = false;
@@ -972,12 +1315,19 @@ document.addEventListener("DOMContentLoaded", () => {
         if (els.meetingFormat) els.meetingFormat.value = restored.meeting_format || "";
         if (els.documentTemplate) els.documentTemplate.value = restored.template_name || "blank";
         if (els.noteStatus) els.noteStatus.value = restored.note_status || "draft";
+        if (els.magicOutputMode) els.magicOutputMode.value = restored.magic_output_mode || "final_note";
+        if (els.incidentSeverity) els.incidentSeverity.value = restored.incident_severity || "";
         state.speakerSegments = Array.isArray(restored.speaker_segments) ? restored.speaker_segments : [];
         state.speakerMap = restored.speaker_map || {};
+        state.extractedActions = Array.isArray(restored.actions) ? restored.actions : [];
+        state.intelligenceFlags = Array.isArray(restored.flags) ? restored.flags : [];
       }
 
       renderSpeakerMap();
       renderSpeakerTimeline();
+      renderActions();
+      renderIntelligenceFlags(state.intelligenceFlags);
+      renderStructuredFlags(state.intelligenceFlags);
       closeVersionsModal();
       await loadSavedNotes();
       markDirty();
@@ -1091,6 +1441,9 @@ document.addEventListener("DOMContentLoaded", () => {
     state.speakerSegments = [];
     state.speakerMap = {};
     state.extractedActions = [];
+    state.intelligenceFlags = [];
+    state.detectedMeetingType = "";
+    state.transcriptConfidence = null;
 
     if (els.title) els.title.value = "";
     if (els.prompt) els.prompt.value = "";
@@ -1099,12 +1452,33 @@ document.addEventListener("DOMContentLoaded", () => {
     if (els.meetingFormat) els.meetingFormat.value = "";
     if (els.documentTemplate) els.documentTemplate.value = "blank";
     if (els.noteStatus) els.noteStatus.value = "draft";
+    if (els.magicOutputMode) els.magicOutputMode.value = "final_note";
+    if (els.incidentSeverity) els.incidentSeverity.value = "";
     if (els.transcribeBtn) els.transcribeBtn.disabled = true;
     if (els.audio) els.audio.removeAttribute("src");
+
+    [
+      els.structuredWho,
+      els.structuredWhat,
+      els.structuredStaffResponse,
+      els.structuredOutcome,
+      els.structuredInjury,
+      els.structuredFollowUp,
+      els.structuredBodyLocation,
+      els.structuredMedicalAttention,
+      els.structuredNotifications,
+      els.structuredMissingInfo
+    ].forEach(el => {
+      if (el) el.value = "";
+    });
+
+    if (els.meetingTypeBadge) els.meetingTypeBadge.textContent = "Not detected";
 
     renderSpeakerMap();
     renderSpeakerTimeline();
     renderActions();
+    renderIntelligenceFlags([]);
+    renderStructuredFlags([]);
 
     state.dirty = false;
     statusText("Ready");
@@ -1131,6 +1505,19 @@ document.addEventListener("DOMContentLoaded", () => {
     showToast("Transcript copied into final note.");
   }
 
+  function buildStructuredIntoNote() {
+    const structuredText = buildStructuredIncidentText();
+    if (!structuredText.replace(/\s/g, "")) {
+      alert("There is no structured incident content yet.");
+      return;
+    }
+    if (els.note) els.note.value = structuredText;
+    buildIntelligenceFlags();
+    markDirty();
+    setNoteView("final");
+    showToast("Structured incident copied into final note.");
+  }
+
   function bindPromptButtons() {
     document.querySelectorAll("[data-fill]").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -1138,6 +1525,15 @@ document.addEventListener("DOMContentLoaded", () => {
         if (els.prompt) els.prompt.value = value;
         markDirty();
         setNoteView("final");
+      });
+    });
+
+    document.querySelectorAll(".magic-mode-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const mode = btn.getAttribute("data-magic-mode") || "final_note";
+        if (els.magicOutputMode) els.magicOutputMode.value = mode;
+        markDirty();
+        runMagicNotes();
       });
     });
   }
@@ -1150,11 +1546,27 @@ document.addEventListener("DOMContentLoaded", () => {
       els.note,
       els.meetingFormat,
       els.noteStatus,
-      els.documentTemplate
+      els.documentTemplate,
+      els.magicOutputMode,
+      els.incidentSeverity,
+      els.structuredWho,
+      els.structuredWhat,
+      els.structuredStaffResponse,
+      els.structuredOutcome,
+      els.structuredInjury,
+      els.structuredFollowUp,
+      els.structuredBodyLocation,
+      els.structuredMedicalAttention,
+      els.structuredNotifications,
+      els.structuredMissingInfo
     ].forEach(el => {
-      el?.addEventListener("input", markDirty);
+      el?.addEventListener("input", () => {
+        markDirty();
+        buildIntelligenceFlags();
+      });
       el?.addEventListener("change", () => {
         markDirty();
+        buildIntelligenceFlags();
         if (el === els.noteStatus) updateLockState();
       });
     });
@@ -1176,6 +1588,7 @@ document.addEventListener("DOMContentLoaded", () => {
     els.viewFinalBtn?.addEventListener("click", () => setNoteView("final"));
     els.viewSourceBtn?.addEventListener("click", () => setNoteView("source"));
     els.viewActionsBtn?.addEventListener("click", () => setNoteView("actions"));
+    els.viewStructuredBtn?.addEventListener("click", () => setNoteView("structured"));
   }
 
   function bindEvents() {
@@ -1202,8 +1615,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     els.useTranscriptForAiBtn?.addEventListener("click", useTranscriptForAi);
     els.copyTranscriptBtn?.addEventListener("click", useTranscriptForAi);
+    els.buildStructuredIntoNoteBtn?.addEventListener("click", buildStructuredIntoNote);
 
     els.aiBtn?.addEventListener("click", () => applyAI(false));
+    els.runMagicBtn?.addEventListener("click", runMagicNotes);
+
     els.saveBtn?.addEventListener("click", saveNote);
     els.refreshBtn?.addEventListener("click", loadSavedNotes);
     els.pdfBtn?.addEventListener("click", () => exportNote("pdf"));
@@ -1251,6 +1667,8 @@ document.addEventListener("DOMContentLoaded", () => {
     renderSpeakerMap();
     renderSpeakerTimeline();
     renderActions();
+    renderIntelligenceFlags([]);
+    renderStructuredFlags([]);
     setActiveTab("workspace");
     setNoteView("final");
     statusText("Ready");
