@@ -1,28 +1,21 @@
 from __future__ import annotations
 
 import logging
-import os
+import time
 from typing import Any
 
-import psycopg2
 from psycopg2.extras import RealDictCursor
+
+from db.connection import get_db_connection, release_db_connection
 
 logger = logging.getLogger("indicare.memory")
 
+MEMORY_CACHE_TTL_SECONDS = 120
+MAX_MESSAGE_SUMMARY_CHARS = 160
 
-# ---------------------------------------------------------
-# DATABASE
-# ---------------------------------------------------------
-def get_connection():
-    database_url = os.environ.get("DATABASE_URL")
-    if not database_url:
-        raise RuntimeError("DATABASE_URL environment variable missing")
-    return psycopg2.connect(database_url)
+_memory_cache: dict[str, tuple[float, list[dict[str, Any]]]] = {}
 
 
-# ---------------------------------------------------------
-# HELPERS
-# ---------------------------------------------------------
 def _safe_string(value: Any) -> str:
     if value is None:
         return ""
@@ -31,7 +24,7 @@ def _safe_string(value: Any) -> str:
     return str(value).strip()
 
 
-def _trim_text(text: str, limit: int = 180) -> str:
+def _trim_text(text: str, limit: int = MAX_MESSAGE_SUMMARY_CHARS) -> str:
     text = _safe_string(text)
     if len(text) <= limit:
         return text
@@ -47,15 +40,62 @@ def _normalise_role(role: str) -> str:
     return role.title() if role else ""
 
 
-# ---------------------------------------------------------
-# RECENT MESSAGE LOADING
-# ---------------------------------------------------------
-def load_recent_messages(session_id: str, limit: int = 4) -> list[dict[str, Any]]:
-    conn = None
-
+def _normalise_session_id(session_id: str) -> int | None:
     try:
-        safe_limit = max(1, min(int(limit), 8))
-        conn = get_connection()
+        return int(session_id)
+    except (TypeError, ValueError):
+        return None
+
+
+def _cache_key(session_id: int, limit: int) -> str:
+    return f"{session_id}:{limit}"
+
+
+def _cleanup_cache() -> None:
+    now = time.time()
+    expired = [
+        key for key, (expires_at, _rows) in _memory_cache.items()
+        if expires_at <= now
+    ]
+    for key in expired:
+        _memory_cache.pop(key, None)
+
+
+def _get_cached_messages(session_id: int, limit: int) -> list[dict[str, Any]] | None:
+    _cleanup_cache()
+    entry = _memory_cache.get(_cache_key(session_id, limit))
+    if not entry:
+        return None
+
+    expires_at, rows = entry
+    if expires_at <= time.time():
+        _memory_cache.pop(_cache_key(session_id, limit), None)
+        return None
+
+    return rows
+
+
+def _set_cached_messages(session_id: int, limit: int, rows: list[dict[str, Any]]) -> None:
+    _memory_cache[_cache_key(session_id, limit)] = (
+        time.time() + MEMORY_CACHE_TTL_SECONDS,
+        rows,
+    )
+
+
+def load_recent_messages(session_id: str, limit: int = 4) -> list[dict[str, Any]]:
+    normalised_session_id = _normalise_session_id(session_id)
+    if normalised_session_id is None:
+        return []
+
+    safe_limit = max(1, min(int(limit), 6))
+
+    cached = _get_cached_messages(normalised_session_id, safe_limit)
+    if cached is not None:
+        return cached
+
+    conn = None
+    try:
+        conn = get_db_connection()
 
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
@@ -63,57 +103,25 @@ def load_recent_messages(session_id: str, limit: int = 4) -> list[dict[str, Any]
                 SELECT role, message, created_at
                 FROM messages
                 WHERE conversation_id = %s
-                ORDER BY created_at DESC
+                ORDER BY created_at DESC, id DESC
                 LIMIT %s
                 """,
-                (session_id, safe_limit),
+                (normalised_session_id, safe_limit),
             )
             fetched = cur.fetchall()
 
         rows = list(reversed(fetched or []))
+        _set_cached_messages(normalised_session_id, safe_limit, rows)
         return rows
 
-    except Exception as e:
-        logger.exception("Failed to load recent messages for session %s: %s", session_id, e)
+    except Exception:
+        logger.exception("Failed to load recent messages for session_id=%s", session_id)
         return []
 
     finally:
-        if conn:
-            conn.close()
+        release_db_connection(conn)
 
 
-def save_message(session_id: str, role: str, message: str) -> bool:
-    conn = None
-
-    try:
-        conn = get_connection()
-
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO messages (conversation_id, role, message)
-                VALUES (%s, %s, %s)
-                """,
-                (session_id, role, message),
-            )
-            conn.commit()
-
-        return True
-
-    except Exception as e:
-        if conn:
-            conn.rollback()
-        logger.exception("Failed to save message for session %s: %s", session_id, e)
-        return False
-
-    finally:
-        if conn:
-            conn.close()
-
-
-# ---------------------------------------------------------
-# MEMORY SUMMARIES
-# ---------------------------------------------------------
 def summarise_recent_messages(
     messages: list[dict[str, Any]],
     max_items: int = 4,
@@ -122,10 +130,10 @@ def summarise_recent_messages(
     if not messages:
         return ""
 
-    safe_max_items = max(1, min(int(max_items), 6))
+    safe_max_items = max(1, min(int(max_items), 5))
     trimmed = messages[-safe_max_items:]
 
-    lines = []
+    lines: list[str] = []
     for item in trimmed:
         role = _normalise_role(item.get("role"))
         message = _safe_string(item.get("message"))
@@ -136,8 +144,7 @@ def summarise_recent_messages(
         if not include_assistant and role.lower() == "assistant":
             continue
 
-        message = _trim_text(message, 180)
-        lines.append(f"• {role}: {message}")
+        lines.append(f"• {role}: {_trim_text(message)}")
 
     if not lines:
         return ""
@@ -149,7 +156,7 @@ def build_user_preference_context(user_context: dict[str, Any] | None = None) ->
     if not user_context:
         return ""
 
-    parts = []
+    parts: list[str] = []
 
     role = _safe_string(user_context.get("role"))
     preferred_style = _safe_string(user_context.get("preferred_style"))
@@ -193,9 +200,6 @@ def build_mode_memory_hint(mode: str, message: str) -> str:
     return ""
 
 
-# ---------------------------------------------------------
-# MAIN MEMORY API
-# ---------------------------------------------------------
 def get_memory_context(
     session_id: str,
     user_context: dict[str, Any] | None = None,
@@ -203,12 +207,14 @@ def get_memory_context(
     mode: str = "",
     recent_limit: int = 4,
 ) -> str:
+    include_assistant = mode in {"reflective", "supervision", "manager_review"}
+
     recent_messages = load_recent_messages(session_id=session_id, limit=recent_limit)
 
     recent_context = summarise_recent_messages(
         recent_messages,
         max_items=recent_limit,
-        include_assistant=True,
+        include_assistant=include_assistant,
     )
     preference_context = build_user_preference_context(user_context)
     mode_hint = build_mode_memory_hint(mode=mode, message=message)
