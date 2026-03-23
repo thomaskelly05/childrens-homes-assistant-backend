@@ -45,7 +45,6 @@ def get_bearer_token(
 def _get_request_token(request: Request, bearer_token: str | None) -> str | None:
     cookie_token = (request.cookies.get(SESSION_COOKIE_NAME) or "").strip()
 
-    # Prefer cookie session for browser flows, fallback to Authorization header
     if cookie_token:
         return cookie_token
 
@@ -85,10 +84,6 @@ def _is_billing_exempt_path(request_path: str) -> bool:
 
 
 def _get_billing_safe(conn, user_id: int) -> dict | None:
-    """
-    Fetch billing without breaking authentication if billing tables/columns
-    are temporarily unavailable during deploys or migrations.
-    """
     try:
         billing = get_user_billing_by_user_id(conn, user_id)
         return dict(billing) if billing else None
@@ -178,7 +173,7 @@ def get_current_user(
 
     if not is_exempt:
         billing = _get_billing_safe(conn, user_id)
-        subscription_active = bool(billing and billing.get("is_active"))
+        subscription_active = bool(billing and billing.get("subscription_active"))
         subscription_status = billing.get("subscription_status") if billing else "inactive"
         plan_name = billing.get("plan_name") if billing else None
 
@@ -188,12 +183,11 @@ def get_current_user(
                 detail="Subscription required",
             )
     else:
-        # Optional best-effort billing lookup for exempt routes.
         try:
             billing = get_user_billing_by_user_id(conn, user_id)
             if billing:
                 billing = dict(billing)
-                subscription_active = bool(billing.get("is_active"))
+                subscription_active = bool(billing.get("subscription_active"))
                 subscription_status = billing.get("subscription_status") or "inactive"
                 plan_name = billing.get("plan_name")
         except Exception:
