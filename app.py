@@ -11,7 +11,12 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from db.connection import close_db_pool, init_db_pool
+from db.connection import (
+    close_db_pool,
+    get_db_connection,
+    init_db_pool,
+    release_db_connection,
+)
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),
@@ -80,13 +85,19 @@ def shutdown_event():
 
 def include_router(module_path: str):
     module = importlib.import_module(module_path)
-    router = getattr(module, "router", None)
 
-    if router is None:
+    main_router = getattr(module, "router", None)
+    compat_router = getattr(module, "compat_router", None)
+
+    if main_router is None:
         raise RuntimeError(f"No router found in {module_path}")
 
-    app.include_router(router)
-    logger.info("[IndiCare] Loaded router: %s", module_path)
+    app.include_router(main_router)
+    logger.info("[IndiCare] Loaded router: %s (router)", module_path)
+
+    if compat_router is not None:
+        app.include_router(compat_router)
+        logger.info("[IndiCare] Loaded router: %s (compat_router)", module_path)
 
 
 ROUTERS = [
@@ -152,19 +163,12 @@ def health():
 
 @app.get("/health/ready")
 def health_ready():
-    from db.connection import db_pool
-
+    conn = None
     try:
-        if db_pool is None:
-            init_db_pool()
-
-        conn = db_pool.getconn()
-        try:
-            with conn.cursor() as cur:
-                cur.execute("SELECT 1")
-                cur.fetchone()
-        finally:
-            db_pool.putconn(conn)
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1")
+            cur.fetchone()
 
         return {"ok": True, "ready": True}
     except Exception as exc:
@@ -173,6 +177,8 @@ def health_ready():
             status_code=503,
             content={"ok": False, "ready": False, "error": str(exc)},
         )
+    finally:
+        release_db_connection(conn)
 
 
 @app.exception_handler(Exception)
