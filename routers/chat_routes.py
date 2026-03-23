@@ -1,16 +1,19 @@
+import asyncio
 import io
+import json
 import logging
+import time
+from typing import Literal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 from psycopg2.extras import RealDictCursor
-from pydantic import BaseModel
-
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from db.connection import get_db, get_db_connection, release_db_connection
 from auth.current_user import get_current_user
+from db.connection import get_db, get_db_connection, release_db_connection
 from services.ai_service import generate_ai_stream
 
 try:
@@ -23,24 +26,36 @@ try:
 except Exception:
     PdfReader = None
 
-router = APIRouter(
-    prefix="/chat",
-    tags=["Chat"]
-)
+router = APIRouter(prefix="/chat", tags=["Chat"])
 
 logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
 
+MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
+MAX_MESSAGE_CHARS = 20000
+MAX_TITLE_CHARS = 120
+MAX_DOCUMENT_TEXT_CHARS = 120000
+MAX_HISTORY_MESSAGES = 16
+HEARTBEAT_INTERVAL_SECONDS = 15
+
 
 class RenameConversation(BaseModel):
-    title: str
+    title: str = Field(min_length=1, max_length=MAX_TITLE_CHARS)
 
 
 class EditMessagePayload(BaseModel):
-    message: str
+    message: str = Field(min_length=1, max_length=MAX_MESSAGE_CHARS)
     document_text: str | None = None
-    document_name: str | None = None
-    response_mode: str | None = "balanced"
+    document_name: str | None = Field(default=None, max_length=255)
+    response_mode: Literal["quick", "balanced", "deep"] = "balanced"
+
+
+class ChatRequestPayload(BaseModel):
+    message: str = Field(min_length=1, max_length=MAX_MESSAGE_CHARS)
+    conversation_id: int | None = None
+    document_text: str | None = None
+    document_name: str | None = Field(default=None, max_length=255)
+    response_mode: Literal["quick", "balanced", "deep"] = "balanced"
 
 
 def ensure_conversation_owner(conn, conversation_id: int, user_id: int) -> None:
@@ -71,8 +86,30 @@ def get_conversation_history(conn, conversation_id: int):
             """,
             (conversation_id,),
         )
-        rows = cur.fetchall()
-    return rows
+        return cur.fetchall()
+
+
+def get_trimmed_conversation_history(conn, conversation_id: int):
+    """
+    Faster chat responses usually come from smaller prompts.
+    Keep only the most recent message window, then re-sort oldest->newest.
+    """
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT id, role, message, created_at
+            FROM (
+                SELECT id, role, message, created_at
+                FROM messages
+                WHERE conversation_id = %s
+                ORDER BY created_at DESC, id DESC
+                LIMIT %s
+            ) recent_messages
+            ORDER BY created_at ASC, id ASC
+            """,
+            (conversation_id, MAX_HISTORY_MESSAGES),
+        )
+        return cur.fetchall()
 
 
 def get_conversation_document(conn, conversation_id: int):
@@ -87,11 +124,28 @@ def get_conversation_document(conn, conversation_id: int):
             """,
             (conversation_id,),
         )
-        row = cur.fetchone()
-    return row
+        return cur.fetchone()
+
+
+def normalise_optional_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = value.strip()
+    return cleaned or None
+
+
+def clip_text(value: str | None, max_chars: int) -> str | None:
+    if value is None:
+        return None
+    if len(value) <= max_chars:
+        return value
+    return value[:max_chars]
 
 
 def upsert_conversation_document(conn, conversation_id: int, filename: str, document_text: str):
+    filename = normalise_optional_text(filename) or "document"
+    document_text = clip_text(document_text, MAX_DOCUMENT_TEXT_CHARS) or ""
+
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
@@ -115,19 +169,17 @@ def upsert_conversation_document(conn, conversation_id: int, filename: str, docu
                 """,
                 (filename, document_text, existing["id"]),
             )
-            row = cur.fetchone()
-        else:
-            cur.execute(
-                """
-                INSERT INTO conversation_documents (conversation_id, filename, document_text)
-                VALUES (%s, %s, %s)
-                RETURNING id, filename, document_text, created_at
-                """,
-                (conversation_id, filename, document_text),
-            )
-            row = cur.fetchone()
+            return cur.fetchone()
 
-    return row
+        cur.execute(
+            """
+            INSERT INTO conversation_documents (conversation_id, filename, document_text)
+            VALUES (%s, %s, %s)
+            RETURNING id, filename, document_text, created_at
+            """,
+            (conversation_id, filename, document_text),
+        )
+        return cur.fetchone()
 
 
 def delete_conversation_document(conn, conversation_id: int):
@@ -139,9 +191,9 @@ def delete_conversation_document(conn, conversation_id: int):
 
 
 def generate_title(message: str) -> str:
-    cleaned = (message or "").strip()
-    if len(cleaned) > 60:
-        cleaned = cleaned[:60]
+    cleaned = " ".join((message or "").strip().split())
+    if len(cleaned) > MAX_TITLE_CHARS:
+        cleaned = cleaned[:MAX_TITLE_CHARS].rstrip()
     return cleaned or "New chat"
 
 
@@ -159,10 +211,6 @@ def prep_chat_db_sync(conn, user_id, message, conversation_id, document_text, do
             )
             conversation_id = cur.fetchone()["id"]
     else:
-        try:
-            conversation_id = int(conversation_id)
-        except (TypeError, ValueError):
-            raise ValueError("Invalid conversation ID")
         ensure_conversation_owner(conn, conversation_id, user_id)
 
     if document_text and document_name:
@@ -181,29 +229,11 @@ def prep_chat_db_sync(conn, user_id, message, conversation_id, document_text, do
             (conversation_id, message),
         )
 
-    history = get_conversation_history(conn, conversation_id)
+    # Use trimmed history for faster model calls.
+    history = get_trimmed_conversation_history(conn, conversation_id)
+    doc_text = clip_text(doc_text, MAX_DOCUMENT_TEXT_CHARS)
+
     return conversation_id, history, doc_text, doc_name
-
-
-def save_ai_message_sync(conversation_id: int, ai_text: str):
-    conn = None
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO messages (conversation_id, role, message)
-                VALUES (%s, 'assistant', %s)
-                """,
-                (conversation_id, ai_text),
-            )
-        conn.commit()
-    except Exception:
-        if conn is not None and not conn.closed:
-            conn.rollback()
-        logger.exception("Failed to save assistant message for conversation %s", conversation_id)
-    finally:
-        release_db_connection(conn)
 
 
 def prep_edit_db_sync(conn, user_id, message_id, new_message, document_text, document_name):
@@ -245,8 +275,33 @@ def prep_edit_db_sync(conn, user_id, message_id, new_message, document_text, doc
             (conversation_id, message_id),
         )
 
-    history = get_conversation_history(conn, conversation_id)
+    history = get_trimmed_conversation_history(conn, conversation_id)
+    doc_text = clip_text(doc_text, MAX_DOCUMENT_TEXT_CHARS)
+
     return conversation_id, history, doc_text, doc_name
+
+
+def save_ai_message_sync(conversation_id: int, ai_text: str):
+    ai_text = clip_text(ai_text, 200000) or ""
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO messages (conversation_id, role, message)
+                VALUES (%s, 'assistant', %s)
+                """,
+                (conversation_id, ai_text),
+            )
+        conn.commit()
+    except Exception:
+        if conn is not None and not conn.closed:
+            conn.rollback()
+        logger.exception("Failed to save assistant message for conversation_id=%s", conversation_id)
+    finally:
+        release_db_connection(conn)
 
 
 def extract_text_from_txt(file_bytes: bytes) -> str:
@@ -261,7 +316,7 @@ def extract_text_from_docx(file_bytes: bytes) -> str:
         raise HTTPException(status_code=500, detail="DOCX support is not installed on the server")
 
     document = Document(io.BytesIO(file_bytes))
-    parts = []
+    parts: list[str] = []
 
     for paragraph in document.paragraphs:
         text = (paragraph.text or "").strip()
@@ -286,11 +341,10 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
         raise HTTPException(status_code=500, detail="PDF support is not installed on the server")
 
     reader = PdfReader(io.BytesIO(file_bytes))
-    parts = []
+    parts: list[str] = []
 
     for page in reader.pages:
-        text = page.extract_text() or ""
-        text = text.strip()
+        text = (page.extract_text() or "").strip()
         if text:
             parts.append(text)
 
@@ -305,7 +359,13 @@ def extract_document_text(filename: str, file_bytes: bytes) -> str:
     if lower.endswith(".docx"):
         return extract_text_from_docx(file_bytes)
     if lower.endswith(".pdf"):
-        return extract_text_from_pdf(file_bytes)
+        text = extract_text_from_pdf(file_bytes)
+        if not text.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="No readable text found in PDF. The file may be scanned or image-based.",
+            )
+        return text
 
     raise HTTPException(
         status_code=400,
@@ -318,277 +378,51 @@ def sse_data(payload: str) -> str:
     return "".join(f"data: {line}\n" for line in safe_payload.split("\n")) + "\n"
 
 
+def sse_event(event_name: str, payload: str) -> str:
+    safe_payload = (payload or "").replace("\r\n", "\n").replace("\r", "\n")
+    lines = [f"event: {event_name}\n"]
+    lines.extend(f"data: {line}\n" for line in safe_payload.split("\n"))
+    lines.append("\n")
+    return "".join(lines)
+
+
 def sse_done() -> str:
     return "event: done\ndata: [DONE]\n\n"
 
 
-@router.post("/upload")
-@limiter.limit("10/minute")
-async def upload_chat_document(
-    request: Request,
-    file: UploadFile = File(...),
-    conversation_id: int | None = Form(default=None),
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    max_file_size = 5 * 1024 * 1024
-    contents = await file.read()
-
-    if len(contents) > max_file_size:
-        raise HTTPException(status_code=413, detail="File too large. Maximum size is 5MB to protect the server.")
-
-    filename = file.filename or "document"
-    if not contents:
-        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+async def stream_with_heartbeat(token_stream, *, heartbeat_interval: int = HEARTBEAT_INTERVAL_SECONDS):
+    pending_task = asyncio.create_task(token_stream.__anext__())
 
     try:
-        extracted_text = extract_document_text(filename, contents)
-    except HTTPException:
-        raise
-    except Exception:
-        logger.exception("Document extraction failed")
-        raise HTTPException(status_code=500, detail="Could not read the uploaded document")
+        while True:
+            done, _pending = await asyncio.wait(
+                {pending_task},
+                timeout=heartbeat_interval,
+                return_when=asyncio.FIRST_COMPLETED,
+            )
 
-    if not extracted_text.strip():
-        raise HTTPException(status_code=400, detail="No readable text was found in the uploaded document")
+            if pending_task in done:
+                try:
+                    token = pending_task.result()
+                except StopAsyncIteration:
+                    break
 
-    if conversation_id is not None:
-        ensure_conversation_owner(conn, conversation_id, current_user["user_id"])
-        upsert_conversation_document(conn, conversation_id, filename, extracted_text)
-
-    return {
-        "ok": True,
-        "filename": filename,
-        "text": extracted_text,
-        "preview": extracted_text[:1200],
-    }
-
-
-@router.get("/conversations")
-def list_conversations(conn=Depends(get_db), current_user=Depends(get_current_user)):
-    user_id = current_user["user_id"]
-
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(
-            """
-            SELECT id, title, created_at
-            FROM conversations
-            WHERE user_id = %s
-            ORDER BY created_at DESC
-            """,
-            (user_id,),
-        )
-        rows = cur.fetchall()
-
-    return rows
-
-
-@router.get("/conversations/{conversation_id}")
-def load_conversation(conversation_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
-    user_id = current_user["user_id"]
-    ensure_conversation_owner(conn, conversation_id, user_id)
-
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(
-            """
-            SELECT id, role, message, created_at
-            FROM messages
-            WHERE conversation_id = %s
-            ORDER BY created_at ASC, id ASC
-            """,
-            (conversation_id,),
-        )
-        rows = cur.fetchall()
-
-    document = get_conversation_document(conn, conversation_id)
-
-    return {
-        "messages": rows,
-        "document": {
-            "filename": document["filename"],
-            "text": document["document_text"],
-            "created_at": document["created_at"],
-        } if document else None,
-    }
-
-
-@router.delete("/conversations/{conversation_id}/document")
-def remove_conversation_document(conversation_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
-    ensure_conversation_owner(conn, conversation_id, current_user["user_id"])
-    delete_conversation_document(conn, conversation_id)
-    return {"ok": True, "message": "Document removed"}
-
-
-@router.post("/")
-@limiter.limit("20/minute")
-async def chat(request: Request, conn=Depends(get_db), current_user=Depends(get_current_user)):
-    user_id = current_user["user_id"]
-    body = await request.json()
-
-    message = (body.get("message") or "").strip()
-    conversation_id = body.get("conversation_id")
-    document_text = (body.get("document_text") or "").strip() or None
-    document_name = (body.get("document_name") or "").strip() or None
-
-    response_mode = (body.get("response_mode") or "balanced").strip().lower()
-    if response_mode not in {"quick", "balanced", "deep"}:
-        response_mode = "balanced"
-
-    if not message:
-        raise HTTPException(status_code=400, detail="Message required")
-
-    if conversation_id in ("", None):
-        conversation_id = None
-
-    try:
-        conversation_id, history, doc_text, doc_name = prep_chat_db_sync(
-            conn, user_id, message, conversation_id, document_text, document_name
-        )
-        logger.info("Prepared chat DB state for conversation_id=%s", conversation_id)
-    except ValueError as exc:
-        logger.warning("Invalid chat request: %s", exc)
-        raise HTTPException(status_code=400, detail=str(exc))
-    except Exception:
-        logger.exception("Failed preparing chat DB state")
-        raise HTTPException(status_code=500, detail="Could not prepare chat request")
-
-    async def stream():
-        ai_text = ""
-        try:
-            logger.info("Starting AI stream for conversation_id=%s", conversation_id)
-
-            async for token in generate_ai_stream(
-                message=message,
-                session_id=str(conversation_id),
-                history=history,
-                document_text=doc_text,
-                document_name=doc_name,
-                response_mode=response_mode,
-            ):
                 if token:
-                    ai_text += token
-                    yield sse_data(token)
+                    yield token
 
-            logger.info("Finished AI stream for conversation_id=%s", conversation_id)
+                pending_task = asyncio.create_task(token_stream.__anext__())
+            else:
+                yield ": ping\n\n"
+    finally:
+        if not pending_task.done():
+            pending_task.cancel()
+            with contextlib.suppress(Exception):
+                await pending_task
 
-        except Exception:
-            logger.exception("AI stream failed for conversation %s", conversation_id)
-            fallback = "Sorry, something went wrong while generating the response. Please try again."
-            ai_text += fallback
-            yield sse_data(fallback)
 
-        finally:
-            if ai_text.strip():
-                save_ai_message_sync(conversation_id, ai_text)
-            yield sse_done()
-
+def build_streaming_response(streamer):
     return StreamingResponse(
-        stream(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache, no-transform",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
-
-
-@router.post("/conversations/{conversation_id}/rename")
-def rename_conversation(
-    conversation_id: int,
-    payload: RenameConversation,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    ensure_conversation_owner(conn, conversation_id, current_user["user_id"])
-    title = payload.title.strip()
-
-    if not title:
-        raise HTTPException(status_code=400, detail="Title is required")
-
-    with conn.cursor() as cur:
-        cur.execute(
-            "UPDATE conversations SET title = %s WHERE id = %s",
-            (title, conversation_id),
-        )
-
-    return {"ok": True, "message": "Conversation renamed"}
-
-
-@router.delete("/conversations/{conversation_id}")
-def delete_conversation(conversation_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
-    ensure_conversation_owner(conn, conversation_id, current_user["user_id"])
-
-    with conn.cursor() as cur:
-        cur.execute("DELETE FROM conversations WHERE id = %s", (conversation_id,))
-
-    return {"ok": True, "message": "Conversation deleted"}
-
-
-@router.post("/messages/{message_id}/edit")
-@limiter.limit("20/minute")
-async def edit_message_and_regenerate(
-    request: Request,
-    message_id: int,
-    payload: EditMessagePayload,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    user_id = current_user["user_id"]
-    new_message = payload.message.strip()
-
-    response_mode = (payload.response_mode or "balanced").strip().lower()
-    if response_mode not in {"quick", "balanced", "deep"}:
-        response_mode = "balanced"
-
-    if not new_message:
-        raise HTTPException(status_code=400, detail="Message is required")
-
-    try:
-        conversation_id, history, document_text, document_name = prep_edit_db_sync(
-            conn, user_id, message_id, new_message, payload.document_text, payload.document_name
-        )
-        logger.info("Prepared edit/regenerate DB state for conversation_id=%s", conversation_id)
-    except ValueError as exc:
-        if str(exc) == "Message not found":
-            raise HTTPException(status_code=404, detail=str(exc))
-        raise HTTPException(status_code=400, detail=str(exc))
-    except Exception:
-        logger.exception("Failed preparing edit/regenerate DB state")
-        raise HTTPException(status_code=500, detail="Could not prepare message regeneration")
-
-    async def stream():
-        ai_text = ""
-        try:
-            logger.info("Starting regenerate AI stream for conversation_id=%s", conversation_id)
-
-            async for token in generate_ai_stream(
-                message=new_message,
-                session_id=str(conversation_id),
-                history=history,
-                document_text=document_text,
-                document_name=document_name,
-                response_mode=response_mode,
-            ):
-                if token:
-                    ai_text += token
-                    yield sse_data(token)
-
-            logger.info("Finished regenerate AI stream for conversation_id=%s", conversation_id)
-
-        except Exception:
-            logger.exception("AI regenerate failed for conversation %s", conversation_id)
-            fallback = "Sorry, something went wrong while regenerating. Please try again."
-            ai_text += fallback
-            yield sse_data(fallback)
-
-        finally:
-            if ai_text.strip():
-                save_ai_message_sync(conversation_id, ai_text)
-            yield sse_done()
-
-    return StreamingResponse(
-        stream(),
+        streamer,
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache, no-transform",
