@@ -1,206 +1,721 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IndiCare OS</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>IndiCare OS | Command Centre</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
-<style>
-body{margin:0;font-family:Inter, sans-serif;background:#f4f7fb;color:#1e293b}
-.hidden{display:none}
-.shell{display:flex;height:100vh}
-.sidebar{width:240px;background:#fff;border-right:1px solid #ddd;padding:12px}
-.workspace{flex:1;display:flex;flex-direction:column}
+  <style>
+    :root{
+      --bg:#f4f7fb;
+      --panel:#fff;
+      --chat:#fff;
+      --input:#fff;
+      --user:#e0e9f5;
+      --text:#1e293b;
+      --muted:#64748b;
+      --line:#e2e8f0;
+      --accent:#2563eb;
+      --danger:#dc2626;
+      --success:#16a34a;
+      --warn:#d97706;
+      --shadow:0 10px 25px -3px rgb(0 0 0 / .08);
+      --mini:68px;
+      --full:280px;
+    }
 
-.navbtn{display:block;width:100%;padding:10px;border-radius:8px;margin-bottom:6px;text-align:left;cursor:pointer}
-.navbtn.active{background:#2563eb;color:#fff}
+    *{box-sizing:border-box;margin:0;padding:0;font-family:Inter,sans-serif}
+    html,body{height:100%}
+    body{
+      background:var(--bg);
+      color:var(--text);
+      overflow:hidden;
+    }
 
-.panel{flex:1;overflow:auto;padding:20px}
-.card{border:1px solid #ddd;border-radius:10px;padding:14px;margin-bottom:12px;background:#fff}
+    button,input,select,textarea{
+      font:inherit;
+      border:none;
+      outline:none;
+      background:none;
+      color:inherit;
+    }
 
-.field,.area,.sel{width:100%;padding:8px;margin-top:4px;margin-bottom:10px}
-.action{background:#2563eb;color:#fff;padding:10px;border:none;border-radius:8px;cursor:pointer}
+    button{cursor:pointer}
+    .hidden{display:none!important}
 
-.entity-row{border:1px solid #ddd;padding:10px;border-radius:8px;margin-bottom:8px}
-</style>
+    .shell{
+      display:flex;
+      height:100vh;
+    }
+
+    /* SIDEBAR */
+    .sidebar{
+      width:var(--mini);
+      background:var(--panel);
+      border-right:1px solid var(--line);
+      overflow:hidden;
+      transition:.25s;
+      z-index:20;
+    }
+
+    .sidebar:hover{
+      width:var(--full);
+    }
+
+    .side-inner{
+      width:var(--full);
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      padding:12px;
+    }
+
+    .side-top{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      height:48px;
+      margin-bottom:8px;
+    }
+
+    .icon{
+      width:40px;
+      height:40px;
+      border-radius:10px;
+      color:var(--muted);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex:0 0 auto;
+    }
+
+    .brand{
+      font-weight:600;
+      color:var(--accent);
+      white-space:nowrap;
+    }
+
+    .side-content{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      height:100%;
+      opacity:0;
+      pointer-events:none;
+      transition:.15s;
+    }
+
+    .sidebar:hover .side-content{
+      opacity:1;
+      pointer-events:auto;
+    }
+
+    .nav{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      margin-top:6px;
+    }
+
+    .navbtn{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      width:100%;
+      padding:12px;
+      border-radius:10px;
+      color:var(--muted);
+      text-align:left;
+      transition:.2s;
+    }
+
+    .navbtn.active,
+    .navbtn:hover{
+      background:rgba(37,99,235,.08);
+      color:var(--accent);
+    }
+
+    /* WORKSPACE */
+    .workspace{
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      min-width:0;
+      background:var(--chat);
+    }
+
+    .header{
+      height:60px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 16px;
+      border-bottom:1px solid var(--line);
+      background:var(--chat);
+    }
+
+    .header-left{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width:0;
+    }
+
+    .title{
+      font-weight:600;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .panel{
+      flex:1;
+      overflow:auto;
+      padding:24px 16px;
+    }
+
+    .panel-inner{
+      max-width:1100px;
+      margin:0 auto;
+    }
+
+    .welcome{
+      text-align:center;
+      margin-top:12vh;
+    }
+
+    .welcome h1{
+      font-size:2.2rem;
+      letter-spacing:-.04em;
+      margin-bottom:8px;
+    }
+
+    .welcome p{
+      color:var(--muted);
+    }
+
+    /* COMMON CARDS / INPUTS */
+    .card{
+      border:1px solid var(--line);
+      background:var(--panel);
+      border-radius:14px;
+      padding:16px;
+      box-shadow:var(--shadow);
+      margin-bottom:16px;
+    }
+
+    .card h3{
+      color:var(--accent);
+      margin-bottom:12px;
+      font-size:1rem;
+    }
+
+    .field,.area,.sel{
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:var(--panel);
+      padding:10px 12px;
+      color:var(--text);
+      width:100%;
+      margin-top:6px;
+      margin-bottom:12px;
+    }
+
+    .area{
+      min-height:120px;
+      resize:vertical;
+    }
+
+    .action{
+      background:var(--accent);
+      color:#fff;
+      padding:12px 16px;
+      border-radius:12px;
+      font-weight:600;
+      transition:.2s;
+    }
+
+    .action:hover{
+      filter:brightness(.97);
+    }
+
+    .ghost{
+      border:1px solid var(--line);
+      background:var(--panel);
+      color:var(--text);
+      padding:12px 16px;
+      border-radius:12px;
+      font-weight:600;
+    }
+
+    .entity-row{
+      border:1px solid var(--line);
+      background:var(--panel);
+      border-radius:14px;
+      padding:14px;
+      margin-bottom:10px;
+      box-shadow:var(--shadow);
+    }
+
+    /* ASSISTANT */
+    .messages{
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+      margin-top:20px;
+    }
+
+    .msg-row{
+      display:flex;
+      gap:12px;
+      width:100%;
+    }
+
+    .msg-row.user{
+      flex-direction:row-reverse;
+    }
+
+    .avatar{
+      width:32px;
+      height:32px;
+      border-radius:8px;
+      background:var(--line);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:.75rem;
+      font-weight:600;
+      flex-shrink:0;
+    }
+
+    .msg-row.assistant .avatar{
+      background:var(--accent);
+      color:#fff;
+    }
+
+    .msg-bubble{
+      max-width:82%;
+      line-height:1.6;
+      overflow-wrap:anywhere;
+      padding:12px 16px;
+      border-radius:18px;
+      background:var(--panel);
+      border:1px solid var(--line);
+      box-shadow:var(--shadow);
+    }
+
+    .msg-row.user .msg-bubble{
+      background:var(--user);
+      border-radius:18px 18px 4px 18px;
+      color:#0f172a;
+      border-color:transparent;
+    }
+
+    .assistant-input-wrap{
+      border-top:1px solid var(--line);
+      background:var(--chat);
+      padding:12px 16px;
+    }
+
+    .assistant-input-inner{
+      max-width:820px;
+      margin:0 auto;
+    }
+
+    .ibox{
+      background:var(--input);
+      border:1px solid var(--line);
+      border-radius:24px;
+      padding:8px 12px;
+      box-shadow:var(--shadow);
+    }
+
+    .irow{
+      display:flex;
+      align-items:flex-end;
+      gap:8px;
+    }
+
+    .ta{
+      flex:1;
+      resize:none;
+      max-height:140px;
+      min-height:44px;
+      padding:10px 4px;
+      background:transparent;
+      color:var(--text);
+    }
+
+    .send{
+      width:42px;
+      height:42px;
+      border-radius:50%;
+      background:var(--accent);
+      color:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:700;
+      flex:0 0 auto;
+    }
+
+    .section-title{
+      font-size:1.6rem;
+      font-weight:600;
+      letter-spacing:-.03em;
+      margin-bottom:14px;
+    }
+
+    .grid-2{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:16px;
+    }
+
+    .library-list,
+    .users-list,
+    .docs-list{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    @media (max-width:900px){
+      .grid-2{
+        grid-template-columns:1fr;
+      }
+    }
+
+    @media (max-width:768px){
+      .sidebar{
+        width:78px;
+      }
+
+      .sidebar:hover{
+        width:78px;
+      }
+
+      .side-content{
+        opacity:1;
+        pointer-events:auto;
+      }
+
+      .brand{
+        display:none;
+      }
+
+      .navbtn{
+        justify-content:center;
+      }
+
+      .navbtn span{
+        display:none;
+      }
+
+      .panel{
+        padding:16px 10px;
+      }
+
+      .welcome{
+        margin-top:8vh;
+      }
+
+      .welcome h1{
+        font-size:1.85rem;
+      }
+
+      .msg-bubble{
+        max-width:90%;
+      }
+    }
+  </style>
 </head>
 
 <body>
+  <div class="shell">
 
-<div class="shell">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="side-inner">
+        <div class="side-top">
+          <div class="icon">☰</div>
+          <div class="brand">IndiCare Command</div>
+        </div>
 
-<!-- SIDEBAR -->
-<div class="sidebar">
-  <button id="navAssistant" class="navbtn active">Assistant</button>
-  <button id="navLibrary" class="navbtn">Library</button>
-  <button id="navManager" class="navbtn hidden">Manager</button>
-  <button id="navAdmin" class="navbtn hidden">Admin</button>
-</div>
+        <div class="side-content">
+          <div class="nav">
+            <button id="navAssistant" class="navbtn active" type="button">
+              <span>Assistant</span>
+            </button>
+            <button id="navLibrary" class="navbtn" type="button">
+              <span>Library</span>
+            </button>
+            <button id="navManager" class="navbtn hidden" type="button">
+              <span>Manager</span>
+            </button>
+            <button id="navAdmin" class="navbtn hidden" type="button">
+              <span>Admin</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
 
-<!-- MAIN -->
-<div class="workspace">
+    <!-- MAIN -->
+    <main class="workspace">
+      <header class="header">
+        <div class="header-left">
+          <div class="title">IndiCare OS</div>
+        </div>
+      </header>
 
-<!-- ASSISTANT -->
-<section id="assistantPanel" class="panel">
-  <h2>Assistant</h2>
-  <textarea id="input" class="area" placeholder="Type here..."></textarea>
-  <button id="send" class="action">Send</button>
-  <div id="messages"></div>
-</section>
+      <!-- ASSISTANT -->
+      <section id="assistantPanel" class="panel">
+        <div class="panel-inner">
+          <div class="welcome">
+            <h1>Ready.</h1>
+            <p>Your assistant is ready to help with documentation, guidance, and drafting.</p>
+          </div>
 
-<!-- LIBRARY -->
-<section id="libraryPanel" class="panel hidden">
-  <h2>Library</h2>
-  <div id="libraryList"></div>
-</section>
+          <div id="messages" class="messages"></div>
+        </div>
+      </section>
 
-<!-- MANAGER -->
-<section id="managerPanel" class="panel hidden">
-  <h2>Manager Dashboard</h2>
+      <!-- LIBRARY -->
+      <section id="libraryPanel" class="panel hidden">
+        <div class="panel-inner">
+          <h2 class="section-title">Library</h2>
+          <div class="card">
+            <h3>Documents</h3>
+            <div id="libraryList" class="library-list"></div>
+          </div>
+        </div>
+      </section>
 
-  <div class="card">
-    <h3>Onboard Staff</h3>
-    <input id="mgrFirst" class="field" placeholder="First name">
-    <input id="mgrLast" class="field" placeholder="Last name">
-    <input id="mgrEmail" class="field" placeholder="Email">
-    <input id="mgrPass" class="field" placeholder="Password">
-    <select id="mgrRole" class="sel">
-      <option value="staff">staff</option>
-      <option value="manager">manager</option>
-    </select>
-    <button id="createStaff" class="action">Create Staff</button>
+      <!-- MANAGER -->
+      <section id="managerPanel" class="panel hidden">
+        <div class="panel-inner">
+          <h2 class="section-title">Manager Dashboard</h2>
+
+          <div class="grid-2">
+            <div>
+              <div class="card">
+                <h3>Onboard Staff</h3>
+                <input id="mgrFirst" class="field" placeholder="First name">
+                <input id="mgrLast" class="field" placeholder="Last name">
+                <input id="mgrEmail" class="field" placeholder="Email">
+                <input id="mgrPass" class="field" placeholder="Password" type="password">
+                <select id="mgrRole" class="sel">
+                  <option value="staff">staff</option>
+                  <option value="manager">manager</option>
+                </select>
+                <button id="createStaff" class="action" type="button">Create Staff</button>
+              </div>
+
+              <div class="card">
+                <h3>Home Documents</h3>
+                <input id="mgrDocTitle" class="field" placeholder="Title">
+                <textarea id="mgrDocText" class="area" placeholder="Write document content"></textarea>
+                <button id="saveDoc" class="action" type="button">Save</button>
+              </div>
+            </div>
+
+            <div>
+              <div class="card">
+                <h3>Staff List</h3>
+                <div id="mgrUsers" class="users-list"></div>
+              </div>
+
+              <div class="card">
+                <h3>Saved Documents</h3>
+                <div id="mgrDocs" class="docs-list"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ADMIN -->
+      <section id="adminPanel" class="panel hidden">
+        <div class="panel-inner">
+          <h2 class="section-title">Admin</h2>
+          <div class="card">
+            <h3>Users</h3>
+            <div id="adminUsers"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ASSISTANT INPUT -->
+      <div class="assistant-input-wrap">
+        <div class="assistant-input-inner">
+          <div class="ibox">
+            <div class="irow">
+              <textarea id="input" class="ta" rows="1" placeholder="Type here..."></textarea>
+              <button id="send" class="send" type="button">➜</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
   </div>
 
-  <div class="card">
-    <h3>Staff List</h3>
-    <div id="mgrUsers"></div>
-  </div>
+  <script>
+    let currentUser = null;
 
-  <div class="card">
-    <h3>Home Documents</h3>
-    <input id="mgrDocTitle" class="field" placeholder="Title">
-    <textarea id="mgrDocText" class="area"></textarea>
-    <button id="saveDoc" class="action">Save</button>
-    <div id="mgrDocs"></div>
-  </div>
-</section>
+    const $ = id => document.getElementById(id);
 
-<!-- ADMIN -->
-<section id="adminPanel" class="panel hidden">
-  <h2>Admin</h2>
-  <div id="adminUsers"></div>
-</section>
+    function escapeHtml(str){
+      return String(str || "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
+    }
 
-</div>
-</div>
+    async function api(url, options={}){
+      const res = await fetch(url,{
+        ...options,
+        credentials:"include",
+        headers:{
+          "Content-Type":"application/json",
+          ...(options.headers||{})
+        }
+      });
 
-<script>
+      if(res.status===401){
+        location.href="/login";
+        return null;
+      }
 
-/* ========= STATE ========= */
-let currentUser = null;
+      const data = await res.json();
+      return data;
+    }
 
-/* ========= API ========= */
-async function api(url, options={}){
-  const res = await fetch(url,{
-    ...options,
-    credentials:"include",
-    headers:{ "Content-Type":"application/json", ...(options.headers||{}) }
-  });
-  if(res.status===401){location.href="/login";return}
-  return res.json();
-}
+    function show(panel){
+      ["assistant","library","manager","admin"].forEach(p=>{
+        $(p + "Panel").classList.add("hidden");
+        $("nav" + p.charAt(0).toUpperCase() + p.slice(1)).classList.remove("active");
+      });
 
-/* ========= NAV ========= */
-function show(panel){
-  ["assistant","library","manager","admin"].forEach(p=>{
-    document.getElementById(p+"Panel").classList.add("hidden");
-    document.getElementById("nav"+p.charAt(0).toUpperCase()+p.slice(1)).classList.remove("active");
-  });
-  document.getElementById(panel+"Panel").classList.remove("hidden");
-  document.getElementById("nav"+panel.charAt(0).toUpperCase()+panel.slice(1)).classList.add("active");
-}
+      $(panel + "Panel").classList.remove("hidden");
+      $("nav" + panel.charAt(0).toUpperCase() + panel.slice(1)).classList.add("active");
 
-navAssistant.onclick=()=>show("assistant");
-navLibrary.onclick=()=>show("library");
-navManager.onclick=()=>show("manager");
-navAdmin.onclick=()=>show("admin");
+      const inputWrap = document.querySelector(".assistant-input-wrap");
+      inputWrap.classList.toggle("hidden", panel !== "assistant");
+    }
 
-/* ========= USER ========= */
-async function loadUser(){
-  const data = await api("/auth/me");
-  currentUser = data.user;
+    $("navAssistant").onclick = () => show("assistant");
+    $("navLibrary").onclick = () => show("library");
+    $("navManager").onclick = () => show("manager");
+    $("navAdmin").onclick = () => show("admin");
 
-  if(currentUser.role==="manager"){
-    navManager.classList.remove("hidden");
-  }
-  if(currentUser.role==="admin"){
-    navAdmin.classList.remove("hidden");
-  }
-}
+    async function loadUser(){
+      const data = await api("/auth/me");
+      if(!data || !data.user) return;
+      currentUser = data.user;
 
-/* ========= ASSISTANT ========= */
-send.onclick=async()=>{
-  const text = input.value.trim();
-  if(!text) return;
+      if(currentUser.role === "manager"){
+        $("navManager").classList.remove("hidden");
+      }
 
-  messages.innerHTML += `<div><b>You:</b> ${text}</div>`;
+      if(currentUser.role === "admin"){
+        $("navAdmin").classList.remove("hidden");
+      }
+    }
 
-  const res = await api("/chat/",{
-    method:"POST",
-    body:JSON.stringify({message:text})
-  });
+    function appendMessage(role, text){
+      const wrap = document.createElement("div");
+      wrap.className = `msg-row ${role}`;
 
-  messages.innerHTML += `<div><b>AI:</b> ${res.reply}</div>`;
-  input.value="";
-};
+      wrap.innerHTML = `
+        <div class="avatar">${role === "user" ? "You" : "AI"}</div>
+        <div class="msg-bubble">${escapeHtml(text)}</div>
+      `;
 
-/* ========= MANAGER ========= */
+      $("messages").appendChild(wrap);
+      $("messages").scrollTop = $("messages").scrollHeight;
+      $("assistantPanel").scrollTop = $("assistantPanel").scrollHeight;
+    }
 
-createStaff.onclick=async()=>{
-  await api("/manager/users",{
-    method:"POST",
-    body:JSON.stringify({
-      first_name:mgrFirst.value,
-      last_name:mgrLast.value,
-      email:mgrEmail.value,
-      password:mgrPass.value,
-      role:mgrRole.value
-    })
-  });
-  loadManager();
-};
+    $("send").onclick = async () => {
+      const text = $("input").value.trim();
+      if(!text) return;
 
-saveDoc.onclick=async()=>{
-  await api("/manager/documents",{
-    method:"POST",
-    body:JSON.stringify({
-      title:mgrDocTitle.value,
-      input_text:mgrDocText.value
-    })
-  });
-  loadManager();
-};
+      appendMessage("user", text);
 
-async function loadManager(){
-  const data = await api("/manager/overview");
+      const res = await api("/chat/", {
+        method:"POST",
+        body:JSON.stringify({ message:text })
+      });
 
-  mgrUsers.innerHTML="";
-  (data.users||[]).forEach(u=>{
-    mgrUsers.innerHTML+=`<div class="entity-row">${u.first_name} ${u.last_name}</div>`;
-  });
+      appendMessage("assistant", res?.reply || "No response received.");
+      $("input").value = "";
+    };
 
-  mgrDocs.innerHTML="";
-  (data.documents||[]).forEach(d=>{
-    mgrDocs.innerHTML+=`<div class="entity-row">${d.title}</div>`;
-  });
-}
+    $("input").addEventListener("keydown", e => {
+      if(e.key === "Enter" && !e.shiftKey){
+        e.preventDefault();
+        $("send").click();
+      }
+    });
 
-/* ========= INIT ========= */
-(async()=>{
-  await loadUser();
-  show("assistant");
-})();
+    $("createStaff").onclick = async () => {
+      await api("/manager/users",{
+        method:"POST",
+        body:JSON.stringify({
+          first_name:$("mgrFirst").value,
+          last_name:$("mgrLast").value,
+          email:$("mgrEmail").value,
+          password:$("mgrPass").value,
+          role:$("mgrRole").value
+        })
+      });
+      loadManager();
+    };
 
-</script>
+    $("saveDoc").onclick = async () => {
+      await api("/manager/documents",{
+        method:"POST",
+        body:JSON.stringify({
+          title:$("mgrDocTitle").value,
+          input_text:$("mgrDocText").value
+        })
+      });
+      loadManager();
+    };
+
+    async function loadManager(){
+      const data = await api("/manager/overview");
+      if(!data) return;
+
+      $("mgrUsers").innerHTML = "";
+      (data.users || []).forEach(u => {
+        $("mgrUsers").innerHTML += `
+          <div class="entity-row">
+            <strong>${escapeHtml(u.first_name || "")} ${escapeHtml(u.last_name || "")}</strong>
+          </div>
+        `;
+      });
+
+      $("mgrDocs").innerHTML = "";
+      (data.documents || []).forEach(d => {
+        $("mgrDocs").innerHTML += `
+          <div class="entity-row">
+            <strong>${escapeHtml(d.title || "")}</strong>
+          </div>
+        `;
+      });
+    }
+
+    (async () => {
+      await loadUser();
+      show("assistant");
+    })();
+  </script>
 </body>
 </html>
