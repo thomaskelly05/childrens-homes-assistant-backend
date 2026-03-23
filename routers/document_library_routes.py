@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Header, Query
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
 from pydantic import BaseModel
 from psycopg2.extras import RealDictCursor
 
@@ -6,6 +6,8 @@ from db.connection import get_db
 from auth.tokens import decode_session_token
 
 router = APIRouter(prefix="/documents", tags=["Document Library"])
+
+SESSION_COOKIE_NAME = "indicare_session"
 
 
 class CreateLibraryDocumentRequest(BaseModel):
@@ -36,17 +38,22 @@ class UpdateLibraryDocumentRequest(BaseModel):
     confidentiality_level: str | None = None
 
 
-def get_current_user_payload(authorization: str | None = Header(default=None)):
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Missing authorization header")
+def get_current_user_payload(
+    request: Request,
+    authorization: str | None = Header(default=None),
+):
+    cookie_token = request.cookies.get(SESSION_COOKIE_NAME)
 
-    parts = authorization.split(" ", 1)
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise HTTPException(status_code=401, detail="Invalid authorization header")
+    token = cookie_token
+    if not token and authorization:
+        parts = authorization.split(" ", 1)
+        if len(parts) == 2 and parts[0].lower() == "bearer":
+            token = parts[1].strip()
 
-    token = parts[1].strip()
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
     payload = decode_session_token(token)
-
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
@@ -91,14 +98,14 @@ def ensure_document_access(conn, document_id: int, current_user: dict):
             WHERE id = %s
             LIMIT 1
             """,
-            (document_id,)
+            (document_id,),
         )
         row = cur.fetchone()
 
     if not row:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    if role == "admin":
+    if role in {"admin", "provider_admin"}:
         return row
 
     if home_id is None or row["home_id"] != home_id:
@@ -110,7 +117,7 @@ def ensure_document_access(conn, document_id: int, current_user: dict):
 def ensure_manager_or_admin(current_user: dict):
     role, home_id = get_role_and_home(current_user)
 
-    if role not in {"admin", "manager"}:
+    if role not in {"admin", "provider_admin", "manager"}:
         raise HTTPException(status_code=403, detail="Manager or admin access required")
 
     if role == "manager" and home_id is None:
@@ -125,7 +132,7 @@ def list_document_library(
     document_type: str | None = Query(default=None),
     approval_status: str | None = Query(default=None),
     current_user=Depends(get_current_user_payload),
-    conn=Depends(get_db)
+    conn=Depends(get_db),
 ):
     role, home_id = get_role_and_home(current_user)
 
@@ -154,7 +161,7 @@ def list_document_library(
     """
     values = []
 
-    if role != "admin":
+    if role not in {"admin", "provider_admin"}:
         if home_id is None:
             return {"ok": True, "documents": []}
         query += " AND d.home_id = %s"
@@ -192,7 +199,7 @@ def list_document_library(
 def get_document_library_item(
     document_id: int,
     current_user=Depends(get_current_user_payload),
-    conn=Depends(get_db)
+    conn=Depends(get_db),
 ):
     row = ensure_document_access(conn, document_id, current_user)
     return {"ok": True, "document": row}
@@ -202,14 +209,14 @@ def get_document_library_item(
 def create_library_document(
     payload: CreateLibraryDocumentRequest,
     current_user=Depends(get_current_user_payload),
-    conn=Depends(get_db)
+    conn=Depends(get_db),
 ):
     role, home_id = ensure_manager_or_admin(current_user)
 
     if not payload.title.strip():
         raise HTTPException(status_code=400, detail="Title is required")
 
-    target_home_id = home_id if role == "manager" else home_id
+    target_home_id = home_id
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
@@ -263,7 +270,7 @@ def create_library_document(
                 payload.approval_required,
                 payload.approval_status or "not_required",
                 payload.confidentiality_level or "standard",
-            )
+            ),
         )
         row = cur.fetchone()
 
@@ -276,10 +283,10 @@ def update_library_document(
     document_id: int,
     payload: UpdateLibraryDocumentRequest,
     current_user=Depends(get_current_user_payload),
-    conn=Depends(get_db)
+    conn=Depends(get_db),
 ):
-    role, _ = ensure_manager_or_admin(current_user)
-    existing = ensure_document_access(conn, document_id, current_user)
+    ensure_manager_or_admin(current_user)
+    ensure_document_access(conn, document_id, current_user)
 
     fields = []
     values = []
@@ -371,7 +378,7 @@ def update_library_document(
 def delete_library_document(
     document_id: int,
     current_user=Depends(get_current_user_payload),
-    conn=Depends(get_db)
+    conn=Depends(get_db),
 ):
     ensure_manager_or_admin(current_user)
     ensure_document_access(conn, document_id, current_user)
