@@ -1,15 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form
+import io
+import logging
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from psycopg2.extras import RealDictCursor
 from pydantic import BaseModel
-import logging
-import io
 
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from db.connection import get_db
-from auth.dependencies import get_current_user
+from db.connection import get_db, get_db_connection, release_db_connection
+from auth.current_user import get_current_user
 from services.ai_service import generate_ai_stream
 
 try:
@@ -42,17 +43,16 @@ class EditMessagePayload(BaseModel):
     response_mode: str | None = "balanced"
 
 
-# ---------------------------------------------------------
-# DATABASE HELPER FUNCTIONS
-# ---------------------------------------------------------
 def ensure_conversation_owner(conn, conversation_id: int, user_id: int) -> None:
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
-            SELECT id FROM conversations
-            WHERE id = %s AND user_id = %s LIMIT 1
+            SELECT id
+            FROM conversations
+            WHERE id = %s AND user_id = %s
+            LIMIT 1
             """,
-            (conversation_id, user_id)
+            (conversation_id, user_id),
         )
         row = cur.fetchone()
 
@@ -69,7 +69,7 @@ def get_conversation_history(conn, conversation_id: int):
             WHERE conversation_id = %s
             ORDER BY created_at ASC, id ASC
             """,
-            (conversation_id,)
+            (conversation_id,),
         )
         rows = cur.fetchall()
     return rows
@@ -82,9 +82,10 @@ def get_conversation_document(conn, conversation_id: int):
             SELECT id, filename, document_text, created_at
             FROM conversation_documents
             WHERE conversation_id = %s
-            ORDER BY created_at DESC, id DESC LIMIT 1
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1
             """,
-            (conversation_id,)
+            (conversation_id,),
         )
         row = cur.fetchone()
     return row
@@ -94,11 +95,13 @@ def upsert_conversation_document(conn, conversation_id: int, filename: str, docu
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
-            SELECT id FROM conversation_documents
+            SELECT id
+            FROM conversation_documents
             WHERE conversation_id = %s
-            ORDER BY created_at DESC, id DESC LIMIT 1
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1
             """,
-            (conversation_id,)
+            (conversation_id,),
         )
         existing = cur.fetchone()
 
@@ -110,7 +113,7 @@ def upsert_conversation_document(conn, conversation_id: int, filename: str, docu
                 WHERE id = %s
                 RETURNING id, filename, document_text, created_at
                 """,
-                (filename, document_text, existing["id"])
+                (filename, document_text, existing["id"]),
             )
             row = cur.fetchone()
         else:
@@ -120,11 +123,10 @@ def upsert_conversation_document(conn, conversation_id: int, filename: str, docu
                 VALUES (%s, %s, %s)
                 RETURNING id, filename, document_text, created_at
                 """,
-                (conversation_id, filename, document_text)
+                (conversation_id, filename, document_text),
             )
             row = cur.fetchone()
 
-    conn.commit()
     return row
 
 
@@ -132,9 +134,8 @@ def delete_conversation_document(conn, conversation_id: int):
     with conn.cursor() as cur:
         cur.execute(
             "DELETE FROM conversation_documents WHERE conversation_id = %s",
-            (conversation_id,)
+            (conversation_id,),
         )
-    conn.commit()
 
 
 def generate_title(message: str) -> str:
@@ -149,11 +150,14 @@ def prep_chat_db_sync(conn, user_id, message, conversation_id, document_text, do
         title = generate_title(message)
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                "INSERT INTO conversations (user_id, title) VALUES (%s, %s) RETURNING id",
-                (user_id, title)
+                """
+                INSERT INTO conversations (user_id, title)
+                VALUES (%s, %s)
+                RETURNING id
+                """,
+                (user_id, title),
             )
             conversation_id = cur.fetchone()["id"]
-        conn.commit()
     else:
         try:
             conversation_id = int(conversation_id)
@@ -170,26 +174,36 @@ def prep_chat_db_sync(conn, user_id, message, conversation_id, document_text, do
 
     with conn.cursor() as cur:
         cur.execute(
-            "INSERT INTO messages (conversation_id, role, message) VALUES (%s, 'user', %s)",
-            (conversation_id, message)
+            """
+            INSERT INTO messages (conversation_id, role, message)
+            VALUES (%s, 'user', %s)
+            """,
+            (conversation_id, message),
         )
-    conn.commit()
 
     history = get_conversation_history(conn, conversation_id)
     return conversation_id, history, doc_text, doc_name
 
 
-def save_ai_message_sync(conn, conversation_id, ai_text):
+def save_ai_message_sync(conversation_id: int, ai_text: str):
+    conn = None
     try:
+        conn = get_db_connection()
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO messages (conversation_id, role, message) VALUES (%s, 'assistant', %s)",
-                (conversation_id, ai_text)
+                """
+                INSERT INTO messages (conversation_id, role, message)
+                VALUES (%s, 'assistant', %s)
+                """,
+                (conversation_id, ai_text),
             )
         conn.commit()
     except Exception:
-        conn.rollback()
+        if conn is not None and not conn.closed:
+            conn.rollback()
         logger.exception("Failed to save assistant message for conversation %s", conversation_id)
+    finally:
+        release_db_connection(conn)
 
 
 def prep_edit_db_sync(conn, user_id, message_id, new_message, document_text, document_name):
@@ -199,9 +213,10 @@ def prep_edit_db_sync(conn, user_id, message_id, new_message, document_text, doc
             SELECT m.id, m.conversation_id, m.role
             FROM messages m
             JOIN conversations c ON c.id = m.conversation_id
-            WHERE m.id = %s AND c.user_id = %s LIMIT 1
+            WHERE m.id = %s AND c.user_id = %s
+            LIMIT 1
             """,
-            (message_id, user_id)
+            (message_id, user_id),
         )
         row = cur.fetchone()
 
@@ -221,17 +236,19 @@ def prep_edit_db_sync(conn, user_id, message_id, new_message, document_text, doc
     doc_name = stored_document["filename"] if stored_document else None
 
     with conn.cursor() as cur:
-        cur.execute("UPDATE messages SET message = %s WHERE id = %s", (new_message, message_id))
-        cur.execute("DELETE FROM messages WHERE conversation_id = %s AND id > %s", (conversation_id, message_id))
-    conn.commit()
+        cur.execute(
+            "UPDATE messages SET message = %s WHERE id = %s",
+            (new_message, message_id),
+        )
+        cur.execute(
+            "DELETE FROM messages WHERE conversation_id = %s AND id > %s",
+            (conversation_id, message_id),
+        )
 
     history = get_conversation_history(conn, conversation_id)
     return conversation_id, history, doc_text, doc_name
 
 
-# ---------------------------------------------------------
-# DOCUMENT EXTRACTION
-# ---------------------------------------------------------
 def extract_text_from_txt(file_bytes: bytes) -> str:
     try:
         return file_bytes.decode("utf-8")
@@ -242,6 +259,7 @@ def extract_text_from_txt(file_bytes: bytes) -> str:
 def extract_text_from_docx(file_bytes: bytes) -> str:
     if Document is None:
         raise HTTPException(status_code=500, detail="DOCX support is not installed on the server")
+
     document = Document(io.BytesIO(file_bytes))
     parts = []
 
@@ -266,6 +284,7 @@ def extract_text_from_docx(file_bytes: bytes) -> str:
 def extract_text_from_pdf(file_bytes: bytes) -> str:
     if PdfReader is None:
         raise HTTPException(status_code=500, detail="PDF support is not installed on the server")
+
     reader = PdfReader(io.BytesIO(file_bytes))
     parts = []
 
@@ -290,13 +309,10 @@ def extract_document_text(filename: str, file_bytes: bytes) -> str:
 
     raise HTTPException(
         status_code=400,
-        detail="Unsupported file type. Please upload a .txt, .docx, or .pdf file."
+        detail="Unsupported file type. Please upload a .txt, .docx, or .pdf file.",
     )
 
 
-# ---------------------------------------------------------
-# SSE HELPERS
-# ---------------------------------------------------------
 def sse_data(payload: str) -> str:
     safe_payload = (payload or "").replace("\r\n", "\n").replace("\r", "\n")
     return "".join(f"data: {line}\n" for line in safe_payload.split("\n")) + "\n"
@@ -306,9 +322,6 @@ def sse_done() -> str:
     return "event: done\ndata: [DONE]\n\n"
 
 
-# ---------------------------------------------------------
-# ROUTE ENDPOINTS
-# ---------------------------------------------------------
 @router.post("/upload")
 @limiter.limit("10/minute")
 async def upload_chat_document(
@@ -316,16 +329,13 @@ async def upload_chat_document(
     file: UploadFile = File(...),
     conversation_id: int | None = Form(default=None),
     conn=Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
-    MAX_FILE_SIZE = 5 * 1024 * 1024
+    max_file_size = 5 * 1024 * 1024
     contents = await file.read()
 
-    if len(contents) > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail="File too large. Maximum size is 5MB to protect the server."
-        )
+    if len(contents) > max_file_size:
+        raise HTTPException(status_code=413, detail="File too large. Maximum size is 5MB to protect the server.")
 
     filename = file.filename or "document"
     if not contents:
@@ -335,8 +345,8 @@ async def upload_chat_document(
         extracted_text = extract_document_text(filename, contents)
     except HTTPException:
         raise
-    except Exception as e:
-        logger.exception("Document extraction failed: %s", e)
+    except Exception:
+        logger.exception("Document extraction failed")
         raise HTTPException(status_code=500, detail="Could not read the uploaded document")
 
     if not extracted_text.strip():
@@ -350,7 +360,7 @@ async def upload_chat_document(
         "ok": True,
         "filename": filename,
         "text": extracted_text,
-        "preview": extracted_text[:1200]
+        "preview": extracted_text[:1200],
     }
 
 
@@ -366,7 +376,7 @@ def list_conversations(conn=Depends(get_db), current_user=Depends(get_current_us
             WHERE user_id = %s
             ORDER BY created_at DESC
             """,
-            (user_id,)
+            (user_id,),
         )
         rows = cur.fetchall()
 
@@ -386,7 +396,7 @@ def load_conversation(conversation_id: int, conn=Depends(get_db), current_user=D
             WHERE conversation_id = %s
             ORDER BY created_at ASC, id ASC
             """,
-            (conversation_id,)
+            (conversation_id,),
         )
         rows = cur.fetchall()
 
@@ -397,8 +407,8 @@ def load_conversation(conversation_id: int, conn=Depends(get_db), current_user=D
         "document": {
             "filename": document["filename"],
             "text": document["document_text"],
-            "created_at": document["created_at"]
-        } if document else None
+            "created_at": document["created_at"],
+        } if document else None,
     }
 
 
@@ -424,8 +434,6 @@ async def chat(request: Request, conn=Depends(get_db), current_user=Depends(get_
     if response_mode not in {"quick", "balanced", "deep"}:
         response_mode = "balanced"
 
-    logger.info("Chat request received for user_id=%s", user_id)
-
     if not message:
         raise HTTPException(status_code=400, detail="Message required")
 
@@ -437,11 +445,11 @@ async def chat(request: Request, conn=Depends(get_db), current_user=Depends(get_
             conn, user_id, message, conversation_id, document_text, document_name
         )
         logger.info("Prepared chat DB state for conversation_id=%s", conversation_id)
-    except ValueError as e:
-        logger.warning("Invalid chat request: %s", e)
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.exception("Failed preparing chat DB state: %s", e)
+    except ValueError as exc:
+        logger.warning("Invalid chat request: %s", exc)
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception:
+        logger.exception("Failed preparing chat DB state")
         raise HTTPException(status_code=500, detail="Could not prepare chat request")
 
     async def stream():
@@ -463,20 +471,15 @@ async def chat(request: Request, conn=Depends(get_db), current_user=Depends(get_
 
             logger.info("Finished AI stream for conversation_id=%s", conversation_id)
 
-        except Exception as e:
-            logger.exception("AI stream failed for conversation %s: %s", conversation_id, e)
+        except Exception:
+            logger.exception("AI stream failed for conversation %s", conversation_id)
             fallback = "Sorry, something went wrong while generating the response. Please try again."
             ai_text += fallback
             yield sse_data(fallback)
 
         finally:
             if ai_text.strip():
-                try:
-                    save_ai_message_sync(conn, conversation_id, ai_text)
-                    logger.info("Saved assistant message for conversation_id=%s", conversation_id)
-                except Exception as e:
-                    logger.exception("Failed saving assistant message for conversation %s: %s", conversation_id, e)
-
+                save_ai_message_sync(conversation_id, ai_text)
             yield sse_done()
 
     return StreamingResponse(
@@ -491,7 +494,12 @@ async def chat(request: Request, conn=Depends(get_db), current_user=Depends(get_
 
 
 @router.post("/conversations/{conversation_id}/rename")
-def rename_conversation(conversation_id: int, payload: RenameConversation, conn=Depends(get_db), current_user=Depends(get_current_user)):
+def rename_conversation(
+    conversation_id: int,
+    payload: RenameConversation,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
     ensure_conversation_owner(conn, conversation_id, current_user["user_id"])
     title = payload.title.strip()
 
@@ -501,9 +509,8 @@ def rename_conversation(conversation_id: int, payload: RenameConversation, conn=
     with conn.cursor() as cur:
         cur.execute(
             "UPDATE conversations SET title = %s WHERE id = %s",
-            (title, conversation_id)
+            (title, conversation_id),
         )
-        conn.commit()
 
     return {"ok": True, "message": "Conversation renamed"}
 
@@ -514,7 +521,6 @@ def delete_conversation(conversation_id: int, conn=Depends(get_db), current_user
 
     with conn.cursor() as cur:
         cur.execute("DELETE FROM conversations WHERE id = %s", (conversation_id,))
-        conn.commit()
 
     return {"ok": True, "message": "Conversation deleted"}
 
@@ -526,7 +532,7 @@ async def edit_message_and_regenerate(
     message_id: int,
     payload: EditMessagePayload,
     conn=Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
     user_id = current_user["user_id"]
     new_message = payload.message.strip()
@@ -543,12 +549,12 @@ async def edit_message_and_regenerate(
             conn, user_id, message_id, new_message, payload.document_text, payload.document_name
         )
         logger.info("Prepared edit/regenerate DB state for conversation_id=%s", conversation_id)
-    except ValueError as e:
-        if str(e) == "Message not found":
-            raise HTTPException(status_code=404, detail=str(e))
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.exception("Failed preparing edit/regenerate DB state: %s", e)
+    except ValueError as exc:
+        if str(exc) == "Message not found":
+            raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception:
+        logger.exception("Failed preparing edit/regenerate DB state")
         raise HTTPException(status_code=500, detail="Could not prepare message regeneration")
 
     async def stream():
@@ -570,20 +576,15 @@ async def edit_message_and_regenerate(
 
             logger.info("Finished regenerate AI stream for conversation_id=%s", conversation_id)
 
-        except Exception as e:
-            logger.exception("AI regenerate failed for conversation %s: %s", conversation_id, e)
+        except Exception:
+            logger.exception("AI regenerate failed for conversation %s", conversation_id)
             fallback = "Sorry, something went wrong while regenerating. Please try again."
             ai_text += fallback
             yield sse_data(fallback)
 
         finally:
             if ai_text.strip():
-                try:
-                    save_ai_message_sync(conn, conversation_id, ai_text)
-                    logger.info("Saved regenerated assistant message for conversation_id=%s", conversation_id)
-                except Exception as e:
-                    logger.exception("Failed saving regenerated assistant message for conversation %s: %s", conversation_id, e)
-
+                save_ai_message_sync(conversation_id, ai_text)
             yield sse_done()
 
     return StreamingResponse(
