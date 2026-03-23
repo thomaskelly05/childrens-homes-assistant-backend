@@ -132,12 +132,14 @@ class AssistantRequest:
 class AssistantRuntimeContext:
     mode: str = "general_practice"
     safeguarding_level: str = "normal"
+    user_role_profile: str = "staff"
     memory_context: str = ""
     retrieval_context: str = ""
     reflection_context: str = ""
     supervision_context: str = ""
     schema_context: str = ""
     leadership_lens_context: str = ""
+    role_lens_context: str = ""
 
 
 @dataclass
@@ -227,6 +229,39 @@ def _contains_any(text: str, keywords: set[str]) -> bool:
     return any(keyword in text for keyword in keywords)
 
 
+def _normalise_user_role_profile(role: str, user_context: dict[str, Any] | None = None) -> str:
+    text = " ".join(
+        part for part in [
+            _safe_string(role).lower(),
+            _safe_string((user_context or {}).get("role")).lower(),
+            _safe_string((user_context or {}).get("job_title")).lower(),
+        ] if part
+    )
+
+    if any(term in text for term in {
+        "responsible individual",
+        "provider",
+        "director",
+        "head of care",
+        "operations manager",
+        "service manager",
+        "governance",
+    }):
+        return "provider"
+
+    if any(term in text for term in {
+        "registered manager",
+        "deputy",
+        "manager",
+        "senior",
+        "team leader",
+        "shift leader",
+    }):
+        return "manager"
+
+    return "staff"
+
+
 def _should_use_retrieval(
     mode: str,
     safeguarding_level: str,
@@ -268,7 +303,10 @@ def _should_use_reflection(mode: str, response_mode: str) -> bool:
     return mode in REFLECTIVE_MODES and response_mode == "deep"
 
 
-def _should_use_leadership_lens(mode: str, message: str, speed: str) -> bool:
+def _should_use_leadership_lens(mode: str, message: str, speed: str, role_profile: str) -> bool:
+    if role_profile in {"manager", "provider"}:
+        return True
+
     if speed == "quick":
         return _contains_any(message, RM_KEYWORDS | OFSTED_KEYWORDS | RI_KEYWORDS)
 
@@ -285,17 +323,55 @@ def _build_runtime_mode_context(runtime: AssistantRuntimeContext, speed: str) ->
     return (
         f"Detected task mode: {runtime.mode}\n"
         f"Safeguarding level: {runtime.safeguarding_level}\n"
-        f"Selected response mode: {speed}\n\n"
-        f"Use these as working signals for tone, structure, caution, and practical focus."
+        f"Selected response mode: {speed}\n"
+        f"Detected user role profile: {runtime.user_role_profile}\n\n"
+        f"Use these as working signals for tone, structure, caution, accountability, and practical focus."
     )
 
 
-def _build_leadership_lens_context(mode: str, safeguarding_level: str, message: str) -> str:
+def _build_role_lens_context(role_profile: str) -> str:
+    if role_profile == "provider":
+        return (
+            "PROVIDER / RESPONSIBLE INDIVIDUAL ROLE ADAPTATION:\n"
+            "• Write with stronger attention to governance, oversight, patterns, provider risk, quality assurance, and service-wide implications.\n"
+            "• Distinguish clearly between a one-off issue and a systemic issue.\n"
+            "• Highlight what may require provider-level monitoring, escalation, assurance, or follow-up.\n"
+            "• Keep the response grounded in children’s lived experience, but include leadership and governance implications where relevant."
+        )
+
+    if role_profile == "manager":
+        return (
+            "MANAGER / REGISTERED MANAGER ROLE ADAPTATION:\n"
+            "• Write with stronger attention to safety, defensibility, staff actions, recording quality, care planning quality, consistency of practice, and management follow-up.\n"
+            "• Highlight what should be escalated, reviewed, handed over, monitored, or strengthened.\n"
+            "• Where relevant, show what a strong manager would notice, challenge, or tighten."
+        )
+
+    return (
+        "STAFF ROLE ADAPTATION:\n"
+        "• Prioritise practical, shift-usable, clear guidance.\n"
+        "• Keep outputs actionable, concrete, and easy to use in real residential care work.\n"
+        "• Do not overload the response with management-level analysis unless the task clearly calls for it."
+    )
+
+
+def _build_leadership_lens_context(mode: str, safeguarding_level: str, message: str, role_profile: str) -> str:
     text = (message or "").lower()
 
-    emphasise_rm = mode in {"manager_review", "support_planning", "supervision", "document_review"} or _contains_any(text, RM_KEYWORDS)
-    emphasise_ofsted = _contains_any(text, OFSTED_KEYWORDS) or mode in {"manager_review", "document_review", "factual"}
-    emphasise_ri = _contains_any(text, RI_KEYWORDS) or mode in {"manager_review", "supervision"}
+    emphasise_rm = (
+        role_profile == "manager"
+        or mode in {"manager_review", "support_planning", "supervision", "document_review"}
+        or _contains_any(text, RM_KEYWORDS)
+    )
+    emphasise_ofsted = (
+        mode in {"manager_review", "document_review", "factual"}
+        or _contains_any(text, OFSTED_KEYWORDS)
+    )
+    emphasise_ri = (
+        role_profile == "provider"
+        or mode in {"manager_review", "supervision"}
+        or _contains_any(text, RI_KEYWORDS)
+    )
 
     blocks: list[str] = []
 
@@ -470,7 +546,9 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
 
     runtime.mode = _safe_detect_mode(message, history)
     runtime.safeguarding_level = _safe_assess_safeguarding(message, history)
+    runtime.user_role_profile = _normalise_user_role_profile(req.role, req.user_context)
     runtime.schema_context = _safe_schema_context(runtime.mode, runtime.safeguarding_level)
+    runtime.role_lens_context = _build_role_lens_context(runtime.user_role_profile)
 
     if speed != "quick":
         if _should_use_memory(runtime.mode, speed):
@@ -493,11 +571,12 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
                 history,
             )
 
-    if _should_use_leadership_lens(runtime.mode, message, speed):
+    if _should_use_leadership_lens(runtime.mode, message, speed, runtime.user_role_profile):
         runtime.leadership_lens_context = _build_leadership_lens_context(
             runtime.mode,
             runtime.safeguarding_level,
             message,
+            runtime.user_role_profile,
         )
 
     system_prompt, user_message = build_chat_prompt(
@@ -515,7 +594,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
     )
 
     system_prompt = _append_section(system_prompt, "RESPONSE STRUCTURE", runtime.schema_context)
-
+    system_prompt = _append_section(system_prompt, "ROLE ADAPTATION CONTEXT", runtime.role_lens_context)
     system_prompt = _append_section(
         system_prompt,
         "LEADERSHIP / INSPECTION LENS CONTEXT",
@@ -543,11 +622,12 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         )
 
     logger.info(
-        "Assistant prompt package built session_id=%s mode=%s safeguarding=%s response_mode=%s memory=%s retrieval=%s reflection=%s supervision=%s leadership_lens=%s",
+        "Assistant prompt package built session_id=%s mode=%s safeguarding=%s response_mode=%s role_profile=%s memory=%s retrieval=%s reflection=%s supervision=%s leadership_lens=%s",
         req.session_id,
         runtime.mode,
         runtime.safeguarding_level,
         speed,
+        runtime.user_role_profile,
         bool(runtime.memory_context),
         bool(runtime.retrieval_context),
         bool(runtime.reflection_context),
