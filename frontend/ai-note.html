@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IndiCare | Professional Documentation</title>
+  <title>IndiCare | Magic Notes</title>
   <link rel="icon" type="image/svg+xml" href="/assets/logo.svg" />
   <link rel="stylesheet" href="/ai-notes.css" />
 </head>
@@ -20,7 +20,7 @@
           </div>
           <div>
             <h1>IndiCare</h1>
-            <p>Clinical Workspace</p>
+            <p>Magic Notes for Care</p>
           </div>
         </div>
 
@@ -35,11 +35,23 @@
         </div>
 
         <div class="sidebar-section mt-24">
+          <span class="section-label">Magic Outputs</span>
+          <div class="prompt-stack">
+            <button class="prompt-btn magic-mode-btn" data-magic-mode="final_note">Professional Final Record</button>
+            <button class="prompt-btn magic-mode-btn" data-magic-mode="incident_record">Incident Record</button>
+            <button class="prompt-btn magic-mode-btn" data-magic-mode="chronology">Chronology Entry</button>
+            <button class="prompt-btn magic-mode-btn" data-magic-mode="safeguarding_summary">Safeguarding Summary</button>
+            <button class="prompt-btn magic-mode-btn" data-magic-mode="manager_summary">Manager Summary</button>
+            <button class="prompt-btn magic-mode-btn" data-magic-mode="supervision_record">Supervision Record</button>
+          </div>
+        </div>
+
+        <div class="sidebar-section mt-24">
           <span class="section-label">Quick AI Prompts</span>
           <div class="prompt-stack">
             <button class="prompt-btn" data-fill="Format this into a formal Staff Supervision record, highlighting well-being, current caseloads, and agreed actions.">Supervision Record</button>
             <button class="prompt-btn" data-fill="Extract and summarise all safeguarding concerns, risks, and immediate actions required. Use factual, objective language.">Safeguarding Summary</button>
-            <button class="prompt-btn" data-fill="Review this meeting and structure it as a Personal Education Plan (PEP) update, focusing on educational milestones and support needed.">PEP Update</button>
+            <button class="prompt-btn" data-fill="Review this meeting and structure it as a Personal Education Plan update, focusing on educational milestones and support needed.">PEP Update</button>
             <button class="prompt-btn" data-fill="Remove all emotive language and rewrite this incident report to be strictly objective, chronological, and factual.">Make Objective & Factual</button>
             <button class="prompt-btn" data-fill="Rewrite this note in a clear professional tone suitable for management review.">Professional Tone</button>
             <button class="prompt-btn" data-fill="Summarise the key points, decisions, and next actions from this note.">Summarise Key Points</button>
@@ -67,7 +79,7 @@
     <main class="main">
       <header class="topbar">
         <div class="topbar-left">
-          <h2 class="page-title">Workspace</h2>
+          <h2 class="page-title">Magic Notes Workspace</h2>
         </div>
 
         <div class="page-tabs">
@@ -84,6 +96,19 @@
         <div class="workspace-layout">
 
           <aside class="context-panel">
+
+            <div class="context-card">
+              <div class="card-header between">
+                <span class="card-title">Record Intelligence</span>
+                <span id="meetingTypeBadge" class="mini-badge">Not detected</span>
+              </div>
+              <div class="card-body">
+                <div id="intelligenceFlags" class="flags-list">
+                  <div class="empty-text">No flags yet.</div>
+                </div>
+              </div>
+            </div>
+
             <div class="context-card">
               <div class="card-header between">
                 <span class="card-title">Meeting Participants (<span id="speakerCountBadge">0</span>)</span>
@@ -110,9 +135,11 @@
                 <div class="stack-actions">
                   <button id="useTranscriptForAiBtn" class="btn btn-secondary w-full">Copy Transcript to Final Note</button>
                   <button id="extractActionsBtn" class="btn btn-secondary w-full">Extract Actions</button>
+                  <button id="runMagicBtn" class="btn btn-primary w-full">Run Magic Notes</button>
                 </div>
               </div>
             </div>
+
           </aside>
 
           <div class="editor-panel">
@@ -130,6 +157,8 @@
                       <option value="Safeguarding">Safeguarding Meeting</option>
                       <option value="PEP">PEP Meeting</option>
                       <option value="Review">Care Review</option>
+                      <option value="Incident">Incident Debrief</option>
+                      <option value="Manager">Manager Discussion</option>
                     </select>
                   </div>
 
@@ -154,6 +183,29 @@
                       <option value="approved">Approved & Locked</option>
                     </select>
                   </div>
+
+                  <div class="meta-item">
+                    <label for="magicOutputMode">Magic Output Mode</label>
+                    <select id="magicOutputMode" class="meta-select">
+                      <option value="final_note">Professional Final Record</option>
+                      <option value="incident_record">Incident Record</option>
+                      <option value="chronology">Chronology Entry</option>
+                      <option value="safeguarding_summary">Safeguarding Summary</option>
+                      <option value="manager_summary">Manager Summary</option>
+                      <option value="supervision_record">Supervision Record</option>
+                    </select>
+                  </div>
+
+                  <div class="meta-item">
+                    <label for="incidentSeverity">Incident Severity</label>
+                    <select id="incidentSeverity" class="meta-select">
+                      <option value="">Not set</option>
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="critical">Critical</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -162,6 +214,7 @@
                   <button id="viewFinalBtn" class="page-tab active" type="button">Final Note</button>
                   <button id="viewSourceBtn" class="page-tab" type="button">Original Transcript</button>
                   <button id="viewActionsBtn" class="page-tab" type="button">Actions</button>
+                  <button id="viewStructuredBtn" class="page-tab" type="button">Structured Incident</button>
                 </div>
 
                 <section id="finalViewPanel" class="note-subpanel active">
@@ -204,6 +257,80 @@
                     </div>
                   </div>
                 </section>
+
+                <section id="structuredViewPanel" class="note-subpanel">
+                  <div class="context-card full-height">
+                    <div class="card-header between">
+                      <span class="card-title">Structured Incident Builder</span>
+                      <button id="buildStructuredIntoNoteBtn" class="btn btn-primary btn-sm">Build into Final Note</button>
+                    </div>
+                    <div class="card-body structured-grid">
+                      <div class="meta-item structured-full">
+                        <label for="structuredWho">Who was involved</label>
+                        <input id="structuredWho" class="meta-select" placeholder="Child initials, staff present, other professionals">
+                      </div>
+
+                      <div class="meta-item structured-full">
+                        <label for="structuredWhat">What happened</label>
+                        <textarea id="structuredWhat" class="structured-textarea" placeholder="Describe what happened in clear terms"></textarea>
+                      </div>
+
+                      <div class="meta-item structured-full">
+                        <label for="structuredStaffResponse">What staff did</label>
+                        <textarea id="structuredStaffResponse" class="structured-textarea" placeholder="Describe staff response"></textarea>
+                      </div>
+
+                      <div class="meta-item structured-full">
+                        <label for="structuredOutcome">Outcome</label>
+                        <textarea id="structuredOutcome" class="structured-textarea" placeholder="What happened afterwards"></textarea>
+                      </div>
+
+                      <div class="meta-item structured-full">
+                        <label for="structuredInjury">Injury details</label>
+                        <textarea id="structuredInjury" class="structured-textarea" placeholder="Any injuries, visible marks, body map points, first aid, medical review"></textarea>
+                      </div>
+
+                      <div class="meta-item structured-full">
+                        <label for="structuredFollowUp">Follow-up actions</label>
+                        <textarea id="structuredFollowUp" class="structured-textarea" placeholder="Notifications, manager review, safeguarding, parent/social worker updates"></textarea>
+                      </div>
+
+                      <div class="meta-item">
+                        <label for="structuredBodyLocation">Body location</label>
+                        <input id="structuredBodyLocation" class="meta-select" placeholder="e.g. left forearm">
+                      </div>
+
+                      <div class="meta-item">
+                        <label for="structuredMedicalAttention">Medical attention</label>
+                        <select id="structuredMedicalAttention" class="meta-select">
+                          <option value="">Not recorded</option>
+                          <option value="none">None required</option>
+                          <option value="first_aid">First aid given</option>
+                          <option value="gp">GP / nurse input</option>
+                          <option value="hospital">Hospital / urgent care</option>
+                        </select>
+                      </div>
+
+                      <div class="meta-item">
+                        <label for="structuredNotifications">Notifications made</label>
+                        <input id="structuredNotifications" class="meta-select" placeholder="Manager, parent, social worker, Ofsted">
+                      </div>
+
+                      <div class="meta-item">
+                        <label for="structuredMissingInfo">Missing information</label>
+                        <input id="structuredMissingInfo" class="meta-select" placeholder="What still needs checking">
+                      </div>
+
+                      <div class="meta-item structured-full">
+                        <label>Live Safeguarding / Quality Flags</label>
+                        <div id="structuredFlags" class="flags-list">
+                          <div class="empty-text">No live flags yet.</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
               </div>
 
               <div class="editor-footer">
