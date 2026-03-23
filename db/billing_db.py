@@ -19,7 +19,7 @@ def get_user_billing_by_user_id(conn, user_id: int) -> dict[str, Any] | None:
                 subscription_status,
                 plan_name,
                 current_period_end,
-                is_active
+                subscription_active
             FROM users
             WHERE id = %s
             LIMIT 1
@@ -44,7 +44,7 @@ def get_user_billing_by_email(conn, email: str) -> dict[str, Any] | None:
                 subscription_status,
                 plan_name,
                 current_period_end,
-                is_active
+                subscription_active
             FROM users
             WHERE LOWER(email) = %s
             LIMIT 1
@@ -69,7 +69,7 @@ def get_user_billing_by_customer_id(conn, stripe_customer_id: str) -> dict[str, 
                 subscription_status,
                 plan_name,
                 current_period_end,
-                is_active
+                subscription_active
             FROM users
             WHERE stripe_customer_id = %s
             LIMIT 1
@@ -99,7 +99,7 @@ def set_stripe_customer_id(conn, user_id: int, stripe_customer_id: str) -> dict[
                 subscription_status,
                 plan_name,
                 current_period_end,
-                is_active
+                subscription_active
             """,
             (customer_id, user_id),
         )
@@ -114,7 +114,7 @@ def update_subscription_status_by_customer_id(
     subscription_status: str,
     plan_name: str | None,
     current_period_end: datetime | None,
-    is_active: bool,
+    subscription_active: bool,
 ) -> dict[str, Any] | None:
     customer_id = stripe_customer_id.strip()
     subscription_id = stripe_subscription_id.strip() if stripe_subscription_id else None
@@ -130,7 +130,7 @@ def update_subscription_status_by_customer_id(
                 subscription_status = %s,
                 plan_name = %s,
                 current_period_end = %s,
-                is_active = %s,
+                subscription_active = %s,
                 updated_at = NOW()
             WHERE stripe_customer_id = %s
             RETURNING
@@ -141,14 +141,14 @@ def update_subscription_status_by_customer_id(
                 subscription_status,
                 plan_name,
                 current_period_end,
-                is_active
+                subscription_active
             """,
             (
                 subscription_id,
                 status_value,
                 plan_value,
                 current_period_end,
-                is_active,
+                subscription_active,
                 customer_id,
             ),
         )
@@ -171,7 +171,7 @@ def clear_subscription_by_customer_id(
                 subscription_status = 'inactive',
                 plan_name = NULL,
                 current_period_end = NULL,
-                is_active = false,
+                subscription_active = false,
                 updated_at = NOW()
             WHERE stripe_customer_id = %s
             RETURNING
@@ -182,7 +182,7 @@ def clear_subscription_by_customer_id(
                 subscription_status,
                 plan_name,
                 current_period_end,
-                is_active
+                subscription_active
             """,
             (customer_id,),
         )
