@@ -1,5 +1,6 @@
-import os
+import asyncio
 import logging
+import os
 
 from openai import AsyncOpenAI
 
@@ -30,6 +31,8 @@ GUIDANCE_KEYWORDS = [
     "sccif",
 ]
 
+SEARCH_TIMEOUT_SECONDS = float(os.getenv("GUIDANCE_SEARCH_TIMEOUT_SECONDS", "3.0"))
+
 
 def normalise_response_mode(response_mode: str | None, speed: str | None) -> str:
     value = (response_mode or speed or "balanced").strip().lower()
@@ -43,28 +46,31 @@ def trim_history(history: list[dict], selected_mode: str) -> list[dict]:
         return []
 
     if selected_mode == "quick":
-        limit = 4
+        limit = 3
     elif selected_mode == "deep":
         limit = 8
     else:
-        limit = 6
+        limit = 5
 
     trimmed = history[-limit:]
 
-    # Avoid sending the latest user message twice if the route has already
-    # inserted it into history before we append the final user message below.
+    # Avoid duplicating the newest user message if caller already saved it.
     if trimmed and trimmed[-1].get("role") == "user":
         trimmed = trimmed[:-1]
 
-    cleaned = []
+    cleaned: list[dict] = []
     for item in trimmed:
         role_name = item.get("role")
-        content = (item.get("message") or "").strip()
+        content = (item.get("message") or item.get("content") or "").strip()
+
         if role_name in {"user", "assistant"} and content:
-            cleaned.append({
-                "role": role_name,
-                "content": content
-            })
+            cleaned.append(
+                {
+                    "role": role_name,
+                    "content": content[:12000],
+                }
+            )
+
     return cleaned
 
 
@@ -77,11 +83,11 @@ def trim_document_text(document_text: str | None, selected_mode: str) -> str | N
         return None
 
     if selected_mode == "quick":
-        limit = 12000
+        limit = 6000
     elif selected_mode == "deep":
-        limit = 40000
+        limit = 24000
     else:
-        limit = 22000
+        limit = 12000
 
     return text[:limit]
 
@@ -89,16 +95,12 @@ def trim_document_text(document_text: str | None, selected_mode: str) -> str | N
 def should_search_guidance(message: str, mode: str, safeguarding_level: str, response_mode: str) -> bool:
     text = (message or "").lower()
 
-    # Quick mode should stay fast unless you later choose to explicitly force search.
     if response_mode == "quick":
         return False
 
-    # In urgent safeguarding, speed and clear action matter more than live search.
     if safeguarding_level in {"heightened", "urgent"}:
         return False
 
-    # For direct drafting tasks, avoid slowing the response unless the user is
-    # clearly asking for guidance/regulatory content.
     if mode in {"handover", "recording", "incident_summary", "rewrite", "chronology"}:
         return any(keyword in text for keyword in GUIDANCE_KEYWORDS)
 
@@ -106,18 +108,15 @@ def should_search_guidance(message: str, mode: str, safeguarding_level: str, res
 
 
 def choose_model(mode: str, safeguarding_level: str, response_mode: str, has_document: bool) -> str:
-    # Fastest practical path
     if safeguarding_level == "urgent":
         return "gpt-4o-mini"
 
     if response_mode == "quick":
         return "gpt-4o-mini"
 
-    # Deep review gets the stronger model
     if response_mode == "deep":
         return "gpt-4o"
 
-    # Balanced mode: use stronger model only where the work benefits from it
     if mode in {"support_planning", "manager_review", "supervision"}:
         return "gpt-4o"
 
@@ -129,22 +128,62 @@ def choose_model(mode: str, safeguarding_level: str, response_mode: str, has_doc
 
 def choose_temperature(mode: str, response_mode: str) -> float:
     if response_mode == "quick":
-        return 0.2
-    if mode in {"incident_summary", "recording", "chronology", "handover"}:
         return 0.15
+
+    if mode in {"incident_summary", "recording", "chronology", "handover"}:
+        return 0.1
+
     if response_mode == "deep":
-        return 0.35
-    return 0.25
+        return 0.3
+
+    return 0.2
 
 
 def choose_max_tokens(mode: str, response_mode: str) -> int:
     if response_mode == "quick":
-        return 500
+        return 350
+
     if response_mode == "deep":
-        return 1400
+        return 1200
+
     if mode in {"incident_summary", "recording", "handover", "chronology"}:
-        return 700
-    return 1000
+        return 600
+
+    return 850
+
+
+async def maybe_run_guidance_search(
+    message: str,
+    mode: str,
+    safeguarding_level: str,
+    response_mode: str,
+) -> str:
+    if not should_search_guidance(message, mode, safeguarding_level, response_mode):
+        return ""
+
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(web_search, message),
+            timeout=SEARCH_TIMEOUT_SECONDS,
+        )
+    except TimeoutError:
+        logger.warning("Guidance search timed out")
+        return ""
+    except Exception:
+        logger.exception("Guidance search failed")
+        return ""
+
+
+def build_messages(
+    system_prompt: str,
+    user_message: str,
+    history: list[dict],
+    selected_mode: str,
+) -> list[dict]:
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(trim_history(history, selected_mode))
+    messages.append({"role": "user", "content": user_message})
+    return messages
 
 
 async def generate_ai_stream(
@@ -186,19 +225,17 @@ async def generate_ai_stream(
     mode = prompt_package.runtime.mode
     safeguarding_level = prompt_package.runtime.safeguarding_level
 
-    search_results = ""
-    if should_search_guidance(message, mode, safeguarding_level, selected_mode):
-        try:
-            search_results = web_search(message)
-        except Exception as e:
-            logger.exception("Guidance search failed for session %s: %s", session_id, e)
-            search_results = ""
+    search_results = await maybe_run_guidance_search(
+        message=message,
+        mode=mode,
+        safeguarding_level=safeguarding_level,
+        response_mode=selected_mode,
+    )
 
     if search_results:
         system_prompt += f"""
 
-============================================================
-LIVE WEB GUIDANCE CONTEXT
+LIVE GUIDANCE CONTEXT
 
 The following trusted guidance excerpts were retrieved for this request:
 
@@ -209,12 +246,12 @@ Prefer statutory guidance, legislation, Ofsted, and official frameworks where re
 Do not let this stop you completing practical drafting tasks directly.
 """
 
-    messages = [{"role": "system", "content": system_prompt}]
-    messages.extend(trim_history(history, selected_mode))
-    messages.append({
-        "role": "user",
-        "content": user_message
-    })
+    messages = build_messages(
+        system_prompt=system_prompt,
+        user_message=user_message,
+        history=history,
+        selected_mode=selected_mode,
+    )
 
     model = choose_model(
         mode=mode,
@@ -226,13 +263,15 @@ Do not let this stop you completing practical drafting tasks directly.
     max_tokens = choose_max_tokens(mode, selected_mode)
 
     logger.info(
-        "Starting OpenAI stream for session %s | mode=%s | safeguarding=%s | response_mode=%s | model=%s | max_tokens=%s",
+        "Starting OpenAI stream session_id=%s mode=%s safeguarding=%s response_mode=%s model=%s max_tokens=%s history_count=%s has_document=%s",
         session_id,
         mode,
         safeguarding_level,
         selected_mode,
         model,
         max_tokens,
+        len(messages),
+        bool(trimmed_document_text),
     )
 
     stream = await client.chat.completions.create(
@@ -253,4 +292,4 @@ Do not let this stop you completing practical drafting tasks directly.
         if content:
             yield content
 
-    logger.info("Completed OpenAI stream for session %s", session_id)
+    logger.info("Completed OpenAI stream session_id=%s", session_id)
