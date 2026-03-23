@@ -1285,8 +1285,8 @@ def billing_overview(
                 COUNT(*) AS total_users,
                 COUNT(*) FILTER (WHERE COALESCE(is_active, false) = true) AS active_users,
                 COUNT(*) FILTER (WHERE COALESCE(archived, false) = true) AS archived_users,
-                COUNT(*) FILTER (WHERE subscription_status = 'active') AS active_subscriptions,
-                COUNT(*) FILTER (WHERE subscription_status IS NULL OR subscription_status != 'active') AS inactive_subscriptions
+                COUNT(*) FILTER (WHERE COALESCE(subscription_active, false) = true) AS active_subscriptions,
+                COUNT(*) FILTER (WHERE COALESCE(subscription_active, false) = false) AS inactive_subscriptions
             FROM users
             """
         )
@@ -1301,6 +1301,7 @@ def billing_overview(
                 email,
                 plan_name,
                 subscription_status,
+                subscription_active,
                 current_period_end,
                 stripe_customer_id,
                 stripe_subscription_id
