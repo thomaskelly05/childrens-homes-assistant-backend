@@ -28,6 +28,8 @@ BILLING_EXEMPT_PREFIXES = (
     "/components",
 )
 
+BILLING_EXEMPT_ROLES = {"admin", "provider_admin"}
+
 
 def get_bearer_token(
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
@@ -81,6 +83,10 @@ def _get_user_by_id(conn, user_id: int) -> dict | None:
 
 def _is_billing_exempt_path(request_path: str) -> bool:
     return any(request_path.startswith(prefix) for prefix in BILLING_EXEMPT_PREFIXES)
+
+
+def _is_billing_exempt_role(role: str | None) -> bool:
+    return (role or "").strip().lower() in BILLING_EXEMPT_ROLES
 
 
 def _get_billing_safe(conn, user_id: int) -> dict | None:
@@ -163,42 +169,42 @@ def get_current_user(
             detail="User account is inactive",
         )
 
+    role = (user.get("role") or "").strip().lower()
     request_path = request.url.path
-    is_exempt = _is_billing_exempt_path(request_path)
+
+    is_exempt = _is_billing_exempt_path(request_path) or _is_billing_exempt_role(role)
 
     billing = None
     subscription_active = False
     subscription_status = "inactive"
     plan_name = None
 
-    if not is_exempt:
-        billing = _get_billing_safe(conn, user_id)
-        subscription_active = bool(billing and billing.get("subscription_active"))
-        subscription_status = billing.get("subscription_status") if billing else "inactive"
-        plan_name = billing.get("plan_name") if billing else None
-
-        if not subscription_active:
+    try:
+        billing = get_user_billing_by_user_id(conn, user_id)
+        if billing:
+            billing = dict(billing)
+            subscription_active = bool(billing.get("subscription_active"))
+            subscription_status = billing.get("subscription_status") or "inactive"
+            plan_name = billing.get("plan_name")
+    except Exception:
+        if not is_exempt:
+            logger.exception("Required billing lookup failed for user_id=%s path=%s", user_id, request_path)
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Subscription required",
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Billing system unavailable",
             )
-    else:
-        try:
-            billing = get_user_billing_by_user_id(conn, user_id)
-            if billing:
-                billing = dict(billing)
-                subscription_active = bool(billing.get("subscription_active"))
-                subscription_status = billing.get("subscription_status") or "inactive"
-                plan_name = billing.get("plan_name")
-        except Exception:
-            logger.warning(
-                "Best-effort billing lookup failed for exempt path=%s user_id=%s",
-                request_path,
-                user_id,
-                exc_info=True,
-            )
+        logger.warning(
+            "Best-effort billing lookup failed for exempt request path=%s user_id=%s",
+            request_path,
+            user_id,
+            exc_info=True,
+        )
 
-    role = (user.get("role") or "").strip().lower()
+    if not is_exempt and not subscription_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Subscription required",
+        )
 
     return {
         **user,
