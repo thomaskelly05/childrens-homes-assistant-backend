@@ -26,6 +26,7 @@ except Exception:
     PdfReader = None
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
+compat_router = APIRouter(tags=["Chat Compatibility"])
 
 logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
@@ -65,7 +66,7 @@ def clip(text: str | None, max_len: int):
 def ensure_owner(conn, conversation_id: int, user_id: int):
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT id FROM conversations WHERE id=%s AND user_id=%s LIMIT 1",
+            "SELECT id FROM conversations WHERE id = %s AND user_id = %s LIMIT 1",
             (conversation_id, user_id),
         )
         if not cur.fetchone():
@@ -111,7 +112,7 @@ def get_doc(conn, conversation_id: int):
             """
             SELECT id, filename, document_text, created_at
             FROM conversation_documents
-            WHERE conversation_id=%s
+            WHERE conversation_id = %s
             ORDER BY created_at DESC, id DESC
             LIMIT 1
             """,
@@ -176,7 +177,7 @@ def save_ai_message(conversation_id: int, text: str):
         conn = get_db_connection()
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO messages (conversation_id, role, message) VALUES (%s,'assistant',%s)",
+                "INSERT INTO messages (conversation_id, role, message) VALUES (%s, 'assistant', %s)",
                 (conversation_id, clip(text, 200000)),
             )
         conn.commit()
@@ -356,7 +357,7 @@ def list_conversations(conn=Depends(get_db), current_user=Depends(get_current_us
         )
         rows = cur.fetchall()
 
-    return {"ok": True, "conversations": rows}
+    return rows
 
 
 @router.get("/conversations/{conversation_id}")
@@ -368,7 +369,6 @@ def load_conversation(conversation_id: int, conn=Depends(get_db), current_user=D
     document = get_doc(conn, conversation_id)
 
     return {
-        "ok": True,
         "messages": rows,
         "document": {
             "filename": document["filename"],
@@ -617,10 +617,6 @@ async def edit_message_and_regenerate(
             "X-Accel-Buffering": "no",
         },
     )
-
-
-# Backward-compatible aliases if your frontend is still calling /conversations...
-compat_router = APIRouter(tags=["Chat Compatibility"])
 
 
 @compat_router.get("/conversations")
