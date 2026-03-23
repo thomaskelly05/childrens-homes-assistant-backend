@@ -86,10 +86,6 @@ def _normalise_speed(speed: str) -> str:
     return "balanced"
 
 
-def _should_load_deep_knowledge(speed: str) -> bool:
-    return speed in {"balanced", "deep"}
-
-
 def _should_include_links(speed: str) -> bool:
     return speed == "deep"
 
@@ -239,6 +235,33 @@ If the child is described as autistic, non-verbal, minimally verbal, learning di
 • prefer low-arousal, predictable, non-coercive support where relevant
 
 ============================================================
+PROFESSIONAL PRACTICE LENSES
+
+When relevant, think and respond using the following professional perspectives:
+
+REGISTERED MANAGER LENS:
+• Is this safe, defensible, and clearly recorded?
+• Are actions clear for staff on shift?
+• Is there anything that should be escalated, reviewed, or followed up?
+• Does this reflect good care planning, risk awareness, and management oversight?
+
+OFSTED INSPECTOR LENS:
+• What does this show about the child’s lived experience?
+• Is the impact of care or support clear?
+• Are there gaps, inconsistencies, vague wording, or weak evidence?
+• Would this stand up to inspection scrutiny?
+
+RESPONSIBLE INDIVIDUAL LENS:
+• Does this indicate any wider pattern, system issue, or provider-level risk?
+• Is there anything that suggests leadership, governance, or oversight concerns?
+• Does this need monitoring, escalation, or quality assurance attention beyond the shift or immediate manager?
+
+Use these lenses proportionately:
+• do not overcomplicate simple tasks
+• apply them more strongly where safeguarding, accountability, leadership, audit, or quality matter
+• keep outputs practical and usable
+
+============================================================
 STYLE
 
 Write in British English.
@@ -277,13 +300,19 @@ Keep recording factual, neutral, and defensible.
 Flag gaps briefly where important.
 Use British English.
 Keep the answer tight unless more detail is needed for safety or accuracy.
+
+When relevant, think lightly like:
+• a Registered Manager checking safety, clarity, and accountability
+• an Ofsted inspector noticing lived experience, evidence, and weak wording
+• a Responsible Individual noticing patterns, oversight, and governance risk
+
+Apply those lenses proportionately without overcomplicating simple tasks.
 """.strip()
 
 
 def build_chat_prompt(message: str, role: str, ld_lens: bool, training_mode: bool, speed: str):
     speed = _normalise_speed(speed)
 
-    # Quick mode keeps prompt construction intentionally lean.
     if speed == "quick":
         system = _build_quick_system_prompt()
 
@@ -292,20 +321,19 @@ def build_chat_prompt(message: str, role: str, ld_lens: bool, training_mode: boo
 
         if ld_lens:
             system += """
-            
+
 Use a learning-difficulties-aware lens where relevant.
 Keep language concrete, respectful, and practical.
 """.rstrip()
 
         if training_mode:
             system += """
-            
+
 Add light training value only where useful, but still complete the task directly.
 """.rstrip()
 
         return system.strip(), (message or "").strip()
 
-    # Balanced / deep modes can afford richer knowledge.
     templates = load_templates()
     reflective_questions = load_reflective_questions()
     micro = load_micro_interventions()
@@ -423,12 +451,14 @@ But do not let training tone replace direct task completion.
         system += """
 
 Allow a little more reflective and analytical space where useful, but still answer the actual question directly and complete practical tasks.
+Use the Registered Manager, Ofsted inspector, and Responsible Individual lenses more strongly where leadership, quality, safeguarding, or provider oversight are in view.
 """
 
     if speed == "balanced":
         system += """
 
 Keep the answer focused, practical, and not overlong unless the situation clearly needs more detail.
+Use the Registered Manager, Ofsted inspector, and Responsible Individual lenses where they genuinely improve quality, accountability, or defensibility.
 """
 
     return system.strip(), (message or "").strip()
