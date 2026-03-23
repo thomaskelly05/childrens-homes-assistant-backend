@@ -1,12 +1,13 @@
+import os
+
+import bcrypt
 from fastapi import APIRouter, Depends, HTTPException, Header, Request, Response
 from pydantic import BaseModel
 from psycopg2.extras import RealDictCursor
-import bcrypt
-import os
 
-from db.connection import get_db
-from db.billing_db import ensure_billing_columns, get_user_billing_by_user_id
 from auth.tokens import create_session_token, decode_session_token
+from db.billing_db import get_user_billing_by_user_id
+from db.connection import get_db
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -25,8 +26,8 @@ def _normalise_email(email: str) -> str:
     return (email or "").strip().lower()
 
 
-def _extract_token(request: Request, authorization: str | None = None):
-    cookie_token = request.cookies.get(SESSION_COOKIE_NAME)
+def _extract_token(request: Request, authorization: str | None = None) -> str | None:
+    cookie_token = (request.cookies.get(SESSION_COOKIE_NAME) or "").strip()
     if cookie_token:
         return cookie_token
 
@@ -61,7 +62,7 @@ def _get_user_by_id(conn, user_id: int):
             WHERE id = %s
             LIMIT 1
             """,
-            (user_id,)
+            (user_id,),
         )
         return cur.fetchone()
 
@@ -87,8 +88,6 @@ def _clear_session_cookie(response: Response):
 
 @router.post("/login")
 def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
-    ensure_billing_columns(conn)
-
     email = _normalise_email(payload.email)
     password = payload.password or ""
 
@@ -112,7 +111,7 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
             WHERE lower(email) = %s
             LIMIT 1
             """,
-            (email,)
+            (email,),
         )
         user = cur.fetchone()
 
@@ -147,10 +146,11 @@ def login(payload: LoginRequest, response: Response, conn=Depends(get_db)):
             "home_id": user.get("home_id"),
             "first_name": user.get("first_name"),
             "last_name": user.get("last_name"),
-            "is_active": bool(billing and billing.get("is_active")),
+            "is_active": bool(user.get("is_active")),
+            "subscription_active": bool(billing and billing.get("subscription_active")),
             "subscription_status": billing.get("subscription_status") if billing else "inactive",
             "plan_name": billing.get("plan_name") if billing else None,
-        }
+        },
     }
 
 
@@ -159,7 +159,7 @@ def logout(response: Response):
     _clear_session_cookie(response)
     return {
         "ok": True,
-        "message": "Logged out"
+        "message": "Logged out",
     }
 
 
@@ -167,7 +167,7 @@ def logout(response: Response):
 def check_auth(
     request: Request,
     authorization: str | None = Header(default=None),
-    conn=Depends(get_db)
+    conn=Depends(get_db),
 ):
     token = _extract_token(request, authorization)
     payload = decode_session_token(token) if token else None
@@ -181,7 +181,6 @@ def check_auth(
     except (TypeError, ValueError):
         return {"authenticated": False}
 
-    ensure_billing_columns(conn)
     user = _get_user_by_id(conn, user_id)
 
     if not user or user.get("archived") is True or user.get("is_active") is False:
@@ -195,7 +194,8 @@ def check_auth(
         "email": user["email"],
         "role": user["role"],
         "home_id": user.get("home_id"),
-        "is_active": bool(billing and billing.get("is_active")),
+        "is_active": bool(user.get("is_active")),
+        "subscription_active": bool(billing and billing.get("subscription_active")),
         "subscription_status": billing.get("subscription_status") if billing else "inactive",
         "plan_name": billing.get("plan_name") if billing else None,
     }
@@ -205,7 +205,7 @@ def check_auth(
 def get_me(
     request: Request,
     authorization: str | None = Header(default=None),
-    conn=Depends(get_db)
+    conn=Depends(get_db),
 ):
     token = _extract_token(request, authorization)
     payload = decode_session_token(token) if token else None
@@ -222,7 +222,6 @@ def get_me(
     except (TypeError, ValueError):
         raise HTTPException(status_code=401, detail="Invalid session")
 
-    ensure_billing_columns(conn)
     user = _get_user_by_id(conn, user_id)
 
     if not user:
@@ -248,11 +247,12 @@ def get_me(
             "archived": user.get("archived"),
             "updated_at": user.get("updated_at"),
             "created_at": user.get("created_at"),
-            "is_active": bool(billing and billing.get("is_active")),
+            "is_active": bool(user.get("is_active")),
+            "subscription_active": bool(billing and billing.get("subscription_active")),
             "subscription_status": billing.get("subscription_status") if billing else "inactive",
             "plan_name": billing.get("plan_name") if billing else None,
             "stripe_customer_id": billing.get("stripe_customer_id") if billing else None,
             "stripe_subscription_id": billing.get("stripe_subscription_id") if billing else None,
             "current_period_end": billing.get("current_period_end") if billing else None,
-        }
+        },
     }
