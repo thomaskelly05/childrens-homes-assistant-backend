@@ -1,44 +1,29 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
+import time
 from typing import Any
 
-import psycopg2
-from psycopg2.extras import RealDictCursor
 from openai import OpenAI
+from psycopg2.extras import RealDictCursor
+
+from db.connection import get_db_connection, release_db_connection
 
 logger = logging.getLogger("indicare.retrieval")
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
+EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "text-embedding-3-small")
+EMBEDDING_CACHE_TTL_SECONDS = int(os.environ.get("EMBEDDING_CACHE_TTL_SECONDS", "900"))
+MAX_EMBED_TEXT_CHARS = 1200
+MAX_RESULT_ROWS = 5
+MAX_EXCERPT_CHARS = 650
 
-# ---------------------------------------------------------
-# DATABASE
-# ---------------------------------------------------------
-def get_db_connection():
-    return psycopg2.connect(
-        host=os.environ.get("DB_HOST", "localhost"),
-        database=os.environ.get("DB_NAME", "indicare"),
-        user=os.environ.get("DB_USER", "postgres"),
-        password=os.environ.get("DB_PASSWORD", "postgres"),
-    )
+_embedding_cache: dict[str, tuple[float, list[float]]] = {}
 
 
-# ---------------------------------------------------------
-# EMBEDDINGS
-# ---------------------------------------------------------
-def embed_query(text: str) -> list[float]:
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=text,
-    )
-    return response.data[0].embedding
-
-
-# ---------------------------------------------------------
-# RETRIEVAL HINTS
-# ---------------------------------------------------------
 MODE_HINTS = {
     "factual": [
         "children's homes regulations",
@@ -119,9 +104,6 @@ SAFEGUARDING_HINTS = {
 }
 
 
-# ---------------------------------------------------------
-# HELPERS
-# ---------------------------------------------------------
 def _safe_string(value: Any) -> str:
     if value is None:
         return ""
@@ -137,6 +119,50 @@ def _trim_text(value: str, limit: int) -> str:
     return value[:limit].rsplit(" ", 1)[0].strip()
 
 
+def _cache_key(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _cleanup_embedding_cache() -> None:
+    now = time.time()
+    expired_keys = [
+        key
+        for key, (expires_at, _embedding) in _embedding_cache.items()
+        if expires_at <= now
+    ]
+    for key in expired_keys:
+        _embedding_cache.pop(key, None)
+
+
+def _get_cached_embedding(text: str) -> list[float] | None:
+    _cleanup_embedding_cache()
+    key = _cache_key(text)
+    entry = _embedding_cache.get(key)
+    if not entry:
+        return None
+
+    expires_at, embedding = entry
+    if expires_at <= time.time():
+        _embedding_cache.pop(key, None)
+        return None
+
+    return embedding
+
+
+def _set_cached_embedding(text: str, embedding: list[float]) -> None:
+    key = _cache_key(text)
+    _embedding_cache[key] = (time.time() + EMBEDDING_CACHE_TTL_SECONDS, embedding)
+
+
+def _should_skip_retrieval(message: str) -> bool:
+    text = _safe_string(message)
+    if not text:
+        return True
+    if len(text) < 12:
+        return True
+    return False
+
+
 def _build_query_text(
     message: str,
     mode: str = "general_practice",
@@ -144,10 +170,6 @@ def _build_query_text(
     role: str = "",
     document_name: str | None = None,
 ) -> str:
-    """
-    Build a compact shaped retrieval query.
-    Keep it lean so embeddings reflect the actual need, not prompt noise.
-    """
     parts: list[str] = []
 
     clean_message = _trim_text(message, 700)
@@ -162,21 +184,34 @@ def _build_query_text(
 
     mode_hints = MODE_HINTS.get(mode, [])
     if mode_hints:
-        parts.append(f"Mode hints: {', '.join(mode_hints[:4])}")
+        parts.append(f"Mode hints: {', '.join(mode_hints[:3])}")
 
     safeguarding_hints = SAFEGUARDING_HINTS.get(safeguarding_level, [])
     if safeguarding_hints:
-        parts.append(f"Safeguarding hints: {', '.join(safeguarding_hints[:3])}")
+        parts.append(f"Safeguarding hints: {', '.join(safeguarding_hints[:2])}")
 
     if clean_document_name:
         parts.append(f"Document: {clean_document_name}")
 
-    return "\n".join(parts).strip()
+    return _trim_text("\n".join(parts).strip(), MAX_EMBED_TEXT_CHARS)
+
+
+def embed_query(text: str) -> list[float]:
+    cached = _get_cached_embedding(text)
+    if cached is not None:
+        return cached
+
+    response = client.embeddings.create(
+        model=EMBEDDING_MODEL,
+        input=text,
+    )
+    embedding = response.data[0].embedding
+    _set_cached_embedding(text, embedding)
+    return embedding
 
 
 def _fetch_knowledge_rows(embedding: list[float], limit: int = 3) -> list[dict[str, Any]]:
     conn = None
-
     try:
         conn = get_db_connection()
 
@@ -192,15 +227,14 @@ def _fetch_knowledge_rows(embedding: list[float], limit: int = 3) -> list[dict[s
                 ORDER BY embedding <-> %s
                 LIMIT %s
                 """,
-                (embedding, limit)
+                (embedding, limit),
             )
             rows = cur.fetchall()
 
         return rows or []
 
     finally:
-        if conn:
-            conn.close()
+        release_db_connection(conn)
 
 
 def _format_rows(rows: list[dict[str, Any]]) -> str:
@@ -211,7 +245,7 @@ def _format_rows(rows: list[dict[str, Any]]) -> str:
     source_blocks: list[str] = []
 
     for i, row in enumerate(rows, start=1):
-        content = _trim_text(row.get("content") or "", 900)
+        content = _trim_text(row.get("content") or "", MAX_EXCERPT_CHARS)
         doc = _safe_string(row.get("document_title")) or "Unknown document"
         section = _safe_string(row.get("section")) or "Unknown section"
         page = row.get("page_number")
@@ -232,8 +266,7 @@ def _format_rows(rows: list[dict[str, Any]]) -> str:
     return f"""
 RETRIEVED INTERNAL KNOWLEDGE
 
-Use the following internal knowledge selectively where it genuinely improves the answer.
-Prefer the most relevant excerpts and do not force all of them into the response.
+Use the following internal knowledge only where it genuinely improves the answer.
 
 Knowledge excerpts:
 {excerpts}
@@ -243,9 +276,6 @@ Knowledge sources:
 """.strip()
 
 
-# ---------------------------------------------------------
-# PUBLIC API
-# ---------------------------------------------------------
 def retrieve_context(
     message: str,
     mode: str = "general_practice",
@@ -256,7 +286,10 @@ def retrieve_context(
     limit: int = 3,
 ) -> str:
     try:
-        safe_limit = max(1, min(int(limit), 5))
+        if _should_skip_retrieval(message):
+            return ""
+
+        safe_limit = max(1, min(int(limit), MAX_RESULT_ROWS))
 
         shaped_query = _build_query_text(
             message=message,
@@ -282,8 +315,8 @@ An uploaded document is also present in this request. Use retrieved knowledge al
 
         return context
 
-    except Exception as e:
-        logger.exception("Knowledge retrieval failed: %s", e)
+    except Exception:
+        logger.exception("Knowledge retrieval failed")
         return ""
 
 
