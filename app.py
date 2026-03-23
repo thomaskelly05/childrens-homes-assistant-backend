@@ -121,6 +121,7 @@ ROUTERS = [
     "routers.staff_journal_routes",
     "routers.supervision_routes",
     "routers.tasks_routes",
+    "routers.manager_routes",
     "routers.young_people_routes",
     "routers.young_people_profile_routes",
     "routers.young_people_daily_notes_routes",
