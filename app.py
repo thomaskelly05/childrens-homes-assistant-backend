@@ -1,15 +1,24 @@
-import os
 import importlib
+import logging
+import os
 
+import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-import sentry_sdk
+from slowapi.util import get_remote_address
+
+from db.connection import close_db_pool, init_db_pool
+
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
+
+logger = logging.getLogger(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
@@ -21,6 +30,7 @@ COMPONENTS_DIR = os.path.join(FRONTEND_DIR, "components")
 REQUIRED_ENV_VARS = [
     "SESSION_SECRET",
     "OPENAI_API_KEY",
+    "DATABASE_URL",
 ]
 
 missing = [key for key in REQUIRED_ENV_VARS if not os.getenv(key)]
@@ -31,8 +41,10 @@ SENTRY_DSN = os.getenv("SENTRY_DSN")
 if SENTRY_DSN:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
-        traces_sample_rate=1.0,
-        profiles_sample_rate=1.0,
+        traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "1.0")),
+        profiles_sample_rate=float(os.getenv("SENTRY_PROFILES_SAMPLE_RATE", "1.0")),
+        environment=os.getenv("APP_ENV", "production"),
+        release=os.getenv("APP_REVISION"),
     )
 
 app = FastAPI(title="IndiCare API")
@@ -54,6 +66,18 @@ app.add_middleware(
 )
 
 
+@app.on_event("startup")
+def startup_event():
+    init_db_pool()
+    logger.info("IndiCare API started")
+
+
+@app.on_event("shutdown")
+def shutdown_event():
+    close_db_pool()
+    logger.info("IndiCare API stopped")
+
+
 def include_router(module_path: str):
     module = importlib.import_module(module_path)
     router = getattr(module, "router", None)
@@ -62,7 +86,7 @@ def include_router(module_path: str):
         raise RuntimeError(f"No router found in {module_path}")
 
     app.include_router(router)
-    print(f"[IndiCare] Loaded router: {module_path}")
+    logger.info("[IndiCare] Loaded router: %s", module_path)
 
 
 ROUTERS = [
@@ -126,9 +150,34 @@ def health():
     return {"ok": True}
 
 
+@app.get("/health/ready")
+def health_ready():
+    from db.connection import db_pool
+
+    try:
+        if db_pool is None:
+            init_db_pool()
+
+        conn = db_pool.getconn()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+                cur.fetchone()
+        finally:
+            db_pool.putconn(conn)
+
+        return {"ok": True, "ready": True}
+    except Exception as exc:
+        logger.exception("Readiness check failed")
+        return JSONResponse(
+            status_code=503,
+            content={"ok": False, "ready": False, "error": str(exc)},
+        )
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    print(f"[GLOBAL ERROR] {str(exc)}")
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
     return JSONResponse(
         status_code=500,
         content={
@@ -144,10 +193,6 @@ def serve_page(file_name: str):
         return JSONResponse(status_code=404, content={"error": "Page not found"})
     return FileResponse(path)
 
-
-# =========================================================
-# FRONTEND ROUTES
-# =========================================================
 
 @app.get("/")
 def serve_index():
