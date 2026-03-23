@@ -1,12 +1,13 @@
-import os
 import logging
+import os
 from typing import Any
 
 from tavily import TavilyClient
 
 logger = logging.getLogger(__name__)
 
-client = TavilyClient(api_key=os.environ.get("TAVILY_API_KEY"))
+tavily_api_key = (os.environ.get("TAVILY_API_KEY") or "").strip()
+client = TavilyClient(api_key=tavily_api_key) if tavily_api_key else None
 
 PRIMARY_SITES = [
     "gov.uk",
@@ -30,7 +31,8 @@ SECONDARY_SITES = [
     "nice.org.uk",
 ]
 
-MAX_SNIPPET_CHARS = 420
+MAX_SNIPPET_CHARS = 280
+MIN_PRIMARY_RESULTS_TO_SKIP_SECONDARY = 2
 
 
 def _safe_string(value: Any) -> str:
@@ -48,23 +50,16 @@ def _truncate(text: str, max_chars: int = MAX_SNIPPET_CHARS) -> str:
     return text[:max_chars].rsplit(" ", 1)[0].strip() + "..."
 
 
-def build_site_query(query: str, sites: list[str]) -> str:
-    clean_query = _safe_string(query)
-    site_filters = " OR ".join(f"site:{site}" for site in sites if _safe_string(site))
-    if not site_filters:
-        return clean_query
-    return f"{clean_query} ({site_filters})"
-
-
 def _deduplicate_results(results: list[dict]) -> list[dict]:
-    seen = set()
-    unique_results = []
+    seen: set[str] = set()
+    unique_results: list[dict] = []
 
     for item in results or []:
         url = _safe_string(item.get("url")).lower()
         title = _safe_string(item.get("title")).lower()
-        key = url or title
+        content = _safe_string(item.get("content")).lower()
 
+        key = url or f"{title}|{content[:120]}"
         if not key or key in seen:
             continue
 
@@ -75,7 +70,7 @@ def _deduplicate_results(results: list[dict]) -> list[dict]:
 
 
 def _clean_results(results: list[dict]) -> list[dict]:
-    cleaned = []
+    cleaned: list[dict] = []
 
     for item in _deduplicate_results(results):
         title = _safe_string(item.get("title"))
@@ -85,11 +80,13 @@ def _clean_results(results: list[dict]) -> list[dict]:
         if not title and not content:
             continue
 
-        cleaned.append({
-            "title": title,
-            "content": content,
-            "url": url,
-        })
+        cleaned.append(
+            {
+                "title": title,
+                "content": content,
+                "url": url,
+            }
+        )
 
     return cleaned
 
@@ -99,43 +96,57 @@ def format_results(results: list[dict], authority_label: str) -> str:
     if not cleaned:
         return ""
 
-    snippets = []
+    snippets: list[str] = []
 
     for i, result in enumerate(cleaned, start=1):
-        title = result["title"]
+        title = result["title"] or "Untitled source"
         content = result["content"]
-        url = result["url"]
 
-        block_lines = [f"[{authority_label} {i}] {title or 'Untitled source'}"]
+        block_lines = [f"[{authority_label} {i}] {title}"]
 
         if content:
             block_lines.append(f"Snippet: {content}")
-
-        if url:
-            block_lines.append(f"Source: {url}")
 
         snippets.append("\n".join(block_lines))
 
     return "\n\n".join(snippets)
 
 
-def search_sites(query: str, sites: list[str], limit: int) -> list[dict]:
-    try:
-        safe_query = build_site_query(query, sites)
+def _search_sites(query: str, sites: list[str], limit: int, search_depth: str = "basic") -> list[dict]:
+    if not client:
+        logger.warning("Tavily client not configured")
+        return []
 
-        results = client.search(
-            query=safe_query,
-            search_depth="advanced",
-            max_results=max(1, int(limit)),
-        )
+    clean_query = _safe_string(query)
+    if not clean_query:
+        return []
+
+    try:
+        # Prefer structured domain filtering where supported.
+        try:
+            results = client.search(
+                query=clean_query,
+                search_depth=search_depth,
+                max_results=max(1, int(limit)),
+                include_domains=sites,
+            )
+        except TypeError:
+            # Fallback if include_domains is not supported by installed Tavily SDK.
+            site_filters = " OR ".join(f"site:{site}" for site in sites if _safe_string(site))
+            fallback_query = f"{clean_query} ({site_filters})" if site_filters else clean_query
+            results = client.search(
+                query=fallback_query,
+                search_depth=search_depth,
+                max_results=max(1, int(limit)),
+            )
 
         if not results or "results" not in results:
             return []
 
         return results["results"] or []
 
-    except Exception as e:
-        logger.exception("Tavily search failed: %s", e)
+    except Exception:
+        logger.exception("Tavily search failed")
         return []
 
 
@@ -144,15 +155,26 @@ def web_search(query: str, primary_limit: int = 3, secondary_limit: int = 2) -> 
     if not clean_query:
         return ""
 
-    primary_results = search_sites(clean_query, PRIMARY_SITES, primary_limit)
-    primary_text = format_results(primary_results, "Primary")
+    primary_results = _search_sites(
+        query=clean_query,
+        sites=PRIMARY_SITES,
+        limit=primary_limit,
+        search_depth="basic",
+    )
+    cleaned_primary = _clean_results(primary_results)
+    primary_text = format_results(cleaned_primary, "Primary")
 
-    # If primary sources returned enough useful content, prefer those.
-    if len(_clean_results(primary_results)) >= 2:
+    if len(cleaned_primary) >= MIN_PRIMARY_RESULTS_TO_SKIP_SECONDARY:
         return primary_text
 
-    secondary_results = search_sites(clean_query, SECONDARY_SITES, secondary_limit)
-    secondary_text = format_results(secondary_results, "Secondary")
+    secondary_results = _search_sites(
+        query=clean_query,
+        sites=SECONDARY_SITES,
+        limit=secondary_limit,
+        search_depth="basic",
+    )
+    cleaned_secondary = _clean_results(secondary_results)
+    secondary_text = format_results(cleaned_secondary, "Secondary")
 
     parts = [part for part in [primary_text, secondary_text] if part]
     return "\n\n".join(parts)
