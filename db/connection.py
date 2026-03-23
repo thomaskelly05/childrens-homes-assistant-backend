@@ -1,9 +1,8 @@
 import logging
 import os
 
-import psycopg2
-from psycopg2.extras import RealDictCursor
 from psycopg2.pool import ThreadedConnectionPool
+from psycopg2.extras import RealDictCursor
 
 logger = logging.getLogger(__name__)
 
@@ -52,26 +51,50 @@ def close_db_pool():
         logger.info("Database pool closed")
 
 
-def get_db():
+def _prepare_connection(conn):
+    if conn.closed:
+        raise RuntimeError("Received closed database connection from pool")
+
+    with conn.cursor() as cur:
+        cur.execute("SELECT 1")
+        cur.execute(f"SET statement_timeout TO {DB_STATEMENT_TIMEOUT_MS}")
+        cur.execute(f"SET idle_in_transaction_session_timeout TO {DB_IDLE_TX_TIMEOUT_MS}")
+
+
+def get_db_connection():
     global db_pool
 
     if db_pool is None:
         init_db_pool()
 
+    conn = db_pool.getconn()
+    _prepare_connection(conn)
+    return conn
+
+
+def release_db_connection(conn, *, close: bool = False):
+    global db_pool
+
+    if conn is None:
+        return
+
+    try:
+        if conn.closed:
+            return
+
+        if close:
+            db_pool.putconn(conn, close=True)
+        else:
+            db_pool.putconn(conn)
+    except Exception:
+        logger.warning("Failed to release DB connection back to pool", exc_info=True)
+
+
+def get_db():
     conn = None
 
     try:
-        conn = db_pool.getconn()
-
-        if conn.closed:
-            raise RuntimeError("Received closed database connection from pool")
-
-        # Ensure the connection is healthy
-        with conn.cursor() as cur:
-            cur.execute("SELECT 1")
-            cur.execute(f"SET statement_timeout TO {DB_STATEMENT_TIMEOUT_MS}")
-            cur.execute(f"SET idle_in_transaction_session_timeout TO {DB_IDLE_TX_TIMEOUT_MS}")
-
+        conn = get_db_connection()
         yield conn
 
         if not conn.closed:
@@ -83,5 +106,4 @@ def get_db():
         raise
 
     finally:
-        if conn is not None and not conn.closed:
-            db_pool.putconn(conn)
+        release_db_connection(conn)
