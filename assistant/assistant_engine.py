@@ -9,7 +9,7 @@ from assistant.mode_detector import detect_mode
 from assistant.prompts import build_chat_prompt
 from assistant.reflection_engine import maybe_build_reflection_context
 from assistant.response_schemas import get_schema_for_mode, schema_to_prompt_block
-from assistant.retrieval import retrieve_context
+from assistant.retrieval import retrieve_context_bundle
 from assistant.safeguarding import assess_safeguarding_level
 from assistant.supervision_engine import maybe_build_supervision_context
 
@@ -224,6 +224,7 @@ class AssistantRuntimeContext:
     suggested_actions_context: str = ""
     practice_quality_context: str = ""
     escalation_context: str = ""
+    sources_used: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -698,6 +699,18 @@ def _build_escalation_context(urgency: str, safeguarding_level: str, role_profil
     return "\n\n".join(blocks).strip()
 
 
+def _build_document_source(document_name: str | None) -> dict[str, Any]:
+    return {
+        "type": "uploaded_document",
+        "label": f"Uploaded document: {_safe_string(document_name) or 'Uploaded document'}",
+        "document_title": _safe_string(document_name) or "Uploaded document",
+        "section": "",
+        "page_number": None,
+        "excerpt": "",
+        "url": None,
+    }
+
+
 def _safe_detect_mode(message: str, history: list[dict[str, Any]]) -> str:
     try:
         return detect_mode(message=message, history=history)
@@ -757,32 +770,46 @@ def _safe_memory_context(req: AssistantRequest, mode: str, speed: str) -> str:
         return ""
 
 
-def _safe_retrieval_context(req: AssistantRequest, mode: str, safeguarding_level: str, speed: str, retrieval_level: str) -> str:
+def _safe_retrieval_bundle(
+    req: AssistantRequest,
+    mode: str,
+    safeguarding_level: str,
+    speed: str,
+    retrieval_level: str,
+) -> tuple[str, list[dict[str, Any]]]:
     limit = 1 if retrieval_level == "light" else 2
     if speed == "deep" and retrieval_level == "full":
         limit = 3
 
     try:
-        return _safe_string(
-            retrieve_context(
-                message=req.message,
-                mode=mode,
-                safeguarding_level=safeguarding_level,
-                document_text=req.document_text,
-                document_name=req.document_name,
-                role=req.role,
-                limit=limit,
-            )
+        bundle = retrieve_context_bundle(
+            message=req.message,
+            mode=mode,
+            safeguarding_level=safeguarding_level,
+            document_text=req.document_text,
+            document_name=req.document_name,
+            role=req.role,
+            limit=limit,
         )
+        context_text = _safe_string(bundle.get("context_text"))
+        sources = bundle.get("sources") if isinstance(bundle, dict) else []
+        if not isinstance(sources, list):
+            sources = []
+        return context_text, sources
     except TypeError:
         try:
-            return _safe_string(retrieve_context(req.message))
+            bundle = retrieve_context_bundle(req.message, limit=limit)
+            context_text = _safe_string(bundle.get("context_text"))
+            sources = bundle.get("sources") if isinstance(bundle, dict) else []
+            if not isinstance(sources, list):
+                sources = []
+            return context_text, sources
         except Exception:
             logger.exception("Retrieval failed")
-            return ""
+            return "", []
     except Exception:
         logger.exception("Retrieval failed")
-        return ""
+        return "", []
 
 
 def _safe_reflection_context(message: str, mode: str, safeguarding_level: str, history: list[dict[str, Any]]) -> str:
@@ -886,7 +913,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
             runtime.memory_context = _safe_memory_context(req, runtime.mode, speed)
 
         if runtime.retrieval_level != "none":
-            runtime.retrieval_context = _safe_retrieval_context(
+            runtime.retrieval_context, runtime.sources_used = _safe_retrieval_bundle(
                 req,
                 runtime.mode,
                 runtime.safeguarding_level,
@@ -918,6 +945,9 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
             runtime.user_role_profile,
             runtime.task_type,
         )
+
+    if req.document_text:
+        runtime.sources_used.append(_build_document_source(req.document_name))
 
     system_prompt, user_message = build_chat_prompt(
         message=message,
@@ -968,7 +998,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
             "session_id=%s mode=%s task_type=%s output_type=%s "
             "safeguarding=%s urgency=%s response_mode=%s role_profile=%s "
             "retrieval_level=%s reflection_level=%s "
-            "memory=%s retrieval=%s reflection=%s supervision=%s leadership_lens=%s suggested_actions=%s"
+            "memory=%s retrieval=%s reflection=%s supervision=%s leadership_lens=%s suggested_actions=%s sources=%s"
         ),
         req.session_id,
         runtime.mode,
@@ -986,6 +1016,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         bool(runtime.supervision_context),
         bool(runtime.leadership_lens_context),
         bool(runtime.suggested_actions_context),
+        len(runtime.sources_used),
     )
 
     return AssistantPromptPackage(
