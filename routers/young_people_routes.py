@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import logging
+from datetime import date
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -20,30 +20,28 @@ from services.young_people_service import (
     upsert_education_profile,
     upsert_health_profile,
     upsert_identity_profile,
+    upsert_legal_status,
 )
 
-logger = logging.getLogger(__name__)
-
 router = APIRouter(prefix="/young-people", tags=["Young People"])
-compat_router = APIRouter(tags=["Young People Compatibility"])
 
 
 class YoungPersonCreatePayload(BaseModel):
     home_id: int
-    first_name: str = Field(min_length=1, max_length=120)
-    last_name: str | None = ""
-    preferred_name: str | None = ""
-    date_of_birth: str | None = None
-    gender: str | None = ""
-    ethnicity: str | None = ""
-    nhs_number: str | None = ""
-    local_id_number: str | None = ""
-    admission_date: str | None = None
-    discharge_date: str | None = None
-    placement_status: str | None = ""
+    first_name: str = Field(min_length=1)
+    last_name: str | None = None
+    preferred_name: str | None = None
+    date_of_birth: date | None = None
+    gender: str | None = None
+    ethnicity: str | None = None
+    nhs_number: str | None = None
+    local_id_number: str | None = None
+    admission_date: date | None = None
+    discharge_date: date | None = None
+    placement_status: str | None = None
     primary_keyworker_id: int | None = None
-    summary_risk_level: str | None = ""
-    photo_url: str | None = ""
+    summary_risk_level: str | None = None
+    photo_url: str | None = None
     archived: bool = False
 
 
@@ -52,13 +50,13 @@ class YoungPersonUpdatePayload(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
     preferred_name: str | None = None
-    date_of_birth: str | None = None
+    date_of_birth: date | None = None
     gender: str | None = None
     ethnicity: str | None = None
     nhs_number: str | None = None
     local_id_number: str | None = None
-    admission_date: str | None = None
-    discharge_date: str | None = None
+    admission_date: date | None = None
+    discharge_date: date | None = None
     placement_status: str | None = None
     primary_keyworker_id: int | None = None
     summary_risk_level: str | None = None
@@ -66,199 +64,124 @@ class YoungPersonUpdatePayload(BaseModel):
     archived: bool | None = None
 
 
-class CommunicationProfilePayload(BaseModel):
-    neurodiversity_summary: str | None = ""
-    communication_style: str | None = ""
-    sensory_profile: str | None = ""
-    processing_needs: str | None = ""
-    signs_of_distress: str | None = ""
-    what_helps: str | None = ""
-    what_to_avoid: str | None = ""
-    routines_and_predictability: str | None = ""
-    visual_support_needs: str | None = ""
+class YoungPersonCommunicationProfilePayload(BaseModel):
+    neurodiversity_summary: str | None = None
+    communication_style: str | None = None
+    sensory_profile: str | None = None
+    processing_needs: str | None = None
+    signs_of_distress: str | None = None
+    what_helps: str | None = None
+    what_to_avoid: str | None = None
+    routines_and_predictability: str | None = None
+    visual_support_needs: str | None = None
 
 
-class EducationProfilePayload(BaseModel):
-    school_name: str | None = ""
-    year_group: str | None = ""
-    education_status: str | None = ""
-    sen_status: str | None = ""
-    ehcp_details: str | None = ""
-    designated_teacher: str | None = ""
+class YoungPersonEducationProfilePayload(BaseModel):
+    school_name: str | None = None
+    year_group: str | None = None
+    education_status: str | None = None
+    sen_status: str | None = None
+    ehcp_details: str | None = None
+    designated_teacher: str | None = None
     attendance_baseline: float | None = None
-    pep_status: str | None = ""
-    support_summary: str | None = ""
+    pep_status: str | None = None
+    support_summary: str | None = None
 
 
-class HealthProfilePayload(BaseModel):
-    gp_name: str | None = ""
-    gp_contact: str | None = ""
-    dentist_name: str | None = ""
-    dentist_contact: str | None = ""
-    optician_name: str | None = ""
-    optician_contact: str | None = ""
-    allergies: str | None = ""
-    diagnoses: str | None = ""
-    mental_health_summary: str | None = ""
-    medication_summary: str | None = ""
-    consent_notes: str | None = ""
+class YoungPersonHealthProfilePayload(BaseModel):
+    gp_name: str | None = None
+    gp_contact: str | None = None
+    dentist_name: str | None = None
+    dentist_contact: str | None = None
+    optician_name: str | None = None
+    optician_contact: str | None = None
+    allergies: str | None = None
+    diagnoses: str | None = None
+    mental_health_summary: str | None = None
+    medication_summary: str | None = None
+    consent_notes: str | None = None
 
 
-class IdentityProfilePayload(BaseModel):
-    religion_or_faith: str | None = ""
-    cultural_identity: str | None = ""
-    first_language: str | None = ""
-    dietary_needs: str | None = ""
-    interests: str | None = ""
-    strengths_summary: str | None = ""
-    what_matters_to_me: str | None = ""
-    important_dates: str | None = ""
+class YoungPersonIdentityProfilePayload(BaseModel):
+    religion_or_faith: str | None = None
+    cultural_identity: str | None = None
+    first_language: str | None = None
+    dietary_needs: str | None = None
+    interests: str | None = None
+    strengths_summary: str | None = None
+    what_matters_to_me: str | None = None
+    important_dates: str | None = None
 
 
-class ContactPayload(BaseModel):
-    contact_type: str | None = ""
-    full_name: str = Field(min_length=1, max_length=200)
-    relationship_to_young_person: str | None = ""
-    phone: str | None = ""
-    email: str | None = ""
-    address: str | None = ""
+class YoungPersonLegalStatusPayload(BaseModel):
+    legal_status: str | None = None
+    order_type: str | None = None
+    order_details: str | None = None
+    delegated_authority_details: str | None = None
+    restrictions_text: str | None = None
+    consent_arrangements: str | None = None
+    effective_from: date | None = None
+    effective_to: date | None = None
+    is_current: bool = True
+
+
+class YoungPersonContactPayload(BaseModel):
+    contact_type: str | None = None
+    full_name: str = Field(min_length=1)
+    relationship_to_young_person: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    address: str | None = None
     is_parental_responsibility_holder: bool = False
     is_approved_contact: bool = False
     is_restricted_contact: bool = False
-    supervision_level: str | None = ""
-    notes: str | None = ""
+    supervision_level: str | None = None
+    notes: str | None = None
 
 
-class AlertPayload(BaseModel):
-    alert_type: str | None = ""
-    title: str = Field(min_length=1, max_length=200)
-    description: str | None = ""
-    severity: str | None = ""
+class YoungPersonAlertPayload(BaseModel):
+    alert_type: str | None = None
+    title: str = Field(min_length=1)
+    description: str | None = None
+    severity: str | None = None
     is_active: bool = True
     show_globally: bool = False
-    review_date: str | None = None
+    review_date: date | None = None
 
 
-def _current_user_id(current_user: dict[str, Any]) -> int | None:
-    value = current_user.get("user_id") or current_user.get("id")
-    try:
-        return int(value) if value is not None else None
-    except (TypeError, ValueError):
-        return None
-
-
-def _current_home_id(current_user: dict[str, Any]) -> int | None:
-    value = current_user.get("home_id")
-    try:
-        return int(value) if value is not None else None
-    except (TypeError, ValueError):
-        return None
-
-
-def _current_role(current_user: dict[str, Any]) -> str:
-    return str(current_user.get("role") or "").strip().lower()
-
-
-def _can_access_home(current_user: dict[str, Any], target_home_id: int | None) -> bool:
-    role = _current_role(current_user)
-    user_home_id = _current_home_id(current_user)
-
-    if role in {"admin", "provider_admin"}:
-        return True
-
-    if target_home_id is None:
-        return False
-
-    return user_home_id == target_home_id
-
-
-def _get_person_or_404(conn, young_person_id: int) -> dict[str, Any]:
+def _ensure_person_exists(conn, young_person_id: int) -> dict[str, Any]:
     person = get_young_person_by_id(conn, young_person_id)
     if not person:
         raise HTTPException(status_code=404, detail="Young person not found")
     return person
 
 
-def _check_person_access(conn, current_user: dict[str, Any], young_person_id: int) -> dict[str, Any]:
-    person = _get_person_or_404(conn, young_person_id)
-    if not _can_access_home(current_user, person.get("home_id")):
-        raise HTTPException(status_code=403, detail="Not authorised for this young person")
-    return person
-
-
 @router.get("")
 @router.get("/")
-def get_young_people(
+def api_list_young_people(
     home_id: int | None = Query(default=None),
     include_archived: bool = Query(default=False),
     search: str = Query(default=""),
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    requested_home_id = home_id
-
-    if _current_role(current_user) not in {"admin", "provider_admin"}:
-        requested_home_id = _current_home_id(current_user)
-
     rows = list_young_people(
         conn,
-        home_id=requested_home_id,
+        home_id=home_id,
         include_archived=include_archived,
         search=search,
     )
     return {"young_people": rows}
 
 
-@router.get("/overview")
-def get_my_home_young_people_overview(
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    home_id = _current_home_id(current_user)
-    if home_id is None and _current_role(current_user) not in {"admin", "provider_admin"}:
-        raise HTTPException(status_code=400, detail="No home linked to current user")
-
-    rows = list_young_people(
-        conn,
-        home_id=home_id,
-        include_archived=False,
-        search="",
-    )
-    return {"young_people": rows, "count": len(rows)}
-
-
-@router.get("/{young_person_id}")
-def get_young_person(
-    young_person_id: int,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    person = _check_person_access(conn, current_user, young_person_id)
-    return {"young_person": person}
-
-
-@router.get("/{young_person_id}/overview")
-def get_young_person_full_overview(
-    young_person_id: int,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    _check_person_access(conn, current_user, young_person_id)
-    overview = get_young_person_overview(conn, young_person_id)
-    return {"overview": overview}
-
-
 @router.post("")
 @router.post("/")
-def create_new_young_person(
+def api_create_young_person(
     payload: YoungPersonCreatePayload,
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    if not _can_access_home(current_user, payload.home_id):
-        raise HTTPException(status_code=403, detail="Not authorised to create for this home")
-
-    created = create_young_person(
+    row = create_young_person(
         conn,
         home_id=payload.home_id,
         first_name=payload.first_name,
@@ -277,40 +200,55 @@ def create_new_young_person(
         photo_url=payload.photo_url or "",
         archived=payload.archived,
     )
-    return {"ok": True, "young_person": created}
+    return {"ok": True, "young_person": row}
+
+
+@router.get("/{young_person_id}")
+def api_get_young_person(
+    young_person_id: int,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    person = _ensure_person_exists(conn, young_person_id)
+    return {"young_person": person}
 
 
 @router.patch("/{young_person_id}")
-def update_existing_young_person(
+def api_update_young_person(
     young_person_id: int,
     payload: YoungPersonUpdatePayload,
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    person = _check_person_access(conn, current_user, young_person_id)
-
-    if payload.home_id is not None and not _can_access_home(current_user, payload.home_id):
-        raise HTTPException(status_code=403, detail="Not authorised to move this young person to that home")
-
-    updated = update_young_person(
+    _ensure_person_exists(conn, young_person_id)
+    row = update_young_person(
         conn,
         young_person_id,
-        payload.model_dump(exclude_unset=True),
+        payload.model_dump(exclude_none=True),
     )
-    if not updated:
-        raise HTTPException(status_code=404, detail="Young person not found")
-
-    return {"ok": True, "young_person": updated, "previous_home_id": person.get("home_id")}
+    return {"ok": True, "young_person": row}
 
 
-@router.put("/{young_person_id}/communication-profile")
-def save_communication_profile(
+@router.get("/{young_person_id}/overview")
+def api_get_young_person_overview(
     young_person_id: int,
-    payload: CommunicationProfilePayload,
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    _check_person_access(conn, current_user, young_person_id)
+    overview = get_young_person_overview(conn, young_person_id)
+    if not overview:
+        raise HTTPException(status_code=404, detail="Young person not found")
+    return {"ok": True, "overview": overview}
+
+
+@router.post("/{young_person_id}/communication-profile")
+def api_upsert_communication_profile(
+    young_person_id: int,
+    payload: YoungPersonCommunicationProfilePayload,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _ensure_person_exists(conn, young_person_id)
     row = upsert_communication_profile(
         conn,
         young_person_id=young_person_id,
@@ -319,14 +257,14 @@ def save_communication_profile(
     return {"ok": True, "communication_profile": row}
 
 
-@router.put("/{young_person_id}/education-profile")
-def save_education_profile(
+@router.post("/{young_person_id}/education-profile")
+def api_upsert_education_profile(
     young_person_id: int,
-    payload: EducationProfilePayload,
+    payload: YoungPersonEducationProfilePayload,
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    _check_person_access(conn, current_user, young_person_id)
+    _ensure_person_exists(conn, young_person_id)
     row = upsert_education_profile(
         conn,
         young_person_id=young_person_id,
@@ -335,14 +273,14 @@ def save_education_profile(
     return {"ok": True, "education_profile": row}
 
 
-@router.put("/{young_person_id}/health-profile")
-def save_health_profile(
+@router.post("/{young_person_id}/health-profile")
+def api_upsert_health_profile(
     young_person_id: int,
-    payload: HealthProfilePayload,
+    payload: YoungPersonHealthProfilePayload,
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    _check_person_access(conn, current_user, young_person_id)
+    _ensure_person_exists(conn, young_person_id)
     row = upsert_health_profile(
         conn,
         young_person_id=young_person_id,
@@ -351,14 +289,14 @@ def save_health_profile(
     return {"ok": True, "health_profile": row}
 
 
-@router.put("/{young_person_id}/identity-profile")
-def save_identity_profile(
+@router.post("/{young_person_id}/identity-profile")
+def api_upsert_identity_profile(
     young_person_id: int,
-    payload: IdentityProfilePayload,
+    payload: YoungPersonIdentityProfilePayload,
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    _check_person_access(conn, current_user, young_person_id)
+    _ensure_person_exists(conn, young_person_id)
     row = upsert_identity_profile(
         conn,
         young_person_id=young_person_id,
@@ -367,14 +305,32 @@ def save_identity_profile(
     return {"ok": True, "identity_profile": row}
 
 
-@router.post("/{young_person_id}/contacts")
-def create_contact(
+@router.post("/{young_person_id}/legal-status")
+def save_young_person_legal_status(
     young_person_id: int,
-    payload: ContactPayload,
+    payload: YoungPersonLegalStatusPayload,
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    _check_person_access(conn, current_user, young_person_id)
+    _ensure_person_exists(conn, young_person_id)
+
+    row = upsert_legal_status(
+        conn,
+        young_person_id=young_person_id,
+        created_by=current_user["user_id"],
+        payload=payload.model_dump(),
+    )
+    return {"ok": True, "legal_status": row}
+
+
+@router.post("/{young_person_id}/contacts")
+def api_add_contact(
+    young_person_id: int,
+    payload: YoungPersonContactPayload,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _ensure_person_exists(conn, young_person_id)
     row = add_contact(
         conn,
         young_person_id=young_person_id,
@@ -384,60 +340,17 @@ def create_contact(
 
 
 @router.post("/{young_person_id}/alerts")
-def create_alert(
+def api_add_alert(
     young_person_id: int,
-    payload: AlertPayload,
+    payload: YoungPersonAlertPayload,
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    _check_person_access(conn, current_user, young_person_id)
+    _ensure_person_exists(conn, young_person_id)
     row = add_alert(
         conn,
         young_person_id=young_person_id,
-        created_by=_current_user_id(current_user),
+        created_by=current_user["user_id"],
         payload=payload.model_dump(),
     )
     return {"ok": True, "alert": row}
-
-
-@compat_router.get("/young-people")
-def compat_get_young_people(
-    home_id: int | None = Query(default=None),
-    include_archived: bool = Query(default=False),
-    search: str = Query(default=""),
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    return get_young_people(
-        home_id=home_id,
-        include_archived=include_archived,
-        search=search,
-        conn=conn,
-        current_user=current_user,
-    )
-
-
-@compat_router.get("/young-people/{young_person_id}")
-def compat_get_young_person(
-    young_person_id: int,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    return get_young_person(
-        young_person_id=young_person_id,
-        conn=conn,
-        current_user=current_user,
-    )
-
-
-@compat_router.get("/young-people/{young_person_id}/overview")
-def compat_get_young_person_overview(
-    young_person_id: int,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    return get_young_person_full_overview(
-        young_person_id=young_person_id,
-        conn=conn,
-        current_user=current_user,
-    )
