@@ -910,12 +910,16 @@ body.theme-dark .status{
     display:none!important;
   }
 }
-
 .assistant-source-box{
   display:flex;
   flex-direction:column;
   gap:10px;
   margin-top:10px;
+}
+
+.assistant-source-box,
+.assistant-source-box *{
+  min-width:0;
 }
 
 .assistant-source-box .card{
@@ -927,6 +931,8 @@ body.theme-dark .status{
 .assistant-source-box .entity-row{
   background:var(--bg);
   border-color:var(--line);
+  overflow-wrap:anywhere;
+  word-break:break-word;
 }
 
 .assistant-source-box .entity-title{
