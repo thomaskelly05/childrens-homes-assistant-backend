@@ -1,18 +1,12 @@
-window.onerror = function(message, source, line, col, error) {
-  console.error("window.onerror", { message, source, line, col, error });
-};
-
-window.onunhandledrejection = function(event) {
-  console.error("unhandledrejection", event.reason);
-};
-
-let currentUser = null;
 let youngPeople = [];
 let selectedYoungPerson = null;
-let selectedYoungPersonBundle = null;
+let selectedOverview = null;
+let activeProfileTab = "identity";
+let editingYoungPersonId = null;
 
-const $ = id => document.getElementById(id);
-const has = id => !!document.getElementById(id);
+function $(id) {
+  return document.getElementById(id);
+}
 
 function safe(value) {
   return String(value || "")
@@ -23,18 +17,10 @@ function safe(value) {
     .replace(/'/g, "&#039;");
 }
 
-function normArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function normObj(value) {
-  return value && typeof value === "object" ? value : {};
-}
-
-function banner(text, ms = 2400) {
-  const el = $("status");
+function banner(text, ms = 2600) {
+  const el = $("statusBanner");
   if (!el) return;
-  el.textContent = text;
+  el.textContent = text || "";
   el.style.display = "block";
   clearTimeout(banner._t);
   banner._t = setTimeout(() => {
@@ -48,523 +34,1035 @@ async function api(url, options = {}) {
     credentials: "include",
     headers: {
       ...(options.headers || {}),
-      ...(options.body && !(options.body instanceof FormData)
-        ? { "Content-Type": "application/json" }
-        : {})
-    }
+      ...(options.body && !(options.body instanceof FormData) ? { "Content-Type": "application/json" } : {}),
+    },
   });
 
   if (res.status === 401) {
-    location.href = "/login";
-    return null;
+    window.location.href = "/login";
+    throw new Error("Unauthorised");
   }
 
-  const type = res.headers.get("content-type") || "";
-  let data = null;
-
+  let data = {};
   try {
-    if (type.includes("application/json")) {
-      data = await res.json();
-    } else {
-      const text = await res.text();
-      data = text ? { detail: text } : {};
-    }
+    data = await res.json();
   } catch {
     data = {};
   }
 
   if (!res.ok) {
-    throw new Error(data?.detail || data?.error || `Request failed (${res.status})`);
+    throw new Error(data.detail || data.error || `Request failed (${res.status})`);
   }
 
-  return data || {};
+  return data;
 }
 
-function fullName(person) {
-  const preferred = String(person?.preferred_name || "").trim();
-  const first = String(person?.first_name || "").trim();
-  const last = String(person?.last_name || "").trim();
-  if (preferred) return preferred;
-  return [first, last].filter(Boolean).join(" ").trim() || "Unnamed young person";
-}
+function calcAge(dob) {
+  if (!dob) return "—";
+  const birth = new Date(dob);
+  if (Number.isNaN(birth.getTime())) return "—";
 
-function calcAge(dateOfBirth) {
-  if (!dateOfBirth) return "";
-  const dob = new Date(dateOfBirth);
-  if (Number.isNaN(dob.getTime())) return "";
   const now = new Date();
-  let age = now.getFullYear() - dob.getFullYear();
-  const m = now.getMonth() - dob.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age--;
+  let age = now.getFullYear() - birth.getFullYear();
+  const monthDelta = now.getMonth() - birth.getMonth();
+
+  if (monthDelta < 0 || (monthDelta === 0 && now.getDate() < birth.getDate())) {
+    age -= 1;
+  }
+
   return String(age);
 }
 
-function formatDate(value) {
-  if (!value) return "—";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return safe(value);
-  return d.toLocaleDateString("en-GB");
+function initials(person) {
+  const first = (person?.preferred_name || person?.first_name || "").trim();
+  const last = (person?.last_name || "").trim();
+  return ((first[0] || "") + (last[0] || "")).toUpperCase() || "YP";
 }
 
-function setTitle(text = "Young People OS") {
-  if (has("title")) $("title").textContent = text;
+function fullName(person) {
+  const first = person?.preferred_name || person?.first_name || "";
+  const last = person?.last_name || "";
+  return [first, last].filter(Boolean).join(" ").trim() || "Unnamed young person";
 }
 
-function setActiveTab(name) {
-  document.querySelectorAll("[data-yp-tab]").forEach(btn => {
-    btn.classList.toggle("active", btn.dataset.ypTab === name);
-  });
+function riskTagClass(level) {
+  const text = String(level || "").toLowerCase();
+  if (["high", "significant", "severe"].includes(text)) return "danger";
+  if (["medium", "moderate"].includes(text)) return "warn";
+  if (["low", "stable"].includes(text)) return "good";
+  return "";
+}
 
-  document.querySelectorAll(".yp-tab-panel").forEach(panel => {
-    panel.classList.add("hidden");
-  });
+function boolChecked(value) {
+  return !!value ? "checked" : "";
+}
 
-  if (has(`yp-tab-${name}`)) {
-    $(`yp-tab-${name}`).classList.remove("hidden");
+function emptyToNull(value) {
+  if (value === undefined || value === null) return null;
+  const text = String(value).trim();
+  return text === "" ? null : text;
+}
+
+function numberOrNull(value) {
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function isTruthyCheckbox(input) {
+  return !!input?.checked;
+}
+
+function openModal(backdropId) {
+  const el = $(backdropId);
+  if (el) el.classList.add("show");
+}
+
+function closeModal(backdropId) {
+  const el = $(backdropId);
+  if (el) el.classList.remove("show");
+}
+
+function closeSidebarOnMobile() {
+  if (window.innerWidth <= 820) {
+    $("ypSidebar")?.classList.remove("open");
   }
 }
 
-function renderEmptyState() {
-  if (has("youngPeopleDetail")) {
-    $("youngPeopleDetail").innerHTML = `
-      <div class="viewbox">
-        <h3>Select a young person</h3>
-        <p>Choose a record from the list to open their profile, alerts, contacts, and overview.</p>
-      </div>
-    `;
-  }
-}
-
-async function loadMe() {
-  const data = await api("/auth/me");
-  if (!data?.user) throw new Error("No user");
-  currentUser = data.user;
-}
-
-async function loadYoungPeople() {
-  const search = has("ypSearch") ? $("ypSearch").value.trim() : "";
-  const includeArchived = has("ypIncludeArchived") ? $("ypIncludeArchived").checked : false;
-
-  const params = new URLSearchParams();
-  if (search) params.set("q", search);
-  if (includeArchived) params.set("include_archived", "true");
-
-  const data = await api(`/young-people${params.toString() ? `?${params}` : ""}`);
-  youngPeople = normArray(data?.young_people);
-  renderYoungPeopleList();
-
-  if (selectedYoungPerson?.id) {
-    const fresh = youngPeople.find(p => Number(p?.id) === Number(selectedYoungPerson.id));
-    if (fresh) {
-      await openYoungPerson(fresh.id);
-    } else {
-      selectedYoungPerson = null;
-      selectedYoungPersonBundle = null;
-      renderEmptyState();
-    }
-  }
-}
-
-function renderYoungPeopleList() {
-  const host = $("youngPeopleList");
+function renderYoungPersonList() {
+  const host = $("youngPersonList");
   if (!host) return;
 
-  host.innerHTML = "";
+  const q = (($("youngPersonSearch")?.value || "").trim().toLowerCase());
+  const filter = $("youngPersonStatusFilter")?.value || "";
 
-  if (!youngPeople.length) {
-    host.innerHTML = `<div class="entity-row"><div>No young people found.</div></div>`;
+  let rows = [...youngPeople];
+
+  if (q) {
+    rows = rows.filter(person => {
+      const text = [
+        person.first_name,
+        person.last_name,
+        person.preferred_name
+      ].join(" ").toLowerCase();
+      return text.includes(q);
+    });
+  }
+
+  if (filter === "active") {
+    rows = rows.filter(person => !person.archived);
+  } else if (filter === "archived") {
+    rows = rows.filter(person => !!person.archived);
+  }
+
+  if (!rows.length) {
+    host.innerHTML = `<div class="empty-state">No matching young people found.</div>`;
     return;
   }
 
-  youngPeople.forEach(person => {
-    const age = calcAge(person?.date_of_birth);
-    const row = document.createElement("div");
-    row.className = `entity-row ${Number(selectedYoungPerson?.id) === Number(person?.id) ? "active" : ""}`;
-    row.style.cursor = "pointer";
-    row.innerHTML = `
-      <div style="width:100%;">
-        <div class="entity-title">${safe(fullName(person))}</div>
-        <div class="entity-meta">
-          ${person?.placement_status ? safe(person.placement_status) : "placement unknown"}
-          ${age ? ` · age ${safe(age)}` : ""}
-          ${person?.summary_risk_level ? ` · ${safe(person.summary_risk_level)} risk` : ""}
-        </div>
-        <div class="entity-meta">
-          Admitted: ${safe(formatDate(person?.admission_date))}
-          ${person?.archived ? ` · <span class="tag bad">archived</span>` : ""}
-        </div>
+  host.innerHTML = rows.map(person => `
+    <button
+      class="person-card ${selectedYoungPerson && Number(selectedYoungPerson.id) === Number(person.id) ? "active" : ""}"
+      data-id="${person.id}"
+      type="button"
+    >
+      <div class="person-name">${safe(fullName(person))}</div>
+      <div class="person-meta">
+        DOB: ${safe(person.date_of_birth || "—")} · Age: ${safe(calcAge(person.date_of_birth))}<br>
+        Placement: ${safe(person.placement_status || "—")}
       </div>
-    `;
-    row.onclick = () => openYoungPerson(person.id);
-    host.appendChild(row);
+      <div class="tag-row">
+        <span class="tag ${riskTagClass(person.summary_risk_level)}">${safe(person.summary_risk_level || "risk not set")}</span>
+        <span class="tag ${person.archived ? "warn" : "good"}">${person.archived ? "archived" : "active"}</span>
+      </div>
+    </button>
+  `).join("");
+
+  host.querySelectorAll("[data-id]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = Number(btn.getAttribute("data-id"));
+      const person = youngPeople.find(x => Number(x.id) === id);
+      if (!person) return;
+
+      selectedYoungPerson = person;
+      renderYoungPersonList();
+      closeSidebarOnMobile();
+      await loadYoungPersonOverview(id);
+    });
   });
 }
 
-function statCard(label, value) {
-  return `
-    <div class="s">
-      <div class="n">${safe(String(value ?? 0))}</div>
-      <div class="l">${safe(label)}</div>
-    </div>
-  `;
-}
+function renderOverview(overview) {
+  const panel = $("overviewPanel");
+  if (!panel) return;
 
-function renderOverviewTab(bundle) {
-  const youngPerson = normObj(bundle?.young_person);
-  const counts = normObj(bundle?.dashboard_counts);
-  const alerts = normArray(bundle?.alerts);
-  const recent = normArray(bundle?.recent_activity);
+  const yp = overview?.young_person || selectedYoungPerson || {};
+  const identity = overview?.identity_profile || {};
+  const communication = overview?.communication_profile || {};
+  const education = overview?.education_profile || {};
+  const health = overview?.health_profile || {};
+  const legal = overview?.legal_status || {};
+  const contacts = Array.isArray(overview?.contacts) ? overview.contacts : [];
+  const alerts = Array.isArray(overview?.alerts) ? overview.alerts : [];
 
-  if (!has("yp-tab-overview")) return;
-
-  $("yp-tab-overview").innerHTML = `
-    <div class="summary" style="margin-bottom:16px;">
-      ${statCard("Daily notes", counts.daily_notes || 0)}
-      ${statCard("Incidents", counts.incidents || 0)}
-      ${statCard("Risks", counts.risk_assessments || 0)}
-      ${statCard("Contacts", counts.contacts || 0)}
-    </div>
-
-    <div class="library-grid">
-      <div class="card">
-        <strong>Profile snapshot</strong>
-        <div class="entity-meta"><strong>Name:</strong> ${safe(fullName(youngPerson))}</div>
-        <div class="entity-meta"><strong>DOB:</strong> ${safe(formatDate(youngPerson?.date_of_birth))}</div>
-        <div class="entity-meta"><strong>Age:</strong> ${safe(calcAge(youngPerson?.date_of_birth) || "—")}</div>
-        <div class="entity-meta"><strong>Gender:</strong> ${safe(youngPerson?.gender || "—")}</div>
-        <div class="entity-meta"><strong>Ethnicity:</strong> ${safe(youngPerson?.ethnicity || "—")}</div>
-        <div class="entity-meta"><strong>Placement status:</strong> ${safe(youngPerson?.placement_status || "—")}</div>
-        <div class="entity-meta"><strong>Admission date:</strong> ${safe(formatDate(youngPerson?.admission_date))}</div>
-        <div class="entity-meta"><strong>Summary risk:</strong> ${safe(youngPerson?.summary_risk_level || "—")}</div>
+  panel.innerHTML = `
+    <div class="hero">
+      <div class="photo">
+        ${yp.photo_url ? `<img src="${safe(yp.photo_url)}" alt="${safe(fullName(yp))}">` : safe(initials(yp))}
       </div>
 
-      <div class="card">
-        <strong>Active alerts</strong>
-        ${
-          alerts.length
-            ? alerts.map(alert => `
-              <div class="entity-row">
-                <div>
-                  <div class="entity-title">${safe(alert?.title || "Alert")}</div>
-                  <div class="entity-meta">
-                    <span class="tag ${alert?.severity === "high" ? "bad" : alert?.severity === "medium" ? "warn" : "neutral"}">
-                      ${safe(alert?.severity || "standard")}
-                    </span>
-                    ${safe(alert?.alert_type || "")}
-                  </div>
-                  <div class="entity-meta">${safe(alert?.description || "")}</div>
-                </div>
-              </div>
-            `).join("")
-            : `<div class="entity-row"><div>No active alerts.</div></div>`
-        }
+      <div>
+        <h3>${safe(fullName(yp))}</h3>
+        <p>
+          Preferred name: ${safe(yp.preferred_name || yp.first_name || "—")}<br>
+          Date of birth: ${safe(yp.date_of_birth || "—")} · Age: ${safe(calcAge(yp.date_of_birth))}<br>
+          Placement status: ${safe(yp.placement_status || "—")}
+        </p>
+
+        <div class="tag-row">
+          <span class="tag ${riskTagClass(yp.summary_risk_level)}">${safe(yp.summary_risk_level || "risk not set")}</span>
+          <span class="tag">${safe(yp.gender || "gender not set")}</span>
+          <span class="tag">${safe(yp.ethnicity || "ethnicity not set")}</span>
+          <span class="tag ${yp.archived ? "warn" : "good"}">${yp.archived ? "archived" : "active"}</span>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <div class="n">${safe(String(contacts.length))}</div>
+            <div class="l">Contacts</div>
+          </div>
+          <div class="stat">
+            <div class="n">${safe(String(alerts.filter(a => a.is_active).length))}</div>
+            <div class="l">Active alerts</div>
+          </div>
+          <div class="stat">
+            <div class="n">${safe(String(overview?.daily_note_count ?? 0))}</div>
+            <div class="l">Daily notes</div>
+          </div>
+          <div class="stat">
+            <div class="n">${safe(String(overview?.incident_count ?? 0))}</div>
+            <div class="l">Incidents</div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="card" style="margin-top:16px;">
-      <strong>Recent activity</strong>
-      ${
-        recent.length
-          ? recent.map(item => `
-            <div class="entity-row">
-              <div>
-                <div class="entity-title">${safe(item?.title || item?.source_table || "Activity")}</div>
-                <div class="entity-meta">
-                  ${safe(item?.source_table || "record")}
-                  ${item?.event_datetime ? ` · ${safe(formatDate(item.event_datetime))}` : ""}
-                </div>
-                <div class="entity-meta">${safe(item?.summary || item?.description || "")}</div>
-              </div>
-            </div>
-          `).join("")
-          : `<div class="entity-row"><div>No recent activity found.</div></div>`
-      }
-    </div>
-  `;
-}
-
-function textBlock(label, value) {
-  return `
-    <div>
-      <div class="entity-meta" style="font-weight:600;">${safe(label)}</div>
-      <div style="line-height:1.65;margin-top:6px;">${safe(value || "—")}</div>
-    </div>
-  `;
-}
-
-function renderProfilesTab(bundle) {
-  const communication = normObj(bundle?.communication_profile);
-  const education = normObj(bundle?.education_profile);
-  const health = normObj(bundle?.health_profile);
-  const identity = normObj(bundle?.identity_profile);
-  const legal = normObj(bundle?.legal_status);
-
-  if (!has("yp-tab-profiles")) return;
-
-  $("yp-tab-profiles").innerHTML = `
-    <div class="library-grid">
+    <div class="grid-2" style="margin-top:18px;">
       <div class="card">
-        <strong>Communication profile</strong>
-        ${textBlock("Neurodiversity summary", communication?.neurodiversity_summary)}
-        ${textBlock("Communication style", communication?.communication_style)}
-        ${textBlock("Sensory profile", communication?.sensory_profile)}
-        ${textBlock("Processing needs", communication?.processing_needs)}
-        ${textBlock("Signs of distress", communication?.signs_of_distress)}
-        ${textBlock("What helps", communication?.what_helps)}
-        ${textBlock("What to avoid", communication?.what_to_avoid)}
-        ${textBlock("Routines and predictability", communication?.routines_and_predictability)}
-        ${textBlock("Visual support needs", communication?.visual_support_needs)}
+        <h3>Placement and identity</h3>
+        <div class="kv"><div class="k">Home</div><div class="v">${safe(yp.home_name || yp.home_id || "—")}</div></div>
+        <div class="kv"><div class="k">Admission date</div><div class="v">${safe(yp.admission_date || "—")}</div></div>
+        <div class="kv"><div class="k">Discharge date</div><div class="v">${safe(yp.discharge_date || "—")}</div></div>
+        <div class="kv"><div class="k">Religion / faith</div><div class="v">${safe(identity.religion_or_faith || "—")}</div></div>
+        <div class="kv"><div class="k">Cultural identity</div><div class="v">${safe(identity.cultural_identity || "—")}</div></div>
+        <div class="kv"><div class="k">What matters</div><div class="v">${safe(identity.what_matters_to_me || "—")}</div></div>
       </div>
 
       <div class="card">
-        <strong>Education profile</strong>
-        ${textBlock("School name", education?.school_name)}
-        ${textBlock("Year group", education?.year_group)}
-        ${textBlock("Education status", education?.education_status)}
-        ${textBlock("SEN status", education?.sen_status)}
-        ${textBlock("EHCP details", education?.ehcp_details)}
-        ${textBlock("Designated teacher", education?.designated_teacher)}
-        ${textBlock("Attendance baseline", education?.attendance_baseline)}
-        ${textBlock("PEP status", education?.pep_status)}
-        ${textBlock("Support summary", education?.support_summary)}
-      </div>
-
-      <div class="card">
-        <strong>Health profile</strong>
-        ${textBlock("GP", health?.gp_name)}
-        ${textBlock("GP contact", health?.gp_contact)}
-        ${textBlock("Dentist", health?.dentist_name)}
-        ${textBlock("Dentist contact", health?.dentist_contact)}
-        ${textBlock("Optician", health?.optician_name)}
-        ${textBlock("Optician contact", health?.optician_contact)}
-        ${textBlock("Allergies", health?.allergies)}
-        ${textBlock("Diagnoses", health?.diagnoses)}
-        ${textBlock("Mental health summary", health?.mental_health_summary)}
-        ${textBlock("Medication summary", health?.medication_summary)}
-        ${textBlock("Consent notes", health?.consent_notes)}
-      </div>
-
-      <div class="card">
-        <strong>Identity and legal</strong>
-        ${textBlock("Religion or faith", identity?.religion_or_faith)}
-        ${textBlock("Cultural identity", identity?.cultural_identity)}
-        ${textBlock("First language", identity?.first_language)}
-        ${textBlock("Dietary needs", identity?.dietary_needs)}
-        ${textBlock("Interests", identity?.interests)}
-        ${textBlock("Strengths summary", identity?.strengths_summary)}
-        ${textBlock("What matters to me", identity?.what_matters_to_me)}
-        ${textBlock("Important dates", identity?.important_dates)}
-        <hr style="border:none;border-top:1px solid var(--line);margin:8px 0;">
-        ${textBlock("Legal status", legal?.legal_status)}
-        ${textBlock("Order type", legal?.order_type)}
-        ${textBlock("Order details", legal?.order_details)}
-        ${textBlock("Delegated authority", legal?.delegated_authority_details)}
-        ${textBlock("Restrictions", legal?.restrictions_text)}
-        ${textBlock("Consent arrangements", legal?.consent_arrangements)}
+        <h3>Communication, legal and wellbeing</h3>
+        <div class="kv"><div class="k">Communication style</div><div class="v">${safe(communication.communication_style || "—")}</div></div>
+        <div class="kv"><div class="k">What helps</div><div class="v">${safe(communication.what_helps || "—")}</div></div>
+        <div class="kv"><div class="k">Education</div><div class="v">${safe(education.education_status || "—")}</div></div>
+        <div class="kv"><div class="k">Mental health</div><div class="v">${safe(health.mental_health_summary || "—")}</div></div>
+        <div class="kv"><div class="k">Legal status</div><div class="v">${safe(legal.legal_status || "—")}</div></div>
+        <div class="kv"><div class="k">Order type</div><div class="v">${safe(legal.order_type || "—")}</div></div>
       </div>
     </div>
   `;
+
+  renderProfileTab(overview);
+  renderAssistantContext(overview);
+  renderTimelinePlaceholder(overview);
 }
 
-function renderContactsTab(bundle) {
-  const contacts = normArray(bundle?.contacts);
+function renderProfileTab(overview) {
+  const host = $("profileTabContent");
+  if (!host) return;
 
-  if (!has("yp-tab-contacts")) return;
+  const identity = overview?.identity_profile || {};
+  const communication = overview?.communication_profile || {};
+  const education = overview?.education_profile || {};
+  const health = overview?.health_profile || {};
+  const legal = overview?.legal_status || {};
+  const contacts = Array.isArray(overview?.contacts) ? overview.contacts : [];
+  const alerts = Array.isArray(overview?.alerts) ? overview.alerts : [];
 
-  $("yp-tab-contacts").innerHTML = `
-    <div class="card">
-      <strong>Contacts</strong>
-      ${
-        contacts.length
-          ? contacts.map(contact => `
-            <div class="entity-row">
-              <div>
-                <div class="entity-title">${safe(contact?.full_name || "Contact")}</div>
-                <div class="entity-meta">
-                  ${safe(contact?.relationship_to_young_person || "relationship unknown")}
-                  ${contact?.contact_type ? ` · ${safe(contact.contact_type)}` : ""}
-                </div>
-                <div class="entity-meta">
-                  ${contact?.phone ? `Phone: ${safe(contact.phone)}` : ""}
-                  ${contact?.email ? ` ${contact?.phone ? "·" : ""} Email: ${safe(contact.email)}` : ""}
-                </div>
-                <div class="entity-meta">
-                  ${contact?.is_parental_responsibility_holder ? `<span class="tag ok">PR</span>` : ""}
-                  ${contact?.is_approved_contact ? `<span class="tag ok">approved</span>` : ""}
-                  ${contact?.is_restricted_contact ? `<span class="tag bad">restricted</span>` : ""}
-                  ${contact?.supervision_level ? `<span class="tag warn">${safe(contact.supervision_level)}</span>` : ""}
-                </div>
-                ${contact?.notes ? `<div class="entity-meta">${safe(contact.notes)}</div>` : ""}
-              </div>
-            </div>
-          `).join("")
-          : `<div class="entity-row"><div>No contacts recorded.</div></div>`
-      }
-    </div>
-  `;
-}
-
-function renderAlertsTab(bundle) {
-  const alerts = normArray(bundle?.alerts);
-
-  if (!has("yp-tab-alerts")) return;
-
-  $("yp-tab-alerts").innerHTML = `
-    <div class="card">
-      <strong>Alerts</strong>
-      ${
-        alerts.length
-          ? alerts.map(alert => `
-            <div class="entity-row">
-              <div>
-                <div class="entity-title">${safe(alert?.title || "Alert")}</div>
-                <div class="entity-meta">
-                  <span class="tag ${alert?.severity === "high" ? "bad" : alert?.severity === "medium" ? "warn" : "neutral"}">
-                    ${safe(alert?.severity || "standard")}
-                  </span>
-                  ${safe(alert?.alert_type || "")}
-                  ${alert?.review_date ? ` · review ${safe(formatDate(alert.review_date))}` : ""}
-                </div>
-                <div class="entity-meta">${safe(alert?.description || "")}</div>
-              </div>
-            </div>
-          `).join("")
-          : `<div class="entity-row"><div>No active alerts.</div></div>`
-      }
-    </div>
-  `;
-}
-
-function renderHeader(bundle) {
-  const person = normObj(bundle?.young_person);
-
-  if (has("ypCurrentName")) {
-    $("ypCurrentName").textContent = fullName(person);
+  if (!selectedYoungPerson) {
+    host.innerHTML = `<div class="empty-state">Select a young person first.</div>`;
+    return;
   }
 
-  if (has("ypCurrentMeta")) {
-    $("ypCurrentMeta").innerHTML = `
-      ${safe(person?.placement_status || "placement unknown")}
-      ${person?.summary_risk_level ? ` · ${safe(person.summary_risk_level)} risk` : ""}
-      ${person?.date_of_birth ? ` · age ${safe(calcAge(person.date_of_birth) || "—")}` : ""}
+  if (activeProfileTab === "identity") {
+    host.innerHTML = `
+      <div class="notice" style="margin-bottom:14px;">Edit and save the identity profile for the selected young person.</div>
+      <div class="form-grid">
+        <div class="form-section">
+          <label for="identityReligion">Religion / faith</label>
+          <input id="identityReligion" class="field" value="${safe(identity.religion_or_faith || "")}">
+        </div>
+        <div class="form-section">
+          <label for="identityCulture">Cultural identity</label>
+          <input id="identityCulture" class="field" value="${safe(identity.cultural_identity || "")}">
+        </div>
+        <div class="form-section">
+          <label for="identityLanguage">First language</label>
+          <input id="identityLanguage" class="field" value="${safe(identity.first_language || "")}">
+        </div>
+        <div class="form-section">
+          <label for="identityDietary">Dietary needs</label>
+          <input id="identityDietary" class="field" value="${safe(identity.dietary_needs || "")}">
+        </div>
+        <div class="form-section full">
+          <label for="identityInterests">Interests</label>
+          <textarea id="identityInterests" class="textarea">${safe(identity.interests || "")}</textarea>
+        </div>
+        <div class="form-section full">
+          <label for="identityStrengths">Strengths summary</label>
+          <textarea id="identityStrengths" class="textarea">${safe(identity.strengths_summary || "")}</textarea>
+        </div>
+        <div class="form-section full">
+          <label for="identityMatters">What matters to me</label>
+          <textarea id="identityMatters" class="textarea">${safe(identity.what_matters_to_me || "")}</textarea>
+        </div>
+        <div class="form-section full">
+          <label for="identityDates">Important dates</label>
+          <textarea id="identityDates" class="textarea">${safe(identity.important_dates || "")}</textarea>
+        </div>
+      </div>
     `;
+    return;
+  }
+
+  if (activeProfileTab === "communication") {
+    host.innerHTML = `
+      <div class="notice" style="margin-bottom:14px;">Record how the young person communicates, what helps, and what staff need to notice.</div>
+      <div class="form-grid">
+        <div class="form-section full">
+          <label for="commNeuro">Neurodiversity summary</label>
+          <textarea id="commNeuro" class="textarea">${safe(communication.neurodiversity_summary || "")}</textarea>
+        </div>
+        <div class="form-section full">
+          <label for="commStyle">Communication style</label>
+          <textarea id="commStyle" class="textarea">${safe(communication.communication_style || "")}</textarea>
+        </div>
+        <div class="form-section full">
+          <label for="commSensory">Sensory profile</label>
+          <textarea id="commSensory" class="textarea">${safe(communication.sensory_profile || "")}</textarea>
+        </div>
+        <div class="form-section full">
+          <label for="commProcessing">Processing needs</label>
+          <textarea id="commProcessing" class="textarea">${safe(communication.processing_needs || "")}</textarea>
+        </div>
+        <div class="form-section full">
+          <label for="commDistress">Signs of distress</label>
+          <textarea id="commDistress" class="textarea">${safe(communication.signs_of_distress || "")}</textarea>
+        </div>
+        <div class="form-section full">
+          <label for="commHelps">What helps</label>
+          <textarea id="commHelps" class="textarea">${safe(communication.what_helps || "")}</textarea>
+        </div>
+        <div class="form-section full">
+          <label for="commAvoid">What to avoid</label>
+          <textarea id="commAvoid" class="textarea">${safe(communication.what_to_avoid || "")}</textarea>
+        </div>
+        <div class="form-section full">
+          <label for="commRoutine">Routines and predictability</label>
+          <textarea id="commRoutine" class="textarea">${safe(communication.routines_and_predictability || "")}</textarea>
+        </div>
+        <div class="form-section full">
+          <label for="commVisual">Visual support needs</label>
+          <textarea id="commVisual" class="textarea">${safe(communication.visual_support_needs || "")}</textarea>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if (activeProfileTab === "education") {
+    host.innerHTML = `
+      <div class="notice" style="margin-bottom:14px;">Keep school, SEN and attendance information current for planning and review.</div>
+      <div class="form-grid">
+        <div class="form-section">
+          <label for="eduSchool">School name</label>
+          <input id="eduSchool" class="field" value="${safe(education.school_name || "")}">
+        </div>
+        <div class="form-section">
+          <label for="eduYearGroup">Year group</label>
+          <input id="eduYearGroup" class="field" value="${safe(education.year_group || "")}">
+        </div>
+        <div class="form-section">
+          <label for="eduStatus">Education status</label>
+          <input id="eduStatus" class="field" value="${safe(education.education_status || "")}">
+        </div>
+        <div class="form-section">
+          <label for="eduSen">SEN status</label>
+          <input id="eduSen" class="field" value="${safe(education.sen_status || "")}">
+        </div>
+        <div class="form-section full">
+          <label for="eduEhcp">EHCP details</label>
+          <textarea id="eduEhcp" class="textarea">${safe(education.ehcp_details || "")}</textarea>
+        </div>
+        <div class="form-section">
+          <label for="eduTeacher">Designated teacher</label>
+          <input id="eduTeacher" class="field" value="${safe(education.designated_teacher || "")}">
+        </div>
+        <div class="form-section">
+          <label for="eduAttendance">Attendance baseline</label>
+          <input id="eduAttendance" class="field" type="number" step="0.01" value="${safe(education.attendance_baseline ?? "")}">
+        </div>
+        <div class="form-section">
+          <label for="eduPep">PEP status</label>
+          <input id="eduPep" class="field" value="${safe(education.pep_status || "")}">
+        </div>
+        <div class="form-section full">
+          <label for="eduSupport">Support summary</label>
+          <textarea id="eduSupport" class="textarea">${safe(education.support_summary || "")}</textarea>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if (activeProfileTab === "health") {
+    host.innerHTML = `
+      <div class="notice" style="margin-bottom:14px;">Record key health contacts, diagnoses, allergies, and mental health information.</div>
+      <div class="form-grid">
+        <div class="form-section">
+          <label for="healthGpName">GP name</label>
+          <input id="healthGpName" class="field" value="${safe(health.gp_name || "")}">
+        </div>
+        <div class="form-section">
+          <label for="healthGpContact">GP contact</label>
+          <input id="healthGpContact" class="field" value="${safe(health.gp_contact || "")}">
+        </div>
+        <div class="form-section">
+          <label for="healthDentistName">Dentist name</label>
+          <input id="healthDentistName" class="field" value="${safe(health.dentist_name || "")}">
+        </div>
+        <div class="form-section">
+          <label for="healthDentistContact">Dentist contact</label>
+          <input id="healthDentistContact" class="field" value="${safe(health.dentist_contact || "")}">
+        </div>
+        <div class="form-section">
+          <label for="healthOpticianName">Optician name</label>
+          <input id="healthOpticianName" class="field" value="${safe(health.optician_name || "")}">
+        </div>
+        <div class="form-section">
+          <label for="healthOpticianContact">Optician contact</label>
+          <input id="healthOpticianContact" class="field" value="${safe(health.optician_contact || "")}">
+        </div>
+        <div class="form-section full">
+          <label for="healthAllergies">Allergies</label>
+          <textarea id="healthAllergies" class="textarea">${safe(health.allergies || "")}</textarea>
+        </div>
+        <div class="form-section full">
+          <label for="healthDiagnoses">Diagnoses</label>
+          <textarea id="healthDiagnoses" class="textarea">${safe(health.diagnoses || "")}</textarea>
+        </div>
+        <div class="form-section full">
+          <label for="healthMental">Mental health summary</label>
+          <textarea id="healthMental" class="textarea">${safe(health.mental_health_summary || "")}</textarea>
+        </div>
+        <div class="form-section full">
+          <label for="healthMedication">Medication summary</label>
+          <textarea id="healthMedication" class="textarea">${safe(health.medication_summary || "")}</textarea>
+        </div>
+        <div class="form-section full">
+          <label for="healthConsent">Consent notes</label>
+          <textarea id="healthConsent" class="textarea">${safe(health.consent_notes || "")}</textarea>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if (activeProfileTab === "legal") {
+    host.innerHTML = `
+      <div class="notice" style="margin-bottom:14px;">Use this section for current legal status, delegated authority, and restrictions.</div>
+      <div class="form-grid">
+        <div class="form-section">
+          <label for="legalStatus">Legal status</label>
+          <input id="legalStatus" class="field" value="${safe(legal.legal_status || "")}">
+        </div>
+        <div class="form-section">
+          <label for="legalOrderType">Order type</label>
+          <input id="legalOrderType" class="field" value="${safe(legal.order_type || "")}">
+        </div>
+        <div class="form-section full">
+          <label for="legalOrderDetails">Order details</label>
+          <textarea id="legalOrderDetails" class="textarea">${safe(legal.order_details || "")}</textarea>
+        </div>
+        <div class="form-section full">
+          <label for="legalDelegated">Delegated authority details</label>
+          <textarea id="legalDelegated" class="textarea">${safe(legal.delegated_authority_details || "")}</textarea>
+        </div>
+        <div class="form-section full">
+          <label for="legalRestrictions">Restrictions</label>
+          <textarea id="legalRestrictions" class="textarea">${safe(legal.restrictions_text || "")}</textarea>
+        </div>
+        <div class="form-section full">
+          <label for="legalConsent">Consent arrangements</label>
+          <textarea id="legalConsent" class="textarea">${safe(legal.consent_arrangements || "")}</textarea>
+        </div>
+        <div class="form-section">
+          <label for="legalEffectiveFrom">Effective from</label>
+          <input id="legalEffectiveFrom" class="field" type="date" value="${safe(legal.effective_from || "")}">
+        </div>
+        <div class="form-section">
+          <label for="legalEffectiveTo">Effective to</label>
+          <input id="legalEffectiveTo" class="field" type="date" value="${safe(legal.effective_to || "")}">
+        </div>
+        <div class="form-section full">
+          <label style="display:flex;align-items:center;gap:10px;color:var(--text);">
+            <input id="legalCurrent" type="checkbox" ${boolChecked(legal.is_current !== false)} style="width:18px;height:18px;">
+            Mark as current legal status
+          </label>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if (activeProfileTab === "contacts") {
+    host.innerHTML = contacts.length ? `
+      <div class="mini-list">
+        ${contacts.map(contact => `
+          <div class="mini-item">
+            <strong>${safe(contact.full_name || "Unnamed contact")}</strong>
+            <p>
+              ${safe(contact.relationship_to_young_person || "Relationship not set")} · ${safe(contact.contact_type || "contact")}<br>
+              Phone: ${safe(contact.phone || "—")} · Email: ${safe(contact.email || "—")}<br>
+              Supervision: ${safe(contact.supervision_level || "—")}<br>
+              ${contact.is_parental_responsibility_holder ? "Holds parental responsibility · " : ""}${contact.is_approved_contact ? "Approved contact · " : ""}${contact.is_restricted_contact ? "Restricted contact" : ""}
+            </p>
+          </div>
+        `).join("")}
+      </div>
+    ` : `<div class="empty-state">No contacts recorded yet.</div>`;
+    return;
+  }
+
+  if (activeProfileTab === "alerts") {
+    host.innerHTML = alerts.length ? `
+      <div class="mini-list">
+        ${alerts.map(alert => `
+          <div class="mini-item">
+            <strong>${safe(alert.title || "Alert")}</strong>
+            <p>
+              ${safe(alert.alert_type || "alert")} · ${safe(alert.severity || "severity not set")}<br>
+              ${safe(alert.description || "No description")}<br>
+              Review date: ${safe(alert.review_date || "—")} · ${alert.is_active ? "active" : "inactive"}${alert.show_globally ? " · global" : ""}
+            </p>
+          </div>
+        `).join("")}
+      </div>
+    ` : `<div class="empty-state">No alerts recorded yet.</div>`;
   }
 }
 
-async function openYoungPerson(id) {
-  if (!id) return;
+function renderAssistantContext(overview) {
+  const yp = overview?.young_person || selectedYoungPerson || {};
+  const communication = overview?.communication_profile || {};
+  const education = overview?.education_profile || {};
+  const health = overview?.health_profile || {};
+  const legal = overview?.legal_status || {};
+  const box = $("assistantContextBox");
+  if (!box) return;
 
-  const data = await api(`/young-people/${id}`);
-  const bundle = normObj(data?.bundle);
-
-  if (!bundle || !bundle.young_person) {
-    throw new Error("Young person profile could not be loaded");
-  }
-
-  selectedYoungPerson = normObj(bundle.young_person);
-  selectedYoungPersonBundle = bundle;
-
-  setTitle(fullName(selectedYoungPerson));
-  renderYoungPeopleList();
-  renderHeader(bundle);
-  renderOverviewTab(bundle);
-  renderProfilesTab(bundle);
-  renderContactsTab(bundle);
-  renderAlertsTab(bundle);
-  setActiveTab("overview");
+  box.innerHTML = `
+    <strong style="display:block;margin-bottom:8px;color:var(--text);">Assistant context for ${safe(fullName(yp))}</strong>
+    Preferred name: ${safe(yp.preferred_name || yp.first_name || "—")}<br>
+    Placement status: ${safe(yp.placement_status || "—")}<br>
+    Risk level: ${safe(yp.summary_risk_level || "—")}<br>
+    Communication: ${safe(communication.communication_style || "—")}<br>
+    What helps: ${safe(communication.what_helps || "—")}<br>
+    Education: ${safe(education.education_status || "—")}<br>
+    Mental health: ${safe(health.mental_health_summary || "—")}<br>
+    Legal status: ${safe(legal.legal_status || "—")}
+  `;
 }
 
-async function createYoungPerson() {
+function renderTimelinePlaceholder(overview) {
+  const host = $("timelinePanel");
+  if (!host) return;
+  const yp = overview?.young_person || selectedYoungPerson || {};
+
+  host.innerHTML = `
+    <div class="assistant-prompt">
+      Timeline placeholder for <strong>${safe(fullName(yp))}</strong>.<br><br>
+      Next step: link this panel to daily notes, incidents, keywork, health events, education records, family contact, missing episodes, and chronology events.
+    </div>
+  `;
+}
+
+async function loadYoungPeople() {
+  const data = await api("/young-people");
+  youngPeople = Array.isArray(data?.young_people) ? data.young_people : [];
+  renderYoungPersonList();
+
+  if (selectedYoungPerson?.id) {
+    const refreshed = youngPeople.find(p => Number(p.id) === Number(selectedYoungPerson.id));
+    if (refreshed) {
+      selectedYoungPerson = refreshed;
+      renderYoungPersonList();
+      await loadYoungPersonOverview(refreshed.id);
+      return;
+    }
+  }
+
+  if (!selectedYoungPerson && youngPeople.length) {
+    selectedYoungPerson = youngPeople[0];
+    renderYoungPersonList();
+    await loadYoungPersonOverview(selectedYoungPerson.id);
+  }
+}
+
+async function loadYoungPersonOverview(id) {
+  const data = await api(`/young-people/${id}/overview`);
+  const overview = data?.overview || {};
+  selectedOverview = overview;
+  selectedYoungPerson = overview?.young_person || selectedYoungPerson;
+
+  if ($("pageTitle")) $("pageTitle").textContent = fullName(selectedYoungPerson);
+  if ($("pageSubtitle")) {
+    $("pageSubtitle").textContent =
+      `Placement: ${selectedYoungPerson?.placement_status || "—"} · Risk: ${selectedYoungPerson?.summary_risk_level || "—"}`;
+  }
+
+  renderOverview(overview);
+}
+
+function openCreateYoungPersonModal() {
+  editingYoungPersonId = null;
+  $("youngPersonModalTitle").textContent = "Add young person";
+  $("youngPersonForm").reset();
+  $("ypArchived").checked = false;
+  openModal("youngPersonModalBackdrop");
+}
+
+function openEditYoungPersonModal() {
+  if (!selectedYoungPerson) {
+    banner("Select a young person first.");
+    return;
+  }
+
+  editingYoungPersonId = Number(selectedYoungPerson.id);
+  $("youngPersonModalTitle").textContent = "Edit young person";
+
+  $("ypHomeId").value = selectedYoungPerson.home_id ?? "";
+  $("ypPrimaryKeyworkerId").value = selectedYoungPerson.primary_keyworker_id ?? "";
+  $("ypFirstName").value = selectedYoungPerson.first_name || "";
+  $("ypLastName").value = selectedYoungPerson.last_name || "";
+  $("ypPreferredName").value = selectedYoungPerson.preferred_name || "";
+  $("ypDateOfBirth").value = selectedYoungPerson.date_of_birth || "";
+  $("ypGender").value = selectedYoungPerson.gender || "";
+  $("ypEthnicity").value = selectedYoungPerson.ethnicity || "";
+  $("ypNhsNumber").value = selectedYoungPerson.nhs_number || "";
+  $("ypLocalIdNumber").value = selectedYoungPerson.local_id_number || "";
+  $("ypAdmissionDate").value = selectedYoungPerson.admission_date || "";
+  $("ypDischargeDate").value = selectedYoungPerson.discharge_date || "";
+  $("ypPlacementStatus").value = selectedYoungPerson.placement_status || "";
+  $("ypRiskLevel").value = selectedYoungPerson.summary_risk_level || "";
+  $("ypPhotoUrl").value = selectedYoungPerson.photo_url || "";
+  $("ypArchived").checked = !!selectedYoungPerson.archived;
+
+  openModal("youngPersonModalBackdrop");
+}
+
+async function saveYoungPersonForm(event) {
+  event.preventDefault();
+
   const payload = {
-    first_name: has("ypFirstName") ? $("ypFirstName").value.trim() : "",
-    last_name: has("ypLastName") ? $("ypLastName").value.trim() : "",
-    preferred_name: has("ypPreferredName") ? $("ypPreferredName").value.trim() || null : null,
-    date_of_birth: has("ypDob") ? $("ypDob").value || null : null,
-    gender: has("ypGender") ? $("ypGender").value.trim() || null : null,
-    ethnicity: has("ypEthnicity") ? $("ypEthnicity").value.trim() || null : null,
-    admission_date: has("ypAdmissionDate") ? $("ypAdmissionDate").value || null : null,
-    placement_status: has("ypPlacementStatus") ? $("ypPlacementStatus").value.trim() || null : null,
-    summary_risk_level: has("ypRiskLevel") ? $("ypRiskLevel").value.trim() || null : null
+    home_id: numberOrNull($("ypHomeId").value),
+    first_name: $("ypFirstName").value.trim(),
+    last_name: emptyToNull($("ypLastName").value),
+    preferred_name: emptyToNull($("ypPreferredName").value),
+    date_of_birth: emptyToNull($("ypDateOfBirth").value),
+    gender: emptyToNull($("ypGender").value),
+    ethnicity: emptyToNull($("ypEthnicity").value),
+    nhs_number: emptyToNull($("ypNhsNumber").value),
+    local_id_number: emptyToNull($("ypLocalIdNumber").value),
+    admission_date: emptyToNull($("ypAdmissionDate").value),
+    discharge_date: emptyToNull($("ypDischargeDate").value),
+    placement_status: emptyToNull($("ypPlacementStatus").value),
+    primary_keyworker_id: numberOrNull($("ypPrimaryKeyworkerId").value),
+    summary_risk_level: emptyToNull($("ypRiskLevel").value),
+    photo_url: emptyToNull($("ypPhotoUrl").value),
+    archived: isTruthyCheckbox($("ypArchived")),
   };
 
-  if (!payload.first_name || !payload.last_name) {
-    return banner("First name and last name are required");
+  if (!payload.home_id || !payload.first_name) {
+    banner("Home ID and first name are required.");
+    return;
   }
 
-  const data = await api("/young-people", {
+  if (editingYoungPersonId) {
+    await api(`/young-people/${editingYoungPersonId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+    banner("Young person updated.");
+  } else {
+    await api("/young-people", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    banner("Young person created.");
+  }
+
+  closeModal("youngPersonModalBackdrop");
+  await loadYoungPeople();
+}
+
+function openContactModal() {
+  if (!selectedYoungPerson) {
+    banner("Select a young person first.");
+    return;
+  }
+  $("contactForm").reset();
+  openModal("contactModalBackdrop");
+}
+
+async function saveContactForm(event) {
+  event.preventDefault();
+
+  if (!selectedYoungPerson?.id) {
+    banner("Select a young person first.");
+    return;
+  }
+
+  const payload = {
+    contact_type: emptyToNull($("contactType").value),
+    full_name: $("contactFullName").value.trim(),
+    relationship_to_young_person: emptyToNull($("contactRelationship").value),
+    phone: emptyToNull($("contactPhone").value),
+    email: emptyToNull($("contactEmail").value),
+    address: emptyToNull($("contactAddress").value),
+    is_parental_responsibility_holder: isTruthyCheckbox($("contactPr")),
+    is_approved_contact: isTruthyCheckbox($("contactApproved")),
+    is_restricted_contact: isTruthyCheckbox($("contactRestricted")),
+    supervision_level: emptyToNull($("contactSupervisionLevel").value),
+    notes: emptyToNull($("contactNotes").value),
+  };
+
+  if (!payload.full_name) {
+    banner("Contact full name is required.");
+    return;
+  }
+
+  await api(`/young-people/${selectedYoungPerson.id}/contacts`, {
     method: "POST",
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   });
 
-  banner("Young person created");
+  banner("Contact added.");
+  closeModal("contactModalBackdrop");
+  await loadYoungPersonOverview(selectedYoungPerson.id);
+  activeProfileTab = "contacts";
+  syncTabs();
+}
 
-  ["ypFirstName", "ypLastName", "ypPreferredName", "ypDob", "ypGender", "ypEthnicity", "ypAdmissionDate", "ypPlacementStatus", "ypRiskLevel"]
-    .forEach(id => {
-      if (has(id)) $(id).value = "";
-    });
+function openAlertModal() {
+  if (!selectedYoungPerson) {
+    banner("Select a young person first.");
+    return;
+  }
+  $("alertForm").reset();
+  $("alertActive").checked = true;
+  $("alertGlobal").checked = false;
+  openModal("alertModalBackdrop");
+}
 
-  await loadYoungPeople();
+async function saveAlertForm(event) {
+  event.preventDefault();
 
-  const createdId = data?.young_person?.id;
-  if (createdId) {
-    await openYoungPerson(createdId);
+  if (!selectedYoungPerson?.id) {
+    banner("Select a young person first.");
+    return;
+  }
+
+  const payload = {
+    alert_type: emptyToNull($("alertType").value),
+    title: $("alertTitle").value.trim(),
+    description: emptyToNull($("alertDescription").value),
+    severity: emptyToNull($("alertSeverity").value),
+    is_active: isTruthyCheckbox($("alertActive")),
+    show_globally: isTruthyCheckbox($("alertGlobal")),
+    review_date: emptyToNull($("alertReviewDate").value),
+  };
+
+  if (!payload.title) {
+    banner("Alert title is required.");
+    return;
+  }
+
+  await api(`/young-people/${selectedYoungPerson.id}/alerts`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+  banner("Alert added.");
+  closeModal("alertModalBackdrop");
+  await loadYoungPersonOverview(selectedYoungPerson.id);
+  activeProfileTab = "alerts";
+  syncTabs();
+}
+
+async function saveCurrentProfileTab() {
+  if (!selectedYoungPerson?.id) {
+    banner("Select a young person first.");
+    return;
+  }
+
+  const id = selectedYoungPerson.id;
+  let url = "";
+  let payload = {};
+
+  if (activeProfileTab === "identity") {
+    url = `/young-people/${id}/identity-profile`;
+    payload = {
+      religion_or_faith: emptyToNull($("identityReligion")?.value),
+      cultural_identity: emptyToNull($("identityCulture")?.value),
+      first_language: emptyToNull($("identityLanguage")?.value),
+      dietary_needs: emptyToNull($("identityDietary")?.value),
+      interests: emptyToNull($("identityInterests")?.value),
+      strengths_summary: emptyToNull($("identityStrengths")?.value),
+      what_matters_to_me: emptyToNull($("identityMatters")?.value),
+      important_dates: emptyToNull($("identityDates")?.value),
+    };
+  } else if (activeProfileTab === "communication") {
+    url = `/young-people/${id}/communication-profile`;
+    payload = {
+      neurodiversity_summary: emptyToNull($("commNeuro")?.value),
+      communication_style: emptyToNull($("commStyle")?.value),
+      sensory_profile: emptyToNull($("commSensory")?.value),
+      processing_needs: emptyToNull($("commProcessing")?.value),
+      signs_of_distress: emptyToNull($("commDistress")?.value),
+      what_helps: emptyToNull($("commHelps")?.value),
+      what_to_avoid: emptyToNull($("commAvoid")?.value),
+      routines_and_predictability: emptyToNull($("commRoutine")?.value),
+      visual_support_needs: emptyToNull($("commVisual")?.value),
+    };
+  } else if (activeProfileTab === "education") {
+    url = `/young-people/${id}/education-profile`;
+    payload = {
+      school_name: emptyToNull($("eduSchool")?.value),
+      year_group: emptyToNull($("eduYearGroup")?.value),
+      education_status: emptyToNull($("eduStatus")?.value),
+      sen_status: emptyToNull($("eduSen")?.value),
+      ehcp_details: emptyToNull($("eduEhcp")?.value),
+      designated_teacher: emptyToNull($("eduTeacher")?.value),
+      attendance_baseline: $("eduAttendance")?.value === "" ? null : numberOrNull($("eduAttendance")?.value),
+      pep_status: emptyToNull($("eduPep")?.value),
+      support_summary: emptyToNull($("eduSupport")?.value),
+    };
+  } else if (activeProfileTab === "health") {
+    url = `/young-people/${id}/health-profile`;
+    payload = {
+      gp_name: emptyToNull($("healthGpName")?.value),
+      gp_contact: emptyToNull($("healthGpContact")?.value),
+      dentist_name: emptyToNull($("healthDentistName")?.value),
+      dentist_contact: emptyToNull($("healthDentistContact")?.value),
+      optician_name: emptyToNull($("healthOpticianName")?.value),
+      optician_contact: emptyToNull($("healthOpticianContact")?.value),
+      allergies: emptyToNull($("healthAllergies")?.value),
+      diagnoses: emptyToNull($("healthDiagnoses")?.value),
+      mental_health_summary: emptyToNull($("healthMental")?.value),
+      medication_summary: emptyToNull($("healthMedication")?.value),
+      consent_notes: emptyToNull($("healthConsent")?.value),
+    };
+  } else if (activeProfileTab === "legal") {
+    url = `/young-people/${id}/legal-status`;
+    payload = {
+      legal_status: emptyToNull($("legalStatus")?.value),
+      order_type: emptyToNull($("legalOrderType")?.value),
+      order_details: emptyToNull($("legalOrderDetails")?.value),
+      delegated_authority_details: emptyToNull($("legalDelegated")?.value),
+      restrictions_text: emptyToNull($("legalRestrictions")?.value),
+      consent_arrangements: emptyToNull($("legalConsent")?.value),
+      effective_from: emptyToNull($("legalEffectiveFrom")?.value),
+      effective_to: emptyToNull($("legalEffectiveTo")?.value),
+      is_current: isTruthyCheckbox($("legalCurrent")),
+    };
+  } else {
+    banner("This tab is view-only. Use Add contact or Add alert.");
+    return;
+  }
+
+  await api(url, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+  banner("Profile saved.");
+  await loadYoungPersonOverview(id);
+}
+
+function buildAssistantContextText() {
+  if (!selectedOverview?.young_person) return "";
+
+  const yp = selectedOverview.young_person;
+  const communication = selectedOverview.communication_profile || {};
+  const education = selectedOverview.education_profile || {};
+  const health = selectedOverview.health_profile || {};
+  const legal = selectedOverview.legal_status || {};
+
+  return [
+    `Young person: ${fullName(yp)}`,
+    `Preferred name: ${yp.preferred_name || yp.first_name || ""}`,
+    `DOB: ${yp.date_of_birth || ""}`,
+    `Placement status: ${yp.placement_status || ""}`,
+    `Risk level: ${yp.summary_risk_level || ""}`,
+    `Communication style: ${communication.communication_style || ""}`,
+    `What helps: ${communication.what_helps || ""}`,
+    `Education status: ${education.education_status || ""}`,
+    `Mental health summary: ${health.mental_health_summary || ""}`,
+    `Legal status: ${legal.legal_status || ""}`,
+  ].join("\n");
+}
+
+async function copyAssistantContext(actionLabel = "") {
+  if (!selectedYoungPerson) {
+    banner("Select a young person first.");
+    return;
+  }
+
+  const context = buildAssistantContextText();
+  const prompt = [
+    context,
+    "",
+    actionLabel ? `Task: ${actionLabel}` : "Open the assistant and use this young person as the current working context."
+  ].join("\n");
+
+  await navigator.clipboard.writeText(prompt);
+  banner("Young person context copied for assistant.");
+}
+
+function syncTabs() {
+  document.querySelectorAll("[data-profile-tab]").forEach(btn => {
+    btn.classList.toggle("active", btn.getAttribute("data-profile-tab") === activeProfileTab);
+  });
+
+  if (selectedOverview) {
+    renderProfileTab(selectedOverview);
   }
 }
 
-function bind() {
-  if (has("ypSearch")) {
-    $("ypSearch").addEventListener("input", () => {
-      loadYoungPeople().catch(err => {
-        console.error("loadYoungPeople failed", err);
-        banner(err.message || "Could not load young people");
-      });
-    });
-  }
-
-  if (has("ypIncludeArchived")) {
-    $("ypIncludeArchived").addEventListener("change", () => {
-      loadYoungPeople().catch(err => {
-        console.error("loadYoungPeople failed", err);
-        banner(err.message || "Could not load young people");
-      });
-    });
-  }
-
-  if (has("ypCreateBtn")) {
-    $("ypCreateBtn").addEventListener("click", () => {
-      createYoungPerson().catch(err => {
-        console.error("createYoungPerson failed", err);
-        banner(err.message || "Could not create young person");
-      });
-    });
-  }
-
-  if (has("ypRefreshBtn")) {
-    $("ypRefreshBtn").addEventListener("click", () => {
-      loadYoungPeople().catch(err => {
-        console.error("loadYoungPeople failed", err);
-        banner(err.message || "Could not load young people");
-      });
-    });
-  }
-
-  document.querySelectorAll("[data-yp-tab]").forEach(btn => {
+function bindTabs() {
+  document.querySelectorAll("[data-profile-tab]").forEach(btn => {
     btn.addEventListener("click", () => {
-      setActiveTab(btn.dataset.ypTab);
+      activeProfileTab = btn.getAttribute("data-profile-tab");
+      syncTabs();
+    });
+  });
+}
+
+function bindLayout() {
+  const sidebar = $("ypSidebar");
+
+  $("openSidebarBtn")?.addEventListener("click", () => sidebar?.classList.add("open"));
+  $("closeSidebarBtn")?.addEventListener("click", () => sidebar?.classList.remove("open"));
+
+  $("refreshYoungPeopleBtn")?.addEventListener("click", async () => {
+    try {
+      await loadYoungPeople();
+      banner("Young people refreshed.");
+    } catch (e) {
+      banner(e.message || "Could not refresh.");
+    }
+  });
+
+  $("youngPersonSearch")?.addEventListener("input", renderYoungPersonList);
+  $("youngPersonStatusFilter")?.addEventListener("change", renderYoungPersonList);
+
+  $("newYoungPersonBtn")?.addEventListener("click", openCreateYoungPersonModal);
+  $("editYoungPersonBtn")?.addEventListener("click", openEditYoungPersonModal);
+
+  $("openAssistantBtn")?.addEventListener("click", async () => {
+    try {
+      await copyAssistantContext();
+    } catch (e) {
+      banner(e.message || "Could not copy assistant context.");
+    }
+  });
+
+  document.querySelectorAll("[data-assistant-action]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const label = btn.getAttribute("data-assistant-action") || "assistant task";
+      try {
+        await copyAssistantContext(label);
+      } catch (e) {
+        banner(e.message || "Could not copy assistant task context.");
+      }
+    });
+  });
+
+  $("saveCurrentTabBtn")?.addEventListener("click", async () => {
+    try {
+      await saveCurrentProfileTab();
+    } catch (e) {
+      banner(e.message || "Could not save profile.");
+    }
+  });
+
+  $("addContactBtn")?.addEventListener("click", openContactModal);
+  $("addAlertBtn")?.addEventListener("click", openAlertModal);
+}
+
+function bindModals() {
+  $("youngPersonForm")?.addEventListener("submit", async (e) => {
+    try {
+      await saveYoungPersonForm(e);
+    } catch (err) {
+      banner(err.message || "Could not save young person.");
+    }
+  });
+
+  $("cancelYoungPersonFormBtn")?.addEventListener("click", () => closeModal("youngPersonModalBackdrop"));
+  $("closeYoungPersonModalBtn")?.addEventListener("click", () => closeModal("youngPersonModalBackdrop"));
+
+  $("contactForm")?.addEventListener("submit", async (e) => {
+    try {
+      await saveContactForm(e);
+    } catch (err) {
+      banner(err.message || "Could not save contact.");
+    }
+  });
+
+  $("cancelContactFormBtn")?.addEventListener("click", () => closeModal("contactModalBackdrop"));
+  $("closeContactModalBtn")?.addEventListener("click", () => closeModal("contactModalBackdrop"));
+
+  $("alertForm")?.addEventListener("submit", async (e) => {
+    try {
+      await saveAlertForm(e);
+    } catch (err) {
+      banner(err.message || "Could not save alert.");
+    }
+  });
+
+  $("cancelAlertFormBtn")?.addEventListener("click", () => closeModal("alertModalBackdrop"));
+  $("closeAlertModalBtn")?.addEventListener("click", () => closeModal("alertModalBackdrop"));
+
+  [
+    "youngPersonModalBackdrop",
+    "contactModalBackdrop",
+    "alertModalBackdrop"
+  ].forEach(id => {
+    $(id)?.addEventListener("click", (e) => {
+      if (e.target?.id === id) closeModal(id);
     });
   });
 }
 
 async function init() {
-  bind();
-  renderEmptyState();
+  bindTabs();
+  bindLayout();
+  bindModals();
 
   try {
-    await loadMe();
     await loadYoungPeople();
-  } catch (err) {
-    console.error("young-people-shell init failed", err);
-    banner(err.message || "Could not load young people OS");
+  } catch (e) {
+    banner(e.message || "Could not load young people.");
   }
 }
 
