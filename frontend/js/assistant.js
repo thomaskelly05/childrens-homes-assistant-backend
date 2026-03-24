@@ -38,6 +38,11 @@ let availableVoices = [];
 let currentIntent = "general";
 let lastAssistantText = "";
 
+let currentStreamMeta = {
+  sources: [],
+  runtime: {}
+};
+
 let contextState = {
   child: "",
   home: "",
@@ -621,6 +626,7 @@ function resetWelcome() {
   conversationId = null;
   currentDocumentText = null;
   currentDocumentName = null;
+  currentStreamMeta = { sources: [], runtime: {} };
   stopSpeaking();
   if (has("messages")) {
     $("messages").innerHTML = "";
@@ -688,6 +694,8 @@ async function openConversation(id, title) {
   if (!data) return;
 
   conversationId = id;
+  currentStreamMeta = { sources: [], runtime: {} };
+
   if (has("messages")) {
     $("messages").innerHTML = "";
     has("empty") && $("empty").classList.add("hidden");
@@ -729,6 +737,91 @@ async function deleteConversation(id) {
   if (Number(conversationId) === Number(id)) resetWelcome();
   await loadConversations();
   banner(indiCareCopy("deleted"));
+}
+
+function renderSourceCard(source) {
+  const type = safe(source?.type || "source");
+  const label = safe(source?.label || source?.document_title || "Source");
+  const excerpt = safe(source?.excerpt || "");
+  const section = safe(source?.section || "");
+  const page = source?.page_number != null ? safe(String(source.page_number)) : "";
+  const url = source?.url ? String(source.url) : "";
+
+  return `
+    <div class="entity-row" style="padding:10px 12px;margin-top:8px;">
+      <div style="width:100%;">
+        <div class="entity-title" style="font-size:.88rem;">${label}</div>
+        <div class="entity-meta">
+          <span class="tag neutral">${type}</span>
+          ${section ? `<span>${section}</span>` : ""}
+          ${page ? `<span> · p.${page}</span>` : ""}
+        </div>
+        ${excerpt ? `<div class="entity-meta" style="margin-top:8px;line-height:1.55;">${excerpt}</div>` : ""}
+        ${url ? `<div class="entity-meta" style="margin-top:8px;"><a href="${safe(url)}" target="_blank" rel="noopener noreferrer">Open source</a></div>` : ""}
+      </div>
+    </div>
+  `;
+}
+
+function renderSourcesHtml(sources) {
+  const rows = normArray(sources);
+  if (!rows.length) return "";
+  return `
+    <div class="card" style="margin-top:10px;padding:12px;">
+      <div style="font-weight:600;margin-bottom:6px;">Sources used</div>
+      <div class="entity-meta">This response used the following source material.</div>
+      ${rows.map(renderSourceCard).join("")}
+    </div>
+  `;
+}
+
+function renderRuntimeHtml(runtime) {
+  const data = normObj(runtime);
+  if (!Object.keys(data).length) return "";
+
+  const chips = [];
+  if (data.mode) chips.push(`<span class="tag neutral">${safe(data.mode)}</span>`);
+  if (data.task_type) chips.push(`<span class="tag neutral">${safe(data.task_type)}</span>`);
+  if (data.output_type) chips.push(`<span class="tag neutral">${safe(data.output_type)}</span>`);
+  if (data.urgency) chips.push(`<span class="tag ${data.urgency === "urgent" ? "bad" : data.urgency === "heightened" ? "warn" : "neutral"}">${safe(data.urgency)}</span>`);
+  if (data.safeguarding_level) chips.push(`<span class="tag ${data.safeguarding_level === "urgent" ? "bad" : data.safeguarding_level === "heightened" ? "warn" : "neutral"}">${safe(data.safeguarding_level)}</span>`);
+
+  const actions = normArray(data.suggested_actions);
+  return `
+    <div class="card" style="margin-top:10px;padding:12px;">
+      <div style="font-weight:600;margin-bottom:8px;">IndiCare reasoning</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">${chips.join("")}</div>
+      ${actions.length ? `
+        <div class="entity-meta" style="margin-top:10px;font-weight:600;">Suggested priorities</div>
+        <ul style="margin:8px 0 0 18px;">
+          ${actions.map(a => `<li style="margin-bottom:6px;">${safe(a)}</li>`).join("")}
+        </ul>
+      ` : ""}
+    </div>
+  `;
+}
+
+function attachMetaToWrap(wrap, meta = {}) {
+  if (!wrap) return;
+  const block = wrap.querySelector(".block");
+  if (!block) return;
+
+  let oldMetaBox = wrap.querySelector(".assistant-source-box");
+  if (oldMetaBox) oldMetaBox.remove();
+
+  const html = `${renderRuntimeHtml(meta.runtime)}${renderSourcesHtml(meta.sources)}`;
+  if (!html) return;
+
+  const box = document.createElement("div");
+  box.className = "assistant-source-box";
+  box.innerHTML = html;
+  block.appendChild(box);
+}
+
+function attachMetaToStreamingMessage(meta = {}) {
+  const wrap = document.getElementById("streaming");
+  if (!wrap) return;
+  attachMetaToWrap(wrap, meta);
 }
 
 function appendMessage(roleName, text, opts = {}) {
@@ -787,6 +880,13 @@ function appendMessage(roleName, text, opts = {}) {
     addChip("Edit", () => editMessage(opts.messageId, shown));
   }
 
+  if (roleName === "assistant" && (opts.sources || opts.runtime)) {
+    attachMetaToWrap(wrap, {
+      sources: opts.sources || [],
+      runtime: opts.runtime || {}
+    });
+  }
+
   $("messages").appendChild(wrap);
   if (has("assistantPanel")) $("assistantPanel").scrollTop = $("assistantPanel").scrollHeight;
 }
@@ -799,7 +899,13 @@ function createStreamMsg() {
   const wrap = document.createElement("div");
   wrap.id = "streaming";
   wrap.className = "wrap assistant";
-  wrap.innerHTML = `<div class="avatar">IC</div><div class="block"><div class="msg typing" data-raw=""></div><div class="meta">Reply language: ${LANG[selectedLang()] || "English"} · Mode: ${RESP[selectedMode()]}</div></div>`;
+  wrap.innerHTML = `
+    <div class="avatar">IC</div>
+    <div class="block">
+      <div class="msg typing" data-raw=""></div>
+      <div class="meta">Reply language: ${LANG[selectedLang()] || "English"} · Mode: ${RESP[selectedMode()]}</div>
+    </div>
+  `;
   $("messages").appendChild(wrap);
   if (has("assistantPanel")) $("assistantPanel").scrollTop = $("assistantPanel").scrollHeight;
   return wrap;
@@ -827,15 +933,58 @@ function startTyping() {
       el.classList.remove("typing");
       const finalRaw = el.getAttribute("data-raw") || "";
       lastAssistantText = finalRaw;
+      attachMetaToStreamingMessage(currentStreamMeta);
       speakText(finalRaw);
     }
   }, 2);
+}
+
+function parseSseChunk(buffer, onEvent) {
+  const parts = buffer.split("\n\n");
+  const complete = parts.slice(0, -1);
+  const remainder = parts[parts.length - 1] || "";
+
+  for (const block of complete) {
+    const lines = block.split("\n");
+    let eventName = "message";
+    const dataLines = [];
+
+    for (const line of lines) {
+      if (line.startsWith("event:")) {
+        eventName = line.slice(6).trim();
+      } else if (line.startsWith("data:")) {
+        dataLines.push(line.slice(5).trimStart());
+      }
+    }
+
+    const data = dataLines.join("\n");
+    onEvent(eventName, data);
+  }
+
+  return remainder;
+}
+
+function handleMetaEvent(payload) {
+  let parsed = {};
+  try {
+    parsed = JSON.parse(payload || "{}");
+  } catch {
+    parsed = {};
+  }
+
+  currentStreamMeta = {
+    sources: normArray(parsed.sources),
+    runtime: normObj(parsed.runtime)
+  };
+
+  attachMetaToStreamingMessage(currentStreamMeta);
 }
 
 async function stream(url, body) {
   body = normObj(body);
 
   currentIntent = body.intent || detectIntent(body.message || "");
+  currentStreamMeta = { sources: [], runtime: {} };
 
   const promptPrefix =
     copilotPrompt() +
@@ -879,7 +1028,10 @@ async function stream(url, body) {
       data = await res.json();
     } catch {}
     const reply = data.reply || data.message || data.output || "Done.";
-    appendMessage("assistant", reply);
+    appendMessage("assistant", reply, {
+      sources: normArray(data.sources),
+      runtime: normObj(data.runtime)
+    });
     speakText(reply);
     return;
   }
@@ -896,17 +1048,20 @@ async function stream(url, body) {
     const { done, value } = await reader.read();
     if (done) break;
     buffer += dec.decode(value, { stream:true });
-    const parts = buffer.split("\n");
-    buffer = parts.pop() || "";
 
-    for (const line of parts) {
-      if (!line.startsWith("data:")) continue;
-      let payload = line.slice(5);
-      if (payload.startsWith(" ")) payload = payload.slice(1);
-      if (payload === "[DONE]") continue;
-      for (const ch of payload) queue.push(ch);
-      startTyping();
-    }
+    buffer = parseSseChunk(buffer, (eventName, payload) => {
+      if (eventName === "done" || payload === "[DONE]") return;
+
+      if (eventName === "meta") {
+        handleMetaEvent(payload);
+        return;
+      }
+
+      if (eventName === "message") {
+        for (const ch of payload) queue.push(ch);
+        startTyping();
+      }
+    });
   }
 }
 
@@ -988,6 +1143,7 @@ async function sendMessage() {
     if (streamEl) {
       streamEl.classList.remove("typing");
       streamEl.innerHTML = render(`Sorry, there was a problem: ${e.message}`, "assistant");
+      attachMetaToStreamingMessage(currentStreamMeta);
     } else {
       appendMessage("assistant", `Sorry, there was a problem: ${e.message}`);
     }
