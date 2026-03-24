@@ -23,7 +23,6 @@ MAX_EXCERPT_CHARS = 650
 
 _embedding_cache: dict[str, tuple[float, list[float]]] = {}
 
-
 MODE_HINTS = {
     "factual": [
         "children's homes regulations",
@@ -237,31 +236,84 @@ def _fetch_knowledge_rows(embedding: list[float], limit: int = 3) -> list[dict[s
         release_db_connection(conn)
 
 
-def _format_rows(rows: list[dict[str, Any]]) -> str:
-    if not rows:
+def _infer_source_type(document_title: str, section: str) -> str:
+    title = _safe_string(document_title).lower()
+    section_text = _safe_string(section).lower()
+    combined = f"{title} {section_text}"
+
+    if any(term in combined for term in ["regulation", "regulations", "quality standard", "quality standards"]):
+        return "regulation"
+    if any(term in combined for term in ["ofsted", "sccif", "inspection"]):
+        return "ofsted"
+    if any(term in combined for term in ["guide", "guidance", "statutory"]):
+        return "guidance"
+    return "internal_knowledge"
+
+
+def _build_source_label(document_title: str, section: str, page_number: Any) -> str:
+    doc = _safe_string(document_title) or "Unknown document"
+    sec = _safe_string(section)
+    page = page_number if page_number is not None else "?"
+
+    if sec:
+        return f"{doc} — {sec} (p.{page})"
+    return f"{doc} (p.{page})"
+
+
+def _normalise_rows_to_sources(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    sources: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    for row in rows:
+        doc = _safe_string(row.get("document_title")) or "Unknown document"
+        section = _safe_string(row.get("section")) or ""
+        page_number = row.get("page_number")
+        content = _trim_text(row.get("content") or "", MAX_EXCERPT_CHARS)
+
+        label = _build_source_label(doc, section, page_number)
+        dedupe_key = f"{doc}|{section}|{page_number}"
+
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+
+        sources.append(
+            {
+                "type": _infer_source_type(doc, section),
+                "label": label,
+                "document_title": doc,
+                "section": section,
+                "page_number": page_number,
+                "excerpt": content,
+                "url": None,
+            }
+        )
+
+    return sources
+
+
+def _format_context_from_sources(sources: list[dict[str, Any]]) -> str:
+    if not sources:
         return ""
 
     excerpt_blocks: list[str] = []
     source_blocks: list[str] = []
 
-    for i, row in enumerate(rows, start=1):
-        content = _trim_text(row.get("content") or "", MAX_EXCERPT_CHARS)
-        doc = _safe_string(row.get("document_title")) or "Unknown document"
-        section = _safe_string(row.get("section")) or "Unknown section"
-        page = row.get("page_number")
-        page_display = page if page is not None else "?"
+    for i, source in enumerate(sources, start=1):
+        excerpt = _trim_text(source.get("excerpt") or "", MAX_EXCERPT_CHARS)
+        label = _safe_string(source.get("label"))
 
-        if not content:
+        if not excerpt:
             continue
 
-        excerpt_blocks.append(f"[{i}] {content}")
-        source_blocks.append(f"[{i}] {doc} — {section} (p.{page_display})")
+        excerpt_blocks.append(f"[{i}] {excerpt}")
+        source_blocks.append(f"[{i}] {label}")
 
     if not excerpt_blocks:
         return ""
 
     excerpts = "\n\n".join(excerpt_blocks)
-    sources = "\n".join(source_blocks)
+    source_lines = "\n".join(source_blocks)
 
     return f"""
 RETRIEVED INTERNAL KNOWLEDGE
@@ -272,11 +324,11 @@ Knowledge excerpts:
 {excerpts}
 
 Knowledge sources:
-{sources}
+{source_lines}
 """.strip()
 
 
-def retrieve_context(
+def retrieve_context_bundle(
     message: str,
     mode: str = "general_practice",
     safeguarding_level: str = "normal",
@@ -284,10 +336,14 @@ def retrieve_context(
     document_name: str | None = None,
     role: str = "",
     limit: int = 3,
-) -> str:
+) -> dict[str, Any]:
     try:
         if _should_skip_retrieval(message):
-            return ""
+            return {
+                "context_text": "",
+                "sources": [],
+                "query_text": "",
+            }
 
         safe_limit = max(1, min(int(limit), MAX_RESULT_ROWS))
 
@@ -300,28 +356,71 @@ def retrieve_context(
         )
 
         if not shaped_query:
-            return ""
+            return {
+                "context_text": "",
+                "sources": [],
+                "query_text": "",
+            }
 
         embedding = embed_query(shaped_query)
         rows = _fetch_knowledge_rows(embedding, limit=safe_limit)
-        context = _format_rows(rows)
+        sources = _normalise_rows_to_sources(rows)
+        context_text = _format_context_from_sources(sources)
 
-        if context and document_text:
-            context += """
+        if context_text and document_text:
+            context_text += """
 
 Document note:
 An uploaded document is also present in this request. Use retrieved knowledge alongside the uploaded document where relevant.
 """.rstrip()
 
-        return context
+        return {
+            "context_text": context_text,
+            "sources": sources,
+            "query_text": shaped_query,
+        }
 
     except Exception:
         logger.exception("Knowledge retrieval failed")
-        return ""
+        return {
+            "context_text": "",
+            "sources": [],
+            "query_text": "",
+        }
+
+
+def retrieve_context(
+    message: str,
+    mode: str = "general_practice",
+    safeguarding_level: str = "normal",
+    document_text: str | None = None,
+    document_name: str | None = None,
+    role: str = "",
+    limit: int = 3,
+) -> str:
+    bundle = retrieve_context_bundle(
+        message=message,
+        mode=mode,
+        safeguarding_level=safeguarding_level,
+        document_text=document_text,
+        document_name=document_name,
+        role=role,
+        limit=limit,
+    )
+    return _safe_string(bundle.get("context_text"))
 
 
 def retrieve_knowledge(query: str, limit: int = 3) -> str:
     return retrieve_context(
+        message=query,
+        mode="general_practice",
+        safeguarding_level="normal",
+        limit=limit,
+    )
+
+
+def retrieve_knowledge_bundle(query: str, limit: int = 3) -> dict[str, Any]:
+    return retrieve_context_bundle(
         message=query,
         mode="general_practice",
         safeguarding_level="normal",
