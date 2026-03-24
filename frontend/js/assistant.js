@@ -1,1433 +1,1962 @@
-window.conversationId = null;
-window.currentDocumentText = null;
-window.currentDocumentName = null;
-
-const chatState = {
-    historyRows: [],
-    theme: localStorage.getItem("indicare-theme") || "light",
-    recognition: null,
-    isRecording: false,
-    speechSupported: false,
-    draftKeyPrefix: "indicare-chat-draft:",
-    isStreamingResponse: false
+window.onerror = function(message, source, line, col, error) {
+  console.error("window.onerror", { message, source, line, col, error });
 };
 
-function initChat() {
-    applyTheme(chatState.theme);
-    bindChatInput();
-    bindConversationButtons();
-    bindDocumentUpload();
-    bindLogout();
-    bindHistorySearch();
-    bindSidebarControls();
-    bindSidebarCollapse();
-    bindThemeToggle();
-    bindGlobalMessageActions();
-    bindResponseMode();
-    initSpeechToText();
-    applyWelcomeMessage();
-    applyFooterMeta();
-    refreshUploadStatus();
-    restoreDraft();
-    loadConversations(true);
+window.onunhandledrejection = function(event) {
+  console.error("unhandledrejection", event.reason);
+};
+
+let conversationId = null;
+let currentDocumentText = null;
+let currentDocumentName = null;
+let isStreaming = false;
+let queue = [];
+let typing = false;
+let lastPrompt = "";
+let cache = [];
+
+let currentUser = null;
+let adminCreateActive = true;
+let adminUsers = [];
+let homes = [];
+let providers = [];
+let docs = [];
+let billing = null;
+let audit = [];
+let libraryDocs = [];
+let selectedLibraryDoc = null;
+let editingLibraryDocId = null;
+
+let managerUsers = [];
+let managerDocuments = [];
+
+let indicareVoice = null;
+let speechEnabled = false;
+let speechReady = false;
+let availableVoices = [];
+
+let currentIntent = "general";
+let lastAssistantText = "";
+
+let contextState = {
+  child: "",
+  home: "",
+  shift: ""
+};
+
+const DEFAULT_LANGUAGE = "en-GB";
+const REG_PROMPT = " [SYSTEM: Verify response against Ofsted SCCIF and Quality Standards for Children's Homes. Use a calm, professional, safeguarding-aware tone. Keep wording clear, factual, structured, and suitable for care records, management review, and professional communication. Avoid slang, exaggeration, or overly casual wording.]";
+const RESP = { quick:"Quick", balanced:"Balanced", deep:"Deep" };
+const LANG = { "en-GB":"English", "pl-PL":"Polish", "ro-RO":"Romanian", "ur-PK":"Urdu", "ar":"Arabic" };
+const GREET = [
+  n => `Good morning, ${n}.`,
+  n => `Welcome back, ${n}.`,
+  n => `Ready when you are, ${n}.`,
+  n => `Good to see you, ${n}.`
+];
+
+const $ = id => document.getElementById(id);
+const has = id => !!document.getElementById(id);
+
+const safe = s => String(s || "")
+  .replace(/&/g,"&amp;")
+  .replace(/</g,"&lt;")
+  .replace(/>/g,"&gt;")
+  .replace(/"/g,"&quot;")
+  .replace(/'/g,"&#039;");
+
+const role = () => String(currentUser?.role || "").toLowerCase();
+const isAdmin = () => ["admin", "provider_admin"].includes(role());
+const isManager = () => role() === "manager";
+const isStaff = () => role() === "staff";
+const canManageLibrary = () => isAdmin() || isManager();
+
+const selectedLang = () => has("lang") ? ($("lang").value || DEFAULT_LANGUAGE) : DEFAULT_LANGUAGE;
+const selectedMode = () => has("mode") ? ($("mode").value || "balanced") : "balanced";
+const firstName = () => currentUser?.first_name || localStorage.getItem("first_name") || "there";
+
+function banner(t, ms = 2400) {
+  const e = $("status");
+  if (!e) return;
+  e.textContent = t;
+  e.style.display = "block";
+  clearTimeout(banner.t);
+  banner.t = setTimeout(() => {
+    e.style.display = "none";
+  }, ms);
 }
 
-window.initChat = initChat;
-
-function bindChatInput() {
-    const sendBtn = document.getElementById("send-btn");
-    const input = document.getElementById("chat-input");
-    const clearBtn = document.getElementById("clearChatBtn");
-
-    if (!sendBtn || !input) return;
-
-    autoResizeTextarea(input);
-
-    sendBtn.addEventListener("click", sendMessage);
-
-    input.addEventListener("input", () => {
-        autoResizeTextarea(input);
-        saveDraft();
-    });
-
-    input.addEventListener("keydown", (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
-            e.preventDefault();
-            document.getElementById("historySearch")?.focus();
-            return;
-        }
-
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
-    });
-
-    clearBtn?.addEventListener("click", () => {
-        input.value = "";
-        autoResizeTextarea(input);
-        saveDraft();
-        input.focus();
-    });
-
-    document.querySelectorAll(".ica-prompt-chip").forEach((chip) => {
-        chip.addEventListener("click", () => {
-            input.value = chip.textContent?.trim() || "";
-            autoResizeTextarea(input);
-            saveDraft();
-            input.focus();
-        });
-    });
+function stripSystem(s) {
+  return String(s || "").replace(/\s*\[SYSTEM:[\s\S]*$/i, "").trim();
 }
 
-function bindConversationButtons() {
-    document.getElementById("newConversationBtn")?.addEventListener("click", startNewConversation);
-    document.getElementById("headerNewChatBtn")?.addEventListener("click", startNewConversation);
+function setTitle(t = "Intelligence for Care") {
+  if (has("title")) $("title").textContent = t;
 }
 
-function bindHistorySearch() {
-    const search = document.getElementById("historySearch");
-    if (!search) return;
-
-    search.addEventListener("input", () => {
-        renderConversationList(chatState.historyRows, search.value.trim());
-    });
+function resize() {
+  if (!has("input")) return;
+  const t = $("input");
+  t.style.height = "auto";
+  t.style.height = Math.min(t.scrollHeight, 120) + "px";
 }
 
-function bindSidebarControls() {
-    const shell = document.getElementById("assistantShell");
-    const toggle = document.getElementById("sidebarToggle");
-    const backdrop = document.getElementById("sidebarBackdrop");
-
-    if (!shell) return;
-
-    toggle?.addEventListener("click", () => {
-        shell.classList.toggle("is-sidebar-open");
-        toggle.setAttribute("aria-expanded", String(shell.classList.contains("is-sidebar-open")));
-    });
-
-    backdrop?.addEventListener("click", closeSidebar);
-
-    window.addEventListener("resize", () => {
-        if (window.innerWidth > 980) {
-            closeSidebar();
-        }
-    });
+function docShow(name) {
+  if (!has("docText") || !has("doc")) return;
+  $("docText").textContent = name || "";
+  $("doc").classList.add("show");
 }
 
-function bindSidebarCollapse() {
-    const shell = document.getElementById("assistantShell");
-    const collapseBtn = document.getElementById("sidebarCollapseBtn");
-
-    if (!shell || !collapseBtn) return;
-
-    const savedState = localStorage.getItem("indicare-sidebar-collapsed");
-    if (savedState === "true" && window.innerWidth > 980) {
-        shell.classList.add("is-sidebar-collapsed");
-        collapseBtn.setAttribute("aria-label", "Expand sidebar");
-        collapseBtn.setAttribute("title", "Expand sidebar");
-    }
-
-    collapseBtn.addEventListener("click", () => {
-        if (window.innerWidth <= 980) return;
-
-        shell.classList.toggle("is-sidebar-collapsed");
-        const collapsed = shell.classList.contains("is-sidebar-collapsed");
-
-        localStorage.setItem("indicare-sidebar-collapsed", String(collapsed));
-        collapseBtn.setAttribute("aria-label", collapsed ? "Expand sidebar" : "Collapse sidebar");
-        collapseBtn.setAttribute("title", collapsed ? "Expand sidebar" : "Collapse sidebar");
-    });
-
-    window.addEventListener("resize", () => {
-        if (window.innerWidth <= 980) {
-            shell.classList.remove("is-sidebar-collapsed");
-        } else {
-            const shouldCollapse = localStorage.getItem("indicare-sidebar-collapsed") === "true";
-            shell.classList.toggle("is-sidebar-collapsed", shouldCollapse);
-            collapseBtn.setAttribute("aria-label", shouldCollapse ? "Expand sidebar" : "Collapse sidebar");
-            collapseBtn.setAttribute("title", shouldCollapse ? "Expand sidebar" : "Collapse sidebar");
-        }
-    });
+function docHide() {
+  if (!has("docText") || !has("doc")) return;
+  $("docText").textContent = "";
+  $("doc").classList.remove("show");
 }
 
-function bindThemeToggle() {
-    document.getElementById("themeToggle")?.addEventListener("click", () => {
-        applyTheme(chatState.theme === "dark" ? "light" : "dark");
-    });
+function syncHelpers() {
+  if (has("langHelp")) $("langHelp").textContent = `Assistant replies in ${LANG[selectedLang()] || "English"}.`;
+  if (has("modeHelp")) $("modeHelp").textContent = `Mode: ${RESP[selectedMode()]}`;
+  if (has("theme")) $("theme").classList.toggle("active", document.body.classList.contains("theme-dark"));
+  if (has("privacy") && has("app")) $("privacy").classList.toggle("active", $("app").classList.contains("privacy-active"));
+  if (has("adminActiveToggle")) $("adminActiveToggle").classList.toggle("active", adminCreateActive);
+  if (has("voiceReplies")) $("voiceReplies").classList.toggle("active", speechEnabled);
 }
 
-function bindResponseMode() {
-    const select = document.getElementById("responseMode");
-    if (!select) return;
-
-    const saved = localStorage.getItem("indicare-response-mode");
-    if (saved && ["quick", "balanced", "deep"].includes(saved)) {
-        select.value = saved;
-    }
-
-    select.addEventListener("change", () => {
-        const value = getResponseMode();
-        localStorage.setItem("indicare-response-mode", value);
-        showStatusBanner("success", `Response mode set to ${labelForResponseMode(value)}.`);
-    });
+function userInitials() {
+  const full = [currentUser?.first_name, currentUser?.last_name].filter(Boolean).join(" ") || firstName();
+  const p = String(full).trim().split(/\s+/).filter(Boolean);
+  if (!p.length) return "Y";
+  if (p.length === 1) return p[0].slice(0, 2).toUpperCase();
+  return (p[0][0] + p[1][0]).toUpperCase();
 }
 
-function getResponseMode() {
-    const select = document.getElementById("responseMode");
-    const value = select?.value || localStorage.getItem("indicare-response-mode") || "balanced";
-    return ["quick", "balanced", "deep"].includes(value) ? value : "balanced";
+function setWelcome() {
+  if (has("welcomeTitle")) $("welcomeTitle").textContent = GREET[Math.floor(Math.random() * GREET.length)](firstName());
+  if (has("welcomeText")) $("welcomeText").textContent = "Your assistant is ready to help with records, safeguarding, risk, guidance, and drafting.";
 }
 
-function labelForResponseMode(value) {
-    if (value === "quick") return "Quick";
-    if (value === "deep") return "Deep review";
-    return "Balanced";
+function buildLangInstruction() {
+  return selectedLang() === DEFAULT_LANGUAGE
+    ? ""
+    : ` [SYSTEM: Reply in ${LANG[selectedLang()]}. Keep safeguarding, care, and formal documentation wording clear and professional.]`;
 }
 
-function bindGlobalMessageActions() {
-    const messages = document.getElementById("messages");
-    if (!messages) return;
-
-    messages.addEventListener("click", async (event) => {
-        const copyBtn = event.target.closest("[data-copy-text]");
-        if (copyBtn) {
-            const text = copyBtn.getAttribute("data-copy-text") || "";
-            try {
-                await navigator.clipboard.writeText(text);
-                const original = copyBtn.textContent;
-                copyBtn.textContent = "Copied";
-                setTimeout(() => {
-                    copyBtn.textContent = original;
-                }, 1500);
-            } catch (err) {
-                console.error("Copy failed:", err);
-            }
-            return;
-        }
-
-        const editBtn = event.target.closest("[data-edit-message-id]");
-        if (editBtn) {
-            const messageId = editBtn.getAttribute("data-edit-message-id");
-            const currentText = decodeURIComponent(editBtn.getAttribute("data-current-text") || "");
-            if (messageId) await startInlineMessageEdit(messageId, currentText);
-            return;
-        }
-
-        const cancelBtn = event.target.closest("[data-cancel-edit-message-id]");
-        if (cancelBtn) {
-            const messageId = cancelBtn.getAttribute("data-cancel-edit-message-id");
-            if (messageId) cancelInlineMessageEdit(messageId);
-            return;
-        }
-
-        const saveBtn = event.target.closest("[data-save-edit-message-id]");
-        if (saveBtn) {
-            const messageId = saveBtn.getAttribute("data-save-edit-message-id");
-            if (messageId) await submitInlineMessageEdit(messageId);
-        }
-    });
-
-    messages.addEventListener("keydown", async (event) => {
-        const textarea = event.target.closest(".ica-inline-edit-textarea");
-        if (!textarea) return;
-
-        const messageId = textarea.getAttribute("data-editing-message-id");
-        if (!messageId) return;
-
-        if (event.key === "Escape") {
-            event.preventDefault();
-            cancelInlineMessageEdit(messageId);
-        }
-
-        if (event.key === "Enter" && !event.shiftKey) {
-            event.preventDefault();
-            await submitInlineMessageEdit(messageId);
-        }
-    });
-
-    messages.addEventListener("input", (event) => {
-        const textarea = event.target.closest(".ica-inline-edit-textarea");
-        if (!textarea) return;
-        autoResizeTextarea(textarea);
-    });
+function openSettings() {
+  if (has("settingsOverlay")) $("settingsOverlay").classList.add("show");
+  if (has("settings")) $("settings").classList.add("open");
 }
 
-function applyTheme(theme) {
-    chatState.theme = theme;
-    localStorage.setItem("indicare-theme", theme);
-    document.body.classList.toggle("theme-dark", theme === "dark");
+function closeSettings() {
+  if (has("settingsOverlay")) $("settingsOverlay").classList.remove("show");
+  if (has("settings")) $("settings").classList.remove("open");
 }
 
-function closeSidebar() {
-    const shell = document.getElementById("assistantShell");
-    const toggle = document.getElementById("sidebarToggle");
-    if (!shell) return;
-
-    shell.classList.remove("is-sidebar-open");
-    toggle?.setAttribute("aria-expanded", "false");
+function summariseTitle(text) {
+  const clean = stripSystem(text).replace(/[^\p{L}\p{N}\s'-]/gu, " ").replace(/\s+/g, " ").trim();
+  if (!clean) return "New Log";
+  const stop = new Set(["the","a","an","and","or","but","for","with","from","about","who","what","when","where","why","how","are","is","do","does","did","please","tell","write","good","morning","indicare"]);
+  const words = clean.split(" ").filter(Boolean);
+  const pool = words.filter(w => !stop.has(w.toLowerCase()));
+  const picked = (pool.length ? pool : words).slice(0, 3);
+  return picked.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") || "New Log";
 }
 
-function bindDocumentUpload() {
-    const uploadInput = document.getElementById("documentUpload");
-    const clearBtn = document.getElementById("clearDocumentBtn");
-
-    uploadInput?.addEventListener("change", async () => {
-        const file = uploadInput.files?.[0];
-        if (!file) return;
-
-        const formData = new FormData();
-        formData.append("file", file);
-
-        if (window.conversationId) {
-            formData.append("conversation_id", String(window.conversationId));
-        }
-
-        setUploadStatus(`Uploading ${file.name}...`);
-        showStatusBanner("success", `Uploading ${file.name}...`);
-
-        try {
-            const token = localStorage.getItem("access_token");
-
-            const response = await fetch("/chat/upload", {
-                method: "POST",
-                headers: {
-                    ...(token ? { Authorization: `Bearer ${token}` } : {})
-                },
-                credentials: "include",
-                body: formData
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                if (response.status === 401) {
-                    localStorage.removeItem("access_token");
-                    localStorage.removeItem("current_user");
-                    window.location.href = "/login";
-                    return;
-                }
-
-                setUploadStatus(data.detail || "Upload failed.");
-                showStatusBanner("error", data.detail || "Upload failed.");
-                return;
-            }
-
-            window.currentDocumentText = data.text || "";
-            window.currentDocumentName = data.filename || file.name;
-            refreshUploadStatus();
-            showStatusBanner("success", "Document attached.");
-        } catch (error) {
-            console.error("Upload failed:", error);
-            setUploadStatus("Could not upload the document.");
-            showStatusBanner("error", "Could not upload the document.");
-        } finally {
-            uploadInput.value = "";
-        }
-    });
-
-    clearBtn?.addEventListener("click", async () => {
-        if (window.conversationId) {
-            try {
-                await apiRequest(`/chat/conversations/${window.conversationId}/document`, {
-                    method: "DELETE"
-                });
-            } catch (error) {
-                console.error("Failed to clear stored document:", error);
-            }
-        }
-
-        window.currentDocumentText = null;
-        window.currentDocumentName = null;
-        refreshUploadStatus();
-        showStatusBanner("warn", "Document removed.");
-    });
+function beautify(text) {
+  let out = String(text || "").trim();
+  out = out
+    .replace(/([a-z]):(?=[A-Z])/g, "$1:\n")
+    .replace(/What matters most here:/gi, "### What matters most here")
+    .replace(/Key points:/gi, "### Key points")
+    .replace(/Suggested staff response \/ next steps:/gi, "### Suggested next steps")
+    .replace(/What should be recorded \/ handed over \/ reviewed if relevant:/gi, "### Recording and handover")
+    .replace(/- /g, "\n- ")
+    .replace(/\.\s+(?=[A-Z])/g, ".\n\n")
+    .replace(/\n{3,}/g, "\n\n");
+  return out;
 }
 
-function setUploadStatus(text) {
-    const uploadStatus = document.getElementById("uploadStatus");
-    if (uploadStatus) uploadStatus.textContent = text || "";
-}
+function render(text, roleName = "assistant") {
+  let s = safe(roleName === "assistant" ? beautify(text) : text)
+    .replace(/^### (.*)$/gm, "<h3>$1</h3>")
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
 
-function refreshUploadStatus() {
-    const chip = document.getElementById("documentChip");
-    const chipText = document.getElementById("documentChipText");
+  const lines = s.split("\n");
+  let html = "";
+  let list = false;
 
-    if (window.currentDocumentName && window.currentDocumentText) {
-        chip?.classList.remove("ica-hidden");
-        if (chipText) chipText.textContent = window.currentDocumentName;
-        setUploadStatus("Document attached to this chat.");
+  for (const line of lines) {
+    if (/^\s*-\s+/.test(line)) {
+      if (!list) {
+        html += "<ul>";
+        list = true;
+      }
+      html += `<li>${line.replace(/^\s*-\s+/, "")}</li>`;
     } else {
-        chip?.classList.add("ica-hidden");
-        if (chipText) chipText.textContent = "";
-        setUploadStatus("");
+      if (list) {
+        html += "</ul>";
+        list = false;
+      }
+      html += line.trim() === "" ? "<br>" : /^<h3>.*<\/h3>$/.test(line) ? line : `<p>${line}</p>`;
     }
+  }
+
+  if (list) html += "</ul>";
+  return html;
 }
 
-function showStatusBanner(type, message) {
-    const banner = document.getElementById("statusBanner");
-    if (!banner) return;
-
-    const icons = {
-        success: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"></path></svg>`,
-        warn: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0z"></path></svg>`,
-        error: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18"></path><path d="M6 6l12 12"></path></svg>`
-    };
-
-    banner.className = `ica-status-banner is-show is-${type}`;
-    banner.innerHTML = `${icons[type] || ""}<span>${escapeHtml(message)}</span>`;
-
-    clearTimeout(showStatusBanner._timer);
-    showStatusBanner._timer = setTimeout(() => {
-        banner.className = "ica-status-banner";
-        banner.innerHTML = "";
-    }, 2800);
+function cleanSpeechText(text) {
+  return String(text || "")
+    .replace(/###\s*/g, "")
+    .replace(/\*\*/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-function bindLogout() {
-    const logoutBtn = document.getElementById("logoutBtn");
-    if (!logoutBtn) return;
-
-    logoutBtn.addEventListener("click", async () => {
-        try {
-            localStorage.removeItem("access_token");
-            localStorage.removeItem("current_user");
-
-            try {
-                await apiRequest("/auth/logout", { method: "POST" });
-            } catch (_) {}
-
-            window.location.href = "/login";
-        } catch (_) {
-            window.location.href = "/login";
-        }
-    });
+function normArray(value) {
+  return Array.isArray(value) ? value : [];
 }
 
-function getAdultFirstName() {
-    try {
-        const raw = localStorage.getItem("current_user");
-        if (!raw) return "";
-        const parsed = JSON.parse(raw);
-
-        if (parsed?.first_name) return String(parsed.first_name).trim();
-        if (parsed?.user?.first_name) return String(parsed.user.first_name).trim();
-        if (parsed?.adult?.first_name) return String(parsed.adult.first_name).trim();
-
-        return "";
-    } catch (error) {
-        console.error("Could not read first_name from current_user:", error);
-        return "";
-    }
+function normObj(value) {
+  return value && typeof value === "object" ? value : {};
 }
 
-function getUserInitials() {
-    try {
-        const raw = localStorage.getItem("current_user");
-        if (!raw) return "Y";
-        const parsed = JSON.parse(raw);
-
-        const firstName = parsed?.first_name || parsed?.user?.first_name || parsed?.adult?.first_name || "";
-        const lastName = parsed?.last_name || parsed?.user?.last_name || parsed?.adult?.last_name || "";
-
-        const firstInitial = String(firstName).trim().slice(0, 1).toUpperCase();
-        const lastInitial = String(lastName).trim().slice(0, 1).toUpperCase();
-
-        const initials = `${firstInitial}${lastInitial}`.trim();
-        return initials || firstInitial || "Y";
-    } catch {
-        return "Y";
-    }
+function indiCareCopy(key) {
+  const map = {
+    libraryLoadFail: "The library could not be loaded just now.",
+    managerLoadFail: "The manager panel could not be loaded just now.",
+    adminLoadFail: "The admin panel could not be loaded just now.",
+    conversationsLoadFail: "Conversations could not be loaded just now.",
+    adminDataLoadFail: "Admin data could not be loaded just now.",
+    uploadFail: "The document could not be uploaded just now.",
+    speechUnsupported: "Speech to text is not available on this device.",
+    speechFailed: "Speech input could not be completed.",
+    documentRemoved: "Document removed.",
+    copied: "Copied.",
+    updated: "Updated successfully.",
+    saved: "Saved successfully.",
+    deleted: "Deleted successfully.",
+    contextSaved: "Context saved."
+  };
+  return map[key] || "";
 }
 
-function getTimeGreeting() {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 18) return "Good afternoon";
-    return "Good evening";
+function detectIntent(text) {
+  const t = String(text || "").toLowerCase();
+
+  if (t.includes("incident")) return "incident";
+  if (t.includes("risk")) return "risk";
+  if (t.includes("handover")) return "handover";
+  if (t.includes("chronology")) return "chronology";
+  if (t.includes("keywork")) return "keywork";
+  if (t.includes("review")) return "review";
+  if (t.includes("safeguard")) return "safeguarding";
+  if (t.includes("daily note")) return "daily_note";
+  if (t.includes("report")) return "report";
+
+  return "general";
 }
 
-function applyWelcomeMessage() {
-    const heading = document.getElementById("welcomeHeading");
-    const subtext = document.getElementById("welcomeSubtext");
+function buildStructuredPrompt(intent) {
+  const map = {
+    incident: "Respond as a professional incident record using factual, neutral language. Include headings: Summary, What happened, Staff response, Outcome, Follow-up.",
+    risk: "Generate a structured risk assessment. Include headings: Presenting risks, Triggers, Protective factors, Staff actions, Review actions.",
+    handover: "Write a clear handover summary for the next shift. Include: Key events, Risks, Actions completed, Outstanding actions.",
+    chronology: "Write a factual chronology entry in neutral language, suitable for care records.",
+    keywork: "Write a keywork record with discussion, young person's views, support given, and next steps.",
+    review: "Write a formal review summary aligned with care standards and Ofsted expectations.",
+    safeguarding: "Write a safeguarding-focused response prioritising risk, protection, immediate actions, and recording expectations.",
+    daily_note: "Write a daily note suitable for care records using clear, factual wording.",
+    report: "Write a formal report summary using structured, professional language.",
+    general: "Respond clearly and professionally for care documentation."
+  };
 
-    if (!heading || !subtext) return;
-
-    const firstName = getAdultFirstName();
-    const greeting = getTimeGreeting();
-
-    heading.textContent = firstName ? `${greeting}, ${firstName}` : greeting;
-    subtext.textContent = firstName
-        ? `How can I help with support for ${firstName} today? Ask for help with care records, safeguarding wording, support planning, reflection, behaviour support, key work ideas, incident follow-up, or day-to-day residential practice.`
-        : `How can I help today? Ask for help with care records, safeguarding wording, support planning, reflection, behaviour support, key work ideas, incident follow-up, or day-to-day residential practice.`;
+  return map[intent] || map.general;
 }
 
-function applyFooterMeta() {
-    const warning = document.getElementById("footerWarning");
-    const copyright = document.getElementById("footerCopyright");
+function copilotPrompt() {
+  const mode = has("copilot") ? $("copilot").value : "default";
 
-    if (warning) {
-        warning.textContent = "Important: Always accuracy-check AI outputs against the facts provided, current guidance, and your organisation’s policy before use.";
-    }
+  if (mode === "safeguarding") {
+    return "You are IndiCare Safeguarding Copilot. Prioritise immediate safety, risk, protection, and accurate recording.";
+  }
 
-    if (copyright) {
-        copyright.textContent = `© ${new Date().getFullYear()} IndiCare. All rights reserved.`;
-    }
+  if (mode === "manager") {
+    return "You are IndiCare Manager Copilot. Focus on oversight, accountability, actions, and compliance.";
+  }
+
+  if (mode === "ofsted") {
+    return "You are IndiCare Ofsted Copilot. Write in a way that is defensible, inspection-ready, and aligned to standards.";
+  }
+
+  if (mode === "documentation") {
+    return "You are IndiCare Documentation Copilot. Produce clear, factual, well-structured records ready to paste.";
+  }
+
+  return "You are IndiCare Assistant. Be calm, professional, structured, and safeguarding-aware.";
 }
 
-function initSpeechToText() {
-    const micBtn = document.getElementById("micBtn");
-    const input = document.getElementById("chat-input");
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+function loadContextState() {
+  try {
+    contextState = JSON.parse(localStorage.getItem("indicare_context_state") || "{}");
+  } catch {
+    contextState = {};
+  }
 
-    if (!micBtn || !input || !SpeechRecognition) {
-        if (micBtn) {
-            micBtn.disabled = true;
-            micBtn.title = "Speech to text not supported in this browser";
-            micBtn.setAttribute("aria-label", "Speech to text not supported");
-        }
-        return;
-    }
+  contextState = {
+    child: contextState.child || "",
+    home: contextState.home || "",
+    shift: contextState.shift || ""
+  };
 
-    chatState.speechSupported = true;
+  if (has("contextChild")) $("contextChild").value = contextState.child;
+  if (has("contextHome")) $("contextHome").value = contextState.home;
+  if (has("contextShift")) $("contextShift").value = contextState.shift;
+}
 
-    const recognition = new SpeechRecognition();
-    recognition.lang = "en-GB";
-    recognition.interimResults = true;
-    recognition.continuous = false;
-    recognition.maxAlternatives = 1;
+function saveContextState() {
+  contextState = {
+    child: has("contextChild") ? $("contextChild").value.trim() : "",
+    home: has("contextHome") ? $("contextHome").value.trim() : "",
+    shift: has("contextShift") ? $("contextShift").value.trim() : ""
+  };
 
-    let baseTextBeforeRecording = "";
-    let micBusy = false;
+  localStorage.setItem("indicare_context_state", JSON.stringify(contextState));
+  banner(indiCareCopy("contextSaved"));
+}
 
-    recognition.onstart = () => {
-        chatState.isRecording = true;
-        baseTextBeforeRecording = input.value.trim();
-        micBtn.classList.add("is-recording");
-        micBtn.setAttribute("aria-label", "Stop voice input");
-        micBtn.title = "Listening… click to stop";
-        showStatusBanner("success", "Listening…");
-    };
+function buildContextBlock() {
+  const lines = [];
+  if (contextState.child) lines.push(`Current child: ${contextState.child}`);
+  if (contextState.home) lines.push(`Current home: ${contextState.home}`);
+  if (contextState.shift) lines.push(`Current shift: ${contextState.shift}`);
 
-    recognition.onresult = (event) => {
-        const results = Array.from(event.results);
-        const transcript = results.map((r) => r[0].transcript).join(" ").trim();
+  return lines.length ? `[CONTEXT]\n${lines.join("\n")}\n\n` : "";
+}
 
-        input.value = [baseTextBeforeRecording, transcript].filter(Boolean).join(baseTextBeforeRecording ? " " : "");
-        autoResizeTextarea(input);
-        saveDraft();
-    };
+function loadCopilotPref() {
+  if (!has("copilot")) return;
+  $("copilot").value = localStorage.getItem("indicare_copilot_mode") || "default";
+}
 
-    recognition.onerror = (event) => {
-        console.error("Speech recognition error:", event.error);
+function saveCopilotPref() {
+  if (!has("copilot")) return;
+  localStorage.setItem("indicare_copilot_mode", $("copilot").value);
+}
 
-        if (event.error === "aborted") {
-            stopMicVisualState();
-            return;
-        }
+function convertPrompt(type) {
+  const prompts = {
+    incident: "Convert the last response into a formal incident report.",
+    risk: "Convert the last response into a full risk assessment.",
+    handover: "Rewrite the last response as a handover summary.",
+    chronology: "Rewrite the last response as a chronology entry.",
+    keywork: "Rewrite the last response as a keywork record.",
+    review: "Rewrite the last response as a manager review summary."
+  };
+  return prompts[type] || "Rewrite the last response in a more formal structured format.";
+}
 
-        if (event.error === "no-speech") {
-            stopMicVisualState();
-            showStatusBanner("warn", "No speech was detected.");
-            return;
-        }
+function convert(type) {
+  if (!lastAssistantText || !has("input")) return;
+  $("input").value = `${convertPrompt(type)}\n\n${lastAssistantText}`;
+  resize();
+  sendMessage();
+}
 
-        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-            stopMicVisualState();
-            showStatusBanner("error", "Microphone access was not allowed.");
-            return;
-        }
-
-        stopMicVisualState();
-        showStatusBanner("error", "Voice input could not be completed.");
-    };
-
-    recognition.onend = () => {
-        stopMicVisualState();
-        input.focus();
-        saveDraft();
-    };
-
-    micBtn.addEventListener("click", () => {
-        if (micBusy) return;
-
-        if (!chatState.isRecording) {
-            try {
-                micBusy = true;
-                recognition.start();
-                setTimeout(() => {
-                    micBusy = false;
-                }, 400);
-            } catch (error) {
-                micBusy = false;
-                console.error("Could not start speech recognition:", error);
-            }
-        } else {
-            micBusy = true;
-            recognition.stop();
-            setTimeout(() => {
-                micBusy = false;
-            }, 400);
-        }
+async function saveRecord(text) {
+  try {
+    await api("/records/save", {
+      method: "POST",
+      body: JSON.stringify({
+        content: text,
+        type: detectIntent(text),
+        conversation_id: conversationId,
+        context: contextState
+      })
     });
 
-    chatState.recognition = recognition;
+    banner("Saved to record");
+  } catch (e) {
+    banner(e.message || "Save failed");
+  }
 }
 
-function stopMicVisualState() {
-    const micBtn = document.getElementById("micBtn");
-    chatState.isRecording = false;
+function getSavedVoiceName() {
+  return localStorage.getItem("indicare_selected_voice_name") || "";
+}
 
-    if (micBtn) {
-        micBtn.classList.remove("is-recording");
-        micBtn.setAttribute("aria-label", "Start voice input");
-        micBtn.title = "Start voice input";
+function saveVoiceName(name) {
+  localStorage.setItem("indicare_selected_voice_name", name || "");
+}
+
+function populateVoiceSelect() {
+  if (!has("voiceSelect")) return;
+  const sel = $("voiceSelect");
+  const current = getSavedVoiceName();
+  sel.innerHTML = `<option value="">Auto select</option>`;
+
+  availableVoices.forEach(v => {
+    const opt = document.createElement("option");
+    opt.value = v.name;
+    opt.textContent = `${v.name} (${v.lang})`;
+    sel.appendChild(opt);
+  });
+
+  if ([...sel.options].some(o => o.value === current)) {
+    sel.value = current;
+  } else {
+    sel.value = "";
+  }
+}
+
+function pickIndiCareVoice() {
+  if (!("speechSynthesis" in window)) return null;
+
+  const savedName = getSavedVoiceName();
+  const voices = window.speechSynthesis.getVoices() || [];
+  availableVoices = voices.slice().sort((a, b) => {
+    const gbA = /en-GB/i.test(a.lang) ? 0 : 1;
+    const gbB = /en-GB/i.test(b.lang) ? 0 : 1;
+    if (gbA !== gbB) return gbA - gbB;
+    return a.name.localeCompare(b.name);
+  });
+
+  populateVoiceSelect();
+
+  if (!voices.length) return null;
+
+  indicareVoice =
+    voices.find(v => savedName && v.name === savedName) ||
+    voices.find(v => /en-GB/i.test(v.lang) && /female|samantha|serena|karen|libby|hazel|susan|zira/i.test(v.name)) ||
+    voices.find(v => /en-GB/i.test(v.lang)) ||
+    voices.find(v => /en/i.test(v.lang)) ||
+    voices[0] ||
+    null;
+
+  speechReady = true;
+  return indicareVoice;
+}
+
+function stopSpeaking() {
+  try {
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  } catch {}
+}
+
+function speakText(text) {
+  if (!speechEnabled) return;
+  if (!("speechSynthesis" in window)) return;
+
+  const clean = cleanSpeechText(text);
+  if (!clean) return;
+
+  try {
+    stopSpeaking();
+    const utterance = new SpeechSynthesisUtterance(clean);
+    utterance.voice = indicareVoice || pickIndiCareVoice();
+    utterance.lang = utterance.voice?.lang || "en-GB";
+    utterance.rate = 0.98;
+    utterance.pitch = 1.08;
+    utterance.volume = 1;
+    window.speechSynthesis.speak(utterance);
+  } catch (e) {
+    console.error("speakText failed", e);
+  }
+}
+
+function loadVoicePref() {
+  speechEnabled = localStorage.getItem("indicare_voice_replies") === "true";
+  if (has("voiceReplies")) $("voiceReplies").classList.toggle("active", speechEnabled);
+}
+
+function setVoicePref(value) {
+  speechEnabled = !!value;
+  localStorage.setItem("indicare_voice_replies", String(speechEnabled));
+  if (has("voiceReplies")) $("voiceReplies").classList.toggle("active", speechEnabled);
+}
+
+function initSpeech() {
+  if (!("speechSynthesis" in window)) {
+    speechReady = false;
+    availableVoices = [];
+    populateVoiceSelect();
+    if (has("voiceReplies")) $("voiceReplies").classList.remove("active");
+    return;
+  }
+
+  pickIndiCareVoice();
+  window.speechSynthesis.onvoiceschanged = () => {
+    pickIndiCareVoice();
+  };
+}
+
+async function api(url, options = {}) {
+  const res = await fetch(url, {
+    ...options,
+    credentials: "include",
+    headers: {
+      ...(options.headers || {}),
+      ...(options.body && !(options.body instanceof FormData) ? { "Content-Type":"application/json" } : {})
     }
+  });
+
+  if (res.status === 401) {
+    location.href = "/login";
+    return null;
+  }
+
+  const type = res.headers.get("content-type") || "";
+  let data = null;
+
+  try {
+    if (type.includes("application/json")) {
+      data = await res.json();
+    } else {
+      const text = await res.text();
+      data = text ? { detail: text } : {};
+    }
+  } catch {
+    data = {};
+  }
+
+  if (!res.ok) {
+    throw new Error(data?.detail || data?.error || `Request failed (${res.status})`);
+  }
+
+  return data || {};
 }
 
-function getDraftStorageKey() {
-    return `${chatState.draftKeyPrefix}${window.conversationId || "new"}`;
+async function logoutNow() {
+  try {
+    await fetch("/auth/logout", { method:"POST", credentials:"include" });
+  } catch {}
+  localStorage.removeItem("current_user");
+  sessionStorage.removeItem("current_user");
+  localStorage.removeItem("first_name");
+  location.href = "/login";
 }
 
-function saveDraft() {
-    const input = document.getElementById("chat-input");
-    if (!input) return;
-    localStorage.setItem(getDraftStorageKey(), input.value || "");
+async function loadMe() {
+  const data = await api("/auth/me");
+  if (!data?.user) throw new Error("No user");
+
+  currentUser = data.user;
+  localStorage.setItem("first_name", currentUser.first_name || "");
+
+  if (isAdmin() || isManager() || isStaff()) has("navLibrary") && $("navLibrary").classList.remove("hidden");
+  if (isManager()) has("navManager") && $("navManager").classList.remove("hidden");
+  if (isAdmin()) has("navAdmin") && $("navAdmin").classList.remove("hidden");
+  if (canManageLibrary()) has("managerEditorTab") && $("managerEditorTab").classList.remove("hidden");
 }
 
-function restoreDraft() {
-    const input = document.getElementById("chat-input");
-    if (!input) return;
-
-    const draft = localStorage.getItem(getDraftStorageKey()) || "";
-    input.value = draft;
-    autoResizeTextarea(input);
+function closeMobilePanels() {
+  if (window.innerWidth <= 768) {
+    has("sidebar") && $("sidebar").classList.remove("open");
+    has("overlay") && $("overlay").classList.remove("show");
+    closeSettings();
+  }
 }
 
-function clearDraft() {
-    localStorage.removeItem(getDraftStorageKey());
+function hideAllPanels() {
+  ["assistantPanel","libraryPanel","managerPanel","adminPanel"].forEach(id => has(id) && $(id).classList.add("hidden"));
+  ["navAssistant","navLibrary","navManager","navAdmin"].forEach(id => has(id) && $(id).classList.remove("active"));
+}
+
+function showAssistantView() {
+  hideAllPanels();
+  has("assistantPanel") && $("assistantPanel").classList.remove("hidden");
+  has("inputWrap") && $("inputWrap").classList.remove("hidden");
+  has("navAssistant") && $("navAssistant").classList.add("active");
+  setTitle(conversationId ? (has("title") ? $("title").textContent : "Intelligence for Care") : "Intelligence for Care");
+  closeMobilePanels();
+}
+
+function showLibraryView() {
+  hideAllPanels();
+  has("libraryPanel") && $("libraryPanel").classList.remove("hidden");
+  has("inputWrap") && $("inputWrap").classList.add("hidden");
+  has("navLibrary") && $("navLibrary").classList.add("active");
+  setTitle("Policies");
+  closeMobilePanels();
+  loadLibrary().catch(e => {
+    console.error("showLibraryView failed", e);
+    banner(indiCareCopy("libraryLoadFail"));
+  });
+}
+
+async function showManagerView() {
+  if (!isManager()) return banner("Manager access required");
+  hideAllPanels();
+  has("managerPanel") && $("managerPanel").classList.remove("hidden");
+  has("inputWrap") && $("inputWrap").classList.add("hidden");
+  has("navManager") && $("navManager").classList.add("active");
+  setTitle("Manager");
+  closeMobilePanels();
+
+  try {
+    await loadManager();
+  } catch (e) {
+    console.error("showManagerView failed", e);
+    banner(e.message || indiCareCopy("managerLoadFail"));
+  }
+}
+
+async function showAdminView() {
+  if (!isAdmin()) return banner("Admin access required");
+  hideAllPanels();
+  has("adminPanel") && $("adminPanel").classList.remove("hidden");
+  has("inputWrap") && $("inputWrap").classList.add("hidden");
+  has("navAdmin") && $("navAdmin").classList.add("active");
+  setTitle("Admin");
+  closeMobilePanels();
+  try {
+    await loadAdminReferenceData();
+    await loadActiveAdminTab();
+  } catch (e) {
+    console.error("showAdminView failed", e);
+    banner(indiCareCopy("adminLoadFail"));
+  }
+}
+
+function resetWelcome() {
+  conversationId = null;
+  currentDocumentText = null;
+  currentDocumentName = null;
+  stopSpeaking();
+  if (has("messages")) {
+    $("messages").innerHTML = "";
+    $("messages").classList.add("hidden");
+  }
+  has("empty") && $("empty").classList.remove("hidden");
+  if (has("input")) $("input").value = "";
+  resize();
+  docHide();
+  setTitle();
+  setWelcome();
+  filterConversations();
+  closeSettings();
+  showAssistantView();
+}
+
+function renderHistory(rows) {
+  if (!has("history")) return;
+  const host = $("history");
+  host.innerHTML = "";
+
+  normArray(rows).forEach(r => {
+    const item = document.createElement("div");
+    item.className = `item ${Number(r?.id) === Number(conversationId) ? "active" : ""}`;
+    item.innerHTML = `<div class="row"><button class="mainbtn"><div class="ttl">${safe(stripSystem(r?.title || "Observation"))}</div></button><button class="mini">⧉</button><button class="mini danger">🗑</button></div>`;
+
+    const buttons = item.querySelectorAll("button");
+    const main = buttons[0];
+    const copy = buttons[1];
+    const del = buttons[2];
+
+    if (main) main.onclick = () => {
+      showAssistantView();
+      openConversation(r?.id, stripSystem(r?.title || "Observation"));
+    };
+    if (copy) copy.onclick = e => {
+      e.stopPropagation();
+      navigator.clipboard.writeText(stripSystem(r?.title || "Observation"));
+      banner(indiCareCopy("copied"));
+    };
+    if (del) del.onclick = e => {
+      e.stopPropagation();
+      deleteConversation(r?.id);
+    };
+
+    host.appendChild(item);
+  });
+}
+
+function filterConversations() {
+  const q = has("search") ? $("search").value.trim().toLowerCase() : "";
+  renderHistory(q ? cache.filter(r => stripSystem(r?.title || "").toLowerCase().includes(q)) : cache);
+}
+
+async function loadConversations() {
+  const data = await api("/chat/conversations");
+  cache = normArray(data?.conversations || data);
+  renderHistory(cache);
+  return cache;
+}
+
+async function openConversation(id, title) {
+  if (!id) return;
+  const data = await api(`/chat/conversations/${id}`);
+  if (!data) return;
+
+  conversationId = id;
+  if (has("messages")) {
+    $("messages").innerHTML = "";
+    has("empty") && $("empty").classList.add("hidden");
+    $("messages").classList.remove("hidden");
+  }
+
+  normArray(data.messages).forEach(m => appendMessage(m?.role || "assistant", m?.message || "", { messageId: m?.id }));
+
+  if (data.document) {
+    currentDocumentText = data.document.text || data.document.input_text || "";
+    currentDocumentName = data.document.filename || data.document.name || "";
+    docShow(currentDocumentName);
+  } else {
+    currentDocumentText = null;
+    currentDocumentName = null;
+    docHide();
+  }
+
+  setTitle(title || "Observation");
+  filterConversations();
+  closeMobilePanels();
+}
+
+async function renameShort(id, prompt) {
+  if (!id) return;
+  const short = summariseTitle(prompt);
+  try {
+    await api(`/chat/conversations/${id}/rename`, { method:"POST", body: JSON.stringify({ title: short }) });
+  } catch {}
+  setTitle(short);
+  try {
+    await loadConversations();
+  } catch {}
+}
+
+async function deleteConversation(id) {
+  if (!id || !confirm("Delete this conversation?")) return;
+  await api(`/chat/conversations/${id}`, { method:"DELETE" });
+  if (Number(conversationId) === Number(id)) resetWelcome();
+  await loadConversations();
+  banner(indiCareCopy("deleted"));
+}
+
+function appendMessage(roleName, text, opts = {}) {
+  if (!has("messages")) return;
+  const shown = roleName === "user" ? stripSystem(text) : text;
+
+  if (roleName === "assistant") {
+    lastAssistantText = shown;
+  }
+
+  const wrap = document.createElement("div");
+  wrap.className = `wrap ${roleName}`;
+  wrap.innerHTML = `
+    <div class="avatar">${roleName === "assistant" ? "IC" : userInitials()}</div>
+    <div class="block">
+      <div class="msg">${roleName === "assistant" ? render(shown, "assistant") : safe(shown)}</div>
+      ${opts.meta ? `<div class="meta">${safe(opts.meta)}</div>` : ""}
+      <div class="actions"></div>
+    </div>
+  `;
+
+  const actions = wrap.querySelector(".actions");
+
+  const addChip = (label, fn) => {
+    if (!actions) return;
+    const b = document.createElement("button");
+    b.className = "chip";
+    b.textContent = label;
+    b.onclick = fn;
+    actions.appendChild(b);
+  };
+
+  addChip("Copy", () =>
+    navigator.clipboard.writeText(shown)
+      .then(() => banner(indiCareCopy("copied")))
+      .catch(() => banner("Could not copy"))
+  );
+
+  if (roleName === "assistant") {
+    addChip("Read aloud", () => speakText(shown));
+    addChip("Stop", stopSpeaking);
+    addChip("→ Incident", () => convert("incident"));
+    addChip("→ Risk", () => convert("risk"));
+    addChip("→ Handover", () => convert("handover"));
+    addChip("→ Chronology", () => convert("chronology"));
+    addChip("Save to record", () => saveRecord(shown));
+    addChip("Continue", () => {
+      if (!has("input")) return;
+      $("input").value = "Continue and expand this.";
+      resize();
+      sendMessage();
+    });
+  }
+
+  if (roleName === "user" && opts.messageId) {
+    addChip("Edit", () => editMessage(opts.messageId, shown));
+  }
+
+  $("messages").appendChild(wrap);
+  if (has("assistantPanel")) $("assistantPanel").scrollTop = $("assistantPanel").scrollHeight;
+}
+
+function createStreamMsg() {
+  if (!has("messages")) return null;
+  const old = $("streaming");
+  if (old) old.remove();
+
+  const wrap = document.createElement("div");
+  wrap.id = "streaming";
+  wrap.className = "wrap assistant";
+  wrap.innerHTML = `<div class="avatar">IC</div><div class="block"><div class="msg typing" data-raw=""></div><div class="meta">Reply language: ${LANG[selectedLang()] || "English"} · Mode: ${RESP[selectedMode()]}</div></div>`;
+  $("messages").appendChild(wrap);
+  if (has("assistantPanel")) $("assistantPanel").scrollTop = $("assistantPanel").scrollHeight;
+  return wrap;
+}
+
+function startTyping() {
+  if (typing) return;
+  typing = true;
+  const el = document.querySelector("#streaming .msg");
+  if (!el) {
+    typing = false;
+    return;
+  }
+
+  let raw = el.getAttribute("data-raw") || "";
+  const tick = setInterval(() => {
+    if (queue.length) {
+      raw += queue.shift();
+      el.innerHTML = render(raw, "assistant");
+      el.setAttribute("data-raw", raw);
+      if (has("assistantPanel")) $("assistantPanel").scrollTop = $("assistantPanel").scrollHeight;
+    } else if (!isStreaming) {
+      clearInterval(tick);
+      typing = false;
+      el.classList.remove("typing");
+      const finalRaw = el.getAttribute("data-raw") || "";
+      lastAssistantText = finalRaw;
+      speakText(finalRaw);
+    }
+  }, 2);
+}
+
+async function stream(url, body) {
+  body = normObj(body);
+
+  currentIntent = body.intent || detectIntent(body.message || "");
+
+  const promptPrefix =
+    copilotPrompt() +
+    "\n\n" +
+    buildContextBlock() +
+    buildStructuredPrompt(currentIntent) +
+    "\n\n";
+
+  body.message =
+    promptPrefix +
+    String(body.message || "") +
+    REG_PROMPT +
+    buildLangInstruction();
+
+  body.intent = currentIntent;
+  body.structured = true;
+  body.reply_language = selectedLang();
+  body.reply_language_label = LANG[selectedLang()] || "English";
+  body.response_mode = selectedMode();
+  body.context = contextState;
+
+  const res = await fetch(url, {
+    method:"POST",
+    credentials:"include",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify(body)
+  });
+
+  if (res.status === 401) {
+    location.href = "/login";
+    return;
+  }
+
+  if (!res.ok) throw new Error(await res.text() || `Chat request failed (${res.status})`);
+
+  const contentType = res.headers.get("content-type") || "";
+
+  if (!res.body || contentType.includes("application/json")) {
+    let data = {};
+    try {
+      data = await res.json();
+    } catch {}
+    const reply = data.reply || data.message || data.output || "Done.";
+    appendMessage("assistant", reply);
+    speakText(reply);
+    return;
+  }
+
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buffer = "";
+
+  createStreamMsg();
+  queue.push(" ");
+  startTyping();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += dec.decode(value, { stream:true });
+    const parts = buffer.split("\n");
+    buffer = parts.pop() || "";
+
+    for (const line of parts) {
+      if (!line.startsWith("data:")) continue;
+      let payload = line.slice(5);
+      if (payload.startsWith(" ")) payload = payload.slice(1);
+      if (payload === "[DONE]") continue;
+      for (const ch of payload) queue.push(ch);
+      startTyping();
+    }
+  }
+}
+
+async function uploadDoc(file) {
+  const fd = new FormData();
+  fd.append("file", file);
+  if (conversationId) fd.append("conversation_id", conversationId);
+  const data = await api("/chat/upload", { method:"POST", body: fd });
+  currentDocumentText = data?.text || data?.document_text || "";
+  currentDocumentName = data?.filename || data?.name || file?.name || "";
+  docShow(currentDocumentName);
+  banner(`Document attached: ${currentDocumentName}`);
+}
+
+async function editMessage(messageId, currentText) {
+  if (!messageId) return;
+  const edited = prompt("Edit message", currentText);
+  if (edited === null) return;
+
+  const cleaned = stripSystem(edited).trim();
+  if (!cleaned) return banner("Message cannot be empty");
+
+  isStreaming = true;
+  if (has("send")) $("send").disabled = true;
+
+  try {
+    await stream(`/chat/messages/${messageId}/edit`, {
+      message: cleaned,
+      intent: detectIntent(cleaned),
+      structured: true,
+      document_text: currentDocumentText,
+      document_name: currentDocumentName,
+      response_mode: selectedMode()
+    });
+
+    if (conversationId) {
+      await openConversation(conversationId, has("title") ? $("title").textContent : "Observation");
+    }
+
+    banner(indiCareCopy("updated"));
+  } catch (e) {
+    banner(e.message || "Edit failed");
+  } finally {
+    isStreaming = false;
+    if (has("send")) $("send").disabled = false;
+  }
 }
 
 async function sendMessage() {
-    const input = document.getElementById("chat-input");
-    if (!input || chatState.isStreamingResponse) return;
+  if (!has("input")) return;
+  const raw = $("input").value.trim();
+  const text = stripSystem(raw);
+  if (!text || isStreaming) return;
 
-    const message = input.value.trim();
-    if (!message) return;
+  const prev = conversationId;
+  lastPrompt = text;
+  currentIntent = detectIntent(text);
 
-    removeChatEmptyState();
-    ensureMessagesContainer();
-    appendMessage("user", message);
-    input.value = "";
-    autoResizeTextarea(input);
-    clearDraft();
+  isStreaming = true;
+  if (has("send")) $("send").disabled = true;
+  if (has("empty")) $("empty").classList.add("hidden");
+  if (has("messages")) $("messages").classList.remove("hidden");
 
-    setSendLoading(true);
-    showTypingIndicator(true);
-    chatState.isStreamingResponse = true;
+  appendMessage("user", text, { meta:`Mode: ${RESP[selectedMode()]} · Intent: ${currentIntent}` });
+  $("input").value = "";
+  resize();
 
-    try {
-        await streamAssistantResponse("/chat/", {
-            message,
-            conversation_id: window.conversationId || null,
-            document_text: window.currentDocumentText,
-            document_name: window.currentDocumentName,
-            response_mode: getResponseMode()
-        });
-
-        await loadConversations(true);
-    } finally {
-        chatState.isStreamingResponse = false;
-        showTypingIndicator(false);
-        setSendLoading(false);
-    }
-}
-
-async function streamAssistantResponse(url, bodyData) {
-    try {
-        const token = localStorage.getItem("access_token");
-
-        const response = await fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                ...(token ? { Authorization: `Bearer ${token}` } : {})
-            },
-            credentials: "include",
-            body: JSON.stringify(bodyData)
-        });
-
-        if (!response.ok || !response.body) {
-            let data = {};
-            try {
-                data = await response.json();
-            } catch {
-                data = {};
-            }
-
-            if (response.status === 401) {
-                localStorage.removeItem("access_token");
-                localStorage.removeItem("current_user");
-                window.location.href = "/login";
-                return;
-            }
-
-            appendMessage("assistant", data.detail || `Request failed (${response.status}).`);
-            showStatusBanner("error", data.detail || `Request failed (${response.status}).`);
-            return;
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-
-        let fullText = "";
-        let receivedAnyChunk = false;
-
-        createOrResetStreamingAssistantMessage();
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value, { stream: true });
-            if (!chunk) continue;
-
-            receivedAnyChunk = true;
-            fullText += chunk;
-            updateAssistantMessage(fullText);
-        }
-
-        if (!receivedAnyChunk && !fullText.trim()) {
-            updateAssistantMessage("Sorry, something went wrong.");
-        }
-    } catch (error) {
-        console.error("Stream failed:", error);
-
-        const isNetworkDrop =
-            error instanceof TypeError &&
-            /load failed|network connection was lost|fetch/i.test(String(error.message || error));
-
-        if (isNetworkDrop) {
-            appendMessage("assistant", "The connection dropped while waiting for a response. Please try again.");
-            showStatusBanner("error", "The connection was lost while generating the reply.");
-            return;
-        }
-
-        appendMessage("assistant", `Connection error: ${error?.message || "Unknown error"}`);
-        showStatusBanner("error", "The connection was lost while generating the reply.");
-    }
-}
-
-function createMessageElement(role, text = "", messageId = null, timestamp = null) {
-    const wrapper = document.createElement("div");
-    wrapper.className = `ica-message-wrapper ${role === "user" ? "is-user" : "is-assistant"}`;
-    if (messageId) wrapper.dataset.messageId = messageId;
-
-    const avatar = document.createElement("div");
-    avatar.className = "ica-message-avatar";
-    avatar.textContent = role === "assistant" ? "IC" : getUserInitials();
-
-    const block = document.createElement("div");
-    block.className = "ica-message-block";
-
-    const meta = document.createElement("div");
-    meta.className = "ica-message-meta";
-
-    const roleLabel = role === "assistant" ? "IndiCare" : "You";
-    const displayTime = formatTime(timestamp ? new Date(timestamp) : new Date());
-
-    if (role === "assistant") {
-        meta.innerHTML = `<span class="ica-message-role-dot"></span><span>${roleLabel} · ${displayTime}</span>`;
+  try {
+    await stream("/chat/", {
+      message: text,
+      intent: currentIntent,
+      structured: true,
+      conversation_id: conversationId,
+      document_text: currentDocumentText,
+      document_name: currentDocumentName
+    });
+  } catch (e) {
+    const streamEl = document.querySelector("#streaming .msg");
+    if (streamEl) {
+      streamEl.classList.remove("typing");
+      streamEl.innerHTML = render(`Sorry, there was a problem: ${e.message}`, "assistant");
     } else {
-        meta.textContent = `${roleLabel} · ${displayTime}`;
+      appendMessage("assistant", `Sorry, there was a problem: ${e.message}`);
     }
-
-    const msg = document.createElement("div");
-    msg.className = `ica-message ${role === "user" ? "is-user" : "is-assistant"}`;
-
-    block._messageEl = msg;
-    block._rawText = text;
-    block._messageId = messageId;
-
-    if (role === "assistant") {
-        msg.innerHTML = renderMarkdown(text);
-
-        const actions = document.createElement("div");
-        actions.className = "ica-message-actions";
-
-        const copyBtn = document.createElement("button");
-        copyBtn.className = "ica-copy-btn";
-        copyBtn.type = "button";
-        copyBtn.textContent = "Copy";
-        copyBtn.setAttribute("data-copy-text", text);
-
-        actions.appendChild(copyBtn);
-        block.appendChild(meta);
-        block.appendChild(msg);
-        block.appendChild(actions);
-    } else {
-        msg.textContent = text;
-
-        const actions = document.createElement("div");
-        actions.className = "ica-message-actions";
-
-        if (messageId) {
-            const editBtn = document.createElement("button");
-            editBtn.className = "ica-copy-btn";
-            editBtn.type = "button";
-            editBtn.textContent = "Edit";
-            editBtn.setAttribute("data-edit-message-id", messageId);
-            editBtn.setAttribute("data-current-text", encodeURIComponent(text));
-            actions.appendChild(editBtn);
-        }
-
-        block.appendChild(meta);
-        block.appendChild(msg);
-        if (messageId) block.appendChild(actions);
-    }
-
-    if (role === "user") {
-        wrapper.appendChild(block);
-        wrapper.appendChild(avatar);
-    } else {
-        wrapper.appendChild(avatar);
-        wrapper.appendChild(block);
-    }
-
-    return wrapper;
-}
-
-function appendMessage(role, text, messageId = null, timestamp = null) {
-    const messages = ensureMessagesContainer();
-    if (!messages) return;
-
-    const el = createMessageElement(role, text, messageId, timestamp);
-    messages.appendChild(el);
-    scrollChatToBottom();
-}
-
-function createOrResetStreamingAssistantMessage() {
-    const messages = ensureMessagesContainer();
-    if (!messages) return;
-
-    const existingStreaming = messages.querySelector('.ica-message-wrapper.is-assistant[data-streaming="true"]');
-    if (existingStreaming) existingStreaming.remove();
-
-    const wrapper = createMessageElement("assistant", "");
-    wrapper.dataset.streaming = "true";
-    messages.appendChild(wrapper);
-    scrollChatToBottom();
-}
-
-function updateAssistantMessage(text) {
-    const messages = document.getElementById("messages");
-    if (!messages) return;
-
-    const streamingWrappers = messages.querySelectorAll('.ica-message-wrapper.is-assistant[data-streaming="true"]');
-    const lastStreaming = streamingWrappers[streamingWrappers.length - 1];
-    const lastAssistant = lastStreaming || messages.querySelector(".ica-message-wrapper.is-assistant:last-of-type");
-
-    if (!lastAssistant) {
-        appendMessage("assistant", text);
-        return;
-    }
-
-    const block = lastAssistant.querySelector(".ica-message-block");
-    const msg = block?.querySelector(".ica-message.is-assistant");
-    const copyBtn = block?.querySelector("[data-copy-text]");
-
-    if (msg) msg.innerHTML = renderMarkdown(text);
-    if (block) block._rawText = text;
-    if (copyBtn) copyBtn.setAttribute("data-copy-text", text);
-
-    scrollChatToBottom();
-}
-
-function renderMarkdown(text) {
-    const source = String(text || "").replace(/\r\n/g, "\n");
-    const escaped = escapeHtml(source);
-    const lines = escaped.split("\n");
-
-    let html = "";
-    let inCodeBlock = false;
-    let inUl = false;
-    let inOl = false;
-    let inBlockquote = false;
-    let paragraphBuffer = [];
-
-    function flushParagraph() {
-        if (!paragraphBuffer.length) return;
-        html += `<p>${paragraphBuffer.join("<br>")}</p>`;
-        paragraphBuffer = [];
-    }
-
-    function closeLists() {
-        if (inUl) {
-            html += "</ul>";
-            inUl = false;
-        }
-        if (inOl) {
-            html += "</ol>";
-            inOl = false;
-        }
-    }
-
-    function closeBlockquote() {
-        if (inBlockquote) {
-            html += "</blockquote>";
-            inBlockquote = false;
-        }
-    }
-
-    for (const rawLine of lines) {
-        const line = rawLine;
-
-        if (line.trim().startsWith("```")) {
-            flushParagraph();
-            closeLists();
-            closeBlockquote();
-
-            if (!inCodeBlock) {
-                inCodeBlock = true;
-                html += "<pre><code>";
-            } else {
-                inCodeBlock = false;
-                html += "</code></pre>";
-            }
-            continue;
-        }
-
-        if (inCodeBlock) {
-            html += `${line}\n`;
-            continue;
-        }
-
-        if (!line.trim()) {
-            flushParagraph();
-            closeLists();
-            closeBlockquote();
-            continue;
-        }
-
-        const headingMatch = line.match(/^(#{1,6})\s+(.*)$/);
-        if (headingMatch) {
-            flushParagraph();
-            closeLists();
-            closeBlockquote();
-            const level = headingMatch[1].length;
-            html += `<h${level}>${applyInlineMarkdown(headingMatch[2])}</h${level}>`;
-            continue;
-        }
-
-        const blockquoteMatch = line.match(/^&gt;\s?(.*)$/);
-        if (blockquoteMatch) {
-            flushParagraph();
-            closeLists();
-            if (!inBlockquote) {
-                html += "<blockquote>";
-                inBlockquote = true;
-            }
-            html += `<p>${applyInlineMarkdown(blockquoteMatch[1])}</p>`;
-            continue;
-        } else {
-            closeBlockquote();
-        }
-
-        const ulMatch = line.match(/^[-*]\s+(.*)$/);
-        if (ulMatch) {
-            flushParagraph();
-            if (inOl) {
-                html += "</ol>";
-                inOl = false;
-            }
-            if (!inUl) {
-                html += "<ul>";
-                inUl = true;
-            }
-            html += `<li>${applyInlineMarkdown(ulMatch[1])}</li>`;
-            continue;
-        }
-
-        const olMatch = line.match(/^\d+\.\s+(.*)$/);
-        if (olMatch) {
-            flushParagraph();
-            if (inUl) {
-                html += "</ul>";
-                inUl = false;
-            }
-            if (!inOl) {
-                html += "<ol>";
-                inOl = true;
-            }
-            html += `<li>${applyInlineMarkdown(olMatch[1])}</li>`;
-            continue;
-        }
-
-        closeLists();
-        paragraphBuffer.push(applyInlineMarkdown(line));
-    }
-
-    flushParagraph();
-    closeLists();
-    closeBlockquote();
-
-    if (inCodeBlock) html += "</code></pre>";
-
-    return html;
-}
-
-function applyInlineMarkdown(text) {
-    return String(text)
-        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-        .replace(/__(.*?)__/g, "<strong>$1</strong>")
-        .replace(/\*(.*?)\*/g, "<em>$1</em>")
-        .replace(/_(.*?)_/g, "<em>$1</em>")
-        .replace(/`([^`]+)`/g, "<code>$1</code>");
-}
-
-function removeChatEmptyState() {
-    const empty = document.getElementById("chatEmpty");
-    if (empty) empty.hidden = true;
-}
-
-function clearChatWindow() {
-    const messages = document.getElementById("messages");
-    const empty = document.getElementById("chatEmpty");
-
-    if (messages) {
-        messages.innerHTML = "";
-        messages.hidden = true;
-    }
-
-    if (empty) empty.hidden = false;
-
-    showTypingIndicator(false);
-    applyWelcomeMessage();
-}
-
-function ensureMessagesContainer() {
-    const messages = document.getElementById("messages");
-    if (!messages) return null;
-
-    messages.hidden = false;
-    removeChatEmptyState();
-    return messages;
-}
-
-function startNewConversation() {
-    window.conversationId = null;
-    window.currentDocumentText = null;
-    window.currentDocumentName = null;
-    clearChatWindow();
-    setConversationHeading("New conversation");
-    renderConversationSelection();
-    refreshUploadStatus();
-    restoreDraft();
-    closeSidebar();
-}
-
-function setConversationHeading(text) {
-    const heading = document.getElementById("conversationHeading");
-    if (heading) heading.textContent = text || "New conversation";
-}
-
-function setSendLoading(isLoading) {
-    const sendBtn = document.getElementById("send-btn");
-    if (!sendBtn) return;
-
-    sendBtn.classList.toggle("is-loading", isLoading);
-    sendBtn.disabled = isLoading;
-}
-
-function showTypingIndicator(show) {
-    const typingRow = document.getElementById("typingRow");
-    if (!typingRow) return;
-
-    typingRow.hidden = !show;
-    if (show) scrollChatToBottom();
-}
-
-async function loadConversations(autoOpenLatest = false) {
-    const list = document.getElementById("conversationList");
-    if (!list) return;
-
+  } finally {
+    isStreaming = false;
+    if (has("send")) $("send").disabled = false;
     try {
-        const rows = await apiRequest("/chat/conversations");
-        chatState.historyRows = Array.isArray(rows) ? rows : [];
-
-        if (!chatState.historyRows.length) {
-            list.innerHTML = `<div class="ica-history-empty">No conversations yet.</div>`;
-            updateHistoryCount(0);
-            if (!window.conversationId) setConversationHeading("New conversation");
-            return;
-        }
-
-        if (autoOpenLatest && !window.conversationId) {
-            await openConversation(chatState.historyRows[0].id, chatState.historyRows[0].title || "Conversation", false);
-        }
-
-        const searchValue = document.getElementById("historySearch")?.value?.trim() || "";
-        renderConversationList(chatState.historyRows, searchValue);
-    } catch (error) {
-        console.error("Failed to load conversations:", error);
-        list.innerHTML = `<div class="ica-history-empty">Could not load conversations.</div>`;
-        updateHistoryCount(0);
-    }
+      const rows = await loadConversations();
+      if (!prev && !conversationId && rows.length) {
+        conversationId = rows[0]?.id;
+        await renameShort(conversationId, lastPrompt);
+      }
+    } catch {}
+  }
 }
 
-function renderConversationList(rows, filter = "") {
-    const list = document.getElementById("conversationList");
-    if (!list) return;
+function quick(type) {
+  if (!has("input")) return;
 
-    const query = filter.toLowerCase();
-    const filteredRows = rows.filter((row) => {
-        const title = String(row.title || "New chat").toLowerCase();
-        return !query || title.includes(query);
-    });
+  const prompts = {
+    ofsted: "Rewrite the above documentation so it aligns with Ofsted Quality Standards and is ready for professional review.",
+    risk: "Generate a formal risk assessment based on this situation. Include presenting risks, protective factors, staff actions, and follow-up actions."
+  };
 
-    updateHistoryCount(filteredRows.length);
-
-    if (!filteredRows.length) {
-        list.innerHTML = `<div class="ica-history-empty">No matching conversations found.</div>`;
-        return;
-    }
-
-    list.innerHTML = filteredRows.map((row) => `
-        <article class="ica-history-item ${String(window.conversationId) === String(row.id) ? "is-active" : ""}" data-row-id="${row.id}" tabindex="0">
-            <div class="ica-history-item-top">
-                <div class="ica-history-item-title">${escapeHtml(row.title || "New chat")}</div>
-                <div class="ica-history-actions">
-                    <button class="ica-history-icon-btn" type="button" data-open-id="${row.id}" data-title="${escapeHtmlAttr(row.title || "Conversation")}" aria-label="Open conversation" title="Open">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"></path><path d="M10 14L21 3"></path><path d="M21 14v7H3V3h7"></path></svg>
-                    </button>
-                    <button class="ica-history-icon-btn" type="button" data-rename-id="${row.id}" data-title="${escapeHtmlAttr(row.title || "Conversation")}" aria-label="Rename conversation" title="Rename">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>
-                    </button>
-                    <button class="ica-history-icon-btn" type="button" data-delete-id="${row.id}" aria-label="Delete conversation" title="Delete">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path></svg>
-                    </button>
-                </div>
-            </div>
-            <div class="ica-history-item-meta">${escapeHtml(formatDate(row.created_at))}</div>
-            <div class="ica-history-item-preview">${escapeHtml(row.title || "Conversation")}</div>
-        </article>
-    `).join("");
-
-    list.querySelectorAll("[data-open-id]").forEach((btn) => {
-        btn.addEventListener("click", async (e) => {
-            e.stopPropagation();
-            await openConversation(btn.dataset.openId, btn.dataset.title || "Conversation");
-        });
-    });
-
-    list.querySelectorAll("[data-rename-id]").forEach((btn) => {
-        btn.addEventListener("click", async (e) => {
-            e.stopPropagation();
-            await renameConversationInline(btn.dataset.renameId, btn.dataset.title || "");
-        });
-    });
-
-    list.querySelectorAll("[data-delete-id]").forEach((btn) => {
-        btn.addEventListener("click", async (e) => {
-            e.stopPropagation();
-            await deleteConversation(btn.dataset.deleteId);
-        });
-    });
-
-    list.querySelectorAll(".ica-history-item").forEach((item) => {
-        item.addEventListener("click", async () => {
-            const openBtn = item.querySelector("[data-open-id]");
-            if (!openBtn) return;
-            await openConversation(openBtn.dataset.openId, openBtn.dataset.title || "Conversation");
-        });
-
-        item.addEventListener("keydown", async (e) => {
-            if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                const openBtn = item.querySelector("[data-open-id]");
-                if (openBtn) await openConversation(openBtn.dataset.openId, openBtn.dataset.title || "Conversation");
-            }
-        });
-    });
+  $("input").value = prompts[type] || "Rewrite this in a more formal professional format.";
+  resize();
+  sendMessage();
 }
 
-function updateHistoryCount(count) {
-    const countEl = document.getElementById("historyCount");
-    if (countEl) countEl.textContent = String(count);
+function startSpeech() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return banner(indiCareCopy("speechUnsupported"));
+
+  const rec = new SR();
+  rec.lang = selectedLang() || "en-GB";
+  rec.interimResults = true;
+  rec.continuous = false;
+  if (has("mic")) $("mic").style.color = "var(--accent)";
+
+  rec.onresult = e => {
+    let text = "";
+    for (let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript + " ";
+    if (has("input")) $("input").value = text.trim();
+    resize();
+  };
+
+  rec.onerror = () => banner(indiCareCopy("speechFailed"));
+  rec.onend = () => {
+    if (has("mic")) $("mic").style.color = "";
+  };
+  rec.start();
 }
 
-function renderConversationSelection() {
-    document.querySelectorAll(".ica-history-item").forEach((item) => {
-        item.classList.remove("is-active");
-    });
+function fillSelect(id, rows, placeholder, valueKey = "id", labelFn = r => r.name) {
+  if (!has(id)) return;
+  const sel = $(id);
+  const current = sel.value;
+  sel.innerHTML = `<option value="">${placeholder}</option>`;
+  normArray(rows).forEach(r => {
+    const opt = document.createElement("option");
+    opt.value = r?.[valueKey] ?? "";
+    opt.textContent = labelFn(r || {}) || "";
+    sel.appendChild(opt);
+  });
+  if ([...sel.options].some(o => String(o.value) === String(current))) sel.value = current;
 }
 
-async function openConversation(conversationId, title = "Conversation", reloadList = true) {
-    try {
-        const payload = await apiRequest(`/chat/conversations/${conversationId}`);
-        window.conversationId = conversationId;
-
-        const rows = Array.isArray(payload.messages) ? payload.messages : [];
-        const documentInfo = payload.document || null;
-
-        window.currentDocumentText = documentInfo?.text || null;
-        window.currentDocumentName = documentInfo?.filename || null;
-        refreshUploadStatus();
-
-        clearChatWindow();
-
-        if (rows.length) {
-            ensureMessagesContainer();
-            rows.forEach((row) => {
-                appendMessage(row.role, row.message || "", row.id || null, row.created_at || null);
-            });
-        }
-
-        setConversationHeading(title || "Conversation");
-
-        if (reloadList) {
-            await loadConversations(false);
-        }
-
-        restoreDraft();
-        closeSidebar();
-    } catch (error) {
-        console.error("Failed to open conversation:", error);
-        showStatusBanner("error", "Failed to open conversation.");
-    }
+function updateAdminSummary() {
+  if (has("sumUsers")) $("sumUsers").textContent = String(adminUsers.length || 0);
+  if (has("sumHomes")) $("sumHomes").textContent = String(homes.length || 0);
+  if (has("sumProviders")) $("sumProviders").textContent = String(providers.length || 0);
+  if (has("sumDocs")) $("sumDocs").textContent = String(docs.length || 0);
 }
 
-async function renameConversationInline(conversationId, currentTitle = "") {
-    const button = document.querySelector(`.ica-history-item [data-rename-id="${cssEscapeSafe(String(conversationId))}"]`);
-    const item = button?.closest(".ica-history-item");
-    if (!item) return;
+function activeAdminTab() {
+  return localStorage.getItem("indicare_admin_tab") || "users";
+}
 
-    const titleEl = item.querySelector(".ica-history-item-title");
-    if (!titleEl) return;
-    if (item.querySelector(".ica-rename-input")) return;
+function setAdminTab(name) {
+  document.querySelectorAll(".tabbtn[data-tab]").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+  document.querySelectorAll(".admin-tab").forEach(t => t.classList.add("hidden"));
+  if (has("tab-" + name)) $("tab-" + name).classList.remove("hidden");
+  localStorage.setItem("indicare_admin_tab", name);
+}
 
-    const input = document.createElement("input");
-    input.className = "ica-rename-input";
-    input.value = currentTitle;
-    input.type = "text";
-    input.maxLength = 120;
+function setLibraryTab(name) {
+  document.querySelectorAll(".tabbtn[data-library-tab]").forEach(b => b.classList.toggle("active", b.dataset.libraryTab === name));
+  if (has("library-list-tab")) $("library-list-tab").classList.toggle("hidden", name !== "list");
+  if (has("library-editor-tab")) $("library-editor-tab").classList.toggle("hidden", name !== "editor");
+  if (name === "editor" && !canManageLibrary()) setLibraryTab("list");
+}
 
-    titleEl.replaceWith(input);
-    input.focus();
-    input.select();
+function setManagerTab(name) {
+  document.querySelectorAll(".tabbtn[data-manager-tab]").forEach(b => b.classList.toggle("active", b.dataset.managerTab === name));
+  document.querySelectorAll(".manager-tab").forEach(t => t.classList.add("hidden"));
+  if (has("manager-" + name + "-tab")) $("manager-" + name + "-tab").classList.remove("hidden");
+}
 
-    const commit = async () => {
-        const newTitle = input.value.trim();
-        if (!newTitle) {
-            renderConversationList(chatState.historyRows, document.getElementById("historySearch")?.value?.trim() || "");
-            return;
-        }
+async function loadAdminReferenceData() {
+  const [h, p, u] = await Promise.allSettled([
+    api("/admin/homes"),
+    api("/admin/providers"),
+    api("/admin/users")
+  ]);
 
-        try {
-            await apiRequest(`/chat/conversations/${conversationId}/rename`, {
-                method: "POST",
-                body: JSON.stringify({ title: newTitle })
-            });
+  homes = normArray(h.status === "fulfilled" ? h.value?.homes : []);
+  providers = normArray(p.status === "fulfilled" ? p.value?.providers : []);
+  adminUsers = normArray(u.status === "fulfilled" ? u.value?.users : []);
 
-            if (String(window.conversationId) === String(conversationId)) {
-                setConversationHeading(newTitle);
-            }
+  fillSelect("adminHomeId", homes, "Select home");
+  fillSelect("userHomeFilter", homes, "All homes");
+  fillSelect("docHomeFilter", homes, "All homes");
+  fillSelect("docHomeId", homes, "Select home");
+  fillSelect("homeProviderId", providers, "Select provider");
 
-            await loadConversations(false);
-            showStatusBanner("success", "Conversation renamed.");
-        } catch (error) {
-            console.error("Failed to rename conversation:", error);
-            showStatusBanner("error", "Failed to rename conversation.");
-            await loadConversations(false);
-        }
+  const managers = adminUsers.filter(u => ["manager","admin","provider_admin"].includes(String(u?.role || "").toLowerCase()));
+  fillSelect("homeRegisteredManagerId", managers, "Select manager", "id", r => `${r?.first_name || ""} ${r?.last_name || ""}`.trim() || r?.email || "");
+  fillSelect("docOwnerId", adminUsers, "Select owner", "id", r => `${r?.first_name || ""} ${r?.last_name || ""}`.trim() || r?.email || "");
+  fillSelect("libraryOwnerId", adminUsers, "Select owner", "id", r => `${r?.first_name || ""} ${r?.last_name || ""}`.trim() || r?.email || "");
+
+  updateAdminSummary();
+}
+
+async function loadActiveAdminTab() {
+  const t = activeAdminTab();
+  if (t === "users") await loadAdminUsers();
+  if (t === "homes") await loadHomes();
+  if (t === "providers") await loadProviders();
+  if (t === "documents") await loadDocuments();
+  if (t === "billing") await loadBilling();
+  if (t === "audit") await loadAudit();
+}
+
+function clearAdminForm() {
+  ["adminFirstName","adminLastName","adminEmail","adminPassword"].forEach(id => has(id) && ($(id).value = ""));
+  if (has("adminRole")) $("adminRole").value = "staff";
+  if (has("adminHomeId")) $("adminHomeId").value = "";
+  adminCreateActive = true;
+  syncHelpers();
+}
+
+function adminPayloadFromForm() {
+  return {
+    first_name: has("adminFirstName") ? $("adminFirstName").value.trim() : "",
+    last_name: has("adminLastName") ? $("adminLastName").value.trim() : "",
+    email: has("adminEmail") ? $("adminEmail").value.trim() : "",
+    password: has("adminPassword") ? $("adminPassword").value : "",
+    role: has("adminRole") ? $("adminRole").value : "staff",
+    home_id: has("adminHomeId") && $("adminHomeId").value ? Number($("adminHomeId").value) : null,
+    is_active: adminCreateActive
+  };
+}
+
+async function createAdminUser() {
+  const p = adminPayloadFromForm();
+  if (!p.first_name || !p.last_name || !p.email || !p.password || !p.role) return banner("Complete all user fields");
+  await api("/admin/users", { method:"POST", body: JSON.stringify(p) });
+  clearAdminForm();
+  await loadAdminUsers();
+  await loadAdminReferenceData();
+  banner("User created");
+}
+
+async function loadAdminUsers() {
+  const params = new URLSearchParams();
+  if (has("userSearch") && $("userSearch").value.trim()) params.set("q", $("userSearch").value.trim());
+  if (has("userRoleFilter") && $("userRoleFilter").value) params.set("role", $("userRoleFilter").value);
+  if (has("userHomeFilter") && $("userHomeFilter").value.trim()) params.set("home_id", $("userHomeFilter").value.trim());
+  if (has("userArchivedFilter") && $("userArchivedFilter").value) params.set("archived", $("userArchivedFilter").value);
+  adminUsers = normArray((await api("/admin/users" + (params.toString() ? `?${params}` : "")))?.users);
+  renderAdminUsers();
+  updateAdminSummary();
+}
+
+function renderAdminUsers() {
+  if (!has("adminUsersList")) return;
+  const host = $("adminUsersList");
+  host.innerHTML = "";
+  if (!adminUsers.length) return host.innerHTML = `<div class="entity-row"><div>No users found.</div></div>`;
+
+  adminUsers.forEach(user => {
+    const row = document.createElement("div");
+    row.className = "entity-row";
+    row.innerHTML = `<div><div class="entity-title">${safe([user?.first_name,user?.last_name].filter(Boolean).join(" ") || user?.email || "Unknown user")}</div><div class="entity-meta">${safe(user?.email || "")} · ${safe(user?.role || "")} · home ${safe(String(user?.home_id ?? ""))}</div><div class="entity-meta"><span class="tag ${user?.is_active ? "ok" : "bad"}">${user?.is_active ? "active" : "inactive"}</span><span class="tag ${user?.archived ? "bad" : "neutral"}">${user?.archived ? "archived" : "live"}</span></div></div><div class="entity-actions"></div>`;
+    const right = row.querySelector(".entity-actions");
+
+    const add = (label, fn) => {
+      if (!right) return;
+      const b = document.createElement("button");
+      b.className = "chip";
+      b.textContent = label;
+      b.onclick = fn;
+      right.appendChild(b);
     };
 
-    input.addEventListener("keydown", async (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            await commit();
-        }
-        if (e.key === "Escape") {
-            renderConversationList(chatState.historyRows, document.getElementById("historySearch")?.value?.trim() || "");
-        }
+    add(user?.is_active ? "Deactivate" : "Activate", async () => {
+      await api(`/admin/users/${user.id}`, { method:"PATCH", body: JSON.stringify({ is_active: !user?.is_active }) });
+      await loadAdminUsers();
+      banner("User updated");
     });
 
-    input.addEventListener("blur", commit, { once: true });
+    add(user?.archived ? "Unarchive" : "Archive", async () => {
+      await api(`/admin/users/${user.id}`, { method:"PATCH", body: JSON.stringify({ archived: !user?.archived }) });
+      await loadAdminUsers();
+      banner("User updated");
+    });
+
+    add("Role", async () => {
+      const newRole = prompt(`Set role for ${user?.email || "user"}`, user?.role || "staff");
+      if (newRole === null) return;
+      await api(`/admin/users/${user.id}`, { method:"PATCH", body: JSON.stringify({ role: newRole }) });
+      await loadAdminUsers();
+      banner("Role updated");
+    });
+
+    add("Home", async () => {
+      const choices = homes.map(h => `${h?.id}: ${h?.name}`).join("\n");
+      const homeId = prompt(`Set home id for ${user?.email || "user"}\n\n${choices}`, String(user?.home_id ?? ""));
+      if (homeId === null) return;
+      await api(`/admin/users/${user.id}`, { method:"PATCH", body: JSON.stringify({ home_id: homeId ? Number(homeId) : null }) });
+      await loadAdminUsers();
+      banner("Home updated");
+    });
+
+    add("Reset password", async () => {
+      const password = prompt(`Set new password for ${user?.email || "user"}`);
+      if (password === null || !password.trim()) return banner("Password cannot be empty");
+      await api(`/admin/users/${user.id}/reset-password`, { method:"POST", body: JSON.stringify({ password }) });
+      banner("Password reset");
+    });
+
+    host.appendChild(row);
+  });
 }
 
-async function deleteConversation(conversationId) {
-    const confirmed = window.confirm("Delete this conversation?");
-    if (!confirmed) return;
+async function createHome() {
+  const p = {
+    name: has("homeName") ? $("homeName").value.trim() : "",
+    address: has("homeAddress") ? $("homeAddress").value.trim() || null : null,
+    postcode: has("homePostcode") ? $("homePostcode").value.trim() || null : null,
+    region: has("homeRegion") ? $("homeRegion").value.trim() || null : null,
+    local_authority: has("homeLocalAuthority") ? $("homeLocalAuthority").value.trim() || null : null,
+    ofsted_urn: has("homeOfstedUrn") ? $("homeOfstedUrn").value.trim() || null : null,
+    provider_id: has("homeProviderId") && $("homeProviderId").value ? Number($("homeProviderId").value) : null,
+    registered_manager_id: has("homeRegisteredManagerId") && $("homeRegisteredManagerId").value ? Number($("homeRegisteredManagerId").value) : null,
+    geofence_radius_m: has("homeGeofence") && $("homeGeofence").value.trim() ? Number($("homeGeofence").value) : null
+  };
 
-    try {
-        await apiRequest(`/chat/conversations/${conversationId}`, {
-            method: "DELETE"
-        });
+  if (!p.name) return banner("Home name is required");
 
-        if (String(window.conversationId) === String(conversationId)) {
-            startNewConversation();
-        }
+  await api("/admin/homes", { method:"POST", body: JSON.stringify(p) });
+  ["homeName","homeAddress","homePostcode","homeRegion","homeLocalAuthority","homeOfstedUrn","homeGeofence"].forEach(id => has(id) && ($(id).value = ""));
+  if (has("homeProviderId")) $("homeProviderId").value = "";
+  if (has("homeRegisteredManagerId")) $("homeRegisteredManagerId").value = "";
+  await loadHomes();
+  await loadAdminReferenceData();
+  banner("Home created");
+}
 
-        await loadConversations(false);
-        showStatusBanner("success", "Conversation deleted.");
-    } catch (error) {
-        console.error("Failed to delete conversation:", error);
-        showStatusBanner("error", "Failed to delete conversation.");
+async function loadHomes() {
+  homes = normArray((await api("/admin/homes"))?.homes);
+  renderHomes();
+  updateAdminSummary();
+}
+
+function renderHomes() {
+  if (!has("homesList")) return;
+  const host = $("homesList");
+  host.innerHTML = "";
+  if (!homes.length) return host.innerHTML = `<div class="entity-row"><div>No homes found.</div></div>`;
+
+  homes.forEach(home => {
+    const row = document.createElement("div");
+    row.className = "entity-row";
+    row.innerHTML = `<div><div class="entity-title">${safe(home?.name || "Unnamed home")}</div><div class="entity-meta">${safe(home?.postcode || "")} · ${safe(home?.region || "")} · ${safe(home?.local_authority || "")}</div><div class="entity-meta">URN: ${safe(home?.ofsted_urn || "—")} · users: ${safe(String(home?.user_count ?? 0))}</div></div><div class="entity-actions"></div>`;
+    const right = row.querySelector(".entity-actions");
+
+    [["Edit", async () => {
+      const name = prompt("Home name", home?.name || "");
+      if (name === null) return;
+      await api(`/admin/homes/${home.id}`, { method:"PATCH", body: JSON.stringify({ name }) });
+      await loadHomes();
+      banner("Home updated");
+    }],[home?.archived ? "Unarchive" : "Archive", async () => {
+      await api(`/admin/homes/${home.id}`, { method:"PATCH", body: JSON.stringify({ archived: !home?.archived }) });
+      await loadHomes();
+      banner("Home updated");
+    }]].forEach(([label, fn]) => {
+      const b = document.createElement("button");
+      b.className = "chip";
+      b.textContent = label;
+      b.onclick = fn;
+      right && right.appendChild(b);
+    });
+
+    host.appendChild(row);
+  });
+}
+
+async function createProvider() {
+  const p = {
+    name: has("providerName") ? $("providerName").value.trim() : "",
+    region: has("providerRegion") ? $("providerRegion").value.trim() || null : null,
+    address: has("providerAddress") ? $("providerAddress").value.trim() || null : null,
+    postcode: has("providerPostcode") ? $("providerPostcode").value.trim() || null : null,
+    local_authority: has("providerLA") ? $("providerLA").value.trim() || null : null,
+    safeguarding_lead_name: has("providerLeadName") ? $("providerLeadName").value.trim() || null : null,
+    safeguarding_lead_email: has("providerLeadEmail") ? $("providerLeadEmail").value.trim() || null : null
+  };
+
+  if (!p.name) return banner("Provider name is required");
+
+  await api("/admin/providers", { method:"POST", body: JSON.stringify(p) });
+  ["providerName","providerRegion","providerAddress","providerPostcode","providerLA","providerLeadName","providerLeadEmail"].forEach(id => has(id) && ($(id).value = ""));
+  await loadProviders();
+  await loadAdminReferenceData();
+  banner("Provider created");
+}
+
+async function loadProviders() {
+  providers = normArray((await api("/admin/providers"))?.providers);
+  renderProviders();
+  updateAdminSummary();
+}
+
+function renderProviders() {
+  if (!has("providersList")) return;
+  const host = $("providersList");
+  host.innerHTML = "";
+  if (!providers.length) return host.innerHTML = `<div class="entity-row"><div>No providers found.</div></div>`;
+
+  providers.forEach(provider => {
+    const row = document.createElement("div");
+    row.className = "entity-row";
+    row.innerHTML = `<div><div class="entity-title">${safe(provider?.name || "Unnamed provider")}</div><div class="entity-meta">${safe(provider?.region || "")} · homes: ${safe(String(provider?.home_count ?? 0))}</div><div class="entity-meta">${safe(provider?.safeguarding_lead_name || "No safeguarding lead")}${provider?.safeguarding_lead_email ? " · " + safe(provider.safeguarding_lead_email) : ""}</div></div><div class="entity-actions"></div>`;
+    const right = row.querySelector(".entity-actions");
+
+    [["Edit", async () => {
+      const name = prompt("Provider name", provider?.name || "");
+      if (name === null) return;
+      await api(`/admin/providers/${provider.id}`, { method:"PATCH", body: JSON.stringify({ name }) });
+      await loadProviders();
+      banner("Provider updated");
+    }],[provider?.archived ? "Unarchive" : "Archive", async () => {
+      await api(`/admin/providers/${provider.id}`, { method:"PATCH", body: JSON.stringify({ archived: !provider?.archived }) });
+      await loadProviders();
+      banner("Provider updated");
+    }]].forEach(([label, fn]) => {
+      const b = document.createElement("button");
+      b.className = "chip";
+      b.textContent = label;
+      b.onclick = fn;
+      right && right.appendChild(b);
+    });
+
+    host.appendChild(row);
+  });
+}
+
+async function createDocumentRecord() {
+  const p = {
+    title: has("docTitle") ? $("docTitle").value.trim() || null : null,
+    document_type: has("docType") ? $("docType").value || "policy" : "policy",
+    home_id: has("docHomeId") && $("docHomeId").value ? Number($("docHomeId").value) : null,
+    owner_id: has("docOwnerId") && $("docOwnerId").value ? Number($("docOwnerId").value) : null,
+    issue_date: has("docIssueDate") ? $("docIssueDate").value || null : null,
+    review_date: has("docReviewDate") ? $("docReviewDate").value || null : null,
+    expiry_date: has("docExpiryDate") ? $("docExpiryDate").value || null : null,
+    approval_status: has("docApprovalStatus") ? $("docApprovalStatus").value || "not_required" : "not_required",
+    confidentiality_level: has("docConfLevel") ? $("docConfLevel").value || "standard" : "standard",
+    input_text: has("docInputText") ? $("docInputText").value.trim() || null : null
+  };
+
+  await api("/admin/documents", { method:"POST", body: JSON.stringify(p) });
+
+  ["docTitle","docIssueDate","docReviewDate","docExpiryDate","docInputText"].forEach(id => has(id) && ($(id).value = ""));
+  if (has("docType")) $("docType").value = "policy";
+  if (has("docHomeId")) $("docHomeId").value = "";
+  if (has("docOwnerId")) $("docOwnerId").value = "";
+  if (has("docApprovalStatus")) $("docApprovalStatus").value = "not_required";
+  if (has("docConfLevel")) $("docConfLevel").value = "standard";
+
+  await loadDocuments();
+  await loadAdminReferenceData();
+  banner("Document created");
+}
+
+async function loadDocuments() {
+  const params = new URLSearchParams();
+  if (has("docSearch") && $("docSearch").value.trim()) params.set("q", $("docSearch").value.trim());
+  if (has("docHomeFilter") && $("docHomeFilter").value.trim()) params.set("home_id", $("docHomeFilter").value.trim());
+  if (has("docTypeFilter") && $("docTypeFilter").value.trim()) params.set("document_type", $("docTypeFilter").value.trim());
+  if (has("docApprovalFilter") && $("docApprovalFilter").value.trim()) params.set("approval_status", $("docApprovalFilter").value.trim());
+
+  docs = normArray((await api("/admin/documents" + (params.toString() ? `?${params}` : "")))?.documents);
+  renderDocuments();
+  updateAdminSummary();
+}
+
+function renderDocuments() {
+  if (!has("docsList")) return;
+  const host = $("docsList");
+  host.innerHTML = "";
+  if (!docs.length) return host.innerHTML = `<div class="entity-row"><div>No documents found.</div></div>`;
+
+  docs.forEach(doc => {
+    const row = document.createElement("div");
+    row.className = "entity-row";
+    row.innerHTML = `<div><div class="entity-title">${safe(doc?.title || "Untitled document")}</div><div class="entity-meta">${safe(doc?.document_type || "—")} · ${safe(doc?.home_name || ("home " + (doc?.home_id ?? "—")))}</div><div class="entity-meta">approval: ${safe(doc?.approval_status || "not_required")} · review: ${safe(doc?.review_date || "—")} · expiry: ${safe(doc?.expiry_date || "—")}</div></div><div class="entity-actions"></div>`;
+    const right = row.querySelector(".entity-actions");
+
+    [["Set approved", async () => {
+      await api(`/admin/documents/${doc.id}`, { method:"PATCH", body: JSON.stringify({ approval_status:"approved" }) });
+      await loadDocuments();
+      banner("Document updated");
+    }],["Edit title", async () => {
+      const title = prompt("Document title", doc?.title || "");
+      if (title === null) return;
+      await api(`/admin/documents/${doc.id}`, { method:"PATCH", body: JSON.stringify({ title }) });
+      await loadDocuments();
+      banner("Document updated");
+    }]].forEach(([label, fn]) => {
+      const b = document.createElement("button");
+      b.className = "chip";
+      b.textContent = label;
+      b.onclick = fn;
+      right && right.appendChild(b);
+    });
+
+    host.appendChild(row);
+  });
+}
+
+async function loadBilling() {
+  try {
+    billing = await api("/admin/billing/overview");
+  } catch {
+    billing = null;
+  }
+  renderBilling();
+}
+
+function renderBilling() {
+  if (has("billingStats")) $("billingStats").innerHTML = "";
+  if (has("billingList")) $("billingList").innerHTML = "";
+  if (!billing) return;
+
+  const totals = normObj(billing.totals);
+  [
+    ["Total users", totals.total_users ?? 0],
+    ["Active users", totals.active_users ?? 0],
+    ["Archived users", totals.archived_users ?? 0],
+    ["Active subscriptions", totals.active_subscriptions ?? 0],
+    ["Inactive subscriptions", totals.inactive_subscriptions ?? 0]
+  ].forEach(([l, n]) => {
+    if (has("billingStats")) $("billingStats").insertAdjacentHTML("beforeend", `<div class="stat"><div class="n">${safe(String(n))}</div><div class="l">${safe(l)}</div></div>`);
+  });
+
+  const users = normArray(billing.users);
+  if (!users.length) {
+    if (has("billingList")) $("billingList").innerHTML = `<div class="entity-row"><div>No billing rows found.</div></div>`;
+    return;
+  }
+
+  users.forEach(user => {
+    if (has("billingList")) {
+      $("billingList").insertAdjacentHTML("beforeend",
+        `<div class="entity-row"><div><div class="entity-title">${safe([user?.first_name,user?.last_name].filter(Boolean).join(" ") || user?.email || "Unknown user")}</div><div class="entity-meta">${safe(user?.email || "")} · ${safe(user?.plan_name || "No plan")}</div><div class="entity-meta">status: ${safe(user?.subscription_status || "inactive")} · period end: ${safe(user?.current_period_end || "—")}</div></div></div>`
+      );
     }
+  });
 }
 
-async function startInlineMessageEdit(messageId, currentText) {
-    const wrapper = document.querySelector(`.ica-message-wrapper.is-user[data-message-id="${cssEscapeSafe(String(messageId))}"]`);
-    if (!wrapper) return;
+async function loadAudit() {
+  try {
+    audit = normArray((await api("/admin/audit"))?.audit);
+  } catch {
+    audit = [];
+  }
+  renderAudit();
+}
 
-    const messageEl = wrapper.querySelector(".ica-message.is-user");
-    const actionsEl = wrapper.querySelector(".ica-message-actions");
-    if (!messageEl || !actionsEl) return;
-    if (wrapper.querySelector(".ica-inline-edit-wrap")) return;
+function renderAudit() {
+  if (!has("auditList")) return;
+  const host = $("auditList");
+  host.innerHTML = "";
+  if (!audit.length) return host.innerHTML = `<div class="entity-row"><div>No audit entries found.</div></div>`;
 
-    messageEl.hidden = true;
-    actionsEl.hidden = true;
+  audit.forEach(a => {
+    host.insertAdjacentHTML("beforeend",
+      `<div class="entity-row"><div><div class="entity-title">${safe(a?.action || "")} · ${safe(a?.target_type || "")} ${safe(String(a?.target_id ?? ""))}</div><div class="entity-meta">${safe([a?.first_name,a?.last_name].filter(Boolean).join(" ") || a?.email || "Unknown admin")} · ${safe(a?.created_at || "")}</div><div class="entity-meta">${safe(JSON.stringify(a?.details || {}))}</div></div></div>`
+    );
+  });
+}
 
-    const editWrap = document.createElement("div");
-    editWrap.className = "ica-inline-edit-wrap";
-    editWrap.innerHTML = `
-        <textarea
-            class="ica-inline-edit-textarea"
-            data-editing-message-id="${escapeHtmlAttr(String(messageId))}"
-            rows="1"
-            aria-label="Edit message"
-        >${escapeHtml(currentText)}</textarea>
-        <div class="ica-message-actions">
-            <button class="ica-copy-btn" type="button" data-save-edit-message-id="${escapeHtmlAttr(String(messageId))}">Save</button>
-            <button class="ica-copy-btn" type="button" data-cancel-edit-message-id="${escapeHtmlAttr(String(messageId))}">Cancel</button>
+async function loadLibrary() {
+  const params = new URLSearchParams();
+  if (has("librarySearch") && $("librarySearch").value.trim()) params.set("q", $("librarySearch").value.trim());
+  if (has("libraryTypeFilter") && $("libraryTypeFilter").value) params.set("document_type", $("libraryTypeFilter").value);
+  if (has("libraryApprovalFilter") && $("libraryApprovalFilter").value) params.set("approval_status", $("libraryApprovalFilter").value);
+
+  libraryDocs = normArray((await api("/documents/library" + (params.toString() ? `?${params}` : "")))?.documents);
+  renderLibraryList();
+  renderManagerLibraryList();
+
+  if (selectedLibraryDoc?.id) {
+    const fresh = libraryDocs.find(d => Number(d?.id) === Number(selectedLibraryDoc.id));
+    if (fresh) openLibraryDocument(fresh.id);
+  }
+}
+
+function renderLibraryList() {
+  if (!has("libraryList")) return;
+  const host = $("libraryList");
+  host.innerHTML = "";
+  if (!libraryDocs.length) return host.innerHTML = `<div class="entity-row"><div>No documents available for your home.</div></div>`;
+
+  libraryDocs.forEach(doc => {
+    const row = document.createElement("div");
+    row.className = "entity-row";
+    row.innerHTML = `<div><div class="entity-title">${safe(doc?.title || "Untitled document")}</div><div class="entity-meta">${safe(doc?.document_type || "—")} · ${safe(doc?.home_name || "Your home")}</div><div class="entity-meta"><span class="tag ${doc?.approval_status === "approved" ? "ok" : doc?.approval_status === "pending" ? "warn" : "neutral"}">${safe(doc?.approval_status || "not_required")}</span><span class="tag neutral">${safe(doc?.confidentiality_level || "standard")}</span></div></div><div class="entity-actions"></div>`;
+    const right = row.querySelector(".entity-actions");
+
+    [["Open", () => openLibraryDocument(doc.id)], ...(canManageLibrary() ? [["Edit", () => populateLibraryEditor(doc)]] : [])].forEach(([label, fn]) => {
+      const b = document.createElement("button");
+      b.className = "chip";
+      b.textContent = label;
+      b.onclick = fn;
+      right && right.appendChild(b);
+    });
+
+    host.appendChild(row);
+  });
+}
+
+function renderManagerLibraryList() {
+  if (!has("managerLibraryList")) return;
+  const host = $("managerLibraryList");
+  host.innerHTML = "";
+
+  if (!canManageLibrary()) return host.innerHTML = `<div class="entity-row"><div>Read-only access.</div></div>`;
+  if (!libraryDocs.length) return host.innerHTML = `<div class="entity-row"><div>No home documents found.</div></div>`;
+
+  libraryDocs.forEach(doc => {
+    host.insertAdjacentHTML("beforeend",
+      `<div class="entity-row"><div><div class="entity-title">${safe(doc?.title || "Untitled document")}</div><div class="entity-meta">${safe(doc?.document_type || "—")} · review ${safe(doc?.review_date || "—")}</div></div><div class="entity-actions"><button class="chip" data-doc-edit="${safe(String(doc?.id ?? ""))}">Edit</button></div></div>`
+    );
+  });
+
+  host.querySelectorAll("[data-doc-edit]").forEach(b => {
+    b.onclick = () => populateLibraryEditor(libraryDocs.find(d => Number(d?.id) === Number(b.dataset.docEdit)));
+  });
+}
+
+async function openLibraryDocument(id) {
+  if (!id || !has("libraryViewer")) return;
+  const data = await api(`/documents/library/${id}`);
+  const doc = data?.document;
+  if (!doc) return;
+  selectedLibraryDoc = doc;
+
+  $("libraryViewer").innerHTML =
+    `<h3>${safe(doc?.title || "Untitled document")}</h3>
+     <p><strong>Type:</strong> ${safe(doc?.document_type || "—")}</p>
+     <p><strong>Approval:</strong> ${safe(doc?.approval_status || "not_required")} · <strong>Confidentiality:</strong> ${safe(doc?.confidentiality_level || "standard")}</p>
+     <p><strong>Issue date:</strong> ${safe(doc?.issue_date || "—")} · <strong>Review date:</strong> ${safe(doc?.review_date || "—")} · <strong>Expiry date:</strong> ${safe(doc?.expiry_date || "—")}</p>
+     <hr style="border:none;border-top:1px solid var(--line);margin:14px 0;">
+     <div>${render(doc?.input_text || doc?.generated_text || "No content available.", "assistant")}</div>`;
+}
+
+function resetLibraryEditor() {
+  editingLibraryDocId = null;
+  if (has("libraryFormTitle")) $("libraryFormTitle").textContent = "Create document";
+  ["libraryDocTitle","libraryIssueDate","libraryReviewDate","libraryExpiryDate","libraryInputText"].forEach(id => has(id) && ($(id).value = ""));
+  if (has("libraryDocType")) $("libraryDocType").value = "policy";
+  if (has("libraryApprovalStatus")) $("libraryApprovalStatus").value = "not_required";
+  if (has("libraryConfidentiality")) $("libraryConfidentiality").value = "standard";
+  if (has("libraryOwnerId")) $("libraryOwnerId").value = "";
+  if (has("deleteLibraryDocBtn")) $("deleteLibraryDocBtn").classList.add("hidden");
+}
+
+function populateLibraryEditor(doc) {
+  if (!canManageLibrary() || !doc) return;
+  editingLibraryDocId = doc.id;
+  if (has("libraryFormTitle")) $("libraryFormTitle").textContent = "Edit document";
+  if (has("libraryDocTitle")) $("libraryDocTitle").value = doc?.title || "";
+  if (has("libraryDocType")) $("libraryDocType").value = doc?.document_type || "policy";
+  if (has("libraryIssueDate")) $("libraryIssueDate").value = doc?.issue_date || "";
+  if (has("libraryReviewDate")) $("libraryReviewDate").value = doc?.review_date || "";
+  if (has("libraryExpiryDate")) $("libraryExpiryDate").value = doc?.expiry_date || "";
+  if (has("libraryApprovalStatus")) $("libraryApprovalStatus").value = doc?.approval_status || "not_required";
+  if (has("libraryConfidentiality")) $("libraryConfidentiality").value = doc?.confidentiality_level || "standard";
+  if (has("libraryOwnerId")) $("libraryOwnerId").value = doc?.owner_id || "";
+  if (has("libraryInputText")) $("libraryInputText").value = doc?.input_text || doc?.generated_text || "";
+  if (has("deleteLibraryDocBtn")) $("deleteLibraryDocBtn").classList.remove("hidden");
+  setLibraryTab("editor");
+}
+
+async function saveLibraryDocument() {
+  if (!canManageLibrary()) return banner("Manager or admin access required");
+
+  const p = {
+    title: has("libraryDocTitle") ? $("libraryDocTitle").value.trim() : "",
+    document_type: has("libraryDocType") ? $("libraryDocType").value : "policy",
+    issue_date: has("libraryIssueDate") ? $("libraryIssueDate").value || null : null,
+    review_date: has("libraryReviewDate") ? $("libraryReviewDate").value || null : null,
+    expiry_date: has("libraryExpiryDate") ? $("libraryExpiryDate").value || null : null,
+    approval_status: has("libraryApprovalStatus") ? $("libraryApprovalStatus").value : "not_required",
+    confidentiality_level: has("libraryConfidentiality") ? $("libraryConfidentiality").value : "standard",
+    owner_id: has("libraryOwnerId") && $("libraryOwnerId").value ? Number($("libraryOwnerId").value) : null,
+    input_text: has("libraryInputText") ? $("libraryInputText").value.trim() || null : null
+  };
+
+  if (!p.title) return banner("Title is required");
+
+  if (editingLibraryDocId) {
+    await api(`/documents/library/${editingLibraryDocId}`, { method:"PATCH", body: JSON.stringify(p) });
+    banner("Document updated");
+  } else {
+    await api("/documents/library", { method:"POST", body: JSON.stringify(p) });
+    banner("Document created");
+  }
+
+  resetLibraryEditor();
+  await loadLibrary();
+  setLibraryTab("list");
+}
+
+async function deleteLibraryDocument() {
+  if (!editingLibraryDocId || !confirm("Delete this document?")) return;
+  await api(`/documents/library/${editingLibraryDocId}`, { method:"DELETE" });
+  banner("Document deleted");
+  resetLibraryEditor();
+  if (has("libraryViewer")) $("libraryViewer").innerHTML = `<h3>Select a document</h3><p>Open a policy or document from the list to read it here.</p>`;
+  await loadLibrary();
+  setLibraryTab("list");
+}
+
+async function createManagerStaff() {
+  const payload = {
+    first_name: has("mgrFirst") ? $("mgrFirst").value.trim() : "",
+    last_name: has("mgrLast") ? $("mgrLast").value.trim() : "",
+    email: has("mgrEmail") ? $("mgrEmail").value.trim() : "",
+    password: has("mgrPass") ? $("mgrPass").value : "",
+    role: has("mgrRole") ? $("mgrRole").value : "staff"
+  };
+
+  if (!payload.first_name || !payload.last_name || !payload.email || !payload.password) return banner("Complete all staff fields");
+
+  await api("/manager/users", {
+    method:"POST",
+    body: JSON.stringify(payload)
+  });
+
+  ["mgrFirst","mgrLast","mgrEmail","mgrPass"].forEach(id => has(id) && ($(id).value = ""));
+  if (has("mgrRole")) $("mgrRole").value = "staff";
+
+  await loadManager();
+  banner("Staff created");
+}
+
+async function saveManagerDoc() {
+  const payload = {
+    title: has("mgrDocTitle") ? $("mgrDocTitle").value.trim() : "",
+    input_text: has("mgrDocText") ? $("mgrDocText").value.trim() : ""
+  };
+
+  if (!payload.title) return banner("Title is required");
+
+  await api("/manager/documents", {
+    method:"POST",
+    body: JSON.stringify(payload)
+  });
+
+  if (has("mgrDocTitle")) $("mgrDocTitle").value = "";
+  if (has("mgrDocText")) $("mgrDocText").value = "";
+
+  await loadManager();
+  banner("Document saved");
+}
+
+async function loadManager() {
+  try {
+    const data = await api("/manager/overview");
+
+    managerUsers = normArray(data?.users);
+    managerDocuments = normArray(data?.documents);
+
+    renderManagerUsers();
+    renderManagerDocuments();
+    updateManagerSummary();
+  } catch (e) {
+    if (/manager access required/i.test(String(e.message || ""))) {
+      banner("Your account does not have manager access.");
+    } else {
+      banner(e.message || "Could not load manager panel.");
+    }
+    throw e;
+  }
+}
+
+function renderManagerUsers() {
+  if (!has("mgrUsers")) return;
+  const host = $("mgrUsers");
+  host.innerHTML = "";
+  if (!managerUsers.length) return host.innerHTML = `<div class="entity-row"><div>No staff found.</div></div>`;
+
+  managerUsers.forEach(u => {
+    host.insertAdjacentHTML("beforeend",
+      `<div class="entity-row">
+        <div>
+          <div class="entity-title">${safe(`${u?.first_name || ""} ${u?.last_name || ""}`.trim() || u?.email || "Unnamed user")}</div>
+          <div class="entity-meta">${safe(u?.email || "")}</div>
+          <div class="entity-meta"><span class="tag ${String(u?.role || "").toLowerCase() === "manager" ? "warn" : "neutral"}">${safe(u?.role || "staff")}</span></div>
         </div>
-    `;
-
-    wrapper.querySelector(".ica-message-block")?.appendChild(editWrap);
-
-    const textarea = editWrap.querySelector(".ica-inline-edit-textarea");
-    if (textarea) {
-        textarea.value = currentText;
-        autoResizeTextarea(textarea);
-        textarea.focus();
-        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-    }
+      </div>`
+    );
+  });
 }
 
-function cancelInlineMessageEdit(messageId) {
-    const wrapper = document.querySelector(`.ica-message-wrapper.is-user[data-message-id="${cssEscapeSafe(String(messageId))}"]`);
-    if (!wrapper) return;
+function renderManagerDocuments() {
+  if (!has("mgrDocs")) return;
+  const host = $("mgrDocs");
+  host.innerHTML = "";
+  if (!managerDocuments.length) return host.innerHTML = `<div class="entity-row"><div>No home documents found.</div></div>`;
 
-    wrapper.querySelector(".ica-inline-edit-wrap")?.remove();
-
-    const messageEl = wrapper.querySelector(".ica-message.is-user");
-    const actionsEl = wrapper.querySelector(".ica-message-actions");
-
-    if (messageEl) messageEl.hidden = false;
-    if (actionsEl) actionsEl.hidden = false;
+  managerDocuments.forEach(d => {
+    host.insertAdjacentHTML("beforeend",
+      `<div class="entity-row">
+        <div>
+          <div class="entity-title">${safe(d?.title || "Untitled document")}</div>
+          <div class="entity-meta">${safe(d?.document_type || "home_document")}</div>
+        </div>
+      </div>`
+    );
+  });
 }
 
-async function submitInlineMessageEdit(messageId) {
-    const wrapper = document.querySelector(`.ica-message-wrapper.is-user[data-message-id="${cssEscapeSafe(String(messageId))}"]`);
-    if (!wrapper) return;
+function updateManagerSummary() {
+  if (has("mgrStatUsers")) $("mgrStatUsers").textContent = String(managerUsers.length || 0);
+  if (has("mgrStatDocs")) $("mgrStatDocs").textContent = String(managerDocuments.length || 0);
+  if (has("mgrStatManagers")) $("mgrStatManagers").textContent = String(managerUsers.filter(u => String(u?.role || "").toLowerCase() === "manager").length || 0);
+  if (has("mgrStatStaffOnly")) $("mgrStatStaffOnly").textContent = String(managerUsers.filter(u => String(u?.role || "").toLowerCase() === "staff").length || 0);
+}
 
-    const textarea = wrapper.querySelector(`.ica-inline-edit-textarea[data-editing-message-id="${cssEscapeSafe(String(messageId))}"]`);
-    if (!textarea) return;
+function restorePrefs() {
+  document.body.classList.toggle("theme-dark", (localStorage.getItem("indicare_theme") || "light") === "dark");
+  if (has("lang")) $("lang").value = localStorage.getItem("indicare_reply_language") || DEFAULT_LANGUAGE;
+  if (has("mode")) $("mode").value = localStorage.getItem("indicare_response_mode") || "balanced";
+  loadVoicePref();
+  loadCopilotPref();
+  loadContextState();
+  syncHelpers();
+  setLibraryTab("list");
+  setManagerTab("staff");
+}
 
-    const newText = textarea.value.trim();
-    const originalText = wrapper.querySelector(".ica-message.is-user")?.textContent?.trim() || "";
+function on(id, event, fn) {
+  if (!has(id)) return;
+  $(id).addEventListener(event, fn);
+}
 
-    if (!newText) {
-        cancelInlineMessageEdit(messageId);
-        return;
+function bind() {
+  on("sideToggle", "click", () => {
+    if (has("sidebar")) $("sidebar").classList.toggle("open");
+    if (window.innerWidth <= 768 && has("overlay")) {
+      $("overlay").classList.toggle("show", has("sidebar") && $("sidebar").classList.contains("open"));
     }
+  });
 
-    if (newText === originalText) {
-        cancelInlineMessageEdit(messageId);
-        return;
-    }
+  on("mobileMenu", "click", () => {
+    if (has("sidebar")) $("sidebar").classList.add("open");
+    if (has("overlay")) $("overlay").classList.add("show");
+  });
 
-    let current = wrapper;
-    while (current) {
-        const next = current.nextElementSibling;
-        current.remove();
-        current = next;
-    }
+  on("overlay", "click", () => {
+    if (has("sidebar")) $("sidebar").classList.remove("open");
+    if (has("overlay")) $("overlay").classList.remove("show");
+    closeSettings();
+  });
 
-    appendMessage("user", newText, messageId);
-    showTypingIndicator(true);
-    setSendLoading(true);
+  on("openSettings", "click", openSettings);
+  on("closeSettings", "click", closeSettings);
+  on("settingsOverlay", "click", closeSettings);
 
-    await streamAssistantResponse(`/chat/messages/${messageId}/edit`, {
-        message: newText,
-        document_text: window.currentDocumentText,
-        document_name: window.currentDocumentName,
-        response_mode: getResponseMode()
+  on("newChat", "click", resetWelcome);
+  on("backWelcome", "click", resetWelcome);
+  on("logout", "click", logoutNow);
+
+  on("theme", "click", () => {
+    document.body.classList.toggle("theme-dark");
+    localStorage.setItem("indicare_theme", document.body.classList.contains("theme-dark") ? "dark" : "light");
+    syncHelpers();
+  });
+
+  on("privacy", "click", () => {
+    if (has("app")) $("app").classList.toggle("privacy-active");
+    syncHelpers();
+  });
+
+  on("voiceReplies", "click", () => {
+    setVoicePref(!speechEnabled);
+  });
+
+  on("stopVoiceBtn", "click", stopSpeaking);
+
+  on("voiceSelect", "change", () => {
+    const selected = has("voiceSelect") ? $("voiceSelect").value : "";
+    saveVoiceName(selected);
+    indicareVoice = null;
+    pickIndiCareVoice();
+  });
+
+  on("copilot", "change", saveCopilotPref);
+  on("saveContextBtn", "click", saveContextState);
+
+  on("lang", "change", () => {
+    localStorage.setItem("indicare_reply_language", selectedLang());
+    syncHelpers();
+  });
+
+  on("mode", "change", () => {
+    localStorage.setItem("indicare_response_mode", selectedMode());
+    syncHelpers();
+  });
+
+  on("navAssistant", "click", showAssistantView);
+  on("navLibrary", "click", showLibraryView);
+  on("navManager", "click", showManagerView);
+  on("navAdmin", "click", showAdminView);
+
+  document.querySelectorAll(".tabbtn[data-tab]").forEach(btn => btn.addEventListener("click", async () => {
+    setAdminTab(btn.dataset.tab);
+    await loadActiveAdminTab();
+  }));
+
+  document.querySelectorAll(".tabbtn[data-library-tab]").forEach(btn => btn.addEventListener("click", () => setLibraryTab(btn.dataset.libraryTab)));
+  document.querySelectorAll(".tabbtn[data-manager-tab]").forEach(btn => btn.addEventListener("click", () => setManagerTab(btn.dataset.managerTab)));
+
+  on("search", "input", filterConversations);
+
+  if (has("input")) {
+    $("input").addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
     });
+    $("input").addEventListener("input", resize);
+  }
 
-    showTypingIndicator(false);
-    setSendLoading(false);
+  on("send", "click", sendMessage);
+  on("mic", "click", startSpeech);
 
-    if (window.conversationId) {
-        await openConversation(
-            window.conversationId,
-            document.getElementById("conversationHeading")?.textContent || "Conversation",
-            false
-        );
-    }
-
-    await loadConversations(false);
-    showStatusBanner("success", "Message updated.");
-}
-
-function formatDate(value) {
-    if (!value) return "-";
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return String(value);
-    return date.toLocaleString("en-GB");
-}
-
-function formatTime(date) {
-    return new Intl.DateTimeFormat("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit"
-    }).format(date);
-}
-
-function autoResizeTextarea(el) {
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 220) + "px";
-}
-
-function scrollChatToBottom() {
-    const chat = document.getElementById("chat");
-    if (!chat) return;
-    requestAnimationFrame(() => {
-        chat.scrollTop = chat.scrollHeight;
+  if (has("upload")) {
+    $("upload").addEventListener("change", async e => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        await uploadDoc(file);
+      } catch (err) {
+        banner(err.message || indiCareCopy("uploadFail"));
+      }
+      e.target.value = "";
     });
+  }
+
+  on("clearDoc", "click", async () => {
+    try {
+      if (conversationId) await api(`/chat/conversations/${conversationId}/document`, { method:"DELETE" });
+    } catch {}
+    currentDocumentText = null;
+    currentDocumentName = null;
+    docHide();
+    banner(indiCareCopy("documentRemoved"));
+  });
+
+  on("adminActiveToggle", "click", () => {
+    adminCreateActive = !adminCreateActive;
+    syncHelpers();
+  });
+
+  on("createUserBtn", "click", createAdminUser);
+  on("refreshUsersBtn", "click", loadAdminUsers);
+  on("userSearch", "input", loadAdminUsers);
+  on("userRoleFilter", "change", loadAdminUsers);
+  on("userHomeFilter", "change", loadAdminUsers);
+  on("userArchivedFilter", "change", loadAdminUsers);
+
+  on("createHomeBtn", "click", createHome);
+  on("refreshHomesBtn", "click", loadHomes);
+
+  on("createProviderBtn", "click", createProvider);
+  on("refreshProvidersBtn", "click", loadProviders);
+
+  on("createDocBtn", "click", createDocumentRecord);
+  on("refreshDocsBtn", "click", loadDocuments);
+  on("docSearch", "input", loadDocuments);
+  on("docHomeFilter", "change", loadDocuments);
+  on("docTypeFilter", "change", loadDocuments);
+  on("docApprovalFilter", "change", loadDocuments);
+
+  on("refreshBillingBtn", "click", loadBilling);
+  on("refreshAuditBtn", "click", loadAudit);
+
+  on("refreshLibraryBtn", "click", loadLibrary);
+  on("refreshManagerLibraryBtn", "click", loadLibrary);
+  on("librarySearch", "input", loadLibrary);
+  on("libraryTypeFilter", "change", loadLibrary);
+  on("libraryApprovalFilter", "change", loadLibrary);
+  on("saveLibraryDocBtn", "click", saveLibraryDocument);
+  on("resetLibraryDocBtn", "click", resetLibraryEditor);
+  on("deleteLibraryDocBtn", "click", deleteLibraryDocument);
+
+  on("createStaff", "click", createManagerStaff);
+  on("saveDoc", "click", saveManagerDoc);
+  on("refreshManagerBtn", "click", loadManager);
+  on("refreshManagerDocsBtn", "click", loadManager);
 }
 
-function cssEscapeSafe(value) {
-    if (window.CSS && typeof window.CSS.escape === "function") {
-        return window.CSS.escape(value);
+async function init() {
+  bind();
+  restorePrefs();
+  initSpeech();
+  resize();
+
+  try {
+    await loadMe();
+  } catch (e) {
+    console.error("loadMe failed", e);
+    location.href = "/login";
+    return;
+  }
+
+  if (isAdmin()) setAdminTab(activeAdminTab());
+  setWelcome();
+
+  try {
+    await loadConversations();
+  } catch (e) {
+    console.error("loadConversations failed", e);
+    banner(indiCareCopy("conversationsLoadFail"));
+  }
+
+  if (isAdmin()) {
+    try {
+      await loadAdminReferenceData();
+      await loadActiveAdminTab();
+    } catch (e) {
+      console.error("loadAdminReferenceData failed", e);
+      banner(indiCareCopy("adminDataLoadFail"));
     }
-    return String(value).replace(/["\\]/g, "\\$&");
+  }
+
+  if (isManager()) {
+    try {
+      await loadManager();
+    } catch (e) {
+      console.error("loadManager failed", e);
+    }
+  }
+
+  try {
+    await loadLibrary();
+  } catch (e) {
+    console.error("loadLibrary failed", e);
+  }
+
+  showAssistantView();
 }
 
-function escapeHtml(value) {
-    return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-}
-
-function escapeHtmlAttr(value) {
-    return escapeHtml(value);
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-    initChat();
-});
+document.addEventListener("DOMContentLoaded", init);
