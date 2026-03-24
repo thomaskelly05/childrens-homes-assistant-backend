@@ -37,6 +37,7 @@ MAX_DOCUMENT_CHARS = 120000
 MAX_HISTORY_MESSAGES = 12
 HEARTBEAT_SECONDS = 15
 MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
+HEARTBEAT_MARKER = "__heartbeat__"
 
 
 class ChatRequest(BaseModel):
@@ -273,6 +274,10 @@ def sse_done():
     return "event: done\ndata: [DONE]\n\n"
 
 
+def is_heartbeat(item: Any) -> bool:
+    return item == HEARTBEAT_MARKER
+
+
 async def stream_with_heartbeat(generator):
     task = asyncio.create_task(generator.__anext__())
 
@@ -295,7 +300,7 @@ async def stream_with_heartbeat(generator):
 
                 task = asyncio.create_task(generator.__anext__())
             else:
-                yield ": ping\n\n"
+                yield HEARTBEAT_MARKER
 
     finally:
         if not task.done():
@@ -323,7 +328,7 @@ def _normalise_sources(value: Any) -> list[dict[str, Any]]:
         excerpt = str(item.get("excerpt") or "").strip()
         url = item.get("url")
 
-        dedupe_key = f"{label}|{source_type}|{document_title}|{section}|{page_number}"
+        dedupe_key = f"{label}|{source_type}|{document_title}|{section}|{page_number}|{url}"
         if dedupe_key in seen:
             continue
         seen.add(dedupe_key)
@@ -525,6 +530,10 @@ async def chat(
             )
 
             async for item in stream_with_heartbeat(generator):
+                if is_heartbeat(item):
+                    yield ": ping\n\n"
+                    continue
+
                 if isinstance(item, str):
                     ai_text += item
                     yield sse(item)
@@ -703,6 +712,10 @@ async def edit_message_and_regenerate(
             )
 
             async for item in stream_with_heartbeat(generator):
+                if is_heartbeat(item):
+                    yield ": ping\n\n"
+                    continue
+
                 if isinstance(item, str):
                     ai_text += item
                     yield sse(item)
