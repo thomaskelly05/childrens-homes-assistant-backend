@@ -1,8 +1,9 @@
 import asyncio
 import contextlib
 import io
+import json
 import logging
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
@@ -263,6 +264,11 @@ def sse(data: str):
     return "".join(f"data: {line}\n" for line in safe.split("\n")) + "\n"
 
 
+def sse_event(event: str, payload: Any):
+    body = json.dumps(payload, ensure_ascii=False)
+    return f"event: {event}\ndata: {body}\n\n"
+
+
 def sse_done():
     return "event: done\ndata: [DONE]\n\n"
 
@@ -280,12 +286,12 @@ async def stream_with_heartbeat(generator):
 
             if task in done:
                 try:
-                    token = task.result()
+                    item = task.result()
                 except StopAsyncIteration:
                     break
 
-                if token:
-                    yield token
+                if item is not None:
+                    yield item
 
                 task = asyncio.create_task(generator.__anext__())
             else:
@@ -296,6 +302,64 @@ async def stream_with_heartbeat(generator):
             task.cancel()
             with contextlib.suppress(Exception):
                 await task
+
+
+def _normalise_sources(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+
+    cleaned: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+
+        label = str(item.get("label") or "").strip()
+        source_type = str(item.get("type") or "").strip()
+        document_title = str(item.get("document_title") or "").strip()
+        section = str(item.get("section") or "").strip()
+        page_number = item.get("page_number")
+        excerpt = str(item.get("excerpt") or "").strip()
+        url = item.get("url")
+
+        dedupe_key = f"{label}|{source_type}|{document_title}|{section}|{page_number}"
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+
+        cleaned.append(
+            {
+                "type": source_type,
+                "label": label,
+                "document_title": document_title,
+                "section": section,
+                "page_number": page_number,
+                "excerpt": excerpt,
+                "url": url,
+            }
+        )
+
+    return cleaned
+
+
+def _normalise_runtime(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+
+    runtime = {
+        "mode": value.get("mode"),
+        "task_type": value.get("task_type"),
+        "output_type": value.get("output_type"),
+        "urgency": value.get("urgency"),
+        "safeguarding_level": value.get("safeguarding_level"),
+        "user_role_profile": value.get("user_role_profile"),
+        "retrieval_level": value.get("retrieval_level"),
+        "reflection_level": value.get("reflection_level"),
+        "suggested_actions": value.get("suggested_actions") or [],
+    }
+
+    return {k: v for k, v in runtime.items() if v not in (None, "", [])}
 
 
 @router.post("/upload")
@@ -447,6 +511,8 @@ async def chat(
 
     async def stream():
         ai_text = ""
+        sources: list[dict[str, Any]] = []
+        runtime: dict[str, Any] = {}
 
         try:
             generator = generate_ai_stream(
@@ -458,9 +524,39 @@ async def chat(
                 response_mode=body.response_mode,
             )
 
-            async for token in stream_with_heartbeat(generator):
-                ai_text += token
-                yield sse(token)
+            async for item in stream_with_heartbeat(generator):
+                if isinstance(item, str):
+                    ai_text += item
+                    yield sse(item)
+                    continue
+
+                if isinstance(item, dict):
+                    item_type = item.get("type")
+
+                    if item_type == "token":
+                        token = str(item.get("content") or "")
+                        if token:
+                            ai_text += token
+                            yield sse(token)
+                        continue
+
+                    if item_type == "sources":
+                        sources = _normalise_sources(item.get("sources"))
+                        continue
+
+                    if item_type == "runtime":
+                        runtime = _normalise_runtime(item.get("runtime"))
+                        continue
+
+                    if item_type == "meta":
+                        sources = _normalise_sources(item.get("sources")) or sources
+                        merged_runtime = _normalise_runtime(item.get("runtime"))
+                        if merged_runtime:
+                            runtime = merged_runtime
+                        continue
+
+                    logger.debug("Unhandled AI stream item type=%s", item_type)
+                    continue
 
         except Exception:
             logger.exception("AI stream failed for conversation_id=%s", conversation_id)
@@ -471,6 +567,17 @@ async def chat(
         finally:
             if ai_text.strip():
                 save_ai_message(conversation_id, ai_text)
+
+            if sources or runtime:
+                yield sse_event(
+                    "meta",
+                    {
+                        "conversation_id": conversation_id,
+                        "sources": sources,
+                        "runtime": runtime,
+                    },
+                )
+
             yield sse_done()
 
     return StreamingResponse(
@@ -582,6 +689,8 @@ async def edit_message_and_regenerate(
 
     async def stream():
         ai_text = ""
+        sources: list[dict[str, Any]] = []
+        runtime: dict[str, Any] = {}
 
         try:
             generator = generate_ai_stream(
@@ -593,9 +702,39 @@ async def edit_message_and_regenerate(
                 response_mode=payload.response_mode,
             )
 
-            async for token in stream_with_heartbeat(generator):
-                ai_text += token
-                yield sse(token)
+            async for item in stream_with_heartbeat(generator):
+                if isinstance(item, str):
+                    ai_text += item
+                    yield sse(item)
+                    continue
+
+                if isinstance(item, dict):
+                    item_type = item.get("type")
+
+                    if item_type == "token":
+                        token = str(item.get("content") or "")
+                        if token:
+                            ai_text += token
+                            yield sse(token)
+                        continue
+
+                    if item_type == "sources":
+                        sources = _normalise_sources(item.get("sources"))
+                        continue
+
+                    if item_type == "runtime":
+                        runtime = _normalise_runtime(item.get("runtime"))
+                        continue
+
+                    if item_type == "meta":
+                        sources = _normalise_sources(item.get("sources")) or sources
+                        merged_runtime = _normalise_runtime(item.get("runtime"))
+                        if merged_runtime:
+                            runtime = merged_runtime
+                        continue
+
+                    logger.debug("Unhandled AI regenerate item type=%s", item_type)
+                    continue
 
         except Exception:
             logger.exception("AI regenerate failed for conversation_id=%s", conversation_id)
@@ -606,6 +745,17 @@ async def edit_message_and_regenerate(
         finally:
             if ai_text.strip():
                 save_ai_message(conversation_id, ai_text)
+
+            if sources or runtime:
+                yield sse_event(
+                    "meta",
+                    {
+                        "conversation_id": conversation_id,
+                        "sources": sources,
+                        "runtime": runtime,
+                    },
+                )
+
             yield sse_done()
 
     return StreamingResponse(
