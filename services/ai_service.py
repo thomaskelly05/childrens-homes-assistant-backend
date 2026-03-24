@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import os
@@ -75,7 +77,7 @@ def trim_history(history: list[dict], selected_mode: str) -> list[dict]:
     if trimmed and trimmed[-1].get("role") == "user":
         trimmed = trimmed[:-1]
 
-    cleaned: list[dict] = []
+    cleaned: list[dict[str, str]] = []
     for item in trimmed:
         role_name = item.get("role")
         content = (item.get("message") or item.get("content") or "").strip()
@@ -194,10 +196,11 @@ async def maybe_run_guidance_search(
         return ""
 
     try:
-        return await asyncio.wait_for(
+        result = await asyncio.wait_for(
             asyncio.to_thread(web_search, message),
             timeout=SEARCH_TIMEOUT_SECONDS,
         )
+        return result or ""
     except TimeoutError:
         logger.warning("Guidance search timed out")
         return ""
@@ -267,11 +270,12 @@ def _normalise_sources(sources: Any) -> list[dict[str, Any]]:
 
         key = "|".join(
             str(source.get(k) or "")
-            for k in ["type", "label", "document_title", "section", "page_number"]
+            for k in ["type", "label", "document_title", "section", "page_number", "url"]
         )
 
         if key in seen:
             continue
+
         seen.add(key)
         cleaned.append(source)
 
@@ -387,7 +391,10 @@ Do not let this stop you completing practical drafting tasks directly.
         content = getattr(delta, "content", None)
 
         if content:
-            yield {"type": "token", "content": content}
+            yield {
+                "type": "token",
+                "content": content,
+            }
 
     yield {
         "type": "meta",
