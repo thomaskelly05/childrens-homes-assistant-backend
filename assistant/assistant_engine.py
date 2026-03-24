@@ -113,6 +113,82 @@ RI_KEYWORDS = {
     "provider risk",
 }
 
+RECORDING_KEYWORDS = {
+    "write",
+    "record",
+    "recording",
+    "chronology",
+    "daily note",
+    "incident",
+    "handover",
+    "log",
+    "entry",
+    "document",
+    "report",
+    "rewrite",
+    "draft",
+}
+
+DECISION_SUPPORT_KEYWORDS = {
+    "what should i do",
+    "what do i do",
+    "what should staff do",
+    "next step",
+    "next steps",
+    "how should i respond",
+    "what action",
+    "do i need to",
+    "should i report",
+    "should this be escalated",
+}
+
+PLANNING_KEYWORDS = {
+    "plan",
+    "support plan",
+    "risk plan",
+    "placement plan",
+    "behaviour plan",
+    "care plan",
+}
+
+QUALITY_CHECK_KEYWORDS = {
+    "is this okay",
+    "review this",
+    "check this",
+    "audit this",
+    "improve this",
+    "does this make sense",
+    "is this defensible",
+    "inspection ready",
+}
+
+URGENT_KEYWORDS = {
+    "immediate danger",
+    "unsafe now",
+    "missing child",
+    "gone missing",
+    "sexual exploitation",
+    "assault",
+    "self-harm now",
+    "suicidal",
+    "overdose",
+    "serious injury",
+    "police now",
+    "urgent safeguarding",
+}
+
+ESCALATION_KEYWORDS = {
+    "notify manager",
+    "report to manager",
+    "dsl",
+    "lado",
+    "police",
+    "local authority",
+    "social worker",
+    "on-call",
+    "escalate",
+}
+
 
 @dataclass
 class AssistantRequest:
@@ -131,8 +207,13 @@ class AssistantRequest:
 @dataclass
 class AssistantRuntimeContext:
     mode: str = "general_practice"
+    task_type: str = "guidance"
+    output_type: str = "plain_response"
+    urgency: str = "routine"
     safeguarding_level: str = "normal"
     user_role_profile: str = "staff"
+    retrieval_level: str = "none"
+    reflection_level: str = "none"
     memory_context: str = ""
     retrieval_context: str = ""
     reflection_context: str = ""
@@ -140,6 +221,9 @@ class AssistantRuntimeContext:
     schema_context: str = ""
     leadership_lens_context: str = ""
     role_lens_context: str = ""
+    suggested_actions_context: str = ""
+    practice_quality_context: str = ""
+    escalation_context: str = ""
 
 
 @dataclass
@@ -262,35 +346,97 @@ def _normalise_user_role_profile(role: str, user_context: dict[str, Any] | None 
     return "staff"
 
 
-def _should_use_retrieval(
+def _derive_task_type(message: str, mode: str, document_text: str | None) -> str:
+    text = (message or "").lower()
+
+    if document_text:
+        return "document_work"
+
+    if _contains_any(text, QUALITY_CHECK_KEYWORDS) or mode in {"document_review", "manager_review"}:
+        return "review"
+
+    if _contains_any(text, DECISION_SUPPORT_KEYWORDS) or mode in {"practical", "support_planning"}:
+        return "decision_support"
+
+    if _contains_any(text, PLANNING_KEYWORDS) or mode == "support_planning":
+        return "planning"
+
+    if mode in {"supervision", "reflective"}:
+        return "reflection"
+
+    if mode in {"handover", "recording", "incident_summary", "chronology", "rewrite"}:
+        return "recording"
+
+    if _contains_any(text, RECORDING_KEYWORDS):
+        return "recording"
+
+    return "guidance"
+
+
+def _derive_output_type(mode: str, task_type: str, message: str) -> str:
+    text = (message or "").lower()
+
+    if "chronology" in text or mode == "chronology":
+        return "chronology_entry"
+    if "handover" in text or mode == "handover":
+        return "handover_note"
+    if "incident" in text or mode == "incident_summary":
+        return "incident_record"
+    if "daily note" in text:
+        return "daily_note"
+    if "risk assessment" in text or mode == "support_planning":
+        return "risk_summary"
+    if mode == "manager_review":
+        return "manager_review"
+    if mode == "supervision":
+        return "supervision_reflection"
+    if task_type == "recording":
+        return "structured_record"
+    return "plain_response"
+
+
+def _derive_urgency(message: str, safeguarding_level: str) -> str:
+    text = (message or "").lower()
+
+    if safeguarding_level == "urgent" or _contains_any(text, URGENT_KEYWORDS):
+        return "urgent"
+    if safeguarding_level == "heightened":
+        return "heightened"
+    return "routine"
+
+
+def _retrieval_level(
     mode: str,
+    task_type: str,
     safeguarding_level: str,
     message: str,
     document_text: str | None,
     response_mode: str,
-) -> bool:
+) -> str:
     if document_text:
-        return False
+        return "none"
 
     if response_mode == "quick":
-        return False
+        if _contains_guidance_trigger(message):
+            return "light"
+        return "none"
 
-    if mode in FAST_MODES_SKIP_RETRIEVAL:
-        return False
+    if mode in FAST_MODES_SKIP_RETRIEVAL and not _contains_guidance_trigger(message):
+        return "none"
 
-    if safeguarding_level in {"heightened", "urgent"} and mode in {"recording", "incident_summary", "practical"}:
-        return False
+    if safeguarding_level in {"heightened", "urgent"} and task_type == "recording":
+        return "none"
 
     if _contains_guidance_trigger(message):
-        return True
+        return "full" if response_mode == "deep" else "light"
 
-    return mode in {
-        "factual",
-        "support_planning",
-        "manager_review",
-        "supervision",
-        "general_practice",
-    }
+    if task_type in {"planning", "review"}:
+        return "full" if response_mode == "deep" else "light"
+
+    if mode in {"factual", "support_planning", "manager_review", "supervision", "general_practice"}:
+        return "full" if response_mode == "deep" else "light"
+
+    return "none"
 
 
 def _should_use_memory(mode: str, response_mode: str) -> bool:
@@ -299,12 +445,30 @@ def _should_use_memory(mode: str, response_mode: str) -> bool:
     return mode not in FAST_MODES_LIGHT_MEMORY
 
 
-def _should_use_reflection(mode: str, response_mode: str) -> bool:
-    return mode in REFLECTIVE_MODES and response_mode == "deep"
+def _reflection_level(mode: str, task_type: str, response_mode: str, safeguarding_level: str) -> str:
+    if response_mode == "quick":
+        return "none"
+
+    if response_mode == "deep" and (mode in REFLECTIVE_MODES or task_type in {"reflection", "review", "planning"}):
+        return "full"
+
+    if safeguarding_level in {"heightened", "urgent"}:
+        return "light"
+
+    if mode in {"manager_review", "document_review", "support_planning", "supervision"}:
+        return "light"
+
+    if task_type in {"review", "planning"}:
+        return "light"
+
+    return "none"
 
 
-def _should_use_leadership_lens(mode: str, message: str, speed: str, role_profile: str) -> bool:
-    if role_profile in {"manager", "provider"}:
+def _should_use_leadership_lens(mode: str, message: str, speed: str, role_profile: str, task_type: str) -> bool:
+    if role_profile == "provider":
+        return True
+
+    if role_profile == "manager" and task_type in {"review", "planning", "reflection", "document_work"}:
         return True
 
     if speed == "quick":
@@ -322,9 +486,14 @@ def _should_use_leadership_lens(mode: str, message: str, speed: str, role_profil
 def _build_runtime_mode_context(runtime: AssistantRuntimeContext, speed: str) -> str:
     return (
         f"Detected task mode: {runtime.mode}\n"
+        f"Detected task type: {runtime.task_type}\n"
+        f"Detected output type: {runtime.output_type}\n"
         f"Safeguarding level: {runtime.safeguarding_level}\n"
+        f"Urgency: {runtime.urgency}\n"
         f"Selected response mode: {speed}\n"
-        f"Detected user role profile: {runtime.user_role_profile}\n\n"
+        f"Detected user role profile: {runtime.user_role_profile}\n"
+        f"Retrieval level: {runtime.retrieval_level}\n"
+        f"Reflection level: {runtime.reflection_level}\n\n"
         f"Use these as working signals for tone, structure, caution, accountability, and practical focus."
     )
 
@@ -355,12 +524,13 @@ def _build_role_lens_context(role_profile: str) -> str:
     )
 
 
-def _build_leadership_lens_context(mode: str, safeguarding_level: str, message: str, role_profile: str) -> str:
+def _build_leadership_lens_context(mode: str, safeguarding_level: str, message: str, role_profile: str, task_type: str) -> str:
     text = (message or "").lower()
 
     emphasise_rm = (
         role_profile == "manager"
         or mode in {"manager_review", "support_planning", "supervision", "document_review"}
+        or task_type in {"review", "planning"}
         or _contains_any(text, RM_KEYWORDS)
     )
     emphasise_ofsted = (
@@ -403,6 +573,126 @@ def _build_leadership_lens_context(mode: str, safeguarding_level: str, message: 
         blocks.append(
             "SAFEGUARDING LEADERSHIP PRIORITY:\n"
             "• Keep practical safety, escalation, recording quality, and defensibility at the centre."
+        )
+
+    return "\n\n".join(blocks).strip()
+
+
+def _build_suggested_actions_context(
+    mode: str,
+    task_type: str,
+    output_type: str,
+    safeguarding_level: str,
+    urgency: str,
+    role_profile: str,
+    message: str,
+) -> str:
+    text = (message or "").lower()
+    actions: list[str] = []
+
+    if urgency == "urgent" or safeguarding_level == "urgent":
+        actions.extend([
+            "Prioritise immediate safety and protective action before documentation detail.",
+            "Consider immediate escalation to manager / on-call / safeguarding lead / emergency services where indicated.",
+            "Record exact times, actions taken, who was informed, and the immediate outcome.",
+        ])
+
+    elif safeguarding_level == "heightened":
+        actions.extend([
+            "Clarify current risk level and whether additional safeguarding discussion or management oversight is needed.",
+            "Record what was observed, what was reported, and what action was taken.",
+        ])
+
+    if output_type in {"incident_record", "chronology_entry", "daily_note", "structured_record"}:
+        actions.extend([
+            "Keep wording factual, neutral, and time-anchored.",
+            "Separate observation, action, and outcome clearly.",
+        ])
+
+    if output_type == "handover_note":
+        actions.extend([
+            "Highlight outstanding risks, unfinished actions, and what the next shift needs to know.",
+        ])
+
+    if task_type == "planning":
+        actions.extend([
+            "Identify triggers, protective factors, and practical staff responses.",
+            "Consider whether a plan, risk assessment, or support strategy needs updating.",
+        ])
+
+    if task_type == "review":
+        actions.extend([
+            "Identify any gaps, weak wording, or missing evidence.",
+            "Show what should be followed up, reviewed, or strengthened.",
+        ])
+
+    if role_profile in {"manager", "provider"}:
+        actions.extend([
+            "Notice any pattern, consistency issue, drift, or management follow-up requirement.",
+        ])
+
+    if _contains_any(text, ESCALATION_KEYWORDS):
+        actions.append("Be explicit about who should be informed, by whom, and on what timescale.")
+
+    deduped: list[str] = []
+    for item in actions:
+        if item not in deduped:
+            deduped.append(item)
+
+    if not deduped:
+        return ""
+
+    return "SUGGESTED ACTIONS TO WEIGH INTO THE RESPONSE:\n" + "\n".join(f"• {a}" for a in deduped)
+
+
+def _build_practice_quality_context(task_type: str, output_type: str, safeguarding_level: str) -> str:
+    checks: list[str] = [
+        "Keep wording factual, specific, and professionally neutral.",
+        "Avoid vague statements, assumptions, or emotional overstatement.",
+        "Where relevant, include observation, action taken, outcome, and next step.",
+    ]
+
+    if output_type in {"incident_record", "chronology_entry", "daily_note", "structured_record", "handover_note"}:
+        checks.extend([
+            "Use clear sequencing and time-linked language where possible.",
+            "Distinguish what was seen, heard, reported, and done.",
+        ])
+
+    if task_type in {"review", "document_work"}:
+        checks.extend([
+            "Identify missing evidence, missing actions, or weak wording clearly.",
+            "Strengthen defensibility and inspection-readiness where relevant.",
+        ])
+
+    if safeguarding_level in {"heightened", "urgent"}:
+        checks.append("Do not let polished wording replace clear safeguarding action and escalation logic.")
+
+    return "PRACTICE QUALITY CHECK:\n" + "\n".join(f"• {c}" for c in checks)
+
+
+def _build_escalation_context(urgency: str, safeguarding_level: str, role_profile: str, message: str) -> str:
+    text = (message or "").lower()
+    blocks: list[str] = []
+
+    if urgency == "urgent" or safeguarding_level == "urgent":
+        blocks.append(
+            "URGENT SAFEGUARDING OVERRIDE:\n"
+            "• Put immediate safety first.\n"
+            "• Lead with urgent actions before reflective or stylistic detail.\n"
+            "• Be explicit about escalation, who needs to be informed, and what should be recorded immediately."
+        )
+
+    elif safeguarding_level == "heightened":
+        blocks.append(
+            "HEIGHTENED SAFEGUARDING PRIORITY:\n"
+            "• Keep escalation, clarity of concern, and recording quality prominent.\n"
+            "• Make sure the response does not minimise risk or become overly vague."
+        )
+
+    if role_profile in {"manager", "provider"} and _contains_any(text, ESCALATION_KEYWORDS | URGENT_KEYWORDS):
+        blocks.append(
+            "LEADERSHIP ESCALATION FOCUS:\n"
+            "• Highlight oversight, follow-up, and assurance responsibilities where relevant."
         )
 
     return "\n\n".join(blocks).strip()
@@ -467,7 +757,11 @@ def _safe_memory_context(req: AssistantRequest, mode: str, speed: str) -> str:
         return ""
 
 
-def _safe_retrieval_context(req: AssistantRequest, mode: str, safeguarding_level: str, speed: str) -> str:
+def _safe_retrieval_context(req: AssistantRequest, mode: str, safeguarding_level: str, speed: str, retrieval_level: str) -> str:
+    limit = 1 if retrieval_level == "light" else 2
+    if speed == "deep" and retrieval_level == "full":
+        limit = 3
+
     try:
         return _safe_string(
             retrieve_context(
@@ -477,7 +771,7 @@ def _safe_retrieval_context(req: AssistantRequest, mode: str, safeguarding_level
                 document_text=req.document_text,
                 document_name=req.document_name,
                 role=req.role,
-                limit=1 if speed == "balanced" else 2,
+                limit=limit,
             )
         )
     except TypeError:
@@ -547,23 +841,68 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
     runtime.mode = _safe_detect_mode(message, history)
     runtime.safeguarding_level = _safe_assess_safeguarding(message, history)
     runtime.user_role_profile = _normalise_user_role_profile(req.role, req.user_context)
+    runtime.task_type = _derive_task_type(message, runtime.mode, req.document_text)
+    runtime.output_type = _derive_output_type(runtime.mode, runtime.task_type, message)
+    runtime.urgency = _derive_urgency(message, runtime.safeguarding_level)
+    runtime.retrieval_level = _retrieval_level(
+        runtime.mode,
+        runtime.task_type,
+        runtime.safeguarding_level,
+        message,
+        req.document_text,
+        speed,
+    )
+    runtime.reflection_level = _reflection_level(
+        runtime.mode,
+        runtime.task_type,
+        speed,
+        runtime.safeguarding_level,
+    )
     runtime.schema_context = _safe_schema_context(runtime.mode, runtime.safeguarding_level)
     runtime.role_lens_context = _build_role_lens_context(runtime.user_role_profile)
+    runtime.suggested_actions_context = _build_suggested_actions_context(
+        runtime.mode,
+        runtime.task_type,
+        runtime.output_type,
+        runtime.safeguarding_level,
+        runtime.urgency,
+        runtime.user_role_profile,
+        message,
+    )
+    runtime.practice_quality_context = _build_practice_quality_context(
+        runtime.task_type,
+        runtime.output_type,
+        runtime.safeguarding_level,
+    )
+    runtime.escalation_context = _build_escalation_context(
+        runtime.urgency,
+        runtime.safeguarding_level,
+        runtime.user_role_profile,
+        message,
+    )
 
     if speed != "quick":
         if _should_use_memory(runtime.mode, speed):
             runtime.memory_context = _safe_memory_context(req, runtime.mode, speed)
 
-        if _should_use_retrieval(runtime.mode, runtime.safeguarding_level, message, req.document_text, speed):
-            runtime.retrieval_context = _safe_retrieval_context(req, runtime.mode, runtime.safeguarding_level, speed)
+        if runtime.retrieval_level != "none":
+            runtime.retrieval_context = _safe_retrieval_context(
+                req,
+                runtime.mode,
+                runtime.safeguarding_level,
+                speed,
+                runtime.retrieval_level,
+            )
 
-        if _should_use_reflection(runtime.mode, speed):
+        if runtime.reflection_level in {"light", "full"}:
             runtime.reflection_context = _safe_reflection_context(
                 message,
                 runtime.mode,
                 runtime.safeguarding_level,
                 history,
             )
+
+        if runtime.reflection_level == "full":
             runtime.supervision_context = _safe_supervision_context(
                 message,
                 runtime.mode,
@@ -571,12 +910,13 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
                 history,
             )
 
-    if _should_use_leadership_lens(runtime.mode, message, speed, runtime.user_role_profile):
+    if _should_use_leadership_lens(runtime.mode, message, speed, runtime.user_role_profile, runtime.task_type):
         runtime.leadership_lens_context = _build_leadership_lens_context(
             runtime.mode,
             runtime.safeguarding_level,
             message,
             runtime.user_role_profile,
+            runtime.task_type,
         )
 
     system_prompt, user_message = build_chat_prompt(
@@ -595,11 +935,10 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
 
     system_prompt = _append_section(system_prompt, "RESPONSE STRUCTURE", runtime.schema_context)
     system_prompt = _append_section(system_prompt, "ROLE ADAPTATION CONTEXT", runtime.role_lens_context)
-    system_prompt = _append_section(
-        system_prompt,
-        "LEADERSHIP / INSPECTION LENS CONTEXT",
-        runtime.leadership_lens_context,
-    )
+    system_prompt = _append_section(system_prompt, "LEADERSHIP / INSPECTION LENS CONTEXT", runtime.leadership_lens_context)
+    system_prompt = _append_section(system_prompt, "SUGGESTED ACTIONS CONTEXT", runtime.suggested_actions_context)
+    system_prompt = _append_section(system_prompt, "PRACTICE QUALITY CONTEXT", runtime.practice_quality_context)
+    system_prompt = _append_section(system_prompt, "ESCALATION CONTEXT", runtime.escalation_context)
 
     if speed != "quick":
         system_prompt = _append_section(system_prompt, "MEMORY CONTEXT", runtime.memory_context)
@@ -616,23 +955,37 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
                 f"Document name: {req.document_name or 'Uploaded document'}\n\n"
                 f"Use this document as working source material where relevant.\n"
                 f"Do not invent facts beyond the document and the user's instructions.\n"
-                f"If information is missing, label gaps clearly.\n\n"
+                f"Distinguish clearly between source material and inference.\n"
+                f"If information is missing, label gaps clearly.\n"
+                f"When rewriting, preserve core facts unless the user explicitly asks for adaptation.\n\n"
                 f"Document text:\n{trimmed_document_text}"
             ),
         )
 
     logger.info(
-        "Assistant prompt package built session_id=%s mode=%s safeguarding=%s response_mode=%s role_profile=%s memory=%s retrieval=%s reflection=%s supervision=%s leadership_lens=%s",
+        (
+            "Assistant prompt package built "
+            "session_id=%s mode=%s task_type=%s output_type=%s "
+            "safeguarding=%s urgency=%s response_mode=%s role_profile=%s "
+            "retrieval_level=%s reflection_level=%s "
+            "memory=%s retrieval=%s reflection=%s supervision=%s leadership_lens=%s suggested_actions=%s"
+        ),
         req.session_id,
         runtime.mode,
+        runtime.task_type,
+        runtime.output_type,
         runtime.safeguarding_level,
+        runtime.urgency,
         speed,
         runtime.user_role_profile,
+        runtime.retrieval_level,
+        runtime.reflection_level,
         bool(runtime.memory_context),
         bool(runtime.retrieval_context),
         bool(runtime.reflection_context),
         bool(runtime.supervision_context),
         bool(runtime.leadership_lens_context),
+        bool(runtime.suggested_actions_context),
     )
 
     return AssistantPromptPackage(
