@@ -316,32 +316,40 @@ def _contains_any(text: str, keywords: set[str]) -> bool:
 
 def _normalise_user_role_profile(role: str, user_context: dict[str, Any] | None = None) -> str:
     text = " ".join(
-        part for part in [
+        part
+        for part in [
             _safe_string(role).lower(),
             _safe_string((user_context or {}).get("role")).lower(),
             _safe_string((user_context or {}).get("job_title")).lower(),
-        ] if part
+        ]
+        if part
     )
 
-    if any(term in text for term in {
-        "responsible individual",
-        "provider",
-        "director",
-        "head of care",
-        "operations manager",
-        "service manager",
-        "governance",
-    }):
+    if any(
+        term in text
+        for term in {
+            "responsible individual",
+            "provider",
+            "director",
+            "head of care",
+            "operations manager",
+            "service manager",
+            "governance",
+        }
+    ):
         return "provider"
 
-    if any(term in text for term in {
-        "registered manager",
-        "deputy",
-        "manager",
-        "senior",
-        "team leader",
-        "shift leader",
-    }):
+    if any(
+        term in text
+        for term in {
+            "registered manager",
+            "deputy",
+            "manager",
+            "senior",
+            "team leader",
+            "shift leader",
+        }
+    ):
         return "manager"
 
     return "staff"
@@ -525,7 +533,13 @@ def _build_role_lens_context(role_profile: str) -> str:
     )
 
 
-def _build_leadership_lens_context(mode: str, safeguarding_level: str, message: str, role_profile: str, task_type: str) -> str:
+def _build_leadership_lens_context(
+    mode: str,
+    safeguarding_level: str,
+    message: str,
+    role_profile: str,
+    task_type: str,
+) -> str:
     text = (message or "").lower()
 
     emphasise_rm = (
@@ -592,45 +606,59 @@ def _build_suggested_actions_context(
     actions: list[str] = []
 
     if urgency == "urgent" or safeguarding_level == "urgent":
-        actions.extend([
-            "Prioritise immediate safety and protective action before documentation detail.",
-            "Consider immediate escalation to manager / on-call / safeguarding lead / emergency services where indicated.",
-            "Record exact times, actions taken, who was informed, and the immediate outcome.",
-        ])
+        actions.extend(
+            [
+                "Prioritise immediate safety and protective action before documentation detail.",
+                "Consider immediate escalation to manager / on-call / safeguarding lead / emergency services where indicated.",
+                "Record exact times, actions taken, who was informed, and the immediate outcome.",
+            ]
+        )
 
     elif safeguarding_level == "heightened":
-        actions.extend([
-            "Clarify current risk level and whether additional safeguarding discussion or management oversight is needed.",
-            "Record what was observed, what was reported, and what action was taken.",
-        ])
+        actions.extend(
+            [
+                "Clarify current risk level and whether additional safeguarding discussion or management oversight is needed.",
+                "Record what was observed, what was reported, and what action was taken.",
+            ]
+        )
 
     if output_type in {"incident_record", "chronology_entry", "daily_note", "structured_record"}:
-        actions.extend([
-            "Keep wording factual, neutral, and time-anchored.",
-            "Separate observation, action, and outcome clearly.",
-        ])
+        actions.extend(
+            [
+                "Keep wording factual, neutral, and time-anchored.",
+                "Separate observation, action, and outcome clearly.",
+            ]
+        )
 
     if output_type == "handover_note":
-        actions.extend([
-            "Highlight outstanding risks, unfinished actions, and what the next shift needs to know.",
-        ])
+        actions.extend(
+            [
+                "Highlight outstanding risks, unfinished actions, and what the next shift needs to know.",
+            ]
+        )
 
     if task_type == "planning":
-        actions.extend([
-            "Identify triggers, protective factors, and practical staff responses.",
-            "Consider whether a plan, risk assessment, or support strategy needs updating.",
-        ])
+        actions.extend(
+            [
+                "Identify triggers, protective factors, and practical staff responses.",
+                "Consider whether a plan, risk assessment, or support strategy needs updating.",
+            ]
+        )
 
     if task_type == "review":
-        actions.extend([
-            "Identify any gaps, weak wording, or missing evidence.",
-            "Show what should be followed up, reviewed, or strengthened.",
-        ])
+        actions.extend(
+            [
+                "Identify any gaps, weak wording, or missing evidence.",
+                "Show what should be followed up, reviewed, or strengthened.",
+            ]
+        )
 
     if role_profile in {"manager", "provider"}:
-        actions.extend([
-            "Notice any pattern, consistency issue, drift, or management follow-up requirement.",
-        ])
+        actions.extend(
+            [
+                "Notice any pattern, consistency issue, drift, or management follow-up requirement.",
+            ]
+        )
 
     if _contains_any(text, ESCALATION_KEYWORDS):
         actions.append("Be explicit about who should be informed, by whom, and on what timescale.")
@@ -654,16 +682,20 @@ def _build_practice_quality_context(task_type: str, output_type: str, safeguardi
     ]
 
     if output_type in {"incident_record", "chronology_entry", "daily_note", "structured_record", "handover_note"}:
-        checks.extend([
-            "Use clear sequencing and time-linked language where possible.",
-            "Distinguish what was seen, heard, reported, and done.",
-        ])
+        checks.extend(
+            [
+                "Use clear sequencing and time-linked language where possible.",
+                "Distinguish what was seen, heard, reported, and done.",
+            ]
+        )
 
     if task_type in {"review", "document_work"}:
-        checks.extend([
-            "Identify missing evidence, missing actions, or weak wording clearly.",
-            "Strengthen defensibility and inspection-readiness where relevant.",
-        ])
+        checks.extend(
+            [
+                "Identify missing evidence, missing actions, or weak wording clearly.",
+                "Strengthen defensibility and inspection-readiness where relevant.",
+            ]
+        )
 
     if safeguarding_level in {"heightened", "urgent"}:
         checks.append("Do not let polished wording replace clear safeguarding action and escalation logic.")
@@ -921,6 +953,9 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
                 runtime.retrieval_level,
             )
 
+        if not isinstance(runtime.sources_used, list):
+            runtime.sources_used = []
+
         if runtime.reflection_level in {"light", "full"}:
             runtime.reflection_context = _safe_reflection_context(
                 message,
@@ -937,7 +972,13 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
                 history,
             )
 
-    if _should_use_leadership_lens(runtime.mode, message, speed, runtime.user_role_profile, runtime.task_type):
+    if _should_use_leadership_lens(
+        runtime.mode,
+        message,
+        speed,
+        runtime.user_role_profile,
+        runtime.task_type,
+    ):
         runtime.leadership_lens_context = _build_leadership_lens_context(
             runtime.mode,
             runtime.safeguarding_level,
@@ -947,7 +988,13 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         )
 
     if req.document_text:
-        runtime.sources_used.append(_build_document_source(req.document_name))
+        uploaded_source = _build_document_source(req.document_name)
+        if not any(
+            s.get("type") == "uploaded_document"
+            and s.get("document_title") == uploaded_source["document_title"]
+            for s in runtime.sources_used
+        ):
+            runtime.sources_used.append(uploaded_source)
 
     system_prompt, user_message = build_chat_prompt(
         message=message,
@@ -965,9 +1012,21 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
 
     system_prompt = _append_section(system_prompt, "RESPONSE STRUCTURE", runtime.schema_context)
     system_prompt = _append_section(system_prompt, "ROLE ADAPTATION CONTEXT", runtime.role_lens_context)
-    system_prompt = _append_section(system_prompt, "LEADERSHIP / INSPECTION LENS CONTEXT", runtime.leadership_lens_context)
-    system_prompt = _append_section(system_prompt, "SUGGESTED ACTIONS CONTEXT", runtime.suggested_actions_context)
-    system_prompt = _append_section(system_prompt, "PRACTICE QUALITY CONTEXT", runtime.practice_quality_context)
+    system_prompt = _append_section(
+        system_prompt,
+        "LEADERSHIP / INSPECTION LENS CONTEXT",
+        runtime.leadership_lens_context,
+    )
+    system_prompt = _append_section(
+        system_prompt,
+        "SUGGESTED ACTIONS CONTEXT",
+        runtime.suggested_actions_context,
+    )
+    system_prompt = _append_section(
+        system_prompt,
+        "PRACTICE QUALITY CONTEXT",
+        runtime.practice_quality_context,
+    )
     system_prompt = _append_section(system_prompt, "ESCALATION CONTEXT", runtime.escalation_context)
 
     if speed != "quick":
