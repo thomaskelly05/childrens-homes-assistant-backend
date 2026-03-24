@@ -81,7 +81,7 @@
     .helper{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:.76rem;padding:8px 6px 0}
     .overlay,.so{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:30}
     .overlay.show,.so.show{display:block}
-    .settings{position:fixed;right:-100%;top:0;bottom:0;width:340px;max-width:100vw;background:var(--panel);border-left:1px solid var(--line);box-shadow:var(--shadow);z-index:40;transition:.25s;padding:18px;display:flex;flex-direction:column;gap:14px}
+    .settings{position:fixed;right:-100%;top:0;bottom:0;width:340px;max-width:100vw;background:var(--panel);border-left:1px solid var(--line);box-shadow:var(--shadow);z-index:40;transition:.25s;padding:18px;display:flex;flex-direction:column;gap:14px;overflow:auto}
     .settings.open{right:0}
     .card{border:1px solid var(--line);background:var(--bg);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px}
     .card label{font-size:.82rem;color:var(--muted);font-weight:600}
@@ -186,6 +186,31 @@
       </div>
     </div>
 
+    <div class="card">
+      <div class="rowset">
+        <div>
+          <div style="font-weight:600">Voice replies</div>
+          <div style="font-size:.8rem;color:var(--muted)">Read assistant replies aloud</div>
+        </div>
+        <button id="voiceReplies" class="toggle" type="button"></button>
+      </div>
+
+      <div>
+        <label for="voiceSelect">Voice</label>
+        <select id="voiceSelect" class="sel">
+          <option value="">Auto select</option>
+        </select>
+      </div>
+
+      <div class="rowset">
+        <div>
+          <div style="font-weight:600">Stop speech</div>
+          <div style="font-size:.8rem;color:var(--muted)">Stop any reply being read aloud</div>
+        </div>
+        <button id="stopVoiceBtn" class="ghost" type="button" style="padding:8px 12px;">Stop</button>
+      </div>
+    </div>
+
     <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px">
       <button id="backWelcome" class="ghost" type="button">Back to welcome screen</button>
       <button id="logout" class="logout" type="button">Log out</button>
@@ -276,8 +301,8 @@
       <section id="assistantPanel" class="panel">
         <div class="panel-inner">
           <div id="empty" class="welcome">
-            <h1 id="welcomeTitle">Ready.</h1>
-            <p>Your assistant is ready to help with documentation, guidance, and drafting.</p>
+            <h1 id="welcomeTitle">Ready to support.</h1>
+            <p id="welcomeText">Your assistant is ready to help with records, safeguarding, risk, guidance, and drafting.</p>
           </div>
           <div id="messages" class="messages hidden"></div>
         </div>
@@ -719,8 +744,13 @@
     let managerUsers = [];
     let managerDocuments = [];
 
+    let indicareVoice = null;
+    let speechEnabled = false;
+    let speechReady = false;
+    let availableVoices = [];
+
     const DEFAULT_LANGUAGE = "en-GB";
-    const REG_PROMPT = " [SYSTEM: Verify response against Ofsted SCCIF and Quality Standards for Children's Homes]";
+    const REG_PROMPT = " [SYSTEM: Verify response against Ofsted SCCIF and Quality Standards for Children's Homes. Use a calm, professional, safeguarding-aware tone. Keep wording clear, factual, structured, and suitable for care records, management review, and professional communication. Avoid slang, exaggeration, or overly casual wording.]";
     const RESP = { quick:"Quick", balanced:"Balanced", deep:"Deep" };
     const LANG = { "en-GB":"English", "pl-PL":"Polish", "ro-RO":"Romanian", "ur-PK":"Urdu", "ar":"Arabic" };
     const GREET = [
@@ -732,7 +762,6 @@
 
     const $ = id => document.getElementById(id);
     const has = id => !!document.getElementById(id);
-    const noop = () => {};
 
     const safe = s => String(s || "")
       .replace(/&/g,"&amp;")
@@ -793,6 +822,7 @@
       if (has("theme")) $("theme").classList.toggle("active", document.body.classList.contains("theme-dark"));
       if (has("privacy") && has("app")) $("privacy").classList.toggle("active", $("app").classList.contains("privacy-active"));
       if (has("adminActiveToggle")) $("adminActiveToggle").classList.toggle("active", adminCreateActive);
+      if (has("voiceReplies")) $("voiceReplies").classList.toggle("active", speechEnabled);
     }
 
     function userInitials() {
@@ -805,6 +835,7 @@
 
     function setWelcome() {
       if (has("welcomeTitle")) $("welcomeTitle").textContent = GREET[Math.floor(Math.random() * GREET.length)](firstName());
+      if (has("welcomeText")) $("welcomeText").textContent = "Your assistant is ready to help with records, safeguarding, risk, guidance, and drafting.";
     }
 
     function buildLangInstruction() {
@@ -875,12 +906,148 @@
       return html;
     }
 
+    function cleanSpeechText(text) {
+      return String(text || "")
+        .replace(/###\s*/g, "")
+        .replace(/\*\*/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function indiCareCopy(key) {
+      const map = {
+        libraryLoadFail: "The library could not be loaded just now.",
+        managerLoadFail: "The manager panel could not be loaded just now.",
+        adminLoadFail: "The admin panel could not be loaded just now.",
+        conversationsLoadFail: "Conversations could not be loaded just now.",
+        adminDataLoadFail: "Admin data could not be loaded just now.",
+        uploadFail: "The document could not be uploaded just now.",
+        speechUnsupported: "Speech to text is not available on this device.",
+        speechFailed: "Speech input could not be completed.",
+        documentRemoved: "Document removed.",
+        copied: "Copied.",
+        updated: "Updated successfully.",
+        saved: "Saved successfully.",
+        deleted: "Deleted successfully."
+      };
+      return map[key] || "";
+    }
+
     function normArray(value) {
       return Array.isArray(value) ? value : [];
     }
 
     function normObj(value) {
       return value && typeof value === "object" ? value : {};
+    }
+
+    function getSavedVoiceName() {
+      return localStorage.getItem("indicare_selected_voice_name") || "";
+    }
+
+    function saveVoiceName(name) {
+      localStorage.setItem("indicare_selected_voice_name", name || "");
+    }
+
+    function populateVoiceSelect() {
+      if (!has("voiceSelect")) return;
+      const sel = $("voiceSelect");
+      const current = getSavedVoiceName();
+      sel.innerHTML = `<option value="">Auto select</option>`;
+
+      availableVoices.forEach(v => {
+        const opt = document.createElement("option");
+        opt.value = v.name;
+        opt.textContent = `${v.name} (${v.lang})`;
+        sel.appendChild(opt);
+      });
+
+      if ([...sel.options].some(o => o.value === current)) {
+        sel.value = current;
+      } else {
+        sel.value = "";
+      }
+    }
+
+    function pickIndiCareVoice() {
+      if (!("speechSynthesis" in window)) return null;
+
+      const savedName = getSavedVoiceName();
+      const voices = window.speechSynthesis.getVoices() || [];
+      availableVoices = voices.slice().sort((a, b) => {
+        const gbA = /en-GB/i.test(a.lang) ? 0 : 1;
+        const gbB = /en-GB/i.test(b.lang) ? 0 : 1;
+        if (gbA !== gbB) return gbA - gbB;
+        return a.name.localeCompare(b.name);
+      });
+
+      populateVoiceSelect();
+
+      if (!voices.length) return null;
+
+      indicareVoice =
+        voices.find(v => savedName && v.name === savedName) ||
+        voices.find(v => /en-GB/i.test(v.lang) && /female|samantha|serena|karen|google uk english female/i.test(v.name)) ||
+        voices.find(v => /en-GB/i.test(v.lang)) ||
+        voices.find(v => /en/i.test(v.lang)) ||
+        voices[0] ||
+        null;
+
+      speechReady = true;
+      return indicareVoice;
+    }
+
+    function stopSpeaking() {
+      try {
+        if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+      } catch {}
+    }
+
+    function speakText(text) {
+      if (!speechEnabled) return;
+      if (!("speechSynthesis" in window)) return;
+
+      const clean = cleanSpeechText(text);
+      if (!clean) return;
+
+      try {
+        stopSpeaking();
+        const utterance = new SpeechSynthesisUtterance(clean);
+        utterance.voice = indicareVoice || pickIndiCareVoice();
+        utterance.lang = utterance.voice?.lang || "en-GB";
+        utterance.rate = 0.95;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+        window.speechSynthesis.speak(utterance);
+      } catch (e) {
+        console.error("speakText failed", e);
+      }
+    }
+
+    function loadVoicePref() {
+      speechEnabled = localStorage.getItem("indicare_voice_replies") === "true";
+      if (has("voiceReplies")) $("voiceReplies").classList.toggle("active", speechEnabled);
+    }
+
+    function setVoicePref(value) {
+      speechEnabled = !!value;
+      localStorage.setItem("indicare_voice_replies", String(speechEnabled));
+      if (has("voiceReplies")) $("voiceReplies").classList.toggle("active", speechEnabled);
+    }
+
+    function initSpeech() {
+      if (!("speechSynthesis" in window)) {
+        speechReady = false;
+        availableVoices = [];
+        populateVoiceSelect();
+        if (has("voiceReplies")) $("voiceReplies").classList.remove("active");
+        return;
+      }
+
+      pickIndiCareVoice();
+      window.speechSynthesis.onvoiceschanged = () => {
+        pickIndiCareVoice();
+      };
     }
 
     async function api(url, options = {}) {
@@ -963,7 +1130,7 @@
       setTitle("Policies");
       loadLibrary().catch(e => {
         console.error("showLibraryView failed", e);
-        banner("Could not load library");
+        banner(indiCareCopy("libraryLoadFail"));
       });
     }
 
@@ -974,7 +1141,7 @@
       has("inputWrap") && $("inputWrap").classList.add("hidden");
       has("navManager") && $("navManager").classList.add("active");
       setTitle("Manager");
-      try { await loadManager(); } catch (e) { console.error("showManagerView failed", e); banner("Could not load manager panel"); }
+      try { await loadManager(); } catch (e) { console.error("showManagerView failed", e); banner(indiCareCopy("managerLoadFail")); }
     }
 
     async function showAdminView() {
@@ -989,7 +1156,7 @@
         await loadActiveAdminTab();
       } catch (e) {
         console.error("showAdminView failed", e);
-        banner("Could not load admin panel");
+        banner(indiCareCopy("adminLoadFail"));
       }
     }
 
@@ -997,6 +1164,7 @@
       conversationId = null;
       currentDocumentText = null;
       currentDocumentName = null;
+      stopSpeaking();
       if (has("messages")) {
         $("messages").innerHTML = "";
         $("messages").classList.add("hidden");
@@ -1031,7 +1199,7 @@
         if (copy) copy.onclick = e => {
           e.stopPropagation();
           navigator.clipboard.writeText(stripSystem(r?.title || "Observation"));
-          banner("Copied");
+          banner(indiCareCopy("copied"));
         };
         if (del) del.onclick = e => {
           e.stopPropagation();
@@ -1048,7 +1216,8 @@
     }
 
     async function loadConversations() {
-      cache = normArray(await api("/chat/conversations"));
+      const data = await api("/chat/conversations");
+      cache = normArray(data?.conversations || data);
       renderHistory(cache);
       return cache;
     }
@@ -1101,7 +1270,7 @@
       await api(`/chat/conversations/${id}`, { method:"DELETE" });
       if (Number(conversationId) === Number(id)) resetWelcome();
       await loadConversations();
-      banner("Conversation deleted");
+      banner(indiCareCopy("deleted"));
     }
 
     function appendMessage(roleName, text, opts = {}) {
@@ -1119,6 +1288,7 @@
       `;
 
       const actions = wrap.querySelector(".actions");
+
       const addChip = (label, fn) => {
         if (!actions) return;
         const b = document.createElement("button");
@@ -1128,11 +1298,15 @@
         actions.appendChild(b);
       };
 
-      addChip("Copy", () => navigator.clipboard.writeText(shown).then(() => banner("Copied")).catch(() => banner("Could not copy")));
+      addChip("Copy", () => navigator.clipboard.writeText(shown).then(() => banner(indiCareCopy("copied"))).catch(() => banner("Could not copy")));
+
       if (roleName === "assistant") {
+        addChip("Read aloud", () => speakText(shown));
+        addChip("Stop", stopSpeaking);
         addChip("Format for Ofsted", () => quick("ofsted"));
         addChip("Draft Risk Assess", () => quick("risk"));
       }
+
       if (roleName === "user" && opts.messageId) {
         addChip("Edit", () => editMessage(opts.messageId, shown));
       }
@@ -1175,6 +1349,8 @@
           clearInterval(tick);
           typing = false;
           el.classList.remove("typing");
+          const finalRaw = el.getAttribute("data-raw") || "";
+          speakText(finalRaw);
         }
       }, 2);
     }
@@ -1207,6 +1383,7 @@
         try { data = await res.json(); } catch {}
         const reply = data.reply || data.message || data.output || "Done.";
         appendMessage("assistant", reply);
+        speakText(reply);
         return;
       }
 
@@ -1267,7 +1444,7 @@
         });
 
         if (conversationId) await openConversation(conversationId, has("title") ? $("title").textContent : "Observation");
-        banner("Updated");
+        banner(indiCareCopy("updated"));
       } catch (e) {
         banner(e.message || "Edit failed");
       } finally {
@@ -1332,7 +1509,7 @@
 
     function startSpeech() {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SR) return banner("Speech to text is not supported on this device");
+      if (!SR) return banner(indiCareCopy("speechUnsupported"));
 
       const rec = new SR();
       rec.lang = selectedLang() || "en-GB";
@@ -1347,7 +1524,7 @@
         resize();
       };
 
-      rec.onerror = () => banner("Speech input failed");
+      rec.onerror = () => banner(indiCareCopy("speechFailed"));
       rec.onend = () => { has("mic") && ($("mic").style.color = ""); };
       rec.start();
     }
@@ -1626,7 +1803,7 @@
       if (!providers.length) return host.innerHTML = `<div class="entity-row"><div>No providers found.</div></div>`;
 
       providers.forEach(provider => {
-                const row = document.createElement("div");
+        const row = document.createElement("div");
         row.className = "entity-row";
         row.innerHTML = `<div><div class="entity-title">${safe(provider?.name || "Unnamed provider")}</div><div class="entity-meta">${safe(provider?.region || "")} · homes: ${safe(String(provider?.home_count ?? 0))}</div><div class="entity-meta">${safe(provider?.safeguarding_lead_name || "No safeguarding lead")}${provider?.safeguarding_lead_email ? " · " + safe(provider.safeguarding_lead_email) : ""}</div></div><div class="entity-actions"></div>`;
         const right = row.querySelector(".entity-actions");
@@ -2031,6 +2208,7 @@
       document.body.classList.toggle("theme-dark", (localStorage.getItem("indicare_theme") || "light") === "dark");
       has("lang") && ($("lang").value = localStorage.getItem("indicare_reply_language") || DEFAULT_LANGUAGE);
       has("mode") && ($("mode").value = localStorage.getItem("indicare_response_mode") || "balanced");
+      loadVoicePref();
       syncHelpers();
       setLibraryTab("list");
       setManagerTab("staff");
@@ -2069,6 +2247,19 @@
       on("privacy", "click", () => {
         has("app") && $("app").classList.toggle("privacy-active");
         syncHelpers();
+      });
+
+      on("voiceReplies", "click", () => {
+        setVoicePref(!speechEnabled);
+      });
+
+      on("stopVoiceBtn", "click", stopSpeaking);
+
+      on("voiceSelect", "change", () => {
+        const selected = has("voiceSelect") ? $("voiceSelect").value : "";
+        saveVoiceName(selected);
+        indicareVoice = null;
+        pickIndiCareVoice();
       });
 
       on("lang", "change", () => {
@@ -2116,7 +2307,7 @@
           try {
             await uploadDoc(file);
           } catch (err) {
-            banner(err.message || "Upload failed");
+            banner(err.message || indiCareCopy("uploadFail"));
           }
           e.target.value = "";
         });
@@ -2129,7 +2320,7 @@
         currentDocumentText = null;
         currentDocumentName = null;
         docHide();
-        banner("Document removed");
+        banner(indiCareCopy("documentRemoved"));
       });
 
       on("adminActiveToggle", "click", () => {
@@ -2178,6 +2369,7 @@
     async function init() {
       bind();
       restorePrefs();
+      initSpeech();
       resize();
 
       try {
@@ -2195,7 +2387,7 @@
         await loadConversations();
       } catch (e) {
         console.error("loadConversations failed", e);
-        banner("Could not load conversations");
+        banner(indiCareCopy("conversationsLoadFail"));
       }
 
       if (isAdmin()) {
@@ -2204,7 +2396,7 @@
           await loadActiveAdminTab();
         } catch (e) {
           console.error("loadAdminReferenceData failed", e);
-          banner("Could not load admin data");
+          banner(indiCareCopy("adminDataLoadFail"));
         }
       }
 
