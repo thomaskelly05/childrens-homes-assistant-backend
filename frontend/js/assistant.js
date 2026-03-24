@@ -950,7 +950,9 @@ function parseSseChunk(buffer, onEvent) {
     const dataLines = [];
 
     for (const line of lines) {
-      if (line.startsWith("event:")) {
+      if (line.startsWith(":")) {
+        continue;
+      } else if (line.startsWith("event:")) {
         eventName = line.slice(6).trim();
       } else if (line.startsWith("data:")) {
         dataLines.push(line.slice(5).trimStart());
@@ -1058,6 +1060,7 @@ async function stream(url, body) {
       }
 
       if (eventName === "message") {
+        if (!payload) return;
         for (const ch of payload) queue.push(ch);
         startTyping();
       }
