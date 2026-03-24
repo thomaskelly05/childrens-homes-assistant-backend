@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from typing import Any
 
 from openai import AsyncOpenAI
 
@@ -217,6 +218,66 @@ def build_messages(
     return messages
 
 
+def _serialise_runtime(runtime: Any) -> dict[str, Any]:
+    if runtime is None:
+        return {}
+
+    suggested_actions: list[str] = []
+    raw_actions = getattr(runtime, "suggested_actions_context", "") or ""
+
+    if raw_actions:
+        for line in raw_actions.splitlines():
+            line = line.strip()
+            if line.startswith("•"):
+                suggested_actions.append(line.lstrip("•").strip())
+
+    return {
+        "mode": getattr(runtime, "mode", None),
+        "task_type": getattr(runtime, "task_type", None),
+        "output_type": getattr(runtime, "output_type", None),
+        "urgency": getattr(runtime, "urgency", None),
+        "safeguarding_level": getattr(runtime, "safeguarding_level", None),
+        "user_role_profile": getattr(runtime, "user_role_profile", None),
+        "retrieval_level": getattr(runtime, "retrieval_level", None),
+        "reflection_level": getattr(runtime, "reflection_level", None),
+        "suggested_actions": suggested_actions,
+    }
+
+
+def _normalise_sources(sources: Any) -> list[dict[str, Any]]:
+    if not isinstance(sources, list):
+        return []
+
+    cleaned: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    for item in sources:
+        if not isinstance(item, dict):
+            continue
+
+        source = {
+            "type": item.get("type"),
+            "label": item.get("label"),
+            "document_title": item.get("document_title"),
+            "section": item.get("section"),
+            "page_number": item.get("page_number"),
+            "excerpt": item.get("excerpt"),
+            "url": item.get("url"),
+        }
+
+        key = "|".join(
+            str(source.get(k) or "")
+            for k in ["type", "label", "document_title", "section", "page_number"]
+        )
+
+        if key in seen:
+            continue
+        seen.add(key)
+        cleaned.append(source)
+
+    return cleaned
+
+
 async def generate_ai_stream(
     message: str,
     session_id: str,
@@ -253,8 +314,11 @@ async def generate_ai_stream(
 
     system_prompt = prompt_package.system_prompt
     user_message = prompt_package.user_message
-    mode = prompt_package.runtime.mode
-    safeguarding_level = prompt_package.runtime.safeguarding_level
+    runtime = prompt_package.runtime
+    mode = runtime.mode
+    safeguarding_level = runtime.safeguarding_level
+    sources_used = _normalise_sources(getattr(runtime, "sources_used", []))
+    runtime_payload = _serialise_runtime(runtime)
 
     search_results = await maybe_run_guidance_search(
         message=message,
@@ -295,7 +359,7 @@ Do not let this stop you completing practical drafting tasks directly.
     max_tokens = choose_max_tokens(mode, selected_mode)
 
     logger.info(
-        "Starting OpenAI stream session_id=%s mode=%s safeguarding=%s response_mode=%s model=%s max_tokens=%s history_count=%s has_document=%s",
+        "Starting OpenAI stream session_id=%s mode=%s safeguarding=%s response_mode=%s model=%s max_tokens=%s history_count=%s has_document=%s sources=%s",
         session_id,
         mode,
         safeguarding_level,
@@ -304,6 +368,7 @@ Do not let this stop you completing practical drafting tasks directly.
         max_tokens,
         len(messages),
         bool(trimmed_document_text),
+        len(sources_used),
     )
 
     stream = await client.chat.completions.create(
@@ -322,6 +387,12 @@ Do not let this stop you completing practical drafting tasks directly.
         content = getattr(delta, "content", None)
 
         if content:
-            yield content
+            yield {"type": "token", "content": content}
+
+    yield {
+        "type": "meta",
+        "sources": sources_used,
+        "runtime": runtime_payload,
+    }
 
     logger.info("Completed OpenAI stream session_id=%s", session_id)
