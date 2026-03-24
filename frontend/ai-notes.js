@@ -11,7 +11,9 @@ document.addEventListener("DOMContentLoaded", () => {
     useTranscriptForAiBtn: $("useTranscriptForAiBtn"),
     copyTranscriptBtn: $("copyTranscriptBtn"),
     aiBtn: $("aiBtn"),
-    runMagicBtn: $("runMagicBtn"),
+    runINotesBtn: $("runINotesBtn"),
+    voicePromptBtn: $("voicePromptBtn"),
+    dictateNoteBtn: $("dictateNoteBtn"),
     saveBtn: $("saveBtn"),
     printBtn: $("printBtn"),
     pdfBtn: $("pdfBtn"),
@@ -43,7 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
     meetingFormat: $("meetingFormat"),
     noteStatus: $("noteStatus"),
     documentTemplate: $("documentTemplate"),
-    magicOutputMode: $("magicOutputMode"),
+    outputMode: $("outputMode"),
     incidentSeverity: $("incidentSeverity"),
 
     status: $("status"),
@@ -112,7 +114,7 @@ document.addEventListener("DOMContentLoaded", () => {
     transcriptConfidence: null
   };
 
-  const MAGIC_MODE_PROMPTS = {
+  const OUTPUT_MODE_PROMPTS = {
     final_note:
       "Rewrite this as a professional children's home record. Use factual, neutral, defensible language. Separate observation from interpretation. Keep it clear, concise, and suitable for management and Ofsted review.",
     incident_record:
@@ -263,7 +265,7 @@ document.addEventListener("DOMContentLoaded", () => {
       els.note,
       els.meetingFormat,
       els.documentTemplate,
-      els.magicOutputMode,
+      els.outputMode,
       els.incidentSeverity,
       els.structuredWho,
       els.structuredWhat,
@@ -283,8 +285,10 @@ document.addEventListener("DOMContentLoaded", () => {
       els.aiBtn,
       els.useTranscriptForAiBtn,
       els.copyTranscriptBtn,
-      els.runMagicBtn,
-      els.buildStructuredIntoNoteBtn
+      els.runINotesBtn,
+      els.buildStructuredIntoNoteBtn,
+      els.voicePromptBtn,
+      els.dictateNoteBtn
     ].forEach(el => {
       if (el) el.disabled = locked;
     });
@@ -349,62 +353,38 @@ document.addEventListener("DOMContentLoaded", () => {
     const flags = [];
 
     if (source.includes("hit") || source.includes("kicked") || source.includes("punched") || source.includes("restraint")) {
-      flags.push({
-        level: "alert",
-        text: "Possible physical incident or restrictive practice mentioned."
-      });
+      flags.push({ level: "alert", text: "Possible physical incident or restrictive practice mentioned." });
     }
 
     if (source.includes("missing") || source.includes("ran away") || source.includes("absent without")) {
-      flags.push({
-        level: "alert",
-        text: "Possible missing-from-home / absent-without-authorisation issue."
-      });
+      flags.push({ level: "alert", text: "Possible missing-from-home / absent-without-authorisation issue." });
     }
 
     if (source.includes("injury") || source.includes("bruise") || source.includes("mark")) {
       if (!(els.structuredInjury?.value || "").trim()) {
-        flags.push({
-          level: "warn",
-          text: "Possible injury mentioned but structured injury detail is blank."
-        });
+        flags.push({ level: "warn", text: "Possible injury mentioned but structured injury detail is blank." });
       }
     }
 
     if ((source.includes("safeguard") || source.includes("allegation") || source.includes("disclosure")) &&
         !(els.structuredFollowUp?.value || "").trim()) {
-      flags.push({
-        level: "warn",
-        text: "Possible safeguarding concern mentioned but follow-up actions are not clearly recorded."
-      });
+      flags.push({ level: "warn", text: "Possible safeguarding concern mentioned but follow-up actions are not clearly recorded." });
     }
 
     if ((els.structuredWhat?.value || "").trim() && !(els.structuredStaffResponse?.value || "").trim()) {
-      flags.push({
-        level: "warn",
-        text: "Incident detail present but staff response is missing."
-      });
+      flags.push({ level: "warn", text: "Incident detail present but staff response is missing." });
     }
 
     if ((els.structuredWhat?.value || "").trim() && !(els.structuredOutcome?.value || "").trim()) {
-      flags.push({
-        level: "warn",
-        text: "Incident detail present but outcome is missing."
-      });
+      flags.push({ level: "warn", text: "Incident detail present but outcome is missing." });
     }
 
     if ((els.structuredWhat?.value || "").trim() && !(els.structuredFollowUp?.value || "").trim()) {
-      flags.push({
-        level: "warn",
-        text: "Incident detail present but follow-up is missing."
-      });
+      flags.push({ level: "warn", text: "Incident detail present but follow-up is missing." });
     }
 
     if (!uniqueSpeakers().length && (els.transcript?.value || "").trim()) {
-      flags.push({
-        level: "info",
-        text: "Transcript available but speaker separation is not populated."
-      });
+      flags.push({ level: "info", text: "Transcript available but speaker separation is not populated." });
     }
 
     state.intelligenceFlags = flags;
@@ -716,7 +696,7 @@ document.addEventListener("DOMContentLoaded", () => {
     state.mediaRecorder.stop();
   }
 
-  async function transcribeAudio(autoMagic = false) {
+  async function transcribeAudio(autoINotes = false) {
     if (!state.blob) {
       alert("Please record audio first.");
       return;
@@ -788,8 +768,8 @@ document.addEventListener("DOMContentLoaded", () => {
       setStatusMode("success");
       showToast("Transcription complete.");
 
-      if (autoMagic && transcript) {
-        await runMagicNotes();
+      if (autoINotes && transcript) {
+        await runINotes();
       }
     } catch (error) {
       console.error("Transcription error:", error);
@@ -801,9 +781,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function getMagicInstruction() {
-    const selectedMode = els.magicOutputMode?.value || "final_note";
-    const base = MAGIC_MODE_PROMPTS[selectedMode] || MAGIC_MODE_PROMPTS.final_note;
+  function getINotesInstruction() {
+    const selectedMode = els.outputMode?.value || "final_note";
+    const base = OUTPUT_MODE_PROMPTS[selectedMode] || OUTPUT_MODE_PROMPTS.final_note;
     const custom = (els.prompt?.value || "").trim();
 
     const meetingType = els.meetingFormat?.value || state.detectedMeetingType || "";
@@ -880,7 +860,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  async function runMagicNotes() {
+  async function runINotes() {
     if (els.noteStatus?.value === "approved") {
       alert("Approved notes are locked.");
       return;
@@ -893,7 +873,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     buildIntelligenceFlags();
-    const instruction = getMagicInstruction();
+    const instruction = getINotesInstruction();
 
     const form = new FormData();
     form.append("text", sourceText);
@@ -901,7 +881,7 @@ document.addEventListener("DOMContentLoaded", () => {
     form.append("instruction", instruction);
 
     try {
-      statusText("Running Magic Notes...");
+      statusText("Running I-Notes...");
       setStatusMode("processing");
 
       const response = await fetchWithSession("/ai-notes/edit", {
@@ -916,7 +896,7 @@ document.addEventListener("DOMContentLoaded", () => {
           redirectToLogin();
           return;
         }
-        alert(data.detail || "Magic Notes failed.");
+        alert(data.detail || "I-Notes processing failed.");
         statusText("Ready");
         setStatusMode("idle");
         return;
@@ -930,9 +910,9 @@ document.addEventListener("DOMContentLoaded", () => {
       markDirty();
       buildIntelligenceFlags();
       setNoteView("final");
-      statusText("Magic Notes ready");
+      statusText("I-Notes ready");
       setStatusMode("success");
-      showToast("Magic Notes output generated.");
+      showToast("I-Notes output generated.");
     } catch (error) {
       console.error(error);
       alert("Could not connect to AI service.");
@@ -1010,7 +990,7 @@ document.addEventListener("DOMContentLoaded", () => {
     form.append("meeting_format", els.meetingFormat?.value || "");
     form.append("template_name", els.documentTemplate?.value || "");
     form.append("note_status", els.noteStatus?.value || "draft");
-    form.append("magic_output_mode", els.magicOutputMode?.value || "final_note");
+    form.append("output_mode", els.outputMode?.value || "final_note");
     form.append("incident_severity", els.incidentSeverity?.value || "");
     form.append("speaker_segments_json", JSON.stringify(state.speakerSegments || []));
     form.append("speaker_map_json", JSON.stringify(state.speakerMap || {}));
@@ -1108,7 +1088,7 @@ document.addEventListener("DOMContentLoaded", () => {
         note.note_status,
         note.meeting_format,
         note.template_name,
-        note.magic_output_mode,
+        note.output_mode,
         note.incident_severity
       ].join(" ").toLowerCase();
 
@@ -1160,7 +1140,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (els.meetingFormat) els.meetingFormat.value = note.meeting_format || "";
     if (els.documentTemplate) els.documentTemplate.value = note.template_name || "blank";
     if (els.noteStatus) els.noteStatus.value = note.note_status || "draft";
-    if (els.magicOutputMode) els.magicOutputMode.value = note.magic_output_mode || "final_note";
+    if (els.outputMode) els.outputMode.value = note.output_mode || "final_note";
     if (els.incidentSeverity) els.incidentSeverity.value = note.incident_severity || "";
 
     const structured = note.structured_incident || {};
@@ -1315,7 +1295,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (els.meetingFormat) els.meetingFormat.value = restored.meeting_format || "";
         if (els.documentTemplate) els.documentTemplate.value = restored.template_name || "blank";
         if (els.noteStatus) els.noteStatus.value = restored.note_status || "draft";
-        if (els.magicOutputMode) els.magicOutputMode.value = restored.magic_output_mode || "final_note";
+        if (els.outputMode) els.outputMode.value = restored.output_mode || "final_note";
         if (els.incidentSeverity) els.incidentSeverity.value = restored.incident_severity || "";
         state.speakerSegments = Array.isArray(restored.speaker_segments) ? restored.speaker_segments : [];
         state.speakerMap = restored.speaker_map || {};
@@ -1452,7 +1432,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (els.meetingFormat) els.meetingFormat.value = "";
     if (els.documentTemplate) els.documentTemplate.value = "blank";
     if (els.noteStatus) els.noteStatus.value = "draft";
-    if (els.magicOutputMode) els.magicOutputMode.value = "final_note";
+    if (els.outputMode) els.outputMode.value = "final_note";
     if (els.incidentSeverity) els.incidentSeverity.value = "";
     if (els.transcribeBtn) els.transcribeBtn.disabled = true;
     if (els.audio) els.audio.removeAttribute("src");
@@ -1518,6 +1498,165 @@ document.addEventListener("DOMContentLoaded", () => {
     showToast("Structured incident copied into final note.");
   }
 
+  function getSpeechRecognition() {
+    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  }
+
+  function buildRecognition() {
+    const SR = getSpeechRecognition();
+    if (!SR) {
+      alert("Speech recognition is not supported on this device/browser.");
+      return null;
+    }
+
+    const recognition = new SR();
+    recognition.lang = "en-GB";
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    return recognition;
+  }
+
+  function insertAtCursor(textarea, text) {
+    if (!textarea) return;
+
+    const start = textarea.selectionStart ?? textarea.value.length;
+    const end = textarea.selectionEnd ?? textarea.value.length;
+    const before = textarea.value.slice(0, start);
+    const after = textarea.value.slice(end);
+
+    const needsGapBefore = before && !before.endsWith("\n") && !before.endsWith(" ");
+    const prefix = needsGapBefore ? "\n" : "";
+
+    textarea.value = `${before}${prefix}${text}${after}`;
+    const newPos = before.length + prefix.length + text.length;
+    textarea.selectionStart = newPos;
+    textarea.selectionEnd = newPos;
+    textarea.focus();
+  }
+
+  async function startVoicePromptCapture() {
+    if (els.noteStatus?.value === "approved") {
+      alert("Approved notes are locked.");
+      return;
+    }
+
+    const recognition = buildRecognition();
+    if (!recognition) return;
+
+    let finalText = "";
+    let heardAnything = false;
+
+    statusText("Listening for instruction...");
+    setStatusMode("processing");
+
+    if (els.voicePromptBtn) {
+      els.voicePromptBtn.disabled = true;
+      els.voicePromptBtn.textContent = "Listening...";
+    }
+
+    recognition.onresult = event => {
+      let transcript = "";
+
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript + " ";
+        if (event.results[i].isFinal) heardAnything = true;
+      }
+
+      finalText = transcript.trim();
+      if (els.prompt) els.prompt.value = finalText;
+    };
+
+    recognition.onerror = () => {
+      statusText("Ready");
+      setStatusMode("idle");
+      if (els.voicePromptBtn) {
+        els.voicePromptBtn.disabled = false;
+        els.voicePromptBtn.textContent = "Talk to IndiCare";
+      }
+      showToast("Voice instruction failed.");
+    };
+
+    recognition.onend = async () => {
+      statusText("Ready");
+      setStatusMode("idle");
+
+      if (els.voicePromptBtn) {
+        els.voicePromptBtn.disabled = false;
+        els.voicePromptBtn.textContent = "Talk to IndiCare";
+      }
+
+      if (heardAnything && finalText.trim()) {
+        showToast("Instruction captured.");
+        markDirty();
+        await applyAI(false);
+      }
+    };
+
+    recognition.start();
+  }
+
+  function startDictationIntoNote() {
+    if (els.noteStatus?.value === "approved") {
+      alert("Approved notes are locked.");
+      return;
+    }
+
+    const recognition = buildRecognition();
+    if (!recognition) return;
+
+    let finalText = "";
+    let heardAnything = false;
+
+    statusText("Dictating into final note...");
+    setStatusMode("processing");
+
+    if (els.dictateNoteBtn) {
+      els.dictateNoteBtn.disabled = true;
+      els.dictateNoteBtn.textContent = "Listening...";
+    }
+
+    recognition.onresult = event => {
+      let transcript = "";
+
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript + " ";
+        if (event.results[i].isFinal) heardAnything = true;
+      }
+
+      finalText = transcript.trim();
+    };
+
+    recognition.onerror = () => {
+      statusText("Ready");
+      setStatusMode("idle");
+      if (els.dictateNoteBtn) {
+        els.dictateNoteBtn.disabled = false;
+        els.dictateNoteBtn.textContent = "Dictate Note";
+      }
+      showToast("Dictation failed.");
+    };
+
+    recognition.onend = () => {
+      statusText("Ready");
+      setStatusMode("idle");
+
+      if (els.dictateNoteBtn) {
+        els.dictateNoteBtn.disabled = false;
+        els.dictateNoteBtn.textContent = "Dictate Note";
+      }
+
+      if (heardAnything && finalText.trim()) {
+        insertAtCursor(els.note, finalText.trim());
+        markDirty();
+        buildIntelligenceFlags();
+        setNoteView("final");
+        showToast("Dictation added to final note.");
+      }
+    };
+
+    recognition.start();
+  }
+
   function bindPromptButtons() {
     document.querySelectorAll("[data-fill]").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -1528,12 +1667,12 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
 
-    document.querySelectorAll(".magic-mode-btn").forEach(btn => {
+    document.querySelectorAll(".output-mode-btn").forEach(btn => {
       btn.addEventListener("click", () => {
-        const mode = btn.getAttribute("data-magic-mode") || "final_note";
-        if (els.magicOutputMode) els.magicOutputMode.value = mode;
+        const mode = btn.getAttribute("data-output-mode") || "final_note";
+        if (els.outputMode) els.outputMode.value = mode;
         markDirty();
-        runMagicNotes();
+        runINotes();
       });
     });
   }
@@ -1547,7 +1686,7 @@ document.addEventListener("DOMContentLoaded", () => {
       els.meetingFormat,
       els.noteStatus,
       els.documentTemplate,
-      els.magicOutputMode,
+      els.outputMode,
       els.incidentSeverity,
       els.structuredWho,
       els.structuredWhat,
@@ -1618,7 +1757,9 @@ document.addEventListener("DOMContentLoaded", () => {
     els.buildStructuredIntoNoteBtn?.addEventListener("click", buildStructuredIntoNote);
 
     els.aiBtn?.addEventListener("click", () => applyAI(false));
-    els.runMagicBtn?.addEventListener("click", runMagicNotes);
+    els.runINotesBtn?.addEventListener("click", runINotes);
+    els.voicePromptBtn?.addEventListener("click", startVoicePromptCapture);
+    els.dictateNoteBtn?.addEventListener("click", startDictationIntoNote);
 
     els.saveBtn?.addEventListener("click", saveNote);
     els.refreshBtn?.addEventListener("click", loadSavedNotes);
