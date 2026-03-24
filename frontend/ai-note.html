@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IndiCare | Magic Notes</title>
+  <title>IndiCare | I-Notes</title>
   <link rel="icon" type="image/svg+xml" href="/assets/logo.svg" />
   <link rel="stylesheet" href="/ai-notes.css" />
 </head>
@@ -20,13 +20,13 @@
           </div>
           <div>
             <h1>IndiCare</h1>
-            <p>Magic Notes for Care</p>
+            <p>I-Notes for Care</p>
           </div>
         </div>
 
         <nav class="nav">
           <a href="/" class="nav-link">Dashboard</a>
-          <a href="/ai-note.html" class="nav-link active">Documentation</a>
+          <a href="/ai-note.html" class="nav-link active">I-Notes</a>
         </nav>
 
         <div class="sidebar-section mt-24">
@@ -35,14 +35,14 @@
         </div>
 
         <div class="sidebar-section mt-24">
-          <span class="section-label">Magic Outputs</span>
+          <span class="section-label">Output Modes</span>
           <div class="prompt-stack">
-            <button class="prompt-btn magic-mode-btn" data-magic-mode="final_note">Professional Final Record</button>
-            <button class="prompt-btn magic-mode-btn" data-magic-mode="incident_record">Incident Record</button>
-            <button class="prompt-btn magic-mode-btn" data-magic-mode="chronology">Chronology Entry</button>
-            <button class="prompt-btn magic-mode-btn" data-magic-mode="safeguarding_summary">Safeguarding Summary</button>
-            <button class="prompt-btn magic-mode-btn" data-magic-mode="manager_summary">Manager Summary</button>
-            <button class="prompt-btn magic-mode-btn" data-magic-mode="supervision_record">Supervision Record</button>
+            <button class="prompt-btn output-mode-btn" data-output-mode="final_note">Professional Final Record</button>
+            <button class="prompt-btn output-mode-btn" data-output-mode="incident_record">Incident Record</button>
+            <button class="prompt-btn output-mode-btn" data-output-mode="chronology">Chronology Entry</button>
+            <button class="prompt-btn output-mode-btn" data-output-mode="safeguarding_summary">Safeguarding Summary</button>
+            <button class="prompt-btn output-mode-btn" data-output-mode="manager_summary">Manager Summary</button>
+            <button class="prompt-btn output-mode-btn" data-output-mode="supervision_record">Supervision Record</button>
           </div>
         </div>
 
@@ -52,7 +52,7 @@
             <button class="prompt-btn" data-fill="Format this into a formal Staff Supervision record, highlighting well-being, current caseloads, and agreed actions.">Supervision Record</button>
             <button class="prompt-btn" data-fill="Extract and summarise all safeguarding concerns, risks, and immediate actions required. Use factual, objective language.">Safeguarding Summary</button>
             <button class="prompt-btn" data-fill="Review this meeting and structure it as a Personal Education Plan update, focusing on educational milestones and support needed.">PEP Update</button>
-            <button class="prompt-btn" data-fill="Remove all emotive language and rewrite this incident report to be strictly objective, chronological, and factual.">Make Objective & Factual</button>
+            <button class="prompt-btn" data-fill="Remove all emotive language and rewrite this incident report to be strictly objective, chronological, and factual.">Make Objective &amp; Factual</button>
             <button class="prompt-btn" data-fill="Rewrite this note in a clear professional tone suitable for management review.">Professional Tone</button>
             <button class="prompt-btn" data-fill="Summarise the key points, decisions, and next actions from this note.">Summarise Key Points</button>
           </div>
@@ -79,7 +79,7 @@
     <main class="main">
       <header class="topbar">
         <div class="topbar-left">
-          <h2 class="page-title">Magic Notes Workspace</h2>
+          <h2 class="page-title">I-Notes Workspace</h2>
         </div>
 
         <div class="page-tabs">
@@ -135,7 +135,7 @@
                 <div class="stack-actions">
                   <button id="useTranscriptForAiBtn" class="btn btn-secondary w-full">Copy Transcript to Final Note</button>
                   <button id="extractActionsBtn" class="btn btn-secondary w-full">Extract Actions</button>
-                  <button id="runMagicBtn" class="btn btn-primary w-full">Run Magic Notes</button>
+                  <button id="runINotesBtn" class="btn btn-primary w-full">Run I-Notes</button>
                 </div>
               </div>
             </div>
@@ -180,13 +180,13 @@
                     <select id="noteStatus" class="meta-select status-badge-select">
                       <option value="draft">Draft (In Progress)</option>
                       <option value="review">Pending Manager Review</option>
-                      <option value="approved">Approved & Locked</option>
+                      <option value="approved">Approved &amp; Locked</option>
                     </select>
                   </div>
 
                   <div class="meta-item">
-                    <label for="magicOutputMode">Magic Output Mode</label>
-                    <select id="magicOutputMode" class="meta-select">
+                    <label for="outputMode">I-Notes Output Mode</label>
+                    <select id="outputMode" class="meta-select">
                       <option value="final_note">Professional Final Record</option>
                       <option value="incident_record">Incident Record</option>
                       <option value="chronology">Chronology Entry</option>
@@ -225,8 +225,12 @@
                         <path d="M21 3v5h-5"/>
                       </svg>
                     </div>
+
                     <input id="prompt" type="text" class="ai-command-input" placeholder="Instruct the assistant to structure, summarise, anonymise, or refine this document..." />
-                    <button id="aiBtn" class="btn btn-primary btn-sm">Apply AI</button>
+
+                    <button id="voicePromptBtn" class="btn btn-secondary btn-sm" type="button">Talk to IndiCare</button>
+                    <button id="dictateNoteBtn" class="btn btn-secondary btn-sm" type="button">Dictate Note</button>
+                    <button id="aiBtn" class="btn btn-primary btn-sm" type="button">Apply AI</button>
                   </div>
 
                   <div class="document-area">
