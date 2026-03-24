@@ -104,10 +104,7 @@ def list_young_people(
                 h.name AS home_name,
                 CONCAT(
                     COALESCE(u.first_name, ''),
-                    CASE
-                        WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN ' '
-                        ELSE ''
-                    END,
+                    CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN ' ' ELSE '' END,
                     COALESCE(u.last_name, '')
                 ) AS primary_keyworker_name
             FROM young_people yp
@@ -133,10 +130,7 @@ def get_young_person_by_id(conn, young_person_id: int) -> dict[str, Any] | None:
                 h.name AS home_name,
                 CONCAT(
                     COALESCE(u.first_name, ''),
-                    CASE
-                        WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN ' '
-                        ELSE ''
-                    END,
+                    CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN ' ' ELSE '' END,
                     COALESCE(u.last_name, '')
                 ) AS primary_keyworker_name
             FROM young_people yp
@@ -743,6 +737,117 @@ def upsert_identity_profile(
                 RETURNING *
                 """,
                 (young_person_id, *sql_values),
+            )
+
+        row = _fetchone_dict(cur)
+
+    conn.commit()
+    return row or {}
+
+
+def upsert_legal_status(
+    conn,
+    *,
+    young_person_id: int,
+    created_by: int | None = None,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    effective_from = payload.get("effective_from")
+    effective_to = payload.get("effective_to")
+    is_current = _normalise_bool(payload.get("is_current"), True)
+
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        if is_current:
+            cur.execute(
+                """
+                UPDATE young_person_legal_status
+                SET
+                    is_current = FALSE,
+                    updated_at = NOW()
+                WHERE young_person_id = %s
+                  AND COALESCE(is_current, FALSE) = TRUE
+                """,
+                (young_person_id,),
+            )
+
+        cur.execute(
+            """
+            SELECT id
+            FROM young_person_legal_status
+            WHERE young_person_id = %s
+              AND (
+                    (effective_from IS NOT DISTINCT FROM %s)
+                AND (order_type IS NOT DISTINCT FROM %s)
+                AND (legal_status IS NOT DISTINCT FROM %s)
+              )
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (
+                young_person_id,
+                effective_from,
+                _safe_string(payload.get("order_type")),
+                _safe_string(payload.get("legal_status")),
+            ),
+        )
+        existing = _fetchone_dict(cur)
+
+        values = (
+            _safe_string(payload.get("legal_status")),
+            _safe_string(payload.get("order_type")),
+            _safe_string(payload.get("order_details")),
+            _safe_string(payload.get("delegated_authority_details")),
+            _safe_string(payload.get("restrictions_text")),
+            _safe_string(payload.get("consent_arrangements")),
+            effective_from,
+            effective_to,
+            is_current,
+        )
+
+        if existing:
+            cur.execute(
+                """
+                UPDATE young_person_legal_status
+                SET
+                    legal_status = %s,
+                    order_type = %s,
+                    order_details = %s,
+                    delegated_authority_details = %s,
+                    restrictions_text = %s,
+                    consent_arrangements = %s,
+                    effective_from = %s,
+                    effective_to = %s,
+                    is_current = %s,
+                    updated_at = NOW()
+                WHERE id = %s
+                RETURNING *
+                """,
+                (*values, existing["id"]),
+            )
+        else:
+            cur.execute(
+                """
+                INSERT INTO young_person_legal_status (
+                    young_person_id,
+                    legal_status,
+                    order_type,
+                    order_details,
+                    delegated_authority_details,
+                    restrictions_text,
+                    consent_arrangements,
+                    effective_from,
+                    effective_to,
+                    is_current,
+                    created_by
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING *
+                """,
+                (
+                    young_person_id,
+                    *values,
+                    created_by,
+                ),
             )
 
         row = _fetchone_dict(cur)
