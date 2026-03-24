@@ -955,7 +955,7 @@ function parseSseChunk(buffer, onEvent) {
       } else if (line.startsWith("event:")) {
         eventName = line.slice(6).trim();
       } else if (line.startsWith("data:")) {
-        dataLines.push(line.slice(5).trimStart());
+        dataLines.push(line.startsWith("data: ") ? line.slice(6) : line.slice(5));
       }
     }
 
