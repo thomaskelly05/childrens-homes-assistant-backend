@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="../css/young-people-shell.css" />
+  <link rel="stylesheet" href="/css/young-people-shell.css" />
 </head>
 <body>
   <div class="app">
@@ -129,13 +129,27 @@
             <div class="panel">
               <div class="panel-head">
                 <div>
-                  <h2>Timeline and linked records</h2>
-                  <p>For now this is a placeholder block ready to connect to incidents, daily notes, keywork, health, education, and chronology.</p>
+                  <h2>Record workspace</h2>
+                  <p>Load individual workspaces here without bloating the shell.</p>
                 </div>
               </div>
-              <div id="timelinePanel" class="panel-body">
-                <div class="empty-state">
-                  Once linked, this panel should surface the latest records for the selected young person.
+
+              <div class="panel-body">
+                <div class="tabs" style="margin-bottom:16px;">
+                  <button class="tab active" data-workspace="incident" type="button">Incident</button>
+                  <button class="tab" data-workspace="timeline" type="button">Timeline</button>
+                  <button class="tab" data-workspace="daily-note" type="button">Daily note</button>
+                  <button class="tab" data-workspace="health" type="button">Health</button>
+                  <button class="tab" data-workspace="education" type="button">Education</button>
+                  <button class="tab" data-workspace="family" type="button">Family</button>
+                  <button class="tab" data-workspace="keywork" type="button">Keywork</button>
+                  <button class="tab" data-workspace="risk" type="button">Risk</button>
+                </div>
+
+                <div id="workspaceMount">
+                  <div class="empty-state">
+                    Select a young person to load a workspace.
+                  </div>
                 </div>
               </div>
             </div>
@@ -145,6 +159,6 @@
     </main>
   </div>
 
-  <script src="../js/young-people-shell.js"></script>
+  <script src="/js/young-people-shell.js"></script>
 </body>
 </html>
