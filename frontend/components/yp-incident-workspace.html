@@ -1,0 +1,209 @@
+<div id="incidentWorkspace">
+  <div class="record-form-grid">
+    <div class="card">
+      <h3>Incident details</h3>
+
+      <div class="form-block">
+        <label for="incidentType">Incident type</label>
+        <select id="incidentType" class="select">
+          <option value="">Select incident type</option>
+          <option value="Behaviour incident">Behaviour incident</option>
+          <option value="Physical intervention">Physical intervention</option>
+          <option value="Missing from home">Missing from home</option>
+          <option value="Safeguarding concern">Safeguarding concern</option>
+          <option value="Health incident">Health incident</option>
+          <option value="Property damage">Property damage</option>
+          <option value="Police involvement">Police involvement</option>
+          <option value="Other">Other</option>
+        </select>
+        <div class="help-text">Choose the main incident type so the record can be filtered, reviewed, and linked correctly.</div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-block">
+          <label for="incidentDatetime">Date and time</label>
+          <input id="incidentDatetime" class="field" type="datetime-local">
+          <div class="help-text">Record when the incident happened as accurately as possible.</div>
+        </div>
+
+        <div class="form-block">
+          <label for="incidentLocation">Location</label>
+          <input id="incidentLocation" class="field" type="text" placeholder="e.g. lounge, bedroom, school transport">
+          <div class="help-text">Record where the incident happened.</div>
+        </div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-block">
+          <label for="incidentSeverity">Severity</label>
+          <select id="incidentSeverity" class="select">
+            <option value="">Select severity</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+          <div class="help-text">Use a proportionate rating based on impact, risk, and follow-up required.</div>
+        </div>
+
+        <div class="form-block">
+          <label for="incidentPresentation">Presentation</label>
+          <input id="incidentPresentation" class="field" type="text" placeholder="e.g. anxious, dysregulated, withdrawn">
+          <div class="help-text">Briefly describe how the young person presented before or during the incident.</div>
+        </div>
+      </div>
+
+      <div class="form-block">
+        <label for="incidentAntecedent">Antecedent / context</label>
+        <textarea id="incidentAntecedent" class="textarea" placeholder="What happened before the incident?"></textarea>
+        <div class="help-text">Record triggers, build-up, requests, interactions, changes in routine, or environmental factors. Avoid blame or assumption.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="incidentDescription">What happened</label>
+        <textarea id="incidentDescription" class="textarea" placeholder="Record the sequence of events factually."></textarea>
+        <div class="help-text">Describe what happened in order, using factual and neutral language. Include significant words or behaviours where relevant.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="incidentStaffResponse">Staff response</label>
+        <textarea id="incidentStaffResponse" class="textarea" placeholder="What did staff do?"></textarea>
+        <div class="help-text">Record what staff did in sequence, including de-escalation, reassurance, boundaries, protection, and who was informed.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="incidentChildResponse">Young person response</label>
+        <textarea id="incidentChildResponse" class="textarea" placeholder="How did the young person respond?"></textarea>
+        <div class="help-text">Record how the young person responded to support, intervention, or direction.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="incidentOutcome">Outcome</label>
+        <textarea id="incidentOutcome" class="textarea" placeholder="How did the incident end?"></textarea>
+        <div class="help-text">Record how the incident ended, whether anyone was harmed, and the young person’s presentation afterwards.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="incidentChildVoice">Young person’s voice</label>
+        <textarea id="incidentChildVoice" class="textarea" placeholder="What did the young person say or express?"></textarea>
+        <div class="help-text">Record the young person’s words, explanation, feelings, wishes, or reflection where appropriate.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="incidentRestorativeFollowUp">Restorative follow-up</label>
+        <textarea id="incidentRestorativeFollowUp" class="textarea" placeholder="Was there any repair, reflection, or follow-up discussion?"></textarea>
+        <div class="help-text">Record any restorative conversation, relationship repair, emotional support, reflection, or agreed next steps after the incident.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="incidentActionsTaken">Immediate and follow-up actions</label>
+        <textarea id="incidentActionsTaken" class="textarea" placeholder="What actions were taken and what still needs to happen?"></textarea>
+        <div class="help-text">Record notifications made, follow-up actions, who is responsible, and what needs handing over or reviewing.</div>
+      </div>
+    </div>
+
+    <div class="record-side-stack">
+      <div class="card">
+        <h3>Checks and notifications</h3>
+
+        <div class="checkbox-grid">
+          <label class="check-item"><input id="incidentInjuryFlag" type="checkbox"><span>Injury involved</span></label>
+          <label class="check-item"><input id="incidentPropertyDamageFlag" type="checkbox"><span>Property damage</span></label>
+          <label class="check-item"><input id="incidentPoliceInvolved" type="checkbox"><span>Police involved</span></label>
+          <label class="check-item"><input id="incidentPoliceNotified" type="checkbox"><span>Police notified</span></label>
+          <label class="check-item"><input id="incidentSafeguardingFlag" type="checkbox"><span>Safeguarding concern</span></label>
+          <label class="check-item"><input id="incidentLadoNotified" type="checkbox"><span>LADO notified</span></label>
+          <label class="check-item"><input id="incidentOfstedNotified" type="checkbox"><span>Ofsted notified</span></label>
+          <label class="check-item"><input id="incidentManagerReviewRequired" type="checkbox" checked><span>Manager review required</span></label>
+          <label class="check-item"><input id="incidentFollowUpRequired" type="checkbox" checked><span>Follow-up required</span></label>
+          <label class="check-item"><input id="incidentRequiresReg40" type="checkbox"><span>Consider Regulation 40</span></label>
+          <label class="check-item"><input id="incidentRequiresNotification" type="checkbox"><span>Requires wider notification</span></label>
+        </div>
+
+        <div class="help-text" style="margin-top:10px;">
+          Use these to support accountability and help the system generate the right follow-up tasks and reviews.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Quality Standards</h3>
+        <div id="incidentStandardsBox" class="assistant-prompt">
+          Suggested standards will appear here after AI review.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Linked records</h3>
+        <div id="incidentLinksBox" class="assistant-prompt">
+          Suggested links to chronology, risk, safeguarding, tasks, and reviews will appear here after AI review.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Accountability workflow</h3>
+        <div id="incidentWorkflowBox" class="assistant-prompt">
+          Complete the incident, review AI prompts, save the record, then follow the generated tasks and management checks.
+        </div>
+      </div>
+
+      <div class="doc-ai-panel">
+        <div class="doc-ai-panel-head">
+          <div>
+            <h3>AI document review</h3>
+            <p>Improve wording, spell check, therapeutic language, standards, links, and missing details.</p>
+          </div>
+        </div>
+
+        <div class="doc-ai-actions">
+          <button type="button" class="ghost-btn" data-incident-ai-action="improve_wording">Improve wording</button>
+          <button type="button" class="ghost-btn" data-incident-ai-action="spell_check">Spell check</button>
+          <button type="button" class="ghost-btn" data-incident-ai-action="make_therapeutic">Make therapeutic</button>
+          <button type="button" class="ghost-btn" data-incident-ai-action="make_more_factual">Make more factual</button>
+          <button type="button" class="ghost-btn" data-incident-ai-action="suggest_missing_details">Missing details</button>
+          <button type="button" class="ghost-btn" data-incident-ai-action="suggest_quality_standards">Quality standards</button>
+          <button type="button" class="ghost-btn" data-incident-ai-action="suggest_links">Suggest links</button>
+          <button type="button" class="primary-btn" id="runIncidentAiReviewBtn">Run full review</button>
+        </div>
+
+        <div id="incidentAiStatus" class="doc-ai-status hidden"></div>
+
+        <div id="incidentAiResults" class="doc-ai-results hidden">
+          <div class="doc-ai-result-card">
+            <h4>Improved version</h4>
+            <textarea id="incidentAiImprovedText" class="textarea" rows="12" readonly></textarea>
+            <div class="doc-ai-result-actions">
+              <button type="button" class="secondary-btn" id="copyIncidentAiBtn">Copy</button>
+              <button type="button" class="primary-btn" id="applyIncidentAiBtn">Apply to description</button>
+            </div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Field feedback</h4>
+            <div id="incidentAiFieldFeedback" class="doc-ai-list"></div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Missing details</h4>
+            <div id="incidentAiMissingDetails" class="doc-ai-list"></div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Safeguarding notes</h4>
+            <div id="incidentAiSafeguarding" class="doc-ai-list"></div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Summary</h4>
+            <div id="incidentAiSummary" class="doc-ai-summary"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="record-action-bar">
+        <button id="clearIncidentFormBtn" class="secondary-btn" type="button">Clear form</button>
+        <button id="saveIncidentBtn" class="primary-btn" type="button">Save incident</button>
+      </div>
+
+      <div id="incidentSaveStatus" class="doc-ai-status hidden"></div>
+    </div>
+  </div>
+</div>
