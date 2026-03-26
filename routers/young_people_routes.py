@@ -245,6 +245,34 @@ def api_get_young_person_overview(
         raise HTTPException(status_code=404, detail="Young person not found")
     return {"ok": True, "overview": overview}
 
+@router.get("/{young_person_id}/timeline")
+def api_get_young_person_timeline(
+    young_person_id: int,
+    date_from: date | None = Query(default=None),
+    date_to: date | None = Query(default=None),
+    record_type: str = Query(default=""),
+    search: str = Query(default=""),
+    limit: int = Query(default=250, ge=1, le=1000),
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _ensure_person_exists(conn, young_person_id)
+
+    rows = get_young_person_timeline(
+        conn,
+        young_person_id=young_person_id,
+        date_from=date_from,
+        date_to=date_to,
+        record_type=record_type,
+        search=search,
+        limit=limit,
+    )
+
+    return {
+        "ok": True,
+        "timeline": rows,
+        "count": len(rows),
+    }
 
 @router.post("/{young_person_id}/communication-profile")
 def api_upsert_communication_profile(
