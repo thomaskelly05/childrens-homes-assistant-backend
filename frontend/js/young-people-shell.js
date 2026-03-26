@@ -323,6 +323,25 @@ window.YoungPeopleShell = (function () {
 
   return;
 }
+    if (workspaceName === "family") {
+  const html = await fetch("/components/yp-family-workspace.html", {
+    credentials: "include"
+  }).then(r => r.text());
+
+  mount.innerHTML = html;
+
+  if (!window.YoungPersonFamilyWorkspace) {
+    await loadScript("/js/workspaces/yp-family-workspace.js");
+  }
+
+  window.YoungPersonFamilyWorkspace.bind({
+    selectedYoungPerson,
+    overview: latestOverview,
+    reloadOverview: loadYoungPersonOverview
+  });
+
+  return;
+}
 
     if (activeProfileTab === "contacts") {
       host.innerHTML = contacts.length ? `
