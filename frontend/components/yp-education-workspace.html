@@ -1,0 +1,193 @@
+<div id="educationWorkspace">
+  <div class="record-form-grid">
+    <div class="card">
+      <h3>Education record</h3>
+
+      <div class="form-row-2">
+        <div class="form-block">
+          <label for="educationRecordDate">Record date</label>
+          <input id="educationRecordDate" class="field" type="date">
+          <div class="help-text">Record the date the education update relates to.</div>
+        </div>
+
+        <div class="form-block">
+          <label for="educationAttendanceStatus">Attendance status</label>
+          <select id="educationAttendanceStatus" class="select">
+            <option value="">Select attendance</option>
+            <option value="present">Present</option>
+            <option value="late">Late</option>
+            <option value="partial">Partial attendance</option>
+            <option value="absent_authorised">Absent authorised</option>
+            <option value="absent_unauthorised">Absent unauthorised</option>
+            <option value="refused">Refused</option>
+            <option value="alternative_provision">Alternative provision</option>
+            <option value="holiday_or_closure">Holiday / closure</option>
+          </select>
+          <div class="help-text">Choose the attendance outcome for the day or session.</div>
+        </div>
+      </div>
+
+      <div class="form-block">
+        <label for="educationProvisionName">Provision / school name</label>
+        <input id="educationProvisionName" class="field" type="text" placeholder="e.g. school name, college, AP setting">
+        <div class="help-text">Record the education setting or provision involved.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="educationLearningEngagement">Learning and engagement</label>
+        <textarea id="educationLearningEngagement" class="textarea" placeholder="How did the young person engage with learning?"></textarea>
+        <div class="help-text">Record concentration, participation, effort, emotional readiness to learn, and engagement across the session or day.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="educationBehaviourSummary">Behaviour and presentation in education</label>
+        <textarea id="educationBehaviourSummary" class="textarea" placeholder="How did the young person present in education?"></textarea>
+        <div class="help-text">Record behaviour, regulation, relationships, anxieties, dysregulation, or positive changes linked to education.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="educationAchievementNote">Achievement or positive progress</label>
+        <textarea id="educationAchievementNote" class="textarea" placeholder="What went well in education today?"></textarea>
+        <div class="help-text">Record achievements, positive participation, effort, progress, attendance improvement, or praise received.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="educationIssueRaised">Issue or concern raised</label>
+        <textarea id="educationIssueRaised" class="textarea" placeholder="Any education concern, barrier, or issue raised?"></textarea>
+        <div class="help-text">Record concerns such as non-attendance, behaviour issues, emotional distress, conflict, exclusions, or communication from school.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="educationActionTaken">Action taken</label>
+        <textarea id="educationActionTaken" class="textarea" placeholder="What did staff or professionals do?"></textarea>
+        <div class="help-text">Record what action was taken by the home, school, or other professionals, including support, follow-up, phone calls, meetings, or practical action.</div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-block">
+          <label for="educationProfessionalInvolved">Professional involved</label>
+          <input id="educationProfessionalInvolved" class="field" type="text" placeholder="e.g. teacher, DSL, SENCO, tutor">
+          <div class="help-text">Record the professional spoken to or involved where known.</div>
+        </div>
+
+        <div class="form-block">
+          <label for="educationNextActionDate">Next action date</label>
+          <input id="educationNextActionDate" class="field" type="date">
+          <div class="help-text">If follow-up is required, record the next relevant date.</div>
+        </div>
+      </div>
+
+      <div class="form-block">
+        <label for="educationYoungPersonVoice">Young person’s voice</label>
+        <textarea id="educationYoungPersonVoice" class="textarea" placeholder="What did the young person say or express about education?"></textarea>
+        <div class="help-text">Record the young person’s views, worries, wishes, motivation, feelings about learning, or any direct comments about school or college.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="educationFollowUpNotes">Follow-up and handover</label>
+        <textarea id="educationFollowUpNotes" class="textarea" placeholder="What still needs to happen?"></textarea>
+        <div class="help-text">Record anything that needs to be handed over, monitored, reviewed, escalated, or followed up by staff or managers.</div>
+      </div>
+    </div>
+
+    <div class="record-side-stack">
+      <div class="card">
+        <h3>Checks and follow-up</h3>
+
+        <div class="checkbox-grid">
+          <label class="check-item"><input id="educationFollowUpRequired" type="checkbox" checked><span>Follow-up required</span></label>
+          <label class="check-item"><input id="educationChronologyLink" type="checkbox" checked><span>Link to chronology</span></label>
+          <label class="check-item"><input id="educationPlanLink" type="checkbox" checked><span>Link to education plan</span></label>
+          <label class="check-item"><input id="educationTaskCreate" type="checkbox" checked><span>Create follow-up task</span></label>
+          <label class="check-item"><input id="educationManagerReview" type="checkbox"><span>Manager review needed</span></label>
+          <label class="check-item"><input id="educationSafeguardingConcern" type="checkbox"><span>Safeguarding concern</span></label>
+        </div>
+
+        <div class="help-text" style="margin-top:10px;">
+          These checks help the system suggest linked records, chronology items, education plans, tasks, and accountability actions.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Suggested Quality Standards</h3>
+        <div id="educationStandardsBox" class="assistant-prompt">
+          Suggested standards will appear here after AI review.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Suggested links</h3>
+        <div id="educationLinksBox" class="assistant-prompt">
+          Suggested links to chronology, education profile, plans, tasks, and reviews will appear here after AI review.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Accountability workflow</h3>
+        <div id="educationWorkflowBox" class="assistant-prompt">
+          Complete the education record, review AI suggestions, save the record, and follow any linked actions, plans, chronology, or task prompts.
+        </div>
+      </div>
+
+      <div class="doc-ai-panel">
+        <div class="doc-ai-panel-head">
+          <div>
+            <h3>AI document review</h3>
+            <p>Improve wording, spell check, therapeutic tone, missing details, standards, and linked records.</p>
+          </div>
+        </div>
+
+        <div class="doc-ai-actions">
+          <button type="button" class="ghost-btn" data-education-ai-action="improve_wording">Improve wording</button>
+          <button type="button" class="ghost-btn" data-education-ai-action="spell_check">Spell check</button>
+          <button type="button" class="ghost-btn" data-education-ai-action="make_therapeutic">Make therapeutic</button>
+          <button type="button" class="ghost-btn" data-education-ai-action="make_more_factual">Make more factual</button>
+          <button type="button" class="ghost-btn" data-education-ai-action="suggest_missing_details">Missing details</button>
+          <button type="button" class="ghost-btn" data-education-ai-action="suggest_quality_standards">Quality standards</button>
+          <button type="button" class="ghost-btn" data-education-ai-action="suggest_links">Suggest links</button>
+          <button type="button" class="primary-btn" id="runEducationAiReviewBtn">Run full review</button>
+        </div>
+
+        <div id="educationAiStatus" class="doc-ai-status hidden"></div>
+
+        <div id="educationAiResults" class="doc-ai-results hidden">
+          <div class="doc-ai-result-card">
+            <h4>Improved version</h4>
+            <textarea id="educationAiImprovedText" class="textarea" rows="12" readonly></textarea>
+            <div class="doc-ai-result-actions">
+              <button type="button" class="secondary-btn" id="copyEducationAiBtn">Copy</button>
+              <button type="button" class="primary-btn" id="applyEducationAiBtn">Apply to engagement</button>
+            </div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Field feedback</h4>
+            <div id="educationAiFieldFeedback" class="doc-ai-list"></div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Missing details</h4>
+            <div id="educationAiMissingDetails" class="doc-ai-list"></div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Safeguarding notes</h4>
+            <div id="educationAiSafeguarding" class="doc-ai-list"></div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Summary</h4>
+            <div id="educationAiSummary" class="doc-ai-summary"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="record-action-bar">
+        <button id="clearEducationFormBtn" class="secondary-btn" type="button">Clear form</button>
+        <button id="saveEducationRecordBtn" class="primary-btn" type="button">Save education record</button>
+      </div>
+
+      <div id="educationSaveStatus" class="doc-ai-status hidden"></div>
+    </div>
+  </div>
+</div>
