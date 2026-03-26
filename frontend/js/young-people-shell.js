@@ -455,6 +455,26 @@ window.YoungPeopleShell = (function () {
       return;
     }
 
+    if (workspaceName === "health") {
+  const html = await fetch("/components/yp-health-workspace.html", {
+    credentials: "include"
+  }).then(r => r.text());
+
+  mount.innerHTML = html;
+
+  if (!window.YoungPersonHealthWorkspace) {
+    await loadScript("/js/workspaces/yp-health-workspace.js");
+  }
+
+  window.YoungPersonHealthWorkspace.bind({
+    selectedYoungPerson,
+    overview: latestOverview,
+    reloadOverview: loadYoungPersonOverview
+  });
+
+  return;
+}
+
     mount.innerHTML = `
       <div class="empty-state">
         The <strong>${safe(workspaceName)}</strong> workspace has not been built yet.<br>
