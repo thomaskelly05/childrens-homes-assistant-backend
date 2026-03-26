@@ -73,10 +73,18 @@ window.YoungPeopleShell = (function () {
 
   function riskTagClass(level) {
     const text = String(level || "").toLowerCase();
-    if (["high", "significant", "severe"].includes(text)) return "danger";
+    if (["high", "significant", "severe", "critical"].includes(text)) return "danger";
     if (["medium", "moderate"].includes(text)) return "warn";
     if (["low", "stable"].includes(text)) return "good";
     return "";
+  }
+
+  function getTodayString() {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
   }
 
   function renderYoungPersonList() {
@@ -222,6 +230,50 @@ window.YoungPeopleShell = (function () {
     `;
   }
 
+  function showProfileSaveStatus(message, type = "") {
+    const el = document.getElementById("profileSaveStatus");
+    if (!el) return;
+    el.classList.remove("hidden", "error", "success");
+    el.textContent = message || "";
+    if (type) el.classList.add(type);
+  }
+
+  function clearProfileSaveStatus() {
+    const el = document.getElementById("profileSaveStatus");
+    if (!el) return;
+    el.classList.add("hidden");
+    el.classList.remove("error", "success");
+    el.textContent = "";
+  }
+
+  function bindProfileSave(saveFn) {
+    const cancelBtn = document.getElementById("cancelProfileEditBtn");
+    const saveBtn = document.getElementById("saveProfileEditBtn");
+
+    cancelBtn?.addEventListener("click", () => {
+      if (latestOverview) {
+        clearProfileSaveStatus();
+        renderProfileTab(latestOverview);
+      }
+    });
+
+    saveBtn?.addEventListener("click", async () => {
+      clearProfileSaveStatus();
+      showProfileSaveStatus("Saving profile changes...");
+
+      try {
+        await saveFn();
+        showProfileSaveStatus("Changes saved successfully.", "success");
+        if (selectedYoungPerson?.id) {
+          await loadYoungPersonOverview(selectedYoungPerson.id);
+        }
+      } catch (error) {
+        console.error("Profile save failed", error);
+        showProfileSaveStatus(error.message || "Could not save changes.", "error");
+      }
+    });
+  }
+
   function renderProfileTab(overview) {
     const host = document.getElementById("profileTabContent");
     if (!host) return;
@@ -233,210 +285,530 @@ window.YoungPeopleShell = (function () {
     const contacts = Array.isArray(overview?.contacts) ? overview.contacts : [];
     const alerts = Array.isArray(overview?.alerts) ? overview.alerts : [];
 
+    const saveBar = `
+      <div class="record-action-bar" style="margin-top:16px;">
+        <button class="secondary-btn" type="button" id="cancelProfileEditBtn">Cancel</button>
+        <button class="primary-btn" type="button" id="saveProfileEditBtn">Save changes</button>
+      </div>
+      <div id="profileSaveStatus" class="doc-ai-status hidden" style="margin-top:10px;"></div>
+    `;
+
     if (activeProfileTab === "identity") {
       host.innerHTML = `
         <div class="card">
-          <h3>Identity profile</h3>
-          <div class="kv"><div class="k">Religion / faith</div><div class="v">${safe(identity.religion_or_faith || "—")}</div></div>
-          <div class="kv"><div class="k">Cultural identity</div><div class="v">${safe(identity.cultural_identity || "—")}</div></div>
-          <div class="kv"><div class="k">First language</div><div class="v">${safe(identity.first_language || "—")}</div></div>
-          <div class="kv"><div class="k">Dietary needs</div><div class="v">${safe(identity.dietary_needs || "—")}</div></div>
-          <div class="kv"><div class="k">Interests</div><div class="v">${safe(identity.interests || "—")}</div></div>
-          <div class="kv"><div class="k">Strengths</div><div class="v">${safe(identity.strengths_summary || "—")}</div></div>
-          <div class="kv"><div class="k">What matters to me</div><div class="v">${safe(identity.what_matters_to_me || "—")}</div></div>
-          <div class="kv"><div class="k">Important dates</div><div class="v">${safe(identity.important_dates || "—")}</div></div>
+          <h3>Edit identity profile</h3>
+
+          <div class="form-block">
+            <label for="identityReligion">Religion / faith</label>
+            <input id="identityReligion" class="field" type="text" value="${safe(identity.religion_or_faith || "")}">
+            <div class="help-text">Record religion, faith, or spiritual identity if relevant to care and support.</div>
+          </div>
+
+          <div class="form-block">
+            <label for="identityCulture">Cultural identity</label>
+            <input id="identityCulture" class="field" type="text" value="${safe(identity.cultural_identity || "")}">
+            <div class="help-text">Record cultural identity, heritage, or important background information.</div>
+          </div>
+
+          <div class="form-block">
+            <label for="identityLanguage">First language</label>
+            <input id="identityLanguage" class="field" type="text" value="${safe(identity.first_language || "")}">
+            <div class="help-text">Record the young person’s first or preferred language.</div>
+          </div>
+
+          <div class="form-block">
+            <label for="identityDietary">Dietary needs</label>
+            <textarea id="identityDietary" class="textarea">${safe(identity.dietary_needs || "")}</textarea>
+            <div class="help-text">Record allergies, cultural food needs, preferences, and dietary support required.</div>
+          </div>
+
+          <div class="form-block">
+            <label for="identityInterests">Interests</label>
+            <textarea id="identityInterests" class="textarea">${safe(identity.interests || "")}</textarea>
+            <div class="help-text">Record hobbies, interests, preferred activities, and important motivators.</div>
+          </div>
+
+          <div class="form-block">
+            <label for="identityStrengths">Strengths summary</label>
+            <textarea id="identityStrengths" class="textarea">${safe(identity.strengths_summary || "")}</textarea>
+            <div class="help-text">Record strengths, talents, resilience, and positive qualities.</div>
+          </div>
+
+          <div class="form-block">
+            <label for="identityMatters">What matters to me</label>
+            <textarea id="identityMatters" class="textarea">${safe(identity.what_matters_to_me || "")}</textarea>
+            <div class="help-text">Record what is important to the young person in their own terms where possible.</div>
+          </div>
+
+          <div class="form-block">
+            <label for="identityDates">Important dates</label>
+            <textarea id="identityDates" class="textarea">${safe(identity.important_dates || "")}</textarea>
+            <div class="help-text">Record birthdays, anniversaries, key family dates, and other meaningful events.</div>
+          </div>
+
+          ${saveBar}
         </div>
       `;
+
+      bindProfileSave(async () => {
+        return api(`/young-people/${selectedYoungPerson.id}/identity-profile`, {
+          method: "POST",
+          body: JSON.stringify({
+            religion_or_faith: document.getElementById("identityReligion")?.value || "",
+            cultural_identity: document.getElementById("identityCulture")?.value || "",
+            first_language: document.getElementById("identityLanguage")?.value || "",
+            dietary_needs: document.getElementById("identityDietary")?.value || "",
+            interests: document.getElementById("identityInterests")?.value || "",
+            strengths_summary: document.getElementById("identityStrengths")?.value || "",
+            what_matters_to_me: document.getElementById("identityMatters")?.value || "",
+            important_dates: document.getElementById("identityDates")?.value || ""
+          })
+        });
+      });
+
       return;
     }
 
     if (activeProfileTab === "communication") {
       host.innerHTML = `
         <div class="card">
-          <h3>Communication profile</h3>
-          <div class="kv"><div class="k">Neurodiversity summary</div><div class="v">${safe(communication.neurodiversity_summary || "—")}</div></div>
-          <div class="kv"><div class="k">Communication style</div><div class="v">${safe(communication.communication_style || "—")}</div></div>
-          <div class="kv"><div class="k">Sensory profile</div><div class="v">${safe(communication.sensory_profile || "—")}</div></div>
-          <div class="kv"><div class="k">Processing needs</div><div class="v">${safe(communication.processing_needs || "—")}</div></div>
-          <div class="kv"><div class="k">Signs of distress</div><div class="v">${safe(communication.signs_of_distress || "—")}</div></div>
-          <div class="kv"><div class="k">What helps</div><div class="v">${safe(communication.what_helps || "—")}</div></div>
-          <div class="kv"><div class="k">What to avoid</div><div class="v">${safe(communication.what_to_avoid || "—")}</div></div>
-          <div class="kv"><div class="k">Routines and predictability</div><div class="v">${safe(communication.routines_and_predictability || "—")}</div></div>
-          <div class="kv"><div class="k">Visual support needs</div><div class="v">${safe(communication.visual_support_needs || "—")}</div></div>
+          <h3>Edit communication profile</h3>
+
+          <div class="form-block">
+            <label for="commNeuro">Neurodiversity summary</label>
+            <textarea id="commNeuro" class="textarea">${safe(communication.neurodiversity_summary || "")}</textarea>
+            <div class="help-text">Record key information about neurodiversity, understanding, and support needs.</div>
+          </div>
+
+          <div class="form-block">
+            <label for="commStyle">Communication style</label>
+            <textarea id="commStyle" class="textarea">${safe(communication.communication_style || "")}</textarea>
+            <div class="help-text">Record how the young person prefers to communicate and how adults should respond.</div>
+          </div>
+
+          <div class="form-block">
+            <label for="commSensory">Sensory profile</label>
+            <textarea id="commSensory" class="textarea">${safe(communication.sensory_profile || "")}</textarea>
+            <div class="help-text">Record sensory sensitivities, regulation needs, and environmental considerations.</div>
+          </div>
+
+          <div class="form-block">
+            <label for="commProcessing">Processing needs</label>
+            <textarea id="commProcessing" class="textarea">${safe(communication.processing_needs || "")}</textarea>
+            <div class="help-text">Record processing time, instructions support, and communication pacing needs.</div>
+          </div>
+
+          <div class="form-block">
+            <label for="commDistress">Signs of distress</label>
+            <textarea id="commDistress" class="textarea">${safe(communication.signs_of_distress || "")}</textarea>
+            <div class="help-text">Record early signs of dysregulation or overwhelm adults should notice.</div>
+          </div>
+
+          <div class="form-block">
+            <label for="commHelps">What helps</label>
+            <textarea id="commHelps" class="textarea">${safe(communication.what_helps || "")}</textarea>
+            <div class="help-text">Record the strategies, responses, and communication approaches that help.</div>
+          </div>
+
+          <div class="form-block">
+            <label for="commAvoid">What to avoid</label>
+            <textarea id="commAvoid" class="textarea">${safe(communication.what_to_avoid || "")}</textarea>
+            <div class="help-text">Record responses, language, or situations adults should avoid where possible.</div>
+          </div>
+
+          <div class="form-block">
+            <label for="commRoutine">Routines and predictability</label>
+            <textarea id="commRoutine" class="textarea">${safe(communication.routines_and_predictability || "")}</textarea>
+            <div class="help-text">Record the importance of structure, routine, warning, and predictability.</div>
+          </div>
+
+          <div class="form-block">
+            <label for="commVisual">Visual support needs</label>
+            <textarea id="commVisual" class="textarea">${safe(communication.visual_support_needs || "")}</textarea>
+            <div class="help-text">Record visual schedules, cues, prompts, or communication tools used.</div>
+          </div>
+
+          ${saveBar}
         </div>
       `;
+
+      bindProfileSave(async () => {
+        return api(`/young-people/${selectedYoungPerson.id}/communication-profile`, {
+          method: "POST",
+          body: JSON.stringify({
+            neurodiversity_summary: document.getElementById("commNeuro")?.value || "",
+            communication_style: document.getElementById("commStyle")?.value || "",
+            sensory_profile: document.getElementById("commSensory")?.value || "",
+            processing_needs: document.getElementById("commProcessing")?.value || "",
+            signs_of_distress: document.getElementById("commDistress")?.value || "",
+            what_helps: document.getElementById("commHelps")?.value || "",
+            what_to_avoid: document.getElementById("commAvoid")?.value || "",
+            routines_and_predictability: document.getElementById("commRoutine")?.value || "",
+            visual_support_needs: document.getElementById("commVisual")?.value || ""
+          })
+        });
+      });
+
       return;
     }
 
     if (activeProfileTab === "education") {
       host.innerHTML = `
         <div class="card">
-          <h3>Education profile</h3>
-          <div class="kv"><div class="k">School</div><div class="v">${safe(education.school_name || "—")}</div></div>
-          <div class="kv"><div class="k">Year group</div><div class="v">${safe(education.year_group || "—")}</div></div>
-          <div class="kv"><div class="k">Education status</div><div class="v">${safe(education.education_status || "—")}</div></div>
-          <div class="kv"><div class="k">SEN status</div><div class="v">${safe(education.sen_status || "—")}</div></div>
-          <div class="kv"><div class="k">EHCP details</div><div class="v">${safe(education.ehcp_details || "—")}</div></div>
-          <div class="kv"><div class="k">Designated teacher</div><div class="v">${safe(education.designated_teacher || "—")}</div></div>
-          <div class="kv"><div class="k">Attendance baseline</div><div class="v">${safe(education.attendance_baseline || "—")}</div></div>
-          <div class="kv"><div class="k">PEP status</div><div class="v">${safe(education.pep_status || "—")}</div></div>
-          <div class="kv"><div class="k">Support summary</div><div class="v">${safe(education.support_summary || "—")}</div></div>
+          <h3>Edit education profile</h3>
+
+          <div class="form-block">
+            <label for="eduSchool">School name</label>
+            <input id="eduSchool" class="field" type="text" value="${safe(education.school_name || "")}">
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-block">
+              <label for="eduYear">Year group</label>
+              <input id="eduYear" class="field" type="text" value="${safe(education.year_group || "")}">
+            </div>
+
+            <div class="form-block">
+              <label for="eduStatus">Education status</label>
+              <input id="eduStatus" class="field" type="text" value="${safe(education.education_status || "")}">
+            </div>
+          </div>
+
+          <div class="form-block">
+            <label for="eduSen">SEN status</label>
+            <input id="eduSen" class="field" type="text" value="${safe(education.sen_status || "")}">
+          </div>
+
+          <div class="form-block">
+            <label for="eduEhcp">EHCP details</label>
+            <textarea id="eduEhcp" class="textarea">${safe(education.ehcp_details || "")}</textarea>
+          </div>
+
+          <div class="form-block">
+            <label for="eduTeacher">Designated teacher</label>
+            <input id="eduTeacher" class="field" type="text" value="${safe(education.designated_teacher || "")}">
+          </div>
+
+          <div class="form-block">
+            <label for="eduAttendance">Attendance baseline</label>
+            <input id="eduAttendance" class="field" type="number" step="0.01" value="${safe(education.attendance_baseline || "")}">
+          </div>
+
+          <div class="form-block">
+            <label for="eduPep">PEP status</label>
+            <input id="eduPep" class="field" type="text" value="${safe(education.pep_status || "")}">
+          </div>
+
+          <div class="form-block">
+            <label for="eduSupport">Support summary</label>
+            <textarea id="eduSupport" class="textarea">${safe(education.support_summary || "")}</textarea>
+          </div>
+
+          ${saveBar}
         </div>
       `;
+
+      bindProfileSave(async () => {
+        const attendanceValue = document.getElementById("eduAttendance")?.value || "";
+        return api(`/young-people/${selectedYoungPerson.id}/education-profile`, {
+          method: "POST",
+          body: JSON.stringify({
+            school_name: document.getElementById("eduSchool")?.value || "",
+            year_group: document.getElementById("eduYear")?.value || "",
+            education_status: document.getElementById("eduStatus")?.value || "",
+            sen_status: document.getElementById("eduSen")?.value || "",
+            ehcp_details: document.getElementById("eduEhcp")?.value || "",
+            designated_teacher: document.getElementById("eduTeacher")?.value || "",
+            attendance_baseline: attendanceValue ? Number(attendanceValue) : null,
+            pep_status: document.getElementById("eduPep")?.value || "",
+            support_summary: document.getElementById("eduSupport")?.value || ""
+          })
+        });
+      });
+
       return;
     }
 
     if (activeProfileTab === "health") {
       host.innerHTML = `
         <div class="card">
-          <h3>Health profile</h3>
-          <div class="kv"><div class="k">GP</div><div class="v">${safe(health.gp_name || "—")}</div></div>
-          <div class="kv"><div class="k">GP contact</div><div class="v">${safe(health.gp_contact || "—")}</div></div>
-          <div class="kv"><div class="k">Dentist</div><div class="v">${safe(health.dentist_name || "—")}</div></div>
-          <div class="kv"><div class="k">Optician</div><div class="v">${safe(health.optician_name || "—")}</div></div>
-          <div class="kv"><div class="k">Allergies</div><div class="v">${safe(health.allergies || "—")}</div></div>
-          <div class="kv"><div class="k">Diagnoses</div><div class="v">${safe(health.diagnoses || "—")}</div></div>
-          <div class="kv"><div class="k">Mental health summary</div><div class="v">${safe(health.mental_health_summary || "—")}</div></div>
-          <div class="kv"><div class="k">Medication summary</div><div class="v">${safe(health.medication_summary || "—")}</div></div>
-          <div class="kv"><div class="k">Consent notes</div><div class="v">${safe(health.consent_notes || "—")}</div></div>
+          <h3>Edit health profile</h3>
+
+          <div class="form-row-2">
+            <div class="form-block">
+              <label for="healthGpName">GP name</label>
+              <input id="healthGpName" class="field" type="text" value="${safe(health.gp_name || "")}">
+            </div>
+
+            <div class="form-block">
+              <label for="healthGpContact">GP contact</label>
+              <input id="healthGpContact" class="field" type="text" value="${safe(health.gp_contact || "")}">
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-block">
+              <label for="healthDentistName">Dentist name</label>
+              <input id="healthDentistName" class="field" type="text" value="${safe(health.dentist_name || "")}">
+            </div>
+
+            <div class="form-block">
+              <label for="healthDentistContact">Dentist contact</label>
+              <input id="healthDentistContact" class="field" type="text" value="${safe(health.dentist_contact || "")}">
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-block">
+              <label for="healthOpticianName">Optician name</label>
+              <input id="healthOpticianName" class="field" type="text" value="${safe(health.optician_name || "")}">
+            </div>
+
+            <div class="form-block">
+              <label for="healthOpticianContact">Optician contact</label>
+              <input id="healthOpticianContact" class="field" type="text" value="${safe(health.optician_contact || "")}">
+            </div>
+          </div>
+
+          <div class="form-block">
+            <label for="healthAllergies">Allergies</label>
+            <textarea id="healthAllergies" class="textarea">${safe(health.allergies || "")}</textarea>
+          </div>
+
+          <div class="form-block">
+            <label for="healthDiagnoses">Diagnoses</label>
+            <textarea id="healthDiagnoses" class="textarea">${safe(health.diagnoses || "")}</textarea>
+          </div>
+
+          <div class="form-block">
+            <label for="healthMental">Mental health summary</label>
+            <textarea id="healthMental" class="textarea">${safe(health.mental_health_summary || "")}</textarea>
+          </div>
+
+          <div class="form-block">
+            <label for="healthMedication">Medication summary</label>
+            <textarea id="healthMedication" class="textarea">${safe(health.medication_summary || "")}</textarea>
+          </div>
+
+          <div class="form-block">
+            <label for="healthConsent">Consent notes</label>
+            <textarea id="healthConsent" class="textarea">${safe(health.consent_notes || "")}</textarea>
+          </div>
+
+          ${saveBar}
         </div>
       `;
+
+      bindProfileSave(async () => {
+        return api(`/young-people/${selectedYoungPerson.id}/health-profile`, {
+          method: "POST",
+          body: JSON.stringify({
+            gp_name: document.getElementById("healthGpName")?.value || "",
+            gp_contact: document.getElementById("healthGpContact")?.value || "",
+            dentist_name: document.getElementById("healthDentistName")?.value || "",
+            dentist_contact: document.getElementById("healthDentistContact")?.value || "",
+            optician_name: document.getElementById("healthOpticianName")?.value || "",
+            optician_contact: document.getElementById("healthOpticianContact")?.value || "",
+            allergies: document.getElementById("healthAllergies")?.value || "",
+            diagnoses: document.getElementById("healthDiagnoses")?.value || "",
+            mental_health_summary: document.getElementById("healthMental")?.value || "",
+            medication_summary: document.getElementById("healthMedication")?.value || "",
+            consent_notes: document.getElementById("healthConsent")?.value || ""
+          })
+        });
+      });
+
       return;
     }
 
-    if (workspaceName === "education") {
-  const html = await fetch("/components/yp-education-workspace.html", {
-    credentials: "include"
-  }).then(r => r.text());
-
-  mount.innerHTML = html;
-
-  if (!window.YoungPersonEducationWorkspace) {
-    await loadScript("/js/workspaces/yp-education-workspace.js");
-  }
-
-  window.YoungPersonEducationWorkspace.bind({
-    selectedYoungPerson,
-    overview: latestOverview,
-    reloadOverview: loadYoungPersonOverview
-  });
-
-  return;
-}
-    if (workspaceName === "family") {
-  const html = await fetch("/components/yp-family-workspace.html", {
-    credentials: "include"
-  }).then(r => r.text());
-
-  mount.innerHTML = html;
-
-  if (!window.YoungPersonFamilyWorkspace) {
-    await loadScript("/js/workspaces/yp-family-workspace.js");
-  }
-
-  window.YoungPersonFamilyWorkspace.bind({
-    selectedYoungPerson,
-    overview: latestOverview,
-    reloadOverview: loadYoungPersonOverview
-  });
-
-  return;
-}
-
-    if (workspaceName === "risk") {
-  const html = await fetch("/components/yp-risk-workspace.html", {
-    credentials: "include"
-  }).then(r => r.text());
-
-  mount.innerHTML = html;
-
-  if (!window.YoungPersonRiskWorkspace) {
-    await loadScript("/js/workspaces/yp-risk-workspace.js");
-  }
-
-  window.YoungPersonRiskWorkspace.bind({
-    selectedYoungPerson,
-    overview: latestOverview,
-    reloadOverview: loadYoungPersonOverview
-  });
-
-  return;
-}
-
-    if (workspaceName === "keywork") {
-  const html = await fetch("/components/yp-keywork-workspace.html", {
-    credentials: "include"
-  }).then(r => r.text());
-
-  mount.innerHTML = html;
-
-  if (!window.YoungPersonKeyworkWorkspace) {
-    await loadScript("/js/workspaces/yp-keywork-workspace.js");
-  }
-
-  window.YoungPersonKeyworkWorkspace.bind({
-    selectedYoungPerson,
-    overview: latestOverview,
-    reloadOverview: loadYoungPersonOverview
-  });
-
-  return;
-}
-
     if (activeProfileTab === "contacts") {
-      host.innerHTML = contacts.length ? `
-        <div class="mini-list">
-          ${contacts.map(contact => `
-            <div class="mini-item">
-              <strong>${safe(contact.full_name || "Unnamed contact")}</strong>
-              <p>
-                ${safe(contact.relationship_to_young_person || "Relationship not set")} · ${safe(contact.contact_type || "contact")}<br>
-                Phone: ${safe(contact.phone || "—")} · Email: ${safe(contact.email || "—")}<br>
-                Supervision: ${safe(contact.supervision_level || "—")}
-              </p>
+      host.innerHTML = `
+        <div class="card">
+          <h3>Add contact</h3>
+
+          <div class="form-block">
+            <label for="contactFullName">Full name</label>
+            <input id="contactFullName" class="field" type="text">
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-block">
+              <label for="contactType">Contact type</label>
+              <input id="contactType" class="field" type="text" placeholder="e.g. parent, family member, professional">
             </div>
-          `).join("")}
+
+            <div class="form-block">
+              <label for="contactRelationship">Relationship</label>
+              <input id="contactRelationship" class="field" type="text">
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-block">
+              <label for="contactPhone">Phone</label>
+              <input id="contactPhone" class="field" type="text">
+            </div>
+
+            <div class="form-block">
+              <label for="contactEmail">Email</label>
+              <input id="contactEmail" class="field" type="email">
+            </div>
+          </div>
+
+          <div class="form-block">
+            <label for="contactAddress">Address</label>
+            <textarea id="contactAddress" class="textarea"></textarea>
+          </div>
+
+          <div class="form-block">
+            <label for="contactSupervision">Supervision level</label>
+            <input id="contactSupervision" class="field" type="text">
+          </div>
+
+          <div class="form-block">
+            <label for="contactNotes">Notes</label>
+            <textarea id="contactNotes" class="textarea"></textarea>
+          </div>
+
+          <div class="checkbox-grid">
+            <label class="check-item"><input id="contactPR" type="checkbox"><span>Parental responsibility</span></label>
+            <label class="check-item"><input id="contactApproved" type="checkbox"><span>Approved contact</span></label>
+            <label class="check-item"><input id="contactRestricted" type="checkbox"><span>Restricted contact</span></label>
+          </div>
+
+          ${saveBar}
         </div>
-      ` : `<div class="empty-state">No contacts recorded yet.</div>`;
+
+        <div class="card" style="margin-top:16px;">
+          <h3>Existing contacts</h3>
+          ${
+            contacts.length
+              ? contacts.map(contact => `
+                <div class="mini-item" style="margin-bottom:10px;">
+                  <strong>${safe(contact.full_name || "Unnamed contact")}</strong>
+                  <p>
+                    ${safe(contact.relationship_to_young_person || "Relationship not set")} · ${safe(contact.contact_type || "contact")}<br>
+                    Phone: ${safe(contact.phone || "—")} · Email: ${safe(contact.email || "—")}<br>
+                    Supervision: ${safe(contact.supervision_level || "—")}
+                  </p>
+                </div>
+              `).join("")
+              : `<div class="empty-state">No contacts recorded yet.</div>`
+          }
+        </div>
+      `;
+
+      bindProfileSave(async () => {
+        const fullNameValue = document.getElementById("contactFullName")?.value || "";
+        if (!fullNameValue.trim()) {
+          throw new Error("Full name is required.");
+        }
+
+        return api(`/young-people/${selectedYoungPerson.id}/contacts`, {
+          method: "POST",
+          body: JSON.stringify({
+            full_name: fullNameValue,
+            contact_type: document.getElementById("contactType")?.value || "",
+            relationship_to_young_person: document.getElementById("contactRelationship")?.value || "",
+            phone: document.getElementById("contactPhone")?.value || "",
+            email: document.getElementById("contactEmail")?.value || "",
+            address: document.getElementById("contactAddress")?.value || "",
+            supervision_level: document.getElementById("contactSupervision")?.value || "",
+            notes: document.getElementById("contactNotes")?.value || "",
+            is_parental_responsibility_holder: !!document.getElementById("contactPR")?.checked,
+            is_approved_contact: !!document.getElementById("contactApproved")?.checked,
+            is_restricted_contact: !!document.getElementById("contactRestricted")?.checked
+          })
+        });
+      });
+
       return;
     }
 
     if (activeProfileTab === "alerts") {
-      host.innerHTML = alerts.length ? `
-        <div class="mini-list">
-          ${alerts.map(alert => `
-            <div class="mini-item">
-              <strong>${safe(alert.title || "Alert")}</strong>
-              <p>
-                ${safe(alert.alert_type || "alert")} · ${safe(alert.severity || "severity not set")}<br>
-                ${safe(alert.description || "No description")}<br>
-                Review date: ${safe(alert.review_date || "—")} · ${alert.is_active ? "active" : "inactive"}
-              </p>
+      host.innerHTML = `
+        <div class="card">
+          <h3>Add alert</h3>
+
+          <div class="form-row-2">
+            <div class="form-block">
+              <label for="alertType">Alert type</label>
+              <input id="alertType" class="field" type="text" placeholder="e.g. health, missing, behaviour, contact">
             </div>
-          `).join("")}
+
+            <div class="form-block">
+              <label for="alertSeverity">Severity</label>
+              <select id="alertSeverity" class="select">
+                <option value="">Select severity</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-block">
+            <label for="alertTitle">Title</label>
+            <input id="alertTitle" class="field" type="text">
+          </div>
+
+          <div class="form-block">
+            <label for="alertDescription">Description</label>
+            <textarea id="alertDescription" class="textarea"></textarea>
+          </div>
+
+          <div class="form-block">
+            <label for="alertReviewDate">Review date</label>
+            <input id="alertReviewDate" class="field" type="date" value="${getTodayString()}">
+          </div>
+
+          <div class="checkbox-grid">
+            <label class="check-item"><input id="alertActive" type="checkbox" checked><span>Active</span></label>
+            <label class="check-item"><input id="alertGlobal" type="checkbox"><span>Show globally</span></label>
+          </div>
+
+          ${saveBar}
         </div>
-      ` : `<div class="empty-state">No alerts recorded yet.</div>`;
+
+        <div class="card" style="margin-top:16px;">
+          <h3>Existing alerts</h3>
+          ${
+            alerts.length
+              ? alerts.map(alert => `
+                <div class="mini-item" style="margin-bottom:10px;">
+                  <strong>${safe(alert.title || "Alert")}</strong>
+                  <p>
+                    ${safe(alert.alert_type || "alert")} · ${safe(alert.severity || "severity not set")}<br>
+                    ${safe(alert.description || "No description")}<br>
+                    Review date: ${safe(alert.review_date || "—")} · ${alert.is_active ? "active" : "inactive"}
+                  </p>
+                </div>
+              `).join("")
+              : `<div class="empty-state">No alerts recorded yet.</div>`
+          }
+        </div>
+      `;
+
+      bindProfileSave(async () => {
+        const titleValue = document.getElementById("alertTitle")?.value || "";
+        if (!titleValue.trim()) {
+          throw new Error("Alert title is required.");
+        }
+
+        return api(`/young-people/${selectedYoungPerson.id}/alerts`, {
+          method: "POST",
+          body: JSON.stringify({
+            alert_type: document.getElementById("alertType")?.value || "",
+            severity: document.getElementById("alertSeverity")?.value || "",
+            title: titleValue,
+            description: document.getElementById("alertDescription")?.value || "",
+            review_date: document.getElementById("alertReviewDate")?.value || null,
+            is_active: !!document.getElementById("alertActive")?.checked,
+            show_globally: !!document.getElementById("alertGlobal")?.checked
+          })
+        });
+      });
     }
-  }
-
-  function renderAssistantContext(overview) {
-    const yp = overview?.young_person || selectedYoungPerson || {};
-    const communication = overview?.communication_profile || {};
-    const education = overview?.education_profile || {};
-    const health = overview?.health_profile || {};
-    const box = document.getElementById("assistantContextBox");
-    if (!box) return;
-
-    box.innerHTML = `
-      <strong style="display:block;margin-bottom:8px;color:var(--text);">Assistant context for ${safe(fullName(yp))}</strong>
-      Preferred name: ${safe(yp.preferred_name || yp.first_name || "—")}<br>
-      Placement status: ${safe(yp.placement_status || "—")}<br>
-      Risk level: ${safe(yp.summary_risk_level || "—")}<br>
-      Communication: ${safe(communication.communication_style || "—")}<br>
-      What helps: ${safe(communication.what_helps || "—")}<br>
-      Education: ${safe(education.education_status || "—")}<br>
-      Health / mental health: ${safe(health.mental_health_summary || "—")}
-    `;
   }
 
   async function loadYoungPeople() {
@@ -471,6 +843,26 @@ window.YoungPeopleShell = (function () {
     renderProfileTab(overview);
     renderAssistantContext(overview);
     await loadWorkspace(activeWorkspace);
+  }
+
+  function renderAssistantContext(overview) {
+    const yp = overview?.young_person || selectedYoungPerson || {};
+    const communication = overview?.communication_profile || {};
+    const education = overview?.education_profile || {};
+    const health = overview?.health_profile || {};
+    const box = document.getElementById("assistantContextBox");
+    if (!box) return;
+
+    box.innerHTML = `
+      <strong style="display:block;margin-bottom:8px;color:var(--text);">Assistant context for ${safe(fullName(yp))}</strong>
+      Preferred name: ${safe(yp.preferred_name || yp.first_name || "—")}<br>
+      Placement status: ${safe(yp.placement_status || "—")}<br>
+      Risk level: ${safe(yp.summary_risk_level || "—")}<br>
+      Communication: ${safe(communication.communication_style || "—")}<br>
+      What helps: ${safe(communication.what_helps || "—")}<br>
+      Education: ${safe(education.education_status || "—")}<br>
+      Health / mental health: ${safe(health.mental_health_summary || "—")}
+    `;
   }
 
   async function loadWorkspace(workspaceName) {
@@ -535,24 +927,104 @@ window.YoungPeopleShell = (function () {
     }
 
     if (workspaceName === "health") {
-  const html = await fetch("/components/yp-health-workspace.html", {
-    credentials: "include"
-  }).then(r => r.text());
+      const html = await fetch("/components/yp-health-workspace.html", {
+        credentials: "include"
+      }).then(r => r.text());
 
-  mount.innerHTML = html;
+      mount.innerHTML = html;
 
-  if (!window.YoungPersonHealthWorkspace) {
-    await loadScript("/js/workspaces/yp-health-workspace.js");
-  }
+      if (!window.YoungPersonHealthWorkspace) {
+        await loadScript("/js/workspaces/yp-health-workspace.js");
+      }
 
-  window.YoungPersonHealthWorkspace.bind({
-    selectedYoungPerson,
-    overview: latestOverview,
-    reloadOverview: loadYoungPersonOverview
-  });
+      window.YoungPersonHealthWorkspace.bind({
+        selectedYoungPerson,
+        overview: latestOverview,
+        reloadOverview: loadYoungPersonOverview
+      });
 
-  return;
-}
+      return;
+    }
+
+    if (workspaceName === "education") {
+      const html = await fetch("/components/yp-education-workspace.html", {
+        credentials: "include"
+      }).then(r => r.text());
+
+      mount.innerHTML = html;
+
+      if (!window.YoungPersonEducationWorkspace) {
+        await loadScript("/js/workspaces/yp-education-workspace.js");
+      }
+
+      window.YoungPersonEducationWorkspace.bind({
+        selectedYoungPerson,
+        overview: latestOverview,
+        reloadOverview: loadYoungPersonOverview
+      });
+
+      return;
+    }
+
+    if (workspaceName === "family") {
+      const html = await fetch("/components/yp-family-workspace.html", {
+        credentials: "include"
+      }).then(r => r.text());
+
+      mount.innerHTML = html;
+
+      if (!window.YoungPersonFamilyWorkspace) {
+        await loadScript("/js/workspaces/yp-family-workspace.js");
+      }
+
+      window.YoungPersonFamilyWorkspace.bind({
+        selectedYoungPerson,
+        overview: latestOverview,
+        reloadOverview: loadYoungPersonOverview
+      });
+
+      return;
+    }
+
+    if (workspaceName === "risk") {
+      const html = await fetch("/components/yp-risk-workspace.html", {
+        credentials: "include"
+      }).then(r => r.text());
+
+      mount.innerHTML = html;
+
+      if (!window.YoungPersonRiskWorkspace) {
+        await loadScript("/js/workspaces/yp-risk-workspace.js");
+      }
+
+      window.YoungPersonRiskWorkspace.bind({
+        selectedYoungPerson,
+        overview: latestOverview,
+        reloadOverview: loadYoungPersonOverview
+      });
+
+      return;
+    }
+
+    if (workspaceName === "keywork") {
+      const html = await fetch("/components/yp-keywork-workspace.html", {
+        credentials: "include"
+      }).then(r => r.text());
+
+      mount.innerHTML = html;
+
+      if (!window.YoungPersonKeyworkWorkspace) {
+        await loadScript("/js/workspaces/yp-keywork-workspace.js");
+      }
+
+      window.YoungPersonKeyworkWorkspace.bind({
+        selectedYoungPerson,
+        overview: latestOverview,
+        reloadOverview: loadYoungPersonOverview
+      });
+
+      return;
+    }
 
     mount.innerHTML = `
       <div class="empty-state">
