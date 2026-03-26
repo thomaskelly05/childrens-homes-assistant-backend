@@ -875,16 +875,25 @@ window.YoungPeopleShell = (function () {
       mount.innerHTML = `<div class="empty-state">Select a young person to load a workspace.</div>`;
       return;
     }
+if (workspaceName === "timeline") {
+  const html = await fetch("/components/yp-timeline-workspace.html", {
+    credentials: "include"
+  }).then(r => r.text());
 
-    if (workspaceName === "timeline") {
-      mount.innerHTML = `
-        <div class="assistant-prompt">
-          Timeline placeholder for <strong>${safe(fullName(selectedYoungPerson || {}))}</strong>.<br><br>
-          Next step: load chronology events, incidents, daily notes, health records, education records, family contact, keywork, and tasks here.
-        </div>
-      `;
-      return;
-    }
+  mount.innerHTML = html;
+
+  if (!window.YoungPersonTimelineWorkspace) {
+    await loadScript("/js/workspaces/yp-timeline-workspace.js");
+  }
+
+  window.YoungPersonTimelineWorkspace.bind({
+    selectedYoungPerson,
+    overview: latestOverview,
+    reloadOverview: loadYoungPersonOverview
+  });
+
+  return;
+}
 
     if (workspaceName === "incident") {
       const html = await fetch("/components/yp-incident-workspace.html", {
