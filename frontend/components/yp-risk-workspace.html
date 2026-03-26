@@ -1,0 +1,247 @@
+<div id="riskWorkspace">
+  <div class="record-form-grid">
+    <div class="card">
+      <h3>Risk assessment</h3>
+
+      <div class="form-row-2">
+        <div class="form-block">
+          <label for="riskCategory">Risk category</label>
+          <select id="riskCategory" class="select">
+            <option value="">Select risk category</option>
+            <option value="missing">Missing / absent from home</option>
+            <option value="self_harm">Self-harm</option>
+            <option value="suicidal_ideation">Suicidal ideation</option>
+            <option value="physical_aggression">Physical aggression</option>
+            <option value="property_damage">Property damage</option>
+            <option value="exploitation">Exploitation</option>
+            <option value="substance_misuse">Substance misuse</option>
+            <option value="sexualised_behaviour">Sexualised behaviour</option>
+            <option value="health">Health</option>
+            <option value="community_safety">Community safety</option>
+            <option value="relationships">Relationships</option>
+            <option value="online_safety">Online safety</option>
+            <option value="other">Other</option>
+          </select>
+          <div class="help-text">Choose the main risk area so the assessment can be filtered, reviewed, and linked correctly.</div>
+        </div>
+
+        <div class="form-block">
+          <label for="riskTitle">Risk title</label>
+          <input id="riskTitle" class="field" type="text" placeholder="e.g. Risk of going missing following contact">
+          <div class="help-text">Use a clear title that describes the specific risk.</div>
+        </div>
+      </div>
+
+      <div class="form-block">
+        <label for="riskConcernSummary">Concern summary</label>
+        <textarea id="riskConcernSummary" class="textarea" placeholder="What is the concern and why does it matter?"></textarea>
+        <div class="help-text">Describe the risk clearly, factually, and proportionately. Explain what the concern is and the impact it may have.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="riskKnownTriggers">Known triggers</label>
+        <textarea id="riskKnownTriggers" class="textarea" placeholder="What tends to increase the risk?"></textarea>
+        <div class="help-text">Record triggers, contexts, patterns, people, situations, or changes that may increase the likelihood of the risk.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="riskEarlyWarningSigns">Early warning signs</label>
+        <textarea id="riskEarlyWarningSigns" class="textarea" placeholder="What signs show the risk may be increasing?"></textarea>
+        <div class="help-text">Record the early indicators adults should notice so support can be offered early.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="riskContextualFactors">Contextual factors</label>
+        <textarea id="riskContextualFactors" class="textarea" placeholder="What wider context is relevant?"></textarea>
+        <div class="help-text">Record contextual factors such as family dynamics, peers, education issues, trauma history, routines, or environmental pressures.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="riskCurrentControls">Current controls</label>
+        <textarea id="riskCurrentControls" class="textarea" placeholder="What is already in place to reduce the risk?"></textarea>
+        <div class="help-text">Record the measures already in place, including routines, supervision, strategies, environmental controls, and professional input.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="riskDeescalationStrategies">De-escalation and support strategies</label>
+        <textarea id="riskDeescalationStrategies" class="textarea" placeholder="What helps reduce risk or support the young person safely?"></textarea>
+        <div class="help-text">Describe the practical, trauma-informed, and therapeutic approaches that help to reduce distress and risk.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="riskResponseActions">Response actions</label>
+        <textarea id="riskResponseActions" class="textarea" placeholder="What should staff do if the risk increases or occurs?"></textarea>
+        <div class="help-text">Record the agreed staff response, escalation, notification, immediate action, and protective steps to take.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="riskChildViews">Young person’s views</label>
+        <textarea id="riskChildViews" class="textarea" placeholder="What does the young person say or communicate about this risk?"></textarea>
+        <div class="help-text">Record the young person’s understanding, views, feelings, and any strategies they say help them.</div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-block">
+          <label for="riskSeverity">Severity</label>
+          <select id="riskSeverity" class="select">
+            <option value="">Select severity</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="critical">Critical</option>
+          </select>
+          <div class="help-text">Rate the likely seriousness of harm if the risk occurs.</div>
+        </div>
+
+        <div class="form-block">
+          <label for="riskLikelihood">Likelihood</label>
+          <select id="riskLikelihood" class="select">
+            <option value="">Select likelihood</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+          <div class="help-text">Rate how likely the risk is to happen in current circumstances.</div>
+        </div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-block">
+          <label for="riskReviewDate">Review date</label>
+          <input id="riskReviewDate" class="field" type="date">
+          <div class="help-text">Set when this risk assessment must be reviewed.</div>
+        </div>
+
+        <div class="form-block">
+          <label for="riskStatus">Status</label>
+          <select id="riskStatus" class="select">
+            <option value="active">Active</option>
+            <option value="draft">Draft</option>
+            <option value="review_due">Review due</option>
+            <option value="closed">Closed</option>
+          </select>
+          <div class="help-text">Track whether the assessment is active, draft, due for review, or closed.</div>
+        </div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-block">
+          <label for="riskApprovalStatus">Approval status</label>
+          <select id="riskApprovalStatus" class="select">
+            <option value="draft">Draft</option>
+            <option value="pending_review">Pending review</option>
+            <option value="approved">Approved</option>
+            <option value="returned">Returned</option>
+          </select>
+          <div class="help-text">Use this to track management review and approval.</div>
+        </div>
+
+        <div class="form-block">
+          <label for="riskOwnerId">Owner ID</label>
+          <input id="riskOwnerId" class="field" type="number" placeholder="Optional owner user ID">
+          <div class="help-text">Use this if a specific adult owns the risk plan or review.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="record-side-stack">
+      <div class="card">
+        <h3>Checks and accountability</h3>
+
+        <div class="checkbox-grid">
+          <label class="check-item"><input id="riskTaskCreate" type="checkbox" checked><span>Create follow-up task</span></label>
+          <label class="check-item"><input id="riskChronologyLink" type="checkbox" checked><span>Link to chronology</span></label>
+          <label class="check-item"><input id="riskPlanLink" type="checkbox" checked><span>Link to support plans</span></label>
+          <label class="check-item"><input id="riskManagerReview" type="checkbox" checked><span>Manager review needed</span></label>
+          <label class="check-item"><input id="riskSafeguardingConcern" type="checkbox"><span>Safeguarding concern</span></label>
+          <label class="check-item"><input id="riskArchiveExisting" type="checkbox"><span>Archive old version</span></label>
+        </div>
+
+        <div class="help-text" style="margin-top:10px;">
+          These checks help the system create review actions, chronology links, linked plans, and management accountability prompts.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Suggested Quality Standards</h3>
+        <div id="riskStandardsBox" class="assistant-prompt">
+          Suggested standards will appear here after AI review.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Suggested links</h3>
+        <div id="riskLinksBox" class="assistant-prompt">
+          Suggested links to chronology, incidents, safeguarding, support plans, and tasks will appear here after AI review.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Accountability workflow</h3>
+        <div id="riskWorkflowBox" class="assistant-prompt">
+          Complete the risk assessment, review AI suggestions, save the assessment, and follow any linked actions, chronology, support plan, or management review prompts.
+        </div>
+      </div>
+
+      <div class="doc-ai-panel">
+        <div class="doc-ai-panel-head">
+          <div>
+            <h3>AI document review</h3>
+            <p>Improve wording, spell check, therapeutic tone, missing details, standards, and linked records.</p>
+          </div>
+        </div>
+
+        <div class="doc-ai-actions">
+          <button type="button" class="ghost-btn" data-risk-ai-action="improve_wording">Improve wording</button>
+          <button type="button" class="ghost-btn" data-risk-ai-action="spell_check">Spell check</button>
+          <button type="button" class="ghost-btn" data-risk-ai-action="make_therapeutic">Make therapeutic</button>
+          <button type="button" class="ghost-btn" data-risk-ai-action="make_more_factual">Make more factual</button>
+          <button type="button" class="ghost-btn" data-risk-ai-action="suggest_missing_details">Missing details</button>
+          <button type="button" class="ghost-btn" data-risk-ai-action="suggest_quality_standards">Quality standards</button>
+          <button type="button" class="ghost-btn" data-risk-ai-action="suggest_links">Suggest links</button>
+          <button type="button" class="primary-btn" id="runRiskAiReviewBtn">Run full review</button>
+        </div>
+
+        <div id="riskAiStatus" class="doc-ai-status hidden"></div>
+
+        <div id="riskAiResults" class="doc-ai-results hidden">
+          <div class="doc-ai-result-card">
+            <h4>Improved version</h4>
+            <textarea id="riskAiImprovedText" class="textarea" rows="12" readonly></textarea>
+            <div class="doc-ai-result-actions">
+              <button type="button" class="secondary-btn" id="copyRiskAiBtn">Copy</button>
+              <button type="button" class="primary-btn" id="applyRiskAiBtn">Apply to concern summary</button>
+            </div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Field feedback</h4>
+            <div id="riskAiFieldFeedback" class="doc-ai-list"></div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Missing details</h4>
+            <div id="riskAiMissingDetails" class="doc-ai-list"></div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Safeguarding notes</h4>
+            <div id="riskAiSafeguarding" class="doc-ai-list"></div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Summary</h4>
+            <div id="riskAiSummary" class="doc-ai-summary"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="record-action-bar">
+        <button id="clearRiskFormBtn" class="secondary-btn" type="button">Clear form</button>
+        <button id="saveRiskRecordBtn" class="primary-btn" type="button">Save risk assessment</button>
+      </div>
+
+      <div id="riskSaveStatus" class="doc-ai-status hidden"></div>
+    </div>
+  </div>
+</div>
