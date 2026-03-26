@@ -1,0 +1,77 @@
+<div id="timelineWorkspace">
+  <div class="record-form-grid">
+    <div class="card">
+      <h3>Timeline</h3>
+
+      <div class="form-row-2">
+        <div class="form-block">
+          <label for="timelineDateFrom">From date</label>
+          <input id="timelineDateFrom" class="field" type="date">
+          <div class="help-text">Filter the timeline from this date onwards.</div>
+        </div>
+
+        <div class="form-block">
+          <label for="timelineDateTo">To date</label>
+          <input id="timelineDateTo" class="field" type="date">
+          <div class="help-text">Filter the timeline up to this date.</div>
+        </div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-block">
+          <label for="timelineTypeFilter">Record type</label>
+          <select id="timelineTypeFilter" class="select">
+            <option value="">All record types</option>
+            <option value="incident">Incident</option>
+            <option value="daily_note">Daily note</option>
+            <option value="health_record">Health</option>
+            <option value="education_record">Education</option>
+            <option value="family_contact">Family contact</option>
+            <option value="keywork_session">Keywork</option>
+            <option value="risk_assessment">Risk</option>
+            <option value="chronology_event">Chronology</option>
+          </select>
+          <div class="help-text">Filter by a specific record type.</div>
+        </div>
+
+        <div class="form-block">
+          <label for="timelineSearch">Search</label>
+          <input id="timelineSearch" class="field" type="text" placeholder="Search titles, summaries, keywords">
+          <div class="help-text">Search across the timeline content shown for this young person.</div>
+        </div>
+      </div>
+
+      <div class="record-action-bar" style="margin-top:4px;">
+        <button id="applyTimelineFiltersBtn" class="secondary-btn" type="button">Apply filters</button>
+        <button id="resetTimelineFiltersBtn" class="ghost-btn" type="button">Reset</button>
+        <button id="refreshTimelineBtn" class="primary-btn" type="button">Refresh timeline</button>
+      </div>
+
+      <div id="timelineStatus" class="doc-ai-status hidden" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="record-side-stack">
+      <div class="card">
+        <h3>Timeline summary</h3>
+        <div id="timelineSummaryBox" class="assistant-prompt">
+          Timeline summary will appear here once records are loaded.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Linked system view</h3>
+        <div class="assistant-prompt">
+          This timeline is where linked records start to come together:
+          chronology, incidents, daily notes, health, education, family contact, keywork, and risk.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:18px;">
+    <h3 style="margin-bottom:14px;">Timeline entries</h3>
+    <div id="timelineList">
+      <div class="empty-state">Select a young person to load their timeline.</div>
+    </div>
+  </div>
+</div>
