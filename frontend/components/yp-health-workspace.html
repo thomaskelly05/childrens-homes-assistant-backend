@@ -1,0 +1,183 @@
+<div id="healthWorkspace">
+  <div class="record-form-grid">
+    <div class="card">
+      <h3>Health record</h3>
+
+      <div class="form-row-2">
+        <div class="form-block">
+          <label for="healthRecordType">Record type</label>
+          <select id="healthRecordType" class="select">
+            <option value="">Select record type</option>
+            <option value="appointment">Appointment</option>
+            <option value="medication">Medication</option>
+            <option value="illness">Illness</option>
+            <option value="injury">Injury</option>
+            <option value="mental_health">Mental health</option>
+            <option value="routine_check">Routine check</option>
+            <option value="professional_contact">Professional contact</option>
+            <option value="other">Other</option>
+          </select>
+          <div class="help-text">Choose the main health category so the record can be filtered and linked correctly.</div>
+        </div>
+
+        <div class="form-block">
+          <label for="healthEventDatetime">Date and time</label>
+          <input id="healthEventDatetime" class="field" type="datetime-local">
+          <div class="help-text">Record when the health event, contact, or appointment happened.</div>
+        </div>
+      </div>
+
+      <div class="form-block">
+        <label for="healthTitle">Title</label>
+        <input id="healthTitle" class="field" type="text" placeholder="e.g. GP appointment, dental check, low mood reported">
+        <div class="help-text">Give the record a clear short title so adults can quickly understand the entry.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="healthSummary">Summary</label>
+        <textarea id="healthSummary" class="textarea" placeholder="What happened, why, and what is important?"></textarea>
+        <div class="help-text">Record the health event clearly and factually, including the reason, what was observed, and the key outcome.</div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-block">
+          <label for="healthProfessionalName">Professional involved</label>
+          <input id="healthProfessionalName" class="field" type="text" placeholder="e.g. GP, CAMHS worker, dentist">
+          <div class="help-text">Record the professional’s name or role where known.</div>
+        </div>
+
+        <div class="form-block">
+          <label for="healthOutcome">Outcome</label>
+          <input id="healthOutcome" class="field" type="text" placeholder="e.g. reviewed, advice given, referral made">
+          <div class="help-text">Record the result of the appointment, contact, or health event.</div>
+        </div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-block">
+          <label for="healthNextActionDate">Next action date</label>
+          <input id="healthNextActionDate" class="field" type="date">
+          <div class="help-text">If something needs following up, record the expected next date.</div>
+        </div>
+
+        <div class="form-block">
+          <label for="healthMedicationImpact">Medication / treatment update</label>
+          <input id="healthMedicationImpact" class="field" type="text" placeholder="e.g. PRN given, prescription reviewed">
+          <div class="help-text">Briefly note medication, treatment, or health intervention where relevant.</div>
+        </div>
+      </div>
+
+      <div class="form-block">
+        <label for="healthYoungPersonVoice">Young person’s voice</label>
+        <textarea id="healthYoungPersonVoice" class="textarea" placeholder="What did the young person say, report, or express?"></textarea>
+        <div class="help-text">Record the young person’s views, symptoms reported, emotional presentation, or wishes around their health.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="healthFollowUpNotes">Follow-up and staff actions</label>
+        <textarea id="healthFollowUpNotes" class="textarea" placeholder="What do staff need to do next?"></textarea>
+        <div class="help-text">Record any follow-up actions, appointments, monitoring, communication, or handover needed.</div>
+      </div>
+    </div>
+
+    <div class="record-side-stack">
+      <div class="card">
+        <h3>Checks and follow-up</h3>
+
+        <div class="checkbox-grid">
+          <label class="check-item"><input id="healthFollowUpRequired" type="checkbox" checked><span>Follow-up required</span></label>
+          <label class="check-item"><input id="healthChronologyLink" type="checkbox" checked><span>Link to chronology</span></label>
+          <label class="check-item"><input id="healthPlanLink" type="checkbox" checked><span>Link to health plan</span></label>
+          <label class="check-item"><input id="healthTaskCreate" type="checkbox" checked><span>Create follow-up task</span></label>
+          <label class="check-item"><input id="healthManagerReview" type="checkbox"><span>Manager review needed</span></label>
+          <label class="check-item"><input id="healthSafeguardingConcern" type="checkbox"><span>Safeguarding concern</span></label>
+        </div>
+
+        <div class="help-text" style="margin-top:10px;">
+          These checks help the system suggest linked records, plans, chronology entries, and accountability actions.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Suggested Quality Standards</h3>
+        <div id="healthStandardsBox" class="assistant-prompt">
+          Suggested standards will appear here after AI review.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Suggested links</h3>
+        <div id="healthLinksBox" class="assistant-prompt">
+          Suggested links to chronology, health profile, health plan, tasks, and reviews will appear here after AI review.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Accountability workflow</h3>
+        <div id="healthWorkflowBox" class="assistant-prompt">
+          Complete the health record, review AI suggestions, save the record, and follow any linked actions, plans, chronology, or task prompts.
+        </div>
+      </div>
+
+      <div class="doc-ai-panel">
+        <div class="doc-ai-panel-head">
+          <div>
+            <h3>AI document review</h3>
+            <p>Improve wording, spell check, therapeutic tone, missing details, standards, and linked records.</p>
+          </div>
+        </div>
+
+        <div class="doc-ai-actions">
+          <button type="button" class="ghost-btn" data-health-ai-action="improve_wording">Improve wording</button>
+          <button type="button" class="ghost-btn" data-health-ai-action="spell_check">Spell check</button>
+          <button type="button" class="ghost-btn" data-health-ai-action="make_therapeutic">Make therapeutic</button>
+          <button type="button" class="ghost-btn" data-health-ai-action="make_more_factual">Make more factual</button>
+          <button type="button" class="ghost-btn" data-health-ai-action="suggest_missing_details">Missing details</button>
+          <button type="button" class="ghost-btn" data-health-ai-action="suggest_quality_standards">Quality standards</button>
+          <button type="button" class="ghost-btn" data-health-ai-action="suggest_links">Suggest links</button>
+          <button type="button" class="primary-btn" id="runHealthAiReviewBtn">Run full review</button>
+        </div>
+
+        <div id="healthAiStatus" class="doc-ai-status hidden"></div>
+
+        <div id="healthAiResults" class="doc-ai-results hidden">
+          <div class="doc-ai-result-card">
+            <h4>Improved version</h4>
+            <textarea id="healthAiImprovedText" class="textarea" rows="12" readonly></textarea>
+            <div class="doc-ai-result-actions">
+              <button type="button" class="secondary-btn" id="copyHealthAiBtn">Copy</button>
+              <button type="button" class="primary-btn" id="applyHealthAiBtn">Apply to summary</button>
+            </div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Field feedback</h4>
+            <div id="healthAiFieldFeedback" class="doc-ai-list"></div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Missing details</h4>
+            <div id="healthAiMissingDetails" class="doc-ai-list"></div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Safeguarding notes</h4>
+            <div id="healthAiSafeguarding" class="doc-ai-list"></div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Summary</h4>
+            <div id="healthAiSummary" class="doc-ai-summary"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="record-action-bar">
+        <button id="clearHealthFormBtn" class="secondary-btn" type="button">Clear form</button>
+        <button id="saveHealthRecordBtn" class="primary-btn" type="button">Save health record</button>
+      </div>
+
+      <div id="healthSaveStatus" class="doc-ai-status hidden"></div>
+    </div>
+  </div>
+</div>
