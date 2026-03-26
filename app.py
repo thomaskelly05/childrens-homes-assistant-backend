@@ -123,6 +123,7 @@ ROUTERS = [
     "routers.tasks_routes",
     "routers.document_rules_routes",
     "routers.document_ai_review_routes",
+    "routers.document_ai_routes",
     "routers.manager_routes",
     "routers.young_people_routes",
     "routers.young_people_profile_routes",
