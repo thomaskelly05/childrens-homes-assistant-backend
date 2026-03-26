@@ -343,6 +343,26 @@ window.YoungPeopleShell = (function () {
   return;
 }
 
+    if (workspaceName === "risk") {
+  const html = await fetch("/components/yp-risk-workspace.html", {
+    credentials: "include"
+  }).then(r => r.text());
+
+  mount.innerHTML = html;
+
+  if (!window.YoungPersonRiskWorkspace) {
+    await loadScript("/js/workspaces/yp-risk-workspace.js");
+  }
+
+  window.YoungPersonRiskWorkspace.bind({
+    selectedYoungPerson,
+    overview: latestOverview,
+    reloadOverview: loadYoungPersonOverview
+  });
+
+  return;
+}
+
     if (activeProfileTab === "contacts") {
       host.innerHTML = contacts.length ? `
         <div class="mini-list">
