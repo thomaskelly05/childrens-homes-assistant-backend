@@ -304,6 +304,26 @@ window.YoungPeopleShell = (function () {
       return;
     }
 
+    if (workspaceName === "education") {
+  const html = await fetch("/components/yp-education-workspace.html", {
+    credentials: "include"
+  }).then(r => r.text());
+
+  mount.innerHTML = html;
+
+  if (!window.YoungPersonEducationWorkspace) {
+    await loadScript("/js/workspaces/yp-education-workspace.js");
+  }
+
+  window.YoungPersonEducationWorkspace.bind({
+    selectedYoungPerson,
+    overview: latestOverview,
+    reloadOverview: loadYoungPersonOverview
+  });
+
+  return;
+}
+
     if (activeProfileTab === "contacts") {
       host.innerHTML = contacts.length ? `
         <div class="mini-list">
