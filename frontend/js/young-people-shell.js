@@ -1,13 +1,15 @@
-window.YoungPeopleShell = (function () {
+window.ChildrensHomeOS = (function () {
   let youngPeople = [];
   let filteredYoungPeople = [];
   let selectedYoungPerson = null;
-  let activeProfileTab = "identity";
-  let activeWorkspace = "incident";
   let latestOverview = null;
 
+  let activeProfileTab = "identity";
+  let activeWorkspace = "daily-note";
+  let activeShiftMode = "during";
+
   async function api(url, options = {}) {
-    const res = await fetch(url, {
+    const response = await fetch(url, {
       ...options,
       credentials: "include",
       headers: {
@@ -18,17 +20,17 @@ window.YoungPeopleShell = (function () {
       }
     });
 
-    if (!res.ok) {
-      let detail = "Request failed";
+    if (!response.ok) {
+      let message = "Request failed";
       try {
-        const data = await res.json();
-        detail = data.detail || data.error || detail;
+        const data = await response.json();
+        message = data?.detail || data?.error || message;
       } catch {}
-      throw new Error(detail);
+      throw new Error(message);
     }
 
     try {
-      return await res.json();
+      return await response.json();
     } catch {
       return {};
     }
@@ -41,6 +43,18 @@ window.YoungPeopleShell = (function () {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
+  }
+
+  function fullName(person) {
+    const first = person?.preferred_name || person?.first_name || "";
+    const last = person?.last_name || "";
+    return [first, last].filter(Boolean).join(" ").trim() || "Unnamed young person";
+  }
+
+  function initials(person) {
+    const first = (person?.preferred_name || person?.first_name || "").trim();
+    const last = (person?.last_name || "").trim();
+    return ((first[0] || "") + (last[0] || "")).toUpperCase() || "YP";
   }
 
   function calcAge(dob) {
@@ -59,18 +73,6 @@ window.YoungPeopleShell = (function () {
     return String(age);
   }
 
-  function initials(person) {
-    const first = (person?.preferred_name || person?.first_name || "").trim();
-    const last = (person?.last_name || "").trim();
-    return ((first[0] || "") + (last[0] || "")).toUpperCase() || "YP";
-  }
-
-  function fullName(person) {
-    const first = person?.preferred_name || person?.first_name || "";
-    const last = person?.last_name || "";
-    return [first, last].filter(Boolean).join(" ").trim() || "Unnamed young person";
-  }
-
   function riskTagClass(level) {
     const text = String(level || "").toLowerCase();
     if (["high", "significant", "severe", "critical"].includes(text)) return "danger";
@@ -87,30 +89,87 @@ window.YoungPeopleShell = (function () {
     return `${yyyy}-${mm}-${dd}`;
   }
 
-  function closeSidebar() {
-    document.getElementById("ypSidebar")?.classList.remove("open");
-  }
-
   function openSidebar() {
     document.getElementById("ypSidebar")?.classList.add("open");
   }
 
+  function closeSidebar() {
+    document.getElementById("ypSidebar")?.classList.remove("open");
+  }
+
+  function setActiveShiftMode(mode) {
+    activeShiftMode = mode;
+    document.querySelectorAll("[data-shift-mode]").forEach(btn => {
+      btn.classList.toggle("active", btn.getAttribute("data-shift-mode") === mode);
+    });
+    renderShiftPanel();
+  }
+
+  function renderYoungPersonList() {
+    const host = document.getElementById("youngPersonList");
+    if (!host) return;
+
+    if (!filteredYoungPeople.length) {
+      host.innerHTML = `<div class="empty-state compact">No young people match your filters.</div>`;
+      return;
+    }
+
+    host.innerHTML = filteredYoungPeople.map(person => `
+      <button
+        type="button"
+        class="young-person-card ${Number(person.id) === Number(selectedYoungPerson?.id) ? "active" : ""}"
+        data-young-person-id="${safe(person.id)}"
+      >
+        <div class="young-person-card-top">
+          <div class="young-person-avatar">${safe(initials(person))}</div>
+          <div class="young-person-card-main">
+            <div class="young-person-card-name">${safe(fullName(person))}</div>
+            <div class="young-person-card-meta">
+              ${safe(person.placement_status || "Placement not set")}
+            </div>
+          </div>
+        </div>
+
+        <div class="tag-row">
+          <span class="tag ${riskTagClass(person.summary_risk_level)}">${safe(person.summary_risk_level || "risk not set")}</span>
+          <span class="tag ${person.archived ? "warn" : "good"}">${person.archived ? "archived" : "active"}</span>
+        </div>
+      </button>
+    `).join("");
+
+    host.querySelectorAll("[data-young-person-id]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = Number(btn.getAttribute("data-young-person-id") || 0);
+        if (!id) return;
+
+        const person = youngPeople.find(p => Number(p.id) === id);
+        if (!person) return;
+
+        selectedYoungPerson = person;
+        renderYoungPersonList();
+        closeSidebar();
+        await loadYoungPersonOverview(id);
+      });
+    });
+  }
+
   function applyYoungPersonFilters() {
-    const q = (document.getElementById("youngPersonSearch")?.value || "").trim().toLowerCase();
+    const query = (document.getElementById("youngPersonSearch")?.value || "").trim().toLowerCase();
     const status = document.getElementById("youngPersonStatusFilter")?.value || "";
 
     let rows = [...youngPeople];
 
-    if (q) {
+    if (query) {
       rows = rows.filter(person => {
-        const text = [
+        const haystack = [
           person.first_name,
           person.last_name,
           person.preferred_name,
-          person.placement_status
+          person.placement_status,
+          person.summary_risk_level
         ].filter(Boolean).join(" ").toLowerCase();
 
-        return text.includes(q);
+        return haystack.includes(query);
       });
     }
 
@@ -127,7 +186,7 @@ window.YoungPeopleShell = (function () {
 
     if (
       selectedYoungPerson &&
-      !filteredYoungPeople.some(p => Number(p.id) === Number(selectedYoungPerson.id))
+      !filteredYoungPeople.some(person => Number(person.id) === Number(selectedYoungPerson.id))
     ) {
       selectedYoungPerson = null;
       latestOverview = null;
@@ -135,56 +194,18 @@ window.YoungPeopleShell = (function () {
     }
   }
 
-  function renderYoungPersonList() {
-    const host = document.getElementById("youngPersonList");
-    if (!host) return;
-
-    if (!filteredYoungPeople.length) {
-      host.innerHTML = `<div class="empty-state compact">No young people match your filters.</div>`;
-      return;
-    }
-
-    host.innerHTML = filteredYoungPeople.map(person => `
-      <button
-        class="young-person-card ${Number(person.id) === Number(selectedYoungPerson?.id) ? "active" : ""}"
-        type="button"
-        data-young-person-id="${safe(person.id)}"
-      >
-        <div class="young-person-card-name">${safe(fullName(person))}</div>
-        <div class="young-person-card-meta">
-          ${safe(person.placement_status || "Placement not set")} ·
-          ${safe(person.summary_risk_level || "Risk not set")}
-          ${person.archived ? " · Archived" : ""}
-        </div>
-      </button>
-    `).join("");
-
-    host.querySelectorAll("[data-young-person-id]").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const id = Number(btn.getAttribute("data-young-person-id") || 0);
-        if (!id) return;
-        const person = youngPeople.find(p => Number(p.id) === id);
-        if (!person) return;
-
-        selectedYoungPerson = person;
-        renderYoungPersonList();
-        closeSidebar();
-        await loadYoungPersonOverview(id);
-      });
-    });
-  }
-
   function clearDashboard() {
     const pageTitle = document.getElementById("pageTitle");
     const pageSubtitle = document.getElementById("pageSubtitle");
     const overviewPanel = document.getElementById("overviewPanel");
     const profileTabContent = document.getElementById("profileTabContent");
-    const assistantContextBox = document.getElementById("assistantContextBox");
     const workspaceMount = document.getElementById("workspaceMount");
+    const assistantContextBox = document.getElementById("assistantContextBox");
     const liveRightRail = document.getElementById("liveRightRail");
+    const shiftPanel = document.getElementById("shiftPanel");
 
-    if (pageTitle) pageTitle.textContent = "Young Person OS";
-    if (pageSubtitle) pageSubtitle.textContent = "Residential care dashboard, linked records, risks, plans, and oversight";
+    if (pageTitle) pageTitle.textContent = "Children’s Home OS";
+    if (pageSubtitle) pageSubtitle.textContent = "Shift-aware care, records, plans, safeguarding, and oversight";
 
     if (overviewPanel) {
       overviewPanel.innerHTML = `<div class="empty-state">Select a young person to open their dashboard.</div>`;
@@ -194,24 +215,78 @@ window.YoungPeopleShell = (function () {
       profileTabContent.innerHTML = `<div class="empty-state compact">Profile content will appear here once a young person is selected.</div>`;
     }
 
-    if (assistantContextBox) {
-      assistantContextBox.innerHTML = "Choose a young person and this area can pass context into your main assistant chat, records, handovers, plans, and reviews.";
-    }
-
     if (workspaceMount) {
       workspaceMount.innerHTML = `<div class="empty-state">Select a young person to load a workspace.</div>`;
+    }
+
+    if (assistantContextBox) {
+      assistantContextBox.innerHTML = `Choose a young person and this area will build context for notes, handovers, plans, and reviews.`;
     }
 
     if (liveRightRail) {
       liveRightRail.innerHTML = `
         <div class="snapshot-item">
-          <div class="snapshot-title">Current priorities</div>
-          <div class="snapshot-text">Select a young person to surface key actions, alerts, reviews, and follow-up.</div>
+          <div class="snapshot-title">Live care feed</div>
+          <div class="snapshot-text">Select a young person to surface alerts, due actions, and next steps.</div>
         </div>
       `;
     }
 
+    if (shiftPanel) {
+      renderShiftPanel();
+    }
+
     renderYoungPersonList();
+  }
+
+  function renderShiftPanel() {
+    const host = document.getElementById("shiftPanel");
+    if (!host) return;
+
+    if (activeShiftMode === "start") {
+      host.innerHTML = `
+        <div class="shift-card">
+          <div class="shift-card-title">Start shift focus</div>
+          <div class="shift-card-text">Review alerts, incidents since last shift, appointments today, and missing records before staff begin care tasks.</div>
+        </div>
+        <div class="shift-checklist">
+          <div class="check-row">Review handover</div>
+          <div class="check-row">Check high-risk alerts</div>
+          <div class="check-row">Confirm education / appointments</div>
+          <div class="check-row">Identify overdue records</div>
+        </div>
+      `;
+      return;
+    }
+
+    if (activeShiftMode === "during") {
+      host.innerHTML = `
+        <div class="shift-card">
+          <div class="shift-card-title">During shift focus</div>
+          <div class="shift-card-text">Capture events quickly, keep daily notes live, and follow alerts, appointments, and support needs as the day changes.</div>
+        </div>
+        <div class="shift-checklist">
+          <div class="check-row">Record significant events promptly</div>
+          <div class="check-row">Update daily note as you go</div>
+          <div class="check-row">Log health / contact / education events</div>
+          <div class="check-row">Create follow-up tasks immediately</div>
+        </div>
+      `;
+      return;
+    }
+
+    host.innerHTML = `
+      <div class="shift-card">
+        <div class="shift-card-title">End shift focus</div>
+        <div class="shift-card-text">Finish key records, confirm unresolved issues, and leave a handover that helps the next staff team start safely.</div>
+      </div>
+      <div class="shift-checklist">
+        <div class="check-row">Complete daily note</div>
+        <div class="check-row">Finalise incidents</div>
+        <div class="check-row">List next actions</div>
+        <div class="check-row">Generate handover summary</div>
+      </div>
+    `;
   }
 
   function renderOverview(overview) {
@@ -224,22 +299,9 @@ window.YoungPeopleShell = (function () {
     const education = overview?.education_profile || {};
     const health = overview?.health_profile || {};
     const legal = overview?.legal_status || {};
-    const contacts = Array.isArray(overview?.contacts) ? overview.contacts : [];
     const alerts = Array.isArray(overview?.alerts) ? overview.alerts : [];
-
-    const activeAlerts = alerts.filter(a => a && a.is_active);
+    const activeAlerts = alerts.filter(alert => alert?.is_active);
     const priorityAlerts = activeAlerts.slice(0, 4);
-
-    const contactNames = contacts
-      .slice(0, 3)
-      .map(c => c?.full_name)
-      .filter(Boolean);
-
-    const primaryRisk = yp.summary_risk_level || "Not set";
-    const educationStatus = education.education_status || "Not recorded";
-    const gpName = health.gp_name || "Not recorded";
-    const legalStatus = legal.legal_status || legal.order_type || "Not recorded";
-    const keyworkerName = yp.primary_keyworker_name || "Not allocated";
 
     panel.innerHTML = `
       <div class="overview-shell">
@@ -253,7 +315,7 @@ window.YoungPeopleShell = (function () {
               <div class="overview-title-row">
                 <h3>${safe(fullName(yp))}</h3>
                 <div class="tag-row">
-                  <span class="tag ${riskTagClass(yp.summary_risk_level)}">${safe(primaryRisk)}</span>
+                  <span class="tag ${riskTagClass(yp.summary_risk_level)}">${safe(yp.summary_risk_level || "risk not set")}</span>
                   <span class="tag ${yp.archived ? "warn" : "good"}">${yp.archived ? "archived" : "active"}</span>
                   <span class="tag">${safe(yp.placement_status || "placement not set")}</span>
                 </div>
@@ -266,27 +328,22 @@ window.YoungPeopleShell = (function () {
               </div>
 
               <div class="overview-subtext">
-                Home ID: <strong>${safe(yp.home_id || "—")}</strong> ·
-                Admission: <strong>${safe(yp.admission_date || "—")}</strong> ·
-                Discharge: <strong>${safe(yp.discharge_date || "—")}</strong>
+                Keyworker: <strong>${safe(yp.primary_keyworker_name || "Not allocated")}</strong> ·
+                Legal status: <strong>${safe(legal.legal_status || legal.order_type || "Not recorded")}</strong>
               </div>
 
-              <div class="overview-chip-grid">
-                <div class="mini-stat-chip">
-                  <span class="mini-stat-label">Keyworker</span>
-                  <span class="mini-stat-value">${safe(keyworkerName)}</span>
+              <div class="human-strip">
+                <div class="human-card">
+                  <div class="human-card-label">What matters to me</div>
+                  <div class="human-card-text">${safe(identity.what_matters_to_me || "Not recorded yet.")}</div>
                 </div>
-                <div class="mini-stat-chip">
-                  <span class="mini-stat-label">Legal status</span>
-                  <span class="mini-stat-value">${safe(legalStatus)}</span>
+                <div class="human-card">
+                  <div class="human-card-label">How best to support me</div>
+                  <div class="human-card-text">${safe(communication.what_helps || "Not recorded yet.")}</div>
                 </div>
-                <div class="mini-stat-chip">
-                  <span class="mini-stat-label">Education</span>
-                  <span class="mini-stat-value">${safe(educationStatus)}</span>
-                </div>
-                <div class="mini-stat-chip">
-                  <span class="mini-stat-label">GP</span>
-                  <span class="mini-stat-value">${safe(gpName)}</span>
+                <div class="human-card">
+                  <div class="human-card-label">Early signs I am struggling</div>
+                  <div class="human-card-text">${safe(communication.signs_of_distress || "Not recorded yet.")}</div>
                 </div>
               </div>
             </div>
@@ -298,14 +355,14 @@ window.YoungPeopleShell = (function () {
               ${
                 priorityAlerts.length
                   ? priorityAlerts.map(alert => `
-                      <div class="alert-line">
-                        <div class="alert-line-title">${safe(alert.title || "Alert")}</div>
-                        <div class="alert-line-meta">
-                          <span class="tag ${riskTagClass(alert.severity)}">${safe(alert.severity || "alert")}</span>
-                          <span>${safe(alert.alert_type || "general")}</span>
-                        </div>
+                    <div class="alert-line">
+                      <div class="alert-line-title">${safe(alert.title || "Alert")}</div>
+                      <div class="alert-line-meta">
+                        <span class="tag ${riskTagClass(alert.severity)}">${safe(alert.severity || "alert")}</span>
+                        <span>${safe(alert.alert_type || "general")}</span>
                       </div>
-                    `).join("")
+                    </div>
+                  `).join("")
                   : `<div class="muted-line">No active alerts recorded.</div>`
               }
             </div>
@@ -316,10 +373,6 @@ window.YoungPeopleShell = (function () {
           <div class="overview-stat-card">
             <div class="overview-stat-number">${safe(String(activeAlerts.length))}</div>
             <div class="overview-stat-label">Active alerts</div>
-          </div>
-          <div class="overview-stat-card">
-            <div class="overview-stat-number">${safe(String(contacts.length))}</div>
-            <div class="overview-stat-label">Contacts</div>
           </div>
           <div class="overview-stat-card">
             <div class="overview-stat-number">${safe(String(overview?.daily_note_count ?? 0))}</div>
@@ -337,97 +390,54 @@ window.YoungPeopleShell = (function () {
             <div class="overview-stat-number">${safe(String(overview?.active_support_plan_count ?? 0))}</div>
             <div class="overview-stat-label">Active plans</div>
           </div>
+          <div class="overview-stat-card">
+            <div class="overview-stat-number">${safe(String(overview?.open_task_count ?? 0))}</div>
+            <div class="overview-stat-label">Open tasks</div>
+          </div>
         </div>
 
         <div class="overview-info-grid">
           <div class="card">
-            <h3>Placement and identity</h3>
+            <h3>Identity and belonging</h3>
             <div class="kv"><div class="k">Gender</div><div class="v">${safe(yp.gender || "—")}</div></div>
             <div class="kv"><div class="k">Ethnicity</div><div class="v">${safe(yp.ethnicity || "—")}</div></div>
-            <div class="kv"><div class="k">Local ID</div><div class="v">${safe(yp.local_id_number || "—")}</div></div>
             <div class="kv"><div class="k">Faith / religion</div><div class="v">${safe(identity.religion_or_faith || "—")}</div></div>
-            <div class="kv"><div class="k">Cultural identity</div><div class="v">${safe(identity.cultural_identity || "—")}</div></div>
+            <div class="kv"><div class="k">Culture</div><div class="v">${safe(identity.cultural_identity || "—")}</div></div>
             <div class="kv"><div class="k">First language</div><div class="v">${safe(identity.first_language || "—")}</div></div>
-            <div class="kv"><div class="k">What matters</div><div class="v">${safe(identity.what_matters_to_me || "—")}</div></div>
+            <div class="kv"><div class="k">Important dates</div><div class="v">${safe(identity.important_dates || "—")}</div></div>
           </div>
 
           <div class="card">
             <h3>Communication and regulation</h3>
             <div class="kv"><div class="k">Communication style</div><div class="v">${safe(communication.communication_style || "—")}</div></div>
-            <div class="kv"><div class="k">Sensory profile</div><div class="v">${safe(communication.sensory_profile || "—")}</div></div>
             <div class="kv"><div class="k">Processing needs</div><div class="v">${safe(communication.processing_needs || "—")}</div></div>
-            <div class="kv"><div class="k">Signs of distress</div><div class="v">${safe(communication.signs_of_distress || "—")}</div></div>
+            <div class="kv"><div class="k">Sensory profile</div><div class="v">${safe(communication.sensory_profile || "—")}</div></div>
             <div class="kv"><div class="k">What helps</div><div class="v">${safe(communication.what_helps || "—")}</div></div>
             <div class="kv"><div class="k">What to avoid</div><div class="v">${safe(communication.what_to_avoid || "—")}</div></div>
           </div>
 
           <div class="card">
             <h3>Health and education</h3>
-            <div class="kv"><div class="k">School / provision</div><div class="v">${safe(education.school_name || "—")}</div></div>
+            <div class="kv"><div class="k">School</div><div class="v">${safe(education.school_name || "—")}</div></div>
             <div class="kv"><div class="k">Education status</div><div class="v">${safe(education.education_status || "—")}</div></div>
             <div class="kv"><div class="k">SEN status</div><div class="v">${safe(education.sen_status || "—")}</div></div>
             <div class="kv"><div class="k">GP</div><div class="v">${safe(health.gp_name || "—")}</div></div>
             <div class="kv"><div class="k">Allergies</div><div class="v">${safe(health.allergies || "—")}</div></div>
-            <div class="kv"><div class="k">Diagnoses</div><div class="v">${safe(health.diagnoses || "—")}</div></div>
             <div class="kv"><div class="k">Mental health</div><div class="v">${safe(health.mental_health_summary || "—")}</div></div>
           </div>
 
           <div class="card">
-            <h3>Key network and oversight</h3>
+            <h3>Care and legal context</h3>
+            <div class="kv"><div class="k">Placement</div><div class="v">${safe(yp.placement_status || "—")}</div></div>
+            <div class="kv"><div class="k">Admission date</div><div class="v">${safe(yp.admission_date || "—")}</div></div>
+            <div class="kv"><div class="k">Discharge date</div><div class="v">${safe(yp.discharge_date || "—")}</div></div>
             <div class="kv"><div class="k">Legal status</div><div class="v">${safe(legal.legal_status || "—")}</div></div>
             <div class="kv"><div class="k">Order type</div><div class="v">${safe(legal.order_type || "—")}</div></div>
             <div class="kv"><div class="k">Consent</div><div class="v">${safe(legal.consent_arrangements || "—")}</div></div>
-            <div class="kv"><div class="k">Restrictions</div><div class="v">${safe(legal.restrictions_text || "—")}</div></div>
-            <div class="kv"><div class="k">Top contacts</div><div class="v">${safe(contactNames.join(", ") || "—")}</div></div>
-            <div class="kv"><div class="k">Important dates</div><div class="v">${safe(identity.important_dates || "—")}</div></div>
           </div>
         </div>
       </div>
     `;
-  }
-
-  function showProfileSaveStatus(message, type = "") {
-    const el = document.getElementById("profileSaveStatus");
-    if (!el) return;
-    el.classList.remove("hidden", "error", "success");
-    el.textContent = message || "";
-    if (type) el.classList.add(type);
-  }
-
-  function clearProfileSaveStatus() {
-    const el = document.getElementById("profileSaveStatus");
-    if (!el) return;
-    el.classList.add("hidden");
-    el.classList.remove("error", "success");
-    el.textContent = "";
-  }
-
-  function bindProfileSave(saveFn) {
-    const cancelBtn = document.getElementById("cancelProfileEditBtn");
-    const saveBtn = document.getElementById("saveProfileEditBtn");
-
-    cancelBtn?.addEventListener("click", () => {
-      if (latestOverview) {
-        clearProfileSaveStatus();
-        renderProfileTab(latestOverview);
-      }
-    });
-
-    saveBtn?.addEventListener("click", async () => {
-      clearProfileSaveStatus();
-      showProfileSaveStatus("Saving profile changes...");
-
-      try {
-        await saveFn();
-        showProfileSaveStatus("Changes saved successfully.", "success");
-        if (selectedYoungPerson?.id) {
-          await loadYoungPersonOverview(selectedYoungPerson.id);
-        }
-      } catch (error) {
-        console.error("Profile save failed", error);
-        showProfileSaveStatus(error.message || "Could not save changes.", "error");
-      }
-    });
   }
 
   function renderProfileTab(overview) {
@@ -438,224 +448,76 @@ window.YoungPeopleShell = (function () {
     const communication = overview?.communication_profile || {};
     const education = overview?.education_profile || {};
     const health = overview?.health_profile || {};
-    const contacts = Array.isArray(overview?.contacts) ? overview.contacts : [];
-    const alerts = Array.isArray(overview?.alerts) ? overview.alerts : [];
-
-    const saveBar = `
-      <div class="record-action-bar" style="margin-top:16px;">
-        <button class="secondary-btn" type="button" id="cancelProfileEditBtn">Cancel</button>
-        <button class="primary-btn" type="button" id="saveProfileEditBtn">Save changes</button>
-      </div>
-      <div id="profileSaveStatus" class="doc-ai-status hidden" style="margin-top:10px;"></div>
-    `;
 
     if (activeProfileTab === "identity") {
       host.innerHTML = `
         <div class="card">
-          <h3>Edit identity profile</h3>
-          <div class="form-block">
-            <label for="identityReligion">Religion / faith</label>
-            <input id="identityReligion" class="field" type="text" value="${safe(identity.religion_or_faith || "")}">
-          </div>
-          <div class="form-block">
-            <label for="identityCulture">Cultural identity</label>
-            <input id="identityCulture" class="field" type="text" value="${safe(identity.cultural_identity || "")}">
-          </div>
-          <div class="form-block">
-            <label for="identityLanguage">First language</label>
-            <input id="identityLanguage" class="field" type="text" value="${safe(identity.first_language || "")}">
-          </div>
-          <div class="form-block">
-            <label for="identityDietary">Dietary needs</label>
-            <textarea id="identityDietary" class="textarea">${safe(identity.dietary_needs || "")}</textarea>
-          </div>
-          <div class="form-block">
-            <label for="identityInterests">Interests</label>
-            <textarea id="identityInterests" class="textarea">${safe(identity.interests || "")}</textarea>
-          </div>
-          <div class="form-block">
-            <label for="identityStrengths">Strengths summary</label>
-            <textarea id="identityStrengths" class="textarea">${safe(identity.strengths_summary || "")}</textarea>
-          </div>
-          <div class="form-block">
-            <label for="identityMatters">What matters to me</label>
-            <textarea id="identityMatters" class="textarea">${safe(identity.what_matters_to_me || "")}</textarea>
-          </div>
-          <div class="form-block">
-            <label for="identityDates">Important dates</label>
-            <textarea id="identityDates" class="textarea">${safe(identity.important_dates || "")}</textarea>
-          </div>
-          ${saveBar}
+          <h3>Identity profile</h3>
+          <div class="kv"><div class="k">Religion / faith</div><div class="v">${safe(identity.religion_or_faith || "—")}</div></div>
+          <div class="kv"><div class="k">Cultural identity</div><div class="v">${safe(identity.cultural_identity || "—")}</div></div>
+          <div class="kv"><div class="k">First language</div><div class="v">${safe(identity.first_language || "—")}</div></div>
+          <div class="kv"><div class="k">Dietary needs</div><div class="v">${safe(identity.dietary_needs || "—")}</div></div>
+          <div class="kv"><div class="k">Interests</div><div class="v">${safe(identity.interests || "—")}</div></div>
+          <div class="kv"><div class="k">Strengths</div><div class="v">${safe(identity.strengths_summary || "—")}</div></div>
         </div>
       `;
-
-      bindProfileSave(async () => api(`/young-people/${selectedYoungPerson.id}/identity-profile`, {
-        method: "POST",
-        body: JSON.stringify({
-          religion_or_faith: document.getElementById("identityReligion")?.value || "",
-          cultural_identity: document.getElementById("identityCulture")?.value || "",
-          first_language: document.getElementById("identityLanguage")?.value || "",
-          dietary_needs: document.getElementById("identityDietary")?.value || "",
-          interests: document.getElementById("identityInterests")?.value || "",
-          strengths_summary: document.getElementById("identityStrengths")?.value || "",
-          what_matters_to_me: document.getElementById("identityMatters")?.value || "",
-          important_dates: document.getElementById("identityDates")?.value || ""
-        })
-      }));
-
       return;
     }
 
     if (activeProfileTab === "communication") {
       host.innerHTML = `
         <div class="card">
-          <h3>Edit communication profile</h3>
-          <div class="form-block"><label for="commNeuro">Neurodiversity summary</label><textarea id="commNeuro" class="textarea">${safe(communication.neurodiversity_summary || "")}</textarea></div>
-          <div class="form-block"><label for="commStyle">Communication style</label><textarea id="commStyle" class="textarea">${safe(communication.communication_style || "")}</textarea></div>
-          <div class="form-block"><label for="commSensory">Sensory profile</label><textarea id="commSensory" class="textarea">${safe(communication.sensory_profile || "")}</textarea></div>
-          <div class="form-block"><label for="commProcessing">Processing needs</label><textarea id="commProcessing" class="textarea">${safe(communication.processing_needs || "")}</textarea></div>
-          <div class="form-block"><label for="commDistress">Signs of distress</label><textarea id="commDistress" class="textarea">${safe(communication.signs_of_distress || "")}</textarea></div>
-          <div class="form-block"><label for="commHelps">What helps</label><textarea id="commHelps" class="textarea">${safe(communication.what_helps || "")}</textarea></div>
-          <div class="form-block"><label for="commAvoid">What to avoid</label><textarea id="commAvoid" class="textarea">${safe(communication.what_to_avoid || "")}</textarea></div>
-          <div class="form-block"><label for="commRoutine">Routines and predictability</label><textarea id="commRoutine" class="textarea">${safe(communication.routines_and_predictability || "")}</textarea></div>
-          <div class="form-block"><label for="commVisual">Visual support needs</label><textarea id="commVisual" class="textarea">${safe(communication.visual_support_needs || "")}</textarea></div>
-          ${saveBar}
+          <h3>Communication profile</h3>
+          <div class="kv"><div class="k">Neurodiversity summary</div><div class="v">${safe(communication.neurodiversity_summary || "—")}</div></div>
+          <div class="kv"><div class="k">Communication style</div><div class="v">${safe(communication.communication_style || "—")}</div></div>
+          <div class="kv"><div class="k">Sensory profile</div><div class="v">${safe(communication.sensory_profile || "—")}</div></div>
+          <div class="kv"><div class="k">Signs of distress</div><div class="v">${safe(communication.signs_of_distress || "—")}</div></div>
+          <div class="kv"><div class="k">What helps</div><div class="v">${safe(communication.what_helps || "—")}</div></div>
+          <div class="kv"><div class="k">What to avoid</div><div class="v">${safe(communication.what_to_avoid || "—")}</div></div>
         </div>
       `;
-
-      bindProfileSave(async () => api(`/young-people/${selectedYoungPerson.id}/communication-profile`, {
-        method: "POST",
-        body: JSON.stringify({
-          neurodiversity_summary: document.getElementById("commNeuro")?.value || "",
-          communication_style: document.getElementById("commStyle")?.value || "",
-          sensory_profile: document.getElementById("commSensory")?.value || "",
-          processing_needs: document.getElementById("commProcessing")?.value || "",
-          signs_of_distress: document.getElementById("commDistress")?.value || "",
-          what_helps: document.getElementById("commHelps")?.value || "",
-          what_to_avoid: document.getElementById("commAvoid")?.value || "",
-          routines_and_predictability: document.getElementById("commRoutine")?.value || "",
-          visual_support_needs: document.getElementById("commVisual")?.value || ""
-        })
-      }));
-
       return;
     }
 
     if (activeProfileTab === "education") {
       host.innerHTML = `
         <div class="card">
-          <h3>Edit education profile</h3>
-          <div class="form-block"><label for="eduSchool">School name</label><input id="eduSchool" class="field" type="text" value="${safe(education.school_name || "")}"></div>
-          <div class="form-row-2">
-            <div class="form-block"><label for="eduYear">Year group</label><input id="eduYear" class="field" type="text" value="${safe(education.year_group || "")}"></div>
-            <div class="form-block"><label for="eduStatus">Education status</label><input id="eduStatus" class="field" type="text" value="${safe(education.education_status || "")}"></div>
-          </div>
-          <div class="form-block"><label for="eduSen">SEN status</label><input id="eduSen" class="field" type="text" value="${safe(education.sen_status || "")}"></div>
-          <div class="form-block"><label for="eduEhcp">EHCP details</label><textarea id="eduEhcp" class="textarea">${safe(education.ehcp_details || "")}</textarea></div>
-          <div class="form-block"><label for="eduTeacher">Designated teacher</label><input id="eduTeacher" class="field" type="text" value="${safe(education.designated_teacher || "")}"></div>
-          <div class="form-block"><label for="eduAttendance">Attendance baseline</label><input id="eduAttendance" class="field" type="number" step="0.01" value="${safe(education.attendance_baseline || "")}"></div>
-          <div class="form-block"><label for="eduPep">PEP status</label><input id="eduPep" class="field" type="text" value="${safe(education.pep_status || "")}"></div>
-          <div class="form-block"><label for="eduSupport">Support summary</label><textarea id="eduSupport" class="textarea">${safe(education.support_summary || "")}</textarea></div>
-          ${saveBar}
+          <h3>Education profile</h3>
+          <div class="kv"><div class="k">School</div><div class="v">${safe(education.school_name || "—")}</div></div>
+          <div class="kv"><div class="k">Year group</div><div class="v">${safe(education.year_group || "—")}</div></div>
+          <div class="kv"><div class="k">Status</div><div class="v">${safe(education.education_status || "—")}</div></div>
+          <div class="kv"><div class="k">SEN status</div><div class="v">${safe(education.sen_status || "—")}</div></div>
+          <div class="kv"><div class="k">EHCP</div><div class="v">${safe(education.ehcp_details || "—")}</div></div>
+          <div class="kv"><div class="k">Support summary</div><div class="v">${safe(education.support_summary || "—")}</div></div>
         </div>
       `;
-
-      bindProfileSave(async () => {
-        const attendanceValue = document.getElementById("eduAttendance")?.value || "";
-        return api(`/young-people/${selectedYoungPerson.id}/education-profile`, {
-          method: "POST",
-          body: JSON.stringify({
-            school_name: document.getElementById("eduSchool")?.value || "",
-            year_group: document.getElementById("eduYear")?.value || "",
-            education_status: document.getElementById("eduStatus")?.value || "",
-            sen_status: document.getElementById("eduSen")?.value || "",
-            ehcp_details: document.getElementById("eduEhcp")?.value || "",
-            designated_teacher: document.getElementById("eduTeacher")?.value || "",
-            attendance_baseline: attendanceValue ? Number(attendanceValue) : null,
-            pep_status: document.getElementById("eduPep")?.value || "",
-            support_summary: document.getElementById("eduSupport")?.value || ""
-          })
-        });
-      });
-
       return;
     }
 
     if (activeProfileTab === "health") {
       host.innerHTML = `
         <div class="card">
-          <h3>Edit health profile</h3>
-          <div class="form-row-2">
-            <div class="form-block"><label for="healthGpName">GP name</label><input id="healthGpName" class="field" type="text" value="${safe(health.gp_name || "")}"></div>
-            <div class="form-block"><label for="healthGpContact">GP contact</label><input id="healthGpContact" class="field" type="text" value="${safe(health.gp_contact || "")}"></div>
-          </div>
-          <div class="form-row-2">
-            <div class="form-block"><label for="healthDentistName">Dentist name</label><input id="healthDentistName" class="field" type="text" value="${safe(health.dentist_name || "")}"></div>
-            <div class="form-block"><label for="healthDentistContact">Dentist contact</label><input id="healthDentistContact" class="field" type="text" value="${safe(health.dentist_contact || "")}"></div>
-          </div>
-          <div class="form-row-2">
-            <div class="form-block"><label for="healthOpticianName">Optician name</label><input id="healthOpticianName" class="field" type="text" value="${safe(health.optician_name || "")}"></div>
-            <div class="form-block"><label for="healthOpticianContact">Optician contact</label><input id="healthOpticianContact" class="field" type="text" value="${safe(health.optician_contact || "")}"></div>
-          </div>
-          <div class="form-block"><label for="healthAllergies">Allergies</label><textarea id="healthAllergies" class="textarea">${safe(health.allergies || "")}</textarea></div>
-          <div class="form-block"><label for="healthDiagnoses">Diagnoses</label><textarea id="healthDiagnoses" class="textarea">${safe(health.diagnoses || "")}</textarea></div>
-          <div class="form-block"><label for="healthMental">Mental health summary</label><textarea id="healthMental" class="textarea">${safe(health.mental_health_summary || "")}</textarea></div>
-          <div class="form-block"><label for="healthMedication">Medication summary</label><textarea id="healthMedication" class="textarea">${safe(health.medication_summary || "")}</textarea></div>
-          <div class="form-block"><label for="healthConsent">Consent notes</label><textarea id="healthConsent" class="textarea">${safe(health.consent_notes || "")}</textarea></div>
-          ${saveBar}
+          <h3>Health profile</h3>
+          <div class="kv"><div class="k">GP</div><div class="v">${safe(health.gp_name || "—")}</div></div>
+          <div class="kv"><div class="k">Dentist</div><div class="v">${safe(health.dentist_name || "—")}</div></div>
+          <div class="kv"><div class="k">Optician</div><div class="v">${safe(health.optician_name || "—")}</div></div>
+          <div class="kv"><div class="k">Allergies</div><div class="v">${safe(health.allergies || "—")}</div></div>
+          <div class="kv"><div class="k">Diagnoses</div><div class="v">${safe(health.diagnoses || "—")}</div></div>
+          <div class="kv"><div class="k">Medication</div><div class="v">${safe(health.medication_summary || "—")}</div></div>
         </div>
       `;
-
-      bindProfileSave(async () => api(`/young-people/${selectedYoungPerson.id}/health-profile`, {
-        method: "POST",
-        body: JSON.stringify({
-          gp_name: document.getElementById("healthGpName")?.value || "",
-          gp_contact: document.getElementById("healthGpContact")?.value || "",
-          dentist_name: document.getElementById("healthDentistName")?.value || "",
-          dentist_contact: document.getElementById("healthDentistContact")?.value || "",
-          optician_name: document.getElementById("healthOpticianName")?.value || "",
-          optician_contact: document.getElementById("healthOpticianContact")?.value || "",
-          allergies: document.getElementById("healthAllergies")?.value || "",
-          diagnoses: document.getElementById("healthDiagnoses")?.value || "",
-          mental_health_summary: document.getElementById("healthMental")?.value || "",
-          medication_summary: document.getElementById("healthMedication")?.value || "",
-          consent_notes: document.getElementById("healthConsent")?.value || ""
-        })
-      }));
-
       return;
     }
 
     if (activeProfileTab === "contacts") {
+      const contacts = Array.isArray(overview?.contacts) ? overview.contacts : [];
       host.innerHTML = `
         <div class="card">
-          <h3>Add contact</h3>
-          <div class="form-block"><label for="contactFullName">Full name</label><input id="contactFullName" class="field" type="text"></div>
-          <div class="form-row-2">
-            <div class="form-block"><label for="contactType">Contact type</label><input id="contactType" class="field" type="text" placeholder="e.g. parent, family member, professional"></div>
-            <div class="form-block"><label for="contactRelationship">Relationship</label><input id="contactRelationship" class="field" type="text"></div>
-          </div>
-          <div class="form-row-2">
-            <div class="form-block"><label for="contactPhone">Phone</label><input id="contactPhone" class="field" type="text"></div>
-            <div class="form-block"><label for="contactEmail">Email</label><input id="contactEmail" class="field" type="email"></div>
-          </div>
-          <div class="form-block"><label for="contactAddress">Address</label><textarea id="contactAddress" class="textarea"></textarea></div>
-          <div class="form-block"><label for="contactSupervision">Supervision level</label><input id="contactSupervision" class="field" type="text"></div>
-          <div class="form-block"><label for="contactNotes">Notes</label><textarea id="contactNotes" class="textarea"></textarea></div>
-          <div class="checkbox-grid">
-            <label class="check-item"><input id="contactPR" type="checkbox"><span>Parental responsibility</span></label>
-            <label class="check-item"><input id="contactApproved" type="checkbox"><span>Approved contact</span></label>
-            <label class="check-item"><input id="contactRestricted" type="checkbox"><span>Restricted contact</span></label>
-          </div>
-          ${saveBar}
-        </div>
-
-        <div class="card" style="margin-top:16px;">
-          <h3>Existing contacts</h3>
+          <h3>Contacts</h3>
           ${
             contacts.length
               ? contacts.map(contact => `
-                <div class="mini-item" style="margin-bottom:10px;">
+                <div class="mini-item">
                   <strong>${safe(contact.full_name || "Unnamed contact")}</strong>
                   <p>
                     ${safe(contact.relationship_to_young_person || "Relationship not set")} · ${safe(contact.contact_type || "contact")}<br>
@@ -668,117 +530,51 @@ window.YoungPeopleShell = (function () {
           }
         </div>
       `;
-
-      bindProfileSave(async () => {
-        const fullNameValue = document.getElementById("contactFullName")?.value || "";
-        if (!fullNameValue.trim()) throw new Error("Full name is required.");
-
-        return api(`/young-people/${selectedYoungPerson.id}/contacts`, {
-          method: "POST",
-          body: JSON.stringify({
-            full_name: fullNameValue,
-            contact_type: document.getElementById("contactType")?.value || "",
-            relationship_to_young_person: document.getElementById("contactRelationship")?.value || "",
-            phone: document.getElementById("contactPhone")?.value || "",
-            email: document.getElementById("contactEmail")?.value || "",
-            address: document.getElementById("contactAddress")?.value || "",
-            supervision_level: document.getElementById("contactSupervision")?.value || "",
-            notes: document.getElementById("contactNotes")?.value || "",
-            is_parental_responsibility_holder: !!document.getElementById("contactPR")?.checked,
-            is_approved_contact: !!document.getElementById("contactApproved")?.checked,
-            is_restricted_contact: !!document.getElementById("contactRestricted")?.checked
-          })
-        });
-      });
-
       return;
     }
 
-    if (activeProfileTab === "alerts") {
-      host.innerHTML = `
-        <div class="card">
-          <h3>Add alert</h3>
-          <div class="form-row-2">
-            <div class="form-block">
-              <label for="alertType">Alert type</label>
-              <input id="alertType" class="field" type="text" placeholder="e.g. health, missing, behaviour, contact">
-            </div>
-            <div class="form-block">
-              <label for="alertSeverity">Severity</label>
-              <select id="alertSeverity" class="select">
-                <option value="">Select severity</option>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-block"><label for="alertTitle">Title</label><input id="alertTitle" class="field" type="text"></div>
-          <div class="form-block"><label for="alertDescription">Description</label><textarea id="alertDescription" class="textarea"></textarea></div>
-          <div class="form-block"><label for="alertReviewDate">Review date</label><input id="alertReviewDate" class="field" type="date" value="${getTodayString()}"></div>
-          <div class="checkbox-grid">
-            <label class="check-item"><input id="alertActive" type="checkbox" checked><span>Active</span></label>
-            <label class="check-item"><input id="alertGlobal" type="checkbox"><span>Show globally</span></label>
-          </div>
-          ${saveBar}
-        </div>
-
-        <div class="card" style="margin-top:16px;">
-          <h3>Existing alerts</h3>
-          ${
-            alerts.length
-              ? alerts.map(alert => `
-                <div class="mini-item" style="margin-bottom:10px;">
-                  <strong>${safe(alert.title || "Alert")}</strong>
-                  <p>
-                    ${safe(alert.alert_type || "alert")} · ${safe(alert.severity || "severity not set")}<br>
-                    ${safe(alert.description || "No description")}<br>
-                    Review date: ${safe(alert.review_date || "—")} · ${alert.is_active ? "active" : "inactive"}
-                  </p>
-                </div>
-              `).join("")
-              : `<div class="empty-state compact">No alerts recorded yet.</div>`
-          }
-        </div>
-      `;
-
-      bindProfileSave(async () => {
-        const titleValue = document.getElementById("alertTitle")?.value || "";
-        if (!titleValue.trim()) throw new Error("Alert title is required.");
-
-        return api(`/young-people/${selectedYoungPerson.id}/alerts`, {
-          method: "POST",
-          body: JSON.stringify({
-            alert_type: document.getElementById("alertType")?.value || "",
-            severity: document.getElementById("alertSeverity")?.value || "",
-            title: titleValue,
-            description: document.getElementById("alertDescription")?.value || "",
-            review_date: document.getElementById("alertReviewDate")?.value || null,
-            is_active: !!document.getElementById("alertActive")?.checked,
-            show_globally: !!document.getElementById("alertGlobal")?.checked
-          })
-        });
-      });
-    }
+    const alerts = Array.isArray(overview?.alerts) ? overview.alerts : [];
+    host.innerHTML = `
+      <div class="card">
+        <h3>Alerts</h3>
+        ${
+          alerts.length
+            ? alerts.map(alert => `
+              <div class="mini-item">
+                <strong>${safe(alert.title || "Alert")}</strong>
+                <p>
+                  ${safe(alert.alert_type || "alert")} · ${safe(alert.severity || "severity not set")}<br>
+                  ${safe(alert.description || "No description")}<br>
+                  Review date: ${safe(alert.review_date || "—")} · ${alert.is_active ? "active" : "inactive"}
+                </p>
+              </div>
+            `).join("")
+            : `<div class="empty-state compact">No alerts recorded yet.</div>`
+        }
+      </div>
+    `;
   }
 
   function renderAssistantContext(overview) {
+    const host = document.getElementById("assistantContextBox");
+    if (!host) return;
+
     const yp = overview?.young_person || selectedYoungPerson || {};
     const communication = overview?.communication_profile || {};
-    const education = overview?.education_profile || {};
     const health = overview?.health_profile || {};
-    const box = document.getElementById("assistantContextBox");
-    if (!box) return;
+    const education = overview?.education_profile || {};
 
-    box.innerHTML = `
-      <strong style="display:block;margin-bottom:8px;color:var(--text);">Assistant context for ${safe(fullName(yp))}</strong>
-      Preferred name: ${safe(yp.preferred_name || yp.first_name || "—")}<br>
-      Placement status: ${safe(yp.placement_status || "—")}<br>
-      Risk level: ${safe(yp.summary_risk_level || "—")}<br>
-      Communication: ${safe(communication.communication_style || "—")}<br>
-      What helps: ${safe(communication.what_helps || "—")}<br>
-      Education: ${safe(education.education_status || "—")}<br>
-      Health / mental health: ${safe(health.mental_health_summary || "—")}
+    host.innerHTML = `
+      <strong class="assistant-heading">Assistant context for ${safe(fullName(yp))}</strong>
+      <div class="assistant-prompt">
+        Preferred name: ${safe(yp.preferred_name || yp.first_name || "—")}<br>
+        Placement: ${safe(yp.placement_status || "—")}<br>
+        Risk level: ${safe(yp.summary_risk_level || "—")}<br>
+        What helps: ${safe(communication.what_helps || "—")}<br>
+        Signs of distress: ${safe(communication.signs_of_distress || "—")}<br>
+        Education: ${safe(education.education_status || "—")}<br>
+        Mental health: ${safe(health.mental_health_summary || "—")}
+      </div>
     `;
   }
 
@@ -787,36 +583,29 @@ window.YoungPeopleShell = (function () {
     if (!host) return;
 
     const yp = overview?.young_person || {};
-    const alerts = Array.isArray(overview?.alerts) ? overview.alerts.filter(a => a?.is_active) : [];
-    const legal = overview?.legal_status || {};
+    const alerts = Array.isArray(overview?.alerts) ? overview.alerts.filter(alert => alert?.is_active) : [];
 
     host.innerHTML = `
       <div class="snapshot-item">
-        <div class="snapshot-title">Current priorities</div>
+        <div class="snapshot-title">Immediate risks</div>
         <div class="snapshot-text">
-          ${safe(fullName(yp))} is currently marked as <strong>${safe(yp.placement_status || "not set")}</strong> with a risk level of <strong>${safe(yp.summary_risk_level || "not set")}</strong>.
+          ${alerts.length
+            ? safe(alerts.map(alert => alert.title).slice(0, 3).join(", "))
+            : "No immediate active alerts recorded."}
         </div>
       </div>
 
       <div class="snapshot-item">
-        <div class="snapshot-title">Active alerts</div>
+        <div class="snapshot-title">What needs action</div>
         <div class="snapshot-text">
-          ${alerts.length ? safe(alerts.map(a => a.title).slice(0, 3).join(", ")) : "No active alerts recorded."}
+          Review incidents, daily notes, follow-up tasks, and any unresolved safeguarding or health concerns for ${safe(fullName(yp))}.
         </div>
       </div>
 
       <div class="snapshot-item">
-        <div class="snapshot-title">Legal and consent</div>
+        <div class="snapshot-title">Today’s care focus</div>
         <div class="snapshot-text">
-          Legal status: ${safe(legal.legal_status || legal.order_type || "Not recorded")}<br>
-          Consent: ${safe(legal.consent_arrangements || "Not recorded")}
-        </div>
-      </div>
-
-      <div class="snapshot-item">
-        <div class="snapshot-title">What to do next</div>
-        <div class="snapshot-text">
-          Use the operational workspace to add or review incidents, daily notes, health, education, family, keywork, risks, and chronology-linked activity.
+          Keep recording linked, clear, factual, and therapeutic. Use quick actions to reduce duplication and build handover as the shift progresses.
         </div>
       </div>
     `;
@@ -846,8 +635,7 @@ window.YoungPeopleShell = (function () {
 
     if (pageTitle) pageTitle.textContent = fullName(selectedYoungPerson);
     if (pageSubtitle) {
-      pageSubtitle.textContent =
-        `Placement: ${selectedYoungPerson?.placement_status || "—"} · Risk: ${selectedYoungPerson?.summary_risk_level || "—"}`;
+      pageSubtitle.textContent = `Placement: ${selectedYoungPerson?.placement_status || "—"} · Risk: ${selectedYoungPerson?.summary_risk_level || "—"}`;
     }
 
     renderYoungPersonList();
@@ -855,152 +643,216 @@ window.YoungPeopleShell = (function () {
     renderProfileTab(overview);
     renderAssistantContext(overview);
     renderRightRail(overview);
-    await loadWorkspace(activeWorkspace);
+    renderWorkspace(activeWorkspace);
   }
 
-  async function fetchHtml(url) {
-    const res = await fetch(url, { credentials: "include" });
-    if (!res.ok) throw new Error(`Could not load component: ${url}`);
-    return res.text();
-  }
-
-  async function loadWorkspace(workspaceName) {
+  function renderWorkspace(workspaceName) {
     activeWorkspace = workspaceName;
+
+    document.querySelectorAll("[data-workspace]").forEach(btn => {
+      btn.classList.toggle("active", btn.getAttribute("data-workspace") === workspaceName);
+    });
 
     const mount = document.getElementById("workspaceMount");
     if (!mount) return;
 
-    document.querySelectorAll("[data-workspace]").forEach(x => {
-      x.classList.toggle("active", x.getAttribute("data-workspace") === workspaceName);
-    });
-
-    if (!selectedYoungPerson && workspaceName !== "timeline") {
+    if (!selectedYoungPerson) {
       mount.innerHTML = `<div class="empty-state">Select a young person to load a workspace.</div>`;
       return;
     }
 
-    const workspaceMap = {
-      timeline: {
-        html: "/components/yp-timeline-workspace.html",
-        script: "/js/workspaces/yp-timeline-workspace.js",
-        global: "YoungPersonTimelineWorkspace"
-      },
-      incident: {
-        html: "/components/yp-incident-workspace.html",
-        script: "/js/workspaces/yp-incident-workspace.js",
-        global: "YoungPersonIncidentWorkspace"
-      },
-      "daily-note": {
-        html: "/components/yp-daily-note-workspace.html",
-        script: "/js/workspaces/yp-daily-note-workspace.js",
-        global: "YoungPersonDailyNoteWorkspace"
-      },
-      health: {
-        html: "/components/yp-health-workspace.html",
-        script: "/js/workspaces/yp-health-workspace.js",
-        global: "YoungPersonHealthWorkspace"
-      },
-      education: {
-        html: "/components/yp-education-workspace.html",
-        script: "/js/workspaces/yp-education-workspace.js",
-        global: "YoungPersonEducationWorkspace"
-      },
-      family: {
-        html: "/components/yp-family-workspace.html",
-        script: "/js/workspaces/yp-family-workspace.js",
-        global: "YoungPersonFamilyWorkspace"
-      },
-      risk: {
-        html: "/components/yp-risk-workspace.html",
-        script: "/js/workspaces/yp-risk-workspace.js",
-        global: "YoungPersonRiskWorkspace"
-      },
-      keywork: {
-        html: "/components/yp-keywork-workspace.html",
-        script: "/js/workspaces/yp-keywork-workspace.js",
-        global: "YoungPersonKeyworkWorkspace"
-      }
-    };
+    const personName = fullName(selectedYoungPerson);
 
-    const config = workspaceMap[workspaceName];
+    if (workspaceName === "record") {
+      mount.innerHTML = `
+        <div class="record-form-grid">
+          <div class="card">
+            <h3>Quick record</h3>
 
-    if (!config) {
-      mount.innerHTML = `<div class="empty-state">The <strong>${safe(workspaceName)}</strong> workspace has not been built yet.</div>`;
+            <div class="form-block">
+              <label for="recordType">What do you need to record?</label>
+              <select id="recordType" class="select">
+                <option>Incident</option>
+                <option>Daily note update</option>
+                <option>Health event</option>
+                <option>Education event</option>
+                <option>Family contact</option>
+                <option>Keywork session</option>
+                <option>Behaviour concern</option>
+              </select>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-block">
+                <label for="recordDate">Date</label>
+                <input id="recordDate" class="field" type="date" value="${getTodayString()}">
+              </div>
+              <div class="form-block">
+                <label for="recordTime">Time</label>
+                <input id="recordTime" class="field" type="time">
+              </div>
+            </div>
+
+            <div class="form-block">
+              <label for="recordSummary">Brief summary</label>
+              <input id="recordSummary" class="field" type="text" placeholder="What happened?">
+            </div>
+
+            <div class="form-block">
+              <label for="recordDetails">Details</label>
+              <textarea id="recordDetails" class="textarea" placeholder="Write the factual account here."></textarea>
+            </div>
+
+            <div class="record-action-bar">
+              <button class="secondary-btn" type="button">Save draft</button>
+              <button class="primary-btn" type="button">Save record</button>
+            </div>
+          </div>
+
+          <div class="record-side-stack">
+            <div class="doc-ai-panel">
+              <div class="doc-ai-panel-head">
+                <h3>Linked outputs</h3>
+                <p>One good record should update other parts of the system.</p>
+              </div>
+              <div class="doc-ai-list">
+                <div class="doc-ai-item"><strong>Will inform</strong><p>Timeline, handover, review work, and oversight.</p></div>
+                <div class="doc-ai-item"><strong>Can trigger</strong><p>Risk review, safeguarding review, or follow-up task creation.</p></div>
+              </div>
+            </div>
+
+            <div class="doc-ai-panel">
+              <div class="doc-ai-panel-head">
+                <h3>Writing prompts</h3>
+                <p>Helpful prompts for staff under pressure.</p>
+              </div>
+              <div class="doc-ai-list">
+                <div class="doc-ai-item"><strong>Before</strong><p>What was happening before the event?</p></div>
+                <div class="doc-ai-item"><strong>During</strong><p>What did the young person communicate or show?</p></div>
+                <div class="doc-ai-item"><strong>After</strong><p>What did staff do and what happened next?</p></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
       return;
     }
 
-    try {
-      const html = await fetchHtml(config.html);
-      mount.innerHTML = html;
-
-      if (!window[config.global]) {
-        await loadScript(config.script);
-      }
-
-      const workspace = window[config.global];
-      if (workspace?.bind) {
-        workspace.bind({
-          selectedYoungPerson,
-          overview: latestOverview,
-          reloadOverview: loadYoungPersonOverview
-        });
-      } else {
-        mount.innerHTML = `<div class="empty-state">Workspace loaded, but no bind() function was found.</div>`;
-      }
-    } catch (error) {
-      console.error(error);
+    if (workspaceName === "review") {
       mount.innerHTML = `
-        <div class="empty-state">
-          Could not load the <strong>${safe(workspaceName)}</strong> workspace.<br>
-          <span class="muted-line">${safe(error.message || "Unknown error")}</span>
+        <div class="timeline-group">
+          <div class="timeline-date">Recent chronology for ${safe(personName)}</div>
+          <div class="timeline-items">
+            <div class="timeline-item">
+              <div class="timeline-item-head">
+                <div>
+                  <div class="timeline-item-title">Daily note updated</div>
+                  <div class="timeline-item-meta">Today · Staff entry · Linked to handover</div>
+                </div>
+                <span class="tag good">complete</span>
+              </div>
+              <div class="timeline-item-body">
+                <p>Chronology entries, incidents, health items, and care notes should appear here in one joined-up view.</p>
+              </div>
+            </div>
+
+            <div class="timeline-item">
+              <div class="timeline-item-head">
+                <div>
+                  <div class="timeline-item-title">Risk review suggested</div>
+                  <div class="timeline-item-meta">Yesterday · Behaviour pattern · Follow-up needed</div>
+                </div>
+                <span class="tag warn">review</span>
+              </div>
+              <div class="timeline-item-body">
+                <p>The review view should surface linked events, patterns, and incomplete follow-up.</p>
+              </div>
+            </div>
+          </div>
         </div>
       `;
+      return;
     }
-  }
 
-  async function loadScript(src) {
-    return new Promise((resolve, reject) => {
-      const existing = document.querySelector(`script[src="${src}"]`);
-      if (existing) {
-        resolve();
-        return;
-      }
+    if (workspaceName === "plan") {
+      mount.innerHTML = `
+        <div class="card">
+          <h3>Care and planning workspace</h3>
 
-      const script = document.createElement("script");
-      script.src = src;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error(`Could not load script: ${src}`));
-      document.body.appendChild(script);
-    });
+          <div class="mini-item">
+            <strong>Support plans</strong>
+            <p>Plans should be live, plain English, and updated from real events rather than rewritten from scratch.</p>
+          </div>
+
+          <div class="mini-item">
+            <strong>Risk plans</strong>
+            <p>Show triggers, early signs, what staff should do, what to avoid, escalation steps, and links to recent incidents.</p>
+          </div>
+
+          <div class="mini-item">
+            <strong>Review cycle</strong>
+            <p>When incidents or concerns are added, suggest plan review automatically.</p>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    mount.innerHTML = `
+      <div class="empty-state">
+        This workspace is not built yet.
+      </div>
+    `;
   }
 
   function bindProfileTabs() {
     document.querySelectorAll("[data-profile-tab]").forEach(btn => {
       btn.addEventListener("click", () => {
-        document.querySelectorAll("[data-profile-tab]").forEach(x => x.classList.remove("active"));
+        document.querySelectorAll("[data-profile-tab]").forEach(item => item.classList.remove("active"));
         btn.classList.add("active");
         activeProfileTab = btn.getAttribute("data-profile-tab");
-        if (latestOverview) renderProfileTab(latestOverview);
+        if (latestOverview) {
+          renderProfileTab(latestOverview);
+        }
       });
     });
   }
 
   function bindWorkspaceTabs() {
     document.querySelectorAll("[data-workspace]").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        await loadWorkspace(btn.getAttribute("data-workspace"));
+      btn.addEventListener("click", () => {
+        renderWorkspace(btn.getAttribute("data-workspace"));
       });
     });
   }
 
-  function bindTopbar() {
+  function bindShiftModeTabs() {
+    document.querySelectorAll("[data-shift-mode]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        setActiveShiftMode(btn.getAttribute("data-shift-mode"));
+      });
+    });
+  }
+
+  function bindActions() {
     document.getElementById("refreshYoungPeopleBtn")?.addEventListener("click", loadYoungPeople);
+    document.getElementById("openSidebarBtn")?.addEventListener("click", openSidebar);
+    document.getElementById("closeSidebarBtn")?.addEventListener("click", closeSidebar);
 
     document.getElementById("youngPersonSearch")?.addEventListener("input", applyYoungPersonFilters);
     document.getElementById("youngPersonStatusFilter")?.addEventListener("change", applyYoungPersonFilters);
 
     document.getElementById("newYoungPersonBtn")?.addEventListener("click", () => {
-      alert("Next step: connect this button to a create young person modal.");
+      alert("Next step: connect this to a create young person modal.");
+    });
+
+    document.getElementById("quickCaptureBtn")?.addEventListener("click", () => {
+      if (!selectedYoungPerson) {
+        alert("Select a young person first.");
+        return;
+      }
+      activeWorkspace = "record";
+      renderWorkspace("record");
     });
 
     document.getElementById("openAssistantBtn")?.addEventListener("click", async () => {
@@ -1015,12 +867,12 @@ window.YoungPeopleShell = (function () {
         `Placement status: ${selectedYoungPerson.placement_status || ""}`,
         `Risk level: ${selectedYoungPerson.summary_risk_level || ""}`,
         "",
-        "Open the assistant and use this young person as the current working context."
+        "Use this young person as the working context for notes, reviews, and handover."
       ].join("\n");
 
       try {
         await navigator.clipboard.writeText(prompt);
-        alert("Young person context copied.");
+        alert("Assistant context copied.");
       } catch {
         alert(prompt);
       }
@@ -1032,20 +884,18 @@ window.YoungPeopleShell = (function () {
           alert("Select a young person first.");
           return;
         }
-
-        alert(`Next step: link "${btn.getAttribute("data-assistant-action")}" into the main assistant flow.`);
+        alert(`Next step: connect "${btn.getAttribute("data-assistant-action")}" to your assistant workflow.`);
       });
     });
-
-    document.getElementById("openSidebarBtn")?.addEventListener("click", openSidebar);
-    document.getElementById("closeSidebarBtn")?.addEventListener("click", closeSidebar);
   }
 
   async function init() {
     bindProfileTabs();
     bindWorkspaceTabs();
-    bindTopbar();
+    bindShiftModeTabs();
+    bindActions();
     clearDashboard();
+    renderShiftPanel();
 
     try {
       await loadYoungPeople();
@@ -1064,13 +914,10 @@ window.YoungPeopleShell = (function () {
   }
 
   return {
-    init,
-    api,
-    safe,
-    fullName
+    init
   };
 })();
 
 document.addEventListener("DOMContentLoaded", () => {
-  window.YoungPeopleShell.init();
+  window.ChildrensHomeOS.init();
 });
