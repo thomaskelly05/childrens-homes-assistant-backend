@@ -1,0 +1,192 @@
+<div id="dailyNoteWorkspace">
+  <div class="record-form-grid">
+    <div class="card">
+      <h3>Daily note</h3>
+
+      <div class="form-row-2">
+        <div class="form-block">
+          <label for="dailyNoteDate">Note date</label>
+          <input id="dailyNoteDate" class="field" type="date">
+          <div class="help-text">Record the date this note relates to.</div>
+        </div>
+
+        <div class="form-block">
+          <label for="dailyShiftType">Shift type</label>
+          <select id="dailyShiftType" class="select">
+            <option value="">Select shift</option>
+            <option value="day">Day</option>
+            <option value="evening">Evening</option>
+            <option value="night">Night</option>
+            <option value="waking_night">Waking night</option>
+            <option value="full_day">Full day</option>
+          </select>
+          <div class="help-text">Choose the shift this note covers.</div>
+        </div>
+      </div>
+
+      <div class="form-block">
+        <label for="dailyMood">Mood / presentation</label>
+        <textarea id="dailyMood" class="textarea" placeholder="How did the young person present during the day?"></textarea>
+        <div class="help-text">Record mood, presentation, regulation, engagement, and any significant changes across the shift.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="dailyActivities">Activities and routine</label>
+        <textarea id="dailyActivities" class="textarea" placeholder="What did the young person do during the day?"></textarea>
+        <div class="help-text">Record activities, routines, engagement, time spent in the home or community, and meaningful parts of the day.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="dailyEducationUpdate">Education update</label>
+        <textarea id="dailyEducationUpdate" class="textarea" placeholder="Attendance, engagement, progress, concerns, achievements."></textarea>
+        <div class="help-text">Record school attendance, participation, learning, incidents, achievements, or communication with education professionals.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="dailyHealthUpdate">Health update</label>
+        <textarea id="dailyHealthUpdate" class="textarea" placeholder="Appointments, health concerns, medication, emotional wellbeing."></textarea>
+        <div class="help-text">Record appointments, health concerns, physical wellbeing, medication, sleep, appetite, and emotional wellbeing.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="dailyFamilyUpdate">Family and relationships</label>
+        <textarea id="dailyFamilyUpdate" class="textarea" placeholder="Family time, contact, relationship issues, positive interactions."></textarea>
+        <div class="help-text">Record family contact, important relationship events, positive interactions, or any concerns and follow-up needed.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="dailyBehaviourUpdate">Behaviour and significant events</label>
+        <textarea id="dailyBehaviourUpdate" class="textarea" placeholder="Any incidents, dysregulation, conflict, or significant positive behaviour."></textarea>
+        <div class="help-text">Record significant behaviour, conflict, incidents, positive progress, and how support was offered.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="dailyYoungPersonVoice">Young person’s voice</label>
+        <textarea id="dailyYoungPersonVoice" class="textarea" placeholder="What did the young person say, express, or communicate?"></textarea>
+        <div class="help-text">Include the young person’s views, wishes, feelings, reflections, and important comments where known.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="dailyPositives">Positives and achievements</label>
+        <textarea id="dailyPositives" class="textarea" placeholder="What went well today?"></textarea>
+        <div class="help-text">Record strengths, effort, positive choices, progress, routines, relationships, or achievements from the day.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="dailyActionsRequired">Actions required / handover</label>
+        <textarea id="dailyActionsRequired" class="textarea" placeholder="What needs following up, handing over, or reviewing?"></textarea>
+        <div class="help-text">Record outstanding actions, appointments, notifications, risk issues, and anything the next shift needs to know.</div>
+      </div>
+    </div>
+
+    <div class="record-side-stack">
+      <div class="card">
+        <h3>Quality and workflow</h3>
+
+        <div class="form-row-2">
+          <div class="form-block">
+            <label for="dailySignificance">Significance</label>
+            <select id="dailySignificance" class="select">
+              <option value="">Select significance</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+            <div class="help-text">Use this to show how important the note is in the wider context of care and oversight.</div>
+          </div>
+
+          <div class="form-block">
+            <label for="dailyWorkflowStatus">Workflow status</label>
+            <select id="dailyWorkflowStatus" class="select">
+              <option value="draft">Draft</option>
+              <option value="submitted">Submitted</option>
+              <option value="reviewed">Reviewed</option>
+            </select>
+            <div class="help-text">Track whether the note is still being worked on or ready for management review.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Suggested Quality Standards</h3>
+        <div id="dailyStandardsBox" class="assistant-prompt">
+          Suggested standards will appear here after AI review.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Suggested links</h3>
+        <div id="dailyLinksBox" class="assistant-prompt">
+          Suggested links to chronology, health, education, family, tasks, and plans will appear here after AI review.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Accountability workflow</h3>
+        <div id="dailyWorkflowBox" class="assistant-prompt">
+          Complete the daily note, review AI suggestions, save the note, and follow any generated tasks or linked record prompts.
+        </div>
+      </div>
+
+      <div class="doc-ai-panel">
+        <div class="doc-ai-panel-head">
+          <div>
+            <h3>AI document review</h3>
+            <p>Improve wording, spell check, therapeutic tone, missing details, standards, and linked records.</p>
+          </div>
+        </div>
+
+        <div class="doc-ai-actions">
+          <button type="button" class="ghost-btn" data-daily-ai-action="improve_wording">Improve wording</button>
+          <button type="button" class="ghost-btn" data-daily-ai-action="spell_check">Spell check</button>
+          <button type="button" class="ghost-btn" data-daily-ai-action="make_therapeutic">Make therapeutic</button>
+          <button type="button" class="ghost-btn" data-daily-ai-action="make_more_factual">Make more factual</button>
+          <button type="button" class="ghost-btn" data-daily-ai-action="suggest_missing_details">Missing details</button>
+          <button type="button" class="ghost-btn" data-daily-ai-action="suggest_quality_standards">Quality standards</button>
+          <button type="button" class="ghost-btn" data-daily-ai-action="suggest_links">Suggest links</button>
+          <button type="button" class="primary-btn" id="runDailyAiReviewBtn">Run full review</button>
+        </div>
+
+        <div id="dailyAiStatus" class="doc-ai-status hidden"></div>
+
+        <div id="dailyAiResults" class="doc-ai-results hidden">
+          <div class="doc-ai-result-card">
+            <h4>Improved version</h4>
+            <textarea id="dailyAiImprovedText" class="textarea" rows="12" readonly></textarea>
+            <div class="doc-ai-result-actions">
+              <button type="button" class="secondary-btn" id="copyDailyAiBtn">Copy</button>
+              <button type="button" class="primary-btn" id="applyDailyAiBtn">Apply to activities</button>
+            </div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Field feedback</h4>
+            <div id="dailyAiFieldFeedback" class="doc-ai-list"></div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Missing details</h4>
+            <div id="dailyAiMissingDetails" class="doc-ai-list"></div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Safeguarding notes</h4>
+            <div id="dailyAiSafeguarding" class="doc-ai-list"></div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Summary</h4>
+            <div id="dailyAiSummary" class="doc-ai-summary"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="record-action-bar">
+        <button id="clearDailyFormBtn" class="secondary-btn" type="button">Clear form</button>
+        <button id="saveDailyNoteBtn" class="primary-btn" type="button">Save daily note</button>
+      </div>
+
+      <div id="dailySaveStatus" class="doc-ai-status hidden"></div>
+    </div>
+  </div>
+</div>
