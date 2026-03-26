@@ -1,19 +1,6 @@
 window.YoungPersonIncidentWorkspace = (function () {
-  function showStatus(id, message, type = "") {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.classList.remove("hidden", "error", "success");
-    el.textContent = message || "";
-    if (type) el.classList.add(type);
-  }
-
-  function clearStatus(id) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.classList.add("hidden");
-    el.classList.remove("error", "success");
-    el.textContent = "";
-  }
+  let currentContext = null;
+  let latestReview = null;
 
   function safe(value) {
     return String(value || "")
@@ -24,296 +11,270 @@ window.YoungPersonIncidentWorkspace = (function () {
       .replace(/'/g, "&#039;");
   }
 
-  function getPayload(selectedYoungPerson) {
+  function showSaveStatus(message, type = "") {
+    const el = document.getElementById("incidentSaveStatus");
+    if (!el) return;
+    el.classList.remove("hidden", "error", "success");
+    el.textContent = message || "";
+    if (type) el.classList.add(type);
+  }
+
+  function clearSaveStatus() {
+    const el = document.getElementById("incidentSaveStatus");
+    if (!el) return;
+    el.classList.add("hidden");
+    el.classList.remove("error", "success");
+    el.textContent = "";
+  }
+
+  function showAiStatus(message, type = "") {
+    const el = document.getElementById("incidentAiStatus");
+    if (!el) return;
+    el.classList.remove("hidden", "error", "success");
+    el.textContent = message || "";
+    if (type) el.classList.add(type);
+  }
+
+  function clearAiStatus() {
+    const el = document.getElementById("incidentAiStatus");
+    if (!el) return;
+    el.classList.add("hidden");
+    el.classList.remove("error", "success");
+    el.textContent = "";
+  }
+
+  function getNowLocalDateTimeValue() {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mi = String(now.getMinutes()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+  }
+
+  function getPayload() {
     return {
-      young_person_id: selectedYoungPerson?.id || null,
-      home_id: selectedYoungPerson?.home_id || null,
+      young_person_id: currentContext?.selectedYoungPerson?.id || null,
+      incident_datetime: document.getElementById("incidentDateTime")?.value || null,
       incident_type: document.getElementById("incidentType")?.value || "",
-      incident_datetime: document.getElementById("incidentDatetime")?.value || null,
       location: document.getElementById("incidentLocation")?.value || "",
-      antecedent: document.getElementById("incidentAntecedent")?.value || "",
+      severity: document.getElementById("incidentSeverity")?.value || "",
       description: document.getElementById("incidentDescription")?.value || "",
+      antecedent: document.getElementById("incidentAntecedent")?.value || "",
+      presentation: document.getElementById("incidentPresentation")?.value || "",
       staff_response: document.getElementById("incidentStaffResponse")?.value || "",
       child_response: document.getElementById("incidentChildResponse")?.value || "",
-      outcome: document.getElementById("incidentOutcome")?.value || "",
-      severity: document.getElementById("incidentSeverity")?.value || "",
-      presentation: document.getElementById("incidentPresentation")?.value || "",
       child_voice: document.getElementById("incidentChildVoice")?.value || "",
-      restorative_follow_up: document.getElementById("incidentRestorativeFollowUp")?.value || "",
+      outcome: document.getElementById("incidentOutcome")?.value || "",
       actions_taken: document.getElementById("incidentActionsTaken")?.value || "",
+      restorative_follow_up: document.getElementById("incidentRestorativeFollowUp")?.value || "",
       injury_flag: !!document.getElementById("incidentInjuryFlag")?.checked,
-      property_damage_flag: !!document.getElementById("incidentPropertyDamageFlag")?.checked,
-      police_involved: !!document.getElementById("incidentPoliceInvolved")?.checked,
-      police_notified: !!document.getElementById("incidentPoliceNotified")?.checked,
+      police_involved: !!document.getElementById("incidentPoliceFlag")?.checked,
       safeguarding_flag: !!document.getElementById("incidentSafeguardingFlag")?.checked,
-      lado_notified: !!document.getElementById("incidentLadoNotified")?.checked,
-      ofsted_notified: !!document.getElementById("incidentOfstedNotified")?.checked,
-      manager_review_required: !!document.getElementById("incidentManagerReviewRequired")?.checked,
-      follow_up_required: !!document.getElementById("incidentFollowUpRequired")?.checked,
-      requires_reg40: !!document.getElementById("incidentRequiresReg40")?.checked,
-      requires_notification: !!document.getElementById("incidentRequiresNotification")?.checked
+      follow_up_required: !!document.getElementById("incidentFollowUpFlag")?.checked,
+      manager_review_required: !!document.getElementById("incidentManagerReviewFlag")?.checked,
+      ofsted_notified: !!document.getElementById("incidentOfstedFlag")?.checked
     };
   }
 
-  function clearForm() {
-    [
-      "incidentType",
-      "incidentDatetime",
-      "incidentLocation",
-      "incidentSeverity",
-      "incidentPresentation",
-      "incidentAntecedent",
-      "incidentDescription",
-      "incidentStaffResponse",
-      "incidentChildResponse",
-      "incidentOutcome",
-      "incidentChildVoice",
-      "incidentRestorativeFollowUp",
-      "incidentActionsTaken"
-    ].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = "";
-    });
+  function resetForm() {
+    document.getElementById("incidentDateTime").value = getNowLocalDateTimeValue();
+    document.getElementById("incidentType").value = "";
+    document.getElementById("incidentLocation").value = "";
+    document.getElementById("incidentSeverity").value = "";
+    document.getElementById("incidentDescription").value = "";
+    document.getElementById("incidentAntecedent").value = "";
+    document.getElementById("incidentPresentation").value = "";
+    document.getElementById("incidentStaffResponse").value = "";
+    document.getElementById("incidentChildResponse").value = "";
+    document.getElementById("incidentChildVoice").value = "";
+    document.getElementById("incidentOutcome").value = "";
+    document.getElementById("incidentActionsTaken").value = "";
+    document.getElementById("incidentRestorativeFollowUp").value = "";
+    document.getElementById("incidentInjuryFlag").checked = false;
+    document.getElementById("incidentPoliceFlag").checked = false;
+    document.getElementById("incidentSafeguardingFlag").checked = false;
+    document.getElementById("incidentFollowUpFlag").checked = false;
+    document.getElementById("incidentManagerReviewFlag").checked = false;
+    document.getElementById("incidentOfstedFlag").checked = false;
 
-    [
-      "incidentInjuryFlag",
-      "incidentPropertyDamageFlag",
-      "incidentPoliceInvolved",
-      "incidentPoliceNotified",
-      "incidentSafeguardingFlag",
-      "incidentLadoNotified",
-      "incidentOfstedNotified",
-      "incidentRequiresReg40",
-      "incidentRequiresNotification"
-    ].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.checked = false;
-    });
-
-    const managerReview = document.getElementById("incidentManagerReviewRequired");
-    if (managerReview) managerReview.checked = true;
-
-    const followUp = document.getElementById("incidentFollowUpRequired");
-    if (followUp) followUp.checked = true;
-
-    clearStatus("incidentSaveStatus");
-    clearStatus("incidentAiStatus");
+    latestReview = null;
+    clearSaveStatus();
+    clearAiStatus();
 
     const results = document.getElementById("incidentAiResults");
-    if (results) results.classList.add("hidden");
-
-    const standards = document.getElementById("incidentStandardsBox");
-    if (standards) standards.innerHTML = "Suggested standards will appear here after AI review.";
-
-    const links = document.getElementById("incidentLinksBox");
-    if (links) links.innerHTML = "Suggested links to chronology, risk, safeguarding, tasks, and reviews will appear here after AI review.";
+    if (results) {
+      results.classList.add("hidden");
+      results.innerHTML = "";
+    }
   }
 
-  function renderAiList(hostId, rows, renderer) {
-    const host = document.getElementById(hostId);
-    if (!host) return;
-
-    if (!Array.isArray(rows) || !rows.length) {
-      host.innerHTML = `<div class="doc-ai-item"><p>Nothing suggested.</p></div>`;
-      return;
+  function renderListItems(title, items) {
+    if (!Array.isArray(items) || !items.length) {
+      return "";
     }
 
-    host.innerHTML = rows.map(renderer).join("");
+    return `
+      <div class="doc-ai-result-card">
+        <h4>${safe(title)}</h4>
+        <div class="doc-ai-list">
+          ${items.map(item => {
+            if (typeof item === "string") {
+              return `
+                <div class="doc-ai-item">
+                  <p>${safe(item)}</p>
+                </div>
+              `;
+            }
+
+            return `
+              <div class="doc-ai-item">
+                ${item.field ? `<strong>${safe(item.field)}</strong>` : item.code ? `<strong>Standard ${safe(item.code)}</strong>` : item.record_type ? `<strong>${safe(item.record_type)}</strong>` : ""}
+                <p>${safe(item.message || item.reason || "")}</p>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    `;
   }
 
   function renderAiResults(review) {
-    const results = document.getElementById("incidentAiResults");
-    if (results) results.classList.remove("hidden");
+    const host = document.getElementById("incidentAiResults");
+    if (!host) return;
 
-    const improved = document.getElementById("incidentAiImprovedText");
-    if (improved) improved.value = review?.improved_text || "";
-
-    renderAiList("incidentAiFieldFeedback", review?.field_feedback, item => `
-      <div class="doc-ai-item">
-        <strong>${safe(item?.field || "Field")}</strong>
-        <p><strong>Issue:</strong> ${safe(item?.issue || "—")}</p>
-        <p><strong>Suggestion:</strong> ${safe(item?.suggestion || "—")}</p>
+    host.innerHTML = `
+      <div class="doc-ai-result-card">
+        <h4>Review summary</h4>
+        <div class="doc-ai-summary">${safe(review.summary || "No summary returned.")}</div>
       </div>
-    `);
 
-    renderAiList("incidentAiMissingDetails", review?.missing_details, item => `
-      <div class="doc-ai-item"><p>${safe(item)}</p></div>
-    `);
+      ${renderListItems("Field feedback", review.field_feedback)}
+      ${renderListItems("Spelling and clarity", review.spelling_and_clarity)}
+      ${renderListItems("Missing details", review.missing_details)}
+      ${renderListItems("Safeguarding considerations", review.safeguarding_considerations)}
+      ${renderListItems("Quality Standards suggestions", review.quality_standards_suggestions)}
+      ${renderListItems("Linked record suggestions", review.linked_record_suggestions)}
 
-    renderAiList("incidentAiSafeguarding", review?.safeguarding_notes, item => `
-      <div class="doc-ai-item"><p>${safe(item)}</p></div>
-    `);
-
-    const summary = document.getElementById("incidentAiSummary");
-    if (summary) summary.innerHTML = safe(review?.summary || "No summary returned.");
-
-    const standards = Array.isArray(review?.quality_standards) ? review.quality_standards : [];
-    const links = Array.isArray(review?.link_suggestions) ? review.link_suggestions : [];
-
-    const standardsBox = document.getElementById("incidentStandardsBox");
-    if (standardsBox) {
-      standardsBox.innerHTML = standards.length
-        ? standards.map(item => `
-            <div class="doc-ai-item" style="margin-bottom:8px;">
-              <strong>Standard ${safe(item?.code || "—")}</strong>
-              <p>${safe(item?.reason || "")}</p>
+      ${
+        review.therapeutic_rewrite
+          ? `
+          <div class="doc-ai-result-card">
+            <h4>Therapeutic rewrite</h4>
+            <div class="doc-ai-summary" style="white-space:pre-wrap;">${safe(review.therapeutic_rewrite)}</div>
+            <div class="doc-ai-result-actions">
+              <button id="applyIncidentRewriteInlineBtn" class="secondary-btn" type="button">Apply rewrite to description</button>
             </div>
-          `).join("")
-        : "No Quality Standards suggested yet.";
-    }
+          </div>
+          `
+          : ""
+      }
+    `;
 
-    const linksBox = document.getElementById("incidentLinksBox");
-    if (linksBox) {
-      linksBox.innerHTML = links.length
-        ? links.map(item => `
-            <div class="doc-ai-item" style="margin-bottom:8px;">
-              <strong>${safe(item?.target || "Link")}</strong>
-              <p>${safe(item?.reason || "")}</p>
-            </div>
-          `).join("")
-        : "No linked records suggested yet.";
+    host.classList.remove("hidden");
+
+    const inlineBtn = document.getElementById("applyIncidentRewriteInlineBtn");
+    if (inlineBtn) {
+      inlineBtn.addEventListener("click", applyRewriteToDescription);
     }
   }
 
-  async function runAiReview(selectedYoungPerson) {
-    if (!selectedYoungPerson?.id) {
-      showStatus("incidentAiStatus", "Select a young person first.", "error");
+  function applyRewriteToDescription() {
+    if (!latestReview?.therapeutic_rewrite) {
+      showAiStatus("No rewrite available to apply.", "error");
       return;
     }
 
-    clearStatus("incidentAiStatus");
-    showStatus("incidentAiStatus", "Running AI review...");
+    const target = document.getElementById("incidentDescription");
+    if (!target) return;
+
+    target.value = latestReview.therapeutic_rewrite;
+    showAiStatus("Therapeutic rewrite applied to description.", "success");
+  }
+
+  async function runAiReview() {
+    clearAiStatus();
+    showAiStatus("Running AI review...");
 
     try {
-      const payload = getPayload(selectedYoungPerson);
+      const payload = getPayload();
 
-      const data = await window.YoungPeopleShell.api("/document-ai/review", {
+      const res = await window.YoungPeopleShell.api("/document-ai/review", {
         method: "POST",
         body: JSON.stringify({
           document_type: "incident",
           payload,
           actions: [
-            "improve_wording",
             "spell_check",
-            "make_therapeutic",
-            "make_more_factual",
-            "suggest_missing_details",
-            "suggest_quality_standards",
-            "suggest_links"
+            "improve_writing",
+            "therapeutic_rewrite",
+            "missing_details",
+            "quality_standards",
+            "linked_records",
+            "safeguarding"
           ]
         })
       });
 
-      renderAiResults(data?.review || {});
-      showStatus("incidentAiStatus", "AI review complete.", "success");
+      latestReview = res?.review || null;
+
+      if (!latestReview) {
+        throw new Error("No review returned.");
+      }
+
+      renderAiResults(latestReview);
+      showAiStatus("AI review complete.", "success");
     } catch (error) {
       console.error("runAiReview failed", error);
-      showStatus("incidentAiStatus", error.message || "AI review failed.", "error");
+      showAiStatus(error.message || "Could not complete AI review.", "error");
     }
   }
 
-  async function saveIncident(selectedYoungPerson, reloadOverview) {
-    if (!selectedYoungPerson?.id) {
-      showStatus("incidentSaveStatus", "Select a young person first.", "error");
-      return;
-    }
-
-    const payload = getPayload(selectedYoungPerson);
-
-    if (!payload.incident_type || !payload.description || !payload.staff_response || !payload.outcome) {
-      showStatus("incidentSaveStatus", "Complete incident type, what happened, staff response, and outcome before saving.", "error");
-      return;
-    }
-
-    clearStatus("incidentSaveStatus");
-    showStatus("incidentSaveStatus", "Saving incident...");
+  async function saveIncident() {
+    clearSaveStatus();
+    showSaveStatus("Saving incident...");
 
     try {
-      await window.YoungPeopleShell.api("/incidents", {
+      const payload = getPayload();
+
+      if (!payload.incident_type.trim()) {
+        throw new Error("Incident type is required.");
+      }
+
+      if (!payload.description.trim()) {
+        throw new Error("Description is required.");
+      }
+
+      const res = await window.YoungPeopleShell.api(`/young-people-incidents/${currentContext.selectedYoungPerson.id}`, {
         method: "POST",
         body: JSON.stringify(payload)
       });
 
-      showStatus("incidentSaveStatus", "Incident saved successfully.", "success");
+      showSaveStatus("Incident saved successfully.", "success");
 
-      if (typeof reloadOverview === "function") {
-        await reloadOverview(selectedYoungPerson.id);
+      if (typeof currentContext?.reloadOverview === "function" && currentContext?.selectedYoungPerson?.id) {
+        await currentContext.reloadOverview(currentContext.selectedYoungPerson.id);
       }
+
+      return res;
     } catch (error) {
       console.error("saveIncident failed", error);
-      showStatus("incidentSaveStatus", error.message || "Could not save incident.", "error");
+      showSaveStatus(error.message || "Could not save incident.", "error");
+      throw error;
     }
   }
 
   function bind(context) {
-    const { selectedYoungPerson, reloadOverview } = context;
+    currentContext = context || null;
+    latestReview = null;
 
-    const workflow = document.getElementById("incidentWorkflowBox");
-    if (workflow && selectedYoungPerson) {
-      workflow.innerHTML = `
-        Incident workflow for <strong>${safe(window.YoungPeopleShell.fullName(selectedYoungPerson))}</strong>.<br><br>
-        1. Record the event factually.<br>
-        2. Use AI review to improve wording and identify gaps.<br>
-        3. Save the incident.<br>
-        4. Review chronology, safeguarding, risk, and follow-up tasks.
-      `;
-    }
+    resetForm();
 
-    document.getElementById("clearIncidentFormBtn")?.addEventListener("click", clearForm);
-
-    document.getElementById("saveIncidentBtn")?.addEventListener("click", () => {
-      saveIncident(selectedYoungPerson, reloadOverview);
-    });
-
-    document.getElementById("runIncidentAiReviewBtn")?.addEventListener("click", () => {
-      runAiReview(selectedYoungPerson);
-    });
-
-    document.getElementById("copyIncidentAiBtn")?.addEventListener("click", async () => {
-      const text = document.getElementById("incidentAiImprovedText")?.value || "";
-      if (!text) return;
-      await navigator.clipboard.writeText(text);
-      showStatus("incidentAiStatus", "Improved version copied.", "success");
-    });
-
-    document.getElementById("applyIncidentAiBtn")?.addEventListener("click", () => {
-      const text = document.getElementById("incidentAiImprovedText")?.value || "";
-      const target = document.getElementById("incidentDescription");
-      if (target) {
-        target.value = text;
-        target.dispatchEvent(new Event("input", { bubbles: true }));
-      }
-      showStatus("incidentAiStatus", "Improved text applied to description.", "success");
-    });
-
-    document.querySelectorAll("[data-incident-ai-action]").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const action = btn.getAttribute("data-incident-ai-action");
-        if (!action || !selectedYoungPerson?.id) return;
-
-        clearStatus("incidentAiStatus");
-        showStatus("incidentAiStatus", "Running AI review...");
-
-        try {
-          const payload = getPayload(selectedYoungPerson);
-
-          const data = await window.YoungPeopleShell.api("/document-ai/review", {
-            method: "POST",
-            body: JSON.stringify({
-              document_type: "incident",
-              payload,
-              actions: [action]
-            })
-          });
-
-          renderAiResults(data?.review || {});
-          showStatus("incidentAiStatus", "AI review complete.", "success");
-        } catch (error) {
-          console.error("single action AI review failed", error);
-          showStatus("incidentAiStatus", error.message || "AI review failed.", "error");
-        }
-      });
-    });
+    document.getElementById("saveIncidentBtn")?.addEventListener("click", saveIncident);
+    document.getElementById("resetIncidentBtn")?.addEventListener("click", resetForm);
+    document.getElementById("reviewIncidentAiBtn")?.addEventListener("click", runAiReview);
+    document.getElementById("applyIncidentRewriteBtn")?.addEventListener("click", applyRewriteToDescription);
   }
 
   return {
