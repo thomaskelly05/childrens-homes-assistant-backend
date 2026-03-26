@@ -7,51 +7,63 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="/css/young-people-shell.css" />
 </head>
 <body>
-  <div class="app">
-    <aside id="ypSidebar" class="sidebar">
-      <div class="brand">
-        <div class="brand-title">Young Person OS</div>
-        <button id="closeSidebarBtn" class="ghost-btn mobile-toggle" type="button">Close</button>
+  <div class="app-shell">
+    <aside id="ypSidebar" class="app-sidebar">
+      <div class="sidebar-top">
+        <div class="brand-lockup">
+          <div class="brand-mark">IC</div>
+          <div>
+            <div class="brand-title">IndiCare</div>
+            <div class="brand-subtitle">Young Person OS</div>
+          </div>
+        </div>
+
+        <button id="closeSidebarBtn" class="icon-btn mobile-only" type="button" aria-label="Close menu">
+          ✕
+        </button>
       </div>
 
-      <div class="sidebar-body">
-        <button id="newYoungPersonBtn" class="primary-btn" type="button">+ Add young person</button>
+      <div class="sidebar-section">
+        <button id="newYoungPersonBtn" class="primary-btn full-btn" type="button">+ Add young person</button>
+      </div>
 
-        <div>
-          <div class="section-label">Find young person</div>
-          <input id="youngPersonSearch" class="field" type="text" placeholder="Search by name or preferred name">
-        </div>
+      <div class="sidebar-section">
+        <div class="section-label">Search</div>
+        <input id="youngPersonSearch" class="field" type="text" placeholder="Search young person">
+      </div>
 
-        <div>
-          <div class="section-label">Status</div>
-          <select id="youngPersonStatusFilter" class="select">
-            <option value="">All</option>
-            <option value="active">Active placements</option>
-            <option value="archived">Archived</option>
-          </select>
-        </div>
+      <div class="sidebar-section">
+        <div class="section-label">Status</div>
+        <select id="youngPersonStatusFilter" class="select">
+          <option value="">All placements</option>
+          <option value="active">Active</option>
+          <option value="archived">Archived</option>
+        </select>
+      </div>
 
-        <div>
-          <div class="section-label">Young people</div>
-          <div id="youngPersonList" class="person-list">
-            <div class="empty-state">No young people loaded yet.</div>
-          </div>
+      <div class="sidebar-section fill">
+        <div class="section-label">Young people</div>
+        <div id="youngPersonList" class="young-person-list">
+          <div class="empty-state compact">No young people loaded yet.</div>
         </div>
       </div>
     </aside>
 
-    <main class="main">
+    <main class="app-main">
       <header class="topbar">
-        <div style="display:flex;align-items:center;gap:12px;min-width:0;">
-          <button id="openSidebarBtn" class="ghost-btn mobile-toggle" type="button">Menu</button>
-          <div class="topbar-title">
+        <div class="topbar-left">
+          <button id="openSidebarBtn" class="icon-btn mobile-only" type="button" aria-label="Open menu">
+            ☰
+          </button>
+
+          <div class="topbar-heading">
             <h1 id="pageTitle">Young Person OS</h1>
-            <p id="pageSubtitle">Assistant-led care record, profile, and oversight workspace</p>
+            <p id="pageSubtitle">Residential care dashboard, linked records, risks, plans, and oversight</p>
           </div>
         </div>
 
@@ -61,99 +73,173 @@
         </div>
       </header>
 
-      <section class="workspace">
-        <div class="workspace-inner">
-          <div style="display:flex;flex-direction:column;gap:18px;">
-            <div class="panel">
-              <div class="panel-head">
+      <section class="page-content">
+        <div class="page-grid">
+          <!-- MAIN COLUMN -->
+          <div class="main-column">
+            <section class="panel hero-panel">
+              <div class="panel-head slim">
                 <div>
-                  <h2>Overview</h2>
-                  <p>Main profile, placement snapshot, and the information staff need first.</p>
+                  <h2>Young person summary</h2>
+                  <p>Core placement, identity, alerts, and current context.</p>
                 </div>
               </div>
+
               <div id="overviewPanel" class="panel-body">
                 <div class="empty-state">
-                  Select a young person to open their profile.
+                  Select a young person to open their dashboard.
                 </div>
               </div>
-            </div>
+            </section>
 
-            <div class="panel">
-              <div class="panel-head">
-                <div>
-                  <h2>Profile workspace</h2>
-                  <p>Core profile areas branching out from the main young person record.</p>
-                </div>
-              </div>
-              <div class="panel-body">
-                <div class="tabs">
-                  <button class="tab active" data-profile-tab="identity" type="button">Identity</button>
-                  <button class="tab" data-profile-tab="communication" type="button">Communication</button>
-                  <button class="tab" data-profile-tab="education" type="button">Education</button>
-                  <button class="tab" data-profile-tab="health" type="button">Health</button>
-                  <button class="tab" data-profile-tab="contacts" type="button">Contacts</button>
-                  <button class="tab" data-profile-tab="alerts" type="button">Alerts</button>
+            <section class="dashboard-row two-col">
+              <div class="panel">
+                <div class="panel-head slim">
+                  <div>
+                    <h2>Profile workspace</h2>
+                    <p>Editable profile information adults need for day-to-day care.</p>
+                  </div>
                 </div>
 
-                <div id="profileTabContent">
-                  <div class="empty-state">
-                    Profile content will appear here once a young person is selected.
+                <div class="panel-body">
+                  <div class="tab-strip">
+                    <button class="tab active" data-profile-tab="identity" type="button">Identity</button>
+                    <button class="tab" data-profile-tab="communication" type="button">Communication</button>
+                    <button class="tab" data-profile-tab="education" type="button">Education</button>
+                    <button class="tab" data-profile-tab="health" type="button">Health</button>
+                    <button class="tab" data-profile-tab="contacts" type="button">Contacts</button>
+                    <button class="tab" data-profile-tab="alerts" type="button">Alerts</button>
+                  </div>
+
+                  <div id="profileTabContent">
+                    <div class="empty-state compact">
+                      Profile content will appear here once a young person is selected.
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <div style="display:flex;flex-direction:column;gap:18px;">
-            <div class="panel">
-              <div class="panel-head">
-                <div>
-                  <h2>Assistant centre</h2>
-                  <p>The assistant stays central, with all young person work branching from this view.</p>
+              <div class="panel">
+                <div class="panel-head slim">
+                  <div>
+                    <h2>Assistant centre</h2>
+                    <p>The assistant stays central to records, plans, handovers, review, and quality.</p>
+                  </div>
+                </div>
+
+                <div class="panel-body assistant-centre">
+                  <div id="assistantContextBox" class="assistant-context-box">
+                    Choose a young person and this area can pass context into your main assistant chat, records, handovers, plans, and reviews.
+                  </div>
+
+                  <div class="action-grid">
+                    <button class="secondary-btn" type="button" data-assistant-action="daily-note">Draft daily note</button>
+                    <button class="secondary-btn" type="button" data-assistant-action="handover">Create handover</button>
+                    <button class="secondary-btn" type="button" data-assistant-action="risk-review">Review risks</button>
+                    <button class="secondary-btn" type="button" data-assistant-action="monthly-review">Build monthly review</button>
+                  </div>
                 </div>
               </div>
-              <div class="panel-body assistant-box">
-                <div id="assistantContextBox" class="assistant-prompt">
-                  Choose a young person and this area can pass context into your main assistant chat, handovers, records, plans, and reviews.
-                </div>
+            </section>
 
-                <div class="quick-actions">
-                  <button class="secondary-btn" type="button" data-assistant-action="daily-note">Draft daily note</button>
-                  <button class="secondary-btn" type="button" data-assistant-action="handover">Create handover</button>
-                  <button class="secondary-btn" type="button" data-assistant-action="risk-review">Review risks</button>
-                  <button class="secondary-btn" type="button" data-assistant-action="monthly-review">Build monthly review</button>
-                </div>
-              </div>
-            </div>
-
-            <div class="panel">
+            <section class="panel">
               <div class="panel-head">
                 <div>
-                  <h2>Record workspace</h2>
-                  <p>Load individual workspaces here without bloating the shell.</p>
+                  <h2>Operational workspace</h2>
+                  <p>Create, review, and link care records without bloating the shell.</p>
                 </div>
               </div>
 
               <div class="panel-body">
-                <div class="tabs" style="margin-bottom:16px;">
-                  <button class="tab active" data-workspace="incident" type="button">Incident</button>
-                  <button class="tab" data-workspace="timeline" type="button">Timeline</button>
-                  <button class="tab" data-workspace="daily-note" type="button">Daily note</button>
-                  <button class="tab" data-workspace="health" type="button">Health</button>
-                  <button class="tab" data-workspace="education" type="button">Education</button>
-                  <button class="tab" data-workspace="family" type="button">Family</button>
-                  <button class="tab" data-workspace="keywork" type="button">Keywork</button>
-                  <button class="tab" data-workspace="risk" type="button">Risk</button>
+                <div class="workspace-toolbar">
+                  <div class="workspace-group">
+                    <span class="workspace-group-label">Recording</span>
+                    <div class="tab-strip tight">
+                      <button class="tab active" data-workspace="incident" type="button">Incident</button>
+                      <button class="tab" data-workspace="daily-note" type="button">Daily note</button>
+                      <button class="tab" data-workspace="timeline" type="button">Timeline</button>
+                    </div>
+                  </div>
+
+                  <div class="workspace-group">
+                    <span class="workspace-group-label">Domains</span>
+                    <div class="tab-strip tight">
+                      <button class="tab" data-workspace="health" type="button">Health</button>
+                      <button class="tab" data-workspace="education" type="button">Education</button>
+                      <button class="tab" data-workspace="family" type="button">Family</button>
+                      <button class="tab" data-workspace="keywork" type="button">Keywork</button>
+                      <button class="tab" data-workspace="risk" type="button">Risk</button>
+                    </div>
+                  </div>
                 </div>
 
-                <div id="workspaceMount">
+                <div id="workspaceMount" class="workspace-mount">
                   <div class="empty-state">
                     Select a young person to load a workspace.
                   </div>
                 </div>
               </div>
-            </div>
+            </section>
           </div>
+
+          <!-- RIGHT COLUMN -->
+          <aside class="right-column">
+            <section class="panel side-panel">
+              <div class="panel-head slim">
+                <div>
+                  <h2>Today and next actions</h2>
+                  <p>What adults need to notice, complete, or hand over.</p>
+                </div>
+              </div>
+
+              <div class="panel-body">
+                <div class="snapshot-list">
+                  <div class="snapshot-item">
+                    <div class="snapshot-title">Current priorities</div>
+                    <div class="snapshot-text">Use the selected workspace to record important events, follow-up, and accountability actions.</div>
+                  </div>
+
+                  <div class="snapshot-item">
+                    <div class="snapshot-title">Outstanding records</div>
+                    <div class="snapshot-text">Daily note, incident, health, education, family contact, keywork, and risk work will surface here as the platform develops.</div>
+                  </div>
+
+                  <div class="snapshot-item">
+                    <div class="snapshot-title">Management oversight</div>
+                    <div class="snapshot-text">Returned records, review-needed items, and overdue actions should appear here next.</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel side-panel">
+              <div class="panel-head slim">
+                <div>
+                  <h2>System design direction</h2>
+                  <p>This shell is designed to become an operating system, not just a form page.</p>
+                </div>
+              </div>
+
+              <div class="panel-body">
+                <div class="snapshot-list">
+                  <div class="snapshot-item">
+                    <div class="snapshot-title">Linked records</div>
+                    <div class="snapshot-text">One event should be able to influence chronology, plans, reviews, tasks, and standards evidence.</div>
+                  </div>
+
+                  <div class="snapshot-item">
+                    <div class="snapshot-title">Quality standards</div>
+                    <div class="snapshot-text">Every document should connect to the Quality Standards and support inspection-readiness.</div>
+                  </div>
+
+                  <div class="snapshot-item">
+                    <div class="snapshot-title">Therapeutic writing</div>
+                    <div class="snapshot-text">AI review should improve clarity, spelling, factual balance, and therapeutic tone.</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </aside>
         </div>
       </section>
     </main>
