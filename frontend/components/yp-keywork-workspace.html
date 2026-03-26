@@ -1,0 +1,197 @@
+<div id="keyworkWorkspace">
+  <div class="record-form-grid">
+    <div class="card">
+      <h3>Keywork session</h3>
+
+      <div class="form-row-2">
+        <div class="form-block">
+          <label for="keyworkSessionDate">Session date</label>
+          <input id="keyworkSessionDate" class="field" type="date">
+          <div class="help-text">Record the date the keywork session took place.</div>
+        </div>
+
+        <div class="form-block">
+          <label for="keyworkNextSessionDate">Next session date</label>
+          <input id="keyworkNextSessionDate" class="field" type="date">
+          <div class="help-text">Record the next planned keywork session date if known.</div>
+        </div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-block">
+          <label for="keyworkWorkerId">Worker ID</label>
+          <input id="keyworkWorkerId" class="field" type="number" placeholder="Optional worker user ID">
+          <div class="help-text">Use this if you want to link the session to a specific worker.</div>
+        </div>
+
+        <div class="form-block">
+          <label for="keyworkStatus">Status</label>
+          <select id="keyworkStatus" class="select">
+            <option value="completed">Completed</option>
+            <option value="planned">Planned</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="partial">Partial</option>
+          </select>
+          <div class="help-text">Track whether the keywork session happened fully, partially, or not at all.</div>
+        </div>
+      </div>
+
+      <div class="form-block">
+        <label for="keyworkTopic">Topic</label>
+        <input id="keyworkTopic" class="field" type="text" placeholder="e.g. family relationships, online safety, emotions, independence">
+        <div class="help-text">Use a clear topic so the session can be found and grouped with similar work.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="keyworkPurpose">Purpose</label>
+        <textarea id="keyworkPurpose" class="textarea" placeholder="What was the purpose of this session?"></textarea>
+        <div class="help-text">Record why the session was held and what it was intended to support, explore, or review.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="keyworkSummary">Session summary</label>
+        <textarea id="keyworkSummary" class="textarea" placeholder="What was discussed in the session?"></textarea>
+        <div class="help-text">Record the session factually and clearly, including key themes, conversation points, and significant discussion.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="keyworkChildVoice">Young person’s voice</label>
+        <textarea id="keyworkChildVoice" class="textarea" placeholder="What did the young person say, reflect on, or communicate?"></textarea>
+        <div class="help-text">Record the young person’s views, wishes, reflections, concerns, and feelings in their own words where possible.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="keyworkReflectiveAnalysis">Reflective analysis</label>
+        <textarea id="keyworkReflectiveAnalysis" class="textarea" placeholder="What did the session show or teach adults?"></textarea>
+        <div class="help-text">Record the professional reflection, themes noticed, meaning of the discussion, and what this suggests for care or support.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="keyworkActionsAgreed">Actions agreed</label>
+        <textarea id="keyworkActionsAgreed" class="textarea" placeholder="What was agreed, by whom, and what happens next?"></textarea>
+        <div class="help-text">Record any actions, goals, commitments, support strategies, or follow-up steps agreed in the session.</div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-block">
+          <label for="keyworkWorkflowStatus">Workflow status</label>
+          <select id="keyworkWorkflowStatus" class="select">
+            <option value="draft">Draft</option>
+            <option value="submitted">Submitted</option>
+            <option value="reviewed">Reviewed</option>
+          </select>
+          <div class="help-text">Track whether the record is still being worked on or ready for review.</div>
+        </div>
+
+        <div class="form-block">
+          <label for="keyworkArchived">Archived</label>
+          <select id="keyworkArchived" class="select">
+            <option value="false">No</option>
+            <option value="true">Yes</option>
+          </select>
+          <div class="help-text">Use this if the session should be archived rather than left active in current work views.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="record-side-stack">
+      <div class="card">
+        <h3>Checks and follow-up</h3>
+
+        <div class="checkbox-grid">
+          <label class="check-item"><input id="keyworkFollowUpRequired" type="checkbox" checked><span>Follow-up required</span></label>
+          <label class="check-item"><input id="keyworkChronologyLink" type="checkbox" checked><span>Link to chronology</span></label>
+          <label class="check-item"><input id="keyworkPlanLink" type="checkbox" checked><span>Link to support / placement plans</span></label>
+          <label class="check-item"><input id="keyworkTaskCreate" type="checkbox" checked><span>Create follow-up task</span></label>
+          <label class="check-item"><input id="keyworkManagerReview" type="checkbox"><span>Manager review needed</span></label>
+          <label class="check-item"><input id="keyworkSafeguardingConcern" type="checkbox"><span>Safeguarding concern</span></label>
+        </div>
+
+        <div class="help-text" style="margin-top:10px;">
+          These checks help the system suggest chronology items, linked plans, tasks, and management accountability actions.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Suggested Quality Standards</h3>
+        <div id="keyworkStandardsBox" class="assistant-prompt">
+          Suggested standards will appear here after AI review.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Suggested links</h3>
+        <div id="keyworkLinksBox" class="assistant-prompt">
+          Suggested links to chronology, plans, tasks, and reviews will appear here after AI review.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Accountability workflow</h3>
+        <div id="keyworkWorkflowBox" class="assistant-prompt">
+          Complete the keywork record, review AI suggestions, save the session, and follow any linked actions, plans, chronology, or task prompts.
+        </div>
+      </div>
+
+      <div class="doc-ai-panel">
+        <div class="doc-ai-panel-head">
+          <div>
+            <h3>AI document review</h3>
+            <p>Improve wording, spell check, therapeutic tone, missing details, standards, and linked records.</p>
+          </div>
+        </div>
+
+        <div class="doc-ai-actions">
+          <button type="button" class="ghost-btn" data-keywork-ai-action="improve_wording">Improve wording</button>
+          <button type="button" class="ghost-btn" data-keywork-ai-action="spell_check">Spell check</button>
+          <button type="button" class="ghost-btn" data-keywork-ai-action="make_therapeutic">Make therapeutic</button>
+          <button type="button" class="ghost-btn" data-keywork-ai-action="make_more_factual">Make more factual</button>
+          <button type="button" class="ghost-btn" data-keywork-ai-action="suggest_missing_details">Missing details</button>
+          <button type="button" class="ghost-btn" data-keywork-ai-action="suggest_quality_standards">Quality standards</button>
+          <button type="button" class="ghost-btn" data-keywork-ai-action="suggest_links">Suggest links</button>
+          <button type="button" class="primary-btn" id="runKeyworkAiReviewBtn">Run full review</button>
+        </div>
+
+        <div id="keyworkAiStatus" class="doc-ai-status hidden"></div>
+
+        <div id="keyworkAiResults" class="doc-ai-results hidden">
+          <div class="doc-ai-result-card">
+            <h4>Improved version</h4>
+            <textarea id="keyworkAiImprovedText" class="textarea" rows="12" readonly></textarea>
+            <div class="doc-ai-result-actions">
+              <button type="button" class="secondary-btn" id="copyKeyworkAiBtn">Copy</button>
+              <button type="button" class="primary-btn" id="applyKeyworkAiBtn">Apply to summary</button>
+            </div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Field feedback</h4>
+            <div id="keyworkAiFieldFeedback" class="doc-ai-list"></div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Missing details</h4>
+            <div id="keyworkAiMissingDetails" class="doc-ai-list"></div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Safeguarding notes</h4>
+            <div id="keyworkAiSafeguarding" class="doc-ai-list"></div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Summary</h4>
+            <div id="keyworkAiSummary" class="doc-ai-summary"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="record-action-bar">
+        <button id="clearKeyworkFormBtn" class="secondary-btn" type="button">Clear form</button>
+        <button id="saveKeyworkRecordBtn" class="primary-btn" type="button">Save keywork session</button>
+      </div>
+
+      <div id="keyworkSaveStatus" class="doc-ai-status hidden"></div>
+    </div>
+  </div>
+</div>
