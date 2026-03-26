@@ -1,5 +1,6 @@
 window.YoungPeopleShell = (function () {
   let youngPeople = [];
+  let filteredYoungPeople = [];
   let selectedYoungPerson = null;
   let activeProfileTab = "identity";
   let activeWorkspace = "incident";
@@ -44,7 +45,6 @@ window.YoungPeopleShell = (function () {
 
   function calcAge(dob) {
     if (!dob) return "—";
-
     const birth = new Date(dob);
     if (Number.isNaN(birth.getTime())) return "—";
 
@@ -87,12 +87,9 @@ window.YoungPeopleShell = (function () {
     return `${yyyy}-${mm}-${dd}`;
   }
 
-  function renderYoungPersonList() {
-    const host = document.getElementById("youngPersonList");
-    if (!host) return;
-
+  function applyYoungPersonFilters() {
     const q = (document.getElementById("youngPersonSearch")?.value || "").trim().toLowerCase();
-    const filter = document.getElementById("youngPersonStatusFilter")?.value || "";
+    const status = document.getElementById("youngPersonStatusFilter")?.value || "";
 
     let rows = [...youngPeople];
 
@@ -107,49 +104,84 @@ window.YoungPeopleShell = (function () {
       });
     }
 
-    if (filter === "active") {
+    if (status === "active") {
       rows = rows.filter(person => !person.archived);
     }
 
-    if (filter === "archived") {
+    if (status === "archived") {
       rows = rows.filter(person => !!person.archived);
     }
 
-    if (!rows.length) {
-      host.innerHTML = `<div class="empty-state">No matching young people found.</div>`;
-      return;
+    filteredYoungPeople = rows;
+    renderYoungPersonSelect();
+
+    if (
+      selectedYoungPerson &&
+      !filteredYoungPeople.some(p => Number(p.id) === Number(selectedYoungPerson.id))
+    ) {
+      selectedYoungPerson = null;
+      latestOverview = null;
+      clearDashboard();
+    }
+  }
+
+  function renderYoungPersonSelect() {
+    const select = document.getElementById("youngPersonSelect");
+    if (!select) return;
+
+    const currentId = selectedYoungPerson?.id ? String(selectedYoungPerson.id) : "";
+    select.innerHTML = `<option value="">Select young person</option>`;
+
+    filteredYoungPeople.forEach(person => {
+      const option = document.createElement("option");
+      option.value = String(person.id);
+      option.textContent = `${fullName(person)}${person.archived ? " (Archived)" : ""}`;
+      select.appendChild(option);
+    });
+
+    if ([...select.options].some(opt => opt.value === currentId)) {
+      select.value = currentId;
+    } else {
+      select.value = "";
+    }
+  }
+
+  function clearDashboard() {
+    const pageTitle = document.getElementById("pageTitle");
+    const pageSubtitle = document.getElementById("pageSubtitle");
+    const overviewPanel = document.getElementById("overviewPanel");
+    const profileTabContent = document.getElementById("profileTabContent");
+    const assistantContextBox = document.getElementById("assistantContextBox");
+    const workspaceMount = document.getElementById("workspaceMount");
+    const liveRightRail = document.getElementById("liveRightRail");
+
+    if (pageTitle) pageTitle.textContent = "Young Person OS";
+    if (pageSubtitle) pageSubtitle.textContent = "Residential care dashboard, linked records, risks, plans, and oversight";
+
+    if (overviewPanel) {
+      overviewPanel.innerHTML = `<div class="empty-state">Select a young person from the dropdown to open their dashboard.</div>`;
     }
 
-    host.innerHTML = rows.map(person => `
-      <button
-        class="person-card ${selectedYoungPerson && Number(selectedYoungPerson.id) === Number(person.id) ? "active" : ""}"
-        data-id="${person.id}"
-        type="button"
-      >
-        <div class="person-name">${safe(fullName(person))}</div>
-        <div class="person-meta">
-          DOB: ${safe(person.date_of_birth || "—")} · Age: ${safe(calcAge(person.date_of_birth))}<br>
-          Placement: ${safe(person.placement_status || "—")}
-        </div>
-        <div class="tag-row">
-          <span class="tag ${riskTagClass(person.summary_risk_level)}">${safe(person.summary_risk_level || "risk not set")}</span>
-          <span class="tag ${person.archived ? "warn" : "good"}">${person.archived ? "archived" : "active"}</span>
-        </div>
-      </button>
-    `).join("");
+    if (profileTabContent) {
+      profileTabContent.innerHTML = `<div class="empty-state compact">Profile content will appear here once a young person is selected.</div>`;
+    }
 
-    host.querySelectorAll("[data-id]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const id = Number(btn.getAttribute("data-id"));
-        const person = youngPeople.find(x => Number(x.id) === id);
-        if (!person) return;
+    if (assistantContextBox) {
+      assistantContextBox.innerHTML = "Choose a young person and this area can pass context into your main assistant chat, records, handovers, plans, and reviews.";
+    }
 
-        selectedYoungPerson = person;
-        renderYoungPersonList();
-        loadYoungPersonOverview(id);
-        closeSidebarOnMobile();
-      });
-    });
+    if (workspaceMount) {
+      workspaceMount.innerHTML = `<div class="empty-state">Select a young person to load a workspace.</div>`;
+    }
+
+    if (liveRightRail) {
+      liveRightRail.innerHTML = `
+        <div class="snapshot-item">
+          <div class="snapshot-title">Current priorities</div>
+          <div class="snapshot-text">Select a young person to surface key actions, alerts, reviews, and follow-up.</div>
+        </div>
+      `;
+    }
   }
 
   function renderOverview(overview) {
@@ -161,70 +193,164 @@ window.YoungPeopleShell = (function () {
     const communication = overview?.communication_profile || {};
     const education = overview?.education_profile || {};
     const health = overview?.health_profile || {};
+    const legal = overview?.legal_status || {};
     const contacts = Array.isArray(overview?.contacts) ? overview.contacts : [];
     const alerts = Array.isArray(overview?.alerts) ? overview.alerts : [];
 
+    const activeAlerts = alerts.filter(a => a && a.is_active);
+    const priorityAlerts = activeAlerts.slice(0, 4);
+
+    const contactNames = contacts
+      .slice(0, 3)
+      .map(c => c?.full_name)
+      .filter(Boolean);
+
+    const primaryRisk = yp.summary_risk_level || "Not set";
+    const educationStatus = education.education_status || "Not recorded";
+    const gpName = health.gp_name || "Not recorded";
+    const legalStatus = legal.legal_status || legal.order_type || "Not recorded";
+    const keyworkerName = yp.primary_keyworker_name || "Not allocated";
+
     panel.innerHTML = `
-      <div class="hero">
-        <div class="photo">
-          ${yp.photo_url ? `<img src="${safe(yp.photo_url)}" alt="${safe(fullName(yp))}">` : safe(initials(yp))}
-        </div>
+      <div class="overview-shell">
+        <div class="overview-header">
+          <div class="overview-header-main">
+            <div class="overview-photo">
+              ${yp.photo_url ? `<img src="${safe(yp.photo_url)}" alt="${safe(fullName(yp))}">` : safe(initials(yp))}
+            </div>
 
-        <div>
-          <h3>${safe(fullName(yp))}</h3>
-          <p>
-            Preferred name: ${safe(yp.preferred_name || yp.first_name || "—")}<br>
-            Date of birth: ${safe(yp.date_of_birth || "—")} · Age: ${safe(calcAge(yp.date_of_birth))}<br>
-            Placement status: ${safe(yp.placement_status || "—")}
-          </p>
+            <div class="overview-identity">
+              <div class="overview-title-row">
+                <h3>${safe(fullName(yp))}</h3>
+                <div class="tag-row">
+                  <span class="tag ${riskTagClass(yp.summary_risk_level)}">${safe(primaryRisk)}</span>
+                  <span class="tag ${yp.archived ? "warn" : "good"}">${yp.archived ? "archived" : "active"}</span>
+                  <span class="tag">${safe(yp.placement_status || "placement not set")}</span>
+                </div>
+              </div>
 
-          <div class="tag-row">
-            <span class="tag ${riskTagClass(yp.summary_risk_level)}">${safe(yp.summary_risk_level || "risk not set")}</span>
-            <span class="tag">${safe(yp.gender || "gender not set")}</span>
-            <span class="tag">${safe(yp.ethnicity || "ethnicity not set")}</span>
-            <span class="tag ${yp.archived ? "warn" : "good"}">${yp.archived ? "archived" : "active"}</span>
+              <div class="overview-subtext">
+                Preferred name: <strong>${safe(yp.preferred_name || yp.first_name || "—")}</strong> ·
+                DOB: <strong>${safe(yp.date_of_birth || "—")}</strong> ·
+                Age: <strong>${safe(calcAge(yp.date_of_birth))}</strong>
+              </div>
+
+              <div class="overview-subtext">
+                Home ID: <strong>${safe(yp.home_id || "—")}</strong> ·
+                Admission: <strong>${safe(yp.admission_date || "—")}</strong> ·
+                Discharge: <strong>${safe(yp.discharge_date || "—")}</strong>
+              </div>
+
+              <div class="overview-chip-grid">
+                <div class="mini-stat-chip">
+                  <span class="mini-stat-label">Keyworker</span>
+                  <span class="mini-stat-value">${safe(keyworkerName)}</span>
+                </div>
+                <div class="mini-stat-chip">
+                  <span class="mini-stat-label">Legal status</span>
+                  <span class="mini-stat-value">${safe(legalStatus)}</span>
+                </div>
+                <div class="mini-stat-chip">
+                  <span class="mini-stat-label">Education</span>
+                  <span class="mini-stat-value">${safe(educationStatus)}</span>
+                </div>
+                <div class="mini-stat-chip">
+                  <span class="mini-stat-label">GP</span>
+                  <span class="mini-stat-value">${safe(gpName)}</span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div class="stats">
-            <div class="stat">
-              <div class="n">${safe(String(contacts.length))}</div>
-              <div class="l">Contacts</div>
-            </div>
-            <div class="stat">
-              <div class="n">${safe(String(alerts.filter(a => a.is_active).length))}</div>
-              <div class="l">Active alerts</div>
-            </div>
-            <div class="stat">
-              <div class="n">${safe(education.education_status || "—")}</div>
-              <div class="l">Education</div>
-            </div>
-            <div class="stat">
-              <div class="n">${safe(health.gp_name || "—")}</div>
-              <div class="l">GP</div>
+          <div class="overview-alerts">
+            <div class="overview-side-card">
+              <div class="overview-side-title">Active alerts</div>
+              ${
+                priorityAlerts.length
+                  ? priorityAlerts.map(alert => `
+                      <div class="alert-line">
+                        <div class="alert-line-title">${safe(alert.title || "Alert")}</div>
+                        <div class="alert-line-meta">
+                          <span class="tag ${riskTagClass(alert.severity)}">${safe(alert.severity || "alert")}</span>
+                          <span>${safe(alert.alert_type || "general")}</span>
+                        </div>
+                      </div>
+                    `).join("")
+                  : `<div class="muted-line">No active alerts recorded.</div>`
+              }
             </div>
           </div>
         </div>
-      </div>
 
-      <div class="grid-2" style="margin-top:18px;">
-        <div class="card">
-          <h3>Placement and identity</h3>
-          <div class="kv"><div class="k">Home ID</div><div class="v">${safe(yp.home_id || "—")}</div></div>
-          <div class="kv"><div class="k">Admission date</div><div class="v">${safe(yp.admission_date || "—")}</div></div>
-          <div class="kv"><div class="k">Discharge date</div><div class="v">${safe(yp.discharge_date || "—")}</div></div>
-          <div class="kv"><div class="k">Faith / religion</div><div class="v">${safe(identity.religion_or_faith || "—")}</div></div>
-          <div class="kv"><div class="k">Cultural identity</div><div class="v">${safe(identity.cultural_identity || "—")}</div></div>
-          <div class="kv"><div class="k">What matters</div><div class="v">${safe(identity.what_matters_to_me || "—")}</div></div>
+        <div class="overview-stat-grid">
+          <div class="overview-stat-card">
+            <div class="overview-stat-number">${safe(String(activeAlerts.length))}</div>
+            <div class="overview-stat-label">Active alerts</div>
+          </div>
+          <div class="overview-stat-card">
+            <div class="overview-stat-number">${safe(String(contacts.length))}</div>
+            <div class="overview-stat-label">Contacts</div>
+          </div>
+          <div class="overview-stat-card">
+            <div class="overview-stat-number">${safe(String(overview?.daily_note_count ?? 0))}</div>
+            <div class="overview-stat-label">Daily notes</div>
+          </div>
+          <div class="overview-stat-card">
+            <div class="overview-stat-number">${safe(String(overview?.incident_count ?? 0))}</div>
+            <div class="overview-stat-label">Incidents</div>
+          </div>
+          <div class="overview-stat-card">
+            <div class="overview-stat-number">${safe(String(overview?.active_risk_count ?? 0))}</div>
+            <div class="overview-stat-label">Active risks</div>
+          </div>
+          <div class="overview-stat-card">
+            <div class="overview-stat-number">${safe(String(overview?.active_support_plan_count ?? 0))}</div>
+            <div class="overview-stat-label">Active plans</div>
+          </div>
         </div>
 
-        <div class="card">
-          <h3>Communication and wellbeing</h3>
-          <div class="kv"><div class="k">Communication style</div><div class="v">${safe(communication.communication_style || "—")}</div></div>
-          <div class="kv"><div class="k">Sensory profile</div><div class="v">${safe(communication.sensory_profile || "—")}</div></div>
-          <div class="kv"><div class="k">What helps</div><div class="v">${safe(communication.what_helps || "—")}</div></div>
-          <div class="kv"><div class="k">What to avoid</div><div class="v">${safe(communication.what_to_avoid || "—")}</div></div>
-          <div class="kv"><div class="k">Mental health</div><div class="v">${safe(health.mental_health_summary || "—")}</div></div>
-          <div class="kv"><div class="k">Medication summary</div><div class="v">${safe(health.medication_summary || "—")}</div></div>
+        <div class="overview-info-grid">
+          <div class="card">
+            <h3>Placement and identity</h3>
+            <div class="kv"><div class="k">Gender</div><div class="v">${safe(yp.gender || "—")}</div></div>
+            <div class="kv"><div class="k">Ethnicity</div><div class="v">${safe(yp.ethnicity || "—")}</div></div>
+            <div class="kv"><div class="k">Local ID</div><div class="v">${safe(yp.local_id_number || "—")}</div></div>
+            <div class="kv"><div class="k">Faith / religion</div><div class="v">${safe(identity.religion_or_faith || "—")}</div></div>
+            <div class="kv"><div class="k">Cultural identity</div><div class="v">${safe(identity.cultural_identity || "—")}</div></div>
+            <div class="kv"><div class="k">First language</div><div class="v">${safe(identity.first_language || "—")}</div></div>
+            <div class="kv"><div class="k">What matters</div><div class="v">${safe(identity.what_matters_to_me || "—")}</div></div>
+          </div>
+
+          <div class="card">
+            <h3>Communication and regulation</h3>
+            <div class="kv"><div class="k">Communication style</div><div class="v">${safe(communication.communication_style || "—")}</div></div>
+            <div class="kv"><div class="k">Sensory profile</div><div class="v">${safe(communication.sensory_profile || "—")}</div></div>
+            <div class="kv"><div class="k">Processing needs</div><div class="v">${safe(communication.processing_needs || "—")}</div></div>
+            <div class="kv"><div class="k">Signs of distress</div><div class="v">${safe(communication.signs_of_distress || "—")}</div></div>
+            <div class="kv"><div class="k">What helps</div><div class="v">${safe(communication.what_helps || "—")}</div></div>
+            <div class="kv"><div class="k">What to avoid</div><div class="v">${safe(communication.what_to_avoid || "—")}</div></div>
+          </div>
+
+          <div class="card">
+            <h3>Health and education</h3>
+            <div class="kv"><div class="k">School / provision</div><div class="v">${safe(education.school_name || "—")}</div></div>
+            <div class="kv"><div class="k">Education status</div><div class="v">${safe(education.education_status || "—")}</div></div>
+            <div class="kv"><div class="k">SEN status</div><div class="v">${safe(education.sen_status || "—")}</div></div>
+            <div class="kv"><div class="k">GP</div><div class="v">${safe(health.gp_name || "—")}</div></div>
+            <div class="kv"><div class="k">Allergies</div><div class="v">${safe(health.allergies || "—")}</div></div>
+            <div class="kv"><div class="k">Diagnoses</div><div class="v">${safe(health.diagnoses || "—")}</div></div>
+            <div class="kv"><div class="k">Mental health</div><div class="v">${safe(health.mental_health_summary || "—")}</div></div>
+          </div>
+
+          <div class="card">
+            <h3>Key network and oversight</h3>
+            <div class="kv"><div class="k">Legal status</div><div class="v">${safe(legal.legal_status || "—")}</div></div>
+            <div class="kv"><div class="k">Order type</div><div class="v">${safe(legal.order_type || "—")}</div></div>
+            <div class="kv"><div class="k">Consent</div><div class="v">${safe(legal.consent_arrangements || "—")}</div></div>
+            <div class="kv"><div class="k">Restrictions</div><div class="v">${safe(legal.restrictions_text || "—")}</div></div>
+            <div class="kv"><div class="k">Top contacts</div><div class="v">${safe(contactNames.join(", ") || "—")}</div></div>
+            <div class="kv"><div class="k">Important dates</div><div class="v">${safe(identity.important_dates || "—")}</div></div>
+          </div>
         </div>
       </div>
     `;
@@ -693,16 +819,14 @@ window.YoungPeopleShell = (function () {
                   </p>
                 </div>
               `).join("")
-              : `<div class="empty-state">No contacts recorded yet.</div>`
+              : `<div class="empty-state compact">No contacts recorded yet.</div>`
           }
         </div>
       `;
 
       bindProfileSave(async () => {
         const fullNameValue = document.getElementById("contactFullName")?.value || "";
-        if (!fullNameValue.trim()) {
-          throw new Error("Full name is required.");
-        }
+        if (!fullNameValue.trim()) throw new Error("Full name is required.");
 
         return api(`/young-people/${selectedYoungPerson.id}/contacts`, {
           method: "POST",
@@ -784,16 +908,14 @@ window.YoungPeopleShell = (function () {
                   </p>
                 </div>
               `).join("")
-              : `<div class="empty-state">No alerts recorded yet.</div>`
+              : `<div class="empty-state compact">No alerts recorded yet.</div>`
           }
         </div>
       `;
 
       bindProfileSave(async () => {
         const titleValue = document.getElementById("alertTitle")?.value || "";
-        if (!titleValue.trim()) {
-          throw new Error("Alert title is required.");
-        }
+        if (!titleValue.trim()) throw new Error("Alert title is required.");
 
         return api(`/young-people/${selectedYoungPerson.id}/alerts`, {
           method: "POST",
@@ -809,40 +931,6 @@ window.YoungPeopleShell = (function () {
         });
       });
     }
-  }
-
-  async function loadYoungPeople() {
-    const data = await api("/young-people");
-    youngPeople = Array.isArray(data?.young_people) ? data.young_people : [];
-    renderYoungPersonList();
-
-    if (!selectedYoungPerson && youngPeople.length) {
-      selectedYoungPerson = youngPeople[0];
-      renderYoungPersonList();
-      await loadYoungPersonOverview(selectedYoungPerson.id);
-    }
-  }
-
-  async function loadYoungPersonOverview(id) {
-    const data = await api(`/young-people/${id}/overview`);
-    const overview = data?.overview || {};
-
-    latestOverview = overview;
-    selectedYoungPerson = overview?.young_person || selectedYoungPerson;
-
-    const pageTitle = document.getElementById("pageTitle");
-    const pageSubtitle = document.getElementById("pageSubtitle");
-
-    if (pageTitle) pageTitle.textContent = fullName(selectedYoungPerson);
-    if (pageSubtitle) {
-      pageSubtitle.textContent =
-        `Placement: ${selectedYoungPerson?.placement_status || "—"} · Risk: ${selectedYoungPerson?.summary_risk_level || "—"}`;
-    }
-
-    renderOverview(overview);
-    renderProfileTab(overview);
-    renderAssistantContext(overview);
-    await loadWorkspace(activeWorkspace);
   }
 
   function renderAssistantContext(overview) {
@@ -865,6 +953,82 @@ window.YoungPeopleShell = (function () {
     `;
   }
 
+  function renderRightRail(overview) {
+    const host = document.getElementById("liveRightRail");
+    if (!host) return;
+
+    const yp = overview?.young_person || {};
+    const alerts = Array.isArray(overview?.alerts) ? overview.alerts.filter(a => a?.is_active) : [];
+    const legal = overview?.legal_status || {};
+
+    host.innerHTML = `
+      <div class="snapshot-item">
+        <div class="snapshot-title">Current priorities</div>
+        <div class="snapshot-text">
+          ${safe(fullName(yp))} is currently marked as <strong>${safe(yp.placement_status || "not set")}</strong> with a risk level of <strong>${safe(yp.summary_risk_level || "not set")}</strong>.
+        </div>
+      </div>
+
+      <div class="snapshot-item">
+        <div class="snapshot-title">Active alerts</div>
+        <div class="snapshot-text">
+          ${alerts.length ? safe(alerts.map(a => a.title).slice(0, 3).join(", ")) : "No active alerts recorded."}
+        </div>
+      </div>
+
+      <div class="snapshot-item">
+        <div class="snapshot-title">Legal and consent</div>
+        <div class="snapshot-text">
+          Legal status: ${safe(legal.legal_status || legal.order_type || "Not recorded")}<br>
+          Consent: ${safe(legal.consent_arrangements || "Not recorded")}
+        </div>
+      </div>
+
+      <div class="snapshot-item">
+        <div class="snapshot-title">What to do next</div>
+        <div class="snapshot-text">
+          Use the operational workspace to add or review incidents, daily notes, health, education, family, keywork, risks, and chronology-linked activity.
+        </div>
+      </div>
+    `;
+  }
+
+  async function loadYoungPeople() {
+    const data = await api("/young-people");
+    youngPeople = Array.isArray(data?.young_people) ? data.young_people : [];
+    applyYoungPersonFilters();
+
+    if (!selectedYoungPerson && filteredYoungPeople.length) {
+      selectedYoungPerson = filteredYoungPeople[0];
+      renderYoungPersonSelect();
+      await loadYoungPersonOverview(selectedYoungPerson.id);
+    }
+  }
+
+  async function loadYoungPersonOverview(id) {
+    const data = await api(`/young-people/${id}/overview`);
+    const overview = data?.overview || {};
+
+    latestOverview = overview;
+    selectedYoungPerson = overview?.young_person || selectedYoungPerson;
+    renderYoungPersonSelect();
+
+    const pageTitle = document.getElementById("pageTitle");
+    const pageSubtitle = document.getElementById("pageSubtitle");
+
+    if (pageTitle) pageTitle.textContent = fullName(selectedYoungPerson);
+    if (pageSubtitle) {
+      pageSubtitle.textContent =
+        `Placement: ${selectedYoungPerson?.placement_status || "—"} · Risk: ${selectedYoungPerson?.summary_risk_level || "—"}`;
+    }
+
+    renderOverview(overview);
+    renderProfileTab(overview);
+    renderAssistantContext(overview);
+    renderRightRail(overview);
+    await loadWorkspace(activeWorkspace);
+  }
+
   async function loadWorkspace(workspaceName) {
     activeWorkspace = workspaceName;
 
@@ -875,25 +1039,26 @@ window.YoungPeopleShell = (function () {
       mount.innerHTML = `<div class="empty-state">Select a young person to load a workspace.</div>`;
       return;
     }
-if (workspaceName === "timeline") {
-  const html = await fetch("/components/yp-timeline-workspace.html", {
-    credentials: "include"
-  }).then(r => r.text());
 
-  mount.innerHTML = html;
+    if (workspaceName === "timeline") {
+      const html = await fetch("/components/yp-timeline-workspace.html", {
+        credentials: "include"
+      }).then(r => r.text());
 
-  if (!window.YoungPersonTimelineWorkspace) {
-    await loadScript("/js/workspaces/yp-timeline-workspace.js");
-  }
+      mount.innerHTML = html;
 
-  window.YoungPersonTimelineWorkspace.bind({
-    selectedYoungPerson,
-    overview: latestOverview,
-    reloadOverview: loadYoungPersonOverview
-  });
+      if (!window.YoungPersonTimelineWorkspace) {
+        await loadScript("/js/workspaces/yp-timeline-workspace.js");
+      }
 
-  return;
-}
+      window.YoungPersonTimelineWorkspace.bind({
+        selectedYoungPerson,
+        overview: latestOverview,
+        reloadOverview: loadYoungPersonOverview
+      });
+
+      return;
+    }
 
     if (workspaceName === "incident") {
       const html = await fetch("/components/yp-incident-workspace.html", {
@@ -1037,8 +1202,7 @@ if (workspaceName === "timeline") {
 
     mount.innerHTML = `
       <div class="empty-state">
-        The <strong>${safe(workspaceName)}</strong> workspace has not been built yet.<br>
-        Next step: add a dedicated component and JS module for this section.
+        The <strong>${safe(workspaceName)}</strong> workspace has not been built yet.
       </div>
     `;
   }
@@ -1082,26 +1246,32 @@ if (workspaceName === "timeline") {
     });
   }
 
-  function closeSidebarOnMobile() {
-    if (window.innerWidth <= 820) {
-      document.getElementById("ypSidebar")?.classList.remove("open");
-    }
-  }
-
-  function bindLayout() {
-    const sidebar = document.getElementById("ypSidebar");
-
-    document.getElementById("openSidebarBtn")?.addEventListener("click", () => {
-      sidebar?.classList.add("open");
-    });
-
-    document.getElementById("closeSidebarBtn")?.addEventListener("click", () => {
-      sidebar?.classList.remove("open");
-    });
-
+  function bindTopbar() {
     document.getElementById("refreshYoungPeopleBtn")?.addEventListener("click", loadYoungPeople);
-    document.getElementById("youngPersonSearch")?.addEventListener("input", renderYoungPersonList);
-    document.getElementById("youngPersonStatusFilter")?.addEventListener("change", renderYoungPersonList);
+
+    document.getElementById("youngPersonSearch")?.addEventListener("input", () => {
+      applyYoungPersonFilters();
+    });
+
+    document.getElementById("youngPersonStatusFilter")?.addEventListener("change", () => {
+      applyYoungPersonFilters();
+    });
+
+    document.getElementById("youngPersonSelect")?.addEventListener("change", async e => {
+      const id = Number(e.target.value || 0);
+      if (!id) {
+        selectedYoungPerson = null;
+        latestOverview = null;
+        clearDashboard();
+        return;
+      }
+
+      const person = filteredYoungPeople.find(p => Number(p.id) === id) || youngPeople.find(p => Number(p.id) === id);
+      if (!person) return;
+
+      selectedYoungPerson = person;
+      await loadYoungPersonOverview(id);
+    });
 
     document.getElementById("newYoungPersonBtn")?.addEventListener("click", () => {
       alert("Next step: connect this button to a create young person modal.");
@@ -1142,7 +1312,8 @@ if (workspaceName === "timeline") {
   async function init() {
     bindProfileTabs();
     bindWorkspaceTabs();
-    bindLayout();
+    bindTopbar();
+    clearDashboard();
     await loadYoungPeople();
   }
 
