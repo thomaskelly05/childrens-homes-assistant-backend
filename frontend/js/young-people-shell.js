@@ -363,6 +363,26 @@ window.YoungPeopleShell = (function () {
   return;
 }
 
+    if (workspaceName === "keywork") {
+  const html = await fetch("/components/yp-keywork-workspace.html", {
+    credentials: "include"
+  }).then(r => r.text());
+
+  mount.innerHTML = html;
+
+  if (!window.YoungPersonKeyworkWorkspace) {
+    await loadScript("/js/workspaces/yp-keywork-workspace.js");
+  }
+
+  window.YoungPersonKeyworkWorkspace.bind({
+    selectedYoungPerson,
+    overview: latestOverview,
+    reloadOverview: loadYoungPersonOverview
+  });
+
+  return;
+}
+
     if (activeProfileTab === "contacts") {
       host.innerHTML = contacts.length ? `
         <div class="mini-list">
