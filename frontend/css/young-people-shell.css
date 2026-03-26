@@ -722,3 +722,67 @@ button{
     gap:5px;
   }
 }
+
+.timeline-group{
+  margin-bottom:20px;
+}
+
+.timeline-date{
+  font-size:.82rem;
+  font-weight:700;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  margin-bottom:10px;
+}
+
+.timeline-items{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.timeline-item{
+  border:1px solid var(--line);
+  background:var(--panel);
+  border-radius:16px;
+  padding:14px;
+}
+
+.timeline-item-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.timeline-item-title{
+  font-size:.95rem;
+  font-weight:700;
+  line-height:1.4;
+}
+
+.timeline-item-meta{
+  margin-top:6px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+  color:var(--muted);
+  font-size:.8rem;
+}
+
+.timeline-item-body{
+  margin-top:10px;
+}
+
+.timeline-item-body p{
+  color:var(--muted);
+  line-height:1.6;
+  font-size:.88rem;
+  margin-bottom:8px;
+}
+
+.timeline-item-body p:last-child{
+  margin-bottom:0;
+}
