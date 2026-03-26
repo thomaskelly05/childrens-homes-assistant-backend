@@ -22,6 +22,7 @@ from services.young_people_service import (
     upsert_identity_profile,
     upsert_legal_status,
 )
+from services.young_people_timeline_service import get_young_person_timeline
 
 router = APIRouter(prefix="/young-people", tags=["Young People"])
 
@@ -156,11 +157,6 @@ def _ensure_person_exists(conn, young_person_id: int) -> dict[str, Any]:
     return person
 
 
-def _fetchall_dicts(cur) -> list[dict[str, Any]]:
-    rows = cur.fetchall() or []
-    return [dict(row) for row in rows]
-
-
 @router.get("")
 @router.get("/")
 def api_list_young_people(
@@ -245,6 +241,7 @@ def api_get_young_person_overview(
         raise HTTPException(status_code=404, detail="Young person not found")
     return {"ok": True, "overview": overview}
 
+
 @router.get("/{young_person_id}/timeline")
 def api_get_young_person_timeline(
     young_person_id: int,
@@ -273,6 +270,7 @@ def api_get_young_person_timeline(
         "timeline": rows,
         "count": len(rows),
     }
+
 
 @router.post("/{young_person_id}/communication-profile")
 def api_upsert_communication_profile(
@@ -387,156 +385,3 @@ def api_add_alert(
         payload=payload.model_dump(),
     )
     return {"ok": True, "alert": row}
-
-
-@router.get("/{young_person_id}/timeline")
-def api_get_young_person_timeline(
-    young_person_id: int,
-    limit: int = Query(default=20, ge=1, le=100),
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    _ensure_person_exists(conn, young_person_id)
-
-    timeline: list[dict[str, Any]] = []
-
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            SELECT
-                'daily_note' AS item_type,
-                id AS source_id,
-                note_date::timestamp AS event_at,
-                COALESCE(shift_type, 'daily note') AS title,
-                COALESCE(positives, activities, presentation, actions_required, '') AS summary,
-                workflow_status AS status
-            FROM daily_notes
-            WHERE young_person_id = %s
-            ORDER BY note_date DESC, id DESC
-            LIMIT %s
-            """,
-            (young_person_id, limit),
-        )
-        timeline.extend(_fetchall_dicts(cur))
-
-        cur.execute(
-            """
-            SELECT
-                'incident' AS item_type,
-                id AS source_id,
-                COALESCE(incident_datetime, created_at) AS event_at,
-                COALESCE(incident_type, 'incident') AS title,
-                COALESCE(description, outcome, actions_taken, '') AS summary,
-                workflow_status AS status
-            FROM incidents
-            WHERE young_person_id = %s
-            ORDER BY COALESCE(incident_datetime, created_at) DESC, id DESC
-            LIMIT %s
-            """,
-            (young_person_id, limit),
-        )
-        timeline.extend(_fetchall_dicts(cur))
-
-        cur.execute(
-            """
-            SELECT
-                'keywork' AS item_type,
-                id AS source_id,
-                session_date::timestamp AS event_at,
-                COALESCE(topic, 'keywork session') AS title,
-                COALESCE(summary, child_voice, actions_agreed, '') AS summary,
-                workflow_status AS status
-            FROM keywork_sessions
-            WHERE young_person_id = %s
-            ORDER BY session_date DESC, id DESC
-            LIMIT %s
-            """,
-            (young_person_id, limit),
-        )
-        timeline.extend(_fetchall_dicts(cur))
-
-        cur.execute(
-            """
-            SELECT
-                'health' AS item_type,
-                id AS source_id,
-                COALESCE(event_datetime, created_at) AS event_at,
-                COALESCE(title, record_type, 'health record') AS title,
-                COALESCE(summary, outcome, '') AS summary,
-                NULL::text AS status
-            FROM health_records
-            WHERE young_person_id = %s
-            ORDER BY COALESCE(event_datetime, created_at) DESC, id DESC
-            LIMIT %s
-            """,
-            (young_person_id, limit),
-        )
-        timeline.extend(_fetchall_dicts(cur))
-
-        cur.execute(
-            """
-            SELECT
-                'education' AS item_type,
-                id AS source_id,
-                record_date::timestamp AS event_at,
-                COALESCE(provision_name, 'education record') AS title,
-                COALESCE(achievement_note, issue_raised, behaviour_summary, '') AS summary,
-                attendance_status AS status
-            FROM education_records
-            WHERE young_person_id = %s
-            ORDER BY record_date DESC, id DESC
-            LIMIT %s
-            """,
-            (young_person_id, limit),
-        )
-        timeline.extend(_fetchall_dicts(cur))
-
-        cur.execute(
-            """
-            SELECT
-                'family_contact' AS item_type,
-                id AS source_id,
-                COALESCE(contact_datetime, created_at) AS event_at,
-                COALESCE(contact_person, contact_type, 'family contact') AS title,
-                COALESCE(post_contact_presentation, concerns, child_voice, '') AS summary,
-                NULL::text AS status
-            FROM family_contact_records
-            WHERE young_person_id = %s
-            ORDER BY COALESCE(contact_datetime, created_at) DESC, id DESC
-            LIMIT %s
-            """,
-            (young_person_id, limit),
-        )
-        timeline.extend(_fetchall_dicts(cur))
-
-        cur.execute(
-            """
-            SELECT
-                'chronology' AS item_type,
-                id AS source_id,
-                COALESCE(event_datetime, created_at) AS event_at,
-                COALESCE(title, category, 'chronology event') AS title,
-                COALESCE(summary, significance, '') AS summary,
-                event_status AS status
-            FROM chronology_events
-            WHERE young_person_id = %s
-            ORDER BY COALESCE(event_datetime, created_at) DESC, id DESC
-            LIMIT %s
-            """,
-            (young_person_id, limit),
-        )
-        timeline.extend(_fetchall_dicts(cur))
-
-    timeline.sort(
-        key=lambda x: (
-            x.get("event_at") is None,
-            x.get("event_at"),
-            x.get("source_id") or 0,
-        ),
-        reverse=True,
-    )
-
-    return {
-        "ok": True,
-        "timeline": timeline[:limit],
-    }
