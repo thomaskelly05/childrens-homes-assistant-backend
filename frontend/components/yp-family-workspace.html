@@ -1,0 +1,194 @@
+<div id="familyWorkspace">
+  <div class="record-form-grid">
+    <div class="card">
+      <h3>Family contact record</h3>
+
+      <div class="form-row-2">
+        <div class="form-block">
+          <label for="familyContactDatetime">Contact date and time</label>
+          <input id="familyContactDatetime" class="field" type="datetime-local">
+          <div class="help-text">Record when the contact took place or was attempted.</div>
+        </div>
+
+        <div class="form-block">
+          <label for="familyContactType">Contact type</label>
+          <select id="familyContactType" class="select">
+            <option value="">Select contact type</option>
+            <option value="phone_call">Phone call</option>
+            <option value="video_call">Video call</option>
+            <option value="face_to_face">Face to face</option>
+            <option value="community_contact">Community contact</option>
+            <option value="supervised_contact">Supervised contact</option>
+            <option value="text_message">Text message</option>
+            <option value="contact_attempt">Contact attempt</option>
+            <option value="other">Other</option>
+          </select>
+          <div class="help-text">Choose the main contact type so the record can be filtered and reviewed correctly.</div>
+        </div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-block">
+          <label for="familyContactPerson">Contact person</label>
+          <input id="familyContactPerson" class="field" type="text" placeholder="e.g. Mum, Dad, Aunt, sibling, social worker">
+          <div class="help-text">Record the person or people involved in the contact.</div>
+        </div>
+
+        <div class="form-block">
+          <label for="familySupervisionLevel">Supervision level</label>
+          <select id="familySupervisionLevel" class="select">
+            <option value="">Select supervision level</option>
+            <option value="unsupervised">Unsupervised</option>
+            <option value="staff_present">Staff present</option>
+            <option value="fully_supervised">Fully supervised</option>
+            <option value="monitored">Monitored</option>
+            <option value="not_applicable">Not applicable</option>
+          </select>
+          <div class="help-text">Record the agreed supervision or monitoring level for the contact.</div>
+        </div>
+      </div>
+
+      <div class="form-block">
+        <label for="familyLocation">Location</label>
+        <input id="familyLocation" class="field" type="text" placeholder="e.g. home, contact centre, phone, video call">
+        <div class="help-text">Record where or how the contact took place.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="familyPrePresentation">Pre-contact presentation</label>
+        <textarea id="familyPrePresentation" class="textarea" placeholder="How did the young person present before contact?"></textarea>
+        <div class="help-text">Record mood, anxiety, anticipation, willingness, reluctance, or other presentation before the contact.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="familyPostPresentation">Post-contact presentation</label>
+        <textarea id="familyPostPresentation" class="textarea" placeholder="How did the young person present after contact?"></textarea>
+        <div class="help-text">Record how the young person appeared after the contact, including mood, emotional impact, regulation, or behavioural change.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="familyContactSummary">Contact summary</label>
+        <textarea id="familyContactSummary" class="textarea" placeholder="What happened during the contact?"></textarea>
+        <div class="help-text">Record the main events of the contact factually and clearly, including what was discussed and anything significant.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="familyYoungPersonVoice">Young person’s voice</label>
+        <textarea id="familyYoungPersonVoice" class="textarea" placeholder="What did the young person say or express about the contact?"></textarea>
+        <div class="help-text">Record the young person’s views, feelings, wishes, worries, and reflections before, during, or after contact.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="familyConcerns">Concerns or issues</label>
+        <textarea id="familyConcerns" class="textarea" placeholder="Any concerns, breaches, emotional impact, or issues arising?"></textarea>
+        <div class="help-text">Record any concerns, conflict, safeguarding issues, emotional distress, boundary issues, or follow-up concerns from the contact.</div>
+      </div>
+
+      <div class="form-block">
+        <label for="familyFollowUpNotes">Follow-up and actions</label>
+        <textarea id="familyFollowUpNotes" class="textarea" placeholder="What needs to happen next?"></textarea>
+        <div class="help-text">Record actions needed, notifications, support required, handover points, or future contact arrangements.</div>
+      </div>
+    </div>
+
+    <div class="record-side-stack">
+      <div class="card">
+        <h3>Checks and follow-up</h3>
+
+        <div class="checkbox-grid">
+          <label class="check-item"><input id="familyFollowUpRequired" type="checkbox" checked><span>Follow-up required</span></label>
+          <label class="check-item"><input id="familyChronologyLink" type="checkbox" checked><span>Link to chronology</span></label>
+          <label class="check-item"><input id="familyPlanLink" type="checkbox" checked><span>Link to family / placement plans</span></label>
+          <label class="check-item"><input id="familyTaskCreate" type="checkbox" checked><span>Create follow-up task</span></label>
+          <label class="check-item"><input id="familyManagerReview" type="checkbox"><span>Manager review needed</span></label>
+          <label class="check-item"><input id="familySafeguardingConcern" type="checkbox"><span>Safeguarding concern</span></label>
+        </div>
+
+        <div class="help-text" style="margin-top:10px;">
+          These checks help the system suggest chronology items, linked plans, tasks, and accountability actions.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Suggested Quality Standards</h3>
+        <div id="familyStandardsBox" class="assistant-prompt">
+          Suggested standards will appear here after AI review.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Suggested links</h3>
+        <div id="familyLinksBox" class="assistant-prompt">
+          Suggested links to chronology, family plans, tasks, and reviews will appear here after AI review.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Accountability workflow</h3>
+        <div id="familyWorkflowBox" class="assistant-prompt">
+          Complete the family contact record, review AI suggestions, save the record, and follow any linked actions, plans, chronology, or task prompts.
+        </div>
+      </div>
+
+      <div class="doc-ai-panel">
+        <div class="doc-ai-panel-head">
+          <div>
+            <h3>AI document review</h3>
+            <p>Improve wording, spell check, therapeutic tone, missing details, standards, and linked records.</p>
+          </div>
+        </div>
+
+        <div class="doc-ai-actions">
+          <button type="button" class="ghost-btn" data-family-ai-action="improve_wording">Improve wording</button>
+          <button type="button" class="ghost-btn" data-family-ai-action="spell_check">Spell check</button>
+          <button type="button" class="ghost-btn" data-family-ai-action="make_therapeutic">Make therapeutic</button>
+          <button type="button" class="ghost-btn" data-family-ai-action="make_more_factual">Make more factual</button>
+          <button type="button" class="ghost-btn" data-family-ai-action="suggest_missing_details">Missing details</button>
+          <button type="button" class="ghost-btn" data-family-ai-action="suggest_quality_standards">Quality standards</button>
+          <button type="button" class="ghost-btn" data-family-ai-action="suggest_links">Suggest links</button>
+          <button type="button" class="primary-btn" id="runFamilyAiReviewBtn">Run full review</button>
+        </div>
+
+        <div id="familyAiStatus" class="doc-ai-status hidden"></div>
+
+        <div id="familyAiResults" class="doc-ai-results hidden">
+          <div class="doc-ai-result-card">
+            <h4>Improved version</h4>
+            <textarea id="familyAiImprovedText" class="textarea" rows="12" readonly></textarea>
+            <div class="doc-ai-result-actions">
+              <button type="button" class="secondary-btn" id="copyFamilyAiBtn">Copy</button>
+              <button type="button" class="primary-btn" id="applyFamilyAiBtn">Apply to summary</button>
+            </div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Field feedback</h4>
+            <div id="familyAiFieldFeedback" class="doc-ai-list"></div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Missing details</h4>
+            <div id="familyAiMissingDetails" class="doc-ai-list"></div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Safeguarding notes</h4>
+            <div id="familyAiSafeguarding" class="doc-ai-list"></div>
+          </div>
+
+          <div class="doc-ai-result-card">
+            <h4>Summary</h4>
+            <div id="familyAiSummary" class="doc-ai-summary"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="record-action-bar">
+        <button id="clearFamilyFormBtn" class="secondary-btn" type="button">Clear form</button>
+        <button id="saveFamilyRecordBtn" class="primary-btn" type="button">Save family contact</button>
+      </div>
+
+      <div id="familySaveStatus" class="doc-ai-status hidden"></div>
+    </div>
+  </div>
+</div>
