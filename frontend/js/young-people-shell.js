@@ -1,4 +1,4 @@
-window.ChildrensHomeOS = (function () => {
+window.ChildrensHomeOS = (function () {
   let youngPeople = [];
   let filteredYoungPeople = [];
   let selectedYoungPerson = null;
@@ -82,27 +82,28 @@ window.ChildrensHomeOS = (function () => {
   }
 
   function getSectionTitle(section) {
-    const titles = {
+    const map = {
       overview: "Overview",
       "daily-notes": "Daily notes",
       incidents: "Incidents",
       health: "Health",
       education: "Education",
-      family: "Family and contact",
+      family: "Family",
       keywork: "Keywork",
       risk: "Risk",
       timeline: "Timeline"
     };
-    return titles[section] || "Overview";
+    return map[section] || "Overview";
   }
 
   function setActiveShiftMode(mode) {
     activeShiftMode = mode;
+
     document.querySelectorAll("[data-shift-mode]").forEach(btn => {
       btn.classList.toggle("active", btn.getAttribute("data-shift-mode") === mode);
     });
-    renderShiftModeSummary();
-    renderHomeStatusStrip();
+
+    renderContextStrip();
   }
 
   function setActiveSectionTab(section) {
@@ -116,14 +117,7 @@ window.ChildrensHomeOS = (function () => {
       panel.classList.toggle("active", panel.id === `section-${section}`);
     });
 
-    if (selectedYoungPerson) {
-      const pageTitle = document.getElementById("pageTitle");
-      const pageSubtitle = document.getElementById("pageSubtitle");
-      if (pageTitle) pageTitle.textContent = `${fullName(selectedYoungPerson)} · ${getSectionTitle(section)}`;
-      if (pageSubtitle) {
-        pageSubtitle.textContent = `Placement: ${selectedYoungPerson?.placement_status || "—"} · Risk: ${selectedYoungPerson?.summary_risk_level || "—"}`;
-      }
-    }
+    renderContextStrip();
   }
 
   function openModal(id) {
@@ -143,6 +137,36 @@ window.ChildrensHomeOS = (function () => {
     document.querySelectorAll(".modal").forEach(closeModal);
   }
 
+  function renderYoungPersonSelect() {
+    const select = document.getElementById("youngPersonSelect");
+    if (!select) return;
+
+    const currentId = selectedYoungPerson?.id ? String(selectedYoungPerson.id) : "";
+    select.innerHTML = `<option value="">Select young person</option>`;
+
+    if (!filteredYoungPeople.length) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No young people match your filters";
+      select.appendChild(option);
+      select.value = "";
+      return;
+    }
+
+    filteredYoungPeople.forEach(person => {
+      const option = document.createElement("option");
+      option.value = String(person.id);
+      option.textContent = `${fullName(person)}${person.archived ? " (Archived)" : ""}`;
+      select.appendChild(option);
+    });
+
+    if ([...select.options].some(opt => opt.value === currentId)) {
+      select.value = currentId;
+    } else {
+      select.value = "";
+    }
+  }
+
   function applyYoungPersonFilters() {
     const query = (document.getElementById("youngPersonSearch")?.value || "").trim().toLowerCase();
     const status = document.getElementById("youngPersonStatusFilter")?.value || "";
@@ -157,7 +181,10 @@ window.ChildrensHomeOS = (function () => {
           person.preferred_name,
           person.placement_status,
           person.summary_risk_level
-        ].filter(Boolean).join(" ").toLowerCase();
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
 
         return haystack.includes(query);
       });
@@ -184,139 +211,47 @@ window.ChildrensHomeOS = (function () => {
     }
   }
 
-  function renderYoungPersonSelect() {
-    const select = document.getElementById("youngPersonSelect");
-    if (!select) return;
+  function renderContextStrip() {
+    const pageTitle = document.getElementById("pageTitle");
+    const pageSubtitle = document.getElementById("pageSubtitle");
+    const contextTags = document.getElementById("contextTags");
 
-    const currentId = selectedYoungPerson?.id ? String(selectedYoungPerson.id) : "";
-    select.innerHTML = `<option value="">Select young person</option>`;
-
-    if (!filteredYoungPeople.length) {
-      const option = document.createElement("option");
-      option.value = "";
-      option.textContent = "No young people match your filters";
-      select.appendChild(option);
-      select.value = "";
-      return;
-    }
-
-    filteredYoungPeople.forEach(person => {
-      const option = document.createElement("option");
-      option.value = String(person.id);
-      option.textContent = `${fullName(person)}${person.archived ? " (Archived)" : ""} · ${person.placement_status || "Placement not set"} · ${person.summary_risk_level || "Risk not set"}`;
-      select.appendChild(option);
-    });
-
-    if ([...select.options].some(opt => opt.value === currentId)) {
-      select.value = currentId;
-    } else {
-      select.value = "";
-    }
-  }
-
-  function renderShiftModeSummary() {
-    const host = document.getElementById("shiftModeSummary");
-    if (!host) return;
-
-    if (activeShiftMode === "start") {
-      host.innerHTML = `
-        Review handover, check high-risk alerts, confirm appointments, and identify overdue records before the shift gathers pace.
-      `;
-      return;
-    }
-
-    if (activeShiftMode === "during") {
-      host.innerHTML = `
-        Keep notes live, record important events quickly, and make follow-up visible as the shift unfolds.
-      `;
-      return;
-    }
-
-    host.innerHTML = `
-      Finish key records, capture next actions clearly, and hand over the emotional and practical picture safely.
-    `;
-  }
-
-  function renderHomeStatusStrip() {
-    const host = document.getElementById("homeStatusStrip");
-    if (!host) return;
-
-    const activeCount = youngPeople.filter(person => !person.archived).length;
-    const archivedCount = youngPeople.filter(person => !!person.archived).length;
-    const selectedRisk = selectedYoungPerson?.summary_risk_level || "Not selected";
-    const selectedPlacement = selectedYoungPerson?.placement_status || "Not selected";
-
-    let shiftHelp = "Live recording and follow-up";
-    if (activeShiftMode === "start") shiftHelp = "Review handover and priorities";
-    if (activeShiftMode === "end") shiftHelp = "Complete records and handover";
-
-    host.innerHTML = `
-      <div class="status-card">
-        <div class="status-label">Active placements</div>
-        <div class="status-value">${safe(String(activeCount))}</div>
-        <div class="status-help">Young people currently open in the home.</div>
-      </div>
-
-      <div class="status-card">
-        <div class="status-label">Archived</div>
-        <div class="status-value">${safe(String(archivedCount))}</div>
-        <div class="status-help">Closed or archived placements.</div>
-      </div>
-
-      <div class="status-card">
-        <div class="status-label">Shift mode</div>
-        <div class="status-value">${safe(activeShiftMode)}</div>
-        <div class="status-help">${safe(shiftHelp)}</div>
-      </div>
-
-      <div class="status-card">
-        <div class="status-label">Selected placement</div>
-        <div class="status-value">${safe(selectedPlacement)}</div>
-        <div class="status-help">Current young person context.</div>
-      </div>
-
-      <div class="status-card">
-        <div class="status-label">Current risk</div>
-        <div class="status-value">${safe(selectedRisk)}</div>
-        <div class="status-help">Selected young person risk summary.</div>
-      </div>
-    `;
-  }
-
-  function renderHeroStrip(overview) {
-    const yp = overview?.young_person || selectedYoungPerson || {};
-    const identity = overview?.identity_profile || {};
-    const communication = overview?.communication_profile || {};
-
-    const focusTitle = document.getElementById("heroFocusTitle");
-    const focusText = document.getElementById("heroFocusText");
-    const tagRow = document.getElementById("heroTagRow");
-
-    if (!focusTitle || !focusText || !tagRow) return;
+    if (!pageTitle || !pageSubtitle || !contextTags) return;
 
     if (!selectedYoungPerson) {
-      focusTitle.textContent = "Select a young person";
-      focusText.textContent = "Once selected, the system will show the young person’s support needs, current alerts, and active care areas.";
-      tagRow.innerHTML = "";
+      pageTitle.textContent = "Children’s Home OS";
+      pageSubtitle.textContent = "Select a young person to begin.";
+      contextTags.innerHTML = "";
       return;
     }
 
-    focusTitle.textContent = fullName(yp);
-    focusText.textContent =
-      identity.what_matters_to_me ||
-      communication.what_helps ||
-      "Use the tabs to focus on one care area at a time and keep recording warm, clear, and manageable.";
+    pageTitle.textContent = `${fullName(selectedYoungPerson)} · ${getSectionTitle(activeSectionTab)}`;
 
-    tagRow.innerHTML = `
-      <span class="tag ${riskTagClass(yp.summary_risk_level)}">${safe(yp.summary_risk_level || "risk not set")}</span>
-      <span class="tag ${yp.archived ? "warn" : "good"}">${yp.archived ? "archived" : "active"}</span>
-      <span class="tag">${safe(yp.placement_status || "placement not set")}</span>
-      <span class="tag">${safe(yp.primary_keyworker_name || "keyworker not allocated")}</span>
+    const shiftText =
+      activeShiftMode === "start"
+        ? "Start shift"
+        : activeShiftMode === "end"
+          ? "End shift"
+          : "During shift";
+
+    pageSubtitle.textContent =
+      latestOverview?.identity_profile?.what_matters_to_me ||
+      "Use the tabs to focus on one area at a time and keep recording clear and manageable.";
+
+    const legal = latestOverview?.legal_status || {};
+
+    contextTags.innerHTML = `
+      <span class="tag ${riskTagClass(selectedYoungPerson.summary_risk_level)}">${safe(selectedYoungPerson.summary_risk_level || "risk not set")}</span>
+      <span class="tag ${selectedYoungPerson.archived ? "warn" : "good"}">${selectedYoungPerson.archived ? "archived" : "active"}</span>
+      <span class="tag">${safe(selectedYoungPerson.placement_status || "placement not set")}</span>
+      <span class="tag">${safe(selectedYoungPerson.primary_keyworker_name || "keyworker not allocated")}</span>
+      <span class="tag">${safe(legal.legal_status || legal.order_type || "legal status not recorded")}</span>
+      <span class="tag">${safe(shiftText)}</span>
     `;
   }
 
   function clearSectionBodies() {
-    const sections = [
+    const ids = [
       "dailyNotesSection",
       "incidentsSection",
       "healthSection",
@@ -327,7 +262,7 @@ window.ChildrensHomeOS = (function () => {
       "timelineSection"
     ];
 
-    sections.forEach(id => {
+    ids.forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         el.innerHTML = `<div class="empty-state">Select a young person to view this area.</div>`;
@@ -336,16 +271,10 @@ window.ChildrensHomeOS = (function () => {
   }
 
   function clearDashboard() {
-    const pageTitle = document.getElementById("pageTitle");
-    const pageSubtitle = document.getElementById("pageSubtitle");
     const overviewPanel = document.getElementById("overviewPanel");
     const profileTabContent = document.getElementById("profileTabContent");
     const assistantContextBox = document.getElementById("assistantContextBox");
     const liveRightRail = document.getElementById("liveRightRail");
-    const managementPanel = document.getElementById("managementPanel");
-
-    if (pageTitle) pageTitle.textContent = "Children’s Home OS";
-    if (pageSubtitle) pageSubtitle.textContent = "Warm, clear, shift-aware care recording and oversight";
 
     if (overviewPanel) {
       overviewPanel.innerHTML = `<div class="empty-state">Select a young person to open their dashboard.</div>`;
@@ -368,18 +297,7 @@ window.ChildrensHomeOS = (function () => {
       `;
     }
 
-    if (managementPanel) {
-      managementPanel.innerHTML = `
-        <div class="snapshot-item">
-          <div class="snapshot-title">Management view</div>
-          <div class="snapshot-text">Returned records, missing entries, overdue reviews, and quality checks can surface here.</div>
-        </div>
-      `;
-    }
-
-    renderHeroStrip(null);
-    renderHomeStatusStrip();
-    renderShiftModeSummary();
+    renderContextStrip();
     renderYoungPersonSelect();
     clearSectionBodies();
     setActiveSectionTab(activeSectionTab);
@@ -463,7 +381,7 @@ window.ChildrensHomeOS = (function () => {
                       </div>
                     </div>
                   `).join("")
-                  : `<div class="muted-line">No active alerts recorded.</div>`
+                  : `<div class="snapshot-text">No active alerts recorded.</div>`
               }
             </div>
           </div>
@@ -699,38 +617,10 @@ window.ChildrensHomeOS = (function () => {
           Review incidents, notes, follow-up tasks, and unresolved concerns for ${safe(fullName(yp))}.
         </div>
       </div>
-
-      <div class="snapshot-item">
-        <div class="snapshot-title">Today’s care focus</div>
-        <div class="snapshot-text">
-          Keep recording clear, warm, factual, and easy for the next adult to understand quickly.
-        </div>
-      </div>
     `;
   }
 
-  function renderManagementPanel() {
-    const host = document.getElementById("managementPanel");
-    if (!host) return;
-
-    host.innerHTML = `
-      <div class="snapshot-item">
-        <div class="snapshot-title">Quality checks</div>
-        <div class="snapshot-text">
-          Missing records, returned work, overdue reviews, and open actions${selectedYoungPerson ? ` for ${safe(fullName(selectedYoungPerson))}` : ""}.
-        </div>
-      </div>
-
-      <div class="snapshot-item">
-        <div class="snapshot-title">Oversight</div>
-        <div class="snapshot-text">
-          Keep management visibility inside everyday work so patterns and risks are easier to notice early.
-        </div>
-      </div>
-    `;
-  }
-
-  function buildSimpleSectionCard(title, text, actionText = "") {
+  function buildSimpleSectionCard(title, text, helper = "") {
     return `
       <div class="workspace-demo">
         <div class="workspace-banner">
@@ -738,15 +628,15 @@ window.ChildrensHomeOS = (function () => {
           <p>${safe(text)}</p>
         </div>
         ${
-          actionText
+          helper
             ? `
-            <div class="workspace-section">
-              <h4>What belongs here</h4>
-              <div class="workspace-helper-list">
-                <div>${safe(actionText)}</div>
+              <div class="workspace-section">
+                <h4>What belongs here</h4>
+                <div class="workspace-helper-list">
+                  <div>${safe(helper)}</div>
+                </div>
               </div>
-            </div>
-          `
+            `
             : ""
         }
       </div>
@@ -777,8 +667,8 @@ window.ChildrensHomeOS = (function () => {
     if (incidents) {
       incidents.innerHTML = buildSimpleSectionCard(
         `Incidents for ${personName}`,
-        "Use this area to review recent incidents and open a new incident modal when needed.",
-        "Clear factual accounts, safeguarding concerns, behaviour events, injuries, missing episodes, and follow-up."
+        "Use this area to review incidents and open the modal to record a new incident when needed.",
+        "Clear factual accounts, safeguarding concerns, injuries, missing episodes, and follow-up."
       );
     }
 
@@ -786,22 +676,22 @@ window.ChildrensHomeOS = (function () => {
       health.innerHTML = buildSimpleSectionCard(
         `Health for ${personName}`,
         "Appointments, medication, symptoms, injuries, and wellbeing can be reviewed here.",
-        "Medication, symptoms, injuries, appointments, refusals, and health-related concerns."
+        "Medication, symptoms, appointments, refusals, injuries, and health-related concerns."
       );
     }
 
     if (education) {
       education.innerHTML = buildSimpleSectionCard(
         `Education for ${personName}`,
-        "Use this area to keep attendance, provision, engagement, and school communication visible.",
-        "Attendance, barriers, engagement, school contact, support, and educational progress."
+        "Keep attendance, provision, engagement, and school communication visible.",
+        "Attendance, barriers, engagement, support, and educational progress."
       );
     }
 
     if (family) {
       family.innerHTML = buildSimpleSectionCard(
         `Family and contact for ${personName}`,
-        "Keep contact arrangements and the emotional impact of contact easier to review.",
+        "Review contact arrangements and emotional impact in one place.",
         "Planned contact, supervision, restrictions, emotional impact, and follow-up."
       );
     }
@@ -809,8 +699,8 @@ window.ChildrensHomeOS = (function () => {
     if (keywork) {
       keywork.innerHTML = buildSimpleSectionCard(
         `Keywork for ${personName}`,
-        "This area keeps goals, themes, reflections, and the young person’s voice together.",
-        "Session themes, goals, voice, reflection, progress, and next steps."
+        "Keep goals, themes, reflections, and the young person’s voice together.",
+        "Session themes, voice, goals, reflection, progress, and next steps."
       );
     }
 
@@ -818,14 +708,14 @@ window.ChildrensHomeOS = (function () => {
       risk.innerHTML = buildSimpleSectionCard(
         `Risk for ${personName}`,
         "Review current risks, patterns, and immediate concerns in one focused area.",
-        "Triggers, warning signs, protective factors, responses, escalation, and review points."
+        "Triggers, warning signs, protective factors, staff responses, escalation, and review points."
       );
     }
 
     if (timeline) {
       timeline.innerHTML = buildSimpleSectionCard(
         `Timeline for ${personName}`,
-        "A joined-up chronology should make it easier to see patterns across the young person’s care.",
+        "A joined-up chronology should make it easier to see patterns across the placement.",
         "Daily notes, incidents, health, education, family contact, and keywork in one place."
       );
     }
@@ -840,8 +730,6 @@ window.ChildrensHomeOS = (function () => {
       selectedYoungPerson = filteredYoungPeople[0];
       renderYoungPersonSelect();
       await loadYoungPersonOverview(selectedYoungPerson.id);
-    } else {
-      renderHomeStatusStrip();
     }
   }
 
@@ -853,14 +741,11 @@ window.ChildrensHomeOS = (function () => {
     selectedYoungPerson = overview?.young_person || selectedYoungPerson;
 
     renderYoungPersonSelect();
-    renderHeroStrip(overview);
-    renderHomeStatusStrip();
-    renderShiftModeSummary();
+    renderContextStrip();
     renderOverview(overview);
     renderProfileTab(overview);
     renderAssistantContext(overview);
     renderRightRail(overview);
-    renderManagementPanel();
     renderAreaSections(overview);
     setActiveSectionTab(activeSectionTab);
   }
@@ -879,8 +764,7 @@ window.ChildrensHomeOS = (function () => {
   function bindSectionTabs() {
     document.querySelectorAll("[data-section-tab]").forEach(btn => {
       btn.addEventListener("click", () => {
-        const section = btn.getAttribute("data-section-tab");
-        setActiveSectionTab(section);
+        setActiveSectionTab(btn.getAttribute("data-section-tab"));
       });
     });
   }
@@ -935,9 +819,21 @@ window.ChildrensHomeOS = (function () => {
         }
 
         const type = btn.getAttribute("data-quick-open");
-        if (type === "daily-note") openModal("daily-note-modal");
-        if (type === "incident") openModal("incident-modal");
-        if (type === "health") openModal("health-modal");
+
+        if (type === "daily-note") {
+          setActiveSectionTab("daily-notes");
+          openModal("daily-note-modal");
+        }
+
+        if (type === "incident") {
+          setActiveSectionTab("incidents");
+          openModal("incident-modal");
+        }
+
+        if (type === "health") {
+          setActiveSectionTab("health");
+          openModal("health-modal");
+        }
       });
     });
 
@@ -948,8 +844,7 @@ window.ChildrensHomeOS = (function () => {
           return;
         }
 
-        const modalId = btn.getAttribute("data-open-modal");
-        openModal(modalId);
+        openModal(btn.getAttribute("data-open-modal"));
       });
     });
 
@@ -1052,26 +947,6 @@ window.ChildrensHomeOS = (function () => {
     });
   }
 
-  function bindMiscActions() {
-    document.getElementById("refreshYoungPeopleBtn")?.addEventListener("click", loadYoungPeople);
-
-    document.querySelectorAll("[data-home-action]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const action = btn.getAttribute("data-home-action");
-
-        if (action === "handover") {
-          alert("Handover generator can be connected next.");
-          return;
-        }
-
-        if (action === "manager") {
-          const panel = document.getElementById("managementPanel");
-          panel?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      });
-    });
-  }
-
   async function init() {
     bindProfileTabs();
     bindSectionTabs();
@@ -1080,7 +955,6 @@ window.ChildrensHomeOS = (function () => {
     bindQuickActions();
     bindModalCloseActions();
     bindAssistantActions();
-    bindMiscActions();
 
     clearDashboard();
 
