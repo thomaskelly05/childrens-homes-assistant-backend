@@ -5,7 +5,7 @@ window.ChildrensHomeOS = (function () {
   let latestOverview = null;
 
   let activeProfileTab = "identity";
-  let activeWorkspace = "daily-note";
+  let activeWorkspace = "incident";
   let activeShiftMode = "during";
 
   async function api(url, options = {}) {
@@ -81,14 +81,6 @@ window.ChildrensHomeOS = (function () {
     return "";
   }
 
-  function getTodayString() {
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, "0");
-    const dd = String(now.getDate()).padStart(2, "0");
-    return `${yyyy}-${mm}-${dd}`;
-  }
-
   function openSidebar() {
     document.getElementById("ypSidebar")?.classList.add("open");
   }
@@ -97,12 +89,27 @@ window.ChildrensHomeOS = (function () {
     document.getElementById("ypSidebar")?.classList.remove("open");
   }
 
+  function openQuickCaptureModal() {
+    const modal = document.getElementById("quickCaptureModal");
+    if (!modal) return;
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden", "false");
+  }
+
+  function closeQuickCaptureModal() {
+    const modal = document.getElementById("quickCaptureModal");
+    if (!modal) return;
+    modal.classList.add("hidden");
+    modal.setAttribute("aria-hidden", "true");
+  }
+
   function setActiveShiftMode(mode) {
     activeShiftMode = mode;
     document.querySelectorAll("[data-shift-mode]").forEach(btn => {
       btn.classList.toggle("active", btn.getAttribute("data-shift-mode") === mode);
     });
-    renderShiftPanel();
+    renderShiftModeSummary();
+    renderHomeStatusStrip();
   }
 
   function renderYoungPersonList() {
@@ -120,19 +127,11 @@ window.ChildrensHomeOS = (function () {
         class="young-person-card ${Number(person.id) === Number(selectedYoungPerson?.id) ? "active" : ""}"
         data-young-person-id="${safe(person.id)}"
       >
-        <div class="young-person-card-top">
-          <div class="young-person-avatar">${safe(initials(person))}</div>
-          <div class="young-person-card-main">
-            <div class="young-person-card-name">${safe(fullName(person))}</div>
-            <div class="young-person-card-meta">
-              ${safe(person.placement_status || "Placement not set")}
-            </div>
-          </div>
-        </div>
-
-        <div class="tag-row">
-          <span class="tag ${riskTagClass(person.summary_risk_level)}">${safe(person.summary_risk_level || "risk not set")}</span>
-          <span class="tag ${person.archived ? "warn" : "good"}">${person.archived ? "archived" : "active"}</span>
+        <div class="young-person-card-name">${safe(fullName(person))}</div>
+        <div class="young-person-card-meta">
+          ${safe(person.placement_status || "Placement not set")} ·
+          ${safe(person.summary_risk_level || "Risk not set")}
+          ${person.archived ? " · Archived" : ""}
         </div>
       </button>
     `).join("");
@@ -194,6 +193,78 @@ window.ChildrensHomeOS = (function () {
     }
   }
 
+  function renderHomeStatusStrip() {
+    const host = document.getElementById("homeStatusStrip");
+    if (!host) return;
+
+    const activeCount = youngPeople.filter(person => !person.archived).length;
+    const archivedCount = youngPeople.filter(person => !!person.archived).length;
+    const selectedRisk = selectedYoungPerson?.summary_risk_level || "Not selected";
+    const selectedPlacement = selectedYoungPerson?.placement_status || "Not selected";
+
+    let shiftMessage = "Live recording and follow-up";
+    if (activeShiftMode === "start") shiftMessage = "Review handover and priorities";
+    if (activeShiftMode === "end") shiftMessage = "Complete records and handover";
+
+    host.innerHTML = `
+      <div class="status-card">
+        <div class="status-label">Active placements</div>
+        <div class="status-value">${safe(String(activeCount))}</div>
+        <div class="status-help">Young people currently open in the home.</div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-label">Archived</div>
+        <div class="status-value">${safe(String(archivedCount))}</div>
+        <div class="status-help">Closed or archived placements.</div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-label">Shift mode</div>
+        <div class="status-value">${safe(activeShiftMode)}</div>
+        <div class="status-help">${safe(shiftMessage)}</div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-label">Selected placement</div>
+        <div class="status-value">${safe(selectedPlacement)}</div>
+        <div class="status-help">Current young person context.</div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-label">Current risk</div>
+        <div class="status-value">${safe(selectedRisk)}</div>
+        <div class="status-help">Selected young person risk summary.</div>
+      </div>
+    `;
+  }
+
+  function renderShiftModeSummary() {
+    const host = document.getElementById("shiftModeSummary");
+    if (!host) return;
+
+    if (activeShiftMode === "start") {
+      host.innerHTML = `
+        <strong>Start shift focus:</strong>
+        Review handover, check high-risk alerts, confirm education and appointments, and identify overdue records before staff begin care tasks.
+      `;
+      return;
+    }
+
+    if (activeShiftMode === "during") {
+      host.innerHTML = `
+        <strong>During shift focus:</strong>
+        Capture events quickly, keep daily notes live, follow alerts, and record health, education, family contact, and care actions as they happen.
+      `;
+      return;
+    }
+
+    host.innerHTML = `
+      <strong>End shift focus:</strong>
+      Finish key records, confirm unresolved issues, create clear next actions, and leave a handover that helps the next staff team start safely.
+    `;
+  }
+
   function clearDashboard() {
     const pageTitle = document.getElementById("pageTitle");
     const pageSubtitle = document.getElementById("pageSubtitle");
@@ -202,10 +273,10 @@ window.ChildrensHomeOS = (function () {
     const workspaceMount = document.getElementById("workspaceMount");
     const assistantContextBox = document.getElementById("assistantContextBox");
     const liveRightRail = document.getElementById("liveRightRail");
-    const shiftPanel = document.getElementById("shiftPanel");
+    const managementPanel = document.getElementById("managementPanel");
 
     if (pageTitle) pageTitle.textContent = "Children’s Home OS";
-    if (pageSubtitle) pageSubtitle.textContent = "Shift-aware care, records, plans, safeguarding, and oversight";
+    if (pageSubtitle) pageSubtitle.textContent = "Shift-aware care, safer records, stronger oversight";
 
     if (overviewPanel) {
       overviewPanel.innerHTML = `<div class="empty-state">Select a young person to open their dashboard.</div>`;
@@ -220,73 +291,30 @@ window.ChildrensHomeOS = (function () {
     }
 
     if (assistantContextBox) {
-      assistantContextBox.innerHTML = `Choose a young person and this area will build context for notes, handovers, plans, and reviews.`;
+      assistantContextBox.innerHTML = `Choose a young person and this area will hold live assistant context and suggested actions.`;
     }
 
     if (liveRightRail) {
       liveRightRail.innerHTML = `
         <div class="snapshot-item">
-          <div class="snapshot-title">Live care feed</div>
-          <div class="snapshot-text">Select a young person to surface alerts, due actions, and next steps.</div>
+          <div class="snapshot-title">Current priorities</div>
+          <div class="snapshot-text">Select a young person to surface alerts, risks, tasks, reviews, and follow-up.</div>
         </div>
       `;
     }
 
-    if (shiftPanel) {
-      renderShiftPanel();
+    if (managementPanel) {
+      managementPanel.innerHTML = `
+        <div class="snapshot-item">
+          <div class="snapshot-title">Management view</div>
+          <div class="snapshot-text">Returned records, missing entries, overdue reviews, and quality checks can surface here.</div>
+        </div>
+      `;
     }
 
+    renderHomeStatusStrip();
+    renderShiftModeSummary();
     renderYoungPersonList();
-  }
-
-  function renderShiftPanel() {
-    const host = document.getElementById("shiftPanel");
-    if (!host) return;
-
-    if (activeShiftMode === "start") {
-      host.innerHTML = `
-        <div class="shift-card">
-          <div class="shift-card-title">Start shift focus</div>
-          <div class="shift-card-text">Review alerts, incidents since last shift, appointments today, and missing records before staff begin care tasks.</div>
-        </div>
-        <div class="shift-checklist">
-          <div class="check-row">Review handover</div>
-          <div class="check-row">Check high-risk alerts</div>
-          <div class="check-row">Confirm education / appointments</div>
-          <div class="check-row">Identify overdue records</div>
-        </div>
-      `;
-      return;
-    }
-
-    if (activeShiftMode === "during") {
-      host.innerHTML = `
-        <div class="shift-card">
-          <div class="shift-card-title">During shift focus</div>
-          <div class="shift-card-text">Capture events quickly, keep daily notes live, and follow alerts, appointments, and support needs as the day changes.</div>
-        </div>
-        <div class="shift-checklist">
-          <div class="check-row">Record significant events promptly</div>
-          <div class="check-row">Update daily note as you go</div>
-          <div class="check-row">Log health / contact / education events</div>
-          <div class="check-row">Create follow-up tasks immediately</div>
-        </div>
-      `;
-      return;
-    }
-
-    host.innerHTML = `
-      <div class="shift-card">
-        <div class="shift-card-title">End shift focus</div>
-        <div class="shift-card-text">Finish key records, confirm unresolved issues, and leave a handover that helps the next staff team start safely.</div>
-      </div>
-      <div class="shift-checklist">
-        <div class="check-row">Complete daily note</div>
-        <div class="check-row">Finalise incidents</div>
-        <div class="check-row">List next actions</div>
-        <div class="check-row">Generate handover summary</div>
-      </div>
-    `;
   }
 
   function renderOverview(overview) {
@@ -332,7 +360,7 @@ window.ChildrensHomeOS = (function () {
                 Legal status: <strong>${safe(legal.legal_status || legal.order_type || "Not recorded")}</strong>
               </div>
 
-              <div class="human-strip">
+              <div class="overview-human-strip">
                 <div class="human-card">
                   <div class="human-card-label">What matters to me</div>
                   <div class="human-card-text">${safe(identity.what_matters_to_me || "Not recorded yet.")}</div>
@@ -344,6 +372,10 @@ window.ChildrensHomeOS = (function () {
                 <div class="human-card">
                   <div class="human-card-label">Early signs I am struggling</div>
                   <div class="human-card-text">${safe(communication.signs_of_distress || "Not recorded yet.")}</div>
+                </div>
+                <div class="human-card">
+                  <div class="human-card-label">What adults should avoid</div>
+                  <div class="human-card-text">${safe(communication.what_to_avoid || "Not recorded yet.")}</div>
                 </div>
               </div>
             </div>
@@ -448,6 +480,8 @@ window.ChildrensHomeOS = (function () {
     const communication = overview?.communication_profile || {};
     const education = overview?.education_profile || {};
     const health = overview?.health_profile || {};
+    const contacts = Array.isArray(overview?.contacts) ? overview.contacts : [];
+    const alerts = Array.isArray(overview?.alerts) ? overview.alerts : [];
 
     if (activeProfileTab === "identity") {
       host.innerHTML = `
@@ -510,7 +544,6 @@ window.ChildrensHomeOS = (function () {
     }
 
     if (activeProfileTab === "contacts") {
-      const contacts = Array.isArray(overview?.contacts) ? overview.contacts : [];
       host.innerHTML = `
         <div class="card">
           <h3>Contacts</h3>
@@ -533,7 +566,6 @@ window.ChildrensHomeOS = (function () {
       return;
     }
 
-    const alerts = Array.isArray(overview?.alerts) ? overview.alerts : [];
     host.innerHTML = `
       <div class="card">
         <h3>Alerts</h3>
@@ -565,16 +597,14 @@ window.ChildrensHomeOS = (function () {
     const education = overview?.education_profile || {};
 
     host.innerHTML = `
-      <strong class="assistant-heading">Assistant context for ${safe(fullName(yp))}</strong>
-      <div class="assistant-prompt">
-        Preferred name: ${safe(yp.preferred_name || yp.first_name || "—")}<br>
-        Placement: ${safe(yp.placement_status || "—")}<br>
-        Risk level: ${safe(yp.summary_risk_level || "—")}<br>
-        What helps: ${safe(communication.what_helps || "—")}<br>
-        Signs of distress: ${safe(communication.signs_of_distress || "—")}<br>
-        Education: ${safe(education.education_status || "—")}<br>
-        Mental health: ${safe(health.mental_health_summary || "—")}
-      </div>
+      <strong>Assistant context for ${safe(fullName(yp))}</strong><br><br>
+      Preferred name: ${safe(yp.preferred_name || yp.first_name || "—")}<br>
+      Placement: ${safe(yp.placement_status || "—")}<br>
+      Risk level: ${safe(yp.summary_risk_level || "—")}<br>
+      What helps: ${safe(communication.what_helps || "—")}<br>
+      Signs of distress: ${safe(communication.signs_of_distress || "—")}<br>
+      Education: ${safe(education.education_status || "—")}<br>
+      Mental health: ${safe(health.mental_health_summary || "—")}
     `;
   }
 
@@ -611,6 +641,27 @@ window.ChildrensHomeOS = (function () {
     `;
   }
 
+  function renderManagementPanel(overview) {
+    const host = document.getElementById("managementPanel");
+    if (!host) return;
+
+    host.innerHTML = `
+      <div class="snapshot-item">
+        <div class="snapshot-title">Quality checks</div>
+        <div class="snapshot-text">
+          Monitor missing records, returned work, overdue reviews, and open actions${selectedYoungPerson ? ` for ${safe(fullName(selectedYoungPerson))}` : ""}.
+        </div>
+      </div>
+
+      <div class="snapshot-item">
+        <div class="snapshot-title">Oversight</div>
+        <div class="snapshot-text">
+          Build management visibility into everyday work so incidents, patterns, and follow-up are not missed.
+        </div>
+      </div>
+    `;
+  }
+
   async function loadYoungPeople() {
     const data = await api("/young-people");
     youngPeople = Array.isArray(data?.young_people) ? data.young_people : [];
@@ -620,6 +671,8 @@ window.ChildrensHomeOS = (function () {
       selectedYoungPerson = filteredYoungPeople[0];
       renderYoungPersonList();
       await loadYoungPersonOverview(selectedYoungPerson.id);
+    } else {
+      renderHomeStatusStrip();
     }
   }
 
@@ -638,15 +691,74 @@ window.ChildrensHomeOS = (function () {
       pageSubtitle.textContent = `Placement: ${selectedYoungPerson?.placement_status || "—"} · Risk: ${selectedYoungPerson?.summary_risk_level || "—"}`;
     }
 
+    renderHomeStatusStrip();
     renderYoungPersonList();
     renderOverview(overview);
     renderProfileTab(overview);
     renderAssistantContext(overview);
     renderRightRail(overview);
+    renderManagementPanel(overview);
     renderWorkspace(activeWorkspace);
   }
 
-  function renderWorkspace(workspaceName) {
+  async function loadWorkspaceComponent(name) {
+    const mount = document.getElementById("workspaceMount");
+    if (!mount || !selectedYoungPerson) return false;
+
+    const htmlPath = `/components/yp-${name}-workspace.html`;
+    const scriptPath = `/js/workspaces/yp-${name}-workspace.js`;
+
+    try {
+      const htmlResponse = await fetch(htmlPath, { credentials: "include" });
+      if (!htmlResponse.ok) {
+        throw new Error(`Component not found for ${name}`);
+      }
+
+      const html = await htmlResponse.text();
+      mount.innerHTML = html;
+
+      const existingScript = document.querySelector(`script[src="${scriptPath}"]`);
+      if (!existingScript) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = scriptPath;
+          script.onload = resolve;
+          script.onerror = () => reject(new Error(`Could not load script: ${scriptPath}`));
+          document.body.appendChild(script);
+        });
+      }
+
+      const binderMap = {
+        incident: "YoungPersonIncidentWorkspace",
+        "daily-note": "YoungPersonDailyNoteWorkspace",
+        timeline: "YoungPersonTimelineWorkspace",
+        health: "YoungPersonHealthWorkspace",
+        education: "YoungPersonEducationWorkspace",
+        family: "YoungPersonFamilyWorkspace",
+        keywork: "YoungPersonKeyworkWorkspace",
+        risk: "YoungPersonRiskWorkspace"
+      };
+
+      const binderName = binderMap[name];
+      const binder = window[binderName];
+
+      if (binder && typeof binder.bind === "function") {
+        binder.bind({
+          selectedYoungPerson,
+          overview: latestOverview,
+          reloadOverview: loadYoungPersonOverview
+        });
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  }
+
+  async function renderWorkspace(workspaceName) {
     activeWorkspace = workspaceName;
 
     document.querySelectorAll("[data-workspace]").forEach(btn => {
@@ -661,76 +773,25 @@ window.ChildrensHomeOS = (function () {
       return;
     }
 
+    const loaded = await loadWorkspaceComponent(workspaceName);
+    if (loaded) return;
+
     const personName = fullName(selectedYoungPerson);
 
-    if (workspaceName === "record") {
+    if (workspaceName === "incident") {
       mount.innerHTML = `
-        <div class="record-form-grid">
-          <div class="card">
-            <h3>Quick record</h3>
-
-            <div class="form-block">
-              <label for="recordType">What do you need to record?</label>
-              <select id="recordType" class="select">
-                <option>Incident</option>
-                <option>Daily note update</option>
-                <option>Health event</option>
-                <option>Education event</option>
-                <option>Family contact</option>
-                <option>Keywork session</option>
-                <option>Behaviour concern</option>
-              </select>
-            </div>
-
-            <div class="form-row-2">
-              <div class="form-block">
-                <label for="recordDate">Date</label>
-                <input id="recordDate" class="field" type="date" value="${getTodayString()}">
-              </div>
-              <div class="form-block">
-                <label for="recordTime">Time</label>
-                <input id="recordTime" class="field" type="time">
-              </div>
-            </div>
-
-            <div class="form-block">
-              <label for="recordSummary">Brief summary</label>
-              <input id="recordSummary" class="field" type="text" placeholder="What happened?">
-            </div>
-
-            <div class="form-block">
-              <label for="recordDetails">Details</label>
-              <textarea id="recordDetails" class="textarea" placeholder="Write the factual account here."></textarea>
-            </div>
-
-            <div class="record-action-bar">
-              <button class="secondary-btn" type="button">Save draft</button>
-              <button class="primary-btn" type="button">Save record</button>
-            </div>
+        <div class="workspace-demo">
+          <div class="workspace-banner">
+            <h3>Incident workspace</h3>
+            <p>Record incidents clearly, link follow-up, and support risk review and management oversight.</p>
           </div>
-
-          <div class="record-side-stack">
-            <div class="doc-ai-panel">
-              <div class="doc-ai-panel-head">
-                <h3>Linked outputs</h3>
-                <p>One good record should update other parts of the system.</p>
-              </div>
-              <div class="doc-ai-list">
-                <div class="doc-ai-item"><strong>Will inform</strong><p>Timeline, handover, review work, and oversight.</p></div>
-                <div class="doc-ai-item"><strong>Can trigger</strong><p>Risk review, safeguarding review, or follow-up task creation.</p></div>
-              </div>
-            </div>
-
-            <div class="doc-ai-panel">
-              <div class="doc-ai-panel-head">
-                <h3>Writing prompts</h3>
-                <p>Helpful prompts for staff under pressure.</p>
-              </div>
-              <div class="doc-ai-list">
-                <div class="doc-ai-item"><strong>Before</strong><p>What was happening before the event?</p></div>
-                <div class="doc-ai-item"><strong>During</strong><p>What did the young person communicate or show?</p></div>
-                <div class="doc-ai-item"><strong>After</strong><p>What did staff do and what happened next?</p></div>
-              </div>
+          <div class="workspace-section">
+            <h4>What should this record capture?</h4>
+            <div class="workspace-helper-list">
+              <div>• What happened before, during, and after</div>
+              <div>• Who was involved</div>
+              <div>• What staff did</div>
+              <div>• Any safeguarding, injury, missing, or restraint implications</div>
             </div>
           </div>
         </div>
@@ -738,35 +799,20 @@ window.ChildrensHomeOS = (function () {
       return;
     }
 
-    if (workspaceName === "review") {
+    if (workspaceName === "daily-note") {
       mount.innerHTML = `
-        <div class="timeline-group">
-          <div class="timeline-date">Recent chronology for ${safe(personName)}</div>
-          <div class="timeline-items">
-            <div class="timeline-item">
-              <div class="timeline-item-head">
-                <div>
-                  <div class="timeline-item-title">Daily note updated</div>
-                  <div class="timeline-item-meta">Today · Staff entry · Linked to handover</div>
-                </div>
-                <span class="tag good">complete</span>
-              </div>
-              <div class="timeline-item-body">
-                <p>Chronology entries, incidents, health items, and care notes should appear here in one joined-up view.</p>
-              </div>
-            </div>
-
-            <div class="timeline-item">
-              <div class="timeline-item-head">
-                <div>
-                  <div class="timeline-item-title">Risk review suggested</div>
-                  <div class="timeline-item-meta">Yesterday · Behaviour pattern · Follow-up needed</div>
-                </div>
-                <span class="tag warn">review</span>
-              </div>
-              <div class="timeline-item-body">
-                <p>The review view should surface linked events, patterns, and incomplete follow-up.</p>
-              </div>
+        <div class="workspace-demo">
+          <div class="workspace-banner">
+            <h3>Daily note workspace</h3>
+            <p>Build the day as it happens, not at the end when details are forgotten.</p>
+          </div>
+          <div class="workspace-section">
+            <h4>Suggested note structure</h4>
+            <div class="workspace-helper-list">
+              <div>• Presentation and emotional wellbeing</div>
+              <div>• Education, activities, and appointments</div>
+              <div>• Relationships and contact</div>
+              <div>• Risks, concerns, and what helped</div>
             </div>
           </div>
         </div>
@@ -774,35 +820,87 @@ window.ChildrensHomeOS = (function () {
       return;
     }
 
-    if (workspaceName === "plan") {
+    if (workspaceName === "timeline") {
       mount.innerHTML = `
-        <div class="card">
-          <h3>Care and planning workspace</h3>
-
-          <div class="mini-item">
-            <strong>Support plans</strong>
-            <p>Plans should be live, plain English, and updated from real events rather than rewritten from scratch.</p>
+        <div class="workspace-demo">
+          <div class="workspace-banner">
+            <h3>Timeline workspace</h3>
+            <p>Chronology should bring incidents, notes, health, education, and family contact together in one place.</p>
           </div>
-
-          <div class="mini-item">
-            <strong>Risk plans</strong>
-            <p>Show triggers, early signs, what staff should do, what to avoid, escalation steps, and links to recent incidents.</p>
-          </div>
-
-          <div class="mini-item">
-            <strong>Review cycle</strong>
-            <p>When incidents or concerns are added, suggest plan review automatically.</p>
+          <div class="workspace-section">
+            <h4>Recent chronology for ${safe(personName)}</h4>
+            <div class="workspace-helper-list">
+              <div>• Daily notes and incidents should join up</div>
+              <div>• Patterns should be easier to spot</div>
+              <div>• Follow-up should be visible, not hidden</div>
+            </div>
           </div>
         </div>
       `;
       return;
     }
 
-    mount.innerHTML = `
-      <div class="empty-state">
-        This workspace is not built yet.
-      </div>
-    `;
+    if (workspaceName === "health") {
+      mount.innerHTML = `
+        <div class="workspace-demo">
+          <div class="workspace-banner">
+            <h3>Health workspace</h3>
+            <p>Track medication, symptoms, injuries, appointments, and wellbeing clearly and safely.</p>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    if (workspaceName === "education") {
+      mount.innerHTML = `
+        <div class="workspace-demo">
+          <div class="workspace-banner">
+            <h3>Education workspace</h3>
+            <p>Record attendance, barriers, engagement, school communication, and progress over time.</p>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    if (workspaceName === "family") {
+      mount.innerHTML = `
+        <div class="workspace-demo">
+          <div class="workspace-banner">
+            <h3>Family contact workspace</h3>
+            <p>Track contact arrangements, supervision, emotional impact, concerns, and follow-up.</p>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    if (workspaceName === "keywork") {
+      mount.innerHTML = `
+        <div class="workspace-demo">
+          <div class="workspace-banner">
+            <h3>Keywork workspace</h3>
+            <p>Capture the young person’s voice, goals, progress, reflection, and next steps.</p>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    if (workspaceName === "risk") {
+      mount.innerHTML = `
+        <div class="workspace-demo">
+          <div class="workspace-banner">
+            <h3>Risk workspace</h3>
+            <p>Review triggers, early warning signs, protective factors, staff responses, and escalation pathways.</p>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    mount.innerHTML = `<div class="empty-state">This workspace is not built yet.</div>`;
   }
 
   function bindProfileTabs() {
@@ -820,8 +918,8 @@ window.ChildrensHomeOS = (function () {
 
   function bindWorkspaceTabs() {
     document.querySelectorAll("[data-workspace]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        renderWorkspace(btn.getAttribute("data-workspace"));
+      btn.addEventListener("click", async () => {
+        await renderWorkspace(btn.getAttribute("data-workspace"));
       });
     });
   }
@@ -830,6 +928,69 @@ window.ChildrensHomeOS = (function () {
     document.querySelectorAll("[data-shift-mode]").forEach(btn => {
       btn.addEventListener("click", () => {
         setActiveShiftMode(btn.getAttribute("data-shift-mode"));
+      });
+    });
+  }
+
+  function bindPrimaryActions() {
+    document.querySelectorAll("[data-primary-action]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const action = btn.getAttribute("data-primary-action");
+
+        if (!selectedYoungPerson) {
+          alert("Select a young person first.");
+          return;
+        }
+
+        if (action === "record") {
+          openQuickCaptureModal();
+          return;
+        }
+
+        if (action === "review") {
+          await renderWorkspace("timeline");
+          return;
+        }
+
+        if (action === "plan") {
+          await renderWorkspace("risk");
+        }
+      });
+    });
+  }
+
+  function bindModalActions() {
+    document.getElementById("quickCaptureBtn")?.addEventListener("click", () => {
+      if (!selectedYoungPerson) {
+        alert("Select a young person first.");
+        return;
+      }
+      openQuickCaptureModal();
+    });
+
+    document.getElementById("closeQuickCaptureBtn")?.addEventListener("click", closeQuickCaptureModal);
+
+    document.querySelectorAll("[data-close-modal='true']").forEach(el => {
+      el.addEventListener("click", closeQuickCaptureModal);
+    });
+
+    document.querySelectorAll("[data-capture-type]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        if (!selectedYoungPerson) {
+          alert("Select a young person first.");
+          return;
+        }
+
+        const type = btn.getAttribute("data-capture-type");
+
+        if (type === "task") {
+          closeQuickCaptureModal();
+          alert("Task quick capture can be connected next.");
+          return;
+        }
+
+        closeQuickCaptureModal();
+        await renderWorkspace(type);
       });
     });
   }
@@ -844,15 +1005,6 @@ window.ChildrensHomeOS = (function () {
 
     document.getElementById("newYoungPersonBtn")?.addEventListener("click", () => {
       alert("Next step: connect this to a create young person modal.");
-    });
-
-    document.getElementById("quickCaptureBtn")?.addEventListener("click", () => {
-      if (!selectedYoungPerson) {
-        alert("Select a young person first.");
-        return;
-      }
-      activeWorkspace = "record";
-      renderWorkspace("record");
     });
 
     document.getElementById("openAssistantBtn")?.addEventListener("click", async () => {
@@ -887,15 +1039,31 @@ window.ChildrensHomeOS = (function () {
         alert(`Next step: connect "${btn.getAttribute("data-assistant-action")}" to your assistant workflow.`);
       });
     });
+
+    document.querySelectorAll("[data-home-action]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const action = btn.getAttribute("data-home-action");
+        if (action === "handover") {
+          alert("Handover generator can be connected next.");
+          return;
+        }
+        if (action === "manager") {
+          const panel = document.getElementById("managementPanel");
+          panel?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      });
+    });
   }
 
   async function init() {
     bindProfileTabs();
     bindWorkspaceTabs();
     bindShiftModeTabs();
+    bindPrimaryActions();
+    bindModalActions();
     bindActions();
+
     clearDashboard();
-    renderShiftPanel();
 
     try {
       await loadYoungPeople();
@@ -906,7 +1074,7 @@ window.ChildrensHomeOS = (function () {
         overviewPanel.innerHTML = `
           <div class="empty-state">
             Could not load young people.<br>
-            <span class="muted-line">${safe(error.message || "Unknown error")}</span>
+            <span>${safe(error.message || "Unknown error")}</span>
           </div>
         `;
       }
