@@ -1,764 +1,742 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
-from fastapi import HTTPException
 
+class YoungPeopleLinkingService:
+    """
+    Central linking / workflow engine for all young people's records.
 
-class YoungPersonDailyNotesService:
-    @staticmethod
-    def now_utc() -> datetime:
-        return datetime.utcnow()
+    Purpose:
+    - create chronology events
+    - create tasks
+    - create manager actions
+    - create safeguarding records
+    - create record links
+    - link to support plans
+    - link to monthly reviews
+    - link to quality standards
+    - create compliance items later if needed
 
-    @staticmethod
-    def full_name(first_name: str | None, last_name: str | None) -> str | None:
-        return " ".join([x for x in [first_name, last_name] if x]).strip() or None
-
-    @staticmethod
-    def normalise_workflow_status(value: str | None) -> str:
-        v = (value or "").strip().lower()
-        if v in {"draft", "submitted", "approved", "returned", "reviewed", "completed", "archived"}:
-            return v
-        return "draft"
-
-    @staticmethod
-    def workflow_display_status(value: str | None) -> str:
-        v = YoungPersonDailyNotesService.normalise_workflow_status(value)
-        if v == "reviewed":
-            return "approved"
-        return v
+    Design principles:
+    - defensive: never break the main record save flow
+    - centralised: one place for downstream linking logic
+    - extensible: easy to add new record types
+    """
 
     @staticmethod
-    def ensure_young_person_exists(conn, young_person_id: int) -> dict[str, Any]:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT id, home_id, first_name, last_name
-                FROM young_people
-                WHERE id = %s
-                LIMIT 1
-                """,
-                (young_person_id,),
-            )
-            row = cur.fetchone()
-            if not row:
-                raise HTTPException(status_code=404, detail="Young person not found")
-            return row
+    def process_record_event(
+        conn,
+        *,
+        young_person_id: int,
+        source_table: str,
+        source_id: int,
+        event_type: str = "created",
+        title: str | None = None,
+        summary: str | None = None,
+        narrative: str | None = None,
+        category: str | None = None,
+        subcategory: str | None = None,
+        significance: str | None = None,
+        review_date: str | date | None = None,
+        due_date: str | date | None = None,
+        owner_id: int | None = None,
+        created_by: int | None = None,
+        workflow: dict[str, Any] | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        workflow = workflow or {}
+        metadata = metadata or {}
 
-    @staticmethod
-    def fetch_daily_note_select_sql(where_sql: str) -> str:
-        return f"""
-            SELECT
-                dn.id,
-                dn.young_person_id,
-                dn.home_id,
-                dn.note_date,
-                dn.shift_type,
-                dn.mood,
-                dn.presentation,
-                dn.activities,
-                dn.education_update,
-                dn.health_update,
-                dn.family_update,
-                dn.behaviour_update,
-                dn.young_person_voice,
-                dn.positives,
-                dn.actions_required,
-                dn.significance,
-                dn.workflow_status,
-                dn.manager_review_comment,
-                dn.approved_by,
-                dn.approved_at,
-                dn.returned_at,
-                dn.submitted_at,
-                dn.last_edited_at,
-                dn.author_id,
-                dn.created_at,
-                dn.updated_at,
-                u.first_name AS author_first_name,
-                u.last_name AS author_last_name,
-                a.first_name AS approved_by_first_name,
-                a.last_name AS approved_by_last_name
-            FROM daily_notes dn
-            LEFT JOIN users u ON dn.author_id = u.id
-            LEFT JOIN users a ON dn.approved_by = a.id
-            {where_sql}
-        """
-
-    @staticmethod
-    def transform_daily_note_row(row: dict[str, Any]) -> dict[str, Any]:
-        author_name = YoungPersonDailyNotesService.full_name(
-            row.get("author_first_name"),
-            row.get("author_last_name"),
-        )
-        approved_by_name = YoungPersonDailyNotesService.full_name(
-            row.get("approved_by_first_name"),
-            row.get("approved_by_last_name"),
-        )
-        workflow_status = YoungPersonDailyNotesService.workflow_display_status(
-            row.get("workflow_status")
-        )
-
-        summary_parts = [
-            row.get("positives"),
-            row.get("presentation"),
-            row.get("behaviour_update"),
-            row.get("actions_required"),
-        ]
-        summary = " | ".join([str(x).strip() for x in summary_parts if x and str(x).strip()])
-
-        return {
-            "id": row.get("id"),
-            "young_person_id": row.get("young_person_id"),
-            "home_id": row.get("home_id"),
-            "note_date": row.get("note_date"),
-            "recorded_at": row.get("note_date"),
-            "shift_type": row.get("shift_type"),
-            "mood": row.get("mood"),
-            "presentation": row.get("presentation"),
-            "activities": row.get("activities"),
-            "education_update": row.get("education_update"),
-            "health_update": row.get("health_update"),
-            "family_update": row.get("family_update"),
-            "behaviour_update": row.get("behaviour_update"),
-            "young_person_voice": row.get("young_person_voice"),
-            "child_voice": row.get("young_person_voice"),
-            "positives": row.get("positives"),
-            "actions_required": row.get("actions_required"),
-            "significance": row.get("significance") or "standard",
-            "workflow_status": workflow_status,
-            "manager_review_comment": row.get("manager_review_comment"),
-            "approved_by": row.get("approved_by"),
-            "approved_by_name": approved_by_name,
-            "approved_at": row.get("approved_at"),
-            "returned_at": row.get("returned_at"),
-            "submitted_at": row.get("submitted_at"),
-            "last_edited_at": row.get("last_edited_at"),
-            "author_id": row.get("author_id"),
-            "author_name": author_name,
-            "created_at": row.get("created_at"),
-            "updated_at": row.get("updated_at"),
-            "title": f"{(row.get('shift_type') or 'Shift').replace('_', ' ').title()} daily note",
-            "summary": summary or "Daily note recorded",
-            "narrative": summary or "Daily note recorded",
-            "event_type": "daily_note",
-            "requires_manager_review": True,
-            "quality_standards": ["quality_and_purpose_of_care"],
-            "judgement_areas": ["experiences_and_progress"],
-            "version_no": 1,
+        result = {
+            "source_table": source_table,
+            "source_id": source_id,
+            "young_person_id": young_person_id,
+            "event_type": event_type,
+            "chronology_event_id": None,
+            "task_id": None,
+            "manager_action_id": None,
+            "safeguarding_record_id": None,
+            "record_links_created": 0,
+            "support_plan_links_created": 0,
+            "monthly_review_links_created": 0,
+            "standard_links_created": 0,
+            "notes": [],
+            "errors": [],
         }
 
-    @staticmethod
-    def fetch_daily_note_by_id(conn, daily_note_id: int) -> dict[str, Any]:
-        with conn.cursor() as cur:
-            cur.execute(
-                YoungPersonDailyNotesService.fetch_daily_note_select_sql("WHERE dn.id = %s LIMIT 1"),
-                (daily_note_id,),
-            )
-            row = cur.fetchone()
-            if not row:
-                raise HTTPException(status_code=404, detail="Daily note not found")
-            return row
+        safe_title = title or YoungPeopleLinkingService._default_title(source_table, event_type)
+        safe_summary = summary or title or YoungPeopleLinkingService._default_summary(source_table, event_type)
+        safe_narrative = narrative or safe_summary
+
+        link_chronology = bool(workflow.get("link_chronology", False))
+        create_task = bool(workflow.get("create_task", False))
+        manager_review = bool(workflow.get("manager_review", False))
+        safeguarding = bool(workflow.get("safeguarding", False))
+        link_support_plans = bool(workflow.get("link_support_plans", False))
+        link_monthly_reviews = bool(workflow.get("link_monthly_reviews", False))
+        link_quality_standards = bool(workflow.get("link_quality_standards", False))
+
+        try:
+            if link_chronology:
+                chronology_id = YoungPeopleLinkingService._create_chronology_event(
+                    conn=conn,
+                    young_person_id=young_person_id,
+                    source_table=source_table,
+                    source_id=source_id,
+                    title=safe_title,
+                    summary=safe_summary,
+                    category=category or YoungPeopleLinkingService._default_category(source_table),
+                    subcategory=subcategory or category or YoungPeopleLinkingService._default_subcategory(source_table),
+                    significance=significance or YoungPeopleLinkingService._default_significance(source_table, metadata),
+                    created_by=created_by,
+                    metadata=metadata,
+                )
+                result["chronology_event_id"] = chronology_id
+                result["notes"].append("Chronology event created.")
+
+                if chronology_id:
+                    if YoungPeopleLinkingService._create_record_link(
+                        conn=conn,
+                        young_person_id=young_person_id,
+                        from_table=source_table,
+                        from_id=source_id,
+                        to_table="chronology_events",
+                        to_id=chronology_id,
+                        relationship_type="timeline_entry",
+                        created_by=created_by,
+                    ):
+                        result["record_links_created"] += 1
+        except Exception as exc:
+            result["errors"].append(f"Chronology linking failed: {exc}")
+
+        try:
+            if create_task:
+                task_id = YoungPeopleLinkingService._create_task(
+                    conn=conn,
+                    young_person_id=young_person_id,
+                    source_table=source_table,
+                    source_id=source_id,
+                    title=f"Follow up: {safe_title}",
+                    task=safe_summary,
+                    owner_id=owner_id,
+                    due_date=due_date or review_date,
+                    task_type=YoungPeopleLinkingService._default_task_type(source_table),
+                )
+                result["task_id"] = task_id
+                result["notes"].append("Task created.")
+
+                if task_id:
+                    if YoungPeopleLinkingService._create_record_link(
+                        conn=conn,
+                        young_person_id=young_person_id,
+                        from_table=source_table,
+                        from_id=source_id,
+                        to_table="tasks",
+                        to_id=task_id,
+                        relationship_type="follow_up_task",
+                        created_by=created_by,
+                    ):
+                        result["record_links_created"] += 1
+        except Exception as exc:
+            result["errors"].append(f"Task creation failed: {exc}")
+
+        try:
+            if manager_review:
+                manager_action_id = YoungPeopleLinkingService._create_manager_action(
+                    conn=conn,
+                    young_person_id=young_person_id,
+                    related_table=source_table,
+                    related_id=source_id,
+                    action_type=YoungPeopleLinkingService._default_manager_action_type(source_table),
+                    note=f"Manager review required: {safe_title}",
+                    action_by=created_by,
+                )
+                result["manager_action_id"] = manager_action_id
+                result["notes"].append("Manager action created.")
+        except Exception as exc:
+            result["errors"].append(f"Manager action creation failed: {exc}")
+
+        try:
+            if safeguarding:
+                safeguarding_id = YoungPeopleLinkingService._create_safeguarding_record(
+                    conn=conn,
+                    young_person_id=young_person_id,
+                    incident_id=source_id if source_table == "incidents" else None,
+                    safeguarding_category=category or YoungPeopleLinkingService._default_safeguarding_category(source_table),
+                    concern_details=safe_narrative,
+                    immediate_action_taken=metadata.get("response_actions"),
+                    created_by=created_by,
+                )
+                result["safeguarding_record_id"] = safeguarding_id
+                result["notes"].append("Safeguarding record created.")
+
+                if safeguarding_id:
+                    if YoungPeopleLinkingService._create_record_link(
+                        conn=conn,
+                        young_person_id=young_person_id,
+                        from_table=source_table,
+                        from_id=source_id,
+                        to_table="safeguarding_records",
+                        to_id=safeguarding_id,
+                        relationship_type="safeguarding_link",
+                        created_by=created_by,
+                    ):
+                        result["record_links_created"] += 1
+        except Exception as exc:
+            result["errors"].append(f"Safeguarding creation failed: {exc}")
+
+        try:
+            if link_support_plans:
+                count = YoungPeopleLinkingService._link_to_active_support_plans(
+                    conn=conn,
+                    young_person_id=young_person_id,
+                    source_table=source_table,
+                    source_id=source_id,
+                    created_by=created_by,
+                )
+                result["support_plan_links_created"] = count
+                if count:
+                    result["record_links_created"] += count
+                    result["notes"].append(f"Linked to {count} support plan(s).")
+        except Exception as exc:
+            result["errors"].append(f"Support plan linking failed: {exc}")
+
+        try:
+            if link_monthly_reviews:
+                count = YoungPeopleLinkingService._link_to_relevant_monthly_reviews(
+                    conn=conn,
+                    young_person_id=young_person_id,
+                    source_table=source_table,
+                    source_id=source_id,
+                    created_by=created_by,
+                    reason=f"Linked from {source_table} {event_type}",
+                )
+                result["monthly_review_links_created"] = count
+                if count:
+                    result["notes"].append(f"Linked to {count} monthly review record(s).")
+        except Exception as exc:
+            result["errors"].append(f"Monthly review linking failed: {exc}")
+
+        try:
+            if link_quality_standards:
+                count = YoungPeopleLinkingService._link_quality_standards(
+                    conn=conn,
+                    young_person_id=young_person_id,
+                    source_table=source_table,
+                    source_id=source_id,
+                    metadata=metadata,
+                    linked_by=created_by,
+                )
+                result["standard_links_created"] = count
+                if count:
+                    result["notes"].append(f"Linked to {count} quality standard(s).")
+        except Exception as exc:
+            result["errors"].append(f"Quality standards linking failed: {exc}")
+
+        return result
 
     @staticmethod
-    def build_daily_note_summary(
-        *,
-        presentation: str | None,
-        activities: str | None,
-        education_update: str | None,
-        health_update: str | None,
-        family_update: str | None,
-        behaviour_update: str | None,
-        actions_required: str | None,
-        positives: str | None,
-    ) -> str:
-        parts = [
-            positives,
-            presentation,
-            activities,
-            education_update,
-            health_update,
-            family_update,
-            behaviour_update,
-            actions_required,
-        ]
-        text = " | ".join([str(x).strip() for x in parts if x and str(x).strip()])
-        return text or "Daily note recorded"
-
-    @staticmethod
-    def build_daily_note_narrative(
-        *,
-        mood: str | None,
-        presentation: str | None,
-        activities: str | None,
-        education_update: str | None,
-        health_update: str | None,
-        family_update: str | None,
-        behaviour_update: str | None,
-        young_person_voice: str | None,
-        positives: str | None,
-        actions_required: str | None,
-    ) -> str:
-        parts = [
-            f"Mood: {mood}" if mood else None,
-            f"Presentation: {presentation}" if presentation else None,
-            f"Activities: {activities}" if activities else None,
-            f"Education: {education_update}" if education_update else None,
-            f"Health: {health_update}" if health_update else None,
-            f"Family: {family_update}" if family_update else None,
-            f"Behaviour: {behaviour_update}" if behaviour_update else None,
-            f"Young person voice: {young_person_voice}" if young_person_voice else None,
-            f"Positives: {positives}" if positives else None,
-            f"Actions required: {actions_required}" if actions_required else None,
-        ]
-        return "\n".join([p for p in parts if p]) or "Daily note recorded"
-
-    @staticmethod
-    def build_daily_note_title(shift_type: str | None, note_date: str | None) -> str:
-        shift = (shift_type or "shift").replace("_", " ").title()
-        date_part = note_date or "undated"
-        return f"{shift} daily note - {date_part}"
-
-    @staticmethod
-    def list_daily_notes_for_young_person(
+    def _create_chronology_event(
         conn,
         *,
         young_person_id: int,
-        archived: bool = False,
-    ) -> list[dict[str, Any]]:
-        YoungPersonDailyNotesService.ensure_young_person_exists(conn, young_person_id)
-
-        where_sql = """
-            WHERE dn.young_person_id = %s
-              AND LOWER(COALESCE(dn.workflow_status, 'draft')) NOT IN ('completed', 'archived')
-            ORDER BY dn.note_date DESC, dn.created_at DESC, dn.id DESC
-        """
-        if archived:
-            where_sql = """
-                WHERE dn.young_person_id = %s
-                  AND LOWER(COALESCE(dn.workflow_status, '')) IN ('completed', 'archived')
-                ORDER BY dn.note_date DESC, dn.created_at DESC, dn.id DESC
-            """
-
-        with conn.cursor() as cur:
-            cur.execute(
-                YoungPersonDailyNotesService.fetch_daily_note_select_sql(where_sql),
-                (young_person_id,),
-            )
-            rows = cur.fetchall() or []
-            return [YoungPersonDailyNotesService.transform_daily_note_row(r) for r in rows]
-
-    @staticmethod
-    def get_daily_note(conn, daily_note_id: int) -> dict[str, Any]:
-        row = YoungPersonDailyNotesService.fetch_daily_note_by_id(conn, daily_note_id)
-        return YoungPersonDailyNotesService.transform_daily_note_row(row)
-
-    @staticmethod
-    def create_daily_note(
-        conn,
-        *,
-        young_person_id: int,
-        payload: dict[str, Any],
-        author_id: int | None,
-        linking_service,
-    ) -> dict[str, Any]:
-        now = YoungPersonDailyNotesService.now_utc()
-        person = YoungPersonDailyNotesService.ensure_young_person_exists(conn, young_person_id)
-
-        note_date = payload.get("note_date") or payload.get("recorded_at")
-        if not note_date:
-            raise HTTPException(status_code=400, detail="note_date is required")
-
-        young_person_voice = payload.get("young_person_voice")
-        if young_person_voice is None:
-            young_person_voice = payload.get("child_voice")
-
-        home_id = payload.get("home_id") or person.get("home_id")
-        workflow_status = YoungPersonDailyNotesService.normalise_workflow_status(
-            payload.get("workflow_status")
-        )
+        source_table: str,
+        source_id: int,
+        title: str,
+        summary: str,
+        category: str,
+        subcategory: str | None,
+        significance: str,
+        created_by: int | None,
+        metadata: dict[str, Any] | None = None,
+    ) -> int | None:
+        now = datetime.utcnow()
 
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO daily_notes (
+                INSERT INTO chronology_events (
                     young_person_id,
-                    home_id,
-                    note_date,
-                    shift_type,
-                    mood,
-                    presentation,
-                    activities,
-                    education_update,
-                    health_update,
-                    family_update,
-                    behaviour_update,
-                    young_person_voice,
-                    positives,
-                    actions_required,
+                    event_datetime,
+                    category,
+                    subcategory,
+                    title,
+                    summary,
                     significance,
-                    workflow_status,
-                    manager_review_comment,
-                    approved_by,
-                    approved_at,
-                    returned_at,
-                    submitted_at,
-                    last_edited_at,
-                    author_id,
+                    source_table,
+                    source_id,
+                    created_by,
+                    auto_generated,
+                    is_visible,
+                    metadata_json,
                     created_at,
-                    updated_at
+                    updated_at,
+                    event_status
                 )
                 VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                    %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 )
                 RETURNING id
                 """,
                 (
                     young_person_id,
-                    home_id,
-                    note_date,
-                    payload.get("shift_type"),
-                    payload.get("mood"),
-                    payload.get("presentation"),
-                    payload.get("activities"),
-                    payload.get("education_update"),
-                    payload.get("health_update"),
-                    payload.get("family_update"),
-                    payload.get("behaviour_update"),
-                    young_person_voice,
-                    payload.get("positives"),
-                    payload.get("actions_required"),
-                    payload.get("significance"),
-                    workflow_status,
-                    payload.get("manager_review_comment"),
-                    payload.get("approved_by"),
-                    payload.get("approved_at"),
-                    payload.get("returned_at"),
-                    payload.get("submitted_at"),
-                    payload.get("last_edited_at") or now,
-                    payload.get("author_id") or author_id,
+                    now,
+                    category,
+                    subcategory,
+                    title,
+                    summary,
+                    significance,
+                    source_table,
+                    source_id,
+                    created_by,
+                    True,
+                    True,
+                    metadata or {},
+                    now,
+                    now,
+                    "active",
+                ),
+            )
+            row = cur.fetchone()
+            return row["id"] if row else None
+
+    @staticmethod
+    def _create_task(
+        conn,
+        *,
+        young_person_id: int,
+        source_table: str,
+        source_id: int,
+        title: str,
+        task: str,
+        owner_id: int | None,
+        due_date: str | date | None,
+        task_type: str,
+    ) -> int | None:
+        now = datetime.utcnow()
+
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO tasks (
+                    title,
+                    task,
+                    young_person_id,
+                    source_table,
+                    source_id,
+                    task_type,
+                    due_date,
+                    assigned_to_user_id,
+                    completed,
+                    compliance_generated,
+                    created_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+                """,
+                (
+                    title,
+                    task,
+                    young_person_id,
+                    source_table,
+                    source_id,
+                    task_type,
+                    due_date,
+                    owner_id,
+                    False,
+                    False,
+                    now,
+                ),
+            )
+            row = cur.fetchone()
+            return row["id"] if row else None
+
+    @staticmethod
+    def _create_manager_action(
+        conn,
+        *,
+        young_person_id: int,
+        related_table: str,
+        related_id: int,
+        action_type: str,
+        note: str,
+        action_by: int | None,
+    ) -> int | None:
+        now = datetime.utcnow()
+
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO manager_actions (
+                    young_person_id,
+                    action_type,
+                    related_table,
+                    related_id,
+                    note,
+                    action_by,
+                    action_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+                """,
+                (
+                    young_person_id,
+                    action_type,
+                    related_table,
+                    related_id,
+                    note,
+                    action_by,
+                    now,
+                ),
+            )
+            row = cur.fetchone()
+            return row["id"] if row else None
+
+    @staticmethod
+    def _create_safeguarding_record(
+        conn,
+        *,
+        young_person_id: int,
+        incident_id: int | None,
+        safeguarding_category: str,
+        concern_details: str,
+        immediate_action_taken: str | None,
+        created_by: int | None,
+    ) -> int | None:
+        now = datetime.utcnow()
+
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO safeguarding_records (
+                    young_person_id,
+                    incident_id,
+                    safeguarding_category,
+                    concern_datetime,
+                    disclosure_details,
+                    concern_details,
+                    immediate_action_taken,
+                    referral_made,
+                    referral_details,
+                    outcome,
+                    manager_review_status,
+                    created_by,
+                    created_at,
+                    updated_at
+                )
+                VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                )
+                RETURNING id
+                """,
+                (
+                    young_person_id,
+                    incident_id,
+                    safeguarding_category,
+                    now,
+                    None,
+                    concern_details,
+                    immediate_action_taken,
+                    False,
+                    None,
+                    "Open",
+                    "pending_review",
+                    created_by,
                     now,
                     now,
                 ),
             )
-            created = cur.fetchone()
-            daily_note_id = created["id"]
+            row = cur.fetchone()
+            return row["id"] if row else None
 
-            workflow_result = linking_service.process_record_event(
+    @staticmethod
+    def _create_record_link(
+        conn,
+        *,
+        young_person_id: int,
+        from_table: str,
+        from_id: int,
+        to_table: str,
+        to_id: int,
+        relationship_type: str,
+        created_by: int | None,
+    ) -> bool:
+        now = datetime.utcnow()
+
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO record_links (
+                    young_person_id,
+                    from_table,
+                    from_id,
+                    to_table,
+                    to_id,
+                    relationship_type,
+                    created_by,
+                    created_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    young_person_id,
+                    from_table,
+                    from_id,
+                    to_table,
+                    to_id,
+                    relationship_type,
+                    created_by,
+                    now,
+                ),
+            )
+        return True
+
+    @staticmethod
+    def _link_to_active_support_plans(
+        conn,
+        *,
+        young_person_id: int,
+        source_table: str,
+        source_id: int,
+        created_by: int | None,
+    ) -> int:
+        count = 0
+
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id
+                FROM support_plans
+                WHERE young_person_id = %s
+                  AND COALESCE(archived, FALSE) = FALSE
+                  AND LOWER(COALESCE(status, 'active')) NOT IN ('archived', 'closed', 'completed')
+                ORDER BY created_at DESC
+                """,
+                (young_person_id,),
+            )
+            rows = cur.fetchall() or []
+
+        for row in rows:
+            created = YoungPeopleLinkingService._create_record_link(
                 conn=conn,
                 young_person_id=young_person_id,
-                source_table="daily_notes",
-                source_id=daily_note_id,
-                event_type="created",
-                title=payload.get("title")
-                or YoungPersonDailyNotesService.build_daily_note_title(payload.get("shift_type"), note_date),
-                summary=YoungPersonDailyNotesService.build_daily_note_summary(
-                    presentation=payload.get("presentation"),
-                    activities=payload.get("activities"),
-                    education_update=payload.get("education_update"),
-                    health_update=payload.get("health_update"),
-                    family_update=payload.get("family_update"),
-                    behaviour_update=payload.get("behaviour_update"),
-                    actions_required=payload.get("actions_required"),
-                    positives=payload.get("positives"),
-                ),
-                narrative=payload.get("narrative")
-                or YoungPersonDailyNotesService.build_daily_note_narrative(
-                    mood=payload.get("mood"),
-                    presentation=payload.get("presentation"),
-                    activities=payload.get("activities"),
-                    education_update=payload.get("education_update"),
-                    health_update=payload.get("health_update"),
-                    family_update=payload.get("family_update"),
-                    behaviour_update=payload.get("behaviour_update"),
-                    young_person_voice=young_person_voice,
-                    positives=payload.get("positives"),
-                    actions_required=payload.get("actions_required"),
-                ),
-                category="daily_note",
-                subcategory=payload.get("shift_type") or "daily_note",
-                significance=payload.get("significance") or "medium",
-                due_date=note_date,
-                owner_id=payload.get("author_id") or author_id,
-                created_by=payload.get("author_id") or author_id,
-                workflow={
-                    "link_chronology": bool(payload.get("link_to_chronology", True)),
-                    "create_task": bool(payload.get("create_follow_up_task", False))
-                    or bool(payload.get("actions_required")),
-                    "manager_review": bool(payload.get("manager_review_needed", False))
-                    or workflow_status in {"submitted", "approved"},
-                    "safeguarding": bool(payload.get("safeguarding_concern", False)),
-                    "link_support_plans": bool(payload.get("link_to_support_plans", False)),
-                    "link_monthly_reviews": bool(payload.get("link_monthly_reviews", False)),
-                    "link_quality_standards": bool(payload.get("link_quality_standards", True)),
-                },
-                metadata={
-                    "severity": payload.get("significance") or "medium",
-                    "workflow_status": workflow_status,
-                    "shift_type": payload.get("shift_type"),
-                    "note_date": note_date,
-                    "quality_standards": ["quality_and_purpose_of_care"]
-                    if payload.get("link_quality_standards", True)
-                    else [],
-                    "standards_rationale": "Linked from daily note workflow",
-                    "evidence_strength": "medium",
-                    "response_actions": payload.get("actions_required"),
-                    "judgement_areas": ["experiences_and_progress"],
-                },
+                from_table=source_table,
+                from_id=source_id,
+                to_table="support_plans",
+                to_id=row["id"],
+                relationship_type="relevant_to_plan",
+                created_by=created_by,
             )
+            if created:
+                count += 1
 
-        conn.commit()
-        return {
-            "message": "Daily note created successfully",
-            "id": daily_note_id,
-            "workflow": workflow_result,
-        }
+        return count
 
     @staticmethod
-    def update_daily_note(
+    def _link_to_relevant_monthly_reviews(
         conn,
         *,
-        daily_note_id: int,
-        payload: dict[str, Any],
-    ) -> dict[str, Any]:
-        update_data = dict(payload)
-
-        if not update_data:
-            raise HTTPException(status_code=400, detail="No fields provided for update")
-
-        if "child_voice" in update_data:
-            update_data["young_person_voice"] = update_data.pop("child_voice")
-
-        if "recorded_at" in update_data:
-            update_data["note_date"] = update_data.pop("recorded_at")
-
-        update_data.pop("title", None)
-        update_data.pop("narrative", None)
-
-        if "workflow_status" in update_data and update_data["workflow_status"] is not None:
-            update_data["workflow_status"] = YoungPersonDailyNotesService.normalise_workflow_status(
-                update_data["workflow_status"]
-            )
-
-        now = YoungPersonDailyNotesService.now_utc()
-        update_data["updated_at"] = now
-        update_data["last_edited_at"] = now
-
-        set_parts = []
-        values = []
-
-        for field, value in update_data.items():
-            set_parts.append(f"{field} = %s")
-            values.append(value)
-
-        values.append(daily_note_id)
-
-        query = f"""
-            UPDATE daily_notes
-            SET {", ".join(set_parts)}
-            WHERE id = %s
-            RETURNING id
-        """
-
-        with conn.cursor() as cur:
-            cur.execute(query, values)
-            row = cur.fetchone()
-
-        if not row:
-            conn.rollback()
-            raise HTTPException(status_code=404, detail="Daily note not found")
-
-        conn.commit()
-        return {"message": "Daily note updated successfully", "id": row["id"]}
-
-    @staticmethod
-    def submit_daily_note(
-        conn,
-        *,
-        daily_note_id: int,
-        actor_user_id: int | None,
-        linking_service,
-    ) -> dict[str, Any]:
-        row = YoungPersonDailyNotesService.fetch_daily_note_by_id(conn, daily_note_id)
-        now = YoungPersonDailyNotesService.now_utc()
+        young_person_id: int,
+        source_table: str,
+        source_id: int,
+        created_by: int | None,
+        reason: str,
+    ) -> int:
+        count = 0
+        now = datetime.utcnow()
 
         with conn.cursor() as cur:
             cur.execute(
                 """
-                UPDATE daily_notes
-                SET
-                    workflow_status = %s,
-                    submitted_at = %s,
-                    updated_at = %s,
-                    last_edited_at = %s
-                WHERE id = %s
-                RETURNING id
+                SELECT id
+                FROM monthly_reviews
+                WHERE young_person_id = %s
+                ORDER BY review_month DESC, created_at DESC
+                LIMIT 3
                 """,
-                ("submitted", now, now, now, daily_note_id),
+                (young_person_id,),
             )
-            updated = cur.fetchone()
+            rows = cur.fetchall() or []
 
-            transformed = YoungPersonDailyNotesService.transform_daily_note_row(row)
+            for row in rows:
+                cur.execute(
+                    """
+                    INSERT INTO monthly_review_record_links (
+                        monthly_review_id,
+                        source_table,
+                        source_id,
+                        link_reason,
+                        created_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s)
+                    """,
+                    (
+                        row["id"],
+                        source_table,
+                        source_id,
+                        reason,
+                        now,
+                    ),
+                )
+                count += 1
 
-            workflow_result = linking_service.process_record_event(
-                conn=conn,
-                young_person_id=row["young_person_id"],
-                source_table="daily_notes",
-                source_id=daily_note_id,
-                event_type="submitted",
-                title=f"{(row.get('shift_type') or 'Shift').replace('_', ' ').title()} daily note submitted",
-                summary=transformed["summary"],
-                narrative=transformed["narrative"],
-                category="daily_note",
-                subcategory=row.get("shift_type") or "daily_note",
-                significance=row.get("significance") or "medium",
-                due_date=row.get("note_date"),
-                owner_id=row.get("author_id"),
-                created_by=actor_user_id or row.get("author_id"),
-                workflow={
-                    "link_chronology": True,
-                    "create_task": False,
-                    "manager_review": True,
-                    "safeguarding": False,
-                    "link_support_plans": False,
-                    "link_monthly_reviews": True,
-                    "link_quality_standards": True,
-                },
-                metadata={
-                    "severity": row.get("significance") or "medium",
-                    "workflow_status": "submitted",
-                    "shift_type": row.get("shift_type"),
-                    "note_date": str(row.get("note_date")) if row.get("note_date") else None,
-                    "quality_standards": ["quality_and_purpose_of_care"],
-                    "standards_rationale": "Daily note submitted for workflow review",
-                    "evidence_strength": "medium",
-                    "judgement_areas": ["experiences_and_progress"],
-                },
-            )
-
-        conn.commit()
-        return {
-            "ok": True,
-            "status": "submitted",
-            "id": updated["id"],
-            "workflow": workflow_result,
-        }
+        return count
 
     @staticmethod
-    def approve_daily_note(
+    def _link_quality_standards(
         conn,
         *,
-        daily_note_id: int,
-        approved_by: int | None,
-        review_note: str | None,
-        linking_service,
-    ) -> dict[str, Any]:
-        row = YoungPersonDailyNotesService.fetch_daily_note_by_id(conn, daily_note_id)
-        now = YoungPersonDailyNotesService.now_utc()
+        young_person_id: int,
+        source_table: str,
+        source_id: int,
+        metadata: dict[str, Any],
+        linked_by: int | None,
+    ) -> int:
+        standards = metadata.get("quality_standards") or metadata.get("standard_codes") or []
+        if not isinstance(standards, list):
+            return 0
+
+        count = 0
+        now = datetime.utcnow()
 
         with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE daily_notes
-                SET
-                    workflow_status = %s,
-                    manager_review_comment = %s,
-                    approved_by = %s,
-                    approved_at = %s,
-                    updated_at = %s
-                WHERE id = %s
-                RETURNING id
-                """,
-                ("approved", review_note, approved_by, now, now, daily_note_id),
-            )
-            updated = cur.fetchone()
+            for code in standards:
+                if not code:
+                    continue
 
-            transformed = YoungPersonDailyNotesService.transform_daily_note_row(row)
+                cur.execute(
+                    """
+                    INSERT INTO record_standard_links (
+                        young_person_id,
+                        source_table,
+                        source_id,
+                        standard_code,
+                        evidence_strength,
+                        rationale,
+                        linked_by,
+                        auto_linked,
+                        created_at,
+                        updated_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        young_person_id,
+                        source_table,
+                        source_id,
+                        code,
+                        metadata.get("evidence_strength") or "medium",
+                        metadata.get("standards_rationale"),
+                        linked_by,
+                        True,
+                        now,
+                        now,
+                    ),
+                )
+                count += 1
 
-            workflow_result = linking_service.process_record_event(
-                conn=conn,
-                young_person_id=row["young_person_id"],
-                source_table="daily_notes",
-                source_id=daily_note_id,
-                event_type="approved",
-                title=f"{(row.get('shift_type') or 'Shift').replace('_', ' ').title()} daily note approved",
-                summary=transformed["summary"],
-                narrative=review_note or transformed["narrative"],
-                category="daily_note",
-                subcategory=row.get("shift_type") or "daily_note",
-                significance=row.get("significance") or "medium",
-                due_date=row.get("note_date"),
-                owner_id=row.get("author_id"),
-                created_by=approved_by,
-                workflow={
-                    "link_chronology": True,
-                    "create_task": False,
-                    "manager_review": False,
-                    "safeguarding": False,
-                    "link_support_plans": False,
-                    "link_monthly_reviews": True,
-                    "link_quality_standards": True,
-                },
-                metadata={
-                    "severity": row.get("significance") or "medium",
-                    "workflow_status": "approved",
-                    "shift_type": row.get("shift_type"),
-                    "note_date": str(row.get("note_date")) if row.get("note_date") else None,
-                    "quality_standards": ["quality_and_purpose_of_care"],
-                    "standards_rationale": "Daily note approved",
-                    "evidence_strength": "strong",
-                    "judgement_areas": ["experiences_and_progress"],
-                    "manager_review_comment": review_note,
-                },
-            )
-
-        conn.commit()
-        return {
-            "ok": True,
-            "status": "approved",
-            "id": updated["id"],
-            "workflow": workflow_result,
-        }
+        return count
 
     @staticmethod
-    def return_daily_note(
-        conn,
-        *,
-        daily_note_id: int,
-        actor_user_id: int | None,
-        review_note: str | None,
-        linking_service,
-    ) -> dict[str, Any]:
-        row = YoungPersonDailyNotesService.fetch_daily_note_by_id(conn, daily_note_id)
-        now = YoungPersonDailyNotesService.now_utc()
-
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE daily_notes
-                SET
-                    workflow_status = %s,
-                    manager_review_comment = %s,
-                    returned_at = %s,
-                    updated_at = %s
-                WHERE id = %s
-                RETURNING id
-                """,
-                ("returned", review_note, now, now, daily_note_id),
-            )
-            updated = cur.fetchone()
-
-            transformed = YoungPersonDailyNotesService.transform_daily_note_row(row)
-
-            workflow_result = linking_service.process_record_event(
-                conn=conn,
-                young_person_id=row["young_person_id"],
-                source_table="daily_notes",
-                source_id=daily_note_id,
-                event_type="returned",
-                title=f"{(row.get('shift_type') or 'Shift').replace('_', ' ').title()} daily note returned",
-                summary=transformed["summary"],
-                narrative=review_note or "Daily note returned for revision",
-                category="daily_note",
-                subcategory=row.get("shift_type") or "daily_note",
-                significance=row.get("significance") or "medium",
-                due_date=row.get("note_date"),
-                owner_id=row.get("author_id"),
-                created_by=actor_user_id,
-                workflow={
-                    "link_chronology": True,
-                    "create_task": True,
-                    "manager_review": True,
-                    "safeguarding": False,
-                    "link_support_plans": False,
-                    "link_monthly_reviews": False,
-                    "link_quality_standards": False,
-                },
-                metadata={
-                    "severity": row.get("significance") or "medium",
-                    "workflow_status": "returned",
-                    "shift_type": row.get("shift_type"),
-                    "note_date": str(row.get("note_date")) if row.get("note_date") else None,
-                    "response_actions": review_note,
-                    "manager_review_comment": review_note,
-                },
-            )
-
-        conn.commit()
-        return {
-            "ok": True,
-            "status": "returned",
-            "id": updated["id"],
-            "review_note": review_note or "",
-            "workflow": workflow_result,
+    def _default_title(source_table: str, event_type: str) -> str:
+        labels = {
+            "daily_notes": "Daily note",
+            "incidents": "Incident",
+            "risk_assessments": "Risk assessment",
+            "health_records": "Health record",
+            "education_records": "Education record",
+            "family_contact_records": "Family contact",
+            "keywork_sessions": "Keywork session",
+            "support_plans": "Support plan",
+            "monthly_reviews": "Monthly review",
+            "achievement_records": "Achievement record",
         }
+        return f"{labels.get(source_table, 'Record')} {event_type}".strip()
 
     @staticmethod
-    def archive_daily_note(
-        conn,
-        *,
-        daily_note_id: int,
-        actor_user_id: int | None,
-        linking_service,
-    ) -> dict[str, Any]:
-        row = YoungPersonDailyNotesService.fetch_daily_note_by_id(conn, daily_note_id)
-        now = YoungPersonDailyNotesService.now_utc()
+    def _default_summary(source_table: str, event_type: str) -> str:
+        return f"{YoungPeopleLinkingService._default_title(source_table, event_type)} recorded."
 
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE daily_notes
-                SET
-                    workflow_status = %s,
-                    updated_at = %s
-                WHERE id = %s
-                RETURNING id
-                """,
-                ("archived", now, daily_note_id),
-            )
-            updated = cur.fetchone()
-
-            transformed = YoungPersonDailyNotesService.transform_daily_note_row(row)
-
-            workflow_result = linking_service.process_record_event(
-                conn=conn,
-                young_person_id=row["young_person_id"],
-                source_table="daily_notes",
-                source_id=daily_note_id,
-                event_type="archived",
-                title=f"{(row.get('shift_type') or 'Shift').replace('_', ' ').title()} daily note archived",
-                summary=transformed["summary"],
-                narrative="Daily note archived",
-                category="daily_note",
-                subcategory=row.get("shift_type") or "daily_note",
-                significance=row.get("significance") or "low",
-                due_date=row.get("note_date"),
-                owner_id=row.get("author_id"),
-                created_by=actor_user_id or row.get("author_id"),
-                workflow={
-                    "link_chronology": True,
-                    "create_task": False,
-                    "manager_review": False,
-                    "safeguarding": False,
-                    "link_support_plans": False,
-                    "link_monthly_reviews": False,
-                    "link_quality_standards": False,
-                },
-                metadata={
-                    "severity": row.get("significance") or "low",
-                    "workflow_status": "archived",
-                    "shift_type": row.get("shift_type"),
-                    "note_date": str(row.get("note_date")) if row.get("note_date") else None,
-                },
-            )
-
-        conn.commit()
-        return {
-            "ok": True,
-            "status": "archived",
-            "id": updated["id"],
-            "workflow": workflow_result,
+    @staticmethod
+    def _default_category(source_table: str) -> str:
+        mapping = {
+            "daily_notes": "daily_note",
+            "incidents": "incident",
+            "risk_assessments": "risk",
+            "health_records": "health",
+            "education_records": "education",
+            "family_contact_records": "family",
+            "keywork_sessions": "keywork",
+            "support_plans": "support_plan",
+            "monthly_reviews": "monthly_review",
+            "achievement_records": "achievement",
         }
+        return mapping.get(source_table, "record")
+
+    @staticmethod
+    def _default_subcategory(source_table: str) -> str:
+        return YoungPeopleLinkingService._default_category(source_table)
+
+    @staticmethod
+    def _default_significance(source_table: str, metadata: dict[str, Any]) -> str:
+        if metadata.get("severity") in {"critical", "high"}:
+            return "high"
+        if metadata.get("severity") == "medium":
+            return "medium"
+
+        mapping = {
+            "incidents": "high",
+            "risk_assessments": "high",
+            "safeguarding_records": "high",
+            "daily_notes": "medium",
+            "health_records": "medium",
+            "education_records": "medium",
+            "family_contact_records": "medium",
+            "keywork_sessions": "medium",
+            "support_plans": "medium",
+            "achievement_records": "low",
+        }
+        return mapping.get(source_table, "medium")
+
+    @staticmethod
+    def _default_task_type(source_table: str) -> str:
+        mapping = {
+            "daily_notes": "daily_note_follow_up",
+            "incidents": "incident_follow_up",
+            "risk_assessments": "risk_review",
+            "health_records": "health_follow_up",
+            "education_records": "education_follow_up",
+            "family_contact_records": "family_follow_up",
+            "keywork_sessions": "keywork_follow_up",
+            "support_plans": "plan_review",
+            "monthly_reviews": "monthly_review_action",
+        }
+        return mapping.get(source_table, "follow_up")
+
+    @staticmethod
+    def _default_manager_action_type(source_table: str) -> str:
+        mapping = {
+            "daily_notes": "daily_note_review_required",
+            "incidents": "incident_review_required",
+            "risk_assessments": "risk_review_required",
+            "health_records": "health_review_required",
+            "education_records": "education_review_required",
+            "family_contact_records": "family_review_required",
+            "keywork_sessions": "keywork_review_required",
+            "support_plans": "support_plan_review_required",
+            "monthly_reviews": "monthly_review_required",
+        }
+        return mapping.get(source_table, "record_review_required")
+
+    @staticmethod
+    def _default_safeguarding_category(source_table: str) -> str:
+        mapping = {
+            "incidents": "incident",
+            "risk_assessments": "risk",
+            "daily_notes": "daily_note",
+            "family_contact_records": "family_contact",
+            "health_records": "health",
+        }
+        return mapping.get(source_table, "general")
