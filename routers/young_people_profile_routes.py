@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import date
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -8,10 +9,11 @@ from pydantic import BaseModel, Field
 
 from auth.current_user import get_current_user
 from services.young_person_service import YoungPersonService
+from services.young_people_timeline_service import get_young_person_timeline
 
 logger = logging.getLogger("indicare.young_people_profile_routes")
 
-router = APIRouter(prefix="/young-people", tags=["Young People Profiles"])
+router = APIRouter(prefix="/young-people", tags=["Young People"])
 
 
 def _safe_int(value: Any) -> int | None:
@@ -234,10 +236,7 @@ def list_young_people(
         offset=offset,
     )
 
-    return {
-        "young_people": rows,
-        "count": len(rows),
-    }
+    return {"young_people": rows, "count": len(rows)}
 
 
 @router.post("")
@@ -261,10 +260,7 @@ def create_young_person(
 
     try:
         row = YoungPersonService.create_young_person(data)
-        return {
-            "ok": True,
-            "young_person": row,
-        }
+        return {"ok": True, "young_person": row}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -302,10 +298,7 @@ def update_young_person(
             young_person_id,
             payload.model_dump(exclude_none=True),
         )
-        return {
-            "ok": True,
-            "young_person": row,
-        }
+        return {"ok": True, "young_person": row}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -323,6 +316,34 @@ def get_young_person_overview(
         "dashboard_counts": YoungPersonService.get_dashboard_counts(young_person_id),
         "recent_activity": YoungPersonService.get_recent_activity(young_person_id, limit=20),
         "alerts": YoungPersonService.get_active_alerts(young_person_id),
+    }
+
+
+@router.get("/{young_person_id}/timeline")
+def get_timeline(
+    young_person_id: int,
+    date_from: date | None = Query(default=None),
+    date_to: date | None = Query(default=None),
+    record_type: str = Query(default=""),
+    search: str = Query(default=""),
+    limit: int = Query(default=250, ge=1, le=1000),
+    current_user=Depends(get_current_user),
+):
+    _load_and_check_young_person(young_person_id, current_user)
+
+    rows = get_young_person_timeline(
+        young_person_id=young_person_id,
+        date_from=date_from,
+        date_to=date_to,
+        record_type=record_type,
+        search=search,
+        limit=limit,
+    )
+
+    return {
+        "ok": True,
+        "timeline": rows,
+        "count": len(rows),
     }
 
 
@@ -352,10 +373,7 @@ def upsert_communication_profile(
         section="communication_profile",
         data=payload.model_dump(exclude_none=True),
     )
-    return {
-        "ok": True,
-        "communication_profile": row,
-    }
+    return {"ok": True, "communication_profile": row}
 
 
 @router.get("/{young_person_id}/education-profile")
@@ -384,10 +402,7 @@ def upsert_education_profile(
         section="education_profile",
         data=payload.model_dump(exclude_none=True),
     )
-    return {
-        "ok": True,
-        "education_profile": row,
-    }
+    return {"ok": True, "education_profile": row}
 
 
 @router.get("/{young_person_id}/health-profile")
@@ -416,10 +431,7 @@ def upsert_health_profile(
         section="health_profile",
         data=payload.model_dump(exclude_none=True),
     )
-    return {
-        "ok": True,
-        "health_profile": row,
-    }
+    return {"ok": True, "health_profile": row}
 
 
 @router.get("/{young_person_id}/identity-profile")
@@ -448,10 +460,7 @@ def upsert_identity_profile(
         section="identity_profile",
         data=payload.model_dump(exclude_none=True),
     )
-    return {
-        "ok": True,
-        "identity_profile": row,
-    }
+    return {"ok": True, "identity_profile": row}
 
 
 @router.get("/{young_person_id}/legal-status")
@@ -484,10 +493,7 @@ def upsert_legal_status(
         section="legal_status",
         data=data,
     )
-    return {
-        "ok": True,
-        "legal_status": row,
-    }
+    return {"ok": True, "legal_status": row}
 
 
 @router.get("/{young_person_id}/contacts")
@@ -497,11 +503,7 @@ def list_contacts(
 ):
     _load_and_check_young_person(young_person_id, current_user)
     rows = YoungPersonService.list_contacts(young_person_id)
-    return {
-        "ok": True,
-        "contacts": rows,
-        "count": len(rows),
-    }
+    return {"ok": True, "contacts": rows, "count": len(rows)}
 
 
 @router.post("/{young_person_id}/contacts")
@@ -518,10 +520,7 @@ def create_contact(
             young_person_id,
             payload.model_dump(exclude_none=True),
         )
-        return {
-            "ok": True,
-            "contact": row,
-        }
+        return {"ok": True, "contact": row}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -547,10 +546,7 @@ def update_contact(
 
     _assert_home_access(current_user, _safe_int(parent.get("home_id")))
 
-    return {
-        "ok": True,
-        "contact": row,
-    }
+    return {"ok": True, "contact": row}
 
 
 @router.get("/{young_person_id}/alerts")
@@ -560,11 +556,7 @@ def list_alerts(
 ):
     _load_and_check_young_person(young_person_id, current_user)
     rows = YoungPersonService.get_active_alerts(young_person_id)
-    return {
-        "ok": True,
-        "alerts": rows,
-        "count": len(rows),
-    }
+    return {"ok": True, "alerts": rows, "count": len(rows)}
 
 
 @router.post("/{young_person_id}/alerts")
@@ -581,9 +573,6 @@ def create_alert(
 
     try:
         row = YoungPersonService.create_alert(young_person_id, data)
-        return {
-            "ok": True,
-            "alert": row,
-        }
+        return {"ok": True, "alert": row}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
