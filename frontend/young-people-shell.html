@@ -20,8 +20,8 @@
       <div class="young-person-summary" id="youngPersonSummary">
         <div class="avatar" id="youngPersonAvatar">YP</div>
         <div class="summary-text">
-          <h2 id="youngPersonName">Loading...</h2>
-          <p id="youngPersonMeta">Please wait</p>
+          <h2 id="youngPersonName">No young person selected</h2>
+          <p id="youngPersonMeta">Choose from the selector</p>
         </div>
       </div>
 
@@ -41,16 +41,34 @@
     <main class="main">
       <header class="topbar">
         <div>
-          <h2 id="pageTitle">Overview</h2>
-          <p id="pageSubtitle">Young person workspace</p>
+          <h2 id="pageTitle">Select a young person</h2>
+          <p id="pageSubtitle">Open a workspace to begin</p>
         </div>
 
         <div class="topbar-actions">
-          <button class="ghost-btn" id="refreshBtn">Refresh</button>
+          <button class="ghost-btn hidden" id="refreshBtn">Refresh</button>
         </div>
       </header>
 
       <section id="statusBar" class="status-bar hidden"></section>
+
+      <section id="selectorPanel" class="panel hidden">
+        <h3>Select a young person</h3>
+        <p class="selector-help">Choose a young person to open their OS workspace.</p>
+
+        <div class="selector-toolbar">
+          <input
+            type="text"
+            id="selectorSearch"
+            class="selector-input"
+            placeholder="Search by name..."
+            autocomplete="off"
+          />
+          <button class="ghost-btn" id="selectorRefreshBtn">Refresh list</button>
+        </div>
+
+        <div id="selectorList" class="selector-list"></div>
+      </section>
 
       <section id="viewContent" class="view-content">
         <div class="loading-state">
