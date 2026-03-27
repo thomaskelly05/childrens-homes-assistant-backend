@@ -13,49 +13,16 @@
 </head>
 <body>
   <div class="app-shell">
-    <aside id="ypSidebar" class="app-sidebar">
-      <div class="sidebar-top">
-        <div class="brand-lockup">
-          <div class="brand-mark">IC</div>
-          <div>
-            <div class="brand-title">IndiCare</div>
-            <div class="brand-subtitle">Children’s Home OS</div>
-          </div>
-        </div>
-
-        <button id="closeSidebarBtn" class="icon-btn mobile-only" type="button" aria-label="Close menu">✕</button>
-      </div>
-
-      <div class="sidebar-section">
-        <button id="newYoungPersonBtn" class="primary-btn full-btn" type="button">+ Add young person</button>
-      </div>
-
-      <div class="sidebar-section">
-        <div class="section-label">Search young people</div>
-        <input id="youngPersonSearch" class="field" type="text" placeholder="Search by name or placement">
-      </div>
-
-      <div class="sidebar-section">
-        <div class="section-label">Placement status</div>
-        <select id="youngPersonStatusFilter" class="select">
-          <option value="">All placements</option>
-          <option value="active">Active</option>
-          <option value="archived">Archived</option>
-        </select>
-      </div>
-
-      <div class="sidebar-section fill">
-        <div class="section-label">Young people</div>
-        <div id="youngPersonList" class="young-person-list">
-          <div class="empty-state compact">Loading young people…</div>
-        </div>
-      </div>
-    </aside>
-
     <main class="app-main">
-      <header class="topbar">
-        <div class="topbar-left">
-          <button id="openSidebarBtn" class="icon-btn mobile-only" type="button" aria-label="Open menu">☰</button>
+      <header class="topbar topbar-shell">
+        <div class="topbar-main">
+          <div class="brand-lockup">
+            <div class="brand-mark">IC</div>
+            <div>
+              <div class="brand-title">IndiCare</div>
+              <div class="brand-subtitle">Children’s Home OS</div>
+            </div>
+          </div>
 
           <div class="topbar-heading">
             <h1 id="pageTitle">Children’s Home OS</h1>
@@ -63,14 +30,39 @@
           </div>
         </div>
 
-        <div class="topbar-right">
-          <div class="shift-toggle" id="shiftModeToggle">
-            <button class="shift-pill" data-shift-mode="start" type="button">Start shift</button>
-            <button class="shift-pill active" data-shift-mode="during" type="button">During shift</button>
-            <button class="shift-pill" data-shift-mode="end" type="button">End shift</button>
+        <div class="topbar-controls">
+          <div class="topbar-control-block young-person-picker">
+            <label for="youngPersonSelect">Young person</label>
+            <select id="youngPersonSelect" class="select">
+              <option value="">Loading young people…</option>
+            </select>
+          </div>
+
+          <div class="topbar-control-block search-block">
+            <label for="youngPersonSearch">Search</label>
+            <input id="youngPersonSearch" class="field" type="text" placeholder="Search by name or placement">
+          </div>
+
+          <div class="topbar-control-block status-block">
+            <label for="youngPersonStatusFilter">Placement status</label>
+            <select id="youngPersonStatusFilter" class="select">
+              <option value="">All placements</option>
+              <option value="active">Active</option>
+              <option value="archived">Archived</option>
+            </select>
+          </div>
+
+          <div class="topbar-control-block shift-block">
+            <label>Shift mode</label>
+            <div class="shift-toggle" id="shiftModeToggle">
+              <button class="shift-pill" data-shift-mode="start" type="button">Start</button>
+              <button class="shift-pill active" data-shift-mode="during" type="button">During</button>
+              <button class="shift-pill" data-shift-mode="end" type="button">End</button>
+            </div>
           </div>
 
           <div class="topbar-actions">
+            <button id="newYoungPersonBtn" class="secondary-btn" type="button">+ Add young person</button>
             <button id="quickCaptureBtn" class="primary-btn" type="button">+ Quick capture</button>
             <button id="refreshYoungPeopleBtn" class="secondary-btn" type="button">Refresh</button>
             <button id="openAssistantBtn" class="secondary-btn" type="button">Assistant</button>
