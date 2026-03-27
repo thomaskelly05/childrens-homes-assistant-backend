@@ -1,22 +1,36 @@
 window.YoungPersonDailyNoteWorkspace = (function () {
-  function showStatus(id, message, type = "") {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.classList.remove("hidden", "error", "success");
-    el.textContent = message || "";
-    if (type) el.classList.add(type);
-  }
+  let ctx = null;
 
-  function clearStatus(id) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.classList.add("hidden");
-    el.classList.remove("error", "success");
-    el.textContent = "";
+  async function api(url, options = {}) {
+    const response = await fetch(url, {
+      ...options,
+      credentials: "include",
+      headers: {
+        ...(options.headers || {}),
+        ...(options.body && !(options.body instanceof FormData)
+          ? { "Content-Type": "application/json" }
+          : {})
+      }
+    });
+
+    if (!response.ok) {
+      let message = "Request failed";
+      try {
+        const data = await response.json();
+        message = data?.detail || data?.error || message;
+      } catch {}
+      throw new Error(message);
+    }
+
+    try {
+      return await response.json();
+    } catch {
+      return {};
+    }
   }
 
   function safe(value) {
-    return String(value || "")
+    return String(value ?? "")
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
@@ -24,7 +38,7 @@ window.YoungPersonDailyNoteWorkspace = (function () {
       .replace(/'/g, "&#039;");
   }
 
-  function getTodayString() {
+  function todayString() {
     const now = new Date();
     const yyyy = now.getFullYear();
     const mm = String(now.getMonth() + 1).padStart(2, "0");
@@ -32,256 +46,371 @@ window.YoungPersonDailyNoteWorkspace = (function () {
     return `${yyyy}-${mm}-${dd}`;
   }
 
-  function getPayload(selectedYoungPerson) {
-    return {
-      young_person_id: selectedYoungPerson?.id || null,
-      home_id: selectedYoungPerson?.home_id || null,
-      note_date: document.getElementById("dailyNoteDate")?.value || null,
-      shift_type: document.getElementById("dailyShiftType")?.value || "",
-      mood: document.getElementById("dailyMood")?.value || "",
-      activities: document.getElementById("dailyActivities")?.value || "",
-      education_update: document.getElementById("dailyEducationUpdate")?.value || "",
-      health_update: document.getElementById("dailyHealthUpdate")?.value || "",
-      family_update: document.getElementById("dailyFamilyUpdate")?.value || "",
-      behaviour_update: document.getElementById("dailyBehaviourUpdate")?.value || "",
-      young_person_voice: document.getElementById("dailyYoungPersonVoice")?.value || "",
-      positives: document.getElementById("dailyPositives")?.value || "",
-      actions_required: document.getElementById("dailyActionsRequired")?.value || "",
-      significance: document.getElementById("dailySignificance")?.value || "",
-      workflow_status: document.getElementById("dailyWorkflowStatus")?.value || "draft"
-    };
+  function getSelectedYoungPersonId() {
+    return ctx?.selectedYoungPerson?.id || null;
   }
 
-  function clearForm() {
-    [
-      "dailyMood",
-      "dailyActivities",
-      "dailyEducationUpdate",
-      "dailyHealthUpdate",
-      "dailyFamilyUpdate",
-      "dailyBehaviourUpdate",
-      "dailyYoungPersonVoice",
-      "dailyPositives",
-      "dailyActionsRequired"
-    ].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = "";
-    });
+  function setFieldValue(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = value ?? "";
+  }
 
-    const noteDate = document.getElementById("dailyNoteDate");
-    if (noteDate) noteDate.value = getTodayString();
+  function getFieldValue(id) {
+    return document.getElementById(id)?.value?.trim() || "";
+  }
 
-    const shiftType = document.getElementById("dailyShiftType");
-    if (shiftType) shiftType.value = "";
+  function showSaveStatus(message, type = "") {
+    const box = document.getElementById("dailySaveStatus");
+    if (!box) return;
 
-    const significance = document.getElementById("dailySignificance");
-    if (significance) significance.value = "";
+    box.classList.remove("hidden", "success", "error");
+    if (type) box.classList.add(type);
+    box.textContent = message;
+  }
 
-    const workflowStatus = document.getElementById("dailyWorkflowStatus");
-    if (workflowStatus) workflowStatus.value = "draft";
+  function hideSaveStatus() {
+    const box = document.getElementById("dailySaveStatus");
+    if (!box) return;
+    box.classList.add("hidden");
+    box.classList.remove("success", "error");
+    box.textContent = "";
+  }
 
-    clearStatus("dailySaveStatus");
-    clearStatus("dailyAiStatus");
+  function showAiStatus(message, type = "") {
+    const box = document.getElementById("dailyAiStatus");
+    if (!box) return;
 
-    const results = document.getElementById("dailyAiResults");
-    if (results) results.classList.add("hidden");
+    box.classList.remove("hidden", "success", "error");
+    if (type) box.classList.add(type);
+    box.textContent = message;
+  }
 
+  function hideAiStatus() {
+    const box = document.getElementById("dailyAiStatus");
+    if (!box) return;
+    box.classList.add("hidden");
+    box.classList.remove("success", "error");
+    box.textContent = "";
+  }
+
+  function clearAiResults() {
+    document.getElementById("dailyAiResults")?.classList.add("hidden");
+    setFieldValue("dailyAiImprovedText", "");
+    renderList("dailyAiFieldFeedback", []);
+    renderList("dailyAiMissingDetails", []);
+    renderList("dailyAiSafeguarding", []);
+    const summary = document.getElementById("dailyAiSummary");
+    if (summary) summary.innerHTML = "";
     const standards = document.getElementById("dailyStandardsBox");
     if (standards) standards.innerHTML = "Suggested standards will appear here after AI review.";
-
     const links = document.getElementById("dailyLinksBox");
     if (links) links.innerHTML = "Suggested links to chronology, health, education, family, tasks, and plans will appear here after AI review.";
   }
 
-  function renderAiList(hostId, rows, renderer) {
-    const host = document.getElementById(hostId);
+  function renderList(id, items) {
+    const host = document.getElementById(id);
     if (!host) return;
 
-    if (!Array.isArray(rows) || !rows.length) {
-      host.innerHTML = `<div class="doc-ai-item"><p>Nothing suggested.</p></div>`;
+    if (!Array.isArray(items) || !items.length) {
+      host.innerHTML = `<div class="muted-line">Nothing returned.</div>`;
       return;
     }
 
-    host.innerHTML = rows.map(renderer).join("");
+    host.innerHTML = items
+      .map(item => {
+        if (typeof item === "string") {
+          return `
+            <div class="doc-ai-item">
+              <p>${safe(item)}</p>
+            </div>
+          `;
+        }
+
+        const title = item?.title || item?.label || item?.field || "Item";
+        const text = item?.text || item?.message || item?.detail || item?.value || "";
+
+        return `
+          <div class="doc-ai-item">
+            <strong>${safe(title)}</strong>
+            <p>${safe(text)}</p>
+          </div>
+        `;
+      })
+      .join("");
   }
 
-  function renderAiResults(review) {
-    const results = document.getElementById("dailyAiResults");
-    if (results) results.classList.remove("hidden");
+  function buildNarrativeForAi() {
+    return [
+      `Mood / presentation:\n${getFieldValue("dailyMood")}`,
+      `Activities and routine:\n${getFieldValue("dailyActivities")}`,
+      `Education update:\n${getFieldValue("dailyEducationUpdate")}`,
+      `Health update:\n${getFieldValue("dailyHealthUpdate")}`,
+      `Family and relationships:\n${getFieldValue("dailyFamilyUpdate")}`,
+      `Behaviour and significant events:\n${getFieldValue("dailyBehaviourUpdate")}`,
+      `Young person's voice:\n${getFieldValue("dailyYoungPersonVoice")}`,
+      `Positives and achievements:\n${getFieldValue("dailyPositives")}`,
+      `Actions required / handover:\n${getFieldValue("dailyActionsRequired")}`
+    ].join("\n\n");
+  }
 
-    const improved = document.getElementById("dailyAiImprovedText");
-    if (improved) improved.value = review?.improved_text || "";
+  function buildPayload() {
+    return {
+      note_date: getFieldValue("dailyNoteDate") || null,
+      shift_type: getFieldValue("dailyShiftType") || null,
+      mood_presentation: getFieldValue("dailyMood"),
+      activities_routine: getFieldValue("dailyActivities"),
+      education_update: getFieldValue("dailyEducationUpdate"),
+      health_update: getFieldValue("dailyHealthUpdate"),
+      family_update: getFieldValue("dailyFamilyUpdate"),
+      behaviour_update: getFieldValue("dailyBehaviourUpdate"),
+      young_person_voice: getFieldValue("dailyYoungPersonVoice"),
+      positives_achievements: getFieldValue("dailyPositives"),
+      actions_required_handover: getFieldValue("dailyActionsRequired"),
+      significance: getFieldValue("dailySignificance") || null,
+      workflow_status: getFieldValue("dailyWorkflowStatus") || "draft",
+      combined_note: buildNarrativeForAi()
+    };
+  }
 
-    renderAiList("dailyAiFieldFeedback", review?.field_feedback, item => `
-      <div class="doc-ai-item">
-        <strong>${safe(item?.field || "Field")}</strong>
-        <p><strong>Issue:</strong> ${safe(item?.issue || "—")}</p>
-        <p><strong>Suggestion:</strong> ${safe(item?.suggestion || "—")}</p>
-      </div>
-    `);
+  function resetForm() {
+    setFieldValue("dailyNoteDate", todayString());
+    setFieldValue("dailyShiftType", "");
+    setFieldValue("dailyMood", "");
+    setFieldValue("dailyActivities", "");
+    setFieldValue("dailyEducationUpdate", "");
+    setFieldValue("dailyHealthUpdate", "");
+    setFieldValue("dailyFamilyUpdate", "");
+    setFieldValue("dailyBehaviourUpdate", "");
+    setFieldValue("dailyYoungPersonVoice", "");
+    setFieldValue("dailyPositives", "");
+    setFieldValue("dailyActionsRequired", "");
+    setFieldValue("dailySignificance", "");
+    setFieldValue("dailyWorkflowStatus", "draft");
 
-    renderAiList("dailyAiMissingDetails", review?.missing_details, item => `
-      <div class="doc-ai-item"><p>${safe(item)}</p></div>
-    `);
+    hideSaveStatus();
+    hideAiStatus();
+    clearAiResults();
+  }
 
-    renderAiList("dailyAiSafeguarding", review?.safeguarding_notes, item => `
-      <div class="doc-ai-item"><p>${safe(item)}</p></div>
-    `);
-
-    const summary = document.getElementById("dailyAiSummary");
-    if (summary) summary.innerHTML = safe(review?.summary || "No summary returned.");
-
-    const standards = Array.isArray(review?.quality_standards) ? review.quality_standards : [];
-    const links = Array.isArray(review?.link_suggestions) ? review.link_suggestions : [];
-
-    const standardsBox = document.getElementById("dailyStandardsBox");
-    if (standardsBox) {
-      standardsBox.innerHTML = standards.length
-        ? standards.map(item => `
-            <div class="doc-ai-item" style="margin-bottom:8px;">
-              <strong>Standard ${safe(item?.code || "—")}</strong>
-              <p>${safe(item?.reason || "")}</p>
-            </div>
-          `).join("")
-        : "No Quality Standards suggested yet.";
+  function fillFromOverview() {
+    const noteDate = document.getElementById("dailyNoteDate");
+    if (noteDate && !noteDate.value) {
+      noteDate.value = todayString();
     }
 
-    const linksBox = document.getElementById("dailyLinksBox");
-    if (linksBox) {
-      linksBox.innerHTML = links.length
-        ? links.map(item => `
-            <div class="doc-ai-item" style="margin-bottom:8px;">
-              <strong>${safe(item?.target || "Link")}</strong>
-              <p>${safe(item?.reason || "")}</p>
-            </div>
-          `).join("")
-        : "No linked records suggested yet.";
+    const workflow = document.getElementById("dailyWorkflowStatus");
+    if (workflow && !workflow.value) {
+      workflow.value = "draft";
     }
   }
 
-  async function runAiReview(selectedYoungPerson, actions) {
-    if (!selectedYoungPerson?.id) {
-      showStatus("dailyAiStatus", "Select a young person first.", "error");
+  async function saveDailyNote() {
+    const youngPersonId = getSelectedYoungPersonId();
+    if (!youngPersonId) {
+      showSaveStatus("No young person selected.", "error");
       return;
     }
 
-    clearStatus("dailyAiStatus");
-    showStatus("dailyAiStatus", "Running AI review...");
+    hideSaveStatus();
+
+    const payload = buildPayload();
+
+    if (!payload.combined_note.trim()) {
+      showSaveStatus("Please complete at least one daily note field before saving.", "error");
+      return;
+    }
 
     try {
-      const payload = getPayload(selectedYoungPerson);
+      showSaveStatus("Saving daily note...");
 
-      const data = await window.YoungPeopleShell.api("/document-ai/review", {
-        method: "POST",
-        body: JSON.stringify({
-          document_type: "daily_note",
-          payload,
-          actions
-        })
-      });
-
-      renderAiResults(data?.review || {});
-      showStatus("dailyAiStatus", "AI review complete.", "success");
-    } catch (error) {
-      console.error("runAiReview failed", error);
-      showStatus("dailyAiStatus", error.message || "AI review failed.", "error");
-    }
-  }
-
-  async function saveDailyNote(selectedYoungPerson, reloadOverview) {
-    if (!selectedYoungPerson?.id) {
-      showStatus("dailySaveStatus", "Select a young person first.", "error");
-      return;
-    }
-
-    const payload = getPayload(selectedYoungPerson);
-
-    if (!payload.note_date || !payload.shift_type || !payload.activities) {
-      showStatus("dailySaveStatus", "Complete note date, shift type, and activities before saving.", "error");
-      return;
-    }
-
-    clearStatus("dailySaveStatus");
-    showStatus("dailySaveStatus", "Saving daily note...");
-
-    try {
-      await window.YoungPeopleShell.api("/daily-notes", {
+      await api(`/young-people/${youngPersonId}/daily-notes`, {
         method: "POST",
         body: JSON.stringify(payload)
       });
 
-      showStatus("dailySaveStatus", "Daily note saved successfully.", "success");
+      showSaveStatus("Daily note saved successfully.", "success");
 
-      if (typeof reloadOverview === "function") {
-        await reloadOverview(selectedYoungPerson.id);
+      if (typeof ctx?.reloadOverview === "function") {
+        await ctx.reloadOverview(youngPersonId);
       }
     } catch (error) {
-      console.error("saveDailyNote failed", error);
-      showStatus("dailySaveStatus", error.message || "Could not save daily note.", "error");
+      console.error("Daily note save failed", error);
+      showSaveStatus(error.message || "Could not save daily note.", "error");
     }
   }
 
-  function bind(context) {
-    const { selectedYoungPerson, reloadOverview } = context;
+  async function runAiAction(action) {
+    const youngPersonId = getSelectedYoungPersonId();
+    if (!youngPersonId) {
+      showAiStatus("No young person selected.", "error");
+      return;
+    }
+
+    hideAiStatus();
+
+    const payload = {
+      document_type: "daily_note",
+      action,
+      text: buildNarrativeForAi(),
+      metadata: {
+        shift_type: getFieldValue("dailyShiftType"),
+        significance: getFieldValue("dailySignificance"),
+        workflow_status: getFieldValue("dailyWorkflowStatus"),
+        shift_mode: ctx?.shiftMode || "during",
+        young_person_id: youngPersonId
+      }
+    };
+
+    if (!payload.text.trim()) {
+      showAiStatus("Please add some daily note content before running AI review.", "error");
+      return;
+    }
+
+    try {
+      showAiStatus("Running AI review...");
+
+      const result = await api("/document-ai/review", {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+
+      applyAiResult(result);
+      showAiStatus("AI review complete.", "success");
+    } catch (error) {
+      console.error("AI review failed", error);
+      showAiStatus(error.message || "AI review failed.", "error");
+    }
+  }
+
+  function applyAiResult(result) {
+    document.getElementById("dailyAiResults")?.classList.remove("hidden");
+
+    const improvedText =
+      result?.improved_text ||
+      result?.improved_version ||
+      result?.output_text ||
+      "";
+
+    setFieldValue("dailyAiImprovedText", improvedText);
+
+    renderList(
+      "dailyAiFieldFeedback",
+      result?.field_feedback ||
+        result?.field_level_feedback ||
+        []
+    );
+
+    renderList(
+      "dailyAiMissingDetails",
+      result?.missing_details ||
+        result?.suggested_missing_details ||
+        []
+    );
+
+    renderList(
+      "dailyAiSafeguarding",
+      result?.safeguarding_notes ||
+        result?.safeguarding_flags ||
+        []
+    );
+
+    const summary = document.getElementById("dailyAiSummary");
+    if (summary) {
+      summary.innerHTML = safe(
+        result?.summary ||
+          result?.review_summary ||
+          "AI review completed."
+      );
+    }
+
+    const standards = document.getElementById("dailyStandardsBox");
+    if (standards) {
+      const standardsList =
+        result?.quality_standards ||
+        result?.suggested_quality_standards ||
+        [];
+      if (Array.isArray(standardsList) && standardsList.length) {
+        standards.innerHTML = standardsList
+          .map(item => `<div class="doc-ai-item"><p>${safe(typeof item === "string" ? item : item?.text || item?.title || "")}</p></div>`)
+          .join("");
+      } else {
+        standards.innerHTML = "No standards suggested.";
+      }
+    }
+
+    const links = document.getElementById("dailyLinksBox");
+    if (links) {
+      const linkedItems =
+        result?.suggested_links ||
+        result?.links ||
+        [];
+      if (Array.isArray(linkedItems) && linkedItems.length) {
+        links.innerHTML = linkedItems
+          .map(item => `<div class="doc-ai-item"><p>${safe(typeof item === "string" ? item : item?.text || item?.title || "")}</p></div>`)
+          .join("");
+      } else {
+        links.innerHTML = "No linked record suggestions returned.";
+      }
+    }
 
     const workflow = document.getElementById("dailyWorkflowBox");
-    if (workflow && selectedYoungPerson) {
-      workflow.innerHTML = `
-        Daily note workflow for <strong>${safe(window.YoungPeopleShell.fullName(selectedYoungPerson))}</strong>.<br><br>
-        1. Record the day clearly and factually.<br>
-        2. Use AI review to improve wording and identify gaps.<br>
-        3. Save the daily note.<br>
-        4. Review suggested chronology, health, education, family, and task links.
-      `;
+    if (workflow) {
+      const workflowText =
+        result?.workflow_guidance ||
+        result?.workflow_summary ||
+        "Review AI suggestions, save the note, and follow any generated tasks or linked record prompts.";
+      workflow.innerHTML = safe(workflowText);
     }
+  }
 
-    const noteDate = document.getElementById("dailyNoteDate");
-    if (noteDate && !noteDate.value) {
-      noteDate.value = getTodayString();
+  function applyImprovedTextToActivities() {
+    const improved = getFieldValue("dailyAiImprovedText");
+    if (!improved) return;
+    setFieldValue("dailyActivities", improved);
+  }
+
+  async function copyImprovedText() {
+    const improved = getFieldValue("dailyAiImprovedText");
+    if (!improved) return;
+
+    try {
+      await navigator.clipboard.writeText(improved);
+      showAiStatus("Improved text copied.", "success");
+    } catch {
+      showAiStatus("Could not copy text.", "error");
     }
+  }
 
-    document.getElementById("clearDailyFormBtn")?.addEventListener("click", clearForm);
-
-    document.getElementById("saveDailyNoteBtn")?.addEventListener("click", () => {
-      saveDailyNote(selectedYoungPerson, reloadOverview);
+  function bindAiButtons() {
+    document.querySelectorAll("[data-daily-ai-action]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const action = btn.getAttribute("data-daily-ai-action");
+        runAiAction(action);
+      });
     });
 
     document.getElementById("runDailyAiReviewBtn")?.addEventListener("click", () => {
-      runAiReview(selectedYoungPerson, [
-        "improve_wording",
-        "spell_check",
-        "make_therapeutic",
-        "make_more_factual",
-        "suggest_missing_details",
-        "suggest_quality_standards",
-        "suggest_links"
-      ]);
+      runAiAction("full_review");
     });
 
-    document.getElementById("copyDailyAiBtn")?.addEventListener("click", async () => {
-      const text = document.getElementById("dailyAiImprovedText")?.value || "";
-      if (!text) return;
-      await navigator.clipboard.writeText(text);
-      showStatus("dailyAiStatus", "Improved version copied.", "success");
-    });
+    document.getElementById("applyDailyAiBtn")?.addEventListener("click", applyImprovedTextToActivities);
+    document.getElementById("copyDailyAiBtn")?.addEventListener("click", copyImprovedText);
+  }
 
-    document.getElementById("applyDailyAiBtn")?.addEventListener("click", () => {
-      const text = document.getElementById("dailyAiImprovedText")?.value || "";
-      const target = document.getElementById("dailyActivities");
-      if (target) {
-        target.value = text;
-        target.dispatchEvent(new Event("input", { bubbles: true }));
-      }
-      showStatus("dailyAiStatus", "Improved text applied to activities.", "success");
-    });
+  function bindMainButtons() {
+    document.getElementById("clearDailyFormBtn")?.addEventListener("click", resetForm);
+    document.getElementById("saveDailyNoteBtn")?.addEventListener("click", saveDailyNote);
+  }
 
-    document.querySelectorAll("[data-daily-ai-action]").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const action = btn.getAttribute("data-daily-ai-action");
-        if (!action) return;
-        runAiReview(selectedYoungPerson, [action]);
-      });
-    });
+  async function bind(contextInput) {
+    ctx = contextInput;
+    fillFromOverview();
+    bindAiButtons();
+    bindMainButtons();
+    hideSaveStatus();
+    hideAiStatus();
+    clearAiResults();
   }
 
   return {
