@@ -81,14 +81,6 @@ window.ChildrensHomeOS = (function () {
     return "";
   }
 
-  function openSidebar() {
-    document.getElementById("ypSidebar")?.classList.add("open");
-  }
-
-  function closeSidebar() {
-    document.getElementById("ypSidebar")?.classList.remove("open");
-  }
-
   function openQuickCaptureModal() {
     const modal = document.getElementById("quickCaptureModal");
     if (!modal) return;
@@ -110,46 +102,6 @@ window.ChildrensHomeOS = (function () {
     });
     renderShiftModeSummary();
     renderHomeStatusStrip();
-  }
-
-  function renderYoungPersonList() {
-    const host = document.getElementById("youngPersonList");
-    if (!host) return;
-
-    if (!filteredYoungPeople.length) {
-      host.innerHTML = `<div class="empty-state compact">No young people match your filters.</div>`;
-      return;
-    }
-
-    host.innerHTML = filteredYoungPeople.map(person => `
-      <button
-        type="button"
-        class="young-person-card ${Number(person.id) === Number(selectedYoungPerson?.id) ? "active" : ""}"
-        data-young-person-id="${safe(person.id)}"
-      >
-        <div class="young-person-card-name">${safe(fullName(person))}</div>
-        <div class="young-person-card-meta">
-          ${safe(person.placement_status || "Placement not set")} ·
-          ${safe(person.summary_risk_level || "Risk not set")}
-          ${person.archived ? " · Archived" : ""}
-        </div>
-      </button>
-    `).join("");
-
-    host.querySelectorAll("[data-young-person-id]").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const id = Number(btn.getAttribute("data-young-person-id") || 0);
-        if (!id) return;
-
-        const person = youngPeople.find(p => Number(p.id) === id);
-        if (!person) return;
-
-        selectedYoungPerson = person;
-        renderYoungPersonList();
-        closeSidebar();
-        await loadYoungPersonOverview(id);
-      });
-    });
   }
 
   function applyYoungPersonFilters() {
@@ -181,7 +133,7 @@ window.ChildrensHomeOS = (function () {
     }
 
     filteredYoungPeople = rows;
-    renderYoungPersonList();
+    renderYoungPersonSelect();
 
     if (
       selectedYoungPerson &&
@@ -190,6 +142,36 @@ window.ChildrensHomeOS = (function () {
       selectedYoungPerson = null;
       latestOverview = null;
       clearDashboard();
+    }
+  }
+
+  function renderYoungPersonSelect() {
+    const select = document.getElementById("youngPersonSelect");
+    if (!select) return;
+
+    const currentId = selectedYoungPerson?.id ? String(selectedYoungPerson.id) : "";
+    select.innerHTML = `<option value="">Select young person</option>`;
+
+    if (!filteredYoungPeople.length) {
+      const emptyOption = document.createElement("option");
+      emptyOption.value = "";
+      emptyOption.textContent = "No young people match your filters";
+      select.appendChild(emptyOption);
+      select.value = "";
+      return;
+    }
+
+    filteredYoungPeople.forEach(person => {
+      const option = document.createElement("option");
+      option.value = String(person.id);
+      option.textContent = `${fullName(person)}${person.archived ? " (Archived)" : ""} · ${person.placement_status || "Placement not set"} · ${person.summary_risk_level || "Risk not set"}`;
+      select.appendChild(option);
+    });
+
+    if ([...select.options].some(opt => opt.value === currentId)) {
+      select.value = currentId;
+    } else {
+      select.value = "";
     }
   }
 
@@ -314,7 +296,7 @@ window.ChildrensHomeOS = (function () {
 
     renderHomeStatusStrip();
     renderShiftModeSummary();
-    renderYoungPersonList();
+    renderYoungPersonSelect();
   }
 
   function renderOverview(overview) {
@@ -641,7 +623,7 @@ window.ChildrensHomeOS = (function () {
     `;
   }
 
-  function renderManagementPanel(overview) {
+  function renderManagementPanel() {
     const host = document.getElementById("managementPanel");
     if (!host) return;
 
@@ -669,7 +651,7 @@ window.ChildrensHomeOS = (function () {
 
     if (!selectedYoungPerson && filteredYoungPeople.length) {
       selectedYoungPerson = filteredYoungPeople[0];
-      renderYoungPersonList();
+      renderYoungPersonSelect();
       await loadYoungPersonOverview(selectedYoungPerson.id);
     } else {
       renderHomeStatusStrip();
@@ -692,13 +674,13 @@ window.ChildrensHomeOS = (function () {
     }
 
     renderHomeStatusStrip();
-    renderYoungPersonList();
+    renderYoungPersonSelect();
     renderOverview(overview);
     renderProfileTab(overview);
     renderAssistantContext(overview);
     renderRightRail(overview);
-    renderManagementPanel(overview);
-    renderWorkspace(activeWorkspace);
+    renderManagementPanel();
+    await renderWorkspace(activeWorkspace);
   }
 
   async function loadWorkspaceComponent(name) {
@@ -995,13 +977,30 @@ window.ChildrensHomeOS = (function () {
     });
   }
 
-  function bindActions() {
-    document.getElementById("refreshYoungPeopleBtn")?.addEventListener("click", loadYoungPeople);
-    document.getElementById("openSidebarBtn")?.addEventListener("click", openSidebar);
-    document.getElementById("closeSidebarBtn")?.addEventListener("click", closeSidebar);
+  function bindSelectControls() {
+    document.getElementById("youngPersonSelect")?.addEventListener("change", async event => {
+      const id = Number(event.target.value || 0);
+
+      if (!id) {
+        selectedYoungPerson = null;
+        latestOverview = null;
+        clearDashboard();
+        return;
+      }
+
+      const person = filteredYoungPeople.find(p => Number(p.id) === id) || youngPeople.find(p => Number(p.id) === id);
+      if (!person) return;
+
+      selectedYoungPerson = person;
+      await loadYoungPersonOverview(id);
+    });
 
     document.getElementById("youngPersonSearch")?.addEventListener("input", applyYoungPersonFilters);
     document.getElementById("youngPersonStatusFilter")?.addEventListener("change", applyYoungPersonFilters);
+  }
+
+  function bindActions() {
+    document.getElementById("refreshYoungPeopleBtn")?.addEventListener("click", loadYoungPeople);
 
     document.getElementById("newYoungPersonBtn")?.addEventListener("click", () => {
       alert("Next step: connect this to a create young person modal.");
@@ -1061,6 +1060,7 @@ window.ChildrensHomeOS = (function () {
     bindShiftModeTabs();
     bindPrimaryActions();
     bindModalActions();
+    bindSelectControls();
     bindActions();
 
     clearDashboard();
