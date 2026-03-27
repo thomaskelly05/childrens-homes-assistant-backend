@@ -1,13 +1,74 @@
-from datetime import datetime
+from __future__ import annotations
+
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+
+from auth.current_user import get_current_user
 from db.connection import get_db
+from services.young_people_linking_service import YoungPeopleLinkingService
+from services.young_person_risk_service import YoungPersonRiskService
 
 router = APIRouter(prefix="/young-people", tags=["Young People Risk"])
 
 
-class RiskAssessmentCreate(BaseModel):
-    young_person_id: int
+def _safe_int(value: Any) -> int | None:
+    try:
+        if value is None:
+            return None
+        return int(value)
+    except Exception:
+        return None
+
+
+def _user_home_id(current_user: dict[str, Any]) -> int | None:
+    return _safe_int(current_user.get("home_id"))
+
+
+def _user_role(current_user: dict[str, Any]) -> str:
+    return str(current_user.get("role") or "").strip().lower()
+
+
+def _assert_home_access(current_user: dict[str, Any], record_home_id: int | None) -> None:
+    role = _user_role(current_user)
+    user_home_id = _user_home_id(current_user)
+
+    if role in {"admin", "provider_admin"}:
+        return
+
+    if record_home_id is None:
+        raise HTTPException(status_code=403, detail="Home access could not be verified")
+
+    if user_home_id != record_home_id:
+        raise HTTPException(status_code=403, detail="You do not have access to this young person")
+
+
+def _assert_can_edit(current_user: dict[str, Any]) -> None:
+    role = _user_role(current_user)
+    if role not in {"admin", "provider_admin", "manager", "staff"}:
+        raise HTTPException(status_code=403, detail="You do not have permission to edit this record")
+
+
+def _assert_can_review(current_user: dict[str, Any]) -> None:
+    role = _user_role(current_user)
+    if role not in {"admin", "provider_admin", "manager"}:
+        raise HTTPException(status_code=403, detail="You do not have permission to review this record")
+
+
+def _load_and_check_young_person(conn, young_person_id: int, current_user: dict[str, Any]) -> dict[str, Any]:
+    person = YoungPersonRiskService.ensure_young_person_exists(conn, young_person_id)
+    _assert_home_access(current_user, _safe_int(person.get("home_id")))
+    return person
+
+
+def _load_and_check_risk(conn, risk_id: int, current_user: dict[str, Any]) -> dict[str, Any]:
+    row = YoungPersonRiskService.fetch_risk_by_id(conn, risk_id)
+    _assert_home_access(current_user, _safe_int(row.get("home_id")))
+    return row
+
+
+class RiskAssessmentCreatePayload(BaseModel):
     category: str
     title: str
     concern_summary: str | None = None
@@ -28,7 +89,7 @@ class RiskAssessmentCreate(BaseModel):
     archived: bool | None = False
 
 
-class RiskAssessmentUpdate(BaseModel):
+class RiskAssessmentUpdatePayload(BaseModel):
     category: str | None = None
     title: str | None = None
     concern_summary: str | None = None
@@ -49,274 +110,161 @@ class RiskAssessmentUpdate(BaseModel):
     archived: bool | None = None
 
 
-def ensure_young_person_exists(cur, young_person_id: int):
-    cur.execute("SELECT id FROM young_people WHERE id = %s LIMIT 1", (young_person_id,))
-    if not cur.fetchone():
-        raise HTTPException(status_code=404, detail="Young person not found")
-
-
-def full_name(first_name, last_name):
-    return " ".join([x for x in [first_name, last_name] if x]).strip() or None
-
-
-def fetch_risk_select_sql(where_sql: str):
-    return f"""
-        SELECT
-            ra.id,
-            ra.young_person_id,
-            ra.category,
-            ra.title,
-            ra.concern_summary,
-            ra.known_triggers,
-            ra.early_warning_signs,
-            ra.contextual_factors,
-            ra.current_controls,
-            ra.deescalation_strategies,
-            ra.response_actions,
-            ra.child_views,
-            ra.severity,
-            ra.likelihood,
-            ra.review_date,
-            ra.status,
-            ra.owner_id,
-            ra.approval_status,
-            ra.created_by,
-            ra.archived,
-            ra.created_at,
-            ra.updated_at,
-            ou.first_name AS owner_first_name,
-            ou.last_name AS owner_last_name,
-            cu.first_name AS created_by_first_name,
-            cu.last_name AS created_by_last_name
-        FROM risk_assessments ra
-        LEFT JOIN users ou ON ra.owner_id = ou.id
-        LEFT JOIN users cu ON ra.created_by = cu.id
-        {where_sql}
-    """
-
-
-def transform_risk_row(row: dict) -> dict:
-    return {
-        "id": row.get("id"),
-        "young_person_id": row.get("young_person_id"),
-        "category": row.get("category"),
-        "title": row.get("title"),
-        "concern_summary": row.get("concern_summary"),
-        "known_triggers": row.get("known_triggers"),
-        "early_warning_signs": row.get("early_warning_signs"),
-        "contextual_factors": row.get("contextual_factors"),
-        "current_controls": row.get("current_controls"),
-        "deescalation_strategies": row.get("deescalation_strategies"),
-        "response_actions": row.get("response_actions"),
-        "child_views": row.get("child_views"),
-        "severity": row.get("severity"),
-        "likelihood": row.get("likelihood"),
-        "review_date": row.get("review_date"),
-        "status": row.get("status"),
-        "approval_status": row.get("approval_status"),
-        "owner_id": row.get("owner_id"),
-        "owner_name": full_name(row.get("owner_first_name"), row.get("owner_last_name")),
-        "created_by": row.get("created_by"),
-        "created_by_name": full_name(row.get("created_by_first_name"), row.get("created_by_last_name")),
-        "archived": row.get("archived"),
-        "created_at": row.get("created_at"),
-        "updated_at": row.get("updated_at"),
-
-        # shell aliases
-        "summary": row.get("concern_summary") or "Risk assessment",
-        "narrative": row.get("concern_summary") or "Risk assessment",
-        "workflow_status": row.get("approval_status") or row.get("status") or "active",
-        "review_due_at": row.get("review_date"),
-        "event_type": "risk",
-        "formulation": row.get("concern_summary"),
-        "staff_guidance": row.get("current_controls"),
-    }
+class RiskReviewPayload(BaseModel):
+    review_note: str | None = None
+    approved_by: int | None = None
 
 
 @router.get("/{young_person_id}/risk")
-def get_young_person_risk(young_person_id: int, conn=Depends(get_db)):
-    try:
-        with conn.cursor() as cur:
-            ensure_young_person_exists(cur, young_person_id)
-            cur.execute(
-                fetch_risk_select_sql(
-                    """
-                    WHERE ra.young_person_id = %s
-                      AND COALESCE(ra.archived, FALSE) = FALSE
-                      AND LOWER(COALESCE(ra.status, 'active')) NOT IN ('archived', 'completed')
-                    ORDER BY
-                        CASE
-                            WHEN LOWER(COALESCE(ra.severity, '')) = 'high' THEN 1
-                            WHEN LOWER(COALESCE(ra.severity, '')) = 'medium' THEN 2
-                            ELSE 3
-                        END,
-                        ra.review_date ASC NULLS LAST,
-                        ra.created_at DESC,
-                        ra.id DESC
-                    """
-                ),
-                (young_person_id,),
-            )
-            rows = cur.fetchall() or []
-            return {"items": [transform_risk_row(r) for r in rows]}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load risk: {str(e)}")
+def list_risk(
+    young_person_id: int,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _load_and_check_young_person(conn, young_person_id, current_user)
+    rows = YoungPersonRiskService.list_risk_for_young_person(
+        conn,
+        young_person_id=young_person_id,
+        archived=False,
+    )
+    return {"items": rows, "count": len(rows)}
 
 
 @router.get("/{young_person_id}/risk/archive")
-def get_young_person_archived_risk(young_person_id: int, conn=Depends(get_db)):
-    try:
-        with conn.cursor() as cur:
-            ensure_young_person_exists(cur, young_person_id)
-            cur.execute(
-                fetch_risk_select_sql(
-                    """
-                    WHERE ra.young_person_id = %s
-                      AND (
-                        COALESCE(ra.archived, FALSE) = TRUE
-                        OR LOWER(COALESCE(ra.status, '')) IN ('archived', 'completed')
-                      )
-                    ORDER BY ra.updated_at DESC, ra.id DESC
-                    """
-                ),
-                (young_person_id,),
-            )
-            rows = cur.fetchall() or []
-            return {"items": [transform_risk_row(r) for r in rows]}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load archived risk: {str(e)}")
+def list_archived_risk(
+    young_person_id: int,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _load_and_check_young_person(conn, young_person_id, current_user)
+    rows = YoungPersonRiskService.list_risk_for_young_person(
+        conn,
+        young_person_id=young_person_id,
+        archived=True,
+    )
+    return {"items": rows, "count": len(rows)}
 
 
 @router.get("/risk/{risk_id}")
-def get_risk_assessment(risk_id: int, conn=Depends(get_db)):
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                fetch_risk_select_sql("WHERE ra.id = %s LIMIT 1"),
-                (risk_id,),
-            )
-            row = cur.fetchone()
-
-        if not row:
-            raise HTTPException(status_code=404, detail="Risk assessment not found")
-
-        return transform_risk_row(row)
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load risk assessment: {str(e)}")
+def get_risk_assessment(
+    risk_id: int,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _load_and_check_risk(conn, risk_id, current_user)
+    return YoungPersonRiskService.get_risk(conn, risk_id)
 
 
-@router.post("/risk")
-def create_risk_assessment(payload: RiskAssessmentCreate, conn=Depends(get_db)):
-    now = datetime.utcnow()
+@router.post("/{young_person_id}/risk")
+def create_risk_assessment(
+    young_person_id: int,
+    payload: RiskAssessmentCreatePayload,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _assert_can_edit(current_user)
+    _load_and_check_young_person(conn, young_person_id, current_user)
 
-    query = """
-        INSERT INTO risk_assessments (
-            young_person_id,
-            category,
-            title,
-            concern_summary,
-            known_triggers,
-            early_warning_signs,
-            contextual_factors,
-            current_controls,
-            deescalation_strategies,
-            response_actions,
-            child_views,
-            severity,
-            likelihood,
-            review_date,
-            status,
-            owner_id,
-            approval_status,
-            created_by,
-            archived,
-            created_at,
-            updated_at
-        )
-        VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-        )
-        RETURNING id
-    """
-
-    values = (
-        payload.young_person_id,
-        payload.category,
-        payload.title,
-        payload.concern_summary,
-        payload.known_triggers,
-        payload.early_warning_signs,
-        payload.contextual_factors,
-        payload.current_controls,
-        payload.deescalation_strategies,
-        payload.response_actions,
-        payload.child_views,
-        payload.severity,
-        payload.likelihood,
-        payload.review_date,
-        payload.status,
-        payload.owner_id,
-        payload.approval_status,
-        payload.created_by,
-        payload.archived,
-        now,
-        now,
+    return YoungPersonRiskService.create_risk_assessment(
+        conn,
+        young_person_id=young_person_id,
+        payload=payload.model_dump(exclude_none=True),
+        actor_user_id=_safe_int(current_user.get("user_id")),
+        linking_service=YoungPeopleLinkingService,
     )
 
-    try:
-        with conn.cursor() as cur:
-            ensure_young_person_exists(cur, payload.young_person_id)
-            cur.execute(query, values)
-            row = cur.fetchone()
-        conn.commit()
-        return {"message": "Risk assessment created successfully", "id": row["id"]}
-    except Exception as e:
-        conn.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to create risk assessment: {str(e)}")
 
-
+@router.patch("/risk/{risk_id}")
 @router.put("/risk/{risk_id}")
-def update_risk_assessment(risk_id: int, payload: RiskAssessmentUpdate, conn=Depends(get_db)):
-    update_data = payload.model_dump(exclude_unset=True)
-    if not update_data:
-        raise HTTPException(status_code=400, detail="No fields provided for update")
+def update_risk_assessment(
+    risk_id: int,
+    payload: RiskAssessmentUpdatePayload,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _assert_can_edit(current_user)
+    _load_and_check_risk(conn, risk_id, current_user)
 
-    update_data["updated_at"] = datetime.utcnow()
+    return YoungPersonRiskService.update_risk_assessment(
+        conn,
+        risk_id=risk_id,
+        payload=payload.model_dump(exclude_unset=True),
+    )
 
-    set_parts = []
-    values = []
-    for field, value in update_data.items():
-        set_parts.append(f"{field} = %s")
-        values.append(value)
-    values.append(risk_id)
 
-    query = f"""
-        UPDATE risk_assessments
-        SET {", ".join(set_parts)}
-        WHERE id = %s
-        RETURNING id
-    """
+@router.post("/risk/{risk_id}/submit")
+@router.put("/risk/{risk_id}/submit")
+def submit_risk_assessment(
+    risk_id: int,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _assert_can_edit(current_user)
+    _load_and_check_risk(conn, risk_id, current_user)
 
-    try:
-        with conn.cursor() as cur:
-            cur.execute(query, values)
-            row = cur.fetchone()
+    return YoungPersonRiskService.submit_risk_assessment(
+        conn,
+        risk_id=risk_id,
+        actor_user_id=_safe_int(current_user.get("user_id")),
+        linking_service=YoungPeopleLinkingService,
+    )
 
-        if not row:
-            conn.rollback()
-            raise HTTPException(status_code=404, detail="Risk assessment not found")
 
-        conn.commit()
-        return {"message": "Risk assessment updated successfully", "id": row["id"]}
-    except HTTPException:
-        raise
-    except Exception as e:
-        conn.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to update risk assessment: {str(e)}")
+@router.post("/risk/{risk_id}/approve")
+@router.put("/risk/{risk_id}/approve")
+def approve_risk_assessment(
+    risk_id: int,
+    payload: RiskReviewPayload,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _assert_can_review(current_user)
+    _load_and_check_risk(conn, risk_id, current_user)
+
+    approved_by = payload.approved_by or _safe_int(current_user.get("user_id"))
+
+    return YoungPersonRiskService.approve_risk_assessment(
+        conn,
+        risk_id=risk_id,
+        approved_by=approved_by,
+        review_note=payload.review_note,
+        linking_service=YoungPeopleLinkingService,
+    )
+
+
+@router.post("/risk/{risk_id}/return")
+@router.put("/risk/{risk_id}/return")
+def return_risk_assessment(
+    risk_id: int,
+    payload: RiskReviewPayload,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _assert_can_review(current_user)
+    _load_and_check_risk(conn, risk_id, current_user)
+
+    return YoungPersonRiskService.return_risk_assessment(
+        conn,
+        risk_id=risk_id,
+        actor_user_id=_safe_int(current_user.get("user_id")),
+        review_note=payload.review_note,
+        linking_service=YoungPeopleLinkingService,
+    )
+
+
+@router.post("/risk/{risk_id}/archive")
+@router.put("/risk/{risk_id}/archive")
+def archive_risk_assessment(
+    risk_id: int,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _assert_can_review(current_user)
+    _load_and_check_risk(conn, risk_id, current_user)
+
+    return YoungPersonRiskService.archive_risk_assessment(
+        conn,
+        risk_id=risk_id,
+        actor_user_id=_safe_int(current_user.get("user_id")),
+        linking_service=YoungPeopleLinkingService,
+    )
