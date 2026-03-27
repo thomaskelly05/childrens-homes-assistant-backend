@@ -1,7 +1,10 @@
 <div id="dailyNoteWorkspace">
   <div class="record-form-grid">
     <div class="card">
-      <h3>Daily note</h3>
+      <div class="workspace-section-header">
+        <h3>Daily note</h3>
+        <p>Build a clear, therapeutic, factual record of the day.</p>
+      </div>
 
       <div class="form-row-2">
         <div class="form-block">
@@ -81,7 +84,10 @@
 
     <div class="record-side-stack">
       <div class="card">
-        <h3>Quality and workflow</h3>
+        <div class="workspace-section-header small">
+          <h3>Quality and workflow</h3>
+          <p>Control how this note moves through the OS.</p>
+        </div>
 
         <div class="form-row-2">
           <div class="form-block">
@@ -91,6 +97,7 @@
               <option value="low">Low</option>
               <option value="medium">Medium</option>
               <option value="high">High</option>
+              <option value="standard">Standard</option>
             </select>
             <div class="help-text">Use this to show how important the note is in the wider context of care and oversight.</div>
           </div>
@@ -100,7 +107,8 @@
             <select id="dailyWorkflowStatus" class="select">
               <option value="draft">Draft</option>
               <option value="submitted">Submitted</option>
-              <option value="reviewed">Reviewed</option>
+              <option value="approved">Approved</option>
+              <option value="returned">Returned</option>
             </select>
             <div class="help-text">Track whether the note is still being worked on or ready for management review.</div>
           </div>
@@ -132,7 +140,7 @@
         <div class="doc-ai-panel-head">
           <div>
             <h3>AI document review</h3>
-            <p>Improve wording, spell check, therapeutic tone, missing details, standards, and linked records.</p>
+            <p>Improve wording, spelling, therapeutic tone, missing details, standards, and linked records.</p>
           </div>
         </div>
 
