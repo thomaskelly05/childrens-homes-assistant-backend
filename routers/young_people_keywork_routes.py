@@ -1,112 +1,90 @@
-from datetime import datetime
-from typing import Optional
+from __future__ import annotations
+
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
 
+from auth.current_user import get_current_user
 from db.connection import get_db
+from services.young_people_linking_service import YoungPeopleLinkingService
+from services.young_person_keywork_service import YoungPersonKeyworkService
 
 router = APIRouter(prefix="/young-people", tags=["Young People Keywork"])
 
 
-# =========================================================
-# Helpers
-# =========================================================
-
-def now():
-    return datetime.utcnow()
-
-
-def ensure_young_person_exists(cur, young_person_id: int):
-    cur.execute("SELECT id FROM young_people WHERE id = %s LIMIT 1", (young_person_id,))
-    if not cur.fetchone():
-        raise HTTPException(status_code=404, detail="Young person not found")
+def _safe_int(value: Any) -> int | None:
+    try:
+        if value is None:
+            return None
+        return int(value)
+    except Exception:
+        return None
 
 
-def normalise_status(value: Optional[str]) -> str:
-    v = (value or "").lower()
-    if v in ["draft", "submitted", "approved", "returned", "archived"]:
-        return v
-    return "draft"
+def _user_home_id(current_user: dict[str, Any]) -> int | None:
+    return _safe_int(current_user.get("home_id"))
 
 
-def transform(row):
-    return {
-        "id": row["id"],
-        "young_person_id": row["young_person_id"],
-        "session_date": row["session_date"],
-        "worker_id": row["worker_id"],
-        "worker_name": f"{row.get('worker_first_name','')} {row.get('worker_last_name','')}".strip(),
-        "topic": row["topic"],
-        "purpose": row["purpose"],
-        "summary": row["summary"],
-        "child_voice": row["child_voice"],
-        "reflective_analysis": row["reflective_analysis"],
-        "actions_agreed": row["actions_agreed"],
-        "next_session_date": row["next_session_date"],
-        "status": normalise_status(row.get("status")),
-        "archived": row.get("archived", False),
-        "manager_review_comment": row.get("manager_review_comment"),
-        "submitted_at": row.get("submitted_at"),
-        "approved_at": row.get("approved_at"),
-        "returned_at": row.get("returned_at"),
-        "created_at": row["created_at"],
-        "updated_at": row["updated_at"],
-
-        # Shell compatibility
-        "title": f"Keywork: {row.get('topic') or 'Session'}",
-        "narrative": row.get("summary") or "Keywork session recorded",
-        "event_type": "keywork",
-        "workflow_status": normalise_status(row.get("status")),
-        "requires_manager_review": True,
-        "quality_standards": ["positive_relationships", "wishes_and_feelings"],
-    }
+def _user_role(current_user: dict[str, Any]) -> str:
+    return str(current_user.get("role") or "").strip().lower()
 
 
-def select_sql(where):
-    return f"""
-        SELECT
-            k.*,
-            u.first_name AS worker_first_name,
-            u.last_name AS worker_last_name
-        FROM keywork_sessions k
-        LEFT JOIN users u ON k.worker_id = u.id
-        {where}
-    """
+def _assert_home_access(current_user: dict[str, Any], record_home_id: int | None) -> None:
+    role = _user_role(current_user)
+    user_home_id = _user_home_id(current_user)
+
+    if role in {"admin", "provider_admin"}:
+        return
+
+    if record_home_id is None:
+        raise HTTPException(status_code=403, detail="Home access could not be verified")
+
+    if user_home_id != record_home_id:
+        raise HTTPException(status_code=403, detail="You do not have access to this young person")
 
 
-def get_one(cur, id):
-    cur.execute(select_sql("WHERE k.id = %s LIMIT 1"), (id,))
-    row = cur.fetchone()
-    if not row:
-        raise HTTPException(404, "Keywork session not found")
+def _assert_can_edit(current_user: dict[str, Any]) -> None:
+    role = _user_role(current_user)
+    if role not in {"admin", "provider_admin", "manager", "staff"}:
+        raise HTTPException(status_code=403, detail="You do not have permission to edit this record")
+
+
+def _assert_can_review(current_user: dict[str, Any]) -> None:
+    role = _user_role(current_user)
+    if role not in {"admin", "provider_admin", "manager"}:
+        raise HTTPException(status_code=403, detail="You do not have permission to review this record")
+
+
+def _load_and_check_young_person(conn, young_person_id: int, current_user: dict[str, Any]) -> dict[str, Any]:
+    person = YoungPersonKeyworkService.ensure_young_person_exists(conn, young_person_id)
+    _assert_home_access(current_user, _safe_int(person.get("home_id")))
+    return person
+
+
+def _load_and_check_keywork(conn, keywork_id: int, current_user: dict[str, Any]) -> dict[str, Any]:
+    row = YoungPersonKeyworkService.get_keywork_row(conn, keywork_id)
+    _assert_home_access(current_user, _safe_int(row.get("home_id")))
     return row
 
 
-# =========================================================
-# Models
-# =========================================================
-
-class KeyworkCreate(BaseModel):
+class KeyworkCreatePayload(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    young_person_id: int
     session_date: str
     worker_id: int | None = None
     topic: str
-
     purpose: str | None = None
     summary: str | None = None
     child_voice: str | None = None
     reflective_analysis: str | None = None
     actions_agreed: str | None = None
     next_session_date: str | None = None
-
     status: str | None = "draft"
     archived: bool | None = False
 
 
-class KeyworkUpdate(BaseModel):
+class KeyworkUpdatePayload(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     session_date: str | None = None
@@ -118,7 +96,6 @@ class KeyworkUpdate(BaseModel):
     reflective_analysis: str | None = None
     actions_agreed: str | None = None
     next_session_date: str | None = None
-
     status: str | None = None
     archived: bool | None = None
     manager_review_comment: str | None = None
@@ -129,168 +106,132 @@ class ReviewPayload(BaseModel):
     approved_by: int | None = None
 
 
-# =========================================================
-# READ
-# =========================================================
-
 @router.get("/{young_person_id}/keywork")
-def list_keywork(young_person_id: int, conn=Depends(get_db)):
-    with conn.cursor() as cur:
-        ensure_young_person_exists(cur, young_person_id)
-
-        cur.execute(select_sql("""
-            WHERE k.young_person_id = %s
-            AND COALESCE(k.archived, FALSE) = FALSE
-            ORDER BY k.session_date DESC
-        """), (young_person_id,))
-
-        return {"items": [transform(r) for r in cur.fetchall()]}
+def list_keywork(
+    young_person_id: int,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _load_and_check_young_person(conn, young_person_id, current_user)
+    rows = YoungPersonKeyworkService.list_keywork(conn, young_person_id)
+    return {"items": rows, "count": len(rows)}
 
 
-@router.get("/keywork/{id}")
-def get_keywork(id: int, conn=Depends(get_db)):
-    with conn.cursor() as cur:
-        return transform(get_one(cur, id))
+@router.get("/keywork/{keywork_id}")
+def get_keywork(
+    keywork_id: int,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _load_and_check_keywork(conn, keywork_id, current_user)
+    return YoungPersonKeyworkService.get_keywork(conn, keywork_id)
 
 
-# =========================================================
-# CREATE / UPDATE
-# =========================================================
+@router.post("/{young_person_id}/keywork")
+def create_keywork(
+    young_person_id: int,
+    payload: KeyworkCreatePayload,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _assert_can_edit(current_user)
+    _load_and_check_young_person(conn, young_person_id, current_user)
 
-@router.post("/keywork")
-def create_keywork(payload: KeyworkCreate, conn=Depends(get_db)):
-    now_ = now()
-
-    with conn.cursor() as cur:
-        ensure_young_person_exists(cur, payload.young_person_id)
-
-        cur.execute("""
-            INSERT INTO keywork_sessions (
-                young_person_id, session_date, worker_id, topic,
-                purpose, summary, child_voice, reflective_analysis,
-                actions_agreed, next_session_date, status, archived,
-                created_at, updated_at
-            )
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-            RETURNING id
-        """, (
-            payload.young_person_id,
-            payload.session_date,
-            payload.worker_id,
-            payload.topic,
-            payload.purpose,
-            payload.summary,
-            payload.child_voice,
-            payload.reflective_analysis,
-            payload.actions_agreed,
-            payload.next_session_date,
-            normalise_status(payload.status),
-            payload.archived,
-            now_,
-            now_
-        ))
-
-        row = cur.fetchone()
-
-    conn.commit()
-    return {"id": row["id"]}
+    return YoungPersonKeyworkService.create_keywork(
+        conn,
+        young_person_id=young_person_id,
+        payload=payload.model_dump(exclude_none=True),
+        actor_user_id=_safe_int(current_user.get("user_id")),
+        linking_service=YoungPeopleLinkingService,
+    )
 
 
-@router.put("/keywork/{id}")
-def update_keywork(id: int, payload: KeyworkUpdate, conn=Depends(get_db)):
-    data = payload.model_dump(exclude_unset=True)
-    if not data:
-        raise HTTPException(400, "No fields")
+@router.patch("/keywork/{keywork_id}")
+@router.put("/keywork/{keywork_id}")
+def update_keywork(
+    keywork_id: int,
+    payload: KeyworkUpdatePayload,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _assert_can_edit(current_user)
+    _load_and_check_keywork(conn, keywork_id, current_user)
 
-    data["updated_at"] = now()
-
-    set_parts = []
-    values = []
-
-    for k, v in data.items():
-        set_parts.append(f"{k} = %s")
-        values.append(v)
-
-    values.append(id)
-
-    with conn.cursor() as cur:
-        cur.execute(f"""
-            UPDATE keywork_sessions
-            SET {", ".join(set_parts)}
-            WHERE id = %s
-            RETURNING id
-        """, values)
-
-        if not cur.fetchone():
-            raise HTTPException(404, "Not found")
-
-    conn.commit()
-    return {"ok": True}
+    return YoungPersonKeyworkService.update_keywork(
+        conn,
+        keywork_id=keywork_id,
+        payload=payload.model_dump(exclude_unset=True),
+        actor_user_id=_safe_int(current_user.get("user_id")),
+    )
 
 
-# =========================================================
-# WORKFLOW
-# =========================================================
+@router.post("/keywork/{keywork_id}/submit")
+def submit_keywork(
+    keywork_id: int,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _assert_can_edit(current_user)
+    _load_and_check_keywork(conn, keywork_id, current_user)
 
-@router.post("/keywork/{id}/submit")
-def submit(id: int, conn=Depends(get_db)):
-    with conn.cursor() as cur:
-        get_one(cur, id)
-
-        cur.execute("""
-            UPDATE keywork_sessions
-            SET status='submitted', submitted_at=%s
-            WHERE id=%s
-        """, (now(), id))
-
-    conn.commit()
-    return {"status": "submitted"}
+    return YoungPersonKeyworkService.submit_keywork(
+        conn,
+        keywork_id=keywork_id,
+        actor_user_id=_safe_int(current_user.get("user_id")),
+        linking_service=YoungPeopleLinkingService,
+    )
 
 
-@router.post("/keywork/{id}/approve")
-def approve(id: int, payload: ReviewPayload, conn=Depends(get_db)):
-    with conn.cursor() as cur:
-        get_one(cur, id)
+@router.post("/keywork/{keywork_id}/approve")
+def approve_keywork(
+    keywork_id: int,
+    payload: ReviewPayload,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _assert_can_review(current_user)
+    _load_and_check_keywork(conn, keywork_id, current_user)
 
-        cur.execute("""
-            UPDATE keywork_sessions
-            SET status='approved',
-                manager_review_comment=%s,
-                approved_at=%s
-            WHERE id=%s
-        """, (payload.review_note, now(), id))
-
-    conn.commit()
-    return {"status": "approved"}
-
-
-@router.post("/keywork/{id}/return")
-def return_item(id: int, payload: ReviewPayload, conn=Depends(get_db)):
-    with conn.cursor() as cur:
-        get_one(cur, id)
-
-        cur.execute("""
-            UPDATE keywork_sessions
-            SET status='returned',
-                manager_review_comment=%s,
-                returned_at=%s
-            WHERE id=%s
-        """, (payload.review_note, now(), id))
-
-    conn.commit()
-    return {"status": "returned"}
+    return YoungPersonKeyworkService.approve_keywork(
+        conn,
+        keywork_id=keywork_id,
+        approved_by=payload.approved_by or _safe_int(current_user.get("user_id")),
+        review_note=payload.review_note,
+        linking_service=YoungPeopleLinkingService,
+    )
 
 
-@router.post("/keywork/{id}/archive")
-def archive(id: int, conn=Depends(get_db)):
-    with conn.cursor() as cur:
-        get_one(cur, id)
+@router.post("/keywork/{keywork_id}/return")
+def return_keywork(
+    keywork_id: int,
+    payload: ReviewPayload,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _assert_can_review(current_user)
+    _load_and_check_keywork(conn, keywork_id, current_user)
 
-        cur.execute("""
-            UPDATE keywork_sessions
-            SET archived=TRUE, status='archived'
-            WHERE id=%s
-        """, (id,))
+    return YoungPersonKeyworkService.return_keywork(
+        conn,
+        keywork_id=keywork_id,
+        actor_user_id=_safe_int(current_user.get("user_id")),
+        review_note=payload.review_note,
+        linking_service=YoungPeopleLinkingService,
+    )
 
-    conn.commit()
-    return {"status": "archived"}
+
+@router.post("/keywork/{keywork_id}/archive")
+def archive_keywork(
+    keywork_id: int,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _assert_can_review(current_user)
+    _load_and_check_keywork(conn, keywork_id, current_user)
+
+    return YoungPersonKeyworkService.archive_keywork(
+        conn,
+        keywork_id=keywork_id,
+        actor_user_id=_safe_int(current_user.get("user_id")),
+        linking_service=YoungPeopleLinkingService,
+    )
