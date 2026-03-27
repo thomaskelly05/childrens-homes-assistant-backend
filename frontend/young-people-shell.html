@@ -14,8 +14,8 @@
 <body>
   <div class="app-shell">
     <main class="app-main">
-      <header class="topbar topbar-shell">
-        <div class="topbar-main">
+      <header class="topbar-shell">
+        <div class="topbar-row">
           <div class="brand-lockup">
             <div class="brand-mark">IC</div>
             <div>
@@ -24,82 +24,58 @@
             </div>
           </div>
 
-          <div class="topbar-heading">
-            <h1 id="pageTitle">Children’s Home OS</h1>
-            <p id="pageSubtitle">Warm, clear, shift-aware care recording and oversight</p>
-          </div>
-        </div>
+          <div class="topbar-main-controls">
+            <div class="topbar-control-block young-person-picker">
+              <label for="youngPersonSelect">Young person</label>
+              <select id="youngPersonSelect" class="select">
+                <option value="">Loading young people…</option>
+              </select>
+            </div>
 
-        <div class="topbar-controls">
-          <div class="topbar-control-block young-person-picker">
-            <label for="youngPersonSelect">Young person</label>
-            <select id="youngPersonSelect" class="select">
-              <option value="">Loading young people…</option>
-            </select>
-          </div>
+            <div class="topbar-control-block search-block">
+              <label for="youngPersonSearch">Search</label>
+              <input id="youngPersonSearch" class="field" type="text" placeholder="Search by name or placement">
+            </div>
 
-          <div class="topbar-control-block search-block">
-            <label for="youngPersonSearch">Search</label>
-            <input id="youngPersonSearch" class="field" type="text" placeholder="Search by name or placement">
-          </div>
+            <div class="topbar-control-block status-block">
+              <label for="youngPersonStatusFilter">Status</label>
+              <select id="youngPersonStatusFilter" class="select">
+                <option value="">All placements</option>
+                <option value="active">Active</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
 
-          <div class="topbar-control-block status-block">
-            <label for="youngPersonStatusFilter">Placement status</label>
-            <select id="youngPersonStatusFilter" class="select">
-              <option value="">All placements</option>
-              <option value="active">Active</option>
-              <option value="archived">Archived</option>
-            </select>
-          </div>
-
-          <div class="topbar-control-block shift-block">
-            <label>Shift mode</label>
-            <div class="shift-toggle" id="shiftModeToggle">
-              <button class="shift-pill" data-shift-mode="start" type="button">Start</button>
-              <button class="shift-pill active" data-shift-mode="during" type="button">During</button>
-              <button class="shift-pill" data-shift-mode="end" type="button">End</button>
+            <div class="topbar-control-block shift-block">
+              <label>Shift mode</label>
+              <div class="shift-toggle" id="shiftModeToggle">
+                <button class="shift-pill" data-shift-mode="start" type="button">Start</button>
+                <button class="shift-pill active" data-shift-mode="during" type="button">During</button>
+                <button class="shift-pill" data-shift-mode="end" type="button">End</button>
+              </div>
             </div>
           </div>
 
           <div class="topbar-actions">
             <button id="quickCaptureBtn" class="primary-btn" type="button">+ Quick capture</button>
-            <button id="refreshYoungPeopleBtn" class="secondary-btn" type="button">Refresh</button>
             <button id="openAssistantBtn" class="secondary-btn" type="button">Assistant</button>
           </div>
         </div>
       </header>
 
       <section class="page-content">
-        <section class="hero-strip">
-          <div class="hero-card hero-card-main">
-            <div class="hero-card-label">Current focus</div>
-            <div id="heroFocusTitle" class="hero-card-title">Select a young person</div>
-            <div id="heroFocusText" class="hero-card-text">
-              Once selected, the system will show the young person’s support needs, current alerts, and active care areas.
-            </div>
-            <div id="heroTagRow" class="tag-row"></div>
+        <section class="context-strip">
+          <div class="context-main">
+            <h1 id="pageTitle">Children’s Home OS</h1>
+            <p id="pageSubtitle">Select a young person to begin.</p>
           </div>
 
-          <div class="hero-card">
-            <div class="hero-card-label">Shift summary</div>
-            <div id="shiftModeSummary" class="hero-card-text">
-              During shift focus: capture events clearly, keep notes live, and follow actions as they happen.
-            </div>
-          </div>
+          <div id="contextTags" class="context-tags"></div>
 
-          <div class="hero-card">
-            <div class="hero-card-label">Quick actions</div>
-            <div class="hero-action-stack">
-              <button class="secondary-btn full-btn" type="button" data-quick-open="daily-note">New daily note</button>
-              <button class="secondary-btn full-btn" type="button" data-quick-open="incident">New incident</button>
-              <button class="secondary-btn full-btn" type="button" data-quick-open="health">New health entry</button>
-            </div>
-          </div>
-        </section>
-
-        <section class="panel soft-panel">
-          <div class="panel-body">
-            <div id="homeStatusStrip" class="status-strip"></div>
+          <div class="context-actions">
+            <button class="ghost-btn" type="button" data-quick-open="daily-note">New daily note</button>
+            <button class="ghost-btn" type="button" data-quick-open="incident">New incident</button>
+            <button class="ghost-btn" type="button" data-quick-open="health">New health entry</button>
           </div>
         </section>
 
@@ -124,8 +100,8 @@
                 <div class="panel">
                   <div class="panel-head slim">
                     <div>
-                      <h2>Young person overview</h2>
-                      <p>Human-first summary, support needs, legal context, and current care picture.</p>
+                      <h2>Overview</h2>
+                      <p>Human-first summary, support needs, and active context.</p>
                     </div>
                   </div>
                   <div id="overviewPanel" class="panel-body">
@@ -137,7 +113,7 @@
                   <div class="panel-head slim">
                     <div>
                       <h2>Profile areas</h2>
-                      <p>Switch between key profile areas without leaving the overview.</p>
+                      <p>Switch between key profile areas.</p>
                     </div>
                   </div>
                   <div class="panel-body">
@@ -163,7 +139,7 @@
                 <div class="panel-head">
                   <div>
                     <h2>Daily notes</h2>
-                    <p>Keep notes live through the shift and reduce end-of-day pressure.</p>
+                    <p>Keep notes live through the shift.</p>
                   </div>
                   <button class="primary-btn" type="button" data-open-modal="daily-note-modal">+ New daily note</button>
                 </div>
@@ -178,7 +154,7 @@
                 <div class="panel-head">
                   <div>
                     <h2>Incidents</h2>
-                    <p>Record incidents clearly and link follow-up, safeguards, and review points.</p>
+                    <p>Record incidents clearly and calmly.</p>
                   </div>
                   <button class="primary-btn" type="button" data-open-modal="incident-modal">+ New incident</button>
                 </div>
@@ -193,7 +169,7 @@
                 <div class="panel-head">
                   <div>
                     <h2>Health</h2>
-                    <p>Appointments, medication, symptoms, injuries, and wellbeing.</p>
+                    <p>Appointments, medication, symptoms, and wellbeing.</p>
                   </div>
                   <button class="primary-btn" type="button" data-open-modal="health-modal">+ New health entry</button>
                 </div>
@@ -208,7 +184,7 @@
                 <div class="panel-head">
                   <div>
                     <h2>Education</h2>
-                    <p>Attendance, provision, support, and daily educational context.</p>
+                    <p>Attendance, engagement, and support.</p>
                   </div>
                   <button class="primary-btn" type="button" data-open-modal="education-modal">+ New education entry</button>
                 </div>
@@ -223,7 +199,7 @@
                 <div class="panel-head">
                   <div>
                     <h2>Family and contact</h2>
-                    <p>Contact arrangements, impact, restrictions, and support around family relationships.</p>
+                    <p>Contact arrangements and emotional impact.</p>
                   </div>
                   <button class="primary-btn" type="button" data-open-modal="family-modal">+ New family contact</button>
                 </div>
@@ -238,7 +214,7 @@
                 <div class="panel-head">
                   <div>
                     <h2>Keywork</h2>
-                    <p>Goals, conversations, progress, reflections, and the young person’s voice.</p>
+                    <p>Goals, progress, reflections, and voice.</p>
                   </div>
                   <button class="primary-btn" type="button" data-open-modal="keywork-modal">+ New keywork session</button>
                 </div>
@@ -253,7 +229,7 @@
                 <div class="panel-head">
                   <div>
                     <h2>Risk</h2>
-                    <p>Triggers, signs, protective factors, staff responses, and review needs.</p>
+                    <p>Triggers, concerns, and review points.</p>
                   </div>
                   <button class="primary-btn" type="button" data-open-modal="risk-modal">+ New risk review</button>
                 </div>
@@ -268,7 +244,7 @@
                 <div class="panel-head">
                   <div>
                     <h2>Timeline</h2>
-                    <p>A joined-up chronology across notes, incidents, health, education, and contact.</p>
+                    <p>A joined-up chronology across the placement.</p>
                   </div>
                 </div>
                 <div id="timelineSection" class="panel-body">
@@ -283,7 +259,7 @@
               <div class="panel-head slim">
                 <div>
                   <h2>Live care feed</h2>
-                  <p>What needs noticing right now.</p>
+                  <p>Only what matters right now.</p>
                 </div>
               </div>
 
@@ -300,8 +276,8 @@
             <section class="panel side-panel">
               <div class="panel-head slim">
                 <div>
-                  <h2>Assistant and insight</h2>
-                  <p>Support therapeutic writing, summaries, reviews, and handovers.</p>
+                  <h2>Assistant</h2>
+                  <p>Support summaries, reviews, and handovers.</p>
                 </div>
               </div>
 
@@ -311,8 +287,7 @@
                 </div>
 
                 <div class="assistant-prompt">
-                  <strong>Suggested assistant actions</strong>
-                  <div class="action-grid" style="margin-top:12px;">
+                  <div class="action-grid">
                     <button class="secondary-btn" type="button" data-assistant-action="daily-note">Draft daily note</button>
                     <button class="secondary-btn" type="button" data-assistant-action="handover">Create handover</button>
                     <button class="secondary-btn" type="button" data-assistant-action="risk-review">Review risks</button>
@@ -321,26 +296,12 @@
                 </div>
               </div>
             </section>
-
-            <section class="panel side-panel">
-              <div class="panel-head slim">
-                <div>
-                  <h2>Management and quality</h2>
-                  <p>Oversight should feel built in, not bolted on.</p>
-                </div>
-              </div>
-
-              <div class="panel-body">
-                <div id="managementPanel" class="snapshot-list"></div>
-              </div>
-            </section>
           </aside>
         </div>
       </section>
     </main>
   </div>
 
-  <!-- Quick capture modal -->
   <div id="quickCaptureModal" class="modal hidden" aria-hidden="true">
     <div class="modal-backdrop" data-close-modal="true"></div>
     <div class="modal-card">
@@ -356,48 +317,47 @@
         <div class="quick-capture-grid">
           <button class="capture-tile" data-capture-type="daily-note" type="button">
             <span class="capture-title">Daily note</span>
-            <span class="capture-text">General update, emotional presentation, routines, support used, outcomes.</span>
+            <span class="capture-text">General update, routines, support used, outcomes.</span>
           </button>
 
           <button class="capture-tile" data-capture-type="incident" type="button">
             <span class="capture-title">Incident</span>
-            <span class="capture-text">Behaviour, safeguarding, missing, injury, restraint, property damage.</span>
+            <span class="capture-text">Behaviour, safeguarding, injury, missing, restraint.</span>
           </button>
 
           <button class="capture-tile" data-capture-type="health" type="button">
             <span class="capture-title">Health</span>
-            <span class="capture-text">Medication, symptoms, appointments, injuries, wellbeing, refusals.</span>
+            <span class="capture-text">Medication, symptoms, appointments, wellbeing.</span>
           </button>
 
           <button class="capture-tile" data-capture-type="family" type="button">
             <span class="capture-title">Family contact</span>
-            <span class="capture-text">Planned contact, supervision, impact before and after, concerns.</span>
+            <span class="capture-text">Planned contact, impact, concerns, follow-up.</span>
           </button>
 
           <button class="capture-tile" data-capture-type="keywork" type="button">
             <span class="capture-title">Keywork</span>
-            <span class="capture-text">Session notes, views, goals, progress, reflection and next steps.</span>
+            <span class="capture-text">Goals, voice, reflection, next steps.</span>
           </button>
 
           <button class="capture-tile" data-capture-type="risk" type="button">
             <span class="capture-title">Risk</span>
-            <span class="capture-text">Review triggers, concerns, patterns, and immediate staff responses.</span>
+            <span class="capture-text">Review concerns, patterns, and staff responses.</span>
           </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Daily note modal -->
   <div id="daily-note-modal" class="modal hidden" aria-hidden="true">
     <div class="modal-backdrop" data-close-modal="true"></div>
     <div class="modal-card modal-card-large">
       <div class="modal-head">
         <div>
           <h3>New daily note</h3>
-          <p>Capture the day in a warm, clear, factual way.</p>
+          <p>Capture the day clearly and warmly.</p>
         </div>
-        <button class="icon-btn" type="button" data-close-modal-btn="true" aria-label="Close">✕</button>
+        <button class="icon-btn" type="button" data-close-modal-btn="true">✕</button>
       </div>
       <div class="modal-body">
         <div class="modal-form-grid">
@@ -411,11 +371,11 @@
           </div>
           <div class="form-block">
             <label>Support used and what helped</label>
-            <textarea class="textarea" placeholder="What support or strategies worked well?"></textarea>
+            <textarea class="textarea" placeholder="What support worked well?"></textarea>
           </div>
           <div class="form-block">
             <label>Risks, concerns, and follow-up</label>
-            <textarea class="textarea" placeholder="Any risks, incidents, or handover points?"></textarea>
+            <textarea class="textarea" placeholder="Any risks or handover points?"></textarea>
           </div>
           <div class="record-action-bar">
             <button class="secondary-btn" type="button">Save draft</button>
@@ -426,7 +386,6 @@
     </div>
   </div>
 
-  <!-- Incident modal -->
   <div id="incident-modal" class="modal hidden" aria-hidden="true">
     <div class="modal-backdrop" data-close-modal="true"></div>
     <div class="modal-card modal-card-large">
@@ -435,7 +394,7 @@
           <h3>New incident</h3>
           <p>Record clearly, calmly, and factually.</p>
         </div>
-        <button class="icon-btn" type="button" data-close-modal-btn="true" aria-label="Close">✕</button>
+        <button class="icon-btn" type="button" data-close-modal-btn="true">✕</button>
       </div>
       <div class="modal-body">
         <div class="modal-form-grid">
@@ -473,7 +432,6 @@
     </div>
   </div>
 
-  <!-- Health modal -->
   <div id="health-modal" class="modal hidden" aria-hidden="true">
     <div class="modal-backdrop" data-close-modal="true"></div>
     <div class="modal-card">
@@ -482,7 +440,7 @@
           <h3>New health entry</h3>
           <p>Medication, symptoms, appointments, injuries, and wellbeing.</p>
         </div>
-        <button class="icon-btn" type="button" data-close-modal-btn="true" aria-label="Close">✕</button>
+        <button class="icon-btn" type="button" data-close-modal-btn="true">✕</button>
       </div>
       <div class="modal-body">
         <div class="modal-form-grid">
@@ -499,16 +457,15 @@
     </div>
   </div>
 
-  <!-- Education modal -->
   <div id="education-modal" class="modal hidden" aria-hidden="true">
     <div class="modal-backdrop" data-close-modal="true"></div>
     <div class="modal-card">
       <div class="modal-head">
         <div>
           <h3>New education entry</h3>
-          <p>Attendance, engagement, support, and school communication.</p>
+          <p>Attendance, engagement, and support.</p>
         </div>
-        <button class="icon-btn" type="button" data-close-modal-btn="true" aria-label="Close">✕</button>
+        <button class="icon-btn" type="button" data-close-modal-btn="true">✕</button>
       </div>
       <div class="modal-body">
         <div class="modal-form-grid">
@@ -525,16 +482,15 @@
     </div>
   </div>
 
-  <!-- Family modal -->
   <div id="family-modal" class="modal hidden" aria-hidden="true">
     <div class="modal-backdrop" data-close-modal="true"></div>
     <div class="modal-card">
       <div class="modal-head">
         <div>
-          <h3>New family contact entry</h3>
+          <h3>New family contact</h3>
           <p>Capture contact, impact, and concerns.</p>
         </div>
-        <button class="icon-btn" type="button" data-close-modal-btn="true" aria-label="Close">✕</button>
+        <button class="icon-btn" type="button" data-close-modal-btn="true">✕</button>
       </div>
       <div class="modal-body">
         <div class="modal-form-grid">
@@ -551,7 +507,6 @@
     </div>
   </div>
 
-  <!-- Keywork modal -->
   <div id="keywork-modal" class="modal hidden" aria-hidden="true">
     <div class="modal-backdrop" data-close-modal="true"></div>
     <div class="modal-card">
@@ -560,7 +515,7 @@
           <h3>New keywork session</h3>
           <p>Record goals, voice, reflection, and next steps.</p>
         </div>
-        <button class="icon-btn" type="button" data-close-modal-btn="true" aria-label="Close">✕</button>
+        <button class="icon-btn" type="button" data-close-modal-btn="true">✕</button>
       </div>
       <div class="modal-body">
         <div class="modal-form-grid">
@@ -577,16 +532,15 @@
     </div>
   </div>
 
-  <!-- Risk modal -->
   <div id="risk-modal" class="modal hidden" aria-hidden="true">
     <div class="modal-backdrop" data-close-modal="true"></div>
     <div class="modal-card">
       <div class="modal-head">
         <div>
           <h3>New risk review</h3>
-          <p>Capture triggers, concerns, patterns, and staff responses.</p>
+          <p>Capture triggers, concerns, and staff responses.</p>
         </div>
-        <button class="icon-btn" type="button" data-close-modal-btn="true" aria-label="Close">✕</button>
+        <button class="icon-btn" type="button" data-close-modal-btn="true">✕</button>
       </div>
       <div class="modal-body">
         <div class="modal-form-grid">
