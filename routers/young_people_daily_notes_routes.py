@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from db.connection import get_db
+from services.young_people_linking_service import YoungPeopleLinkingService
 
 router = APIRouter(prefix="/young-people", tags=["Young People Daily Notes"])
 
@@ -149,6 +150,65 @@ def fetch_daily_note_by_id(cur, daily_note_id: int):
     return row
 
 
+def build_daily_note_summary(
+    *,
+    presentation: Optional[str],
+    activities: Optional[str],
+    education_update: Optional[str],
+    health_update: Optional[str],
+    family_update: Optional[str],
+    behaviour_update: Optional[str],
+    actions_required: Optional[str],
+    positives: Optional[str],
+) -> str:
+    parts = [
+        positives,
+        presentation,
+        activities,
+        education_update,
+        health_update,
+        family_update,
+        behaviour_update,
+        actions_required,
+    ]
+    text = " | ".join([str(x).strip() for x in parts if x and str(x).strip()])
+    return text or "Daily note recorded"
+
+
+def build_daily_note_narrative(
+    *,
+    mood: Optional[str],
+    presentation: Optional[str],
+    activities: Optional[str],
+    education_update: Optional[str],
+    health_update: Optional[str],
+    family_update: Optional[str],
+    behaviour_update: Optional[str],
+    young_person_voice: Optional[str],
+    positives: Optional[str],
+    actions_required: Optional[str],
+) -> str:
+    parts = [
+        f"Mood: {mood}" if mood else None,
+        f"Presentation: {presentation}" if presentation else None,
+        f"Activities: {activities}" if activities else None,
+        f"Education: {education_update}" if education_update else None,
+        f"Health: {health_update}" if health_update else None,
+        f"Family: {family_update}" if family_update else None,
+        f"Behaviour: {behaviour_update}" if behaviour_update else None,
+        f"Young person voice: {young_person_voice}" if young_person_voice else None,
+        f"Positives: {positives}" if positives else None,
+        f"Actions required: {actions_required}" if actions_required else None,
+    ]
+    return "\n".join([p for p in parts if p]) or "Daily note recorded"
+
+
+def build_daily_note_title(shift_type: Optional[str], note_date: Optional[str]) -> str:
+    shift = (shift_type or "shift").replace("_", " ").title()
+    date_part = note_date or "undated"
+    return f"{shift} daily note - {date_part}"
+
+
 # =========================================================
 # Models
 # =========================================================
@@ -187,6 +247,15 @@ class DailyNoteCreate(BaseModel):
     recorded_at: str | None = Field(default=None, alias="recorded_at")
     narrative: str | None = Field(default=None, alias="narrative")
     title: str | None = None
+
+    # OS workflow flags
+    create_follow_up_task: bool = False
+    link_to_chronology: bool = True
+    link_to_support_plans: bool = False
+    manager_review_needed: bool = False
+    safeguarding_concern: bool = False
+    link_monthly_reviews: bool = False
+    link_quality_standards: bool = True
 
 
 class DailyNoteUpdate(BaseModel):
@@ -374,8 +443,71 @@ def create_daily_note(payload: DailyNoteCreate, conn=Depends(get_db)):
             ensure_young_person_exists(cur, payload.young_person_id)
             cur.execute(query, values)
             row = cur.fetchone()
+            daily_note_id = row["id"]
+
+            workflow_result = YoungPeopleLinkingService.process_record_event(
+                conn=conn,
+                young_person_id=payload.young_person_id,
+                source_table="daily_notes",
+                source_id=daily_note_id,
+                event_type="created",
+                title=payload.title or build_daily_note_title(payload.shift_type, note_date),
+                summary=build_daily_note_summary(
+                    presentation=payload.presentation,
+                    activities=payload.activities,
+                    education_update=payload.education_update,
+                    health_update=payload.health_update,
+                    family_update=payload.family_update,
+                    behaviour_update=payload.behaviour_update,
+                    actions_required=payload.actions_required,
+                    positives=payload.positives,
+                ),
+                narrative=payload.narrative or build_daily_note_narrative(
+                    mood=payload.mood,
+                    presentation=payload.presentation,
+                    activities=payload.activities,
+                    education_update=payload.education_update,
+                    health_update=payload.health_update,
+                    family_update=payload.family_update,
+                    behaviour_update=payload.behaviour_update,
+                    young_person_voice=young_person_voice,
+                    positives=payload.positives,
+                    actions_required=payload.actions_required,
+                ),
+                category="daily_note",
+                subcategory=payload.shift_type or "daily_note",
+                significance=payload.significance or "medium",
+                due_date=note_date,
+                owner_id=payload.author_id,
+                created_by=payload.author_id,
+                workflow={
+                    "link_chronology": payload.link_to_chronology,
+                    "create_task": payload.create_follow_up_task or bool(payload.actions_required),
+                    "manager_review": payload.manager_review_needed or normalise_workflow_status(payload.workflow_status) in {"submitted", "approved"},
+                    "safeguarding": payload.safeguarding_concern,
+                    "link_support_plans": payload.link_to_support_plans,
+                    "link_monthly_reviews": payload.link_monthly_reviews,
+                    "link_quality_standards": payload.link_quality_standards,
+                },
+                metadata={
+                    "severity": payload.significance or "medium",
+                    "workflow_status": normalise_workflow_status(payload.workflow_status),
+                    "shift_type": payload.shift_type,
+                    "note_date": note_date,
+                    "quality_standards": ["quality_and_purpose_of_care"] if payload.link_quality_standards else [],
+                    "standards_rationale": "Linked from daily note workflow",
+                    "evidence_strength": "medium",
+                    "response_actions": payload.actions_required,
+                    "judgement_areas": ["experiences_and_progress"],
+                },
+            )
+
         conn.commit()
-        return {"message": "Daily note created successfully", "id": row["id"]}
+        return {
+            "message": "Daily note created successfully",
+            "id": daily_note_id,
+            "workflow": workflow_result,
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -390,14 +522,12 @@ def update_daily_note(daily_note_id: int, payload: DailyNoteUpdate, conn=Depends
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields provided for update")
 
-    # UI aliases
     if "child_voice" in update_data:
         update_data["young_person_voice"] = update_data.pop("child_voice")
 
     if "recorded_at" in update_data:
         update_data["note_date"] = update_data.pop("recorded_at")
 
-    # "title" and "narrative" are accepted by UI but not stored directly here
     update_data.pop("title", None)
     update_data.pop("narrative", None)
 
@@ -449,7 +579,7 @@ def update_daily_note(daily_note_id: int, payload: DailyNoteUpdate, conn=Depends
 def submit_daily_note(daily_note_id: int, conn=Depends(get_db)):
     try:
         with conn.cursor() as cur:
-            fetch_daily_note_by_id(cur, daily_note_id)
+            row = fetch_daily_note_by_id(cur, daily_note_id)
 
             cur.execute(
                 """
@@ -464,10 +594,46 @@ def submit_daily_note(daily_note_id: int, conn=Depends(get_db)):
                 """,
                 ("submitted", now_utc(), now_utc(), now_utc(), daily_note_id),
             )
-            row = cur.fetchone()
+            updated = cur.fetchone()
+
+            workflow_result = YoungPeopleLinkingService.process_record_event(
+                conn=conn,
+                young_person_id=row["young_person_id"],
+                source_table="daily_notes",
+                source_id=daily_note_id,
+                event_type="submitted",
+                title=f"{(row.get('shift_type') or 'Shift').replace('_', ' ').title()} daily note submitted",
+                summary=transform_daily_note_row(row)["summary"],
+                narrative=transform_daily_note_row(row)["narrative"],
+                category="daily_note",
+                subcategory=row.get("shift_type") or "daily_note",
+                significance=row.get("significance") or "medium",
+                due_date=row.get("note_date"),
+                owner_id=row.get("author_id"),
+                created_by=row.get("author_id"),
+                workflow={
+                    "link_chronology": True,
+                    "create_task": False,
+                    "manager_review": True,
+                    "safeguarding": False,
+                    "link_support_plans": False,
+                    "link_monthly_reviews": True,
+                    "link_quality_standards": True,
+                },
+                metadata={
+                    "severity": row.get("significance") or "medium",
+                    "workflow_status": "submitted",
+                    "shift_type": row.get("shift_type"),
+                    "note_date": str(row.get("note_date")) if row.get("note_date") else None,
+                    "quality_standards": ["quality_and_purpose_of_care"],
+                    "standards_rationale": "Daily note submitted for workflow review",
+                    "evidence_strength": "medium",
+                    "judgement_areas": ["experiences_and_progress"],
+                },
+            )
 
         conn.commit()
-        return {"ok": True, "status": "submitted", "id": row["id"]}
+        return {"ok": True, "status": "submitted", "id": updated["id"], "workflow": workflow_result}
     except HTTPException:
         raise
     except Exception as e:
@@ -479,7 +645,7 @@ def submit_daily_note(daily_note_id: int, conn=Depends(get_db)):
 def approve_daily_note(daily_note_id: int, payload: ReviewDecisionPayload, conn=Depends(get_db)):
     try:
         with conn.cursor() as cur:
-            fetch_daily_note_by_id(cur, daily_note_id)
+            row = fetch_daily_note_by_id(cur, daily_note_id)
 
             cur.execute(
                 """
@@ -502,10 +668,47 @@ def approve_daily_note(daily_note_id: int, payload: ReviewDecisionPayload, conn=
                     daily_note_id,
                 ),
             )
-            row = cur.fetchone()
+            updated = cur.fetchone()
+
+            workflow_result = YoungPeopleLinkingService.process_record_event(
+                conn=conn,
+                young_person_id=row["young_person_id"],
+                source_table="daily_notes",
+                source_id=daily_note_id,
+                event_type="approved",
+                title=f"{(row.get('shift_type') or 'Shift').replace('_', ' ').title()} daily note approved",
+                summary=transform_daily_note_row(row)["summary"],
+                narrative=payload.review_note or transform_daily_note_row(row)["narrative"],
+                category="daily_note",
+                subcategory=row.get("shift_type") or "daily_note",
+                significance=row.get("significance") or "medium",
+                due_date=row.get("note_date"),
+                owner_id=row.get("author_id"),
+                created_by=payload.approved_by,
+                workflow={
+                    "link_chronology": True,
+                    "create_task": False,
+                    "manager_review": False,
+                    "safeguarding": False,
+                    "link_support_plans": False,
+                    "link_monthly_reviews": True,
+                    "link_quality_standards": True,
+                },
+                metadata={
+                    "severity": row.get("significance") or "medium",
+                    "workflow_status": "approved",
+                    "shift_type": row.get("shift_type"),
+                    "note_date": str(row.get("note_date")) if row.get("note_date") else None,
+                    "quality_standards": ["quality_and_purpose_of_care"],
+                    "standards_rationale": "Daily note approved",
+                    "evidence_strength": "strong",
+                    "judgement_areas": ["experiences_and_progress"],
+                    "manager_review_comment": payload.review_note,
+                },
+            )
 
         conn.commit()
-        return {"ok": True, "status": "approved", "id": row["id"]}
+        return {"ok": True, "status": "approved", "id": updated["id"], "workflow": workflow_result}
     except HTTPException:
         raise
     except Exception as e:
@@ -517,7 +720,7 @@ def approve_daily_note(daily_note_id: int, payload: ReviewDecisionPayload, conn=
 def return_daily_note(daily_note_id: int, payload: ReviewDecisionPayload, conn=Depends(get_db)):
     try:
         with conn.cursor() as cur:
-            fetch_daily_note_by_id(cur, daily_note_id)
+            row = fetch_daily_note_by_id(cur, daily_note_id)
 
             cur.execute(
                 """
@@ -538,14 +741,49 @@ def return_daily_note(daily_note_id: int, payload: ReviewDecisionPayload, conn=D
                     daily_note_id,
                 ),
             )
-            row = cur.fetchone()
+            updated = cur.fetchone()
+
+            workflow_result = YoungPeopleLinkingService.process_record_event(
+                conn=conn,
+                young_person_id=row["young_person_id"],
+                source_table="daily_notes",
+                source_id=daily_note_id,
+                event_type="returned",
+                title=f"{(row.get('shift_type') or 'Shift').replace('_', ' ').title()} daily note returned",
+                summary=transform_daily_note_row(row)["summary"],
+                narrative=payload.review_note or "Daily note returned for revision",
+                category="daily_note",
+                subcategory=row.get("shift_type") or "daily_note",
+                significance=row.get("significance") or "medium",
+                due_date=row.get("note_date"),
+                owner_id=row.get("author_id"),
+                created_by=payload.approved_by,
+                workflow={
+                    "link_chronology": True,
+                    "create_task": True,
+                    "manager_review": True,
+                    "safeguarding": False,
+                    "link_support_plans": False,
+                    "link_monthly_reviews": False,
+                    "link_quality_standards": False,
+                },
+                metadata={
+                    "severity": row.get("significance") or "medium",
+                    "workflow_status": "returned",
+                    "shift_type": row.get("shift_type"),
+                    "note_date": str(row.get("note_date")) if row.get("note_date") else None,
+                    "response_actions": payload.review_note,
+                    "manager_review_comment": payload.review_note,
+                },
+            )
 
         conn.commit()
         return {
             "ok": True,
             "status": "returned",
-            "id": row["id"],
+            "id": updated["id"],
             "review_note": payload.review_note or "",
+            "workflow": workflow_result,
         }
     except HTTPException:
         raise
@@ -558,7 +796,7 @@ def return_daily_note(daily_note_id: int, payload: ReviewDecisionPayload, conn=D
 def archive_daily_note(daily_note_id: int, conn=Depends(get_db)):
     try:
         with conn.cursor() as cur:
-            fetch_daily_note_by_id(cur, daily_note_id)
+            row = fetch_daily_note_by_id(cur, daily_note_id)
 
             cur.execute(
                 """
@@ -571,10 +809,42 @@ def archive_daily_note(daily_note_id: int, conn=Depends(get_db)):
                 """,
                 ("archived", now_utc(), daily_note_id),
             )
-            row = cur.fetchone()
+            updated = cur.fetchone()
+
+            workflow_result = YoungPeopleLinkingService.process_record_event(
+                conn=conn,
+                young_person_id=row["young_person_id"],
+                source_table="daily_notes",
+                source_id=daily_note_id,
+                event_type="archived",
+                title=f"{(row.get('shift_type') or 'Shift').replace('_', ' ').title()} daily note archived",
+                summary=transform_daily_note_row(row)["summary"],
+                narrative="Daily note archived",
+                category="daily_note",
+                subcategory=row.get("shift_type") or "daily_note",
+                significance=row.get("significance") or "low",
+                due_date=row.get("note_date"),
+                owner_id=row.get("author_id"),
+                created_by=row.get("author_id"),
+                workflow={
+                    "link_chronology": True,
+                    "create_task": False,
+                    "manager_review": False,
+                    "safeguarding": False,
+                    "link_support_plans": False,
+                    "link_monthly_reviews": False,
+                    "link_quality_standards": False,
+                },
+                metadata={
+                    "severity": row.get("significance") or "low",
+                    "workflow_status": "archived",
+                    "shift_type": row.get("shift_type"),
+                    "note_date": str(row.get("note_date")) if row.get("note_date") else None,
+                },
+            )
 
         conn.commit()
-        return {"ok": True, "status": "archived", "id": row["id"]}
+        return {"ok": True, "status": "archived", "id": updated["id"], "workflow": workflow_result}
     except HTTPException:
         raise
     except Exception as e:
