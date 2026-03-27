@@ -8,6 +8,18 @@ window.ChildrensHomeOS = (function () {
   let activeSectionTab = "overview";
   let activeShiftMode = "during";
 
+  const SECTION_IDS = [
+    "overview",
+    "daily-notes",
+    "incidents",
+    "health",
+    "education",
+    "family",
+    "keywork",
+    "risk",
+    "timeline"
+  ];
+
   async function api(url, options = {}) {
     const response = await fetch(url, {
       ...options,
@@ -219,7 +231,7 @@ window.ChildrensHomeOS = (function () {
     if (!pageTitle || !pageSubtitle || !contextTags) return;
 
     if (!selectedYoungPerson) {
-      pageTitle.textContent = "Children’s Home OS";
+      pageTitle.textContent = "Young Person OS";
       pageSubtitle.textContent = "Select a young person to begin.";
       contextTags.innerHTML = "";
       return;
