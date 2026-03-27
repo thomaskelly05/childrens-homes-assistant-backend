@@ -100,12 +100,24 @@ window.YoungPersonDailyNoteWorkspace = (function () {
     renderList("dailyAiFieldFeedback", []);
     renderList("dailyAiMissingDetails", []);
     renderList("dailyAiSafeguarding", []);
+
     const summary = document.getElementById("dailyAiSummary");
     if (summary) summary.innerHTML = "";
+
     const standards = document.getElementById("dailyStandardsBox");
-    if (standards) standards.innerHTML = "Suggested standards will appear here after AI review.";
+    if (standards) {
+      standards.innerHTML = "Suggested standards will appear here after AI review.";
+    }
+
     const links = document.getElementById("dailyLinksBox");
-    if (links) links.innerHTML = "Suggested links to chronology, health, education, family, tasks, and plans will appear here after AI review.";
+    if (links) {
+      links.innerHTML = "Suggested links to chronology, health, education, family, tasks, and plans will appear here after AI review.";
+    }
+
+    const workflow = document.getElementById("dailyWorkflowBox");
+    if (workflow) {
+      workflow.innerHTML = "Complete the daily note, review AI suggestions, save the note, and follow any generated tasks or linked record prompts.";
+    }
   }
 
   function renderList(id, items) {
@@ -154,22 +166,45 @@ window.YoungPersonDailyNoteWorkspace = (function () {
     ].join("\n\n");
   }
 
+  function buildTitle() {
+    const shift = getFieldValue("dailyShiftType") || "shift";
+    const date = getFieldValue("dailyNoteDate") || "undated";
+    return `${shift.replace(/_/g, " ")} daily note - ${date}`;
+  }
+
   function buildPayload() {
+    const workflowStatus = getFieldValue("dailyWorkflowStatus") || "draft";
+    const significance = getFieldValue("dailySignificance") || "standard";
+    const actionsRequired = getFieldValue("dailyActionsRequired");
+
     return {
+      young_person_id: getSelectedYoungPersonId(),
       note_date: getFieldValue("dailyNoteDate") || null,
-      shift_type: getFieldValue("dailyShiftType") || null,
-      mood_presentation: getFieldValue("dailyMood"),
-      activities_routine: getFieldValue("dailyActivities"),
+      shift_type: getFieldValue("dailyShiftType") || "",
+      mood: getFieldValue("dailyMood"),
+      presentation: getFieldValue("dailyMood"),
+      activities: getFieldValue("dailyActivities"),
       education_update: getFieldValue("dailyEducationUpdate"),
       health_update: getFieldValue("dailyHealthUpdate"),
       family_update: getFieldValue("dailyFamilyUpdate"),
       behaviour_update: getFieldValue("dailyBehaviourUpdate"),
       young_person_voice: getFieldValue("dailyYoungPersonVoice"),
-      positives_achievements: getFieldValue("dailyPositives"),
-      actions_required_handover: getFieldValue("dailyActionsRequired"),
-      significance: getFieldValue("dailySignificance") || null,
-      workflow_status: getFieldValue("dailyWorkflowStatus") || "draft",
-      combined_note: buildNarrativeForAi()
+      child_voice: getFieldValue("dailyYoungPersonVoice"),
+      positives: getFieldValue("dailyPositives"),
+      actions_required: actionsRequired,
+      significance,
+      workflow_status: workflowStatus,
+      title: buildTitle(),
+      narrative: buildNarrativeForAi(),
+
+      // central linking service flags
+      create_follow_up_task: !!actionsRequired,
+      link_to_chronology: true,
+      link_to_support_plans: false,
+      manager_review_needed: workflowStatus === "submitted" || workflowStatus === "reviewed",
+      safeguarding_concern: false,
+      link_monthly_reviews: workflowStatus === "submitted" || workflowStatus === "reviewed",
+      link_quality_standards: true
     };
   }
 
@@ -213,10 +248,9 @@ window.YoungPersonDailyNoteWorkspace = (function () {
     }
 
     hideSaveStatus();
-
     const payload = buildPayload();
 
-    if (!payload.combined_note.trim()) {
+    if (!payload.narrative.trim()) {
       showSaveStatus("Please complete at least one daily note field before saving.", "error");
       return;
     }
@@ -224,7 +258,7 @@ window.YoungPersonDailyNoteWorkspace = (function () {
     try {
       showSaveStatus("Saving daily note...");
 
-      await api(`/young-people/${youngPersonId}/daily-notes`, {
+      await api("/young-people/daily-notes", {
         method: "POST",
         body: JSON.stringify(payload)
       });
@@ -296,31 +330,25 @@ window.YoungPersonDailyNoteWorkspace = (function () {
 
     renderList(
       "dailyAiFieldFeedback",
-      result?.field_feedback ||
-        result?.field_level_feedback ||
-        []
+      result?.field_feedback || result?.field_level_feedback || []
     );
 
     renderList(
       "dailyAiMissingDetails",
-      result?.missing_details ||
-        result?.suggested_missing_details ||
-        []
+      result?.missing_details || result?.suggested_missing_details || []
     );
 
     renderList(
       "dailyAiSafeguarding",
-      result?.safeguarding_notes ||
-        result?.safeguarding_flags ||
-        []
+      result?.safeguarding_notes || result?.safeguarding_flags || []
     );
 
     const summary = document.getElementById("dailyAiSummary");
     if (summary) {
       summary.innerHTML = safe(
         result?.summary ||
-          result?.review_summary ||
-          "AI review completed."
+        result?.review_summary ||
+        "AI review completed."
       );
     }
 
@@ -330,6 +358,7 @@ window.YoungPersonDailyNoteWorkspace = (function () {
         result?.quality_standards ||
         result?.suggested_quality_standards ||
         [];
+
       if (Array.isArray(standardsList) && standardsList.length) {
         standards.innerHTML = standardsList
           .map(item => `<div class="doc-ai-item"><p>${safe(typeof item === "string" ? item : item?.text || item?.title || "")}</p></div>`)
@@ -341,10 +370,7 @@ window.YoungPersonDailyNoteWorkspace = (function () {
 
     const links = document.getElementById("dailyLinksBox");
     if (links) {
-      const linkedItems =
-        result?.suggested_links ||
-        result?.links ||
-        [];
+      const linkedItems = result?.suggested_links || result?.links || [];
       if (Array.isArray(linkedItems) && linkedItems.length) {
         links.innerHTML = linkedItems
           .map(item => `<div class="doc-ai-item"><p>${safe(typeof item === "string" ? item : item?.text || item?.title || "")}</p></div>`)
