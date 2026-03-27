@@ -8,17 +8,56 @@ window.ChildrensHomeOS = (function () {
   let activeSectionTab = "overview";
   let activeShiftMode = "during";
 
-  const SECTION_IDS = [
-    "overview",
-    "daily-notes",
-    "incidents",
-    "health",
-    "education",
-    "family",
-    "keywork",
-    "risk",
-    "timeline"
-  ];
+  const WORKSPACE_REGISTRY = {
+    "daily-notes": {
+      component: "/components/yp-daily-note-workspace.html",
+      script: "/js/workspaces/yp-daily-note-workspace.js",
+      binder: "YoungPersonDailyNoteWorkspace",
+      mountId: "dailyNotesSection"
+    },
+    incidents: {
+      component: "/components/yp-incident-workspace.html",
+      script: "/js/workspaces/yp-incident-workspace.js",
+      binder: "YoungPersonIncidentWorkspace",
+      mountId: "incidentsSection"
+    },
+    health: {
+      component: "/components/yp-health-workspace.html",
+      script: "/js/workspaces/yp-health-workspace.js",
+      binder: "YoungPersonHealthWorkspace",
+      mountId: "healthSection"
+    },
+    education: {
+      component: "/components/yp-education-workspace.html",
+      script: "/js/workspaces/yp-education-workspace.js",
+      binder: "YoungPersonEducationWorkspace",
+      mountId: "educationSection"
+    },
+    family: {
+      component: "/components/yp-family-workspace.html",
+      script: "/js/workspaces/yp-family-workspace.js",
+      binder: "YoungPersonFamilyWorkspace",
+      mountId: "familySection"
+    },
+    keywork: {
+      component: "/components/yp-keywork-workspace.html",
+      script: "/js/workspaces/yp-keywork-workspace.js",
+      binder: "YoungPersonKeyworkWorkspace",
+      mountId: "keyworkSection"
+    },
+    risk: {
+      component: "/components/yp-risk-workspace.html",
+      script: "/js/workspaces/yp-risk-workspace.js",
+      binder: "YoungPersonRiskWorkspace",
+      mountId: "riskSection"
+    },
+    timeline: {
+      component: "/components/yp-timeline-workspace.html",
+      script: "/js/workspaces/yp-timeline-workspace.js",
+      binder: "YoungPersonTimelineWorkspace",
+      mountId: "timelineSection"
+    }
+  };
 
   async function api(url, options = {}) {
     const response = await fetch(url, {
@@ -118,7 +157,7 @@ window.ChildrensHomeOS = (function () {
     renderContextStrip();
   }
 
-  function setActiveSectionTab(section) {
+  async function setActiveSectionTab(section) {
     activeSectionTab = section;
 
     document.querySelectorAll("[data-section-tab]").forEach(btn => {
@@ -130,6 +169,10 @@ window.ChildrensHomeOS = (function () {
     });
 
     renderContextStrip();
+
+    if (selectedYoungPerson && section !== "overview") {
+      await loadWorkspaceSection(section);
+    }
   }
 
   function openModal(id) {
@@ -312,7 +355,6 @@ window.ChildrensHomeOS = (function () {
     renderContextStrip();
     renderYoungPersonSelect();
     clearSectionBodies();
-    setActiveSectionTab(activeSectionTab);
   }
 
   function renderOverview(overview) {
@@ -632,104 +674,71 @@ window.ChildrensHomeOS = (function () {
     `;
   }
 
-  function buildSimpleSectionCard(title, text, helper = "") {
-    return `
-      <div class="workspace-demo">
-        <div class="workspace-banner">
-          <h3>${safe(title)}</h3>
-          <p>${safe(text)}</p>
-        </div>
-        ${
-          helper
-            ? `
-              <div class="workspace-section">
-                <h4>What belongs here</h4>
-                <div class="workspace-helper-list">
-                  <div>${safe(helper)}</div>
-                </div>
-              </div>
-            `
-            : ""
-        }
-      </div>
-    `;
+  async function loadScriptOnce(src) {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) return;
+
+    await new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error(`Could not load script: ${src}`));
+      document.body.appendChild(script);
+    });
   }
 
-  function renderAreaSections(overview) {
-    const yp = overview?.young_person || selectedYoungPerson || {};
-    const personName = fullName(yp);
+  async function loadWorkspaceSection(section) {
+    const config = WORKSPACE_REGISTRY[section];
+    if (!config) return;
 
-    const daily = document.getElementById("dailyNotesSection");
-    const incidents = document.getElementById("incidentsSection");
-    const health = document.getElementById("healthSection");
-    const education = document.getElementById("educationSection");
-    const family = document.getElementById("familySection");
-    const keywork = document.getElementById("keyworkSection");
-    const risk = document.getElementById("riskSection");
-    const timeline = document.getElementById("timelineSection");
+    const mount = document.getElementById(config.mountId);
+    if (!mount) return;
 
-    if (daily) {
-      daily.innerHTML = buildSimpleSectionCard(
-        `Daily notes for ${personName}`,
-        "Use this area to review daily note activity and open the modal to add a new note without leaving the page.",
-        "Presentation, routines, support used, emotional wellbeing, risks, and handover points."
-      );
+    if (!selectedYoungPerson) {
+      mount.innerHTML = `<div class="empty-state">Select a young person to view this area.</div>`;
+      return;
     }
 
-    if (incidents) {
-      incidents.innerHTML = buildSimpleSectionCard(
-        `Incidents for ${personName}`,
-        "Use this area to review incidents and open the modal to record a new incident when needed.",
-        "Clear factual accounts, safeguarding concerns, injuries, missing episodes, and follow-up."
-      );
-    }
+    try {
+      const htmlResponse = await fetch(config.component, { credentials: "include" });
+      if (!htmlResponse.ok) {
+        throw new Error(`Component not found: ${config.component}`);
+      }
 
-    if (health) {
-      health.innerHTML = buildSimpleSectionCard(
-        `Health for ${personName}`,
-        "Appointments, medication, symptoms, injuries, and wellbeing can be reviewed here.",
-        "Medication, symptoms, appointments, refusals, injuries, and health-related concerns."
-      );
-    }
+      const html = await htmlResponse.text();
+      mount.innerHTML = html;
 
-    if (education) {
-      education.innerHTML = buildSimpleSectionCard(
-        `Education for ${personName}`,
-        "Keep attendance, provision, engagement, and school communication visible.",
-        "Attendance, barriers, engagement, support, and educational progress."
-      );
-    }
+      await loadScriptOnce(config.script);
 
-    if (family) {
-      family.innerHTML = buildSimpleSectionCard(
-        `Family and contact for ${personName}`,
-        "Review contact arrangements and emotional impact in one place.",
-        "Planned contact, supervision, restrictions, emotional impact, and follow-up."
-      );
+      const binder = window[config.binder];
+      if (binder && typeof binder.bind === "function") {
+        await binder.bind({
+          selectedYoungPerson,
+          overview: latestOverview,
+          reloadOverview: loadYoungPersonOverview,
+          shiftMode: activeShiftMode,
+          shellState: {
+            activeSectionTab,
+            activeProfileTab
+          }
+        });
+      }
+    } catch (error) {
+      console.error(`Failed to load workspace "${section}"`, error);
+      mount.innerHTML = `
+        <div class="empty-state">
+          Could not load this workspace.<br>
+          <span>${safe(error.message || "Unknown error")}</span>
+        </div>
+      `;
     }
+  }
 
-    if (keywork) {
-      keywork.innerHTML = buildSimpleSectionCard(
-        `Keywork for ${personName}`,
-        "Keep goals, themes, reflections, and the young person’s voice together.",
-        "Session themes, voice, goals, reflection, progress, and next steps."
-      );
-    }
+  async function loadAllVisibleWorkspaceContent() {
+    if (!selectedYoungPerson) return;
 
-    if (risk) {
-      risk.innerHTML = buildSimpleSectionCard(
-        `Risk for ${personName}`,
-        "Review current risks, patterns, and immediate concerns in one focused area.",
-        "Triggers, warning signs, protective factors, staff responses, escalation, and review points."
-      );
-    }
-
-    if (timeline) {
-      timeline.innerHTML = buildSimpleSectionCard(
-        `Timeline for ${personName}`,
-        "A joined-up chronology should make it easier to see patterns across the placement.",
-        "Daily notes, incidents, health, education, family contact, and keywork in one place."
-      );
+    if (activeSectionTab !== "overview") {
+      await loadWorkspaceSection(activeSectionTab);
     }
   }
 
@@ -758,8 +767,7 @@ window.ChildrensHomeOS = (function () {
     renderProfileTab(overview);
     renderAssistantContext(overview);
     renderRightRail(overview);
-    renderAreaSections(overview);
-    setActiveSectionTab(activeSectionTab);
+    await loadAllVisibleWorkspaceContent();
   }
 
   function bindProfileTabs() {
@@ -775,8 +783,8 @@ window.ChildrensHomeOS = (function () {
 
   function bindSectionTabs() {
     document.querySelectorAll("[data-section-tab]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        setActiveSectionTab(btn.getAttribute("data-section-tab"));
+      btn.addEventListener("click", async () => {
+        await setActiveSectionTab(btn.getAttribute("data-section-tab"));
       });
     });
   }
@@ -824,7 +832,7 @@ window.ChildrensHomeOS = (function () {
     });
 
     document.querySelectorAll("[data-quick-open]").forEach(btn => {
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", async () => {
         if (!selectedYoungPerson) {
           alert("Select a young person first.");
           return;
@@ -833,17 +841,17 @@ window.ChildrensHomeOS = (function () {
         const type = btn.getAttribute("data-quick-open");
 
         if (type === "daily-note") {
-          setActiveSectionTab("daily-notes");
+          await setActiveSectionTab("daily-notes");
           openModal("daily-note-modal");
         }
 
         if (type === "incident") {
-          setActiveSectionTab("incidents");
+          await setActiveSectionTab("incidents");
           openModal("incident-modal");
         }
 
         if (type === "health") {
-          setActiveSectionTab("health");
+          await setActiveSectionTab("health");
           openModal("health-modal");
         }
       });
@@ -861,7 +869,7 @@ window.ChildrensHomeOS = (function () {
     });
 
     document.querySelectorAll("[data-capture-type]").forEach(btn => {
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", async () => {
         if (!selectedYoungPerson) {
           alert("Select a young person first.");
           return;
@@ -871,37 +879,37 @@ window.ChildrensHomeOS = (function () {
         closeAllModals();
 
         if (type === "daily-note") {
-          setActiveSectionTab("daily-notes");
+          await setActiveSectionTab("daily-notes");
           openModal("daily-note-modal");
           return;
         }
 
         if (type === "incident") {
-          setActiveSectionTab("incidents");
+          await setActiveSectionTab("incidents");
           openModal("incident-modal");
           return;
         }
 
         if (type === "health") {
-          setActiveSectionTab("health");
+          await setActiveSectionTab("health");
           openModal("health-modal");
           return;
         }
 
         if (type === "family") {
-          setActiveSectionTab("family");
+          await setActiveSectionTab("family");
           openModal("family-modal");
           return;
         }
 
         if (type === "keywork") {
-          setActiveSectionTab("keywork");
+          await setActiveSectionTab("keywork");
           openModal("keywork-modal");
           return;
         }
 
         if (type === "risk") {
-          setActiveSectionTab("risk");
+          await setActiveSectionTab("risk");
           openModal("risk-modal");
         }
       });
