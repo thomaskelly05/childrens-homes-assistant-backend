@@ -1,566 +1,64 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IndiCare | Young Person OS</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
+  <title>Young Person Shell</title>
   <link rel="stylesheet" href="/css/young-people-shell.css" />
 </head>
 <body>
-  <div class="app-shell">
-    <main class="app-main">
-      <header class="shell-header">
-        <div class="shell-header-row">
-          <div class="brand-lockup">
-            <div class="brand-mark">IC</div>
-            <div class="brand-copy">
-              <div class="brand-title">IndiCare</div>
-              <div class="brand-subtitle">Young Person OS</div>
-            </div>
-          </div>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-badge">IC</div>
+        <div>
+          <h1>IndiCare OS</h1>
+          <p>Young Person Shell</p>
+        </div>
+      </div>
 
-          <div class="shell-header-controls">
-            <div class="control-block control-block-large">
-              <label for="youngPersonSelect">Young person</label>
-              <select id="youngPersonSelect" class="select">
-                <option value="">Loading young people…</option>
-              </select>
-            </div>
+      <div class="young-person-summary" id="youngPersonSummary">
+        <div class="avatar" id="youngPersonAvatar">YP</div>
+        <div class="summary-text">
+          <h2 id="youngPersonName">Loading...</h2>
+          <p id="youngPersonMeta">Please wait</p>
+        </div>
+      </div>
 
-            <div class="control-block">
-              <label for="youngPersonSearch">Search</label>
-              <input id="youngPersonSearch" class="field" type="text" placeholder="Search by name or placement">
-            </div>
+      <nav class="nav" id="shellNav">
+        <button class="nav-item active" data-view="overview">Overview</button>
+        <button class="nav-item" data-view="daily-notes">Daily Notes</button>
+        <button class="nav-item" data-view="incidents">Incidents</button>
+        <button class="nav-item" data-view="risk">Risk</button>
+        <button class="nav-item" data-view="plans">Plans</button>
+        <button class="nav-item" data-view="health">Health</button>
+        <button class="nav-item" data-view="education">Education</button>
+        <button class="nav-item" data-view="family">Family</button>
+        <button class="nav-item" data-view="keywork">Keywork</button>
+      </nav>
+    </aside>
 
-            <div class="control-block">
-              <label for="youngPersonStatusFilter">Status</label>
-              <select id="youngPersonStatusFilter" class="select">
-                <option value="">All placements</option>
-                <option value="active">Active</option>
-                <option value="archived">Archived</option>
-              </select>
-            </div>
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h2 id="pageTitle">Overview</h2>
+          <p id="pageSubtitle">Young person workspace</p>
+        </div>
 
-            <div class="control-block control-block-shift">
-              <label>Shift mode</label>
-              <div class="shift-toggle" id="shiftModeToggle">
-                <button class="shift-pill" data-shift-mode="start" type="button">Start</button>
-                <button class="shift-pill active" data-shift-mode="during" type="button">During</button>
-                <button class="shift-pill" data-shift-mode="end" type="button">End</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="shell-header-actions">
-            <button id="quickCaptureBtn" class="primary-btn" type="button">+ Quick capture</button>
-            <button id="openAssistantBtn" class="secondary-btn" type="button">Assistant</button>
-          </div>
+        <div class="topbar-actions">
+          <button class="ghost-btn" id="refreshBtn">Refresh</button>
         </div>
       </header>
 
-      <section class="shell-body">
-        <section class="context-strip">
-          <div class="context-main">
-            <h1 id="pageTitle">Young Person OS</h1>
-            <p id="pageSubtitle">Select a young person to begin.</p>
-          </div>
+      <section id="statusBar" class="status-bar hidden"></section>
 
-          <div id="contextTags" class="context-tags"></div>
-
-          <div class="context-actions">
-            <button class="ghost-btn" type="button" data-quick-open="daily-note">New daily note</button>
-            <button class="ghost-btn" type="button" data-quick-open="incident">New incident</button>
-            <button class="ghost-btn" type="button" data-quick-open="health">New health entry</button>
-          </div>
-        </section>
-
-        <section class="primary-tabs-shell">
-          <div class="primary-tabs">
-            <button class="primary-tab active" data-section-tab="overview" type="button">Overview</button>
-            <button class="primary-tab" data-section-tab="daily-notes" type="button">Daily notes</button>
-            <button class="primary-tab" data-section-tab="incidents" type="button">Incidents</button>
-            <button class="primary-tab" data-section-tab="health" type="button">Health</button>
-            <button class="primary-tab" data-section-tab="education" type="button">Education</button>
-            <button class="primary-tab" data-section-tab="family" type="button">Family</button>
-            <button class="primary-tab" data-section-tab="keywork" type="button">Keywork</button>
-            <button class="primary-tab" data-section-tab="risk" type="button">Risk</button>
-            <button class="primary-tab" data-section-tab="timeline" type="button">Timeline</button>
-          </div>
-        </section>
-
-        <div class="workspace-layout">
-          <div class="workspace-main">
-            <section id="section-overview" class="section-panel active">
-              <div class="overview-grid">
-                <section class="panel">
-                  <div class="panel-head slim">
-                    <div>
-                      <h2>Overview</h2>
-                      <p>Human-first summary, support needs, active alerts, and current context.</p>
-                    </div>
-                  </div>
-                  <div id="overviewPanel" class="panel-body">
-                    <div class="empty-state">Select a young person to open their dashboard.</div>
-                  </div>
-                </section>
-
-                <section class="panel">
-                  <div class="panel-head slim">
-                    <div>
-                      <h2>Profile areas</h2>
-                      <p>Switch between key profile areas without leaving the overview.</p>
-                    </div>
-                  </div>
-                  <div class="panel-body">
-                    <div class="sub-tabs">
-                      <button class="sub-tab active" data-profile-tab="identity" type="button">Identity</button>
-                      <button class="sub-tab" data-profile-tab="communication" type="button">Communication</button>
-                      <button class="sub-tab" data-profile-tab="education" type="button">Education</button>
-                      <button class="sub-tab" data-profile-tab="health" type="button">Health</button>
-                      <button class="sub-tab" data-profile-tab="contacts" type="button">Contacts</button>
-                      <button class="sub-tab" data-profile-tab="alerts" type="button">Alerts</button>
-                    </div>
-
-                    <div id="profileTabContent">
-                      <div class="empty-state compact">Profile content will appear here once a young person is selected.</div>
-                    </div>
-                  </div>
-                </section>
-              </div>
-            </section>
-
-            <section id="section-daily-notes" class="section-panel">
-              <section class="panel">
-                <div class="panel-head">
-                  <div>
-                    <h2>Daily notes</h2>
-                    <p>Keep notes live through the shift and reduce end-of-day pressure.</p>
-                  </div>
-                  <button class="primary-btn" type="button" data-open-modal="daily-note-modal">+ New daily note</button>
-                </div>
-                <div id="dailyNotesSection" class="panel-body">
-                  <div class="empty-state">Select a young person to view daily notes.</div>
-                </div>
-              </section>
-            </section>
-
-            <section id="section-incidents" class="section-panel">
-              <section class="panel">
-                <div class="panel-head">
-                  <div>
-                    <h2>Incidents</h2>
-                    <p>Record incidents clearly and link follow-up, safeguarding, and review actions.</p>
-                  </div>
-                  <button class="primary-btn" type="button" data-open-modal="incident-modal">+ New incident</button>
-                </div>
-                <div id="incidentsSection" class="panel-body">
-                  <div class="empty-state">Select a young person to view incidents.</div>
-                </div>
-              </section>
-            </section>
-
-            <section id="section-health" class="section-panel">
-              <section class="panel">
-                <div class="panel-head">
-                  <div>
-                    <h2>Health</h2>
-                    <p>Appointments, medication, symptoms, injuries, and wellbeing.</p>
-                  </div>
-                  <button class="primary-btn" type="button" data-open-modal="health-modal">+ New health entry</button>
-                </div>
-                <div id="healthSection" class="panel-body">
-                  <div class="empty-state">Select a young person to view health information.</div>
-                </div>
-              </section>
-            </section>
-
-            <section id="section-education" class="section-panel">
-              <section class="panel">
-                <div class="panel-head">
-                  <div>
-                    <h2>Education</h2>
-                    <p>Attendance, provision, support, and daily educational context.</p>
-                  </div>
-                  <button class="primary-btn" type="button" data-open-modal="education-modal">+ New education entry</button>
-                </div>
-                <div id="educationSection" class="panel-body">
-                  <div class="empty-state">Select a young person to view education information.</div>
-                </div>
-              </section>
-            </section>
-
-            <section id="section-family" class="section-panel">
-              <section class="panel">
-                <div class="panel-head">
-                  <div>
-                    <h2>Family and contact</h2>
-                    <p>Contact arrangements, impact, restrictions, and support around family relationships.</p>
-                  </div>
-                  <button class="primary-btn" type="button" data-open-modal="family-modal">+ New family contact</button>
-                </div>
-                <div id="familySection" class="panel-body">
-                  <div class="empty-state">Select a young person to view family contact information.</div>
-                </div>
-              </section>
-            </section>
-
-            <section id="section-keywork" class="section-panel">
-              <section class="panel">
-                <div class="panel-head">
-                  <div>
-                    <h2>Keywork</h2>
-                    <p>Goals, conversations, progress, reflections, and the young person’s voice.</p>
-                  </div>
-                  <button class="primary-btn" type="button" data-open-modal="keywork-modal">+ New keywork session</button>
-                </div>
-                <div id="keyworkSection" class="panel-body">
-                  <div class="empty-state">Select a young person to view keywork information.</div>
-                </div>
-              </section>
-            </section>
-
-            <section id="section-risk" class="section-panel">
-              <section class="panel">
-                <div class="panel-head">
-                  <div>
-                    <h2>Risk</h2>
-                    <p>Triggers, warning signs, protective factors, staff responses, and review needs.</p>
-                  </div>
-                  <button class="primary-btn" type="button" data-open-modal="risk-modal">+ New risk review</button>
-                </div>
-                <div id="riskSection" class="panel-body">
-                  <div class="empty-state">Select a young person to view risk information.</div>
-                </div>
-              </section>
-            </section>
-
-            <section id="section-timeline" class="section-panel">
-              <section class="panel">
-                <div class="panel-head">
-                  <div>
-                    <h2>Timeline</h2>
-                    <p>A joined-up chronology across notes, incidents, health, education, and contact.</p>
-                  </div>
-                </div>
-                <div id="timelineSection" class="panel-body">
-                  <div class="empty-state">Select a young person to view the timeline.</div>
-                </div>
-              </section>
-            </section>
-          </div>
-
-          <aside class="workspace-side">
-            <section class="panel side-panel">
-              <div class="panel-head slim">
-                <div>
-                  <h2>Live care feed</h2>
-                  <p>Only what matters right now.</p>
-                </div>
-              </div>
-              <div class="panel-body">
-                <div id="liveRightRail" class="snapshot-list">
-                  <div class="snapshot-item">
-                    <div class="snapshot-title">Current priorities</div>
-                    <div class="snapshot-text">Select a young person to surface alerts, risks, tasks, reviews, and follow-up.</div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section class="panel side-panel">
-              <div class="panel-head slim">
-                <div>
-                  <h2>Assistant</h2>
-                  <p>Support summaries, reviews, and handovers.</p>
-                </div>
-              </div>
-              <div class="panel-body assistant-centre">
-                <div id="assistantContextBox" class="assistant-context-box">
-                  Choose a young person and this area will hold live assistant context and suggested actions.
-                </div>
-
-                <div class="assistant-prompt">
-                  <div class="assistant-actions-grid">
-                    <button class="secondary-btn" type="button" data-assistant-action="daily-note">Draft daily note</button>
-                    <button class="secondary-btn" type="button" data-assistant-action="handover">Create handover</button>
-                    <button class="secondary-btn" type="button" data-assistant-action="risk-review">Review risks</button>
-                    <button class="secondary-btn" type="button" data-assistant-action="monthly-review">Build monthly review</button>
-                  </div>
-                </div>
-              </div>
-            </section>
-          </aside>
+      <section id="viewContent" class="view-content">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Loading workspace...</p>
         </div>
       </section>
     </main>
-  </div>
-
-  <!-- Quick capture -->
-  <div id="quickCaptureModal" class="modal hidden" aria-hidden="true">
-    <div class="modal-backdrop" data-close-modal="true"></div>
-    <div class="modal-card">
-      <div class="modal-head">
-        <div>
-          <h3>Quick capture</h3>
-          <p>Start recording in one click.</p>
-        </div>
-        <button id="closeQuickCaptureBtn" class="icon-btn" type="button" aria-label="Close quick capture">✕</button>
-      </div>
-
-      <div class="modal-body">
-        <div class="quick-capture-grid">
-          <button class="capture-tile" data-capture-type="daily-note" type="button">
-            <span class="capture-title">Daily note</span>
-            <span class="capture-text">General update, routines, support used, outcomes.</span>
-          </button>
-
-          <button class="capture-tile" data-capture-type="incident" type="button">
-            <span class="capture-title">Incident</span>
-            <span class="capture-text">Behaviour, safeguarding, injury, missing, restraint.</span>
-          </button>
-
-          <button class="capture-tile" data-capture-type="health" type="button">
-            <span class="capture-title">Health</span>
-            <span class="capture-text">Medication, symptoms, appointments, wellbeing.</span>
-          </button>
-
-          <button class="capture-tile" data-capture-type="family" type="button">
-            <span class="capture-title">Family contact</span>
-            <span class="capture-text">Planned contact, impact, concerns, follow-up.</span>
-          </button>
-
-          <button class="capture-tile" data-capture-type="keywork" type="button">
-            <span class="capture-title">Keywork</span>
-            <span class="capture-text">Goals, voice, reflection, next steps.</span>
-          </button>
-
-          <button class="capture-tile" data-capture-type="risk" type="button">
-            <span class="capture-title">Risk</span>
-            <span class="capture-text">Review concerns, patterns, and staff responses.</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Daily note modal -->
-  <div id="daily-note-modal" class="modal hidden" aria-hidden="true">
-    <div class="modal-backdrop" data-close-modal="true"></div>
-    <div class="modal-card modal-card-large">
-      <div class="modal-head">
-        <div>
-          <h3>New daily note</h3>
-          <p>Capture the day clearly and warmly.</p>
-        </div>
-        <button class="icon-btn" type="button" data-close-modal-btn="true" aria-label="Close">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="modal-form-grid">
-          <div class="form-block">
-            <label>Presentation and emotional wellbeing</label>
-            <textarea class="textarea" placeholder="How did the young person present today?"></textarea>
-          </div>
-          <div class="form-block">
-            <label>Activities, routines, and key events</label>
-            <textarea class="textarea" placeholder="What happened through the shift?"></textarea>
-          </div>
-          <div class="form-block">
-            <label>Support used and what helped</label>
-            <textarea class="textarea" placeholder="What support worked well?"></textarea>
-          </div>
-          <div class="form-block">
-            <label>Risks, concerns, and follow-up</label>
-            <textarea class="textarea" placeholder="Any risks or handover points?"></textarea>
-          </div>
-          <div class="record-action-bar">
-            <button class="secondary-btn" type="button">Save draft</button>
-            <button class="primary-btn" type="button">Save daily note</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Incident modal -->
-  <div id="incident-modal" class="modal hidden" aria-hidden="true">
-    <div class="modal-backdrop" data-close-modal="true"></div>
-    <div class="modal-card modal-card-large">
-      <div class="modal-head">
-        <div>
-          <h3>New incident</h3>
-          <p>Record clearly, calmly, and factually.</p>
-        </div>
-        <button class="icon-btn" type="button" data-close-modal-btn="true" aria-label="Close">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="modal-form-grid">
-          <div class="form-row-2">
-            <div class="form-block">
-              <label>Incident type</label>
-              <select class="select">
-                <option>Behaviour</option>
-                <option>Safeguarding</option>
-                <option>Missing from home</option>
-                <option>Injury</option>
-                <option>Restraint</option>
-                <option>Property damage</option>
-              </select>
-            </div>
-            <div class="form-block">
-              <label>Date and time</label>
-              <input class="field" type="datetime-local">
-            </div>
-          </div>
-          <div class="form-block">
-            <label>Brief summary</label>
-            <input class="field" type="text" placeholder="What happened?">
-          </div>
-          <div class="form-block">
-            <label>Full account</label>
-            <textarea class="textarea" placeholder="What happened before, during, and after?"></textarea>
-          </div>
-          <div class="record-action-bar">
-            <button class="secondary-btn" type="button">Save draft</button>
-            <button class="primary-btn" type="button">Save incident</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Health modal -->
-  <div id="health-modal" class="modal hidden" aria-hidden="true">
-    <div class="modal-backdrop" data-close-modal="true"></div>
-    <div class="modal-card">
-      <div class="modal-head">
-        <div>
-          <h3>New health entry</h3>
-          <p>Medication, symptoms, appointments, injuries, and wellbeing.</p>
-        </div>
-        <button class="icon-btn" type="button" data-close-modal-btn="true" aria-label="Close">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="modal-form-grid">
-          <div class="form-block">
-            <label>Health entry</label>
-            <textarea class="textarea" placeholder="What needs recording?"></textarea>
-          </div>
-          <div class="record-action-bar">
-            <button class="secondary-btn" type="button">Save draft</button>
-            <button class="primary-btn" type="button">Save health entry</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Education modal -->
-  <div id="education-modal" class="modal hidden" aria-hidden="true">
-    <div class="modal-backdrop" data-close-modal="true"></div>
-    <div class="modal-card">
-      <div class="modal-head">
-        <div>
-          <h3>New education entry</h3>
-          <p>Attendance, engagement, and support.</p>
-        </div>
-        <button class="icon-btn" type="button" data-close-modal-btn="true" aria-label="Close">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="modal-form-grid">
-          <div class="form-block">
-            <label>Education entry</label>
-            <textarea class="textarea" placeholder="What needs recording?"></textarea>
-          </div>
-          <div class="record-action-bar">
-            <button class="secondary-btn" type="button">Save draft</button>
-            <button class="primary-btn" type="button">Save education entry</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Family modal -->
-  <div id="family-modal" class="modal hidden" aria-hidden="true">
-    <div class="modal-backdrop" data-close-modal="true"></div>
-    <div class="modal-card">
-      <div class="modal-head">
-        <div>
-          <h3>New family contact</h3>
-          <p>Capture contact, impact, and concerns.</p>
-        </div>
-        <button class="icon-btn" type="button" data-close-modal-btn="true" aria-label="Close">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="modal-form-grid">
-          <div class="form-block">
-            <label>Family contact entry</label>
-            <textarea class="textarea" placeholder="What happened before, during, and after contact?"></textarea>
-          </div>
-          <div class="record-action-bar">
-            <button class="secondary-btn" type="button">Save draft</button>
-            <button class="primary-btn" type="button">Save family contact</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Keywork modal -->
-  <div id="keywork-modal" class="modal hidden" aria-hidden="true">
-    <div class="modal-backdrop" data-close-modal="true"></div>
-    <div class="modal-card">
-      <div class="modal-head">
-        <div>
-          <h3>New keywork session</h3>
-          <p>Record goals, voice, reflection, and next steps.</p>
-        </div>
-        <button class="icon-btn" type="button" data-close-modal-btn="true" aria-label="Close">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="modal-form-grid">
-          <div class="form-block">
-            <label>Keywork note</label>
-            <textarea class="textarea" placeholder="What was discussed and what matters next?"></textarea>
-          </div>
-          <div class="record-action-bar">
-            <button class="secondary-btn" type="button">Save draft</button>
-            <button class="primary-btn" type="button">Save keywork entry</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Risk modal -->
-  <div id="risk-modal" class="modal hidden" aria-hidden="true">
-    <div class="modal-backdrop" data-close-modal="true"></div>
-    <div class="modal-card">
-      <div class="modal-head">
-        <div>
-          <h3>New risk review</h3>
-          <p>Capture triggers, concerns, and staff responses.</p>
-        </div>
-        <button class="icon-btn" type="button" data-close-modal-btn="true" aria-label="Close">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="modal-form-grid">
-          <div class="form-block">
-            <label>Risk review entry</label>
-            <textarea class="textarea" placeholder="What has changed or needs reviewing?"></textarea>
-          </div>
-          <div class="record-action-bar">
-            <button class="secondary-btn" type="button">Save draft</button>
-            <button class="primary-btn" type="button">Save risk review</button>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 
   <script src="/js/young-people-shell.js"></script>
