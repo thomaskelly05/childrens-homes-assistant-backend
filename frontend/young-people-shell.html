@@ -3,38 +3,47 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Young Person Shell</title>
+  <title>IndiCare OS • Young Person Workspace</title>
   <link rel="stylesheet" href="/css/young-people-shell.css" />
 </head>
 <body>
-  <div class="shell">
+  <div class="app-shell">
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-badge">IC</div>
-        <div>
+        <div class="brand-mark">IC</div>
+        <div class="brand-copy">
           <h1>IndiCare OS</h1>
-          <p>Young Person Shell</p>
+          <p>Young Person Workspace</p>
         </div>
       </div>
 
-      <div class="young-person-summary" id="youngPersonSummary">
-        <div class="avatar" id="youngPersonAvatar">YP</div>
-        <div class="summary-text">
-          <h2 id="youngPersonName">No young person selected</h2>
-          <p id="youngPersonMeta">Choose from the selector</p>
+      <section class="person-summary">
+        <div class="person-avatar-wrap">
+          <img id="personPhoto" class="person-photo hidden" alt="Young person photo" />
+          <div id="personAvatar" class="person-avatar">YP</div>
         </div>
+        <div class="person-text">
+          <h2 id="personName">No young person selected</h2>
+          <p id="personMeta">Choose from the selector</p>
+        </div>
+      </section>
+
+      <div class="sidebar-actions">
+        <button id="changePersonBtn" class="sidebar-btn">Change young person</button>
       </div>
 
-      <nav class="nav" id="shellNav">
-        <button class="nav-item active" data-view="overview">Overview</button>
-        <button class="nav-item" data-view="daily-notes">Daily Notes</button>
-        <button class="nav-item" data-view="incidents">Incidents</button>
-        <button class="nav-item" data-view="risk">Risk</button>
-        <button class="nav-item" data-view="plans">Plans</button>
-        <button class="nav-item" data-view="health">Health</button>
-        <button class="nav-item" data-view="education">Education</button>
-        <button class="nav-item" data-view="family">Family</button>
-        <button class="nav-item" data-view="keywork">Keywork</button>
+      <nav class="sidebar-nav" id="sidebarNav">
+        <button class="nav-btn active" data-view="home">Home</button>
+        <button class="nav-btn" data-view="calendar">Calendar</button>
+        <button class="nav-btn" data-view="timeline">What happened</button>
+        <button class="nav-btn" data-view="daily-notes">Daily notes</button>
+        <button class="nav-btn" data-view="incidents">Incidents</button>
+        <button class="nav-btn" data-view="risk">Current risks</button>
+        <button class="nav-btn" data-view="plans">Plans and guidance</button>
+        <button class="nav-btn" data-view="health">Health</button>
+        <button class="nav-btn" data-view="education">Education</button>
+        <button class="nav-btn" data-view="family">Family and contact</button>
+        <button class="nav-btn" data-view="keywork">Keywork</button>
       </nav>
     </aside>
 
@@ -44,37 +53,64 @@
           <h2 id="pageTitle">Select a young person</h2>
           <p id="pageSubtitle">Open a workspace to begin</p>
         </div>
-
         <div class="topbar-actions">
-          <button class="ghost-btn hidden" id="refreshBtn">Refresh</button>
+          <button id="refreshBtn" class="secondary-btn hidden">Refresh</button>
         </div>
       </header>
 
       <section id="statusBar" class="status-bar hidden"></section>
 
       <section id="selectorPanel" class="panel hidden">
-        <h3>Select a young person</h3>
-        <p class="selector-help">Choose a young person to open their OS workspace.</p>
+        <div class="panel-header">
+          <div>
+            <h3>Select a young person</h3>
+            <p class="panel-subtitle">Choose a young person to open their record.</p>
+          </div>
+        </div>
 
         <div class="selector-toolbar">
           <input
             type="text"
             id="selectorSearch"
-            class="selector-input"
-            placeholder="Search by name..."
+            class="text-input"
+            placeholder="Search by name, preferred name, status or risk..."
             autocomplete="off"
           />
-          <button class="ghost-btn" id="selectorRefreshBtn">Refresh list</button>
+          <button id="selectorRefreshBtn" class="secondary-btn">Refresh list</button>
         </div>
 
         <div id="selectorList" class="selector-list"></div>
       </section>
 
-      <section id="viewContent" class="view-content">
-        <div class="loading-state">
-          <div class="spinner"></div>
-          <p>Loading workspace...</p>
-        </div>
+      <section id="workspacePanel" class="workspace">
+        <section id="quickActions" class="quick-actions hidden">
+          <button class="quick-action primary" data-action="daily-note">
+            <span class="quick-action-title">Add daily note</span>
+            <span class="quick-action-subtitle">Record this shift</span>
+          </button>
+
+          <button class="quick-action" data-action="incident">
+            <span class="quick-action-title">Log incident</span>
+            <span class="quick-action-subtitle">Record an incident now</span>
+          </button>
+
+          <button class="quick-action" data-action="risk">
+            <span class="quick-action-title">Update risk</span>
+            <span class="quick-action-subtitle">Review current concerns</span>
+          </button>
+
+          <button class="quick-action" data-action="plan">
+            <span class="quick-action-title">Add plan</span>
+            <span class="quick-action-subtitle">Create or update guidance</span>
+          </button>
+        </section>
+
+        <section id="viewContent" class="view-content">
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Loading workspace...</p>
+          </div>
+        </section>
       </section>
     </main>
   </div>
