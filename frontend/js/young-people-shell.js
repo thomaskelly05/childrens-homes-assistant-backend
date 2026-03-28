@@ -20,7 +20,6 @@ const els = {
   personName: document.getElementById("personName"),
   personMeta: document.getElementById("personMeta"),
   personAvatar: document.getElementById("personAvatar"),
-  personPhoto: document.getElementById("personPhoto"),
   selectorPanel: document.getElementById("selectorPanel"),
   selectorList: document.getElementById("selectorList"),
   selectorSearch: document.getElementById("selectorSearch"),
@@ -33,7 +32,7 @@ const els = {
 const VIEW_CONFIG = {
   home: {
     title: "Home",
-    subtitle: "What staff need most, first",
+    subtitle: "What staff need first",
     loader: loadHome,
   },
   calendar: {
@@ -43,28 +42,28 @@ const VIEW_CONFIG = {
   },
   timeline: {
     title: "What happened",
-    subtitle: "Chronology across all linked records",
+    subtitle: "Chronology across all records",
     loader: loadTimeline,
   },
   "daily-notes": {
     title: "Daily notes",
-    subtitle: "Shift-based daily recording",
+    subtitle: "Shift recording",
     loader: () => loadRecordList(`/young-people/${state.youngPersonId}/daily-notes`, "Daily notes"),
   },
   incidents: {
     title: "Incidents",
-    subtitle: "Behavioural and safeguarding incidents",
+    subtitle: "Incidents and safeguarding concerns",
     loader: () => loadRecordList(`/young-people/${state.youngPersonId}/incidents`, "Incidents"),
   },
   risk: {
-    title: "Current risks",
-    subtitle: "Current risks and active concerns",
+    title: "Risks",
+    subtitle: "Current risks and concerns",
     loader: () => loadRecordList(`/young-people/${state.youngPersonId}/risk`, "Risk assessments"),
   },
   plans: {
-    title: "Plans and guidance",
-    subtitle: "Support plans and guidance for staff",
-    loader: () => loadRecordList(`/young-people/${state.youngPersonId}/plans`, "Support plans"),
+    title: "Plans",
+    subtitle: "Plans and staff guidance",
+    loader: () => loadRecordList(`/young-people/${state.youngPersonId}/plans`, "Plans"),
   },
   health: {
     title: "Health",
@@ -77,14 +76,14 @@ const VIEW_CONFIG = {
     loader: loadEducation,
   },
   family: {
-    title: "Family and contact",
-    subtitle: "Contacts and family contact records",
+    title: "Family",
+    subtitle: "Family and contact records",
     loader: loadFamily,
   },
   keywork: {
     title: "Keywork",
-    subtitle: "Keywork sessions and follow-up",
-    loader: () => loadRecordList(`/young-people/${state.youngPersonId}/keywork`, "Keywork sessions"),
+    subtitle: "Keywork sessions",
+    loader: () => loadRecordList(`/young-people/${state.youngPersonId}/keywork`, "Keywork"),
   },
 };
 
@@ -326,9 +325,6 @@ function showSelectorMode() {
   els.personName.textContent = "No young person selected";
   els.personMeta.textContent = "Choose from the selector";
   els.personAvatar.textContent = "YP";
-  els.personPhoto.classList.add("hidden");
-  els.personPhoto.removeAttribute("src");
-  els.personAvatar.classList.remove("hidden");
 }
 
 function hideSelectorMode() {
@@ -378,14 +374,10 @@ function renderSelectorList(items) {
       item.summary_risk_level ? `Risk: ${item.summary_risk_level}` : null,
     ].filter(Boolean).join(" • ");
 
-    const media = item.photo_url
-      ? `<img src="${escapeHtml(item.photo_url)}" class="selector-card-photo" alt="Young person photo" />`
-      : `<div class="selector-card-avatar">${escapeHtml(initialsFromName(name))}</div>`;
-
     return `
       <article class="selector-card">
         <div class="selector-card-left">
-          ${media}
+          <div class="selector-card-avatar">${escapeHtml(initialsFromName(name))}</div>
           <div>
             <h4>${escapeHtml(name)}</h4>
             <p>${escapeHtml(meta || "Young person record")}</p>
@@ -460,17 +452,7 @@ async function loadYoungPerson() {
 
   els.personName.textContent = fullName;
   els.personMeta.textContent = meta || "Young person record";
-
-  if (youngPerson.photo_url) {
-    els.personPhoto.src = youngPerson.photo_url;
-    els.personPhoto.classList.remove("hidden");
-    els.personAvatar.classList.add("hidden");
-  } else {
-    els.personPhoto.classList.add("hidden");
-    els.personPhoto.removeAttribute("src");
-    els.personAvatar.classList.remove("hidden");
-    els.personAvatar.textContent = initialsFromName(fullName);
-  }
+  els.personAvatar.textContent = initialsFromName(fullName);
 }
 
 async function loadHome() {
@@ -581,7 +563,7 @@ async function loadHome() {
       <div class="panel">
         <div class="panel-header">
           <div>
-            <h3>Plans and guidance</h3>
+            <h3>Plans</h3>
             <p class="panel-subtitle">Current plans staff may need to follow.</p>
           </div>
         </div>
@@ -596,8 +578,8 @@ async function loadHome() {
     <div class="panel">
       <div class="panel-header">
         <div>
-          <h3>What happened</h3>
-          <p class="panel-subtitle">Recent activity from the chronology.</p>
+          <h3>Recent activity</h3>
+          <p class="panel-subtitle">Recent chronology across the record.</p>
         </div>
       </div>
       ${
@@ -607,17 +589,6 @@ async function loadHome() {
       }
     </div>
   `;
-}
-
-async function loadCalendarView() {
-  setLoading("Loading calendar...");
-
-  await Promise.all([
-    loadCalendarMonthSummary(),
-    loadSelectedDayRecords(),
-  ]);
-
-  renderCalendarView();
 }
 
 async function loadCalendarMonthSummary() {
@@ -776,6 +747,17 @@ function buildDaySummary(records) {
   return { total, incidents, dailyNotes };
 }
 
+async function loadCalendarView() {
+  setLoading("Loading calendar...");
+
+  await Promise.all([
+    loadCalendarMonthSummary(),
+    loadSelectedDayRecords(),
+  ]);
+
+  renderCalendarView();
+}
+
 function renderCalendarView() {
   const selectedDateLabel = formatDate(`${state.selectedDate}T12:00:00`);
   const summary = buildDaySummary(state.selectedDayRecords);
@@ -918,10 +900,7 @@ function bindCalendarEvents() {
 
       const typeValue = String(item.record_type || item.event_type || "").toLowerCase();
 
-      const matchesSearch = !term || haystack.includes(term);
-      const matchesType = !type || typeValue === type;
-
-      return matchesSearch && matchesType;
+      return (!term || haystack.includes(term)) && (!type || typeValue === type);
     });
 
     dayResults.innerHTML = renderDayRecords(filtered);
@@ -947,7 +926,7 @@ function renderTimelinePanel(items) {
       <div class="panel-header">
         <div>
           <h3>What happened</h3>
-          <p class="panel-subtitle">Chronology across all linked records.</p>
+          <p class="panel-subtitle">Chronology across all records.</p>
         </div>
       </div>
 
@@ -995,10 +974,7 @@ function renderTimelinePanel(items) {
 
       const typeValue = String(item.event_type || item.category || "").toLowerCase();
 
-      const matchesSearch = !term || haystack.includes(term);
-      const matchesType = !type || typeValue === type;
-
-      return matchesSearch && matchesType;
+      return (!term || haystack.includes(term)) && (!type || typeValue === type);
     });
 
     resultsEl.innerHTML = filtered.length
@@ -1042,7 +1018,7 @@ async function loadHealth() {
       <div class="panel-header">
         <div>
           <h3>Health profile</h3>
-          <p class="panel-subtitle">Key health information and baseline details.</p>
+          <p class="panel-subtitle">Key health information.</p>
         </div>
       </div>
       <div class="kv">
@@ -1098,7 +1074,7 @@ async function loadEducation() {
       <div class="panel-header">
         <div>
           <h3>Education profile</h3>
-          <p class="panel-subtitle">Current school and education support information.</p>
+          <p class="panel-subtitle">Current school and support information.</p>
         </div>
       </div>
       <div class="kv">
@@ -1129,7 +1105,7 @@ async function loadFamily() {
       <div class="panel-header">
         <div>
           <h3>Family contacts</h3>
-          <p class="panel-subtitle">Approved, restricted and key family relationships.</p>
+          <p class="panel-subtitle">Family and contact information.</p>
         </div>
       </div>
       ${
@@ -1157,7 +1133,7 @@ Notes: ${escapeHtml(contact.notes || "—")}</div>
     </div>
 
     <div class="panel">
-      <h3>Family contact records</h3>
+      <h3>Family records</h3>
       ${records.length ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>` : `<div class="empty-state">No family contact records.</div>`}
     </div>
   `;
@@ -1242,10 +1218,10 @@ function bindEvents() {
 
     const action = btn.dataset.action;
     const messages = {
-      "daily-note": "Next step: connect this button to your daily note modal or route.",
-      incident: "Next step: connect this button to your incident modal or route.",
-      risk: "Next step: connect this button to your risk editor modal or route.",
-      plan: "Next step: connect this button to your support plan modal or route.",
+      "daily-note": "Connect this button to your daily note creation flow.",
+      incident: "Connect this button to your incident creation flow.",
+      risk: "Connect this button to your risk update flow.",
+      plan: "Connect this button to your plan creation flow.",
     };
 
     showError(messages[action] || "Action not connected yet.");
