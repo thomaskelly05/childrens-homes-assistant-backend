@@ -2,6 +2,7 @@ const state = {
   youngPersonId: null,
   youngPerson: null,
   currentView: "overview",
+  selectorItems: [],
 };
 
 const els = {
@@ -14,6 +15,10 @@ const els = {
   youngPersonName: document.getElementById("youngPersonName"),
   youngPersonMeta: document.getElementById("youngPersonMeta"),
   youngPersonAvatar: document.getElementById("youngPersonAvatar"),
+  selectorPanel: document.getElementById("selectorPanel"),
+  selectorList: document.getElementById("selectorList"),
+  selectorSearch: document.getElementById("selectorSearch"),
+  selectorRefreshBtn: document.getElementById("selectorRefreshBtn"),
 };
 
 const VIEW_CONFIG = {
@@ -75,7 +80,7 @@ async function apiGet(url) {
     method: "GET",
     credentials: "include",
     headers: {
-      "Accept": "application/json",
+      Accept: "application/json",
     },
   });
 
@@ -133,14 +138,14 @@ function formatDate(value) {
   if (Number.isNaN(date.getTime())) return String(value);
   return date.toLocaleString("en-GB", {
     dateStyle: "medium",
-    timeStyle: value.includes?.("T") ? "short" : undefined,
+    timeStyle: String(value).includes("T") ? "short" : undefined,
   });
 }
 
 function initialsFromName(name) {
   if (!name) return "YP";
   const parts = name.trim().split(/\s+/).slice(0, 2);
-  return parts.map(p => p[0]?.toUpperCase() || "").join("") || "YP";
+  return parts.map((p) => p[0]?.toUpperCase() || "").join("") || "YP";
 }
 
 function statusBadgeClass(status) {
@@ -157,15 +162,29 @@ function renderBadges(values = []) {
     <div class="badge-row">
       ${values
         .filter(Boolean)
-        .map(value => `<span class="badge ${statusBadgeClass(value)}">${escapeHtml(value)}</span>`)
+        .map(
+          (value) =>
+            `<span class="badge ${statusBadgeClass(value)}">${escapeHtml(value)}</span>`
+        )
         .join("")}
     </div>
   `;
 }
 
 function renderRecordCard(item) {
-  const title = item.title || item.topic || item.contact_person || item.record_type || "Record";
-  const summary = item.summary || item.narrative || item.description || "No summary available.";
+  const title =
+    item.title ||
+    item.topic ||
+    item.contact_person ||
+    item.record_type ||
+    "Record";
+
+  const summary =
+    item.summary ||
+    item.narrative ||
+    item.description ||
+    "No summary available.";
+
   const metaBits = [
     item.occurred_at ? formatDate(item.occurred_at) : null,
     item.session_date ? formatDate(item.session_date) : null,
@@ -204,9 +223,130 @@ function updateHeaderForView(viewKey) {
 
 function markActiveNav(viewKey) {
   const buttons = els.nav.querySelectorAll(".nav-item");
-  buttons.forEach(btn => {
+  buttons.forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.view === viewKey);
   });
+}
+
+function showSelectorMode() {
+  els.selectorPanel.classList.remove("hidden");
+  els.content.classList.add("hidden");
+  els.refreshBtn.classList.add("hidden");
+  els.pageTitle.textContent = "Select a young person";
+  els.pageSubtitle.textContent = "Open a workspace to begin";
+  els.youngPersonName.textContent = "No young person selected";
+  els.youngPersonMeta.textContent = "Choose from the list";
+  els.youngPersonAvatar.textContent = "YP";
+}
+
+function hideSelectorMode() {
+  els.selectorPanel.classList.add("hidden");
+  els.content.classList.remove("hidden");
+  els.refreshBtn.classList.remove("hidden");
+}
+
+function openYoungPerson(id) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("id", String(id));
+  window.history.replaceState({}, "", url.toString());
+
+  state.youngPersonId = Number(id);
+  state.currentView = "overview";
+
+  hideSelectorMode();
+
+  loadYoungPerson()
+    .then(loadCurrentView)
+    .catch((error) => {
+      console.error(error);
+      showError(error.message || "Failed to load young person.");
+      setEmpty("Unable to load young person workspace.");
+    });
+}
+
+function renderSelectorList(items) {
+  if (!items.length) {
+    els.selectorList.innerHTML = `<div class="selector-empty">No young people found.</div>`;
+    return;
+  }
+
+  els.selectorList.innerHTML = items
+    .map((item) => {
+      const name =
+        [item.first_name, item.last_name].filter(Boolean).join(" ").trim() ||
+        item.preferred_name ||
+        "Young Person";
+
+      const meta = [
+        item.preferred_name ? `Preferred: ${item.preferred_name}` : null,
+        item.placement_status || null,
+        item.summary_risk_level ? `Risk: ${item.summary_risk_level}` : null,
+      ]
+        .filter(Boolean)
+        .join(" • ");
+
+      return `
+        <article class="selector-card">
+          <div class="selector-card-left">
+            <div class="selector-card-avatar">${escapeHtml(initialsFromName(name))}</div>
+            <div>
+              <h4>${escapeHtml(name)}</h4>
+              <p>${escapeHtml(meta || "Young person record")}</p>
+            </div>
+          </div>
+          <button class="primary-btn" data-open-young-person="${item.id}">Open</button>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function filterSelectorList() {
+  const term = (els.selectorSearch.value || "").trim().toLowerCase();
+
+  if (!term) {
+    renderSelectorList(state.selectorItems);
+    return;
+  }
+
+  const filtered = state.selectorItems.filter((item) => {
+    const haystack = [
+      item.first_name,
+      item.last_name,
+      item.preferred_name,
+      item.placement_status,
+      item.summary_risk_level,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    return haystack.includes(term);
+  });
+
+  renderSelectorList(filtered);
+}
+
+async function loadYoungPersonSelector() {
+  clearError();
+  showSelectorMode();
+
+  els.selectorList.innerHTML = `
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading young people...</p>
+    </div>
+  `;
+
+  try {
+    const data = await apiGet("/young-people");
+    state.selectorItems = data.young_people || [];
+    renderSelectorList(state.selectorItems);
+  } catch (error) {
+    console.error(error);
+    showError(error.message || "Failed to load young people.");
+    els.selectorList.innerHTML = `<div class="selector-empty">Unable to load young people.</div>`;
+  }
 }
 
 async function loadYoungPerson() {
@@ -214,12 +354,18 @@ async function loadYoungPerson() {
   const yp = result.young_person || result.bundle?.young_person || result;
   state.youngPerson = yp;
 
-  const fullName = [yp.first_name, yp.last_name].filter(Boolean).join(" ").trim() || yp.preferred_name || "Young Person";
+  const fullName =
+    [yp.first_name, yp.last_name].filter(Boolean).join(" ").trim() ||
+    yp.preferred_name ||
+    "Young Person";
+
   const meta = [
     yp.preferred_name ? `Preferred: ${yp.preferred_name}` : null,
     yp.placement_status || null,
     yp.summary_risk_level ? `Risk: ${yp.summary_risk_level}` : null,
-  ].filter(Boolean).join(" • ");
+  ]
+    .filter(Boolean)
+    .join(" • ");
 
   els.youngPersonName.textContent = fullName;
   els.youngPersonMeta.textContent = meta || "Young person record";
@@ -256,14 +402,20 @@ async function loadOverview() {
     <div class="panel">
       <h3>Dashboard counts</h3>
       <div class="grid grid-3">
-        ${Object.keys(counts).length
-          ? Object.entries(counts).map(([key, value]) => `
-            <div class="stat-card">
-              <div class="label">${escapeHtml(key.replaceAll("_", " "))}</div>
-              <div class="value">${escapeHtml(String(value))}</div>
-            </div>
-          `).join("")
-          : `<div class="empty-state">No dashboard counts returned.</div>`}
+        ${
+          Object.keys(counts).length
+            ? Object.entries(counts)
+                .map(
+                  ([key, value]) => `
+                    <div class="stat-card">
+                      <div class="label">${escapeHtml(key.replaceAll("_", " "))}</div>
+                      <div class="value">${escapeHtml(String(value))}</div>
+                    </div>
+                  `
+                )
+                .join("")
+            : `<div class="empty-state">No dashboard counts returned.</div>`
+        }
       </div>
     </div>
 
@@ -271,18 +423,24 @@ async function loadOverview() {
       <h3>Active alerts</h3>
       ${
         alerts.length
-          ? `<div class="record-list">${alerts.map(alert => `
-              <article class="record-card">
-                <div class="record-card-header">
-                  <div>
-                    <h4>${escapeHtml(alert.title || "Alert")}</h4>
-                    <div class="meta">${escapeHtml(alert.alert_type || "Alert")} • ${escapeHtml(alert.severity || "standard")}</div>
-                  </div>
-                </div>
-                <div class="body">${escapeHtml(alert.description || "No description.")}</div>
-                ${renderBadges([alert.severity, alert.is_active ? "active" : "inactive"])}
-              </article>
-            `).join("")}</div>`
+          ? `<div class="record-list">${alerts
+              .map(
+                (alert) => `
+                  <article class="record-card">
+                    <div class="record-card-header">
+                      <div>
+                        <h4>${escapeHtml(alert.title || "Alert")}</h4>
+                        <div class="meta">${escapeHtml(
+                          alert.alert_type || "Alert"
+                        )} • ${escapeHtml(alert.severity || "standard")}</div>
+                      </div>
+                    </div>
+                    <div class="body">${escapeHtml(alert.description || "No description.")}</div>
+                    ${renderBadges([alert.severity, alert.is_active ? "active" : "inactive"])}
+                  </article>
+                `
+              )
+              .join("")}</div>`
           : `<div class="empty-state">No active alerts.</div>`
       }
     </div>
@@ -300,8 +458,9 @@ async function loadOverview() {
 
 async function loadRecordList(url, emptyLabel) {
   setLoading(`Loading ${emptyLabel.toLowerCase()}...`);
+
   const data = await apiGet(url);
-  const items = data.items || data.timeline || data.records || data[emptyLabel.toLowerCase()] || [];
+  const items = data.items || data.timeline || data.records || [];
 
   if (!items.length) {
     setEmpty(`No ${emptyLabel.toLowerCase()} found.`);
@@ -317,6 +476,7 @@ async function loadRecordList(url, emptyLabel) {
 
 async function loadHealth() {
   setLoading("Loading health...");
+
   const data = await apiGet(`/young-people/${state.youngPersonId}/health`);
 
   const profile = data.health_profile || data.profile || {};
@@ -338,34 +498,51 @@ async function loadHealth() {
 
     <div class="panel">
       <h3>Health records</h3>
-      ${records.length ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>` : `<div class="empty-state">No health records.</div>`}
+      ${
+        records.length
+          ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>`
+          : `<div class="empty-state">No health records.</div>`
+      }
     </div>
 
     <div class="panel">
       <h3>Medication profiles</h3>
       ${
         medicationProfiles.length
-          ? `<div class="record-list">${medicationProfiles.map(item => `
-              <article class="record-card">
-                <h4>${escapeHtml(item.medication_name || "Medication")}</h4>
-                <div class="meta">${escapeHtml(item.dosage || "—")} • ${escapeHtml(item.frequency || "—")}</div>
-                <div class="body">${escapeHtml(item.notes || item.prn_guidance || "No notes.")}</div>
-                ${renderBadges([item.is_active ? "active" : "inactive"])}
-              </article>
-            `).join("")}</div>`
+          ? `<div class="record-list">${medicationProfiles
+              .map(
+                (item) => `
+                  <article class="record-card">
+                    <h4>${escapeHtml(item.medication_name || "Medication")}</h4>
+                    <div class="meta">${escapeHtml(item.dosage || "—")} • ${escapeHtml(
+                      item.frequency || "—"
+                    )}</div>
+                    <div class="body">${escapeHtml(
+                      item.notes || item.prn_guidance || "No notes."
+                    )}</div>
+                    ${renderBadges([item.is_active ? "active" : "inactive"])}
+                  </article>
+                `
+              )
+              .join("")}</div>`
           : `<div class="empty-state">No medication profiles.</div>`
       }
     </div>
 
     <div class="panel">
       <h3>Medication records</h3>
-      ${medicationRecords.length ? `<div class="record-list">${medicationRecords.map(renderRecordCard).join("")}</div>` : `<div class="empty-state">No medication records.</div>`}
+      ${
+        medicationRecords.length
+          ? `<div class="record-list">${medicationRecords.map(renderRecordCard).join("")}</div>`
+          : `<div class="empty-state">No medication records.</div>`
+      }
     </div>
   `;
 }
 
 async function loadEducation() {
   setLoading("Loading education...");
+
   const data = await apiGet(`/young-people/${state.youngPersonId}/education`);
 
   const profile = data.education_profile || data.profile || {};
@@ -385,13 +562,18 @@ async function loadEducation() {
 
     <div class="panel">
       <h3>Education records</h3>
-      ${records.length ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>` : `<div class="empty-state">No education records.</div>`}
+      ${
+        records.length
+          ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>`
+          : `<div class="empty-state">No education records.</div>`
+      }
     </div>
   `;
 }
 
 async function loadFamily() {
   setLoading("Loading family...");
+
   const data = await apiGet(`/young-people/${state.youngPersonId}/family`);
 
   const contacts = data.contacts || [];
@@ -402,29 +584,37 @@ async function loadFamily() {
       <h3>Family contacts</h3>
       ${
         contacts.length
-          ? `<div class="record-list">${contacts.map(contact => `
-              <article class="record-card">
-                <h4>${escapeHtml(contact.full_name || "Contact")}</h4>
-                <div class="meta">${escapeHtml(contact.relationship_to_young_person || contact.contact_type || "Contact")}</div>
-                <div class="body">
-Phone: ${escapeHtml(contact.phone || "—")}
+          ? `<div class="record-list">${contacts
+              .map(
+                (contact) => `
+                  <article class="record-card">
+                    <h4>${escapeHtml(contact.full_name || "Contact")}</h4>
+                    <div class="meta">${escapeHtml(
+                      contact.relationship_to_young_person || contact.contact_type || "Contact"
+                    )}</div>
+                    <div class="body">Phone: ${escapeHtml(contact.phone || "—")}
 Email: ${escapeHtml(contact.email || "—")}
-Notes: ${escapeHtml(contact.notes || "—")}
-                </div>
-                ${renderBadges([
-                  contact.is_parental_responsibility_holder ? "parental responsibility" : null,
-                  contact.is_approved_contact ? "approved" : null,
-                  contact.is_restricted_contact ? "restricted" : null,
-                ])}
-              </article>
-            `).join("")}</div>`
+Notes: ${escapeHtml(contact.notes || "—")}</div>
+                    ${renderBadges([
+                      contact.is_parental_responsibility_holder ? "parental responsibility" : null,
+                      contact.is_approved_contact ? "approved" : null,
+                      contact.is_restricted_contact ? "restricted" : null,
+                    ])}
+                  </article>
+                `
+              )
+              .join("")}</div>`
           : `<div class="empty-state">No family contacts.</div>`
       }
     </div>
 
     <div class="panel">
       <h3>Family contact records</h3>
-      ${records.length ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>` : `<div class="empty-state">No family contact records.</div>`}
+      ${
+        records.length
+          ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>`
+          : `<div class="empty-state">No family contact records.</div>`
+      }
     </div>
   `;
 }
@@ -454,11 +644,21 @@ function bindEvents() {
     const button = event.target.closest(".nav-item");
     if (!button) return;
 
+    if (!state.youngPersonId) {
+      showError("Select a young person first.");
+      return;
+    }
+
     state.currentView = button.dataset.view;
     loadCurrentView();
   });
 
   els.refreshBtn.addEventListener("click", () => {
+    if (!state.youngPersonId) {
+      loadYoungPersonSelector();
+      return;
+    }
+
     loadYoungPerson()
       .then(loadCurrentView)
       .catch((error) => {
@@ -466,26 +666,43 @@ function bindEvents() {
         showError(error.message || "Failed to refresh.");
       });
   });
+
+  els.selectorRefreshBtn.addEventListener("click", () => {
+    loadYoungPersonSelector();
+  });
+
+  els.selectorSearch.addEventListener("input", () => {
+    filterSelectorList();
+  });
+
+  els.selectorList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-open-young-person]");
+    if (!button) return;
+
+    const id = Number(button.dataset.openYoungPerson);
+    if (!id) return;
+
+    openYoungPerson(id);
+  });
 }
 
 async function init() {
   state.youngPersonId = getYoungPersonId();
+  bindEvents();
 
   if (!state.youngPersonId) {
-    showError("No young person id was provided in the URL. Use ?id=123");
-    setEmpty("No young person selected.");
+    await loadYoungPersonSelector();
     return;
   }
 
-  bindEvents();
-
   try {
+    hideSelectorMode();
     await loadYoungPerson();
     await loadCurrentView();
   } catch (error) {
     console.error(error);
     showError(error.message || "Failed to load young person.");
-    setEmpty("Unable to load young person workspace.");
+    await loadYoungPersonSelector();
   }
 }
 
