@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IndiCare OS • Young Person Workspace</title>
+  <title>IndiCare OS • Young Person</title>
   <link rel="stylesheet" href="/css/young-people-shell.css" />
 </head>
 <body>
@@ -13,36 +13,31 @@
         <div class="brand-mark">IC</div>
         <div class="brand-copy">
           <h1>IndiCare OS</h1>
-          <p>Young Person Workspace</p>
+          <p>Young Person</p>
         </div>
       </div>
 
       <section class="person-summary">
-        <div class="person-avatar-wrap">
-          <img id="personPhoto" class="person-photo hidden" alt="Young person photo" />
-          <div id="personAvatar" class="person-avatar">YP</div>
-        </div>
+        <div id="personAvatar" class="person-avatar">YP</div>
         <div class="person-text">
           <h2 id="personName">No young person selected</h2>
           <p id="personMeta">Choose from the selector</p>
         </div>
       </section>
 
-      <div class="sidebar-actions">
-        <button id="changePersonBtn" class="sidebar-btn">Change young person</button>
-      </div>
+      <button id="changePersonBtn" class="sidebar-btn">Change young person</button>
 
-      <nav class="sidebar-nav" id="sidebarNav">
+      <nav id="sidebarNav" class="sidebar-nav">
         <button class="nav-btn active" data-view="home">Home</button>
         <button class="nav-btn" data-view="calendar">Calendar</button>
         <button class="nav-btn" data-view="timeline">What happened</button>
         <button class="nav-btn" data-view="daily-notes">Daily notes</button>
         <button class="nav-btn" data-view="incidents">Incidents</button>
-        <button class="nav-btn" data-view="risk">Current risks</button>
-        <button class="nav-btn" data-view="plans">Plans and guidance</button>
+        <button class="nav-btn" data-view="risk">Risks</button>
+        <button class="nav-btn" data-view="plans">Plans</button>
         <button class="nav-btn" data-view="health">Health</button>
         <button class="nav-btn" data-view="education">Education</button>
-        <button class="nav-btn" data-view="family">Family and contact</button>
+        <button class="nav-btn" data-view="family">Family</button>
         <button class="nav-btn" data-view="keywork">Keywork</button>
       </nav>
     </aside>
@@ -53,9 +48,7 @@
           <h2 id="pageTitle">Select a young person</h2>
           <p id="pageSubtitle">Open a workspace to begin</p>
         </div>
-        <div class="topbar-actions">
-          <button id="refreshBtn" class="secondary-btn hidden">Refresh</button>
-        </div>
+        <button id="refreshBtn" class="secondary-btn hidden">Refresh</button>
       </header>
 
       <section id="statusBar" class="status-bar hidden"></section>
@@ -64,19 +57,19 @@
         <div class="panel-header">
           <div>
             <h3>Select a young person</h3>
-            <p class="panel-subtitle">Choose a young person to open their record.</p>
+            <p class="panel-subtitle">Open one record to view all daily work and history.</p>
           </div>
         </div>
 
         <div class="selector-toolbar">
           <input
-            type="text"
             id="selectorSearch"
             class="text-input"
+            type="text"
             placeholder="Search by name, preferred name, status or risk..."
             autocomplete="off"
           />
-          <button id="selectorRefreshBtn" class="secondary-btn">Refresh list</button>
+          <button id="selectorRefreshBtn" class="secondary-btn">Refresh</button>
         </div>
 
         <div id="selectorList" class="selector-list"></div>
@@ -88,20 +81,17 @@
             <span class="quick-action-title">Add daily note</span>
             <span class="quick-action-subtitle">Record this shift</span>
           </button>
-
           <button class="quick-action" data-action="incident">
             <span class="quick-action-title">Log incident</span>
-            <span class="quick-action-subtitle">Record an incident now</span>
+            <span class="quick-action-subtitle">Record an incident</span>
           </button>
-
           <button class="quick-action" data-action="risk">
             <span class="quick-action-title">Update risk</span>
             <span class="quick-action-subtitle">Review current concerns</span>
           </button>
-
           <button class="quick-action" data-action="plan">
             <span class="quick-action-title">Add plan</span>
-            <span class="quick-action-subtitle">Create or update guidance</span>
+            <span class="quick-action-subtitle">Create guidance</span>
           </button>
         </section>
 
