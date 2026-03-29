@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IndiCare | Set up MFA</title>
+  <meta name="theme-color" content="#18357f" />
+  <style>
+    :root {
+      --bg: #edf3f9;
+      --panel: #ffffff;
+      --text: #18263b;
+      --muted: #5f7088;
+      --border: #d8e1ec;
+      --primary: #2348a5;
+      --primary-strong: #18357f;
+      --success: #166534;
+      --success-bg: #effaf3;
+      --error: #9f1239;
+      --error-bg: #fff1f2;
+      --shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+      --radius: 22px;
+      --focus-ring: 0 0 0 4px rgba(35, 72, 165, 0.14);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, system-ui, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(35,72,165,.08), transparent 22%),
+        linear-gradient(135deg, #f8fbfe 0%, var(--bg) 100%);
+      color: var(--text);
+      padding: 24px;
+    }
+
+    .wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      display: grid;
+      gap: 20px;
+    }
+
+    .hero, .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 28px;
+    }
+
+    .eyebrow {
+      font-size: .82rem;
+      font-weight: 800;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 2rem;
+      line-height: 1.1;
+    }
+
+    p {
+      margin: 0 0 14px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .card {
+      padding: 24px;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 1.15rem;
+    }
+
+    .qr-wrap {
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      border: 1px dashed var(--border);
+      border-radius: 18px;
+      background: #fbfdff;
+      min-height: 280px;
+    }
+
+    .qr-wrap img {
+      max-width: 260px;
+      width: 100%;
+      height: auto;
+    }
+
+    .secret-box, .recovery-box {
+      padding: 14px;
+      border-radius: 14px;
+      background: #f8fbff;
+      border: 1px solid var(--border);
+      word-break: break-word;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: .95rem;
+      line-height: 1.7;
+    }
+
+    form {
+      display: grid;
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    label {
+      font-size: .92rem;
+      font-weight: 700;
+    }
+
+    input {
+      width: 100%;
+      min-height: 50px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      font: inherit;
+      color: var(--text);
+      background: #fff;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: var(--focus-ring);
+    }
+
+    button {
+      min-height: 52px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+      color: #fff;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #fff;
+      color: var(--primary);
+      border: 1px solid var(--border);
+    }
+
+    button:disabled {
+      opacity: .7;
+      cursor: not-allowed;
+    }
+
+    .status {
+      min-height: 22px;
+      margin-top: 10px;
+      font-size: .94rem;
+      line-height: 1.5;
+    }
+
+    .status.error { color: var(--error); }
+    .status.success { color: var(--success); }
+
+    .success-panel {
+      margin-top: 18px;
+      padding: 18px;
+      border-radius: 16px;
+      background: var(--success-bg);
+      color: var(--success);
+      border: 1px solid rgba(22,101,52,.08);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    ul {
+      margin: 12px 0 0 20px;
+      padding: 0;
+    }
+
+    li {
+      margin-bottom: 8px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    @media (max-width: 860px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <div class="eyebrow">Mandatory security</div>
+      <h1>Set up multi-factor authentication</h1>
+      <p>
+        Multi-factor authentication is required for all IndiCare users before access is granted
+        to records, safeguarding content, documents, and operational tools.
+      </p>
+      <ul>
+        <li>Scan the QR code with your authenticator app.</li>
+        <li>Enter the 6-digit code from the app to confirm setup.</li>
+        <li>Save your recovery codes securely. They will only be shown once.</li>
+      </ul>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Step 1 — Add IndiCare to your authenticator app</h2>
+        <div class="qr-wrap" id="qrWrap">
+          <span>Loading QR code...</span>
+        </div>
+
+        <p style="margin-top:16px;">If you cannot scan the QR code, enter this secret manually:</p>
+        <div class="secret-box" id="secretBox">Loading...</div>
+      </div>
+
+      <div class="card">
+        <h2>Step 2 — Confirm setup</h2>
+
+        <form id="enableForm" novalidate>
+          <div>
+            <label for="code">Authentication code</label>
+            <input
+              id="code"
+              name="code"
+              type="text"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="12"
+              placeholder="123456"
+              required
+            />
+          </div>
+
+          <button id="enableBtn" type="submit">Enable MFA</button>
+        </form>
+
+        <div id="status" class="status" aria-live="polite"></div>
+
+        <div id="successPanel" class="success-panel hidden">
+          <strong>MFA has been enabled successfully.</strong>
+          <p style="margin-top:10px; color:inherit;">
+            Save these recovery codes somewhere secure. Each code can only be used once.
+          </p>
+          <div id="recoveryBox" class="recovery-box" style="margin-top:12px;"></div>
+          <button id="continueBtn" type="button" style="margin-top:16px;">Continue to IndiCare</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    (function () {
+      const qrWrap = document.getElementById("qrWrap");
+      const secretBox = document.getElementById("secretBox");
+      const form = document.getElementById("enableForm");
+      const code = document.getElementById("code");
+      const enableBtn = document.getElementById("enableBtn");
+      const statusEl = document.getElementById("status");
+      const successPanel = document.getElementById("successPanel");
+      const recoveryBox = document.getElementById("recoveryBox");
+      const continueBtn = document.getElementById("continueBtn");
+
+      function setStatus(message, type = "") {
+        statusEl.textContent = message || "";
+        statusEl.className = "status";
+        if (type) statusEl.classList.add(type);
+      }
+
+      function setLoading(isLoading) {
+        enableBtn.disabled = isLoading;
+        code.disabled = isLoading;
+        enableBtn.textContent = isLoading ? "Enabling..." : "Enable MFA";
+      }
+
+      async function boot() {
+        const state = await window.auth.validateSession();
+
+        if (!state.authenticated) {
+          window.location.replace("/login");
+          return;
+        }
+
+        if (state.mfaEnabled && state.mfaVerified) {
+          window.location.replace("/assistant");
+          return;
+        }
+
+        if (state.mfaEnabled && !state.mfaVerified) {
+          window.location.replace("/mfa");
+          return;
+        }
+
+        try {
+          const setup = await window.apiRequest("/auth/mfa/setup", {
+            method: "POST"
+          });
+
+          qrWrap.innerHTML = setup?.qr_code_data_url
+            ? `<img src="${setup.qr_code_data_url}" alt="MFA QR code for authenticator app" />`
+            : `<span>QR code could not be loaded.</span>`;
+
+          secretBox.textContent = setup?.secret || "Secret unavailable";
+        } catch (error) {
+          qrWrap.innerHTML = `<span>Could not load QR code.</span>`;
+          secretBox.textContent = "Could not load secret.";
+          setStatus(error?.message || "Could not start MFA setup.", "error");
+        }
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const value = code.value.trim();
+        if (!value) {
+          setStatus("Please enter the authentication code from your app.", "error");
+          code.focus();
+          return;
+        }
+
+        setLoading(true);
+        setStatus("Confirming MFA setup...");
+
+        try {
+          const data = await window.apiRequest("/auth/mfa/enable", {
+            method: "POST",
+            body: JSON.stringify({ code: value })
+          });
+
+          if (!data?.ok) {
+            throw new Error("Could not enable MFA.");
+          }
+
+          const recoveryCodes = Array.isArray(data.recovery_codes) ? data.recovery_codes : [];
+          recoveryBox.innerHTML = recoveryCodes.length
+            ? recoveryCodes.map(code => `<div>${code}</div>`).join("")
+            : "No recovery codes returned.";
+
+          const existing = window.auth.getStoredUser() || {};
+          const remember = !!localStorage.getItem("current_user");
+          const merged = { ...existing, mfa_enabled: true, mfa_verified: true };
+
+          if (remember) {
+            localStorage.setItem("current_user", JSON.stringify(merged));
+          } else {
+            sessionStorage.setItem("current_user", JSON.stringify(merged));
+          }
+
+          setStatus("MFA enabled successfully.", "success");
+          successPanel.classList.remove("hidden");
+          form.classList.add("hidden");
+        } catch (error) {
+          setStatus(error?.message || "Could not enable MFA.", "error");
+          code.focus();
+        } finally {
+          setLoading(false);
+        }
+      });
+
+      continueBtn.addEventListener("click", () => {
+        window.location.href = "/assistant";
+      });
+
+      boot();
+    })();
+  </script>
+</body>
+</html>
