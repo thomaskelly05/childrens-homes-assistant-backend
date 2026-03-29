@@ -7,9 +7,13 @@ from db.mfa_db import get_user_mfa
 
 PUBLIC_PATH_PREFIXES = (
     "/login",
+    "/login.html",
     "/mfa",
+    "/mfa.html",
     "/mfa-setup",
+    "/mfa-setup.html",
     "/mfa-recovery",
+    "/mfa-recovery.html",
     "/favicon",
     "/assets",
     "/frontend",
@@ -107,7 +111,7 @@ async def enforce_mfa_middleware(request: Request, call_next=None):
     if not user_id:
         return None
 
-    # Allow auth + MFA endpoints before MFA is completed.
+    # Allow auth and MFA routes during pre-MFA state.
     if path_allowed_during_mfa(path):
         return None
 
@@ -118,7 +122,6 @@ async def enforce_mfa_middleware(request: Request, call_next=None):
         return JSONResponse(
             status_code=403,
             content={
-                "ok": False,
                 "detail": "MFA setup is required before using the platform.",
                 "code": "mfa_setup_required",
             },
@@ -128,7 +131,6 @@ async def enforce_mfa_middleware(request: Request, call_next=None):
         return JSONResponse(
             status_code=403,
             content={
-                "ok": False,
                 "detail": "MFA verification is required before using the platform.",
                 "code": "mfa_verification_required",
             },
