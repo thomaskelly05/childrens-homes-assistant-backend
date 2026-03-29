@@ -1,3 +1,5 @@
+const LEGAL_VERSION = "2026-03-29-v1";
+
 window.addEventListener("load", async () => {
   bindHomeNavigation();
   bindLogout();
@@ -6,24 +8,55 @@ window.addEventListener("load", async () => {
   highlightActiveSidebarLink();
 
   try {
+    await enforceLegalGate();
     await loadInitialWorkspace();
   } catch (error) {
     showAppError(error.message || "Failed to load workspace");
   }
 });
 
+async function hasAcceptedLegalFromServer() {
+  try {
+    const data = await apiRequest("/auth/legal-acceptance/current", {
+      method: "GET"
+    });
+
+    return data?.accepted_current_version === true;
+  } catch (error) {
+    console.error("Legal acceptance check failed:", error);
+    return false;
+  }
+}
+
+async function enforceLegalGate() {
+  const accepted = await hasAcceptedLegalFromServer();
+
+  if (accepted) {
+    return true;
+  }
+
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("current_user");
+  window.location.href = "/login";
+  throw new Error("Current legal terms must be accepted before using this area.");
+}
 
 function bindHomeNavigation() {
   const navButtons = document.querySelectorAll("button.nav-link[data-view]");
 
   navButtons.forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", async () => {
+      const ok = await hasAcceptedLegalFromServer();
+      if (!ok) {
+        await enforceLegalGate();
+        return;
+      }
+
       const view = button.dataset.view;
       activateView(view);
     });
   });
 }
-
 
 function highlightActiveSidebarLink() {
   const currentPath = window.location.pathname;
@@ -41,7 +74,6 @@ function highlightActiveSidebarLink() {
     }
   }
 }
-
 
 function bindLogout() {
   const logoutBtn = document.getElementById("logoutBtn");
@@ -68,7 +100,6 @@ function bindLogout() {
   });
 }
 
-
 function bindIncidentReportForm() {
   const form = document.getElementById("incidentReportForm");
   const output = document.getElementById("incidentReportOutput");
@@ -77,6 +108,12 @@ function bindIncidentReportForm() {
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+
+    const ok = await hasAcceptedLegalFromServer();
+    if (!ok) {
+      await enforceLegalGate();
+      return;
+    }
 
     const description = document.getElementById("incidentDescription")?.value?.trim();
 
@@ -105,7 +142,6 @@ function bindIncidentReportForm() {
   });
 }
 
-
 function bindDocumentForm() {
   const form = document.getElementById("documentForm");
   const output = document.getElementById("documentOutput");
@@ -114,6 +150,12 @@ function bindDocumentForm() {
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+
+    const ok = await hasAcceptedLegalFromServer();
+    if (!ok) {
+      await enforceLegalGate();
+      return;
+    }
 
     const type = document.getElementById("documentType")?.value;
     const description = document.getElementById("documentDescription")?.value?.trim();
@@ -126,10 +168,31 @@ function bindDocumentForm() {
     output.innerHTML = `<p>Generating document...</p>`;
 
     try {
-      const response = await apiRequest(`/documents/${type}`, {
+      const response = await fetch(`/documents/${type}`, {
         method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({ description })
       });
+
+      if (!response.ok) {
+        let message = `Request failed (${response.status})`;
+
+        try {
+          const errorData = await response.json();
+          message = errorData?.detail || errorData?.error || message;
+        } catch (_) {
+          try {
+            message = await response.text() || message;
+          } catch (_) {
+            // ignore
+          }
+        }
+
+        throw new Error(message);
+      }
 
       const blob = await response.blob();
       const downloadUrl = URL.createObjectURL(blob);
@@ -146,7 +209,6 @@ function bindDocumentForm() {
     }
   });
 }
-
 
 async function loadInitialWorkspace() {
   hideAppError();
@@ -179,7 +241,6 @@ async function loadInitialWorkspace() {
   setLoading(false);
 }
 
-
 async function loadAccount() {
   const account = await apiRequest("/account/me");
 
@@ -195,7 +256,6 @@ async function loadAccount() {
   return account;
 }
 
-
 function renderAccount(account) {
   const accountDetails = document.getElementById("accountDetails");
   if (!accountDetails) return;
@@ -210,14 +270,12 @@ function renderAccount(account) {
   `;
 }
 
-
 function setUserBadge(account) {
   const userBadge = document.getElementById("userBadge");
   if (!userBadge) return;
 
   userBadge.textContent = `${account.email || "User"}${account.role ? ` • ${account.role}` : ""}`;
 }
-
 
 async function loadTasks() {
   const preview = document.getElementById("tasksPreview");
@@ -239,7 +297,6 @@ async function loadTasks() {
     if (list) list.innerHTML = `<p class="error-text">Could not load tasks.</p>`;
   }
 }
-
 
 async function loadHandover() {
   const preview = document.getElementById("handoverPreview");
@@ -266,7 +323,6 @@ async function loadHandover() {
     }
   }
 }
-
 
 async function loadLatestJournal() {
   const preview = document.getElementById("journalPreview");
@@ -298,7 +354,6 @@ async function loadLatestJournal() {
     preview.innerHTML = `<p class="error-text">Could not load journal preview.</p>`;
   }
 }
-
 
 function activateView(viewName) {
   const pageTitle = document.getElementById("pageTitle");
@@ -353,7 +408,6 @@ function activateView(viewName) {
   }
 }
 
-
 function setLoading(isLoading) {
   const loadingState = document.getElementById("loadingState");
 
@@ -361,7 +415,6 @@ function setLoading(isLoading) {
     loadingState.classList.toggle("hidden", !isLoading);
   }
 }
-
 
 function showAppError(message) {
   const errorState = document.getElementById("errorState");
@@ -381,14 +434,12 @@ function showAppError(message) {
   }
 }
 
-
 function hideAppError() {
   const errorState = document.getElementById("errorState");
   if (errorState) {
     errorState.classList.add("hidden");
   }
 }
-
 
 function renderTasksPreview(tasks) {
   if (!tasks.length) {
@@ -406,7 +457,6 @@ function renderTasksPreview(tasks) {
     </ul>
   `;
 }
-
 
 function renderTasksList(tasks) {
   if (!tasks.length) {
@@ -426,7 +476,6 @@ function renderTasksList(tasks) {
   `;
 }
 
-
 function renderHandoverPreview(notes) {
   if (!notes.length) {
     return `<p>No handover notes found.</p>`;
@@ -443,7 +492,6 @@ function renderHandoverPreview(notes) {
     </ul>
   `;
 }
-
 
 function renderHandoverList(notes) {
   if (!notes.length) {
@@ -462,7 +510,6 @@ function renderHandoverList(notes) {
   `;
 }
 
-
 function formatDate(value) {
   if (!value) return "-";
 
@@ -471,7 +518,6 @@ function formatDate(value) {
 
   return date.toLocaleString("en-GB");
 }
-
 
 function summariseObject(obj) {
   if (!obj || typeof obj !== "object") return "-";
@@ -487,7 +533,6 @@ function summariseObject(obj) {
 
   return parts.join(" | ").slice(0, 240) || "Journal entry available.";
 }
-
 
 function escapeHtml(value) {
   return String(value ?? "")
