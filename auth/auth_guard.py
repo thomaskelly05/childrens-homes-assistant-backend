@@ -3,9 +3,11 @@ from __future__ import annotations
 from fastapi import Request
 from starlette.responses import JSONResponse, RedirectResponse
 
+from auth.mfa_guard import get_session_user_id
 
 PUBLIC_PATH_PREFIXES = (
     "/login",
+    "/login.html",
     "/mfa",
     "/mfa-setup",
     "/mfa-recovery",
@@ -41,23 +43,11 @@ def wants_html(request: Request) -> bool:
     return "text/html" in accept
 
 
-def get_session_user_id(request: Request) -> int | None:
-    try:
-        value = request.session.get("user_id")
-    except Exception:
-        return None
-
-    try:
-        return int(value) if value is not None else None
-    except Exception:
-        return None
-
-
 async def enforce_login_middleware(request: Request, call_next=None):
     path = request.url.path
 
     if path_is_public(path):
-        return None
+      return None
 
     user_id = get_session_user_id(request)
 
