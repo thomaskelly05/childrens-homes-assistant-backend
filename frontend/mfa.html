@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IndiCare | MFA verification</title>
   <meta name="theme-color" content="#18357f" />
+  <meta name="color-scheme" content="light" />
   <style>
     :root {
       --bg: #edf3f9;
@@ -15,15 +16,15 @@
       --primary: #2348a5;
       --primary-strong: #18357f;
       --error: #9f1239;
-      --error-bg: #fff1f2;
       --success: #166534;
-      --success-bg: #effaf3;
       --shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
       --radius: 22px;
       --focus-ring: 0 0 0 4px rgba(35, 72, 165, 0.14);
     }
 
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
@@ -78,6 +79,8 @@
     label {
       font-size: .92rem;
       font-weight: 700;
+      display: block;
+      margin-bottom: 8px;
     }
 
     input {
@@ -89,12 +92,19 @@
       font: inherit;
       color: var(--text);
       background: #fff;
+      letter-spacing: .14em;
+      font-size: 1.1rem;
+      text-align: center;
     }
 
     input:focus {
       outline: none;
       border-color: var(--primary);
       box-shadow: var(--focus-ring);
+    }
+
+    input[aria-invalid="true"] {
+      border-color: var(--error);
     }
 
     button {
@@ -121,6 +131,10 @@
       text-decoration: none;
     }
 
+    .secondary:hover {
+      text-decoration: underline;
+    }
+
     .status {
       min-height: 22px;
       margin-top: 14px;
@@ -140,10 +154,31 @@
       margin-top: 18px;
       padding: 14px;
       border-radius: 14px;
-      background: var(--success-bg);
+      background: #effaf3;
       color: var(--success);
       font-size: .9rem;
       line-height: 1.6;
+    }
+
+    .footer-actions {
+      margin-top: 14px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .ghost {
+      min-height: 44px;
+      padding: 0 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      font-weight: 700;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
   </style>
 </head>
@@ -162,18 +197,23 @@
           type="text"
           inputmode="numeric"
           autocomplete="one-time-code"
-          maxlength="12"
+          maxlength="6"
           placeholder="123456"
           required
+          aria-invalid="false"
         />
       </div>
 
       <button id="verifyBtn" type="submit">Verify</button>
     </form>
 
-    <div id="status" class="status" aria-live="polite"></div>
+    <div id="status" class="status" aria-live="polite" role="status"></div>
 
     <a class="secondary" href="/mfa-recovery">Use a recovery code instead</a>
+
+    <div class="footer-actions">
+      <button id="logoutBtn" class="ghost" type="button">Sign out</button>
+    </div>
 
     <div class="helper">
       Access remains restricted until multi-factor verification is completed.
@@ -188,6 +228,7 @@
       const code = document.getElementById("code");
       const verifyBtn = document.getElementById("verifyBtn");
       const statusEl = document.getElementById("status");
+      const logoutBtn = document.getElementById("logoutBtn");
 
       function setStatus(message, type = "") {
         statusEl.textContent = message || "";
@@ -198,32 +239,50 @@
       function setLoading(isLoading) {
         verifyBtn.disabled = isLoading;
         code.disabled = isLoading;
+        logoutBtn.disabled = isLoading;
         verifyBtn.textContent = isLoading ? "Verifying..." : "Verify";
       }
 
+      function setCodeError(hasError) {
+        code.setAttribute("aria-invalid", hasError ? "true" : "false");
+      }
+
       async function boot() {
-        const state = await window.auth.validateSession();
+        try {
+          if (!window.auth || typeof window.auth.validateSession !== "function") {
+            window.location.replace("/login");
+            return;
+          }
 
-        if (!state.authenticated) {
+          const state = await window.auth.validateSession();
+
+          if (!state || !state.authenticated) {
+            window.location.replace("/login");
+            return;
+          }
+
+          if (!state.mfa_enabled) {
+            window.location.replace("/mfa-setup");
+            return;
+          }
+
+          if (state.mfa_verified) {
+            window.location.replace("/assistant");
+            return;
+          }
+        } catch (_) {
           window.location.replace("/login");
-          return;
-        }
-
-        if (!state.mfaEnabled) {
-          window.location.replace("/mfa-setup");
-          return;
-        }
-
-        if (state.mfaVerified) {
-          window.location.replace("/assistant");
         }
       }
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
 
-        const value = code.value.trim();
+        const value = code.value.replace(/\s+/g, "").trim();
+        setCodeError(false);
+
         if (!value) {
+          setCodeError(true);
           setStatus("Please enter your authentication code.", "error");
           code.focus();
           return;
@@ -238,28 +297,55 @@
             body: JSON.stringify({ code: value })
           });
 
-          if (!data?.ok) {
+          if (!data || !data.ok) {
             throw new Error("Verification failed.");
           }
 
-          const existing = window.auth.getStoredUser() || {};
+          const existing = (window.auth && typeof window.auth.getStoredUser === "function")
+            ? (window.auth.getStoredUser() || {})
+            : {};
+
           const remember = !!localStorage.getItem("current_user");
-          const merged = { ...existing, mfa_enabled: true, mfa_verified: true };
+          const merged = {
+            ...existing,
+            mfa_enabled: true,
+            mfa_verified: true
+          };
 
           if (remember) {
             localStorage.setItem("current_user", JSON.stringify(merged));
+            sessionStorage.removeItem("current_user");
           } else {
             sessionStorage.setItem("current_user", JSON.stringify(merged));
+            localStorage.removeItem("current_user");
           }
 
           setStatus("Verification successful. Redirecting...", "success");
-          window.location.href = "/assistant";
+          window.location.replace("/assistant");
         } catch (error) {
+          setCodeError(true);
           setStatus(error?.message || "Verification failed.", "error");
           code.focus();
+          code.select();
         } finally {
           setLoading(false);
         }
+      });
+
+      code.addEventListener("input", () => {
+        code.value = code.value.replace(/[^\d]/g, "").slice(0, 6);
+        setCodeError(false);
+      });
+
+      logoutBtn.addEventListener("click", async () => {
+        try {
+          if (window.auth && typeof window.auth.logoutUser === "function") {
+            await window.auth.logoutUser();
+            return;
+          }
+        } catch (_) {}
+
+        window.location.replace("/login");
       });
 
       boot();
