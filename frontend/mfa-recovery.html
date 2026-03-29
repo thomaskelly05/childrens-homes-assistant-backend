@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IndiCare | Recovery code verification</title>
   <meta name="theme-color" content="#18357f" />
+  <meta name="color-scheme" content="light" />
+
   <style>
     :root {
       --bg: #edf3f9;
@@ -16,6 +18,7 @@
       --primary-strong: #18357f;
       --error: #9f1239;
       --success: #166534;
+      --success-bg: #effaf3;
       --shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
       --radius: 22px;
       --focus-ring: 0 0 0 4px rgba(35, 72, 165, 0.14);
@@ -87,6 +90,7 @@
       font: inherit;
       color: var(--text);
       background: #fff;
+      text-transform: uppercase;
     }
 
     input:focus {
@@ -119,6 +123,10 @@
       text-decoration: none;
     }
 
+    .secondary:hover {
+      text-decoration: underline;
+    }
+
     .status {
       min-height: 22px;
       margin-top: 14px;
@@ -133,14 +141,31 @@
     .status.success {
       color: var(--success);
     }
+
+    .helper {
+      margin-top: 18px;
+      padding: 14px;
+      border-radius: 14px;
+      background: var(--success-bg);
+      color: var(--success);
+      font-size: .9rem;
+      line-height: 1.6;
+    }
+
+    .note {
+      margin-top: 10px;
+      font-size: .84rem;
+      color: var(--muted);
+    }
   </style>
 </head>
 <body>
   <main class="card">
-    <div class="eyebrow">Secure recovery</div>
+    <div class="eyebrow">Secure access</div>
     <h1>Use a recovery code</h1>
     <p>
-      Enter one of your saved recovery codes to complete sign-in. Each code can only be used once.
+      Enter one of your saved recovery codes to complete sign-in. Each recovery
+      code can only be used once.
     </p>
 
     <form id="recoveryForm" novalidate>
@@ -151,9 +176,13 @@
           name="recoveryCode"
           type="text"
           autocomplete="one-time-code"
+          maxlength="32"
           placeholder="AB12CD34-EF56GH78"
           required
+          spellcheck="false"
+          autocapitalize="characters"
         />
+        <div class="note">You can paste the code exactly as saved.</div>
       </div>
 
       <button id="verifyBtn" type="submit">Verify recovery code</button>
@@ -161,7 +190,12 @@
 
     <div id="status" class="status" aria-live="polite"></div>
 
-    <a class="secondary" href="/mfa">Back to authenticator code</a>
+    <a class="secondary" href="/mfa">Use an authenticator code instead</a>
+
+    <div class="helper">
+      After successful recovery verification, you should sign in and generate a
+      fresh set of recovery codes if needed.
+    </div>
   </main>
 
   <script src="/js/api.js"></script>
@@ -185,28 +219,35 @@
         verifyBtn.textContent = isLoading ? "Verifying..." : "Verify recovery code";
       }
 
-      async function boot() {
-        const state = await window.auth.validateSession();
+      function normaliseRecoveryCode(value) {
+        return String(value || "").trim().toUpperCase();
+      }
 
-        if (!state.authenticated) {
+      async function boot() {
+        if (!(window.auth && typeof window.auth.getPendingMfa === "function")) {
           window.location.replace("/login");
           return;
         }
 
-        if (!state.mfaEnabled) {
-          window.location.replace("/mfa-setup");
+        const pending = window.auth.getPendingMfa();
+        if (!pending || pending.pending !== true) {
+          window.location.replace("/login");
           return;
         }
 
-        if (state.mfaVerified) {
-          window.location.replace("/assistant");
+        try {
+          const ok = await window.auth.validateSession();
+          if (ok) {
+            window.location.replace("/assistant");
+          }
+        } catch (_) {
         }
       }
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
 
-        const value = recoveryCode.value.trim().toUpperCase();
+        const value = normaliseRecoveryCode(recoveryCode.value);
         if (!value) {
           setStatus("Please enter a recovery code.", "error");
           recoveryCode.focus();
@@ -223,27 +264,48 @@
           });
 
           if (!data?.ok) {
-            throw new Error("Recovery code verification failed.");
+            throw new Error("Recovery verification failed.");
           }
 
-          const existing = window.auth.getStoredUser() || {};
-          const remember = !!localStorage.getItem("current_user");
-          const merged = { ...existing, mfa_enabled: true, mfa_verified: true };
+          const pending = window.auth.getPendingMfa ? window.auth.getPendingMfa() : null;
+          const pendingUser = window.auth.getPendingMfaUser
+            ? window.auth.getPendingMfaUser()
+            : null;
 
-          if (remember) {
-            localStorage.setItem("current_user", JSON.stringify(merged));
-          } else {
-            sessionStorage.setItem("current_user", JSON.stringify(merged));
+          const remember = !!pending?.remember;
+          const userToStore = {
+            ...(pendingUser || {}),
+            mfa_enabled: true,
+            mfa_verified: true
+          };
+
+          if (userToStore && userToStore.email) {
+            if (remember) {
+              localStorage.setItem("current_user", JSON.stringify(userToStore));
+              sessionStorage.removeItem("current_user");
+            } else {
+              sessionStorage.setItem("current_user", JSON.stringify(userToStore));
+              localStorage.removeItem("current_user");
+            }
           }
 
-          setStatus("Verification successful. Redirecting...", "success");
-          window.location.href = "/assistant";
+          sessionStorage.removeItem("indicare_pending_mfa");
+          localStorage.removeItem("indicare_pending_mfa");
+          sessionStorage.removeItem("indicare_mfa_user");
+          localStorage.removeItem("indicare_mfa_user");
+
+          setStatus("Recovery verification successful. Redirecting...", "success");
+          window.location.replace("/assistant");
         } catch (error) {
-          setStatus(error?.message || "Recovery code verification failed.", "error");
+          setStatus(error?.message || "Recovery verification failed.", "error");
           recoveryCode.focus();
         } finally {
           setLoading(false);
         }
+      });
+
+      recoveryCode.addEventListener("blur", function () {
+        recoveryCode.value = normaliseRecoveryCode(recoveryCode.value);
       });
 
       boot();
