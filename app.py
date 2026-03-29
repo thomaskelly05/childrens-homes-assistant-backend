@@ -5,7 +5,7 @@ import os
 import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -225,14 +225,41 @@ def serve_page(file_name: str):
     return FileResponse(path)
 
 
+def serve_component(file_name: str):
+    path = os.path.join(COMPONENTS_DIR, file_name)
+    if not os.path.exists(path):
+        return JSONResponse(status_code=404, content={"error": "Component page not found"})
+    return FileResponse(path)
+
+
 @app.get("/")
 def serve_index():
-    return FileResponse(os.path.join(COMPONENTS_DIR, "assistant.html"))
+    return serve_component("assistant.html")
 
 
 @app.get("/assistant")
 def serve_assistant():
-    return FileResponse(os.path.join(COMPONENTS_DIR, "assistant.html"))
+    return serve_component("assistant.html")
+
+
+@app.get("/assistant.html")
+def serve_assistant_html():
+    return serve_component("assistant.html")
+
+
+@app.get("/command")
+def serve_command():
+    return serve_component("assistant.html")
+
+
+@app.get("/command.html")
+def serve_command_html():
+    return serve_component("assistant.html")
+
+
+@app.get("/home")
+def serve_home():
+    return RedirectResponse(url="/assistant", status_code=302)
 
 
 @app.get("/login")
