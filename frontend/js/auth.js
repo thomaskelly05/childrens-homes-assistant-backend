@@ -31,8 +31,82 @@ function clearStoredUser() {
   localStorage.removeItem("current_user");
 }
 
+function rememberPreference() {
+  return !!localStorage.getItem("current_user");
+}
+
+function setStatus(loginStatus, message, isError = false) {
+  if (!loginStatus) return;
+  loginStatus.textContent = message || "";
+  loginStatus.classList.remove("is-error", "is-success");
+  if (isError) {
+    loginStatus.classList.add("is-error");
+  } else if (message) {
+    loginStatus.classList.add("is-success");
+  }
+}
+
 async function apiFetchJson(path, options = {}) {
   return apiRequest(path, options);
+}
+
+function buildStoredUser(existing, authData) {
+  return {
+    ...existing,
+    id: authData?.user_id ?? authData?.user?.id ?? existing?.id,
+    email: authData?.email ?? authData?.user?.email ?? existing?.email,
+    role: authData?.role ?? authData?.user?.role ?? existing?.role,
+    home_id: authData?.home_id ?? authData?.user?.home_id ?? existing?.home_id,
+    first_name: authData?.user?.first_name ?? existing?.first_name,
+    last_name: authData?.user?.last_name ?? existing?.last_name,
+    is_active: authData?.is_active ?? authData?.user?.is_active ?? existing?.is_active,
+    subscription_active:
+      authData?.subscription_active ??
+      authData?.user?.subscription_active ??
+      existing?.subscription_active,
+    subscription_status:
+      authData?.subscription_status ??
+      authData?.user?.subscription_status ??
+      existing?.subscription_status,
+    plan_name:
+      authData?.plan_name ??
+      authData?.user?.plan_name ??
+      existing?.plan_name,
+    mfa_enabled:
+      authData?.mfa_enabled ??
+      authData?.user?.mfa_enabled ??
+      existing?.mfa_enabled ??
+      false,
+    mfa_verified:
+      authData?.mfa_verified ??
+      authData?.user?.mfa_verified ??
+      existing?.mfa_verified ??
+      false,
+  };
+}
+
+function redirectForAuthState(authData) {
+  const mfaEnabled =
+    authData?.mfa_enabled ??
+    authData?.user?.mfa_enabled ??
+    false;
+
+  const mfaVerified =
+    authData?.mfa_verified ??
+    authData?.user?.mfa_verified ??
+    false;
+
+  if (!mfaEnabled) {
+    window.location.href = "/mfa-setup";
+    return;
+  }
+
+  if (!mfaVerified) {
+    window.location.href = "/mfa";
+    return;
+  }
+
+  window.location.href = "/assistant";
 }
 
 async function login(credentialsArg = null) {
@@ -56,9 +130,7 @@ async function login(credentialsArg = null) {
       : !!(rememberInput && rememberInput.checked);
 
   if (!email || !password) {
-    if (loginStatus) {
-      loginStatus.textContent = "Please enter your email and password.";
-    }
+    setStatus(loginStatus, "Please enter your email and password.", true);
     throw new Error("Please enter your email and password");
   }
 
@@ -67,36 +139,29 @@ async function login(credentialsArg = null) {
     loginButton.textContent = "Signing in...";
   }
 
-  if (loginStatus) {
-    loginStatus.textContent = "Checking your details...";
-  }
+  setStatus(loginStatus, "Checking your details...");
 
   try {
     const data = await apiFetchJson("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, remember }),
     });
 
     if (!data || !data.ok) {
       throw new Error("Login failed");
     }
 
-    if (data.user) {
-      setStoredUser(data.user, remember);
-    }
+    const stored = buildStoredUser({}, data);
+    setStoredUser(stored, remember);
 
-    if (loginStatus) {
-      loginStatus.textContent = "Sign-in successful. Redirecting...";
-    }
+    setStatus(loginStatus, "Sign-in successful. Redirecting...");
 
-    window.location.href = "/assistant";
+    redirectForAuthState(data);
     return data;
   } catch (error) {
     clearStoredUser();
     const message = error?.message || "Login failed";
-    if (loginStatus) {
-      loginStatus.textContent = message;
-    }
+    setStatus(loginStatus, message, true);
     throw error;
   } finally {
     if (loginButton) {
@@ -125,39 +190,75 @@ async function validateSession() {
 
     if (!data || data.authenticated !== true) {
       clearStoredUser();
-      return false;
+      return {
+        authenticated: false,
+        fullyAuthenticated: false,
+        mfaEnabled: false,
+        mfaVerified: false,
+      };
     }
 
     const existing = getStoredUser() || {};
-    const remember = !!localStorage.getItem("current_user");
+    const remember = rememberPreference();
 
-    setStoredUser(
-      {
-        ...existing,
-        id: data.user_id,
-        email: data.email,
-        role: data.role,
-        home_id: data.home_id,
-        is_active: data.is_active,
-        subscription_status: data.subscription_status,
-        plan_name: data.plan_name,
-      },
-      remember
-    );
+    const merged = buildStoredUser(existing, data);
+    setStoredUser(merged, remember);
 
-    return true;
+    return {
+      authenticated: true,
+      fullyAuthenticated: data.mfa_enabled === true && data.mfa_verified === true,
+      mfaEnabled: data.mfa_enabled === true,
+      mfaVerified: data.mfa_verified === true,
+      user: merged,
+    };
   } catch (_) {
     clearStoredUser();
-    return false;
+    return {
+      authenticated: false,
+      fullyAuthenticated: false,
+      mfaEnabled: false,
+      mfaVerified: false,
+    };
   }
 }
 
 async function requireAuth() {
-  const ok = await validateSession();
-  if (!ok) {
+  const state = await validateSession();
+
+  if (!state.authenticated) {
     window.location.replace("/login");
     return false;
   }
+
+  if (!state.mfaEnabled) {
+    window.location.replace("/mfa-setup");
+    return false;
+  }
+
+  if (!state.mfaVerified) {
+    window.location.replace("/mfa");
+    return false;
+  }
+
+  return true;
+}
+
+async function redirectIfAlreadySignedIn() {
+  const state = await validateSession();
+
+  if (!state.authenticated) return false;
+
+  if (!state.mfaEnabled) {
+    window.location.replace("/mfa-setup");
+    return true;
+  }
+
+  if (!state.mfaVerified) {
+    window.location.replace("/mfa");
+    return true;
+  }
+
+  window.location.replace("/assistant");
   return true;
 }
 
@@ -175,4 +276,5 @@ window.auth = {
   requireAuth,
   validateSession,
   getStoredUser,
+  redirectIfAlreadySignedIn,
 };
