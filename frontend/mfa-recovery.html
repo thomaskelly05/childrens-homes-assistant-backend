@@ -3,10 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IndiCare | Recovery code verification</title>
+  <title>IndiCare | Recovery codes</title>
   <meta name="theme-color" content="#18357f" />
   <meta name="color-scheme" content="light" />
-
   <style>
     :root {
       --bg: #edf3f9;
@@ -19,12 +18,17 @@
       --error: #9f1239;
       --success: #166534;
       --success-bg: #effaf3;
+      --warn-bg: #fff8eb;
+      --warn-text: #92400e;
       --shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
       --radius: 22px;
       --focus-ring: 0 0 0 4px rgba(35, 72, 165, 0.14);
+      --code-bg: #f8fbfe;
     }
 
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
@@ -41,7 +45,7 @@
 
     .card {
       width: 100%;
-      max-width: 460px;
+      max-width: 760px;
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -60,76 +64,103 @@
 
     h1 {
       margin: 0 0 10px;
-      font-size: 1.8rem;
+      font-size: 1.9rem;
       line-height: 1.1;
     }
 
     p {
-      margin: 0 0 16px;
+      margin: 0 0 14px;
       color: var(--muted);
       line-height: 1.65;
     }
 
-    form {
+    .notice {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: var(--warn-bg);
+      color: var(--warn-text);
+      line-height: 1.65;
+      border: 1px solid rgba(146, 64, 14, 0.12);
+    }
+
+    .codes {
+      margin-top: 20px;
       display: grid;
-      gap: 14px;
-      margin-top: 16px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
     }
 
-    label {
-      font-size: .92rem;
-      font-weight: 700;
-    }
-
-    input {
-      width: 100%;
-      min-height: 50px;
-      padding: 12px 14px;
+    .code {
+      padding: 14px 16px;
+      border-radius: 14px;
       border: 1px solid var(--border);
-      border-radius: 14px;
-      font: inherit;
-      color: var(--text);
-      background: #fff;
-      text-transform: uppercase;
+      background: var(--code-bg);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 1rem;
+      letter-spacing: .04em;
+      text-align: center;
+      word-break: break-word;
     }
 
-    input:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: var(--focus-ring);
+    .empty {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 14px;
+      border: 1px dashed var(--border);
+      background: #fafcff;
+      color: var(--muted);
+      text-align: center;
     }
 
-    button {
-      min-height: 52px;
-      border: none;
+    .actions {
+      margin-top: 22px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    button,
+    a.button-link {
+      min-height: 48px;
+      padding: 0 16px;
       border-radius: 14px;
-      background: linear-gradient(135deg, var(--primary), var(--primary-strong));
-      color: #fff;
       font: inherit;
       font-weight: 800;
       cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    button:disabled {
+    .action {
+      border: none;
+      background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+      color: #fff;
+    }
+
+    .ghost {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+    }
+
+    button:disabled,
+    a.button-link:disabled {
       opacity: .7;
       cursor: not-allowed;
     }
 
-    .secondary {
-      display: inline-block;
-      margin-top: 16px;
-      color: var(--primary);
-      font-weight: 700;
-      text-decoration: none;
-    }
-
-    .secondary:hover {
-      text-decoration: underline;
+    button:focus-visible,
+    a:focus-visible {
+      outline: none;
+      box-shadow: var(--focus-ring);
     }
 
     .status {
       min-height: 22px;
-      margin-top: 14px;
+      margin-top: 16px;
       font-size: .94rem;
       line-height: 1.5;
     }
@@ -152,49 +183,47 @@
       line-height: 1.6;
     }
 
-    .note {
-      margin-top: 10px;
-      font-size: .84rem;
-      color: var(--muted);
+    @media (max-width: 640px) {
+      .card {
+        padding: 20px;
+      }
+
+      .codes {
+        grid-template-columns: 1fr;
+      }
+
+      .actions {
+        flex-direction: column;
+      }
     }
   </style>
 </head>
 <body>
   <main class="card">
     <div class="eyebrow">Secure access</div>
-    <h1>Use a recovery code</h1>
+    <h1>Save your recovery codes</h1>
     <p>
-      Enter one of your saved recovery codes to complete sign-in. Each recovery
-      code can only be used once.
+      These recovery codes let you access your account if you lose your authenticator device.
+      Each code can be used once only.
     </p>
 
-    <form id="recoveryForm" novalidate>
-      <div>
-        <label for="recoveryCode">Recovery code</label>
-        <input
-          id="recoveryCode"
-          name="recoveryCode"
-          type="text"
-          autocomplete="one-time-code"
-          maxlength="32"
-          placeholder="AB12CD34-EF56GH78"
-          required
-          spellcheck="false"
-          autocapitalize="characters"
-        />
-        <div class="note">You can paste the code exactly as saved.</div>
-      </div>
+    <div class="notice">
+      Store these codes somewhere secure now. After you leave this page, you may not be shown the same set again.
+    </div>
 
-      <button id="verifyBtn" type="submit">Verify recovery code</button>
-    </form>
+    <section id="codesSection" class="codes" aria-label="Recovery codes"></section>
+    <div id="emptyState" class="empty" hidden>No recovery codes found for this session.</div>
 
-    <div id="status" class="status" aria-live="polite"></div>
+    <div class="actions">
+      <button id="copyBtn" class="ghost" type="button">Copy codes</button>
+      <button id="downloadBtn" class="ghost" type="button">Download codes</button>
+      <button id="continueBtn" class="action" type="button">Continue to assistant</button>
+    </div>
 
-    <a class="secondary" href="/mfa">Use an authenticator code instead</a>
+    <div id="status" class="status" aria-live="polite" role="status"></div>
 
     <div class="helper">
-      After successful recovery verification, you should sign in and generate a
-      fresh set of recovery codes if needed.
+      Once you continue, your account should open normally without asking for password again in this session.
     </div>
   </main>
 
@@ -202,10 +231,14 @@
   <script src="/js/auth.js"></script>
   <script>
     (function () {
-      const form = document.getElementById("recoveryForm");
-      const recoveryCode = document.getElementById("recoveryCode");
-      const verifyBtn = document.getElementById("verifyBtn");
+      const codesSection = document.getElementById("codesSection");
+      const emptyState = document.getElementById("emptyState");
+      const copyBtn = document.getElementById("copyBtn");
+      const downloadBtn = document.getElementById("downloadBtn");
+      const continueBtn = document.getElementById("continueBtn");
       const statusEl = document.getElementById("status");
+
+      let recoveryCodes = [];
 
       function setStatus(message, type = "") {
         statusEl.textContent = message || "";
@@ -213,99 +246,121 @@
         if (type) statusEl.classList.add(type);
       }
 
-      function setLoading(isLoading) {
-        verifyBtn.disabled = isLoading;
-        recoveryCode.disabled = isLoading;
-        verifyBtn.textContent = isLoading ? "Verifying..." : "Verify recovery code";
+      function renderCodes() {
+        codesSection.innerHTML = "";
+
+        if (!recoveryCodes.length) {
+          codesSection.hidden = true;
+          emptyState.hidden = false;
+          return;
+        }
+
+        codesSection.hidden = false;
+        emptyState.hidden = true;
+
+        recoveryCodes.forEach((code) => {
+          const div = document.createElement("div");
+          div.className = "code";
+          div.textContent = code;
+          codesSection.appendChild(div);
+        });
       }
 
-      function normaliseRecoveryCode(value) {
-        return String(value || "").trim().toUpperCase();
+      function readCodesFromSession() {
+        try {
+          const raw = sessionStorage.getItem("indicare_recovery_codes");
+          const parsed = JSON.parse(raw || "[]");
+          return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+        } catch (_) {
+          return [];
+        }
+      }
+
+      function clearCodesFromSession() {
+        sessionStorage.removeItem("indicare_recovery_codes");
       }
 
       async function boot() {
-        if (!(window.auth && typeof window.auth.getPendingMfa === "function")) {
-          window.location.replace("/login");
-          return;
-        }
-
-        const pending = window.auth.getPendingMfa();
-        if (!pending || pending.pending !== true) {
-          window.location.replace("/login");
-          return;
-        }
-
         try {
-          const ok = await window.auth.validateSession();
-          if (ok) {
-            window.location.replace("/assistant");
+          if (!window.auth || typeof window.auth.validateSession !== "function") {
+            window.location.replace("/login");
+            return;
           }
-        } catch (_) {
+
+          const state = await window.auth.validateSession();
+
+          if (!state || !state.authenticated) {
+            window.location.replace("/login");
+            return;
+          }
+
+          if (!state.mfa_enabled) {
+            window.location.replace("/mfa-setup");
+            return;
+          }
+
+          if (!state.mfa_verified) {
+            window.location.replace("/mfa");
+            return;
+          }
+
+          recoveryCodes = readCodesFromSession();
+          renderCodes();
+
+          if (recoveryCodes.length) {
+            setStatus("Recovery codes ready. Save them before continuing.", "success");
+          } else {
+            setStatus("No new recovery codes were found in this browser session.", "error");
+          }
+        } catch (error) {
+          setStatus(error?.message || "Could not load recovery codes.", "error");
         }
       }
 
-      form.addEventListener("submit", async (event) => {
-        event.preventDefault();
-
-        const value = normaliseRecoveryCode(recoveryCode.value);
-        if (!value) {
-          setStatus("Please enter a recovery code.", "error");
-          recoveryCode.focus();
+      copyBtn.addEventListener("click", async () => {
+        if (!recoveryCodes.length) {
+          setStatus("There are no recovery codes to copy.", "error");
           return;
         }
 
-        setLoading(true);
-        setStatus("Checking your recovery code...");
-
         try {
-          const data = await window.apiRequest("/auth/mfa/verify-recovery", {
-            method: "POST",
-            body: JSON.stringify({ recovery_code: value })
-          });
-
-          if (!data?.ok) {
-            throw new Error("Recovery verification failed.");
-          }
-
-          const pending = window.auth.getPendingMfa ? window.auth.getPendingMfa() : null;
-          const pendingUser = window.auth.getPendingMfaUser
-            ? window.auth.getPendingMfaUser()
-            : null;
-
-          const remember = !!pending?.remember;
-          const userToStore = {
-            ...(pendingUser || {}),
-            mfa_enabled: true,
-            mfa_verified: true
-          };
-
-          if (userToStore && userToStore.email) {
-            if (remember) {
-              localStorage.setItem("current_user", JSON.stringify(userToStore));
-              sessionStorage.removeItem("current_user");
-            } else {
-              sessionStorage.setItem("current_user", JSON.stringify(userToStore));
-              localStorage.removeItem("current_user");
-            }
-          }
-
-          sessionStorage.removeItem("indicare_pending_mfa");
-          localStorage.removeItem("indicare_pending_mfa");
-          sessionStorage.removeItem("indicare_mfa_user");
-          localStorage.removeItem("indicare_mfa_user");
-
-          setStatus("Recovery verification successful. Redirecting...", "success");
-          window.location.replace("/assistant");
-        } catch (error) {
-          setStatus(error?.message || "Recovery verification failed.", "error");
-          recoveryCode.focus();
-        } finally {
-          setLoading(false);
+          await navigator.clipboard.writeText(recoveryCodes.join("\n"));
+          setStatus("Recovery codes copied.", "success");
+        } catch (_) {
+          setStatus("Could not copy the recovery codes on this device.", "error");
         }
       });
 
-      recoveryCode.addEventListener("blur", function () {
-        recoveryCode.value = normaliseRecoveryCode(recoveryCode.value);
+      downloadBtn.addEventListener("click", () => {
+        if (!recoveryCodes.length) {
+          setStatus("There are no recovery codes to download.", "error");
+          return;
+        }
+
+        const content = [
+          "IndiCare Recovery Codes",
+          "",
+          "Store these securely. Each code can be used once.",
+          "",
+          ...recoveryCodes
+        ].join("\n");
+
+        const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "indicare-recovery-codes.txt";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+
+        setStatus("Recovery codes downloaded.", "success");
+      });
+
+      continueBtn.addEventListener("click", () => {
+        clearCodesFromSession();
+        window.location.replace("/assistant");
       });
 
       boot();
