@@ -19,9 +19,12 @@ PUBLIC_PATH_PREFIXES = (
     "/openapi",
     "/docs",
     "/redoc",
+    "/health",
 )
 
-PUBLIC_EXACT_PATHS = set()
+PUBLIC_EXACT_PATHS = {
+    "/",
+}
 
 MFA_ALLOWED_PATH_PREFIXES = (
     "/auth/login",
@@ -100,7 +103,7 @@ async def enforce_mfa_middleware(request: Request, call_next):
 
     user_id = get_session_user_id(request)
 
-    # Not logged in yet; let your normal auth flow handle it.
+    # Not logged in yet; let the login/auth guard handle it.
     if not user_id:
         return await call_next(request)
 
