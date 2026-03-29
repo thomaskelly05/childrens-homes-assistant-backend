@@ -31,18 +31,66 @@ function clearStoredUser() {
   localStorage.removeItem("current_user");
 }
 
-function rememberPreference() {
-  return !!localStorage.getItem("current_user");
+function clearStoredSessionMeta() {
+  sessionStorage.removeItem("indicare_pending_mfa");
+  localStorage.removeItem("indicare_pending_mfa");
+  sessionStorage.removeItem("indicare_mfa_user");
+  localStorage.removeItem("indicare_mfa_user");
 }
 
-function setStatus(loginStatus, message, isError = false) {
-  if (!loginStatus) return;
-  loginStatus.textContent = message || "";
-  loginStatus.classList.remove("is-error", "is-success");
-  if (isError) {
-    loginStatus.classList.add("is-error");
-  } else if (message) {
-    loginStatus.classList.add("is-success");
+function setPendingMfa(user, remember = false) {
+  const raw = JSON.stringify({
+    pending: true,
+    remember: !!remember,
+    user: user || null,
+    created_at: new Date().toISOString()
+  });
+
+  if (remember) {
+    localStorage.setItem("indicare_pending_mfa", raw);
+    sessionStorage.removeItem("indicare_pending_mfa");
+  } else {
+    sessionStorage.setItem("indicare_pending_mfa", raw);
+    localStorage.removeItem("indicare_pending_mfa");
+  }
+
+  if (user) {
+    const userRaw = JSON.stringify(user);
+    if (remember) {
+      localStorage.setItem("indicare_mfa_user", userRaw);
+      sessionStorage.removeItem("indicare_mfa_user");
+    } else {
+      sessionStorage.setItem("indicare_mfa_user", userRaw);
+      localStorage.removeItem("indicare_mfa_user");
+    }
+  }
+}
+
+function getPendingMfa() {
+  const raw =
+    sessionStorage.getItem("indicare_pending_mfa") ||
+    localStorage.getItem("indicare_pending_mfa");
+
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch (_) {
+    return null;
+  }
+}
+
+function getPendingMfaUser() {
+  const raw =
+    sessionStorage.getItem("indicare_mfa_user") ||
+    localStorage.getItem("indicare_mfa_user");
+
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch (_) {
+    return null;
   }
 }
 
@@ -50,63 +98,24 @@ async function apiFetchJson(path, options = {}) {
   return apiRequest(path, options);
 }
 
-function buildStoredUser(existing, authData) {
-  return {
-    ...existing,
-    id: authData?.user_id ?? authData?.user?.id ?? existing?.id,
-    email: authData?.email ?? authData?.user?.email ?? existing?.email,
-    role: authData?.role ?? authData?.user?.role ?? existing?.role,
-    home_id: authData?.home_id ?? authData?.user?.home_id ?? existing?.home_id,
-    first_name: authData?.user?.first_name ?? existing?.first_name,
-    last_name: authData?.user?.last_name ?? existing?.last_name,
-    is_active: authData?.is_active ?? authData?.user?.is_active ?? existing?.is_active,
-    subscription_active:
-      authData?.subscription_active ??
-      authData?.user?.subscription_active ??
-      existing?.subscription_active,
-    subscription_status:
-      authData?.subscription_status ??
-      authData?.user?.subscription_status ??
-      existing?.subscription_status,
-    plan_name:
-      authData?.plan_name ??
-      authData?.user?.plan_name ??
-      existing?.plan_name,
-    mfa_enabled:
-      authData?.mfa_enabled ??
-      authData?.user?.mfa_enabled ??
-      existing?.mfa_enabled ??
-      false,
-    mfa_verified:
-      authData?.mfa_verified ??
-      authData?.user?.mfa_verified ??
-      existing?.mfa_verified ??
-      false,
-  };
+function redirectToLogin() {
+  window.location.replace("/login");
 }
 
-function redirectForAuthState(authData) {
-  const mfaEnabled =
-    authData?.mfa_enabled ??
-    authData?.user?.mfa_enabled ??
-    false;
+function redirectAfterSuccessfulAuth() {
+  window.location.replace("/assistant");
+}
 
-  const mfaVerified =
-    authData?.mfa_verified ??
-    authData?.user?.mfa_verified ??
-    false;
+function redirectForMfaRequirement(data) {
+  if (!data || data.mfa_required !== true) return false;
 
-  if (!mfaEnabled) {
-    window.location.href = "/mfa-setup";
-    return;
+  if (data.mfa_enabled) {
+    window.location.replace("/mfa");
+  } else {
+    window.location.replace("/mfa-setup");
   }
 
-  if (!mfaVerified) {
-    window.location.href = "/mfa";
-    return;
-  }
-
-  window.location.href = "/assistant";
+  return true;
 }
 
 async function login(credentialsArg = null) {
@@ -130,7 +139,9 @@ async function login(credentialsArg = null) {
       : !!(rememberInput && rememberInput.checked);
 
   if (!email || !password) {
-    setStatus(loginStatus, "Please enter your email and password.", true);
+    if (loginStatus) {
+      loginStatus.textContent = "Please enter your email and password.";
+    }
     throw new Error("Please enter your email and password");
   }
 
@@ -139,7 +150,9 @@ async function login(credentialsArg = null) {
     loginButton.textContent = "Signing in...";
   }
 
-  setStatus(loginStatus, "Checking your details...");
+  if (loginStatus) {
+    loginStatus.textContent = "Checking your details...";
+  }
 
   try {
     const data = await apiFetchJson("/auth/login", {
@@ -151,17 +164,36 @@ async function login(credentialsArg = null) {
       throw new Error("Login failed");
     }
 
-    const stored = buildStoredUser({}, data);
-    setStoredUser(stored, remember);
+    clearStoredUser();
+    clearStoredSessionMeta();
 
-    setStatus(loginStatus, "Sign-in successful. Redirecting...");
+    if (data.user) {
+      setPendingMfa(data.user, remember);
+    }
 
-    redirectForAuthState(data);
+    if (loginStatus) {
+      loginStatus.textContent = data.mfa_required
+        ? "Password accepted. Continuing to multi-factor sign-in..."
+        : "Sign-in successful. Redirecting...";
+    }
+
+    if (redirectForMfaRequirement(data)) {
+      return data;
+    }
+
+    if (data.user) {
+      setStoredUser(data.user, remember);
+    }
+
+    redirectAfterSuccessfulAuth();
     return data;
   } catch (error) {
     clearStoredUser();
+    clearStoredSessionMeta();
     const message = error?.message || "Login failed";
-    setStatus(loginStatus, message, true);
+    if (loginStatus) {
+      loginStatus.textContent = message;
+    }
     throw error;
   } finally {
     if (loginButton) {
@@ -177,7 +209,8 @@ async function logoutUser() {
   } catch (_) {}
 
   clearStoredUser();
-  window.location.replace("/login");
+  clearStoredSessionMeta();
+  redirectToLogin();
 }
 
 function logout() {
@@ -190,75 +223,66 @@ async function validateSession() {
 
     if (!data || data.authenticated !== true) {
       clearStoredUser();
-      return {
-        authenticated: false,
-        fullyAuthenticated: false,
-        mfaEnabled: false,
-        mfaVerified: false,
-      };
+      clearStoredSessionMeta();
+      return false;
     }
 
-    const existing = getStoredUser() || {};
-    const remember = rememberPreference();
+    if (data.mfa_enabled && data.mfa_verified !== true) {
+      const existingPending = getPendingMfa();
+      const remember = existingPending ? !!existingPending.remember : !!localStorage.getItem("current_user");
+      const pendingUser = getPendingMfaUser() || getStoredUser() || {
+        id: data.user_id,
+        email: data.email,
+        role: data.role,
+        home_id: data.home_id,
+        is_active: data.is_active,
+        subscription_status: data.subscription_status,
+        plan_name: data.plan_name,
+        mfa_enabled: data.mfa_enabled,
+        mfa_verified: data.mfa_verified,
+      };
 
-    const merged = buildStoredUser(existing, data);
-    setStoredUser(merged, remember);
+      clearStoredUser();
+      setPendingMfa(pendingUser, remember);
+      window.location.replace("/mfa");
+      return false;
+    }
 
-    return {
-      authenticated: true,
-      fullyAuthenticated: data.mfa_enabled === true && data.mfa_verified === true,
-      mfaEnabled: data.mfa_enabled === true,
-      mfaVerified: data.mfa_verified === true,
-      user: merged,
-    };
+    const existing = getStoredUser() || getPendingMfaUser() || {};
+    const remember = !!localStorage.getItem("current_user");
+
+    setStoredUser(
+      {
+        ...existing,
+        id: data.user_id,
+        email: data.email,
+        role: data.role,
+        home_id: data.home_id,
+        is_active: data.is_active,
+        subscription_status: data.subscription_status,
+        plan_name: data.plan_name,
+        subscription_active: data.subscription_active,
+        mfa_enabled: data.mfa_enabled,
+        mfa_verified: data.mfa_verified,
+      },
+      remember
+    );
+
+    clearStoredSessionMeta();
+    return true;
   } catch (_) {
     clearStoredUser();
-    return {
-      authenticated: false,
-      fullyAuthenticated: false,
-      mfaEnabled: false,
-      mfaVerified: false,
-    };
+    clearStoredSessionMeta();
+    return false;
   }
 }
 
 async function requireAuth() {
-  const state = await validateSession();
-
-  if (!state.authenticated) {
-    window.location.replace("/login");
+  const ok = await validateSession();
+  if (!ok) {
+    redirectToLogin();
     return false;
   }
-
-  if (!state.mfaEnabled) {
-    window.location.replace("/mfa-setup");
-    return false;
-  }
-
-  if (!state.mfaVerified) {
-    window.location.replace("/mfa");
-    return false;
-  }
-
-  return true;
-}
-
-async function redirectIfAlreadySignedIn() {
-  const state = await validateSession();
-
-  if (!state.authenticated) return false;
-
-  if (!state.mfaEnabled) {
-    window.location.replace("/mfa-setup");
-    return true;
-  }
-
-  if (!state.mfaVerified) {
-    window.location.replace("/mfa");
-    return true;
-  }
-
-  window.location.replace("/assistant");
   return true;
 }
 
@@ -276,5 +300,7 @@ window.auth = {
   requireAuth,
   validateSession,
   getStoredUser,
-  redirectIfAlreadySignedIn,
+  getPendingMfa,
+  getPendingMfaUser,
+  clearStoredUser,
 };
