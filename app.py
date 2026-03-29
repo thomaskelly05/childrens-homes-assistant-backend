@@ -12,6 +12,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from starlette.middleware.sessions import SessionMiddleware
 
+from auth.auth_guard import enforce_login_middleware
 from auth.mfa_guard import enforce_mfa_middleware
 from db.connection import (
     close_db_pool,
@@ -81,6 +82,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def global_login_enforcement(request: Request, call_next):
+    return await enforce_login_middleware(request, call_next)
 
 
 @app.middleware("http")
