@@ -12,45 +12,113 @@
   <div id="settingsOverlay" class="so"></div>
 
   <div id="legalOverlay" class="legal-overlay" aria-hidden="true"></div>
-  <section id="legalModal" class="legal-modal" role="dialog" aria-modal="true" aria-labelledby="legalModalTitle">
+  <section
+    id="legalModal"
+    class="legal-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="legalModalTitle"
+  >
     <div class="legal-head">
       <div>
-        <h2 id="legalModalTitle">IndiCare terms, privacy and intellectual property notice</h2>
+        <h2 id="legalModalTitle">
+          IndiCare terms, privacy and intellectual property notice
+        </h2>
         <p>You must review and accept these terms before using the platform.</p>
       </div>
-      <button id="closeLegalModal" class="icon" type="button" aria-label="Close legal notice">✕</button>
+      <button
+        id="closeLegalModal"
+        class="icon"
+        type="button"
+        aria-label="Close legal notice"
+      >
+        ✕
+      </button>
     </div>
 
     <div class="legal-tabs">
-      <button type="button" class="legal-tab active" data-legal-tab="terms" aria-selected="true">Terms of use</button>
-      <button type="button" class="legal-tab" data-legal-tab="privacy" aria-selected="false">Privacy</button>
-      <button type="button" class="legal-tab" data-legal-tab="ip" aria-selected="false">Intellectual property</button>
-      <button type="button" class="legal-tab" data-legal-tab="acceptance" aria-selected="false">Acceptance</button>
+      <button
+        type="button"
+        class="legal-tab active"
+        data-legal-tab="terms"
+        aria-selected="true"
+      >
+        Terms of use
+      </button>
+      <button
+        type="button"
+        class="legal-tab"
+        data-legal-tab="privacy"
+        aria-selected="false"
+      >
+        Privacy
+      </button>
+      <button
+        type="button"
+        class="legal-tab"
+        data-legal-tab="ip"
+        aria-selected="false"
+      >
+        Intellectual property
+      </button>
+      <button
+        type="button"
+        class="legal-tab"
+        data-legal-tab="acceptance"
+        aria-selected="false"
+      >
+        Acceptance
+      </button>
     </div>
 
     <div class="legal-body">
       <div class="legal-panel" data-legal-panel="terms">
         <h3>Terms of use</h3>
-        <p>This system is for authorised professional use only. You must keep login details secure, use the platform lawfully, and ensure records remain accurate, proportionate and professionally appropriate.</p>
-        <p>You must not misuse the system, attempt unauthorised access, copy protected content, or share confidential platform material outside authorised operational purposes.</p>
+        <p>
+          This system is for authorised professional use only. You must keep
+          login details secure, use the platform lawfully, and ensure records
+          remain accurate, proportionate and professionally appropriate.
+        </p>
+        <p>
+          You must not misuse the system, attempt unauthorised access, copy
+          protected content, or share confidential platform material outside
+          authorised operational purposes.
+        </p>
       </div>
 
       <div class="legal-panel hidden" data-legal-panel="privacy">
         <h3>Privacy and data handling</h3>
-        <p>IndiCare may process sensitive information for operational, safeguarding, recording and governance purposes. Users must only access information they are authorised to see and must handle children’s information lawfully and confidentially.</p>
-        <p>You remain responsible for ensuring records are necessary, relevant, accurate and shared appropriately.</p>
+        <p>
+          IndiCare may process sensitive information for operational,
+          safeguarding, recording and governance purposes. Users must only
+          access information they are authorised to see and must handle
+          children’s information lawfully and confidentially.
+        </p>
+        <p>
+          You remain responsible for ensuring records are necessary, relevant,
+          accurate and shared appropriately.
+        </p>
       </div>
 
       <div class="legal-panel hidden" data-legal-panel="ip">
         <h3>Intellectual property</h3>
-        <p>The IndiCare platform, interface, prompts, structure, wording, code, branding and supporting materials are proprietary unless expressly stated otherwise.</p>
-        <p>You must not copy, reproduce, republish, reverse engineer, sell, rebrand or commercially exploit the platform or its protected contents without written permission.</p>
+        <p>
+          The IndiCare platform, interface, prompts, structure, wording, code,
+          branding and supporting materials are proprietary unless expressly
+          stated otherwise.
+        </p>
+        <p>
+          You must not copy, reproduce, republish, reverse engineer, sell,
+          rebrand or commercially exploit the platform or its protected contents
+          without written permission.
+        </p>
       </div>
 
       <div class="legal-panel hidden" data-legal-panel="acceptance">
         <h3>Confirm acceptance</h3>
         <div class="legal-note">
-          By continuing, you confirm that you understand the platform terms, privacy expectations and intellectual property restrictions.
+          By continuing, you confirm that you understand the platform terms,
+          privacy expectations and intellectual property restrictions.
         </div>
 
         <div class="legal-checks">
@@ -61,20 +129,34 @@
 
           <label class="legal-check">
             <input id="acceptPrivacyCheck" type="checkbox" />
-            <span>I understand my responsibilities regarding confidential and sensitive information.</span>
+            <span>
+              I understand my responsibilities regarding confidential and
+              sensitive information.
+            </span>
           </label>
 
           <label class="legal-check">
             <input id="acceptIPCheck" type="checkbox" />
-            <span>I understand the intellectual property and non-copying restrictions.</span>
+            <span>
+              I understand the intellectual property and non-copying
+              restrictions.
+            </span>
           </label>
         </div>
       </div>
     </div>
 
     <div class="legal-actions">
-      <button id="declineLegalBtn" type="button" class="ghost danger-outline">Decline and sign out</button>
-      <button id="acceptLegalBtn" type="button" class="action">Accept and continue</button>
+      <button
+        id="declineLegalBtn"
+        type="button"
+        class="ghost danger-outline"
+      >
+        Decline and sign out
+      </button>
+      <button id="acceptLegalBtn" type="button" class="action">
+        Accept and continue
+      </button>
     </div>
   </section>
 
@@ -108,7 +190,9 @@
       <div class="rowset">
         <div>
           <div style="font-weight:600">Privacy mode</div>
-          <div style="font-size:.8rem;color:var(--muted)">Blur chat until hover</div>
+          <div style="font-size:.8rem;color:var(--muted)">
+            Blur chat until hover
+          </div>
         </div>
         <button id="privacy" class="toggle" type="button"></button>
       </div>
@@ -116,7 +200,9 @@
       <div class="rowset">
         <div>
           <div style="font-weight:600">Dark mode</div>
-          <div style="font-size:.8rem;color:var(--muted)">Switch appearance</div>
+          <div style="font-size:.8rem;color:var(--muted)">
+            Switch appearance
+          </div>
         </div>
         <button id="theme" class="toggle" type="button"></button>
       </div>
@@ -126,7 +212,9 @@
       <div class="rowset">
         <div>
           <div style="font-weight:600">Voice replies</div>
-          <div style="font-size:.8rem;color:var(--muted)">Read assistant replies aloud</div>
+          <div style="font-size:.8rem;color:var(--muted)">
+            Read assistant replies aloud
+          </div>
         </div>
         <button id="voiceReplies" class="toggle" type="button"></button>
       </div>
@@ -141,9 +229,18 @@
       <div class="rowset">
         <div>
           <div style="font-weight:600">Stop speech</div>
-          <div style="font-size:.8rem;color:var(--muted)">Stop any reply being read aloud</div>
+          <div style="font-size:.8rem;color:var(--muted)">
+            Stop any reply being read aloud
+          </div>
         </div>
-        <button id="stopVoiceBtn" class="ghost" type="button" style="padding:8px 12px;">Stop</button>
+        <button
+          id="stopVoiceBtn"
+          class="ghost"
+          type="button"
+          style="padding:8px 12px;"
+        >
+          Stop
+        </button>
       </div>
     </div>
 
@@ -160,23 +257,41 @@
 
     <div class="card">
       <label for="contextChild">Current child / young person</label>
-      <input id="contextChild" class="field" placeholder="Optional name or initials">
+      <input
+        id="contextChild"
+        class="field"
+        placeholder="Optional name or initials"
+      />
 
       <label for="contextHome">Current home</label>
-      <input id="contextHome" class="field" placeholder="Optional home name">
+      <input
+        id="contextHome"
+        class="field"
+        placeholder="Optional home name"
+      />
 
       <label for="contextShift">Current shift</label>
-      <input id="contextShift" class="field" placeholder="Optional shift, e.g. Day / Night">
+      <input
+        id="contextShift"
+        class="field"
+        placeholder="Optional shift, e.g. Day / Night"
+      />
 
-      <button id="saveContextBtn" class="action" type="button">Save context</button>
+      <button id="saveContextBtn" class="action" type="button">
+        Save context
+      </button>
     </div>
 
     <div class="card">
-      <button id="openLegalFromSettings" class="ghost" type="button">Review terms and privacy</button>
+      <button id="openLegalFromSettings" class="ghost" type="button">
+        Review terms and privacy
+      </button>
     </div>
 
     <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px">
-      <button id="backWelcome" class="ghost" type="button">Back to welcome screen</button>
+      <button id="backWelcome" class="ghost" type="button">
+        Back to welcome screen
+      </button>
       <button id="logout" class="logout" type="button">Log out</button>
     </div>
   </aside>
@@ -185,7 +300,14 @@
     <aside id="sidebar" class="sidebar">
       <div class="side-inner">
         <div class="side-top">
-          <button id="sideToggle" class="icon" type="button" aria-label="Toggle sidebar">☰</button>
+          <button
+            id="sideToggle"
+            class="icon"
+            type="button"
+            aria-label="Toggle sidebar"
+          >
+            ☰
+          </button>
           <div class="brand">IndiCare Command</div>
         </div>
 
@@ -193,13 +315,26 @@
           <button id="newChat" class="primary" type="button">+ New Log</button>
 
           <div class="nav">
-            <button id="navAssistant" class="navbtn active" type="button">Assistant OS</button>
-            <button id="navLibrary" class="navbtn hidden" type="button">Policies</button>
-            <button id="navManager" class="navbtn hidden" type="button">Manager</button>
-            <button id="navAdmin" class="navbtn hidden" type="button">Admin</button>
+            <button id="navAssistant" class="navbtn active" type="button">
+              Assistant OS
+            </button>
+            <button id="navLibrary" class="navbtn hidden" type="button">
+              Policies
+            </button>
+            <button id="navManager" class="navbtn hidden" type="button">
+              Manager
+            </button>
+            <button id="navAdmin" class="navbtn hidden" type="button">
+              Admin
+            </button>
           </div>
 
-          <input id="search" class="search" type="text" placeholder="Search conversations...">
+          <input
+            id="search"
+            class="search"
+            type="text"
+            placeholder="Search conversations..."
+          />
           <div id="history" class="history"></div>
         </div>
       </div>
@@ -208,12 +343,33 @@
     <main class="workspace">
       <header class="header">
         <div class="header-left">
-          <button id="mobileMenu" class="icon mobile" type="button" aria-label="Open menu">☰</button>
+          <button
+            id="mobileMenu"
+            class="icon mobile"
+            type="button"
+            aria-label="Open menu"
+          >
+            ☰
+          </button>
           <div id="title" class="title">Intelligence for Care</div>
         </div>
+
         <div style="display:flex;gap:8px;align-items:center;">
-          <button id="openLegalHeaderBtn" class="ghost legal-mini-btn" type="button">Terms</button>
-          <button id="openSettings" class="icon" type="button" aria-label="Open settings">⚙</button>
+          <button
+            id="openLegalHeaderBtn"
+            class="ghost legal-mini-btn"
+            type="button"
+          >
+            Terms
+          </button>
+          <button
+            id="openSettings"
+            class="icon"
+            type="button"
+            aria-label="Open settings"
+          >
+            ⚙
+          </button>
         </div>
       </header>
 
@@ -221,7 +377,10 @@
         <div class="panel-inner">
           <div id="empty" class="welcome">
             <h1 id="welcomeTitle">Ready to support.</h1>
-            <p id="welcomeText">Your assistant is ready to help with records, safeguarding, risk, guidance, and drafting.</p>
+            <p id="welcomeText">
+              Your assistant is ready to help with records, safeguarding, risk,
+              guidance, and drafting.
+            </p>
           </div>
           <div id="messages" class="messages hidden"></div>
         </div>
@@ -229,42 +388,648 @@
 
       <section id="libraryPanel" class="panel hidden">
         <div class="panel-inner">
-          <div id="library-list-tab"></div>
-          <div id="library-editor-tab" class="hidden"></div>
-          <div id="libraryList"></div>
-          <div id="libraryViewer" class="viewbox"><h3>Select a document</h3><p>Open a policy or document from the list to read it here.</p></div>
-          <div id="managerLibraryList"></div>
+          <div class="tabbar">
+            <button
+              class="tabbtn active"
+              type="button"
+              data-library-tab="list"
+            >
+              Library
+            </button>
+            <button
+              id="managerEditorTab"
+              class="tabbtn hidden"
+              type="button"
+              data-library-tab="editor"
+            >
+              Editor
+            </button>
+            <button
+              id="refreshLibraryBtn"
+              class="ghost"
+              type="button"
+              style="margin-left:auto"
+            >
+              Refresh
+            </button>
+          </div>
+
+          <div id="library-list-tab">
+            <div class="filters">
+              <input
+                id="librarySearch"
+                class="field"
+                type="text"
+                placeholder="Search library..."
+              />
+              <select id="libraryTypeFilter" class="sel">
+                <option value="">All types</option>
+                <option value="policy">Policy</option>
+                <option value="procedure">Procedure</option>
+                <option value="guidance">Guidance</option>
+                <option value="risk_assessment">Risk assessment</option>
+                <option value="form">Form</option>
+                <option value="template">Template</option>
+                <option value="home_document">Home document</option>
+              </select>
+              <select id="libraryApprovalFilter" class="sel">
+                <option value="">All approval states</option>
+                <option value="approved">Approved</option>
+                <option value="pending">Pending</option>
+                <option value="draft">Draft</option>
+                <option value="not_required">Not required</option>
+              </select>
+              <button id="refreshManagerLibraryBtn" class="ghost" type="button">
+                Reload
+              </button>
+            </div>
+
+            <div id="libraryList"></div>
+
+            <div id="libraryViewer" class="viewbox">
+              <h3>Select a document</h3>
+              <p>
+                Open a policy or document from the list to read it here.
+              </p>
+            </div>
+
+            <div id="managerLibraryList"></div>
+          </div>
+
+          <div id="library-editor-tab" class="hidden">
+            <div class="form-card">
+              <div
+                style="display:flex;justify-content:space-between;align-items:center;gap:12px;"
+              >
+                <h3 id="libraryFormTitle" style="margin:0;">Create document</h3>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <button id="resetLibraryDocBtn" class="ghost" type="button">
+                    Reset
+                  </button>
+                  <button
+                    id="deleteLibraryDocBtn"
+                    class="ghost danger-outline hidden"
+                    type="button"
+                  >
+                    Delete
+                  </button>
+                  <button id="saveLibraryDocBtn" class="action" type="button">
+                    Save
+                  </button>
+                </div>
+              </div>
+
+              <div class="grid-2">
+                <div>
+                  <label for="libraryDocTitle">Title</label>
+                  <input id="libraryDocTitle" class="field" type="text" />
+                </div>
+
+                <div>
+                  <label for="libraryDocType">Type</label>
+                  <select id="libraryDocType" class="sel">
+                    <option value="policy">Policy</option>
+                    <option value="procedure">Procedure</option>
+                    <option value="guidance">Guidance</option>
+                    <option value="risk_assessment">Risk assessment</option>
+                    <option value="form">Form</option>
+                    <option value="template">Template</option>
+                    <option value="home_document">Home document</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label for="libraryIssueDate">Issue date</label>
+                  <input id="libraryIssueDate" class="field" type="date" />
+                </div>
+
+                <div>
+                  <label for="libraryReviewDate">Review date</label>
+                  <input id="libraryReviewDate" class="field" type="date" />
+                </div>
+
+                <div>
+                  <label for="libraryExpiryDate">Expiry date</label>
+                  <input id="libraryExpiryDate" class="field" type="date" />
+                </div>
+
+                <div>
+                  <label for="libraryApprovalStatus">Approval status</label>
+                  <select id="libraryApprovalStatus" class="sel">
+                    <option value="not_required">Not required</option>
+                    <option value="draft">Draft</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label for="libraryConfidentiality">Confidentiality</label>
+                  <select id="libraryConfidentiality" class="sel">
+                    <option value="standard">Standard</option>
+                    <option value="confidential">Confidential</option>
+                    <option value="restricted">Restricted</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label for="libraryOwnerId">Owner</label>
+                  <select id="libraryOwnerId" class="sel">
+                    <option value="">Select owner</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label for="libraryInputText">Document content</label>
+                <textarea
+                  id="libraryInputText"
+                  class="ta tall"
+                  rows="10"
+                  placeholder="Enter document content..."
+                ></textarea>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
       <section id="managerPanel" class="panel hidden">
         <div class="panel-inner">
-          <div class="summary" style="margin-bottom:16px;">
-            <div class="s"><div class="n" id="mgrStatUsers">0</div><div class="l">Staff</div></div>
-            <div class="s"><div class="n" id="mgrStatDocs">0</div><div class="l">Home Documents</div></div>
-            <div class="s"><div class="n" id="mgrStatManagers">0</div><div class="l">Managers</div></div>
-            <div class="s"><div class="n" id="mgrStatStaffOnly">0</div><div class="l">Support Staff</div></div>
+          <div class="tabbar">
+            <button
+              class="tabbtn active"
+              type="button"
+              data-manager-tab="staff"
+            >
+              Staff
+            </button>
+            <button
+              class="tabbtn"
+              type="button"
+              data-manager-tab="documents"
+            >
+              Documents
+            </button>
+            <button
+              id="refreshManagerBtn"
+              class="ghost"
+              type="button"
+              style="margin-left:auto"
+            >
+              Refresh
+            </button>
           </div>
-          <div id="mgrUsers"></div>
-          <div id="mgrDocs"></div>
+
+          <div class="summary" style="margin-bottom:16px;">
+            <div class="s">
+              <div class="n" id="mgrStatUsers">0</div>
+              <div class="l">Staff</div>
+            </div>
+            <div class="s">
+              <div class="n" id="mgrStatDocs">0</div>
+              <div class="l">Home Documents</div>
+            </div>
+            <div class="s">
+              <div class="n" id="mgrStatManagers">0</div>
+              <div class="l">Managers</div>
+            </div>
+            <div class="s">
+              <div class="n" id="mgrStatStaffOnly">0</div>
+              <div class="l">Support Staff</div>
+            </div>
+          </div>
+
+          <div id="manager-staff-tab" class="manager-tab">
+            <div class="form-card">
+              <h3>Create staff account</h3>
+              <div class="grid-2">
+                <div>
+                  <label for="mgrFirst">First name</label>
+                  <input id="mgrFirst" class="field" type="text" />
+                </div>
+                <div>
+                  <label for="mgrLast">Last name</label>
+                  <input id="mgrLast" class="field" type="text" />
+                </div>
+                <div>
+                  <label for="mgrEmail">Email</label>
+                  <input id="mgrEmail" class="field" type="email" />
+                </div>
+                <div>
+                  <label for="mgrPass">Password</label>
+                  <input id="mgrPass" class="field" type="password" />
+                </div>
+                <div>
+                  <label for="mgrRole">Role</label>
+                  <select id="mgrRole" class="sel">
+                    <option value="staff">Staff</option>
+                    <option value="manager">Manager</option>
+                  </select>
+                </div>
+              </div>
+              <div style="margin-top:12px;">
+                <button id="createStaff" class="action" type="button">
+                  Create staff member
+                </button>
+              </div>
+            </div>
+
+            <div id="mgrUsers"></div>
+          </div>
+
+          <div id="manager-documents-tab" class="manager-tab hidden">
+            <div class="form-card">
+              <h3>Create manager document</h3>
+              <div>
+                <label for="mgrDocTitle">Title</label>
+                <input id="mgrDocTitle" class="field" type="text" />
+              </div>
+              <div>
+                <label for="mgrDocText">Content</label>
+                <textarea
+                  id="mgrDocText"
+                  class="ta tall"
+                  rows="8"
+                  placeholder="Enter document content..."
+                ></textarea>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+                <button id="saveDoc" class="action" type="button">
+                  Save document
+                </button>
+                <button id="refreshManagerDocsBtn" class="ghost" type="button">
+                  Refresh documents
+                </button>
+              </div>
+            </div>
+
+            <div id="mgrDocs"></div>
+          </div>
         </div>
       </section>
 
       <section id="adminPanel" class="panel hidden">
         <div class="panel-inner">
           <div class="summary">
-            <div class="s"><div class="n" id="sumUsers">0</div><div class="l">Users</div></div>
-            <div class="s"><div class="n" id="sumHomes">0</div><div class="l">Homes</div></div>
-            <div class="s"><div class="n" id="sumProviders">0</div><div class="l">Providers</div></div>
-            <div class="s"><div class="n" id="sumDocs">0</div><div class="l">Policies / Documents</div></div>
+            <div class="s">
+              <div class="n" id="sumUsers">0</div>
+              <div class="l">Users</div>
+            </div>
+            <div class="s">
+              <div class="n" id="sumHomes">0</div>
+              <div class="l">Homes</div>
+            </div>
+            <div class="s">
+              <div class="n" id="sumProviders">0</div>
+              <div class="l">Providers</div>
+            </div>
+            <div class="s">
+              <div class="n" id="sumDocs">0</div>
+              <div class="l">Policies / Documents</div>
+            </div>
           </div>
-          <div id="adminUsersList"></div>
-          <div id="homesList"></div>
-          <div id="providersList"></div>
-          <div id="docsList"></div>
-          <div id="billingStats"></div>
-          <div id="billingList"></div>
-          <div id="auditList"></div>
+
+          <div class="tabbar">
+            <button class="tabbtn active" type="button" data-tab="users">
+              Users
+            </button>
+            <button class="tabbtn" type="button" data-tab="homes">
+              Homes
+            </button>
+            <button class="tabbtn" type="button" data-tab="providers">
+              Providers
+            </button>
+            <button class="tabbtn" type="button" data-tab="documents">
+              Documents
+            </button>
+            <button class="tabbtn" type="button" data-tab="billing">
+              Billing
+            </button>
+            <button class="tabbtn" type="button" data-tab="audit">
+              Audit
+            </button>
+          </div>
+
+          <div id="tab-users" class="admin-tab">
+            <div class="form-card">
+              <h3>Create user</h3>
+              <div class="grid-2">
+                <div>
+                  <label for="adminFirstName">First name</label>
+                  <input id="adminFirstName" class="field" type="text" />
+                </div>
+                <div>
+                  <label for="adminLastName">Last name</label>
+                  <input id="adminLastName" class="field" type="text" />
+                </div>
+                <div>
+                  <label for="adminEmail">Email</label>
+                  <input id="adminEmail" class="field" type="email" />
+                </div>
+                <div>
+                  <label for="adminPassword">Password</label>
+                  <input id="adminPassword" class="field" type="password" />
+                </div>
+                <div>
+                  <label for="adminRole">Role</label>
+                  <select id="adminRole" class="sel">
+                    <option value="staff">Staff</option>
+                    <option value="manager">Manager</option>
+                    <option value="admin">Admin</option>
+                    <option value="provider_admin">Provider admin</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="adminHomeId">Home</label>
+                  <select id="adminHomeId" class="sel">
+                    <option value="">Select home</option>
+                  </select>
+                </div>
+              </div>
+
+              <div
+                style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px;"
+              >
+                <button id="createUserBtn" class="action" type="button">
+                  Create user
+                </button>
+                <button id="refreshUsersBtn" class="ghost" type="button">
+                  Refresh users
+                </button>
+                <button id="adminActiveToggle" class="toggle" type="button"></button>
+                <span style="font-size:.9rem;color:var(--muted);">
+                  New user active on creation
+                </span>
+              </div>
+            </div>
+
+            <div class="filters">
+              <input
+                id="userSearch"
+                class="field"
+                type="text"
+                placeholder="Search users..."
+              />
+              <select id="userRoleFilter" class="sel">
+                <option value="">All roles</option>
+                <option value="staff">Staff</option>
+                <option value="manager">Manager</option>
+                <option value="admin">Admin</option>
+                <option value="provider_admin">Provider admin</option>
+              </select>
+              <select id="userHomeFilter" class="sel">
+                <option value="">All homes</option>
+              </select>
+              <select id="userArchivedFilter" class="sel">
+                <option value="">All statuses</option>
+                <option value="false">Live</option>
+                <option value="true">Archived</option>
+              </select>
+            </div>
+
+            <div id="adminUsersList"></div>
+          </div>
+
+          <div id="tab-homes" class="admin-tab hidden">
+            <div class="form-card">
+              <h3>Create home</h3>
+              <div class="grid-2">
+                <div>
+                  <label for="homeName">Home name</label>
+                  <input id="homeName" class="field" type="text" />
+                </div>
+                <div>
+                  <label for="homePostcode">Postcode</label>
+                  <input id="homePostcode" class="field" type="text" />
+                </div>
+                <div>
+                  <label for="homeAddress">Address</label>
+                  <input id="homeAddress" class="field" type="text" />
+                </div>
+                <div>
+                  <label for="homeRegion">Region</label>
+                  <input id="homeRegion" class="field" type="text" />
+                </div>
+                <div>
+                  <label for="homeLocalAuthority">Local authority</label>
+                  <input id="homeLocalAuthority" class="field" type="text" />
+                </div>
+                <div>
+                  <label for="homeOfstedUrn">Ofsted URN</label>
+                  <input id="homeOfstedUrn" class="field" type="text" />
+                </div>
+                <div>
+                  <label for="homeProviderId">Provider</label>
+                  <select id="homeProviderId" class="sel">
+                    <option value="">Select provider</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="homeRegisteredManagerId">Registered manager</label>
+                  <select id="homeRegisteredManagerId" class="sel">
+                    <option value="">Select manager</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="homeGeofence">Geofence radius (m)</label>
+                  <input id="homeGeofence" class="field" type="number" min="0" />
+                </div>
+              </div>
+
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+                <button id="createHomeBtn" class="action" type="button">
+                  Create home
+                </button>
+                <button id="refreshHomesBtn" class="ghost" type="button">
+                  Refresh homes
+                </button>
+              </div>
+            </div>
+
+            <div id="homesList"></div>
+          </div>
+
+          <div id="tab-providers" class="admin-tab hidden">
+            <div class="form-card">
+              <h3>Create provider</h3>
+              <div class="grid-2">
+                <div>
+                  <label for="providerName">Provider name</label>
+                  <input id="providerName" class="field" type="text" />
+                </div>
+                <div>
+                  <label for="providerRegion">Region</label>
+                  <input id="providerRegion" class="field" type="text" />
+                </div>
+                <div>
+                  <label for="providerAddress">Address</label>
+                  <input id="providerAddress" class="field" type="text" />
+                </div>
+                <div>
+                  <label for="providerPostcode">Postcode</label>
+                  <input id="providerPostcode" class="field" type="text" />
+                </div>
+                <div>
+                  <label for="providerLA">Local authority</label>
+                  <input id="providerLA" class="field" type="text" />
+                </div>
+                <div>
+                  <label for="providerLeadName">Safeguarding lead name</label>
+                  <input id="providerLeadName" class="field" type="text" />
+                </div>
+                <div>
+                  <label for="providerLeadEmail">Safeguarding lead email</label>
+                  <input id="providerLeadEmail" class="field" type="email" />
+                </div>
+              </div>
+
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+                <button id="createProviderBtn" class="action" type="button">
+                  Create provider
+                </button>
+                <button id="refreshProvidersBtn" class="ghost" type="button">
+                  Refresh providers
+                </button>
+              </div>
+            </div>
+
+            <div id="providersList"></div>
+          </div>
+
+          <div id="tab-documents" class="admin-tab hidden">
+            <div class="form-card">
+              <h3>Create document</h3>
+              <div class="grid-2">
+                <div>
+                  <label for="docTitle">Title</label>
+                  <input id="docTitle" class="field" type="text" />
+                </div>
+                <div>
+                  <label for="docType">Type</label>
+                  <select id="docType" class="sel">
+                    <option value="policy">Policy</option>
+                    <option value="procedure">Procedure</option>
+                    <option value="guidance">Guidance</option>
+                    <option value="risk_assessment">Risk assessment</option>
+                    <option value="form">Form</option>
+                    <option value="template">Template</option>
+                    <option value="home_document">Home document</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="docHomeId">Home</label>
+                  <select id="docHomeId" class="sel">
+                    <option value="">Select home</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="docOwnerId">Owner</label>
+                  <select id="docOwnerId" class="sel">
+                    <option value="">Select owner</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="docIssueDate">Issue date</label>
+                  <input id="docIssueDate" class="field" type="date" />
+                </div>
+                <div>
+                  <label for="docReviewDate">Review date</label>
+                  <input id="docReviewDate" class="field" type="date" />
+                </div>
+                <div>
+                  <label for="docExpiryDate">Expiry date</label>
+                  <input id="docExpiryDate" class="field" type="date" />
+                </div>
+                <div>
+                  <label for="docApprovalStatus">Approval status</label>
+                  <select id="docApprovalStatus" class="sel">
+                    <option value="not_required">Not required</option>
+                    <option value="draft">Draft</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="docConfLevel">Confidentiality</label>
+                  <select id="docConfLevel" class="sel">
+                    <option value="standard">Standard</option>
+                    <option value="confidential">Confidential</option>
+                    <option value="restricted">Restricted</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label for="docInputText">Document content</label>
+                <textarea
+                  id="docInputText"
+                  class="ta tall"
+                  rows="8"
+                  placeholder="Enter document content..."
+                ></textarea>
+              </div>
+
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+                <button id="createDocBtn" class="action" type="button">
+                  Create document
+                </button>
+                <button id="refreshDocsBtn" class="ghost" type="button">
+                  Refresh documents
+                </button>
+              </div>
+            </div>
+
+            <div class="filters">
+              <input
+                id="docSearch"
+                class="field"
+                type="text"
+                placeholder="Search documents..."
+              />
+              <select id="docHomeFilter" class="sel">
+                <option value="">All homes</option>
+              </select>
+              <select id="docTypeFilter" class="sel">
+                <option value="">All types</option>
+                <option value="policy">Policy</option>
+                <option value="procedure">Procedure</option>
+                <option value="guidance">Guidance</option>
+                <option value="risk_assessment">Risk assessment</option>
+                <option value="form">Form</option>
+                <option value="template">Template</option>
+                <option value="home_document">Home document</option>
+              </select>
+              <select id="docApprovalFilter" class="sel">
+                <option value="">All approval states</option>
+                <option value="approved">Approved</option>
+                <option value="pending">Pending</option>
+                <option value="draft">Draft</option>
+                <option value="not_required">Not required</option>
+              </select>
+            </div>
+
+            <div id="docsList"></div>
+          </div>
+
+          <div id="tab-billing" class="admin-tab hidden">
+            <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+              <button id="refreshBillingBtn" class="ghost" type="button">
+                Refresh billing
+              </button>
+            </div>
+            <div id="billingStats"></div>
+            <div id="billingList"></div>
+          </div>
+
+          <div id="tab-audit" class="admin-tab hidden">
+            <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+              <button id="refreshAuditBtn" class="ghost" type="button">
+                Refresh audit
+              </button>
+            </div>
+            <div id="auditList"></div>
+          </div>
         </div>
       </section>
 
@@ -277,14 +1042,45 @@
 
           <div class="ibox">
             <div class="irow">
-              <label for="upload" class="icon" style="cursor:pointer;color:var(--muted)">
+              <label
+                for="upload"
+                class="icon"
+                style="cursor:pointer;color:var(--muted)"
+              >
                 📎
-                <input id="upload" type="file" hidden accept=".txt,.docx,.pdf">
+                <input
+                  id="upload"
+                  type="file"
+                  hidden
+                  accept=".txt,.docx,.pdf"
+                />
               </label>
 
-              <button id="mic" class="icon" type="button" title="Speech to text" aria-label="Speech to text">🎙</button>
-              <textarea id="input" class="ta" rows="1" placeholder="Describe situation..."></textarea>
-              <button id="send" class="send" type="button" aria-label="Send">➤</button>
+              <button
+                id="mic"
+                class="icon"
+                type="button"
+                title="Speech to text"
+                aria-label="Speech to text"
+              >
+                🎙
+              </button>
+
+              <textarea
+                id="input"
+                class="ta"
+                rows="1"
+                placeholder="Describe situation..."
+              ></textarea>
+
+              <button
+                id="send"
+                class="send"
+                type="button"
+                aria-label="Send"
+              >
+                ➤
+              </button>
             </div>
           </div>
 
@@ -295,9 +1091,27 @@
           </div>
 
           <div class="app-legal-footer">
-            <button id="footerTermsBtn" class="footer-link-btn" type="button">Terms</button>
-            <button id="footerPrivacyBtn" class="footer-link-btn" type="button">Privacy</button>
-            <button id="footerIPBtn" class="footer-link-btn" type="button">IP notice</button>
+            <button
+              id="footerTermsBtn"
+              class="footer-link-btn"
+              type="button"
+            >
+              Terms
+            </button>
+            <button
+              id="footerPrivacyBtn"
+              class="footer-link-btn"
+              type="button"
+            >
+              Privacy
+            </button>
+            <button
+              id="footerIPBtn"
+              class="footer-link-btn"
+              type="button"
+            >
+              IP notice
+            </button>
           </div>
         </div>
       </section>
