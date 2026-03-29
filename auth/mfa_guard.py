@@ -7,6 +7,9 @@ from db.mfa_db import get_user_mfa
 
 PUBLIC_PATH_PREFIXES = (
     "/login",
+    "/mfa",
+    "/mfa-setup",
+    "/mfa-recovery",
     "/favicon",
     "/assets",
     "/frontend",
@@ -18,13 +21,12 @@ PUBLIC_PATH_PREFIXES = (
     "/redoc",
 )
 
-PUBLIC_EXACT_PATHS = {
-    "/",
-}
+PUBLIC_EXACT_PATHS = set()
 
 MFA_ALLOWED_PATH_PREFIXES = (
     "/auth/login",
     "/auth/logout",
+    "/auth/check",
     "/auth/me",
     "/auth/legal-acceptance",
     "/auth/mfa",
@@ -46,7 +48,11 @@ def path_allowed_during_mfa(path: str) -> bool:
 
 
 def get_session_user_id(request: Request) -> int | None:
-    value = request.session.get(SESSION_USER_ID_KEY)
+    try:
+        value = request.session.get(SESSION_USER_ID_KEY)
+    except Exception:
+        return None
+
     try:
         return int(value) if value is not None else None
     except Exception:
@@ -54,12 +60,18 @@ def get_session_user_id(request: Request) -> int | None:
 
 
 def get_session_user_email(request: Request) -> str | None:
-    value = request.session.get(SESSION_USER_EMAIL_KEY)
-    return str(value) if value else None
+    try:
+        value = request.session.get(SESSION_USER_EMAIL_KEY)
+        return str(value) if value else None
+    except Exception:
+        return None
 
 
 def is_mfa_verified_in_session(request: Request) -> bool:
-    return request.session.get(SESSION_MFA_VERIFIED_KEY) is True
+    try:
+        return request.session.get(SESSION_MFA_VERIFIED_KEY) is True
+    except Exception:
+        return False
 
 
 def set_mfa_verified_in_session(request: Request, verified: bool) -> None:
@@ -67,14 +79,17 @@ def set_mfa_verified_in_session(request: Request, verified: bool) -> None:
 
 
 def clear_auth_session(request: Request) -> None:
-    request.session.pop(SESSION_MFA_VERIFIED_KEY, None)
-    request.session.pop(SESSION_USER_ID_KEY, None)
-    request.session.pop(SESSION_USER_EMAIL_KEY, None)
+    try:
+        request.session.pop(SESSION_MFA_VERIFIED_KEY, None)
+        request.session.pop(SESSION_USER_ID_KEY, None)
+        request.session.pop(SESSION_USER_EMAIL_KEY, None)
+    except Exception:
+        pass
 
 
 def user_has_enabled_mfa(user_id: int) -> bool:
     row = get_user_mfa(user_id)
-    return bool(row and int(row.get("is_enabled", 0)) == 1)
+    return bool(row and bool(row.get("is_enabled")))
 
 
 async def enforce_mfa_middleware(request: Request, call_next):
@@ -85,16 +100,16 @@ async def enforce_mfa_middleware(request: Request, call_next):
 
     user_id = get_session_user_id(request)
 
-    # If not logged in, let existing auth layers handle it.
+    # Not logged in yet; let your normal auth flow handle it.
     if not user_id:
+        return await call_next(request)
+
+    # Allow auth and MFA routes during pre-MFA state.
+    if path_allowed_during_mfa(path):
         return await call_next(request)
 
     mfa_enabled = user_has_enabled_mfa(user_id)
     mfa_verified = is_mfa_verified_in_session(request)
-
-    # During rollout, every logged-in user must either set up MFA or verify it.
-    if path_allowed_during_mfa(path):
-        return await call_next(request)
 
     if not mfa_enabled:
         return JSONResponse(
