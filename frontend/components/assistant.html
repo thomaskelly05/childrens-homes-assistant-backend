@@ -1,13 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>IndiCare OS | Command Centre</title>
+  <meta name="description" content="IndiCare OS Command Centre for records, safeguarding, risk, guidance, and drafting." />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="copyright" content="© 2026 IndiCare. All rights reserved." />
+
+  <!--
+    © 2026 IndiCare. All rights reserved.
+    This source code, interface, layout, structure, styling, and associated logic
+    are proprietary to IndiCare unless otherwise stated in a separate written licence.
+    Unauthorised copying, reproduction, modification, reverse engineering,
+    distribution, sublicensing, or commercial exploitation is prohibited.
+  -->
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="/css/assistant.css" />
 </head>
@@ -15,6 +26,188 @@
   <div id="status" class="status"></div>
   <div id="overlay" class="overlay"></div>
   <div id="settingsOverlay" class="so"></div>
+
+  <!-- LEGAL MODAL OVERLAY -->
+  <div id="legalOverlay" class="legal-overlay" aria-hidden="true"></div>
+
+  <!-- LEGAL / TERMS MODAL -->
+  <section
+    id="legalModal"
+    class="legal-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="legalTitle"
+    aria-describedby="legalIntro"
+  >
+    <div class="legal-head">
+      <div>
+        <h2 id="legalTitle">IndiCare Legal Information</h2>
+        <p id="legalIntro">
+          Please read these terms carefully. Use of this platform confirms acceptance of the applicable terms, privacy notices, and platform conditions.
+        </p>
+      </div>
+      <button id="closeLegalModal" class="icon" type="button" aria-label="Close legal modal">✕</button>
+    </div>
+
+    <div class="legal-tabs" role="tablist" aria-label="Legal sections">
+      <button id="legalTabTerms" class="legal-tab active" type="button" data-legal-tab="terms" role="tab" aria-selected="true">Terms of Use</button>
+      <button id="legalTabPrivacy" class="legal-tab" type="button" data-legal-tab="privacy" role="tab" aria-selected="false">Privacy</button>
+      <button id="legalTabIP" class="legal-tab" type="button" data-legal-tab="ip" role="tab" aria-selected="false">Intellectual Property</button>
+      <button id="legalTabAccept" class="legal-tab" type="button" data-legal-tab="acceptance" role="tab" aria-selected="false">Acceptance</button>
+    </div>
+
+    <div class="legal-body">
+      <article id="legalPanelTerms" class="legal-panel" data-legal-panel="terms">
+        <h3>1. Terms of Use</h3>
+        <p>
+          IndiCare OS is a restricted-access professional platform intended for authorised use only in connection with safeguarding, care planning, case recording, operational oversight, and associated management or administrative functions.
+        </p>
+        <p>
+          By accessing or using this platform, you agree that:
+        </p>
+        <ul>
+          <li>You will only use the platform for lawful and authorised professional purposes.</li>
+          <li>You will not share your account credentials with any unauthorised person.</li>
+          <li>You will not attempt to bypass permissions, security controls, or access restrictions.</li>
+          <li>You will not copy, scrape, reproduce, mirror, republish, reverse engineer, decompile, adapt, sell, licence, or distribute any part of the platform except where expressly permitted in writing by IndiCare.</li>
+          <li>You remain responsible for checking records, assessments, reports, and outputs before relying on them in practice.</li>
+          <li>You will ensure that any use of the system complies with internal policy, safeguarding duties, confidentiality standards, and applicable law.</li>
+        </ul>
+
+        <h3>2. Professional Reliance</h3>
+        <p>
+          IndiCare OS may assist with drafting, structuring, or summarising information. It is a support tool and does not replace professional judgement, management oversight, safeguarding decision-making, legal advice, or regulatory interpretation.
+        </p>
+        <p>
+          Users must review all outputs before saving, sharing, exporting, or placing them on a child’s record, personnel record, provider file, or compliance document set.
+        </p>
+
+        <h3>3. Restricted Access</h3>
+        <p>
+          Access to certain features may be limited based on account role, home assignment, provider permissions, or administrative controls. IndiCare may suspend, restrict, or revoke access where required for security, misuse prevention, contractual compliance, or safeguarding reasons.
+        </p>
+
+        <h3>4. Prohibited Conduct</h3>
+        <ul>
+          <li>Uploading malicious code or attempting to disrupt the service.</li>
+          <li>Testing vulnerabilities without written authorisation.</li>
+          <li>Using the service to generate unlawful, discriminatory, abusive, or misleading content.</li>
+          <li>Exporting or sharing confidential material without authority.</li>
+          <li>Removing ownership notices, legal notices, or attribution statements from the platform.</li>
+        </ul>
+
+        <h3>5. Suspension and Termination</h3>
+        <p>
+          IndiCare reserves the right to suspend or terminate access, investigate misuse, preserve audit records, and take appropriate contractual, technical, or legal action where unauthorised use is suspected.
+        </p>
+      </article>
+
+      <article id="legalPanelPrivacy" class="legal-panel hidden" data-legal-panel="privacy">
+        <h3>1. Privacy and Confidentiality</h3>
+        <p>
+          IndiCare OS may process information relating to staff, homes, providers, service operations, children, and young people. Some of this information may be sensitive or special category data depending on how the platform is used.
+        </p>
+        <p>
+          Users must only enter information where they have a lawful basis, an operational need, and proper authority to do so.
+        </p>
+
+        <h3>2. User Responsibilities</h3>
+        <ul>
+          <li>Only input information necessary for the task being completed.</li>
+          <li>Avoid excessive personal detail where it is not needed.</li>
+          <li>Check all records for factual accuracy before saving.</li>
+          <li>Ensure confidential information is handled in line with policy, role permissions, and applicable data protection requirements.</li>
+          <li>Do not use the system on shared or insecure devices without appropriate safeguards.</li>
+        </ul>
+
+        <h3>3. Operational Logging</h3>
+        <p>
+          For safety, governance, quality assurance, service improvement, compliance, and security purposes, IndiCare may maintain logs relating to access, actions, uploads, document changes, and administrative events.
+        </p>
+
+        <h3>4. No Unauthorised Disclosure</h3>
+        <p>
+          Users must not disclose information obtained through the platform to any third party unless permitted by law, contract, safeguarding procedure, court order, or formal organisational authority.
+        </p>
+
+        <h3>5. Data Protection</h3>
+        <p>
+          Where applicable, processing should be managed in accordance with UK GDPR, the Data Protection Act 2018, confidentiality obligations, safeguarding duties, and internal retention and access policies.
+        </p>
+      </article>
+
+      <article id="legalPanelIP" class="legal-panel hidden" data-legal-panel="ip">
+        <h3>1. Intellectual Property Ownership</h3>
+        <p>
+          Unless expressly stated otherwise in writing, all intellectual property rights in and to IndiCare OS are owned by or licensed to IndiCare. This includes, without limitation:
+        </p>
+        <ul>
+          <li>source code and object code;</li>
+          <li>screen layouts, structure, arrangement, and interface design;</li>
+          <li>platform branding, names, logos, and visual identity;</li>
+          <li>workflows, prompts, system copy, templates, and drafting structures;</li>
+          <li>documentation, text, graphics, icons, styling, and compiled assets;</li>
+          <li>databases and platform-specific content architecture.</li>
+        </ul>
+
+        <h3>2. Copyright Notice</h3>
+        <p>
+          © 2026 IndiCare. All rights reserved.
+        </p>
+        <p>
+          No part of this platform may be copied, reproduced, modified, stored, transmitted, republished, distributed, displayed, licensed, sold, or exploited for commercial or competitive purposes without prior written permission from IndiCare, except to the limited extent permitted by mandatory law.
+        </p>
+
+        <h3>3. Trade Secrets and Confidential Know-How</h3>
+        <p>
+          Certain features, structures, workflows, prompts, backend logic, operational models, and implementation methods may constitute confidential information and trade secrets. Unauthorised extraction, imitation for competitive use, or disclosure is prohibited.
+        </p>
+
+        <h3>4. No Implied Licence</h3>
+        <p>
+          Access to the platform does not transfer ownership of any intellectual property rights and does not grant any implied licence other than the limited right to use the service as authorised.
+        </p>
+
+        <h3>5. Feedback</h3>
+        <p>
+          Where users submit suggestions or feedback, IndiCare may use that feedback to improve the service without obligation, restriction, or compensation unless otherwise agreed in writing.
+        </p>
+      </article>
+
+      <article id="legalPanelAcceptance" class="legal-panel hidden" data-legal-panel="acceptance">
+        <h3>Acceptance</h3>
+        <p>
+          Before continuing, confirm that you understand and accept the platform terms.
+        </p>
+
+        <div class="legal-checks">
+          <label class="legal-check">
+            <input id="acceptTermsCheck" type="checkbox" />
+            <span>I have read and accept the Terms of Use.</span>
+          </label>
+
+          <label class="legal-check">
+            <input id="acceptPrivacyCheck" type="checkbox" />
+            <span>I understand the privacy and confidentiality responsibilities.</span>
+          </label>
+
+          <label class="legal-check">
+            <input id="acceptIPCheck" type="checkbox" />
+            <span>I understand that the platform, code, design, and content are protected by intellectual property rights.</span>
+          </label>
+        </div>
+
+        <div class="legal-note">
+          By accepting, you confirm that you are an authorised user and that your use of IndiCare OS will comply with law, policy, confidentiality requirements, and safeguarding responsibilities.
+        </div>
+      </article>
+    </div>
+
+    <div class="legal-actions">
+      <button id="declineLegalBtn" class="ghost danger-outline" type="button">Decline</button>
+      <button id="acceptLegalBtn" class="action" type="button">Accept and continue</button>
+    </div>
+  </section>
 
   <aside id="settings" class="settings">
     <div style="display:flex;justify-content:space-between;align-items:center">
@@ -109,6 +302,14 @@
       <button id="saveContextBtn" class="action" type="button">Save context</button>
     </div>
 
+    <div class="card">
+      <strong>Legal</strong>
+      <div style="font-size:.88rem;color:var(--muted);line-height:1.6;">
+        View the current terms, privacy information, and intellectual property notice for IndiCare OS.
+      </div>
+      <button id="openLegalFromSettings" class="ghost" type="button">Open legal information</button>
+    </div>
+
     <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px">
       <button id="backWelcome" class="ghost" type="button">Back to welcome screen</button>
       <button id="logout" class="logout" type="button">Log out</button>
@@ -193,7 +394,11 @@
           </button>
           <div id="title" class="title">Intelligence for Care</div>
         </div>
-        <button id="openSettings" class="icon" type="button" aria-label="Open settings">⚙</button>
+
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button id="openLegalHeaderBtn" class="ghost legal-mini-btn" type="button">Legal</button>
+          <button id="openSettings" class="icon" type="button" aria-label="Open settings">⚙</button>
+        </div>
       </header>
 
       <section id="assistantPanel" class="panel">
@@ -806,10 +1011,14 @@
             <span id="langHelp">Assistant replies in English.</span>
             <span id="modeHelp">Mode: Balanced</span>
             <span>Review final records before saving or export.</span>
-            <span> <!-- © 2026 IndiCare. All rights reserved.
-Unauthorised copying, modification, or distribution prohibited.
---></span>
           </div>
+
+          <footer class="app-legal-footer">
+            <span>© 2026 IndiCare. All rights reserved.</span>
+            <button id="footerTermsBtn" class="footer-link-btn" type="button">Terms</button>
+            <button id="footerPrivacyBtn" class="footer-link-btn" type="button">Privacy</button>
+            <button id="footerIPBtn" class="footer-link-btn" type="button">IP Notice</button>
+          </footer>
         </div>
       </section>
     </main>
