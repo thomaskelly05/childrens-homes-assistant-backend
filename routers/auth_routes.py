@@ -18,9 +18,16 @@ from db.mfa_db import get_user_mfa, log_auth_event
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 SESSION_COOKIE_NAME = "indicare_session"
-COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "true").lower() == "true"
+APP_ENV = os.environ.get("APP_ENV", "development").lower()
+IS_PRODUCTION = APP_ENV == "production"
+
+COOKIE_SECURE = os.environ.get(
+    "COOKIE_SECURE",
+    "true" if IS_PRODUCTION else "false",
+).lower() == "true"
+
 COOKIE_SAMESITE = os.environ.get("COOKIE_SAMESITE", "lax")
-COOKIE_MAX_AGE = 60 * 30
+COOKIE_MAX_AGE = 60 * 60 * 12
 
 
 class LoginRequest(BaseModel):
@@ -36,7 +43,7 @@ def _normalise_email(email: str) -> str:
 def _extract_token(request: Request, authorization: str | None = None) -> str | None:
     cookie_token = (request.cookies.get(SESSION_COOKIE_NAME) or "").strip()
     if cookie_token:
-        return cookie_token
+      return cookie_token
 
     if not authorization:
         return None
@@ -186,13 +193,12 @@ def login(payload: LoginRequest, request: Request, response: Response, conn=Depe
     token = create_session_token(user["id"])
     _set_session_cookie(response, token)
 
-    # Pre-authenticated session state for MFA enforcement
     request.session[SESSION_USER_ID_KEY] = int(user["id"])
     request.session[SESSION_USER_EMAIL_KEY] = user["email"]
     request.session[SESSION_MFA_VERIFIED_KEY] = False
 
     mfa_row = get_user_mfa(int(user["id"]))
-    mfa_enabled = bool(mfa_row and int(mfa_row.get("is_enabled", 0)) == 1)
+    mfa_enabled = bool(mfa_row and mfa_row.get("is_enabled") is True)
 
     billing = get_user_billing_by_user_id(conn, user["id"])
 
@@ -260,7 +266,7 @@ def check_auth(
 
     billing = get_user_billing_by_user_id(conn, user_id)
     mfa_row = get_user_mfa(user_id)
-    mfa_enabled = bool(mfa_row and int(mfa_row.get("is_enabled", 0)) == 1)
+    mfa_enabled = bool(mfa_row and mfa_row.get("is_enabled") is True)
     mfa_verified = request.session.get(SESSION_MFA_VERIFIED_KEY) is True
 
     return {
@@ -312,7 +318,7 @@ def get_me(
 
     billing = get_user_billing_by_user_id(conn, user_id)
     mfa_row = get_user_mfa(user_id)
-    mfa_enabled = bool(mfa_row and int(mfa_row.get("is_enabled", 0)) == 1)
+    mfa_enabled = bool(mfa_row and mfa_row.get("is_enabled") is True)
     mfa_verified = request.session.get(SESSION_MFA_VERIFIED_KEY) is True
 
     return {
