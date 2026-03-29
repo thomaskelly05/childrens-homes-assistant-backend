@@ -57,8 +57,8 @@ let contextState = {
 
 const DEFAULT_LANGUAGE = "en-GB";
 const REG_PROMPT = " [SYSTEM: Verify response against Ofsted SCCIF and Quality Standards for Children's Homes. Use a calm, professional, safeguarding-aware tone. Keep wording clear, factual, structured, and suitable for care records, management review, and professional communication. Avoid slang, exaggeration, or overly casual wording.]";
-const RESP = { quick:"Quick", balanced:"Balanced", deep:"Deep" };
-const LANG = { "en-GB":"English", "pl-PL":"Polish", "ro-RO":"Romanian", "ur-PK":"Urdu", "ar":"Arabic" };
+const RESP = { quick: "Quick", balanced: "Balanced", deep: "Deep" };
+const LANG = { "en-GB": "English", "pl-PL": "Polish", "ro-RO": "Romanian", "ur-PK": "Urdu", "ar": "Arabic" };
 const GREET = [
   n => `Good morning, ${n}.`,
   n => `Welcome back, ${n}.`,
@@ -74,11 +74,11 @@ const $ = id => document.getElementById(id);
 const has = id => !!document.getElementById(id);
 
 const safe = s => String(s || "")
-  .replace(/&/g,"&amp;")
-  .replace(/</g,"&lt;")
-  .replace(/>/g,"&gt;")
-  .replace(/"/g,"&quot;")
-  .replace(/'/g,"&#039;");
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;")
+  .replace(/'/g, "&#039;");
 
 const role = () => String(currentUser?.role || "").toLowerCase();
 const isAdmin = () => ["admin", "provider_admin"].includes(role());
@@ -169,7 +169,7 @@ function closeSettings() {
 function summariseTitle(text) {
   const clean = stripSystem(text).replace(/[^\p{L}\p{N}\s'-]/gu, " ").replace(/\s+/g, " ").trim();
   if (!clean) return "New Log";
-  const stop = new Set(["the","a","an","and","or","but","for","with","from","about","who","what","when","where","why","how","are","is","do","does","did","please","tell","write","good","morning","indicare"]);
+  const stop = new Set(["the", "a", "an", "and", "or", "but", "for", "with", "from", "about", "who", "what", "when", "where", "why", "how", "are", "is", "do", "does", "did", "please", "tell", "write", "good", "morning", "indicare"]);
   const words = clean.split(" ").filter(Boolean);
   const pool = words.filter(w => !stop.has(w.toLowerCase()));
   const picked = (pool.length ? pool : words).slice(0, 3);
@@ -370,6 +370,149 @@ function convertPrompt(type) {
   return prompts[type] || "Rewrite the last response in a more formal structured format.";
 }
 
+function legalStoragePayload() {
+  try {
+    return JSON.parse(localStorage.getItem(LEGAL_ACCEPTANCE_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function legalAcceptanceValid() {
+  const data = legalStoragePayload();
+  return !!(data.accepted && data.version === LEGAL_VERSION);
+}
+
+function storeLegalAcceptance() {
+  const payload = {
+    accepted: true,
+    version: LEGAL_VERSION,
+    accepted_at: new Date().toISOString(),
+    user_id: currentUser?.id || null,
+    email: currentUser?.email || null
+  };
+  localStorage.setItem(LEGAL_ACCEPTANCE_KEY, JSON.stringify(payload));
+}
+
+function clearLegalAcceptance() {
+  localStorage.removeItem(LEGAL_ACCEPTANCE_KEY);
+}
+
+async function logLegalAcceptanceToServer() {
+  try {
+    await api("/auth/legal-acceptance", {
+      method: "POST",
+      body: JSON.stringify({
+        version: LEGAL_VERSION,
+        accepted_at: new Date().toISOString()
+      })
+    });
+  } catch (e) {
+    console.warn("Legal acceptance log skipped:", e?.message || e);
+  }
+}
+
+function setLegalTab(name = "terms") {
+  const tab = LEGAL_TABS.includes(name) ? name : "terms";
+
+  document.querySelectorAll("[data-legal-tab]").forEach(btn => {
+    const active = btn.dataset.legalTab === tab;
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-selected", active ? "true" : "false");
+  });
+
+  document.querySelectorAll("[data-legal-panel]").forEach(panel => {
+    panel.classList.toggle("hidden", panel.dataset.legalPanel !== tab);
+  });
+}
+
+function legalControlsDisabled(disabled) {
+  [
+    "send",
+    "input",
+    "upload",
+    "mic",
+    "newChat",
+    "navAssistant",
+    "navLibrary",
+    "navManager",
+    "navAdmin",
+    "openSettings",
+    "sideToggle",
+    "mobileMenu"
+  ].forEach(id => {
+    if (!has(id)) return;
+    $(id).disabled = !!disabled;
+  });
+}
+
+function openLegalModal(tab = "terms", force = false) {
+  if (!has("legalModal") || !has("legalOverlay")) return;
+  setLegalTab(tab);
+  $("legalOverlay").classList.add("show");
+  $("legalModal").classList.add("open");
+  $("legalOverlay").setAttribute("aria-hidden", "false");
+
+  if (force) {
+    $("legalModal").dataset.force = "true";
+    if (has("closeLegalModal")) $("closeLegalModal").style.display = "none";
+  } else {
+    $("legalModal").dataset.force = "false";
+    if (has("closeLegalModal")) $("closeLegalModal").style.display = "";
+  }
+}
+
+function closeLegalModal() {
+  if (!has("legalModal") || !has("legalOverlay")) return;
+  const forced = $("legalModal").dataset.force === "true";
+  if (forced && !legalAcceptanceValid()) return;
+
+  $("legalOverlay").classList.remove("show");
+  $("legalModal").classList.remove("open");
+  $("legalOverlay").setAttribute("aria-hidden", "true");
+}
+
+function allLegalChecksPassed() {
+  return !!(
+    has("acceptTermsCheck") &&
+    has("acceptPrivacyCheck") &&
+    has("acceptIPCheck") &&
+    $("acceptTermsCheck").checked &&
+    $("acceptPrivacyCheck").checked &&
+    $("acceptIPCheck").checked
+  );
+}
+
+async function acceptLegalTerms() {
+  if (!allLegalChecksPassed()) {
+    setLegalTab("acceptance");
+    return banner("Please tick all acceptance boxes before continuing.");
+  }
+
+  storeLegalAcceptance();
+  await logLegalAcceptanceToServer();
+  legalControlsDisabled(false);
+  closeLegalModal();
+  banner("Legal terms accepted.");
+}
+
+async function declineLegalTerms() {
+  clearLegalAcceptance();
+  banner("You must accept the legal terms to use IndiCare OS.");
+  await logoutNow();
+}
+
+function enforceLegalGate() {
+  const accepted = legalAcceptanceValid();
+  legalControlsDisabled(!accepted);
+
+  if (!accepted) {
+    openLegalModal("terms", true);
+  } else {
+    closeLegalModal();
+  }
+}
+
 function convert(type) {
   if (!lastAssistantText || !has("input")) return;
   if (!legalAcceptanceValid()) return openLegalModal("acceptance");
@@ -505,20 +648,27 @@ function initSpeech() {
   };
 }
 
+function redirectFor403(data) {
+  if (data?.code === "mfa_setup_required") {
+    window.location.replace("/mfa-setup");
+    return true;
+  }
+  if (data?.code === "mfa_verification_required") {
+    window.location.replace("/mfa");
+    return true;
+  }
+  return false;
+}
+
 async function api(url, options = {}) {
   const res = await fetch(url, {
     ...options,
     credentials: "include",
     headers: {
       ...(options.headers || {}),
-      ...(options.body && !(options.body instanceof FormData) ? { "Content-Type":"application/json" } : {})
+      ...(options.body && !(options.body instanceof FormData) ? { "Content-Type": "application/json" } : {})
     }
   });
-
-  if (res.status === 401) {
-    location.href = "/login";
-    return null;
-  }
 
   const type = res.headers.get("content-type") || "";
   let data = null;
@@ -534,6 +684,16 @@ async function api(url, options = {}) {
     data = {};
   }
 
+  if (res.status === 401) {
+    console.warn("401 detected → redirecting to login");
+    window.location.replace("/login");
+    return null;
+  }
+
+  if (res.status === 403 && redirectFor403(data)) {
+    return null;
+  }
+
   if (!res.ok) {
     throw new Error(data?.detail || data?.error || `Request failed (${res.status})`);
   }
@@ -543,25 +703,31 @@ async function api(url, options = {}) {
 
 async function logoutNow() {
   try {
-    await fetch("/auth/logout", { method:"POST", credentials:"include" });
+    await fetch("/auth/logout", { method: "POST", credentials: "include" });
   } catch {}
   localStorage.removeItem("current_user");
   sessionStorage.removeItem("current_user");
   localStorage.removeItem("first_name");
-  location.href = "/login";
+  window.location.replace("/login");
 }
 
 async function loadMe() {
-  const data = await api("/auth/me");
-  if (!data?.user) throw new Error("No user");
+  try {
+    const data = await api("/auth/me");
+    if (!data?.user) throw new Error("No user");
 
-  currentUser = data.user;
-  localStorage.setItem("first_name", currentUser.first_name || "");
+    currentUser = data.user;
+    localStorage.setItem("first_name", currentUser.first_name || "");
 
-  if (isAdmin() || isManager() || isStaff()) has("navLibrary") && $("navLibrary").classList.remove("hidden");
-  if (isManager()) has("navManager") && $("navManager").classList.remove("hidden");
-  if (isAdmin()) has("navAdmin") && $("navAdmin").classList.remove("hidden");
-  if (canManageLibrary()) has("managerEditorTab") && $("managerEditorTab").classList.remove("hidden");
+    if (isAdmin() || isManager() || isStaff()) has("navLibrary") && $("navLibrary").classList.remove("hidden");
+    if (isManager()) has("navManager") && $("navManager").classList.remove("hidden");
+    if (isAdmin()) has("navAdmin") && $("navAdmin").classList.remove("hidden");
+    if (canManageLibrary()) has("managerEditorTab") && $("managerEditorTab").classList.remove("hidden");
+  } catch (e) {
+    console.warn("User not authenticated → redirecting to login");
+    window.location.replace("/login");
+    throw e;
+  }
 }
 
 function closeMobilePanels() {
@@ -573,8 +739,8 @@ function closeMobilePanels() {
 }
 
 function hideAllPanels() {
-  ["assistantPanel","libraryPanel","managerPanel","adminPanel"].forEach(id => has(id) && $(id).classList.add("hidden"));
-  ["navAssistant","navLibrary","navManager","navAdmin"].forEach(id => has(id) && $(id).classList.remove("active"));
+  ["assistantPanel", "libraryPanel", "managerPanel", "adminPanel"].forEach(id => has(id) && $(id).classList.add("hidden"));
+  ["navAssistant", "navLibrary", "navManager", "navAdmin"].forEach(id => has(id) && $(id).classList.remove("active"));
 }
 
 function showAssistantView() {
@@ -698,6 +864,7 @@ function filterConversations() {
 
 async function loadConversations() {
   const data = await api("/chat/conversations");
+  if (!data) return [];
   cache = normArray(data?.conversations || data);
   renderHistory(cache);
   return cache;
@@ -738,7 +905,7 @@ async function renameShort(id, prompt) {
   if (!id) return;
   const short = summariseTitle(prompt);
   try {
-    await api(`/chat/conversations/${id}/rename`, { method:"POST", body: JSON.stringify({ title: short }) });
+    await api(`/chat/conversations/${id}/rename`, { method: "POST", body: JSON.stringify({ title: short }) });
   } catch {}
   setTitle(short);
   try {
@@ -748,7 +915,7 @@ async function renameShort(id, prompt) {
 
 async function deleteConversation(id) {
   if (!id || !confirm("Delete this conversation?")) return;
-  await api(`/chat/conversations/${id}`, { method:"DELETE" });
+  await api(`/chat/conversations/${id}`, { method: "DELETE" });
   if (Number(conversationId) === Number(id)) resetWelcome();
   await loadConversations();
   banner(indiCareCopy("deleted"));
@@ -1025,20 +1192,28 @@ async function stream(url, body) {
   body.context = contextState;
 
   const res = await fetch(url, {
-    method:"POST",
-    credentials:"include",
-    headers:{ "Content-Type":"application/json" },
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
   });
 
+  const contentType = res.headers.get("content-type") || "";
+
   if (res.status === 401) {
-    location.href = "/login";
+    window.location.replace("/login");
     return;
   }
 
-  if (!res.ok) throw new Error(await res.text() || `Chat request failed (${res.status})`);
+  if (res.status === 403) {
+    let data = {};
+    try {
+      if (contentType.includes("application/json")) data = await res.json();
+    } catch {}
+    if (redirectFor403(data)) return;
+  }
 
-  const contentType = res.headers.get("content-type") || "";
+  if (!res.ok) throw new Error(await res.text() || `Chat request failed (${res.status})`);
 
   if (!res.body || contentType.includes("application/json")) {
     let data = {};
@@ -1065,7 +1240,7 @@ async function stream(url, body) {
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-    buffer += dec.decode(value, { stream:true });
+    buffer += dec.decode(value, { stream: true });
 
     buffer = parseSseChunk(buffer, (eventName, payload) => {
       if (eventName === "done" || payload === "[DONE]") return;
@@ -1088,7 +1263,8 @@ async function uploadDoc(file) {
   const fd = new FormData();
   fd.append("file", file);
   if (conversationId) fd.append("conversation_id", conversationId);
-  const data = await api("/chat/upload", { method:"POST", body: fd });
+  const data = await api("/chat/upload", { method: "POST", body: fd });
+  if (!data) return;
   currentDocumentText = data?.text || data?.document_text || "";
   currentDocumentName = data?.filename || data?.name || file?.name || "";
   docShow(currentDocumentName);
@@ -1148,7 +1324,7 @@ async function sendMessage() {
   if (has("empty")) $("empty").classList.add("hidden");
   if (has("messages")) $("messages").classList.remove("hidden");
 
-  appendMessage("user", text, { meta:`Mode: ${RESP[selectedMode()]} · Intent: ${currentIntent}` });
+  appendMessage("user", text, { meta: `Mode: ${RESP[selectedMode()]} · Intent: ${currentIntent}` });
   $("input").value = "";
   resize();
 
@@ -1283,7 +1459,7 @@ async function loadAdminReferenceData() {
   fillSelect("docHomeId", homes, "Select home");
   fillSelect("homeProviderId", providers, "Select provider");
 
-  const managers = adminUsers.filter(u => ["manager","admin","provider_admin"].includes(String(u?.role || "").toLowerCase()));
+  const managers = adminUsers.filter(u => ["manager", "admin", "provider_admin"].includes(String(u?.role || "").toLowerCase()));
   fillSelect("homeRegisteredManagerId", managers, "Select manager", "id", r => `${r?.first_name || ""} ${r?.last_name || ""}`.trim() || r?.email || "");
   fillSelect("docOwnerId", adminUsers, "Select owner", "id", r => `${r?.first_name || ""} ${r?.last_name || ""}`.trim() || r?.email || "");
   fillSelect("libraryOwnerId", adminUsers, "Select owner", "id", r => `${r?.first_name || ""} ${r?.last_name || ""}`.trim() || r?.email || "");
@@ -1302,7 +1478,7 @@ async function loadActiveAdminTab() {
 }
 
 function clearAdminForm() {
-  ["adminFirstName","adminLastName","adminEmail","adminPassword"].forEach(id => has(id) && ($(id).value = ""));
+  ["adminFirstName", "adminLastName", "adminEmail", "adminPassword"].forEach(id => has(id) && ($(id).value = ""));
   if (has("adminRole")) $("adminRole").value = "staff";
   if (has("adminHomeId")) $("adminHomeId").value = "";
   adminCreateActive = true;
@@ -1324,7 +1500,7 @@ function adminPayloadFromForm() {
 async function createAdminUser() {
   const p = adminPayloadFromForm();
   if (!p.first_name || !p.last_name || !p.email || !p.password || !p.role) return banner("Complete all user fields");
-  await api("/admin/users", { method:"POST", body: JSON.stringify(p) });
+  await api("/admin/users", { method: "POST", body: JSON.stringify(p) });
   clearAdminForm();
   await loadAdminUsers();
   await loadAdminReferenceData();
@@ -1337,7 +1513,9 @@ async function loadAdminUsers() {
   if (has("userRoleFilter") && $("userRoleFilter").value) params.set("role", $("userRoleFilter").value);
   if (has("userHomeFilter") && $("userHomeFilter").value.trim()) params.set("home_id", $("userHomeFilter").value.trim());
   if (has("userArchivedFilter") && $("userArchivedFilter").value) params.set("archived", $("userArchivedFilter").value);
-  adminUsers = normArray((await api("/admin/users" + (params.toString() ? `?${params}` : "")))?.users);
+  const data = await api("/admin/users" + (params.toString() ? `?${params}` : ""));
+  if (!data) return;
+  adminUsers = normArray(data?.users);
   renderAdminUsers();
   updateAdminSummary();
 }
@@ -1351,7 +1529,7 @@ function renderAdminUsers() {
   adminUsers.forEach(user => {
     const row = document.createElement("div");
     row.className = "entity-row";
-    row.innerHTML = `<div><div class="entity-title">${safe([user?.first_name,user?.last_name].filter(Boolean).join(" ") || user?.email || "Unknown user")}</div><div class="entity-meta">${safe(user?.email || "")} · ${safe(user?.role || "")} · home ${safe(String(user?.home_id ?? ""))}</div><div class="entity-meta"><span class="tag ${user?.is_active ? "ok" : "bad"}">${user?.is_active ? "active" : "inactive"}</span><span class="tag ${user?.archived ? "bad" : "neutral"}">${user?.archived ? "archived" : "live"}</span></div></div><div class="entity-actions"></div>`;
+    row.innerHTML = `<div><div class="entity-title">${safe([user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || "Unknown user")}</div><div class="entity-meta">${safe(user?.email || "")} · ${safe(user?.role || "")} · home ${safe(String(user?.home_id ?? ""))}</div><div class="entity-meta"><span class="tag ${user?.is_active ? "ok" : "bad"}">${user?.is_active ? "active" : "inactive"}</span><span class="tag ${user?.archived ? "bad" : "neutral"}">${user?.archived ? "archived" : "live"}</span></div></div><div class="entity-actions"></div>`;
     const right = row.querySelector(".entity-actions");
 
     const add = (label, fn) => {
@@ -1364,13 +1542,13 @@ function renderAdminUsers() {
     };
 
     add(user?.is_active ? "Deactivate" : "Activate", async () => {
-      await api(`/admin/users/${user.id}`, { method:"PATCH", body: JSON.stringify({ is_active: !user?.is_active }) });
+      await api(`/admin/users/${user.id}`, { method: "PATCH", body: JSON.stringify({ is_active: !user?.is_active }) });
       await loadAdminUsers();
       banner("User updated");
     });
 
     add(user?.archived ? "Unarchive" : "Archive", async () => {
-      await api(`/admin/users/${user.id}`, { method:"PATCH", body: JSON.stringify({ archived: !user?.archived }) });
+      await api(`/admin/users/${user.id}`, { method: "PATCH", body: JSON.stringify({ archived: !user?.archived }) });
       await loadAdminUsers();
       banner("User updated");
     });
@@ -1378,7 +1556,7 @@ function renderAdminUsers() {
     add("Role", async () => {
       const newRole = prompt(`Set role for ${user?.email || "user"}`, user?.role || "staff");
       if (newRole === null) return;
-      await api(`/admin/users/${user.id}`, { method:"PATCH", body: JSON.stringify({ role: newRole }) });
+      await api(`/admin/users/${user.id}`, { method: "PATCH", body: JSON.stringify({ role: newRole }) });
       await loadAdminUsers();
       banner("Role updated");
     });
@@ -1387,7 +1565,7 @@ function renderAdminUsers() {
       const choices = homes.map(h => `${h?.id}: ${h?.name}`).join("\n");
       const homeId = prompt(`Set home id for ${user?.email || "user"}\n\n${choices}`, String(user?.home_id ?? ""));
       if (homeId === null) return;
-      await api(`/admin/users/${user.id}`, { method:"PATCH", body: JSON.stringify({ home_id: homeId ? Number(homeId) : null }) });
+      await api(`/admin/users/${user.id}`, { method: "PATCH", body: JSON.stringify({ home_id: homeId ? Number(homeId) : null }) });
       await loadAdminUsers();
       banner("Home updated");
     });
@@ -1395,7 +1573,7 @@ function renderAdminUsers() {
     add("Reset password", async () => {
       const password = prompt(`Set new password for ${user?.email || "user"}`);
       if (password === null || !password.trim()) return banner("Password cannot be empty");
-      await api(`/admin/users/${user.id}/reset-password`, { method:"POST", body: JSON.stringify({ password }) });
+      await api(`/admin/users/${user.id}/reset-password`, { method: "POST", body: JSON.stringify({ password }) });
       banner("Password reset");
     });
 
@@ -1418,8 +1596,8 @@ async function createHome() {
 
   if (!p.name) return banner("Home name is required");
 
-  await api("/admin/homes", { method:"POST", body: JSON.stringify(p) });
-  ["homeName","homeAddress","homePostcode","homeRegion","homeLocalAuthority","homeOfstedUrn","homeGeofence"].forEach(id => has(id) && ($(id).value = ""));
+  await api("/admin/homes", { method: "POST", body: JSON.stringify(p) });
+  ["homeName", "homeAddress", "homePostcode", "homeRegion", "homeLocalAuthority", "homeOfstedUrn", "homeGeofence"].forEach(id => has(id) && ($(id).value = ""));
   if (has("homeProviderId")) $("homeProviderId").value = "";
   if (has("homeRegisteredManagerId")) $("homeRegisteredManagerId").value = "";
   await loadHomes();
@@ -1428,7 +1606,9 @@ async function createHome() {
 }
 
 async function loadHomes() {
-  homes = normArray((await api("/admin/homes"))?.homes);
+  const data = await api("/admin/homes");
+  if (!data) return;
+  homes = normArray(data?.homes);
   renderHomes();
   updateAdminSummary();
 }
@@ -1448,11 +1628,11 @@ function renderHomes() {
     [["Edit", async () => {
       const name = prompt("Home name", home?.name || "");
       if (name === null) return;
-      await api(`/admin/homes/${home.id}`, { method:"PATCH", body: JSON.stringify({ name }) });
+      await api(`/admin/homes/${home.id}`, { method: "PATCH", body: JSON.stringify({ name }) });
       await loadHomes();
       banner("Home updated");
-    }],[home?.archived ? "Unarchive" : "Archive", async () => {
-      await api(`/admin/homes/${home.id}`, { method:"PATCH", body: JSON.stringify({ archived: !home?.archived }) });
+    }], [home?.archived ? "Unarchive" : "Archive", async () => {
+      await api(`/admin/homes/${home.id}`, { method: "PATCH", body: JSON.stringify({ archived: !home?.archived }) });
       await loadHomes();
       banner("Home updated");
     }]].forEach(([label, fn]) => {
@@ -1480,15 +1660,17 @@ async function createProvider() {
 
   if (!p.name) return banner("Provider name is required");
 
-  await api("/admin/providers", { method:"POST", body: JSON.stringify(p) });
-  ["providerName","providerRegion","providerAddress","providerPostcode","providerLA","providerLeadName","providerLeadEmail"].forEach(id => has(id) && ($(id).value = ""));
+  await api("/admin/providers", { method: "POST", body: JSON.stringify(p) });
+  ["providerName", "providerRegion", "providerAddress", "providerPostcode", "providerLA", "providerLeadName", "providerLeadEmail"].forEach(id => has(id) && ($(id).value = ""));
   await loadProviders();
   await loadAdminReferenceData();
   banner("Provider created");
 }
 
 async function loadProviders() {
-  providers = normArray((await api("/admin/providers"))?.providers);
+  const data = await api("/admin/providers");
+  if (!data) return;
+  providers = normArray(data?.providers);
   renderProviders();
   updateAdminSummary();
 }
@@ -1508,11 +1690,11 @@ function renderProviders() {
     [["Edit", async () => {
       const name = prompt("Provider name", provider?.name || "");
       if (name === null) return;
-      await api(`/admin/providers/${provider.id}`, { method:"PATCH", body: JSON.stringify({ name }) });
+      await api(`/admin/providers/${provider.id}`, { method: "PATCH", body: JSON.stringify({ name }) });
       await loadProviders();
       banner("Provider updated");
-    }],[provider?.archived ? "Unarchive" : "Archive", async () => {
-      await api(`/admin/providers/${provider.id}`, { method:"PATCH", body: JSON.stringify({ archived: !provider?.archived }) });
+    }], [provider?.archived ? "Unarchive" : "Archive", async () => {
+      await api(`/admin/providers/${provider.id}`, { method: "PATCH", body: JSON.stringify({ archived: !provider?.archived }) });
       await loadProviders();
       banner("Provider updated");
     }]].forEach(([label, fn]) => {
@@ -1541,9 +1723,9 @@ async function createDocumentRecord() {
     input_text: has("docInputText") ? $("docInputText").value.trim() || null : null
   };
 
-  await api("/admin/documents", { method:"POST", body: JSON.stringify(p) });
+  await api("/admin/documents", { method: "POST", body: JSON.stringify(p) });
 
-  ["docTitle","docIssueDate","docReviewDate","docExpiryDate","docInputText"].forEach(id => has(id) && ($(id).value = ""));
+  ["docTitle", "docIssueDate", "docReviewDate", "docExpiryDate", "docInputText"].forEach(id => has(id) && ($(id).value = ""));
   if (has("docType")) $("docType").value = "policy";
   if (has("docHomeId")) $("docHomeId").value = "";
   if (has("docOwnerId")) $("docOwnerId").value = "";
@@ -1562,7 +1744,9 @@ async function loadDocuments() {
   if (has("docTypeFilter") && $("docTypeFilter").value.trim()) params.set("document_type", $("docTypeFilter").value.trim());
   if (has("docApprovalFilter") && $("docApprovalFilter").value.trim()) params.set("approval_status", $("docApprovalFilter").value.trim());
 
-  docs = normArray((await api("/admin/documents" + (params.toString() ? `?${params}` : "")))?.documents);
+  const data = await api("/admin/documents" + (params.toString() ? `?${params}` : ""));
+  if (!data) return;
+  docs = normArray(data?.documents);
   renderDocuments();
   updateAdminSummary();
 }
@@ -1580,13 +1764,13 @@ function renderDocuments() {
     const right = row.querySelector(".entity-actions");
 
     [["Set approved", async () => {
-      await api(`/admin/documents/${doc.id}`, { method:"PATCH", body: JSON.stringify({ approval_status:"approved" }) });
+      await api(`/admin/documents/${doc.id}`, { method: "PATCH", body: JSON.stringify({ approval_status: "approved" }) });
       await loadDocuments();
       banner("Document updated");
-    }],["Edit title", async () => {
+    }], ["Edit title", async () => {
       const title = prompt("Document title", doc?.title || "");
       if (title === null) return;
-      await api(`/admin/documents/${doc.id}`, { method:"PATCH", body: JSON.stringify({ title }) });
+      await api(`/admin/documents/${doc.id}`, { method: "PATCH", body: JSON.stringify({ title }) });
       await loadDocuments();
       banner("Document updated");
     }]].forEach(([label, fn]) => {
@@ -1635,7 +1819,7 @@ function renderBilling() {
   users.forEach(user => {
     if (has("billingList")) {
       $("billingList").insertAdjacentHTML("beforeend",
-        `<div class="entity-row"><div><div class="entity-title">${safe([user?.first_name,user?.last_name].filter(Boolean).join(" ") || user?.email || "Unknown user")}</div><div class="entity-meta">${safe(user?.email || "")} · ${safe(user?.plan_name || "No plan")}</div><div class="entity-meta">status: ${safe(user?.subscription_status || "inactive")} · period end: ${safe(user?.current_period_end || "—")}</div></div></div>`
+        `<div class="entity-row"><div><div class="entity-title">${safe([user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || "Unknown user")}</div><div class="entity-meta">${safe(user?.email || "")} · ${safe(user?.plan_name || "No plan")}</div><div class="entity-meta">status: ${safe(user?.subscription_status || "inactive")} · period end: ${safe(user?.current_period_end || "—")}</div></div></div>`
       );
     }
   });
@@ -1643,7 +1827,8 @@ function renderBilling() {
 
 async function loadAudit() {
   try {
-    audit = normArray((await api("/admin/audit"))?.audit);
+    const data = await api("/admin/audit");
+    audit = normArray(data?.audit);
   } catch {
     audit = [];
   }
@@ -1658,7 +1843,7 @@ function renderAudit() {
 
   audit.forEach(a => {
     host.insertAdjacentHTML("beforeend",
-      `<div class="entity-row"><div><div class="entity-title">${safe(a?.action || "")} · ${safe(a?.target_type || "")} ${safe(String(a?.target_id ?? ""))}</div><div class="entity-meta">${safe([a?.first_name,a?.last_name].filter(Boolean).join(" ") || a?.email || "Unknown admin")} · ${safe(a?.created_at || "")}</div><div class="entity-meta">${safe(JSON.stringify(a?.details || {}))}</div></div></div>`
+      `<div class="entity-row"><div><div class="entity-title">${safe(a?.action || "")} · ${safe(a?.target_type || "")} ${safe(String(a?.target_id ?? ""))}</div><div class="entity-meta">${safe([a?.first_name, a?.last_name].filter(Boolean).join(" ") || a?.email || "Unknown admin")} · ${safe(a?.created_at || "")}</div><div class="entity-meta">${safe(JSON.stringify(a?.details || {}))}</div></div></div>`
     );
   });
 }
@@ -1669,7 +1854,9 @@ async function loadLibrary() {
   if (has("libraryTypeFilter") && $("libraryTypeFilter").value) params.set("document_type", $("libraryTypeFilter").value);
   if (has("libraryApprovalFilter") && $("libraryApprovalFilter").value) params.set("approval_status", $("libraryApprovalFilter").value);
 
-  libraryDocs = normArray((await api("/documents/library" + (params.toString() ? `?${params}` : "")))?.documents);
+  const data = await api("/documents/library" + (params.toString() ? `?${params}` : ""));
+  if (!data) return;
+  libraryDocs = normArray(data?.documents);
   renderLibraryList();
   renderManagerLibraryList();
 
@@ -1741,7 +1928,7 @@ async function openLibraryDocument(id) {
 function resetLibraryEditor() {
   editingLibraryDocId = null;
   if (has("libraryFormTitle")) $("libraryFormTitle").textContent = "Create document";
-  ["libraryDocTitle","libraryIssueDate","libraryReviewDate","libraryExpiryDate","libraryInputText"].forEach(id => has(id) && ($(id).value = ""));
+  ["libraryDocTitle", "libraryIssueDate", "libraryReviewDate", "libraryExpiryDate", "libraryInputText"].forEach(id => has(id) && ($(id).value = ""));
   if (has("libraryDocType")) $("libraryDocType").value = "policy";
   if (has("libraryApprovalStatus")) $("libraryApprovalStatus").value = "not_required";
   if (has("libraryConfidentiality")) $("libraryConfidentiality").value = "standard";
@@ -1784,10 +1971,10 @@ async function saveLibraryDocument() {
   if (!p.title) return banner("Title is required");
 
   if (editingLibraryDocId) {
-    await api(`/documents/library/${editingLibraryDocId}`, { method:"PATCH", body: JSON.stringify(p) });
+    await api(`/documents/library/${editingLibraryDocId}`, { method: "PATCH", body: JSON.stringify(p) });
     banner("Document updated");
   } else {
-    await api("/documents/library", { method:"POST", body: JSON.stringify(p) });
+    await api("/documents/library", { method: "POST", body: JSON.stringify(p) });
     banner("Document created");
   }
 
@@ -1798,7 +1985,7 @@ async function saveLibraryDocument() {
 
 async function deleteLibraryDocument() {
   if (!editingLibraryDocId || !confirm("Delete this document?")) return;
-  await api(`/documents/library/${editingLibraryDocId}`, { method:"DELETE" });
+  await api(`/documents/library/${editingLibraryDocId}`, { method: "DELETE" });
   banner("Document deleted");
   resetLibraryEditor();
   if (has("libraryViewer")) $("libraryViewer").innerHTML = `<h3>Select a document</h3><p>Open a policy or document from the list to read it here.</p>`;
@@ -1818,11 +2005,11 @@ async function createManagerStaff() {
   if (!payload.first_name || !payload.last_name || !payload.email || !payload.password) return banner("Complete all staff fields");
 
   await api("/manager/users", {
-    method:"POST",
+    method: "POST",
     body: JSON.stringify(payload)
   });
 
-  ["mgrFirst","mgrLast","mgrEmail","mgrPass"].forEach(id => has(id) && ($(id).value = ""));
+  ["mgrFirst", "mgrLast", "mgrEmail", "mgrPass"].forEach(id => has(id) && ($(id).value = ""));
   if (has("mgrRole")) $("mgrRole").value = "staff";
 
   await loadManager();
@@ -1838,7 +2025,7 @@ async function saveManagerDoc() {
   if (!payload.title) return banner("Title is required");
 
   await api("/manager/documents", {
-    method:"POST",
+    method: "POST",
     body: JSON.stringify(payload)
   });
 
@@ -1852,6 +2039,7 @@ async function saveManagerDoc() {
 async function loadManager() {
   try {
     const data = await api("/manager/overview");
+    if (!data) return;
 
     managerUsers = normArray(data?.users);
     managerDocuments = normArray(data?.documents);
@@ -1912,155 +2100,6 @@ function updateManagerSummary() {
   if (has("mgrStatManagers")) $("mgrStatManagers").textContent = String(managerUsers.filter(u => String(u?.role || "").toLowerCase() === "manager").length || 0);
   if (has("mgrStatStaffOnly")) $("mgrStatStaffOnly").textContent = String(managerUsers.filter(u => String(u?.role || "").toLowerCase() === "staff").length || 0);
 }
-
-/* =========================
-   LEGAL MODAL + ACCEPTANCE
-========================= */
-
-function legalStoragePayload() {
-  try {
-    return JSON.parse(localStorage.getItem(LEGAL_ACCEPTANCE_KEY) || "{}");
-  } catch {
-    return {};
-  }
-}
-
-function legalAcceptanceValid() {
-  const data = legalStoragePayload();
-  return !!(data.accepted && data.version === LEGAL_VERSION);
-}
-
-function storeLegalAcceptance() {
-  const payload = {
-    accepted: true,
-    version: LEGAL_VERSION,
-    accepted_at: new Date().toISOString(),
-    user_id: currentUser?.id || null,
-    email: currentUser?.email || null
-  };
-  localStorage.setItem(LEGAL_ACCEPTANCE_KEY, JSON.stringify(payload));
-}
-
-function clearLegalAcceptance() {
-  localStorage.removeItem(LEGAL_ACCEPTANCE_KEY);
-}
-
-async function logLegalAcceptanceToServer() {
-  try {
-    await api("/auth/legal-acceptance", {
-      method: "POST",
-      body: JSON.stringify({
-        version: LEGAL_VERSION,
-        accepted_at: new Date().toISOString()
-      })
-    });
-  } catch (e) {
-    console.warn("Legal acceptance log skipped:", e?.message || e);
-  }
-}
-
-function setLegalTab(name = "terms") {
-  const tab = LEGAL_TABS.includes(name) ? name : "terms";
-
-  document.querySelectorAll("[data-legal-tab]").forEach(btn => {
-    const active = btn.dataset.legalTab === tab;
-    btn.classList.toggle("active", active);
-    btn.setAttribute("aria-selected", active ? "true" : "false");
-  });
-
-  document.querySelectorAll("[data-legal-panel]").forEach(panel => {
-    panel.classList.toggle("hidden", panel.dataset.legalPanel !== tab);
-  });
-}
-
-function legalControlsDisabled(disabled) {
-  [
-    "send",
-    "input",
-    "upload",
-    "mic",
-    "newChat",
-    "navAssistant",
-    "navLibrary",
-    "navManager",
-    "navAdmin",
-    "openSettings",
-    "sideToggle",
-    "mobileMenu"
-  ].forEach(id => {
-    if (!has(id)) return;
-    $(id).disabled = !!disabled;
-  });
-}
-
-function openLegalModal(tab = "terms", force = false) {
-  if (!has("legalModal") || !has("legalOverlay")) return;
-  setLegalTab(tab);
-  $("legalOverlay").classList.add("show");
-  $("legalModal").classList.add("open");
-  $("legalOverlay").setAttribute("aria-hidden", "false");
-
-  if (force) {
-    $("legalModal").dataset.force = "true";
-    if (has("closeLegalModal")) $("closeLegalModal").style.display = "none";
-  } else {
-    $("legalModal").dataset.force = "false";
-    if (has("closeLegalModal")) $("closeLegalModal").style.display = "";
-  }
-}
-
-function closeLegalModal() {
-  if (!has("legalModal") || !has("legalOverlay")) return;
-  const forced = $("legalModal").dataset.force === "true";
-  if (forced && !legalAcceptanceValid()) return;
-
-  $("legalOverlay").classList.remove("show");
-  $("legalModal").classList.remove("open");
-  $("legalOverlay").setAttribute("aria-hidden", "true");
-}
-
-function allLegalChecksPassed() {
-  return !!(
-    has("acceptTermsCheck") &&
-    has("acceptPrivacyCheck") &&
-    has("acceptIPCheck") &&
-    $("acceptTermsCheck").checked &&
-    $("acceptPrivacyCheck").checked &&
-    $("acceptIPCheck").checked
-  );
-}
-
-async function acceptLegalTerms() {
-  if (!allLegalChecksPassed()) {
-    setLegalTab("acceptance");
-    return banner("Please tick all acceptance boxes before continuing.");
-  }
-
-  storeLegalAcceptance();
-  await logLegalAcceptanceToServer();
-  legalControlsDisabled(false);
-  closeLegalModal();
-  banner("Legal terms accepted.");
-}
-
-async function declineLegalTerms() {
-  clearLegalAcceptance();
-  banner("You must accept the legal terms to use IndiCare OS.");
-  await logoutNow();
-}
-
-function enforceLegalGate() {
-  const accepted = legalAcceptanceValid();
-  legalControlsDisabled(!accepted);
-
-  if (!accepted) {
-    openLegalModal("terms", true);
-  } else {
-    closeLegalModal();
-  }
-}
-
-/* ========================= */
 
 function restorePrefs() {
   document.body.classList.toggle("theme-dark", (localStorage.getItem("indicare_theme") || "light") === "dark");
@@ -2220,7 +2259,7 @@ function bind() {
 
   on("clearDoc", "click", async () => {
     try {
-      if (conversationId) await api(`/chat/conversations/${conversationId}/document`, { method:"DELETE" });
+      if (conversationId) await api(`/chat/conversations/${conversationId}/document`, { method: "DELETE" });
     } catch {}
     currentDocumentText = null;
     currentDocumentName = null;
@@ -2282,8 +2321,6 @@ async function init() {
   try {
     await loadMe();
   } catch (e) {
-    console.error("loadMe failed", e);
-    location.href = "/login";
     return;
   }
 
