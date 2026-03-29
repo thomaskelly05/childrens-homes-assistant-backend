@@ -95,21 +95,21 @@ def user_has_enabled_mfa(user_id: int) -> bool:
     return bool(row and bool(row.get("is_enabled")))
 
 
-async def enforce_mfa_middleware(request: Request, call_next):
+async def enforce_mfa_middleware(request: Request, call_next=None):
     path = request.url.path
 
     if path_is_public(path):
-        return await call_next(request)
+        return None
 
     user_id = get_session_user_id(request)
 
-    # Not logged in yet; let the login/auth guard handle it.
+    # Not logged in yet; let login middleware handle that.
     if not user_id:
-        return await call_next(request)
+        return None
 
-    # Allow auth and MFA routes during pre-MFA state.
+    # Allow auth + MFA endpoints before MFA is completed.
     if path_allowed_during_mfa(path):
-        return await call_next(request)
+        return None
 
     mfa_enabled = user_has_enabled_mfa(user_id)
     mfa_verified = is_mfa_verified_in_session(request)
@@ -118,6 +118,7 @@ async def enforce_mfa_middleware(request: Request, call_next):
         return JSONResponse(
             status_code=403,
             content={
+                "ok": False,
                 "detail": "MFA setup is required before using the platform.",
                 "code": "mfa_setup_required",
             },
@@ -127,9 +128,10 @@ async def enforce_mfa_middleware(request: Request, call_next):
         return JSONResponse(
             status_code=403,
             content={
+                "ok": False,
                 "detail": "MFA verification is required before using the platform.",
                 "code": "mfa_verification_required",
             },
         )
 
-    return await call_next(request)
+    return None
