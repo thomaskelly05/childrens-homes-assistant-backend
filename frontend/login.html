@@ -762,20 +762,32 @@
       }
 
       async function bootExistingSession() {
-        if (!(window.auth && typeof window.auth.validateSession === "function")) {
+        if (!window.auth || typeof window.auth.validateSession !== "function") {
           return;
         }
 
         try {
-          setLoading(true);
-          const ok = await window.auth.validateSession();
-          if (ok) {
-            setStatus("Existing session found. Redirecting...", "is-success");
-            window.location.replace("/assistant");
+          const state = await window.auth.validateSession();
+
+          if (!state || !state.authenticated) {
             return;
           }
+
+          setStatus("Existing session found. Redirecting...", "is-success");
+          setLoading(true);
+
+          if (!state.mfaEnabled) {
+            window.location.replace("/mfa-setup");
+            return;
+          }
+
+          if (!state.mfaVerified) {
+            window.location.replace("/mfa");
+            return;
+          }
+
+          window.location.replace("/assistant");
         } catch (_) {
-        } finally {
           setLoading(false);
         }
       }
@@ -809,17 +821,29 @@
         setStatus("Checking your details...");
 
         try {
-          if (window.auth && typeof window.auth.login === "function") {
-            await window.auth.login({
-              email: emailValue,
-              password: passwordValue,
-              remember: rememberMe.checked
-            });
-          } else {
+          if (!window.auth || typeof window.auth.login !== "function") {
             throw new Error("Login service is not available.");
           }
 
+          const data = await window.auth.login({
+            email: emailValue,
+            password: passwordValue,
+            remember: rememberMe.checked
+          });
+
+          if (data?.mfa_required) {
+            setStatus("Password accepted. Redirecting to security check...", "is-success");
+
+            if (data.mfa_enabled) {
+              window.location.replace("/mfa");
+            } else {
+              window.location.replace("/mfa-setup");
+            }
+            return;
+          }
+
           setStatus("Sign-in successful. Redirecting...", "is-success");
+          window.location.replace("/assistant");
         } catch (error) {
           const message =
             error && error.message
