@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Request, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from auth.current_user import get_current_user
 from db.legal_acceptance_db import (
-    init_legal_acceptance_table,
-    record_legal_acceptance,
     get_latest_legal_acceptance_for_user,
     has_user_accepted_version,
+    record_legal_acceptance,
 )
 from schemas.legal_acceptance import (
     LegalAcceptanceCreate,
@@ -41,11 +40,6 @@ def _extract_user_email(user: object) -> str | None:
     return getattr(user, "email", None)
 
 
-@router.on_event("startup")
-def startup_init_legal_acceptance_table() -> None:
-    init_legal_acceptance_table()
-
-
 @router.post("/legal-acceptance", response_model=LegalAcceptanceResponse)
 async def create_legal_acceptance(
     payload: LegalAcceptanceCreate,
@@ -56,13 +50,20 @@ async def create_legal_acceptance(
     email = _extract_user_email(current_user)
 
     if not user_id:
-      raise HTTPException(
-          status_code=status.HTTP_401_UNAUTHORIZED,
-          detail="Authentication required",
-      )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+
+    if payload.version != CURRENT_LEGAL_VERSION:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Legal version mismatch",
+        )
 
     forwarded_for = request.headers.get("x-forwarded-for", "")
     ip_address = forwarded_for.split(",")[0].strip() if forwarded_for else None
+
     if not ip_address and request.client:
         ip_address = request.client.host
 
@@ -90,6 +91,7 @@ async def get_current_legal_acceptance_status(
     current_user: object = Depends(get_current_user),
 ) -> dict:
     user_id = _extract_user_id(current_user)
+
     if not user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
