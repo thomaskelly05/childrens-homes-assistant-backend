@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IndiCare | MFA verification</title>
+  <meta name="theme-color" content="#18357f" />
+  <style>
+    :root {
+      --bg: #edf3f9;
+      --panel: #ffffff;
+      --text: #18263b;
+      --muted: #5f7088;
+      --border: #d8e1ec;
+      --primary: #2348a5;
+      --primary-strong: #18357f;
+      --error: #9f1239;
+      --error-bg: #fff1f2;
+      --success: #166534;
+      --success-bg: #effaf3;
+      --shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+      --radius: 22px;
+      --focus-ring: 0 0 0 4px rgba(35, 72, 165, 0.14);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, system-ui, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(35,72,165,.08), transparent 22%),
+        linear-gradient(135deg, #f8fbfe 0%, var(--bg) 100%);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 460px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px;
+    }
+
+    .eyebrow {
+      font-size: .82rem;
+      font-weight: 800;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 1.8rem;
+      line-height: 1.1;
+    }
+
+    p {
+      margin: 0 0 16px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    form {
+      display: grid;
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    label {
+      font-size: .92rem;
+      font-weight: 700;
+    }
+
+    input {
+      width: 100%;
+      min-height: 50px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      font: inherit;
+      color: var(--text);
+      background: #fff;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: var(--focus-ring);
+    }
+
+    button {
+      min-height: 52px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+      color: #fff;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: .7;
+      cursor: not-allowed;
+    }
+
+    .secondary {
+      display: inline-block;
+      margin-top: 16px;
+      color: var(--primary);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .status {
+      min-height: 22px;
+      margin-top: 14px;
+      font-size: .94rem;
+      line-height: 1.5;
+    }
+
+    .status.error {
+      color: var(--error);
+    }
+
+    .status.success {
+      color: var(--success);
+    }
+
+    .helper {
+      margin-top: 18px;
+      padding: 14px;
+      border-radius: 14px;
+      background: var(--success-bg);
+      color: var(--success);
+      font-size: .9rem;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="eyebrow">Secure access</div>
+    <h1>Verify your sign-in</h1>
+    <p>Enter the 6-digit code from your authenticator app to continue.</p>
+
+    <form id="mfaForm" novalidate>
+      <div>
+        <label for="code">Authentication code</label>
+        <input
+          id="code"
+          name="code"
+          type="text"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          maxlength="12"
+          placeholder="123456"
+          required
+        />
+      </div>
+
+      <button id="verifyBtn" type="submit">Verify</button>
+    </form>
+
+    <div id="status" class="status" aria-live="polite"></div>
+
+    <a class="secondary" href="/mfa-recovery">Use a recovery code instead</a>
+
+    <div class="helper">
+      Access remains restricted until multi-factor verification is completed.
+    </div>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    (function () {
+      const form = document.getElementById("mfaForm");
+      const code = document.getElementById("code");
+      const verifyBtn = document.getElementById("verifyBtn");
+      const statusEl = document.getElementById("status");
+
+      function setStatus(message, type = "") {
+        statusEl.textContent = message || "";
+        statusEl.className = "status";
+        if (type) statusEl.classList.add(type);
+      }
+
+      function setLoading(isLoading) {
+        verifyBtn.disabled = isLoading;
+        code.disabled = isLoading;
+        verifyBtn.textContent = isLoading ? "Verifying..." : "Verify";
+      }
+
+      async function boot() {
+        const state = await window.auth.validateSession();
+
+        if (!state.authenticated) {
+          window.location.replace("/login");
+          return;
+        }
+
+        if (!state.mfaEnabled) {
+          window.location.replace("/mfa-setup");
+          return;
+        }
+
+        if (state.mfaVerified) {
+          window.location.replace("/assistant");
+        }
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const value = code.value.trim();
+        if (!value) {
+          setStatus("Please enter your authentication code.", "error");
+          code.focus();
+          return;
+        }
+
+        setLoading(true);
+        setStatus("Checking your code...");
+
+        try {
+          const data = await window.apiRequest("/auth/mfa/verify", {
+            method: "POST",
+            body: JSON.stringify({ code: value })
+          });
+
+          if (!data?.ok) {
+            throw new Error("Verification failed.");
+          }
+
+          const existing = window.auth.getStoredUser() || {};
+          const remember = !!localStorage.getItem("current_user");
+          const merged = { ...existing, mfa_enabled: true, mfa_verified: true };
+
+          if (remember) {
+            localStorage.setItem("current_user", JSON.stringify(merged));
+          } else {
+            sessionStorage.setItem("current_user", JSON.stringify(merged));
+          }
+
+          setStatus("Verification successful. Redirecting...", "success");
+          window.location.href = "/assistant";
+        } catch (error) {
+          setStatus(error?.message || "Verification failed.", "error");
+          code.focus();
+        } finally {
+          setLoading(false);
+        }
+      });
+
+      boot();
+    })();
+  </script>
+</body>
+</html>
