@@ -87,7 +87,7 @@
           </button>
           <button class="quick-action" data-action="risk">
             <span class="quick-action-title">Update risk</span>
-            <span class="quick-action-subtitle">Review current concerns</span>
+            <span class="quick-action-subtitle">Add or review risk</span>
           </button>
           <button class="quick-action" data-action="plan">
             <span class="quick-action-title">Add plan</span>
@@ -116,12 +116,41 @@
       <button id="closeRecordDrawerBtn" class="drawer-close-btn" type="button">✕</button>
     </div>
 
+    <div id="recordDrawerActions" class="record-drawer-actions hidden">
+      <button id="drawerEditBtn" class="secondary-btn" type="button">Edit</button>
+      <button id="drawerSubmitBtn" class="secondary-btn" type="button">Submit</button>
+      <button id="drawerApproveBtn" class="secondary-btn" type="button">Approve</button>
+      <button id="drawerReturnBtn" class="secondary-btn" type="button">Return</button>
+      <button id="drawerArchiveBtn" class="secondary-btn" type="button">Archive</button>
+    </div>
+
     <div id="recordDrawerBody" class="record-drawer-body">
       <div class="empty-state">
         <p>Select a record to view it here.</p>
       </div>
     </div>
   </aside>
+
+  <div id="modalBackdrop" class="modal-backdrop hidden"></div>
+
+  <section id="recordModal" class="record-modal hidden" aria-hidden="true">
+    <div class="record-modal-header">
+      <div>
+        <h3 id="recordModalTitle">Create record</h3>
+        <p id="recordModalSubtitle">Complete the form below</p>
+      </div>
+      <button id="closeRecordModalBtn" class="drawer-close-btn" type="button">✕</button>
+    </div>
+
+    <form id="recordModalForm" class="record-modal-body">
+      <div id="recordModalFields" class="form-grid"></div>
+
+      <div class="record-modal-footer">
+        <button type="button" id="recordModalCancelBtn" class="secondary-btn">Cancel</button>
+        <button type="submit" id="recordModalSaveBtn" class="primary-btn">Save</button>
+      </div>
+    </form>
+  </section>
 
   <script src="/js/young-people-shell.js"></script>
 </body>
