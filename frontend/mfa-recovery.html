@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IndiCare | Recovery code verification</title>
+  <meta name="theme-color" content="#18357f" />
+  <style>
+    :root {
+      --bg: #edf3f9;
+      --panel: #ffffff;
+      --text: #18263b;
+      --muted: #5f7088;
+      --border: #d8e1ec;
+      --primary: #2348a5;
+      --primary-strong: #18357f;
+      --error: #9f1239;
+      --success: #166534;
+      --shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+      --radius: 22px;
+      --focus-ring: 0 0 0 4px rgba(35, 72, 165, 0.14);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, system-ui, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(35,72,165,.08), transparent 22%),
+        linear-gradient(135deg, #f8fbfe 0%, var(--bg) 100%);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 460px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px;
+    }
+
+    .eyebrow {
+      font-size: .82rem;
+      font-weight: 800;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 1.8rem;
+      line-height: 1.1;
+    }
+
+    p {
+      margin: 0 0 16px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    form {
+      display: grid;
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    label {
+      font-size: .92rem;
+      font-weight: 700;
+    }
+
+    input {
+      width: 100%;
+      min-height: 50px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      font: inherit;
+      color: var(--text);
+      background: #fff;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: var(--focus-ring);
+    }
+
+    button {
+      min-height: 52px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+      color: #fff;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: .7;
+      cursor: not-allowed;
+    }
+
+    .secondary {
+      display: inline-block;
+      margin-top: 16px;
+      color: var(--primary);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .status {
+      min-height: 22px;
+      margin-top: 14px;
+      font-size: .94rem;
+      line-height: 1.5;
+    }
+
+    .status.error {
+      color: var(--error);
+    }
+
+    .status.success {
+      color: var(--success);
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="eyebrow">Secure recovery</div>
+    <h1>Use a recovery code</h1>
+    <p>
+      Enter one of your saved recovery codes to complete sign-in. Each code can only be used once.
+    </p>
+
+    <form id="recoveryForm" novalidate>
+      <div>
+        <label for="recoveryCode">Recovery code</label>
+        <input
+          id="recoveryCode"
+          name="recoveryCode"
+          type="text"
+          autocomplete="one-time-code"
+          placeholder="AB12CD34-EF56GH78"
+          required
+        />
+      </div>
+
+      <button id="verifyBtn" type="submit">Verify recovery code</button>
+    </form>
+
+    <div id="status" class="status" aria-live="polite"></div>
+
+    <a class="secondary" href="/mfa">Back to authenticator code</a>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    (function () {
+      const form = document.getElementById("recoveryForm");
+      const recoveryCode = document.getElementById("recoveryCode");
+      const verifyBtn = document.getElementById("verifyBtn");
+      const statusEl = document.getElementById("status");
+
+      function setStatus(message, type = "") {
+        statusEl.textContent = message || "";
+        statusEl.className = "status";
+        if (type) statusEl.classList.add(type);
+      }
+
+      function setLoading(isLoading) {
+        verifyBtn.disabled = isLoading;
+        recoveryCode.disabled = isLoading;
+        verifyBtn.textContent = isLoading ? "Verifying..." : "Verify recovery code";
+      }
+
+      async function boot() {
+        const state = await window.auth.validateSession();
+
+        if (!state.authenticated) {
+          window.location.replace("/login");
+          return;
+        }
+
+        if (!state.mfaEnabled) {
+          window.location.replace("/mfa-setup");
+          return;
+        }
+
+        if (state.mfaVerified) {
+          window.location.replace("/assistant");
+        }
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const value = recoveryCode.value.trim().toUpperCase();
+        if (!value) {
+          setStatus("Please enter a recovery code.", "error");
+          recoveryCode.focus();
+          return;
+        }
+
+        setLoading(true);
+        setStatus("Checking your recovery code...");
+
+        try {
+          const data = await window.apiRequest("/auth/mfa/verify-recovery", {
+            method: "POST",
+            body: JSON.stringify({ recovery_code: value })
+          });
+
+          if (!data?.ok) {
+            throw new Error("Recovery code verification failed.");
+          }
+
+          const existing = window.auth.getStoredUser() || {};
+          const remember = !!localStorage.getItem("current_user");
+          const merged = { ...existing, mfa_enabled: true, mfa_verified: true };
+
+          if (remember) {
+            localStorage.setItem("current_user", JSON.stringify(merged));
+          } else {
+            sessionStorage.setItem("current_user", JSON.stringify(merged));
+          }
+
+          setStatus("Verification successful. Redirecting...", "success");
+          window.location.href = "/assistant";
+        } catch (error) {
+          setStatus(error?.message || "Recovery code verification failed.", "error");
+          recoveryCode.focus();
+        } finally {
+          setLoading(false);
+        }
+      });
+
+      boot();
+    })();
+  </script>
+</body>
+</html>
