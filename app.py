@@ -10,7 +10,9 @@ from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
+from starlette.middleware.sessions import SessionMiddleware
 
+from auth.mfa_guard import enforce_mfa_middleware
 from db.connection import (
     close_db_pool,
     get_db_connection,
@@ -18,6 +20,7 @@ from db.connection import (
     release_db_connection,
 )
 from db.legal_acceptance_db import init_legal_acceptance_table
+from db.mfa_db import init_mfa_tables
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),
@@ -60,6 +63,14 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.environ["SESSION_SECRET"],
+    same_site="lax",
+    https_only=os.getenv("APP_ENV", "production").lower() != "development",
+    max_age=60 * 60 * 12,
+)
+
+app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://app.indicare.co.uk",
@@ -72,10 +83,16 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def global_mfa_enforcement(request: Request, call_next):
+    return await enforce_mfa_middleware(request, call_next)
+
+
 @app.on_event("startup")
 def startup_event():
     init_db_pool()
     init_legal_acceptance_table()
+    init_mfa_tables()
     logger.info("IndiCare API started")
 
 
@@ -104,6 +121,7 @@ def include_router(module_path: str):
 
 ROUTERS = [
     "routers.auth_routes",
+    "routers.mfa_routes",
     "routers.legal_acceptance_routes",
     "routers.account_routes",
     "routers.admin_routes",
@@ -225,6 +243,36 @@ def serve_login():
 @app.get("/login.html")
 def serve_login_html():
     return serve_page("login.html")
+
+
+@app.get("/mfa")
+def serve_mfa():
+    return serve_page("mfa.html")
+
+
+@app.get("/mfa.html")
+def serve_mfa_html():
+    return serve_page("mfa.html")
+
+
+@app.get("/mfa-setup")
+def serve_mfa_setup():
+    return serve_page("mfa-setup.html")
+
+
+@app.get("/mfa-setup.html")
+def serve_mfa_setup_html():
+    return serve_page("mfa-setup.html")
+
+
+@app.get("/mfa-recovery")
+def serve_mfa_recovery():
+    return serve_page("mfa-recovery.html")
+
+
+@app.get("/mfa-recovery.html")
+def serve_mfa_recovery_html():
+    return serve_page("mfa-recovery.html")
 
 
 @app.get("/oslogin")
