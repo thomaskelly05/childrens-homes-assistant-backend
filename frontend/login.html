@@ -30,9 +30,7 @@
       --primary-soft: #e8effc;
       --success-bg: #eef8f1;
       --success-text: #2b4d39;
-      --error-bg: #fff1f2;
       --error-text: #9f1239;
-      --error-border: rgba(159, 18, 57, 0.12);
       --shadow-xl: 0 30px 80px rgba(15, 23, 42, 0.14);
       --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.08);
       --shadow-sm: 0 8px 20px rgba(15, 23, 42, 0.04);
@@ -727,9 +725,6 @@
 
   <script>
     (function () {
-      const REDIRECT_IF_ACCEPTED = "/";
-      const REDIRECT_IF_NOT_ACCEPTED = "/command";
-
       const form = document.getElementById("loginForm");
       const email = document.getElementById("email");
       const password = document.getElementById("password");
@@ -766,43 +761,21 @@
         field.focus();
       }
 
-      async function getLegalAcceptanceStatus() {
-        if (!(window.apiRequest && typeof window.apiRequest === "function")) {
-          return null;
-        }
-
-        try {
-          const data = await window.apiRequest("/auth/legal-acceptance/current", {
-            method: "GET"
-          });
-          return data || null;
-        } catch (_) {
-          return null;
-        }
-      }
-
-      async function redirectAfterLogin() {
-        const legal = await getLegalAcceptanceStatus();
-
-        if (legal && legal.accepted_current_version === true) {
-          window.location.href = REDIRECT_IF_ACCEPTED;
-          return;
-        }
-
-        window.location.href = REDIRECT_IF_NOT_ACCEPTED;
-      }
-
       async function bootExistingSession() {
-        if (!(window.apiRequest && typeof window.apiRequest === "function")) {
+        if (!(window.auth && typeof window.auth.validateSession === "function")) {
           return;
         }
 
         try {
-          await window.apiRequest("/account/me", { method: "GET" });
-          setStatus("Existing session found. Redirecting...", "is-success");
           setLoading(true);
-          await redirectAfterLogin();
+          const ok = await window.auth.validateSession();
+          if (ok) {
+            setStatus("Existing session found. Redirecting...", "is-success");
+            window.location.replace("/assistant");
+            return;
+          }
         } catch (_) {
+        } finally {
           setLoading(false);
         }
       }
@@ -847,7 +820,6 @@
           }
 
           setStatus("Sign-in successful. Redirecting...", "is-success");
-          await redirectAfterLogin();
         } catch (error) {
           const message =
             error && error.message
