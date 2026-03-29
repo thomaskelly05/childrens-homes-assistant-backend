@@ -17,6 +17,7 @@ from db.connection import (
     init_db_pool,
     release_db_connection,
 )
+from db.legal_acceptance_db import init_legal_acceptance_table
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),
@@ -74,6 +75,7 @@ app.add_middleware(
 @app.on_event("startup")
 def startup_event():
     init_db_pool()
+    init_legal_acceptance_table()
     logger.info("IndiCare API started")
 
 
@@ -102,6 +104,7 @@ def include_router(module_path: str):
 
 ROUTERS = [
     "routers.auth_routes",
+    "routers.legal_acceptance_routes",
     "routers.account_routes",
     "routers.admin_routes",
     "routers.billing_routes",
