@@ -9,6 +9,8 @@
     content="Secure sign in to IndiCare, the professional digital workspace for children’s residential home teams."
   />
   <meta name="theme-color" content="#18357f" />
+  <meta name="color-scheme" content="light" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
 
   <style>
     :root {
@@ -28,6 +30,9 @@
       --primary-soft: #e8effc;
       --success-bg: #eef8f1;
       --success-text: #2b4d39;
+      --error-bg: #fff1f2;
+      --error-text: #9f1239;
+      --error-border: rgba(159, 18, 57, 0.12);
       --shadow-xl: 0 30px 80px rgba(15, 23, 42, 0.14);
       --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.08);
       --shadow-sm: 0 8px 20px rgba(15, 23, 42, 0.04);
@@ -45,7 +50,7 @@
 
     html {
       -webkit-text-size-adjust: 100%;
-      scroll-behaviour: smooth;
+      scroll-behavior: smooth;
     }
 
     body {
@@ -77,6 +82,7 @@
     button:focus-visible,
     input:focus-visible {
       outline: none;
+      box-shadow: var(--focus-ring);
     }
 
     .page {
@@ -105,7 +111,7 @@
     .brand-panel::before {
       content: "";
       position: absolute;
-      inset: 2rem 2rem 2rem 2rem;
+      inset: 2rem;
       border-radius: 36px;
       background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.12));
@@ -339,8 +345,12 @@
 
     .form-input:focus {
       border-color: var(--primary);
-      box-shadow: var(--focus-ring);
       background: #ffffff;
+    }
+
+    .form-input[aria-invalid="true"] {
+      border-color: #d9465f;
+      background: #fffdfd;
     }
 
     .password-toggle {
@@ -415,19 +425,31 @@
       box-shadow: 0 10px 20px rgba(24, 53, 127, 0.16);
     }
 
-    .signin-button:focus-visible {
-      box-shadow: var(--focus-ring), 0 20px 34px rgba(24, 53, 127, 0.22);
+    .status {
+      min-height: 1.4rem;
+      color: var(--text-soft);
+      font-size: 0.92rem;
+      line-height: 1.5;
     }
 
-    .status {
-      min-height: 1.25rem;
+    .status.is-error {
+      color: var(--error-text);
+    }
+
+    .status.is-success {
+      color: var(--success-text);
+    }
+
+    .security-note {
+      margin-top: 0.3rem;
       color: var(--text-soft);
-      font-size: 0.9rem;
+      font-size: 0.84rem;
+      line-height: 1.5;
     }
 
     .reassurance {
       margin-top: 1.2rem;
-      padding: 1rem 1rem;
+      padding: 1rem;
       border-radius: 18px;
       background: var(--success-bg);
       border: 1px solid rgba(43, 77, 57, 0.08);
@@ -527,7 +549,7 @@
       * {
         animation: none !important;
         transition: none !important;
-        scroll-behaviour: auto !important;
+        scroll-behavior: auto !important;
       }
     }
   </style>
@@ -624,7 +646,9 @@
                 name="email"
                 type="email"
                 inputmode="email"
-                autocomplete="email"
+                autocomplete="username"
+                autocapitalize="none"
+                spellcheck="false"
                 placeholder="name@organisation.co.uk"
                 required
                 aria-describedby="emailHelp"
@@ -643,6 +667,7 @@
                   name="password"
                   type="password"
                   autocomplete="current-password"
+                  spellcheck="false"
                   placeholder="Enter your password"
                   required
                 />
@@ -672,7 +697,10 @@
               Sign in
             </button>
 
-            <div class="status" id="loginStatus" aria-live="polite"></div>
+            <div class="status" id="loginStatus" aria-live="polite" role="status"></div>
+            <div class="security-note">
+              Access is monitored for security, safeguarding, and governance purposes.
+            </div>
           </form>
 
           <div class="reassurance">
@@ -699,6 +727,9 @@
 
   <script>
     (function () {
+      const REDIRECT_IF_ACCEPTED = "/";
+      const REDIRECT_IF_NOT_ACCEPTED = "/command";
+
       const form = document.getElementById("loginForm");
       const email = document.getElementById("email");
       const password = document.getElementById("password");
@@ -707,13 +738,73 @@
       const loginStatus = document.getElementById("loginStatus");
       const rememberMe = document.getElementById("rememberMe");
 
-      function setStatus(message) {
+      function setStatus(message, type = "") {
         loginStatus.textContent = message || "";
+        loginStatus.classList.remove("is-error", "is-success");
+        if (type) {
+          loginStatus.classList.add(type);
+        }
       }
 
       function setLoading(isLoading) {
         loginBtn.disabled = isLoading;
+        email.disabled = isLoading;
+        password.disabled = isLoading;
+        rememberMe.disabled = isLoading;
+        togglePassword.disabled = isLoading;
         loginBtn.textContent = isLoading ? "Signing in..." : "Sign in";
+      }
+
+      function clearFieldErrors() {
+        email.setAttribute("aria-invalid", "false");
+        password.setAttribute("aria-invalid", "false");
+      }
+
+      function showFieldError(field, message) {
+        field.setAttribute("aria-invalid", "true");
+        setStatus(message, "is-error");
+        field.focus();
+      }
+
+      async function getLegalAcceptanceStatus() {
+        if (!(window.apiRequest && typeof window.apiRequest === "function")) {
+          return null;
+        }
+
+        try {
+          const data = await window.apiRequest("/auth/legal-acceptance/current", {
+            method: "GET"
+          });
+          return data || null;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      async function redirectAfterLogin() {
+        const legal = await getLegalAcceptanceStatus();
+
+        if (legal && legal.accepted_current_version === true) {
+          window.location.href = REDIRECT_IF_ACCEPTED;
+          return;
+        }
+
+        window.location.href = REDIRECT_IF_NOT_ACCEPTED;
+      }
+
+      async function bootExistingSession() {
+        if (!(window.apiRequest && typeof window.apiRequest === "function")) {
+          return;
+        }
+
+        try {
+          await window.apiRequest("/account/me", { method: "GET" });
+          setStatus("Existing session found. Redirecting...", "is-success");
+          setLoading(true);
+          await redirectAfterLogin();
+        } catch (_) {
+          setLoading(false);
+        }
       }
 
       togglePassword.addEventListener("click", function () {
@@ -726,17 +817,18 @@
 
       form.addEventListener("submit", async function (event) {
         event.preventDefault();
+        clearFieldErrors();
 
         const emailValue = email.value.trim();
         const passwordValue = password.value;
 
-        if (!emailValue || !passwordValue) {
-          setStatus("Please enter your work email address and password.");
-          if (!emailValue) {
-            email.focus();
-          } else {
-            password.focus();
-          }
+        if (!emailValue) {
+          showFieldError(email, "Please enter your work email address.");
+          return;
+        }
+
+        if (!passwordValue) {
+          showFieldError(password, "Please enter your password.");
           return;
         }
 
@@ -751,20 +843,26 @@
               remember: rememberMe.checked
             });
           } else {
-            await new Promise((resolve) => setTimeout(resolve, 600));
+            throw new Error("Login service is not available.");
           }
 
-          setStatus("Sign-in successful. Redirecting...");
+          setStatus("Sign-in successful. Redirecting...", "is-success");
+          await redirectAfterLogin();
         } catch (error) {
-          setStatus(
+          const message =
             error && error.message
               ? error.message
-              : "We could not sign you in. Please check your details and try again."
-          );
+              : "We could not sign you in. Please check your details and try again.";
+
+          setStatus(message, "is-error");
+          password.focus();
         } finally {
           setLoading(false);
         }
       });
+
+      clearFieldErrors();
+      bootExistingSession();
     })();
   </script>
 </body>
