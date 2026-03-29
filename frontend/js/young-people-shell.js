@@ -27,6 +27,12 @@ const els = {
   workspacePanel: document.getElementById("workspacePanel"),
   quickActions: document.getElementById("quickActions"),
   changePersonBtn: document.getElementById("changePersonBtn"),
+  drawer: document.getElementById("recordDrawer"),
+  drawerBackdrop: document.getElementById("recordDrawerBackdrop"),
+  drawerTitle: document.getElementById("recordDrawerTitle"),
+  drawerSubtitle: document.getElementById("recordDrawerSubtitle"),
+  drawerBody: document.getElementById("recordDrawerBody"),
+  closeDrawerBtn: document.getElementById("closeRecordDrawerBtn"),
 };
 
 const VIEW_CONFIG = {
@@ -207,6 +213,147 @@ function renderBadges(values = []) {
   `;
 }
 
+function getRecordUrl(item) {
+  const type = String(item.record_type || item.event_type || "").toLowerCase();
+  const id = item.record_id || item.id;
+
+  if (!id) return null;
+
+  const map = {
+    daily_note: `/young-people/daily-notes/${id}`,
+    daily_notes: `/young-people/daily-notes/${id}`,
+    incident: `/young-people/incidents/${id}`,
+    incidents: `/young-people/incidents/${id}`,
+    risk: `/young-people/risk/${id}`,
+    risk_assessment: `/young-people/risk/${id}`,
+    support_plan: `/young-people/plans/${id}`,
+    plan: `/young-people/plans/${id}`,
+    health: `/young-people/health-records/${id}`,
+    health_record: `/young-people/health-records/${id}`,
+    education: `/young-people/education-records/${id}`,
+    education_record: `/young-people/education-records/${id}`,
+    family: `/young-people/family/records/${id}`,
+    family_contact: `/young-people/family/records/${id}`,
+    keywork: `/young-people/keywork/${id}`,
+    keywork_session: `/young-people/keywork/${id}`,
+  };
+
+  return map[type] || null;
+}
+
+function normaliseDetailEntries(data) {
+  const skipKeys = new Set([
+    "id",
+    "record_id",
+    "young_person_id",
+    "created_at",
+    "updated_at",
+    "title",
+    "summary",
+    "narrative",
+  ]);
+
+  return Object.entries(data || {})
+    .filter(([key, value]) => !skipKeys.has(key) && value !== null && value !== "" && value !== undefined)
+    .map(([key, value]) => ({
+      key: key.replaceAll("_", " "),
+      value: typeof value === "object" ? JSON.stringify(value, null, 2) : String(value),
+    }));
+}
+
+function openDrawer() {
+  els.drawer.classList.remove("hidden");
+  els.drawerBackdrop.classList.remove("hidden");
+  els.drawer.setAttribute("aria-hidden", "false");
+}
+
+function closeDrawer() {
+  els.drawer.classList.add("hidden");
+  els.drawerBackdrop.classList.add("hidden");
+  els.drawer.setAttribute("aria-hidden", "true");
+}
+
+async function openRecordDetail(item) {
+  const url = getRecordUrl(item);
+
+  if (!url) {
+    showError("This record cannot be opened yet.");
+    return;
+  }
+
+  openDrawer();
+  els.drawerTitle.textContent = item.title || "Record details";
+  els.drawerSubtitle.textContent = "Loading record...";
+  els.drawerBody.innerHTML = `
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading record details...</p>
+    </div>
+  `;
+
+  try {
+    const data = await apiGet(url);
+    const detailData = data && typeof data === "object" ? data : {};
+    const entries = normaliseDetailEntries(detailData);
+
+    els.drawerTitle.textContent = item.title || detailData.title || "Record details";
+    els.drawerSubtitle.textContent =
+      `${String(item.record_type || item.event_type || "record").replaceAll("_", " ")} • ${formatDate(item.recorded_at || item.occurred_at || detailData.created_at)}`;
+
+    els.drawerBody.innerHTML = `
+      <div class="detail-section">
+        <h4>Summary</h4>
+        <div class="detail-list">
+          <div class="detail-row">
+            <div class="detail-key">Title</div>
+            <div class="detail-value">${escapeHtml(item.title || detailData.title || "—")}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-key">Recorded at</div>
+            <div class="detail-value">${escapeHtml(formatDate(item.recorded_at || item.occurred_at || detailData.created_at))}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-key">Recorded by</div>
+            <div class="detail-value">${escapeHtml(item.recorded_by_name || item.author_name || item.created_by_name || item.worker_name || "Unknown")}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-key">Status</div>
+            <div class="detail-value">${escapeHtml(item.workflow_status || detailData.workflow_status || detailData.status || "—")}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-key">Summary</div>
+            <div class="detail-value">${escapeHtml(item.summary || item.narrative || detailData.summary || detailData.description || "—")}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h4>Details</h4>
+        <div class="detail-list">
+          ${
+            entries.length
+              ? entries.map((entry) => `
+                  <div class="detail-row">
+                    <div class="detail-key">${escapeHtml(entry.key)}</div>
+                    <div class="detail-value">${escapeHtml(entry.value)}</div>
+                  </div>
+                `).join("")
+              : `<div class="detail-row"><div class="detail-key">Details</div><div class="detail-value">No additional details.</div></div>`
+          }
+        </div>
+      </div>
+    `;
+  } catch (error) {
+    console.error(error);
+    els.drawerSubtitle.textContent = "Could not load record";
+    els.drawerBody.innerHTML = `
+      <div class="empty-state">
+        <p>${escapeHtml(error.message || "Failed to load record details.")}</p>
+      </div>
+    `;
+  }
+}
+
 function renderRecordCard(item) {
   const title = item.title || item.topic || item.contact_person || item.record_type || "Record";
   const summary = item.summary || item.narrative || item.description || "No summary available.";
@@ -237,6 +384,9 @@ function renderRecordCard(item) {
       </div>
       <div class="record-body">${escapeHtml(summary)}</div>
       ${renderBadges(badges)}
+      <div class="day-record-actions">
+        <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>
+      </div>
     </article>
   `;
 }
@@ -256,6 +406,9 @@ function renderTimelineItem(item) {
       </div>
       <div class="record-body">${escapeHtml(item.summary || item.narrative || "No summary available.")}</div>
       ${renderBadges([item.severity, item.workflow_status])}
+      <div class="day-record-actions">
+        <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>
+      </div>
     </article>
   `;
 }
@@ -656,34 +809,6 @@ function buildCalendarGrid() {
   return days.join("");
 }
 
-function getRecordUrl(item) {
-  const type = String(item.record_type || item.event_type || "").toLowerCase();
-  const id = item.record_id || item.id;
-
-  if (!id) return null;
-
-  const map = {
-    daily_note: `/young-people/daily-notes/${id}`,
-    daily_notes: `/young-people/daily-notes/${id}`,
-    incident: `/young-people/incidents/${id}`,
-    incidents: `/young-people/incidents/${id}`,
-    risk: `/young-people/risk/${id}`,
-    risk_assessment: `/young-people/risk/${id}`,
-    support_plan: `/young-people/plans/${id}`,
-    plan: `/young-people/plans/${id}`,
-    health: `/young-people/health-records/${id}`,
-    health_record: `/young-people/health-records/${id}`,
-    education: `/young-people/education-records/${id}`,
-    education_record: `/young-people/education-records/${id}`,
-    family: `/young-people/family/records/${id}`,
-    family_contact: `/young-people/family/records/${id}`,
-    keywork: `/young-people/keywork/${id}`,
-    keywork_session: `/young-people/keywork/${id}`,
-  };
-
-  return map[type] || null;
-}
-
 function renderDayRecords(records) {
   if (!records.length) {
     return `<div class="empty-state">No records were recorded on this day.</div>`;
@@ -704,7 +829,6 @@ function renderDayRecords(records) {
         item.occurred_at ||
         item.event_datetime ||
         item.created_at;
-      const recordUrl = getRecordUrl(item);
 
       return `
         <article class="day-record-card">
@@ -722,11 +846,9 @@ function renderDayRecords(records) {
             </div>
           </div>
           <div class="day-record-summary">${escapeHtml(summary)}</div>
-          ${
-            recordUrl
-              ? `<div class="day-record-actions"><a class="day-record-link" href="${escapeHtml(recordUrl)}">Open record</a></div>`
-              : ""
-          }
+          <div class="day-record-actions">
+            <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>
+          </div>
         </article>
       `;
     })
@@ -1048,7 +1170,6 @@ async function loadHealth() {
                   </div>
                 </div>
                 <div class="record-body">${escapeHtml(item.notes || item.prn_guidance || item.reason || "No notes.")}</div>
-                ${renderBadges([item.is_active ? "active" : "inactive"])}
               </article>
             `).join("")}</div>`
           : `<div class="empty-state">No medication profiles.</div>`
@@ -1121,11 +1242,6 @@ async function loadFamily() {
                 <div class="record-body">Phone: ${escapeHtml(contact.phone || "—")}
 Email: ${escapeHtml(contact.email || "—")}
 Notes: ${escapeHtml(contact.notes || "—")}</div>
-                ${renderBadges([
-                  contact.is_parental_responsibility_holder ? "parental responsibility" : null,
-                  contact.is_approved_contact ? "approved" : null,
-                  contact.is_restricted_contact ? "restricted" : null,
-                ])}
               </article>
             `).join("")}</div>`
           : `<div class="empty-state">No family contacts.</div>`
@@ -1159,6 +1275,20 @@ async function loadCurrentView() {
   }
 }
 
+function bindDynamicOpenRecordButtons() {
+  els.content.querySelectorAll("[data-open-record]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      try {
+        const item = JSON.parse(btn.dataset.openRecord);
+        openRecordDetail(item);
+      } catch (error) {
+        console.error(error);
+        showError("Could not open record.");
+      }
+    });
+  });
+}
+
 function bindEvents() {
   els.nav.addEventListener("click", (event) => {
     const btn = event.target.closest(".nav-btn");
@@ -1170,7 +1300,7 @@ function bindEvents() {
     }
 
     state.currentView = btn.dataset.view;
-    loadCurrentView();
+    loadCurrentView().then(bindDynamicOpenRecordButtons);
   });
 
   els.refreshBtn.addEventListener("click", () => {
@@ -1181,6 +1311,7 @@ function bindEvents() {
 
     loadYoungPerson()
       .then(loadCurrentView)
+      .then(bindDynamicOpenRecordButtons)
       .catch((error) => {
         console.error(error);
         showError(error.message || "Failed to refresh.");
@@ -1206,6 +1337,7 @@ function bindEvents() {
     state.timelineCache = [];
     state.calendarMonthSummary = [];
     state.selectedDayRecords = [];
+    closeDrawer();
     const url = new URL(window.location.href);
     url.searchParams.delete("id");
     window.history.replaceState({}, "", url.toString());
@@ -1226,6 +1358,15 @@ function bindEvents() {
 
     showError(messages[action] || "Action not connected yet.");
   });
+
+  els.closeDrawerBtn.addEventListener("click", closeDrawer);
+  els.drawerBackdrop.addEventListener("click", closeDrawer);
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeDrawer();
+    }
+  });
 }
 
 async function init() {
@@ -1241,11 +1382,18 @@ async function init() {
     hideSelectorMode();
     await loadYoungPerson();
     await loadCurrentView();
+    bindDynamicOpenRecordButtons();
   } catch (error) {
     console.error(error);
     showError(error.message || "Failed to load young person.");
     await loadYoungPersonSelector();
   }
 }
+
+const originalLoadCurrentView = loadCurrentView;
+loadCurrentView = async function () {
+  await originalLoadCurrentView();
+  bindDynamicOpenRecordButtons();
+};
 
 init();
