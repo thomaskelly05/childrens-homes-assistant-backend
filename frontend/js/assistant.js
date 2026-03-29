@@ -1,3 +1,9 @@
+/*
+  © 2026 IndiCare. All rights reserved.
+  Proprietary and confidential. Unauthorised copying, reproduction,
+  reverse engineering, redistribution, or commercial exploitation prohibited.
+*/
+
 window.onerror = function(message, source, line, col, error) {
   console.error("window.onerror", { message, source, line, col, error });
 };
@@ -59,6 +65,10 @@ const GREET = [
   n => `Ready when you are, ${n}.`,
   n => `Good to see you, ${n}.`
 ];
+
+const LEGAL_VERSION = "2026-03-29-v1";
+const LEGAL_ACCEPTANCE_KEY = "indicare_legal_acceptance";
+const LEGAL_TABS = ["terms", "privacy", "ip", "acceptance"];
 
 const $ = id => document.getElementById(id);
 const has = id => !!document.getElementById(id);
@@ -362,6 +372,7 @@ function convertPrompt(type) {
 
 function convert(type) {
   if (!lastAssistantText || !has("input")) return;
+  if (!legalAcceptanceValid()) return openLegalModal("acceptance");
   $("input").value = `${convertPrompt(type)}\n\n${lastAssistantText}`;
   resize();
   sendMessage();
@@ -576,6 +587,7 @@ function showAssistantView() {
 }
 
 function showLibraryView() {
+  if (!legalAcceptanceValid()) return openLegalModal("acceptance");
   hideAllPanels();
   has("libraryPanel") && $("libraryPanel").classList.remove("hidden");
   has("inputWrap") && $("inputWrap").classList.add("hidden");
@@ -589,6 +601,7 @@ function showLibraryView() {
 }
 
 async function showManagerView() {
+  if (!legalAcceptanceValid()) return openLegalModal("acceptance");
   if (!isManager()) return banner("Manager access required");
   hideAllPanels();
   has("managerPanel") && $("managerPanel").classList.remove("hidden");
@@ -606,6 +619,7 @@ async function showManagerView() {
 }
 
 async function showAdminView() {
+  if (!legalAcceptanceValid()) return openLegalModal("acceptance");
   if (!isAdmin()) return banner("Admin access required");
   hideAllPanels();
   has("adminPanel") && $("adminPanel").classList.remove("hidden");
@@ -659,6 +673,7 @@ function renderHistory(rows) {
     const del = buttons[2];
 
     if (main) main.onclick = () => {
+      if (!legalAcceptanceValid()) return openLegalModal("acceptance");
       showAssistantView();
       openConversation(r?.id, stripSystem(r?.title || "Observation"));
     };
@@ -870,6 +885,7 @@ function appendMessage(roleName, text, opts = {}) {
     addChip("Save to record", () => saveRecord(shown));
     addChip("Continue", () => {
       if (!has("input")) return;
+      if (!legalAcceptanceValid()) return openLegalModal("acceptance");
       $("input").value = "Continue and expand this.";
       resize();
       sendMessage();
@@ -1081,6 +1097,8 @@ async function uploadDoc(file) {
 
 async function editMessage(messageId, currentText) {
   if (!messageId) return;
+  if (!legalAcceptanceValid()) return openLegalModal("acceptance");
+
   const edited = prompt("Edit message", currentText);
   if (edited === null) return;
 
@@ -1115,6 +1133,8 @@ async function editMessage(messageId, currentText) {
 
 async function sendMessage() {
   if (!has("input")) return;
+  if (!legalAcceptanceValid()) return openLegalModal("acceptance");
+
   const raw = $("input").value.trim();
   const text = stripSystem(raw);
   if (!text || isStreaming) return;
@@ -1165,6 +1185,7 @@ async function sendMessage() {
 
 function quick(type) {
   if (!has("input")) return;
+  if (!legalAcceptanceValid()) return openLegalModal("acceptance");
 
   const prompts = {
     ofsted: "Rewrite the above documentation so it aligns with Ofsted Quality Standards and is ready for professional review.",
@@ -1892,6 +1913,155 @@ function updateManagerSummary() {
   if (has("mgrStatStaffOnly")) $("mgrStatStaffOnly").textContent = String(managerUsers.filter(u => String(u?.role || "").toLowerCase() === "staff").length || 0);
 }
 
+/* =========================
+   LEGAL MODAL + ACCEPTANCE
+========================= */
+
+function legalStoragePayload() {
+  try {
+    return JSON.parse(localStorage.getItem(LEGAL_ACCEPTANCE_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function legalAcceptanceValid() {
+  const data = legalStoragePayload();
+  return !!(data.accepted && data.version === LEGAL_VERSION);
+}
+
+function storeLegalAcceptance() {
+  const payload = {
+    accepted: true,
+    version: LEGAL_VERSION,
+    accepted_at: new Date().toISOString(),
+    user_id: currentUser?.id || null,
+    email: currentUser?.email || null
+  };
+  localStorage.setItem(LEGAL_ACCEPTANCE_KEY, JSON.stringify(payload));
+}
+
+function clearLegalAcceptance() {
+  localStorage.removeItem(LEGAL_ACCEPTANCE_KEY);
+}
+
+async function logLegalAcceptanceToServer() {
+  try {
+    await api("/auth/legal-acceptance", {
+      method: "POST",
+      body: JSON.stringify({
+        version: LEGAL_VERSION,
+        accepted_at: new Date().toISOString()
+      })
+    });
+  } catch (e) {
+    console.warn("Legal acceptance log skipped:", e?.message || e);
+  }
+}
+
+function setLegalTab(name = "terms") {
+  const tab = LEGAL_TABS.includes(name) ? name : "terms";
+
+  document.querySelectorAll("[data-legal-tab]").forEach(btn => {
+    const active = btn.dataset.legalTab === tab;
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-selected", active ? "true" : "false");
+  });
+
+  document.querySelectorAll("[data-legal-panel]").forEach(panel => {
+    panel.classList.toggle("hidden", panel.dataset.legalPanel !== tab);
+  });
+}
+
+function legalControlsDisabled(disabled) {
+  [
+    "send",
+    "input",
+    "upload",
+    "mic",
+    "newChat",
+    "navAssistant",
+    "navLibrary",
+    "navManager",
+    "navAdmin",
+    "openSettings",
+    "sideToggle",
+    "mobileMenu"
+  ].forEach(id => {
+    if (!has(id)) return;
+    $(id).disabled = !!disabled;
+  });
+}
+
+function openLegalModal(tab = "terms", force = false) {
+  if (!has("legalModal") || !has("legalOverlay")) return;
+  setLegalTab(tab);
+  $("legalOverlay").classList.add("show");
+  $("legalModal").classList.add("open");
+  $("legalOverlay").setAttribute("aria-hidden", "false");
+
+  if (force) {
+    $("legalModal").dataset.force = "true";
+    if (has("closeLegalModal")) $("closeLegalModal").style.display = "none";
+  } else {
+    $("legalModal").dataset.force = "false";
+    if (has("closeLegalModal")) $("closeLegalModal").style.display = "";
+  }
+}
+
+function closeLegalModal() {
+  if (!has("legalModal") || !has("legalOverlay")) return;
+  const forced = $("legalModal").dataset.force === "true";
+  if (forced && !legalAcceptanceValid()) return;
+
+  $("legalOverlay").classList.remove("show");
+  $("legalModal").classList.remove("open");
+  $("legalOverlay").setAttribute("aria-hidden", "true");
+}
+
+function allLegalChecksPassed() {
+  return !!(
+    has("acceptTermsCheck") &&
+    has("acceptPrivacyCheck") &&
+    has("acceptIPCheck") &&
+    $("acceptTermsCheck").checked &&
+    $("acceptPrivacyCheck").checked &&
+    $("acceptIPCheck").checked
+  );
+}
+
+async function acceptLegalTerms() {
+  if (!allLegalChecksPassed()) {
+    setLegalTab("acceptance");
+    return banner("Please tick all acceptance boxes before continuing.");
+  }
+
+  storeLegalAcceptance();
+  await logLegalAcceptanceToServer();
+  legalControlsDisabled(false);
+  closeLegalModal();
+  banner("Legal terms accepted.");
+}
+
+async function declineLegalTerms() {
+  clearLegalAcceptance();
+  banner("You must accept the legal terms to use IndiCare OS.");
+  await logoutNow();
+}
+
+function enforceLegalGate() {
+  const accepted = legalAcceptanceValid();
+  legalControlsDisabled(!accepted);
+
+  if (!accepted) {
+    openLegalModal("terms", true);
+  } else {
+    closeLegalModal();
+  }
+}
+
+/* ========================= */
+
 function restorePrefs() {
   document.body.classList.toggle("theme-dark", (localStorage.getItem("indicare_theme") || "light") === "dark");
   if (has("lang")) $("lang").value = localStorage.getItem("indicare_reply_language") || DEFAULT_LANGUAGE;
@@ -1907,6 +2077,35 @@ function restorePrefs() {
 function on(id, event, fn) {
   if (!has(id)) return;
   $(id).addEventListener(event, fn);
+}
+
+function bindLegalControls() {
+  document.querySelectorAll("[data-legal-tab]").forEach(btn => {
+    btn.addEventListener("click", () => setLegalTab(btn.dataset.legalTab));
+  });
+
+  on("openLegalFromSettings", "click", () => openLegalModal("terms"));
+  on("openLegalHeaderBtn", "click", () => openLegalModal("terms"));
+  on("footerTermsBtn", "click", () => openLegalModal("terms"));
+  on("footerPrivacyBtn", "click", () => openLegalModal("privacy"));
+  on("footerIPBtn", "click", () => openLegalModal("ip"));
+  on("closeLegalModal", "click", closeLegalModal);
+
+  on("legalOverlay", "click", () => {
+    const forced = has("legalModal") && $("legalModal").dataset.force === "true";
+    if (!forced || legalAcceptanceValid()) closeLegalModal();
+  });
+
+  on("acceptLegalBtn", "click", acceptLegalTerms);
+  on("declineLegalBtn", "click", declineLegalTerms);
+
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") {
+      if (has("legalModal") && $("legalModal").classList.contains("open")) {
+        closeLegalModal();
+      }
+    }
+  });
 }
 
 function bind() {
@@ -2003,6 +2202,11 @@ function bind() {
 
   if (has("upload")) {
     $("upload").addEventListener("change", async e => {
+      if (!legalAcceptanceValid()) {
+        e.target.value = "";
+        return openLegalModal("acceptance");
+      }
+
       const file = e.target.files?.[0];
       if (!file) return;
       try {
@@ -2065,6 +2269,8 @@ function bind() {
   on("saveDoc", "click", saveManagerDoc);
   on("refreshManagerBtn", "click", loadManager);
   on("refreshManagerDocsBtn", "click", loadManager);
+
+  bindLegalControls();
 }
 
 async function init() {
@@ -2116,6 +2322,7 @@ async function init() {
   }
 
   showAssistantView();
+  enforceLegalGate();
 }
 
 document.addEventListener("DOMContentLoaded", init);
