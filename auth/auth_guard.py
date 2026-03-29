@@ -26,7 +26,9 @@ PUBLIC_PATH_PREFIXES = (
     "/health",
 )
 
-PUBLIC_EXACT_PATHS = set()
+PUBLIC_EXACT_PATHS = {
+    "/",
+}
 
 
 def path_is_public(path: str) -> bool:
