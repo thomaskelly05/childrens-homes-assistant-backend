@@ -66,7 +66,7 @@ app.add_middleware(
     SessionMiddleware,
     secret_key=os.environ["SESSION_SECRET"],
     same_site="lax",
-    https_only=os.getenv("APP_ENV", "production").lower() != "development",
+    https_only=os.getenv("APP_ENV", "production").lower() == "production",
     max_age=60 * 60 * 12,
 )
 
@@ -249,12 +249,12 @@ def serve_assistant_html():
 
 @app.get("/command")
 def serve_command():
-    return serve_component("assistant.html")
+    return RedirectResponse(url="/assistant", status_code=302)
 
 
 @app.get("/command.html")
 def serve_command_html():
-    return serve_component("assistant.html")
+    return RedirectResponse(url="/assistant", status_code=302)
 
 
 @app.get("/home")
