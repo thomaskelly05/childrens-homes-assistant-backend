@@ -105,6 +105,24 @@
     </main>
   </div>
 
+  <div id="recordDrawerBackdrop" class="drawer-backdrop hidden"></div>
+
+  <aside id="recordDrawer" class="record-drawer hidden" aria-hidden="true">
+    <div class="record-drawer-header">
+      <div>
+        <h3 id="recordDrawerTitle">Record details</h3>
+        <p id="recordDrawerSubtitle">Open a record to view details</p>
+      </div>
+      <button id="closeRecordDrawerBtn" class="drawer-close-btn" type="button">✕</button>
+    </div>
+
+    <div id="recordDrawerBody" class="record-drawer-body">
+      <div class="empty-state">
+        <p>Select a record to view it here.</p>
+      </div>
+    </div>
+  </aside>
+
   <script src="/js/young-people-shell.js"></script>
 </body>
 </html>
