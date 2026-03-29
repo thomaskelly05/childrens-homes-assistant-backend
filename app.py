@@ -13,7 +13,12 @@ from slowapi.util import get_remote_address
 from starlette.middleware.sessions import SessionMiddleware
 
 from auth.auth_guard import enforce_login_middleware
-from auth.mfa_guard import enforce_mfa_middleware
+from auth.mfa_guard import (
+    enforce_mfa_middleware,
+    get_session_user_id,
+    is_mfa_verified_in_session,
+    user_has_enabled_mfa,
+)
 from db.connection import (
     close_db_pool,
     get_db_connection,
@@ -85,13 +90,23 @@ app.add_middleware(
 
 
 @app.middleware("http")
-async def global_login_enforcement(request: Request, call_next):
-    return await enforce_login_middleware(request, call_next)
+async def security_enforcement(request: Request, call_next):
+    """
+    Single combined security middleware to avoid ordering confusion.
 
+    Flow:
+    1. Enforce login
+    2. Enforce MFA
+    """
+    login_result = await enforce_login_middleware(request, call_next=None)
+    if login_result is not None:
+        return login_result
 
-@app.middleware("http")
-async def global_mfa_enforcement(request: Request, call_next):
-    return await enforce_mfa_middleware(request, call_next)
+    mfa_result = await enforce_mfa_middleware(request, call_next=None)
+    if mfa_result is not None:
+        return mfa_result
+
+    return await call_next(request)
 
 
 @app.on_event("startup")
@@ -239,8 +254,23 @@ def serve_component(file_name: str):
 
 
 @app.get("/")
-def serve_index():
-    return serve_component("assistant.html")
+def serve_index(request: Request):
+    """
+    Public landing route so Render health probes do not hit a 401 wall.
+    Redirect based on current session state.
+    """
+    user_id = get_session_user_id(request)
+
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=302)
+
+    if not user_has_enabled_mfa(user_id):
+        return RedirectResponse(url="/mfa-setup", status_code=302)
+
+    if not is_mfa_verified_in_session(request):
+        return RedirectResponse(url="/mfa", status_code=302)
+
+    return RedirectResponse(url="/assistant", status_code=302)
 
 
 @app.get("/assistant")
