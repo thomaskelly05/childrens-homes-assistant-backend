@@ -12,11 +12,11 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from starlette.middleware.sessions import SessionMiddleware
 
-from auth.auth_guard import enforce_login_middleware
 from auth.mfa_guard import (
-    enforce_mfa_middleware,
     get_session_user_id,
     is_mfa_verified_in_session,
+    path_allowed_during_mfa,
+    path_is_public as mfa_path_is_public,
     user_has_enabled_mfa,
 )
 from db.connection import (
@@ -89,22 +89,84 @@ app.add_middleware(
 )
 
 
+def login_public_path(path: str) -> bool:
+    public_prefixes = (
+        "/",
+        "/login",
+        "/mfa",
+        "/mfa-setup",
+        "/mfa-recovery",
+        "/auth/login",
+        "/auth/logout",
+        "/auth/check",
+        "/auth/mfa",
+        "/css",
+        "/js",
+        "/assets",
+        "/components",
+        "/static",
+        "/favicon",
+        "/docs",
+        "/redoc",
+        "/openapi",
+        "/health",
+    )
+    return any(path.startswith(prefix) for prefix in public_prefixes)
+
+
+def wants_html(request: Request) -> bool:
+    accept = (request.headers.get("accept") or "").lower()
+    return "text/html" in accept
+
+
 @app.middleware("http")
 async def security_enforcement(request: Request, call_next):
-    """
-    Single combined security middleware to avoid ordering confusion.
+    path = request.url.path
+    user_id = get_session_user_id(request)
 
-    Flow:
-    1. Enforce login
-    2. Enforce MFA
-    """
-    login_result = await enforce_login_middleware(request, call_next=None)
-    if login_result is not None:
-        return login_result
+    # Public paths are always allowed through.
+    if login_public_path(path) or mfa_path_is_public(path):
+        return await call_next(request)
 
-    mfa_result = await enforce_mfa_middleware(request, call_next=None)
-    if mfa_result is not None:
-        return mfa_result
+    # Not logged in.
+    if not user_id:
+        if wants_html(request):
+            return RedirectResponse(url="/login", status_code=302)
+        return JSONResponse(
+            status_code=401,
+            content={
+                "ok": False,
+                "detail": "Authentication required.",
+                "code": "authentication_required",
+            },
+        )
+
+    # Allow auth/MFA endpoints while user is in pre-MFA state.
+    if path_allowed_during_mfa(path):
+        return await call_next(request)
+
+    # Enforce MFA after login.
+    if not user_has_enabled_mfa(user_id):
+        if wants_html(request):
+            return RedirectResponse(url="/mfa-setup", status_code=302)
+        return JSONResponse(
+            status_code=403,
+            content={
+                "detail": "MFA setup is required before using the platform.",
+                "code": "mfa_setup_required",
+            },
+        )
+
+    if not is_mfa_verified_in_session(request):
+        if wants_html(request):
+            return RedirectResponse(url="/mfa", status_code=302)
+        return JSONResponse(
+            status_code=403,
+            content={
+                "detail": "MFA verification is required before using the platform.",
+                "code": "mfa_verification_required",
+            },
+        )
 
     return await call_next(request)
 
@@ -255,10 +317,6 @@ def serve_component(file_name: str):
 
 @app.get("/")
 def serve_index(request: Request):
-    """
-    Public landing route so Render health probes do not hit a 401 wall.
-    Redirect based on current session state.
-    """
     user_id = get_session_user_id(request)
 
     if not user_id:
