@@ -16,7 +16,6 @@ from auth.mfa_guard import (
     get_session_user_id,
     is_mfa_verified_in_session,
     path_allowed_during_mfa,
-    path_is_public as mfa_path_is_public,
     user_has_enabled_mfa,
 )
 from db.connection import (
@@ -89,29 +88,40 @@ app.add_middleware(
 )
 
 
-def login_public_path(path: str) -> bool:
-    public_prefixes = (
-        "/",
-        "/login",
-        "/mfa",
-        "/mfa-setup",
-        "/mfa-recovery",
-        "/auth/login",
-        "/auth/logout",
-        "/auth/check",
-        "/auth/mfa",
-        "/css",
-        "/js",
-        "/assets",
-        "/components",
-        "/static",
-        "/favicon",
-        "/docs",
-        "/redoc",
-        "/openapi",
-        "/health",
-    )
-    return any(path.startswith(prefix) for prefix in public_prefixes)
+PUBLIC_PREFIXES = (
+    "/login",
+    "/login.html",
+    "/mfa",
+    "/mfa.html",
+    "/mfa-setup",
+    "/mfa-setup.html",
+    "/mfa-recovery",
+    "/mfa-recovery.html",
+    "/auth/login",
+    "/auth/logout",
+    "/auth/check",
+    "/auth/mfa",
+    "/css",
+    "/js",
+    "/assets",
+    "/components",
+    "/static",
+    "/favicon",
+    "/docs",
+    "/redoc",
+    "/openapi",
+    "/health",
+)
+
+PUBLIC_EXACT_PATHS = {
+    "/",
+}
+
+
+def path_is_public(path: str) -> bool:
+    if path in PUBLIC_EXACT_PATHS:
+        return True
+    return any(path.startswith(prefix) for prefix in PUBLIC_PREFIXES)
 
 
 def wants_html(request: Request) -> bool:
@@ -124,11 +134,9 @@ async def security_enforcement(request: Request, call_next):
     path = request.url.path
     user_id = get_session_user_id(request)
 
-    # Public paths are always allowed through.
-    if login_public_path(path) or mfa_path_is_public(path):
+    if path_is_public(path):
         return await call_next(request)
 
-    # Not logged in.
     if not user_id:
         if wants_html(request):
             return RedirectResponse(url="/login", status_code=302)
@@ -141,11 +149,9 @@ async def security_enforcement(request: Request, call_next):
             },
         )
 
-    # Allow auth/MFA endpoints while user is in pre-MFA state.
     if path_allowed_during_mfa(path):
         return await call_next(request)
 
-    # Enforce MFA after login.
     if not user_has_enabled_mfa(user_id):
         if wants_html(request):
             return RedirectResponse(url="/mfa-setup", status_code=302)
@@ -329,6 +335,11 @@ def serve_index(request: Request):
         return RedirectResponse(url="/mfa", status_code=302)
 
     return RedirectResponse(url="/assistant", status_code=302)
+
+
+@app.head("/")
+def serve_index_head():
+    return RedirectResponse(url="/login", status_code=302)
 
 
 @app.get("/assistant")
