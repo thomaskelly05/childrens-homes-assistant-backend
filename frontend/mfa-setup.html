@@ -1,212 +1,229 @@
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>IndiCare | MFA setup</title>
-<meta name="theme-color" content="#18357f" />
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IndiCare | MFA setup</title>
+  <meta name="theme-color" content="#18357f" />
   <meta name="color-scheme" content="light" />
 
-<style>
-:root {
---bg: #edf3f9;
-@@ -15,13 +15,13 @@
---border: #d8e1ec;
---primary: #2348a5;
---primary-strong: #18357f;
-      --error: #9f1239;
---success: #166534;
---success-bg: #effaf3;
+  <style>
+    :root {
+      --bg: #edf3f9;
+      --panel: #ffffff;
+      --text: #172033;
+      --muted: #5d6b82;
+      --border: #d8e1ec;
+      --primary: #2348a5;
+      --primary-strong: #18357f;
       --error: #9f1239;
       --error-bg: #fff1f2;
---shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
---radius: 22px;
---focus-ring: 0 0 0 4px rgba(35, 72, 165, 0.14);
+      --success: #166534;
+      --success-bg: #effaf3;
+      --shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+      --radius: 22px;
+      --focus-ring: 0 0 0 4px rgba(35, 72, 165, 0.14);
       --code-bg: #f8fbfe;
-}
-
-* {
-@@ -43,7 +43,7 @@
-
-.card {
-width: 100%;
-      max-width: 760px;
-      max-width: 560px;
-background: var(--panel);
-border: 1px solid var(--border);
-border-radius: var(--radius);
-@@ -67,64 +67,62 @@
-}
-
-p {
-      margin: 0 0 14px;
-      margin: 0 0 16px;
-color: var(--muted);
-line-height: 1.65;
-}
-
-    .grid {
-      margin-top: 18px;
-      display: grid;
-      grid-template-columns: 1.05fr .95fr;
-      gap: 18px;
-      align-items: start;
     }
 
-.panel {
-border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 18px;
-      background: #fff;
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 560px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px;
+    }
+
+    .eyebrow {
+      display: inline-block;
+      margin-bottom: 10px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--primary);
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 1.9rem;
+      line-height: 1.15;
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+    }
+
+    p {
+      margin: 0 0 16px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
       border-radius: 16px;
       padding: 16px;
       background: #fbfdff;
       margin-top: 16px;
-}
-
-.panel h2 {
-margin: 0 0 10px;
-      font-size: 1.08rem;
-      font-size: 1rem;
     }
 
-    .panel p:last-child {
-      margin-bottom: 0;
-}
-
-.qr-wrap {
-display: grid;
-place-items: center;
-      min-height: 280px;
-      padding: 16px;
-      background: #ffffff;
-border: 1px dashed var(--border);
-border-radius: 16px;
-      background: #fafcff;
-      overflow: hidden;
+    .qr-wrap {
+      display: grid;
+      place-items: center;
       min-height: 220px;
       margin-top: 12px;
-}
+      padding: 16px;
+      background: #fafcff;
+      border: 1px dashed var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      text-align: center;
+      color: var(--muted);
+    }
 
-.qr-wrap img {
-      max-width: 220px;
-width: 100%;
+    .qr-wrap img {
+      width: 100%;
       max-width: 260px;
-height: auto;
-display: block;
-}
+      height: auto;
+      display: block;
+    }
 
-    .secret {
     .secret-box {
-margin-top: 12px;
-      padding: 14px 16px;
-      padding: 12px 14px;
-border-radius: 14px;
-      background: #f7f9fc;
-border: 1px solid var(--border);
-      background: var(--code-bg);
-      word-break: break-word;
-font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      word-break: break-all;
-      font-size: .96rem;
-      line-height: 1.6;
-      font-size: .95rem;
-      color: var(--text);
-}
-
-form {
-display: grid;
-gap: 14px;
       margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      word-break: break-all;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.95rem;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    form {
+      display: grid;
+      gap: 14px;
       margin-top: 18px;
-}
+    }
 
-label {
-@@ -150,33 +148,36 @@
-}
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
 
-button {
+    input {
+      width: 100%;
       min-height: 50px;
-      min-height: 52px;
-border: none;
-border-radius: 14px;
-      background: linear-gradient(135deg, var(--primary), var(--primary-strong));
-      color: #fff;
-font: inherit;
-font-weight: 800;
-cursor: pointer;
-}
-
-    .action {
-      background: linear-gradient(135deg, var(--primary), var(--primary-strong));
-      color: #fff;
-    button:disabled {
-      opacity: .7;
-      cursor: not-allowed;
-}
-
-.ghost {
+      padding: 0 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
       background: #fff;
       color: var(--text);
-      background: transparent;
-      color: var(--primary);
-border: 1px solid var(--border);
-}
+      font: inherit;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--primary);
+      box-shadow: var(--focus-ring);
+    }
+
+    button {
+      min-height: 52px;
+      border: none;
+      border-radius: 14px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
 
     button:disabled {
-      opacity: .7;
+      opacity: 0.7;
       cursor: not-allowed;
+    }
+
+    .primary-btn {
+      background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+      color: #fff;
+    }
+
+    .ghost {
+      background: transparent;
+      color: var(--primary);
+      border: 1px solid var(--border);
+    }
+
     .actions {
       display: grid;
       gap: 10px;
       margin-top: 18px;
-}
+    }
 
-.status {
-min-height: 22px;
-      margin-top: 12px;
+    .status {
+      min-height: 22px;
       margin-top: 14px;
-font-size: .94rem;
-line-height: 1.5;
-}
-@@ -199,32 +200,30 @@
-line-height: 1.6;
-}
+      font-size: 0.94rem;
+      line-height: 1.5;
+    }
 
-    .steps {
-      margin: 0;
-      padding-left: 18px;
+    .status.success {
+      color: var(--success);
+    }
+
+    .status.error {
+      color: var(--error);
+    }
+
+    .helper {
+      margin-top: 16px;
+      font-size: 0.92rem;
       color: var(--muted);
-      line-height: 1.7;
+      line-height: 1.6;
+    }
+
     .hidden {
       display: none !important;
-}
+    }
 
-    .top-actions {
-      margin-top: 14px;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
     .recovery-box {
       margin-top: 18px;
       padding: 16px;
       border-radius: 16px;
       background: #fffdf7;
       border: 1px solid #efe2b8;
-}
-
-    @media (max-width: 760px) {
-      .card {
-        padding: 20px;
-      }
-
-      .grid {
-        grid-template-columns: 1fr;
-      }
-    .recovery-box h3 {
-      margin: 0 0 10px;
-      font-size: 1rem;
     }
 
-      .top-actions {
-        flex-direction: column;
-      }
     .recovery-list {
       margin: 0;
       padding-left: 18px;
@@ -214,65 +231,27 @@ line-height: 1.6;
       gap: 8px;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       color: var(--text);
-}
-</style>
-</head>
-@@ -233,184 +232,188 @@
-<div class="eyebrow">Secure access</div>
-<h1>Set up multi-factor authentication</h1>
-<p>
-      Scan this QR code in your authenticator app, then enter the 6-digit code to finish setup.
-      To continue using IndiCare, you must set up multi-factor authentication for your account.
-</p>
+    }
 
-    <div class="grid">
-      <section class="panel">
-        <h2>Authenticator setup</h2>
-        <div class="qr-wrap">
-          <img id="qrImage" alt="MFA QR code" />
-        </div>
-        <div id="secretText" class="secret"></div>
+    @media (max-width: 760px) {
+      .card {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="eyebrow">Secure access</div>
+    <h1>Set up multi-factor authentication</h1>
+    <p>
+      To continue using IndiCare, you must set up multi-factor authentication for your account.
+    </p>
+
     <div class="panel">
       <h2>Step 1</h2>
       <p>Open your authenticator app and scan the QR code below.</p>
 
-        <div class="top-actions">
-          <button id="copySecretBtn" class="ghost" type="button">Copy secret</button>
-          <button id="refreshSetupBtn" class="ghost" type="button">Generate new secret</button>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>Complete setup</h2>
-
-        <ol class="steps">
-          <li>Open your authenticator app.</li>
-          <li>Scan the QR code or enter the secret manually.</li>
-          <li>Enter the current 6-digit code below.</li>
-        </ol>
-
-        <form id="mfaSetupForm" novalidate>
-          <div>
-            <label for="code">Authentication code</label>
-            <input
-              id="code"
-              name="code"
-              type="text"
-              inputmode="numeric"
-              autocomplete="one-time-code"
-              maxlength="12"
-              placeholder="123456"
-              required
-            />
-          </div>
-
-          <button id="enableBtn" class="action" type="submit">Enable MFA</button>
-        </form>
-
-        <div id="status" class="status" aria-live="polite" role="status"></div>
-
-        <div class="helper">
-          After setup, you will receive recovery codes. Save them securely before continuing.
       <div id="qrWrap" class="qr-wrap">
         <span id="qrLoading">Preparing QR code...</span>
         <img id="qrImage" class="hidden" alt="MFA QR code" />
@@ -299,10 +278,9 @@ line-height: 1.6;
             placeholder="123456"
             required
           />
-</div>
-      </section>
+        </div>
 
-        <button id="enableBtn" type="submit">Enable MFA</button>
+        <button id="enableBtn" type="submit" class="primary-btn">Enable MFA</button>
       </form>
     </div>
 
@@ -315,7 +293,7 @@ line-height: 1.6;
       </p>
       <ul id="recoveryList" class="recovery-list"></ul>
       <div class="actions">
-        <button id="continueBtn" type="button">Continue to assistant</button>
+        <button id="continueBtn" type="button" class="primary-btn">Continue to assistant</button>
       </div>
     </div>
 
@@ -325,56 +303,40 @@ line-height: 1.6;
 
     <div class="helper">
       Access remains restricted until MFA setup is completed successfully.
-</div>
-</main>
+    </div>
+  </main>
 
-<script src="/js/api.js"></script>
-<script src="/js/auth.js"></script>
-<script>
-(function () {
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    (function () {
       const qrLoading = document.getElementById("qrLoading");
-const qrImage = document.getElementById("qrImage");
-      const secretText = document.getElementById("secretText");
-      const copySecretBtn = document.getElementById("copySecretBtn");
-      const refreshSetupBtn = document.getElementById("refreshSetupBtn");
+      const qrImage = document.getElementById("qrImage");
       const secretBox = document.getElementById("secretBox");
-const form = document.getElementById("mfaSetupForm");
+      const form = document.getElementById("mfaSetupForm");
       const codeInput = document.getElementById("code");
-      const code = document.getElementById("code");
-const enableBtn = document.getElementById("enableBtn");
-const statusEl = document.getElementById("status");
-
-      let currentSecret = "";
-      let currentOtpAuthUrl = "";
+      const enableBtn = document.getElementById("enableBtn");
+      const statusEl = document.getElementById("status");
       const recoveryBox = document.getElementById("recoveryBox");
       const recoveryList = document.getElementById("recoveryList");
       const continueBtn = document.getElementById("continueBtn");
       const reloadSetupBtn = document.getElementById("reloadSetupBtn");
 
-function setStatus(message, type = "") {
-statusEl.textContent = message || "";
-statusEl.className = "status";
-        if (type) statusEl.classList.add(type);
+      function setStatus(message, type) {
+        statusEl.textContent = message || "";
+        statusEl.className = "status";
         if (type) {
           statusEl.classList.add(type);
         }
-}
+      }
 
-function setLoading(isLoading) {
-enableBtn.disabled = isLoading;
-        refreshSetupBtn.disabled = isLoading;
-        copySecretBtn.disabled = isLoading;
+      function setLoading(isLoading) {
+        enableBtn.disabled = isLoading;
         codeInput.disabled = isLoading;
-        code.disabled = isLoading;
         reloadSetupBtn.disabled = isLoading;
-enableBtn.textContent = isLoading ? "Enabling..." : "Enable MFA";
-}
+        enableBtn.textContent = isLoading ? "Enabling..." : "Enable MFA";
+      }
 
-      async function validateSessionOrRedirect() {
-        if (!window.auth || typeof window.auth.validateSession !== "function") {
-          window.location.replace("/login");
-          return null;
-        }
       function setSetupLoading(message) {
         qrLoading.textContent = message || "Preparing QR code...";
         qrLoading.classList.remove("hidden");
@@ -400,154 +362,122 @@ enableBtn.textContent = isLoading ? "Enabling..." : "Enable MFA";
         recoveryBox.classList.remove("hidden");
       }
 
+      function getStoredUserSafe() {
+        if (!window.auth || typeof window.auth.getStoredUser !== "function") {
+          return {};
+        }
+        return window.auth.getStoredUser() || {};
+      }
+
       async function boot() {
-const state = await window.auth.validateSession();
-
-        if (!state || !state.authenticated) {
-        if (!state.authenticated) {
-window.location.replace("/login");
-          return null;
-          return;
-}
-
-        if (state.mfa_enabled && state.mfa_verified) {
-        if (state.mfaEnabled && state.mfaVerified) {
-window.location.replace("/assistant");
-          return null;
+        if (!window.auth || typeof window.auth.validateSession !== "function") {
+          window.location.replace("/login");
           return;
         }
 
-        if (state.mfaEnabled && !state.mfaVerified) {
+        const state = await window.auth.validateSession();
+
+        if (!state || !state.authenticated) {
+          window.location.replace("/login");
+          return;
+        }
+
+        if (state.mfa_enabled && state.mfa_verified) {
+          window.location.replace("/assistant");
+          return;
+        }
+
+        if (state.mfa_enabled && !state.mfa_verified) {
           window.location.replace("/mfa");
           return;
-}
+        }
 
-        return state;
         await loadSetup();
-}
+      }
 
-async function loadSetup() {
-        setStatus("Preparing MFA setup...");
+      async function loadSetup() {
         setLoading(true);
         setSetupLoading("Preparing QR code...");
         setStatus("");
+        recoveryBox.classList.add("hidden");
+        recoveryList.innerHTML = "";
 
-try {
-          const session = await validateSessionOrRedirect();
-          if (!session) return;
+        try {
+          const data = await window.apiRequest("/auth/mfa/setup", {
+            method: "POST"
+          });
 
-const data = await window.apiRequest("/auth/mfa/setup", {
-method: "POST"
-});
-
-if (!data?.ok) {
-            throw new Error("Could not prepare MFA setup.");
+          if (!data || data.ok !== true) {
             throw new Error("Could not start MFA setup.");
-}
+          }
 
-          currentSecret = data.secret || "";
-          currentOtpAuthUrl = data.otp_auth_url || "";
-          qrImage.src = data.qr_code_data_url || "";
-          secretText.textContent = currentSecret || "No secret returned.";
-
-          setStatus("Scan the QR code and enter the current code from your app.", "success");
           showSetup(data);
-} catch (error) {
-          setStatus(error?.message || "Could not load MFA setup.", "error");
-        } finally {
-          setLoading(false);
+        } catch (error) {
           setSetupLoading("Could not load QR code.");
           setStatus(error?.message || "Could not start MFA setup.", "error");
-}
-}
+        } finally {
+          setLoading(false);
+        }
+      }
 
-      copySecretBtn.addEventListener("click", async () => {
-        if (!currentSecret) {
-          setStatus("No secret is available to copy.", "error");
+      form.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const value = codeInput.value.trim();
+        if (!value) {
+          setStatus("Please enter the code from your authenticator app.", "error");
+          codeInput.focus();
           return;
         }
 
+        setLoading(true);
+        setStatus("Checking your code...");
+
         try {
-          await navigator.clipboard.writeText(currentSecret);
-          setStatus("Secret copied.", "success");
-        } catch (_) {
-          setStatus("Could not copy the secret on this device.", "error");
+          const data = await window.apiRequest("/auth/mfa/enable", {
+            method: "POST",
+            body: JSON.stringify({ code: value })
+          });
+
+          if (!data || data.ok !== true) {
+            throw new Error("MFA setup failed.");
+          }
+
+          const existing = getStoredUserSafe();
+          const remember = !!localStorage.getItem("current_user");
+          const merged = { ...existing, mfa_enabled: true, mfa_verified: true };
+
+          if (remember) {
+            localStorage.setItem("current_user", JSON.stringify(merged));
+          } else {
+            sessionStorage.setItem("current_user", JSON.stringify(merged));
+            localStorage.removeItem("current_user");
+          }
+
+          setStatus(
+            "MFA enabled successfully. Save your recovery codes before continuing.",
+            "success"
+          );
+          showRecoveryCodes(data.recovery_codes || []);
+        } catch (error) {
+          setStatus(error?.message || "MFA setup failed.", "error");
+          codeInput.focus();
+        } finally {
+          setLoading(false);
         }
       });
 
-      refreshSetupBtn.addEventListener("click", async () => {
-        await loadSetup();
-      });
-
-form.addEventListener("submit", async (event) => {
-event.preventDefault();
-
-        const code = codeInput.value.trim();
-        if (!code) {
-          setStatus("Please enter your authentication code.", "error");
-          codeInput.focus();
-        const value = code.value.trim();
-        if (!value) {
-          setStatus("Please enter the code from your authenticator app.", "error");
-          code.focus();
-return;
-}
-
-setLoading(true);
-        setStatus("Verifying and enabling MFA...");
-        setStatus("Checking your code...");
-
-try {
-const data = await window.apiRequest("/auth/mfa/enable", {
-method: "POST",
-            body: JSON.stringify({ code })
-            body: JSON.stringify({ code: value })
-});
-
-if (!data?.ok) {
-            throw new Error("Could not enable MFA.");
-            throw new Error("MFA setup failed.");
-}
-
-          const codes = Array.isArray(data.recovery_codes) ? data.recovery_codes : [];
-          sessionStorage.setItem("indicare_recovery_codes", JSON.stringify(codes));
-
-          const existing = window.auth.getStoredUser ? (window.auth.getStoredUser() || {}) : {};
-          const existing = window.auth.getStoredUser() || {};
-const remember = !!localStorage.getItem("current_user");
-const merged = { ...existing, mfa_enabled: true, mfa_verified: true };
-
-@@ -422,17 +425,28 @@ <h2>Complete setup</h2>
-localStorage.removeItem("current_user");
-}
-
-          setStatus("MFA enabled successfully. Redirecting to recovery codes...", "success");
-          window.location.replace("/mfa-recovery");
-          setStatus("MFA enabled successfully. Save your recovery codes before continuing.", "success");
-          showRecoveryCodes(data.recovery_codes || []);
-} catch (error) {
-          setStatus(error?.message || "Could not enable MFA.", "error");
-          codeInput.focus();
-          setStatus(error?.message || "MFA setup failed.", "error");
-          code.focus();
-} finally {
-setLoading(false);
-}
-});
-
-      loadSetup();
       continueBtn.addEventListener("click", function () {
         window.location.href = "/assistant";
       });
 
       reloadSetupBtn.addEventListener("click", function () {
-        recoveryBox.classList.add("hidden");
-        recoveryList.innerHTML = "";
-        code.value = "";
+        codeInput.value = "";
         loadSetup();
       });
 
       boot();
-})();
-</script>
+    })();
+  </script>
 </body>
+</html>
