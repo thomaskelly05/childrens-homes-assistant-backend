@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import Request
+from fastapi.responses import RedirectResponse
 from starlette.responses import JSONResponse
 
 from db.mfa_db import get_user_mfa
@@ -99,6 +100,11 @@ def user_has_enabled_mfa(user_id: int) -> bool:
     return bool(row and bool(row.get("is_enabled")))
 
 
+def wants_html(request: Request) -> bool:
+    accept = (request.headers.get("accept") or "").lower()
+    return "text/html" in accept
+
+
 async def enforce_mfa_middleware(request: Request, call_next=None):
     path = request.url.path
 
@@ -107,11 +113,10 @@ async def enforce_mfa_middleware(request: Request, call_next=None):
 
     user_id = get_session_user_id(request)
 
-    # Not logged in yet; let login middleware handle that.
+    # Not logged in yet; let auth/login middleware handle that.
     if not user_id:
         return None
 
-    # Allow auth and MFA routes during pre-MFA state.
     if path_allowed_during_mfa(path):
         return None
 
@@ -119,6 +124,8 @@ async def enforce_mfa_middleware(request: Request, call_next=None):
     mfa_verified = is_mfa_verified_in_session(request)
 
     if not mfa_enabled:
+        if wants_html(request):
+            return RedirectResponse(url="/mfa-setup", status_code=302)
         return JSONResponse(
             status_code=403,
             content={
@@ -128,6 +135,8 @@ async def enforce_mfa_middleware(request: Request, call_next=None):
         )
 
     if not mfa_verified:
+        if wants_html(request):
+            return RedirectResponse(url="/mfa", status_code=302)
         return JSONResponse(
             status_code=403,
             content={
