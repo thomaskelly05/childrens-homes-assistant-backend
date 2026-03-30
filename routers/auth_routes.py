@@ -20,10 +20,6 @@ from db.mfa_db import get_user_mfa, log_auth_event
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-# -----------------------------------------------------------------------------
-# SETTINGS
-# -----------------------------------------------------------------------------
-
 @dataclass(frozen=True)
 class AuthSettings:
     session_cookie_name: str
@@ -60,19 +56,11 @@ class AuthSettings:
 settings = AuthSettings.load()
 
 
-# -----------------------------------------------------------------------------
-# MODELS
-# -----------------------------------------------------------------------------
-
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
     remember: bool | None = False
 
-
-# -----------------------------------------------------------------------------
-# HELPERS
-# -----------------------------------------------------------------------------
 
 def _normalise_email(email: str) -> str:
     return (email or "").strip().lower()
@@ -193,14 +181,17 @@ def _log_auth(
     detail: str,
 ) -> None:
     context = _auth_context(request)
-    log_auth_event(
-        user_id=user_id,
-        email=email,
-        event_type=event_type,
-        ip_address=context["ip_address"],
-        user_agent=context["user_agent"],
-        detail=detail,
-    )
+    try:
+        log_auth_event(
+            user_id=user_id,
+            email=email,
+            event_type=event_type,
+            ip_address=context["ip_address"],
+            user_agent=context["user_agent"],
+            detail=detail,
+        )
+    except Exception:
+        pass
 
 
 def _ensure_password_hash_bytes(password_hash: str | bytes | None) -> bytes:
@@ -214,6 +205,13 @@ def _ensure_password_hash_bytes(password_hash: str | bytes | None) -> bytes:
 def _get_billing_safe(conn: Any, user_id: int) -> dict[str, Any] | None:
     try:
         return get_user_billing_by_user_id(conn, user_id)
+    except Exception:
+        return None
+
+
+def _get_mfa_safe(user_id: int) -> dict[str, Any] | None:
+    try:
+        return get_user_mfa(user_id)
     except Exception:
         return None
 
@@ -312,10 +310,6 @@ def _get_session_user_from_request(
     return user, user_id
 
 
-# -----------------------------------------------------------------------------
-# ROUTES
-# -----------------------------------------------------------------------------
-
 @router.post("/login")
 def login(
     payload: LoginRequest,
@@ -374,7 +368,18 @@ def login(
         )
 
     password_hash = _ensure_password_hash_bytes(user.get("password_hash"))
-    if not password_hash or not bcrypt.checkpw(password.encode("utf-8"), password_hash):
+    if not password_hash:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+
+    try:
+        password_ok = bcrypt.checkpw(password.encode("utf-8"), password_hash)
+    except ValueError:
+        password_ok = False
+
+    if not password_ok:
         _log_auth(
             request=request,
             user_id=user["id"],
@@ -390,12 +395,18 @@ def login(
     token = create_session_token(user["id"])
     _set_session_cookie(response, token)
 
-    request.session[SESSION_USER_ID_KEY] = int(user["id"])
-    request.session[SESSION_USER_EMAIL_KEY] = user["email"]
-    request.session[SESSION_MFA_VERIFIED_KEY] = False
+    try:
+        request.session[SESSION_USER_ID_KEY] = int(user["id"])
+        request.session[SESSION_USER_EMAIL_KEY] = user["email"]
+        request.session[SESSION_MFA_VERIFIED_KEY] = False
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Session could not be created",
+        )
 
-    mfa_row = get_user_mfa(int(user["id"]))
-    mfa_enabled = bool(mfa_row and mfa_row.get("is_enabled") is True)
+    mfa_row = _get_mfa_safe(int(user["id"]))
+    mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
     billing = _get_billing_safe(conn, user["id"])
 
     _log_auth(
@@ -445,8 +456,8 @@ def check_auth(
         return {"authenticated": False}
 
     billing = _get_billing_safe(conn, user_id)
-    mfa_row = get_user_mfa(user_id)
-    mfa_enabled = bool(mfa_row and mfa_row.get("is_enabled") is True)
+    mfa_row = _get_mfa_safe(user_id)
+    mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
     mfa_verified = request.session.get(SESSION_MFA_VERIFIED_KEY) is True
 
     return {
@@ -483,8 +494,8 @@ def get_me(
     user = _validate_active_user(user)
 
     billing = _get_billing_safe(conn, user_id)
-    mfa_row = get_user_mfa(user_id)
-    mfa_enabled = bool(mfa_row and mfa_row.get("is_enabled") is True)
+    mfa_row = _get_mfa_safe(user_id)
+    mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
     mfa_verified = request.session.get(SESSION_MFA_VERIFIED_KEY) is True
 
     return {
