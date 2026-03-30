@@ -348,7 +348,9 @@ def register_page_route(app: FastAPI, route_path: str, file_name: str) -> None:
     def endpoint():
         return serve_page(file_name)
 
-    endpoint.__name__ = f"page_{route_path.strip('/').replace('-', '_').replace('.', '_') or 'root'}"
+    endpoint.__name__ = (
+        f"page_{route_path.strip('/').replace('-', '_').replace('.', '_') or 'root'}"
+    )
     app.get(route_path)(endpoint)
 
 
@@ -356,7 +358,9 @@ def register_component_route(app: FastAPI, route_path: str, file_name: str) -> N
     def endpoint():
         return serve_component(file_name)
 
-    endpoint.__name__ = f"component_{route_path.strip('/').replace('-', '_').replace('.', '_') or 'root'}"
+    endpoint.__name__ = (
+        f"component_{route_path.strip('/').replace('-', '_').replace('.', '_') or 'root'}"
+    )
     app.get(route_path)(endpoint)
 
 
@@ -370,12 +374,13 @@ def register_redirect_route(
     def endpoint():
         return RedirectResponse(url=target, status_code=status_code)
 
-    endpoint.__name__ = f"redirect_{route_path.strip('/').replace('-', '_').replace('.', '_') or 'root'}"
+    endpoint.__name__ = (
+        f"redirect_{route_path.strip('/').replace('-', '_').replace('.', '_') or 'root'}"
+    )
     app.get(route_path)(endpoint)
 
 
 def register_frontend_routes(app: FastAPI) -> None:
-    # Root
     @app.get("/")
     def serve_index(request: Request):
         user_id = get_session_user_id(request)
@@ -395,15 +400,12 @@ def register_frontend_routes(app: FastAPI) -> None:
     def serve_index_head():
         return RedirectResponse(url="/login", status_code=302)
 
-    # Component-backed routes
     for route_path in ("/assistant", "/assistant.html"):
         register_component_route(app, route_path, "assistant.html")
 
-    # Redirect routes
     for route_path in ("/command", "/command.html", "/home"):
         register_redirect_route(app, route_path, "/assistant")
 
-    # Standard frontend pages
     page_routes = {
         "/login": "login.html",
         "/login.html": "login.html",
@@ -434,7 +436,6 @@ def register_frontend_routes(app: FastAPI) -> None:
     for route_path, file_name in page_routes.items():
         register_page_route(app, route_path, file_name)
 
-    # Special asset-like frontend files that were previously explicit routes
     @app.get("/ai-notes.css")
     def serve_ai_notes_css():
         return FileResponse(os.path.join(FRONTEND_DIR, "ai-notes.css"))
