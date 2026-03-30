@@ -2,6 +2,7 @@ import importlib
 import logging
 import os
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 
 import sentry_sdk
 from fastapi import FastAPI, Request
@@ -28,34 +29,55 @@ from db.connection import (
 from db.legal_acceptance_db import init_legal_acceptance_table
 from db.mfa_db import init_mfa_tables
 
+
 # -----------------------------------------------------------------------------
-# CONFIG
+# SETTINGS
 # -----------------------------------------------------------------------------
 
+@dataclass(frozen=True)
 class Settings:
-    def __init__(self):
-        self.app_env = os.getenv("APP_ENV", "production")
-        self.log_level = os.getenv("LOG_LEVEL", "INFO")
+    app_env: str
+    log_level: str
+    session_secret: str
+    openai_api_key: str
+    database_url: str
+    sentry_dsn: str | None
+    sentry_traces_sample_rate: float
+    sentry_profiles_sample_rate: float
+    app_revision: str | None
 
-        self.session_secret = os.getenv("SESSION_SECRET")
-        self.openai_api_key = os.getenv("OPENAI_API_KEY")
-        self.database_url = os.getenv("DATABASE_URL")
-
-        self.sentry_dsn = os.getenv("SENTRY_DSN")
-        self.sentry_traces_sample_rate = float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "1.0"))
-        self.sentry_profiles_sample_rate = float(os.getenv("SENTRY_PROFILES_SAMPLE_RATE", "1.0"))
-        self.app_revision = os.getenv("APP_REVISION")
-
-        self.validate()
-
-    def validate(self):
-        required = ["session_secret", "openai_api_key", "database_url"]
-        missing = [key for key in required if getattr(self, key) is None]
+    @classmethod
+    def load(cls) -> "Settings":
+        required_env_vars = [
+            "SESSION_SECRET",
+            "OPENAI_API_KEY",
+            "DATABASE_URL",
+        ]
+        missing = [key for key in required_env_vars if not os.getenv(key)]
         if missing:
-            raise RuntimeError(f"Missing required environment variables: {', '.join(missing)}")
+            raise RuntimeError(
+                f"Missing required environment variables: {', '.join(missing)}"
+            )
+
+        return cls(
+            app_env=os.getenv("APP_ENV", "production"),
+            log_level=os.getenv("LOG_LEVEL", "INFO"),
+            session_secret=os.environ["SESSION_SECRET"],
+            openai_api_key=os.environ["OPENAI_API_KEY"],
+            database_url=os.environ["DATABASE_URL"],
+            sentry_dsn=os.getenv("SENTRY_DSN"),
+            sentry_traces_sample_rate=float(
+                os.getenv("SENTRY_TRACES_SAMPLE_RATE", "1.0")
+            ),
+            sentry_profiles_sample_rate=float(
+                os.getenv("SENTRY_PROFILES_SAMPLE_RATE", "1.0")
+            ),
+            app_revision=os.getenv("APP_REVISION"),
+        )
 
 
-settings = Settings()
+settings = Settings.load()
+
 
 # -----------------------------------------------------------------------------
 # LOGGING
@@ -65,21 +87,8 @@ logging.basicConfig(
     level=settings.log_level,
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
+logger = logging.getLogger(__name__)
 
-logger = logging.getLogger("indicare")
-
-# -----------------------------------------------------------------------------
-# SENTRY
-# -----------------------------------------------------------------------------
-
-if settings.sentry_dsn:
-    sentry_sdk.init(
-        dsn=settings.sentry_dsn,
-        traces_sample_rate=settings.sentry_traces_sample_rate,
-        profiles_sample_rate=settings.sentry_profiles_sample_rate,
-        environment=settings.app_env,
-        release=settings.app_revision,
-    )
 
 # -----------------------------------------------------------------------------
 # PATHS
@@ -92,109 +101,132 @@ JS_DIR = os.path.join(FRONTEND_DIR, "js")
 ASSETS_DIR = os.path.join(FRONTEND_DIR, "assets")
 COMPONENTS_DIR = os.path.join(FRONTEND_DIR, "components")
 
+
 # -----------------------------------------------------------------------------
-# LIFESPAN
+# SENTRY
+# -----------------------------------------------------------------------------
+
+def configure_sentry() -> None:
+    if settings.sentry_dsn:
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn,
+            traces_sample_rate=settings.sentry_traces_sample_rate,
+            profiles_sample_rate=settings.sentry_profiles_sample_rate,
+            environment=settings.app_env,
+            release=settings.app_revision,
+        )
+
+
+# -----------------------------------------------------------------------------
+# APP LIFESPAN
 # -----------------------------------------------------------------------------
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_: FastAPI):
     init_db_pool()
     init_legal_acceptance_table()
     init_mfa_tables()
     logger.info("IndiCare API started")
-    yield
-    close_db_pool()
-    logger.info("IndiCare API stopped")
+    try:
+        yield
+    finally:
+        close_db_pool()
+        logger.info("IndiCare API stopped")
 
-# -----------------------------------------------------------------------------
-# APP FACTORY
-# -----------------------------------------------------------------------------
-
-def create_app() -> FastAPI:
-    app = FastAPI(title="IndiCare API", lifespan=lifespan)
-
-    # Rate limiting
-    limiter = Limiter(key_func=get_remote_address)
-    app.state.limiter = limiter
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
-    # Sessions
-    app.add_middleware(
-        SessionMiddleware,
-        secret_key=settings.session_secret,
-        same_site="lax",
-        https_only=settings.app_env == "production",
-        max_age=60 * 60 * 12,
-    )
-
-    # CORS
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=[
-            "https://app.indicare.co.uk",
-            "http://localhost:3000",
-        ],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
-    register_security_middleware(app)
-    register_exception_handlers(app)
-    register_routers(app)
-    mount_static(app)
-    register_frontend_routes(app)
-    register_health_routes(app)
-
-    return app
 
 # -----------------------------------------------------------------------------
 # SECURITY
 # -----------------------------------------------------------------------------
 
 PUBLIC_PREFIXES = (
-    "/login", "/mfa", "/auth", "/css", "/js", "/assets", "/components",
-    "/docs", "/openapi", "/health"
+    "/login",
+    "/login.html",
+    "/mfa",
+    "/mfa.html",
+    "/mfa-setup",
+    "/mfa-setup.html",
+    "/mfa-recovery",
+    "/mfa-recovery.html",
+    "/auth/login",
+    "/auth/logout",
+    "/auth/check",
+    "/auth/mfa",
+    "/css",
+    "/js",
+    "/assets",
+    "/components",
+    "/static",
+    "/favicon",
+    "/docs",
+    "/redoc",
+    "/openapi",
+    "/health",
 )
 
-PUBLIC_EXACT = {"/"}
+PUBLIC_EXACT_PATHS = {
+    "/",
+}
 
 
-def is_public(path: str) -> bool:
-    if path in PUBLIC_EXACT:
+def path_is_public(path: str) -> bool:
+    if path in PUBLIC_EXACT_PATHS:
         return True
-    return any(path.startswith(p) for p in PUBLIC_PREFIXES)
+    return any(path.startswith(prefix) for prefix in PUBLIC_PREFIXES)
 
 
 def wants_html(request: Request) -> bool:
-    return "text/html" in (request.headers.get("accept") or "").lower()
+    accept = (request.headers.get("accept") or "").lower()
+    return "text/html" in accept
 
 
-def register_security_middleware(app: FastAPI):
-
+def register_security_middleware(app: FastAPI) -> None:
     @app.middleware("http")
-    async def security(request: Request, call_next):
+    async def security_enforcement(request: Request, call_next):
         path = request.url.path
         user_id = get_session_user_id(request)
 
-        if is_public(path):
+        if path_is_public(path):
             return await call_next(request)
 
         if not user_id:
             if wants_html(request):
-                return RedirectResponse("/login")
-            return JSONResponse(status_code=401, content={"error": "auth_required"})
+                return RedirectResponse(url="/login", status_code=302)
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "ok": False,
+                    "detail": "Authentication required.",
+                    "code": "authentication_required",
+                },
+            )
 
         if path_allowed_during_mfa(path):
             return await call_next(request)
 
         if not user_has_enabled_mfa(user_id):
-            return RedirectResponse("/mfa-setup")
+            if wants_html(request):
+                return RedirectResponse(url="/mfa-setup", status_code=302)
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "detail": "MFA setup is required before using the platform.",
+                    "code": "mfa_setup_required",
+                },
+            )
 
         if not is_mfa_verified_in_session(request):
-            return RedirectResponse("/mfa")
+            if wants_html(request):
+                return RedirectResponse(url="/mfa", status_code=302)
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "detail": "MFA verification is required before using the platform.",
+                    "code": "mfa_verification_required",
+                },
+            )
 
         return await call_next(request)
+
 
 # -----------------------------------------------------------------------------
 # ROUTERS
@@ -202,84 +234,227 @@ def register_security_middleware(app: FastAPI):
 
 ROUTERS = [
     "routers.auth_routes",
+    "routers.mfa_routes",
+    "routers.legal_acceptance_routes",
+    "routers.account_routes",
+    "routers.admin_routes",
+    "routers.billing_routes",
+    "routers.ai_notes_routes",
+    "routers.ai_note_templates_routes",
+    "routers.ai_note_export_routes",
     "routers.chat_routes",
+    "routers.document_library_routes",
     "routers.dashboard_routes",
+    "routers.documents_routes",
+    "routers.handover_routes",
+    "routers.monthly_reviews_routes",
+    "routers.ofsted_ai_report_routes",
+    "routers.ofsted_pack_routes",
+    "routers.reports_routes",
+    "routers.risk_routes",
+    "routers.staff_journal_routes",
+    "routers.supervision_routes",
+    "routers.tasks_routes",
+    "routers.document_rules_routes",
+    "routers.document_ai_review_routes",
+    "routers.document_ai_routes",
+    "routers.manager_routes",
     "routers.young_people_profile_routes",
     "routers.young_people_daily_notes_routes",
     "routers.young_people_incidents_routes",
-    # (keep rest of your routers here)
+    "routers.young_people_health_routes",
+    "routers.young_people_education_routes",
+    "routers.young_people_family_routes",
+    "routers.young_people_keywork_routes",
+    "routers.young_people_plans_routes",
+    "routers.young_people_risk_routes",
+    "routers.young_people_chronology_routes",
+    "routers.young_people_calendar_routes",
+    "routers.young_people_compliance_routes",
+    "routers.young_people_standards_routes",
+    "routers.young_people_handover_routes",
+    "routers.young_people_reports_routes",
+    "routers.young_people_photo_routes",
+    "routers.young_people_statutory_documents_routes",
+    "routers.workflow_review_routes",
+    "routers.command_centre_routes",
+    "routers.events_routes",
+    "routers.evidence_routes",
+    "routers.qa_routes",
+    "routers.exports_routes",
+    "routers.rostering_routes",
 ]
 
 
-def register_routers(app: FastAPI):
-    for path in ROUTERS:
-        try:
-            module = importlib.import_module(path)
-            router = getattr(module, "router", None)
+def include_router(app: FastAPI, module_path: str) -> None:
+    try:
+        module = importlib.import_module(module_path)
+    except Exception as exc:
+        logger.exception("Failed to import router module: %s", module_path)
+        raise RuntimeError(f"Failed to import router module: {module_path}") from exc
 
-            if not router:
-                raise RuntimeError(f"No router in {path}")
+    main_router = getattr(module, "router", None)
+    compat_router = getattr(module, "compat_router", None)
 
-            app.include_router(router)
-            logger.info(f"Loaded router: {path}")
+    if main_router is None:
+        raise RuntimeError(f"No router found in {module_path}")
 
-        except Exception as e:
-            logger.exception(f"Failed loading router: {path}")
-            raise
+    app.include_router(main_router)
+    logger.info("[IndiCare] Loaded router: %s (router)", module_path)
+
+    if compat_router is not None:
+        app.include_router(compat_router)
+        logger.info("[IndiCare] Loaded router: %s (compat_router)", module_path)
+
+
+def register_routers(app: FastAPI) -> None:
+    for route in ROUTERS:
+        include_router(app, route)
+
 
 # -----------------------------------------------------------------------------
-# STATIC + FRONTEND
+# STATIC FILES
 # -----------------------------------------------------------------------------
 
-def mount_static(app: FastAPI):
+def mount_static(app: FastAPI) -> None:
     app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
     app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
     app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
     app.mount("/components", StaticFiles(directory=COMPONENTS_DIR), name="components")
 
 
+# -----------------------------------------------------------------------------
+# PAGE SERVING
+# -----------------------------------------------------------------------------
+
 def serve_page(file_name: str):
     path = os.path.join(FRONTEND_DIR, file_name)
-    return FileResponse(path) if os.path.exists(path) else JSONResponse(status_code=404)
+    if not os.path.exists(path):
+        return JSONResponse(status_code=404, content={"error": "Page not found"})
+    return FileResponse(path)
 
 
-PAGES = {
-    "/login": "login.html",
-    "/mfa": "mfa.html",
-    "/mfa-setup": "mfa-setup.html",
-    "/journal": "journal.html",
-    "/supervision": "supervision.html",
-    "/rostering": "rostering.html",
-    "/assistant": "components/assistant.html",
-}
+def serve_component(file_name: str):
+    path = os.path.join(COMPONENTS_DIR, file_name)
+    if not os.path.exists(path):
+        return JSONResponse(
+            status_code=404,
+            content={"error": "Component page not found"},
+        )
+    return FileResponse(path)
 
 
-def register_frontend_routes(app: FastAPI):
+def register_page_route(app: FastAPI, route_path: str, file_name: str) -> None:
+    def endpoint():
+        return serve_page(file_name)
 
-    for route, file in PAGES.items():
+    endpoint.__name__ = f"page_{route_path.strip('/').replace('-', '_').replace('.', '_') or 'root'}"
+    app.get(route_path)(endpoint)
 
-        @app.get(route)
-        def _(file=file):
-            if "components/" in file:
-                return FileResponse(os.path.join(COMPONENTS_DIR, file.split("/")[-1]))
-            return serve_page(file)
+
+def register_component_route(app: FastAPI, route_path: str, file_name: str) -> None:
+    def endpoint():
+        return serve_component(file_name)
+
+    endpoint.__name__ = f"component_{route_path.strip('/').replace('-', '_').replace('.', '_') or 'root'}"
+    app.get(route_path)(endpoint)
+
+
+def register_redirect_route(
+    app: FastAPI,
+    route_path: str,
+    target: str,
+    *,
+    status_code: int = 302,
+) -> None:
+    def endpoint():
+        return RedirectResponse(url=target, status_code=status_code)
+
+    endpoint.__name__ = f"redirect_{route_path.strip('/').replace('-', '_').replace('.', '_') or 'root'}"
+    app.get(route_path)(endpoint)
+
+
+def register_frontend_routes(app: FastAPI) -> None:
+    # Root
+    @app.get("/")
+    def serve_index(request: Request):
+        user_id = get_session_user_id(request)
+
+        if not user_id:
+            return RedirectResponse(url="/login", status_code=302)
+
+        if not user_has_enabled_mfa(user_id):
+            return RedirectResponse(url="/mfa-setup", status_code=302)
+
+        if not is_mfa_verified_in_session(request):
+            return RedirectResponse(url="/mfa", status_code=302)
+
+        return RedirectResponse(url="/assistant", status_code=302)
+
+    @app.head("/")
+    def serve_index_head():
+        return RedirectResponse(url="/login", status_code=302)
+
+    # Component-backed routes
+    for route_path in ("/assistant", "/assistant.html"):
+        register_component_route(app, route_path, "assistant.html")
+
+    # Redirect routes
+    for route_path in ("/command", "/command.html", "/home"):
+        register_redirect_route(app, route_path, "/assistant")
+
+    # Standard frontend pages
+    page_routes = {
+        "/login": "login.html",
+        "/login.html": "login.html",
+        "/mfa": "mfa.html",
+        "/mfa.html": "mfa.html",
+        "/mfa-setup": "mfa-setup.html",
+        "/mfa-setup.html": "mfa-setup.html",
+        "/mfa-recovery": "mfa-recovery.html",
+        "/mfa-recovery.html": "mfa-recovery.html",
+        "/oslogin": "oslogin.html",
+        "/oslogin.html": "oslogin.html",
+        "/journal": "journal.html",
+        "/journal.html": "journal.html",
+        "/supervision": "supervision.html",
+        "/supervision.html": "supervision.html",
+        "/ai-notes": "ai-note.html",
+        "/ai-note.html": "ai-note.html",
+        "/young-people-page": "young-people.html",
+        "/young-people-page.html": "young-people.html",
+        "/young-people-shell": "young-people-shell.html",
+        "/young-people-shell.html": "young-people-shell.html",
+        "/childrens-home-os": "young-people-shell.html",
+        "/childrens-home-os.html": "young-people-shell.html",
+        "/rostering": "rostering.html",
+        "/rostering.html": "rostering.html",
+    }
+
+    for route_path, file_name in page_routes.items():
+        register_page_route(app, route_path, file_name)
+
+    # Special asset-like frontend files that were previously explicit routes
+    @app.get("/ai-notes.css")
+    def serve_ai_notes_css():
+        return FileResponse(os.path.join(FRONTEND_DIR, "ai-notes.css"))
+
+    @app.get("/ai-notes.js")
+    def serve_ai_notes_js():
+        return FileResponse(os.path.join(FRONTEND_DIR, "ai-notes.js"))
+
 
 # -----------------------------------------------------------------------------
 # HEALTH
 # -----------------------------------------------------------------------------
 
-def register_health_routes(app: FastAPI):
-
+def register_health_routes(app: FastAPI) -> None:
     @app.get("/health")
     def health():
-        return {
-            "ok": True,
-            "env": settings.app_env,
-            "revision": settings.app_revision,
-        }
+        return {"ok": True}
 
     @app.get("/health/ready")
-    def ready():
+    def health_ready():
         conn = None
         try:
             conn = get_db_connection()
@@ -288,27 +463,74 @@ def register_health_routes(app: FastAPI):
                 cur.fetchone()
 
             return {"ok": True, "ready": True}
-        except Exception as e:
-            return JSONResponse(status_code=503, content={"ok": False, "error": str(e)})
+        except Exception as exc:
+            logger.exception("Readiness check failed")
+            return JSONResponse(
+                status_code=503,
+                content={"ok": False, "ready": False, "error": str(exc)},
+            )
         finally:
             release_db_connection(conn)
 
+
 # -----------------------------------------------------------------------------
-# ERRORS
+# EXCEPTION HANDLING
 # -----------------------------------------------------------------------------
 
-def register_exception_handlers(app: FastAPI):
-
+def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
-        logger.exception("Unhandled error")
+        logger.exception("Unhandled error on %s %s", request.method, request.url.path)
         return JSONResponse(
             status_code=500,
-            content={"ok": False, "error": "internal_server_error"},
+            content={
+                "ok": False,
+                "error": "Internal server error",
+            },
         )
 
+
 # -----------------------------------------------------------------------------
-# APP
+# APP CREATION
 # -----------------------------------------------------------------------------
+
+def create_app() -> FastAPI:
+    configure_sentry()
+
+    app = FastAPI(title="IndiCare API", lifespan=lifespan)
+
+    limiter = Limiter(key_func=get_remote_address)
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=settings.session_secret,
+        same_site="lax",
+        https_only=settings.app_env.lower() == "production",
+        max_age=60 * 60 * 12,
+    )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "https://app.indicare.co.uk",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+        ],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    register_security_middleware(app)
+    register_routers(app)
+    mount_static(app)
+    register_health_routes(app)
+    register_exception_handlers(app)
+    register_frontend_routes(app)
+
+    return app
+
 
 app = create_app()
