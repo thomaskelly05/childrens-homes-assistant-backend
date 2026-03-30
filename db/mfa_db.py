@@ -2,16 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-from datetime import datetime, timezone
 from typing import Any
 
 from psycopg2.extras import RealDictCursor
 
 from db.connection import get_db_connection, release_db_connection
-
-
-def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def hash_recovery_code(code: str) -> str:
