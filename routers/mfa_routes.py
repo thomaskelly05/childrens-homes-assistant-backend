@@ -62,6 +62,7 @@ def _require_session_user(request: Request) -> tuple[int, str | None]:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required.",
         )
+
     return user_id, email
 
 
@@ -74,16 +75,9 @@ def _build_qr_data_url(otp_url: str) -> str:
 
 
 def _persist_verified_session(request: Request, user_id: int, email: str | None) -> None:
-    """
-    Re-stamp the full auth session after MFA passes so the next request
-    definitely sees the verified state.
-    """
     request.session[SESSION_USER_ID_KEY] = int(user_id)
     request.session[SESSION_USER_EMAIL_KEY] = email or ""
     request.session[SESSION_MFA_VERIFIED_KEY] = True
-
-    # Explicitly mark the session as changed
-    request.session.modified = True  # harmless if supported
     request.state.mfa_verified = True
 
 
@@ -164,8 +158,10 @@ async def mfa_enable(request: Request, payload: MfaVerifyEnableRequest):
         "ok": True,
         "enabled": True,
         "verified": True,
+        "mfa_verified": True,
         "recovery_codes": recovery_codes,
         "detail": "MFA enabled successfully.",
+        "redirect_to": "/assistant",
     }
 
 
