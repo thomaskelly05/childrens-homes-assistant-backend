@@ -32,3 +32,4 @@ sentry-sdk
 email-validator
 pyotp 
 qrcode[pil]
+Pillow
