@@ -2,19 +2,12 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-import sqlite3
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-DB_PATH = BASE_DIR / "indicare.db"
+from psycopg2.extras import RealDictCursor
 
-
-def get_connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+from db.connection import get_db_connection, release_db_connection
 
 
 def utc_now_iso() -> str:
@@ -30,61 +23,62 @@ def generate_recovery_code() -> str:
 
 
 def init_mfa_tables() -> None:
-    conn = get_connection()
+    conn = get_db_connection()
     try:
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS user_mfa (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL UNIQUE,
-                email TEXT,
-                totp_secret TEXT NOT NULL,
-                is_enabled INTEGER NOT NULL DEFAULT 0,
-                created_at TEXT NOT NULL,
-                enabled_at TEXT,
-                last_verified_at TEXT
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS user_mfa (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL UNIQUE,
+                    email TEXT,
+                    totp_secret TEXT NOT NULL,
+                    is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    enabled_at TIMESTAMPTZ,
+                    last_verified_at TIMESTAMPTZ
+                )
+                """
             )
-            """
-        )
 
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS user_mfa_recovery_codes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                code_hash TEXT NOT NULL,
-                is_used INTEGER NOT NULL DEFAULT 0,
-                used_at TEXT,
-                created_at TEXT NOT NULL
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS user_mfa_recovery_codes (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    code_hash TEXT NOT NULL,
+                    is_used BOOLEAN NOT NULL DEFAULT FALSE,
+                    used_at TIMESTAMPTZ,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+                """
             )
-            """
-        )
 
-        conn.execute(
-            """
-            CREATE INDEX IF NOT EXISTS idx_user_mfa_recovery_user
-            ON user_mfa_recovery_codes (user_id)
-            """
-        )
-
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS auth_audit_log (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                email TEXT,
-                event_type TEXT NOT NULL,
-                ip_address TEXT,
-                user_agent TEXT,
-                detail TEXT,
-                created_at TEXT NOT NULL
+            cur.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_user_mfa_recovery_user
+                ON user_mfa_recovery_codes (user_id)
+                """
             )
-            """
-        )
+
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS auth_audit_log (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER,
+                    email TEXT,
+                    event_type TEXT NOT NULL,
+                    ip_address TEXT,
+                    user_agent TEXT,
+                    detail TEXT,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+                """
+            )
 
         conn.commit()
     finally:
-        conn.close()
+        release_db_connection(conn)
 
 
 def log_auth_event(
@@ -96,117 +90,143 @@ def log_auth_event(
     user_agent: str | None,
     detail: str | None = None,
 ) -> None:
-    conn = get_connection()
+    conn = get_db_connection()
     try:
-        conn.execute(
-            """
-            INSERT INTO auth_audit_log (
-                user_id, email, event_type, ip_address, user_agent, detail, created_at
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO auth_audit_log (
+                    user_id, email, event_type, ip_address, user_agent, detail, created_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, NOW())
+                """,
+                (user_id, email, event_type, ip_address, user_agent, detail),
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (user_id, email, event_type, ip_address, user_agent, detail, utc_now_iso()),
-        )
         conn.commit()
     finally:
-        conn.close()
+        release_db_connection(conn)
 
 
 def get_user_mfa(user_id: int) -> dict[str, Any] | None:
-    conn = get_connection()
+    conn = get_db_connection()
     try:
-        row = conn.execute(
-            """
-            SELECT id, user_id, email, totp_secret, is_enabled, created_at, enabled_at, last_verified_at
-            FROM user_mfa
-            WHERE user_id = ?
-            LIMIT 1
-            """,
-            (user_id,),
-        ).fetchone()
-        return dict(row) if row else None
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT
+                    id,
+                    user_id,
+                    email,
+                    totp_secret,
+                    is_enabled,
+                    created_at,
+                    enabled_at,
+                    last_verified_at
+                FROM user_mfa
+                WHERE user_id = %s
+                LIMIT 1
+                """,
+                (user_id,),
+            )
+            row = cur.fetchone()
+            return dict(row) if row else None
     finally:
-        conn.close()
+        release_db_connection(conn)
 
 
 def upsert_user_mfa_secret(user_id: int, email: str | None, totp_secret: str) -> None:
-    existing = get_user_mfa(user_id)
-    conn = get_connection()
+    conn = get_db_connection()
     try:
-        if existing:
-            conn.execute(
-                """
-                UPDATE user_mfa
-                SET totp_secret = ?, email = ?, is_enabled = 0, enabled_at = NULL
-                WHERE user_id = ?
-                """,
-                (totp_secret, email, user_id),
-            )
-        else:
-            conn.execute(
+        with conn.cursor() as cur:
+            cur.execute(
                 """
                 INSERT INTO user_mfa (
-                    user_id, email, totp_secret, is_enabled, created_at
+                    user_id,
+                    email,
+                    totp_secret,
+                    is_enabled,
+                    created_at,
+                    enabled_at,
+                    last_verified_at
                 )
-                VALUES (?, ?, ?, 0, ?)
+                VALUES (%s, %s, %s, FALSE, NOW(), NULL, NULL)
+                ON CONFLICT (user_id)
+                DO UPDATE SET
+                    email = EXCLUDED.email,
+                    totp_secret = EXCLUDED.totp_secret,
+                    is_enabled = FALSE,
+                    enabled_at = NULL,
+                    last_verified_at = NULL
                 """,
-                (user_id, email, totp_secret, utc_now_iso()),
+                (user_id, email, totp_secret),
             )
         conn.commit()
     finally:
-        conn.close()
+        release_db_connection(conn)
 
 
 def enable_user_mfa(user_id: int) -> None:
-    conn = get_connection()
+    conn = get_db_connection()
     try:
-        conn.execute(
-            """
-            UPDATE user_mfa
-            SET is_enabled = 1, enabled_at = ?
-            WHERE user_id = ?
-            """,
-            (utc_now_iso(), user_id),
-        )
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE user_mfa
+                SET is_enabled = TRUE,
+                    enabled_at = NOW()
+                WHERE user_id = %s
+                """,
+                (user_id,),
+            )
         conn.commit()
     finally:
-        conn.close()
+        release_db_connection(conn)
 
 
 def update_last_verified(user_id: int) -> None:
-    conn = get_connection()
+    conn = get_db_connection()
     try:
-        conn.execute(
-            """
-            UPDATE user_mfa
-            SET last_verified_at = ?
-            WHERE user_id = ?
-            """,
-            (utc_now_iso(), user_id),
-        )
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE user_mfa
+                SET last_verified_at = NOW()
+                WHERE user_id = %s
+                """,
+                (user_id,),
+            )
         conn.commit()
     finally:
-        conn.close()
+        release_db_connection(conn)
 
 
 def replace_recovery_codes(user_id: int, codes: list[str]) -> list[str]:
-    conn = get_connection()
+    conn = get_db_connection()
     try:
-        conn.execute("DELETE FROM user_mfa_recovery_codes WHERE user_id = ?", (user_id,))
-        for code in codes:
-            conn.execute(
-                """
-                INSERT INTO user_mfa_recovery_codes (
-                    user_id, code_hash, is_used, created_at
-                )
-                VALUES (?, ?, 0, ?)
-                """,
-                (user_id, hash_recovery_code(code), utc_now_iso()),
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM user_mfa_recovery_codes WHERE user_id = %s",
+                (user_id,),
             )
+
+            for code in codes:
+                cur.execute(
+                    """
+                    INSERT INTO user_mfa_recovery_codes (
+                        user_id,
+                        code_hash,
+                        is_used,
+                        created_at
+                    )
+                    VALUES (%s, %s, FALSE, NOW())
+                    """,
+                    (user_id, hash_recovery_code(code)),
+                )
+
         conn.commit()
         return codes
     finally:
-        conn.close()
+        release_db_connection(conn)
 
 
 def generate_and_store_recovery_codes(user_id: int, count: int = 8) -> list[str]:
@@ -215,47 +235,55 @@ def generate_and_store_recovery_codes(user_id: int, count: int = 8) -> list[str]
 
 
 def count_unused_recovery_codes(user_id: int) -> int:
-    conn = get_connection()
+    conn = get_db_connection()
     try:
-        row = conn.execute(
-            """
-            SELECT COUNT(*) AS c
-            FROM user_mfa_recovery_codes
-            WHERE user_id = ? AND is_used = 0
-            """,
-            (user_id,),
-        ).fetchone()
-        return int(row["c"]) if row else 0
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT COUNT(*) AS c
+                FROM user_mfa_recovery_codes
+                WHERE user_id = %s AND is_used = FALSE
+                """,
+                (user_id,),
+            )
+            row = cur.fetchone()
+            return int(row["c"]) if row else 0
     finally:
-        conn.close()
+        release_db_connection(conn)
 
 
 def use_recovery_code(user_id: int, code: str) -> bool:
     code_hash = hash_recovery_code(code)
-    conn = get_connection()
+    conn = get_db_connection()
     try:
-        row = conn.execute(
-            """
-            SELECT id
-            FROM user_mfa_recovery_codes
-            WHERE user_id = ? AND code_hash = ? AND is_used = 0
-            LIMIT 1
-            """,
-            (user_id, code_hash),
-        ).fetchone()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT id
+                FROM user_mfa_recovery_codes
+                WHERE user_id = %s
+                  AND code_hash = %s
+                  AND is_used = FALSE
+                LIMIT 1
+                """,
+                (user_id, code_hash),
+            )
+            row = cur.fetchone()
 
-        if not row:
-            return False
+            if not row:
+                return False
 
-        conn.execute(
-            """
-            UPDATE user_mfa_recovery_codes
-            SET is_used = 1, used_at = ?
-            WHERE id = ?
-            """,
-            (utc_now_iso(), row["id"]),
-        )
+            cur.execute(
+                """
+                UPDATE user_mfa_recovery_codes
+                SET is_used = TRUE,
+                    used_at = NOW()
+                WHERE id = %s
+                """,
+                (row["id"],),
+            )
+
         conn.commit()
         return True
     finally:
-        conn.close()
+        release_db_connection(conn)
