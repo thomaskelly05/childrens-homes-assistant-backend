@@ -211,6 +211,13 @@ def _ensure_password_hash_bytes(password_hash: str | bytes | None) -> bytes:
     return password_hash.encode("utf-8")
 
 
+def _get_billing_safe(conn: Any, user_id: int) -> dict[str, Any] | None:
+    try:
+        return get_user_billing_by_user_id(conn, user_id)
+    except Exception:
+        return None
+
+
 def _session_user_payload(
     user: dict[str, Any],
     billing: dict[str, Any] | None,
@@ -389,7 +396,7 @@ def login(
 
     mfa_row = get_user_mfa(int(user["id"]))
     mfa_enabled = bool(mfa_row and mfa_row.get("is_enabled") is True)
-    billing = get_user_billing_by_user_id(conn, user["id"])
+    billing = _get_billing_safe(conn, user["id"])
 
     _log_auth(
         request=request,
@@ -437,7 +444,7 @@ def check_auth(
     if user.get("archived") is True or user.get("is_active") is False:
         return {"authenticated": False}
 
-    billing = get_user_billing_by_user_id(conn, user_id)
+    billing = _get_billing_safe(conn, user_id)
     mfa_row = get_user_mfa(user_id)
     mfa_enabled = bool(mfa_row and mfa_row.get("is_enabled") is True)
     mfa_verified = request.session.get(SESSION_MFA_VERIFIED_KEY) is True
@@ -475,7 +482,7 @@ def get_me(
 
     user = _validate_active_user(user)
 
-    billing = get_user_billing_by_user_id(conn, user_id)
+    billing = _get_billing_safe(conn, user_id)
     mfa_row = get_user_mfa(user_id)
     mfa_enabled = bool(mfa_row and mfa_row.get("is_enabled") is True)
     mfa_verified = request.session.get(SESSION_MFA_VERIFIED_KEY) is True
