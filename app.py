@@ -14,6 +14,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from starlette.middleware.sessions import SessionMiddleware
 
+from auth.legal_acceptance import CURRENT_LEGAL_VERSION
 from auth.mfa_guard import (
     get_session_user_id,
     is_mfa_verified_in_session,
@@ -26,7 +27,10 @@ from db.connection import (
     init_db_pool,
     release_db_connection,
 )
-from db.legal_acceptance_db import init_legal_acceptance_table
+from db.legal_acceptance_db import (
+    has_user_accepted_version,
+    init_legal_acceptance_table,
+)
 from db.mfa_db import init_mfa_tables
 
 
@@ -167,11 +171,23 @@ PUBLIC_EXACT_PATHS = {
     "/",
 }
 
+LEGAL_ALLOWED_PREFIXES = (
+    "/auth/logout",
+    "/auth/check",
+    "/auth/me",
+    "/auth/legal-acceptance",
+    "/auth/mfa",
+)
+
 
 def path_is_public(path: str) -> bool:
     if path in PUBLIC_EXACT_PATHS:
         return True
     return any(path.startswith(prefix) for prefix in PUBLIC_PREFIXES)
+
+
+def path_allowed_during_legal_acceptance(path: str) -> bool:
+    return any(path.startswith(prefix) for prefix in LEGAL_ALLOWED_PREFIXES)
 
 
 def wants_html(request: Request) -> bool:
@@ -197,6 +213,23 @@ def register_security_middleware(app: FastAPI) -> None:
                     "ok": False,
                     "detail": "Authentication required.",
                     "code": "authentication_required",
+                },
+            )
+
+        if not has_user_accepted_version(user_id, CURRENT_LEGAL_VERSION):
+            if path_allowed_during_legal_acceptance(path):
+                return await call_next(request)
+
+            if wants_html(request):
+                return RedirectResponse(url="/assistant", status_code=302)
+
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "ok": False,
+                    "detail": "Current legal terms must be accepted before using the platform.",
+                    "code": "legal_acceptance_required",
+                    "current_version": CURRENT_LEGAL_VERSION,
                 },
             )
 
@@ -387,6 +420,9 @@ def register_frontend_routes(app: FastAPI) -> None:
 
         if not user_id:
             return RedirectResponse(url="/login", status_code=302)
+
+        if not has_user_accepted_version(user_id, CURRENT_LEGAL_VERSION):
+            return RedirectResponse(url="/assistant", status_code=302)
 
         if not user_has_enabled_mfa(user_id):
             return RedirectResponse(url="/mfa-setup", status_code=302)
