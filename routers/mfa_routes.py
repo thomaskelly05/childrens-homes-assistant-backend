@@ -188,7 +188,14 @@ async def mfa_setup(request: Request):
 @router.post("/enable")
 async def mfa_enable(request: Request, payload: MfaVerifyEnableRequest):
     user_id, email = _require_session_user(request)
-    row = _get_mfa_row_or_none(user_id)
+
+    try:
+        row = _get_mfa_row_or_none(user_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not load MFA setup: {exc}",
+        )
 
     if not row:
         raise HTTPException(
@@ -196,17 +203,52 @@ async def mfa_enable(request: Request, payload: MfaVerifyEnableRequest):
             detail="MFA setup has not been started.",
         )
 
-    totp = pyotp.TOTP(row["totp_secret"])
-    if not totp.verify(payload.code, valid_window=1):
+    try:
+        totp = pyotp.TOTP(row["totp_secret"])
+        code_ok = totp.verify(payload.code, valid_window=1)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not verify authentication code: {exc}",
+        )
+
+    if not code_ok:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid authentication code.",
         )
 
-    enable_user_mfa(user_id)
-    update_last_verified(user_id)
-    _persist_verified_session(request, user_id, email)
-    recovery_codes = generate_and_store_recovery_codes(user_id, count=8)
+    try:
+        enable_user_mfa(user_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not enable MFA in database: {exc}",
+        )
+
+    try:
+        update_last_verified(user_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not update MFA verification time: {exc}",
+        )
+
+    try:
+        _persist_verified_session(request, user_id, email)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not persist MFA session: {exc}",
+        )
+
+    try:
+        recovery_codes = generate_and_store_recovery_codes(user_id, count=8)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not generate recovery codes: {exc}",
+        )
 
     try:
         _log_mfa_event(
@@ -233,10 +275,27 @@ async def mfa_enable(request: Request, payload: MfaVerifyEnableRequest):
 @router.post("/verify")
 async def mfa_verify(request: Request, payload: MfaChallengeRequest):
     user_id, email = _require_session_user(request)
-    row = _require_enabled_mfa(user_id)
 
-    totp = pyotp.TOTP(row["totp_secret"])
-    if not totp.verify(payload.code, valid_window=1):
+    try:
+        row = _require_enabled_mfa(user_id)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not load enabled MFA record: {exc}",
+        )
+
+    try:
+        totp = pyotp.TOTP(row["totp_secret"])
+        code_ok = totp.verify(payload.code, valid_window=1)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not verify authentication code: {exc}",
+        )
+
+    if not code_ok:
         try:
             _log_mfa_event(
                 request,
@@ -252,8 +311,21 @@ async def mfa_verify(request: Request, payload: MfaChallengeRequest):
             detail="Invalid authentication code.",
         )
 
-    update_last_verified(user_id)
-    _persist_verified_session(request, user_id, email)
+    try:
+        update_last_verified(user_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not update MFA verification time: {exc}",
+        )
+
+    try:
+        _persist_verified_session(request, user_id, email)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not persist MFA session: {exc}",
+        )
 
     try:
         _log_mfa_event(
@@ -278,7 +350,14 @@ async def mfa_verify(request: Request, payload: MfaChallengeRequest):
 async def mfa_verify_recovery(request: Request, payload: RecoveryCodeVerifyRequest):
     user_id, email = _require_session_user(request)
 
-    ok = use_recovery_code(user_id, payload.recovery_code.strip().upper())
+    try:
+        ok = use_recovery_code(user_id, payload.recovery_code.strip().upper())
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not verify recovery code: {exc}",
+        )
+
     if not ok:
         try:
             _log_mfa_event(
@@ -295,8 +374,21 @@ async def mfa_verify_recovery(request: Request, payload: RecoveryCodeVerifyReque
             detail="Invalid recovery code.",
         )
 
-    update_last_verified(user_id)
-    _persist_verified_session(request, user_id, email)
+    try:
+        update_last_verified(user_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not update MFA verification time: {exc}",
+        )
+
+    try:
+        _persist_verified_session(request, user_id, email)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not persist MFA session: {exc}",
+        )
 
     try:
         _log_mfa_event(
@@ -320,7 +412,16 @@ async def mfa_verify_recovery(request: Request, payload: RecoveryCodeVerifyReque
 @router.post("/regenerate-recovery-codes")
 async def regenerate_recovery_codes(request: Request):
     user_id, email = _require_session_user(request)
-    _require_enabled_mfa(user_id)
+
+    try:
+        _require_enabled_mfa(user_id)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not load enabled MFA record: {exc}",
+        )
 
     if not is_mfa_verified_in_session(request):
         raise HTTPException(
@@ -328,7 +429,13 @@ async def regenerate_recovery_codes(request: Request):
             detail="MFA verification required.",
         )
 
-    codes = generate_and_store_recovery_codes(user_id, count=8)
+    try:
+        codes = generate_and_store_recovery_codes(user_id, count=8)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not generate recovery codes: {exc}",
+        )
 
     try:
         _log_mfa_event(
