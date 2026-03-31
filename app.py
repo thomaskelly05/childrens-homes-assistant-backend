@@ -523,9 +523,10 @@ def register_exception_handlers(app: FastAPI) -> None:
             content={
                 "ok": False,
                 "error": "Internal server error",
+                "detail": str(exc),
+                "path": request.url.path,
             },
         )
-
 
 # -----------------------------------------------------------------------------
 # APP CREATION
