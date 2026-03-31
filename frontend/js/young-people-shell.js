@@ -99,7 +99,7 @@ const VIEW_CONFIG = {
   plans: {
     title: "Plans",
     subtitle: "Plans and staff guidance",
-    loader: () => loadRecordList(`/young-people/${state.youngPersonId}/plans`, "Plans"),
+    loader: () => loadRecordList(RECORD_CONFIG.support_plan.listUrl(state.youngPersonId), "Plans"),
   },
   health: {
     title: "Health",
@@ -361,6 +361,8 @@ function getRecordUrl(item) {
     plan: RECORD_CONFIG.support_plan.detailUrl(id),
     health: `/young-people/health-records/${id}`,
     health_record: `/young-people/health-records/${id}`,
+    medication_profile: `/young-people/medication-profiles/${id}`,
+    medication_record: `/young-people/medication-records/${id}`,
     education: `/young-people/education-records/${id}`,
     education_record: `/young-people/education-records/${id}`,
     family: `/young-people/family/records/${id}`,
@@ -376,6 +378,9 @@ function normaliseRecordType(item) {
   const raw = String(item.record_type || item.event_type || item.category || "").toLowerCase();
   if (raw === "plan") return "support_plan";
   if (raw === "risk_assessment") return "risk";
+  if (raw === "daily_notes") return "daily_note";
+  if (raw === "incidents") return "incident";
+  if (raw === "keywork_session") return "keywork";
   return raw;
 }
 
@@ -497,7 +502,14 @@ function getModalSchema(recordType, item = null) {
 
   if (recordType === "incident") {
     return [
-      { name: "incident_datetime", label: "Incident time", type: "datetime-local", value: item?.incident_datetime ? item.incident_datetime.slice(0, 16) : "" },
+      {
+        name: "incident_datetime",
+        label: "Incident time",
+        type: "datetime-local",
+        value: item?.incident_datetime
+          ? item.incident_datetime.slice(0, 16)
+          : (item?.occurred_at ? String(item.occurred_at).slice(0, 16) : ""),
+      },
       { name: "incident_type", label: "Incident type", type: "text", value: item?.incident_type || "" },
       { name: "severity", label: "Severity", type: "select", value: item?.severity || "medium", options: [
         { value: "low", label: "Low" },
@@ -575,7 +587,6 @@ function serializeModalForm() {
   }
 
   obj.young_person_id = state.youngPersonId;
-
   return obj;
 }
 
@@ -638,6 +649,7 @@ async function runDrawerWorkflow(action) {
 
   let url = null;
   let body = null;
+  let method = "POST";
 
   if (action === "submit") url = config.submitUrl?.(id);
   if (action === "approve") {
@@ -656,7 +668,7 @@ async function runDrawerWorkflow(action) {
   }
 
   try {
-    await apiSend(url, "POST", body);
+    await apiSend(url, method, body);
     showMessage(`${config.label} ${action}ed.`);
     await loadCurrentView();
     closeDrawer();
@@ -664,6 +676,10 @@ async function runDrawerWorkflow(action) {
     console.error(error);
     showError(error.message || `Could not ${action} record.`);
   }
+}
+
+function shouldShowDrawerActions(type) {
+  return Boolean(RECORD_CONFIG[type]);
 }
 
 async function openRecordDetail(item) {
@@ -678,7 +694,12 @@ async function openRecordDetail(item) {
   state.activeRecordType = type;
 
   openDrawer();
-  els.drawerActions.classList.remove("hidden");
+  if (shouldShowDrawerActions(type)) {
+    els.drawerActions.classList.remove("hidden");
+  } else {
+    els.drawerActions.classList.add("hidden");
+  }
+
   els.drawerTitle.textContent = item.title || "Record details";
   els.drawerSubtitle.textContent = "Loading record...";
   els.drawerBody.innerHTML = `
@@ -690,7 +711,20 @@ async function openRecordDetail(item) {
 
   try {
     const data = await apiGet(url);
-    const detailData = data && typeof data === "object" ? data : {};
+    const detailData =
+      data?.daily_note ||
+      data?.incident ||
+      data?.risk ||
+      data?.support_plan ||
+      data?.health_record ||
+      data?.medication_profile ||
+      data?.medication_record ||
+      data?.education_record ||
+      data?.family_contact_record ||
+      data?.contact ||
+      data?.keywork ||
+      data;
+
     const entries = normaliseDetailEntries(detailData);
 
     els.drawerTitle.textContent = item.title || detailData.title || "Record details";
@@ -707,19 +741,19 @@ async function openRecordDetail(item) {
           </div>
           <div class="detail-row">
             <div class="detail-key">Recorded at</div>
-            <div class="detail-value">${escapeHtml(formatDate(item.recorded_at || item.occurred_at || item.event_datetime || detailData.created_at))}</div>
+            <div class="detail-value">${escapeHtml(formatDate(item.recorded_at || item.occurred_at || item.event_datetime || detailData.created_at || detailData.updated_at))}</div>
           </div>
           <div class="detail-row">
             <div class="detail-key">Recorded by</div>
-            <div class="detail-value">${escapeHtml(item.recorded_by_name || item.author_name || item.created_by_name || item.worker_name || "Unknown")}</div>
+            <div class="detail-value">${escapeHtml(item.recorded_by_name || item.author_name || item.created_by_name || item.worker_name || detailData.created_by_name || detailData.owner_name || "Unknown")}</div>
           </div>
           <div class="detail-row">
             <div class="detail-key">Status</div>
-            <div class="detail-value">${escapeHtml(item.workflow_status || detailData.workflow_status || detailData.status || "—")}</div>
+            <div class="detail-value">${escapeHtml(item.workflow_status || detailData.workflow_status || detailData.status || detailData.approval_status || "—")}</div>
           </div>
           <div class="detail-row">
             <div class="detail-key">Summary</div>
-            <div class="detail-value">${escapeHtml(item.summary || item.narrative || detailData.summary || detailData.description || "—")}</div>
+            <div class="detail-value">${escapeHtml(item.summary || item.narrative || detailData.summary || detailData.description || detailData.concern_summary || "—")}</div>
           </div>
         </div>
       </div>
@@ -753,11 +787,12 @@ async function openRecordDetail(item) {
 
 function renderRecordCard(item) {
   const title = item.title || item.topic || item.contact_person || item.record_type || "Record";
-  const summary = item.summary || item.narrative || item.description || "No summary available.";
+  const summary = item.summary || item.narrative || item.description || item.concern_summary || "No summary available.";
 
   const meta = [
     item.occurred_at ? formatDate(item.occurred_at) : null,
     item.session_date ? formatDate(item.session_date) : null,
+    item.recorded_at ? formatDate(item.recorded_at) : null,
     item.worker_name || null,
     item.author_name || null,
     item.created_by_name || null,
@@ -852,7 +887,7 @@ function renderGroupedTimelineFromItems(items) {
 
 function renderProfileSection(title, rows = []) {
   return `
-    <section class="profile-card">
+    <section class="panel">
       <div class="panel-header">
         <div>
           <h3>${escapeHtml(title)}</h3>
@@ -874,7 +909,7 @@ function renderProfileSection(title, rows = []) {
 
 function renderHandoverItem(title, body, badges = []) {
   return `
-    <article class="handover-item">
+    <article class="record-card">
       <div class="record-card-header">
         <div>
           <h4>${escapeHtml(title)}</h4>
@@ -902,6 +937,7 @@ function showSelectorMode() {
   els.selectorPanel.classList.remove("hidden");
   els.workspacePanel.classList.add("hidden");
   els.refreshBtn.classList.add("hidden");
+  els.quickActions.classList.add("hidden");
   els.pageTitle.textContent = "Select a young person";
   els.pageSubtitle.textContent = "Open a workspace to begin";
   els.personName.textContent = "No young person selected";
@@ -923,10 +959,13 @@ function openYoungPerson(id) {
   window.history.replaceState({}, "", url.toString());
 
   state.youngPersonId = Number(id);
+  state.youngPerson = null;
   state.currentView = "home";
   state.timelineCache = [];
   state.calendarDate = new Date();
   state.selectedDate = toDateInputValue(new Date());
+  state.calendarMonthSummary = [];
+  state.selectedDayRecords = [];
 
   hideSelectorMode();
 
@@ -1076,8 +1115,8 @@ async function loadProfile() {
       </div>
     </div>
 
-    <div class="profile-grid-shell">
-      <div class="profile-stack">
+    <div class="callout-grid">
+      <div class="record-list">
         ${renderProfileSection("Core profile", [
           { label: "Preferred name", value: yp.preferred_name || "—" },
           { label: "Date of birth", value: formatDate(yp.date_of_birth) },
@@ -1107,7 +1146,7 @@ async function loadProfile() {
         ])}
       </div>
 
-      <div class="profile-stack">
+      <div class="record-list">
         ${renderProfileSection("Legal and contact", [
           { label: "Legal status", value: legal.legal_status || "—" },
           { label: "Order type", value: legal.order_type || "—" },
@@ -1132,7 +1171,7 @@ async function loadProfile() {
           { label: "Medication summary", value: health.medication_summary || "—" },
         ])}
 
-        <section class="profile-card">
+        <section class="panel">
           <div class="panel-header">
             <div>
               <h3>Contacts and alerts</h3>
@@ -1164,11 +1203,15 @@ Notes: ${escapeHtml(contact.notes || "—")}</div>
 
           ${
             alerts.length
-              ? `<div class="alert-list">
+              ? `<div class="record-list">
                   ${alerts.map((alert) => `
-                    <article class="alert-item">
-                      <strong>${escapeHtml(alert.title || "Alert")}</strong>
-                      <div class="helper-note">${escapeHtml(alert.description || "No description.")}</div>
+                    <article class="record-card">
+                      <div class="record-card-header">
+                        <div>
+                          <h4>${escapeHtml(alert.title || "Alert")}</h4>
+                        </div>
+                      </div>
+                      <div class="record-body">${escapeHtml(alert.description || "No description.")}</div>
                       ${renderBadges([alert.severity, alert.is_active ? "active" : "inactive"])}
                     </article>
                   `).join("")}
@@ -1282,20 +1325,23 @@ async function loadHome() {
 async function loadHandover() {
   setLoading("Loading handover...");
 
-  const [overviewData, timelineData, riskData, plansData] = await Promise.all([
+  const [overviewData, timelineData, riskData, plansData, handoverData] = await Promise.all([
     apiGet(`/young-people/${state.youngPersonId}/overview`),
     apiGet(`/young-people/${state.youngPersonId}/timeline?limit=25`),
     apiGet(`/young-people/${state.youngPersonId}/risk`).catch(() => ({ items: [] })),
     apiGet(`/young-people/${state.youngPersonId}/plans`).catch(() => ({ items: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/handover`).catch(() => ({ items: [] })),
   ]);
 
   const alerts = overviewData.alerts || [];
   const recent = (timelineData.timeline || []).slice(0, 10);
   const risks = (riskData.items || []).slice(0, 5);
   const plans = (plansData.items || []).slice(0, 5);
+  const handovers = handoverData.items || [];
 
   const incidents = recent.filter((item) => String(item.event_type || item.category || "").toLowerCase().includes("incident"));
   const dailyNotes = recent.filter((item) => String(item.event_type || item.category || "").toLowerCase().includes("daily_note"));
+  const latestHandover = handovers[0] || null;
 
   els.content.innerHTML = `
     <div class="grid grid-4">
@@ -1317,6 +1363,34 @@ async function loadHandover() {
       </div>
     </div>
 
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <h3>Generated handover</h3>
+          <p class="panel-subtitle">Auto-built from recent recorded reality.</p>
+        </div>
+        <div class="day-record-actions">
+          <button id="generateHandoverBtn" class="primary-btn">Generate handover</button>
+        </div>
+      </div>
+      ${
+        latestHandover
+          ? `
+            <article class="record-card">
+              <div class="record-card-header">
+                <div>
+                  <h4>${escapeHtml(latestHandover.title || "Shift handover")}</h4>
+                  <div class="record-meta">${escapeHtml(formatDate(latestHandover.handover_date || latestHandover.created_at))}</div>
+                </div>
+              </div>
+              <div class="record-body">${escapeHtml(latestHandover.summary_text || "No summary.")}</div>
+              ${renderBadges([latestHandover.status, latestHandover.shift_type])}
+            </article>
+          `
+          : `<div class="empty-state">No handover generated yet.</div>`
+      }
+    </div>
+
     <div class="callout-grid">
       <section class="panel">
         <div class="panel-header">
@@ -1326,7 +1400,7 @@ async function loadHandover() {
           </div>
         </div>
 
-        <div class="handover-list">
+        <div class="record-list">
           ${
             alerts.length
               ? alerts.map((alert) => renderHandoverItem(
@@ -1375,6 +1449,26 @@ async function loadHandover() {
       ${recent.length ? renderGroupedTimelineFromItems(recent) : `<div class="empty-state">No recent chronology recorded.</div>`}
     </section>
   `;
+
+  const generateBtn = document.getElementById("generateHandoverBtn");
+  if (generateBtn) {
+    generateBtn.addEventListener("click", async () => {
+      try {
+        generateBtn.disabled = true;
+        await apiSend(`/young-people/${state.youngPersonId}/handover/generate`, "POST", {
+          shift_type: "day",
+          title: "Shift Handover",
+        });
+        showMessage("Handover generated.");
+        await loadCurrentView();
+      } catch (error) {
+        console.error(error);
+        showError(error.message || "Could not generate handover.");
+      } finally {
+        generateBtn.disabled = false;
+      }
+    });
+  }
 
   bindDynamicOpenRecordButtons();
 }
@@ -1753,17 +1847,21 @@ async function loadHealth() {
 
     <div class="panel">
       <h3>Medication profiles</h3>
-      ${medicationProfiles.length ? `<div class="record-list">${medicationProfiles.map((item) => `
-        <article class="record-card">
-          <div class="record-card-header">
-            <div>
-              <h4>${escapeHtml(item.medication_name || "Medication")}</h4>
-              <div class="record-meta">${escapeHtml(item.dosage || item.dose || "—")} • ${escapeHtml(item.frequency || "—")}</div>
-            </div>
-          </div>
-          <div class="record-body">${escapeHtml(item.notes || item.prn_guidance || item.reason || "No notes.")}</div>
-        </article>
-      `).join("")}</div>` : `<div class="empty-state">No medication profiles.</div>`}
+      ${
+        medicationProfiles.length
+          ? `<div class="record-list">${medicationProfiles.map((item) => `
+              <article class="record-card">
+                <div class="record-card-header">
+                  <div>
+                    <h4>${escapeHtml(item.medication_name || "Medication")}</h4>
+                    <div class="record-meta">${escapeHtml(item.dosage || item.dose || "—")} • ${escapeHtml(item.frequency || "—")}</div>
+                  </div>
+                </div>
+                <div class="record-body">${escapeHtml(item.notes || item.prn_guidance || item.reason || "No notes.")}</div>
+              </article>
+            `).join("")}</div>`
+          : `<div class="empty-state">No medication profiles.</div>`
+      }
     </div>
 
     <div class="panel"><h3>Medication records</h3>${medicationRecords.length ? `<div class="record-list">${medicationRecords.map(renderRecordCard).join("")}</div>` : `<div class="empty-state">No medication records.</div>`}</div>
@@ -1922,8 +2020,13 @@ function bindEvents() {
 
   els.drawerEditBtn.addEventListener("click", () => {
     if (!state.activeRecordItem || !state.activeRecordType) return;
+    if (!RECORD_CONFIG[state.activeRecordType]) {
+      showError("This record type cannot be edited from the workspace yet.");
+      return;
+    }
     openRecordModal(state.activeRecordType, "edit", state.activeRecordItem);
   });
+
   els.drawerSubmitBtn.addEventListener("click", () => runDrawerWorkflow("submit"));
   els.drawerApproveBtn.addEventListener("click", () => runDrawerWorkflow("approve"));
   els.drawerReturnBtn.addEventListener("click", () => runDrawerWorkflow("return"));
