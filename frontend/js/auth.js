@@ -6,9 +6,11 @@ function setStoredUser(user, remember = false) {
   if (remember) {
     localStorage.setItem("current_user", raw);
     sessionStorage.removeItem("current_user");
+    localStorage.setItem("indicare_remember_me", "true");
   } else {
     sessionStorage.setItem("current_user", raw);
     localStorage.removeItem("current_user");
+    localStorage.removeItem("indicare_remember_me");
   }
 }
 
@@ -26,10 +28,15 @@ function getStoredUser() {
   }
 }
 
+function shouldRememberUser() {
+  return localStorage.getItem("indicare_remember_me") === "true";
+}
+
 function clearStoredUser() {
   sessionStorage.removeItem("current_user");
   localStorage.removeItem("current_user");
   sessionStorage.removeItem("indicare_recovery_codes");
+  localStorage.removeItem("indicare_remember_me");
 }
 
 async function apiFetchJson(path, options = {}) {
@@ -47,7 +54,7 @@ function clearRecoveryCodes() {
 
 function updateStoredUser(patch = {}) {
   const existing = getStoredUser() || {};
-  const remember = !!localStorage.getItem("current_user");
+  const remember = shouldRememberUser();
   const merged = { ...existing, ...patch };
   setStoredUser(merged, remember);
   return merged;
@@ -175,7 +182,7 @@ async function validateSession() {
     }
 
     const existing = getStoredUser() || {};
-    const remember = !!localStorage.getItem("current_user");
+    const remember = shouldRememberUser();
 
     setStoredUser(
       {
@@ -187,8 +194,8 @@ async function validateSession() {
         home_id: data.home_id,
         is_active: data.is_active,
         subscription_active: !!data.subscription_active,
-        subscription_status: data.subscription_status,
-        plan_name: data.plan_name,
+        subscription_status: data.subscription_status || "inactive",
+        plan_name: data.plan_name || null,
         mfa_enabled: !!data.mfa_enabled,
         mfa_verified: !!data.mfa_verified,
         mfaEnabled: !!data.mfa_enabled,
@@ -205,8 +212,8 @@ async function validateSession() {
       home_id: data.home_id,
       is_active: data.is_active,
       subscription_active: !!data.subscription_active,
-      subscription_status: data.subscription_status,
-      plan_name: data.plan_name,
+      subscription_status: data.subscription_status || "inactive",
+      plan_name: data.plan_name || null,
       mfa_enabled: !!data.mfa_enabled,
       mfa_verified: !!data.mfa_verified,
       mfaEnabled: !!data.mfa_enabled,
@@ -233,7 +240,10 @@ async function requireAuth() {
     return false;
   }
 
-  if (!state.subscription_active && !["admin", "provider_admin"].includes(String(state.role || "").toLowerCase())) {
+  if (
+    !state.subscription_active &&
+    !["admin", "provider_admin"].includes(String(state.role || "").toLowerCase())
+  ) {
     throw new Error("Subscription required");
   }
 
