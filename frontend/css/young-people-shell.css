@@ -462,7 +462,10 @@ select {
 .stat-card,
 .day-record-card,
 .day-summary-card,
-.detail-section {
+.detail-section,
+.compliance-card,
+.report-card,
+.report-output-card {
   background: var(--panel-soft);
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -475,7 +478,9 @@ select {
 .panel-header,
 .calendar-header,
 .record-drawer-header,
-.record-modal-header {
+.record-modal-header,
+.compliance-card-header,
+.report-card-header {
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -483,7 +488,9 @@ select {
 
 .record-body,
 .day-record-summary,
-.detail-value {
+.detail-value,
+.compliance-card-body,
+.report-card-body {
   white-space: pre-wrap;
   line-height: 1.5;
   font-size: 14px;
@@ -605,7 +612,10 @@ select {
 .calendar-controls,
 .record-drawer-actions,
 .record-modal-footer,
-.handover-actions {
+.handover-actions,
+.compliance-toolbar,
+.report-actions,
+.report-toolbar {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
@@ -874,6 +884,127 @@ select {
   padding: 12px;
 }
 
+/* Compliance */
+.compliance-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.compliance-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.compliance-card {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
+}
+
+.compliance-card-header h4 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.compliance-meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.compliance-card-body {
+  margin-top: 10px;
+}
+
+.compliance-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.compliance-empty {
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  padding: 20px;
+  text-align: center;
+  color: var(--muted);
+  background: var(--panel);
+}
+
+.compliance-status-ok {
+  color: var(--success);
+}
+
+.compliance-status-due_soon {
+  color: var(--warning);
+}
+
+.compliance-status-overdue {
+  color: var(--danger);
+}
+
+/* Reports / Ofsted packs */
+.report-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.report-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.report-card {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
+}
+
+.report-card-header h4 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.report-output-card pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.report-actions .primary-btn,
+.report-actions .secondary-btn,
+.report-toolbar .primary-btn,
+.report-toolbar .secondary-btn {
+  min-width: 140px;
+}
+
+.inspection-pack-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.inspection-pack-stat {
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.inspection-pack-stat-label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.inspection-pack-stat-value {
+  font-size: 24px;
+  font-weight: 700;
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -901,7 +1032,10 @@ select {
   .grid-4,
   .callout-grid,
   .calendar-shell,
-  .form-grid {
+  .form-grid,
+  .compliance-summary-grid,
+  .report-grid,
+  .inspection-pack-summary {
     grid-template-columns: 1fr;
   }
 
