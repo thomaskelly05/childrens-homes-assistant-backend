@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from datetime import date
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from auth.current_user import get_current_user
 from db.connection import get_db
-from services.young_person_service import YoungPersonService
 
 router = APIRouter(prefix="/young-people", tags=["Young People Compliance"])
 
@@ -43,173 +41,24 @@ def _assert_home_access(current_user: dict[str, Any], record_home_id: int | None
         raise HTTPException(status_code=403, detail="You do not have access to this young person")
 
 
-def _load_and_check_young_person(
-    young_person_id: int,
-    current_user: dict[str, Any],
-) -> dict[str, Any]:
-    record = YoungPersonService.get_young_person_by_id(young_person_id)
-    if not record:
+def _load_and_check_young_person(conn, young_person_id: int, current_user: dict[str, Any]) -> dict[str, Any]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, home_id
+            FROM young_people
+            WHERE id = %s
+            LIMIT 1
+            """,
+            (young_person_id,),
+        )
+        yp = cur.fetchone()
+
+    if not yp:
         raise HTTPException(status_code=404, detail="Young person not found")
 
-    _assert_home_access(current_user, _safe_int(record.get("home_id")))
-    return record
-
-
-def _build_profile_completeness_items(bundle: dict[str, Any]) -> list[dict[str, Any]]:
-    communication_profile = bundle.get("communication_profile") or {}
-    education_profile = bundle.get("education_profile") or {}
-    health_profile = bundle.get("health_profile") or {}
-    identity_profile = bundle.get("identity_profile") or {}
-    legal_status = bundle.get("legal_status") or {}
-    contacts = bundle.get("contacts") or []
-
-    def has_any_value(data: dict[str, Any], keys: list[str]) -> bool:
-        return any(bool(data.get(key)) for key in keys)
-
-    items = [
-        {
-            "compliance_type": "profile_section",
-            "title": "Communication profile",
-            "due_date": None,
-            "status": "present" if has_any_value(
-                communication_profile,
-                [
-                    "communication_style",
-                    "sensory_profile",
-                    "processing_needs",
-                    "signs_of_distress",
-                    "what_helps",
-                ],
-            ) else "missing",
-            "approval_status": None,
-            "compliance_status": "ok" if has_any_value(
-                communication_profile,
-                [
-                    "communication_style",
-                    "sensory_profile",
-                    "processing_needs",
-                    "signs_of_distress",
-                    "what_helps",
-                ],
-            ) else "missing",
-            "category": "profile",
-        },
-        {
-            "compliance_type": "profile_section",
-            "title": "Education profile",
-            "due_date": None,
-            "status": "present" if has_any_value(
-                education_profile,
-                [
-                    "school_name",
-                    "education_status",
-                    "sen_status",
-                    "support_summary",
-                ],
-            ) else "missing",
-            "approval_status": None,
-            "compliance_status": "ok" if has_any_value(
-                education_profile,
-                [
-                    "school_name",
-                    "education_status",
-                    "sen_status",
-                    "support_summary",
-                ],
-            ) else "missing",
-            "category": "profile",
-        },
-        {
-            "compliance_type": "profile_section",
-            "title": "Health profile",
-            "due_date": None,
-            "status": "present" if has_any_value(
-                health_profile,
-                [
-                    "gp_name",
-                    "allergies",
-                    "diagnoses",
-                    "mental_health_summary",
-                    "medication_summary",
-                ],
-            ) else "missing",
-            "approval_status": None,
-            "compliance_status": "ok" if has_any_value(
-                health_profile,
-                [
-                    "gp_name",
-                    "allergies",
-                    "diagnoses",
-                    "mental_health_summary",
-                    "medication_summary",
-                ],
-            ) else "missing",
-            "category": "profile",
-        },
-        {
-            "compliance_type": "profile_section",
-            "title": "Identity profile",
-            "due_date": None,
-            "status": "present" if has_any_value(
-                identity_profile,
-                [
-                    "cultural_identity",
-                    "first_language",
-                    "interests",
-                    "strengths_summary",
-                    "what_matters_to_me",
-                ],
-            ) else "missing",
-            "approval_status": None,
-            "compliance_status": "ok" if has_any_value(
-                identity_profile,
-                [
-                    "cultural_identity",
-                    "first_language",
-                    "interests",
-                    "strengths_summary",
-                    "what_matters_to_me",
-                ],
-            ) else "missing",
-            "category": "profile",
-        },
-        {
-            "compliance_type": "profile_section",
-            "title": "Legal status",
-            "due_date": None,
-            "status": "present" if has_any_value(
-                legal_status,
-                [
-                    "legal_status",
-                    "order_type",
-                    "delegated_authority_details",
-                    "consent_arrangements",
-                ],
-            ) else "missing",
-            "approval_status": None,
-            "compliance_status": "ok" if has_any_value(
-                legal_status,
-                [
-                    "legal_status",
-                    "order_type",
-                    "delegated_authority_details",
-                    "consent_arrangements",
-                ],
-            ) else "missing",
-            "category": "profile",
-        },
-        {
-            "compliance_type": "profile_section",
-            "title": "Family / contact information",
-            "due_date": None,
-            "status": "present" if len(contacts) > 0 else "missing",
-            "approval_status": None,
-            "compliance_status": "ok" if len(contacts) > 0 else "missing",
-            "category": "profile",
-        },
-    ]
-
-    return items
+    _assert_home_access(current_user, _safe_int(yp.get("home_id")))
+    return yp
 
 
 @router.get("/{young_person_id}/compliance")
@@ -218,7 +67,7 @@ def get_young_person_compliance(
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    _load_and_check_young_person(young_person_id, current_user)
+    _load_and_check_young_person(conn, young_person_id, current_user)
 
     try:
         with conn.cursor() as cur:
@@ -227,12 +76,12 @@ def get_young_person_compliance(
                 SELECT * FROM (
                     SELECT
                         'support_plan_review' AS compliance_type,
+                        sp.id,
                         COALESCE(sp.title, sp.plan_type, 'Plan review') AS title,
                         sp.review_date AS due_date,
                         sp.status,
                         sp.approval_status,
-                        sp.created_at,
-                        'planning' AS category
+                        sp.created_at
                     FROM support_plans sp
                     WHERE sp.young_person_id = %s
                       AND sp.review_date IS NOT NULL
@@ -242,12 +91,12 @@ def get_young_person_compliance(
 
                     SELECT
                         'risk_review' AS compliance_type,
+                        r.id,
                         COALESCE(r.title, r.category, 'Risk review') AS title,
                         r.review_date AS due_date,
                         r.status,
                         r.approval_status,
-                        r.created_at,
-                        'risk' AS category
+                        r.created_at
                     FROM risk_assessments r
                     WHERE r.young_person_id = %s
                       AND r.review_date IS NOT NULL
@@ -257,12 +106,12 @@ def get_young_person_compliance(
 
                     SELECT
                         'keywork_follow_up' AS compliance_type,
+                        k.id,
                         COALESCE(k.topic, 'Key work follow up') AS title,
                         k.next_session_date AS due_date,
                         k.status,
                         NULL::text AS approval_status,
-                        k.created_at,
-                        'relationships' AS category
+                        k.created_at
                     FROM keywork_sessions k
                     WHERE k.young_person_id = %s
                       AND k.next_session_date IS NOT NULL
@@ -272,12 +121,12 @@ def get_young_person_compliance(
 
                     SELECT
                         'statutory_document_review' AS compliance_type,
+                        sd.id,
                         COALESCE(sd.title, sd.document_type, 'Statutory document') AS title,
                         COALESCE(sd.review_date, sd.expiry_date) AS due_date,
                         sd.status,
                         NULL::text AS approval_status,
-                        sd.created_at,
-                        'documents' AS category
+                        sd.created_at
                     FROM statutory_documents sd
                     WHERE sd.young_person_id = %s
                       AND COALESCE(sd.archived, FALSE) = FALSE
@@ -291,9 +140,13 @@ def get_young_person_compliance(
 
             cur.execute("SELECT CURRENT_DATE AS today")
             today_row = cur.fetchone()
-            today: date = today_row["today"]
+            today = today_row["today"]
 
-        items: list[dict[str, Any]] = []
+        items = []
+        overdue_count = 0
+        due_soon_count = 0
+        ok_count = 0
+
         for row in rows:
             due_date = row.get("due_date")
             compliance_status = "ok"
@@ -308,36 +161,22 @@ def get_young_person_compliance(
             item["compliance_status"] = compliance_status
             items.append(item)
 
-        bundle = YoungPersonService.get_full_profile_bundle(young_person_id)
-        profile_items = _build_profile_completeness_items(bundle)
-        all_items = items + profile_items
-
-        overdue_items = [item for item in all_items if item.get("compliance_status") == "overdue"]
-        due_soon_items = [item for item in all_items if item.get("compliance_status") == "due_soon"]
-        missing_items = [item for item in all_items if item.get("compliance_status") == "missing"]
-        ok_items = [item for item in all_items if item.get("compliance_status") == "ok"]
-
-        grouped = {
-            "overdue": overdue_items,
-            "due_soon": due_soon_items,
-            "missing": missing_items,
-            "ok": ok_items,
-        }
-
-        summary = {
-            "total_items": len(all_items),
-            "overdue_count": len(overdue_items),
-            "due_soon_count": len(due_soon_items),
-            "missing_count": len(missing_items),
-            "ok_count": len(ok_items),
-        }
+            if compliance_status == "overdue":
+                overdue_count += 1
+            elif compliance_status == "due_soon":
+                due_soon_count += 1
+            else:
+                ok_count += 1
 
         return {
-            "ok": True,
             "young_person_id": young_person_id,
-            "summary": summary,
-            "compliance_items": all_items,
-            "grouped_items": grouped,
+            "compliance_items": items,
+            "summary": {
+                "total": len(items),
+                "overdue": overdue_count,
+                "due_soon": due_soon_count,
+                "ok": ok_count,
+            },
         }
 
     except HTTPException:
