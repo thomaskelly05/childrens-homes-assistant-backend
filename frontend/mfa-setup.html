@@ -445,7 +445,13 @@
 
           const existing = getStoredUserSafe();
           const remember = !!localStorage.getItem("current_user");
-          const merged = { ...existing, mfa_enabled: true, mfa_verified: true };
+          const merged = {
+            ...existing,
+            mfa_enabled: true,
+            mfa_verified: true,
+            mfaEnabled: true,
+            mfaVerified: true
+          };
 
           if (remember) {
             localStorage.setItem("current_user", JSON.stringify(merged));
@@ -453,6 +459,15 @@
             sessionStorage.setItem("current_user", JSON.stringify(merged));
             localStorage.removeItem("current_user");
           }
+
+          if (Array.isArray(data.recovery_codes) && data.recovery_codes.length) {
+            sessionStorage.setItem(
+              "indicare_recovery_codes",
+              JSON.stringify(data.recovery_codes)
+            );
+          }
+
+          await window.auth.validateSession();
 
           setStatus(
             "MFA enabled successfully. Save your recovery codes before continuing.",
@@ -467,7 +482,8 @@
         }
       });
 
-      continueBtn.addEventListener("click", function () {
+      continueBtn.addEventListener("click", async function () {
+        await window.auth.validateSession();
         window.location.href = "/assistant";
       });
 
