@@ -61,6 +61,11 @@ const VIEW_CONFIG = {
     subtitle: "What staff need first",
     loader: loadHome,
   },
+  profile: {
+    title: "Profile",
+    subtitle: "Identity, communication, legal and contact information",
+    loader: loadProfile,
+  },
   calendar: {
     title: "Calendar",
     subtitle: "All records by day",
@@ -70,6 +75,11 @@ const VIEW_CONFIG = {
     title: "What happened",
     subtitle: "Chronology across all records",
     loader: loadTimeline,
+  },
+  handover: {
+    title: "Handover",
+    subtitle: "What the next staff need to know",
+    loader: loadHandover,
   },
   "daily-notes": {
     title: "Daily notes",
@@ -110,6 +120,16 @@ const VIEW_CONFIG = {
     title: "Keywork",
     subtitle: "Keywork sessions",
     loader: () => loadRecordList(`/young-people/${state.youngPersonId}/keywork`, "Keywork"),
+  },
+  compliance: {
+    title: "Compliance",
+    subtitle: "Checks, gaps and evidence readiness",
+    loader: loadCompliancePlaceholder,
+  },
+  reports: {
+    title: "Reports",
+    subtitle: "Outputs, summaries and management reporting",
+    loader: loadReportsPlaceholder,
   },
 };
 
