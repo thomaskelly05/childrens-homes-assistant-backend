@@ -733,6 +733,8 @@
       const loginStatus = document.getElementById("loginStatus");
       const rememberMe = document.getElementById("rememberMe");
 
+      const LOGIN_REDIRECT_GUARD_KEY = "indicare_login_redirect_guard";
+
       function setStatus(message, type = "") {
         loginStatus.textContent = message || "";
         loginStatus.classList.remove("is-error", "is-success");
@@ -761,8 +763,36 @@
         field.focus();
       }
 
+      function hasRecentRedirectGuard() {
+        try {
+          const raw = sessionStorage.getItem(LOGIN_REDIRECT_GUARD_KEY);
+          if (!raw) return false;
+          const ts = Number(raw);
+          if (!ts) return false;
+          return Date.now() - ts < 5000;
+        } catch (_) {
+          return false;
+        }
+      }
+
+      function markRedirectGuard() {
+        try {
+          sessionStorage.setItem(LOGIN_REDIRECT_GUARD_KEY, String(Date.now()));
+        } catch (_) {}
+      }
+
+      function clearRedirectGuard() {
+        try {
+          sessionStorage.removeItem(LOGIN_REDIRECT_GUARD_KEY);
+        } catch (_) {}
+      }
+
       async function bootExistingSession() {
         if (!window.auth || typeof window.auth.validateSession !== "function") {
+          return;
+        }
+
+        if (hasRecentRedirectGuard()) {
           return;
         }
 
@@ -770,11 +800,13 @@
           const state = await window.auth.validateSession();
 
           if (!state || !state.authenticated) {
+            clearRedirectGuard();
             return;
           }
 
           setStatus("Existing session found. Redirecting...", "is-success");
           setLoading(true);
+          markRedirectGuard();
 
           if (!state.mfa_enabled) {
             window.location.replace("/mfa-setup");
@@ -788,6 +820,7 @@
 
           window.location.replace("/assistant");
         } catch (_) {
+          clearRedirectGuard();
           setLoading(false);
         }
       }
@@ -803,6 +836,7 @@
       form.addEventListener("submit", async function (event) {
         event.preventDefault();
         clearFieldErrors();
+        clearRedirectGuard();
 
         const emailValue = email.value.trim();
         const passwordValue = password.value;
@@ -833,6 +867,7 @@
 
           if (data?.mfa_required) {
             setStatus("Password accepted. Redirecting to security check...", "is-success");
+            markRedirectGuard();
 
             if (data.mfa_enabled) {
               window.location.replace("/mfa");
@@ -843,8 +878,10 @@
           }
 
           setStatus("Sign-in successful. Redirecting...", "is-success");
+          markRedirectGuard();
           window.location.replace("/assistant");
         } catch (error) {
+          clearRedirectGuard();
           const message =
             error && error.message
               ? error.message
