@@ -107,6 +107,8 @@ async function login(credentialsArg = null) {
           ...data.user,
           mfa_enabled: !!data.mfa_enabled,
           mfa_verified: false,
+          mfaEnabled: !!data.mfa_enabled,
+          mfaVerified: false,
         },
         remember
       );
@@ -163,6 +165,8 @@ async function validateSession() {
         authenticated: false,
         mfa_enabled: false,
         mfa_verified: false,
+        mfaEnabled: false,
+        mfaVerified: false,
       };
     }
 
@@ -173,6 +177,7 @@ async function validateSession() {
       {
         ...existing,
         id: data.user_id,
+        user_id: data.user_id,
         email: data.email,
         role: data.role,
         home_id: data.home_id,
@@ -181,6 +186,8 @@ async function validateSession() {
         plan_name: data.plan_name,
         mfa_enabled: !!data.mfa_enabled,
         mfa_verified: !!data.mfa_verified,
+        mfaEnabled: !!data.mfa_enabled,
+        mfaVerified: !!data.mfa_verified,
       },
       remember
     );
@@ -196,6 +203,8 @@ async function validateSession() {
       plan_name: data.plan_name,
       mfa_enabled: !!data.mfa_enabled,
       mfa_verified: !!data.mfa_verified,
+      mfaEnabled: !!data.mfa_enabled,
+      mfaVerified: !!data.mfa_verified,
     };
   } catch (_) {
     clearStoredUser();
@@ -203,6 +212,8 @@ async function validateSession() {
       authenticated: false,
       mfa_enabled: false,
       mfa_verified: false,
+      mfaEnabled: false,
+      mfaVerified: false,
     };
   }
 }
@@ -241,6 +252,8 @@ async function verifyMfaCode(code) {
   updateStoredUser({
     mfa_enabled: true,
     mfa_verified: true,
+    mfaEnabled: true,
+    mfaVerified: true,
   });
 
   return data;
@@ -259,6 +272,8 @@ async function verifyRecoveryCode(recoveryCode) {
   updateStoredUser({
     mfa_enabled: true,
     mfa_verified: true,
+    mfaEnabled: true,
+    mfaVerified: true,
   });
 
   return data;
@@ -285,6 +300,8 @@ async function enableMfa(code) {
   updateStoredUser({
     mfa_enabled: true,
     mfa_verified: true,
+    mfaEnabled: true,
+    mfaVerified: true,
   });
 
   if (Array.isArray(data.recovery_codes) && data.recovery_codes.length) {
