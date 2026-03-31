@@ -69,6 +69,7 @@ const GREET = [
 const LEGAL_VERSION = "2026-03-29-v1";
 const LEGAL_ACCEPTANCE_KEY = "indicare_legal_acceptance";
 const LEGAL_TABS = ["terms", "privacy", "ip", "acceptance"];
+const ASSISTANT_REDIRECT_GUARD_KEY = "indicare_assistant_redirect_guard";
 
 const $ = id => document.getElementById(id);
 const has = id => !!document.getElementById(id);
@@ -89,6 +90,30 @@ const canManageLibrary = () => isAdmin() || isManager();
 const selectedLang = () => has("lang") ? ($("lang").value || DEFAULT_LANGUAGE) : DEFAULT_LANGUAGE;
 const selectedMode = () => has("mode") ? ($("mode").value || "balanced") : "balanced";
 const firstName = () => currentUser?.first_name || localStorage.getItem("first_name") || "there";
+
+function hasRecentAssistantRedirectGuard() {
+  try {
+    const raw = sessionStorage.getItem(ASSISTANT_REDIRECT_GUARD_KEY);
+    if (!raw) return false;
+    const ts = Number(raw);
+    if (!ts) return false;
+    return Date.now() - ts < 5000;
+  } catch (_) {
+    return false;
+  }
+}
+
+function markAssistantRedirectGuard() {
+  try {
+    sessionStorage.setItem(ASSISTANT_REDIRECT_GUARD_KEY, String(Date.now()));
+  } catch (_) {}
+}
+
+function clearAssistantRedirectGuard() {
+  try {
+    sessionStorage.removeItem(ASSISTANT_REDIRECT_GUARD_KEY);
+  } catch (_) {}
+}
 
 function banner(t, ms = 2400) {
   const e = $("status");
@@ -257,7 +282,6 @@ function indiCareCopy(key) {
 
 function detectIntent(text) {
   const t = String(text || "").toLowerCase();
-
   if (t.includes("incident")) return "incident";
   if (t.includes("risk")) return "risk";
   if (t.includes("handover")) return "handover";
@@ -267,7 +291,6 @@ function detectIntent(text) {
   if (t.includes("safeguard")) return "safeguarding";
   if (t.includes("daily note")) return "daily_note";
   if (t.includes("report")) return "report";
-
   return "general";
 }
 
@@ -284,29 +307,15 @@ function buildStructuredPrompt(intent) {
     report: "Write a formal report summary using structured, professional language.",
     general: "Respond clearly and professionally for care documentation."
   };
-
   return map[intent] || map.general;
 }
 
 function copilotPrompt() {
   const mode = has("copilot") ? $("copilot").value : "default";
-
-  if (mode === "safeguarding") {
-    return "You are IndiCare Safeguarding Copilot. Prioritise immediate safety, risk, protection, and accurate recording.";
-  }
-
-  if (mode === "manager") {
-    return "You are IndiCare Manager Copilot. Focus on oversight, accountability, actions, and compliance.";
-  }
-
-  if (mode === "ofsted") {
-    return "You are IndiCare Ofsted Copilot. Write in a way that is defensible, inspection-ready, and aligned to standards.";
-  }
-
-  if (mode === "documentation") {
-    return "You are IndiCare Documentation Copilot. Produce clear, factual, well-structured records ready to paste.";
-  }
-
+  if (mode === "safeguarding") return "You are IndiCare Safeguarding Copilot. Prioritise immediate safety, risk, protection, and accurate recording.";
+  if (mode === "manager") return "You are IndiCare Manager Copilot. Focus on oversight, accountability, actions, and compliance.";
+  if (mode === "ofsted") return "You are IndiCare Ofsted Copilot. Write in a way that is defensible, inspection-ready, and aligned to standards.";
+  if (mode === "documentation") return "You are IndiCare Documentation Copilot. Produce clear, factual, well-structured records ready to paste.";
   return "You are IndiCare Assistant. Be calm, professional, structured, and safeguarding-aware.";
 }
 
@@ -316,13 +325,11 @@ function loadContextState() {
   } catch {
     contextState = {};
   }
-
   contextState = {
     child: contextState.child || "",
     home: contextState.home || "",
     shift: contextState.shift || ""
   };
-
   if (has("contextChild")) $("contextChild").value = contextState.child;
   if (has("contextHome")) $("contextHome").value = contextState.home;
   if (has("contextShift")) $("contextShift").value = contextState.shift;
@@ -334,7 +341,6 @@ function saveContextState() {
     home: has("contextHome") ? $("contextHome").value.trim() : "",
     shift: has("contextShift") ? $("contextShift").value.trim() : ""
   };
-
   localStorage.setItem("indicare_context_state", JSON.stringify(contextState));
   banner(indiCareCopy("contextSaved"));
 }
@@ -344,7 +350,6 @@ function buildContextBlock() {
   if (contextState.child) lines.push(`Current child: ${contextState.child}`);
   if (contextState.home) lines.push(`Current home: ${contextState.home}`);
   if (contextState.shift) lines.push(`Current shift: ${contextState.shift}`);
-
   return lines.length ? `[CONTEXT]\n${lines.join("\n")}\n\n` : "";
 }
 
@@ -414,13 +419,11 @@ async function logLegalAcceptanceToServer() {
 
 function setLegalTab(name = "terms") {
   const tab = LEGAL_TABS.includes(name) ? name : "terms";
-
   document.querySelectorAll("[data-legal-tab]").forEach(btn => {
     const active = btn.dataset.legalTab === tab;
     btn.classList.toggle("active", active);
     btn.setAttribute("aria-selected", active ? "true" : "false");
   });
-
   document.querySelectorAll("[data-legal-panel]").forEach(panel => {
     panel.classList.toggle("hidden", panel.dataset.legalPanel !== tab);
   });
@@ -428,18 +431,8 @@ function setLegalTab(name = "terms") {
 
 function legalControlsDisabled(disabled) {
   [
-    "send",
-    "input",
-    "upload",
-    "mic",
-    "newChat",
-    "navAssistant",
-    "navLibrary",
-    "navManager",
-    "navAdmin",
-    "openSettings",
-    "sideToggle",
-    "mobileMenu"
+    "send", "input", "upload", "mic", "newChat", "navAssistant", "navLibrary",
+    "navManager", "navAdmin", "openSettings", "sideToggle", "mobileMenu"
   ].forEach(id => {
     if (!has(id)) return;
     $(id).disabled = !!disabled;
@@ -452,7 +445,6 @@ function openLegalModal(tab = "terms", force = false) {
   $("legalOverlay").classList.add("show");
   $("legalModal").classList.add("open");
   $("legalOverlay").setAttribute("aria-hidden", "false");
-
   if (force) {
     $("legalModal").dataset.force = "true";
     if (has("closeLegalModal")) $("closeLegalModal").style.display = "none";
@@ -466,7 +458,6 @@ function closeLegalModal() {
   if (!has("legalModal") || !has("legalOverlay")) return;
   const forced = $("legalModal").dataset.force === "true";
   if (forced && !legalAcceptanceValid()) return;
-
   $("legalOverlay").classList.remove("show");
   $("legalModal").classList.remove("open");
   $("legalOverlay").setAttribute("aria-hidden", "true");
@@ -488,7 +479,6 @@ async function acceptLegalTerms() {
     setLegalTab("acceptance");
     return banner("Please tick all acceptance boxes before continuing.");
   }
-
   storeLegalAcceptance();
   await logLegalAcceptanceToServer();
   legalControlsDisabled(false);
@@ -505,7 +495,6 @@ async function declineLegalTerms() {
 function enforceLegalGate() {
   const accepted = legalAcceptanceValid();
   legalControlsDisabled(!accepted);
-
   if (!accepted) {
     openLegalModal("terms", true);
   } else {
@@ -532,7 +521,6 @@ async function saveRecord(text) {
         context: contextState
       })
     });
-
     banner("Saved to record");
   } catch (e) {
     banner(e.message || "Save failed");
@@ -552,24 +540,18 @@ function populateVoiceSelect() {
   const sel = $("voiceSelect");
   const current = getSavedVoiceName();
   sel.innerHTML = `<option value="">Auto select</option>`;
-
   availableVoices.forEach(v => {
     const opt = document.createElement("option");
     opt.value = v.name;
     opt.textContent = `${v.name} (${v.lang})`;
     sel.appendChild(opt);
   });
-
-  if ([...sel.options].some(o => o.value === current)) {
-    sel.value = current;
-  } else {
-    sel.value = "";
-  }
+  if ([...sel.options].some(o => o.value === current)) sel.value = current;
+  else sel.value = "";
 }
 
 function pickIndiCareVoice() {
   if (!("speechSynthesis" in window)) return null;
-
   const savedName = getSavedVoiceName();
   const voices = window.speechSynthesis.getVoices() || [];
   availableVoices = voices.slice().sort((a, b) => {
@@ -578,19 +560,14 @@ function pickIndiCareVoice() {
     if (gbA !== gbB) return gbA - gbB;
     return a.name.localeCompare(b.name);
   });
-
   populateVoiceSelect();
-
   if (!voices.length) return null;
-
   indicareVoice =
     voices.find(v => savedName && v.name === savedName) ||
     voices.find(v => /en-GB/i.test(v.lang) && /female|samantha|serena|karen|libby|hazel|susan|zira/i.test(v.name)) ||
     voices.find(v => /en-GB/i.test(v.lang)) ||
     voices.find(v => /en/i.test(v.lang)) ||
-    voices[0] ||
-    null;
-
+    voices[0] || null;
   speechReady = true;
   return indicareVoice;
 }
@@ -604,10 +581,8 @@ function stopSpeaking() {
 function speakText(text) {
   if (!speechEnabled) return;
   if (!("speechSynthesis" in window)) return;
-
   const clean = cleanSpeechText(text);
   if (!clean) return;
-
   try {
     stopSpeaking();
     const utterance = new SpeechSynthesisUtterance(clean);
@@ -641,7 +616,6 @@ function initSpeech() {
     if (has("voiceReplies")) $("voiceReplies").classList.remove("active");
     return;
   }
-
   pickIndiCareVoice();
   window.speechSynthesis.onvoiceschanged = () => {
     pickIndiCareVoice();
@@ -650,10 +624,12 @@ function initSpeech() {
 
 function redirectFor403(data) {
   if (data?.code === "mfa_setup_required") {
+    markAssistantRedirectGuard();
     window.location.replace("/mfa-setup");
     return true;
   }
   if (data?.code === "mfa_verification_required") {
+    markAssistantRedirectGuard();
     window.location.replace("/mfa");
     return true;
   }
@@ -686,6 +662,7 @@ async function api(url, options = {}) {
 
   if (res.status === 401) {
     console.warn("401 detected → redirecting to login");
+    markAssistantRedirectGuard();
     window.location.replace("/login");
     return null;
   }
@@ -708,26 +685,51 @@ async function logoutNow() {
   localStorage.removeItem("current_user");
   sessionStorage.removeItem("current_user");
   localStorage.removeItem("first_name");
+  sessionStorage.removeItem("indicare_login_redirect_guard");
+  sessionStorage.removeItem("indicare_assistant_redirect_guard");
   window.location.replace("/login");
 }
 
 async function loadMe() {
-  try {
-    const data = await api("/auth/me");
-    if (!data?.user) throw new Error("No user");
+  if (window.auth && typeof window.auth.validateSession === "function") {
+    const state = await window.auth.validateSession();
 
-    currentUser = data.user;
-    localStorage.setItem("first_name", currentUser.first_name || "");
+    if (!state || !state.authenticated) {
+      if (!hasRecentAssistantRedirectGuard()) {
+        markAssistantRedirectGuard();
+        window.location.replace("/login");
+      }
+      throw new Error("Not authenticated");
+    }
 
-    if (isAdmin() || isManager() || isStaff()) has("navLibrary") && $("navLibrary").classList.remove("hidden");
-    if (isManager()) has("navManager") && $("navManager").classList.remove("hidden");
-    if (isAdmin()) has("navAdmin") && $("navAdmin").classList.remove("hidden");
-    if (canManageLibrary()) has("managerEditorTab") && $("managerEditorTab").classList.remove("hidden");
-  } catch (e) {
-    console.warn("User not authenticated → redirecting to login");
-    window.location.replace("/login");
-    throw e;
+    if (!state.mfa_enabled) {
+      if (!hasRecentAssistantRedirectGuard()) {
+        markAssistantRedirectGuard();
+        window.location.replace("/mfa-setup");
+      }
+      throw new Error("MFA setup required");
+    }
+
+    if (!state.mfa_verified) {
+      if (!hasRecentAssistantRedirectGuard()) {
+        markAssistantRedirectGuard();
+        window.location.replace("/mfa");
+      }
+      throw new Error("MFA verification required");
+    }
   }
+
+  const data = await api("/auth/me");
+  if (!data?.user) throw new Error("No user");
+
+  currentUser = data.user;
+  localStorage.setItem("first_name", currentUser.first_name || "");
+  clearAssistantRedirectGuard();
+
+  if (isAdmin() || isManager() || isStaff()) has("navLibrary") && $("navLibrary").classList.remove("hidden");
+  if (isManager()) has("navManager") && $("navManager").classList.remove("hidden");
+  if (isAdmin()) has("navAdmin") && $("navAdmin").classList.remove("hidden");
+  if (canManageLibrary()) has("managerEditorTab") && $("managerEditorTab").classList.remove("hidden");
 }
 
 function closeMobilePanels() {
@@ -775,7 +777,6 @@ async function showManagerView() {
   has("navManager") && $("navManager").classList.add("active");
   setTitle("Manager");
   closeMobilePanels();
-
   try {
     await loadManager();
   } catch (e) {
@@ -827,17 +828,14 @@ function renderHistory(rows) {
   if (!has("history")) return;
   const host = $("history");
   host.innerHTML = "";
-
   normArray(rows).forEach(r => {
     const item = document.createElement("div");
     item.className = `item ${Number(r?.id) === Number(conversationId) ? "active" : ""}`;
     item.innerHTML = `<div class="row"><button class="mainbtn"><div class="ttl">${safe(stripSystem(r?.title || "Observation"))}</div></button><button class="mini">⧉</button><button class="mini danger">🗑</button></div>`;
-
     const buttons = item.querySelectorAll("button");
     const main = buttons[0];
     const copy = buttons[1];
     const del = buttons[2];
-
     if (main) main.onclick = () => {
       if (!legalAcceptanceValid()) return openLegalModal("acceptance");
       showAssistantView();
@@ -852,7 +850,6 @@ function renderHistory(rows) {
       e.stopPropagation();
       deleteConversation(r?.id);
     };
-
     host.appendChild(item);
   });
 }
@@ -874,18 +871,14 @@ async function openConversation(id, title) {
   if (!id) return;
   const data = await api(`/chat/conversations/${id}`);
   if (!data) return;
-
   conversationId = id;
   currentStreamMeta = { sources: [], runtime: {} };
-
   if (has("messages")) {
     $("messages").innerHTML = "";
     has("empty") && $("empty").classList.add("hidden");
     $("messages").classList.remove("hidden");
   }
-
   normArray(data.messages).forEach(m => appendMessage(m?.role || "assistant", m?.message || "", { messageId: m?.id }));
-
   if (data.document) {
     currentDocumentText = data.document.text || data.document.input_text || "";
     currentDocumentName = data.document.filename || data.document.name || "";
@@ -895,7 +888,6 @@ async function openConversation(id, title) {
     currentDocumentName = null;
     docHide();
   }
-
   setTitle(title || "Observation");
   filterConversations();
   closeMobilePanels();
@@ -928,7 +920,6 @@ function renderSourceCard(source) {
   const section = safe(source?.section || "");
   const page = source?.page_number != null ? safe(String(source.page_number)) : "";
   const url = source?.url ? String(source.url) : "";
-
   return `
     <div class="entity-row" style="padding:10px 12px;margin-top:8px;">
       <div style="width:100%;">
@@ -960,14 +951,12 @@ function renderSourcesHtml(sources) {
 function renderRuntimeHtml(runtime) {
   const data = normObj(runtime);
   if (!Object.keys(data).length) return "";
-
   const chips = [];
   if (data.mode) chips.push(`<span class="tag neutral">${safe(data.mode)}</span>`);
   if (data.task_type) chips.push(`<span class="tag neutral">${safe(data.task_type)}</span>`);
   if (data.output_type) chips.push(`<span class="tag neutral">${safe(data.output_type)}</span>`);
   if (data.urgency) chips.push(`<span class="tag ${data.urgency === "urgent" ? "bad" : data.urgency === "heightened" ? "warn" : "neutral"}">${safe(data.urgency)}</span>`);
   if (data.safeguarding_level) chips.push(`<span class="tag ${data.safeguarding_level === "urgent" ? "bad" : data.safeguarding_level === "heightened" ? "warn" : "neutral"}">${safe(data.safeguarding_level)}</span>`);
-
   const actions = normArray(data.suggested_actions);
   return `
     <div class="card" style="margin-top:10px;padding:12px;">
@@ -987,13 +976,10 @@ function attachMetaToWrap(wrap, meta = {}) {
   if (!wrap) return;
   const block = wrap.querySelector(".block");
   if (!block) return;
-
   let oldMetaBox = wrap.querySelector(".assistant-source-box");
   if (oldMetaBox) oldMetaBox.remove();
-
   const html = `${renderRuntimeHtml(meta.runtime)}${renderSourcesHtml(meta.sources)}`;
   if (!html) return;
-
   const box = document.createElement("div");
   box.className = "assistant-source-box";
   box.innerHTML = html;
@@ -1009,10 +995,7 @@ function attachMetaToStreamingMessage(meta = {}) {
 function appendMessage(roleName, text, opts = {}) {
   if (!has("messages")) return;
   const shown = roleName === "user" ? stripSystem(text) : text;
-
-  if (roleName === "assistant") {
-    lastAssistantText = shown;
-  }
+  if (roleName === "assistant") lastAssistantText = shown;
 
   const wrap = document.createElement("div");
   wrap.className = `wrap ${roleName}`;
@@ -1026,7 +1009,6 @@ function appendMessage(roleName, text, opts = {}) {
   `;
 
   const actions = wrap.querySelector(".actions");
-
   const addChip = (label, fn) => {
     if (!actions) return;
     const b = document.createElement("button");
@@ -1078,7 +1060,6 @@ function createStreamMsg() {
   if (!has("messages")) return null;
   const old = $("streaming");
   if (old) old.remove();
-
   const wrap = document.createElement("div");
   wrap.id = "streaming";
   wrap.className = "wrap assistant";
@@ -1126,12 +1107,10 @@ function parseSseChunk(buffer, onEvent) {
   const parts = buffer.split("\n\n");
   const complete = parts.slice(0, -1);
   const remainder = parts[parts.length - 1] || "";
-
   for (const block of complete) {
     const lines = block.split("\n");
     let eventName = "message";
     const dataLines = [];
-
     for (const line of lines) {
       if (line.startsWith(":")) {
         continue;
@@ -1141,11 +1120,9 @@ function parseSseChunk(buffer, onEvent) {
         dataLines.push(line.startsWith("data: ") ? line.slice(6) : line.slice(5));
       }
     }
-
     const data = dataLines.join("\n");
     onEvent(eventName, data);
   }
-
   return remainder;
 }
 
@@ -1156,27 +1133,22 @@ function handleMetaEvent(payload) {
   } catch {
     parsed = {};
   }
-
   currentStreamMeta = {
     sources: normArray(parsed.sources),
     runtime: normObj(parsed.runtime)
   };
-
   attachMetaToStreamingMessage(currentStreamMeta);
 }
 
 async function stream(url, body) {
   body = normObj(body);
-
   currentIntent = body.intent || detectIntent(body.message || "");
   currentStreamMeta = { sources: [], runtime: {} };
 
   const promptPrefix =
-    copilotPrompt() +
-    "\n\n" +
+    copilotPrompt() + "\n\n" +
     buildContextBlock() +
-    buildStructuredPrompt(currentIntent) +
-    "\n\n";
+    buildStructuredPrompt(currentIntent) + "\n\n";
 
   body.message =
     promptPrefix +
@@ -1201,6 +1173,7 @@ async function stream(url, body) {
   const contentType = res.headers.get("content-type") || "";
 
   if (res.status === 401) {
+    markAssistantRedirectGuard();
     window.location.replace("/login");
     return;
   }
@@ -1244,12 +1217,10 @@ async function stream(url, body) {
 
     buffer = parseSseChunk(buffer, (eventName, payload) => {
       if (eventName === "done" || payload === "[DONE]") return;
-
       if (eventName === "meta") {
         handleMetaEvent(payload);
         return;
       }
-
       if (eventName === "message") {
         if (!payload) return;
         for (const ch of payload) queue.push(ch);
@@ -1277,7 +1248,6 @@ async function editMessage(messageId, currentText) {
 
   const edited = prompt("Edit message", currentText);
   if (edited === null) return;
-
   const cleaned = stripSystem(edited).trim();
   if (!cleaned) return banner("Message cannot be empty");
 
@@ -1297,7 +1267,6 @@ async function editMessage(messageId, currentText) {
     if (conversationId) {
       await openConversation(conversationId, has("title") ? $("title").textContent : "Observation");
     }
-
     banner(indiCareCopy("updated"));
   } catch (e) {
     banner(e.message || "Edit failed");
@@ -1367,7 +1336,6 @@ function quick(type) {
     ofsted: "Rewrite the above documentation so it aligns with Ofsted Quality Standards and is ready for professional review.",
     risk: "Generate a formal risk assessment based on this situation. Include presenting risks, protective factors, staff actions, and follow-up actions."
   };
-
   $("input").value = prompts[type] || "Rewrite this in a more formal professional format.";
   resize();
   sendMessage();
@@ -1525,13 +1493,11 @@ function renderAdminUsers() {
   const host = $("adminUsersList");
   host.innerHTML = "";
   if (!adminUsers.length) return host.innerHTML = `<div class="entity-row"><div>No users found.</div></div>`;
-
   adminUsers.forEach(user => {
     const row = document.createElement("div");
     row.className = "entity-row";
     row.innerHTML = `<div><div class="entity-title">${safe([user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || "Unknown user")}</div><div class="entity-meta">${safe(user?.email || "")} · ${safe(user?.role || "")} · home ${safe(String(user?.home_id ?? ""))}</div><div class="entity-meta"><span class="tag ${user?.is_active ? "ok" : "bad"}">${user?.is_active ? "active" : "inactive"}</span><span class="tag ${user?.archived ? "bad" : "neutral"}">${user?.archived ? "archived" : "live"}</span></div></div><div class="entity-actions"></div>`;
     const right = row.querySelector(".entity-actions");
-
     const add = (label, fn) => {
       if (!right) return;
       const b = document.createElement("button");
@@ -1540,19 +1506,16 @@ function renderAdminUsers() {
       b.onclick = fn;
       right.appendChild(b);
     };
-
     add(user?.is_active ? "Deactivate" : "Activate", async () => {
       await api(`/admin/users/${user.id}`, { method: "PATCH", body: JSON.stringify({ is_active: !user?.is_active }) });
       await loadAdminUsers();
       banner("User updated");
     });
-
     add(user?.archived ? "Unarchive" : "Archive", async () => {
       await api(`/admin/users/${user.id}`, { method: "PATCH", body: JSON.stringify({ archived: !user?.archived }) });
       await loadAdminUsers();
       banner("User updated");
     });
-
     add("Role", async () => {
       const newRole = prompt(`Set role for ${user?.email || "user"}`, user?.role || "staff");
       if (newRole === null) return;
@@ -1560,7 +1523,6 @@ function renderAdminUsers() {
       await loadAdminUsers();
       banner("Role updated");
     });
-
     add("Home", async () => {
       const choices = homes.map(h => `${h?.id}: ${h?.name}`).join("\n");
       const homeId = prompt(`Set home id for ${user?.email || "user"}\n\n${choices}`, String(user?.home_id ?? ""));
@@ -1569,14 +1531,12 @@ function renderAdminUsers() {
       await loadAdminUsers();
       banner("Home updated");
     });
-
     add("Reset password", async () => {
       const password = prompt(`Set new password for ${user?.email || "user"}`);
       if (password === null || !password.trim()) return banner("Password cannot be empty");
       await api(`/admin/users/${user.id}/reset-password`, { method: "POST", body: JSON.stringify({ password }) });
       banner("Password reset");
     });
-
     host.appendChild(row);
   });
 }
@@ -1593,9 +1553,7 @@ async function createHome() {
     registered_manager_id: has("homeRegisteredManagerId") && $("homeRegisteredManagerId").value ? Number($("homeRegisteredManagerId").value) : null,
     geofence_radius_m: has("homeGeofence") && $("homeGeofence").value.trim() ? Number($("homeGeofence").value) : null
   };
-
   if (!p.name) return banner("Home name is required");
-
   await api("/admin/homes", { method: "POST", body: JSON.stringify(p) });
   ["homeName", "homeAddress", "homePostcode", "homeRegion", "homeLocalAuthority", "homeOfstedUrn", "homeGeofence"].forEach(id => has(id) && ($(id).value = ""));
   if (has("homeProviderId")) $("homeProviderId").value = "";
@@ -1618,13 +1576,11 @@ function renderHomes() {
   const host = $("homesList");
   host.innerHTML = "";
   if (!homes.length) return host.innerHTML = `<div class="entity-row"><div>No homes found.</div></div>`;
-
   homes.forEach(home => {
     const row = document.createElement("div");
     row.className = "entity-row";
     row.innerHTML = `<div><div class="entity-title">${safe(home?.name || "Unnamed home")}</div><div class="entity-meta">${safe(home?.postcode || "")} · ${safe(home?.region || "")} · ${safe(home?.local_authority || "")}</div><div class="entity-meta">URN: ${safe(home?.ofsted_urn || "—")} · users: ${safe(String(home?.user_count ?? 0))}</div></div><div class="entity-actions"></div>`;
     const right = row.querySelector(".entity-actions");
-
     [["Edit", async () => {
       const name = prompt("Home name", home?.name || "");
       if (name === null) return;
@@ -1642,7 +1598,6 @@ function renderHomes() {
       b.onclick = fn;
       right && right.appendChild(b);
     });
-
     host.appendChild(row);
   });
 }
@@ -1657,9 +1612,7 @@ async function createProvider() {
     safeguarding_lead_name: has("providerLeadName") ? $("providerLeadName").value.trim() || null : null,
     safeguarding_lead_email: has("providerLeadEmail") ? $("providerLeadEmail").value.trim() || null : null
   };
-
   if (!p.name) return banner("Provider name is required");
-
   await api("/admin/providers", { method: "POST", body: JSON.stringify(p) });
   ["providerName", "providerRegion", "providerAddress", "providerPostcode", "providerLA", "providerLeadName", "providerLeadEmail"].forEach(id => has(id) && ($(id).value = ""));
   await loadProviders();
@@ -1680,13 +1633,11 @@ function renderProviders() {
   const host = $("providersList");
   host.innerHTML = "";
   if (!providers.length) return host.innerHTML = `<div class="entity-row"><div>No providers found.</div></div>`;
-
   providers.forEach(provider => {
     const row = document.createElement("div");
     row.className = "entity-row";
     row.innerHTML = `<div><div class="entity-title">${safe(provider?.name || "Unnamed provider")}</div><div class="entity-meta">${safe(provider?.region || "")} · homes: ${safe(String(provider?.home_count ?? 0))}</div><div class="entity-meta">${safe(provider?.safeguarding_lead_name || "No safeguarding lead")}${provider?.safeguarding_lead_email ? " · " + safe(provider.safeguarding_lead_email) : ""}</div></div><div class="entity-actions"></div>`;
     const right = row.querySelector(".entity-actions");
-
     [["Edit", async () => {
       const name = prompt("Provider name", provider?.name || "");
       if (name === null) return;
@@ -1704,7 +1655,6 @@ function renderProviders() {
       b.onclick = fn;
       right && right.appendChild(b);
     });
-
     host.appendChild(row);
   });
 }
@@ -1722,16 +1672,13 @@ async function createDocumentRecord() {
     confidentiality_level: has("docConfLevel") ? $("docConfLevel").value || "standard" : "standard",
     input_text: has("docInputText") ? $("docInputText").value.trim() || null : null
   };
-
   await api("/admin/documents", { method: "POST", body: JSON.stringify(p) });
-
   ["docTitle", "docIssueDate", "docReviewDate", "docExpiryDate", "docInputText"].forEach(id => has(id) && ($(id).value = ""));
   if (has("docType")) $("docType").value = "policy";
   if (has("docHomeId")) $("docHomeId").value = "";
   if (has("docOwnerId")) $("docOwnerId").value = "";
   if (has("docApprovalStatus")) $("docApprovalStatus").value = "not_required";
   if (has("docConfLevel")) $("docConfLevel").value = "standard";
-
   await loadDocuments();
   await loadAdminReferenceData();
   banner("Document created");
@@ -1743,7 +1690,6 @@ async function loadDocuments() {
   if (has("docHomeFilter") && $("docHomeFilter").value.trim()) params.set("home_id", $("docHomeFilter").value.trim());
   if (has("docTypeFilter") && $("docTypeFilter").value.trim()) params.set("document_type", $("docTypeFilter").value.trim());
   if (has("docApprovalFilter") && $("docApprovalFilter").value.trim()) params.set("approval_status", $("docApprovalFilter").value.trim());
-
   const data = await api("/admin/documents" + (params.toString() ? `?${params}` : ""));
   if (!data) return;
   docs = normArray(data?.documents);
@@ -1756,13 +1702,11 @@ function renderDocuments() {
   const host = $("docsList");
   host.innerHTML = "";
   if (!docs.length) return host.innerHTML = `<div class="entity-row"><div>No documents found.</div></div>`;
-
   docs.forEach(doc => {
     const row = document.createElement("div");
     row.className = "entity-row";
     row.innerHTML = `<div><div class="entity-title">${safe(doc?.title || "Untitled document")}</div><div class="entity-meta">${safe(doc?.document_type || "—")} · ${safe(doc?.home_name || ("home " + (doc?.home_id ?? "—")))}</div><div class="entity-meta">approval: ${safe(doc?.approval_status || "not_required")} · review: ${safe(doc?.review_date || "—")} · expiry: ${safe(doc?.expiry_date || "—")}</div></div><div class="entity-actions"></div>`;
     const right = row.querySelector(".entity-actions");
-
     [["Set approved", async () => {
       await api(`/admin/documents/${doc.id}`, { method: "PATCH", body: JSON.stringify({ approval_status: "approved" }) });
       await loadDocuments();
@@ -1780,7 +1724,6 @@ function renderDocuments() {
       b.onclick = fn;
       right && right.appendChild(b);
     });
-
     host.appendChild(row);
   });
 }
@@ -1798,7 +1741,6 @@ function renderBilling() {
   if (has("billingStats")) $("billingStats").innerHTML = "";
   if (has("billingList")) $("billingList").innerHTML = "";
   if (!billing) return;
-
   const totals = normObj(billing.totals);
   [
     ["Total users", totals.total_users ?? 0],
@@ -1809,13 +1751,11 @@ function renderBilling() {
   ].forEach(([l, n]) => {
     if (has("billingStats")) $("billingStats").insertAdjacentHTML("beforeend", `<div class="stat"><div class="n">${safe(String(n))}</div><div class="l">${safe(l)}</div></div>`);
   });
-
   const users = normArray(billing.users);
   if (!users.length) {
     if (has("billingList")) $("billingList").innerHTML = `<div class="entity-row"><div>No billing rows found.</div></div>`;
     return;
   }
-
   users.forEach(user => {
     if (has("billingList")) {
       $("billingList").insertAdjacentHTML("beforeend",
@@ -1840,7 +1780,6 @@ function renderAudit() {
   const host = $("auditList");
   host.innerHTML = "";
   if (!audit.length) return host.innerHTML = `<div class="entity-row"><div>No audit entries found.</div></div>`;
-
   audit.forEach(a => {
     host.insertAdjacentHTML("beforeend",
       `<div class="entity-row"><div><div class="entity-title">${safe(a?.action || "")} · ${safe(a?.target_type || "")} ${safe(String(a?.target_id ?? ""))}</div><div class="entity-meta">${safe([a?.first_name, a?.last_name].filter(Boolean).join(" ") || a?.email || "Unknown admin")} · ${safe(a?.created_at || "")}</div><div class="entity-meta">${safe(JSON.stringify(a?.details || {}))}</div></div></div>`
@@ -1871,13 +1810,11 @@ function renderLibraryList() {
   const host = $("libraryList");
   host.innerHTML = "";
   if (!libraryDocs.length) return host.innerHTML = `<div class="entity-row"><div>No documents available for your home.</div></div>`;
-
   libraryDocs.forEach(doc => {
     const row = document.createElement("div");
     row.className = "entity-row";
     row.innerHTML = `<div><div class="entity-title">${safe(doc?.title || "Untitled document")}</div><div class="entity-meta">${safe(doc?.document_type || "—")} · ${safe(doc?.home_name || "Your home")}</div><div class="entity-meta"><span class="tag ${doc?.approval_status === "approved" ? "ok" : doc?.approval_status === "pending" ? "warn" : "neutral"}">${safe(doc?.approval_status || "not_required")}</span><span class="tag neutral">${safe(doc?.confidentiality_level || "standard")}</span></div></div><div class="entity-actions"></div>`;
     const right = row.querySelector(".entity-actions");
-
     [["Open", () => openLibraryDocument(doc.id)], ...(canManageLibrary() ? [["Edit", () => populateLibraryEditor(doc)]] : [])].forEach(([label, fn]) => {
       const b = document.createElement("button");
       b.className = "chip";
@@ -1885,7 +1822,6 @@ function renderLibraryList() {
       b.onclick = fn;
       right && right.appendChild(b);
     });
-
     host.appendChild(row);
   });
 }
@@ -1894,16 +1830,13 @@ function renderManagerLibraryList() {
   if (!has("managerLibraryList")) return;
   const host = $("managerLibraryList");
   host.innerHTML = "";
-
   if (!canManageLibrary()) return host.innerHTML = `<div class="entity-row"><div>Read-only access.</div></div>`;
   if (!libraryDocs.length) return host.innerHTML = `<div class="entity-row"><div>No home documents found.</div></div>`;
-
   libraryDocs.forEach(doc => {
     host.insertAdjacentHTML("beforeend",
       `<div class="entity-row"><div><div class="entity-title">${safe(doc?.title || "Untitled document")}</div><div class="entity-meta">${safe(doc?.document_type || "—")} · review ${safe(doc?.review_date || "—")}</div></div><div class="entity-actions"><button class="chip" data-doc-edit="${safe(String(doc?.id ?? ""))}">Edit</button></div></div>`
     );
   });
-
   host.querySelectorAll("[data-doc-edit]").forEach(b => {
     b.onclick = () => populateLibraryEditor(libraryDocs.find(d => Number(d?.id) === Number(b.dataset.docEdit)));
   });
@@ -1915,7 +1848,6 @@ async function openLibraryDocument(id) {
   const doc = data?.document;
   if (!doc) return;
   selectedLibraryDoc = doc;
-
   $("libraryViewer").innerHTML =
     `<h3>${safe(doc?.title || "Untitled document")}</h3>
      <p><strong>Type:</strong> ${safe(doc?.document_type || "—")}</p>
@@ -1955,7 +1887,6 @@ function populateLibraryEditor(doc) {
 
 async function saveLibraryDocument() {
   if (!canManageLibrary()) return banner("Manager or admin access required");
-
   const p = {
     title: has("libraryDocTitle") ? $("libraryDocTitle").value.trim() : "",
     document_type: has("libraryDocType") ? $("libraryDocType").value : "policy",
@@ -1967,7 +1898,6 @@ async function saveLibraryDocument() {
     owner_id: has("libraryOwnerId") && $("libraryOwnerId").value ? Number($("libraryOwnerId").value) : null,
     input_text: has("libraryInputText") ? $("libraryInputText").value.trim() || null : null
   };
-
   if (!p.title) return banner("Title is required");
 
   if (editingLibraryDocId) {
@@ -2001,17 +1931,13 @@ async function createManagerStaff() {
     password: has("mgrPass") ? $("mgrPass").value : "",
     role: has("mgrRole") ? $("mgrRole").value : "staff"
   };
-
   if (!payload.first_name || !payload.last_name || !payload.email || !payload.password) return banner("Complete all staff fields");
-
   await api("/manager/users", {
     method: "POST",
     body: JSON.stringify(payload)
   });
-
   ["mgrFirst", "mgrLast", "mgrEmail", "mgrPass"].forEach(id => has(id) && ($(id).value = ""));
   if (has("mgrRole")) $("mgrRole").value = "staff";
-
   await loadManager();
   banner("Staff created");
 }
@@ -2021,17 +1947,13 @@ async function saveManagerDoc() {
     title: has("mgrDocTitle") ? $("mgrDocTitle").value.trim() : "",
     input_text: has("mgrDocText") ? $("mgrDocText").value.trim() : ""
   };
-
   if (!payload.title) return banner("Title is required");
-
   await api("/manager/documents", {
     method: "POST",
     body: JSON.stringify(payload)
   });
-
   if (has("mgrDocTitle")) $("mgrDocTitle").value = "";
   if (has("mgrDocText")) $("mgrDocText").value = "";
-
   await loadManager();
   banner("Document saved");
 }
@@ -2040,10 +1962,8 @@ async function loadManager() {
   try {
     const data = await api("/manager/overview");
     if (!data) return;
-
     managerUsers = normArray(data?.users);
     managerDocuments = normArray(data?.documents);
-
     renderManagerUsers();
     renderManagerDocuments();
     updateManagerSummary();
@@ -2062,7 +1982,6 @@ function renderManagerUsers() {
   const host = $("mgrUsers");
   host.innerHTML = "";
   if (!managerUsers.length) return host.innerHTML = `<div class="entity-row"><div>No staff found.</div></div>`;
-
   managerUsers.forEach(u => {
     host.insertAdjacentHTML("beforeend",
       `<div class="entity-row">
@@ -2081,7 +2000,6 @@ function renderManagerDocuments() {
   const host = $("mgrDocs");
   host.innerHTML = "";
   if (!managerDocuments.length) return host.innerHTML = `<div class="entity-row"><div>No home documents found.</div></div>`;
-
   managerDocuments.forEach(d => {
     host.insertAdjacentHTML("beforeend",
       `<div class="entity-row">
@@ -2245,7 +2163,6 @@ function bind() {
         e.target.value = "";
         return openLegalModal("acceptance");
       }
-
       const file = e.target.files?.[0];
       if (!file) return;
       try {
