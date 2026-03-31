@@ -13,6 +13,8 @@ const state = {
   modalMode: "create",
   modalRecordType: null,
   modalEditItem: null,
+  complianceItems: [],
+  inspectionPackData: null,
 };
 
 const els = {
@@ -123,13 +125,13 @@ const VIEW_CONFIG = {
   },
   compliance: {
     title: "Compliance",
-    subtitle: "Checks, gaps and evidence readiness",
-    loader: loadCompliancePlaceholder,
+    subtitle: "Checks, due items and inspection readiness",
+    loader: loadCompliance,
   },
   reports: {
     title: "Reports",
-    subtitle: "Outputs, summaries and management reporting",
-    loader: loadReportsPlaceholder,
+    subtitle: "Inspection pack, evidence and management outputs",
+    loader: loadReports,
   },
 };
 
@@ -327,11 +329,28 @@ function formatShortTime(value) {
   });
 }
 
+function formatDateOnly(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString("en-GB", { dateStyle: "medium" });
+}
+
+function daysUntil(value) {
+  if (!value) return null;
+  const due = new Date(value);
+  if (Number.isNaN(due.getTime())) return null;
+  const now = new Date();
+  const startA = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startB = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+  return Math.round((startB - startA) / 86400000);
+}
+
 function statusBadgeClass(value) {
   const v = String(value || "").toLowerCase();
-  if (["approved", "active", "recorded", "low", "completed"].includes(v)) return "success";
-  if (["submitted", "pending", "medium"].includes(v)) return "warning";
-  if (["returned", "high", "critical", "archived"].includes(v)) return "danger";
+  if (["approved", "active", "recorded", "low", "completed", "ok", "ready"].includes(v)) return "success";
+  if (["submitted", "pending", "medium", "due_soon", "partial"].includes(v)) return "warning";
+  if (["returned", "high", "critical", "archived", "overdue", "missing"].includes(v)) return "danger";
   return "";
 }
 
@@ -343,6 +362,10 @@ function renderBadges(values = []) {
       ${filtered.map((value) => `<span class="badge ${statusBadgeClass(value)}">${escapeHtml(value)}</span>`).join("")}
     </div>
   `;
+}
+
+function pluralise(count, singular, plural = null) {
+  return `${count} ${count === 1 ? singular : (plural || `${singular}s`)}`;
 }
 
 function getRecordUrl(item) {
@@ -484,12 +507,18 @@ function getModalSchema(recordType, item = null) {
   if (recordType === "daily_note") {
     return [
       { name: "note_date", label: "Date", type: "date", value: item?.note_date || today },
-      { name: "shift_type", label: "Shift type", type: "select", value: item?.shift_type || "day", options: [
-        { value: "day", label: "Day" },
-        { value: "evening", label: "Evening" },
-        { value: "night", label: "Night" },
-        { value: "waking_night", label: "Waking night" },
-      ]},
+      {
+        name: "shift_type",
+        label: "Shift type",
+        type: "select",
+        value: item?.shift_type || "day",
+        options: [
+          { value: "day", label: "Day" },
+          { value: "evening", label: "Evening" },
+          { value: "night", label: "Night" },
+          { value: "waking_night", label: "Waking night" },
+        ],
+      },
       { name: "mood", label: "Mood", type: "text", value: item?.mood || "" },
       { name: "presentation", label: "Presentation", type: "textarea", full: true, value: item?.presentation || "" },
       { name: "activities", label: "Activities", type: "textarea", full: true, value: item?.activities || "" },
@@ -511,12 +540,18 @@ function getModalSchema(recordType, item = null) {
           : (item?.occurred_at ? String(item.occurred_at).slice(0, 16) : ""),
       },
       { name: "incident_type", label: "Incident type", type: "text", value: item?.incident_type || "" },
-      { name: "severity", label: "Severity", type: "select", value: item?.severity || "medium", options: [
-        { value: "low", label: "Low" },
-        { value: "medium", label: "Medium" },
-        { value: "high", label: "High" },
-        { value: "critical", label: "Critical" },
-      ]},
+      {
+        name: "severity",
+        label: "Severity",
+        type: "select",
+        value: item?.severity || "medium",
+        options: [
+          { value: "low", label: "Low" },
+          { value: "medium", label: "Medium" },
+          { value: "high", label: "High" },
+          { value: "critical", label: "Critical" },
+        ],
+      },
       { name: "location", label: "Location", type: "text", value: item?.location || "" },
       { name: "description", label: "Description", type: "textarea", full: true, value: item?.description || item?.narrative || "" },
       { name: "antecedent", label: "Antecedent", type: "textarea", full: true, value: item?.antecedent || "" },
@@ -530,16 +565,28 @@ function getModalSchema(recordType, item = null) {
     return [
       { name: "category", label: "Category", type: "text", value: item?.category || "" },
       { name: "title", label: "Title", type: "text", value: item?.title || "" },
-      { name: "severity", label: "Severity", type: "select", value: item?.severity || "medium", options: [
-        { value: "low", label: "Low" },
-        { value: "medium", label: "Medium" },
-        { value: "high", label: "High" },
-      ]},
-      { name: "likelihood", label: "Likelihood", type: "select", value: item?.likelihood || "medium", options: [
-        { value: "low", label: "Low" },
-        { value: "medium", label: "Medium" },
-        { value: "high", label: "High" },
-      ]},
+      {
+        name: "severity",
+        label: "Severity",
+        type: "select",
+        value: item?.severity || "medium",
+        options: [
+          { value: "low", label: "Low" },
+          { value: "medium", label: "Medium" },
+          { value: "high", label: "High" },
+        ],
+      },
+      {
+        name: "likelihood",
+        label: "Likelihood",
+        type: "select",
+        value: item?.likelihood || "medium",
+        options: [
+          { value: "low", label: "Low" },
+          { value: "medium", label: "Medium" },
+          { value: "high", label: "High" },
+        ],
+      },
       { name: "review_date", label: "Review date", type: "date", value: item?.review_date || today },
       { name: "concern_summary", label: "Concern summary", type: "textarea", full: true, value: item?.concern_summary || item?.formulation || "" },
       { name: "known_triggers", label: "Known triggers", type: "textarea", full: true, value: item?.known_triggers || "" },
@@ -649,7 +696,7 @@ async function runDrawerWorkflow(action) {
 
   let url = null;
   let body = null;
-  let method = "POST";
+  const method = "POST";
 
   if (action === "submit") url = config.submitUrl?.(id);
   if (action === "approve") {
@@ -921,6 +968,73 @@ function renderHandoverItem(title, body, badges = []) {
   `;
 }
 
+function renderComplianceItem(item) {
+  const days = daysUntil(item.due_date);
+  const dueText = item.due_date
+    ? `${formatDateOnly(item.due_date)}${days !== null ? ` • ${days < 0 ? `${Math.abs(days)} day(s) overdue` : days === 0 ? "due today" : `${days} day(s) remaining`}` : ""}`
+    : "No due date";
+
+  return `
+    <article class="record-card">
+      <div class="record-card-header">
+        <div>
+          <h4>${escapeHtml(item.title || item.compliance_type || "Compliance item")}</h4>
+          <div class="record-meta">${escapeHtml(String(item.compliance_type || "").replaceAll("_", " "))}</div>
+        </div>
+      </div>
+      <div class="record-body">${escapeHtml(dueText)}</div>
+      ${renderBadges([item.compliance_status, item.status, item.approval_status])}
+    </article>
+  `;
+}
+
+function renderStandardSummaryCard(item) {
+  return `
+    <article class="record-card">
+      <div class="record-card-header">
+        <div>
+          <h4>${escapeHtml(item.short_label || item.title || item.code || "Standard")}</h4>
+          <div class="record-meta">${escapeHtml(item.code || "")}</div>
+        </div>
+      </div>
+      <div class="record-body">${escapeHtml(pluralise(Number(item.linked_record_count || 0), "linked record"))}</div>
+    </article>
+  `;
+}
+
+function renderInspectionMissingSection(packData) {
+  const yp = packData?.young_person || {};
+  const communication = Array.isArray(packData?.communication_profile) ? packData.communication_profile[0] : null;
+  const identity = Array.isArray(packData?.identity_profile) ? packData.identity_profile[0] : null;
+  const legal = Array.isArray(packData?.legal_status) ? packData.legal_status[0] : null;
+  const health = Array.isArray(packData?.health_profile) ? packData.health_profile[0] : null;
+  const education = Array.isArray(packData?.education_profile) ? packData.education_profile[0] : null;
+
+  const missing = [];
+
+  if (!yp.first_name || !yp.last_name) missing.push("Core profile name");
+  if (!yp.admission_date) missing.push("Admission date");
+  if (!communication) missing.push("Communication profile");
+  if (!identity) missing.push("Identity profile");
+  if (!legal) missing.push("Legal status");
+  if (!health) missing.push("Health profile");
+  if (!education) missing.push("Education profile");
+  if (!(packData?.plans || []).length) missing.push("Support plans");
+  if (!(packData?.risks || []).length) missing.push("Risk assessments");
+  if (!(packData?.daily_notes || []).length) missing.push("Daily notes");
+  if (!(packData?.chronology || []).length) missing.push("Chronology");
+
+  return missing;
+}
+
+function renderReadinessStatus(missingItems, complianceItems) {
+  const overdue = complianceItems.filter((x) => x.compliance_status === "overdue").length;
+  if (missingItems.length > 0 || overdue > 0) return "missing";
+  const dueSoon = complianceItems.filter((x) => x.compliance_status === "due_soon").length;
+  if (dueSoon > 0) return "partial";
+  return "ready";
+}
+
 function updateHeaderForView(view) {
   const config = VIEW_CONFIG[view];
   els.pageTitle.textContent = config.title;
@@ -966,6 +1080,8 @@ function openYoungPerson(id) {
   state.selectedDate = toDateInputValue(new Date());
   state.calendarMonthSummary = [];
   state.selectedDayRecords = [];
+  state.complianceItems = [];
+  state.inspectionPackData = null;
 
   hideSelectorMode();
 
@@ -1473,36 +1589,287 @@ async function loadHandover() {
   bindDynamicOpenRecordButtons();
 }
 
-async function loadCompliancePlaceholder() {
-  els.content.innerHTML = `
-    <div class="panel">
-      <div class="panel-header">
-        <div>
-          <h3>Compliance</h3>
-          <p class="panel-subtitle">This section is ready to connect to compliance checks, statutory documents and review evidence.</p>
+async function loadCompliance() {
+  setLoading("Loading compliance...");
+
+  const [complianceData, overviewData] = await Promise.all([
+    apiGet(`/young-people/${state.youngPersonId}/compliance`),
+    apiGet(`/young-people/${state.youngPersonId}/overview`).catch(() => ({})),
+  ]);
+
+  const items = complianceData.compliance_items || [];
+  const alerts = overviewData.alerts || [];
+  state.complianceItems = items;
+
+  const overdue = items.filter((x) => x.compliance_status === "overdue");
+  const dueSoon = items.filter((x) => x.compliance_status === "due_soon");
+  const okItems = items.filter((x) => x.compliance_status === "ok");
+
+  const byType = items.reduce((acc, item) => {
+    const key = item.compliance_type || "other";
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  const typeCards = Object.entries(byType)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([key, count]) => `
+      <article class="record-card">
+        <div class="record-card-header">
+          <div>
+            <h4>${escapeHtml(key.replaceAll("_", " "))}</h4>
+          </div>
         </div>
+        <div class="record-body">${escapeHtml(pluralise(count, "item"))}</div>
+      </article>
+    `)
+    .join("");
+
+  els.content.innerHTML = `
+    <div class="grid grid-4">
+      <div class="stat-card">
+        <div class="stat-label">Overdue</div>
+        <div class="stat-value">${overdue.length}</div>
       </div>
-      <div class="empty-state">
-        <p>Next pass: connect this view to compliance routes, due reviews, missing records and evidence readiness.</p>
+      <div class="stat-card">
+        <div class="stat-label">Due soon</div>
+        <div class="stat-value">${dueSoon.length}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">OK</div>
+        <div class="stat-value">${okItems.length}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Active alerts</div>
+        <div class="stat-value">${alerts.length}</div>
       </div>
     </div>
+
+    <div class="callout-grid">
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>Priority action</h3>
+            <p class="panel-subtitle">Items that need attention first.</p>
+          </div>
+        </div>
+        ${
+          overdue.length || dueSoon.length
+            ? `<div class="record-list">${[...overdue, ...dueSoon].map(renderComplianceItem).join("")}</div>`
+            : `<div class="empty-state">No overdue or due soon items.</div>`
+        }
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>By compliance type</h3>
+            <p class="panel-subtitle">Where the due work sits.</p>
+          </div>
+        </div>
+        ${typeCards || `<div class="empty-state">No compliance items found.</div>`}
+      </section>
+    </div>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h3>All compliance items</h3>
+          <p class="panel-subtitle">Reviews, follow ups and statutory due dates.</p>
+        </div>
+      </div>
+      ${
+        items.length
+          ? `<div class="record-list">${items.map(renderComplianceItem).join("")}</div>`
+          : `<div class="empty-state">No compliance items found.</div>`
+      }
+    </section>
   `;
 }
 
-async function loadReportsPlaceholder() {
+async function loadReports() {
+  setLoading("Loading inspection pack...");
+
+  const [packData, complianceData] = await Promise.all([
+    apiGet(`/inspection-pack/young-person/${state.youngPersonId}`),
+    apiGet(`/young-people/${state.youngPersonId}/compliance`).catch(() => ({ compliance_items: [] })),
+  ]);
+
+  state.inspectionPackData = packData;
+  state.complianceItems = complianceData.compliance_items || [];
+
+  const missingItems = renderInspectionMissingSection(packData);
+  const readiness = renderReadinessStatus(missingItems, state.complianceItems);
+
+  const standardsSummary = packData.standards_summary || [];
+  const chronology = packData.chronology || [];
+  const plans = packData.plans || [];
+  const risks = packData.risks || [];
+  const incidents = packData.incidents || [];
+  const dailyNotes = packData.daily_notes || [];
+  const monthlyReviews = packData.monthly_reviews || [];
+  const complianceItems = packData.compliance_items?.length ? packData.compliance_items : state.complianceItems;
+
+  const overdue = complianceItems.filter((x) => x.compliance_status === "overdue").length;
+  const dueSoon = complianceItems.filter((x) => x.compliance_status === "due_soon").length;
+  const evidenceCount = (packData.standards_evidence || []).length;
+
   els.content.innerHTML = `
+    <div class="grid grid-4">
+      <div class="stat-card">
+        <div class="stat-label">Inspection readiness</div>
+        <div class="stat-value" style="font-size:20px;">${escapeHtml(readiness.replaceAll("_", " "))}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Missing sections</div>
+        <div class="stat-value">${missingItems.length}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Overdue items</div>
+        <div class="stat-value">${overdue}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Standards evidence</div>
+        <div class="stat-value">${evidenceCount}</div>
+      </div>
+    </div>
+
     <div class="panel">
       <div class="panel-header">
         <div>
-          <h3>Reports</h3>
-          <p class="panel-subtitle">This section is ready to connect to reports, summaries and management outputs.</p>
+          <h3>Inspection pack</h3>
+          <p class="panel-subtitle">Build an Ofsted-style evidence pack for this young person.</p>
+        </div>
+        <div class="day-record-actions">
+          <button id="createInspectionPackBtn" class="primary-btn">Create inspection pack job</button>
         </div>
       </div>
-      <div class="empty-state">
-        <p>Next pass: connect this view to report generation, export options and management summaries.</p>
+
+      <div class="record-list">
+        <article class="record-card">
+          <div class="record-card-header">
+            <div>
+              <h4>Readiness summary</h4>
+              <div class="record-meta">Inspection and evidence view</div>
+            </div>
+          </div>
+          <div class="record-body">
+Missing sections: ${missingItems.length}
+Overdue compliance items: ${overdue}
+Due soon items: ${dueSoon}
+Chronology entries: ${chronology.length}
+Plans: ${plans.length}
+Risks: ${risks.length}
+Incidents: ${incidents.length}
+Daily notes: ${dailyNotes.length}
+Monthly reviews: ${monthlyReviews.length}
+          </div>
+          ${renderBadges([readiness, overdue ? "overdue" : "ok"])}
+        </article>
       </div>
     </div>
+
+    <div class="callout-grid">
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>Missing or weak areas</h3>
+            <p class="panel-subtitle">Sections to strengthen before inspection.</p>
+          </div>
+        </div>
+        ${
+          missingItems.length
+            ? `<div class="record-list">
+                ${missingItems.map((item) => `
+                  <article class="record-card">
+                    <div class="record-card-header">
+                      <div>
+                        <h4>${escapeHtml(item)}</h4>
+                      </div>
+                    </div>
+                    <div class="record-body">This section looks missing or not yet evidenced in the inspection pack view.</div>
+                    ${renderBadges(["missing"])}
+                  </article>
+                `).join("")}
+              </div>`
+            : `<div class="empty-state">No obvious missing sections found.</div>`
+        }
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>Standards summary</h3>
+            <p class="panel-subtitle">Linked evidence against quality standards.</p>
+          </div>
+        </div>
+        ${
+          standardsSummary.length
+            ? `<div class="record-list">${standardsSummary.map(renderStandardSummaryCard).join("")}</div>`
+            : `<div class="empty-state">No standards evidence linked yet.</div>`
+        }
+      </section>
+    </div>
+
+    <div class="callout-grid">
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>Recent inspection-relevant records</h3>
+            <p class="panel-subtitle">Latest chronology and significant activity.</p>
+          </div>
+        </div>
+        ${
+          chronology.length
+            ? `<div class="record-list">${chronology.slice(0, 12).map((item) => renderRecordCard({
+                ...item,
+                record_type: item.category || item.record_type,
+                record_id: item.source_id || item.id,
+                recorded_at: item.event_datetime || item.created_at,
+                workflow_status: item.event_status,
+                severity: item.significance,
+              })).join("")}</div>`
+            : `<div class="empty-state">No chronology available.</div>`
+        }
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>Compliance for inspection</h3>
+            <p class="panel-subtitle">Due dates and follow ups likely to be queried.</p>
+          </div>
+        </div>
+        ${
+          complianceItems.length
+            ? `<div class="record-list">${complianceItems.slice(0, 12).map(renderComplianceItem).join("")}</div>`
+            : `<div class="empty-state">No compliance items found.</div>`
+        }
+      </section>
+    </div>
   `;
+
+  const createPackBtn = document.getElementById("createInspectionPackBtn");
+  if (createPackBtn) {
+    createPackBtn.addEventListener("click", async () => {
+      try {
+        createPackBtn.disabled = true;
+        await apiSend(`/inspection-pack`, "POST", {
+          scope_type: "young_person",
+          scope_id: state.youngPersonId,
+          pack_type: "ofsted",
+        });
+        showMessage("Inspection pack job created.");
+      } catch (error) {
+        console.error(error);
+        showError(error.message || "Could not create inspection pack job.");
+      } finally {
+        createPackBtn.disabled = false;
+      }
+    });
+  }
+
+  bindDynamicOpenRecordButtons();
 }
 
 async function loadCalendarMonthSummary() {
@@ -1994,6 +2361,8 @@ function bindEvents() {
     state.timelineCache = [];
     state.calendarMonthSummary = [];
     state.selectedDayRecords = [];
+    state.complianceItems = [];
+    state.inspectionPackData = null;
     closeDrawer();
     closeModal();
 
