@@ -105,6 +105,9 @@ async function login(credentialsArg = null) {
       setStoredUser(
         {
           ...data.user,
+          subscription_active: !!data.user.subscription_active,
+          subscription_status: data.user.subscription_status || "inactive",
+          plan_name: data.user.plan_name || null,
           mfa_enabled: !!data.mfa_enabled,
           mfa_verified: false,
           mfaEnabled: !!data.mfa_enabled,
@@ -163,6 +166,7 @@ async function validateSession() {
       clearStoredUser();
       return {
         authenticated: false,
+        subscription_active: false,
         mfa_enabled: false,
         mfa_verified: false,
         mfaEnabled: false,
@@ -182,6 +186,7 @@ async function validateSession() {
         role: data.role,
         home_id: data.home_id,
         is_active: data.is_active,
+        subscription_active: !!data.subscription_active,
         subscription_status: data.subscription_status,
         plan_name: data.plan_name,
         mfa_enabled: !!data.mfa_enabled,
@@ -199,6 +204,7 @@ async function validateSession() {
       role: data.role,
       home_id: data.home_id,
       is_active: data.is_active,
+      subscription_active: !!data.subscription_active,
       subscription_status: data.subscription_status,
       plan_name: data.plan_name,
       mfa_enabled: !!data.mfa_enabled,
@@ -210,6 +216,7 @@ async function validateSession() {
     clearStoredUser();
     return {
       authenticated: false,
+      subscription_active: false,
       mfa_enabled: false,
       mfa_verified: false,
       mfaEnabled: false,
@@ -224,6 +231,10 @@ async function requireAuth() {
   if (!state.authenticated) {
     window.location.replace("/login");
     return false;
+  }
+
+  if (!state.subscription_active && !["admin", "provider_admin"].includes(String(state.role || "").toLowerCase())) {
+    throw new Error("Subscription required");
   }
 
   if (!state.mfa_enabled) {
