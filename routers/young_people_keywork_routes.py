@@ -166,6 +166,7 @@ def update_keywork(
 
 
 @router.post("/keywork/{keywork_id}/submit")
+@router.put("/keywork/{keywork_id}/submit")
 def submit_keywork(
     keywork_id: int,
     conn=Depends(get_db),
@@ -183,6 +184,7 @@ def submit_keywork(
 
 
 @router.post("/keywork/{keywork_id}/approve")
+@router.put("/keywork/{keywork_id}/approve")
 def approve_keywork(
     keywork_id: int,
     payload: ReviewPayload,
@@ -202,6 +204,7 @@ def approve_keywork(
 
 
 @router.post("/keywork/{keywork_id}/return")
+@router.put("/keywork/{keywork_id}/return")
 def return_keywork(
     keywork_id: int,
     payload: ReviewPayload,
@@ -221,6 +224,7 @@ def return_keywork(
 
 
 @router.post("/keywork/{keywork_id}/archive")
+@router.put("/keywork/{keywork_id}/archive")
 def archive_keywork(
     keywork_id: int,
     conn=Depends(get_db),
