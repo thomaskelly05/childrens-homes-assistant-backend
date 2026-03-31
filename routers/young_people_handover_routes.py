@@ -1,14 +1,116 @@
+from __future__ import annotations
+
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+
+from auth.current_user import get_current_user
 from db.connection import get_db
+from services.young_person_service import YoungPersonService
 
 router = APIRouter(prefix="/young-people", tags=["Young People Handover"])
+
+
+def _safe_int(value: Any) -> int | None:
+    try:
+        if value is None:
+            return None
+        return int(value)
+    except Exception:
+        return None
+
+
+def _user_home_id(current_user: dict[str, Any]) -> int | None:
+    return _safe_int(current_user.get("home_id"))
+
+
+def _user_role(current_user: dict[str, Any]) -> str:
+    return str(current_user.get("role") or "").strip().lower()
+
+
+def _assert_home_access(current_user: dict[str, Any], record_home_id: int | None) -> None:
+    role = _user_role(current_user)
+    user_home_id = _user_home_id(current_user)
+
+    if role in {"admin", "provider_admin"}:
+        return
+
+    if record_home_id is None:
+        raise HTTPException(status_code=403, detail="Home access could not be verified")
+
+    if user_home_id != record_home_id:
+        raise HTTPException(status_code=403, detail="You do not have access to this young person")
+
+
+def _assert_can_edit(current_user: dict[str, Any]) -> None:
+    role = _user_role(current_user)
+    if role not in {"admin", "provider_admin", "manager", "staff"}:
+        raise HTTPException(status_code=403, detail="You do not have permission to edit this record")
+
+
+def _assert_can_review(current_user: dict[str, Any]) -> None:
+    role = _user_role(current_user)
+    if role not in {"admin", "provider_admin", "manager"}:
+        raise HTTPException(status_code=403, detail="You do not have permission to review this record")
+
+
+def _load_and_check_young_person(
+    young_person_id: int,
+    current_user: dict[str, Any],
+) -> dict[str, Any]:
+    record = YoungPersonService.get_young_person_by_id(young_person_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Young person not found")
+
+    _assert_home_access(current_user, _safe_int(record.get("home_id")))
+    return record
+
+
+def _load_and_check_handover(
+    conn,
+    handover_id: int,
+    current_user: dict[str, Any],
+) -> dict[str, Any]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+                h.*,
+                yp.home_id
+            FROM handover_records h
+            JOIN young_people yp ON yp.id = h.young_person_id
+            WHERE h.id = %s
+            LIMIT 1
+            """,
+            (handover_id,),
+        )
+        row = cur.fetchone()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Handover not found")
+
+    _assert_home_access(current_user, _safe_int(row.get("home_id")))
+    return row
+
+
+class GenerateHandoverPayload(BaseModel):
+    shift_type: str | None = "day"
+    title: str | None = "Shift Handover"
+
+
+class HandoverDecisionPayload(BaseModel):
+    review_note: str | None = None
 
 
 @router.get("/{young_person_id}/handover")
 def get_handover_records(
     young_person_id: int,
     conn=Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
+    _load_and_check_young_person(young_person_id, current_user)
+
     try:
         query = """
             SELECT
@@ -32,10 +134,15 @@ def get_handover_records(
 
         with conn.cursor() as cur:
             cur.execute(query, (young_person_id,))
-            rows = cur.fetchall()
+            rows = cur.fetchall() or []
 
-        return rows
+        return {
+            "items": [dict(row) for row in rows],
+            "count": len(rows),
+        }
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load handover: {str(e)}")
 
@@ -43,8 +150,15 @@ def get_handover_records(
 @router.post("/{young_person_id}/handover/generate")
 def generate_handover_record(
     young_person_id: int,
+    payload: GenerateHandoverPayload | None = None,
     conn=Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
+    _assert_can_edit(current_user)
+    _load_and_check_young_person(young_person_id, current_user)
+
+    payload = payload or GenerateHandoverPayload()
+
     try:
         with conn.cursor() as cur:
             cur.execute(
@@ -69,7 +183,7 @@ def generate_handover_record(
                 """,
                 (young_person_id,),
             )
-            daily_rows = cur.fetchall()
+            daily_rows = cur.fetchall() or []
 
             cur.execute(
                 """
@@ -88,7 +202,7 @@ def generate_handover_record(
                 """,
                 (young_person_id,),
             )
-            incident_rows = cur.fetchall()
+            incident_rows = cur.fetchall() or []
 
             cur.execute(
                 """
@@ -107,13 +221,65 @@ def generate_handover_record(
                 """,
                 (young_person_id,),
             )
-            keywork_rows = cur.fetchall()
+            keywork_rows = cur.fetchall() or []
+
+            cur.execute(
+                """
+                SELECT
+                    title,
+                    concern_summary,
+                    severity,
+                    status
+                FROM risk_assessments
+                WHERE young_person_id = %s
+                  AND COALESCE(archived, FALSE) = FALSE
+                ORDER BY updated_at DESC, id DESC
+                LIMIT 3
+                """,
+                (young_person_id,),
+            )
+            risk_rows = cur.fetchall() or []
+
+            cur.execute(
+                """
+                SELECT
+                    title,
+                    description,
+                    severity,
+                    is_active
+                FROM young_person_alerts
+                WHERE young_person_id = %s
+                  AND COALESCE(is_active, TRUE) = TRUE
+                ORDER BY created_at DESC, id DESC
+                LIMIT 5
+                """,
+                (young_person_id,),
+            )
+            alert_rows = cur.fetchall() or []
 
             latest_daily = daily_rows[0] if daily_rows else None
             latest_incident = incident_rows[0] if incident_rows else None
             latest_keywork = keywork_rows[0] if keywork_rows else None
 
-            parts = []
+            parts: list[str] = []
+
+            if alert_rows:
+                alert_text = "; ".join(
+                    [
+                        f"{row.get('title') or 'Alert'} ({row.get('severity') or 'standard'})"
+                        for row in alert_rows
+                    ]
+                )
+                parts.append(f"Active alerts: {alert_text}.")
+
+            if risk_rows:
+                risk_text = "; ".join(
+                    [
+                        f"{row.get('title') or 'Risk'} - {row.get('concern_summary') or 'No summary'}"
+                        for row in risk_rows
+                    ]
+                )
+                parts.append(f"Current risks: {risk_text}.")
 
             if latest_daily:
                 presentation = latest_daily.get("presentation") or latest_daily.get("mood") or "No presentation recorded"
@@ -144,9 +310,15 @@ def generate_handover_record(
             if latest_keywork:
                 topic = latest_keywork.get("topic") or "Key work"
                 summary = latest_keywork.get("summary") or latest_keywork.get("reflective_analysis") or "No summary recorded"
-                parts.append(f"Recent key work focus: {topic}. {summary}")
+                actions = latest_keywork.get("actions_agreed")
+                text = f"Recent key work focus: {topic}. {summary}"
+                if actions:
+                    text += f" Actions agreed: {actions}"
+                parts.append(text)
 
             summary_text = " ".join(parts) if parts else "No recent records were available to generate a handover summary."
+
+            actor_user_id = _safe_int(current_user.get("user_id"))
 
             cur.execute(
                 """
@@ -166,35 +338,52 @@ def generate_handover_record(
                 VALUES (
                     %s,
                     CURRENT_DATE,
-                    'day',
-                    'Shift Handover',
+                    %s,
+                    %s,
                     %s,
                     'draft',
                     NOW() - INTERVAL '7 days',
                     NOW(),
-                    1,
+                    %s,
                     NOW(),
                     NOW()
                 )
                 RETURNING *
                 """,
-                (young_person_id, summary_text),
+                (
+                    young_person_id,
+                    payload.shift_type or "day",
+                    payload.title or "Shift Handover",
+                    summary_text,
+                    actor_user_id,
+                ),
             )
             row = cur.fetchone()
 
         conn.commit()
-        return row
+        return {
+            "ok": True,
+            "handover": dict(row) if row else None,
+        }
 
+    except HTTPException:
+        raise
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to generate handover: {str(e)}")
 
 
 @router.put("/handover/{handover_id}/approve")
+@router.post("/handover/{handover_id}/approve")
 def approve_handover(
     handover_id: int,
+    payload: HandoverDecisionPayload | None = None,
     conn=Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
+    _assert_can_review(current_user)
+    _load_and_check_handover(conn, handover_id, current_user)
+
     try:
         with conn.cursor() as cur:
             cur.execute(
@@ -202,12 +391,12 @@ def approve_handover(
                 UPDATE handover_records
                 SET
                     status = 'approved',
-                    approved_by = 1,
+                    approved_by = %s,
                     updated_at = NOW()
                 WHERE id = %s
                 RETURNING *
                 """,
-                (handover_id,),
+                (_safe_int(current_user.get("user_id")), handover_id),
             )
             row = cur.fetchone()
 
@@ -215,7 +404,10 @@ def approve_handover(
             raise HTTPException(status_code=404, detail="Handover not found")
 
         conn.commit()
-        return row
+        return {
+            "ok": True,
+            "handover": dict(row),
+        }
 
     except HTTPException:
         raise
@@ -225,10 +417,15 @@ def approve_handover(
 
 
 @router.put("/handover/{handover_id}/archive")
+@router.post("/handover/{handover_id}/archive")
 def archive_handover(
     handover_id: int,
     conn=Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
+    _assert_can_review(current_user)
+    _load_and_check_handover(conn, handover_id, current_user)
+
     try:
         with conn.cursor() as cur:
             cur.execute(
@@ -248,7 +445,10 @@ def archive_handover(
             raise HTTPException(status_code=404, detail="Handover not found")
 
         conn.commit()
-        return row
+        return {
+            "ok": True,
+            "handover": dict(row),
+        }
 
     except HTTPException:
         raise
