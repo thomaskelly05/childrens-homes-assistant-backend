@@ -37,10 +37,6 @@ from db.legal_acceptance_db import (
 from db.mfa_db import init_mfa_tables
 
 
-# -----------------------------------------------------------------------------
-# SETTINGS
-# -----------------------------------------------------------------------------
-
 @dataclass(frozen=True)
 class Settings:
     app_env: str
@@ -85,21 +81,11 @@ class Settings:
 
 settings = Settings.load()
 
-
-# -----------------------------------------------------------------------------
-# LOGGING
-# -----------------------------------------------------------------------------
-
 logging.basicConfig(
     level=settings.log_level,
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
 logger = logging.getLogger(__name__)
-
-
-# -----------------------------------------------------------------------------
-# PATHS
-# -----------------------------------------------------------------------------
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
@@ -109,43 +95,6 @@ ASSETS_DIR = os.path.join(FRONTEND_DIR, "assets")
 COMPONENTS_DIR = os.path.join(FRONTEND_DIR, "components")
 
 SESSION_COOKIE_NAME = "indicare_session"
-
-
-# -----------------------------------------------------------------------------
-# SENTRY
-# -----------------------------------------------------------------------------
-
-def configure_sentry() -> None:
-    if settings.sentry_dsn:
-        sentry_sdk.init(
-            dsn=settings.sentry_dsn,
-            traces_sample_rate=settings.sentry_traces_sample_rate,
-            profiles_sample_rate=settings.sentry_profiles_sample_rate,
-            environment=settings.app_env,
-            release=settings.app_revision,
-        )
-
-
-# -----------------------------------------------------------------------------
-# APP LIFESPAN
-# -----------------------------------------------------------------------------
-
-@asynccontextmanager
-async def lifespan(_: FastAPI):
-    init_db_pool()
-    init_legal_acceptance_table()
-    init_mfa_tables()
-    logger.info("IndiCare API started")
-    try:
-        yield
-    finally:
-        close_db_pool()
-        logger.info("IndiCare API stopped")
-
-
-# -----------------------------------------------------------------------------
-# SECURITY
-# -----------------------------------------------------------------------------
 
 PUBLIC_PREFIXES = (
     "/login",
@@ -184,6 +133,83 @@ LEGAL_ALLOWED_PREFIXES = (
     "/auth/mfa",
 )
 
+ROUTERS = [
+    "routers.auth_routes",
+    "routers.mfa_routes",
+    "routers.legal_acceptance_routes",
+    "routers.account_routes",
+    "routers.admin_routes",
+    "routers.billing_routes",
+    "routers.ai_notes_routes",
+    "routers.ai_note_templates_routes",
+    "routers.ai_note_export_routes",
+    "routers.chat_routes",
+    "routers.document_library_routes",
+    "routers.dashboard_routes",
+    "routers.documents_routes",
+    "routers.handover_routes",
+    "routers.monthly_reviews_routes",
+    "routers.ofsted_ai_report_routes",
+    "routers.ofsted_pack_routes",
+    "routers.reports_routes",
+    "routers.risk_routes",
+    "routers.staff_journal_routes",
+    "routers.supervision_routes",
+    "routers.tasks_routes",
+    "routers.document_rules_routes",
+    "routers.document_ai_review_routes",
+    "routers.document_ai_routes",
+    "routers.manager_routes",
+    "routers.young_people_profile_routes",
+    "routers.young_people_daily_notes_routes",
+    "routers.young_people_incidents_routes",
+    "routers.young_people_health_routes",
+    "routers.young_people_education_routes",
+    "routers.young_people_family_routes",
+    "routers.young_people_keywork_routes",
+    "routers.young_people_plans_routes",
+    "routers.young_people_risk_routes",
+    "routers.young_people_chronology_routes",
+    "routers.young_people_calendar_routes",
+    "routers.young_people_compliance_routes",
+    "routers.young_people_standards_routes",
+    "routers.young_people_handover_routes",
+    "routers.young_people_reports_routes",
+    "routers.young_people_photo_routes",
+    "routers.young_people_statutory_documents_routes",
+    "routers.workflow_review_routes",
+    "routers.command_centre_routes",
+    "routers.events_routes",
+    "routers.evidence_routes",
+    "routers.qa_routes",
+    "routers.exports_routes",
+    "routers.rostering_routes",
+]
+
+
+def configure_sentry() -> None:
+    if settings.sentry_dsn:
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn,
+            traces_sample_rate=settings.sentry_traces_sample_rate,
+            profiles_sample_rate=settings.sentry_profiles_sample_rate,
+            environment=settings.app_env,
+            release=settings.app_revision,
+        )
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    init_db_pool()
+    init_legal_acceptance_table()
+    init_mfa_tables()
+    logger.info("IndiCare API started")
+    try:
+        yield
+    finally:
+        close_db_pool()
+        logger.info("IndiCare API stopped")
+
 
 def path_is_public(path: str) -> bool:
     if path in PUBLIC_EXACT_PATHS:
@@ -200,13 +226,13 @@ def wants_html(request: Request) -> bool:
     return "text/html" in accept
 
 
-def _get_request_session_token(request: Request) -> str | None:
+def get_request_session_token(request: Request) -> str | None:
     token = (request.cookies.get(SESSION_COOKIE_NAME) or "").strip()
     return token or None
 
 
-def _get_authenticated_user_id_from_request(request: Request) -> int | None:
-    token = _get_request_session_token(request)
+def get_authenticated_user_id_from_request(request: Request) -> int | None:
+    token = get_request_session_token(request)
     payload = decode_session_token(token) if token else None
 
     if not payload:
@@ -226,7 +252,7 @@ class SecurityEnforcementMiddleware(BaseHTTPMiddleware):
         if path_is_public(path):
             return await call_next(request)
 
-        user_id = _get_authenticated_user_id_from_request(request)
+        user_id = get_authenticated_user_id_from_request(request)
 
         if not user_id:
             if wants_html(request):
@@ -288,68 +314,6 @@ class SecurityEnforcementMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
-def register_security_middleware(app: FastAPI) -> None:
-    app.add_middleware(SecurityEnforcementMiddleware)
-
-
-# -----------------------------------------------------------------------------
-# ROUTERS
-# -----------------------------------------------------------------------------
-
-ROUTERS = [
-    "routers.auth_routes",
-    "routers.mfa_routes",
-    "routers.legal_acceptance_routes",
-    "routers.account_routes",
-    "routers.admin_routes",
-    "routers.billing_routes",
-    "routers.ai_notes_routes",
-    "routers.ai_note_templates_routes",
-    "routers.ai_note_export_routes",
-    "routers.chat_routes",
-    "routers.document_library_routes",
-    "routers.dashboard_routes",
-    "routers.documents_routes",
-    "routers.handover_routes",
-    "routers.monthly_reviews_routes",
-    "routers.ofsted_ai_report_routes",
-    "routers.ofsted_pack_routes",
-    "routers.reports_routes",
-    "routers.risk_routes",
-    "routers.staff_journal_routes",
-    "routers.supervision_routes",
-    "routers.tasks_routes",
-    "routers.document_rules_routes",
-    "routers.document_ai_review_routes",
-    "routers.document_ai_routes",
-    "routers.manager_routes",
-    "routers.young_people_profile_routes",
-    "routers.young_people_daily_notes_routes",
-    "routers.young_people_incidents_routes",
-    "routers.young_people_health_routes",
-    "routers.young_people_education_routes",
-    "routers.young_people_family_routes",
-    "routers.young_people_keywork_routes",
-    "routers.young_people_plans_routes",
-    "routers.young_people_risk_routes",
-    "routers.young_people_chronology_routes",
-    "routers.young_people_calendar_routes",
-    "routers.young_people_compliance_routes",
-    "routers.young_people_standards_routes",
-    "routers.young_people_handover_routes",
-    "routers.young_people_reports_routes",
-    "routers.young_people_photo_routes",
-    "routers.young_people_statutory_documents_routes",
-    "routers.workflow_review_routes",
-    "routers.command_centre_routes",
-    "routers.events_routes",
-    "routers.evidence_routes",
-    "routers.qa_routes",
-    "routers.exports_routes",
-    "routers.rostering_routes",
-]
-
-
 def include_router(app: FastAPI, module_path: str) -> None:
     try:
         module = importlib.import_module(module_path)
@@ -370,26 +334,6 @@ def include_router(app: FastAPI, module_path: str) -> None:
         app.include_router(compat_router)
         logger.info("[IndiCare] Loaded router: %s (compat_router)", module_path)
 
-
-def register_routers(app: FastAPI) -> None:
-    for route in ROUTERS:
-        include_router(app, route)
-
-
-# -----------------------------------------------------------------------------
-# STATIC FILES
-# -----------------------------------------------------------------------------
-
-def mount_static(app: FastAPI) -> None:
-    app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
-    app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
-    app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
-    app.mount("/components", StaticFiles(directory=COMPONENTS_DIR), name="components")
-
-
-# -----------------------------------------------------------------------------
-# PAGE SERVING
-# -----------------------------------------------------------------------------
 
 def serve_page(file_name: str):
     path = os.path.join(FRONTEND_DIR, file_name)
@@ -447,7 +391,7 @@ def register_redirect_route(
 def register_frontend_routes(app: FastAPI) -> None:
     @app.get("/")
     def serve_index(request: Request):
-        user_id = _get_authenticated_user_id_from_request(request)
+        user_id = get_authenticated_user_id_from_request(request)
 
         if not user_id:
             return RedirectResponse(url="/login", status_code=302)
@@ -517,10 +461,6 @@ def register_frontend_routes(app: FastAPI) -> None:
         return FileResponse(os.path.join(FRONTEND_DIR, "ai-notes.js"))
 
 
-# -----------------------------------------------------------------------------
-# HEALTH
-# -----------------------------------------------------------------------------
-
 def register_health_routes(app: FastAPI) -> None:
     @app.get("/health")
     def health():
@@ -545,10 +485,6 @@ def register_health_routes(app: FastAPI) -> None:
             release_db_connection(conn)
 
 
-# -----------------------------------------------------------------------------
-# EXCEPTION HANDLING
-# -----------------------------------------------------------------------------
-
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
@@ -558,15 +494,9 @@ def register_exception_handlers(app: FastAPI) -> None:
             content={
                 "ok": False,
                 "error": "Internal server error",
-                "detail": str(exc),
-                "path": request.url.path,
             },
         )
 
-
-# -----------------------------------------------------------------------------
-# APP CREATION
-# -----------------------------------------------------------------------------
 
 def create_app() -> FastAPI:
     configure_sentry()
@@ -577,9 +507,7 @@ def create_app() -> FastAPI:
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-    # Order matters:
-    # Security middleware must be added first so SessionMiddleware wraps it.
-    register_security_middleware(app)
+    app.add_middleware(SecurityEnforcementMiddleware)
 
     app.add_middleware(
         SessionMiddleware,
@@ -601,8 +529,14 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    register_routers(app)
-    mount_static(app)
+    for route in ROUTERS:
+        include_router(app, route)
+
+    app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
+    app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
+    app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
+    app.mount("/components", StaticFiles(directory=COMPONENTS_DIR), name="components")
+
     register_health_routes(app)
     register_exception_handlers(app)
     register_frontend_routes(app)
