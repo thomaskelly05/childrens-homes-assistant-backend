@@ -285,6 +285,7 @@ def get_young_person_bundle(
 
 
 @router.patch("/{young_person_id}")
+@router.put("/{young_person_id}")
 def update_young_person(
     young_person_id: int,
     payload: YoungPersonUpdatePayload,
