@@ -1,11 +1,14 @@
 :root {
-  --bg: #f5f7fb;
+  --bg: #f4f7fb;
   --panel: #ffffff;
   --panel-soft: #f8fafc;
+  --panel-tint: #f2f6ff;
   --text: #172033;
   --muted: #667085;
   --line: #e4e7ec;
+  --line-strong: #d0d5dd;
   --primary: #1d4ed8;
+  --primary-strong: #1e40af;
   --primary-soft: #e8f0ff;
   --success: #157f3b;
   --success-soft: #ecfdf3;
@@ -16,7 +19,9 @@
   --sidebar: #0f1728;
   --sidebar-soft: rgba(255, 255, 255, 0.08);
   --shadow: 0 8px 20px rgba(16, 24, 40, 0.06);
+  --shadow-lg: 0 18px 44px rgba(16, 24, 40, 0.12);
   --radius: 16px;
+  --radius-sm: 12px;
 }
 
 * {
@@ -51,16 +56,17 @@ select {
 .app-shell {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 300px 1fr;
 }
 
 .sidebar {
-  background: var(--sidebar);
+  background: linear-gradient(180deg, #0f1728 0%, #111b31 100%);
   color: #fff;
-  padding: 18px 14px;
+  padding: 20px 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .brand {
@@ -70,13 +76,14 @@ select {
 }
 
 .brand-mark {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
   background: linear-gradient(135deg, #2e90fa, #7a5af8);
   display: grid;
   place-items: center;
   font-weight: 700;
+  box-shadow: 0 8px 20px rgba(46, 144, 250, 0.28);
 }
 
 .brand-copy h1 {
@@ -101,14 +108,15 @@ select {
 }
 
 .person-avatar {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
   display: grid;
   place-items: center;
   font-weight: 700;
   background: rgba(255, 255, 255, 0.15);
   flex-shrink: 0;
+  font-size: 16px;
 }
 
 .person-text h2 {
@@ -130,6 +138,26 @@ select {
   border-radius: 12px;
   padding: 10px 12px;
   cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.sidebar-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nav-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.56);
+  padding: 0 4px;
 }
 
 .sidebar-nav {
@@ -147,6 +175,7 @@ select {
   padding: 11px 12px;
   border-radius: 12px;
   cursor: pointer;
+  transition: 0.2s ease;
 }
 
 .nav-btn:hover {
@@ -175,12 +204,28 @@ select {
 
 .topbar h2 {
   margin: 0;
-  font-size: 28px;
+  font-size: 30px;
+  line-height: 1.15;
 }
 
 .topbar p {
   margin: 6px 0 0;
   color: var(--muted);
+}
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 8px;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .secondary-btn,
@@ -193,12 +238,24 @@ select {
   padding: 10px 14px;
   cursor: pointer;
   font-weight: 600;
+  transition: 0.2s ease;
+}
+
+.secondary-btn:hover,
+.ghost-btn:hover {
+  border-color: var(--line-strong);
+  background: #f8fafc;
 }
 
 .primary-btn {
   background: var(--primary);
   border-color: var(--primary);
   color: #fff;
+}
+
+.primary-btn:hover {
+  background: var(--primary-strong);
+  border-color: var(--primary-strong);
 }
 
 .ghost-btn {
@@ -228,7 +285,7 @@ select {
 
 .quick-action {
   border: 1px solid var(--line);
-  background: var(--panel);
+  background: linear-gradient(180deg, var(--panel) 0%, #fbfcfe 100%);
   border-radius: 14px;
   padding: 14px;
   text-align: left;
@@ -237,10 +294,16 @@ select {
   flex-direction: column;
   gap: 4px;
   box-shadow: var(--shadow);
+  transition: 0.2s ease;
+}
+
+.quick-action:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
 }
 
 .quick-action.primary {
-  background: var(--primary);
+  background: linear-gradient(135deg, var(--primary) 0%, #2457dc 100%);
   border-color: var(--primary);
   color: #fff;
 }
@@ -299,6 +362,14 @@ select {
   padding: 11px 13px;
   min-width: 0;
   width: 100%;
+}
+
+.text-input:focus,
+.select-input:focus,
+.textarea-input:focus {
+  outline: none;
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.08);
 }
 
 .text-input {
@@ -381,7 +452,9 @@ select {
 .stat-card,
 .day-record-card,
 .day-summary-card,
-.detail-section {
+.detail-section,
+.profile-card,
+.handover-card {
   background: var(--panel-soft);
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -475,15 +548,24 @@ select {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.grid-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .callout-grid {
   display: grid;
   grid-template-columns: 1.15fr 1fr;
   gap: 14px;
 }
 
+.stat-card {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
+}
+
 .stat-label {
   font-size: 12px;
   margin-bottom: 8px;
+  color: var(--muted);
 }
 
 .stat-value {
@@ -503,12 +585,25 @@ select {
   font-weight: 600;
 }
 
+.profile-grid-shell {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 14px;
+}
+
+.profile-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 .timeline-toolbar,
 .day-filter-row,
 .day-record-actions,
 .calendar-controls,
 .record-drawer-actions,
-.record-modal-footer {
+.record-modal-footer,
+.handover-actions {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
@@ -671,7 +766,7 @@ select {
 .record-drawer {
   top: 0;
   right: 0;
-  width: min(520px, 100vw);
+  width: min(560px, 100vw);
   height: 100vh;
   border-left: 1px solid var(--line);
   display: flex;
@@ -682,7 +777,7 @@ select {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: min(760px, calc(100vw - 24px));
+  width: min(820px, calc(100vw - 24px));
   max-height: calc(100vh - 32px);
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -757,13 +852,33 @@ select {
   align-items: start;
 }
 
+.helper-note {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.handover-list,
+.alert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.handover-item,
+.alert-item {
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1180px) {
   .app-shell {
     grid-template-columns: 1fr;
   }
@@ -781,9 +896,11 @@ select {
   .quick-actions,
   .grid-2,
   .grid-3,
+  .grid-4,
   .callout-grid,
   .calendar-shell,
-  .form-grid {
+  .form-grid,
+  .profile-grid-shell {
     grid-template-columns: 1fr;
   }
 
@@ -816,5 +933,9 @@ select {
     top: 0;
     left: 0;
     transform: none;
+  }
+
+  .topbar h2 {
+    font-size: 24px;
   }
 }
