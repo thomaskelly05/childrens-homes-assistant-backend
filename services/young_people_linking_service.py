@@ -80,7 +80,7 @@ class YoungPeopleLinkingService:
 
         try:
             if link_chronology:
-                chronology_id = YoungPeopleLinkingService._create_chronology_event(
+                chronology_id = YoungPeopleLinkingService._create_or_update_chronology_event(
                     conn=conn,
                     young_person_id=young_person_id,
                     source_table=source_table,
@@ -92,12 +92,13 @@ class YoungPeopleLinkingService:
                     significance=significance or YoungPeopleLinkingService._default_significance(source_table, metadata),
                     created_by=created_by,
                     metadata=metadata,
+                    event_type=event_type,
                 )
                 result["chronology_event_id"] = chronology_id
-                result["notes"].append("Chronology event created.")
+                result["notes"].append("Chronology event processed.")
 
                 if chronology_id:
-                    if YoungPeopleLinkingService._create_record_link(
+                    if YoungPeopleLinkingService._create_record_link_if_missing(
                         conn=conn,
                         young_person_id=young_person_id,
                         from_table=source_table,
@@ -113,7 +114,7 @@ class YoungPeopleLinkingService:
 
         try:
             if create_task:
-                task_id = YoungPeopleLinkingService._create_task(
+                task_id = YoungPeopleLinkingService._create_task_if_missing(
                     conn=conn,
                     young_person_id=young_person_id,
                     source_table=source_table,
@@ -125,10 +126,10 @@ class YoungPeopleLinkingService:
                     task_type=YoungPeopleLinkingService._default_task_type(source_table),
                 )
                 result["task_id"] = task_id
-                result["notes"].append("Task created.")
+                result["notes"].append("Task processed.")
 
                 if task_id:
-                    if YoungPeopleLinkingService._create_record_link(
+                    if YoungPeopleLinkingService._create_record_link_if_missing(
                         conn=conn,
                         young_person_id=young_person_id,
                         from_table=source_table,
@@ -144,7 +145,7 @@ class YoungPeopleLinkingService:
 
         try:
             if manager_review:
-                manager_action_id = YoungPeopleLinkingService._create_manager_action(
+                manager_action_id = YoungPeopleLinkingService._create_manager_action_if_missing(
                     conn=conn,
                     young_person_id=young_person_id,
                     related_table=source_table,
@@ -154,7 +155,7 @@ class YoungPeopleLinkingService:
                     action_by=created_by,
                 )
                 result["manager_action_id"] = manager_action_id
-                result["notes"].append("Manager action created.")
+                result["notes"].append("Manager action processed.")
         except Exception as exc:
             result["errors"].append(f"Manager action creation failed: {exc}")
 
@@ -173,7 +174,7 @@ class YoungPeopleLinkingService:
                 result["notes"].append("Safeguarding record created.")
 
                 if safeguarding_id:
-                    if YoungPeopleLinkingService._create_record_link(
+                    if YoungPeopleLinkingService._create_record_link_if_missing(
                         conn=conn,
                         young_person_id=young_person_id,
                         from_table=source_table,
@@ -238,7 +239,17 @@ class YoungPeopleLinkingService:
         return result
 
     @staticmethod
-    def _create_chronology_event(
+    def _normalise_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
+        return metadata if isinstance(metadata, dict) else {}
+
+    @staticmethod
+    def _normalise_due_date(value: str | date | None) -> str | date | None:
+        if value in (None, "", "null"):
+            return None
+        return value
+
+    @staticmethod
+    def _create_or_update_chronology_event(
         conn,
         *,
         young_person_id: int,
@@ -251,10 +262,64 @@ class YoungPeopleLinkingService:
         significance: str,
         created_by: int | None,
         metadata: dict[str, Any] | None = None,
+        event_type: str = "created",
     ) -> int | None:
         now = datetime.utcnow()
+        safe_metadata = YoungPeopleLinkingService._normalise_metadata(metadata)
+        event_status = safe_metadata.get("workflow_status") or safe_metadata.get("event_status") or "recorded"
 
         with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id
+                FROM chronology_events
+                WHERE young_person_id = %s
+                  AND source_table = %s
+                  AND source_id = %s
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (young_person_id, source_table, source_id),
+            )
+            existing = cur.fetchone()
+
+            if existing:
+                cur.execute(
+                    """
+                    UPDATE chronology_events
+                    SET
+                        event_datetime = %s,
+                        category = %s,
+                        subcategory = %s,
+                        title = %s,
+                        summary = %s,
+                        significance = %s,
+                        created_by = COALESCE(created_by, %s),
+                        auto_generated = TRUE,
+                        is_visible = TRUE,
+                        metadata_json = %s,
+                        updated_at = %s,
+                        event_status = %s
+                    WHERE id = %s
+                    RETURNING id
+                    """,
+                    (
+                        now,
+                        category,
+                        subcategory,
+                        title,
+                        summary,
+                        significance,
+                        created_by,
+                        safe_metadata,
+                        now,
+                        event_status,
+                        existing["id"],
+                    ),
+                )
+                row = cur.fetchone()
+                return row["id"] if row else existing["id"]
+
             cur.execute(
                 """
                 INSERT INTO chronology_events (
@@ -293,17 +358,17 @@ class YoungPeopleLinkingService:
                     created_by,
                     True,
                     True,
-                    metadata or {},
+                    safe_metadata,
                     now,
                     now,
-                    "active",
+                    event_status,
                 ),
             )
             row = cur.fetchone()
             return row["id"] if row else None
 
     @staticmethod
-    def _create_task(
+    def _create_task_if_missing(
         conn,
         *,
         young_person_id: int,
@@ -315,9 +380,43 @@ class YoungPeopleLinkingService:
         due_date: str | date | None,
         task_type: str,
     ) -> int | None:
+        safe_due_date = YoungPeopleLinkingService._normalise_due_date(due_date)
         now = datetime.utcnow()
 
         with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id
+                FROM tasks
+                WHERE young_person_id = %s
+                  AND source_table = %s
+                  AND source_id = %s
+                  AND task_type = %s
+                  AND COALESCE(completed, FALSE) = FALSE
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (young_person_id, source_table, source_id, task_type),
+            )
+            existing = cur.fetchone()
+
+            if existing:
+                cur.execute(
+                    """
+                    UPDATE tasks
+                    SET
+                        title = %s,
+                        task = %s,
+                        due_date = %s,
+                        assigned_to_user_id = COALESCE(%s, assigned_to_user_id)
+                    WHERE id = %s
+                    RETURNING id
+                    """,
+                    (title, task, safe_due_date, owner_id, existing["id"]),
+                )
+                row = cur.fetchone()
+                return row["id"] if row else existing["id"]
+
             cur.execute(
                 """
                 INSERT INTO tasks (
@@ -343,7 +442,7 @@ class YoungPeopleLinkingService:
                     source_table,
                     source_id,
                     task_type,
-                    due_date,
+                    safe_due_date,
                     owner_id,
                     False,
                     False,
@@ -354,7 +453,7 @@ class YoungPeopleLinkingService:
             return row["id"] if row else None
 
     @staticmethod
-    def _create_manager_action(
+    def _create_manager_action_if_missing(
         conn,
         *,
         young_person_id: int,
@@ -367,6 +466,24 @@ class YoungPeopleLinkingService:
         now = datetime.utcnow()
 
         with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id
+                FROM manager_actions
+                WHERE young_person_id = %s
+                  AND related_table = %s
+                  AND related_id = %s
+                  AND action_type = %s
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (young_person_id, related_table, related_id, action_type),
+            )
+            existing = cur.fetchone()
+
+            if existing:
+                return existing["id"]
+
             cur.execute(
                 """
                 INSERT INTO manager_actions (
@@ -452,7 +569,7 @@ class YoungPeopleLinkingService:
             return row["id"] if row else None
 
     @staticmethod
-    def _create_record_link(
+    def _create_record_link_if_missing(
         conn,
         *,
         young_person_id: int,
@@ -466,6 +583,31 @@ class YoungPeopleLinkingService:
         now = datetime.utcnow()
 
         with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id
+                FROM record_links
+                WHERE young_person_id = %s
+                  AND from_table = %s
+                  AND from_id = %s
+                  AND to_table = %s
+                  AND to_id = %s
+                  AND relationship_type = %s
+                LIMIT 1
+                """,
+                (
+                    young_person_id,
+                    from_table,
+                    from_id,
+                    to_table,
+                    to_id,
+                    relationship_type,
+                ),
+            )
+            existing = cur.fetchone()
+            if existing:
+                return False
+
             cur.execute(
                 """
                 INSERT INTO record_links (
@@ -519,7 +661,7 @@ class YoungPeopleLinkingService:
             rows = cur.fetchall() or []
 
         for row in rows:
-            created = YoungPeopleLinkingService._create_record_link(
+            created = YoungPeopleLinkingService._create_record_link_if_missing(
                 conn=conn,
                 young_person_id=young_person_id,
                 from_table=source_table,
@@ -563,6 +705,21 @@ class YoungPeopleLinkingService:
             for row in rows:
                 cur.execute(
                     """
+                    SELECT id
+                    FROM monthly_review_record_links
+                    WHERE monthly_review_id = %s
+                      AND source_table = %s
+                      AND source_id = %s
+                    LIMIT 1
+                    """,
+                    (row["id"], source_table, source_id),
+                )
+                existing = cur.fetchone()
+                if existing:
+                    continue
+
+                cur.execute(
+                    """
                     INSERT INTO monthly_review_record_links (
                         monthly_review_id,
                         source_table,
@@ -604,6 +761,22 @@ class YoungPeopleLinkingService:
         with conn.cursor() as cur:
             for code in standards:
                 if not code:
+                    continue
+
+                cur.execute(
+                    """
+                    SELECT id
+                    FROM record_standard_links
+                    WHERE young_person_id = %s
+                      AND source_table = %s
+                      AND source_id = %s
+                      AND standard_code = %s
+                    LIMIT 1
+                    """,
+                    (young_person_id, source_table, source_id, code),
+                )
+                existing = cur.fetchone()
+                if existing:
                     continue
 
                 cur.execute(
