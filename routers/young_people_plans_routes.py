@@ -200,6 +200,7 @@ def update_support_plan(
 
 
 @router.post("/plans/{plan_id}/submit")
+@router.put("/plans/{plan_id}/submit")
 def submit_support_plan(
     plan_id: int,
     conn=Depends(get_db),
@@ -217,6 +218,7 @@ def submit_support_plan(
 
 
 @router.post("/plans/{plan_id}/approve")
+@router.put("/plans/{plan_id}/approve")
 def approve_support_plan(
     plan_id: int,
     payload: ReviewDecisionPayload,
@@ -236,6 +238,7 @@ def approve_support_plan(
 
 
 @router.post("/plans/{plan_id}/return")
+@router.put("/plans/{plan_id}/return")
 def return_support_plan(
     plan_id: int,
     payload: ReviewDecisionPayload,
@@ -255,6 +258,7 @@ def return_support_plan(
 
 
 @router.post("/plans/{plan_id}/archive")
+@router.put("/plans/{plan_id}/archive")
 def archive_support_plan(
     plan_id: int,
     conn=Depends(get_db),
