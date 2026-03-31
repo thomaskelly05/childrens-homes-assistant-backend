@@ -13,7 +13,7 @@
         <div class="brand-mark">IC</div>
         <div class="brand-copy">
           <h1>IndiCare OS</h1>
-          <p>Young Person</p>
+          <p>Children’s Residential</p>
         </div>
       </div>
 
@@ -27,28 +27,57 @@
 
       <button id="changePersonBtn" class="sidebar-btn">Change young person</button>
 
-      <nav id="sidebarNav" class="sidebar-nav">
-        <button class="nav-btn active" data-view="home">Home</button>
-        <button class="nav-btn" data-view="calendar">Calendar</button>
-        <button class="nav-btn" data-view="timeline">What happened</button>
-        <button class="nav-btn" data-view="daily-notes">Daily notes</button>
-        <button class="nav-btn" data-view="incidents">Incidents</button>
-        <button class="nav-btn" data-view="risk">Risks</button>
-        <button class="nav-btn" data-view="plans">Plans</button>
-        <button class="nav-btn" data-view="health">Health</button>
-        <button class="nav-btn" data-view="education">Education</button>
-        <button class="nav-btn" data-view="family">Family</button>
-        <button class="nav-btn" data-view="keywork">Keywork</button>
-      </nav>
+      <div class="nav-group">
+        <div class="nav-group-title">Overview</div>
+        <nav id="sidebarNav" class="sidebar-nav">
+          <button class="nav-btn active" data-view="home">Home</button>
+          <button class="nav-btn" data-view="profile">Profile</button>
+          <button class="nav-btn" data-view="calendar">Calendar</button>
+          <button class="nav-btn" data-view="timeline">What happened</button>
+          <button class="nav-btn" data-view="handover">Handover</button>
+        </nav>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-title">Recording</div>
+        <nav class="sidebar-nav">
+          <button class="nav-btn" data-view="daily-notes">Daily notes</button>
+          <button class="nav-btn" data-view="incidents">Incidents</button>
+          <button class="nav-btn" data-view="risk">Risks</button>
+          <button class="nav-btn" data-view="plans">Plans</button>
+        </nav>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-title">Care and progress</div>
+        <nav class="sidebar-nav">
+          <button class="nav-btn" data-view="health">Health</button>
+          <button class="nav-btn" data-view="education">Education</button>
+          <button class="nav-btn" data-view="family">Family</button>
+          <button class="nav-btn" data-view="keywork">Keywork</button>
+        </nav>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-title">Operational</div>
+        <nav class="sidebar-nav">
+          <button class="nav-btn" data-view="compliance">Compliance</button>
+          <button class="nav-btn" data-view="reports">Reports</button>
+        </nav>
+      </div>
     </aside>
 
     <main class="main">
       <header class="topbar">
         <div>
+          <div class="eyebrow">Young Person Workspace</div>
           <h2 id="pageTitle">Select a young person</h2>
           <p id="pageSubtitle">Open a workspace to begin</p>
         </div>
-        <button id="refreshBtn" class="secondary-btn hidden">Refresh</button>
+
+        <div class="topbar-actions">
+          <button id="refreshBtn" class="secondary-btn hidden">Refresh</button>
+        </div>
       </header>
 
       <section id="statusBar" class="status-bar hidden"></section>
@@ -57,7 +86,7 @@
         <div class="panel-header">
           <div>
             <h3>Select a young person</h3>
-            <p class="panel-subtitle">Open one record to view all daily work and history.</p>
+            <p class="panel-subtitle">Open one record to view profile, chronology, daily work and handover.</p>
           </div>
         </div>
 
@@ -66,7 +95,7 @@
             id="selectorSearch"
             class="text-input"
             type="text"
-            placeholder="Search by name, preferred name, status or risk..."
+            placeholder="Search by name, preferred name, placement status or risk..."
             autocomplete="off"
           />
           <button id="selectorRefreshBtn" class="secondary-btn">Refresh</button>
@@ -83,15 +112,15 @@
           </button>
           <button class="quick-action" data-action="incident">
             <span class="quick-action-title">Log incident</span>
-            <span class="quick-action-subtitle">Record an incident</span>
+            <span class="quick-action-subtitle">Record incident or concern</span>
           </button>
           <button class="quick-action" data-action="risk">
             <span class="quick-action-title">Update risk</span>
-            <span class="quick-action-subtitle">Add or review risk</span>
+            <span class="quick-action-subtitle">Review risk and controls</span>
           </button>
           <button class="quick-action" data-action="plan">
             <span class="quick-action-title">Add plan</span>
-            <span class="quick-action-subtitle">Create guidance</span>
+            <span class="quick-action-subtitle">Create guidance for staff</span>
           </button>
         </section>
 
@@ -110,6 +139,7 @@
   <aside id="recordDrawer" class="record-drawer hidden" aria-hidden="true">
     <div class="record-drawer-header">
       <div>
+        <div class="eyebrow">Record</div>
         <h3 id="recordDrawerTitle">Record details</h3>
         <p id="recordDrawerSubtitle">Open a record to view details</p>
       </div>
@@ -136,6 +166,7 @@
   <section id="recordModal" class="record-modal hidden" aria-hidden="true">
     <div class="record-modal-header">
       <div>
+        <div class="eyebrow">Record</div>
         <h3 id="recordModalTitle">Create record</h3>
         <p id="recordModalSubtitle">Complete the form below</p>
       </div>
