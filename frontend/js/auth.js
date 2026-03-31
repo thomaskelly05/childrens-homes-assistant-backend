@@ -36,6 +36,7 @@ function clearStoredUser() {
   sessionStorage.removeItem("current_user");
   localStorage.removeItem("current_user");
   sessionStorage.removeItem("indicare_recovery_codes");
+  localStorage.removeItem("indicare_recovery_codes");
   localStorage.removeItem("indicare_remember_me");
 }
 
@@ -50,12 +51,26 @@ function saveRecoveryCodes(codes) {
 
 function clearRecoveryCodes() {
   sessionStorage.removeItem("indicare_recovery_codes");
+  localStorage.removeItem("indicare_recovery_codes");
+}
+
+function normaliseUserPatch(user = {}) {
+  return {
+    ...user,
+    subscription_active: !!user.subscription_active,
+    subscription_status: user.subscription_status || "inactive",
+    plan_name: user.plan_name || null,
+    mfa_enabled: !!user.mfa_enabled,
+    mfa_verified: !!user.mfa_verified,
+    mfaEnabled: !!user.mfa_enabled,
+    mfaVerified: !!user.mfa_verified,
+  };
 }
 
 function updateStoredUser(patch = {}) {
   const existing = getStoredUser() || {};
   const remember = shouldRememberUser();
-  const merged = { ...existing, ...patch };
+  const merged = normaliseUserPatch({ ...existing, ...patch });
   setStoredUser(merged, remember);
   return merged;
 }
@@ -110,16 +125,11 @@ async function login(credentialsArg = null) {
 
     if (data.user) {
       setStoredUser(
-        {
+        normaliseUserPatch({
           ...data.user,
-          subscription_active: !!data.user.subscription_active,
-          subscription_status: data.user.subscription_status || "inactive",
-          plan_name: data.user.plan_name || null,
           mfa_enabled: !!data.mfa_enabled,
           mfa_verified: false,
-          mfaEnabled: !!data.mfa_enabled,
-          mfaVerified: false,
-        },
+        }),
         remember
       );
     }
@@ -184,25 +194,22 @@ async function validateSession() {
     const existing = getStoredUser() || {};
     const remember = shouldRememberUser();
 
-    setStoredUser(
-      {
-        ...existing,
-        id: data.user_id,
-        user_id: data.user_id,
-        email: data.email,
-        role: data.role,
-        home_id: data.home_id,
-        is_active: data.is_active,
-        subscription_active: !!data.subscription_active,
-        subscription_status: data.subscription_status || "inactive",
-        plan_name: data.plan_name || null,
-        mfa_enabled: !!data.mfa_enabled,
-        mfa_verified: !!data.mfa_verified,
-        mfaEnabled: !!data.mfa_enabled,
-        mfaVerified: !!data.mfa_verified,
-      },
-      remember
-    );
+    const merged = normaliseUserPatch({
+      ...existing,
+      id: data.user_id,
+      user_id: data.user_id,
+      email: data.email,
+      role: data.role,
+      home_id: data.home_id,
+      is_active: data.is_active,
+      subscription_active: !!data.subscription_active,
+      subscription_status: data.subscription_status || "inactive",
+      plan_name: data.plan_name || null,
+      mfa_enabled: !!data.mfa_enabled,
+      mfa_verified: !!data.mfa_verified,
+    });
+
+    setStoredUser(merged, remember);
 
     return {
       authenticated: true,
@@ -273,8 +280,6 @@ async function verifyMfaCode(code) {
   updateStoredUser({
     mfa_enabled: true,
     mfa_verified: true,
-    mfaEnabled: true,
-    mfaVerified: true,
   });
 
   return data;
@@ -293,8 +298,6 @@ async function verifyRecoveryCode(recoveryCode) {
   updateStoredUser({
     mfa_enabled: true,
     mfa_verified: true,
-    mfaEnabled: true,
-    mfaVerified: true,
   });
 
   return data;
@@ -321,8 +324,6 @@ async function enableMfa(code) {
   updateStoredUser({
     mfa_enabled: true,
     mfa_verified: true,
-    mfaEnabled: true,
-    mfaVerified: true,
   });
 
   if (Array.isArray(data.recovery_codes) && data.recovery_codes.length) {
@@ -372,4 +373,5 @@ window.auth = {
   regenerateRecoveryCodes,
   saveRecoveryCodes,
   clearRecoveryCodes,
+  shouldRememberUser,
 };
