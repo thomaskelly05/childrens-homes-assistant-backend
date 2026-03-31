@@ -121,6 +121,7 @@ def get_education_record(
 
 
 @router.put("/{young_person_id}/education/profile")
+@router.put("/{young_person_id}/education-profile")
 def upsert_education_profile(
     young_person_id: int,
     payload: EducationProfileUpsertPayload,
