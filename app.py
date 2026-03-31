@@ -577,6 +577,10 @@ def create_app() -> FastAPI:
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+    # Order matters:
+    # Security middleware must be added first so SessionMiddleware wraps it.
+    register_security_middleware(app)
+
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.session_secret,
@@ -597,7 +601,6 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    register_security_middleware(app)
     register_routers(app)
     mount_static(app)
     register_health_routes(app)
