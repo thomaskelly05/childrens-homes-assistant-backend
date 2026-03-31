@@ -776,12 +776,12 @@
           setStatus("Existing session found. Redirecting...", "is-success");
           setLoading(true);
 
-          if (!state.mfaEnabled) {
+          if (!state.mfa_enabled) {
             window.location.replace("/mfa-setup");
             return;
           }
 
-          if (!state.mfaVerified) {
+          if (!state.mfa_verified) {
             window.location.replace("/mfa");
             return;
           }
