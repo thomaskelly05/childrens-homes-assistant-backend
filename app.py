@@ -16,11 +16,14 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from auth.legal_acceptance import CURRENT_LEGAL_VERSION
 from auth.mfa_guard import (
-    get_session_user_id,
+    SESSION_MFA_VERIFIED_KEY,
+    SESSION_USER_EMAIL_KEY,
+    SESSION_USER_ID_KEY,
     is_mfa_verified_in_session,
     path_allowed_during_mfa,
     user_has_enabled_mfa,
 )
+from auth.tokens import decode_session_token
 from db.connection import (
     close_db_pool,
     get_db_connection,
@@ -104,6 +107,8 @@ CSS_DIR = os.path.join(FRONTEND_DIR, "css")
 JS_DIR = os.path.join(FRONTEND_DIR, "js")
 ASSETS_DIR = os.path.join(FRONTEND_DIR, "assets")
 COMPONENTS_DIR = os.path.join(FRONTEND_DIR, "components")
+
+SESSION_COOKIE_NAME = "indicare_session"
 
 
 # -----------------------------------------------------------------------------
@@ -195,14 +200,34 @@ def wants_html(request: Request) -> bool:
     return "text/html" in accept
 
 
+def _get_request_session_token(request: Request) -> str | None:
+    token = (request.cookies.get(SESSION_COOKIE_NAME) or "").strip()
+    return token or None
+
+
+def _get_authenticated_user_id_from_request(request: Request) -> int | None:
+    token = _get_request_session_token(request)
+    payload = decode_session_token(token) if token else None
+
+    if not payload:
+        return None
+
+    raw_user_id = payload.get("sub")
+    try:
+        return int(raw_user_id) if raw_user_id is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
 def register_security_middleware(app: FastAPI) -> None:
     @app.middleware("http")
     async def security_enforcement(request: Request, call_next):
         path = request.url.path
-        user_id = get_session_user_id(request)
 
         if path_is_public(path):
             return await call_next(request)
+
+        user_id = _get_authenticated_user_id_from_request(request)
 
         if not user_id:
             if wants_html(request):
@@ -215,6 +240,10 @@ def register_security_middleware(app: FastAPI) -> None:
                     "code": "authentication_required",
                 },
             )
+
+        # Keep session values in sync with the token-backed auth
+        request.session[SESSION_USER_ID_KEY] = int(user_id)
+        request.session.setdefault(SESSION_USER_EMAIL_KEY, "")
 
         if not has_user_accepted_version(user_id, CURRENT_LEGAL_VERSION):
             if path_allowed_during_legal_acceptance(path):
@@ -416,10 +445,13 @@ def register_redirect_route(
 def register_frontend_routes(app: FastAPI) -> None:
     @app.get("/")
     def serve_index(request: Request):
-        user_id = get_session_user_id(request)
+        user_id = _get_authenticated_user_id_from_request(request)
 
         if not user_id:
             return RedirectResponse(url="/login", status_code=302)
+
+        request.session[SESSION_USER_ID_KEY] = int(user_id)
+        request.session.setdefault(SESSION_USER_EMAIL_KEY, "")
 
         if not has_user_accepted_version(user_id, CURRENT_LEGAL_VERSION):
             return RedirectResponse(url="/assistant", status_code=302)
@@ -527,6 +559,7 @@ def register_exception_handlers(app: FastAPI) -> None:
                 "path": request.url.path,
             },
         )
+
 
 # -----------------------------------------------------------------------------
 # APP CREATION
