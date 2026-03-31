@@ -247,6 +247,29 @@
         code.setAttribute("aria-invalid", hasError ? "true" : "false");
       }
 
+      function setStoredVerifiedState() {
+        const existing = (window.auth && typeof window.auth.getStoredUser === "function")
+          ? (window.auth.getStoredUser() || {})
+          : {};
+
+        const remember = !!localStorage.getItem("current_user");
+        const merged = {
+          ...existing,
+          mfa_enabled: true,
+          mfa_verified: true,
+          mfaEnabled: true,
+          mfaVerified: true
+        };
+
+        if (remember) {
+          localStorage.setItem("current_user", JSON.stringify(merged));
+          sessionStorage.removeItem("current_user");
+        } else {
+          sessionStorage.setItem("current_user", JSON.stringify(merged));
+          localStorage.removeItem("current_user");
+        }
+      }
+
       async function boot() {
         try {
           if (!window.auth || typeof window.auth.validateSession !== "function") {
@@ -301,24 +324,8 @@
             throw new Error("Verification failed.");
           }
 
-          const existing = (window.auth && typeof window.auth.getStoredUser === "function")
-            ? (window.auth.getStoredUser() || {})
-            : {};
-
-          const remember = !!localStorage.getItem("current_user");
-          const merged = {
-            ...existing,
-            mfa_enabled: true,
-            mfa_verified: true
-          };
-
-          if (remember) {
-            localStorage.setItem("current_user", JSON.stringify(merged));
-            sessionStorage.removeItem("current_user");
-          } else {
-            sessionStorage.setItem("current_user", JSON.stringify(merged));
-            localStorage.removeItem("current_user");
-          }
+          setStoredVerifiedState();
+          await window.auth.validateSession();
 
           setStatus("Verification successful. Redirecting...", "success");
           window.location.replace("/assistant");
