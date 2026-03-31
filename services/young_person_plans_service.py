@@ -118,7 +118,11 @@ class YoungPersonPlansService:
 
         display_status = approval_status
         if approval_status in {"not_required", "draft"}:
-            display_status = base_status if base_status in {"draft", "active", "archived", "completed"} else "draft"
+            display_status = (
+                base_status
+                if base_status in {"draft", "active", "archived", "completed"}
+                else "draft"
+            )
 
         return {
             "id": row.get("id"),
@@ -154,6 +158,7 @@ class YoungPersonPlansService:
             "formulation": row.get("presenting_need"),
             "workflow_status": display_status,
             "event_type": "support_plan",
+            "record_type": "support_plan",
             "version_no": 1,
             "quality_standards": ["protection_of_children"],
             "judgement_areas": ["helped_and_protected"],
