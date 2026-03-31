@@ -74,17 +74,17 @@ const VIEW_CONFIG = {
   "daily-notes": {
     title: "Daily notes",
     subtitle: "Shift recording",
-    loader: () => loadRecordList(`/young-people/${state.youngPersonId}/daily-notes`, "Daily notes"),
+    loader: () => loadRecordList(RECORD_CONFIG.daily_note.listUrl(state.youngPersonId), "Daily notes"),
   },
   incidents: {
     title: "Incidents",
     subtitle: "Incidents and safeguarding concerns",
-    loader: () => loadRecordList(`/young-people/${state.youngPersonId}/incidents`, "Incidents"),
+    loader: () => loadRecordList(RECORD_CONFIG.incident.listUrl(state.youngPersonId), "Incidents"),
   },
   risk: {
     title: "Risks",
     subtitle: "Current risks and concerns",
-    loader: () => loadRecordList(`/young-people/${state.youngPersonId}/risk`, "Risk assessments"),
+    loader: () => loadRecordList(RECORD_CONFIG.risk.listUrl(state.youngPersonId), "Risk assessments"),
   },
   plans: {
     title: "Plans",
@@ -116,8 +116,11 @@ const VIEW_CONFIG = {
 const RECORD_CONFIG = {
   daily_note: {
     label: "Daily note",
-    createUrl: "/young-people/daily-notes",
+    listUrl: (youngPersonId) => `/young-people/${youngPersonId}/daily-notes`,
+    createUrl: (youngPersonId) => `/young-people/${youngPersonId}/daily-notes`,
+    detailUrl: (id) => `/young-people/daily-notes/${id}`,
     updateUrl: (id) => `/young-people/daily-notes/${id}`,
+    updateMethod: "PATCH",
     submitUrl: (id) => `/young-people/daily-notes/${id}/submit`,
     approveUrl: (id) => `/young-people/daily-notes/${id}/approve`,
     returnUrl: (id) => `/young-people/daily-notes/${id}/return`,
@@ -125,8 +128,11 @@ const RECORD_CONFIG = {
   },
   incident: {
     label: "Incident",
-    createUrl: "/young-people/incidents",
+    listUrl: (youngPersonId) => `/young-people/${youngPersonId}/incidents`,
+    createUrl: (youngPersonId) => `/young-people/${youngPersonId}/incidents`,
+    detailUrl: (id) => `/young-people/incidents/${id}`,
     updateUrl: (id) => `/young-people/incidents/${id}`,
+    updateMethod: "PATCH",
     submitUrl: (id) => `/young-people/incidents/${id}/submit`,
     approveUrl: (id) => `/young-people/incidents/${id}/approve`,
     returnUrl: (id) => `/young-people/incidents/${id}/return`,
@@ -134,8 +140,11 @@ const RECORD_CONFIG = {
   },
   risk: {
     label: "Risk assessment",
-    createUrl: "/young-people/risk",
+    listUrl: (youngPersonId) => `/young-people/${youngPersonId}/risk`,
+    createUrl: (youngPersonId) => `/young-people/${youngPersonId}/risk`,
+    detailUrl: (id) => `/young-people/risk/${id}`,
     updateUrl: (id) => `/young-people/risk/${id}`,
+    updateMethod: "PUT",
     submitUrl: (id) => `/young-people/risk/${id}/submit`,
     approveUrl: (id) => `/young-people/risk/${id}/approve`,
     returnUrl: (id) => `/young-people/risk/${id}/return`,
@@ -143,8 +152,11 @@ const RECORD_CONFIG = {
   },
   support_plan: {
     label: "Plan",
-    createUrl: "/young-people/plans",
+    listUrl: (youngPersonId) => `/young-people/${youngPersonId}/plans`,
+    createUrl: (youngPersonId) => `/young-people/${youngPersonId}/plans`,
+    detailUrl: (id) => `/young-people/plans/${id}`,
     updateUrl: (id) => `/young-people/plans/${id}`,
+    updateMethod: "PUT",
     submitUrl: (id) => `/young-people/plans/${id}/submit`,
     approveUrl: (id) => `/young-people/plans/${id}/approve`,
     returnUrl: (id) => `/young-people/plans/${id}/return`,
@@ -152,8 +164,11 @@ const RECORD_CONFIG = {
   },
   plan: {
     label: "Plan",
-    createUrl: "/young-people/plans",
+    listUrl: (youngPersonId) => `/young-people/${youngPersonId}/plans`,
+    createUrl: (youngPersonId) => `/young-people/${youngPersonId}/plans`,
+    detailUrl: (id) => `/young-people/plans/${id}`,
     updateUrl: (id) => `/young-people/plans/${id}`,
+    updateMethod: "PUT",
     submitUrl: (id) => `/young-people/plans/${id}/submit`,
     approveUrl: (id) => `/young-people/plans/${id}/approve`,
     returnUrl: (id) => `/young-people/plans/${id}/return`,
@@ -163,7 +178,7 @@ const RECORD_CONFIG = {
 
 function getYoungPersonId() {
   const params = new URLSearchParams(window.location.search);
-  const id = params.get("id");
+  const id = params.get("id") || params.get("young_person_id");
   return id ? Number(id) : null;
 }
 
@@ -311,19 +326,19 @@ function renderBadges(values = []) {
 }
 
 function getRecordUrl(item) {
-  const type = String(item.record_type || item.event_type || "").toLowerCase();
-  const id = item.record_id || item.id;
+  const type = String(item.record_type || item.event_type || item.category || "").toLowerCase();
+  const id = item.record_id || item.source_id || item.id;
   if (!id) return null;
 
   const map = {
-    daily_note: `/young-people/daily-notes/${id}`,
-    daily_notes: `/young-people/daily-notes/${id}`,
-    incident: `/young-people/incidents/${id}`,
-    incidents: `/young-people/incidents/${id}`,
-    risk: `/young-people/risk/${id}`,
-    risk_assessment: `/young-people/risk/${id}`,
-    support_plan: `/young-people/plans/${id}`,
-    plan: `/young-people/plans/${id}`,
+    daily_note: RECORD_CONFIG.daily_note.detailUrl(id),
+    daily_notes: RECORD_CONFIG.daily_note.detailUrl(id),
+    incident: RECORD_CONFIG.incident.detailUrl(id),
+    incidents: RECORD_CONFIG.incident.detailUrl(id),
+    risk: RECORD_CONFIG.risk.detailUrl(id),
+    risk_assessment: RECORD_CONFIG.risk.detailUrl(id),
+    support_plan: RECORD_CONFIG.support_plan.detailUrl(id),
+    plan: RECORD_CONFIG.support_plan.detailUrl(id),
     health: `/young-people/health-records/${id}`,
     health_record: `/young-people/health-records/${id}`,
     education: `/young-people/education-records/${id}`,
@@ -338,8 +353,9 @@ function getRecordUrl(item) {
 }
 
 function normaliseRecordType(item) {
-  const raw = String(item.record_type || item.event_type || "").toLowerCase();
+  const raw = String(item.record_type || item.event_type || item.category || "").toLowerCase();
   if (raw === "plan") return "support_plan";
+  if (raw === "risk_assessment") return "risk";
   return raw;
 }
 
@@ -559,10 +575,18 @@ async function handleModalSubmit(event) {
     els.modalSaveBtn.disabled = true;
 
     if (state.modalMode === "edit" && state.modalEditItem?.id) {
-      await apiSend(config.updateUrl(state.modalEditItem.id), "PUT", payload);
+      await apiSend(
+        config.updateUrl(state.modalEditItem.id),
+        config.updateMethod || "PATCH",
+        payload,
+      );
       showMessage(`${config.label} updated.`);
     } else {
-      await apiSend(config.createUrl, "POST", payload);
+      await apiSend(
+        config.createUrl(state.youngPersonId),
+        "POST",
+        payload,
+      );
       showMessage(`${config.label} created.`);
     }
 
@@ -586,7 +610,7 @@ async function runDrawerWorkflow(action) {
     return;
   }
 
-  const id = item.record_id || item.id;
+  const id = item.record_id || item.source_id || item.id;
   if (!id) {
     showError("This record has no id.");
     return;
@@ -651,7 +675,7 @@ async function openRecordDetail(item) {
 
     els.drawerTitle.textContent = item.title || detailData.title || "Record details";
     els.drawerSubtitle.textContent =
-      `${String(item.record_type || item.event_type || "record").replaceAll("_", " ")} • ${formatDate(item.recorded_at || item.occurred_at || detailData.created_at)}`;
+      `${String(item.record_type || item.event_type || item.category || "record").replaceAll("_", " ")} • ${formatDate(item.recorded_at || item.occurred_at || item.event_datetime || detailData.created_at)}`;
 
     els.drawerBody.innerHTML = `
       <div class="detail-section">
@@ -663,7 +687,7 @@ async function openRecordDetail(item) {
           </div>
           <div class="detail-row">
             <div class="detail-key">Recorded at</div>
-            <div class="detail-value">${escapeHtml(formatDate(item.recorded_at || item.occurred_at || detailData.created_at))}</div>
+            <div class="detail-value">${escapeHtml(formatDate(item.recorded_at || item.occurred_at || item.event_datetime || detailData.created_at))}</div>
           </div>
           <div class="detail-row">
             <div class="detail-key">Recorded by</div>
@@ -745,20 +769,20 @@ function renderRecordCard(item) {
 }
 
 function renderTimelineItem(item) {
-  const severityClass = `severity-${String(item.severity || "").toLowerCase()}`;
+  const severityClass = `severity-${String(item.severity || item.significance || "").toLowerCase()}`;
   return `
     <article class="timeline-item ${escapeHtml(severityClass)}">
       <div class="record-card-header">
         <div>
-          <h4>${escapeHtml(item.title || item.event_type || "Timeline item")}</h4>
+          <h4>${escapeHtml(item.title || item.event_type || item.category || "Timeline item")}</h4>
           <div class="record-meta">
             ${escapeHtml(formatDate(item.occurred_at || item.event_datetime || item.created_at))}
-            ${item.event_type ? ` • ${escapeHtml(item.event_type)}` : ""}
+            ${(item.event_type || item.category) ? ` • ${escapeHtml(item.event_type || item.category)}` : ""}
           </div>
         </div>
       </div>
       <div class="record-body">${escapeHtml(item.summary || item.narrative || "No summary available.")}</div>
-      ${renderBadges([item.severity, item.workflow_status])}
+      ${renderBadges([item.severity || item.significance, item.workflow_status || item.event_status])}
       <div class="day-record-actions">
         <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>
       </div>
@@ -839,6 +863,7 @@ function hideSelectorMode() {
 function openYoungPerson(id) {
   const url = new URL(window.location.href);
   url.searchParams.set("id", String(id));
+  url.searchParams.delete("young_person_id");
   window.history.replaceState({}, "", url.toString());
 
   state.youngPersonId = Number(id);
@@ -1050,6 +1075,8 @@ async function loadHome() {
       ${recent.length ? renderGroupedTimelineFromItems(recent) : `<div class="empty-state">No recent activity.</div>`}
     </div>
   `;
+
+  bindDynamicOpenRecordButtons();
 }
 
 async function loadCalendarMonthSummary() {
@@ -1117,7 +1144,7 @@ function renderDayRecords(records) {
   }
 
   return records.map((item) => {
-    const title = item.title || item.record_type || item.event_type || "Record";
+    const title = item.title || item.record_type || item.event_type || item.category || "Record";
     const summary = item.summary || item.narrative || item.description || "No summary available.";
     const staffName = item.recorded_by_name || item.author_name || item.created_by_name || item.worker_name || "Unknown";
     const recordedAt = item.recorded_at || item.occurred_at || item.event_datetime || item.created_at;
@@ -1128,12 +1155,12 @@ function renderDayRecords(records) {
           <div>
             <div class="day-record-title">${escapeHtml(title)}</div>
             <div class="day-record-meta">
-              ${escapeHtml(String(item.record_type || item.event_type || "record").replaceAll("_", " "))}
+              ${escapeHtml(String(item.record_type || item.event_type || item.category || "record").replaceAll("_", " "))}
               • ${escapeHtml(formatShortTime(recordedAt))}
               • ${escapeHtml(staffName)}
             </div>
           </div>
-          <div>${renderBadges([item.workflow_status, item.severity])}</div>
+          <div>${renderBadges([item.workflow_status, item.severity || item.significance])}</div>
         </div>
         <div class="day-record-summary">${escapeHtml(summary)}</div>
         <div class="day-record-actions">
@@ -1146,9 +1173,9 @@ function renderDayRecords(records) {
 
 function buildDaySummary(records) {
   const total = records.length;
-  const incidents = records.filter((x) => String(x.record_type || x.event_type || "").toLowerCase().includes("incident")).length;
+  const incidents = records.filter((x) => String(x.record_type || x.event_type || x.category || "").toLowerCase().includes("incident")).length;
   const dailyNotes = records.filter((x) => {
-    const t = String(x.record_type || x.event_type || "").toLowerCase();
+    const t = String(x.record_type || x.event_type || x.category || "").toLowerCase();
     return t.includes("daily_note") || t.includes("daily note");
   }).length;
   return { total, incidents, dailyNotes };
@@ -1273,10 +1300,10 @@ function bindCalendarEvents() {
     const filtered = state.selectedDayRecords.filter((item) => {
       const haystack = [
         item.title, item.summary, item.narrative, item.description, item.record_type,
-        item.event_type, item.recorded_by_name, item.author_name, item.created_by_name, item.worker_name,
+        item.event_type, item.category, item.recorded_by_name, item.author_name, item.created_by_name, item.worker_name,
       ].filter(Boolean).join(" ").toLowerCase();
 
-      const typeValue = String(item.record_type || item.event_type || "").toLowerCase();
+      const typeValue = String(item.record_type || item.event_type || item.category || "").toLowerCase();
       return (!term || haystack.includes(term)) && (!type || typeValue === type);
     });
 
@@ -1542,6 +1569,7 @@ function bindEvents() {
 
     const url = new URL(window.location.href);
     url.searchParams.delete("id");
+    url.searchParams.delete("young_person_id");
     window.history.replaceState({}, "", url.toString());
     loadYoungPersonSelector();
   });
