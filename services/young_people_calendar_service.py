@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from calendar import monthrange
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from typing import Any
 
 from db.connection import get_db_connection, release_db_connection
@@ -36,6 +36,7 @@ class YoungPeopleCalendarService:
                     "date": key,
                     "record_count": 0,
                     "record_types": [],
+                    "types": [],
                     "has_daily_note": False,
                     "has_incident": False,
                     "has_risk": False,
@@ -58,6 +59,9 @@ class YoungPeopleCalendarService:
 
                 if record_type not in row["record_types"]:
                     row["record_types"].append(record_type)
+
+                if record_type not in row["types"]:
+                    row["types"].append(record_type)
 
                 if record_type == "daily_note":
                     row["has_daily_note"] = True
@@ -82,6 +86,7 @@ class YoungPeopleCalendarService:
                 "year": year,
                 "month": month,
                 "days": days,
+                "items": days,
             }
         finally:
             release_db_connection(conn)
@@ -201,6 +206,7 @@ class YoungPeopleCalendarService:
                     SELECT i.incident_datetime::date AS record_date, 'incident' AS record_type
                     FROM incidents i
                     WHERE i.young_person_id = %s
+                      AND i.incident_datetime IS NOT NULL
                       AND i.incident_datetime::date BETWEEN %s AND %s
 
                     UNION ALL
@@ -208,6 +214,7 @@ class YoungPeopleCalendarService:
                     SELECT ra.review_date::date AS record_date, 'risk' AS record_type
                     FROM risk_assessments ra
                     WHERE ra.young_person_id = %s
+                      AND ra.review_date IS NOT NULL
                       AND ra.review_date BETWEEN %s AND %s
 
                     UNION ALL
@@ -215,6 +222,7 @@ class YoungPeopleCalendarService:
                     SELECT hr.event_datetime::date AS record_date, 'health' AS record_type
                     FROM health_records hr
                     WHERE hr.young_person_id = %s
+                      AND hr.event_datetime IS NOT NULL
                       AND hr.event_datetime::date BETWEEN %s AND %s
 
                     UNION ALL
@@ -222,6 +230,7 @@ class YoungPeopleCalendarService:
                     SELECT mr.scheduled_time::date AS record_date, 'health' AS record_type
                     FROM medication_records mr
                     WHERE mr.young_person_id = %s
+                      AND mr.scheduled_time IS NOT NULL
                       AND mr.scheduled_time::date BETWEEN %s AND %s
 
                     UNION ALL
@@ -229,6 +238,7 @@ class YoungPeopleCalendarService:
                     SELECT er.record_date::date AS record_date, 'education' AS record_type
                     FROM education_records er
                     WHERE er.young_person_id = %s
+                      AND er.record_date IS NOT NULL
                       AND er.record_date BETWEEN %s AND %s
 
                     UNION ALL
@@ -236,6 +246,7 @@ class YoungPeopleCalendarService:
                     SELECT fcr.contact_datetime::date AS record_date, 'family' AS record_type
                     FROM family_contact_records fcr
                     WHERE fcr.young_person_id = %s
+                      AND fcr.contact_datetime IS NOT NULL
                       AND fcr.contact_datetime::date BETWEEN %s AND %s
 
                     UNION ALL
@@ -243,6 +254,7 @@ class YoungPeopleCalendarService:
                     SELECT ks.session_date::date AS record_date, 'keywork' AS record_type
                     FROM keywork_sessions ks
                     WHERE ks.young_person_id = %s
+                      AND ks.session_date IS NOT NULL
                       AND ks.session_date BETWEEN %s AND %s
 
                     UNION ALL
@@ -250,6 +262,7 @@ class YoungPeopleCalendarService:
                     SELECT sp.review_date::date AS record_date, 'support_plan' AS record_type
                     FROM support_plans sp
                     WHERE sp.young_person_id = %s
+                      AND sp.review_date IS NOT NULL
                       AND sp.review_date BETWEEN %s AND %s
                 ) t
                 WHERE record_date IS NOT NULL
@@ -320,6 +333,7 @@ class YoungPeopleCalendarService:
                 {
                     "record_type": "daily_note",
                     "record_id": row["id"],
+                    "id": row["id"],
                     "title": f"{(row.get('shift_type') or 'Shift').replace('_', ' ').title()} daily note",
                     "summary": summary or "Daily note recorded",
                     "recorded_at": row.get("created_at"),
@@ -350,6 +364,7 @@ class YoungPeopleCalendarService:
             FROM incidents i
             LEFT JOIN users u ON i.staff_id = u.id
             WHERE i.young_person_id = %s
+              AND i.incident_datetime IS NOT NULL
               AND i.incident_datetime::date = %s
             ORDER BY i.incident_datetime DESC NULLS LAST, i.id DESC
             """,
@@ -361,6 +376,7 @@ class YoungPeopleCalendarService:
             {
                 "record_type": "incident",
                 "record_id": row["id"],
+                "id": row["id"],
                 "title": (row.get("incident_type") or "Incident").replace("_", " ").title(),
                 "summary": row.get("description") or "Incident recorded",
                 "recorded_at": row.get("incident_datetime") or row.get("created_at"),
@@ -402,6 +418,7 @@ class YoungPeopleCalendarService:
             {
                 "record_type": "risk",
                 "record_id": row["id"],
+                "id": row["id"],
                 "title": row.get("title") or "Risk assessment",
                 "summary": row.get("concern_summary") or "Risk assessment updated",
                 "recorded_at": row.get("updated_at") or row.get("review_date"),
@@ -431,6 +448,7 @@ class YoungPeopleCalendarService:
             FROM health_records hr
             LEFT JOIN users u ON hr.created_by = u.id
             WHERE hr.young_person_id = %s
+              AND hr.event_datetime IS NOT NULL
               AND hr.event_datetime::date = %s
             ORDER BY hr.event_datetime DESC NULLS LAST, hr.id DESC
             """,
@@ -442,6 +460,7 @@ class YoungPeopleCalendarService:
             {
                 "record_type": "health",
                 "record_id": row["id"],
+                "id": row["id"],
                 "title": row.get("title") or row.get("record_type") or "Health record",
                 "summary": row.get("summary") or "Health record recorded",
                 "recorded_at": row.get("event_datetime") or row.get("created_at"),
@@ -485,6 +504,7 @@ class YoungPeopleCalendarService:
                 {
                     "record_type": "health",
                     "record_id": row["id"],
+                    "id": row["id"],
                     "title": f"Medication: {row.get('medication_name') or 'Medication'}",
                     "summary": f"Status: {row.get('status') or 'recorded'}",
                     "recorded_at": row.get("administered_time") or row.get("scheduled_time") or row.get("created_at"),
@@ -525,6 +545,7 @@ class YoungPeopleCalendarService:
             {
                 "record_type": "education",
                 "record_id": row["id"],
+                "id": row["id"],
                 "title": row.get("provision_name") or "Education record",
                 "summary": row.get("achievement_note") or row.get("behaviour_summary") or "Education record recorded",
                 "recorded_at": row.get("created_at") or row.get("record_date"),
@@ -555,6 +576,7 @@ class YoungPeopleCalendarService:
             FROM family_contact_records fcr
             LEFT JOIN users u ON fcr.created_by = u.id
             WHERE fcr.young_person_id = %s
+              AND fcr.contact_datetime IS NOT NULL
               AND fcr.contact_datetime::date = %s
             ORDER BY fcr.contact_datetime DESC NULLS LAST, fcr.id DESC
             """,
@@ -566,6 +588,7 @@ class YoungPeopleCalendarService:
             {
                 "record_type": "family",
                 "record_id": row["id"],
+                "id": row["id"],
                 "title": row.get("contact_person") or "Family contact",
                 "summary": row.get("child_voice") or row.get("post_contact_presentation") or row.get("concerns") or "Family contact recorded",
                 "recorded_at": row.get("contact_datetime") or row.get("created_at"),
@@ -606,6 +629,7 @@ class YoungPeopleCalendarService:
             {
                 "record_type": "keywork",
                 "record_id": row["id"],
+                "id": row["id"],
                 "title": f"Keywork: {row.get('topic') or 'Session'}",
                 "summary": row.get("summary") or "Keywork session recorded",
                 "recorded_at": row.get("created_at") or row.get("session_date"),
@@ -646,6 +670,7 @@ class YoungPeopleCalendarService:
             {
                 "record_type": "support_plan",
                 "record_id": row["id"],
+                "id": row["id"],
                 "title": row.get("title") or "Support plan",
                 "summary": row.get("summary") or "Support plan updated",
                 "recorded_at": row.get("updated_at") or row.get("review_date"),
