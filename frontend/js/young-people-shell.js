@@ -850,6 +850,42 @@ function renderGroupedTimelineFromItems(items) {
   ].join("") || `<div class="empty-state">No timeline items.</div>`;
 }
 
+function renderProfileSection(title, rows = []) {
+  return `
+    <section class="profile-card">
+      <div class="panel-header">
+        <div>
+          <h3>${escapeHtml(title)}</h3>
+        </div>
+      </div>
+      <div class="kv">
+        ${
+          rows.length
+            ? rows.map((row) => `
+                <div class="kv-key">${escapeHtml(row.label)}</div>
+                <div>${escapeHtml(row.value || "—")}</div>
+              `).join("")
+            : `<div class="kv-key">Details</div><div>—</div>`
+        }
+      </div>
+    </section>
+  `;
+}
+
+function renderHandoverItem(title, body, badges = []) {
+  return `
+    <article class="handover-item">
+      <div class="record-card-header">
+        <div>
+          <h4>${escapeHtml(title)}</h4>
+        </div>
+      </div>
+      <div class="record-body">${escapeHtml(body || "—")}</div>
+      ${renderBadges(badges)}
+    </article>
+  `;
+}
+
 function updateHeaderForView(view) {
   const config = VIEW_CONFIG[view];
   els.pageTitle.textContent = config.title;
@@ -857,7 +893,7 @@ function updateHeaderForView(view) {
 }
 
 function markActiveNav(view) {
-  els.nav.querySelectorAll(".nav-btn").forEach((btn) => {
+  document.querySelectorAll(".nav-btn").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.view === view);
   });
 }
@@ -1001,6 +1037,150 @@ async function loadYoungPerson() {
   els.personAvatar.textContent = initialsFromName(fullName);
 }
 
+async function loadProfile() {
+  setLoading("Loading profile...");
+
+  const data = await apiGet(`/young-people/${state.youngPersonId}`);
+  const bundle = data.bundle || {};
+  const yp = bundle.young_person || data.young_person || state.youngPerson || {};
+  const communication = bundle.communication_profile || {};
+  const education = bundle.education_profile || {};
+  const health = bundle.health_profile || {};
+  const identity = bundle.identity_profile || {};
+  const legal = bundle.legal_status || {};
+  const contacts = bundle.contacts || [];
+  const alerts = bundle.alerts || [];
+
+  const displayName =
+    [yp.first_name, yp.last_name].filter(Boolean).join(" ").trim() ||
+    yp.preferred_name ||
+    "Young Person";
+
+  els.content.innerHTML = `
+    <div class="grid grid-4">
+      <div class="stat-card">
+        <div class="stat-label">Name</div>
+        <div class="stat-value" style="font-size:18px;">${escapeHtml(displayName)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Placement status</div>
+        <div class="stat-value" style="font-size:18px;">${escapeHtml(yp.placement_status || "—")}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Risk level</div>
+        <div class="stat-value" style="font-size:18px;">${escapeHtml(yp.summary_risk_level || "—")}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Alerts</div>
+        <div class="stat-value">${alerts.length}</div>
+      </div>
+    </div>
+
+    <div class="profile-grid-shell">
+      <div class="profile-stack">
+        ${renderProfileSection("Core profile", [
+          { label: "Preferred name", value: yp.preferred_name || "—" },
+          { label: "Date of birth", value: formatDate(yp.date_of_birth) },
+          { label: "Gender", value: yp.gender || "—" },
+          { label: "Ethnicity", value: yp.ethnicity || "—" },
+          { label: "Admission date", value: formatDate(yp.admission_date) },
+          { label: "Discharge date", value: formatDate(yp.discharge_date) },
+        ])}
+
+        ${renderProfileSection("Communication and presentation", [
+          { label: "Communication style", value: communication.communication_style || "—" },
+          { label: "Sensory profile", value: communication.sensory_profile || "—" },
+          { label: "Processing needs", value: communication.processing_needs || "—" },
+          { label: "Signs of distress", value: communication.signs_of_distress || "—" },
+          { label: "What helps", value: communication.what_helps || "—" },
+          { label: "What to avoid", value: communication.what_to_avoid || "—" },
+        ])}
+
+        ${renderProfileSection("Identity and what matters", [
+          { label: "Religion or faith", value: identity.religion_or_faith || "—" },
+          { label: "Cultural identity", value: identity.cultural_identity || "—" },
+          { label: "First language", value: identity.first_language || "—" },
+          { label: "Dietary needs", value: identity.dietary_needs || "—" },
+          { label: "Interests", value: identity.interests || "—" },
+          { label: "Strengths", value: identity.strengths_summary || "—" },
+          { label: "What matters to me", value: identity.what_matters_to_me || "—" },
+        ])}
+      </div>
+
+      <div class="profile-stack">
+        ${renderProfileSection("Legal and contact", [
+          { label: "Legal status", value: legal.legal_status || "—" },
+          { label: "Order type", value: legal.order_type || "—" },
+          { label: "Restrictions", value: legal.restrictions_text || "—" },
+          { label: "Delegated authority", value: legal.delegated_authority_details || "—" },
+          { label: "Consent arrangements", value: legal.consent_arrangements || "—" },
+        ])}
+
+        ${renderProfileSection("Education profile", [
+          { label: "School", value: education.school_name || "—" },
+          { label: "Year group", value: education.year_group || "—" },
+          { label: "Education status", value: education.education_status || "—" },
+          { label: "SEN status", value: education.sen_status || "—" },
+          { label: "Support summary", value: education.support_summary || "—" },
+        ])}
+
+        ${renderProfileSection("Health profile", [
+          { label: "GP", value: health.gp_name || "—" },
+          { label: "Allergies", value: health.allergies || "—" },
+          { label: "Diagnoses", value: health.diagnoses || "—" },
+          { label: "Mental health", value: health.mental_health_summary || "—" },
+          { label: "Medication summary", value: health.medication_summary || "—" },
+        ])}
+
+        <section class="profile-card">
+          <div class="panel-header">
+            <div>
+              <h3>Contacts and alerts</h3>
+              <p class="panel-subtitle">Important adults and current profile alerts.</p>
+            </div>
+          </div>
+
+          ${
+            contacts.length
+              ? `<div class="record-list">
+                  ${contacts.slice(0, 6).map((contact) => `
+                    <article class="record-card">
+                      <div class="record-card-header">
+                        <div>
+                          <h4>${escapeHtml(contact.full_name || "Contact")}</h4>
+                          <div class="record-meta">${escapeHtml(contact.relationship_to_young_person || contact.contact_type || "Contact")}</div>
+                        </div>
+                      </div>
+                      <div class="record-body">Phone: ${escapeHtml(contact.phone || "—")}
+Email: ${escapeHtml(contact.email || "—")}
+Notes: ${escapeHtml(contact.notes || "—")}</div>
+                    </article>
+                  `).join("")}
+                </div>`
+              : `<div class="empty-state">No contacts recorded.</div>`
+          }
+
+          <div style="height:10px;"></div>
+
+          ${
+            alerts.length
+              ? `<div class="alert-list">
+                  ${alerts.map((alert) => `
+                    <article class="alert-item">
+                      <strong>${escapeHtml(alert.title || "Alert")}</strong>
+                      <div class="helper-note">${escapeHtml(alert.description || "No description.")}</div>
+                      ${renderBadges([alert.severity, alert.is_active ? "active" : "inactive"])}
+                    </article>
+                  `).join("")}
+                </div>`
+              : `<div class="empty-state">No active alerts.</div>`
+          }
+        </section>
+      </div>
+    </div>
+  `;
+}
+
 async function loadHome() {
   setLoading("Loading home...");
 
@@ -1097,6 +1277,138 @@ async function loadHome() {
   `;
 
   bindDynamicOpenRecordButtons();
+}
+
+async function loadHandover() {
+  setLoading("Loading handover...");
+
+  const [overviewData, timelineData, riskData, plansData] = await Promise.all([
+    apiGet(`/young-people/${state.youngPersonId}/overview`),
+    apiGet(`/young-people/${state.youngPersonId}/timeline?limit=25`),
+    apiGet(`/young-people/${state.youngPersonId}/risk`).catch(() => ({ items: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/plans`).catch(() => ({ items: [] })),
+  ]);
+
+  const alerts = overviewData.alerts || [];
+  const recent = (timelineData.timeline || []).slice(0, 10);
+  const risks = (riskData.items || []).slice(0, 5);
+  const plans = (plansData.items || []).slice(0, 5);
+
+  const incidents = recent.filter((item) => String(item.event_type || item.category || "").toLowerCase().includes("incident"));
+  const dailyNotes = recent.filter((item) => String(item.event_type || item.category || "").toLowerCase().includes("daily_note"));
+
+  els.content.innerHTML = `
+    <div class="grid grid-4">
+      <div class="stat-card">
+        <div class="stat-label">Active alerts</div>
+        <div class="stat-value">${alerts.length}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Recent incidents</div>
+        <div class="stat-value">${incidents.length}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Recent daily notes</div>
+        <div class="stat-value">${dailyNotes.length}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Current risks</div>
+        <div class="stat-value">${risks.length}</div>
+      </div>
+    </div>
+
+    <div class="callout-grid">
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>What staff need to know now</h3>
+            <p class="panel-subtitle">Priority alerts, current risks and recent events.</p>
+          </div>
+        </div>
+
+        <div class="handover-list">
+          ${
+            alerts.length
+              ? alerts.map((alert) => renderHandoverItem(
+                  alert.title || "Alert",
+                  alert.description || "No description.",
+                  [alert.severity, alert.is_active ? "active" : "inactive"]
+                )).join("")
+              : renderHandoverItem("Alerts", "No active alerts recorded.", [])
+          }
+
+          ${
+            risks.length
+              ? risks.map((risk) => renderHandoverItem(
+                  risk.title || "Risk",
+                  risk.concern_summary || risk.summary || "No summary recorded.",
+                  [risk.severity, risk.status, risk.approval_status]
+                )).join("")
+              : renderHandoverItem("Risks", "No current risk records.", [])
+          }
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>Plans staff may need to follow</h3>
+            <p class="panel-subtitle">Current plans and guidance likely to matter next shift.</p>
+          </div>
+        </div>
+
+        ${
+          plans.length
+            ? `<div class="record-list">${plans.map(renderRecordCard).join("")}</div>`
+            : `<div class="empty-state">No current plans recorded.</div>`
+        }
+      </section>
+    </div>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h3>Recent chronology for handover</h3>
+          <p class="panel-subtitle">Recent recorded activity across the record.</p>
+        </div>
+      </div>
+      ${recent.length ? renderGroupedTimelineFromItems(recent) : `<div class="empty-state">No recent chronology recorded.</div>`}
+    </section>
+  `;
+
+  bindDynamicOpenRecordButtons();
+}
+
+async function loadCompliancePlaceholder() {
+  els.content.innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <h3>Compliance</h3>
+          <p class="panel-subtitle">This section is ready to connect to compliance checks, statutory documents and review evidence.</p>
+        </div>
+      </div>
+      <div class="empty-state">
+        <p>Next pass: connect this view to compliance routes, due reviews, missing records and evidence readiness.</p>
+      </div>
+    </div>
+  `;
+}
+
+async function loadReportsPlaceholder() {
+  els.content.innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <h3>Reports</h3>
+          <p class="panel-subtitle">This section is ready to connect to reports, summaries and management outputs.</p>
+        </div>
+      </div>
+      <div class="empty-state">
+        <p>Next pass: connect this view to report generation, export options and management summaries.</p>
+      </div>
+    </div>
+  `;
 }
 
 async function loadCalendarMonthSummary() {
@@ -1546,7 +1858,7 @@ function bindDynamicOpenRecordButtons() {
 }
 
 function bindEvents() {
-  els.nav.addEventListener("click", (event) => {
+  document.addEventListener("click", (event) => {
     const btn = event.target.closest(".nav-btn");
     if (!btn) return;
     if (!state.youngPersonId) {
