@@ -804,6 +804,15 @@
             return;
           }
 
+          if (
+            state.subscription_active === false &&
+            !["admin", "provider_admin"].includes(String(state.role || "").toLowerCase())
+          ) {
+            clearRedirectGuard();
+            setStatus("Your account does not currently have an active subscription.", "is-error");
+            return;
+          }
+
           setStatus("Existing session found. Redirecting...", "is-success");
           setLoading(true);
           markRedirectGuard();
