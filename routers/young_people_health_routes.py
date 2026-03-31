@@ -215,6 +215,7 @@ def get_medication_record(
 
 
 @router.put("/{young_person_id}/health/profile")
+@router.put("/{young_person_id}/health-profile")
 def upsert_health_profile(
     young_person_id: int,
     payload: HealthProfileUpsertPayload,
