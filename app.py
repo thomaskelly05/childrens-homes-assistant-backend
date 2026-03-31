@@ -12,11 +12,11 @@ from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from auth.legal_acceptance import CURRENT_LEGAL_VERSION
 from auth.mfa_guard import (
-    SESSION_MFA_VERIFIED_KEY,
     SESSION_USER_EMAIL_KEY,
     SESSION_USER_ID_KEY,
     is_mfa_verified_in_session,
@@ -219,9 +219,8 @@ def _get_authenticated_user_id_from_request(request: Request) -> int | None:
         return None
 
 
-def register_security_middleware(app: FastAPI) -> None:
-    @app.middleware("http")
-    async def security_enforcement(request: Request, call_next):
+class SecurityEnforcementMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
         path = request.url.path
 
         if path_is_public(path):
@@ -241,7 +240,6 @@ def register_security_middleware(app: FastAPI) -> None:
                 },
             )
 
-        # Keep session values in sync with the token-backed auth
         request.session[SESSION_USER_ID_KEY] = int(user_id)
         request.session.setdefault(SESSION_USER_EMAIL_KEY, "")
 
@@ -256,7 +254,7 @@ def register_security_middleware(app: FastAPI) -> None:
                 status_code=403,
                 content={
                     "ok": False,
-                    "detail": "Current legal terms must be accepted before using the platform.",
+                    "detail": "Current legal terms must be accepted before using this feature.",
                     "code": "legal_acceptance_required",
                     "current_version": CURRENT_LEGAL_VERSION,
                 },
@@ -288,6 +286,10 @@ def register_security_middleware(app: FastAPI) -> None:
             )
 
         return await call_next(request)
+
+
+def register_security_middleware(app: FastAPI) -> None:
+    app.add_middleware(SecurityEnforcementMiddleware)
 
 
 # -----------------------------------------------------------------------------
@@ -450,16 +452,18 @@ def register_frontend_routes(app: FastAPI) -> None:
         if not user_id:
             return RedirectResponse(url="/login", status_code=302)
 
-        request.session[SESSION_USER_ID_KEY] = int(user_id)
-        request.session.setdefault(SESSION_USER_EMAIL_KEY, "")
-
         if not has_user_accepted_version(user_id, CURRENT_LEGAL_VERSION):
             return RedirectResponse(url="/assistant", status_code=302)
 
         if not user_has_enabled_mfa(user_id):
             return RedirectResponse(url="/mfa-setup", status_code=302)
 
-        if not is_mfa_verified_in_session(request):
+        try:
+            mfa_verified = is_mfa_verified_in_session(request)
+        except Exception:
+            mfa_verified = False
+
+        if not mfa_verified:
             return RedirectResponse(url="/mfa", status_code=302)
 
         return RedirectResponse(url="/assistant", status_code=302)
@@ -530,7 +534,6 @@ def register_health_routes(app: FastAPI) -> None:
             with conn.cursor() as cur:
                 cur.execute("SELECT 1")
                 cur.fetchone()
-
             return {"ok": True, "ready": True}
         except Exception as exc:
             logger.exception("Readiness check failed")
