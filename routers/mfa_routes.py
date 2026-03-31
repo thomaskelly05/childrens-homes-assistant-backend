@@ -130,20 +130,52 @@ async def mfa_status(request: Request):
 async def mfa_setup(request: Request):
     user_id, email = _require_session_user(request)
 
-    secret = pyotp.random_base32()
-    upsert_user_mfa_secret(user_id=user_id, email=email, totp_secret=secret)
+    try:
+        secret = pyotp.random_base32()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not generate MFA secret: {exc}",
+        )
 
-    label = email or f"user-{user_id}"
-    otp_url = pyotp.TOTP(secret).provisioning_uri(name=label, issuer_name=TOTP_ISSUER)
-    qr_code_data_url = _build_qr_data_url(otp_url)
+    try:
+        upsert_user_mfa_secret(user_id=user_id, email=email, totp_secret=secret)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not save MFA setup: {exc}",
+        )
 
-    _log_mfa_event(
-        request,
-        user_id=user_id,
-        email=email,
-        event_type="mfa_setup_started",
-        detail="TOTP setup initiated",
-    )
+    try:
+        label = email or f"user-{user_id}"
+        otp_url = pyotp.TOTP(secret).provisioning_uri(
+            name=label,
+            issuer_name=TOTP_ISSUER,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not create MFA URL: {exc}",
+        )
+
+    try:
+        qr_code_data_url = _build_qr_data_url(otp_url)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not generate MFA QR code: {exc}",
+        )
+
+    try:
+        _log_mfa_event(
+            request,
+            user_id=user_id,
+            email=email,
+            event_type="mfa_setup_started",
+            detail="TOTP setup initiated",
+        )
+    except Exception:
+        pass
 
     return MfaSetupResponse(
         ok=True,
@@ -176,13 +208,16 @@ async def mfa_enable(request: Request, payload: MfaVerifyEnableRequest):
     _persist_verified_session(request, user_id, email)
     recovery_codes = generate_and_store_recovery_codes(user_id, count=8)
 
-    _log_mfa_event(
-        request,
-        user_id=user_id,
-        email=email,
-        event_type="mfa_enabled",
-        detail="MFA enabled successfully",
-    )
+    try:
+        _log_mfa_event(
+            request,
+            user_id=user_id,
+            email=email,
+            event_type="mfa_enabled",
+            detail="MFA enabled successfully",
+        )
+    except Exception:
+        pass
 
     return {
         "ok": True,
@@ -202,13 +237,16 @@ async def mfa_verify(request: Request, payload: MfaChallengeRequest):
 
     totp = pyotp.TOTP(row["totp_secret"])
     if not totp.verify(payload.code, valid_window=1):
-        _log_mfa_event(
-            request,
-            user_id=user_id,
-            email=email,
-            event_type="mfa_verify_failed",
-            detail="Invalid TOTP code",
-        )
+        try:
+            _log_mfa_event(
+                request,
+                user_id=user_id,
+                email=email,
+                event_type="mfa_verify_failed",
+                detail="Invalid TOTP code",
+            )
+        except Exception:
+            pass
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid authentication code.",
@@ -217,13 +255,16 @@ async def mfa_verify(request: Request, payload: MfaChallengeRequest):
     update_last_verified(user_id)
     _persist_verified_session(request, user_id, email)
 
-    _log_mfa_event(
-        request,
-        user_id=user_id,
-        email=email,
-        event_type="mfa_verified",
-        detail="MFA challenge passed",
-    )
+    try:
+        _log_mfa_event(
+            request,
+            user_id=user_id,
+            email=email,
+            event_type="mfa_verified",
+            detail="MFA challenge passed",
+        )
+    except Exception:
+        pass
 
     return {
         "ok": True,
@@ -239,13 +280,16 @@ async def mfa_verify_recovery(request: Request, payload: RecoveryCodeVerifyReque
 
     ok = use_recovery_code(user_id, payload.recovery_code.strip().upper())
     if not ok:
-        _log_mfa_event(
-            request,
-            user_id=user_id,
-            email=email,
-            event_type="mfa_recovery_failed",
-            detail="Invalid recovery code",
-        )
+        try:
+            _log_mfa_event(
+                request,
+                user_id=user_id,
+                email=email,
+                event_type="mfa_recovery_failed",
+                detail="Invalid recovery code",
+            )
+        except Exception:
+            pass
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid recovery code.",
@@ -254,13 +298,16 @@ async def mfa_verify_recovery(request: Request, payload: RecoveryCodeVerifyReque
     update_last_verified(user_id)
     _persist_verified_session(request, user_id, email)
 
-    _log_mfa_event(
-        request,
-        user_id=user_id,
-        email=email,
-        event_type="mfa_recovery_used",
-        detail="Recovery code used",
-    )
+    try:
+        _log_mfa_event(
+            request,
+            user_id=user_id,
+            email=email,
+            event_type="mfa_recovery_used",
+            detail="Recovery code used",
+        )
+    except Exception:
+        pass
 
     return {
         "ok": True,
@@ -283,13 +330,16 @@ async def regenerate_recovery_codes(request: Request):
 
     codes = generate_and_store_recovery_codes(user_id, count=8)
 
-    _log_mfa_event(
-        request,
-        user_id=user_id,
-        email=email,
-        event_type="mfa_recovery_regenerated",
-        detail="Recovery codes regenerated",
-    )
+    try:
+        _log_mfa_event(
+            request,
+            user_id=user_id,
+            email=email,
+            event_type="mfa_recovery_regenerated",
+            detail="Recovery codes regenerated",
+        )
+    except Exception:
+        pass
 
     return {"ok": True, "recovery_codes": codes}
 
@@ -299,13 +349,16 @@ async def mfa_logout(request: Request):
     user_id = get_session_user_id(request)
     email = get_session_user_email(request)
 
-    _log_mfa_event(
-        request,
-        user_id=user_id,
-        email=email,
-        event_type="logout",
-        detail="User logged out",
-    )
+    try:
+        _log_mfa_event(
+            request,
+            user_id=user_id,
+            email=email,
+            event_type="logout",
+            detail="User logged out",
+        )
+    except Exception:
+        pass
 
     clear_auth_session(request)
     return {"ok": True}
