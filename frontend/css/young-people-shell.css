@@ -230,7 +230,8 @@ select {
 
 .secondary-btn,
 .primary-btn,
-.ghost-btn {
+.ghost-btn,
+.calendar-icon-btn {
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--text);
@@ -242,7 +243,8 @@ select {
 }
 
 .secondary-btn:hover,
-.ghost-btn:hover {
+.ghost-btn:hover,
+.calendar-icon-btn:hover {
   border-color: var(--line-strong);
   background: #f8fafc;
 }
@@ -261,6 +263,11 @@ select {
 .ghost-btn {
   padding: 8px 10px;
   font-size: 12px;
+}
+
+.calendar-icon-btn {
+  min-width: 44px;
+  padding: 10px 12px;
 }
 
 .status-bar {
@@ -387,7 +394,9 @@ select {
 .view-content,
 .mini-list,
 .timeline-group,
-.detail-list {
+.detail-list,
+.handover-list,
+.alert-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -443,7 +452,8 @@ select {
 .calendar-weekday,
 .timeline-group-title,
 .person-text p,
-.brand-copy p {
+.brand-copy p,
+.helper-note {
   color: var(--muted);
 }
 
@@ -452,9 +462,7 @@ select {
 .stat-card,
 .day-record-card,
 .day-summary-card,
-.detail-section,
-.profile-card,
-.handover-card {
+.detail-section {
   background: var(--panel-soft);
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -573,6 +581,12 @@ select {
   font-weight: 700;
 }
 
+.mini-item-title,
+.day-record-title {
+  font-weight: 700;
+  font-size: 14px;
+}
+
 .kv {
   display: grid;
   grid-template-columns: 180px 1fr;
@@ -583,18 +597,6 @@ select {
 .detail-key {
   font-size: 12px;
   font-weight: 600;
-}
-
-.profile-grid-shell {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 14px;
-}
-
-.profile-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
 }
 
 .timeline-toolbar,
@@ -639,6 +641,14 @@ select {
 
 .timeline-item.severity-low::before {
   background: var(--success);
+}
+
+.timeline-group-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 2px;
 }
 
 .calendar-shell {
@@ -817,6 +827,10 @@ select {
   flex-shrink: 0;
 }
 
+.drawer-close-btn:hover {
+  background: #f8fafc;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -850,18 +864,6 @@ select {
   grid-template-columns: 150px 1fr;
   gap: 10px;
   align-items: start;
-}
-
-.helper-note {
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.handover-list,
-.alert-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
 }
 
 .handover-item,
@@ -899,8 +901,7 @@ select {
   .grid-4,
   .callout-grid,
   .calendar-shell,
-  .form-grid,
-  .profile-grid-shell {
+  .form-grid {
     grid-template-columns: 1fr;
   }
 
