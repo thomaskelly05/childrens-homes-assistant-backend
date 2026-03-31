@@ -13,7 +13,6 @@ const state = {
   modalMode: "create",
   modalRecordType: null,
   modalEditItem: null,
-  latestInspectionPackData: null,
 };
 
 const els = {
@@ -129,7 +128,7 @@ const VIEW_CONFIG = {
   },
   reports: {
     title: "Reports",
-    subtitle: "Outputs, summaries and inspection readiness",
+    subtitle: "Outputs, summaries and management reporting",
     loader: loadReports,
   },
 };
@@ -318,17 +317,6 @@ function formatDate(value) {
   });
 }
 
-function formatShortDate(value) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
 function formatShortTime(value) {
   if (!value) return "—";
   const date = new Date(value);
@@ -381,6 +369,8 @@ function getRecordUrl(item) {
     family_contact: `/young-people/family/records/${id}`,
     keywork: `/young-people/keywork/${id}`,
     keywork_session: `/young-people/keywork/${id}`,
+    report: `/young-people/reports/${id}`,
+    ai_report: `/young-people/reports/${id}`,
   };
 
   return map[type] || null;
@@ -406,6 +396,7 @@ function normaliseDetailEntries(data) {
     "title",
     "summary",
     "narrative",
+    "report_text",
   ]);
 
   return Object.entries(data || {})
@@ -685,7 +676,7 @@ async function runDrawerWorkflow(action) {
 
   let url = null;
   let body = null;
-  let method = "POST";
+  const method = "POST";
 
   if (action === "submit") url = config.submitUrl?.(id);
   if (action === "approve") {
@@ -716,6 +707,15 @@ async function runDrawerWorkflow(action) {
 
 function shouldShowDrawerActions(type) {
   return Boolean(RECORD_CONFIG[type]);
+}
+
+async function loadReportLinks(reportId) {
+  try {
+    const data = await apiGet(`/young-people/reports/${reportId}/links`);
+    return data.items || [];
+  } catch (_) {
+    return [];
+  }
 }
 
 async function openRecordDetail(item) {
@@ -759,9 +759,41 @@ async function openRecordDetail(item) {
       data?.family_contact_record ||
       data?.contact ||
       data?.keywork ||
+      data?.report ||
       data;
 
     const entries = normaliseDetailEntries(detailData);
+
+    let extraHtml = "";
+    if (type === "report") {
+      const reportId = detailData.id || item.id;
+      const links = await loadReportLinks(reportId);
+
+      extraHtml = `
+        <div class="detail-section">
+          <h4>Report text</h4>
+          <div class="detail-value">${escapeHtml(detailData.report_text || "No report text available.")}</div>
+        </div>
+
+        <div class="detail-section">
+          <h4>Linked evidence</h4>
+          <div class="detail-list">
+            ${
+              links.length
+                ? links.map((link) => `
+                    <div class="detail-row">
+                      <div class="detail-key">${escapeHtml(link.source_table || "Source")}</div>
+                      <div class="detail-value">
+                        ID ${escapeHtml(link.source_id || "—")} • ${escapeHtml(link.link_reason || "Linked evidence")}
+                      </div>
+                    </div>
+                  `).join("")
+                : `<div class="detail-row"><div class="detail-key">Links</div><div class="detail-value">No report links found.</div></div>`
+            }
+          </div>
+        </div>
+      `;
+    }
 
     els.drawerTitle.textContent = item.title || detailData.title || "Record details";
     els.drawerSubtitle.textContent =
@@ -793,6 +825,8 @@ async function openRecordDetail(item) {
           </div>
         </div>
       </div>
+
+      ${extraHtml}
 
       <div class="detail-section">
         <h4>Details</h4>
@@ -957,6 +991,54 @@ function renderHandoverItem(title, body, badges = []) {
   `;
 }
 
+function renderComplianceCard(item) {
+  return `
+    <article class="record-card">
+      <div class="record-card-header">
+        <div>
+          <h4>${escapeHtml(item.title || item.compliance_type || "Compliance item")}</h4>
+          <div class="record-meta">
+            ${escapeHtml(String(item.compliance_type || "").replaceAll("_", " "))}
+            ${item.due_date ? ` • Due ${escapeHtml(formatDate(item.due_date))}` : ""}
+          </div>
+        </div>
+      </div>
+      <div class="record-body">
+Status: ${escapeHtml(item.status || "—")}
+Approval: ${escapeHtml(item.approval_status || "—")}
+      </div>
+      ${renderBadges([item.compliance_status, item.status, item.approval_status])}
+    </article>
+  `;
+}
+
+function renderReportCard(item) {
+  return `
+    <article class="record-card">
+      <div class="record-card-header">
+        <div>
+          <h4>${escapeHtml(item.title || "Report")}</h4>
+          <div class="record-meta">
+            ${escapeHtml(item.report_type || "report")}
+            ${item.review_month ? ` • ${escapeHtml(item.review_month)}` : ""}
+            ${item.created_at ? ` • ${escapeHtml(formatDate(item.created_at))}` : ""}
+          </div>
+        </div>
+      </div>
+      <div class="record-body">${escapeHtml(item.report_text || "No report text available.")}</div>
+      ${renderBadges([item.status])}
+      <div class="day-record-actions">
+        <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify({
+          ...item,
+          record_type: "report",
+          recorded_at: item.created_at,
+          summary: item.report_text,
+        }))}'>Open</button>
+      </div>
+    </article>
+  `;
+}
+
 function updateHeaderForView(view) {
   const config = VIEW_CONFIG[view];
   els.pageTitle.textContent = config.title;
@@ -1002,7 +1084,6 @@ function openYoungPerson(id) {
   state.selectedDate = toDateInputValue(new Date());
   state.calendarMonthSummary = [];
   state.selectedDayRecords = [];
-  state.latestInspectionPackData = null;
 
   hideSelectorMode();
 
@@ -1516,348 +1597,102 @@ async function loadCompliance() {
   const data = await apiGet(`/young-people/${state.youngPersonId}/compliance`);
   const items = data.compliance_items || [];
 
-  const overdue = items.filter((x) => String(x.compliance_status || "").toLowerCase() === "overdue");
-  const dueSoon = items.filter((x) => String(x.compliance_status || "").toLowerCase() === "due_soon");
-  const ok = items.filter((x) => String(x.compliance_status || "").toLowerCase() === "ok");
-
-  const grouped = {
-    support_plan_review: items.filter((x) => x.compliance_type === "support_plan_review"),
-    risk_review: items.filter((x) => x.compliance_type === "risk_review"),
-    keywork_follow_up: items.filter((x) => x.compliance_type === "keywork_follow_up"),
-    statutory_document_review: items.filter((x) => x.compliance_type === "statutory_document_review"),
-  };
-
-  const renderComplianceCard = (item) => `
-    <article class="compliance-card">
-      <div class="compliance-card-header">
-        <div>
-          <h4>${escapeHtml(item.title || item.compliance_type || "Compliance item")}</h4>
-          <div class="compliance-meta">
-            ${escapeHtml(String(item.compliance_type || "").replaceAll("_", " "))} • Due ${escapeHtml(formatShortDate(item.due_date))}
-          </div>
-        </div>
-      </div>
-      <div class="compliance-card-body">
-        Status: ${escapeHtml(item.status || "—")}
-        ${item.approval_status ? `\nApproval: ${escapeHtml(item.approval_status)}` : ""}
-      </div>
-      ${renderBadges([item.compliance_status, item.status, item.approval_status])}
-    </article>
-  `;
-
-  const renderSection = (title, list) => `
-    <section class="panel compliance-section">
-      <div class="panel-header">
-        <div>
-          <h3>${escapeHtml(title)}</h3>
-          <p class="panel-subtitle">${escapeHtml(String(list.length))} item(s)</p>
-        </div>
-      </div>
-      ${
-        list.length
-          ? `<div class="record-list">${list.map(renderComplianceCard).join("")}</div>`
-          : `<div class="compliance-empty">No items in this section.</div>`
-      }
-    </section>
-  `;
+  const overdue = items.filter((x) => x.compliance_status === "overdue");
+  const dueSoon = items.filter((x) => x.compliance_status === "due_soon");
+  const okItems = items.filter((x) => x.compliance_status === "ok");
 
   els.content.innerHTML = `
-    <div class="compliance-shell">
-      <div class="compliance-summary-grid">
-        <div class="stat-card">
-          <div class="stat-label">Total items</div>
-          <div class="stat-value">${items.length}</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Overdue</div>
-          <div class="stat-value">${overdue.length}</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Due soon</div>
-          <div class="stat-value">${dueSoon.length}</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">OK</div>
-          <div class="stat-value">${ok.length}</div>
-        </div>
+    <div class="grid grid-3">
+      <div class="stat-card">
+        <div class="stat-label">Overdue</div>
+        <div class="stat-value">${overdue.length}</div>
       </div>
+      <div class="stat-card">
+        <div class="stat-label">Due soon</div>
+        <div class="stat-value">${dueSoon.length}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total items</div>
+        <div class="stat-value">${items.length}</div>
+      </div>
+    </div>
 
-      ${
-        items.length
-          ? `
-            <section class="panel">
-              <div class="panel-header">
-                <div>
-                  <h3>Priority view</h3>
-                  <p class="panel-subtitle">What needs attention first.</p>
-                </div>
-              </div>
-              <div class="record-list">
-                ${[...overdue, ...dueSoon].length
-                  ? [...overdue, ...dueSoon].map(renderComplianceCard).join("")
-                  : `<div class="compliance-empty">No overdue or due soon items.</div>`
-                }
-              </div>
-            </section>
-          `
-          : `
-            <section class="panel">
-              <div class="panel-header">
-                <div>
-                  <h3>Compliance</h3>
-                  <p class="panel-subtitle">Review dates, follow-ups and evidence readiness.</p>
-                </div>
-              </div>
-              <div class="compliance-empty">No compliance items found.</div>
-            </section>
-          `
-      }
+    <div class="callout-grid">
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>Priority actions</h3>
+            <p class="panel-subtitle">Overdue and due soon items needing attention.</p>
+          </div>
+        </div>
+        ${
+          overdue.length || dueSoon.length
+            ? `<div class="record-list">${[...overdue, ...dueSoon].map(renderComplianceCard).join("")}</div>`
+            : `<div class="empty-state">No overdue or due soon compliance items.</div>`
+        }
+      </section>
 
-      ${renderSection("Plan reviews", grouped.support_plan_review)}
-      ${renderSection("Risk reviews", grouped.risk_review)}
-      ${renderSection("Keywork follow-up", grouped.keywork_follow_up)}
-      ${renderSection("Statutory documents", grouped.statutory_document_review)}
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>Everything else</h3>
+            <p class="panel-subtitle">Items currently in a good position.</p>
+          </div>
+        </div>
+        ${
+          okItems.length
+            ? `<div class="record-list">${okItems.map(renderComplianceCard).join("")}</div>`
+            : `<div class="empty-state">No additional compliance items.</div>`
+        }
+      </section>
     </div>
   `;
-}
-
-function buildInspectionPackSummary(packData) {
-  const data = packData || {};
-  return {
-    dailyNotes: (data.daily_notes || []).length,
-    incidents: (data.incidents || []).length,
-    risks: (data.risks || []).length,
-    plans: (data.plans || []).length,
-    chronology: (data.chronology || []).length,
-    compliance: (data.compliance_items || []).length,
-  };
-}
-
-function buildInspectionPackText(packData) {
-  const data = packData || {};
-  const yp = data.young_person || {};
-  const name = [yp.first_name, yp.last_name].filter(Boolean).join(" ").trim() || yp.preferred_name || "Young person";
-  const alerts = data.alerts || [];
-  const risks = data.risks || [];
-  const plans = data.plans || [];
-  const incidents = data.incidents || [];
-  const dailyNotes = data.daily_notes || [];
-  const complianceItems = data.compliance_items || [];
-  const chronology = data.chronology || [];
-  const standardsSummary = data.standards_summary || [];
-
-  const lines = [
-    "INDICARE OFSTED / INSPECTION PACK SUMMARY",
-    "",
-    `Young person: ${name}`,
-    `Placement status: ${yp.placement_status || "—"}`,
-    `Risk level: ${yp.summary_risk_level || "—"}`,
-    `Admission date: ${yp.admission_date || "—"}`,
-    "",
-    `Active alerts: ${alerts.length}`,
-    `Risk assessments: ${risks.length}`,
-    `Support plans: ${plans.length}`,
-    `Recent incidents: ${incidents.length}`,
-    `Recent daily notes: ${dailyNotes.length}`,
-    `Compliance items: ${complianceItems.length}`,
-    "",
-    "ACTIVE ALERTS",
-    ...(alerts.length
-      ? alerts.slice(0, 10).map((x) => `- ${x.title || "Alert"}${x.severity ? ` (${x.severity})` : ""}: ${x.description || "No description"}`)
-      : ["- None"]),
-    "",
-    "CURRENT RISKS",
-    ...(risks.length
-      ? risks.slice(0, 10).map((x) => `- ${x.title || "Risk"}${x.severity ? ` (${x.severity})` : ""}: ${x.concern_summary || "No summary"}`)
-      : ["- None"]),
-    "",
-    "CURRENT PLANS",
-    ...(plans.length
-      ? plans.slice(0, 10).map((x) => `- ${x.title || "Plan"}${x.review_date ? ` • Review ${x.review_date}` : ""}: ${x.summary || "No summary"}`)
-      : ["- None"]),
-    "",
-    "COMPLIANCE",
-    ...(complianceItems.length
-      ? complianceItems.slice(0, 20).map((x) => `- ${x.compliance_type || "Item"} • ${x.title || "Untitled"} • Due ${x.due_date || "—"} • ${x.compliance_status || "ok"}`)
-      : ["- None"]),
-    "",
-    "QUALITY STANDARDS EVIDENCE SUMMARY",
-    ...(standardsSummary.length
-      ? standardsSummary.map((x) => `- ${x.short_label || x.title || x.code || "Standard"}: ${x.linked_record_count || 0} linked record(s)`)
-      : ["- None"]),
-    "",
-    "RECENT CHRONOLOGY",
-    ...(chronology.length
-      ? chronology.slice(0, 20).map((x) => `- ${x.event_datetime || x.created_at || "—"} • ${x.title || x.category || "Record"} • ${x.summary || "No summary"}`)
-      : ["- None"]),
-  ];
-
-  return lines.join("\n");
-}
-
-function downloadTextFile(filename, content) {
-  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
 }
 
 async function loadReports() {
   setLoading("Loading reports...");
 
-  const [overviewData, packData] = await Promise.all([
-    apiGet(`/young-people/${state.youngPersonId}/overview`).catch(() => ({})),
-    apiGet(`/inspection-pack/young-person/${state.youngPersonId}`).catch(() => null),
-  ]);
+  const data = await apiGet(`/young-people/${state.youngPersonId}/reports`);
+  const items = data.items || [];
 
-  state.latestInspectionPackData = packData;
-
-  const yp = overviewData.young_person || state.youngPerson || {};
-  const packSummary = buildInspectionPackSummary(packData || {});
-  const packPreview = packData ? buildInspectionPackText(packData) : "Inspection pack data could not be loaded.";
-
-  els.content.innerHTML = `
-    <div class="report-shell">
-      <section class="panel">
+  if (!items.length) {
+    els.content.innerHTML = `
+      <div class="panel">
         <div class="panel-header">
           <div>
-            <h3>Inspection readiness</h3>
-            <p class="panel-subtitle">Prepare Ofsted-style packs and reporting outputs from recorded evidence.</p>
-          </div>
-          <div class="report-actions">
-            <button id="createInspectionPackBtn" class="primary-btn" type="button">Queue inspection pack</button>
-            <button id="downloadInspectionSummaryBtn" class="secondary-btn" type="button">Download summary</button>
+            <h3>Reports</h3>
+            <p class="panel-subtitle">AI-generated reports and linked evidence.</p>
           </div>
         </div>
-
-        <div class="inspection-pack-summary">
-          <div class="inspection-pack-stat">
-            <div class="inspection-pack-stat-label">Daily notes</div>
-            <div class="inspection-pack-stat-value">${packSummary.dailyNotes}</div>
-          </div>
-          <div class="inspection-pack-stat">
-            <div class="inspection-pack-stat-label">Incidents</div>
-            <div class="inspection-pack-stat-value">${packSummary.incidents}</div>
-          </div>
-          <div class="inspection-pack-stat">
-            <div class="inspection-pack-stat-label">Risks</div>
-            <div class="inspection-pack-stat-value">${packSummary.risks}</div>
-          </div>
-          <div class="inspection-pack-stat">
-            <div class="inspection-pack-stat-label">Plans</div>
-            <div class="inspection-pack-stat-value">${packSummary.plans}</div>
-          </div>
-          <div class="inspection-pack-stat">
-            <div class="inspection-pack-stat-label">Chronology items</div>
-            <div class="inspection-pack-stat-value">${packSummary.chronology}</div>
-          </div>
-          <div class="inspection-pack-stat">
-            <div class="inspection-pack-stat-label">Compliance items</div>
-            <div class="inspection-pack-stat-value">${packSummary.compliance}</div>
-          </div>
-        </div>
-      </section>
-
-      <div class="report-grid">
-        <section class="panel">
-          <div class="panel-header">
-            <div>
-              <h3>Available outputs</h3>
-              <p class="panel-subtitle">Quick operational and inspection-focused outputs.</p>
-            </div>
-          </div>
-
-          <div class="record-list">
-            <article class="report-card">
-              <div class="report-card-header">
-                <div>
-                  <h4>Young person inspection summary</h4>
-                  <div class="record-meta">${escapeHtml([yp.first_name, yp.last_name].filter(Boolean).join(" ") || yp.preferred_name || "Young person")}</div>
-                </div>
-              </div>
-              <div class="report-card-body">
-                Pulls together profile, alerts, risks, plans, chronology, compliance and standards evidence into one operational view.
-              </div>
-            </article>
-
-            <article class="report-card">
-              <div class="report-card-header">
-                <div>
-                  <h4>Evidence snapshot</h4>
-                  <div class="record-meta">Chronology, plans, incidents and linked standards</div>
-                </div>
-              </div>
-              <div class="report-card-body">
-                Useful for management review, internal quality assurance and inspection preparation.
-              </div>
-            </article>
-
-            <article class="report-card">
-              <div class="report-card-header">
-                <div>
-                  <h4>Compliance snapshot</h4>
-                  <div class="record-meta">Review dates and overdue actions</div>
-                </div>
-              </div>
-              <div class="report-card-body">
-                Highlights what is overdue, due soon and ready for checking.
-              </div>
-            </article>
-          </div>
-        </section>
-
-        <section class="panel report-output-card">
-          <div class="panel-header">
-            <div>
-              <h3>Preview</h3>
-              <p class="panel-subtitle">Plain-text summary ready to export.</p>
-            </div>
-          </div>
-          <pre>${escapeHtml(packPreview)}</pre>
-        </section>
+        <div class="empty-state">No reports found for this young person.</div>
       </div>
-    </div>
-  `;
-
-  const createBtn = document.getElementById("createInspectionPackBtn");
-  if (createBtn) {
-    createBtn.addEventListener("click", async () => {
-      try {
-        createBtn.disabled = true;
-        const result = await apiSend("/inspection-pack", "POST", {
-          scope_type: "young_person",
-          scope_id: state.youngPersonId,
-          pack_type: "ofsted",
-        });
-        showMessage(`Inspection pack job created${result?.id ? ` (#${result.id})` : ""}.`);
-      } catch (error) {
-        console.error(error);
-        showError(error.message || "Could not create inspection pack job.");
-      } finally {
-        createBtn.disabled = false;
-      }
-    });
+    `;
+    return;
   }
 
-  const downloadBtn = document.getElementById("downloadInspectionSummaryBtn");
-  if (downloadBtn) {
-    downloadBtn.addEventListener("click", () => {
-      const person = state.youngPerson || {};
-      const filenameBase =
-        [person.first_name, person.last_name].filter(Boolean).join("-").toLowerCase() ||
-        person.preferred_name?.replace(/\s+/g, "-").toLowerCase() ||
-        `young-person-${state.youngPersonId}`;
+  const byType = {};
+  items.forEach((item) => {
+    const key = item.report_type || "report";
+    if (!byType[key]) byType[key] = [];
+    byType[key].push(item);
+  });
 
-      const content = buildInspectionPackText(state.latestInspectionPackData || {});
-      downloadTextFile(`${filenameBase}-inspection-summary.txt`, content);
-      showMessage("Inspection summary downloaded.");
-    });
-  }
+  const sections = Object.entries(byType).map(([type, rows]) => `
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h3>${escapeHtml(type.replaceAll("_", " "))}</h3>
+          <p class="panel-subtitle">${rows.length} report${rows.length === 1 ? "" : "s"}</p>
+        </div>
+      </div>
+      <div class="record-list">
+        ${rows.map(renderReportCard).join("")}
+      </div>
+    </section>
+  `).join("");
+
+  els.content.innerHTML = sections;
+  bindDynamicOpenRecordButtons();
 }
 
 async function loadCalendarMonthSummary() {
@@ -2350,7 +2185,6 @@ function bindEvents() {
     state.timelineCache = [];
     state.calendarMonthSummary = [];
     state.selectedDayRecords = [];
-    state.latestInspectionPackData = null;
     closeDrawer();
     closeModal();
 
