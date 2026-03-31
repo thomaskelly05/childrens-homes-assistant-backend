@@ -77,13 +77,19 @@ async function loadYoungPeople() {
   youngPeopleGrid.innerHTML = `<div class="panel-card"><p>Loading young people...</p></div>`;
 
   try {
-    const response = await fetch("/young-people");
+    const response = await fetch("/young-people", {
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+      },
+    });
 
     if (!response.ok) {
       throw new Error("Failed to load young people");
     }
 
-    allYoungPeople = await response.json();
+    const data = await response.json();
+    allYoungPeople = data.young_people || [];
     renderYoungPeople();
   } catch (error) {
     console.error(error);
@@ -149,11 +155,7 @@ function renderYoungPeople() {
             <div class="profile-value">${formatDate(person.admission_date)}</div>
 
             <div class="profile-label">Keyworker</div>
-            <div class="profile-value">${
-              person.keyworker_first_name
-                ? escapeHtml(`${person.keyworker_first_name} ${person.keyworker_last_name || ""}`.trim())
-                : "—"
-            }</div>
+            <div class="profile-value">${escapeHtml(person.primary_keyworker_name || "—")}</div>
           </div>
 
           <div class="card-actions">
@@ -176,7 +178,7 @@ function wireCardButtons() {
   document.querySelectorAll(".open-shell-btn").forEach((button) => {
     button.addEventListener("click", () => {
       const id = button.dataset.id;
-      window.location.href = `/young-people-shell?young_person_id=${id}`;
+      window.location.href = `/young-people-shell?id=${id}`;
     });
   });
 
@@ -241,27 +243,33 @@ async function saveYoungPerson(event) {
   };
 
   const url = existingId ? `/young-people/${existingId}` : "/young-people";
-  const method = existingId ? "PUT" : "POST";
+  const method = existingId ? "PATCH" : "POST";
 
   try {
     const response = await fetch(url, {
       method,
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
+        Accept: "application/json",
       },
       body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || "Failed to save young person");
+      let message = "Failed to save young person";
+      try {
+        const body = await response.json();
+        message = body.detail || body.error || message;
+      } catch (_) {}
+      throw new Error(message);
     }
 
     closeYoungPersonModal();
     await loadYoungPeople();
   } catch (error) {
     console.error(error);
-    alert("Unable to save young person. Please check your backend route fields.");
+    alert(error.message || "Unable to save young person.");
   }
 }
 
