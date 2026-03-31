@@ -25,44 +25,44 @@
         </div>
       </section>
 
-      <button id="changePersonBtn" class="sidebar-btn">Change young person</button>
+      <button id="changePersonBtn" class="sidebar-btn" type="button">Change young person</button>
 
       <div class="nav-group">
         <div class="nav-group-title">Overview</div>
         <nav id="sidebarNav" class="sidebar-nav">
-          <button class="nav-btn active" data-view="home">Home</button>
-          <button class="nav-btn" data-view="profile">Profile</button>
-          <button class="nav-btn" data-view="calendar">Calendar</button>
-          <button class="nav-btn" data-view="timeline">What happened</button>
-          <button class="nav-btn" data-view="handover">Handover</button>
+          <button class="nav-btn active" data-view="home" type="button">Home</button>
+          <button class="nav-btn" data-view="profile" type="button">Profile</button>
+          <button class="nav-btn" data-view="calendar" type="button">Calendar</button>
+          <button class="nav-btn" data-view="timeline" type="button">What happened</button>
+          <button class="nav-btn" data-view="handover" type="button">Handover</button>
         </nav>
       </div>
 
       <div class="nav-group">
         <div class="nav-group-title">Recording</div>
         <nav class="sidebar-nav">
-          <button class="nav-btn" data-view="daily-notes">Daily notes</button>
-          <button class="nav-btn" data-view="incidents">Incidents</button>
-          <button class="nav-btn" data-view="risk">Risks</button>
-          <button class="nav-btn" data-view="plans">Plans</button>
+          <button class="nav-btn" data-view="daily-notes" type="button">Daily notes</button>
+          <button class="nav-btn" data-view="incidents" type="button">Incidents</button>
+          <button class="nav-btn" data-view="risk" type="button">Risks</button>
+          <button class="nav-btn" data-view="plans" type="button">Plans</button>
         </nav>
       </div>
 
       <div class="nav-group">
         <div class="nav-group-title">Care and progress</div>
         <nav class="sidebar-nav">
-          <button class="nav-btn" data-view="health">Health</button>
-          <button class="nav-btn" data-view="education">Education</button>
-          <button class="nav-btn" data-view="family">Family</button>
-          <button class="nav-btn" data-view="keywork">Keywork</button>
+          <button class="nav-btn" data-view="health" type="button">Health</button>
+          <button class="nav-btn" data-view="education" type="button">Education</button>
+          <button class="nav-btn" data-view="family" type="button">Family</button>
+          <button class="nav-btn" data-view="keywork" type="button">Keywork</button>
         </nav>
       </div>
 
       <div class="nav-group">
         <div class="nav-group-title">Operational</div>
         <nav class="sidebar-nav">
-          <button class="nav-btn" data-view="compliance">Compliance</button>
-          <button class="nav-btn" data-view="reports">Reports</button>
+          <button class="nav-btn" data-view="compliance" type="button">Compliance</button>
+          <button class="nav-btn" data-view="reports" type="button">Reports</button>
         </nav>
       </div>
     </aside>
@@ -76,11 +76,11 @@
         </div>
 
         <div class="topbar-actions">
-          <button id="refreshBtn" class="secondary-btn hidden">Refresh</button>
+          <button id="refreshBtn" class="secondary-btn hidden" type="button">Refresh</button>
         </div>
       </header>
 
-      <section id="statusBar" class="status-bar hidden"></section>
+      <section id="statusBar" class="status-bar hidden" role="status" aria-live="polite"></section>
 
       <section id="selectorPanel" class="panel hidden">
         <div class="panel-header">
@@ -98,7 +98,7 @@
             placeholder="Search by name, preferred name, placement status or risk..."
             autocomplete="off"
           />
-          <button id="selectorRefreshBtn" class="secondary-btn">Refresh</button>
+          <button id="selectorRefreshBtn" class="secondary-btn" type="button">Refresh</button>
         </div>
 
         <div id="selectorList" class="selector-list"></div>
@@ -106,19 +106,19 @@
 
       <section id="workspacePanel" class="workspace">
         <section id="quickActions" class="quick-actions hidden">
-          <button class="quick-action primary" data-action="daily-note">
+          <button class="quick-action primary" data-action="daily-note" type="button">
             <span class="quick-action-title">Add daily note</span>
             <span class="quick-action-subtitle">Record this shift</span>
           </button>
-          <button class="quick-action" data-action="incident">
+          <button class="quick-action" data-action="incident" type="button">
             <span class="quick-action-title">Log incident</span>
             <span class="quick-action-subtitle">Record incident or concern</span>
           </button>
-          <button class="quick-action" data-action="risk">
+          <button class="quick-action" data-action="risk" type="button">
             <span class="quick-action-title">Update risk</span>
             <span class="quick-action-subtitle">Review risk and controls</span>
           </button>
-          <button class="quick-action" data-action="plan">
+          <button class="quick-action" data-action="plan" type="button">
             <span class="quick-action-title">Add plan</span>
             <span class="quick-action-subtitle">Create guidance for staff</span>
           </button>
@@ -143,7 +143,7 @@
         <h3 id="recordDrawerTitle">Record details</h3>
         <p id="recordDrawerSubtitle">Open a record to view details</p>
       </div>
-      <button id="closeRecordDrawerBtn" class="drawer-close-btn" type="button">✕</button>
+      <button id="closeRecordDrawerBtn" class="drawer-close-btn" type="button" aria-label="Close record drawer">✕</button>
     </div>
 
     <div id="recordDrawerActions" class="record-drawer-actions hidden">
@@ -170,7 +170,7 @@
         <h3 id="recordModalTitle">Create record</h3>
         <p id="recordModalSubtitle">Complete the form below</p>
       </div>
-      <button id="closeRecordModalBtn" class="drawer-close-btn" type="button">✕</button>
+      <button id="closeRecordModalBtn" class="drawer-close-btn" type="button" aria-label="Close record modal">✕</button>
     </div>
 
     <form id="recordModalForm" class="record-modal-body">
