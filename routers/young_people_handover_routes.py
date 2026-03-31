@@ -94,6 +94,27 @@ def _load_and_check_handover(
     return row
 
 
+def _normalise_handover_row(row: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not row:
+        return None
+
+    return {
+        "id": row.get("id"),
+        "young_person_id": row.get("young_person_id"),
+        "handover_date": row.get("handover_date"),
+        "shift_type": row.get("shift_type"),
+        "title": row.get("title"),
+        "summary_text": row.get("summary_text"),
+        "status": row.get("status") or "draft",
+        "source_window_start": row.get("source_window_start"),
+        "source_window_end": row.get("source_window_end"),
+        "generated_by": row.get("generated_by"),
+        "approved_by": row.get("approved_by"),
+        "created_at": row.get("created_at"),
+        "updated_at": row.get("updated_at"),
+    }
+
+
 class GenerateHandoverPayload(BaseModel):
     shift_type: str | None = "day"
     title: str | None = "Shift Handover"
@@ -112,39 +133,43 @@ def get_handover_records(
     _load_and_check_young_person(young_person_id, current_user)
 
     try:
-        query = """
-            SELECT
-                h.id,
-                h.young_person_id,
-                h.handover_date,
-                h.shift_type,
-                h.title,
-                h.summary_text,
-                h.status,
-                h.source_window_start,
-                h.source_window_end,
-                h.generated_by,
-                h.approved_by,
-                h.created_at,
-                h.updated_at
-            FROM handover_records h
-            WHERE h.young_person_id = %s
-            ORDER BY h.handover_date DESC, h.created_at DESC
-        """
-
         with conn.cursor() as cur:
-            cur.execute(query, (young_person_id,))
+            cur.execute(
+                """
+                SELECT
+                    h.id,
+                    h.young_person_id,
+                    h.handover_date,
+                    h.shift_type,
+                    h.title,
+                    h.summary_text,
+                    h.status,
+                    h.source_window_start,
+                    h.source_window_end,
+                    h.generated_by,
+                    h.approved_by,
+                    h.created_at,
+                    h.updated_at
+                FROM handover_records h
+                WHERE h.young_person_id = %s
+                ORDER BY h.handover_date DESC, h.created_at DESC, h.id DESC
+                """,
+                (young_person_id,),
+            )
             rows = cur.fetchall() or []
 
+        items = [_normalise_handover_row(dict(row)) for row in rows]
+
         return {
-            "items": [dict(row) for row in rows],
-            "count": len(rows),
+            "ok": True,
+            "items": items,
+            "count": len(items),
         }
 
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load handover: {str(e)}")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to load handover: {str(exc)}")
 
 
 @router.post("/{young_person_id}/handover/generate")
@@ -175,9 +200,12 @@ def generate_handover_record(
                     behaviour_update,
                     young_person_voice,
                     positives,
-                    actions_required
+                    actions_required,
+                    workflow_status,
+                    created_at
                 FROM daily_notes
                 WHERE young_person_id = %s
+                  AND COALESCE(archived, FALSE) = FALSE
                 ORDER BY note_date DESC, created_at DESC
                 LIMIT 3
                 """,
@@ -193,7 +221,9 @@ def generate_handover_record(
                     description,
                     staff_response,
                     outcome,
-                    severity
+                    severity,
+                    manager_review_status,
+                    created_at
                 FROM incidents
                 WHERE young_person_id = %s
                   AND COALESCE(archived, FALSE) = FALSE
@@ -212,7 +242,9 @@ def generate_handover_record(
                     summary,
                     child_voice,
                     reflective_analysis,
-                    actions_agreed
+                    actions_agreed,
+                    status,
+                    created_at
                 FROM keywork_sessions
                 WHERE young_person_id = %s
                   AND COALESCE(archived, FALSE) = FALSE
@@ -229,7 +261,9 @@ def generate_handover_record(
                     title,
                     concern_summary,
                     severity,
-                    status
+                    status,
+                    approval_status,
+                    updated_at
                 FROM risk_assessments
                 WHERE young_person_id = %s
                   AND COALESCE(archived, FALSE) = FALSE
@@ -246,20 +280,43 @@ def generate_handover_record(
                     title,
                     description,
                     severity,
-                    is_active
+                    is_active,
+                    review_date,
+                    created_at
                 FROM young_person_alerts
                 WHERE young_person_id = %s
                   AND COALESCE(is_active, TRUE) = TRUE
-                ORDER BY created_at DESC, id DESC
+                ORDER BY
+                    COALESCE(review_date, CURRENT_DATE) ASC,
+                    created_at DESC,
+                    id DESC
                 LIMIT 5
                 """,
                 (young_person_id,),
             )
             alert_rows = cur.fetchall() or []
 
-            latest_daily = daily_rows[0] if daily_rows else None
-            latest_incident = incident_rows[0] if incident_rows else None
-            latest_keywork = keywork_rows[0] if keywork_rows else None
+            cur.execute(
+                """
+                SELECT
+                    title,
+                    summary,
+                    review_date,
+                    status,
+                    approval_status,
+                    updated_at
+                FROM support_plans
+                WHERE young_person_id = %s
+                  AND COALESCE(archived, FALSE) = FALSE
+                ORDER BY
+                    review_date ASC NULLS LAST,
+                    updated_at DESC,
+                    id DESC
+                LIMIT 3
+                """,
+                (young_person_id,),
+            )
+            plan_rows = cur.fetchall() or []
 
             parts: list[str] = []
 
@@ -275,12 +332,22 @@ def generate_handover_record(
             if risk_rows:
                 risk_text = "; ".join(
                     [
-                        f"{row.get('title') or 'Risk'} - {row.get('concern_summary') or 'No summary'}"
+                        f"{row.get('title') or 'Risk'} - {row.get('concern_summary') or 'No summary recorded'}"
                         for row in risk_rows
                     ]
                 )
                 parts.append(f"Current risks: {risk_text}.")
 
+            if plan_rows:
+                plan_text = "; ".join(
+                    [
+                        f"{row.get('title') or 'Plan'} ({row.get('approval_status') or row.get('status') or 'draft'})"
+                        for row in plan_rows
+                    ]
+                )
+                parts.append(f"Current plans: {plan_text}.")
+
+            latest_daily = daily_rows[0] if daily_rows else None
             if latest_daily:
                 presentation = latest_daily.get("presentation") or latest_daily.get("mood") or "No presentation recorded"
                 activities = latest_daily.get("activities") or "No activity detail recorded"
@@ -301,20 +368,26 @@ def generate_handover_record(
                 if latest_daily.get("actions_required"):
                     parts.append(f"Actions for next shift: {latest_daily.get('actions_required')}")
 
+            latest_incident = incident_rows[0] if incident_rows else None
             if latest_incident:
                 incident_type = latest_incident.get("incident_type") or "Incident"
                 description = latest_incident.get("description") or "No description recorded"
                 staff_response = latest_incident.get("staff_response") or "No staff response recorded"
-                parts.append(f"Recent incident: {incident_type}. {description}. Staff response: {staff_response}")
+                outcome = latest_incident.get("outcome")
+                incident_text = f"Recent incident: {incident_type}. {description}. Staff response: {staff_response}"
+                if outcome:
+                    incident_text += f" Outcome: {outcome}"
+                parts.append(incident_text)
 
+            latest_keywork = keywork_rows[0] if keywork_rows else None
             if latest_keywork:
                 topic = latest_keywork.get("topic") or "Key work"
                 summary = latest_keywork.get("summary") or latest_keywork.get("reflective_analysis") or "No summary recorded"
                 actions = latest_keywork.get("actions_agreed")
-                text = f"Recent key work focus: {topic}. {summary}"
+                keywork_text = f"Recent key work focus: {topic}. {summary}"
                 if actions:
-                    text += f" Actions agreed: {actions}"
-                parts.append(text)
+                    keywork_text += f" Actions agreed: {actions}"
+                parts.append(keywork_text)
 
             summary_text = " ".join(parts) if parts else "No recent records were available to generate a handover summary."
 
@@ -363,14 +436,14 @@ def generate_handover_record(
         conn.commit()
         return {
             "ok": True,
-            "handover": dict(row) if row else None,
+            "handover": _normalise_handover_row(dict(row)) if row else None,
         }
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as exc:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to generate handover: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate handover: {str(exc)}")
 
 
 @router.put("/handover/{handover_id}/approve")
@@ -406,14 +479,14 @@ def approve_handover(
         conn.commit()
         return {
             "ok": True,
-            "handover": dict(row),
+            "handover": _normalise_handover_row(dict(row)),
         }
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as exc:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to approve handover: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to approve handover: {str(exc)}")
 
 
 @router.put("/handover/{handover_id}/archive")
@@ -447,11 +520,11 @@ def archive_handover(
         conn.commit()
         return {
             "ok": True,
-            "handover": dict(row),
+            "handover": _normalise_handover_row(dict(row)),
         }
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as exc:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to archive handover: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to archive handover: {str(exc)}")
