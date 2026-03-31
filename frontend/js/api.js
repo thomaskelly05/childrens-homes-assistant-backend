@@ -2,21 +2,26 @@ const API_BASE = window.location.origin;
 
 async function apiRequest(path, options = {}) {
   const headers = {
-    ...(options.headers || {})
+    ...(options.headers || {}),
   };
 
   if (!(options.body instanceof FormData) && !headers["Content-Type"]) {
     headers["Content-Type"] = "application/json";
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-    credentials: "include"
-  });
+  let response;
+
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+      credentials: "include",
+    });
+  } catch (_) {
+    throw new Error("Network error");
+  }
 
   const contentType = response.headers.get("content-type") || "";
-
   let data = null;
 
   if (
@@ -38,12 +43,23 @@ async function apiRequest(path, options = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(
+    const message =
       data?.detail ||
       data?.error ||
-      "Request failed"
-    );
+      (response.status === 401
+        ? "Authentication required"
+        : response.status === 403
+          ? "Access denied"
+          : response.status === 404
+            ? "Not found"
+            : response.status >= 500
+              ? "Server error"
+              : "Request failed");
+
+    throw new Error(message);
   }
 
   return data ?? response;
 }
+
+window.apiRequest = apiRequest;
