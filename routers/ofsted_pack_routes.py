@@ -8,7 +8,6 @@ from pydantic import BaseModel
 
 from auth.current_user import get_current_user
 from db.connection import get_db
-from services.young_person_service import YoungPersonService
 
 router = APIRouter(prefix="/inspection-pack", tags=["Inspection Pack"])
 
@@ -41,120 +40,33 @@ def _assert_home_access(current_user: dict[str, Any], record_home_id: int | None
         raise HTTPException(status_code=403, detail="Home access could not be verified")
 
     if user_home_id != record_home_id:
-        raise HTTPException(status_code=403, detail="You do not have access to this record")
+        raise HTTPException(status_code=403, detail="You do not have access to this young person")
 
 
-def _assert_can_request_pack(current_user: dict[str, Any]) -> None:
+def _assert_can_create_pack(current_user: dict[str, Any]) -> None:
     role = _user_role(current_user)
     if role not in {"admin", "provider_admin", "manager", "staff"}:
-        raise HTTPException(status_code=403, detail="You do not have permission to request an inspection pack")
+        raise HTTPException(status_code=403, detail="You do not have permission to create an inspection pack")
 
 
-def _load_and_check_young_person(
-    young_person_id: int,
-    current_user: dict[str, Any],
-) -> dict[str, Any]:
-    record = YoungPersonService.get_young_person_by_id(young_person_id)
-    if not record:
+def _load_and_check_young_person(conn, young_person_id: int, current_user: dict[str, Any]) -> dict[str, Any]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT *
+            FROM young_people
+            WHERE id = %s
+            LIMIT 1
+            """,
+            (young_person_id,),
+        )
+        young_person = cur.fetchone()
+
+    if not young_person:
         raise HTTPException(status_code=404, detail="Young person not found")
 
-    _assert_home_access(current_user, _safe_int(record.get("home_id")))
-    return record
-
-
-def _has_any_value(data: dict[str, Any] | None, keys: list[str]) -> bool:
-    data = data or {}
-    return any(bool(data.get(key)) for key in keys)
-
-
-def _build_profile_readiness(bundle: dict[str, Any]) -> list[dict[str, Any]]:
-    communication_profile = bundle.get("communication_profile") or {}
-    education_profile = bundle.get("education_profile") or {}
-    health_profile = bundle.get("health_profile") or {}
-    identity_profile = bundle.get("identity_profile") or {}
-    legal_status = bundle.get("legal_status") or {}
-    contacts = bundle.get("contacts") or []
-
-    checks = [
-        {
-            "section": "communication_profile",
-            "title": "Communication profile",
-            "is_present": _has_any_value(
-                communication_profile,
-                [
-                    "communication_style",
-                    "sensory_profile",
-                    "processing_needs",
-                    "signs_of_distress",
-                    "what_helps",
-                ],
-            ),
-        },
-        {
-            "section": "education_profile",
-            "title": "Education profile",
-            "is_present": _has_any_value(
-                education_profile,
-                [
-                    "school_name",
-                    "education_status",
-                    "sen_status",
-                    "support_summary",
-                ],
-            ),
-        },
-        {
-            "section": "health_profile",
-            "title": "Health profile",
-            "is_present": _has_any_value(
-                health_profile,
-                [
-                    "gp_name",
-                    "allergies",
-                    "diagnoses",
-                    "mental_health_summary",
-                    "medication_summary",
-                ],
-            ),
-        },
-        {
-            "section": "identity_profile",
-            "title": "Identity profile",
-            "is_present": _has_any_value(
-                identity_profile,
-                [
-                    "cultural_identity",
-                    "first_language",
-                    "interests",
-                    "strengths_summary",
-                    "what_matters_to_me",
-                ],
-            ),
-        },
-        {
-            "section": "legal_status",
-            "title": "Legal status",
-            "is_present": _has_any_value(
-                legal_status,
-                [
-                    "legal_status",
-                    "order_type",
-                    "delegated_authority_details",
-                    "consent_arrangements",
-                ],
-            ),
-        },
-        {
-            "section": "contacts",
-            "title": "Contacts",
-            "is_present": len(contacts) > 0,
-        },
-    ]
-
-    for item in checks:
-        item["status"] = "present" if item["is_present"] else "missing"
-
-    return checks
+    _assert_home_access(current_user, _safe_int(young_person.get("home_id")))
+    return young_person
 
 
 class InspectionPackCreate(BaseModel):
@@ -170,12 +82,10 @@ def create_inspection_pack_job(
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    _assert_can_request_pack(current_user)
-
-    requested_by = payload.requested_by or _safe_int(current_user.get("user_id"))
+    _assert_can_create_pack(current_user)
 
     if payload.scope_type == "young_person":
-        _load_and_check_young_person(payload.scope_id, current_user)
+        _load_and_check_young_person(conn, payload.scope_id, current_user)
 
     query = """
         INSERT INTO inspection_pack_jobs (
@@ -195,7 +105,7 @@ def create_inspection_pack_job(
         payload.scope_id,
         payload.pack_type,
         "queued",
-        requested_by,
+        payload.requested_by or _safe_int(current_user.get("user_id")),
         datetime.utcnow(),
     )
 
@@ -209,7 +119,6 @@ def create_inspection_pack_job(
         raise HTTPException(status_code=500, detail=f"Failed to create inspection pack job: {str(e)}")
 
     return {
-        "ok": True,
         "message": "Inspection pack job created successfully",
         "id": row["id"],
     }
@@ -221,11 +130,9 @@ def get_young_person_inspection_pack_data(
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    young_person = _load_and_check_young_person(young_person_id, current_user)
+    young_person = _load_and_check_young_person(conn, young_person_id, current_user)
 
     try:
-        bundle = YoungPersonService.get_full_profile_bundle(young_person_id)
-
         with conn.cursor() as cur:
             cur.execute(
                 """
@@ -236,7 +143,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            legal_status = [dict(row) for row in (cur.fetchall() or [])]
+            legal_status = cur.fetchall() or []
 
             cur.execute(
                 """
@@ -247,7 +154,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            communication_profile = [dict(row) for row in (cur.fetchall() or [])]
+            communication_profile = cur.fetchall() or []
 
             cur.execute(
                 """
@@ -258,7 +165,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            identity_profile = [dict(row) for row in (cur.fetchall() or [])]
+            identity_profile = cur.fetchall() or []
 
             cur.execute(
                 """
@@ -269,7 +176,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            alerts = [dict(row) for row in (cur.fetchall() or [])]
+            alerts = cur.fetchall() or []
 
             cur.execute(
                 """
@@ -280,7 +187,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            plans = [dict(row) for row in (cur.fetchall() or [])]
+            plans = cur.fetchall() or []
 
             cur.execute(
                 """
@@ -291,7 +198,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            risks = [dict(row) for row in (cur.fetchall() or [])]
+            risks = cur.fetchall() or []
 
             cur.execute(
                 """
@@ -303,7 +210,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            daily_notes = [dict(row) for row in (cur.fetchall() or [])]
+            daily_notes = cur.fetchall() or []
 
             cur.execute(
                 """
@@ -315,7 +222,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            incidents = [dict(row) for row in (cur.fetchall() or [])]
+            incidents = cur.fetchall() or []
 
             cur.execute(
                 """
@@ -326,7 +233,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            health_profile = [dict(row) for row in (cur.fetchall() or [])]
+            health_profile = cur.fetchall() or []
 
             cur.execute(
                 """
@@ -338,7 +245,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            health_records = [dict(row) for row in (cur.fetchall() or [])]
+            health_records = cur.fetchall() or []
 
             cur.execute(
                 """
@@ -349,7 +256,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            medication_profiles = [dict(row) for row in (cur.fetchall() or [])]
+            medication_profiles = cur.fetchall() or []
 
             cur.execute(
                 """
@@ -361,7 +268,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            medication_records = [dict(row) for row in (cur.fetchall() or [])]
+            medication_records = cur.fetchall() or []
 
             cur.execute(
                 """
@@ -372,7 +279,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            education_profile = [dict(row) for row in (cur.fetchall() or [])]
+            education_profile = cur.fetchall() or []
 
             cur.execute(
                 """
@@ -384,7 +291,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            education_records = [dict(row) for row in (cur.fetchall() or [])]
+            education_records = cur.fetchall() or []
 
             cur.execute(
                 """
@@ -395,7 +302,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            contacts = [dict(row) for row in (cur.fetchall() or [])]
+            contacts = cur.fetchall() or []
 
             cur.execute(
                 """
@@ -407,7 +314,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            family_records = [dict(row) for row in (cur.fetchall() or [])]
+            family_records = cur.fetchall() or []
 
             cur.execute(
                 """
@@ -419,7 +326,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            keywork_sessions = [dict(row) for row in (cur.fetchall() or [])]
+            keywork_sessions = cur.fetchall() or []
 
             cur.execute(
                 """
@@ -432,7 +339,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            chronology = [dict(row) for row in (cur.fetchall() or [])]
+            chronology = cur.fetchall() or []
 
             cur.execute(
                 """
@@ -451,7 +358,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            standards_summary = [dict(row) for row in (cur.fetchall() or [])]
+            standards_summary = cur.fetchall() or []
 
             cur.execute(
                 """
@@ -468,7 +375,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            standards_evidence = [dict(row) for row in (cur.fetchall() or [])]
+            standards_evidence = cur.fetchall() or []
 
             cur.execute(
                 """
@@ -479,7 +386,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            monthly_reviews = [dict(row) for row in (cur.fetchall() or [])]
+            monthly_reviews = cur.fetchall() or []
 
             compliance_items: list[dict[str, Any]] = []
 
@@ -506,7 +413,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            compliance_items.extend([dict(row) for row in (cur.fetchall() or [])])
+            compliance_items.extend(cur.fetchall() or [])
 
             cur.execute(
                 """
@@ -531,7 +438,7 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            compliance_items.extend([dict(row) for row in (cur.fetchall() or [])])
+            compliance_items.extend(cur.fetchall() or [])
 
             cur.execute(
                 """
@@ -555,87 +462,35 @@ def get_young_person_inspection_pack_data(
                 """,
                 (young_person_id,),
             )
-            compliance_items.extend([dict(row) for row in (cur.fetchall() or [])])
+            compliance_items.extend(cur.fetchall() or [])
 
-        profile_readiness = _build_profile_readiness(bundle)
-        missing_profile_sections = [item for item in profile_readiness if item["status"] == "missing"]
-        overdue_items = [item for item in compliance_items if item.get("compliance_status") == "overdue"]
-        due_soon_items = [item for item in compliance_items if item.get("compliance_status") == "due_soon"]
-
-        readiness = {
-            "has_active_alerts": len([a for a in alerts if a.get("is_active") in (True, None)]) > 0,
-            "has_overdue_compliance": len(overdue_items) > 0,
-            "has_due_soon_compliance": len(due_soon_items) > 0,
-            "missing_profile_sections_count": len(missing_profile_sections),
-            "standards_with_evidence_count": len([x for x in standards_summary if int(x.get("linked_record_count") or 0) > 0]),
-            "standards_total_count": len(standards_summary),
-        }
-
-        summary = {
-            "alerts_count": len(alerts),
-            "plans_count": len(plans),
-            "risks_count": len(risks),
-            "daily_notes_count": len(daily_notes),
-            "incidents_count": len(incidents),
-            "health_records_count": len(health_records),
-            "medication_records_count": len(medication_records),
-            "education_records_count": len(education_records),
-            "family_records_count": len(family_records),
-            "keywork_sessions_count": len(keywork_sessions),
-            "chronology_count": len(chronology),
-            "monthly_reviews_count": len(monthly_reviews),
-            "compliance_items_count": len(compliance_items),
-            "overdue_compliance_count": len(overdue_items),
-            "due_soon_compliance_count": len(due_soon_items),
-            "missing_profile_sections_count": len(missing_profile_sections),
+        return {
+            "young_person": dict(young_person),
+            "legal_status": [dict(x) for x in legal_status],
+            "communication_profile": [dict(x) for x in communication_profile],
+            "identity_profile": [dict(x) for x in identity_profile],
+            "alerts": [dict(x) for x in alerts],
+            "plans": [dict(x) for x in plans],
+            "risks": [dict(x) for x in risks],
+            "daily_notes": [dict(x) for x in daily_notes],
+            "incidents": [dict(x) for x in incidents],
+            "health_profile": [dict(x) for x in health_profile],
+            "health_records": [dict(x) for x in health_records],
+            "medication_profiles": [dict(x) for x in medication_profiles],
+            "medication_records": [dict(x) for x in medication_records],
+            "education_profile": [dict(x) for x in education_profile],
+            "education_records": [dict(x) for x in education_records],
+            "contacts": [dict(x) for x in contacts],
+            "family_records": [dict(x) for x in family_records],
+            "keywork_sessions": [dict(x) for x in keywork_sessions],
+            "chronology": [dict(x) for x in chronology],
+            "standards_summary": [dict(x) for x in standards_summary],
+            "standards_evidence": [dict(x) for x in standards_evidence],
+            "monthly_reviews": [dict(x) for x in monthly_reviews],
+            "compliance_items": [dict(x) for x in compliance_items],
         }
 
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to build inspection pack data: {str(e)}")
-
-    return {
-        "ok": True,
-        "scope": {
-            "scope_type": "young_person",
-            "scope_id": young_person_id,
-            "pack_type": "ofsted",
-        },
-        "summary": summary,
-        "readiness": readiness,
-        "young_person": dict(young_person),
-        "profiles": {
-            "legal_status": legal_status,
-            "communication_profile": communication_profile,
-            "identity_profile": identity_profile,
-            "health_profile": health_profile,
-            "education_profile": education_profile,
-            "contacts": contacts,
-            "alerts": alerts,
-            "profile_readiness": profile_readiness,
-        },
-        "care_and_safeguarding": {
-            "plans": plans,
-            "risks": risks,
-            "daily_notes": daily_notes,
-            "incidents": incidents,
-            "family_records": family_records,
-            "keywork_sessions": keywork_sessions,
-            "chronology": chronology,
-        },
-        "health": {
-            "health_records": health_records,
-            "medication_profiles": medication_profiles,
-            "medication_records": medication_records,
-        },
-        "education": {
-            "education_records": education_records,
-        },
-        "quality_and_review": {
-            "standards_summary": standards_summary,
-            "standards_evidence": standards_evidence,
-            "monthly_reviews": monthly_reviews,
-            "compliance_items": compliance_items,
-        },
-    }
