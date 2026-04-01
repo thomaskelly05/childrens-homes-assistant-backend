@@ -16,6 +16,7 @@ const state = {
 };
 
 const els = {
+  nav: document.getElementById("sidebarNav"),
   content: document.getElementById("viewContent"),
   pageTitle: document.getElementById("pageTitle"),
   pageSubtitle: document.getElementById("pageSubtitle"),
@@ -31,7 +32,6 @@ const els = {
   workspacePanel: document.getElementById("workspacePanel"),
   quickActions: document.getElementById("quickActions"),
   changePersonBtn: document.getElementById("changePersonBtn"),
-
   drawer: document.getElementById("recordDrawer"),
   drawerBackdrop: document.getElementById("recordDrawerBackdrop"),
   drawerTitle: document.getElementById("recordDrawerTitle"),
@@ -39,13 +39,11 @@ const els = {
   drawerBody: document.getElementById("recordDrawerBody"),
   drawerActions: document.getElementById("recordDrawerActions"),
   closeDrawerBtn: document.getElementById("closeRecordDrawerBtn"),
-  drawerOpenFullBtn: document.getElementById("drawerOpenFullBtn"),
   drawerEditBtn: document.getElementById("drawerEditBtn"),
   drawerSubmitBtn: document.getElementById("drawerSubmitBtn"),
   drawerApproveBtn: document.getElementById("drawerApproveBtn"),
   drawerReturnBtn: document.getElementById("drawerReturnBtn"),
   drawerArchiveBtn: document.getElementById("drawerArchiveBtn"),
-
   modalBackdrop: document.getElementById("modalBackdrop"),
   modal: document.getElementById("recordModal"),
   modalTitle: document.getElementById("recordModalTitle"),
@@ -55,11 +53,6 @@ const els = {
   modalForm: document.getElementById("recordModalForm"),
   modalFields: document.getElementById("recordModalFields"),
   modalSaveBtn: document.getElementById("recordModalSaveBtn"),
-
-  documentTypeChip: document.getElementById("documentTypeChip"),
-  documentPromptPanel: document.getElementById("documentPromptPanel"),
-  documentStandardsPanel: document.getElementById("documentStandardsPanel"),
-  documentOfstedPanel: document.getElementById("documentOfstedPanel"),
 };
 
 const VIEW_CONFIG = {
@@ -75,7 +68,7 @@ const VIEW_CONFIG = {
   },
   calendar: {
     title: "Calendar",
-    subtitle: "All records and appointments by day",
+    subtitle: "All records by day",
     loader: loadCalendarView,
   },
   timeline: {
@@ -87,6 +80,11 @@ const VIEW_CONFIG = {
     title: "Handover",
     subtitle: "What the next staff need to know",
     loader: loadHandover,
+  },
+  appointments: {
+    title: "Appointments",
+    subtitle: "Appointments, reminders and linked plans",
+    loader: loadAppointments,
   },
   "daily-notes": {
     title: "Daily notes",
@@ -131,19 +129,18 @@ const VIEW_CONFIG = {
   compliance: {
     title: "Compliance",
     subtitle: "Checks, gaps and evidence readiness",
-    loader: loadCompliance,
+    loader: loadCompliancePlaceholder,
   },
   reports: {
     title: "Reports",
-    subtitle: "Outputs, summaries and Ofsted-ready evidence",
-    loader: loadReports,
+    subtitle: "Outputs, summaries and management reporting",
+    loader: loadReportsPlaceholder,
   },
 };
 
 const RECORD_CONFIG = {
   daily_note: {
     label: "Daily note",
-    typeChip: "Daily note",
     listUrl: (youngPersonId) => `/young-people/${youngPersonId}/daily-notes`,
     createUrl: (youngPersonId) => `/young-people/${youngPersonId}/daily-notes`,
     detailUrl: (id) => `/young-people/daily-notes/${id}`,
@@ -156,7 +153,6 @@ const RECORD_CONFIG = {
   },
   incident: {
     label: "Incident",
-    typeChip: "Incident record",
     listUrl: (youngPersonId) => `/young-people/${youngPersonId}/incidents`,
     createUrl: (youngPersonId) => `/young-people/${youngPersonId}/incidents`,
     detailUrl: (id) => `/young-people/incidents/${id}`,
@@ -169,7 +165,6 @@ const RECORD_CONFIG = {
   },
   risk: {
     label: "Risk assessment",
-    typeChip: "Risk assessment",
     listUrl: (youngPersonId) => `/young-people/${youngPersonId}/risk`,
     createUrl: (youngPersonId) => `/young-people/${youngPersonId}/risk`,
     detailUrl: (id) => `/young-people/risk/${id}`,
@@ -182,7 +177,6 @@ const RECORD_CONFIG = {
   },
   support_plan: {
     label: "Plan",
-    typeChip: "Therapeutic plan",
     listUrl: (youngPersonId) => `/young-people/${youngPersonId}/plans`,
     createUrl: (youngPersonId) => `/young-people/${youngPersonId}/plans`,
     detailUrl: (id) => `/young-people/plans/${id}`,
@@ -192,10 +186,19 @@ const RECORD_CONFIG = {
     approveUrl: (id) => `/young-people/plans/${id}/approve`,
     returnUrl: (id) => `/young-people/plans/${id}/return`,
     archiveUrl: (id) => `/young-people/plans/${id}/archive`,
+  },
+  appointment: {
+    label: "Appointment",
+    listUrl: (youngPersonId) => `/young-people/${youngPersonId}/appointments`,
+    createUrl: (youngPersonId) => `/young-people/${youngPersonId}/appointments`,
+    detailUrl: (id) => `/young-people/appointments/${id}`,
+    updateUrl: (id) => `/young-people/appointments/${id}`,
+    updateMethod: "PATCH",
+    completeUrl: (id) => `/young-people/appointments/${id}/complete`,
+    cancelUrl: (id) => `/young-people/appointments/${id}/cancel`,
   },
   plan: {
     label: "Plan",
-    typeChip: "Therapeutic plan",
     listUrl: (youngPersonId) => `/young-people/${youngPersonId}/plans`,
     createUrl: (youngPersonId) => `/young-people/${youngPersonId}/plans`,
     detailUrl: (id) => `/young-people/plans/${id}`,
@@ -205,258 +208,6 @@ const RECORD_CONFIG = {
     approveUrl: (id) => `/young-people/plans/${id}/approve`,
     returnUrl: (id) => `/young-people/plans/${id}/return`,
     archiveUrl: (id) => `/young-people/plans/${id}/archive`,
-  },
-};
-
-const DOCUMENT_LIBRARY = {
-  daily_note: {
-    title: "Daily note",
-    subtitle: "Daily living, presentation, relationships and next steps",
-    promptCards: [
-      "Write in a respectful, child-focused way. Describe what the child communicated through words, behaviour and presentation.",
-      "Use PACE: be curious about meaning, not blaming or labelling.",
-      "Record what adults noticed, what support was offered, and what helped.",
-      "Make the next shift clear about what the child may need next."
-    ],
-    standards: [
-      "Children are helped and protected.",
-      "Children’s views, wishes and feelings are understood and acted on.",
-      "Children receive care that responds to their day-to-day lived experience."
-    ],
-    ofsted: [
-      "Evidence of daily lived care.",
-      "Evidence of child-focused language and reflective recording.",
-      "Supports inspection narrative around care quality, relationships and routines."
-    ],
-    sections: [
-      {
-        title: "Core details",
-        subtitle: "Basic shift information",
-        layout: "document-grid-2",
-        fields: [
-          { name: "note_date", label: "Date", type: "date" },
-          {
-            name: "shift_type",
-            label: "Shift type",
-            type: "select",
-            options: [
-              { value: "day", label: "Day" },
-              { value: "evening", label: "Evening" },
-              { value: "night", label: "Night" },
-              { value: "waking_night", label: "Waking night" },
-            ],
-          },
-          { name: "mood", label: "Mood / emotional presentation", type: "text", full: true, hint: "How did the young person appear emotionally?" },
-        ],
-      },
-      {
-        title: "Daily lived experience",
-        subtitle: "What life was like for the child on this shift",
-        layout: "document-grid-1",
-        fields: [
-          { name: "presentation", label: "Presentation", type: "textarea", hint: "How did the child present physically, emotionally and relationally?" },
-          { name: "activities", label: "Activities and daily living", type: "textarea", hint: "Meals, self-care, routines, time with others, interests and engagement." },
-          { name: "behaviour_update", label: "Behaviour and regulation", type: "textarea", hint: "What happened, what it may have meant, and how adults responded supportively." },
-        ],
-      },
-      {
-        title: "Child voice and next steps",
-        subtitle: "Child voice, strengths and what adults need to know next",
-        layout: "document-grid-1",
-        fields: [
-          { name: "young_person_voice", label: "Young person’s voice", type: "textarea", hint: "Record the child’s views, wishes, feelings or expressed meaning." },
-          { name: "positives", label: "Strengths and positives", type: "textarea", hint: "What went well? What strengths or progress were seen?" },
-          { name: "actions_required", label: "Actions for next shift", type: "textarea", hint: "What should adults know, monitor, continue or follow up?" },
-        ],
-      },
-    ],
-  },
-
-  incident: {
-    title: "Incident record",
-    subtitle: "Child-focused incident analysis and response",
-    promptCards: [
-      "Describe what happened clearly and factually, without judgemental wording.",
-      "Where possible, explain the child’s presentation and possible unmet need, stressor or trigger.",
-      "Show how adults used calm, attuned and proportionate support.",
-      "Include the child’s voice and what should happen next to reduce recurrence."
-    ],
-    standards: [
-      "Children are helped and protected.",
-      "Children receive effective support when distressed or unsafe.",
-      "Staff understand behaviour as communication and respond appropriately."
-    ],
-    ofsted: [
-      "Evidence of safeguarding response.",
-      "Evidence of reflection, de-escalation and child-centred incident recording.",
-      "Supports inspection scrutiny of risk, restraint, behaviour and management oversight."
-    ],
-    sections: [
-      {
-        title: "Incident details",
-        subtitle: "When, where and what happened",
-        layout: "document-grid-2",
-        fields: [
-          { name: "incident_datetime", label: "Incident date and time", type: "datetime-local" },
-          { name: "incident_type", label: "Incident type", type: "text" },
-          {
-            name: "severity",
-            label: "Severity",
-            type: "select",
-            options: [
-              { value: "low", label: "Low" },
-              { value: "medium", label: "Medium" },
-              { value: "high", label: "High" },
-              { value: "critical", label: "Critical" },
-            ],
-          },
-          { name: "location", label: "Location", type: "text" },
-        ],
-      },
-      {
-        title: "Understanding the event",
-        subtitle: "What led to the event and what it may have meant",
-        layout: "document-grid-1",
-        fields: [
-          { name: "description", label: "Description of incident", type: "textarea", hint: "Record what happened in a factual, sequenced and child-focused way." },
-          { name: "antecedent", label: "Antecedents / triggers", type: "textarea", hint: "What happened beforehand? Were there stressors, transitions, conflict or overwhelm?" },
-          { name: "child_voice", label: "Child voice", type: "textarea", hint: "What did the young person say, show or communicate?" },
-        ],
-      },
-      {
-        title: "Adult response and outcome",
-        subtitle: "How adults supported and what happened next",
-        layout: "document-grid-1",
-        fields: [
-          { name: "staff_response", label: "Staff response", type: "textarea", hint: "How did adults respond in a calm, attuned and proportionate way?" },
-          { name: "outcome", label: "Outcome and follow-up", type: "textarea", hint: "What was the immediate outcome and what needs to happen next?" },
-        ],
-      },
-    ],
-  },
-
-  risk: {
-    title: "Risk assessment",
-    subtitle: "Therapeutic risk formulation, controls and response planning",
-    promptCards: [
-      "Risk should be framed around safety, vulnerability, context and support needs.",
-      "Avoid blame-based wording. Focus on what increases risk and what reduces it.",
-      "Be specific about adult guidance, protective factors and response actions.",
-      "Make it clear how this links to the child’s plan and daily care."
-    ],
-    standards: [
-      "Children are helped and protected.",
-      "Risks are understood, reviewed and managed in a child-centred way.",
-      "Staff have clear guidance to reduce harm and promote safety."
-    ],
-    ofsted: [
-      "Evidence of live risk management.",
-      "Evidence of management oversight and review dates.",
-      "Supports inspection discussion about safety, planning and multi-agency response."
-    ],
-    sections: [
-      {
-        title: "Risk overview",
-        subtitle: "Headline risk information",
-        layout: "document-grid-2",
-        fields: [
-          { name: "category", label: "Risk category", type: "text" },
-          { name: "title", label: "Risk title", type: "text" },
-          {
-            name: "severity",
-            label: "Severity",
-            type: "select",
-            options: [
-              { value: "low", label: "Low" },
-              { value: "medium", label: "Medium" },
-              { value: "high", label: "High" },
-            ],
-          },
-          {
-            name: "likelihood",
-            label: "Likelihood",
-            type: "select",
-            options: [
-              { value: "low", label: "Low" },
-              { value: "medium", label: "Medium" },
-              { value: "high", label: "High" },
-            ],
-          },
-          { name: "review_date", label: "Review date", type: "date", full: true },
-        ],
-      },
-      {
-        title: "Formulation and triggers",
-        subtitle: "Understanding the concern",
-        layout: "document-grid-1",
-        fields: [
-          { name: "concern_summary", label: "Concern summary / formulation", type: "textarea", hint: "What is the risk, in what context, and why may it arise?" },
-          { name: "known_triggers", label: "Known triggers", type: "textarea", hint: "Situations, emotions, people, memories, environments or unmet needs that increase risk." },
-        ],
-      },
-      {
-        title: "Controls and response",
-        subtitle: "What adults must do",
-        layout: "document-grid-1",
-        fields: [
-          { name: "current_controls", label: "Current controls / staff guidance", type: "textarea", hint: "What should adults do routinely to reduce risk?" },
-          { name: "response_actions", label: "Response actions if risk escalates", type: "textarea", hint: "What should adults do immediately if concerns increase?" },
-        ],
-      },
-    ],
-  },
-
-  support_plan: {
-    title: "Support plan",
-    subtitle: "Child-focused therapeutic guidance for day-to-day care",
-    promptCards: [
-      "Write as a therapeutic support document, not just a compliance form.",
-      "Describe the child’s needs, meaning, strengths and what helps them feel safe.",
-      "Use warm, respectful language that helps adults respond consistently.",
-      "Be clear about proactive strategies, pace, triggers and protective factors."
-    ],
-    standards: [
-      "Children’s needs are understood and met through good planning.",
-      "Children’s views, wishes and feelings shape care.",
-      "Adults are given clear guidance that improves lived care and safety."
-    ],
-    ofsted: [
-      "Evidence of personalised planning.",
-      "Evidence that staff know the child and can respond consistently.",
-      "Supports inspection around care planning, progress, voice and quality of support."
-    ],
-    sections: [
-      {
-        title: "Plan overview",
-        subtitle: "Headline information",
-        layout: "document-grid-2",
-        fields: [
-          { name: "plan_type", label: "Plan type", type: "text" },
-          { name: "title", label: "Plan title", type: "text" },
-          { name: "review_date", label: "Review date", type: "date", full: true },
-        ],
-      },
-      {
-        title: "Understanding the child",
-        subtitle: "Needs, formulation and child voice",
-        layout: "document-grid-1",
-        fields: [
-          { name: "presenting_need", label: "Presenting need / formulation", type: "textarea", hint: "What does the child need support with, and how should adults understand this?" },
-          { name: "summary", label: "Summary", type: "textarea", hint: "A concise overview of the plan." },
-          { name: "child_voice", label: "Child voice", type: "textarea", hint: "What does the child say matters to them? What do they need adults to understand?" },
-        ],
-      },
-      {
-        title: "Guidance for adults",
-        subtitle: "What helps in day-to-day care",
-        layout: "document-grid-1",
-        fields: [
-          { name: "proactive_strategies", label: "Proactive strategies / staff guidance", type: "textarea", hint: "What should adults do routinely to help the child thrive?" },
-          { name: "triggers", label: "Triggers", type: "textarea", hint: "What may increase distress, dysregulation or withdrawal?" },
-          { name: "protective_factors", label: "Protective factors", type: "textarea", hint: "What reduces risk and promotes safety, trust and stability?" },
-        ],
-      },
-    ],
   },
 };
 
@@ -567,12 +318,8 @@ function setEmpty(message = "No records found.") {
 
 function initialsFromName(name) {
   if (!name) return "YP";
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() || "")
-    .join("") || "YP";
+  const parts = name.trim().split(/\s+/).slice(0, 2);
+  return parts.map((p) => p[0]?.toUpperCase() || "").join("") || "YP";
 }
 
 function formatDate(value) {
@@ -597,9 +344,9 @@ function formatShortTime(value) {
 
 function statusBadgeClass(value) {
   const v = String(value || "").toLowerCase();
-  if (["approved", "active", "recorded", "low", "completed", "ok"].includes(v)) return "success";
-  if (["submitted", "pending", "medium", "due_soon"].includes(v)) return "warning";
-  if (["returned", "high", "critical", "archived", "overdue"].includes(v)) return "danger";
+  if (["approved", "active", "recorded", "low", "completed", "scheduled", "done"].includes(v)) return "success";
+  if (["submitted", "pending", "medium", "due_soon", "upcoming"].includes(v)) return "warning";
+  if (["returned", "high", "critical", "archived", "cancelled", "overdue"].includes(v)) return "danger";
   return "";
 }
 
@@ -613,6 +360,37 @@ function renderBadges(values = []) {
   `;
 }
 
+function getRecordUrl(item) {
+  const type = String(item.record_type || item.event_type || item.category || "").toLowerCase();
+  const id = item.record_id || item.source_id || item.id;
+  if (!id) return null;
+
+  const map = {
+    daily_note: RECORD_CONFIG.daily_note.detailUrl(id),
+    daily_notes: RECORD_CONFIG.daily_note.detailUrl(id),
+    incident: RECORD_CONFIG.incident.detailUrl(id),
+    incidents: RECORD_CONFIG.incident.detailUrl(id),
+    risk: RECORD_CONFIG.risk.detailUrl(id),
+    risk_assessment: RECORD_CONFIG.risk.detailUrl(id),
+    support_plan: RECORD_CONFIG.support_plan.detailUrl(id),
+    plan: RECORD_CONFIG.support_plan.detailUrl(id),
+    appointment: RECORD_CONFIG.appointment.detailUrl(id),
+    appointments: RECORD_CONFIG.appointment.detailUrl(id),
+    health: `/young-people/health-records/${id}`,
+    health_record: `/young-people/health-records/${id}`,
+    medication_profile: `/young-people/medication-profiles/${id}`,
+    medication_record: `/young-people/medication-records/${id}`,
+    education: `/young-people/education-records/${id}`,
+    education_record: `/young-people/education-records/${id}`,
+    family: `/young-people/family/records/${id}`,
+    family_contact: `/young-people/family/records/${id}`,
+    keywork: `/young-people/keywork/${id}`,
+    keywork_session: `/young-people/keywork/${id}`,
+  };
+
+  return map[type] || null;
+}
+
 function normaliseRecordType(item) {
   const raw = String(item.record_type || item.event_type || item.category || "").toLowerCase();
   if (raw === "plan") return "support_plan";
@@ -620,28 +398,8 @@ function normaliseRecordType(item) {
   if (raw === "daily_notes") return "daily_note";
   if (raw === "incidents") return "incident";
   if (raw === "keywork_session") return "keywork";
+  if (raw === "appointments") return "appointment";
   return raw;
-}
-
-function getRecordUrl(item) {
-  const type = normaliseRecordType(item);
-  const id = item.record_id || item.source_id || item.id;
-  if (!id) return null;
-
-  const map = {
-    daily_note: `/young-people/daily-notes/${id}`,
-    incident: `/young-people/incidents/${id}`,
-    risk: `/young-people/risk/${id}`,
-    support_plan: `/young-people/plans/${id}`,
-    health: `/young-people/health-records/${id}`,
-    medication_profile: `/young-people/medication-profiles/${id}`,
-    medication_record: `/young-people/medication-records/${id}`,
-    education: `/young-people/education-records/${id}`,
-    family: `/young-people/family/records/${id}`,
-    keywork: `/young-people/keywork/${id}`,
-  };
-
-  return map[type] || null;
 }
 
 function normaliseDetailEntries(data) {
@@ -654,7 +412,6 @@ function normaliseDetailEntries(data) {
     "title",
     "summary",
     "narrative",
-    "home_id",
   ]);
 
   return Object.entries(data || {})
@@ -693,26 +450,17 @@ function closeModal() {
   state.modalRecordType = null;
   state.modalEditItem = null;
   els.modalFields.innerHTML = "";
-  els.documentPromptPanel.innerHTML = "";
-  els.documentStandardsPanel.innerHTML = "";
-  els.documentOfstedPanel.innerHTML = "";
-  els.documentTypeChip.textContent = "Document";
 }
 
-function renderDocumentCards(items = []) {
-  if (!items.length) return `<div class="document-panel-card">No linked guidance.</div>`;
-  return items.map((item) => `<div class="document-panel-card">${escapeHtml(item)}</div>`).join("");
-}
-
-function renderDocumentField(field) {
-  const labelHtml = `<label class="form-label" for="${field.name}">${escapeHtml(field.label)}</label>`;
-  const hintHtml = field.hint ? `<div class="form-hint">${escapeHtml(field.hint)}</div>` : "";
+function buildFormField(field) {
+  const common = `
+    <label class="form-label" for="${field.name}">${escapeHtml(field.label)}</label>
+  `;
 
   if (field.type === "textarea") {
     return `
       <div class="form-field ${field.full ? "full" : ""}">
-        ${labelHtml}
-        ${hintHtml}
+        ${common}
         <textarea id="${field.name}" name="${field.name}" class="textarea-input" placeholder="${escapeHtml(field.placeholder || "")}">${escapeHtml(field.value || "")}</textarea>
       </div>
     `;
@@ -721,11 +469,10 @@ function renderDocumentField(field) {
   if (field.type === "select") {
     return `
       <div class="form-field ${field.full ? "full" : ""}">
-        ${labelHtml}
-        ${hintHtml}
+        ${common}
         <select id="${field.name}" name="${field.name}" class="select-input">
           ${(field.options || []).map((opt) => `
-            <option value="${escapeHtml(opt.value)}" ${String(opt.value) === String(field.value ?? "") ? "selected" : ""}>
+            <option value="${escapeHtml(opt.value)}" ${String(opt.value) === String(field.value || "") ? "selected" : ""}>
               ${escapeHtml(opt.label)}
             </option>
           `).join("")}
@@ -736,8 +483,7 @@ function renderDocumentField(field) {
 
   return `
     <div class="form-field ${field.full ? "full" : ""}">
-      ${labelHtml}
-      ${hintHtml}
+      ${common}
       <input
         id="${field.name}"
         name="${field.name}"
@@ -750,83 +496,192 @@ function renderDocumentField(field) {
   `;
 }
 
-function buildDocumentTemplate(recordType, item = null) {
+function getModalSchema(recordType, item = null) {
   const today = toDateInputValue(new Date());
-  const template = DOCUMENT_LIBRARY[recordType] || DOCUMENT_LIBRARY.support_plan;
-  const base = structuredClone(template);
+  const nowValue = (() => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mi = String(d.getMinutes()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+  })();
 
   if (recordType === "daily_note") {
-    base.sections[0].fields[0].value = item?.note_date || today;
-    base.sections[0].fields[1].value = item?.shift_type || "day";
-    base.sections[0].fields[2].value = item?.mood || "";
-    base.sections[1].fields[0].value = item?.presentation || "";
-    base.sections[1].fields[1].value = item?.activities || "";
-    base.sections[1].fields[2].value = item?.behaviour_update || "";
-    base.sections[2].fields[0].value = item?.young_person_voice || item?.child_voice || "";
-    base.sections[2].fields[1].value = item?.positives || "";
-    base.sections[2].fields[2].value = item?.actions_required || "";
+    return [
+      { name: "note_date", label: "Date", type: "date", value: item?.note_date || today },
+      { name: "shift_type", label: "Shift type", type: "select", value: item?.shift_type || "day", options: [
+        { value: "day", label: "Day" },
+        { value: "evening", label: "Evening" },
+        { value: "night", label: "Night" },
+        { value: "waking_night", label: "Waking night" },
+      ]},
+      { name: "mood", label: "Mood", type: "text", value: item?.mood || "" },
+      { name: "presentation", label: "Presentation", type: "textarea", full: true, value: item?.presentation || "" },
+      { name: "activities", label: "Activities", type: "textarea", full: true, value: item?.activities || "" },
+      { name: "behaviour_update", label: "Behaviour update", type: "textarea", full: true, value: item?.behaviour_update || "" },
+      { name: "young_person_voice", label: "Young person voice", type: "textarea", full: true, value: item?.young_person_voice || item?.child_voice || "" },
+      { name: "positives", label: "Positives", type: "textarea", full: true, value: item?.positives || "" },
+      { name: "actions_required", label: "Actions required", type: "textarea", full: true, value: item?.actions_required || "" },
+    ];
   }
 
   if (recordType === "incident") {
-    base.sections[0].fields[0].value = item?.incident_datetime
-      ? String(item.incident_datetime).slice(0, 16)
-      : item?.occurred_at ? String(item.occurred_at).slice(0, 16) : "";
-    base.sections[0].fields[1].value = item?.incident_type || "";
-    base.sections[0].fields[2].value = item?.severity || "medium";
-    base.sections[0].fields[3].value = item?.location || "";
-    base.sections[1].fields[0].value = item?.description || item?.summary || "";
-    base.sections[1].fields[1].value = item?.antecedent || "";
-    base.sections[1].fields[2].value = item?.child_voice || "";
-    base.sections[2].fields[0].value = item?.staff_response || "";
-    base.sections[2].fields[1].value = item?.outcome || "";
+    return [
+      {
+        name: "incident_datetime",
+        label: "Incident time",
+        type: "datetime-local",
+        value: item?.incident_datetime
+          ? item.incident_datetime.slice(0, 16)
+          : (item?.occurred_at ? String(item.occurred_at).slice(0, 16) : nowValue),
+      },
+      { name: "incident_type", label: "Incident type", type: "text", value: item?.incident_type || "" },
+      { name: "severity", label: "Severity", type: "select", value: item?.severity || "medium", options: [
+        { value: "low", label: "Low" },
+        { value: "medium", label: "Medium" },
+        { value: "high", label: "High" },
+        { value: "critical", label: "Critical" },
+      ]},
+      { name: "location", label: "Location", type: "text", value: item?.location || "" },
+      { name: "description", label: "Description", type: "textarea", full: true, value: item?.description || item?.narrative || "" },
+      { name: "antecedent", label: "Antecedent", type: "textarea", full: true, value: item?.antecedent || "" },
+      { name: "staff_response", label: "Staff response", type: "textarea", full: true, value: item?.staff_response || "" },
+      { name: "child_voice", label: "Child voice", type: "textarea", full: true, value: item?.child_voice || "" },
+      { name: "outcome", label: "Outcome", type: "textarea", full: true, value: item?.outcome || "" },
+    ];
   }
 
   if (recordType === "risk") {
-    base.sections[0].fields[0].value = item?.category || "";
-    base.sections[0].fields[1].value = item?.title || "";
-    base.sections[0].fields[2].value = item?.severity || "medium";
-    base.sections[0].fields[3].value = item?.likelihood || "medium";
-    base.sections[0].fields[4].value = item?.review_date || today;
-    base.sections[1].fields[0].value = item?.concern_summary || item?.formulation || "";
-    base.sections[1].fields[1].value = item?.known_triggers || "";
-    base.sections[2].fields[0].value = item?.current_controls || item?.staff_guidance || "";
-    base.sections[2].fields[1].value = item?.response_actions || "";
+    return [
+      { name: "category", label: "Category", type: "text", value: item?.category || "" },
+      { name: "title", label: "Title", type: "text", value: item?.title || "" },
+      { name: "severity", label: "Severity", type: "select", value: item?.severity || "medium", options: [
+        { value: "low", label: "Low" },
+        { value: "medium", label: "Medium" },
+        { value: "high", label: "High" },
+      ]},
+      { name: "likelihood", label: "Likelihood", type: "select", value: item?.likelihood || "medium", options: [
+        { value: "low", label: "Low" },
+        { value: "medium", label: "Medium" },
+        { value: "high", label: "High" },
+      ]},
+      { name: "review_date", label: "Review date", type: "date", value: item?.review_date || today },
+      { name: "concern_summary", label: "Concern summary", type: "textarea", full: true, value: item?.concern_summary || item?.formulation || "" },
+      { name: "known_triggers", label: "Known triggers", type: "textarea", full: true, value: item?.known_triggers || "" },
+      { name: "current_controls", label: "Current controls", type: "textarea", full: true, value: item?.current_controls || item?.staff_guidance || "" },
+      { name: "response_actions", label: "Response actions", type: "textarea", full: true, value: item?.response_actions || "" },
+    ];
   }
 
-  if (recordType === "support_plan" || recordType === "plan") {
-    base.sections[0].fields[0].value = item?.plan_type || "support_plan";
-    base.sections[0].fields[1].value = item?.title || "";
-    base.sections[0].fields[2].value = item?.review_date || today;
-    base.sections[1].fields[0].value = item?.presenting_need || item?.formulation || "";
-    base.sections[1].fields[1].value = item?.summary || "";
-    base.sections[1].fields[2].value = item?.child_voice || "";
-    base.sections[2].fields[0].value = item?.proactive_strategies || item?.staff_guidance || "";
-    base.sections[2].fields[1].value = item?.triggers || "";
-    base.sections[2].fields[2].value = item?.protective_factors || "";
+  if (recordType === "appointment") {
+    return [
+      { name: "title", label: "Appointment title", type: "text", value: item?.title || "" },
+      {
+        name: "appointment_type",
+        label: "Appointment type",
+        type: "select",
+        value: item?.appointment_type || "general",
+        options: [
+          { value: "general", label: "General" },
+          { value: "health", label: "Health" },
+          { value: "education", label: "Education" },
+          { value: "family", label: "Family / contact" },
+          { value: "therapy", label: "Therapy" },
+          { value: "review", label: "Review" },
+          { value: "legal", label: "Legal" },
+        ],
+      },
+      {
+        name: "appointment_date",
+        label: "Appointment date and time",
+        type: "datetime-local",
+        value: item?.appointment_date ? String(item.appointment_date).slice(0, 16) : nowValue,
+      },
+      {
+        name: "end_datetime",
+        label: "End time",
+        type: "datetime-local",
+        value: item?.end_datetime ? String(item.end_datetime).slice(0, 16) : "",
+      },
+      { name: "location", label: "Location", type: "text", value: item?.location || "" },
+      { name: "professional_name", label: "Professional name", type: "text", value: item?.professional_name || "" },
+      { name: "professional_role", label: "Professional role", type: "text", value: item?.professional_role || "" },
+      { name: "linked_plan_id", label: "Linked plan id", type: "number", value: item?.linked_plan_id || "" },
+      {
+        name: "status",
+        label: "Status",
+        type: "select",
+        value: item?.status || "scheduled",
+        options: [
+          { value: "scheduled", label: "Scheduled" },
+          { value: "completed", label: "Completed" },
+          { value: "cancelled", label: "Cancelled" },
+        ],
+      },
+      {
+        name: "reminder_minutes_before",
+        label: "Reminder minutes before",
+        type: "number",
+        value: item?.reminder_minutes_before ?? 30,
+      },
+      {
+        name: "summary",
+        label: "Summary",
+        type: "textarea",
+        full: true,
+        value: item?.summary || "",
+      },
+      {
+        name: "purpose",
+        label: "Purpose",
+        type: "textarea",
+        full: true,
+        value: item?.purpose || "",
+      },
+      {
+        name: "child_voice",
+        label: "Child voice",
+        type: "textarea",
+        full: true,
+        value: item?.child_voice || "",
+      },
+      {
+        name: "preparation_notes",
+        label: "Preparation notes for adults",
+        type: "textarea",
+        full: true,
+        value: item?.preparation_notes || "",
+      },
+      {
+        name: "outcome_notes",
+        label: "Outcome notes",
+        type: "textarea",
+        full: true,
+        value: item?.outcome_notes || "",
+      },
+      {
+        name: "follow_up_actions",
+        label: "Follow up actions",
+        type: "textarea",
+        full: true,
+        value: item?.follow_up_actions || "",
+      },
+    ];
   }
 
-  return base;
-}
-
-function renderDocumentSections(template) {
-  return template.sections.map((section) => `
-    <section class="document-section">
-      <div class="document-section-header">
-        <h4 class="document-section-title">${escapeHtml(section.title)}</h4>
-        ${section.subtitle ? `<p class="document-section-subtitle">${escapeHtml(section.subtitle)}</p>` : ""}
-      </div>
-      <div class="document-section-body">
-        <div class="${escapeHtml(section.layout || "document-grid-1")}">
-          ${section.fields.map(renderDocumentField).join("")}
-        </div>
-      </div>
-    </section>
-  `).join("");
-}
-
-function getCurrentTemplate(recordType, item) {
-  const key = recordType === "plan" ? "support_plan" : recordType;
-  return buildDocumentTemplate(key, item);
+  return [
+    { name: "plan_type", label: "Plan type", type: "text", value: item?.plan_type || "support_plan" },
+    { name: "title", label: "Title", type: "text", value: item?.title || "" },
+    { name: "review_date", label: "Review date", type: "date", value: item?.review_date || today },
+    { name: "presenting_need", label: "Presenting need", type: "textarea", full: true, value: item?.presenting_need || item?.formulation || "" },
+    { name: "summary", label: "Summary", type: "textarea", full: true, value: item?.summary || "" },
+    { name: "child_voice", label: "Child voice", type: "textarea", full: true, value: item?.child_voice || "" },
+    { name: "proactive_strategies", label: "Proactive strategies", type: "textarea", full: true, value: item?.proactive_strategies || item?.staff_guidance || "" },
+    { name: "triggers", label: "Triggers", type: "textarea", full: true, value: item?.triggers || "" },
+    { name: "protective_factors", label: "Protective factors", type: "textarea", full: true, value: item?.protective_factors || "" },
+  ];
 }
 
 function openRecordModal(recordType, mode = "create", item = null) {
@@ -835,30 +690,27 @@ function openRecordModal(recordType, mode = "create", item = null) {
   state.modalEditItem = item;
 
   const config = RECORD_CONFIG[recordType] || RECORD_CONFIG.plan;
-  const template = getCurrentTemplate(recordType, item);
+  const label = config.label || "Record";
 
-  els.modalTitle.textContent = mode === "edit" ? `Edit ${template.title}` : `Create ${template.title}`;
-  els.modalSubtitle.textContent = template.subtitle;
-  els.modalSaveBtn.textContent = mode === "edit" ? "Save changes" : "Save document";
-  els.documentTypeChip.textContent = config.typeChip || config.label || "Document";
-  els.documentPromptPanel.innerHTML = renderDocumentCards(template.promptCards);
-  els.documentStandardsPanel.innerHTML = renderDocumentCards(template.standards);
-  els.documentOfstedPanel.innerHTML = renderDocumentCards(template.ofsted);
-  els.modalFields.innerHTML = renderDocumentSections(template);
+  els.modalTitle.textContent = mode === "edit" ? `Edit ${label}` : `Add ${label}`;
+  els.modalSubtitle.textContent = mode === "edit" ? "Update the record below" : "Complete the form below";
+  els.modalSaveBtn.textContent = mode === "edit" ? "Save changes" : "Save";
 
+  const schema = getModalSchema(recordType, item);
+  els.modalFields.innerHTML = schema.map(buildFormField).join("");
   openModal();
 }
 
 function serializeModalForm() {
   const formData = new FormData(els.modalForm);
-  const payload = {};
+  const obj = {};
 
   for (const [key, value] of formData.entries()) {
-    payload[key] = typeof value === "string" ? value.trim() : value;
+    obj[key] = value;
   }
 
-  payload.young_person_id = state.youngPersonId;
-  return payload;
+  obj.young_person_id = state.youngPersonId;
+  return obj;
 }
 
 async function handleModalSubmit(event) {
@@ -867,7 +719,7 @@ async function handleModalSubmit(event) {
   const recordType = state.modalRecordType;
   const config = RECORD_CONFIG[recordType];
   if (!config) {
-    showError("This document type is not configured.");
+    showError("This record type is not configured.");
     return;
   }
 
@@ -877,10 +729,18 @@ async function handleModalSubmit(event) {
     els.modalSaveBtn.disabled = true;
 
     if (state.modalMode === "edit" && state.modalEditItem?.id) {
-      await apiSend(config.updateUrl(state.modalEditItem.id), config.updateMethod || "PATCH", payload);
+      await apiSend(
+        config.updateUrl(state.modalEditItem.id),
+        config.updateMethod || "PATCH",
+        payload,
+      );
       showMessage(`${config.label} updated.`);
     } else {
-      await apiSend(config.createUrl(state.youngPersonId), "POST", payload);
+      await apiSend(
+        config.createUrl(state.youngPersonId),
+        "POST",
+        payload,
+      );
       showMessage(`${config.label} created.`);
     }
 
@@ -888,7 +748,7 @@ async function handleModalSubmit(event) {
     await loadCurrentView();
   } catch (error) {
     console.error(error);
-    showError(error.message || "Could not save document.");
+    showError(error.message || "Could not save record.");
   } finally {
     els.modalSaveBtn.disabled = false;
   }
@@ -912,17 +772,33 @@ async function runDrawerWorkflow(action) {
 
   let url = null;
   let body = null;
+  let method = "POST";
 
-  if (action === "submit") url = config.submitUrl?.(id);
-  if (action === "approve") {
-    url = config.approveUrl?.(id);
-    body = { review_note: "Approved in workspace" };
+  if (type === "appointment") {
+    if (action === "approve") {
+      url = config.completeUrl?.(id);
+      body = { review_note: "Completed in workspace" };
+    }
+    if (action === "return" || action === "archive") {
+      url = config.cancelUrl?.(id);
+      body = { review_note: "Cancelled in workspace" };
+    }
+    if (action === "submit") {
+      showError("Appointments do not use submit.");
+      return;
+    }
+  } else {
+    if (action === "submit") url = config.submitUrl?.(id);
+    if (action === "approve") {
+      url = config.approveUrl?.(id);
+      body = { review_note: "Approved in workspace" };
+    }
+    if (action === "return") {
+      url = config.returnUrl?.(id);
+      body = { review_note: "Returned in workspace" };
+    }
+    if (action === "archive") url = config.archiveUrl?.(id);
   }
-  if (action === "return") {
-    url = config.returnUrl?.(id);
-    body = { review_note: "Returned in workspace" };
-  }
-  if (action === "archive") url = config.archiveUrl?.(id);
 
   if (!url) {
     showError(`No ${action} route is configured for this record.`);
@@ -930,10 +806,10 @@ async function runDrawerWorkflow(action) {
   }
 
   try {
-    await apiSend(url, "POST", body);
+    await apiSend(url, method, body);
     showMessage(`${config.label} ${action}ed.`);
-    closeDrawer();
     await loadCurrentView();
+    closeDrawer();
   } catch (error) {
     console.error(error);
     showError(error.message || `Could not ${action} record.`);
@@ -956,7 +832,11 @@ async function openRecordDetail(item) {
   state.activeRecordType = type;
 
   openDrawer();
-  els.drawerActions.classList.toggle("hidden", !shouldShowDrawerActions(type));
+  if (shouldShowDrawerActions(type)) {
+    els.drawerActions.classList.remove("hidden");
+  } else {
+    els.drawerActions.classList.add("hidden");
+  }
 
   els.drawerTitle.textContent = item.title || "Record details";
   els.drawerSubtitle.textContent = "Loading record...";
@@ -974,6 +854,7 @@ async function openRecordDetail(item) {
       data?.incident ||
       data?.risk ||
       data?.support_plan ||
+      data?.appointment ||
       data?.health_record ||
       data?.medication_profile ||
       data?.medication_record ||
@@ -988,7 +869,7 @@ async function openRecordDetail(item) {
 
     els.drawerTitle.textContent = item.title || detailData.title || "Record details";
     els.drawerSubtitle.textContent =
-      `${String(item.record_type || item.event_type || item.category || "record").replaceAll("_", " ")} • ${formatDate(item.recorded_at || item.occurred_at || item.event_datetime || detailData.created_at || detailData.updated_at)}`;
+      `${String(item.record_type || item.event_type || item.category || "record").replaceAll("_", " ")} • ${formatDate(item.recorded_at || item.occurred_at || item.event_datetime || detailData.created_at)}`;
 
     els.drawerBody.innerHTML = `
       <div class="detail-section">
@@ -1000,7 +881,7 @@ async function openRecordDetail(item) {
           </div>
           <div class="detail-row">
             <div class="detail-key">Recorded at</div>
-            <div class="detail-value">${escapeHtml(formatDate(item.recorded_at || item.occurred_at || item.event_datetime || detailData.created_at || detailData.updated_at))}</div>
+            <div class="detail-value">${escapeHtml(formatDate(item.recorded_at || item.occurred_at || item.event_datetime || detailData.created_at || detailData.updated_at || detailData.appointment_date))}</div>
           </div>
           <div class="detail-row">
             <div class="detail-key">Recorded by</div>
@@ -1012,7 +893,7 @@ async function openRecordDetail(item) {
           </div>
           <div class="detail-row">
             <div class="detail-key">Summary</div>
-            <div class="detail-value">${escapeHtml(item.summary || item.narrative || detailData.summary || detailData.description || detailData.concern_summary || detailData.report_text || "—")}</div>
+            <div class="detail-value">${escapeHtml(item.summary || item.narrative || detailData.summary || detailData.description || detailData.concern_summary || "—")}</div>
           </div>
         </div>
       </div>
@@ -1047,14 +928,18 @@ async function openRecordDetail(item) {
 function renderRecordCard(item) {
   const title = item.title || item.topic || item.contact_person || item.record_type || "Record";
   const summary = item.summary || item.narrative || item.description || item.concern_summary || "No summary available.";
+
   const meta = [
     item.occurred_at ? formatDate(item.occurred_at) : null,
     item.session_date ? formatDate(item.session_date) : null,
     item.recorded_at ? formatDate(item.recorded_at) : null,
+    item.appointment_date ? formatDate(item.appointment_date) : null,
     item.worker_name || null,
     item.author_name || null,
     item.created_by_name || null,
     item.owner_name || null,
+    item.professional_name || null,
+    item.location || null,
   ].filter(Boolean);
 
   const badges = [
@@ -1062,7 +947,7 @@ function renderRecordCard(item) {
     item.severity,
     item.status,
     item.approval_status,
-    item.compliance_status,
+    item.appointment_type,
   ].filter(Boolean);
 
   return `
@@ -1076,7 +961,7 @@ function renderRecordCard(item) {
       <div class="record-body">${escapeHtml(summary)}</div>
       ${renderBadges(badges)}
       <div class="day-record-actions">
-        ${getRecordUrl(item) ? `<button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>` : ""}
+        <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>
       </div>
     </article>
   `;
@@ -1098,7 +983,7 @@ function renderTimelineItem(item) {
       <div class="record-body">${escapeHtml(item.summary || item.narrative || "No summary available.")}</div>
       ${renderBadges([item.severity || item.significance, item.workflow_status || item.event_status])}
       <div class="day-record-actions">
-        ${getRecordUrl(item) ? `<button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>` : ""}
+        <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>
       </div>
     </article>
   `;
@@ -1148,7 +1033,9 @@ function renderProfileSection(title, rows = []) {
   return `
     <section class="panel">
       <div class="panel-header">
-        <div><h3>${escapeHtml(title)}</h3></div>
+        <div>
+          <h3>${escapeHtml(title)}</h3>
+        </div>
       </div>
       <div class="kv">
         ${
@@ -1168,7 +1055,9 @@ function renderHandoverItem(title, body, badges = []) {
   return `
     <article class="record-card">
       <div class="record-card-header">
-        <div><h4>${escapeHtml(title)}</h4></div>
+        <div>
+          <h4>${escapeHtml(title)}</h4>
+        </div>
       </div>
       <div class="record-body">${escapeHtml(body || "—")}</div>
       ${renderBadges(badges)}
@@ -1301,7 +1190,7 @@ async function loadYoungPersonSelector() {
 
   try {
     const data = await apiGet("/young-people");
-    state.selectorItems = data.young_people || data.items || [];
+    state.selectorItems = data.young_people || [];
     renderSelectorList(state.selectorItems);
   } catch (error) {
     console.error(error);
@@ -1462,7 +1351,9 @@ Notes: ${escapeHtml(contact.notes || "—")}</div>
                   ${alerts.map((alert) => `
                     <article class="record-card">
                       <div class="record-card-header">
-                        <div><h4>${escapeHtml(alert.title || "Alert")}</h4></div>
+                        <div>
+                          <h4>${escapeHtml(alert.title || "Alert")}</h4>
+                        </div>
                       </div>
                       <div class="record-body">${escapeHtml(alert.description || "No description.")}</div>
                       ${renderBadges([alert.severity, alert.is_active ? "active" : "inactive"])}
@@ -1480,11 +1371,12 @@ Notes: ${escapeHtml(contact.notes || "—")}</div>
 async function loadHome() {
   setLoading("Loading home...");
 
-  const [overviewData, timelineData, plansData, riskData] = await Promise.all([
+  const [overviewData, timelineData, plansData, riskData, appointmentsData] = await Promise.all([
     apiGet(`/young-people/${state.youngPersonId}/overview`),
     apiGet(`/young-people/${state.youngPersonId}/timeline?limit=50`),
     apiGet(`/young-people/${state.youngPersonId}/plans`).catch(() => ({ items: [] })),
     apiGet(`/young-people/${state.youngPersonId}/risk`).catch(() => ({ items: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/appointments`).catch(() => ({ items: [] })),
   ]);
 
   const yp = overviewData.young_person || {};
@@ -1493,6 +1385,7 @@ async function loadHome() {
   const recent = (timelineData.timeline || []).slice(0, 12);
   const plans = (plansData.items || []).slice(0, 3);
   const risks = (riskData.items || []).slice(0, 3);
+  const appointments = (appointmentsData.items || []).slice(0, 3);
 
   state.timelineCache = timelineData.timeline || [];
 
@@ -1561,14 +1454,21 @@ async function loadHome() {
       </div>
 
       <div class="panel">
-        <div class="panel-header"><div><h3>Plans</h3><p class="panel-subtitle">Current plans staff may need to follow.</p></div></div>
-        ${plans.length ? `<div class="record-list">${plans.map(renderRecordCard).join("")}</div>` : `<div class="empty-state">No current plans.</div>`}
+        <div class="panel-header"><div><h3>Upcoming appointments</h3><p class="panel-subtitle">Important planned appointments and linked plans.</p></div></div>
+        ${appointments.length ? `<div class="record-list">${appointments.map(renderRecordCard).join("")}</div>` : `<div class="empty-state">No appointments recorded.</div>`}
       </div>
     </div>
 
-    <div class="panel">
-      <div class="panel-header"><div><h3>Recent activity</h3><p class="panel-subtitle">Recent chronology across the record.</p></div></div>
-      ${recent.length ? renderGroupedTimelineFromItems(recent) : `<div class="empty-state">No recent activity.</div>`}
+    <div class="callout-grid">
+      <div class="panel">
+        <div class="panel-header"><div><h3>Plans</h3><p class="panel-subtitle">Current plans staff may need to follow.</p></div></div>
+        ${plans.length ? `<div class="record-list">${plans.map(renderRecordCard).join("")}</div>` : `<div class="empty-state">No current plans.</div>`}
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><div><h3>Recent activity</h3><p class="panel-subtitle">Recent chronology across the record.</p></div></div>
+        ${recent.length ? renderGroupedTimelineFromItems(recent) : `<div class="empty-state">No recent activity.</div>`}
+      </div>
     </div>
   `;
 
@@ -1598,10 +1498,22 @@ async function loadHandover() {
 
   els.content.innerHTML = `
     <div class="grid grid-4">
-      <div class="stat-card"><div class="stat-label">Active alerts</div><div class="stat-value">${alerts.length}</div></div>
-      <div class="stat-card"><div class="stat-label">Recent incidents</div><div class="stat-value">${incidents.length}</div></div>
-      <div class="stat-card"><div class="stat-label">Recent daily notes</div><div class="stat-value">${dailyNotes.length}</div></div>
-      <div class="stat-card"><div class="stat-label">Current risks</div><div class="stat-value">${risks.length}</div></div>
+      <div class="stat-card">
+        <div class="stat-label">Active alerts</div>
+        <div class="stat-value">${alerts.length}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Recent incidents</div>
+        <div class="stat-value">${incidents.length}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Recent daily notes</div>
+        <div class="stat-value">${dailyNotes.length}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Current risks</div>
+        <div class="stat-value">${risks.length}</div>
+      </div>
     </div>
 
     <div class="panel">
@@ -1611,7 +1523,7 @@ async function loadHandover() {
           <p class="panel-subtitle">Auto-built from recent recorded reality.</p>
         </div>
         <div class="day-record-actions">
-          <button id="generateHandoverBtn" class="primary-btn" type="button">Generate handover</button>
+          <button id="generateHandoverBtn" class="primary-btn">Generate handover</button>
         </div>
       </div>
       ${
@@ -1671,6 +1583,7 @@ async function loadHandover() {
             <p class="panel-subtitle">Current plans and guidance likely to matter next shift.</p>
           </div>
         </div>
+
         ${
           plans.length
             ? `<div class="record-list">${plans.map(renderRecordCard).join("")}</div>`
@@ -1713,153 +1626,128 @@ async function loadHandover() {
   bindDynamicOpenRecordButtons();
 }
 
-async function loadCompliance() {
-  setLoading("Loading compliance...");
-  const data = await apiGet(`/young-people/${state.youngPersonId}/compliance`);
-  const items = data.compliance_items || data.items || [];
+async function loadAppointments() {
+  setLoading("Loading appointments...");
+
+  const [appointmentsData, plansData] = await Promise.all([
+    apiGet(`/young-people/${state.youngPersonId}/appointments`).catch(() => ({ items: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/plans`).catch(() => ({ items: [] })),
+  ]);
+
+  const items = appointmentsData.items || [];
+  const plans = plansData.items || [];
 
   els.content.innerHTML = `
     <div class="panel">
       <div class="panel-header">
         <div>
-          <h3>Compliance tracker</h3>
-          <p class="panel-subtitle">Due reviews, follow-ups and evidence readiness.</p>
+          <h3>Appointments</h3>
+          <p class="panel-subtitle">Appointments for this young person, with reminders and links to plans.</p>
+        </div>
+        <div class="day-record-actions">
+          <button id="addAppointmentBtn" class="primary-btn" type="button">Add appointment</button>
         </div>
       </div>
+
       ${
         items.length
-          ? `<div class="record-list">${items.map((item) => renderRecordCard({
-              ...item,
-              summary: `Due: ${formatDate(item.due_date)}`
-            })).join("")}</div>`
-          : `<div class="empty-state">No compliance items found.</div>`
+          ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
+          : `<div class="empty-state">No appointments recorded.</div>`
       }
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <h3>Plans available to link</h3>
+          <p class="panel-subtitle">Use the plan id below when linking appointments to plans.</p>
+        </div>
+      </div>
+
+      ${
+        plans.length
+          ? `<div class="record-list">
+              ${plans.map((plan) => `
+                <article class="record-card">
+                  <div class="record-card-header">
+                    <div>
+                      <h4>${escapeHtml(plan.title || "Plan")}</h4>
+                      <div class="record-meta">Plan id: ${escapeHtml(String(plan.id || "—"))}</div>
+                    </div>
+                  </div>
+                  <div class="record-body">${escapeHtml(plan.summary || plan.presenting_need || "No summary available.")}</div>
+                  ${renderBadges([plan.status, plan.approval_status])}
+                </article>
+              `).join("")}
+            </div>`
+          : `<div class="empty-state">No plans available to link.</div>`
+      }
+    </div>
+  `;
+
+  const addBtn = document.getElementById("addAppointmentBtn");
+  if (addBtn) {
+    addBtn.addEventListener("click", () => openRecordModal("appointment", "create"));
+  }
+
+  bindDynamicOpenRecordButtons();
+}
+
+async function loadCompliancePlaceholder() {
+  els.content.innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <h3>Compliance</h3>
+          <p class="panel-subtitle">This section is ready to connect to compliance checks, statutory documents and review evidence.</p>
+        </div>
+      </div>
+      <div class="empty-state">
+        <p>Next pass: connect this view to compliance routes, due reviews, missing records and evidence readiness.</p>
+      </div>
     </div>
   `;
 }
 
-async function loadReports() {
-  setLoading("Loading reports...");
-  const [reportsData, packData] = await Promise.all([
-    apiGet(`/young-people/${state.youngPersonId}/reports`).catch(() => ({ items: [] })),
-    apiGet(`/inspection-pack/young-person/${state.youngPersonId}`).catch(() => null),
-  ]);
-
-  const reports = reportsData.items || [];
-  const standardsSummary = packData?.standards_summary || [];
-  const complianceItems = packData?.compliance_items || [];
-
+async function loadReportsPlaceholder() {
   els.content.innerHTML = `
-    <div class="callout-grid">
-      <section class="panel">
-        <div class="panel-header">
-          <div>
-            <h3>Reports</h3>
-            <p class="panel-subtitle">Generated monthly, review and evidence-linked reports.</p>
-          </div>
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <h3>Reports</h3>
+          <p class="panel-subtitle">This section is ready to connect to reports, summaries and management outputs.</p>
         </div>
-        ${
-          reports.length
-            ? `<div class="record-list">${reports.map((report) => `
-                <article class="record-card">
-                  <div class="record-card-header">
-                    <div>
-                      <h4>${escapeHtml(report.title || report.report_type || "Report")}</h4>
-                      <div class="record-meta">${escapeHtml(formatDate(report.created_at))}</div>
-                    </div>
-                  </div>
-                  <div class="record-body">${escapeHtml(report.report_text || "No report text available.")}</div>
-                  ${renderBadges([report.status, report.report_type])}
-                  <div class="day-record-actions">
-                    <button class="ghost-btn" data-open-report="${report.id}" type="button">Open links</button>
-                  </div>
-                </article>
-              `).join("")}</div>`
-            : `<div class="empty-state">No reports found.</div>`
-        }
-      </section>
-
-      <section class="panel">
-        <div class="panel-header">
-          <div>
-            <h3>Ofsted and standards snapshot</h3>
-            <p class="panel-subtitle">Useful evidence view for inspection readiness.</p>
-          </div>
-        </div>
-
-        ${
-          standardsSummary.length
-            ? `<div class="record-list">${standardsSummary.map((item) => `
-                <article class="record-card">
-                  <div class="record-card-header">
-                    <div>
-                      <h4>${escapeHtml(item.short_label || item.title || item.code || "Quality standard")}</h4>
-                      <div class="record-meta">${escapeHtml(item.code || "")}</div>
-                    </div>
-                  </div>
-                  <div class="record-body">Linked records: ${escapeHtml(String(item.linked_record_count || 0))}</div>
-                </article>
-              `).join("")}</div>`
-            : `<div class="empty-state">No standards evidence summary available yet.</div>`
-        }
-
-        <div style="height: 14px;"></div>
-
-        ${
-          complianceItems.length
-            ? `<div class="record-list">${complianceItems.slice(0, 6).map((item) => renderRecordCard(item)).join("")}</div>`
-            : `<div class="empty-state">No compliance concerns currently surfaced.</div>`
-        }
-      </section>
+      </div>
+      <div class="empty-state">
+        <p>Next pass: connect this view to report generation, export options and management summaries.</p>
+      </div>
     </div>
   `;
-
-  els.content.querySelectorAll("[data-open-report]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const reportId = button.dataset.openReport;
-      try {
-        const linksData = await apiGet(`/young-people/reports/${reportId}/links`);
-        const links = linksData.items || [];
-        els.drawerActions.classList.add("hidden");
-        openDrawer();
-        els.drawerTitle.textContent = "Report links";
-        els.drawerSubtitle.textContent = `Report ${reportId}`;
-        els.drawerBody.innerHTML = links.length
-          ? `
-            <div class="detail-section">
-              <h4>Linked evidence</h4>
-              <div class="detail-list">
-                ${links.map((link) => `
-                  <div class="detail-row">
-                    <div class="detail-key">${escapeHtml(link.source_table || "Source")}</div>
-                    <div class="detail-value">
-                      ID: ${escapeHtml(String(link.source_id || "—"))}
-                      ${link.link_reason ? `\nReason: ${escapeHtml(link.link_reason)}` : ""}
-                    </div>
-                  </div>
-                `).join("")}
-              </div>
-            </div>
-          `
-          : `<div class="empty-state">No evidence links found for this report.</div>`;
-      } catch (error) {
-        console.error(error);
-        showError(error.message || "Could not load report links.");
-      }
-    });
-  });
 }
 
 async function loadCalendarMonthSummary() {
   const year = state.calendarDate.getFullYear();
   const month = state.calendarDate.getMonth() + 1;
-  const data = await apiGet(`/young-people/${state.youngPersonId}/calendar-summary?year=${year}&month=${month}`);
-  state.calendarMonthSummary = data.days || data.items || [];
+
+  try {
+    const data = await apiGet(`/young-people/${state.youngPersonId}/calendar-summary?year=${year}&month=${month}`);
+    state.calendarMonthSummary = data.days || data.items || [];
+  } catch (error) {
+    console.error(error);
+    state.calendarMonthSummary = [];
+    throw error;
+  }
 }
 
 async function loadSelectedDayRecords() {
-  const data = await apiGet(`/young-people/${state.youngPersonId}/records-by-date?date=${state.selectedDate}`);
-  state.selectedDayRecords = data.items || [];
+  try {
+    const data = await apiGet(`/young-people/${state.youngPersonId}/records-by-date?date=${state.selectedDate}`);
+    state.selectedDayRecords = data.items || [];
+  } catch (error) {
+    console.error(error);
+    state.selectedDayRecords = [];
+    throw error;
+  }
 }
 
 function getMonthDayMeta(dateString) {
@@ -1887,7 +1775,6 @@ function buildCalendarGrid() {
       <button
         class="calendar-day ${isCurrentMonth ? "" : "other-month"} ${isToday ? "today" : ""} ${isSelected ? "selected" : ""}"
         data-calendar-date="${dateString}"
-        type="button"
       >
         <div class="calendar-day-number">${day.getDate()}</div>
         <div class="calendar-day-markers">
@@ -1900,13 +1787,15 @@ function buildCalendarGrid() {
 }
 
 function renderDayRecords(records) {
-  if (!records.length) return `<div class="empty-state">No records were recorded on this day.</div>`;
+  if (!records.length) {
+    return `<div class="empty-state">No records were recorded on this day.</div>`;
+  }
 
   return records.map((item) => {
     const title = item.title || item.record_type || item.event_type || item.category || "Record";
     const summary = item.summary || item.narrative || item.description || "No summary available.";
     const staffName = item.recorded_by_name || item.author_name || item.created_by_name || item.worker_name || "Unknown";
-    const recordedAt = item.recorded_at || item.occurred_at || item.event_datetime || item.created_at;
+    const recordedAt = item.recorded_at || item.occurred_at || item.event_datetime || item.created_at || item.appointment_date;
 
     return `
       <article class="day-record-card">
@@ -1919,11 +1808,11 @@ function renderDayRecords(records) {
               • ${escapeHtml(staffName)}
             </div>
           </div>
-          <div>${renderBadges([item.workflow_status, item.severity || item.significance])}</div>
+          <div>${renderBadges([item.workflow_status, item.severity || item.significance, item.appointment_type])}</div>
         </div>
         <div class="day-record-summary">${escapeHtml(summary)}</div>
         <div class="day-record-actions">
-          ${getRecordUrl(item) ? `<button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>` : ""}
+          <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>
         </div>
       </article>
     `;
@@ -1956,9 +1845,9 @@ function renderCalendarView() {
         <div class="calendar-header">
           <div class="calendar-title">${escapeHtml(monthName(state.calendarDate))}</div>
           <div class="calendar-controls">
-            <button class="calendar-icon-btn" id="calendarPrevBtn" type="button">←</button>
-            <button class="calendar-icon-btn" id="calendarTodayBtn" type="button">Today</button>
-            <button class="calendar-icon-btn" id="calendarNextBtn" type="button">→</button>
+            <button class="calendar-icon-btn" id="calendarPrevBtn">←</button>
+            <button class="calendar-icon-btn" id="calendarTodayBtn">Today</button>
+            <button class="calendar-icon-btn" id="calendarNextBtn">→</button>
           </div>
         </div>
 
@@ -2001,6 +1890,8 @@ function renderCalendarView() {
             <option value="family">Family</option>
             <option value="keywork">Keywork</option>
             <option value="support_plan">Plans</option>
+            <option value="appointment">Appointments</option>
+            <option value="alert">Alerts</option>
           </select>
         </div>
 
@@ -2059,7 +1950,8 @@ function bindCalendarEvents() {
     const filtered = state.selectedDayRecords.filter((item) => {
       const haystack = [
         item.title, item.summary, item.narrative, item.description, item.record_type,
-        item.event_type, item.category, item.recorded_by_name, item.author_name, item.created_by_name, item.worker_name,
+        item.event_type, item.category, item.recorded_by_name, item.author_name, item.created_by_name,
+        item.worker_name, item.professional_name, item.location,
       ].filter(Boolean).join(" ").toLowerCase();
 
       const typeValue = String(item.record_type || item.event_type || item.category || "").toLowerCase();
@@ -2105,6 +1997,7 @@ function renderTimelinePanel(items) {
           <option value="family">Family</option>
           <option value="keywork">Keywork</option>
           <option value="support_plan">Plans</option>
+          <option value="appointment">Appointments</option>
         </select>
       </div>
 
@@ -2126,6 +2019,7 @@ function renderTimelinePanel(items) {
       const haystack = [item.title, item.summary, item.narrative, item.event_type, item.category, item.subcategory]
         .filter(Boolean).join(" ").toLowerCase();
       const typeValue = String(item.event_type || item.category || "").toLowerCase();
+
       return (!term || haystack.includes(term)) && (!type || typeValue === type);
     });
 
@@ -2198,7 +2092,6 @@ async function loadHealth() {
 
     <div class="panel"><h3>Medication records</h3>${medicationRecords.length ? `<div class="record-list">${medicationRecords.map(renderRecordCard).join("")}</div>` : `<div class="empty-state">No medication records.</div>`}</div>
   `;
-
   bindDynamicOpenRecordButtons();
 }
 
@@ -2222,7 +2115,6 @@ async function loadEducation() {
 
     <div class="panel"><h3>Education records</h3>${records.length ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>` : `<div class="empty-state">No education records.</div>`}</div>
   `;
-
   bindDynamicOpenRecordButtons();
 }
 
@@ -2252,7 +2144,6 @@ Notes: ${escapeHtml(contact.notes || "—")}</div>
 
     <div class="panel"><h3>Family records</h3>${records.length ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>` : `<div class="empty-state">No family contact records.</div>`}</div>
   `;
-
   bindDynamicOpenRecordButtons();
 }
 
@@ -2307,12 +2198,10 @@ function bindEvents() {
       loadYoungPersonSelector();
       return;
     }
-    loadYoungPerson()
-      .then(loadCurrentView)
-      .catch((error) => {
-        console.error(error);
-        showError(error.message || "Failed to refresh.");
-      });
+    loadYoungPerson().then(loadCurrentView).catch((error) => {
+      console.error(error);
+      showError(error.message || "Failed to refresh.");
+    });
   });
 
   els.selectorRefreshBtn.addEventListener("click", loadYoungPersonSelector);
@@ -2350,15 +2239,11 @@ function bindEvents() {
     if (action === "incident") openRecordModal("incident", "create");
     if (action === "risk") openRecordModal("risk", "create");
     if (action === "plan") openRecordModal("support_plan", "create");
+    if (action === "appointment") openRecordModal("appointment", "create");
   });
 
   els.closeDrawerBtn.addEventListener("click", closeDrawer);
   els.drawerBackdrop.addEventListener("click", closeDrawer);
-
-  els.drawerOpenFullBtn?.addEventListener("click", () => {
-    if (!state.activeRecordItem || !state.activeRecordType) return;
-    openRecordModal(state.activeRecordType, "edit", state.activeRecordItem);
-  });
 
   els.drawerEditBtn.addEventListener("click", () => {
     if (!state.activeRecordItem || !state.activeRecordType) return;
