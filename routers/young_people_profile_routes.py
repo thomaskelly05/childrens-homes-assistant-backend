@@ -285,7 +285,6 @@ def get_young_person_bundle(
 
 
 @router.patch("/{young_person_id}")
-@router.put("/{young_person_id}")
 def update_young_person(
     young_person_id: int,
     payload: YoungPersonUpdatePayload,
@@ -311,13 +310,11 @@ def get_young_person_overview(
 ):
     _load_and_check_young_person(young_person_id, current_user)
 
-    return {
-        "ok": True,
-        "young_person": YoungPersonService.get_young_person_by_id(young_person_id),
-        "dashboard_counts": YoungPersonService.get_dashboard_counts(young_person_id),
-        "recent_activity": YoungPersonService.get_recent_activity(young_person_id, limit=20),
-        "alerts": YoungPersonService.get_active_alerts(young_person_id),
-    }
+    overview = YoungPersonService.get_young_person_overview(young_person_id)
+    if not overview:
+        raise HTTPException(status_code=404, detail="Young person not found")
+
+    return overview
 
 
 @router.get("/{young_person_id}/timeline")
