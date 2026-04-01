@@ -13,10 +13,11 @@ const state = {
   modalMode: "create",
   modalRecordType: null,
   modalEditItem: null,
-  documentMode: "create",
-  documentRecordType: null,
-  documentEditItem: null,
-  documentViewItem: null,
+
+  documentModalOpen: false,
+  documentModalMode: "create",
+  documentModalRecordType: null,
+  documentModalEditItem: null,
 };
 
 const els = {
@@ -60,15 +61,13 @@ const els = {
 
   documentModalBackdrop: document.getElementById("documentModalBackdrop"),
   documentModal: document.getElementById("documentModal"),
-  documentModalEyebrow: document.getElementById("documentModalEyebrow"),
+  documentModalKicker: document.getElementById("documentModalKicker"),
   documentModalTitle: document.getElementById("documentModalTitle"),
   documentModalSubtitle: document.getElementById("documentModalSubtitle"),
   documentModalBody: document.getElementById("documentModalBody"),
-  documentModalCloseBtn: document.getElementById("documentModalCloseBtn"),
+  documentModalCloseTopBtn: document.getElementById("documentModalCloseTopBtn"),
   documentModalCancelBtn: document.getElementById("documentModalCancelBtn"),
   documentModalSaveBtn: document.getElementById("documentModalSaveBtn"),
-  documentModalSecondaryBtn: document.getElementById("documentModalSecondaryBtn"),
-  documentFooterLeft: document.getElementById("documentFooterLeft"),
 };
 
 const VIEW_CONFIG = {
@@ -345,9 +344,9 @@ function formatShortTime(value) {
 
 function statusBadgeClass(value) {
   const v = String(value || "").toLowerCase();
-  if (["approved", "active", "recorded", "low", "completed", "ok"].includes(v)) return "success";
-  if (["submitted", "pending", "medium", "due_soon"].includes(v)) return "warning";
-  if (["returned", "high", "critical", "archived", "overdue"].includes(v)) return "danger";
+  if (["approved", "active", "recorded", "low", "completed"].includes(v)) return "success";
+  if (["submitted", "pending", "medium"].includes(v)) return "warning";
+  if (["returned", "high", "critical", "archived"].includes(v)) return "danger";
   return "";
 }
 
@@ -451,6 +450,7 @@ function closeModal() {
 }
 
 function openDocumentModal() {
+  state.documentModalOpen = true;
   els.documentModal.classList.remove("hidden");
   els.documentModalBackdrop.classList.remove("hidden");
   els.documentModal.setAttribute("aria-hidden", "false");
@@ -458,73 +458,38 @@ function openDocumentModal() {
 }
 
 function closeDocumentModal() {
+  state.documentModalOpen = false;
+  state.documentModalMode = "create";
+  state.documentModalRecordType = null;
+  state.documentModalEditItem = null;
   els.documentModal.classList.add("hidden");
   els.documentModalBackdrop.classList.add("hidden");
   els.documentModal.setAttribute("aria-hidden", "true");
-  document.body.style.overflow = "";
-  state.documentMode = "create";
-  state.documentRecordType = null;
-  state.documentEditItem = null;
-  state.documentViewItem = null;
   els.documentModalBody.innerHTML = "";
-  els.documentFooterLeft.innerHTML = "";
-  els.documentModalSecondaryBtn.classList.add("hidden");
-  els.documentModalSecondaryBtn.textContent = "Secondary";
-  els.documentModalSaveBtn.disabled = false;
-  els.documentModalSaveBtn.textContent = "Save";
+  document.body.style.overflow = "";
 }
 
-function renderDocumentChips(item = {}, type = "") {
-  const chips = [
-    item.workflow_status,
-    item.status,
-    item.approval_status,
-    item.severity,
-    type ? type.replaceAll("_", " ") : "",
-    "PACE informed",
-    "Ofsted linked",
-    "Quality standards linked",
-  ].filter(Boolean);
+function buildFormField(field) {
+  const common = `
+    <label class="form-label" for="${field.name}">${escapeHtml(field.label)}</label>
+  `;
 
-  return chips.map((chip) => `<span class="document-chip ${statusBadgeClass(chip)}">${escapeHtml(chip)}</span>`).join("");
-}
-
-function documentField(name, label, value = "", options = {}) {
-  const {
-    type = "text",
-    placeholder = "",
-    full = false,
-    readonly = false,
-    selectOptions = [],
-  } = options;
-
-  if (type === "textarea") {
+  if (field.type === "textarea") {
     return `
-      <div class="document-field ${full ? "full" : ""}">
-        <label class="document-label" for="doc_${name}">${escapeHtml(label)}</label>
-        <textarea
-          id="doc_${name}"
-          name="${escapeHtml(name)}"
-          class="document-input document-textarea"
-          placeholder="${escapeHtml(placeholder)}"
-          ${readonly ? "readonly" : ""}
-        >${escapeHtml(value || "")}</textarea>
+      <div class="form-field ${field.full ? "full" : ""}">
+        ${common}
+        <textarea id="${field.name}" name="${field.name}" class="textarea-input" placeholder="${escapeHtml(field.placeholder || "")}">${escapeHtml(field.value || "")}</textarea>
       </div>
     `;
   }
 
-  if (type === "select") {
+  if (field.type === "select") {
     return `
-      <div class="document-field ${full ? "full" : ""}">
-        <label class="document-label" for="doc_${name}">${escapeHtml(label)}</label>
-        <select
-          id="doc_${name}"
-          name="${escapeHtml(name)}"
-          class="document-input"
-          ${readonly ? "disabled" : ""}
-        >
-          ${selectOptions.map((opt) => `
-            <option value="${escapeHtml(opt.value)}" ${String(opt.value) === String(value || "") ? "selected" : ""}>
+      <div class="form-field ${field.full ? "full" : ""}">
+        ${common}
+        <select id="${field.name}" name="${field.name}" class="select-input">
+          ${(field.options || []).map((opt) => `
+            <option value="${escapeHtml(opt.value)}" ${String(opt.value) === String(field.value || "") ? "selected" : ""}>
               ${escapeHtml(opt.label)}
             </option>
           `).join("")}
@@ -534,300 +499,231 @@ function documentField(name, label, value = "", options = {}) {
   }
 
   return `
-    <div class="document-field ${full ? "full" : ""}">
-      <label class="document-label" for="doc_${name}">${escapeHtml(label)}</label>
+    <div class="form-field ${field.full ? "full" : ""}">
+      ${common}
       <input
-        id="doc_${name}"
-        name="${escapeHtml(name)}"
-        type="${escapeHtml(type)}"
-        class="document-input"
-        value="${escapeHtml(value || "")}"
-        placeholder="${escapeHtml(placeholder)}"
-        ${readonly ? "readonly" : ""}
+        id="${field.name}"
+        name="${field.name}"
+        type="${field.type || "text"}"
+        class="text-input"
+        placeholder="${escapeHtml(field.placeholder || "")}"
+        value="${escapeHtml(field.value || "")}"
       />
     </div>
   `;
 }
 
-function buildDocumentForm(type, item = {}, mode = "create") {
-  const readonly = mode === "view";
+function getModalSchema(recordType, item = null) {
   const today = toDateInputValue(new Date());
 
-  if (type === "daily_note") {
-    return `
-      <form id="documentRecordForm" class="document-sheet document-sheet-narrow">
-        <div class="document-sheet-header">
-          <div>
-            <div class="document-sheet-kicker">Daily note</div>
-            <h3 class="document-sheet-title">Shift recording</h3>
-            <p class="document-sheet-text">Record the shift in a calm, reflective, PACE-informed format.</p>
-          </div>
-        </div>
-
-        <div class="document-meta-grid">
-          ${documentField("note_date", "Date", item.note_date || today, { type: "date", readonly })}
-          ${documentField("shift_type", "Shift type", item.shift_type || "day", {
-            type: "select",
-            readonly,
-            selectOptions: [
-              { value: "day", label: "Day" },
-              { value: "evening", label: "Evening" },
-              { value: "night", label: "Night" },
-              { value: "waking_night", label: "Waking night" },
-            ],
-          })}
-          ${documentField("mood", "Mood", item.mood || "", { readonly })}
-          ${documentField("significance", "Significance", item.significance || "standard", { readonly })}
-        </div>
-
-        <div class="document-section">
-          <h4>Presentation and engagement</h4>
-          <div class="document-grid">
-            ${documentField("presentation", "Presentation", item.presentation || "", { type: "textarea", full: true, readonly })}
-            ${documentField("activities", "Activities", item.activities || "", { type: "textarea", full: true, readonly })}
-          </div>
-        </div>
-
-        <div class="document-section">
-          <h4>Updates across the day</h4>
-          <div class="document-grid">
-            ${documentField("education_update", "Education update", item.education_update || "", { type: "textarea", full: true, readonly })}
-            ${documentField("health_update", "Health update", item.health_update || "", { type: "textarea", full: true, readonly })}
-            ${documentField("family_update", "Family update", item.family_update || "", { type: "textarea", full: true, readonly })}
-            ${documentField("behaviour_update", "Behaviour and regulation", item.behaviour_update || "", { type: "textarea", full: true, readonly })}
-          </div>
-        </div>
-
-        <div class="document-section">
-          <h4>Voice and reflection</h4>
-          <div class="document-grid">
-            ${documentField("young_person_voice", "Young person’s voice", item.young_person_voice || item.child_voice || "", { type: "textarea", full: true, readonly })}
-            ${documentField("positives", "Positives", item.positives || "", { type: "textarea", full: true, readonly })}
-            ${documentField("actions_required", "Actions required", item.actions_required || "", { type: "textarea", full: true, readonly })}
-          </div>
-        </div>
-      </form>
-    `;
+  if (recordType === "daily_note") {
+    return [
+      { name: "note_date", label: "Date", type: "date", value: item?.note_date || today },
+      { name: "shift_type", label: "Shift type", type: "select", value: item?.shift_type || "day", options: [
+        { value: "day", label: "Day" },
+        { value: "evening", label: "Evening" },
+        { value: "night", label: "Night" },
+        { value: "waking_night", label: "Waking night" },
+      ]},
+      { name: "mood", label: "Mood", type: "text", value: item?.mood || "" },
+      { name: "presentation", label: "Presentation", type: "textarea", full: true, value: item?.presentation || "" },
+      { name: "activities", label: "Activities", type: "textarea", full: true, value: item?.activities || "" },
+      { name: "education_update", label: "Education update", type: "textarea", full: true, value: item?.education_update || "" },
+      { name: "health_update", label: "Health update", type: "textarea", full: true, value: item?.health_update || "" },
+      { name: "family_update", label: "Family update", type: "textarea", full: true, value: item?.family_update || "" },
+      { name: "behaviour_update", label: "Behaviour update", type: "textarea", full: true, value: item?.behaviour_update || "" },
+      { name: "young_person_voice", label: "Young person voice", type: "textarea", full: true, value: item?.young_person_voice || item?.child_voice || "" },
+      { name: "positives", label: "Positives", type: "textarea", full: true, value: item?.positives || "" },
+      { name: "actions_required", label: "Actions required", type: "textarea", full: true, value: item?.actions_required || "" },
+      { name: "significance", label: "Significance", type: "select", value: item?.significance || "standard", options: [
+        { value: "low", label: "Low" },
+        { value: "standard", label: "Standard" },
+        { value: "medium", label: "Medium" },
+        { value: "high", label: "High" },
+      ]},
+    ];
   }
 
-  if (type === "incident") {
-    return `
-      <form id="documentRecordForm" class="document-sheet document-sheet-wide">
-        <div class="document-sheet-header">
-          <div>
-            <div class="document-sheet-kicker">Incident record</div>
-            <h3 class="document-sheet-title">Incident and response</h3>
-            <p class="document-sheet-text">Record the incident with clear chronology, relational understanding and PACE-informed reflection.</p>
-          </div>
-        </div>
-
-        <div class="document-meta-grid document-meta-grid-4">
-          ${documentField("incident_datetime", "Date and time", item.incident_datetime ? String(item.incident_datetime).slice(0, 16) : "", { type: "datetime-local", readonly })}
-          ${documentField("incident_type", "Incident type", item.incident_type || "", { readonly })}
-          ${documentField("severity", "Severity", item.severity || "medium", {
-            type: "select",
-            readonly,
-            selectOptions: [
-              { value: "low", label: "Low" },
-              { value: "medium", label: "Medium" },
-              { value: "high", label: "High" },
-              { value: "critical", label: "Critical" },
-            ],
-          })}
-          ${documentField("location", "Location", item.location || "", { readonly })}
-        </div>
-
-        <div class="document-section">
-          <h4>Incident narrative</h4>
-          <div class="document-grid">
-            ${documentField("description", "Description", item.description || item.narrative || "", { type: "textarea", full: true, readonly })}
-            ${documentField("antecedent", "Antecedent", item.antecedent || "", { type: "textarea", full: true, readonly })}
-            ${documentField("presentation", "Presentation before / during", item.presentation || "", { type: "textarea", full: true, readonly })}
-          </div>
-        </div>
-
-        <div class="document-section">
-          <h4>Staff response and PACE reflection</h4>
-          <div class="document-grid document-grid-2">
-            ${documentField("staff_response", "Staff response", item.staff_response || "", { type: "textarea", full: true, readonly })}
-            ${documentField("trauma_informed_formulation", "Trauma informed formulation", item.trauma_informed_formulation || "", { type: "textarea", full: true, readonly })}
-            ${documentField("child_voice", "Child voice", item.child_voice || "", { type: "textarea", full: true, readonly })}
-            ${documentField("restorative_follow_up", "Restorative follow up", item.restorative_follow_up || "", { type: "textarea", full: true, readonly })}
-            ${documentField("outcome", "Outcome", item.outcome || "", { type: "textarea", full: true, readonly })}
-          </div>
-        </div>
-      </form>
-    `;
+  if (recordType === "incident") {
+    return [
+      {
+        name: "incident_datetime",
+        label: "Incident time",
+        type: "datetime-local",
+        value: item?.incident_datetime
+          ? item.incident_datetime.slice(0, 16)
+          : (item?.occurred_at ? String(item.occurred_at).slice(0, 16) : ""),
+      },
+      { name: "incident_type", label: "Incident type", type: "text", value: item?.incident_type || "" },
+      { name: "severity", label: "Severity", type: "select", value: item?.severity || "medium", options: [
+        { value: "low", label: "Low" },
+        { value: "medium", label: "Medium" },
+        { value: "high", label: "High" },
+        { value: "critical", label: "Critical" },
+      ]},
+      { name: "risk_level", label: "Risk level", type: "select", value: item?.risk_level || "medium", options: [
+        { value: "low", label: "Low" },
+        { value: "medium", label: "Medium" },
+        { value: "high", label: "High" },
+      ]},
+      { name: "location", label: "Location", type: "text", value: item?.location || "" },
+      { name: "description", label: "Description", type: "textarea", full: true, value: item?.description || item?.narrative || "" },
+      { name: "antecedent", label: "Antecedent", type: "textarea", full: true, value: item?.antecedent || "" },
+      { name: "presentation", label: "Presentation before/during incident", type: "textarea", full: true, value: item?.presentation || "" },
+      { name: "staff_response", label: "Staff response", type: "textarea", full: true, value: item?.staff_response || "" },
+      { name: "trauma_informed_formulation", label: "PACE / trauma informed formulation", type: "textarea", full: true, value: item?.trauma_informed_formulation || "" },
+      { name: "child_voice", label: "Child voice", type: "textarea", full: true, value: item?.child_voice || "" },
+      { name: "restorative_follow_up", label: "Restorative follow up", type: "textarea", full: true, value: item?.restorative_follow_up || "" },
+      { name: "outcome", label: "Outcome", type: "textarea", full: true, value: item?.outcome || "" },
+    ];
   }
 
-  if (type === "risk") {
-    return `
-      <form id="documentRecordForm" class="document-sheet document-sheet-landscape">
-        <div class="document-sheet-header">
-          <div>
-            <div class="document-sheet-kicker">Risk assessment</div>
-            <h3 class="document-sheet-title">Landscape risk assessment</h3>
-            <p class="document-sheet-text">A working document linking concern, context, triggers, protective factors and staff response.</p>
-          </div>
-        </div>
-
-        <div class="document-meta-grid document-meta-grid-4">
-          ${documentField("category", "Category", item.category || "", { readonly })}
-          ${documentField("title", "Title", item.title || "", { readonly })}
-          ${documentField("severity", "Severity", item.severity || "medium", {
-            type: "select",
-            readonly,
-            selectOptions: [
-              { value: "low", label: "Low" },
-              { value: "medium", label: "Medium" },
-              { value: "high", label: "High" },
-            ],
-          })}
-          ${documentField("likelihood", "Likelihood", item.likelihood || "medium", {
-            type: "select",
-            readonly,
-            selectOptions: [
-              { value: "low", label: "Low" },
-              { value: "medium", label: "Medium" },
-              { value: "high", label: "High" },
-            ],
-          })}
-        </div>
-
-        <div class="document-meta-grid">
-          ${documentField("review_date", "Review date", item.review_date || today, { type: "date", readonly })}
-          ${documentField("status", "Status", item.status || item.approval_status || "active", { readonly })}
-        </div>
-
-        <div class="document-section">
-          <h4>Understanding the concern</h4>
-          <div class="document-grid document-grid-2">
-            ${documentField("concern_summary", "Concern summary", item.concern_summary || item.formulation || "", { type: "textarea", full: true, readonly })}
-            ${documentField("contextual_factors", "Contextual factors", item.contextual_factors || "", { type: "textarea", full: true, readonly })}
-            ${documentField("known_triggers", "Known triggers", item.known_triggers || "", { type: "textarea", full: true, readonly })}
-            ${documentField("early_warning_signs", "Early warning signs", item.early_warning_signs || "", { type: "textarea", full: true, readonly })}
-          </div>
-        </div>
-
-        <div class="document-section">
-          <h4>Protection and response</h4>
-          <div class="document-grid document-grid-2">
-            ${documentField("current_controls", "Current controls", item.current_controls || "", { type: "textarea", full: true, readonly })}
-            ${documentField("deescalation_strategies", "De-escalation strategies", item.deescalation_strategies || "", { type: "textarea", full: true, readonly })}
-            ${documentField("response_actions", "Response actions", item.response_actions || "", { type: "textarea", full: true, readonly })}
-            ${documentField("child_views", "Child views", item.child_views || item.child_voice || "", { type: "textarea", full: true, readonly })}
-          </div>
-        </div>
-      </form>
-    `;
+  if (recordType === "risk") {
+    return [
+      { name: "category", label: "Risk category", type: "text", value: item?.category || "" },
+      { name: "title", label: "Risk title", type: "text", value: item?.title || "" },
+      { name: "severity", label: "Severity", type: "select", value: item?.severity || "medium", options: [
+        { value: "low", label: "Low" },
+        { value: "medium", label: "Medium" },
+        { value: "high", label: "High" },
+      ]},
+      { name: "likelihood", label: "Likelihood", type: "select", value: item?.likelihood || "medium", options: [
+        { value: "low", label: "Low" },
+        { value: "medium", label: "Medium" },
+        { value: "high", label: "High" },
+      ]},
+      { name: "review_date", label: "Review date", type: "date", value: item?.review_date || today },
+      { name: "concern_summary", label: "Concern summary", type: "textarea", full: true, value: item?.concern_summary || item?.formulation || "" },
+      { name: "known_triggers", label: "Known triggers", type: "textarea", full: true, value: item?.known_triggers || "" },
+      { name: "early_warning_signs", label: "Early warning signs", type: "textarea", full: true, value: item?.early_warning_signs || "" },
+      { name: "contextual_factors", label: "Contextual factors", type: "textarea", full: true, value: item?.contextual_factors || "" },
+      { name: "current_controls", label: "Current controls", type: "textarea", full: true, value: item?.current_controls || item?.staff_guidance || "" },
+      { name: "deescalation_strategies", label: "PACE / de-escalation strategies", type: "textarea", full: true, value: item?.deescalation_strategies || "" },
+      { name: "response_actions", label: "Response actions", type: "textarea", full: true, value: item?.response_actions || "" },
+      { name: "child_views", label: "Child views", type: "textarea", full: true, value: item?.child_views || "" },
+    ];
   }
 
+  return [
+    { name: "plan_type", label: "Plan type", type: "text", value: item?.plan_type || "support_plan" },
+    { name: "title", label: "Title", type: "text", value: item?.title || "" },
+    { name: "start_date", label: "Start date", type: "date", value: item?.start_date || today },
+    { name: "review_date", label: "Review date", type: "date", value: item?.review_date || today },
+    { name: "presenting_need", label: "Presenting need / formulation", type: "textarea", full: true, value: item?.presenting_need || item?.formulation || "" },
+    { name: "summary", label: "Summary", type: "textarea", full: true, value: item?.summary || "" },
+    { name: "child_voice", label: "Child voice", type: "textarea", full: true, value: item?.child_voice || "" },
+    { name: "proactive_strategies", label: "PACE / proactive strategies", type: "textarea", full: true, value: item?.proactive_strategies || item?.staff_guidance || "" },
+    { name: "pace_guidance", label: "PACE guidance", type: "textarea", full: true, value: item?.pace_guidance || "" },
+    { name: "triggers", label: "Triggers", type: "textarea", full: true, value: item?.triggers || "" },
+    { name: "protective_factors", label: "Protective factors", type: "textarea", full: true, value: item?.protective_factors || "" },
+  ];
+}
+
+function getDocumentTitle(recordType) {
+  if (recordType === "daily_note") return "Daily Note";
+  if (recordType === "incident") return "Incident Record";
+  if (recordType === "risk") return "Risk Assessment";
+  return "Support Plan";
+}
+
+function getDocumentSubtitle(recordType, mode) {
+  const action = mode === "edit" ? "Edit" : "Create";
+  if (recordType === "daily_note") return `${action} a shift-based daily note in full document format`;
+  if (recordType === "incident") return `${action} a PACE-informed incident document`;
+  if (recordType === "risk") return `${action} a landscape risk assessment with editable fields`;
+  return `${action} a support plan linked to standards and Ofsted evidence`;
+}
+
+function renderDocumentIntro(recordType) {
+  const standardsMap = {
+    daily_note: ["Experiences and progress", "Positive relationships", "Leadership and management"],
+    incident: ["Helped and protected", "Protection of children", "Behaviour support"],
+    risk: ["Helped and protected", "Protection of children", "Risk management"],
+    support_plan: ["Experiences and progress", "Helped and protected", "Care planning"],
+  };
+
+  const standards = standardsMap[recordType] || ["Quality standards linked"];
   return `
-    <form id="documentRecordForm" class="document-sheet document-sheet-landscape">
-      <div class="document-sheet-header">
-        <div>
-          <div class="document-sheet-kicker">Support plan</div>
-          <h3 class="document-sheet-title">Staff guidance and support planning</h3>
-          <p class="document-sheet-text">Plan support in a structured, relational and PACE-informed way, linked to standards and Ofsted-ready evidence.</p>
+    <section class="document-section">
+      <div class="document-section-header">
+        <h3>Practice and compliance framing</h3>
+      </div>
+      <div class="document-info-grid">
+        <div class="document-info-card">
+          <div class="document-info-label">Approach</div>
+          <div class="document-info-value">PACE-informed</div>
+        </div>
+        <div class="document-info-card">
+          <div class="document-info-label">Regulation</div>
+          <div class="document-info-value">Ofsted-ready recording</div>
+        </div>
+        <div class="document-info-card">
+          <div class="document-info-label">Quality standards</div>
+          <div class="document-info-value">${escapeHtml(standards.join(", "))}</div>
         </div>
       </div>
-
-      <div class="document-meta-grid document-meta-grid-4">
-        ${documentField("plan_type", "Plan type", item.plan_type || "support_plan", { readonly })}
-        ${documentField("title", "Title", item.title || "", { readonly })}
-        ${documentField("review_date", "Review date", item.review_date || today, { type: "date", readonly })}
-        ${documentField("status", "Status", item.status || item.approval_status || "draft", { readonly })}
-      </div>
-
-      <div class="document-section">
-        <h4>Understanding need</h4>
-        <div class="document-grid document-grid-2">
-          ${documentField("presenting_need", "Presenting need / formulation", item.presenting_need || item.formulation || "", { type: "textarea", full: true, readonly })}
-          ${documentField("summary", "Summary", item.summary || "", { type: "textarea", full: true, readonly })}
-          ${documentField("child_voice", "Child voice", item.child_voice || "", { type: "textarea", full: true, readonly })}
-          ${documentField("protective_factors", "Protective factors", item.protective_factors || "", { type: "textarea", full: true, readonly })}
-        </div>
-      </div>
-
-      <div class="document-section">
-        <h4>Staff guidance</h4>
-        <div class="document-grid document-grid-2">
-          ${documentField("proactive_strategies", "Proactive strategies", item.proactive_strategies || item.staff_guidance || "", { type: "textarea", full: true, readonly })}
-          ${documentField("pace_guidance", "PACE guidance", item.pace_guidance || "", { type: "textarea", full: true, readonly })}
-          ${documentField("triggers", "Triggers", item.triggers || "", { type: "textarea", full: true, readonly })}
-        </div>
-      </div>
-    </form>
+    </section>
   `;
 }
 
-function serializeDocumentForm() {
-  const form = document.getElementById("documentRecordForm");
-  if (!form) return {};
-  const formData = new FormData(form);
-  const obj = {};
+function renderDocumentForm(recordType, item = null) {
+  const schema = getModalSchema(recordType, item);
+  return `
+    <div class="document-sheet document-sheet-wide">
+      ${renderDocumentIntro(recordType)}
 
-  for (const [key, value] of formData.entries()) {
-    obj[key] = value;
-  }
+      <form id="fullDocumentForm" class="document-form" novalidate>
+        <input type="hidden" name="young_person_id" value="${escapeHtml(String(state.youngPersonId || ""))}" />
 
-  obj.young_person_id = state.youngPersonId;
-  return obj;
+        <section class="document-section">
+          <div class="document-section-header">
+            <h3>${escapeHtml(getDocumentTitle(recordType))}</h3>
+            <p>${escapeHtml(getDocumentSubtitle(recordType, state.documentModalMode))}</p>
+          </div>
+
+          <div class="form-grid">
+            ${schema.map(buildFormField).join("")}
+          </div>
+        </section>
+      </form>
+    </div>
+  `;
 }
 
-function getDocumentConfig(type) {
-  return RECORD_CONFIG[type] || RECORD_CONFIG.plan;
-}
+function openDocumentEditor(recordType, mode = "create", item = null) {
+  state.documentModalMode = mode;
+  state.documentModalRecordType = recordType;
+  state.documentModalEditItem = item;
 
-function renderDocumentFooter(type, item = {}, mode = "create") {
-  els.documentFooterLeft.innerHTML = renderDocumentChips(item, type);
-  if (mode === "view") {
-    els.documentModalSaveBtn.textContent = "Edit document";
-  } else if (mode === "edit") {
-    els.documentModalSaveBtn.textContent = "Save changes";
-  } else {
-    els.documentModalSaveBtn.textContent = "Save document";
-  }
-}
+  els.documentModalKicker.textContent = recordType === "risk" ? "Risk document" : "Document";
+  els.documentModalTitle.textContent = getDocumentTitle(recordType);
+  els.documentModalSubtitle.textContent = getDocumentSubtitle(recordType, mode);
+  els.documentModalSaveBtn.textContent = mode === "edit" ? "Save changes" : "Save document";
+  els.documentModalBody.innerHTML = renderDocumentForm(recordType, item);
 
-function renderDocumentShell(type, mode, item = {}) {
-  const config = getDocumentConfig(type);
-  const modeLabel = mode === "create" ? "Create" : mode === "edit" ? "Edit" : "View";
-
-  els.documentModalEyebrow.textContent = `${modeLabel} ${config.label}`;
-  els.documentModalTitle.textContent = item.title || config.label;
-  els.documentModalSubtitle.textContent =
-    mode === "view"
-      ? "Full document view."
-      : mode === "edit"
-        ? "Update this document in full-screen format."
-        : "Create this document in full-screen format.";
-
-  els.documentModalBody.innerHTML = buildDocumentForm(type, item, mode);
-  renderDocumentFooter(type, item, mode);
   openDocumentModal();
 }
 
-function openRecordModal(recordType, mode = "create", item = null) {
-  state.documentRecordType = recordType;
-  state.documentMode = mode;
-  state.documentEditItem = item;
-  state.documentViewItem = item;
-  renderDocumentShell(recordType, mode, item || {});
+function serializeDocumentForm() {
+  const form = document.getElementById("fullDocumentForm");
+  if (!form) return {};
+
+  const formData = new FormData(form);
+  const payload = {};
+
+  for (const [key, value] of formData.entries()) {
+    payload[key] = value;
+  }
+
+  payload.young_person_id = state.youngPersonId;
+  return payload;
 }
 
 async function handleDocumentSave() {
-  const recordType = state.documentRecordType;
-  const mode = state.documentMode;
-  const config = getDocumentConfig(recordType);
-
+  const recordType = state.documentModalRecordType;
+  const config = RECORD_CONFIG[recordType];
   if (!config) {
-    showError("This record type is not configured.");
-    return;
-  }
-
-  if (mode === "view" && state.documentViewItem) {
-    openRecordModal(recordType, "edit", state.documentViewItem);
+    showError("This document type is not configured.");
     return;
   }
 
@@ -836,9 +732,9 @@ async function handleDocumentSave() {
   try {
     els.documentModalSaveBtn.disabled = true;
 
-    if (mode === "edit" && state.documentEditItem?.id) {
+    if (state.documentModalMode === "edit" && state.documentModalEditItem?.id) {
       await apiSend(
-        config.updateUrl(state.documentEditItem.id),
+        config.updateUrl(state.documentModalEditItem.id),
         config.updateMethod || "PATCH",
         payload,
       );
@@ -880,7 +776,7 @@ async function runDrawerWorkflow(action) {
 
   let url = null;
   let body = null;
-  const method = "POST";
+  let method = "POST";
 
   if (action === "submit") url = config.submitUrl?.(id);
   if (action === "approve") {
@@ -903,7 +799,6 @@ async function runDrawerWorkflow(action) {
     showMessage(`${config.label} ${action}ed.`);
     await loadCurrentView();
     closeDrawer();
-    closeDocumentModal();
   } catch (error) {
     console.error(error);
     showError(error.message || `Could not ${action} record.`);
@@ -925,6 +820,22 @@ async function openRecordDetail(item) {
   state.activeRecordItem = item;
   state.activeRecordType = type;
 
+  openDrawer();
+  if (shouldShowDrawerActions(type)) {
+    els.drawerActions.classList.remove("hidden");
+  } else {
+    els.drawerActions.classList.add("hidden");
+  }
+
+  els.drawerTitle.textContent = item.title || "Record details";
+  els.drawerSubtitle.textContent = "Loading record...";
+  els.drawerBody.innerHTML = `
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading record details...</p>
+    </div>
+  `;
+
   try {
     const data = await apiGet(url);
     const detailData =
@@ -939,18 +850,85 @@ async function openRecordDetail(item) {
       data?.family_contact_record ||
       data?.contact ||
       data?.keywork ||
-      data?.report ||
       data;
 
-    const merged = { ...item, ...detailData };
-    state.documentViewItem = merged;
-    state.documentEditItem = merged;
-    state.documentRecordType = type;
-    state.documentMode = "view";
-    renderDocumentShell(type, "view", merged);
+    const entries = normaliseDetailEntries(detailData);
+
+    els.drawerTitle.textContent = item.title || detailData.title || "Record details";
+    els.drawerSubtitle.textContent =
+      `${String(item.record_type || item.event_type || item.category || "record").replaceAll("_", " ")} • ${formatDate(item.recorded_at || item.occurred_at || item.event_datetime || detailData.created_at)}`;
+
+    els.drawerBody.innerHTML = `
+      <div class="detail-section">
+        <h4>Summary</h4>
+        <div class="detail-list">
+          <div class="detail-row">
+            <div class="detail-key">Title</div>
+            <div class="detail-value">${escapeHtml(item.title || detailData.title || "—")}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-key">Recorded at</div>
+            <div class="detail-value">${escapeHtml(formatDate(item.recorded_at || item.occurred_at || item.event_datetime || detailData.created_at || detailData.updated_at))}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-key">Recorded by</div>
+            <div class="detail-value">${escapeHtml(item.recorded_by_name || item.author_name || item.created_by_name || item.worker_name || detailData.created_by_name || detailData.owner_name || "Unknown")}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-key">Status</div>
+            <div class="detail-value">${escapeHtml(item.workflow_status || detailData.workflow_status || detailData.status || detailData.approval_status || "—")}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-key">Summary</div>
+            <div class="detail-value">${escapeHtml(item.summary || item.narrative || detailData.summary || detailData.description || detailData.concern_summary || "—")}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h4>Details</h4>
+        <div class="detail-list">
+          ${
+            entries.length
+              ? entries.map((entry) => `
+                  <div class="detail-row">
+                    <div class="detail-key">${escapeHtml(entry.key)}</div>
+                    <div class="detail-value">${escapeHtml(entry.value)}</div>
+                  </div>
+                `).join("")
+              : `<div class="detail-row"><div class="detail-key">Details</div><div class="detail-value">No additional details.</div></div>`
+          }
+        </div>
+      </div>
+
+      ${
+        RECORD_CONFIG[type]
+          ? `
+            <div class="detail-section">
+              <h4>Open full document</h4>
+              <div class="day-record-actions">
+                <button id="openDocumentFromDrawerBtn" class="primary-btn" type="button">Open full document</button>
+              </div>
+            </div>
+          `
+          : ""
+      }
+    `;
+
+    const openDocumentBtn = document.getElementById("openDocumentFromDrawerBtn");
+    if (openDocumentBtn && RECORD_CONFIG[type]) {
+      openDocumentBtn.addEventListener("click", () => {
+        openDocumentEditor(type, "edit", detailData);
+      });
+    }
   } catch (error) {
     console.error(error);
-    showError(error.message || "Failed to load record details.");
+    els.drawerSubtitle.textContent = "Could not load record";
+    els.drawerBody.innerHTML = `
+      <div class="empty-state">
+        <p>${escapeHtml(error.message || "Failed to load record details.")}</p>
+      </div>
+    `;
   }
 }
 
@@ -986,7 +964,7 @@ function renderRecordCard(item) {
       <div class="record-body">${escapeHtml(summary)}</div>
       ${renderBadges(badges)}
       <div class="day-record-actions">
-        <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open document</button>
+        <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>
       </div>
     </article>
   `;
@@ -1008,7 +986,7 @@ function renderTimelineItem(item) {
       <div class="record-body">${escapeHtml(item.summary || item.narrative || "No summary available.")}</div>
       ${renderBadges([item.severity || item.significance, item.workflow_status || item.event_status])}
       <div class="day-record-actions">
-        <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open document</button>
+        <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>
       </div>
     </article>
   `;
@@ -1215,7 +1193,7 @@ async function loadYoungPersonSelector() {
 
   try {
     const data = await apiGet("/young-people");
-    state.selectorItems = data.young_people || data.items || [];
+    state.selectorItems = data.young_people || [];
     renderSelectorList(state.selectorItems);
   } catch (error) {
     console.error(error);
@@ -1539,7 +1517,7 @@ async function loadHandover() {
           <p class="panel-subtitle">Auto-built from recent recorded reality.</p>
         </div>
         <div class="day-record-actions">
-          <button id="generateHandoverBtn" class="primary-btn">Generate handover</button>
+          <button id="generateHandoverBtn" class="primary-btn" type="button">Generate handover</button>
         </div>
       </div>
       ${
@@ -1648,11 +1626,11 @@ async function loadCompliancePlaceholder() {
       <div class="panel-header">
         <div>
           <h3>Compliance</h3>
-          <p class="panel-subtitle">Checks, gaps, due dates and evidence readiness.</p>
+          <p class="panel-subtitle">This section is ready to connect to compliance checks, statutory documents and review evidence.</p>
         </div>
       </div>
       <div class="empty-state">
-        <p>This section is ready for the full compliance view in the next step.</p>
+        <p>Next pass: connect this view to compliance routes, due reviews, missing records and evidence readiness.</p>
       </div>
     </div>
   `;
@@ -1664,11 +1642,11 @@ async function loadReportsPlaceholder() {
       <div class="panel-header">
         <div>
           <h3>Reports</h3>
-          <p class="panel-subtitle">Reports, summaries and management outputs.</p>
+          <p class="panel-subtitle">This section is ready to connect to reports, summaries and management outputs.</p>
         </div>
       </div>
       <div class="empty-state">
-        <p>This section is ready for the full reports view in the next step.</p>
+        <p>Next pass: connect this view to report generation, export options and management summaries.</p>
       </div>
     </div>
   `;
@@ -1722,6 +1700,7 @@ function buildCalendarGrid() {
       <button
         class="calendar-day ${isCurrentMonth ? "" : "other-month"} ${isToday ? "today" : ""} ${isSelected ? "selected" : ""}"
         data-calendar-date="${dateString}"
+        type="button"
       >
         <div class="calendar-day-number">${day.getDate()}</div>
         <div class="calendar-day-markers">
@@ -1759,7 +1738,7 @@ function renderDayRecords(records) {
         </div>
         <div class="day-record-summary">${escapeHtml(summary)}</div>
         <div class="day-record-actions">
-          <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open document</button>
+          <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}' type="button">Open</button>
         </div>
       </article>
     `;
@@ -1792,9 +1771,9 @@ function renderCalendarView() {
         <div class="calendar-header">
           <div class="calendar-title">${escapeHtml(monthName(state.calendarDate))}</div>
           <div class="calendar-controls">
-            <button class="calendar-icon-btn" id="calendarPrevBtn">←</button>
-            <button class="calendar-icon-btn" id="calendarTodayBtn">Today</button>
-            <button class="calendar-icon-btn" id="calendarNextBtn">→</button>
+            <button class="calendar-icon-btn" id="calendarPrevBtn" type="button">←</button>
+            <button class="calendar-icon-btn" id="calendarTodayBtn" type="button">Today</button>
+            <button class="calendar-icon-btn" id="calendarNextBtn" type="button">→</button>
           </div>
         </div>
 
@@ -2027,9 +2006,6 @@ async function loadHealth() {
                   </div>
                 </div>
                 <div class="record-body">${escapeHtml(item.notes || item.prn_guidance || item.reason || "No notes.")}</div>
-                <div class="day-record-actions">
-                  <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify({ ...item, record_type: "medication_profile" }))}'>Open document</button>
-                </div>
               </article>
             `).join("")}</div>`
           : `<div class="empty-state">No medication profiles.</div>`
@@ -2182,28 +2158,28 @@ function bindEvents() {
     if (!btn) return;
 
     const action = btn.dataset.action;
-    if (action === "daily-note") openRecordModal("daily_note", "create");
-    if (action === "incident") openRecordModal("incident", "create");
-    if (action === "risk") openRecordModal("risk", "create");
-    if (action === "plan") openRecordModal("support_plan", "create");
+    if (action === "daily-note") openDocumentEditor("daily_note", "create");
+    if (action === "incident") openDocumentEditor("incident", "create");
+    if (action === "risk") openDocumentEditor("risk", "create");
+    if (action === "plan") openDocumentEditor("support_plan", "create");
   });
 
-  els.closeDrawerBtn?.addEventListener("click", closeDrawer);
-  els.drawerBackdrop?.addEventListener("click", closeDrawer);
+  els.closeDrawerBtn.addEventListener("click", closeDrawer);
+  els.drawerBackdrop.addEventListener("click", closeDrawer);
 
-  els.drawerEditBtn?.addEventListener("click", () => {
+  els.drawerEditBtn.addEventListener("click", () => {
     if (!state.activeRecordItem || !state.activeRecordType) return;
     if (!RECORD_CONFIG[state.activeRecordType]) {
       showError("This record type cannot be edited from the workspace yet.");
       return;
     }
-    openRecordModal(state.activeRecordType, "edit", state.activeRecordItem);
+    openDocumentEditor(state.activeRecordType, "edit", state.activeRecordItem);
   });
 
-  els.drawerSubmitBtn?.addEventListener("click", () => runDrawerWorkflow("submit"));
-  els.drawerApproveBtn?.addEventListener("click", () => runDrawerWorkflow("approve"));
-  els.drawerReturnBtn?.addEventListener("click", () => runDrawerWorkflow("return"));
-  els.drawerArchiveBtn?.addEventListener("click", () => runDrawerWorkflow("archive"));
+  els.drawerSubmitBtn.addEventListener("click", () => runDrawerWorkflow("submit"));
+  els.drawerApproveBtn.addEventListener("click", () => runDrawerWorkflow("approve"));
+  els.drawerReturnBtn.addEventListener("click", () => runDrawerWorkflow("return"));
+  els.drawerArchiveBtn.addEventListener("click", () => runDrawerWorkflow("archive"));
 
   els.closeModalBtn?.addEventListener("click", closeModal);
   els.modalCancelBtn?.addEventListener("click", closeModal);
@@ -2212,10 +2188,10 @@ function bindEvents() {
     event.preventDefault();
   });
 
-  els.documentModalCloseBtn?.addEventListener("click", closeDocumentModal);
-  els.documentModalCancelBtn?.addEventListener("click", closeDocumentModal);
-  els.documentModalBackdrop?.addEventListener("click", closeDocumentModal);
-  els.documentModalSaveBtn?.addEventListener("click", handleDocumentSave);
+  els.documentModalCloseTopBtn.addEventListener("click", closeDocumentModal);
+  els.documentModalCancelBtn.addEventListener("click", closeDocumentModal);
+  els.documentModalBackdrop.addEventListener("click", closeDocumentModal);
+  els.documentModalSaveBtn.addEventListener("click", handleDocumentSave);
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
