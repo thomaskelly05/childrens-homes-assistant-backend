@@ -172,6 +172,7 @@ ROUTERS = [
     "routers.young_people_chronology_routes",
     "routers.young_people_calendar_routes",
     "routers.young_people_appointments_routes",
+    "routers.young_people_appointments_routes",
     "routers.young_people_compliance_routes",
     "routers.young_people_standards_routes",
     "routers.young_people_handover_routes",
