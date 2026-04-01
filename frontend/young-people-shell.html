@@ -45,6 +45,7 @@
           <button class="nav-btn" data-view="incidents" type="button">Incidents</button>
           <button class="nav-btn" data-view="risk" type="button">Risks</button>
           <button class="nav-btn" data-view="plans" type="button">Plans</button>
+          <button class="nav-btn" data-view="appointments" type="button">Appointments</button>
         </nav>
       </div>
 
@@ -110,14 +111,17 @@
             <span class="quick-action-title">Add daily note</span>
             <span class="quick-action-subtitle">Record this shift</span>
           </button>
+
           <button class="quick-action" data-action="incident" type="button">
             <span class="quick-action-title">Log incident</span>
             <span class="quick-action-subtitle">Record incident or concern</span>
           </button>
+
           <button class="quick-action" data-action="risk" type="button">
             <span class="quick-action-title">Update risk</span>
             <span class="quick-action-subtitle">Review risk and controls</span>
           </button>
+
           <button class="quick-action" data-action="plan" type="button">
             <span class="quick-action-title">Add plan</span>
             <span class="quick-action-subtitle">Create guidance for staff</span>
@@ -154,7 +158,6 @@
     </div>
 
     <div id="recordDrawerActions" class="record-drawer-actions hidden">
-      <button id="drawerOpenFullBtn" class="primary-btn" type="button">Open full document</button>
       <button id="drawerEditBtn" class="secondary-btn" type="button">Edit</button>
       <button id="drawerSubmitBtn" class="secondary-btn" type="button">Submit</button>
       <button id="drawerApproveBtn" class="secondary-btn" type="button">Approve</button>
@@ -172,69 +175,30 @@
   <div id="modalBackdrop" class="modal-backdrop hidden"></div>
 
   <section id="recordModal" class="record-modal hidden" aria-hidden="true">
-    <div class="record-modal-shell">
-      <div class="record-modal-header">
-        <div class="record-modal-header-copy">
-          <div class="eyebrow">Document</div>
-          <h3 id="recordModalTitle">Create record</h3>
-          <p id="recordModalSubtitle">Complete the document below</p>
-        </div>
-
-        <div class="record-modal-header-actions">
-          <div id="documentTypeChip" class="document-type-chip">Document</div>
-          <button
-            id="closeRecordModalBtn"
-            class="drawer-close-btn"
-            type="button"
-            aria-label="Close record modal"
-          >
-            ✕
-          </button>
-        </div>
+    <div class="record-modal-header">
+      <div>
+        <div class="eyebrow">Record</div>
+        <h3 id="recordModalTitle">Create record</h3>
+        <p id="recordModalSubtitle">Complete the form below</p>
       </div>
-
-      <div class="record-modal-layout">
-        <aside class="record-modal-sidebar">
-          <section class="document-panel">
-            <div class="document-panel-title">Therapeutic writing prompt</div>
-            <div id="documentPromptPanel" class="document-panel-body">
-              <div class="document-panel-card">Use child-focused, PACE-informed, relational language.</div>
-            </div>
-          </section>
-
-          <section class="document-panel">
-            <div class="document-panel-title">Linked quality standards</div>
-            <div id="documentStandardsPanel" class="document-panel-body">
-              <div class="document-panel-card">Standards will appear here.</div>
-            </div>
-          </section>
-
-          <section class="document-panel">
-            <div class="document-panel-title">Ofsted and regulation links</div>
-            <div id="documentOfstedPanel" class="document-panel-body">
-              <div class="document-panel-card">Inspection links will appear here.</div>
-            </div>
-          </section>
-        </aside>
-
-        <form id="recordModalForm" class="record-modal-body">
-          <div class="document-form-intro">
-            <div class="document-form-intro-title">Child-focused document</div>
-            <p class="document-form-intro-copy">
-              Write clearly, respectfully and therapeutically. Record what the child communicated,
-              what adults understood, what support was offered, and what needs to happen next.
-            </p>
-          </div>
-
-          <div id="recordModalFields" class="document-fields"></div>
-
-          <div class="record-modal-footer">
-            <button type="button" id="recordModalCancelBtn" class="secondary-btn">Cancel</button>
-            <button type="submit" id="recordModalSaveBtn" class="primary-btn">Save</button>
-          </div>
-        </form>
-      </div>
+      <button
+        id="closeRecordModalBtn"
+        class="drawer-close-btn"
+        type="button"
+        aria-label="Close record modal"
+      >
+        ✕
+      </button>
     </div>
+
+    <form id="recordModalForm" class="record-modal-body">
+      <div id="recordModalFields" class="form-grid"></div>
+
+      <div class="record-modal-footer">
+        <button type="button" id="recordModalCancelBtn" class="secondary-btn">Cancel</button>
+        <button type="submit" id="recordModalSaveBtn" class="primary-btn">Save</button>
+      </div>
+    </form>
   </section>
 
   <script src="/js/young-people-shell.js"></script>
