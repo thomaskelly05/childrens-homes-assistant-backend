@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IndiCare OS • Young Person</title>
+  <title>IndiCare OS • Young Person Workspace</title>
   <link rel="stylesheet" href="/css/young-people-shell.css" />
 </head>
 <body>
@@ -86,7 +86,9 @@
         <div class="panel-header">
           <div>
             <h3>Select a young person</h3>
-            <p class="panel-subtitle">Open one record to view profile, chronology, daily work and handover.</p>
+            <p class="panel-subtitle">
+              Open one record to view profile, chronology, handover, compliance, reports and appointments.
+            </p>
           </div>
         </div>
 
@@ -110,14 +112,17 @@
             <span class="quick-action-title">Add daily note</span>
             <span class="quick-action-subtitle">Record this shift</span>
           </button>
+
           <button class="quick-action" data-action="incident" type="button">
             <span class="quick-action-title">Log incident</span>
             <span class="quick-action-subtitle">Record incident or concern</span>
           </button>
+
           <button class="quick-action" data-action="risk" type="button">
             <span class="quick-action-title">Update risk</span>
             <span class="quick-action-subtitle">Review risk and controls</span>
           </button>
+
           <button class="quick-action" data-action="plan" type="button">
             <span class="quick-action-title">Add plan</span>
             <span class="quick-action-subtitle">Create guidance for staff</span>
@@ -139,7 +144,7 @@
   <aside id="recordDrawer" class="record-drawer hidden" aria-hidden="true">
     <div class="record-drawer-header">
       <div>
-        <div class="eyebrow">Record</div>
+        <div class="eyebrow">Quick View</div>
         <h3 id="recordDrawerTitle">Record details</h3>
         <p id="recordDrawerSubtitle">Open a record to view details</p>
       </div>
@@ -159,6 +164,7 @@
       <button id="drawerApproveBtn" class="secondary-btn" type="button">Approve</button>
       <button id="drawerReturnBtn" class="secondary-btn" type="button">Return</button>
       <button id="drawerArchiveBtn" class="secondary-btn" type="button">Archive</button>
+      <button id="drawerOpenFullBtn" class="primary-btn" type="button">Open full document</button>
     </div>
 
     <div id="recordDrawerBody" class="record-drawer-body">
@@ -170,10 +176,10 @@
 
   <div id="modalBackdrop" class="modal-backdrop hidden"></div>
 
-  <section id="recordModal" class="record-modal hidden" aria-hidden="true">
+  <section id="recordModal" class="record-modal hidden" aria-hidden="true" role="dialog" aria-modal="true">
     <div class="record-modal-header">
       <div>
-        <div class="eyebrow">Quick create</div>
+        <div class="eyebrow">Document</div>
         <h3 id="recordModalTitle">Create record</h3>
         <p id="recordModalSubtitle">Complete the form below</p>
       </div>
@@ -188,53 +194,57 @@
     </div>
 
     <form id="recordModalForm" class="record-modal-body">
-      <div id="recordModalFields" class="form-grid"></div>
+      <div class="document-shell">
+        <aside class="document-sidebar">
+          <div class="document-sidebar-section">
+            <div class="document-sidebar-title">Document</div>
+            <div id="documentTypeChip" class="document-type-chip">Record</div>
+          </div>
+
+          <div class="document-sidebar-section">
+            <div class="document-sidebar-title">Framework</div>
+            <div class="document-framework-card">
+              <div class="document-framework-title">PACE-informed practice</div>
+              <div class="helper-note">
+                Promotes relational, therapeutic, curiosity-led recording.
+              </div>
+            </div>
+          </div>
+
+          <div class="document-sidebar-section">
+            <div class="document-sidebar-title">Quality standards</div>
+            <div id="documentStandardsPanel" class="document-standards-panel">
+              <div class="helper-note">Linked standards will appear here.</div>
+            </div>
+          </div>
+
+          <div class="document-sidebar-section">
+            <div class="document-sidebar-title">Ofsted and regulation</div>
+            <div id="documentOfstedPanel" class="document-ofsted-panel">
+              <div class="helper-note">Relevant inspection and regulatory links appear here.</div>
+            </div>
+          </div>
+
+          <div class="document-sidebar-section">
+            <div class="document-sidebar-title">Good recording prompt</div>
+            <div id="documentPromptPanel" class="document-prompt-panel">
+              <div class="helper-note">
+                Record what happened, what the young person communicated, what adults understood, what support was offered, and what happens next.
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <div class="document-main">
+          <div id="recordModalFields" class="document-fields"></div>
+        </div>
+      </div>
 
       <div class="record-modal-footer">
         <button type="button" id="recordModalCancelBtn" class="secondary-btn">Cancel</button>
         <button type="submit" id="recordModalSaveBtn" class="primary-btn">Save</button>
       </div>
     </form>
-  </section>
-
-  <div id="documentModalBackdrop" class="document-modal-backdrop hidden"></div>
-
-  <section id="documentModal" class="document-modal hidden" aria-hidden="true">
-    <header class="document-modal-header">
-      <div class="document-modal-header-main">
-        <div id="documentModalKicker" class="document-modal-kicker">Document</div>
-        <h2 id="documentModalTitle" class="document-modal-title">Document title</h2>
-        <p id="documentModalSubtitle" class="document-modal-subtitle">
-          Editable document workspace
-        </p>
-      </div>
-
-      <div class="document-modal-header-actions">
-        <button id="documentModalCloseTopBtn" class="secondary-btn" type="button">Close</button>
-      </div>
-    </header>
-
-    <div id="documentModalBody" class="document-modal-body">
-      <div class="document-sheet document-sheet-wide">
-        <div class="loading-state">
-          <div class="spinner"></div>
-          <p>Loading document...</p>
-        </div>
-      </div>
-    </div>
-
-    <footer class="document-footer">
-      <div class="document-footer-inner">
-        <div id="documentFooterNote" class="document-footer-note">
-          Linked to quality standards, Ofsted expectations and PACE-informed practice.
-        </div>
-
-        <div class="document-footer-actions">
-          <button id="documentModalCancelBtn" class="secondary-btn" type="button">Cancel</button>
-          <button id="documentModalSaveBtn" class="primary-btn" type="button">Save document</button>
-        </div>
-      </div>
-    </footer>
   </section>
 
   <script src="/js/young-people-shell.js"></script>
