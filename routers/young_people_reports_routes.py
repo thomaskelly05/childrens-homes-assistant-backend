@@ -78,6 +78,7 @@ def _load_and_check_report(
     if not row:
         raise HTTPException(status_code=404, detail="Report not found")
 
+    row = dict(row)
     _assert_home_access(current_user, _safe_int(row.get("home_id")))
     return row
 
@@ -113,9 +114,11 @@ def list_young_person_reports(
             )
             rows = cur.fetchall() or []
 
+        items = [dict(row) for row in rows]
+
         return {
-            "items": [dict(row) for row in rows],
-            "count": len(rows),
+            "items": items,
+            "count": len(items),
         }
 
     except HTTPException:
@@ -134,7 +137,7 @@ def get_report(
         row = _load_and_check_report(conn, report_id, current_user)
         return {
             "ok": True,
-            "report": dict(row),
+            "report": row,
         }
 
     except HTTPException:
@@ -170,9 +173,11 @@ def get_report_links(
             )
             rows = cur.fetchall() or []
 
+        items = [dict(row) for row in rows]
+
         return {
-            "items": [dict(row) for row in rows],
-            "count": len(rows),
+            "items": items,
+            "count": len(items),
         }
 
     except HTTPException:
