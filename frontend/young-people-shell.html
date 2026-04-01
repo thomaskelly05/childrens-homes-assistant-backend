@@ -134,6 +134,7 @@
     </main>
   </div>
 
+  <!-- Existing detail drawer -->
   <div id="recordDrawerBackdrop" class="drawer-backdrop hidden"></div>
 
   <aside id="recordDrawer" class="record-drawer hidden" aria-hidden="true">
@@ -143,7 +144,12 @@
         <h3 id="recordDrawerTitle">Record details</h3>
         <p id="recordDrawerSubtitle">Open a record to view details</p>
       </div>
-      <button id="closeRecordDrawerBtn" class="drawer-close-btn" type="button" aria-label="Close record drawer">✕</button>
+      <button
+        id="closeRecordDrawerBtn"
+        class="drawer-close-btn"
+        type="button"
+        aria-label="Close record drawer"
+      >✕</button>
     </div>
 
     <div id="recordDrawerActions" class="record-drawer-actions hidden">
@@ -161,6 +167,7 @@
     </div>
   </aside>
 
+  <!-- Old modal kept for backwards compatibility -->
   <div id="modalBackdrop" class="modal-backdrop hidden"></div>
 
   <section id="recordModal" class="record-modal hidden" aria-hidden="true">
@@ -170,7 +177,12 @@
         <h3 id="recordModalTitle">Create record</h3>
         <p id="recordModalSubtitle">Complete the form below</p>
       </div>
-      <button id="closeRecordModalBtn" class="drawer-close-btn" type="button" aria-label="Close record modal">✕</button>
+      <button
+        id="closeRecordModalBtn"
+        class="drawer-close-btn"
+        type="button"
+        aria-label="Close record modal"
+      >✕</button>
     </div>
 
     <form id="recordModalForm" class="record-modal-body">
@@ -181,6 +193,46 @@
         <button type="submit" id="recordModalSaveBtn" class="primary-btn">Save</button>
       </div>
     </form>
+  </section>
+
+  <!-- New full screen document modal -->
+  <div id="documentModalBackdrop" class="document-modal-backdrop hidden"></div>
+
+  <section id="documentModal" class="document-modal hidden" aria-hidden="true">
+    <header class="document-modal-header">
+      <div class="document-modal-title-wrap">
+        <div class="eyebrow" id="documentModalEyebrow">Document</div>
+        <h2 id="documentModalTitle">Document</h2>
+        <p id="documentModalSubtitle" class="document-modal-subtitle">
+          Open, edit and review the full document.
+        </p>
+      </div>
+
+      <div class="document-modal-actions">
+        <button id="documentModalSecondaryBtn" class="secondary-btn hidden" type="button">Secondary</button>
+        <button id="documentModalCloseBtn" class="drawer-close-btn" type="button" aria-label="Close document">✕</button>
+      </div>
+    </header>
+
+    <div id="documentModalBody" class="document-modal-body">
+      <div class="document-sheet">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Loading document...</p>
+        </div>
+      </div>
+    </div>
+
+    <footer class="document-footer-bar">
+      <div class="document-footer-left" id="documentFooterLeft">
+        <span class="document-chip">Draft</span>
+      </div>
+
+      <div class="document-footer-right">
+        <button id="documentModalCancelBtn" class="secondary-btn" type="button">Close</button>
+        <button id="documentModalSaveBtn" class="primary-btn" type="button">Save</button>
+      </div>
+    </footer>
   </section>
 
   <script src="/js/young-people-shell.js"></script>
