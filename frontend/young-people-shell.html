@@ -148,7 +148,9 @@
         class="drawer-close-btn"
         type="button"
         aria-label="Close record drawer"
-      >✕</button>
+      >
+        ✕
+      </button>
     </div>
 
     <div id="recordDrawerActions" class="record-drawer-actions hidden">
@@ -180,7 +182,9 @@
         class="drawer-close-btn"
         type="button"
         aria-label="Close record modal"
-      >✕</button>
+      >
+        ✕
+      </button>
     </div>
 
     <form id="recordModalForm" class="record-modal-body">
@@ -199,12 +203,14 @@
   <section id="documentModal" class="document-modal hidden" aria-hidden="true">
     <header class="document-modal-header">
       <div class="document-modal-header-main">
-        <div id="documentModalKicker" class="eyebrow">Document</div>
-        <h2 id="documentModalTitle">Document title</h2>
-        <p id="documentModalSubtitle">Document subtitle</p>
+        <div id="documentModalKicker" class="document-modal-kicker">Document</div>
+        <h2 id="documentModalTitle" class="document-modal-title">Document title</h2>
+        <p id="documentModalSubtitle" class="document-modal-subtitle">
+          Editable document workspace
+        </p>
       </div>
 
-      <div class="document-modal-header-actions">
+      <div class="document-modal-actions">
         <button id="documentModalCloseTopBtn" class="secondary-btn" type="button">Close</button>
       </div>
     </header>
@@ -218,16 +224,16 @@
       </div>
     </div>
 
-    <footer class="document-modal-footer">
-      <div id="documentModalFooterLeft" class="document-footer-left">
-        <span class="document-chip">PACE</span>
-        <span class="document-chip">Ofsted ready</span>
-        <span class="document-chip">Quality standards linked</span>
-      </div>
+    <footer class="document-footer">
+      <div class="document-footer-inner">
+        <div id="documentFooterNote" class="document-footer-note">
+          Linked to quality standards, Ofsted expectations and PACE-informed practice.
+        </div>
 
-      <div class="document-footer-right">
-        <button id="documentModalCancelBtn" class="secondary-btn" type="button">Close</button>
-        <button id="documentModalSaveBtn" class="primary-btn" type="button">Save</button>
+        <div class="document-footer-actions">
+          <button id="documentModalCancelBtn" class="secondary-btn" type="button">Cancel</button>
+          <button id="documentModalSaveBtn" class="primary-btn" type="button">Save document</button>
+        </div>
       </div>
     </footer>
   </section>
