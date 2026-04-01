@@ -13,9 +13,6 @@ const state = {
   modalMode: "create",
   modalRecordType: null,
   modalEditItem: null,
-  documentMode: "create",
-  documentType: null,
-  documentItem: null,
 };
 
 const els = {
@@ -35,6 +32,7 @@ const els = {
   workspacePanel: document.getElementById("workspacePanel"),
   quickActions: document.getElementById("quickActions"),
   changePersonBtn: document.getElementById("changePersonBtn"),
+
   drawer: document.getElementById("recordDrawer"),
   drawerBackdrop: document.getElementById("recordDrawerBackdrop"),
   drawerTitle: document.getElementById("recordDrawerTitle"),
@@ -47,6 +45,8 @@ const els = {
   drawerApproveBtn: document.getElementById("drawerApproveBtn"),
   drawerReturnBtn: document.getElementById("drawerReturnBtn"),
   drawerArchiveBtn: document.getElementById("drawerArchiveBtn"),
+  drawerOpenFullBtn: document.getElementById("drawerOpenFullBtn"),
+
   modalBackdrop: document.getElementById("modalBackdrop"),
   modal: document.getElementById("recordModal"),
   modalTitle: document.getElementById("recordModalTitle"),
@@ -56,6 +56,11 @@ const els = {
   modalForm: document.getElementById("recordModalForm"),
   modalFields: document.getElementById("recordModalFields"),
   modalSaveBtn: document.getElementById("recordModalSaveBtn"),
+
+  documentTypeChip: document.getElementById("documentTypeChip"),
+  documentStandardsPanel: document.getElementById("documentStandardsPanel"),
+  documentOfstedPanel: document.getElementById("documentOfstedPanel"),
+  documentPromptPanel: document.getElementById("documentPromptPanel"),
 };
 
 const VIEW_CONFIG = {
@@ -71,7 +76,7 @@ const VIEW_CONFIG = {
   },
   calendar: {
     title: "Calendar",
-    subtitle: "All records by day",
+    subtitle: "All records by day and appointments",
     loader: loadCalendarView,
   },
   timeline: {
@@ -139,6 +144,7 @@ const VIEW_CONFIG = {
 const RECORD_CONFIG = {
   daily_note: {
     label: "Daily note",
+    singular: "daily note",
     listUrl: (youngPersonId) => `/young-people/${youngPersonId}/daily-notes`,
     createUrl: (youngPersonId) => `/young-people/${youngPersonId}/daily-notes`,
     detailUrl: (id) => `/young-people/daily-notes/${id}`,
@@ -148,9 +154,23 @@ const RECORD_CONFIG = {
     approveUrl: (id) => `/young-people/daily-notes/${id}/approve`,
     returnUrl: (id) => `/young-people/daily-notes/${id}/return`,
     archiveUrl: (id) => `/young-people/daily-notes/${id}/archive`,
+    documentTitle: "Daily Note",
+    standards: [
+      "Protection of children",
+      "Children’s views, wishes and feelings",
+      "Enjoyment and achievement",
+    ],
+    ofsted: [
+      "Regulation 35",
+      "Regulation 39",
+      "Accurate daily recording",
+    ],
+    prompt:
+      "Use PACE. Record presentation, what happened, the young person’s voice, staff understanding, support offered, and what the next shift needs to do.",
   },
   incident: {
     label: "Incident",
+    singular: "incident",
     listUrl: (youngPersonId) => `/young-people/${youngPersonId}/incidents`,
     createUrl: (youngPersonId) => `/young-people/${youngPersonId}/incidents`,
     detailUrl: (id) => `/young-people/incidents/${id}`,
@@ -160,9 +180,23 @@ const RECORD_CONFIG = {
     approveUrl: (id) => `/young-people/incidents/${id}/approve`,
     returnUrl: (id) => `/young-people/incidents/${id}/return`,
     archiveUrl: (id) => `/young-people/incidents/${id}/archive`,
+    documentTitle: "Incident Record",
+    standards: [
+      "Protection of children",
+      "Help and protection",
+      "Leadership and management oversight",
+    ],
+    ofsted: [
+      "Regulation 40",
+      "Safeguarding evidence",
+      "Manager review trail",
+    ],
+    prompt:
+      "Use PACE. Describe the event clearly, antecedents, behaviour as communication, adult response, de-escalation, child voice, and outcome.",
   },
   risk: {
     label: "Risk assessment",
+    singular: "risk assessment",
     listUrl: (youngPersonId) => `/young-people/${youngPersonId}/risk`,
     createUrl: (youngPersonId) => `/young-people/${youngPersonId}/risk`,
     detailUrl: (id) => `/young-people/risk/${id}`,
@@ -172,9 +206,23 @@ const RECORD_CONFIG = {
     approveUrl: (id) => `/young-people/risk/${id}/approve`,
     returnUrl: (id) => `/young-people/risk/${id}/return`,
     archiveUrl: (id) => `/young-people/risk/${id}/archive`,
+    documentTitle: "Risk Assessment",
+    standards: [
+      "Protection of children",
+      "Positive relationships",
+      "Individualised care planning",
+    ],
+    ofsted: [
+      "Risk management",
+      "Safer care practice",
+      "Review and oversight",
+    ],
+    prompt:
+      "Use PACE and keep the formulation relational. Focus on what the risk means, when it rises, what staff notice early, and what support reduces harm.",
   },
   support_plan: {
     label: "Plan",
+    singular: "plan",
     listUrl: (youngPersonId) => `/young-people/${youngPersonId}/plans`,
     createUrl: (youngPersonId) => `/young-people/${youngPersonId}/plans`,
     detailUrl: (id) => `/young-people/plans/${id}`,
@@ -184,88 +232,24 @@ const RECORD_CONFIG = {
     approveUrl: (id) => `/young-people/plans/${id}/approve`,
     returnUrl: (id) => `/young-people/plans/${id}/return`,
     archiveUrl: (id) => `/young-people/plans/${id}/archive`,
+    documentTitle: "Support Plan",
+    standards: [
+      "Care planning",
+      "Protection of children",
+      "Positive relationships",
+    ],
+    ofsted: [
+      "Placement planning",
+      "Clear staff guidance",
+      "Review cycle and impact",
+    ],
+    prompt:
+      "Use PACE. Write staff guidance that is calm, compassionate, curious and practical. Make triggers, protective factors and responses clear.",
   },
-  plan: {
-    label: "Plan",
-    listUrl: (youngPersonId) => `/young-people/${youngPersonId}/plans`,
-    createUrl: (youngPersonId) => `/young-people/${youngPersonId}/plans`,
-    detailUrl: (id) => `/young-people/plans/${id}`,
-    updateUrl: (id) => `/young-people/plans/${id}`,
-    updateMethod: "PUT",
-    submitUrl: (id) => `/young-people/plans/${id}/submit`,
-    approveUrl: (id) => `/young-people/plans/${id}/approve`,
-    returnUrl: (id) => `/young-people/plans/${id}/return`,
-    archiveUrl: (id) => `/young-people/plans/${id}/archive`,
-  },
+  plan: null,
 };
 
-const QUALITY_STANDARD_LIBRARY = {
-  daily_note: [
-    {
-      code: "QS7",
-      title: "The experiences and progress of children",
-      copy: "Daily notes should show lived experience, progress, emotional presentation, relationships, routines and what helped."
-    },
-    {
-      code: "QS9",
-      title: "Enjoyment and achievement",
-      copy: "Notes should evidence participation, encouragement, celebration and meaningful day-to-day progress."
-    }
-  ],
-  incident: [
-    {
-      code: "QS12",
-      title: "Protection of children",
-      copy: "Incident records should evidence safeguarding thinking, proportionality, oversight and what reduced harm."
-    },
-    {
-      code: "QS13",
-      title: "Leadership and management",
-      copy: "Serious incidents should show review, learning, escalation and clear management follow-up."
-    }
-  ],
-  risk: [
-    {
-      code: "QS12",
-      title: "Protection of children",
-      copy: "Risk assessments should identify harm, vulnerability, triggers, controls, review points and how staff reduce risk."
-    },
-    {
-      code: "QS6",
-      title: "Children’s views, wishes and feelings",
-      copy: "Risk work should reflect the young person’s understanding, views and voice wherever possible."
-    }
-  ],
-  support_plan: [
-    {
-      code: "QS6",
-      title: "Children’s views, wishes and feelings",
-      copy: "Plans should be shaped by the young person’s voice and what matters to them."
-    },
-    {
-      code: "QS7",
-      title: "The experiences and progress of children",
-      copy: "Plans should support progress, belonging, regulation, development and better day-to-day outcomes."
-    },
-    {
-      code: "QS12",
-      title: "Protection of children",
-      copy: "Plans should reduce harm through proactive, relational and trauma-informed responses."
-    }
-  ],
-  appointment: [
-    {
-      code: "QS7",
-      title: "The experiences and progress of children",
-      copy: "Appointments should show planned support around health, education, identity, family or emotional wellbeing."
-    },
-    {
-      code: "QS12",
-      title: "Protection of children",
-      copy: "Where relevant, appointments should evidence oversight, attendance, follow-up and risk reduction."
-    }
-  ],
-};
+RECORD_CONFIG.plan = RECORD_CONFIG.support_plan;
 
 function getYoungPersonId() {
   const params = new URLSearchParams(window.location.search);
@@ -275,24 +259,11 @@ function getYoungPersonId() {
 
 function toDateInputValue(date) {
   const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return "";
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
-}
-
-function toDateTimeLocalValue(value) {
-  if (!value) return "";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) {
-    return String(value).slice(0, 16);
-  }
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  const hour = String(d.getHours()).padStart(2, "0");
-  const minute = String(d.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hour}:${minute}`;
 }
 
 function monthName(date) {
@@ -415,7 +386,7 @@ function formatShortTime(value) {
 function statusBadgeClass(value) {
   const v = String(value || "").toLowerCase();
   if (["approved", "active", "recorded", "low", "completed", "ok"].includes(v)) return "success";
-  if (["submitted", "pending", "medium", "due_soon"].includes(v)) return "warning";
+  if (["submitted", "pending", "medium", "due_soon", "draft"].includes(v)) return "warning";
   if (["returned", "high", "critical", "archived", "overdue"].includes(v)) return "danger";
   return "";
 }
@@ -454,6 +425,7 @@ function getRecordUrl(item) {
     family_contact: `/young-people/family/records/${id}`,
     keywork: `/young-people/keywork/${id}`,
     keywork_session: `/young-people/keywork/${id}`,
+    appointment: `/young-people/appointments/${id}`,
   };
 
   return map[type] || null;
@@ -508,108 +480,29 @@ function openModal() {
   els.modal.classList.remove("hidden");
   els.modalBackdrop.classList.remove("hidden");
   els.modal.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
 }
 
 function closeModal() {
   els.modal.classList.add("hidden");
   els.modalBackdrop.classList.add("hidden");
   els.modal.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
   state.modalMode = "create";
   state.modalRecordType = null;
   state.modalEditItem = null;
   els.modalFields.innerHTML = "";
 }
 
-function ensureDocumentModal() {
-  let backdrop = document.getElementById("documentModalBackdrop");
-  let modal = document.getElementById("documentModal");
-
-  if (backdrop && modal) {
-    return { backdrop, modal };
+function renderSidebarList(items = []) {
+  if (!items.length) {
+    return `<div class="helper-note">No linked items shown.</div>`;
   }
-
-  backdrop = document.createElement("div");
-  backdrop.id = "documentModalBackdrop";
-  backdrop.className = "document-modal-backdrop hidden";
-
-  modal = document.createElement("section");
-  modal.id = "documentModal";
-  modal.className = "document-modal hidden";
-  modal.setAttribute("aria-hidden", "true");
-  modal.innerHTML = `
-    <div class="document-modal-header">
-      <div class="document-modal-header-main">
-        <div class="document-modal-kicker">Document workspace</div>
-        <h2 id="documentModalTitle" class="document-modal-title">Document</h2>
-        <p id="documentModalSubtitle" class="document-modal-subtitle">Complete the document below.</p>
-      </div>
-      <div class="document-modal-header-actions">
-        <button id="documentModalCloseBtn" class="drawer-close-btn" type="button" aria-label="Close document">✕</button>
-      </div>
-    </div>
-
-    <div id="documentModalBody" class="document-modal-body"></div>
-
-    <div class="document-footer">
-      <div class="document-footer-inner">
-        <div id="documentFooterNote" class="document-footer-note">
-          PACE-informed, quality-standard-linked and ready for review.
-        </div>
-        <div class="document-footer-actions">
-          <button id="documentCancelBtn" class="secondary-btn" type="button">Cancel</button>
-          <button id="documentSaveBtn" class="primary-btn" type="button">Save document</button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(backdrop);
-  document.body.appendChild(modal);
-
-  const close = () => closeDocumentModal();
-  backdrop.addEventListener("click", close);
-  modal.querySelector("#documentModalCloseBtn").addEventListener("click", close);
-  modal.querySelector("#documentCancelBtn").addEventListener("click", close);
-  modal.querySelector("#documentSaveBtn").addEventListener("click", handleDocumentSave);
-
-  return { backdrop, modal };
-}
-
-function openDocumentModal() {
-  const { backdrop, modal } = ensureDocumentModal();
-  backdrop.classList.remove("hidden");
-  modal.classList.remove("hidden");
-  modal.setAttribute("aria-hidden", "false");
-}
-
-function closeDocumentModal() {
-  const backdrop = document.getElementById("documentModalBackdrop");
-  const modal = document.getElementById("documentModal");
-  if (backdrop) backdrop.classList.add("hidden");
-  if (modal) {
-    modal.classList.add("hidden");
-    modal.setAttribute("aria-hidden", "true");
-  }
-  state.documentMode = "create";
-  state.documentType = null;
-  state.documentItem = null;
-}
-
-function getDocumentElements() {
-  ensureDocumentModal();
-  return {
-    title: document.getElementById("documentModalTitle"),
-    subtitle: document.getElementById("documentModalSubtitle"),
-    body: document.getElementById("documentModalBody"),
-    saveBtn: document.getElementById("documentSaveBtn"),
-    footerNote: document.getElementById("documentFooterNote"),
-  };
+  return items.map((item) => `<div class="document-panel-card">${escapeHtml(item)}</div>`).join("");
 }
 
 function buildFormField(field) {
-  const common = `
-    <label class="form-label" for="${field.name}">${escapeHtml(field.label)}</label>
-  `;
+  const common = `<label class="form-label" for="${field.name}">${escapeHtml(field.label)}</label>`;
 
   if (field.type === "textarea") {
     return `
@@ -650,66 +543,20 @@ function buildFormField(field) {
   `;
 }
 
-function documentField(field) {
-  const label = `<label class="document-label" for="${field.name}">${escapeHtml(field.label)}</label>`;
-
-  if (field.type === "textarea") {
-    return `
-      <div class="document-field ${field.full ? "full" : ""}">
-        ${label}
-        <textarea
-          id="${field.name}"
-          name="${field.name}"
-          class="document-textarea ${field.large ? "is-large" : ""}"
-          placeholder="${escapeHtml(field.placeholder || "")}"
-        >${escapeHtml(field.value || "")}</textarea>
-      </div>
-    `;
-  }
-
-  if (field.type === "select") {
-    return `
-      <div class="document-field ${field.full ? "full" : ""}">
-        ${label}
-        <select id="${field.name}" name="${field.name}" class="document-select">
-          ${(field.options || []).map((opt) => `
-            <option value="${escapeHtml(opt.value)}" ${String(opt.value) === String(field.value || "") ? "selected" : ""}>
-              ${escapeHtml(opt.label)}
-            </option>
-          `).join("")}
-        </select>
-      </div>
-    `;
-  }
-
+function wrapDocumentSection(title, subtitle, fieldsHtml) {
   return `
-    <div class="document-field ${field.full ? "full" : ""}">
-      ${label}
-      <input
-        id="${field.name}"
-        name="${field.name}"
-        type="${field.type || "text"}"
-        class="document-input"
-        placeholder="${escapeHtml(field.placeholder || "")}"
-        value="${escapeHtml(field.value || "")}"
-      />
-    </div>
+    <section class="document-section">
+      <div class="document-section-header">
+        <h4 class="document-section-title">${escapeHtml(title)}</h4>
+        <p class="document-section-subtitle">${escapeHtml(subtitle || "")}</p>
+      </div>
+      <div class="document-section-body">
+        <div class="form-grid">
+          ${fieldsHtml}
+        </div>
+      </div>
+    </section>
   `;
-}
-
-function getPaceCopy(documentType) {
-  const map = {
-    daily_note: "Write with curiosity, empathy and attunement. Describe what was happening for the young person, what staff noticed, what helped, and how relationships and co-regulation were used.",
-    incident: "Describe behaviour as communication. Record antecedents, feelings, meaning, staff attunement, de-escalation and repair. Avoid blame-based language.",
-    risk: "Frame risk through unmet need, vulnerability, triggers, strengths and relational safety. Focus on reducing harm through proactive, trauma-informed support.",
-    support_plan: "Shape the plan around voice, connection, predictability, safety and co-regulation. The plan should help staff respond with empathy, not punishment.",
-    appointment: "Appointments should show joined-up support, preparation, reassurance, attendance, follow-up and how the plan around the young person stays coherent."
-  };
-  return map[documentType] || "This document should be written in a relational, trauma-informed and PACE-consistent way.";
-}
-
-function getStandardsForType(documentType) {
-  return QUALITY_STANDARD_LIBRARY[documentType] || [];
 }
 
 function getModalSchema(recordType, item = null) {
@@ -717,106 +564,177 @@ function getModalSchema(recordType, item = null) {
 
   if (recordType === "daily_note") {
     return [
-      { name: "note_date", label: "Date", type: "date", value: item?.note_date || today },
-      {
-        name: "shift_type",
-        label: "Shift type",
-        type: "select",
-        value: item?.shift_type || "day",
-        options: [
-          { value: "day", label: "Day" },
-          { value: "evening", label: "Evening" },
-          { value: "night", label: "Night" },
-          { value: "waking_night", label: "Waking night" },
-        ]
-      },
-      { name: "mood", label: "Mood", type: "text", value: item?.mood || "" },
-      { name: "presentation", label: "Presentation", type: "textarea", full: true, value: item?.presentation || "" },
-      { name: "activities", label: "Activities", type: "textarea", full: true, value: item?.activities || "" },
-      { name: "behaviour_update", label: "Behaviour update", type: "textarea", full: true, value: item?.behaviour_update || "" },
-      { name: "young_person_voice", label: "Young person voice", type: "textarea", full: true, value: item?.young_person_voice || item?.child_voice || "" },
-      { name: "positives", label: "Positives", type: "textarea", full: true, value: item?.positives || "" },
-      { name: "actions_required", label: "Actions required", type: "textarea", full: true, value: item?.actions_required || "" },
+      wrapDocumentSection(
+        "Shift details",
+        "Core context for the note.",
+        [
+          { name: "note_date", label: "Date", type: "date", value: item?.note_date || today },
+          {
+            name: "shift_type",
+            label: "Shift type",
+            type: "select",
+            value: item?.shift_type || "day",
+            options: [
+              { value: "day", label: "Day" },
+              { value: "evening", label: "Evening" },
+              { value: "night", label: "Night" },
+              { value: "waking_night", label: "Waking night" },
+            ],
+          },
+          { name: "mood", label: "Mood", type: "text", value: item?.mood || "" },
+        ].map(buildFormField).join("")
+      ),
+      wrapDocumentSection(
+        "Presentation and day lived",
+        "Describe the shift in a calm, descriptive and relational way.",
+        [
+          { name: "presentation", label: "Presentation", type: "textarea", full: true, value: item?.presentation || "" },
+          { name: "activities", label: "Activities", type: "textarea", full: true, value: item?.activities || "" },
+          { name: "behaviour_update", label: "Behaviour update", type: "textarea", full: true, value: item?.behaviour_update || "" },
+          { name: "young_person_voice", label: "Young person voice", type: "textarea", full: true, value: item?.young_person_voice || item?.child_voice || "" },
+          { name: "positives", label: "Positives", type: "textarea", full: true, value: item?.positives || "" },
+          { name: "actions_required", label: "Actions required", type: "textarea", full: true, value: item?.actions_required || "" },
+        ].map(buildFormField).join("")
+      ),
     ];
   }
 
   if (recordType === "incident") {
     return [
-      {
-        name: "incident_datetime",
-        label: "Incident time",
-        type: "datetime-local",
-        value: item?.incident_datetime
-          ? item.incident_datetime.slice(0, 16)
-          : (item?.occurred_at ? String(item.occurred_at).slice(0, 16) : ""),
-      },
-      { name: "incident_type", label: "Incident type", type: "text", value: item?.incident_type || "" },
-      {
-        name: "severity",
-        label: "Severity",
-        type: "select",
-        value: item?.severity || "medium",
-        options: [
-          { value: "low", label: "Low" },
-          { value: "medium", label: "Medium" },
-          { value: "high", label: "High" },
-          { value: "critical", label: "Critical" },
-        ]
-      },
-      { name: "location", label: "Location", type: "text", value: item?.location || "" },
-      { name: "description", label: "Description", type: "textarea", full: true, value: item?.description || item?.narrative || "" },
-      { name: "antecedent", label: "Antecedent", type: "textarea", full: true, value: item?.antecedent || "" },
-      { name: "staff_response", label: "Staff response", type: "textarea", full: true, value: item?.staff_response || "" },
-      { name: "child_voice", label: "Child voice", type: "textarea", full: true, value: item?.child_voice || "" },
-      { name: "outcome", label: "Outcome", type: "textarea", full: true, value: item?.outcome || "" },
+      wrapDocumentSection(
+        "Incident overview",
+        "Capture the basic incident facts.",
+        [
+          {
+            name: "incident_datetime",
+            label: "Incident time",
+            type: "datetime-local",
+            value: item?.incident_datetime
+              ? item.incident_datetime.slice(0, 16)
+              : item?.occurred_at
+                ? String(item.occurred_at).slice(0, 16)
+                : "",
+          },
+          { name: "incident_type", label: "Incident type", type: "text", value: item?.incident_type || "" },
+          {
+            name: "severity",
+            label: "Severity",
+            type: "select",
+            value: item?.severity || "medium",
+            options: [
+              { value: "low", label: "Low" },
+              { value: "medium", label: "Medium" },
+              { value: "high", label: "High" },
+              { value: "critical", label: "Critical" },
+            ],
+          },
+          { name: "location", label: "Location", type: "text", value: item?.location || "" },
+        ].map(buildFormField).join("")
+      ),
+      wrapDocumentSection(
+        "Analysis and response",
+        "PACE-informed reflective incident recording.",
+        [
+          { name: "description", label: "Description", type: "textarea", full: true, value: item?.description || item?.narrative || "" },
+          { name: "antecedent", label: "Antecedent", type: "textarea", full: true, value: item?.antecedent || "" },
+          { name: "staff_response", label: "Staff response", type: "textarea", full: true, value: item?.staff_response || "" },
+          { name: "child_voice", label: "Child voice", type: "textarea", full: true, value: item?.child_voice || "" },
+          { name: "outcome", label: "Outcome", type: "textarea", full: true, value: item?.outcome || "" },
+        ].map(buildFormField).join("")
+      ),
     ];
   }
 
   if (recordType === "risk") {
     return [
-      { name: "category", label: "Category", type: "text", value: item?.category || "" },
-      { name: "title", label: "Title", type: "text", value: item?.title || "" },
-      {
-        name: "severity",
-        label: "Severity",
-        type: "select",
-        value: item?.severity || "medium",
-        options: [
-          { value: "low", label: "Low" },
-          { value: "medium", label: "Medium" },
-          { value: "high", label: "High" },
-        ]
-      },
-      {
-        name: "likelihood",
-        label: "Likelihood",
-        type: "select",
-        value: item?.likelihood || "medium",
-        options: [
-          { value: "low", label: "Low" },
-          { value: "medium", label: "Medium" },
-          { value: "high", label: "High" },
-        ]
-      },
-      { name: "review_date", label: "Review date", type: "date", value: item?.review_date || today },
-      { name: "concern_summary", label: "Concern summary", type: "textarea", full: true, value: item?.concern_summary || item?.formulation || "" },
-      { name: "known_triggers", label: "Known triggers", type: "textarea", full: true, value: item?.known_triggers || "" },
-      { name: "current_controls", label: "Current controls", type: "textarea", full: true, value: item?.current_controls || item?.staff_guidance || "" },
-      { name: "response_actions", label: "Response actions", type: "textarea", full: true, value: item?.response_actions || "" },
+      wrapDocumentSection(
+        "Risk overview",
+        "Core classification for this assessment.",
+        [
+          { name: "category", label: "Category", type: "text", value: item?.category || "" },
+          { name: "title", label: "Title", type: "text", value: item?.title || "" },
+          {
+            name: "severity",
+            label: "Severity",
+            type: "select",
+            value: item?.severity || "medium",
+            options: [
+              { value: "low", label: "Low" },
+              { value: "medium", label: "Medium" },
+              { value: "high", label: "High" },
+            ],
+          },
+          {
+            name: "likelihood",
+            label: "Likelihood",
+            type: "select",
+            value: item?.likelihood || "medium",
+            options: [
+              { value: "low", label: "Low" },
+              { value: "medium", label: "Medium" },
+              { value: "high", label: "High" },
+            ],
+          },
+          { name: "review_date", label: "Review date", type: "date", value: item?.review_date || today },
+        ].map(buildFormField).join("")
+      ),
+      wrapDocumentSection(
+        "Formulation and controls",
+        "Relational understanding and staff response.",
+        [
+          { name: "concern_summary", label: "Concern summary", type: "textarea", full: true, value: item?.concern_summary || item?.formulation || "" },
+          { name: "known_triggers", label: "Known triggers", type: "textarea", full: true, value: item?.known_triggers || "" },
+          { name: "current_controls", label: "Current controls", type: "textarea", full: true, value: item?.current_controls || item?.staff_guidance || "" },
+          { name: "response_actions", label: "Response actions", type: "textarea", full: true, value: item?.response_actions || "" },
+        ].map(buildFormField).join("")
+      ),
+    ];
+  }
+
+  if (recordType === "support_plan" || recordType === "plan") {
+    return [
+      wrapDocumentSection(
+        "Plan overview",
+        "Core planning information.",
+        [
+          { name: "plan_type", label: "Plan type", type: "text", value: item?.plan_type || "support_plan" },
+          { name: "title", label: "Title", type: "text", value: item?.title || "" },
+          { name: "review_date", label: "Review date", type: "date", value: item?.review_date || today },
+        ].map(buildFormField).join("")
+      ),
+      wrapDocumentSection(
+        "Plan content",
+        "PACE-informed formulation and staff guidance.",
+        [
+          { name: "presenting_need", label: "Presenting need", type: "textarea", full: true, value: item?.presenting_need || item?.formulation || "" },
+          { name: "summary", label: "Summary", type: "textarea", full: true, value: item?.summary || "" },
+          { name: "child_voice", label: "Child voice", type: "textarea", full: true, value: item?.child_voice || "" },
+          { name: "proactive_strategies", label: "Proactive strategies", type: "textarea", full: true, value: item?.proactive_strategies || item?.staff_guidance || "" },
+          { name: "triggers", label: "Triggers", type: "textarea", full: true, value: item?.triggers || "" },
+          { name: "protective_factors", label: "Protective factors", type: "textarea", full: true, value: item?.protective_factors || "" },
+        ].map(buildFormField).join("")
+      ),
     ];
   }
 
   return [
-    { name: "plan_type", label: "Plan type", type: "text", value: item?.plan_type || "support_plan" },
-    { name: "title", label: "Title", type: "text", value: item?.title || "" },
-    { name: "review_date", label: "Review date", type: "date", value: item?.review_date || today },
-    { name: "presenting_need", label: "Presenting need", type: "textarea", full: true, value: item?.presenting_need || item?.formulation || "" },
-    { name: "summary", label: "Summary", type: "textarea", full: true, value: item?.summary || "" },
-    { name: "child_voice", label: "Child voice", type: "textarea", full: true, value: item?.child_voice || "" },
-    { name: "proactive_strategies", label: "Proactive strategies", type: "textarea", full: true, value: item?.proactive_strategies || item?.staff_guidance || "" },
-    { name: "triggers", label: "Triggers", type: "textarea", full: true, value: item?.triggers || "" },
-    { name: "protective_factors", label: "Protective factors", type: "textarea", full: true, value: item?.protective_factors || "" },
+    wrapDocumentSection(
+      "Record",
+      "Complete the fields below.",
+      [
+        { name: "title", label: "Title", type: "text", value: item?.title || "" },
+        { name: "summary", label: "Summary", type: "textarea", full: true, value: item?.summary || "" },
+      ].map(buildFormField).join("")
+    ),
   ];
+}
+
+function renderDocumentSidePanels(recordType) {
+  const config = RECORD_CONFIG[recordType] || RECORD_CONFIG.plan;
+  els.documentTypeChip.textContent = config.documentTitle || config.label || "Record";
+  els.documentStandardsPanel.innerHTML = renderSidebarList(config.standards || []);
+  els.documentOfstedPanel.innerHTML = renderSidebarList(config.ofsted || []);
+  els.documentPromptPanel.innerHTML = `<div class="document-panel-card">${escapeHtml(config.prompt || "")}</div>`;
 }
 
 function openRecordModal(recordType, mode = "create", item = null) {
@@ -828,175 +746,14 @@ function openRecordModal(recordType, mode = "create", item = null) {
   const label = config.label || "Record";
 
   els.modalTitle.textContent = mode === "edit" ? `Edit ${label}` : `Add ${label}`;
-  els.modalSubtitle.textContent = mode === "edit" ? "Update the record below" : "Complete the form below";
+  els.modalSubtitle.textContent = mode === "edit" ? "Update the document below" : "Complete the document below";
   els.modalSaveBtn.textContent = mode === "edit" ? "Save changes" : "Save";
 
+  renderDocumentSidePanels(recordType);
+
   const schema = getModalSchema(recordType, item);
-  els.modalFields.innerHTML = schema.map(buildFormField).join("");
+  els.modalFields.innerHTML = schema.join("");
   openModal();
-}
-
-function getDocumentSchema(documentType, item = null) {
-  const today = toDateInputValue(new Date());
-
-  if (documentType === "daily_note") {
-    return {
-      title: item?.id ? "Daily Note" : "New Daily Note",
-      subtitle: "Shift recording in a PACE-informed daily note format.",
-      sheetClass: "document-sheet-wide",
-      fields: [
-        { name: "note_date", label: "Note date", type: "date", value: item?.note_date || today },
-        {
-          name: "shift_type",
-          label: "Shift type",
-          type: "select",
-          value: item?.shift_type || "day",
-          options: [
-            { value: "day", label: "Day" },
-            { value: "evening", label: "Evening" },
-            { value: "night", label: "Night" },
-            { value: "waking_night", label: "Waking night" },
-          ]
-        },
-        { name: "mood", label: "Mood / presentation headline", type: "text", value: item?.mood || "" },
-        { name: "presentation", label: "Presentation and emotional regulation", type: "textarea", full: true, large: true, value: item?.presentation || "" },
-        { name: "activities", label: "Activities, routines and daily living", type: "textarea", full: true, large: true, value: item?.activities || "" },
-        { name: "behaviour_update", label: "Behaviour as communication", type: "textarea", full: true, large: true, value: item?.behaviour_update || "" },
-        { name: "young_person_voice", label: "Young person’s voice", type: "textarea", full: true, value: item?.young_person_voice || item?.child_voice || "" },
-        { name: "positives", label: "Strengths, positives and progress", type: "textarea", full: true, value: item?.positives || "" },
-        { name: "actions_required", label: "Actions for the next shift", type: "textarea", full: true, value: item?.actions_required || "" },
-      ],
-    };
-  }
-
-  if (documentType === "incident") {
-    return {
-      title: item?.id ? "Incident Record" : "New Incident Record",
-      subtitle: "A relational, trauma-informed incident record with safeguarding-ready structure.",
-      sheetClass: "document-sheet-wide",
-      fields: [
-        { name: "incident_datetime", label: "Incident date and time", type: "datetime-local", value: toDateTimeLocalValue(item?.incident_datetime || item?.occurred_at) },
-        { name: "incident_type", label: "Incident type", type: "text", value: item?.incident_type || "" },
-        {
-          name: "severity",
-          label: "Severity",
-          type: "select",
-          value: item?.severity || "medium",
-          options: [
-            { value: "low", label: "Low" },
-            { value: "medium", label: "Medium" },
-            { value: "high", label: "High" },
-            { value: "critical", label: "Critical" },
-          ]
-        },
-        { name: "location", label: "Location", type: "text", value: item?.location || "" },
-        { name: "antecedent", label: "Antecedent / context", type: "textarea", full: true, large: true, value: item?.antecedent || "" },
-        { name: "description", label: "Incident description", type: "textarea", full: true, large: true, value: item?.description || item?.summary || "" },
-        { name: "presentation", label: "How the young person presented", type: "textarea", full: true, value: item?.presentation || "" },
-        { name: "staff_response", label: "Staff response and de-escalation", type: "textarea", full: true, large: true, value: item?.staff_response || "" },
-        { name: "child_voice", label: "Child voice", type: "textarea", full: true, value: item?.child_voice || "" },
-        { name: "outcome", label: "Outcome and follow-up", type: "textarea", full: true, large: true, value: item?.outcome || "" },
-      ],
-    };
-  }
-
-  if (documentType === "risk") {
-    return {
-      title: item?.id ? "Risk Assessment" : "New Risk Assessment",
-      subtitle: "Landscape-style risk assessment with PACE-informed formulation and clear controls.",
-      sheetClass: "document-sheet-wide",
-      fields: [
-        { name: "category", label: "Risk category", type: "text", value: item?.category || "" },
-        { name: "title", label: "Assessment title", type: "text", value: item?.title || "" },
-        {
-          name: "severity",
-          label: "Severity",
-          type: "select",
-          value: item?.severity || "medium",
-          options: [
-            { value: "low", label: "Low" },
-            { value: "medium", label: "Medium" },
-            { value: "high", label: "High" },
-          ]
-        },
-        {
-          name: "likelihood",
-          label: "Likelihood",
-          type: "select",
-          value: item?.likelihood || "medium",
-          options: [
-            { value: "low", label: "Low" },
-            { value: "medium", label: "Medium" },
-            { value: "high", label: "High" },
-          ]
-        },
-        { name: "review_date", label: "Review date", type: "date", value: item?.review_date || today },
-        { name: "concern_summary", label: "Concern summary / formulation", type: "textarea", full: true, large: true, value: item?.concern_summary || item?.formulation || "" },
-        { name: "known_triggers", label: "Known triggers", type: "textarea", full: true, value: item?.known_triggers || "" },
-        { name: "early_warning_signs", label: "Early warning signs", type: "textarea", full: true, value: item?.early_warning_signs || "" },
-        { name: "contextual_factors", label: "Contextual factors", type: "textarea", full: true, value: item?.contextual_factors || "" },
-        { name: "current_controls", label: "Current controls", type: "textarea", full: true, large: true, value: item?.current_controls || item?.staff_guidance || "" },
-        { name: "deescalation_strategies", label: "De-escalation strategies", type: "textarea", full: true, large: true, value: item?.deescalation_strategies || "" },
-        { name: "response_actions", label: "Response actions", type: "textarea", full: true, large: true, value: item?.response_actions || "" },
-        { name: "child_views", label: "Child views", type: "textarea", full: true, value: item?.child_views || item?.child_voice || "" },
-      ],
-    };
-  }
-
-  if (documentType === "support_plan") {
-    return {
-      title: item?.id ? "Support Plan" : "New Support Plan",
-      subtitle: "Full plan document with staff guidance, child voice and quality-standard links.",
-      sheetClass: "document-sheet-wide",
-      fields: [
-        { name: "plan_type", label: "Plan type", type: "text", value: item?.plan_type || "support_plan" },
-        { name: "title", label: "Plan title", type: "text", value: item?.title || "" },
-        { name: "start_date", label: "Start date", type: "date", value: item?.start_date || today },
-        { name: "review_date", label: "Review date", type: "date", value: item?.review_date || today },
-        { name: "presenting_need", label: "Presenting need / formulation", type: "textarea", full: true, large: true, value: item?.presenting_need || item?.formulation || "" },
-        { name: "summary", label: "Plan summary", type: "textarea", full: true, large: true, value: item?.summary || "" },
-        { name: "child_voice", label: "Child voice", type: "textarea", full: true, value: item?.child_voice || "" },
-        { name: "proactive_strategies", label: "Proactive strategies / staff guidance", type: "textarea", full: true, large: true, value: item?.proactive_strategies || item?.staff_guidance || "" },
-        { name: "pace_guidance", label: "PACE guidance", type: "textarea", full: true, value: item?.pace_guidance || "" },
-        { name: "triggers", label: "Triggers", type: "textarea", full: true, value: item?.triggers || "" },
-        { name: "protective_factors", label: "Protective factors", type: "textarea", full: true, value: item?.protective_factors || "" },
-      ],
-    };
-  }
-
-  if (documentType === "appointment") {
-    return {
-      title: item?.id ? "Appointment" : "New Appointment",
-      subtitle: "Appointment and reminder document linked to the relevant plan and young person journey.",
-      sheetClass: "document-sheet-narrow",
-      fields: [
-        { name: "appointment_title", label: "Appointment title", type: "text", value: item?.appointment_title || "" },
-        {
-          name: "appointment_type",
-          label: "Appointment type",
-          type: "select",
-          value: item?.appointment_type || "health",
-          options: [
-            { value: "health", label: "Health" },
-            { value: "education", label: "Education" },
-            { value: "family", label: "Family / contact" },
-            { value: "therapy", label: "Therapy / emotional wellbeing" },
-            { value: "review", label: "Review meeting" },
-            { value: "other", label: "Other" },
-          ]
-        },
-        { name: "appointment_datetime", label: "Date and time", type: "datetime-local", value: toDateTimeLocalValue(item?.appointment_datetime) },
-        { name: "location", label: "Location", type: "text", value: item?.location || "" },
-        { name: "professional_name", label: "Professional / service", type: "text", value: item?.professional_name || "" },
-        { name: "linked_plan_id", label: "Linked plan id", type: "number", value: item?.linked_plan_id || "" },
-        { name: "preparation_notes", label: "Preparation notes", type: "textarea", full: true, value: item?.preparation_notes || "" },
-        { name: "follow_up_notes", label: "Follow-up notes", type: "textarea", full: true, value: item?.follow_up_notes || "" },
-        { name: "alert_minutes_before", label: "Alert minutes before", type: "number", value: item?.alert_minutes_before || 30 },
-      ],
-    };
-  }
-
-  return null;
 }
 
 function serializeModalForm() {
@@ -1009,23 +766,6 @@ function serializeModalForm() {
 
   obj.young_person_id = state.youngPersonId;
   return obj;
-}
-
-function serialiseDocumentForm() {
-  const root = document.getElementById("documentFormRoot");
-  const fields = root ? root.querySelectorAll("[name]") : [];
-  const data = {};
-
-  fields.forEach((field) => {
-    if (field.type === "checkbox") {
-      data[field.name] = Boolean(field.checked);
-    } else {
-      data[field.name] = field.value;
-    }
-  });
-
-  data.young_person_id = state.youngPersonId;
-  return data;
 }
 
 async function handleModalSubmit(event) {
@@ -1044,11 +784,7 @@ async function handleModalSubmit(event) {
     els.modalSaveBtn.disabled = true;
 
     if (state.modalMode === "edit" && state.modalEditItem?.id) {
-      await apiSend(
-        config.updateUrl(state.modalEditItem.id),
-        config.updateMethod || "PATCH",
-        payload,
-      );
+      await apiSend(config.updateUrl(state.modalEditItem.id), config.updateMethod || "PATCH", payload);
       showMessage(`${config.label} updated.`);
     } else {
       await apiSend(config.createUrl(state.youngPersonId), "POST", payload);
@@ -1062,45 +798,6 @@ async function handleModalSubmit(event) {
     showError(error.message || "Could not save record.");
   } finally {
     els.modalSaveBtn.disabled = false;
-  }
-}
-
-async function handleDocumentSave() {
-  const documentType = state.documentType;
-  const config = RECORD_CONFIG[documentType];
-  const elements = getDocumentElements();
-
-  if (documentType === "appointment") {
-    showMessage("Appointment UI is ready. Next step is adding the appointment backend routes and reminder engine.");
-    closeDocumentModal();
-    return;
-  }
-
-  if (!config) {
-    showError("This document type is not configured.");
-    return;
-  }
-
-  const payload = serialiseDocumentForm();
-
-  try {
-    elements.saveBtn.disabled = true;
-
-    if (state.documentMode === "edit" && state.documentItem?.id) {
-      await apiSend(config.updateUrl(state.documentItem.id), config.updateMethod || "PATCH", payload);
-      showMessage(`${config.label} updated.`);
-    } else {
-      await apiSend(config.createUrl(state.youngPersonId), "POST", payload);
-      showMessage(`${config.label} created.`);
-    }
-
-    closeDocumentModal();
-    await loadCurrentView();
-  } catch (error) {
-    console.error(error);
-    showError(error.message || "Could not save document.");
-  } finally {
-    elements.saveBtn.disabled = false;
   }
 }
 
@@ -1122,7 +819,6 @@ async function runDrawerWorkflow(action) {
 
   let url = null;
   let body = null;
-  const method = "POST";
 
   if (action === "submit") url = config.submitUrl?.(id);
   if (action === "approve") {
@@ -1141,7 +837,7 @@ async function runDrawerWorkflow(action) {
   }
 
   try {
-    await apiSend(url, method, body);
+    await apiSend(url, "POST", body);
     showMessage(`${config.label} ${action}ed.`);
     await loadCurrentView();
     closeDrawer();
@@ -1153,127 +849,6 @@ async function runDrawerWorkflow(action) {
 
 function shouldShowDrawerActions(type) {
   return Boolean(RECORD_CONFIG[type]);
-}
-
-function buildDocumentMetaCards(item, documentType) {
-  const cards = [
-    { label: "Young person id", value: state.youngPersonId || "—" },
-    { label: "Document type", value: documentType.replaceAll("_", " ") },
-    { label: "Mode", value: state.documentMode === "edit" ? "Editing" : "Creating" },
-    { label: "Status", value: item?.workflow_status || item?.status || item?.approval_status || "draft" },
-  ];
-
-  return `
-    <div class="document-meta-grid">
-      ${cards.map((card) => `
-        <div class="document-meta-card">
-          <div class="document-meta-label">${escapeHtml(card.label)}</div>
-          <div class="document-meta-value">${escapeHtml(card.value)}</div>
-        </div>
-      `).join("")}
-    </div>
-  `;
-}
-
-function renderStandardsPanel(documentType) {
-  const standards = getStandardsForType(documentType);
-  if (!standards.length) return "";
-
-  return `
-    <section class="document-section">
-      <div class="document-section-header">
-        <div>
-          <h3 class="document-section-title">Quality standards and Ofsted alignment</h3>
-          <p class="document-section-help">This document is explicitly linked to the following standards and evidence themes.</p>
-        </div>
-      </div>
-
-      <div class="document-standard-list">
-        ${standards.map((standard) => `
-          <div class="document-standard-item">
-            <div class="document-standard-title">${escapeHtml(standard.code)} • ${escapeHtml(standard.title)}</div>
-            <div class="document-standard-copy">${escapeHtml(standard.copy)}</div>
-          </div>
-        `).join("")}
-      </div>
-    </section>
-  `;
-}
-
-function renderPacePanel(documentType) {
-  return `
-    <div class="document-pace-banner">
-      <strong>PACE guidance:</strong>
-      ${escapeHtml(getPaceCopy(documentType))}
-    </div>
-  `;
-}
-
-function renderDocumentTemplate(documentType, mode = "create", item = null) {
-  const schema = getDocumentSchema(documentType, item);
-  if (!schema) {
-    return `
-      <div class="document-sheet document-sheet-narrow">
-        <div class="empty-state">
-          <p>This document type is not available yet.</p>
-        </div>
-      </div>
-    `;
-  }
-
-  const fieldsHtml = schema.fields.map(documentField).join("");
-  const standardsHtml = renderStandardsPanel(documentType);
-  const paceHtml = renderPacePanel(documentType);
-
-  return `
-    <div class="${escapeHtml(schema.sheetClass || "document-sheet")}">
-      <div class="document-shell" id="documentFormRoot">
-        <section class="document-hero">
-          <h3 class="document-hero-title">${escapeHtml(schema.title)}</h3>
-          <p class="document-hero-subtitle">${escapeHtml(schema.subtitle)}</p>
-          ${buildDocumentMetaCards(item, documentType)}
-        </section>
-
-        ${paceHtml}
-
-        <section class="document-section">
-          <div class="document-section-header">
-            <div>
-              <h3 class="document-section-title">Main document fields</h3>
-              <p class="document-section-help">Complete the document in full. Keep language clear, reflective and evidence-based.</p>
-            </div>
-          </div>
-
-          <div class="document-field-grid document-field-grid-2">
-            ${fieldsHtml}
-          </div>
-        </section>
-
-        ${standardsHtml}
-      </div>
-    </div>
-  `;
-}
-
-function openStructuredDocument(recordType, mode = "create", item = null) {
-  state.documentType = recordType;
-  state.documentMode = mode;
-  state.documentItem = item;
-
-  const elements = getDocumentElements();
-  const schema = getDocumentSchema(recordType, item);
-  const label = schema?.title || "Document";
-
-  elements.title.textContent = label;
-  elements.subtitle.textContent =
-    mode === "edit"
-      ? "Review and update the document in its full document layout."
-      : "Complete the document in its full document layout.";
-  elements.saveBtn.textContent = mode === "edit" ? "Save changes" : "Save document";
-  elements.footerNote.textContent = `PACE-informed, quality-standard-linked and review-ready • ${label}`;
-
-  elements.body.innerHTML = renderDocumentTemplate(recordType, mode, item);
-  openDocumentModal();
 }
 
 async function openRecordDetail(item) {
@@ -1288,6 +863,7 @@ async function openRecordDetail(item) {
   state.activeRecordType = type;
 
   openDrawer();
+
   if (shouldShowDrawerActions(type)) {
     els.drawerActions.classList.remove("hidden");
   } else {
@@ -1320,7 +896,6 @@ async function openRecordDetail(item) {
       data?.report ||
       data;
 
-    state.activeRecordItem = { ...item, ...detailData };
     const entries = normaliseDetailEntries(detailData);
 
     els.drawerTitle.textContent = item.title || detailData.title || "Record details";
@@ -1369,41 +944,7 @@ async function openRecordDetail(item) {
           }
         </div>
       </div>
-
-      ${
-        QUALITY_STANDARD_LIBRARY[type]?.length
-          ? `
-            <div class="detail-section">
-              <h4>Quality standards</h4>
-              <div class="detail-list">
-                ${QUALITY_STANDARD_LIBRARY[type].map((standard) => `
-                  <div class="detail-row">
-                    <div class="detail-key">${escapeHtml(standard.code)}</div>
-                    <div class="detail-value">${escapeHtml(standard.title)} — ${escapeHtml(standard.copy)}</div>
-                  </div>
-                `).join("")}
-              </div>
-            </div>
-          `
-          : ""
-      }
-
-      <div class="detail-section">
-        <h4>PACE note</h4>
-        <div class="detail-value">${escapeHtml(getPaceCopy(type))}</div>
-      </div>
-
-      <div class="document-actions-row">
-        <button id="openAsDocumentBtn" class="primary-btn" type="button">Open full document</button>
-      </div>
     `;
-
-    const docBtn = document.getElementById("openAsDocumentBtn");
-    if (docBtn) {
-      docBtn.addEventListener("click", () => {
-        openStructuredDocument(type, "edit", state.activeRecordItem);
-      });
-    }
   } catch (error) {
     console.error(error);
     els.drawerSubtitle.textContent = "Could not load record";
@@ -1429,12 +970,7 @@ function renderRecordCard(item) {
     item.owner_name || null,
   ].filter(Boolean);
 
-  const badges = [
-    item.workflow_status,
-    item.severity,
-    item.status,
-    item.approval_status,
-  ].filter(Boolean);
+  const badges = [item.workflow_status, item.severity, item.status, item.approval_status].filter(Boolean);
 
   return `
     <article class="record-card">
@@ -1447,7 +983,7 @@ function renderRecordCard(item) {
       <div class="record-body">${escapeHtml(summary)}</div>
       ${renderBadges(badges)}
       <div class="day-record-actions">
-        <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}' type="button">Open</button>
+        <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>
       </div>
     </article>
   `;
@@ -1469,7 +1005,7 @@ function renderTimelineItem(item) {
       <div class="record-body">${escapeHtml(item.summary || item.narrative || "No summary available.")}</div>
       ${renderBadges([item.severity || item.significance, item.workflow_status || item.event_status])}
       <div class="day-record-actions">
-        <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}' type="button">Open</button>
+        <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>
       </div>
     </article>
   `;
@@ -1519,9 +1055,7 @@ function renderProfileSection(title, rows = []) {
   return `
     <section class="panel">
       <div class="panel-header">
-        <div>
-          <h3>${escapeHtml(title)}</h3>
-        </div>
+        <div><h3>${escapeHtml(title)}</h3></div>
       </div>
       <div class="kv">
         ${
@@ -1541,9 +1075,7 @@ function renderHandoverItem(title, body, badges = []) {
   return `
     <article class="record-card">
       <div class="record-card-header">
-        <div>
-          <h4>${escapeHtml(title)}</h4>
-        </div>
+        <div><h4>${escapeHtml(title)}</h4></div>
       </div>
       <div class="record-body">${escapeHtml(body || "—")}</div>
       ${renderBadges(badges)}
@@ -1635,7 +1167,7 @@ function renderSelectorList(items) {
             <p>${escapeHtml(meta || "Young person record")}</p>
           </div>
         </div>
-        <button class="primary-btn" data-open-young-person="${item.id}" type="button">Open</button>
+        <button class="primary-btn" data-open-young-person="${item.id}">Open</button>
       </article>
     `;
   }).join("");
@@ -2000,7 +1532,7 @@ async function loadHandover() {
           <p class="panel-subtitle">Auto-built from recent recorded reality.</p>
         </div>
         <div class="day-record-actions">
-          <button id="generateHandoverBtn" class="primary-btn" type="button">Generate handover</button>
+          <button id="generateHandoverBtn" class="primary-btn">Generate handover</button>
         </div>
       </div>
       ${
@@ -2108,52 +1640,32 @@ async function loadCompliance() {
   const data = await apiGet(`/young-people/${state.youngPersonId}/compliance`);
   const items = data.compliance_items || data.items || [];
 
-  const overdue = items.filter((x) => x.compliance_status === "overdue");
-  const dueSoon = items.filter((x) => x.compliance_status === "due_soon");
-
   els.content.innerHTML = `
-    <div class="grid grid-3">
-      <div class="stat-card">
-        <div class="stat-label">Total compliance items</div>
-        <div class="stat-value">${items.length}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Overdue</div>
-        <div class="stat-value">${overdue.length}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Due soon</div>
-        <div class="stat-value">${dueSoon.length}</div>
-      </div>
-    </div>
-
     <div class="panel">
       <div class="panel-header">
         <div>
-          <h3>Compliance dashboard</h3>
-          <p class="panel-subtitle">Reviews, follow-up points and statutory readiness for this young person.</p>
+          <h3>Compliance and review tracker</h3>
+          <p class="panel-subtitle">Upcoming, due soon and overdue items for this young person.</p>
         </div>
       </div>
 
       ${
         items.length
-          ? `<div class="record-list">
+          ? `
+            <div class="compliance-table">
               ${items.map((item) => `
-                <article class="record-card">
-                  <div class="record-card-header">
-                    <div>
-                      <h4>${escapeHtml(item.title || item.compliance_type || "Compliance item")}</h4>
-                      <div class="record-meta">
-                        ${escapeHtml(String(item.compliance_type || "").replaceAll("_", " "))} • Due ${escapeHtml(formatDate(item.due_date))}
-                      </div>
-                    </div>
+                <div class="compliance-row">
+                  <div>
+                    <strong>${escapeHtml(item.title || item.compliance_type || "Compliance item")}</strong>
+                    <div class="helper-note">${escapeHtml((item.compliance_type || "").replaceAll("_", " "))}</div>
                   </div>
-                  <div class="record-body">Status: ${escapeHtml(item.status || "—")}
-Approval: ${escapeHtml(item.approval_status || "—")}</div>
-                  ${renderBadges([item.compliance_status, item.status, item.approval_status])}
-                </article>
+                  <div>${escapeHtml(formatDate(item.due_date))}</div>
+                  <div>${renderBadges([item.status, item.approval_status])}</div>
+                  <div>${renderBadges([item.compliance_status])}</div>
+                </div>
               `).join("")}
-            </div>`
+            </div>
+          `
           : `<div class="empty-state">No compliance items found.</div>`
       }
     </div>
@@ -2170,9 +1682,10 @@ async function loadReports() {
       <div class="panel-header">
         <div>
           <h3>Reports</h3>
-          <p class="panel-subtitle">AI-generated reports, summaries and linked evidence.</p>
+          <p class="panel-subtitle">Generated reports and linked evidence.</p>
         </div>
       </div>
+
       ${
         items.length
           ? `<div class="record-list">
@@ -2183,16 +1696,18 @@ async function loadReports() {
                       <h4>${escapeHtml(item.title || item.report_type || "Report")}</h4>
                       <div class="record-meta">
                         ${escapeHtml(item.report_type || "report")}
-                        ${item.review_month ? ` • ${escapeHtml(item.review_month)}` : ""}
-                        • ${escapeHtml(formatDate(item.created_at))}
+                        ${item.review_month ? ` • ${escapeHtml(String(item.review_month))}` : ""}
+                        ${item.created_at ? ` • ${escapeHtml(formatDate(item.created_at))}` : ""}
                       </div>
                     </div>
                   </div>
-                  <div class="record-body">${escapeHtml(item.report_text || "No report text.")}</div>
+                  <div class="record-body">${escapeHtml(item.report_text || "No report text available.")}</div>
                   ${renderBadges([item.status])}
-                  <div class="day-record-actions">
-                    <button class="ghost-btn" data-open-report="${item.id}" type="button">Open</button>
+                  <div class="report-card-actions">
+                    <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify({ ...item, record_type: "report" }))}'>Open</button>
+                    <button class="ghost-btn" data-load-report-links="${item.id}">View links</button>
                   </div>
+                  <div id="report-links-${item.id}" class="helper-note hidden"></div>
                 </article>
               `).join("")}
             </div>`
@@ -2201,67 +1716,62 @@ async function loadReports() {
     </div>
   `;
 
-  els.content.querySelectorAll("[data-open-report]").forEach((btn) => {
+  els.content.querySelectorAll("[data-load-report-links]").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      const reportId = Number(btn.dataset.openReport);
-      if (!reportId) return;
+      const reportId = btn.dataset.loadReportLinks;
+      const target = document.getElementById(`report-links-${reportId}`);
+      if (!target) return;
 
       try {
-        const [reportRes, linksRes] = await Promise.all([
-          apiGet(`/young-people/reports/${reportId}`),
-          apiGet(`/young-people/reports/${reportId}/links`).catch(() => ({ items: [] })),
-        ]);
+        btn.disabled = true;
+        const linksData = await apiGet(`/young-people/reports/${reportId}/links`);
+        const links = linksData.items || [];
 
-        const report = reportRes.report || {};
-        const links = linksRes.items || [];
-
-        openDrawer();
-        els.drawerActions.classList.add("hidden");
-        els.drawerTitle.textContent = report.title || "Report";
-        els.drawerSubtitle.textContent = `${report.report_type || "report"} • ${formatDate(report.created_at)}`;
-        els.drawerBody.innerHTML = `
-          <div class="detail-section">
-            <h4>Report</h4>
-            <div class="detail-value">${escapeHtml(report.report_text || "No report text.")}</div>
-          </div>
-
-          <div class="detail-section">
-            <h4>Linked evidence</h4>
-            <div class="detail-list">
-              ${
-                links.length
-                  ? links.map((link) => `
-                      <div class="detail-row">
-                        <div class="detail-key">${escapeHtml(link.source_table || "source")}</div>
-                        <div class="detail-value">
-                          Source id: ${escapeHtml(link.source_id || "—")}
-                          ${link.link_reason ? `\nReason: ${escapeHtml(link.link_reason)}` : ""}
-                        </div>
-                      </div>
-                    `).join("")
-                  : `<div class="detail-row"><div class="detail-key">Links</div><div class="detail-value">No linked evidence found.</div></div>`
-              }
-            </div>
-          </div>
-        `;
+        target.classList.remove("hidden");
+        target.innerHTML = links.length
+          ? links.map((link) => `
+              <div class="document-panel-card">
+                ${escapeHtml(link.source_table || "source")} #${escapeHtml(String(link.source_id || ""))}
+                ${link.link_reason ? `<div class="helper-note">${escapeHtml(link.link_reason)}</div>` : ""}
+              </div>
+            `).join("")
+          : "No linked evidence found.";
       } catch (error) {
         console.error(error);
-        showError(error.message || "Could not open report.");
+        target.classList.remove("hidden");
+        target.textContent = error.message || "Could not load report links.";
+      } finally {
+        btn.disabled = false;
       }
     });
   });
+
+  bindDynamicOpenRecordButtons();
 }
 
 async function loadCalendarMonthSummary() {
   const year = state.calendarDate.getFullYear();
   const month = state.calendarDate.getMonth() + 1;
-  const data = await apiGet(`/young-people/${state.youngPersonId}/calendar-summary?year=${year}&month=${month}`);
-  state.calendarMonthSummary = data.days || data.items || [];
+
+  try {
+    const data = await apiGet(`/young-people/${state.youngPersonId}/calendar-summary?year=${year}&month=${month}`);
+    state.calendarMonthSummary = data.days || data.items || [];
+  } catch (error) {
+    console.error(error);
+    state.calendarMonthSummary = [];
+    throw error;
+  }
 }
 
 async function loadSelectedDayRecords() {
-  const data = await apiGet(`/young-people/${state.youngPersonId}/records-by-date?date=${state.selectedDate}`);
-  state.selectedDayRecords = data.items || [];
+  try {
+    const data = await apiGet(`/young-people/${state.youngPersonId}/records-by-date?date=${state.selectedDate}`);
+    state.selectedDayRecords = data.items || [];
+  } catch (error) {
+    console.error(error);
+    state.selectedDayRecords = [];
+    throw error;
+  }
 }
 
 function getMonthDayMeta(dateString) {
@@ -2289,7 +1799,6 @@ function buildCalendarGrid() {
       <button
         class="calendar-day ${isCurrentMonth ? "" : "other-month"} ${isToday ? "today" : ""} ${isSelected ? "selected" : ""}"
         data-calendar-date="${dateString}"
-        type="button"
       >
         <div class="calendar-day-number">${day.getDate()}</div>
         <div class="calendar-day-markers">
@@ -2327,7 +1836,7 @@ function renderDayRecords(records) {
         </div>
         <div class="day-record-summary">${escapeHtml(summary)}</div>
         <div class="day-record-actions">
-          <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}' type="button">Open</button>
+          <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>
         </div>
       </article>
     `;
@@ -2360,10 +1869,9 @@ function renderCalendarView() {
         <div class="calendar-header">
           <div class="calendar-title">${escapeHtml(monthName(state.calendarDate))}</div>
           <div class="calendar-controls">
-            <button class="calendar-icon-btn" id="calendarPrevBtn" type="button">←</button>
-            <button class="calendar-icon-btn" id="calendarTodayBtn" type="button">Today</button>
-            <button class="calendar-icon-btn" id="calendarNextBtn" type="button">→</button>
-            <button class="primary-btn" id="newAppointmentBtn" type="button">New appointment</button>
+            <button class="calendar-icon-btn" id="calendarPrevBtn">←</button>
+            <button class="calendar-icon-btn" id="calendarTodayBtn">Today</button>
+            <button class="calendar-icon-btn" id="calendarNextBtn">→</button>
           </div>
         </div>
 
@@ -2386,6 +1894,9 @@ function renderCalendarView() {
             <h3>${escapeHtml(selectedDateLabel)}</h3>
             <p class="panel-subtitle">Everything recorded on this day.</p>
           </div>
+          <div class="day-record-actions">
+            <button id="addAppointmentBtn" class="primary-btn" type="button">Add appointment</button>
+          </div>
         </div>
 
         <div class="day-summary-row">
@@ -2406,6 +1917,7 @@ function renderCalendarView() {
             <option value="family">Family</option>
             <option value="keywork">Keywork</option>
             <option value="support_plan">Plans</option>
+            <option value="appointment">Appointments</option>
           </select>
         </div>
 
@@ -2421,10 +1933,10 @@ function bindCalendarEvents() {
   const prevBtn = document.getElementById("calendarPrevBtn");
   const nextBtn = document.getElementById("calendarNextBtn");
   const todayBtn = document.getElementById("calendarTodayBtn");
-  const newAppointmentBtn = document.getElementById("newAppointmentBtn");
   const dayResults = document.getElementById("dayRecordsResults");
   const searchEl = document.getElementById("dayRecordSearch");
   const typeEl = document.getElementById("dayRecordType");
+  const addAppointmentBtn = document.getElementById("addAppointmentBtn");
 
   async function rerenderCalendar() {
     setLoading("Loading calendar...");
@@ -2449,14 +1961,6 @@ function bindCalendarEvents() {
     await rerenderCalendar();
   });
 
-  if (newAppointmentBtn) {
-    newAppointmentBtn.addEventListener("click", () => {
-      openStructuredDocument("appointment", "create", {
-        appointment_datetime: `${state.selectedDate}T09:00`,
-      });
-    });
-  }
-
   els.content.querySelectorAll("[data-calendar-date]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       state.selectedDate = btn.dataset.calendarDate;
@@ -2465,6 +1969,12 @@ function bindCalendarEvents() {
       await rerenderCalendar();
     });
   });
+
+  if (addAppointmentBtn) {
+    addAppointmentBtn.addEventListener("click", () => {
+      showMessage("Next step: connect appointment modal and backend route.");
+    });
+  }
 
   function applyDayFilters() {
     const term = (searchEl.value || "").trim().toLowerCase();
@@ -2743,7 +2253,6 @@ function bindEvents() {
     state.selectedDayRecords = [];
     closeDrawer();
     closeModal();
-    closeDocumentModal();
 
     const url = new URL(window.location.href);
     url.searchParams.delete("id");
@@ -2757,10 +2266,10 @@ function bindEvents() {
     if (!btn) return;
 
     const action = btn.dataset.action;
-    if (action === "daily-note") openStructuredDocument("daily_note", "create");
-    if (action === "incident") openStructuredDocument("incident", "create");
-    if (action === "risk") openStructuredDocument("risk", "create");
-    if (action === "plan") openStructuredDocument("support_plan", "create");
+    if (action === "daily-note") openRecordModal("daily_note", "create");
+    if (action === "incident") openRecordModal("incident", "create");
+    if (action === "risk") openRecordModal("risk", "create");
+    if (action === "plan") openRecordModal("support_plan", "create");
   });
 
   els.closeDrawerBtn.addEventListener("click", closeDrawer);
@@ -2772,13 +2281,24 @@ function bindEvents() {
       showError("This record type cannot be edited from the workspace yet.");
       return;
     }
-    openStructuredDocument(state.activeRecordType, "edit", state.activeRecordItem);
+    openRecordModal(state.activeRecordType, "edit", state.activeRecordItem);
   });
 
   els.drawerSubmitBtn.addEventListener("click", () => runDrawerWorkflow("submit"));
   els.drawerApproveBtn.addEventListener("click", () => runDrawerWorkflow("approve"));
   els.drawerReturnBtn.addEventListener("click", () => runDrawerWorkflow("return"));
   els.drawerArchiveBtn.addEventListener("click", () => runDrawerWorkflow("archive"));
+
+  if (els.drawerOpenFullBtn) {
+    els.drawerOpenFullBtn.addEventListener("click", () => {
+      if (!state.activeRecordItem || !state.activeRecordType) return;
+      if (!RECORD_CONFIG[state.activeRecordType]) {
+        showError("This record type cannot be opened in full document mode yet.");
+        return;
+      }
+      openRecordModal(state.activeRecordType, "edit", state.activeRecordItem);
+    });
+  }
 
   els.closeModalBtn.addEventListener("click", closeModal);
   els.modalCancelBtn.addEventListener("click", closeModal);
@@ -2787,9 +2307,11 @@ function bindEvents() {
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
+      if (!els.modal.classList.contains("hidden")) {
+        closeModal();
+        return;
+      }
       closeDrawer();
-      closeModal();
-      closeDocumentModal();
     }
   });
 }
