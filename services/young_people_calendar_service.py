@@ -45,6 +45,8 @@ class YoungPeopleCalendarService:
                     "has_family": False,
                     "has_keywork": False,
                     "has_support_plan": False,
+                    "has_appointment": False,
+                    "has_alert": False,
                 }
                 current += timedelta(days=1)
 
@@ -79,6 +81,10 @@ class YoungPeopleCalendarService:
                     row["has_keywork"] = True
                 elif record_type == "support_plan":
                     row["has_support_plan"] = True
+                elif record_type == "appointment":
+                    row["has_appointment"] = True
+                elif record_type == "alert":
+                    row["has_alert"] = True
 
             days = list(by_day.values())
             return {
@@ -102,6 +108,20 @@ class YoungPeopleCalendarService:
             with conn.cursor() as cur:
                 results: list[dict[str, Any]] = []
 
+                results.extend(
+                    YoungPeopleCalendarService._fetch_alerts(
+                        cur=cur,
+                        young_person_id=young_person_id,
+                        selected_date=selected_date,
+                    )
+                )
+                results.extend(
+                    YoungPeopleCalendarService._fetch_appointments(
+                        cur=cur,
+                        young_person_id=young_person_id,
+                        selected_date=selected_date,
+                    )
+                )
                 results.extend(
                     YoungPeopleCalendarService._fetch_daily_notes(
                         cur=cur,
@@ -168,9 +188,9 @@ class YoungPeopleCalendarService:
 
             results.sort(
                 key=lambda x: (
-                    str(x.get("recorded_at") or ""),
-                    str(x.get("record_type") or ""),
-                    int(x.get("record_id") or 0),
+                    x.get("recorded_at") or "",
+                    x.get("record_type") or "",
+                    x.get("record_id") or 0,
                 ),
                 reverse=True,
             )
@@ -185,20 +205,6 @@ class YoungPeopleCalendarService:
             release_db_connection(conn)
 
     @staticmethod
-    def _table_exists(cur, table_name: str) -> bool:
-        cur.execute(
-            """
-            SELECT 1
-            FROM information_schema.tables
-            WHERE table_schema = 'public'
-              AND table_name = %s
-            LIMIT 1
-            """,
-            (table_name,),
-        )
-        return bool(cur.fetchone())
-
-    @staticmethod
     def _fetch_calendar_items(
         *,
         conn,
@@ -206,151 +212,241 @@ class YoungPeopleCalendarService:
         start_date: date,
         end_date: date,
     ) -> list[dict[str, Any]]:
-        items: list[dict[str, Any]] = []
-
         with conn.cursor() as cur:
-            if YoungPeopleCalendarService._table_exists(cur, "daily_notes"):
-                cur.execute(
-                    """
+            union_sql = """
+                SELECT record_date, record_type
+                FROM (
                     SELECT dn.note_date::date AS record_date, 'daily_note' AS record_type
                     FROM daily_notes dn
                     WHERE dn.young_person_id = %s
-                      AND dn.note_date IS NOT NULL
                       AND dn.note_date BETWEEN %s AND %s
-                    ORDER BY dn.note_date ASC
-                    """,
-                    (young_person_id, start_date, end_date),
-                )
-                items.extend(cur.fetchall() or [])
 
-            if YoungPeopleCalendarService._table_exists(cur, "incidents"):
-                cur.execute(
-                    """
+                    UNION ALL
+
                     SELECT i.incident_datetime::date AS record_date, 'incident' AS record_type
                     FROM incidents i
                     WHERE i.young_person_id = %s
                       AND i.incident_datetime IS NOT NULL
                       AND i.incident_datetime::date BETWEEN %s AND %s
-                    ORDER BY i.incident_datetime ASC
-                    """,
-                    (young_person_id, start_date, end_date),
-                )
-                items.extend(cur.fetchall() or [])
 
-            if YoungPeopleCalendarService._table_exists(cur, "risk_assessments"):
-                cur.execute(
-                    """
+                    UNION ALL
+
                     SELECT ra.review_date::date AS record_date, 'risk' AS record_type
                     FROM risk_assessments ra
                     WHERE ra.young_person_id = %s
                       AND ra.review_date IS NOT NULL
                       AND ra.review_date BETWEEN %s AND %s
-                    ORDER BY ra.review_date ASC
-                    """,
-                    (young_person_id, start_date, end_date),
-                )
-                items.extend(cur.fetchall() or [])
 
-            if YoungPeopleCalendarService._table_exists(cur, "health_records"):
-                cur.execute(
-                    """
+                    UNION ALL
+
                     SELECT hr.event_datetime::date AS record_date, 'health' AS record_type
                     FROM health_records hr
                     WHERE hr.young_person_id = %s
                       AND hr.event_datetime IS NOT NULL
                       AND hr.event_datetime::date BETWEEN %s AND %s
-                    ORDER BY hr.event_datetime ASC
-                    """,
-                    (young_person_id, start_date, end_date),
-                )
-                items.extend(cur.fetchall() or [])
 
-            if YoungPeopleCalendarService._table_exists(cur, "medication_records"):
-                cur.execute(
-                    """
+                    UNION ALL
+
                     SELECT mr.scheduled_time::date AS record_date, 'health' AS record_type
                     FROM medication_records mr
                     WHERE mr.young_person_id = %s
                       AND mr.scheduled_time IS NOT NULL
                       AND mr.scheduled_time::date BETWEEN %s AND %s
-                    ORDER BY mr.scheduled_time ASC
-                    """,
-                    (young_person_id, start_date, end_date),
-                )
-                items.extend(cur.fetchall() or [])
 
-            if YoungPeopleCalendarService._table_exists(cur, "education_records"):
-                cur.execute(
-                    """
+                    UNION ALL
+
                     SELECT er.record_date::date AS record_date, 'education' AS record_type
                     FROM education_records er
                     WHERE er.young_person_id = %s
                       AND er.record_date IS NOT NULL
                       AND er.record_date BETWEEN %s AND %s
-                    ORDER BY er.record_date ASC
-                    """,
-                    (young_person_id, start_date, end_date),
-                )
-                items.extend(cur.fetchall() or [])
 
-            if YoungPeopleCalendarService._table_exists(cur, "family_contact_records"):
-                cur.execute(
-                    """
+                    UNION ALL
+
                     SELECT fcr.contact_datetime::date AS record_date, 'family' AS record_type
                     FROM family_contact_records fcr
                     WHERE fcr.young_person_id = %s
                       AND fcr.contact_datetime IS NOT NULL
                       AND fcr.contact_datetime::date BETWEEN %s AND %s
-                    ORDER BY fcr.contact_datetime ASC
-                    """,
-                    (young_person_id, start_date, end_date),
-                )
-                items.extend(cur.fetchall() or [])
 
-            if YoungPeopleCalendarService._table_exists(cur, "keywork_sessions"):
-                cur.execute(
-                    """
+                    UNION ALL
+
                     SELECT ks.session_date::date AS record_date, 'keywork' AS record_type
                     FROM keywork_sessions ks
                     WHERE ks.young_person_id = %s
                       AND ks.session_date IS NOT NULL
                       AND ks.session_date BETWEEN %s AND %s
-                    ORDER BY ks.session_date ASC
-                    """,
-                    (young_person_id, start_date, end_date),
-                )
-                items.extend(cur.fetchall() or [])
 
-            if YoungPeopleCalendarService._table_exists(cur, "support_plans"):
-                cur.execute(
-                    """
+                    UNION ALL
+
                     SELECT sp.review_date::date AS record_date, 'support_plan' AS record_type
                     FROM support_plans sp
                     WHERE sp.young_person_id = %s
                       AND sp.review_date IS NOT NULL
                       AND sp.review_date BETWEEN %s AND %s
-                    ORDER BY sp.review_date ASC
-                    """,
-                    (young_person_id, start_date, end_date),
-                )
-                items.extend(cur.fetchall() or [])
+
+                    UNION ALL
+
+                    SELECT ap.appointment_date::date AS record_date, 'appointment' AS record_type
+                    FROM young_person_appointments ap
+                    WHERE ap.young_person_id = %s
+                      AND ap.appointment_date IS NOT NULL
+                      AND ap.appointment_date::date BETWEEN %s AND %s
+
+                    UNION ALL
+
+                    SELECT a.review_date::date AS record_date, 'alert' AS record_type
+                    FROM young_person_alerts a
+                    WHERE a.young_person_id = %s
+                      AND a.review_date IS NOT NULL
+                      AND a.review_date BETWEEN %s AND %s
+                ) t
+                WHERE record_date IS NOT NULL
+                ORDER BY record_date ASC
+            """
+            params = [
+                young_person_id, start_date, end_date,
+                young_person_id, start_date, end_date,
+                young_person_id, start_date, end_date,
+                young_person_id, start_date, end_date,
+                young_person_id, start_date, end_date,
+                young_person_id, start_date, end_date,
+                young_person_id, start_date, end_date,
+                young_person_id, start_date, end_date,
+                young_person_id, start_date, end_date,
+                young_person_id, start_date, end_date,
+                young_person_id, start_date, end_date,
+            ]
+            cur.execute(union_sql, params)
+            rows = cur.fetchall() or []
 
         return [
             {
                 "record_date": row["record_date"].isoformat()
-                if row.get("record_date") and hasattr(row["record_date"], "isoformat")
-                else str(row.get("record_date")),
-                "record_type": row.get("record_type"),
+                if hasattr(row["record_date"], "isoformat")
+                else str(row["record_date"]),
+                "record_type": row["record_type"],
             }
-            for row in items
-            if row.get("record_date") is not None and row.get("record_type")
+            for row in rows
         ]
 
     @staticmethod
-    def _fetch_daily_notes(*, cur, young_person_id: int, selected_date: date) -> list[dict[str, Any]]:
-        if not YoungPeopleCalendarService._table_exists(cur, "daily_notes"):
-            return []
+    def _fetch_alerts(*, cur, young_person_id: int, selected_date: date) -> list[dict[str, Any]]:
+        cur.execute(
+            """
+            SELECT
+                a.id,
+                a.alert_type,
+                a.title,
+                a.description,
+                a.severity,
+                a.is_active,
+                a.review_date,
+                a.created_by,
+                a.created_at,
+                u.first_name,
+                u.last_name
+            FROM young_person_alerts a
+            LEFT JOIN users u ON a.created_by = u.id
+            WHERE a.young_person_id = %s
+              AND a.review_date = %s
+            ORDER BY a.created_at DESC, a.id DESC
+            """,
+            (young_person_id, selected_date),
+        )
+        rows = cur.fetchall() or []
 
+        return [
+            {
+                "record_type": "alert",
+                "record_id": row["id"],
+                "id": row["id"],
+                "title": row.get("title") or row.get("alert_type") or "Alert",
+                "summary": row.get("description") or "Alert review due",
+                "recorded_at": row.get("review_date") or row.get("created_at"),
+                "recorded_by_name": YoungPeopleCalendarService._full_name(
+                    row.get("first_name"), row.get("last_name")
+                ),
+                "workflow_status": "active" if row.get("is_active") else "inactive",
+                "severity": row.get("severity") or "medium",
+            }
+            for row in rows
+        ]
+
+    @staticmethod
+    def _fetch_appointments(*, cur, young_person_id: int, selected_date: date) -> list[dict[str, Any]]:
+        cur.execute(
+            """
+            SELECT
+                ap.id,
+                ap.title,
+                ap.appointment_type,
+                ap.appointment_date,
+                ap.end_datetime,
+                ap.location,
+                ap.professional_name,
+                ap.professional_role,
+                ap.summary,
+                ap.purpose,
+                ap.child_voice,
+                ap.follow_up_actions,
+                ap.linked_plan_id,
+                ap.status,
+                ap.alert_enabled,
+                ap.reminder_minutes_before,
+                ap.created_by,
+                ap.created_at,
+                u.first_name,
+                u.last_name,
+                sp.title AS linked_plan_title
+            FROM young_person_appointments ap
+            LEFT JOIN users u ON ap.created_by = u.id
+            LEFT JOIN support_plans sp ON ap.linked_plan_id = sp.id
+            WHERE ap.young_person_id = %s
+              AND ap.appointment_date IS NOT NULL
+              AND ap.appointment_date::date = %s
+            ORDER BY ap.appointment_date ASC, ap.id DESC
+            """,
+            (young_person_id, selected_date),
+        )
+        rows = cur.fetchall() or []
+
+        items: list[dict[str, Any]] = []
+        for row in rows:
+            summary_parts = [
+                row.get("summary"),
+                f"Purpose: {row.get('purpose')}" if row.get("purpose") else None,
+                f"Professional: {row.get('professional_name')}" if row.get("professional_name") else None,
+                f"Linked plan: {row.get('linked_plan_title')}" if row.get("linked_plan_title") else None,
+            ]
+            summary = " | ".join([str(x).strip() for x in summary_parts if x and str(x).strip()])
+
+            items.append(
+                {
+                    "record_type": "appointment",
+                    "record_id": row["id"],
+                    "id": row["id"],
+                    "title": row.get("title") or row.get("appointment_type") or "Appointment",
+                    "summary": summary or "Appointment scheduled",
+                    "recorded_at": row.get("appointment_date") or row.get("created_at"),
+                    "recorded_by_name": YoungPeopleCalendarService._full_name(
+                        row.get("first_name"), row.get("last_name")
+                    ),
+                    "workflow_status": row.get("status") or "scheduled",
+                    "severity": "medium",
+                    "location": row.get("location"),
+                    "professional_name": row.get("professional_name"),
+                    "professional_role": row.get("professional_role"),
+                    "linked_plan_id": row.get("linked_plan_id"),
+                    "linked_plan_title": row.get("linked_plan_title"),
+                    "alert_enabled": row.get("alert_enabled"),
+                    "reminder_minutes_before": row.get("reminder_minutes_before"),
+                }
+            )
+        return items
+
+    @staticmethod
+    def _fetch_daily_notes(*, cur, young_person_id: int, selected_date: date) -> list[dict[str, Any]]:
         cur.execute(
             """
             SELECT
@@ -405,9 +501,6 @@ class YoungPeopleCalendarService:
 
     @staticmethod
     def _fetch_incidents(*, cur, young_person_id: int, selected_date: date) -> list[dict[str, Any]]:
-        if not YoungPeopleCalendarService._table_exists(cur, "incidents"):
-            return []
-
         cur.execute(
             """
             SELECT
@@ -451,9 +544,6 @@ class YoungPeopleCalendarService:
 
     @staticmethod
     def _fetch_risks(*, cur, young_person_id: int, selected_date: date) -> list[dict[str, Any]]:
-        if not YoungPeopleCalendarService._table_exists(cur, "risk_assessments"):
-            return []
-
         cur.execute(
             """
             SELECT
@@ -496,9 +586,6 @@ class YoungPeopleCalendarService:
 
     @staticmethod
     def _fetch_health_records(*, cur, young_person_id: int, selected_date: date) -> list[dict[str, Any]]:
-        if not YoungPeopleCalendarService._table_exists(cur, "health_records"):
-            return []
-
         cur.execute(
             """
             SELECT
@@ -541,9 +628,6 @@ class YoungPeopleCalendarService:
 
     @staticmethod
     def _fetch_medication_records(*, cur, young_person_id: int, selected_date: date) -> list[dict[str, Any]]:
-        if not YoungPeopleCalendarService._table_exists(cur, "medication_records"):
-            return []
-
         cur.execute(
             """
             SELECT
@@ -588,9 +672,6 @@ class YoungPeopleCalendarService:
 
     @staticmethod
     def _fetch_education_records(*, cur, young_person_id: int, selected_date: date) -> list[dict[str, Any]]:
-        if not YoungPeopleCalendarService._table_exists(cur, "education_records"):
-            return []
-
         cur.execute(
             """
             SELECT
@@ -632,9 +713,6 @@ class YoungPeopleCalendarService:
 
     @staticmethod
     def _fetch_family_records(*, cur, young_person_id: int, selected_date: date) -> list[dict[str, Any]]:
-        if not YoungPeopleCalendarService._table_exists(cur, "family_contact_records"):
-            return []
-
         cur.execute(
             """
             SELECT
@@ -678,9 +756,6 @@ class YoungPeopleCalendarService:
 
     @staticmethod
     def _fetch_keywork_records(*, cur, young_person_id: int, selected_date: date) -> list[dict[str, Any]]:
-        if not YoungPeopleCalendarService._table_exists(cur, "keywork_sessions"):
-            return []
-
         cur.execute(
             """
             SELECT
@@ -722,9 +797,6 @@ class YoungPeopleCalendarService:
 
     @staticmethod
     def _fetch_plan_records(*, cur, young_person_id: int, selected_date: date) -> list[dict[str, Any]]:
-        if not YoungPeopleCalendarService._table_exists(cur, "support_plans"):
-            return []
-
         cur.execute(
             """
             SELECT
