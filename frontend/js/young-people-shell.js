@@ -68,7 +68,7 @@ const VIEW_CONFIG = {
   },
   calendar: {
     title: "Calendar",
-    subtitle: "All records by day",
+    subtitle: "All records, appointments and alerts by day",
     loader: loadCalendarView,
   },
   timeline: {
@@ -80,11 +80,6 @@ const VIEW_CONFIG = {
     title: "Handover",
     subtitle: "What the next staff need to know",
     loader: loadHandover,
-  },
-  appointments: {
-    title: "Appointments",
-    subtitle: "Appointments, reminders and linked plans",
-    loader: loadAppointments,
   },
   "daily-notes": {
     title: "Daily notes",
@@ -103,8 +98,13 @@ const VIEW_CONFIG = {
   },
   plans: {
     title: "Plans",
-    subtitle: "Plans and staff guidance",
+    subtitle: "Support, care and placement guidance",
     loader: () => loadRecordList(RECORD_CONFIG.support_plan.listUrl(state.youngPersonId), "Plans"),
+  },
+  appointments: {
+    title: "Appointments",
+    subtitle: "Appointments, reminders and linked plans",
+    loader: loadAppointments,
   },
   health: {
     title: "Health",
@@ -128,13 +128,13 @@ const VIEW_CONFIG = {
   },
   compliance: {
     title: "Compliance",
-    subtitle: "Checks, gaps and evidence readiness",
-    loader: loadCompliancePlaceholder,
+    subtitle: "Checks, gaps, deadlines and evidence readiness",
+    loader: loadCompliance,
   },
   reports: {
     title: "Reports",
-    subtitle: "Outputs, summaries and management reporting",
-    loader: loadReportsPlaceholder,
+    subtitle: "Reports, evidence links and inspection outputs",
+    loader: loadReports,
   },
 };
 
@@ -197,18 +197,6 @@ const RECORD_CONFIG = {
     completeUrl: (id) => `/young-people/appointments/${id}/complete`,
     cancelUrl: (id) => `/young-people/appointments/${id}/cancel`,
   },
-  plan: {
-    label: "Plan",
-    listUrl: (youngPersonId) => `/young-people/${youngPersonId}/plans`,
-    createUrl: (youngPersonId) => `/young-people/${youngPersonId}/plans`,
-    detailUrl: (id) => `/young-people/plans/${id}`,
-    updateUrl: (id) => `/young-people/plans/${id}`,
-    updateMethod: "PUT",
-    submitUrl: (id) => `/young-people/plans/${id}/submit`,
-    approveUrl: (id) => `/young-people/plans/${id}/approve`,
-    returnUrl: (id) => `/young-people/plans/${id}/return`,
-    archiveUrl: (id) => `/young-people/plans/${id}/archive`,
-  },
 };
 
 function getYoungPersonId() {
@@ -223,6 +211,18 @@ function toDateInputValue(date) {
   const month = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function toDateTimeLocalValue(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hours = String(d.getHours()).padStart(2, "0");
+  const mins = String(d.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${mins}`;
 }
 
 function monthName(date) {
@@ -344,9 +344,9 @@ function formatShortTime(value) {
 
 function statusBadgeClass(value) {
   const v = String(value || "").toLowerCase();
-  if (["approved", "active", "recorded", "low", "completed", "scheduled", "done"].includes(v)) return "success";
-  if (["submitted", "pending", "medium", "due_soon", "upcoming"].includes(v)) return "warning";
-  if (["returned", "high", "critical", "archived", "cancelled", "overdue"].includes(v)) return "danger";
+  if (["approved", "active", "recorded", "low", "completed", "ok", "scheduled"].includes(v)) return "success";
+  if (["submitted", "pending", "medium", "due_soon", "draft"].includes(v)) return "warning";
+  if (["returned", "high", "critical", "archived", "overdue", "cancelled"].includes(v)) return "danger";
   return "";
 }
 
@@ -375,7 +375,6 @@ function getRecordUrl(item) {
     support_plan: RECORD_CONFIG.support_plan.detailUrl(id),
     plan: RECORD_CONFIG.support_plan.detailUrl(id),
     appointment: RECORD_CONFIG.appointment.detailUrl(id),
-    appointments: RECORD_CONFIG.appointment.detailUrl(id),
     health: `/young-people/health-records/${id}`,
     health_record: `/young-people/health-records/${id}`,
     medication_profile: `/young-people/medication-profiles/${id}`,
@@ -398,7 +397,6 @@ function normaliseRecordType(item) {
   if (raw === "daily_notes") return "daily_note";
   if (raw === "incidents") return "incident";
   if (raw === "keywork_session") return "keywork";
-  if (raw === "appointments") return "appointment";
   return raw;
 }
 
@@ -412,6 +410,7 @@ function normaliseDetailEntries(data) {
     "title",
     "summary",
     "narrative",
+    "report_text",
   ]);
 
   return Object.entries(data || {})
@@ -420,6 +419,46 @@ function normaliseDetailEntries(data) {
       key: key.replaceAll("_", " "),
       value: typeof value === "object" ? JSON.stringify(value, null, 2) : String(value),
     }));
+}
+
+function renderDocumentHint(recordType) {
+  const hints = {
+    daily_note: {
+      title: "Daily note guidance",
+      text: "Write clearly, chronologically and therapeutically. Show what happened, how the young person presented, their voice, what helped, and what adults need next.",
+    },
+    incident: {
+      title: "Incident guidance",
+      text: "Keep this child-focused and factual. Describe the concern, context, de-escalation used, impact, safeguarding significance, and what needs to happen next.",
+    },
+    risk: {
+      title: "Risk assessment guidance",
+      text: "Write this as a living landscape risk assessment. Focus on triggers, meaning behind behaviour, protective factors, PACE-informed staff responses and practical controls.",
+    },
+    support_plan: {
+      title: "Plan guidance",
+      text: "This should read like a therapeutic support / placement / care plan. Keep the young person at the centre, explain what adults need to understand, and give kind, practical guidance.",
+    },
+    appointment: {
+      title: "Appointment guidance",
+      text: "Record the purpose, child voice, emotional meaning, preparation needed, who is attending, links to plans, and follow-up actions for staff afterwards.",
+    },
+  };
+
+  const hint = hints[recordType];
+  if (!hint) return "";
+  return `
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h3>${escapeHtml(hint.title)}</h3>
+          <p class="panel-subtitle">PACE-informed, quality-led recording.</p>
+        </div>
+      </div>
+      <div class="record-body">${escapeHtml(hint.text)}</div>
+      ${renderBadges(["PACE", "quality_standards", "ofsted_ready"])}
+    </section>
+  `;
 }
 
 function openDrawer() {
@@ -453,15 +492,18 @@ function closeModal() {
 }
 
 function buildFormField(field) {
-  const common = `
-    <label class="form-label" for="${field.name}">${escapeHtml(field.label)}</label>
-  `;
+  const common = `<label class="form-label" for="${field.name}">${escapeHtml(field.label)}</label>`;
 
   if (field.type === "textarea") {
     return `
       <div class="form-field ${field.full ? "full" : ""}">
         ${common}
-        <textarea id="${field.name}" name="${field.name}" class="textarea-input" placeholder="${escapeHtml(field.placeholder || "")}">${escapeHtml(field.value || "")}</textarea>
+        <textarea
+          id="${field.name}"
+          name="${field.name}"
+          class="textarea-input"
+          placeholder="${escapeHtml(field.placeholder || "")}"
+        >${escapeHtml(field.value || "")}</textarea>
       </div>
     `;
   }
@@ -498,25 +540,22 @@ function buildFormField(field) {
 
 function getModalSchema(recordType, item = null) {
   const today = toDateInputValue(new Date());
-  const nowValue = (() => {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    const hh = String(d.getHours()).padStart(2, "0");
-    const mi = String(d.getMinutes()).padStart(2, "0");
-    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
-  })();
 
   if (recordType === "daily_note") {
     return [
       { name: "note_date", label: "Date", type: "date", value: item?.note_date || today },
-      { name: "shift_type", label: "Shift type", type: "select", value: item?.shift_type || "day", options: [
-        { value: "day", label: "Day" },
-        { value: "evening", label: "Evening" },
-        { value: "night", label: "Night" },
-        { value: "waking_night", label: "Waking night" },
-      ]},
+      {
+        name: "shift_type",
+        label: "Shift type",
+        type: "select",
+        value: item?.shift_type || "day",
+        options: [
+          { value: "day", label: "Day" },
+          { value: "evening", label: "Evening" },
+          { value: "night", label: "Night" },
+          { value: "waking_night", label: "Waking night" },
+        ],
+      },
       { name: "mood", label: "Mood", type: "text", value: item?.mood || "" },
       { name: "presentation", label: "Presentation", type: "textarea", full: true, value: item?.presentation || "" },
       { name: "activities", label: "Activities", type: "textarea", full: true, value: item?.activities || "" },
@@ -535,15 +574,21 @@ function getModalSchema(recordType, item = null) {
         type: "datetime-local",
         value: item?.incident_datetime
           ? item.incident_datetime.slice(0, 16)
-          : (item?.occurred_at ? String(item.occurred_at).slice(0, 16) : nowValue),
+          : (item?.occurred_at ? String(item.occurred_at).slice(0, 16) : ""),
       },
       { name: "incident_type", label: "Incident type", type: "text", value: item?.incident_type || "" },
-      { name: "severity", label: "Severity", type: "select", value: item?.severity || "medium", options: [
-        { value: "low", label: "Low" },
-        { value: "medium", label: "Medium" },
-        { value: "high", label: "High" },
-        { value: "critical", label: "Critical" },
-      ]},
+      {
+        name: "severity",
+        label: "Severity",
+        type: "select",
+        value: item?.severity || "medium",
+        options: [
+          { value: "low", label: "Low" },
+          { value: "medium", label: "Medium" },
+          { value: "high", label: "High" },
+          { value: "critical", label: "Critical" },
+        ],
+      },
       { name: "location", label: "Location", type: "text", value: item?.location || "" },
       { name: "description", label: "Description", type: "textarea", full: true, value: item?.description || item?.narrative || "" },
       { name: "antecedent", label: "Antecedent", type: "textarea", full: true, value: item?.antecedent || "" },
@@ -557,16 +602,28 @@ function getModalSchema(recordType, item = null) {
     return [
       { name: "category", label: "Category", type: "text", value: item?.category || "" },
       { name: "title", label: "Title", type: "text", value: item?.title || "" },
-      { name: "severity", label: "Severity", type: "select", value: item?.severity || "medium", options: [
-        { value: "low", label: "Low" },
-        { value: "medium", label: "Medium" },
-        { value: "high", label: "High" },
-      ]},
-      { name: "likelihood", label: "Likelihood", type: "select", value: item?.likelihood || "medium", options: [
-        { value: "low", label: "Low" },
-        { value: "medium", label: "Medium" },
-        { value: "high", label: "High" },
-      ]},
+      {
+        name: "severity",
+        label: "Severity",
+        type: "select",
+        value: item?.severity || "medium",
+        options: [
+          { value: "low", label: "Low" },
+          { value: "medium", label: "Medium" },
+          { value: "high", label: "High" },
+        ],
+      },
+      {
+        name: "likelihood",
+        label: "Likelihood",
+        type: "select",
+        value: item?.likelihood || "medium",
+        options: [
+          { value: "low", label: "Low" },
+          { value: "medium", label: "Medium" },
+          { value: "high", label: "High" },
+        ],
+      },
       { name: "review_date", label: "Review date", type: "date", value: item?.review_date || today },
       { name: "concern_summary", label: "Concern summary", type: "textarea", full: true, value: item?.concern_summary || item?.formulation || "" },
       { name: "known_triggers", label: "Known triggers", type: "textarea", full: true, value: item?.known_triggers || "" },
@@ -587,28 +644,34 @@ function getModalSchema(recordType, item = null) {
           { value: "general", label: "General" },
           { value: "health", label: "Health" },
           { value: "education", label: "Education" },
-          { value: "family", label: "Family / contact" },
+          { value: "family", label: "Family" },
           { value: "therapy", label: "Therapy" },
           { value: "review", label: "Review" },
-          { value: "legal", label: "Legal" },
         ],
       },
       {
         name: "appointment_date",
         label: "Appointment date and time",
         type: "datetime-local",
-        value: item?.appointment_date ? String(item.appointment_date).slice(0, 16) : nowValue,
+        value: item?.appointment_date ? toDateTimeLocalValue(item.appointment_date) : "",
       },
       {
         name: "end_datetime",
         label: "End time",
         type: "datetime-local",
-        value: item?.end_datetime ? String(item.end_datetime).slice(0, 16) : "",
+        value: item?.end_datetime ? toDateTimeLocalValue(item.end_datetime) : "",
       },
       { name: "location", label: "Location", type: "text", value: item?.location || "" },
       { name: "professional_name", label: "Professional name", type: "text", value: item?.professional_name || "" },
       { name: "professional_role", label: "Professional role", type: "text", value: item?.professional_role || "" },
       { name: "linked_plan_id", label: "Linked plan id", type: "number", value: item?.linked_plan_id || "" },
+      { name: "summary", label: "Summary", type: "textarea", full: true, value: item?.summary || "" },
+      { name: "purpose", label: "Purpose", type: "textarea", full: true, value: item?.purpose || "" },
+      { name: "child_voice", label: "Child voice", type: "textarea", full: true, value: item?.child_voice || "" },
+      { name: "preparation_notes", label: "Preparation notes", type: "textarea", full: true, value: item?.preparation_notes || "" },
+      { name: "outcome_notes", label: "Outcome notes", type: "textarea", full: true, value: item?.outcome_notes || "" },
+      { name: "follow_up_actions", label: "Follow-up actions", type: "textarea", full: true, value: item?.follow_up_actions || "" },
+      { name: "reminder_minutes_before", label: "Reminder minutes before", type: "number", value: item?.reminder_minutes_before ?? 30 },
       {
         name: "status",
         label: "Status",
@@ -619,54 +682,6 @@ function getModalSchema(recordType, item = null) {
           { value: "completed", label: "Completed" },
           { value: "cancelled", label: "Cancelled" },
         ],
-      },
-      {
-        name: "reminder_minutes_before",
-        label: "Reminder minutes before",
-        type: "number",
-        value: item?.reminder_minutes_before ?? 30,
-      },
-      {
-        name: "summary",
-        label: "Summary",
-        type: "textarea",
-        full: true,
-        value: item?.summary || "",
-      },
-      {
-        name: "purpose",
-        label: "Purpose",
-        type: "textarea",
-        full: true,
-        value: item?.purpose || "",
-      },
-      {
-        name: "child_voice",
-        label: "Child voice",
-        type: "textarea",
-        full: true,
-        value: item?.child_voice || "",
-      },
-      {
-        name: "preparation_notes",
-        label: "Preparation notes for adults",
-        type: "textarea",
-        full: true,
-        value: item?.preparation_notes || "",
-      },
-      {
-        name: "outcome_notes",
-        label: "Outcome notes",
-        type: "textarea",
-        full: true,
-        value: item?.outcome_notes || "",
-      },
-      {
-        name: "follow_up_actions",
-        label: "Follow up actions",
-        type: "textarea",
-        full: true,
-        value: item?.follow_up_actions || "",
       },
     ];
   }
@@ -689,16 +704,40 @@ function openRecordModal(recordType, mode = "create", item = null) {
   state.modalMode = mode;
   state.modalEditItem = item;
 
-  const config = RECORD_CONFIG[recordType] || RECORD_CONFIG.plan;
+  const config = RECORD_CONFIG[recordType] || RECORD_CONFIG.support_plan;
   const label = config.label || "Record";
 
   els.modalTitle.textContent = mode === "edit" ? `Edit ${label}` : `Add ${label}`;
-  els.modalSubtitle.textContent = mode === "edit" ? "Update the record below" : "Complete the form below";
+  els.modalSubtitle.textContent = mode === "edit"
+    ? "Full-screen therapeutic document editing"
+    : "Complete this document in full-screen";
+
   els.modalSaveBtn.textContent = mode === "edit" ? "Save changes" : "Save";
 
   const schema = getModalSchema(recordType, item);
-  els.modalFields.innerHTML = schema.map(buildFormField).join("");
+  els.modalFields.innerHTML = `
+    ${renderDocumentHint(recordType)}
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h3>${escapeHtml(label)} document</h3>
+          <p class="panel-subtitle">Child-focused, therapeutically written, linked to standards and inspection readiness.</p>
+        </div>
+      </div>
+      <div class="form-grid">
+        ${schema.map(buildFormField).join("")}
+      </div>
+    </section>
+  `;
   openModal();
+}
+
+function serialiseValue(key, value) {
+  if (value === "") return null;
+  if (["linked_plan_id", "reminder_minutes_before"].includes(key)) {
+    return value === null ? null : Number(value);
+  }
+  return value;
 }
 
 function serializeModalForm() {
@@ -706,7 +745,7 @@ function serializeModalForm() {
   const obj = {};
 
   for (const [key, value] of formData.entries()) {
-    obj[key] = value;
+    obj[key] = serialiseValue(key, value);
   }
 
   obj.young_person_id = state.youngPersonId;
@@ -775,16 +814,18 @@ async function runDrawerWorkflow(action) {
   let method = "POST";
 
   if (type === "appointment") {
-    if (action === "approve") {
-      url = config.completeUrl?.(id);
-      body = { review_note: "Completed in workspace" };
-    }
-    if (action === "return" || action === "archive") {
-      url = config.cancelUrl?.(id);
-      body = { review_note: "Cancelled in workspace" };
-    }
     if (action === "submit") {
       showError("Appointments do not use submit.");
+      return;
+    }
+    if (action === "approve") {
+      url = config.completeUrl?.(id);
+    }
+    if (action === "return") {
+      url = config.cancelUrl?.(id);
+    }
+    if (action === "archive") {
+      showError("Appointments do not use archive.");
       return;
     }
   } else {
@@ -832,10 +873,23 @@ async function openRecordDetail(item) {
   state.activeRecordType = type;
 
   openDrawer();
+
   if (shouldShowDrawerActions(type)) {
     els.drawerActions.classList.remove("hidden");
   } else {
     els.drawerActions.classList.add("hidden");
+  }
+
+  if (type === "appointment") {
+    els.drawerSubmitBtn.textContent = "Submit";
+    els.drawerApproveBtn.textContent = "Complete";
+    els.drawerReturnBtn.textContent = "Cancel";
+    els.drawerArchiveBtn.textContent = "Archive";
+  } else {
+    els.drawerSubmitBtn.textContent = "Submit";
+    els.drawerApproveBtn.textContent = "Approve";
+    els.drawerReturnBtn.textContent = "Return";
+    els.drawerArchiveBtn.textContent = "Archive";
   }
 
   els.drawerTitle.textContent = item.title || "Record details";
@@ -872,6 +926,7 @@ async function openRecordDetail(item) {
       `${String(item.record_type || item.event_type || item.category || "record").replaceAll("_", " ")} • ${formatDate(item.recorded_at || item.occurred_at || item.event_datetime || detailData.created_at)}`;
 
     els.drawerBody.innerHTML = `
+      ${renderDocumentHint(type)}
       <div class="detail-section">
         <h4>Summary</h4>
         <div class="detail-list">
@@ -893,7 +948,7 @@ async function openRecordDetail(item) {
           </div>
           <div class="detail-row">
             <div class="detail-key">Summary</div>
-            <div class="detail-value">${escapeHtml(item.summary || item.narrative || detailData.summary || detailData.description || detailData.concern_summary || "—")}</div>
+            <div class="detail-value">${escapeHtml(item.summary || item.narrative || detailData.summary || detailData.description || detailData.concern_summary || detailData.report_text || "—")}</div>
           </div>
         </div>
       </div>
@@ -939,7 +994,6 @@ function renderRecordCard(item) {
     item.created_by_name || null,
     item.owner_name || null,
     item.professional_name || null,
-    item.location || null,
   ].filter(Boolean);
 
   const badges = [
@@ -947,7 +1001,7 @@ function renderRecordCard(item) {
     item.severity,
     item.status,
     item.approval_status,
-    item.appointment_type,
+    item.compliance_status,
   ].filter(Boolean);
 
   return `
@@ -1033,9 +1087,7 @@ function renderProfileSection(title, rows = []) {
   return `
     <section class="panel">
       <div class="panel-header">
-        <div>
-          <h3>${escapeHtml(title)}</h3>
-        </div>
+        <div><h3>${escapeHtml(title)}</h3></div>
       </div>
       <div class="kv">
         ${
@@ -1055,9 +1107,7 @@ function renderHandoverItem(title, body, badges = []) {
   return `
     <article class="record-card">
       <div class="record-card-header">
-        <div>
-          <h4>${escapeHtml(title)}</h4>
-        </div>
+        <div><h4>${escapeHtml(title)}</h4></div>
       </div>
       <div class="record-body">${escapeHtml(body || "—")}</div>
       ${renderBadges(badges)}
@@ -1190,7 +1240,7 @@ async function loadYoungPersonSelector() {
 
   try {
     const data = await apiGet("/young-people");
-    state.selectorItems = data.young_people || [];
+    state.selectorItems = data.young_people || data.items || [];
     renderSelectorList(state.selectorItems);
   } catch (error) {
     console.error(error);
@@ -1390,7 +1440,7 @@ async function loadHome() {
   state.timelineCache = timelineData.timeline || [];
 
   els.content.innerHTML = `
-    <div class="grid grid-3">
+    <div class="grid grid-4">
       <div class="stat-card">
         <div class="stat-label">Placement status</div>
         <div class="stat-value">${escapeHtml(yp.placement_status || "—")}</div>
@@ -1402,6 +1452,10 @@ async function loadHome() {
       <div class="stat-card">
         <div class="stat-label">Open alerts</div>
         <div class="stat-value">${escapeHtml(String(alerts.length))}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Upcoming appointments</div>
+        <div class="stat-value">${escapeHtml(String(appointments.length))}</div>
       </div>
     </div>
 
@@ -1454,8 +1508,8 @@ async function loadHome() {
       </div>
 
       <div class="panel">
-        <div class="panel-header"><div><h3>Upcoming appointments</h3><p class="panel-subtitle">Important planned appointments and linked plans.</p></div></div>
-        ${appointments.length ? `<div class="record-list">${appointments.map(renderRecordCard).join("")}</div>` : `<div class="empty-state">No appointments recorded.</div>`}
+        <div class="panel-header"><div><h3>Upcoming appointments</h3><p class="panel-subtitle">Appointments linked to care and planning.</p></div></div>
+        ${appointments.length ? `<div class="record-list">${appointments.map(renderRecordCard).join("")}</div>` : `<div class="empty-state">No upcoming appointments.</div>`}
       </div>
     </div>
 
@@ -1523,7 +1577,7 @@ async function loadHandover() {
           <p class="panel-subtitle">Auto-built from recent recorded reality.</p>
         </div>
         <div class="day-record-actions">
-          <button id="generateHandoverBtn" class="primary-btn">Generate handover</button>
+          <button id="generateHandoverBtn" class="primary-btn" type="button">Generate handover</button>
         </div>
       </div>
       ${
@@ -1552,7 +1606,6 @@ async function loadHandover() {
             <p class="panel-subtitle">Priority alerts, current risks and recent events.</p>
           </div>
         </div>
-
         <div class="record-list">
           ${
             alerts.length
@@ -1583,7 +1636,6 @@ async function loadHandover() {
             <p class="panel-subtitle">Current plans and guidance likely to matter next shift.</p>
           </div>
         </div>
-
         ${
           plans.length
             ? `<div class="record-list">${plans.map(renderRecordCard).join("")}</div>`
@@ -1630,58 +1682,49 @@ async function loadAppointments() {
   setLoading("Loading appointments...");
 
   const [appointmentsData, plansData] = await Promise.all([
-    apiGet(`/young-people/${state.youngPersonId}/appointments`).catch(() => ({ items: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/appointments`),
     apiGet(`/young-people/${state.youngPersonId}/plans`).catch(() => ({ items: [] })),
   ]);
 
-  const items = appointmentsData.items || [];
+  const appointments = appointmentsData.items || [];
   const plans = plansData.items || [];
+
+  const planOptions = plans.map((plan) => `
+    <option value="${escapeHtml(String(plan.id))}">${escapeHtml(plan.title || `Plan ${plan.id}`)}</option>
+  `).join("");
 
   els.content.innerHTML = `
     <div class="panel">
       <div class="panel-header">
         <div>
           <h3>Appointments</h3>
-          <p class="panel-subtitle">Appointments for this young person, with reminders and links to plans.</p>
+          <p class="panel-subtitle">Each appointment should connect to the most relevant plan and support follow-up.</p>
         </div>
         <div class="day-record-actions">
           <button id="addAppointmentBtn" class="primary-btn" type="button">Add appointment</button>
         </div>
       </div>
 
-      ${
-        items.length
-          ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
-          : `<div class="empty-state">No appointments recorded.</div>`
-      }
+      <div class="helper-note">Use appointments for reviews, health appointments, education meetings, therapy and family time. Keep them linked to plans wherever possible.</div>
     </div>
 
     <div class="panel">
       <div class="panel-header">
         <div>
-          <h3>Plans available to link</h3>
-          <p class="panel-subtitle">Use the plan id below when linking appointments to plans.</p>
+          <h3>Current appointments</h3>
+          <p class="panel-subtitle">Scheduled, completed and cancelled appointments.</p>
         </div>
       </div>
 
       ${
-        plans.length
-          ? `<div class="record-list">
-              ${plans.map((plan) => `
-                <article class="record-card">
-                  <div class="record-card-header">
-                    <div>
-                      <h4>${escapeHtml(plan.title || "Plan")}</h4>
-                      <div class="record-meta">Plan id: ${escapeHtml(String(plan.id || "—"))}</div>
-                    </div>
-                  </div>
-                  <div class="record-body">${escapeHtml(plan.summary || plan.presenting_need || "No summary available.")}</div>
-                  ${renderBadges([plan.status, plan.approval_status])}
-                </article>
-              `).join("")}
-            </div>`
-          : `<div class="empty-state">No plans available to link.</div>`
+        appointments.length
+          ? `<div class="record-list">${appointments.map(renderRecordCard).join("")}</div>`
+          : `<div class="empty-state">No appointments recorded.</div>`
       }
+    </div>
+
+    <div class="panel hidden">
+      <select id="appointmentPlanHelper">${planOptions}</select>
     </div>
   `;
 
@@ -1693,61 +1736,85 @@ async function loadAppointments() {
   bindDynamicOpenRecordButtons();
 }
 
-async function loadCompliancePlaceholder() {
+async function loadCompliance() {
+  setLoading("Loading compliance...");
+  const data = await apiGet(`/young-people/${state.youngPersonId}/compliance`);
+  const items = data.compliance_items || data.items || [];
+
+  const overdue = items.filter((x) => x.compliance_status === "overdue").length;
+  const dueSoon = items.filter((x) => x.compliance_status === "due_soon").length;
+  const ok = items.filter((x) => !x.compliance_status || x.compliance_status === "ok").length;
+
   els.content.innerHTML = `
+    <div class="grid grid-3">
+      <div class="stat-card">
+        <div class="stat-label">Overdue</div>
+        <div class="stat-value">${overdue}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Due soon</div>
+        <div class="stat-value">${dueSoon}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">OK</div>
+        <div class="stat-value">${ok}</div>
+      </div>
+    </div>
+
     <div class="panel">
       <div class="panel-header">
         <div>
-          <h3>Compliance</h3>
-          <p class="panel-subtitle">This section is ready to connect to compliance checks, statutory documents and review evidence.</p>
+          <h3>Compliance items</h3>
+          <p class="panel-subtitle">Deadlines and evidence readiness for this young person.</p>
         </div>
       </div>
-      <div class="empty-state">
-        <p>Next pass: connect this view to compliance routes, due reviews, missing records and evidence readiness.</p>
-      </div>
+      ${
+        items.length
+          ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
+          : `<div class="empty-state">No compliance items found.</div>`
+      }
     </div>
   `;
+
+  bindDynamicOpenRecordButtons();
 }
 
-async function loadReportsPlaceholder() {
+async function loadReports() {
+  setLoading("Loading reports...");
+
+  const reportsData = await apiGet(`/young-people/${state.youngPersonId}/reports`).catch(() => ({ items: [] }));
+  const reports = reportsData.items || [];
+
   els.content.innerHTML = `
     <div class="panel">
       <div class="panel-header">
         <div>
           <h3>Reports</h3>
-          <p class="panel-subtitle">This section is ready to connect to reports, summaries and management outputs.</p>
+          <p class="panel-subtitle">Linked outputs, evidence-led summaries and inspection-ready documents.</p>
         </div>
       </div>
-      <div class="empty-state">
-        <p>Next pass: connect this view to report generation, export options and management summaries.</p>
-      </div>
+      ${
+        reports.length
+          ? `<div class="record-list">${reports.map(renderRecordCard).join("")}</div>`
+          : `<div class="empty-state">No reports have been generated yet.</div>`
+      }
     </div>
   `;
+
+  bindDynamicOpenRecordButtons();
 }
 
 async function loadCalendarMonthSummary() {
   const year = state.calendarDate.getFullYear();
   const month = state.calendarDate.getMonth() + 1;
 
-  try {
-    const data = await apiGet(`/young-people/${state.youngPersonId}/calendar-summary?year=${year}&month=${month}`);
-    state.calendarMonthSummary = data.days || data.items || [];
-  } catch (error) {
-    console.error(error);
-    state.calendarMonthSummary = [];
-    throw error;
-  }
+  const data = await apiGet(`/young-people/${state.youngPersonId}/calendar-summary?year=${year}&month=${month}`);
+  state.calendarMonthSummary = data.days || data.items || [];
 }
 
 async function loadSelectedDayRecords() {
-  try {
-    const data = await apiGet(`/young-people/${state.youngPersonId}/records-by-date?date=${state.selectedDate}`);
-    state.selectedDayRecords = data.items || [];
-  } catch (error) {
-    console.error(error);
-    state.selectedDayRecords = [];
-    throw error;
-  }
+  const data = await apiGet(`/young-people/${state.youngPersonId}/records-by-date?date=${state.selectedDate}`);
+  state.selectedDayRecords = data.items || [];
 }
 
 function getMonthDayMeta(dateString) {
@@ -1775,10 +1842,11 @@ function buildCalendarGrid() {
       <button
         class="calendar-day ${isCurrentMonth ? "" : "other-month"} ${isToday ? "today" : ""} ${isSelected ? "selected" : ""}"
         data-calendar-date="${dateString}"
+        type="button"
       >
         <div class="calendar-day-number">${day.getDate()}</div>
         <div class="calendar-day-markers">
-          ${markers.slice(0, 6).map((type) => `<span class="calendar-marker marker-${escapeHtml(type)}"></span>`).join("")}
+          ${markers.slice(0, 8).map((type) => `<span class="calendar-marker marker-${escapeHtml(type)}"></span>`).join("")}
         </div>
       </button>
     `);
@@ -1808,7 +1876,7 @@ function renderDayRecords(records) {
               • ${escapeHtml(staffName)}
             </div>
           </div>
-          <div>${renderBadges([item.workflow_status, item.severity || item.significance, item.appointment_type])}</div>
+          <div>${renderBadges([item.workflow_status, item.severity || item.significance, item.status])}</div>
         </div>
         <div class="day-record-summary">${escapeHtml(summary)}</div>
         <div class="day-record-actions">
@@ -1831,8 +1899,14 @@ function buildDaySummary(records) {
 
 async function loadCalendarView() {
   setLoading("Loading calendar...");
-  await Promise.all([loadCalendarMonthSummary(), loadSelectedDayRecords()]);
-  renderCalendarView();
+  try {
+    await Promise.all([loadCalendarMonthSummary(), loadSelectedDayRecords()]);
+    renderCalendarView();
+  } catch (error) {
+    console.error(error);
+    showError(error.message || "Failed to load calendar.");
+    setEmpty("Unable to load calendar.");
+  }
 }
 
 function renderCalendarView() {
@@ -1845,9 +1919,9 @@ function renderCalendarView() {
         <div class="calendar-header">
           <div class="calendar-title">${escapeHtml(monthName(state.calendarDate))}</div>
           <div class="calendar-controls">
-            <button class="calendar-icon-btn" id="calendarPrevBtn">←</button>
-            <button class="calendar-icon-btn" id="calendarTodayBtn">Today</button>
-            <button class="calendar-icon-btn" id="calendarNextBtn">→</button>
+            <button class="calendar-icon-btn" id="calendarPrevBtn" type="button">←</button>
+            <button class="calendar-icon-btn" id="calendarTodayBtn" type="button">Today</button>
+            <button class="calendar-icon-btn" id="calendarNextBtn" type="button">→</button>
           </div>
         </div>
 
@@ -1868,7 +1942,7 @@ function renderCalendarView() {
         <div class="panel-header">
           <div>
             <h3>${escapeHtml(selectedDateLabel)}</h3>
-            <p class="panel-subtitle">Everything recorded on this day.</p>
+            <p class="panel-subtitle">Everything recorded on this day, including appointments and alerts.</p>
           </div>
         </div>
 
@@ -1949,9 +2023,18 @@ function bindCalendarEvents() {
 
     const filtered = state.selectedDayRecords.filter((item) => {
       const haystack = [
-        item.title, item.summary, item.narrative, item.description, item.record_type,
-        item.event_type, item.category, item.recorded_by_name, item.author_name, item.created_by_name,
-        item.worker_name, item.professional_name, item.location,
+        item.title,
+        item.summary,
+        item.narrative,
+        item.description,
+        item.record_type,
+        item.event_type,
+        item.category,
+        item.recorded_by_name,
+        item.author_name,
+        item.created_by_name,
+        item.worker_name,
+        item.professional_name,
       ].filter(Boolean).join(" ").toLowerCase();
 
       const typeValue = String(item.record_type || item.event_type || item.category || "").toLowerCase();
@@ -1997,7 +2080,6 @@ function renderTimelinePanel(items) {
           <option value="family">Family</option>
           <option value="keywork">Keywork</option>
           <option value="support_plan">Plans</option>
-          <option value="appointment">Appointments</option>
         </select>
       </div>
 
@@ -2019,7 +2101,6 @@ function renderTimelinePanel(items) {
       const haystack = [item.title, item.summary, item.narrative, item.event_type, item.category, item.subcategory]
         .filter(Boolean).join(" ").toLowerCase();
       const typeValue = String(item.event_type || item.category || "").toLowerCase();
-
       return (!term || haystack.includes(term)) && (!type || typeValue === type);
     });
 
@@ -2239,7 +2320,6 @@ function bindEvents() {
     if (action === "incident") openRecordModal("incident", "create");
     if (action === "risk") openRecordModal("risk", "create");
     if (action === "plan") openRecordModal("support_plan", "create");
-    if (action === "appointment") openRecordModal("appointment", "create");
   });
 
   els.closeDrawerBtn.addEventListener("click", closeDrawer);
