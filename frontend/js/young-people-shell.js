@@ -13,6 +13,7 @@ const state = {
   modalMode: "create",
   modalRecordType: null,
   modalEditItem: null,
+  assistantMessages: [],
 };
 
 const els = {
@@ -32,6 +33,7 @@ const els = {
   workspacePanel: document.getElementById("workspacePanel"),
   quickActions: document.getElementById("quickActions"),
   changePersonBtn: document.getElementById("changePersonBtn"),
+
   drawer: document.getElementById("recordDrawer"),
   drawerBackdrop: document.getElementById("recordDrawerBackdrop"),
   drawerTitle: document.getElementById("recordDrawerTitle"),
@@ -44,6 +46,7 @@ const els = {
   drawerApproveBtn: document.getElementById("drawerApproveBtn"),
   drawerReturnBtn: document.getElementById("drawerReturnBtn"),
   drawerArchiveBtn: document.getElementById("drawerArchiveBtn"),
+
   modalBackdrop: document.getElementById("modalBackdrop"),
   modal: document.getElementById("recordModal"),
   modalTitle: document.getElementById("recordModalTitle"),
@@ -53,34 +56,28 @@ const els = {
   modalForm: document.getElementById("recordModalForm"),
   modalFields: document.getElementById("recordModalFields"),
   modalSaveBtn: document.getElementById("recordModalSaveBtn"),
+
+  assistantLauncher: document.getElementById("assistantLauncher"),
+  assistantBackdrop: document.getElementById("assistantBackdrop"),
+  assistantModal: document.getElementById("assistantModal"),
+  closeAssistantBtn: document.getElementById("closeAssistantBtn"),
+  assistantTitle: document.getElementById("assistantTitle"),
+  assistantSubtitle: document.getElementById("assistantSubtitle"),
+  assistantContext: document.getElementById("assistantContext"),
+  assistantMessages: document.getElementById("assistantMessages"),
+  assistantForm: document.getElementById("assistantForm"),
+  assistantInput: document.getElementById("assistantInput"),
+  assistantSendBtn: document.getElementById("assistantSendBtn"),
+  assistantClearBtn: document.getElementById("assistantClearBtn"),
+  assistantSuggestions: document.getElementById("assistantSuggestions"),
 };
 
 const VIEW_CONFIG = {
-  home: {
-    title: "Home",
-    subtitle: "What staff need first",
-    loader: loadHome,
-  },
-  profile: {
-    title: "Profile",
-    subtitle: "Identity, communication, legal and contact information",
-    loader: loadProfile,
-  },
-  calendar: {
-    title: "Calendar",
-    subtitle: "All records, appointments and alerts by day",
-    loader: loadCalendarView,
-  },
-  timeline: {
-    title: "What happened",
-    subtitle: "Chronology across all records",
-    loader: loadTimeline,
-  },
-  handover: {
-    title: "Handover",
-    subtitle: "What the next staff need to know",
-    loader: loadHandover,
-  },
+  home: { title: "Home", subtitle: "What staff need first", loader: loadHome },
+  profile: { title: "Profile", subtitle: "Identity, communication, legal and contact information", loader: loadProfile },
+  calendar: { title: "Calendar", subtitle: "All records, appointments and alerts by day", loader: loadCalendarView },
+  timeline: { title: "What happened", subtitle: "Chronology across all records", loader: loadTimeline },
+  handover: { title: "Handover", subtitle: "What the next staff need to know", loader: loadHandover },
   "daily-notes": {
     title: "Daily notes",
     subtitle: "Shift recording",
@@ -106,21 +103,9 @@ const VIEW_CONFIG = {
     subtitle: "Appointments, reminders and linked plans",
     loader: loadAppointments,
   },
-  health: {
-    title: "Health",
-    subtitle: "Health profile, records and medication",
-    loader: loadHealth,
-  },
-  education: {
-    title: "Education",
-    subtitle: "Education profile and records",
-    loader: loadEducation,
-  },
-  family: {
-    title: "Family",
-    subtitle: "Family and contact records",
-    loader: loadFamily,
-  },
+  health: { title: "Health", subtitle: "Health profile, records and medication", loader: loadHealth },
+  education: { title: "Education", subtitle: "Education profile and records", loader: loadEducation },
+  family: { title: "Family", subtitle: "Family and contact records", loader: loadFamily },
   keywork: {
     title: "Keywork",
     subtitle: "Keywork sessions",
@@ -385,6 +370,7 @@ function getRecordUrl(item) {
     family_contact: `/young-people/family/records/${id}`,
     keywork: `/young-people/keywork/${id}`,
     keywork_session: `/young-people/keywork/${id}`,
+    report: `/young-people/reports/${id}`,
   };
 
   return map[type] || null;
@@ -437,7 +423,7 @@ function renderDocumentHint(recordType) {
     },
     support_plan: {
       title: "Plan guidance",
-      text: "This should read like a therapeutic support / placement / care plan. Keep the young person at the centre, explain what adults need to understand, and give kind, practical guidance.",
+      text: "This should read like a therapeutic support, placement or care plan. Keep the young person at the centre, explain what adults need to understand, and give kind, practical guidance.",
     },
     appointment: {
       title: "Appointment guidance",
@@ -489,6 +475,126 @@ function closeModal() {
   state.modalRecordType = null;
   state.modalEditItem = null;
   els.modalFields.innerHTML = "";
+}
+
+function openAssistant() {
+  updateAssistantContext();
+  els.assistantModal.classList.remove("hidden");
+  els.assistantBackdrop.classList.remove("hidden");
+  els.assistantModal.setAttribute("aria-hidden", "false");
+}
+
+function closeAssistant() {
+  els.assistantModal.classList.add("hidden");
+  els.assistantBackdrop.classList.add("hidden");
+  els.assistantModal.setAttribute("aria-hidden", "true");
+}
+
+function toggleAssistantLauncher() {
+  if (state.youngPersonId) {
+    els.assistantLauncher?.classList.remove("hidden");
+  } else {
+    els.assistantLauncher?.classList.add("hidden");
+  }
+}
+
+function assistantContextSummary() {
+  if (!state.youngPerson) return "No young person selected.";
+  const fullName =
+    [state.youngPerson.first_name, state.youngPerson.last_name].filter(Boolean).join(" ").trim() ||
+    state.youngPerson.preferred_name ||
+    "Young Person";
+
+  const parts = [
+    `Young person: ${fullName}`,
+    state.youngPerson.preferred_name ? `Preferred name: ${state.youngPerson.preferred_name}` : null,
+    state.youngPerson.placement_status ? `Placement status: ${state.youngPerson.placement_status}` : null,
+    state.youngPerson.summary_risk_level ? `Risk level: ${state.youngPerson.summary_risk_level}` : null,
+    `Current view: ${state.currentView.replaceAll("-", " ")}`,
+  ].filter(Boolean);
+
+  return parts.join(" • ");
+}
+
+function updateAssistantContext() {
+  if (els.assistantContext) {
+    els.assistantContext.textContent = assistantContextSummary();
+  }
+}
+
+function renderAssistantMessages() {
+  if (!els.assistantMessages) return;
+
+  const base = `
+    <article class="assistant-message assistant-message-system">
+      <div class="assistant-message-role">Assistant</div>
+      <div class="assistant-message-body">
+        Ask a question about this young person. The assistant can help with handovers, reports, planning, risks, appointments, evidence and Ofsted preparation.
+      </div>
+    </article>
+  `;
+
+  const messagesHtml = state.assistantMessages.map((message) => `
+    <article class="assistant-message assistant-message-${escapeHtml(message.role)}">
+      <div class="assistant-message-role">${escapeHtml(message.role === "user" ? "You" : "Assistant")}</div>
+      <div class="assistant-message-body">${escapeHtml(message.content)}</div>
+    </article>
+  `).join("");
+
+  els.assistantMessages.innerHTML = base + messagesHtml;
+  els.assistantMessages.scrollTop = els.assistantMessages.scrollHeight;
+}
+
+function pushAssistantMessage(role, content) {
+  state.assistantMessages.push({ role, content });
+  renderAssistantMessages();
+}
+
+async function askAssistant(question) {
+  const trimmed = String(question || "").trim();
+  if (!trimmed) return;
+
+  pushAssistantMessage("user", trimmed);
+
+  try {
+    els.assistantSendBtn.disabled = true;
+
+    const payload = {
+      message: trimmed,
+      context: {
+        scope: "young_person",
+        young_person_id: state.youngPersonId,
+        current_view: state.currentView,
+        young_person_name: els.personName?.textContent || "",
+      },
+    };
+
+    let replyText = "";
+
+    try {
+      const response = await apiSend("/chat", "POST", payload);
+      replyText =
+        response.reply ||
+        response.message ||
+        response.answer ||
+        response.output_text ||
+        response.text ||
+        "";
+    } catch (_) {
+      replyText = "";
+    }
+
+    if (!replyText) {
+      replyText = "The assistant route is connected, but no reply text came back yet. The launcher and young person context are now in place. Next step is wiring the backend assistant response shape to this shell.";
+    }
+
+    pushAssistantMessage("assistant", replyText);
+  } catch (error) {
+    console.error(error);
+    pushAssistantMessage("assistant", error.message || "The assistant could not answer right now.");
+  } finally {
+    els.assistantSendBtn.disabled = false;
+  }
 }
 
 function buildFormField(field) {
@@ -811,19 +917,15 @@ async function runDrawerWorkflow(action) {
 
   let url = null;
   let body = null;
-  let method = "POST";
+  const method = "POST";
 
   if (type === "appointment") {
     if (action === "submit") {
       showError("Appointments do not use submit.");
       return;
     }
-    if (action === "approve") {
-      url = config.completeUrl?.(id);
-    }
-    if (action === "return") {
-      url = config.cancelUrl?.(id);
-    }
+    if (action === "approve") url = config.completeUrl?.(id);
+    if (action === "return") url = config.cancelUrl?.(id);
     if (action === "archive") {
       showError("Appointments do not use archive.");
       return;
@@ -881,15 +983,11 @@ async function openRecordDetail(item) {
   }
 
   if (type === "appointment") {
-    els.drawerSubmitBtn.textContent = "Submit";
     els.drawerApproveBtn.textContent = "Complete";
     els.drawerReturnBtn.textContent = "Cancel";
-    els.drawerArchiveBtn.textContent = "Archive";
   } else {
-    els.drawerSubmitBtn.textContent = "Submit";
     els.drawerApproveBtn.textContent = "Approve";
     els.drawerReturnBtn.textContent = "Return";
-    els.drawerArchiveBtn.textContent = "Archive";
   }
 
   els.drawerTitle.textContent = item.title || "Record details";
@@ -1119,6 +1217,7 @@ function updateHeaderForView(view) {
   const config = VIEW_CONFIG[view];
   els.pageTitle.textContent = config.title;
   els.pageSubtitle.textContent = config.subtitle;
+  updateAssistantContext();
 }
 
 function markActiveNav(view) {
@@ -1137,6 +1236,8 @@ function showSelectorMode() {
   els.personName.textContent = "No young person selected";
   els.personMeta.textContent = "Choose from the selector";
   els.personAvatar.textContent = "YP";
+  toggleAssistantLauncher();
+  updateAssistantContext();
 }
 
 function hideSelectorMode() {
@@ -1144,6 +1245,7 @@ function hideSelectorMode() {
   els.workspacePanel.classList.remove("hidden");
   els.refreshBtn.classList.remove("hidden");
   els.quickActions.classList.remove("hidden");
+  toggleAssistantLauncher();
 }
 
 function openYoungPerson(id) {
@@ -1268,6 +1370,8 @@ async function loadYoungPerson() {
   els.personName.textContent = fullName;
   els.personMeta.textContent = meta || "Young person record";
   els.personAvatar.textContent = initialsFromName(fullName);
+  toggleAssistantLauncher();
+  updateAssistantContext();
 }
 
 async function loadProfile() {
@@ -1681,17 +1785,8 @@ async function loadHandover() {
 async function loadAppointments() {
   setLoading("Loading appointments...");
 
-  const [appointmentsData, plansData] = await Promise.all([
-    apiGet(`/young-people/${state.youngPersonId}/appointments`),
-    apiGet(`/young-people/${state.youngPersonId}/plans`).catch(() => ({ items: [] })),
-  ]);
-
+  const appointmentsData = await apiGet(`/young-people/${state.youngPersonId}/appointments`);
   const appointments = appointmentsData.items || [];
-  const plans = plansData.items || [];
-
-  const planOptions = plans.map((plan) => `
-    <option value="${escapeHtml(String(plan.id))}">${escapeHtml(plan.title || `Plan ${plan.id}`)}</option>
-  `).join("");
 
   els.content.innerHTML = `
     <div class="panel">
@@ -1704,7 +1799,6 @@ async function loadAppointments() {
           <button id="addAppointmentBtn" class="primary-btn" type="button">Add appointment</button>
         </div>
       </div>
-
       <div class="helper-note">Use appointments for reviews, health appointments, education meetings, therapy and family time. Keep them linked to plans wherever possible.</div>
     </div>
 
@@ -1715,23 +1809,17 @@ async function loadAppointments() {
           <p class="panel-subtitle">Scheduled, completed and cancelled appointments.</p>
         </div>
       </div>
-
       ${
         appointments.length
           ? `<div class="record-list">${appointments.map(renderRecordCard).join("")}</div>`
           : `<div class="empty-state">No appointments recorded.</div>`
       }
     </div>
-
-    <div class="panel hidden">
-      <select id="appointmentPlanHelper">${planOptions}</select>
-    </div>
   `;
 
-  const addBtn = document.getElementById("addAppointmentBtn");
-  if (addBtn) {
-    addBtn.addEventListener("click", () => openRecordModal("appointment", "create"));
-  }
+  document.getElementById("addAppointmentBtn")?.addEventListener("click", () => {
+    openRecordModal("appointment", "create");
+  });
 
   bindDynamicOpenRecordButtons();
 }
@@ -1795,7 +1883,7 @@ async function loadReports() {
       </div>
       ${
         reports.length
-          ? `<div class="record-list">${reports.map(renderRecordCard).join("")}</div>`
+          ? `<div class="record-list">${reports.map((report) => renderRecordCard({ ...report, record_type: "report", summary: report.report_text || report.summary || "Report ready." })).join("")}</div>`
           : `<div class="empty-state">No reports have been generated yet.</div>`
       }
     </div>
@@ -1807,7 +1895,6 @@ async function loadReports() {
 async function loadCalendarMonthSummary() {
   const year = state.calendarDate.getFullYear();
   const month = state.calendarDate.getMonth() + 1;
-
   const data = await apiGet(`/young-people/${state.youngPersonId}/calendar-summary?year=${year}&month=${month}`);
   state.calendarMonthSummary = data.days || data.items || [];
 }
@@ -2262,6 +2349,33 @@ function bindDynamicOpenRecordButtons() {
   });
 }
 
+function bindAssistantEvents() {
+  els.assistantLauncher?.addEventListener("click", openAssistant);
+  els.closeAssistantBtn?.addEventListener("click", closeAssistant);
+  els.assistantBackdrop?.addEventListener("click", closeAssistant);
+
+  els.assistantClearBtn?.addEventListener("click", () => {
+    state.assistantMessages = [];
+    renderAssistantMessages();
+    els.assistantInput.value = "";
+  });
+
+  els.assistantForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const value = els.assistantInput.value;
+    els.assistantInput.value = "";
+    await askAssistant(value);
+  });
+
+  els.assistantSuggestions?.addEventListener("click", async (event) => {
+    const btn = event.target.closest("[data-prompt]");
+    if (!btn) return;
+    const prompt = btn.dataset.prompt || "";
+    els.assistantInput.value = prompt;
+    await askAssistant(prompt);
+  });
+}
+
 function bindEvents() {
   document.addEventListener("click", (event) => {
     const btn = event.target.closest(".nav-btn");
@@ -2301,8 +2415,10 @@ function bindEvents() {
     state.timelineCache = [];
     state.calendarMonthSummary = [];
     state.selectedDayRecords = [];
+    state.assistantMessages = [];
     closeDrawer();
     closeModal();
+    closeAssistant();
 
     const url = new URL(window.location.href);
     url.searchParams.delete("id");
@@ -2344,10 +2460,13 @@ function bindEvents() {
   els.modalBackdrop.addEventListener("click", closeModal);
   els.modalForm.addEventListener("submit", handleModalSubmit);
 
+  bindAssistantEvents();
+
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closeDrawer();
       closeModal();
+      closeAssistant();
     }
   });
 }
@@ -2355,6 +2474,9 @@ function bindEvents() {
 async function init() {
   state.youngPersonId = getYoungPersonId();
   bindEvents();
+  renderAssistantMessages();
+  toggleAssistantLauncher();
+  updateAssistantContext();
 
   if (!state.youngPersonId) {
     await loadYoungPersonSelector();
