@@ -64,11 +64,16 @@ def get_calendar_summary(
 ):
     _load_and_check_young_person(young_person_id, current_user)
 
-    return YoungPeopleCalendarService.get_calendar_summary(
-        young_person_id=young_person_id,
-        year=year,
-        month=month,
-    )
+    try:
+        return YoungPeopleCalendarService.get_calendar_summary(
+            young_person_id=young_person_id,
+            year=year,
+            month=month,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load calendar summary: {str(e)}")
 
 
 @router.get("/{young_person_id}/records-by-date")
@@ -79,7 +84,12 @@ def get_records_by_date(
 ):
     _load_and_check_young_person(young_person_id, current_user)
 
-    return YoungPeopleCalendarService.get_records_by_date(
-        young_person_id=young_person_id,
-        selected_date=date_value,
-    )
+    try:
+        return YoungPeopleCalendarService.get_records_by_date(
+            young_person_id=young_person_id,
+            selected_date=date_value,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load records by date: {str(e)}")
