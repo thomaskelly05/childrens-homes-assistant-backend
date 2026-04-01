@@ -39,7 +39,6 @@ class YoungPersonService:
                 "summary_risk_level": "yp.summary_risk_level",
                 "created_at": "yp.created_at",
                 "updated_at": "yp.updated_at",
-                "admission_date": "yp.admission_date",
             }
 
             sort_column = allowed_sort_fields.get(sort_by, "yp.last_name")
@@ -55,7 +54,7 @@ class YoungPersonService:
             if not include_archived:
                 where_parts.append("COALESCE(yp.archived, FALSE) = FALSE")
 
-            if search and str(search).strip():
+            if search:
                 term = f"%{str(search).strip()}%"
                 where_parts.append(
                     """
@@ -63,12 +62,10 @@ class YoungPersonService:
                         COALESCE(yp.first_name, '') ILIKE %s
                         OR COALESCE(yp.last_name, '') ILIKE %s
                         OR COALESCE(yp.preferred_name, '') ILIKE %s
-                        OR COALESCE(yp.placement_status, '') ILIKE %s
-                        OR COALESCE(yp.summary_risk_level, '') ILIKE %s
                     )
                     """
                 )
-                values.extend([term, term, term, term, term])
+                values.extend([term, term, term])
 
             values.extend([limit, offset])
 
@@ -92,16 +89,8 @@ class YoungPersonService:
                         yp.photo_url,
                         yp.archived,
                         yp.created_at,
-                        yp.updated_at,
-                        h.name AS home_name,
-                        CONCAT(
-                            COALESCE(u.first_name, ''),
-                            CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN ' ' ELSE '' END,
-                            COALESCE(u.last_name, '')
-                        ) AS primary_keyworker_name
+                        yp.updated_at
                     FROM young_people yp
-                    LEFT JOIN homes h ON h.id = yp.home_id
-                    LEFT JOIN users u ON u.id = yp.primary_keyworker_id
                     WHERE {' AND '.join(where_parts)}
                     ORDER BY {sort_column} {sort_direction}, yp.id DESC
                     LIMIT %s OFFSET %s
@@ -181,7 +170,7 @@ class YoungPersonService:
                     SELECT *
                     FROM young_person_communication_profile
                     WHERE young_person_id = %s
-                    ORDER BY updated_at DESC NULLS LAST, id DESC
+                    ORDER BY id DESC
                     LIMIT 1
                     """,
                     (young_person_id,),
@@ -193,7 +182,7 @@ class YoungPersonService:
                     SELECT *
                     FROM young_person_education_profile
                     WHERE young_person_id = %s
-                    ORDER BY updated_at DESC NULLS LAST, id DESC
+                    ORDER BY id DESC
                     LIMIT 1
                     """,
                     (young_person_id,),
@@ -205,7 +194,7 @@ class YoungPersonService:
                     SELECT *
                     FROM young_person_health_profile
                     WHERE young_person_id = %s
-                    ORDER BY updated_at DESC NULLS LAST, id DESC
+                    ORDER BY id DESC
                     LIMIT 1
                     """,
                     (young_person_id,),
@@ -217,7 +206,7 @@ class YoungPersonService:
                     SELECT *
                     FROM young_person_identity_profile
                     WHERE young_person_id = %s
-                    ORDER BY updated_at DESC NULLS LAST, id DESC
+                    ORDER BY id DESC
                     LIMIT 1
                     """,
                     (young_person_id,),
@@ -229,11 +218,7 @@ class YoungPersonService:
                     SELECT *
                     FROM young_person_legal_status
                     WHERE young_person_id = %s
-                    ORDER BY
-                        COALESCE(is_current, FALSE) DESC,
-                        effective_from DESC NULLS LAST,
-                        updated_at DESC NULLS LAST,
-                        id DESC
+                    ORDER BY id DESC
                     LIMIT 1
                     """,
                     (young_person_id,),
@@ -245,11 +230,7 @@ class YoungPersonService:
                     SELECT *
                     FROM young_person_contacts
                     WHERE young_person_id = %s
-                    ORDER BY
-                        COALESCE(is_parental_responsibility_holder, FALSE) DESC,
-                        COALESCE(is_approved_contact, FALSE) DESC,
-                        full_name ASC,
-                        id DESC
+                    ORDER BY id DESC
                     """,
                     (young_person_id,),
                 )
@@ -260,11 +241,7 @@ class YoungPersonService:
                     SELECT *
                     FROM young_person_alerts
                     WHERE young_person_id = %s
-                    ORDER BY
-                        COALESCE(is_active, TRUE) DESC,
-                        COALESCE(review_date, CURRENT_DATE) ASC,
-                        created_at DESC,
-                        id DESC
+                    ORDER BY created_at DESC, id DESC
                     """,
                     (young_person_id,),
                 )
@@ -291,67 +268,14 @@ class YoungPersonService:
                 counts: dict[str, int] = {}
 
                 queries = {
-                    "daily_notes": """
-                        SELECT COUNT(*) AS c
-                        FROM daily_notes
-                        WHERE young_person_id = %s
-                          AND COALESCE(archived, FALSE) = FALSE
-                    """,
-                    "incidents": """
-                        SELECT COUNT(*) AS c
-                        FROM incidents
-                        WHERE young_person_id = %s
-                          AND COALESCE(archived, FALSE) = FALSE
-                    """,
-                    "risk_assessments": """
-                        SELECT COUNT(*) AS c
-                        FROM risk_assessments
-                        WHERE young_person_id = %s
-                          AND COALESCE(archived, FALSE) = FALSE
-                    """,
-                    "support_plans": """
-                        SELECT COUNT(*) AS c
-                        FROM support_plans
-                        WHERE young_person_id = %s
-                          AND COALESCE(archived, FALSE) = FALSE
-                    """,
-                    "health_records": """
-                        SELECT COUNT(*) AS c
-                        FROM health_records
-                        WHERE young_person_id = %s
-                    """,
-                    "education_records": """
-                        SELECT COUNT(*) AS c
-                        FROM education_records
-                        WHERE young_person_id = %s
-                    """,
-                    "family_contact_records": """
-                        SELECT COUNT(*) AS c
-                        FROM family_contact_records
-                        WHERE young_person_id = %s
-                    """,
-                    "keywork_sessions": """
-                        SELECT COUNT(*) AS c
-                        FROM keywork_sessions
-                        WHERE young_person_id = %s
-                          AND COALESCE(archived, FALSE) = FALSE
-                    """,
-                    "handover_records": """
-                        SELECT COUNT(*) AS c
-                        FROM handover_records
-                        WHERE young_person_id = %s
-                    """,
-                    "active_alerts": """
-                        SELECT COUNT(*) AS c
-                        FROM young_person_alerts
-                        WHERE young_person_id = %s
-                          AND COALESCE(is_active, TRUE) = TRUE
-                    """,
-                    "contacts": """
-                        SELECT COUNT(*) AS c
-                        FROM young_person_contacts
-                        WHERE young_person_id = %s
-                    """,
+                    "daily_notes": "SELECT COUNT(*) AS c FROM daily_notes WHERE young_person_id = %s",
+                    "incidents": "SELECT COUNT(*) AS c FROM incidents WHERE young_person_id = %s",
+                    "risk_assessments": "SELECT COUNT(*) AS c FROM risk_assessments WHERE young_person_id = %s",
+                    "support_plans": "SELECT COUNT(*) AS c FROM support_plans WHERE young_person_id = %s",
+                    "health_records": "SELECT COUNT(*) AS c FROM health_records WHERE young_person_id = %s",
+                    "education_records": "SELECT COUNT(*) AS c FROM education_records WHERE young_person_id = %s",
+                    "family_contact_records": "SELECT COUNT(*) AS c FROM family_contact_records WHERE young_person_id = %s",
+                    "keywork_sessions": "SELECT COUNT(*) AS c FROM keywork_sessions WHERE young_person_id = %s",
                 }
 
                 for key, sql in queries.items():
@@ -378,10 +302,6 @@ class YoungPersonService:
                         category,
                         subcategory,
                         significance,
-                        source_table,
-                        source_id,
-                        event_status,
-                        metadata_json,
                         created_at
                     FROM chronology_events
                     WHERE young_person_id = %s
@@ -393,29 +313,19 @@ class YoungPersonService:
                 )
                 rows = cur.fetchall() or []
 
-            items: list[dict[str, Any]] = []
-            for row in rows:
-                metadata = row.get("metadata_json") or {}
-                items.append(
-                    {
-                        "id": row["id"],
-                        "record_id": row.get("source_id") or row["id"],
-                        "title": row.get("title") or row.get("category") or "Activity",
-                        "summary": row.get("summary") or "Recent activity",
-                        "narrative": row.get("summary") or "Recent activity",
-                        "event_type": row.get("category"),
-                        "category": row.get("category"),
-                        "subcategory": row.get("subcategory"),
-                        "record_type": row.get("category"),
-                        "occurred_at": row.get("occurred_at") or row.get("created_at"),
-                        "workflow_status": row.get("event_status") or metadata.get("workflow_status") or "recorded",
-                        "severity": row.get("significance") or metadata.get("severity") or "medium",
-                        "source_table": row.get("source_table"),
-                        "source_id": row.get("source_id"),
-                    }
-                )
-
-            return items
+            return [
+                {
+                    "id": row["id"],
+                    "title": row.get("title") or row.get("category") or "Activity",
+                    "summary": row.get("summary") or "Recent activity",
+                    "narrative": row.get("summary") or "Recent activity",
+                    "event_type": row.get("category"),
+                    "occurred_at": row.get("occurred_at") or row.get("created_at"),
+                    "workflow_status": "recorded",
+                    "severity": row.get("significance"),
+                }
+                for row in rows
+            ]
         finally:
             release_db_connection(conn)
 
@@ -444,6 +354,19 @@ class YoungPersonService:
             release_db_connection(conn)
 
     @staticmethod
+    def get_young_person_overview(young_person_id: int) -> dict[str, Any]:
+        person = YoungPersonService.get_young_person_by_id(young_person_id)
+        if not person:
+            return {}
+
+        return {
+            "young_person": person,
+            "dashboard_counts": YoungPersonService.get_dashboard_counts(young_person_id),
+            "recent_activity": YoungPersonService.get_recent_activity(young_person_id, limit=20),
+            "alerts": YoungPersonService.get_active_alerts(young_person_id),
+        }
+
+    @staticmethod
     def get_section(young_person_id: int, section: str) -> dict[str, Any] | None:
         table_map = {
             "communication_profile": "young_person_communication_profile",
@@ -453,23 +376,8 @@ class YoungPersonService:
             "legal_status": "young_person_legal_status",
         }
 
-        order_map = {
-            "communication_profile": "ORDER BY updated_at DESC NULLS LAST, id DESC",
-            "education_profile": "ORDER BY updated_at DESC NULLS LAST, id DESC",
-            "health_profile": "ORDER BY updated_at DESC NULLS LAST, id DESC",
-            "identity_profile": "ORDER BY updated_at DESC NULLS LAST, id DESC",
-            "legal_status": """
-                ORDER BY
-                    COALESCE(is_current, FALSE) DESC,
-                    effective_from DESC NULLS LAST,
-                    updated_at DESC NULLS LAST,
-                    id DESC
-            """,
-        }
-
         table = table_map.get(section)
-        order_sql = order_map.get(section)
-        if not table or not order_sql:
+        if not table:
             return None
 
         conn = get_db_connection()
@@ -480,7 +388,7 @@ class YoungPersonService:
                     SELECT *
                     FROM {table}
                     WHERE young_person_id = %s
-                    {order_sql}
+                    ORDER BY id DESC
                     LIMIT 1
                     """,
                     (young_person_id,),
@@ -571,31 +479,12 @@ class YoungPersonService:
             if not data:
                 return None
 
-            allowed_fields = {
-                "contact_type",
-                "full_name",
-                "relationship_to_young_person",
-                "phone",
-                "email",
-                "address",
-                "is_parental_responsibility_holder",
-                "is_approved_contact",
-                "is_restricted_contact",
-                "supervision_level",
-                "notes",
-            }
-
             set_parts = []
             values = []
 
             for field, value in data.items():
-                if field not in allowed_fields:
-                    continue
                 set_parts.append(f"{field} = %s")
                 values.append(value)
-
-            if not set_parts:
-                return None
 
             values.append(contact_id)
 
