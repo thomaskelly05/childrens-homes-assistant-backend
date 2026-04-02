@@ -569,24 +569,15 @@ async function askAssistant(question) {
       },
     };
 
-    let replyText = "";
+    const response = await apiSend("/young-people/assistant", "POST", payload);
 
-    try {
-      const response = await apiSend("/young-people/assistant", "POST", payload);
-      replyText =
-        response.reply ||
-        response.message ||
-        response.answer ||
-        response.output_text ||
-        response.text ||
-        "";
-    } catch (_) {
-      replyText = "";
-    }
-
-    if (!replyText) {
-      replyText = "The assistant route is connected, but no reply text came back yet. The launcher and young person context are now in place. Next step is wiring the backend assistant response shape to this shell.";
-    }
+    const replyText =
+      response.reply ||
+      response.message ||
+      response.answer ||
+      response.output_text ||
+      response.text ||
+      "No assistant reply returned.";
 
     pushAssistantMessage("assistant", replyText);
   } catch (error) {
@@ -964,13 +955,105 @@ function shouldShowDrawerActions(type) {
 }
 
 async function openRecordDetail(item) {
+  const type = normaliseRecordType(item);
+
+  if (type === "report") {
+    state.activeRecordItem = item;
+    state.activeRecordType = type;
+
+    openDrawer();
+    els.drawerActions.classList.add("hidden");
+    els.drawerTitle.textContent = item.title || "Report";
+    els.drawerSubtitle.textContent = "Loading report...";
+    els.drawerBody.innerHTML = `
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading report...</p>
+      </div>
+    `;
+
+    try {
+      const [reportData, linksData] = await Promise.all([
+        apiGet(`/young-people/reports/${item.id || item.report_id || item.record_id}`),
+        apiGet(`/young-people/reports/${item.id || item.report_id || item.record_id}/links`).catch(() => ({ items: [] })),
+      ]);
+
+      const report = reportData?.report || reportData || {};
+      const links = linksData?.items || [];
+
+      els.drawerTitle.textContent = report.title || "Report";
+      els.drawerSubtitle.textContent = `${String(report.report_type || "report").replaceAll("_", " ")} • ${formatDate(report.created_at)}`;
+
+      els.drawerBody.innerHTML = `
+        <div class="detail-section">
+          <h4>Report summary</h4>
+          <div class="detail-list">
+            <div class="detail-row">
+              <div class="detail-key">Title</div>
+              <div class="detail-value">${escapeHtml(report.title || "—")}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-key">Type</div>
+              <div class="detail-value">${escapeHtml(report.report_type || "—")}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-key">Status</div>
+              <div class="detail-value">${escapeHtml(report.status || "—")}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-key">Created</div>
+              <div class="detail-value">${escapeHtml(formatDate(report.created_at))}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-key">Review month</div>
+              <div class="detail-value">${escapeHtml(report.review_month || "—")}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4>Report text</h4>
+          <div class="detail-value">${escapeHtml(report.report_text || "No report text.")}</div>
+        </div>
+
+        <div class="detail-section">
+          <h4>Linked evidence</h4>
+          <div class="detail-list">
+            ${
+              links.length
+                ? links.map((link) => `
+                    <div class="detail-row">
+                      <div class="detail-key">${escapeHtml(link.source_table || "source")}</div>
+                      <div class="detail-value">
+                        Source ID: ${escapeHtml(link.source_id || "—")}
+                        ${link.link_reason ? `• ${escapeHtml(link.link_reason)}` : ""}
+                      </div>
+                    </div>
+                  `).join("")
+                : `<div class="detail-row"><div class="detail-key">Evidence</div><div class="detail-value">No linked evidence.</div></div>`
+            }
+          </div>
+        </div>
+      `;
+    } catch (error) {
+      console.error(error);
+      els.drawerSubtitle.textContent = "Could not load report";
+      els.drawerBody.innerHTML = `
+        <div class="empty-state">
+          <p>${escapeHtml(error.message || "Failed to load report.")}</p>
+        </div>
+      `;
+    }
+
+    return;
+  }
+
   const url = getRecordUrl(item);
   if (!url) {
     showError("This record cannot be opened yet.");
     return;
   }
 
-  const type = normaliseRecordType(item);
   state.activeRecordItem = item;
   state.activeRecordType = type;
 
@@ -1014,7 +1097,6 @@ async function openRecordDetail(item) {
       data?.family_contact_record ||
       data?.contact ||
       data?.keywork ||
-      data?.report ||
       data;
 
     const entries = normaliseDetailEntries(detailData);
@@ -1046,7 +1128,7 @@ async function openRecordDetail(item) {
           </div>
           <div class="detail-row">
             <div class="detail-key">Summary</div>
-            <div class="detail-value">${escapeHtml(item.summary || item.narrative || detailData.summary || detailData.description || detailData.concern_summary || detailData.report_text || "—")}</div>
+            <div class="detail-value">${escapeHtml(item.summary || item.narrative || detailData.summary || detailData.description || detailData.concern_summary || "—")}</div>
           </div>
         </div>
       </div>
@@ -1087,6 +1169,7 @@ function renderRecordCard(item) {
     item.session_date ? formatDate(item.session_date) : null,
     item.recorded_at ? formatDate(item.recorded_at) : null,
     item.appointment_date ? formatDate(item.appointment_date) : null,
+    item.created_at ? formatDate(item.created_at) : null,
     item.worker_name || null,
     item.author_name || null,
     item.created_by_name || null,
@@ -1100,6 +1183,7 @@ function renderRecordCard(item) {
     item.status,
     item.approval_status,
     item.compliance_status,
+    item.report_type,
   ].filter(Boolean);
 
   return `
@@ -1878,16 +1962,100 @@ async function loadReports() {
       <div class="panel-header">
         <div>
           <h3>Reports</h3>
-          <p class="panel-subtitle">Linked outputs, evidence-led summaries and inspection-ready documents.</p>
+          <p class="panel-subtitle">Generate live summaries, evidence-led reports and inspection-ready outputs for this young person.</p>
         </div>
       </div>
+
+      <div class="day-record-actions">
+        <button id="generateHandoverReportBtn" class="primary-btn" type="button">Generate handover summary</button>
+        <button id="generateMonthlyReportBtn" class="secondary-btn" type="button">Generate monthly summary</button>
+        <button id="generateRiskSupportReportBtn" class="secondary-btn" type="button">Generate risk and support summary</button>
+        <button id="generateOfstedReportBtn" class="secondary-btn" type="button">Generate Ofsted evidence summary</button>
+        <button id="generateAppointmentsReportBtn" class="secondary-btn" type="button">Generate appointments and actions</button>
+      </div>
+
+      <div class="helper-note">
+        Reports should stay child-focused, therapeutically written, linked to plans, risks, chronology, quality standards and Ofsted readiness.
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <h3>Generated reports</h3>
+          <p class="panel-subtitle">Open any report to read the full text and linked evidence.</p>
+        </div>
+      </div>
+
       ${
         reports.length
-          ? `<div class="record-list">${reports.map((report) => renderRecordCard({ ...report, record_type: "report", summary: report.report_text || report.summary || "Report ready." })).join("")}</div>`
+          ? `<div class="record-list">
+              ${reports.map((report) => renderRecordCard({
+                ...report,
+                record_type: "report",
+                title: report.title || "Report",
+                summary: report.report_text || "Report ready.",
+                workflow_status: report.status,
+                recorded_at: report.created_at,
+              })).join("")}
+            </div>`
           : `<div class="empty-state">No reports have been generated yet.</div>`
       }
     </div>
   `;
+
+  async function generateReport(reportType, title) {
+    try {
+      showMessage("Generating report...");
+
+      const response = await apiSend(
+        `/young-people/${state.youngPersonId}/reports/generate`,
+        "POST",
+        {
+          report_type: reportType,
+          title,
+        },
+      );
+
+      showMessage("Report generated.");
+      await loadCurrentView();
+
+      const report = response?.report;
+      if (report) {
+        openRecordDetail({
+          ...report,
+          record_type: "report",
+          title: report.title || "Report",
+          summary: report.report_text || "Report ready.",
+          workflow_status: report.status,
+          recorded_at: report.created_at,
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      showError(error.message || "Could not generate report.");
+    }
+  }
+
+  document.getElementById("generateHandoverReportBtn")?.addEventListener("click", () => {
+    generateReport("handover_summary", "Handover Summary");
+  });
+
+  document.getElementById("generateMonthlyReportBtn")?.addEventListener("click", () => {
+    generateReport("monthly_summary", "Monthly Summary");
+  });
+
+  document.getElementById("generateRiskSupportReportBtn")?.addEventListener("click", () => {
+    generateReport("risk_and_support_summary", "Risk and Support Summary");
+  });
+
+  document.getElementById("generateOfstedReportBtn")?.addEventListener("click", () => {
+    generateReport("ofsted_evidence_summary", "Ofsted Evidence Summary");
+  });
+
+  document.getElementById("generateAppointmentsReportBtn")?.addEventListener("click", () => {
+    generateReport("appointments_and_actions", "Appointments and Actions Summary");
+  });
 
   bindDynamicOpenRecordButtons();
 }
