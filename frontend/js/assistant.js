@@ -77,8 +77,7 @@ const LEGAL_VERSION = "2026-03-29-v1";
 const LEGAL_ACCEPTANCE_KEY = "indicare_legal_acceptance";
 const LEGAL_TABS = ["terms", "privacy", "ip", "acceptance"];
 const ASSISTANT_REDIRECT_GUARD_KEY = "indicare_assistant_redirect_guard";
-
-const MOBILE_BREAKPOINT = 880;
+const MOBILE_BREAKPOINT = 920;
 
 const $ = (id) => document.getElementById(id);
 const has = (id) => !!document.getElementById(id);
@@ -128,6 +127,10 @@ function clearAssistantRedirectGuard() {
   } catch (_) {}
 }
 
+function isMobileView() {
+  return window.innerWidth <= MOBILE_BREAKPOINT;
+}
+
 function banner(t, ms = 2400) {
   const e = $("status");
   if (!e) return;
@@ -164,6 +167,13 @@ function docHide() {
   if (!has("docText") || !has("doc")) return;
   $("docText").textContent = "";
   $("doc").classList.remove("show");
+}
+
+function syncMobileAssistantState() {
+  if (!has("mobileNavAssistant")) return;
+  const active =
+    has("assistantPanel") && !$("assistantPanel").classList.contains("hidden");
+  $("mobileNavAssistant").classList.toggle("active", !!active);
 }
 
 function syncHelpers() {
@@ -212,17 +222,18 @@ function setWelcome() {
     $("welcomeTitle").textContent =
       GREET[Math.floor(Math.random() * GREET.length)](firstName());
   }
+
   if (has("welcomeText")) {
     const r = role();
     if (r === "manager") {
       $("welcomeText").textContent =
-        "Your assistant is ready to help with records, safeguarding, reviews, oversight, guidance, and professional drafting.";
+        "Safer support for records, safeguarding, reviews, oversight, and professional writing.";
     } else if (r === "admin" || r === "provider_admin") {
       $("welcomeText").textContent =
-        "Your assistant is ready to support operational writing, guidance, oversight, and safer decision-making across the platform.";
+        "Safer support for operational writing, oversight, guidance, and role-based practice.";
     } else {
       $("welcomeText").textContent =
-        "Your assistant is ready to help with records, safeguarding, risk, guidance, and drafting.";
+        "Safer support for records, safeguarding, reflection, and professional writing.";
     }
   }
 }
@@ -243,12 +254,27 @@ function closeSettings() {
   if (has("settings")) $("settings").classList.remove("open");
 }
 
+function openSidebarMobile() {
+  if (!isMobileView()) return;
+  has("sidebar") && $("sidebar").classList.add("open");
+  has("overlay") && $("overlay").classList.add("show");
+}
+
+function closeMobilePanels() {
+  if (isMobileView()) {
+    has("sidebar") && $("sidebar").classList.remove("open");
+    has("overlay") && $("overlay").classList.remove("show");
+    closeSettings();
+  }
+}
+
 function summariseTitle(text) {
   const clean = stripSystem(text)
     .replace(/[^\p{L}\p{N}\s'-]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
   if (!clean) return "New Log";
+
   const stop = new Set([
     "the",
     "a",
@@ -281,9 +307,11 @@ function summariseTitle(text) {
     "me",
     "this",
   ]);
+
   const words = clean.split(" ").filter(Boolean);
   const pool = words.filter((w) => !stop.has(w.toLowerCase()));
   const picked = (pool.length ? pool : words).slice(0, 3);
+
   return (
     picked.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") ||
     "New Log"
@@ -463,7 +491,10 @@ function saveContextState() {
     shift: has("contextShift") ? $("contextShift").value.trim() : "",
   };
 
-  localStorage.setItem("indicare_context_state", JSON.stringify(contextState));
+  localStorage.setItem(
+    "indicare_context_state",
+    JSON.stringify(contextState)
+  );
   banner(indiCareCopy("contextSaved"));
 }
 
@@ -755,7 +786,8 @@ function speakText(text) {
 }
 
 function loadVoicePref() {
-  speechEnabled = localStorage.getItem("indicare_voice_replies") === "true";
+  speechEnabled =
+    localStorage.getItem("indicare_voice_replies") === "true";
   if (has("voiceReplies")) {
     $("voiceReplies").classList.toggle("active", speechEnabled);
   }
@@ -941,31 +973,6 @@ async function loadMe() {
   }
 }
 
-function isMobileView() {
-  return window.innerWidth <= MOBILE_BREAKPOINT;
-}
-
-function openSidebarMobile() {
-  if (!isMobileView()) return;
-  has("sidebar") && $("sidebar").classList.add("open");
-  has("overlay") && $("overlay").classList.add("show");
-}
-
-function closeMobilePanels() {
-  if (isMobileView()) {
-    has("sidebar") && $("sidebar").classList.remove("open");
-    has("overlay") && $("overlay").classList.remove("show");
-    closeSettings();
-  }
-}
-
-function syncMobileAssistantState() {
-  if (!has("mobileNavAssistant")) return;
-  const active =
-    has("assistantPanel") && !$("assistantPanel").classList.contains("hidden");
-  $("mobileNavAssistant").classList.toggle("active", !!active);
-}
-
 function hideAllPanels() {
   ["assistantPanel", "libraryPanel", "managerPanel", "adminPanel"].forEach(
     (id) => has(id) && $(id).classList.add("hidden")
@@ -995,7 +1002,6 @@ function showLibraryView() {
   if (!legalAcceptanceValid()) return openLegalModal("acceptance");
   hideAllPanels();
   has("libraryPanel") && $("libraryPanel").classList.remove("hidden");
-  has("inputWrap") && $("inputWrap").classList.add("hidden");
   has("navLibrary") && $("navLibrary").classList.add("active");
   setTitle("Policies & Guidance");
   closeMobilePanels();
@@ -1011,7 +1017,6 @@ async function showManagerView() {
   if (!isManager()) return banner("Manager access required");
   hideAllPanels();
   has("managerPanel") && $("managerPanel").classList.remove("hidden");
-  has("inputWrap") && $("inputWrap").classList.add("hidden");
   has("navManager") && $("navManager").classList.add("active");
   setTitle("Manager tools");
   closeMobilePanels();
@@ -1029,7 +1034,6 @@ async function showAdminView() {
   if (!isAdmin()) return banner("Admin access required");
   hideAllPanels();
   has("adminPanel") && $("adminPanel").classList.remove("hidden");
-  has("inputWrap") && $("inputWrap").classList.add("hidden");
   has("navAdmin") && $("navAdmin").classList.add("active");
   setTitle("Admin tools");
   closeMobilePanels();
@@ -1054,6 +1058,7 @@ function resetWelcome() {
     $("messages").innerHTML = "";
     $("messages").classList.add("hidden");
   }
+
   has("empty") && $("empty").classList.remove("hidden");
 
   if (has("input")) $("input").value = "";
@@ -1076,9 +1081,16 @@ function renderHistory(rows) {
     item.className = `item ${
       Number(r?.id) === Number(conversationId) ? "active" : ""
     }`;
-    item.innerHTML = `<div class="row"><button class="mainbtn"><div class="ttl">${safe(
-      stripSystem(r?.title || "Observation")
-    )}</div></button><button class="mini" type="button">⧉</button><button class="mini danger" type="button">🗑</button></div>`;
+
+    item.innerHTML = `
+      <div class="row">
+        <button class="mainbtn" type="button">
+          <div class="ttl">${safe(stripSystem(r?.title || "Observation"))}</div>
+        </button>
+        <button class="mini" type="button">⧉</button>
+        <button class="mini danger" type="button">🗑</button>
+      </div>
+    `;
 
     const buttons = item.querySelectorAll("button");
     const main = buttons[0];
@@ -1669,6 +1681,7 @@ async function sendMessage() {
   appendMessage("user", text, {
     meta: `Mode: ${RESP[selectedMode()]} · Intent: ${currentIntent}`,
   });
+
   $("input").value = "";
   resize();
 
@@ -1704,23 +1717,6 @@ async function sendMessage() {
       }
     } catch {}
   }
-}
-
-function quick(type) {
-  if (!has("input")) return;
-  if (!legalAcceptanceValid()) return openLegalModal("acceptance");
-
-  const prompts = {
-    ofsted:
-      "Rewrite the above documentation so it aligns with Ofsted Quality Standards and is ready for professional review.",
-    risk:
-      "Generate a formal risk assessment based on this situation. Include presenting risks, protective factors, staff actions, and follow-up actions.",
-  };
-
-  $("input").value =
-    prompts[type] || "Rewrite this in a more formal professional format.";
-  resize();
-  sendMessage();
 }
 
 function fillPrompt(text) {
@@ -1784,8 +1780,7 @@ function fillSelect(
 function updateAdminSummary() {
   if (has("sumUsers")) $("sumUsers").textContent = String(adminUsers.length || 0);
   if (has("sumHomes")) $("sumHomes").textContent = String(homes.length || 0);
-  if (has("sumProviders"))
-    $("sumProviders").textContent = String(providers.length || 0);
+  if (has("sumProviders")) $("sumProviders").textContent = String(providers.length || 0);
   if (has("sumDocs")) $("sumDocs").textContent = String(docs.length || 0);
 }
 
@@ -1805,7 +1800,9 @@ function setAdminTab(name) {
 function setLibraryTab(name) {
   document
     .querySelectorAll(".tabbtn[data-library-tab]")
-    .forEach((b) => b.classList.toggle("active", b.dataset.libraryTab === name));
+    .forEach((b) =>
+      b.classList.toggle("active", b.dataset.libraryTab === name)
+    );
   if (has("library-list-tab")) {
     $("library-list-tab").classList.toggle("hidden", name !== "list");
   }
@@ -1818,7 +1815,9 @@ function setLibraryTab(name) {
 function setManagerTab(name) {
   document
     .querySelectorAll(".tabbtn[data-manager-tab]")
-    .forEach((b) => b.classList.toggle("active", b.dataset.managerTab === name));
+    .forEach((b) =>
+      b.classList.toggle("active", b.dataset.managerTab === name)
+    );
   document.querySelectorAll(".manager-tab").forEach((t) => t.classList.add("hidden"));
   if (has("manager-" + name + "-tab")) {
     $("manager-" + name + "-tab").classList.remove("hidden");
@@ -2283,7 +2282,9 @@ async function createDocumentRecord() {
     confidentiality_level: has("docConfLevel")
       ? $("docConfLevel").value || "standard"
       : "standard",
-    input_text: has("docInputText") ? $("docInputText").value.trim() || null : null,
+    input_text: has("docInputText")
+      ? $("docInputText").value.trim() || null
+      : null,
   };
 
   await api("/admin/documents", { method: "POST", body: JSON.stringify(p) });
@@ -2877,8 +2878,9 @@ function updateManagerSummary() {
   }
   if (has("mgrStatStaffOnly")) {
     $("mgrStatStaffOnly").textContent = String(
-      managerUsers.filter((u) => String(u?.role || "").toLowerCase() === "staff")
-        .length || 0
+      managerUsers.filter(
+        (u) => String(u?.role || "").toLowerCase() === "staff"
+      ).length || 0
     );
   }
 }
@@ -3041,12 +3043,21 @@ function bind() {
     })
   );
 
-  document.querySelectorAll(".tabbtn[data-library-tab]").forEach((btn) =>
-    btn.addEventListener("click", () => setLibraryTab(btn.dataset.libraryTab))
-  );
-  document.querySelectorAll(".tabbtn[data-manager-tab]").forEach((btn) =>
-    btn.addEventListener("click", () => setManagerTab(btn.dataset.managerTab))
-  );
+  document
+    .querySelectorAll(".tabbtn[data-library-tab]")
+    .forEach((btn) =>
+      btn.addEventListener("click", () =>
+        setLibraryTab(btn.dataset.libraryTab)
+      )
+    );
+
+  document
+    .querySelectorAll(".tabbtn[data-manager-tab]")
+    .forEach((btn) =>
+      btn.addEventListener("click", () =>
+        setManagerTab(btn.dataset.managerTab)
+      )
+    );
 
   on("search", "input", filterConversations);
 
