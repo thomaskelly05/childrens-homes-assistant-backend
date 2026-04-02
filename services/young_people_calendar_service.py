@@ -46,7 +46,6 @@ class YoungPeopleCalendarService:
                     "has_keywork": False,
                     "has_support_plan": False,
                     "has_appointment": False,
-                    "has_alert": False,
                 }
                 current += timedelta(days=1)
 
@@ -83,8 +82,6 @@ class YoungPeopleCalendarService:
                     row["has_support_plan"] = True
                 elif record_type == "appointment":
                     row["has_appointment"] = True
-                elif record_type == "alert":
-                    row["has_alert"] = True
 
             days = list(by_day.values())
             return {
@@ -173,13 +170,6 @@ class YoungPeopleCalendarService:
                 )
                 results.extend(
                     YoungPeopleCalendarService._fetch_appointments(
-                        cur=cur,
-                        young_person_id=young_person_id,
-                        selected_date=selected_date,
-                    )
-                )
-                results.extend(
-                    YoungPeopleCalendarService._fetch_alerts(
                         cur=cur,
                         young_person_id=young_person_id,
                         selected_date=selected_date,
@@ -292,19 +282,11 @@ class YoungPeopleCalendarService:
                     WHERE a.young_person_id = %s
                       AND a.appointment_date IS NOT NULL
                       AND a.appointment_date::date BETWEEN %s AND %s
-
-                    UNION ALL
-
-                    SELECT COALESCE(ya.review_date, ya.created_at::date) AS record_date, 'alert' AS record_type
-                    FROM young_person_alerts ya
-                    WHERE ya.young_person_id = %s
-                      AND COALESCE(ya.review_date, ya.created_at::date) BETWEEN %s AND %s
                 ) t
                 WHERE record_date IS NOT NULL
                 ORDER BY record_date ASC
             """
             params = [
-                young_person_id, start_date, end_date,
                 young_person_id, start_date, end_date,
                 young_person_id, start_date, end_date,
                 young_person_id, start_date, end_date,
@@ -737,8 +719,6 @@ class YoungPeopleCalendarService:
                 a.summary,
                 a.purpose,
                 a.child_voice,
-                a.preparation_notes,
-                a.outcome_notes,
                 a.follow_up_actions,
                 a.status,
                 a.created_by,
@@ -748,6 +728,7 @@ class YoungPeopleCalendarService:
             FROM young_person_appointments a
             LEFT JOIN users u ON a.created_by = u.id
             WHERE a.young_person_id = %s
+              AND a.appointment_date IS NOT NULL
               AND a.appointment_date::date = %s
             ORDER BY a.appointment_date DESC, a.id DESC
             """,
@@ -755,85 +736,45 @@ class YoungPeopleCalendarService:
         )
         rows = cur.fetchall() or []
 
-        items: list[dict[str, Any]] = []
+        items = []
         for row in rows:
             summary_parts = [
                 row.get("summary"),
                 row.get("purpose"),
-                row.get("professional_name"),
-                row.get("location"),
+                row.get("child_voice"),
+                row.get("follow_up_actions"),
             ]
             summary = " | ".join([str(x).strip() for x in summary_parts if x and str(x).strip()])
+
+            professional_bits = [row.get("professional_name"), row.get("professional_role")]
+            professional = " ".join([str(x).strip() for x in professional_bits if x and str(x).strip()]).strip()
+
+            title = row.get("title") or row.get("appointment_type") or "Appointment"
+            if professional:
+                title = f"{title} - {professional}"
 
             items.append(
                 {
                     "record_type": "appointment",
                     "record_id": row["id"],
                     "id": row["id"],
-                    "title": row.get("title") or "Appointment",
-                    "summary": summary or "Appointment recorded",
+                    "title": title,
+                    "summary": summary or "Appointment scheduled",
                     "recorded_at": row.get("appointment_date") or row.get("created_at"),
                     "appointment_date": row.get("appointment_date"),
-                    "location": row.get("location"),
-                    "professional_name": row.get("professional_name"),
-                    "professional_role": row.get("professional_role"),
-                    "appointment_type": row.get("appointment_type") or "general",
-                    "status": row.get("status") or "scheduled",
-                    "workflow_status": row.get("status") or "scheduled",
-                    "linked_plan_id": row.get("linked_plan_id"),
                     "recorded_by_name": YoungPeopleCalendarService._full_name(
                         row.get("first_name"), row.get("last_name")
                     ),
+                    "workflow_status": row.get("status") or "scheduled",
+                    "status": row.get("status") or "scheduled",
                     "severity": "medium",
+                    "location": row.get("location"),
+                    "linked_plan_id": row.get("linked_plan_id"),
+                    "professional_name": row.get("professional_name"),
+                    "professional_role": row.get("professional_role"),
                 }
             )
-
         return items
-
-    @staticmethod
-    def _fetch_alerts(*, cur, young_person_id: int, selected_date: date) -> list[dict[str, Any]]:
-        cur.execute(
-            """
-            SELECT
-                ya.id,
-                ya.title,
-                ya.description,
-                ya.alert_type,
-                ya.severity,
-                ya.is_active,
-                ya.review_date,
-                ya.created_by,
-                ya.created_at,
-                u.first_name,
-                u.last_name
-            FROM young_person_alerts ya
-            LEFT JOIN users u ON ya.created_by = u.id
-            WHERE ya.young_person_id = %s
-              AND COALESCE(ya.review_date, ya.created_at::date) = %s
-            ORDER BY COALESCE(ya.review_date::timestamp, ya.created_at) DESC, ya.id DESC
-            """,
-            (young_person_id, selected_date),
-        )
-        rows = cur.fetchall() or []
-
-        return [
-            {
-                "record_type": "alert",
-                "record_id": row["id"],
-                "id": row["id"],
-                "title": row.get("title") or "Alert",
-                "summary": row.get("description") or "Alert recorded",
-                "recorded_at": row.get("review_date") or row.get("created_at"),
-                "recorded_by_name": YoungPeopleCalendarService._full_name(
-                    row.get("first_name"), row.get("last_name")
-                ),
-                "workflow_status": "active" if row.get("is_active") else "inactive",
-                "severity": row.get("severity") or "medium",
-                "alert_type": row.get("alert_type"),
-                "is_active": row.get("is_active"),
-            }
-            for row in rows
-        ]
 
     @staticmethod
     def _full_name(first_name: str | None, last_name: str | None) -> str | None:
