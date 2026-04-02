@@ -78,6 +78,8 @@ const LEGAL_ACCEPTANCE_KEY = "indicare_legal_acceptance";
 const LEGAL_TABS = ["terms", "privacy", "ip", "acceptance"];
 const ASSISTANT_REDIRECT_GUARD_KEY = "indicare_assistant_redirect_guard";
 
+const MOBILE_BREAKPOINT = 880;
+
 const $ = (id) => document.getElementById(id);
 const has = (id) => !!document.getElementById(id);
 
@@ -116,10 +118,7 @@ function hasRecentAssistantRedirectGuard() {
 
 function markAssistantRedirectGuard() {
   try {
-    sessionStorage.setItem(
-      ASSISTANT_REDIRECT_GUARD_KEY,
-      String(Date.now())
-    );
+    sessionStorage.setItem(ASSISTANT_REDIRECT_GUARD_KEY, String(Date.now()));
   } catch (_) {}
 }
 
@@ -152,7 +151,7 @@ function resize() {
   if (!has("input")) return;
   const t = $("input");
   t.style.height = "auto";
-  t.style.height = Math.min(t.scrollHeight, 120) + "px";
+  t.style.height = Math.min(t.scrollHeight, 140) + "px";
 }
 
 function docShow(name) {
@@ -194,6 +193,7 @@ function syncHelpers() {
   if (has("voiceReplies")) {
     $("voiceReplies").classList.toggle("active", speechEnabled);
   }
+  syncMobileAssistantState();
 }
 
 function userInitials() {
@@ -213,8 +213,17 @@ function setWelcome() {
       GREET[Math.floor(Math.random() * GREET.length)](firstName());
   }
   if (has("welcomeText")) {
-    $("welcomeText").textContent =
-      "Your assistant is ready to help with records, safeguarding, risk, guidance, and drafting.";
+    const r = role();
+    if (r === "manager") {
+      $("welcomeText").textContent =
+        "Your assistant is ready to help with records, safeguarding, reviews, oversight, guidance, and professional drafting.";
+    } else if (r === "admin" || r === "provider_admin") {
+      $("welcomeText").textContent =
+        "Your assistant is ready to support operational writing, guidance, oversight, and safer decision-making across the platform.";
+    } else {
+      $("welcomeText").textContent =
+        "Your assistant is ready to help with records, safeguarding, risk, guidance, and drafting.";
+    }
   }
 }
 
@@ -268,6 +277,9 @@ function summariseTitle(text) {
     "good",
     "morning",
     "indicare",
+    "help",
+    "me",
+    "this",
   ]);
   const words = clean.split(" ").filter(Boolean);
   const pool = words.filter((w) => !stop.has(w.toLowerCase()));
@@ -451,10 +463,7 @@ function saveContextState() {
     shift: has("contextShift") ? $("contextShift").value.trim() : "",
   };
 
-  localStorage.setItem(
-    "indicare_context_state",
-    JSON.stringify(contextState)
-  );
+  localStorage.setItem("indicare_context_state", JSON.stringify(contextState));
   banner(indiCareCopy("contextSaved"));
 }
 
@@ -562,6 +571,8 @@ function legalControlsDisabled(disabled) {
     "openSettings",
     "sideToggle",
     "mobileMenu",
+    "mobileNavAssistant",
+    "mobileNavMore",
   ].forEach((id) => {
     if (!has(id)) return;
     $(id).disabled = !!disabled;
@@ -619,7 +630,7 @@ async function acceptLegalTerms() {
 
 async function declineLegalTerms() {
   clearLegalAcceptance();
-  banner("You must accept the legal terms to use IndiCare OS.");
+  banner("You must accept the legal terms to use IndiCare.");
   await logoutNow();
 }
 
@@ -744,8 +755,7 @@ function speakText(text) {
 }
 
 function loadVoicePref() {
-  speechEnabled =
-    localStorage.getItem("indicare_voice_replies") === "true";
+  speechEnabled = localStorage.getItem("indicare_voice_replies") === "true";
   if (has("voiceReplies")) {
     $("voiceReplies").classList.toggle("active", speechEnabled);
   }
@@ -931,12 +941,29 @@ async function loadMe() {
   }
 }
 
+function isMobileView() {
+  return window.innerWidth <= MOBILE_BREAKPOINT;
+}
+
+function openSidebarMobile() {
+  if (!isMobileView()) return;
+  has("sidebar") && $("sidebar").classList.add("open");
+  has("overlay") && $("overlay").classList.add("show");
+}
+
 function closeMobilePanels() {
-  if (window.innerWidth <= 768) {
+  if (isMobileView()) {
     has("sidebar") && $("sidebar").classList.remove("open");
     has("overlay") && $("overlay").classList.remove("show");
     closeSettings();
   }
+}
+
+function syncMobileAssistantState() {
+  if (!has("mobileNavAssistant")) return;
+  const active =
+    has("assistantPanel") && !$("assistantPanel").classList.contains("hidden");
+  $("mobileNavAssistant").classList.toggle("active", !!active);
 }
 
 function hideAllPanels() {
@@ -961,6 +988,7 @@ function showAssistantView() {
       : "Intelligence for Care"
   );
   closeMobilePanels();
+  syncMobileAssistantState();
 }
 
 function showLibraryView() {
@@ -969,8 +997,9 @@ function showLibraryView() {
   has("libraryPanel") && $("libraryPanel").classList.remove("hidden");
   has("inputWrap") && $("inputWrap").classList.add("hidden");
   has("navLibrary") && $("navLibrary").classList.add("active");
-  setTitle("Policies");
+  setTitle("Policies & Guidance");
   closeMobilePanels();
+  syncMobileAssistantState();
   loadLibrary().catch((e) => {
     console.error("showLibraryView failed", e);
     banner(indiCareCopy("libraryLoadFail"));
@@ -984,8 +1013,9 @@ async function showManagerView() {
   has("managerPanel") && $("managerPanel").classList.remove("hidden");
   has("inputWrap") && $("inputWrap").classList.add("hidden");
   has("navManager") && $("navManager").classList.add("active");
-  setTitle("Manager");
+  setTitle("Manager tools");
   closeMobilePanels();
+  syncMobileAssistantState();
   try {
     await loadManager();
   } catch (e) {
@@ -1001,8 +1031,9 @@ async function showAdminView() {
   has("adminPanel") && $("adminPanel").classList.remove("hidden");
   has("inputWrap") && $("inputWrap").classList.add("hidden");
   has("navAdmin") && $("navAdmin").classList.add("active");
-  setTitle("Admin");
+  setTitle("Admin tools");
   closeMobilePanels();
+  syncMobileAssistantState();
   try {
     await loadAdminReferenceData();
     await loadActiveAdminTab();
@@ -1018,11 +1049,13 @@ function resetWelcome() {
   currentDocumentName = null;
   currentStreamMeta = { sources: [], runtime: {} };
   stopSpeaking();
+
   if (has("messages")) {
     $("messages").innerHTML = "";
     $("messages").classList.add("hidden");
   }
   has("empty") && $("empty").classList.remove("hidden");
+
   if (has("input")) $("input").value = "";
   resize();
   docHide();
@@ -1045,7 +1078,7 @@ function renderHistory(rows) {
     }`;
     item.innerHTML = `<div class="row"><button class="mainbtn"><div class="ttl">${safe(
       stripSystem(r?.title || "Observation")
-    )}</div></button><button class="mini">⧉</button><button class="mini danger">🗑</button></div>`;
+    )}</div></button><button class="mini" type="button">⧉</button><button class="mini danger" type="button">🗑</button></div>`;
 
     const buttons = item.querySelectorAll("button");
     const main = buttons[0];
@@ -1133,6 +1166,7 @@ async function openConversation(id, title) {
   setTitle(title || "Observation");
   filterConversations();
   closeMobilePanels();
+  syncMobileAssistantState();
 }
 
 async function renameShort(id, prompt) {
@@ -1160,9 +1194,7 @@ async function deleteConversation(id) {
 
 function renderSourceCard(source) {
   const type = safe(source?.type || "source");
-  const label = safe(
-    source?.label || source?.document_title || "Source"
-  );
+  const label = safe(source?.label || source?.document_title || "Source");
   const excerpt = safe(source?.excerpt || "");
   const section = safe(source?.section || "");
   const page =
@@ -1200,7 +1232,7 @@ function renderSourcesHtml(sources) {
   if (!rows.length) return "";
   return `
     <div class="card" style="margin-top:10px;padding:12px;">
-      <div style="font-weight:600;margin-bottom:6px;">Sources used</div>
+      <div style="font-weight:700;margin-bottom:6px;">Sources used</div>
       <div class="entity-meta">This response used the following source material.</div>
       ${rows.map(renderSourceCard).join("")}
     </div>
@@ -1216,14 +1248,10 @@ function renderRuntimeHtml(runtime) {
     chips.push(`<span class="tag neutral">${safe(data.mode)}</span>`);
   }
   if (data.task_type) {
-    chips.push(
-      `<span class="tag neutral">${safe(data.task_type)}</span>`
-    );
+    chips.push(`<span class="tag neutral">${safe(data.task_type)}</span>`);
   }
   if (data.output_type) {
-    chips.push(
-      `<span class="tag neutral">${safe(data.output_type)}</span>`
-    );
+    chips.push(`<span class="tag neutral">${safe(data.output_type)}</span>`);
   }
   if (data.urgency) {
     chips.push(
@@ -1252,19 +1280,15 @@ function renderRuntimeHtml(runtime) {
 
   return `
     <div class="card" style="margin-top:10px;padding:12px;">
-      <div style="font-weight:600;margin-bottom:8px;">IndiCare reasoning</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">${chips.join(
-        ""
-      )}</div>
+      <div style="font-weight:700;margin-bottom:8px;">IndiCare reasoning</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">${chips.join("")}</div>
       ${
         actions.length
           ? `
-        <div class="entity-meta" style="margin-top:10px;font-weight:600;">Suggested priorities</div>
+        <div class="entity-meta" style="margin-top:10px;font-weight:700;">Suggested priorities</div>
         <ul style="margin:8px 0 0 18px;">
           ${actions
-            .map(
-              (a) => `<li style="margin-bottom:6px;">${safe(a)}</li>`
-            )
+            .map((a) => `<li style="margin-bottom:6px;">${safe(a)}</li>`)
             .join("")}
         </ul>
       `
@@ -1328,6 +1352,7 @@ function appendMessage(roleName, text, opts = {}) {
     if (!actions) return;
     const b = document.createElement("button");
     b.className = "chip";
+    b.type = "button";
     b.textContent = label;
     b.onclick = fn;
     actions.appendChild(b);
@@ -1666,10 +1691,7 @@ async function sendMessage() {
       );
       attachMetaToStreamingMessage(currentStreamMeta);
     } else {
-      appendMessage(
-        "assistant",
-        `Sorry, there was a problem: ${e.message}`
-      );
+      appendMessage("assistant", `Sorry, there was a problem: ${e.message}`);
     }
   } finally {
     isStreaming = false;
@@ -1701,6 +1723,14 @@ function quick(type) {
   sendMessage();
 }
 
+function fillPrompt(text) {
+  if (!has("input")) return;
+  if (!legalAcceptanceValid()) return openLegalModal("acceptance");
+  $("input").value = text || "";
+  resize();
+  $("input").focus();
+}
+
 function startSpeech() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) return banner(indiCareCopy("speechUnsupported"));
@@ -1727,7 +1757,13 @@ function startSpeech() {
   rec.start();
 }
 
-function fillSelect(id, rows, placeholder, valueKey = "id", labelFn = (r) => r.name) {
+function fillSelect(
+  id,
+  rows,
+  placeholder,
+  valueKey = "id",
+  labelFn = (r) => r.name
+) {
   if (!has(id)) return;
   const sel = $(id);
   const current = sel.value;
@@ -1748,7 +1784,8 @@ function fillSelect(id, rows, placeholder, valueKey = "id", labelFn = (r) => r.n
 function updateAdminSummary() {
   if (has("sumUsers")) $("sumUsers").textContent = String(adminUsers.length || 0);
   if (has("sumHomes")) $("sumHomes").textContent = String(homes.length || 0);
-  if (has("sumProviders")) $("sumProviders").textContent = String(providers.length || 0);
+  if (has("sumProviders"))
+    $("sumProviders").textContent = String(providers.length || 0);
   if (has("sumDocs")) $("sumDocs").textContent = String(docs.length || 0);
 }
 
@@ -1760,9 +1797,7 @@ function setAdminTab(name) {
   document
     .querySelectorAll(".tabbtn[data-tab]")
     .forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
-  document
-    .querySelectorAll(".admin-tab")
-    .forEach((t) => t.classList.add("hidden"));
+  document.querySelectorAll(".admin-tab").forEach((t) => t.classList.add("hidden"));
   if (has("tab-" + name)) $("tab-" + name).classList.remove("hidden");
   localStorage.setItem("indicare_admin_tab", name);
 }
@@ -1770,9 +1805,7 @@ function setAdminTab(name) {
 function setLibraryTab(name) {
   document
     .querySelectorAll(".tabbtn[data-library-tab]")
-    .forEach((b) =>
-      b.classList.toggle("active", b.dataset.libraryTab === name)
-    );
+    .forEach((b) => b.classList.toggle("active", b.dataset.libraryTab === name));
   if (has("library-list-tab")) {
     $("library-list-tab").classList.toggle("hidden", name !== "list");
   }
@@ -1785,12 +1818,8 @@ function setLibraryTab(name) {
 function setManagerTab(name) {
   document
     .querySelectorAll(".tabbtn[data-manager-tab]")
-    .forEach((b) =>
-      b.classList.toggle("active", b.dataset.managerTab === name)
-    );
-  document
-    .querySelectorAll(".manager-tab")
-    .forEach((t) => t.classList.add("hidden"));
+    .forEach((b) => b.classList.toggle("active", b.dataset.managerTab === name));
+  document.querySelectorAll(".manager-tab").forEach((t) => t.classList.add("hidden"));
   if (has("manager-" + name + "-tab")) {
     $("manager-" + name + "-tab").classList.remove("hidden");
   }
@@ -1825,9 +1854,7 @@ async function loadAdminReferenceData() {
     "Select manager",
     "id",
     (r) =>
-      `${r?.first_name || ""} ${r?.last_name || ""}`.trim() ||
-      r?.email ||
-      ""
+      `${r?.first_name || ""} ${r?.last_name || ""}`.trim() || r?.email || ""
   );
   fillSelect(
     "docOwnerId",
@@ -1835,9 +1862,7 @@ async function loadAdminReferenceData() {
     "Select owner",
     "id",
     (r) =>
-      `${r?.first_name || ""} ${r?.last_name || ""}`.trim() ||
-      r?.email ||
-      ""
+      `${r?.first_name || ""} ${r?.last_name || ""}`.trim() || r?.email || ""
   );
   fillSelect(
     "libraryOwnerId",
@@ -1845,9 +1870,7 @@ async function loadAdminReferenceData() {
     "Select owner",
     "id",
     (r) =>
-      `${r?.first_name || ""} ${r?.last_name || ""}`.trim() ||
-      r?.email ||
-      ""
+      `${r?.first_name || ""} ${r?.last_name || ""}`.trim() || r?.email || ""
   );
 
   updateAdminSummary();
@@ -1928,7 +1951,8 @@ function renderAdminUsers() {
   host.innerHTML = "";
 
   if (!adminUsers.length) {
-    return (host.innerHTML = `<div class="entity-row"><div>No users found.</div></div>`);
+    host.innerHTML = `<div class="entity-row"><div>No users found.</div></div>`;
+    return;
   }
 
   adminUsers.forEach((user) => {
@@ -1952,6 +1976,7 @@ function renderAdminUsers() {
       if (!right) return;
       const b = document.createElement("button");
       b.className = "chip";
+      b.type = "button";
       b.textContent = label;
       b.onclick = fn;
       right.appendChild(b);
@@ -2007,9 +2032,7 @@ function renderAdminUsers() {
     });
 
     add("Reset password", async () => {
-      const password = prompt(
-        `Set new password for ${user?.email || "user"}`
-      );
+      const password = prompt(`Set new password for ${user?.email || "user"}`);
       if (password === null || !password.trim()) {
         return banner("Password cannot be empty");
       }
@@ -2081,7 +2104,8 @@ function renderHomes() {
   host.innerHTML = "";
 
   if (!homes.length) {
-    return (host.innerHTML = `<div class="entity-row"><div>No homes found.</div></div>`);
+    host.innerHTML = `<div class="entity-row"><div>No homes found.</div></div>`;
+    return;
   }
 
   homes.forEach((home) => {
@@ -2125,6 +2149,7 @@ function renderHomes() {
     ].forEach(([label, fn]) => {
       const b = document.createElement("button");
       b.className = "chip";
+      b.type = "button";
       b.textContent = label;
       b.onclick = fn;
       right && right.appendChild(b);
@@ -2138,9 +2163,7 @@ async function createProvider() {
   const p = {
     name: has("providerName") ? $("providerName").value.trim() : "",
     region: has("providerRegion") ? $("providerRegion").value.trim() || null : null,
-    address: has("providerAddress")
-      ? $("providerAddress").value.trim() || null
-      : null,
+    address: has("providerAddress") ? $("providerAddress").value.trim() || null : null,
     postcode: has("providerPostcode")
       ? $("providerPostcode").value.trim() || null
       : null,
@@ -2184,7 +2207,8 @@ function renderProviders() {
   host.innerHTML = "";
 
   if (!providers.length) {
-    return (host.innerHTML = `<div class="entity-row"><div>No providers found.</div></div>`);
+    host.innerHTML = `<div class="entity-row"><div>No providers found.</div></div>`;
+    return;
   }
 
   providers.forEach((provider) => {
@@ -2228,6 +2252,7 @@ function renderProviders() {
     ].forEach(([label, fn]) => {
       const b = document.createElement("button");
       b.className = "chip";
+      b.type = "button";
       b.textContent = label;
       b.onclick = fn;
       right && right.appendChild(b);
@@ -2258,9 +2283,7 @@ async function createDocumentRecord() {
     confidentiality_level: has("docConfLevel")
       ? $("docConfLevel").value || "standard"
       : "standard",
-    input_text: has("docInputText")
-      ? $("docInputText").value.trim() || null
-      : null,
+    input_text: has("docInputText") ? $("docInputText").value.trim() || null : null,
   };
 
   await api("/admin/documents", { method: "POST", body: JSON.stringify(p) });
@@ -2311,7 +2334,8 @@ function renderDocuments() {
   host.innerHTML = "";
 
   if (!docs.length) {
-    return (host.innerHTML = `<div class="entity-row"><div>No documents found.</div></div>`);
+    host.innerHTML = `<div class="entity-row"><div>No documents found.</div></div>`;
+    return;
   }
 
   docs.forEach((doc) => {
@@ -2357,6 +2381,7 @@ function renderDocuments() {
     ].forEach(([label, fn]) => {
       const b = document.createElement("button");
       b.className = "chip";
+      b.type = "button";
       b.textContent = label;
       b.onclick = fn;
       right && right.appendChild(b);
@@ -2440,7 +2465,8 @@ function renderAudit() {
   host.innerHTML = "";
 
   if (!audit.length) {
-    return (host.innerHTML = `<div class="entity-row"><div>No audit entries found.</div></div>`);
+    host.innerHTML = `<div class="entity-row"><div>No audit entries found.</div></div>`;
+    return;
   }
 
   audit.forEach((a) => {
@@ -2494,7 +2520,8 @@ function renderLibraryList() {
   host.innerHTML = "";
 
   if (!libraryDocs.length) {
-    return (host.innerHTML = `<div class="entity-row"><div>No documents available for your home.</div></div>`);
+    host.innerHTML = `<div class="entity-row"><div>No documents available for your home.</div></div>`;
+    return;
   }
 
   libraryDocs.forEach((doc) => {
@@ -2524,6 +2551,7 @@ function renderLibraryList() {
     ].forEach(([label, fn]) => {
       const b = document.createElement("button");
       b.className = "chip";
+      b.type = "button";
       b.textContent = label;
       b.onclick = fn;
       right && right.appendChild(b);
@@ -2539,10 +2567,12 @@ function renderManagerLibraryList() {
   host.innerHTML = "";
 
   if (!canManageLibrary()) {
-    return (host.innerHTML = `<div class="entity-row"><div>Read-only access.</div></div>`);
+    host.innerHTML = `<div class="entity-row"><div>Read-only access.</div></div>`;
+    return;
   }
   if (!libraryDocs.length) {
-    return (host.innerHTML = `<div class="entity-row"><div>No home documents found.</div></div>`);
+    host.innerHTML = `<div class="entity-row"><div>No home documents found.</div></div>`;
+    return;
   }
 
   libraryDocs.forEach((doc) => {
@@ -2552,7 +2582,7 @@ function renderManagerLibraryList() {
         doc?.title || "Untitled document"
       )}</div><div class="entity-meta">${safe(
         doc?.document_type || "—"
-      )} · review ${safe(doc?.review_date || "—")}</div></div><div class="entity-actions"><button class="chip" data-doc-edit="${safe(
+      )} · review ${safe(doc?.review_date || "—")}</div></div><div class="entity-actions"><button class="chip" type="button" data-doc-edit="${safe(
         String(doc?.id ?? "")
       )}">Edit</button></div></div>`
     );
@@ -2778,7 +2808,8 @@ function renderManagerUsers() {
   host.innerHTML = "";
 
   if (!managerUsers.length) {
-    return (host.innerHTML = `<div class="entity-row"><div>No staff found.</div></div>`);
+    host.innerHTML = `<div class="entity-row"><div>No staff found.</div></div>`;
+    return;
   }
 
   managerUsers.forEach((u) => {
@@ -2809,7 +2840,8 @@ function renderManagerDocuments() {
   host.innerHTML = "";
 
   if (!managerDocuments.length) {
-    return (host.innerHTML = `<div class="entity-row"><div>No home documents found.</div></div>`);
+    host.innerHTML = `<div class="entity-row"><div>No home documents found.</div></div>`;
+    return;
   }
 
   managerDocuments.forEach((d) => {
@@ -2845,9 +2877,8 @@ function updateManagerSummary() {
   }
   if (has("mgrStatStaffOnly")) {
     $("mgrStatStaffOnly").textContent = String(
-      managerUsers.filter(
-        (u) => String(u?.role || "").toLowerCase() === "staff"
-      ).length || 0
+      managerUsers.filter((u) => String(u?.role || "").toLowerCase() === "staff")
+        .length || 0
     );
   }
 }
@@ -2908,21 +2939,41 @@ function bindLegalControls() {
   });
 }
 
+function bindQuickCards() {
+  document.querySelectorAll("[data-quick-fill]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      fillPrompt(btn.getAttribute("data-quick-fill") || "");
+    });
+  });
+}
+
+function bindMobileNav() {
+  on("mobileNavAssistant", "click", showAssistantView);
+  on("mobileNavMore", "click", openSidebarMobile);
+}
+
+function bindWorkspaceLinks() {
+  document.querySelectorAll(".navlink").forEach((link) => {
+    link.addEventListener("click", closeMobilePanels);
+  });
+}
+
 function bind() {
   on("sideToggle", "click", () => {
-    if (has("sidebar")) $("sidebar").classList.toggle("open");
-    if (window.innerWidth <= 768 && has("overlay")) {
-      $("overlay").classList.toggle(
-        "show",
-        has("sidebar") && $("sidebar").classList.contains("open")
-      );
+    if (isMobileView()) {
+      if (has("sidebar")) {
+        const open = $("sidebar").classList.toggle("open");
+        has("overlay") && $("overlay").classList.toggle("show", open);
+      }
+      return;
+    }
+
+    if (has("sidebar")) {
+      $("sidebar").classList.toggle("open");
     }
   });
 
-  on("mobileMenu", "click", () => {
-    if (has("sidebar")) $("sidebar").classList.add("open");
-    if (has("overlay")) $("overlay").classList.add("show");
-  });
+  on("mobileMenu", "click", openSidebarMobile);
 
   on("overlay", "click", () => {
     if (has("sidebar")) $("sidebar").classList.remove("open");
@@ -2990,16 +3041,12 @@ function bind() {
     })
   );
 
-  document
-    .querySelectorAll(".tabbtn[data-library-tab]")
-    .forEach((btn) =>
-      btn.addEventListener("click", () => setLibraryTab(btn.dataset.libraryTab))
-    );
-  document
-    .querySelectorAll(".tabbtn[data-manager-tab]")
-    .forEach((btn) =>
-      btn.addEventListener("click", () => setManagerTab(btn.dataset.managerTab))
-    );
+  document.querySelectorAll(".tabbtn[data-library-tab]").forEach((btn) =>
+    btn.addEventListener("click", () => setLibraryTab(btn.dataset.libraryTab))
+  );
+  document.querySelectorAll(".tabbtn[data-manager-tab]").forEach((btn) =>
+    btn.addEventListener("click", () => setManagerTab(btn.dataset.managerTab))
+  );
 
   on("search", "input", filterConversations);
 
@@ -3093,7 +3140,19 @@ function bind() {
   on("refreshManagerBtn", "click", loadManager);
   on("refreshManagerDocsBtn", "click", loadManager);
 
+  bindQuickCards();
+  bindMobileNav();
+  bindWorkspaceLinks();
   bindLegalControls();
+
+  window.addEventListener("resize", () => {
+    if (!isMobileView()) {
+      has("overlay") && $("overlay").classList.remove("show");
+      has("sidebar") && $("sidebar").classList.remove("open");
+    }
+    syncMobileAssistantState();
+    resize();
+  });
 }
 
 async function init() {
@@ -3144,6 +3203,7 @@ async function init() {
 
   showAssistantView();
   enforceLegalGate();
+  syncHelpers();
 }
 
 document.addEventListener("DOMContentLoaded", init);
