@@ -147,11 +147,7 @@
     </div>
 
     <div class="legal-actions">
-      <button
-        id="declineLegalBtn"
-        type="button"
-        class="ghost danger-outline"
-      >
+      <button id="declineLegalBtn" type="button" class="ghost danger-outline">
         Decline and sign out
       </button>
       <button id="acceptLegalBtn" type="button" class="action">
@@ -299,6 +295,7 @@
         >
           ☰
         </button>
+
         <div class="brand-wrap">
           <div class="brand-mark">IC</div>
           <div class="brand-copy">
@@ -308,8 +305,10 @@
         </div>
       </div>
 
-      <div class="sidebar-inner">
-        <button id="newChat" class="primary" type="button">+ New conversation</button>
+      <div class="sidebar-scroll">
+        <button id="newChat" class="primary" type="button">
+          + New conversation
+        </button>
 
         <div class="nav-label">Workspace</div>
         <div class="nav nav-main">
@@ -403,187 +402,234 @@
         </div>
       </header>
 
-      <section id="assistantPanel" class="panel">
-        <div class="panel-inner assistant-layout">
-          <section class="hero-card">
-            <div class="hero-copy">
-              <div class="eyebrow">Your home base</div>
-              <h1 id="welcomeTitle">Ready to support.</h1>
-              <p id="welcomeText">
-                Your assistant is ready to help with records, safeguarding,
-                risk, guidance, and drafting.
-              </p>
+      <div class="workspace-body">
+        <section id="assistantPanel" class="panel panel-active">
+          <div class="assistant-page">
+            <div class="assistant-scroll">
+              <div class="panel-inner assistant-layout">
+                <section class="hero-card">
+                  <div class="hero-copy">
+                    <div class="eyebrow">Your home base</div>
+                    <h1 id="welcomeTitle">Ready to support.</h1>
+                    <p id="welcomeText">
+                      Your assistant is ready to help with records,
+                      safeguarding, risk, guidance, and drafting.
+                    </p>
 
-              <div class="hero-helper">
-                <span id="langHelp">Assistant replies in English.</span>
-                <span id="modeHelp">Mode: Balanced</span>
-                <span>Review final records before saving or export.</span>
+                    <div class="hero-helper">
+                      <span id="langHelp">Assistant replies in English.</span>
+                      <span id="modeHelp">Mode: Balanced</span>
+                      <span>Review final records before saving or export.</span>
+                    </div>
+                  </div>
+
+                  <div class="hero-actions">
+                    <button
+                      class="quick-card"
+                      type="button"
+                      data-quick-fill="Write a clear daily note based on this situation."
+                    >
+                      <span class="quick-ico">📝</span>
+                      <span>
+                        <strong>Daily note</strong>
+                        <small>Turn notes into a clean record</small>
+                      </span>
+                    </button>
+
+                    <button
+                      class="quick-card"
+                      type="button"
+                      data-quick-fill="Help me draft a factual incident report."
+                    >
+                      <span class="quick-ico">⚠️</span>
+                      <span>
+                        <strong>Incident</strong>
+                        <small>Structured, factual, professional wording</small>
+                      </span>
+                    </button>
+
+                    <button
+                      class="quick-card"
+                      type="button"
+                      data-quick-fill="Rewrite this as a handover for the next shift."
+                    >
+                      <span class="quick-ico">🔄</span>
+                      <span>
+                        <strong>Handover</strong>
+                        <small>Prepare a clear next-shift summary</small>
+                      </span>
+                    </button>
+
+                    <button
+                      class="quick-card"
+                      type="button"
+                      data-quick-fill="Help me think through the safeguarding concerns in this situation."
+                    >
+                      <span class="quick-ico">🛡</span>
+                      <span>
+                        <strong>Safeguarding</strong>
+                        <small>Risk-aware reflection and response</small>
+                      </span>
+                    </button>
+
+                    <button
+                      class="quick-card"
+                      type="button"
+                      data-quick-fill="Rewrite this professionally and make it suitable for care records."
+                    >
+                      <span class="quick-ico">✍️</span>
+                      <span>
+                        <strong>Rewrite professionally</strong>
+                        <small>Sharper, calmer, more suitable wording</small>
+                      </span>
+                    </button>
+
+                    <button
+                      class="quick-card"
+                      type="button"
+                      data-quick-fill="Summarise this policy or guidance in simple practical points."
+                    >
+                      <span class="quick-ico">📘</span>
+                      <span>
+                        <strong>Policy help</strong>
+                        <small>Make guidance easier to use</small>
+                      </span>
+                    </button>
+                  </div>
+                </section>
+
+                <section class="conversation-stage">
+                  <div id="empty" class="welcome">
+                    <h2>Start a conversation</h2>
+                    <p>
+                      Ask for help with incidents, chronology, risk, handovers,
+                      keywork, reflection, or professional wording.
+                    </p>
+                  </div>
+
+                  <div id="messages" class="messages hidden"></div>
+                </section>
               </div>
             </div>
 
-            <div class="hero-actions">
-              <button class="quick-card" type="button" data-quick-fill="Write a clear daily note based on this situation.">
-                <span class="quick-ico">📝</span>
-                <span>
-                  <strong>Daily note</strong>
-                  <small>Turn notes into a clean record</small>
-                </span>
-              </button>
+            <section id="inputWrap" class="input-wrap">
+              <div class="input-inner">
+                <div id="doc" class="doc">
+                  <span id="docText"></span>
+                  <button id="clearDoc" class="icon" type="button">✕</button>
+                </div>
 
-              <button class="quick-card" type="button" data-quick-fill="Help me draft a factual incident report.">
-                <span class="quick-ico">⚠️</span>
-                <span>
-                  <strong>Incident</strong>
-                  <small>Structured, factual, professional wording</small>
-                </span>
-              </button>
+                <div class="ibox">
+                  <div class="irow">
+                    <label
+                      for="upload"
+                      class="icon attach-btn"
+                      style="cursor:pointer;color:var(--muted)"
+                    >
+                      📎
+                      <input
+                        id="upload"
+                        type="file"
+                        hidden
+                        accept=".txt,.docx,.pdf"
+                      />
+                    </label>
 
-              <button class="quick-card" type="button" data-quick-fill="Rewrite this as a handover for the next shift.">
-                <span class="quick-ico">🔄</span>
-                <span>
-                  <strong>Handover</strong>
-                  <small>Prepare a clear next-shift summary</small>
-                </span>
-              </button>
+                    <button
+                      id="mic"
+                      class="icon"
+                      type="button"
+                      title="Speech to text"
+                      aria-label="Speech to text"
+                    >
+                      🎙
+                    </button>
 
-              <button class="quick-card" type="button" data-quick-fill="Help me think through the safeguarding concerns in this situation.">
-                <span class="quick-ico">🛡</span>
-                <span>
-                  <strong>Safeguarding</strong>
-                  <small>Risk-aware reflection and response</small>
-                </span>
-              </button>
+                    <textarea
+                      id="input"
+                      class="ta"
+                      rows="1"
+                      placeholder="Describe situation..."
+                    ></textarea>
 
-              <button class="quick-card" type="button" data-quick-fill="Rewrite this professionally and make it suitable for care records.">
-                <span class="quick-ico">✍️</span>
-                <span>
-                  <strong>Rewrite professionally</strong>
-                  <small>Sharper, calmer, more suitable wording</small>
-                </span>
-              </button>
+                    <button
+                      id="send"
+                      class="send"
+                      type="button"
+                      aria-label="Send"
+                    >
+                      ➤
+                    </button>
+                  </div>
+                </div>
 
-              <button class="quick-card" type="button" data-quick-fill="Summarise this policy or guidance in simple practical points.">
-                <span class="quick-ico">📘</span>
-                <span>
-                  <strong>Policy help</strong>
-                  <small>Make guidance easier to use</small>
-                </span>
-              </button>
-            </div>
-          </section>
-
-          <div class="assistant-stream-wrap">
-            <div id="empty" class="welcome hidden-accessible">
-              <h2>Start a conversation</h2>
-              <p>
-                Ask for help with incidents, chronology, risk, handovers,
-                keywork, reflection, or professional wording.
-              </p>
-            </div>
-
-            <div id="messages" class="messages hidden"></div>
-          </div>
-        </div>
-      </section>
-
-      <section id="libraryPanel" class="panel hidden">
-        <div class="panel-inner">
-          <div class="tabbar sticky-tabs">
-            <button
-              class="tabbtn active"
-              type="button"
-              data-library-tab="list"
-            >
-              Library
-            </button>
-            <button
-              id="managerEditorTab"
-              class="tabbtn hidden"
-              type="button"
-              data-library-tab="editor"
-            >
-              Editor
-            </button>
-            <button
-              id="refreshLibraryBtn"
-              class="ghost"
-              type="button"
-              style="margin-left:auto"
-            >
-              Refresh
-            </button>
-          </div>
-
-          <div id="library-list-tab">
-            <div class="filters">
-              <input
-                id="librarySearch"
-                class="field"
-                type="text"
-                placeholder="Search library..."
-              />
-              <select id="libraryTypeFilter" class="sel">
-                <option value="">All types</option>
-                <option value="policy">Policy</option>
-                <option value="procedure">Procedure</option>
-                <option value="guidance">Guidance</option>
-                <option value="risk_assessment">Risk assessment</option>
-                <option value="form">Form</option>
-                <option value="template">Template</option>
-                <option value="home_document">Home document</option>
-              </select>
-              <select id="libraryApprovalFilter" class="sel">
-                <option value="">All approval states</option>
-                <option value="approved">Approved</option>
-                <option value="pending">Pending</option>
-                <option value="draft">Draft</option>
-                <option value="not_required">Not required</option>
-              </select>
-              <button id="refreshManagerLibraryBtn" class="ghost" type="button">
-                Reload
-              </button>
-            </div>
-
-            <div id="libraryList"></div>
-
-            <div id="libraryViewer" class="viewbox">
-              <h3>Select a document</h3>
-              <p>Open a policy or document from the list to read it here.</p>
-            </div>
-
-            <div id="managerLibraryList"></div>
-          </div>
-
-          <div id="library-editor-tab" class="hidden">
-            <div class="form-card">
-              <div class="form-card-head">
-                <h3 id="libraryFormTitle">Create document</h3>
-                <div class="form-card-actions">
-                  <button id="resetLibraryDocBtn" class="ghost" type="button">
-                    Reset
-                  </button>
+                <div class="app-legal-footer">
                   <button
-                    id="deleteLibraryDocBtn"
-                    class="ghost danger-outline hidden"
+                    id="footerTermsBtn"
+                    class="footer-link-btn"
                     type="button"
                   >
-                    Delete
+                    Terms
                   </button>
-                  <button id="saveLibraryDocBtn" class="action" type="button">
-                    Save
+                  <button
+                    id="footerPrivacyBtn"
+                    class="footer-link-btn"
+                    type="button"
+                  >
+                    Privacy
+                  </button>
+                  <button
+                    id="footerIPBtn"
+                    class="footer-link-btn"
+                    type="button"
+                  >
+                    IP notice
                   </button>
                 </div>
               </div>
+            </section>
+          </div>
+        </section>
 
-              <div class="grid-2">
-                <div>
-                  <label for="libraryDocTitle">Title</label>
-                  <input id="libraryDocTitle" class="field" type="text" />
-                </div>
+        <section id="libraryPanel" class="panel hidden">
+          <div class="panel-scroll">
+            <div class="panel-inner">
+              <div class="tabbar">
+                <button
+                  class="tabbtn active"
+                  type="button"
+                  data-library-tab="list"
+                >
+                  Library
+                </button>
+                <button
+                  id="managerEditorTab"
+                  class="tabbtn hidden"
+                  type="button"
+                  data-library-tab="editor"
+                >
+                  Editor
+                </button>
+                <button
+                  id="refreshLibraryBtn"
+                  class="ghost"
+                  type="button"
+                  style="margin-left:auto"
+                >
+                  Refresh
+                </button>
+              </div>
 
-                <div>
-                  <label for="libraryDocType">Type</label>
-                  <select id="libraryDocType" class="sel">
+              <div id="library-list-tab">
+                <div class="filters">
+                  <input
+                    id="librarySearch"
+                    class="field"
+                    type="text"
+                    placeholder="Search library..."
+                  />
+                  <select id="libraryTypeFilter" class="sel">
+                    <option value="">All types</option>
                     <option value="policy">Policy</option>
                     <option value="procedure">Procedure</option>
                     <option value="guidance">Guidance</option>
@@ -592,408 +638,556 @@
                     <option value="template">Template</option>
                     <option value="home_document">Home document</option>
                   </select>
-                </div>
-
-                <div>
-                  <label for="libraryIssueDate">Issue date</label>
-                  <input id="libraryIssueDate" class="field" type="date" />
-                </div>
-
-                <div>
-                  <label for="libraryReviewDate">Review date</label>
-                  <input id="libraryReviewDate" class="field" type="date" />
-                </div>
-
-                <div>
-                  <label for="libraryExpiryDate">Expiry date</label>
-                  <input id="libraryExpiryDate" class="field" type="date" />
-                </div>
-
-                <div>
-                  <label for="libraryApprovalStatus">Approval status</label>
-                  <select id="libraryApprovalStatus" class="sel">
-                    <option value="not_required">Not required</option>
-                    <option value="draft">Draft</option>
-                    <option value="pending">Pending</option>
+                  <select id="libraryApprovalFilter" class="sel">
+                    <option value="">All approval states</option>
                     <option value="approved">Approved</option>
+                    <option value="pending">Pending</option>
+                    <option value="draft">Draft</option>
+                    <option value="not_required">Not required</option>
                   </select>
+                  <button id="refreshManagerLibraryBtn" class="ghost" type="button">
+                    Reload
+                  </button>
                 </div>
 
-                <div>
-                  <label for="libraryConfidentiality">Confidentiality</label>
-                  <select id="libraryConfidentiality" class="sel">
-                    <option value="standard">Standard</option>
-                    <option value="confidential">Confidential</option>
-                    <option value="restricted">Restricted</option>
-                  </select>
+                <div id="libraryList"></div>
+
+                <div id="libraryViewer" class="viewbox">
+                  <h3>Select a document</h3>
+                  <p>Open a policy or document from the list to read it here.</p>
                 </div>
 
-                <div>
-                  <label for="libraryOwnerId">Owner</label>
-                  <select id="libraryOwnerId" class="sel">
-                    <option value="">Select owner</option>
-                  </select>
-                </div>
+                <div id="managerLibraryList"></div>
               </div>
 
-              <div>
-                <label for="libraryInputText">Document content</label>
-                <textarea
-                  id="libraryInputText"
-                  class="ta tall"
-                  rows="10"
-                  placeholder="Enter document content..."
-                ></textarea>
+              <div id="library-editor-tab" class="hidden">
+                <div class="form-card">
+                  <div class="form-card-head">
+                    <h3 id="libraryFormTitle">Create document</h3>
+                    <div class="form-card-actions">
+                      <button id="resetLibraryDocBtn" class="ghost" type="button">
+                        Reset
+                      </button>
+                      <button
+                        id="deleteLibraryDocBtn"
+                        class="ghost danger-outline hidden"
+                        type="button"
+                      >
+                        Delete
+                      </button>
+                      <button id="saveLibraryDocBtn" class="action" type="button">
+                        Save
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="grid-2">
+                    <div>
+                      <label for="libraryDocTitle">Title</label>
+                      <input id="libraryDocTitle" class="field" type="text" />
+                    </div>
+
+                    <div>
+                      <label for="libraryDocType">Type</label>
+                      <select id="libraryDocType" class="sel">
+                        <option value="policy">Policy</option>
+                        <option value="procedure">Procedure</option>
+                        <option value="guidance">Guidance</option>
+                        <option value="risk_assessment">Risk assessment</option>
+                        <option value="form">Form</option>
+                        <option value="template">Template</option>
+                        <option value="home_document">Home document</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label for="libraryIssueDate">Issue date</label>
+                      <input id="libraryIssueDate" class="field" type="date" />
+                    </div>
+
+                    <div>
+                      <label for="libraryReviewDate">Review date</label>
+                      <input id="libraryReviewDate" class="field" type="date" />
+                    </div>
+
+                    <div>
+                      <label for="libraryExpiryDate">Expiry date</label>
+                      <input id="libraryExpiryDate" class="field" type="date" />
+                    </div>
+
+                    <div>
+                      <label for="libraryApprovalStatus">Approval status</label>
+                      <select id="libraryApprovalStatus" class="sel">
+                        <option value="not_required">Not required</option>
+                        <option value="draft">Draft</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label for="libraryConfidentiality">Confidentiality</label>
+                      <select id="libraryConfidentiality" class="sel">
+                        <option value="standard">Standard</option>
+                        <option value="confidential">Confidential</option>
+                        <option value="restricted">Restricted</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label for="libraryOwnerId">Owner</label>
+                      <select id="libraryOwnerId" class="sel">
+                        <option value="">Select owner</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label for="libraryInputText">Document content</label>
+                    <textarea
+                      id="libraryInputText"
+                      class="ta tall"
+                      rows="10"
+                      placeholder="Enter document content..."
+                    ></textarea>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section id="managerPanel" class="panel hidden">
-        <div class="panel-inner">
-          <div class="tabbar sticky-tabs">
-            <button class="tabbtn active" type="button" data-manager-tab="staff">
-              Staff
-            </button>
-            <button class="tabbtn" type="button" data-manager-tab="documents">
-              Documents
-            </button>
-            <button
-              id="refreshManagerBtn"
-              class="ghost"
-              type="button"
-              style="margin-left:auto"
-            >
-              Refresh
-            </button>
-          </div>
-
-          <div class="summary" style="margin-bottom:16px;">
-            <div class="s">
-              <div class="n" id="mgrStatUsers">0</div>
-              <div class="l">Staff</div>
-            </div>
-            <div class="s">
-              <div class="n" id="mgrStatDocs">0</div>
-              <div class="l">Home Documents</div>
-            </div>
-            <div class="s">
-              <div class="n" id="mgrStatManagers">0</div>
-              <div class="l">Managers</div>
-            </div>
-            <div class="s">
-              <div class="n" id="mgrStatStaffOnly">0</div>
-              <div class="l">Support Staff</div>
-            </div>
-          </div>
-
-          <div id="manager-staff-tab" class="manager-tab">
-            <div class="form-card">
-              <h3>Create staff account</h3>
-              <div class="grid-2">
-                <div>
-                  <label for="mgrFirst">First name</label>
-                  <input id="mgrFirst" class="field" type="text" />
-                </div>
-                <div>
-                  <label for="mgrLast">Last name</label>
-                  <input id="mgrLast" class="field" type="text" />
-                </div>
-                <div>
-                  <label for="mgrEmail">Email</label>
-                  <input id="mgrEmail" class="field" type="email" />
-                </div>
-                <div>
-                  <label for="mgrPass">Password</label>
-                  <input id="mgrPass" class="field" type="password" />
-                </div>
-                <div>
-                  <label for="mgrRole">Role</label>
-                  <select id="mgrRole" class="sel">
-                    <option value="staff">Staff</option>
-                    <option value="manager">Manager</option>
-                  </select>
-                </div>
-              </div>
-              <div style="margin-top:12px;">
-                <button id="createStaff" class="action" type="button">
-                  Create staff member
+        <section id="managerPanel" class="panel hidden">
+          <div class="panel-scroll">
+            <div class="panel-inner">
+              <div class="tabbar">
+                <button class="tabbtn active" type="button" data-manager-tab="staff">
+                  Staff
+                </button>
+                <button class="tabbtn" type="button" data-manager-tab="documents">
+                  Documents
+                </button>
+                <button
+                  id="refreshManagerBtn"
+                  class="ghost"
+                  type="button"
+                  style="margin-left:auto"
+                >
+                  Refresh
                 </button>
               </div>
+
+              <div class="summary" style="margin-bottom:16px;">
+                <div class="s">
+                  <div class="n" id="mgrStatUsers">0</div>
+                  <div class="l">Staff</div>
+                </div>
+                <div class="s">
+                  <div class="n" id="mgrStatDocs">0</div>
+                  <div class="l">Home Documents</div>
+                </div>
+                <div class="s">
+                  <div class="n" id="mgrStatManagers">0</div>
+                  <div class="l">Managers</div>
+                </div>
+                <div class="s">
+                  <div class="n" id="mgrStatStaffOnly">0</div>
+                  <div class="l">Support Staff</div>
+                </div>
+              </div>
+
+              <div id="manager-staff-tab" class="manager-tab">
+                <div class="form-card">
+                  <h3>Create staff account</h3>
+                  <div class="grid-2">
+                    <div>
+                      <label for="mgrFirst">First name</label>
+                      <input id="mgrFirst" class="field" type="text" />
+                    </div>
+                    <div>
+                      <label for="mgrLast">Last name</label>
+                      <input id="mgrLast" class="field" type="text" />
+                    </div>
+                    <div>
+                      <label for="mgrEmail">Email</label>
+                      <input id="mgrEmail" class="field" type="email" />
+                    </div>
+                    <div>
+                      <label for="mgrPass">Password</label>
+                      <input id="mgrPass" class="field" type="password" />
+                    </div>
+                    <div>
+                      <label for="mgrRole">Role</label>
+                      <select id="mgrRole" class="sel">
+                        <option value="staff">Staff</option>
+                        <option value="manager">Manager</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div style="margin-top:12px;">
+                    <button id="createStaff" class="action" type="button">
+                      Create staff member
+                    </button>
+                  </div>
+                </div>
+
+                <div id="mgrUsers"></div>
+              </div>
+
+              <div id="manager-documents-tab" class="manager-tab hidden">
+                <div class="form-card">
+                  <h3>Create manager document</h3>
+                  <div>
+                    <label for="mgrDocTitle">Title</label>
+                    <input id="mgrDocTitle" class="field" type="text" />
+                  </div>
+                  <div>
+                    <label for="mgrDocText">Content</label>
+                    <textarea
+                      id="mgrDocText"
+                      class="ta tall"
+                      rows="8"
+                      placeholder="Enter document content..."
+                    ></textarea>
+                  </div>
+                  <div class="form-card-actions" style="margin-top:12px;">
+                    <button id="saveDoc" class="action" type="button">
+                      Save document
+                    </button>
+                    <button id="refreshManagerDocsBtn" class="ghost" type="button">
+                      Refresh documents
+                    </button>
+                  </div>
+                </div>
+
+                <div id="mgrDocs"></div>
+              </div>
             </div>
-
-            <div id="mgrUsers"></div>
           </div>
+        </section>
 
-          <div id="manager-documents-tab" class="manager-tab hidden">
-            <div class="form-card">
-              <h3>Create manager document</h3>
-              <div>
-                <label for="mgrDocTitle">Title</label>
-                <input id="mgrDocTitle" class="field" type="text" />
+        <section id="adminPanel" class="panel hidden">
+          <div class="panel-scroll">
+            <div class="panel-inner">
+              <div class="summary">
+                <div class="s">
+                  <div class="n" id="sumUsers">0</div>
+                  <div class="l">Users</div>
+                </div>
+                <div class="s">
+                  <div class="n" id="sumHomes">0</div>
+                  <div class="l">Homes</div>
+                </div>
+                <div class="s">
+                  <div class="n" id="sumProviders">0</div>
+                  <div class="l">Providers</div>
+                </div>
+                <div class="s">
+                  <div class="n" id="sumDocs">0</div>
+                  <div class="l">Policies / Documents</div>
+                </div>
               </div>
-              <div>
-                <label for="mgrDocText">Content</label>
-                <textarea
-                  id="mgrDocText"
-                  class="ta tall"
-                  rows="8"
-                  placeholder="Enter document content..."
-                ></textarea>
-              </div>
-              <div class="form-card-actions" style="margin-top:12px;">
-                <button id="saveDoc" class="action" type="button">
-                  Save document
+
+              <div class="tabbar">
+                <button class="tabbtn active" type="button" data-tab="users">
+                  Users
                 </button>
-                <button id="refreshManagerDocsBtn" class="ghost" type="button">
-                  Refresh documents
+                <button class="tabbtn" type="button" data-tab="homes">
+                  Homes
+                </button>
+                <button class="tabbtn" type="button" data-tab="providers">
+                  Providers
+                </button>
+                <button class="tabbtn" type="button" data-tab="documents">
+                  Documents
+                </button>
+                <button class="tabbtn" type="button" data-tab="billing">
+                  Billing
+                </button>
+                <button class="tabbtn" type="button" data-tab="audit">
+                  Audit
                 </button>
               </div>
-            </div>
 
-            <div id="mgrDocs"></div>
-          </div>
-        </div>
-      </section>
+              <div id="tab-users" class="admin-tab">
+                <div class="form-card">
+                  <h3>Create user</h3>
+                  <div class="grid-2">
+                    <div>
+                      <label for="adminFirstName">First name</label>
+                      <input id="adminFirstName" class="field" type="text" />
+                    </div>
+                    <div>
+                      <label for="adminLastName">Last name</label>
+                      <input id="adminLastName" class="field" type="text" />
+                    </div>
+                    <div>
+                      <label for="adminEmail">Email</label>
+                      <input id="adminEmail" class="field" type="email" />
+                    </div>
+                    <div>
+                      <label for="adminPassword">Password</label>
+                      <input id="adminPassword" class="field" type="password" />
+                    </div>
+                    <div>
+                      <label for="adminRole">Role</label>
+                      <select id="adminRole" class="sel">
+                        <option value="staff">Staff</option>
+                        <option value="manager">Manager</option>
+                        <option value="admin">Admin</option>
+                        <option value="provider_admin">Provider admin</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label for="adminHomeId">Home</label>
+                      <select id="adminHomeId" class="sel">
+                        <option value="">Select home</option>
+                      </select>
+                    </div>
+                  </div>
 
-      <section id="adminPanel" class="panel hidden">
-        <div class="panel-inner">
-          <div class="summary">
-            <div class="s">
-              <div class="n" id="sumUsers">0</div>
-              <div class="l">Users</div>
-            </div>
-            <div class="s">
-              <div class="n" id="sumHomes">0</div>
-              <div class="l">Homes</div>
-            </div>
-            <div class="s">
-              <div class="n" id="sumProviders">0</div>
-              <div class="l">Providers</div>
-            </div>
-            <div class="s">
-              <div class="n" id="sumDocs">0</div>
-              <div class="l">Policies / Documents</div>
-            </div>
-          </div>
+                  <div class="form-inline-actions">
+                    <button id="createUserBtn" class="action" type="button">
+                      Create user
+                    </button>
+                    <button id="refreshUsersBtn" class="ghost" type="button">
+                      Refresh users
+                    </button>
+                    <button id="adminActiveToggle" class="toggle" type="button"></button>
+                    <span class="form-inline-note">
+                      New user active on creation
+                    </span>
+                  </div>
+                </div>
 
-          <div class="tabbar sticky-tabs">
-            <button class="tabbtn active" type="button" data-tab="users">
-              Users
-            </button>
-            <button class="tabbtn" type="button" data-tab="homes">
-              Homes
-            </button>
-            <button class="tabbtn" type="button" data-tab="providers">
-              Providers
-            </button>
-            <button class="tabbtn" type="button" data-tab="documents">
-              Documents
-            </button>
-            <button class="tabbtn" type="button" data-tab="billing">
-              Billing
-            </button>
-            <button class="tabbtn" type="button" data-tab="audit">
-              Audit
-            </button>
-          </div>
-
-          <div id="tab-users" class="admin-tab">
-            <div class="form-card">
-              <h3>Create user</h3>
-              <div class="grid-2">
-                <div>
-                  <label for="adminFirstName">First name</label>
-                  <input id="adminFirstName" class="field" type="text" />
-                </div>
-                <div>
-                  <label for="adminLastName">Last name</label>
-                  <input id="adminLastName" class="field" type="text" />
-                </div>
-                <div>
-                  <label for="adminEmail">Email</label>
-                  <input id="adminEmail" class="field" type="email" />
-                </div>
-                <div>
-                  <label for="adminPassword">Password</label>
-                  <input id="adminPassword" class="field" type="password" />
-                </div>
-                <div>
-                  <label for="adminRole">Role</label>
-                  <select id="adminRole" class="sel">
+                <div class="filters">
+                  <input
+                    id="userSearch"
+                    class="field"
+                    type="text"
+                    placeholder="Search users..."
+                  />
+                  <select id="userRoleFilter" class="sel">
+                    <option value="">All roles</option>
                     <option value="staff">Staff</option>
                     <option value="manager">Manager</option>
                     <option value="admin">Admin</option>
                     <option value="provider_admin">Provider admin</option>
                   </select>
-                </div>
-                <div>
-                  <label for="adminHomeId">Home</label>
-                  <select id="adminHomeId" class="sel">
-                    <option value="">Select home</option>
+                  <select id="userHomeFilter" class="sel">
+                    <option value="">All homes</option>
+                  </select>
+                  <select id="userArchivedFilter" class="sel">
+                    <option value="">All statuses</option>
+                    <option value="false">Live</option>
+                    <option value="true">Archived</option>
                   </select>
                 </div>
+
+                <div id="adminUsersList"></div>
               </div>
 
-              <div class="form-inline-actions">
-                <button id="createUserBtn" class="action" type="button">
-                  Create user
-                </button>
-                <button id="refreshUsersBtn" class="ghost" type="button">
-                  Refresh users
-                </button>
-                <button id="adminActiveToggle" class="toggle" type="button"></button>
-                <span class="form-inline-note">
-                  New user active on creation
-                </span>
+              <div id="tab-homes" class="admin-tab hidden">
+                <div class="form-card">
+                  <h3>Create home</h3>
+                  <div class="grid-2">
+                    <div>
+                      <label for="homeName">Home name</label>
+                      <input id="homeName" class="field" type="text" />
+                    </div>
+                    <div>
+                      <label for="homePostcode">Postcode</label>
+                      <input id="homePostcode" class="field" type="text" />
+                    </div>
+                    <div>
+                      <label for="homeAddress">Address</label>
+                      <input id="homeAddress" class="field" type="text" />
+                    </div>
+                    <div>
+                      <label for="homeRegion">Region</label>
+                      <input id="homeRegion" class="field" type="text" />
+                    </div>
+                    <div>
+                      <label for="homeLocalAuthority">Local authority</label>
+                      <input id="homeLocalAuthority" class="field" type="text" />
+                    </div>
+                    <div>
+                      <label for="homeOfstedUrn">Ofsted URN</label>
+                      <input id="homeOfstedUrn" class="field" type="text" />
+                    </div>
+                    <div>
+                      <label for="homeProviderId">Provider</label>
+                      <select id="homeProviderId" class="sel">
+                        <option value="">Select provider</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label for="homeRegisteredManagerId">Registered manager</label>
+                      <select id="homeRegisteredManagerId" class="sel">
+                        <option value="">Select manager</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label for="homeGeofence">Geofence radius (m)</label>
+                      <input id="homeGeofence" class="field" type="number" min="0" />
+                    </div>
+                  </div>
+
+                  <div class="form-card-actions" style="margin-top:12px;">
+                    <button id="createHomeBtn" class="action" type="button">
+                      Create home
+                    </button>
+                    <button id="refreshHomesBtn" class="ghost" type="button">
+                      Refresh homes
+                    </button>
+                  </div>
+                </div>
+
+                <div id="homesList"></div>
               </div>
-            </div>
 
-            <div class="filters">
-              <input
-                id="userSearch"
-                class="field"
-                type="text"
-                placeholder="Search users..."
-              />
-              <select id="userRoleFilter" class="sel">
-                <option value="">All roles</option>
-                <option value="staff">Staff</option>
-                <option value="manager">Manager</option>
-                <option value="admin">Admin</option>
-                <option value="provider_admin">Provider admin</option>
-              </select>
-              <select id="userHomeFilter" class="sel">
-                <option value="">All homes</option>
-              </select>
-              <select id="userArchivedFilter" class="sel">
-                <option value="">All statuses</option>
-                <option value="false">Live</option>
-                <option value="true">Archived</option>
-              </select>
-            </div>
+              <div id="tab-providers" class="admin-tab hidden">
+                <div class="form-card">
+                  <h3>Create provider</h3>
+                  <div class="grid-2">
+                    <div>
+                      <label for="providerName">Provider name</label>
+                      <input id="providerName" class="field" type="text" />
+                    </div>
+                    <div>
+                      <label for="providerRegion">Region</label>
+                      <input id="providerRegion" class="field" type="text" />
+                    </div>
+                    <div>
+                      <label for="providerAddress">Address</label>
+                      <input id="providerAddress" class="field" type="text" />
+                    </div>
+                    <div>
+                      <label for="providerPostcode">Postcode</label>
+                      <input id="providerPostcode" class="field" type="text" />
+                    </div>
+                    <div>
+                      <label for="providerLA">Local authority</label>
+                      <input id="providerLA" class="field" type="text" />
+                    </div>
+                    <div>
+                      <label for="providerLeadName">Safeguarding lead name</label>
+                      <input id="providerLeadName" class="field" type="text" />
+                    </div>
+                    <div>
+                      <label for="providerLeadEmail">Safeguarding lead email</label>
+                      <input id="providerLeadEmail" class="field" type="email" />
+                    </div>
+                  </div>
 
-            <div id="adminUsersList"></div>
-          </div>
+                  <div class="form-card-actions" style="margin-top:12px;">
+                    <button id="createProviderBtn" class="action" type="button">
+                      Create provider
+                    </button>
+                    <button id="refreshProvidersBtn" class="ghost" type="button">
+                      Refresh providers
+                    </button>
+                  </div>
+                </div>
 
-          <div id="tab-homes" class="admin-tab hidden">
-            <div class="form-card">
-              <h3>Create home</h3>
-              <div class="grid-2">
-                <div>
-                  <label for="homeName">Home name</label>
-                  <input id="homeName" class="field" type="text" />
+                <div id="providersList"></div>
+              </div>
+
+              <div id="tab-documents" class="admin-tab hidden">
+                <div class="form-card">
+                  <h3>Create document</h3>
+                  <div class="grid-2">
+                    <div>
+                      <label for="docTitle">Title</label>
+                      <input id="docTitle" class="field" type="text" />
+                    </div>
+                    <div>
+                      <label for="docType">Type</label>
+                      <select id="docType" class="sel">
+                        <option value="policy">Policy</option>
+                        <option value="procedure">Procedure</option>
+                        <option value="guidance">Guidance</option>
+                        <option value="risk_assessment">Risk assessment</option>
+                        <option value="form">Form</option>
+                        <option value="template">Template</option>
+                        <option value="home_document">Home document</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label for="docHomeId">Home</label>
+                      <select id="docHomeId" class="sel">
+                        <option value="">Select home</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label for="docOwnerId">Owner</label>
+                      <select id="docOwnerId" class="sel">
+                        <option value="">Select owner</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label for="docIssueDate">Issue date</label>
+                      <input id="docIssueDate" class="field" type="date" />
+                    </div>
+                    <div>
+                      <label for="docReviewDate">Review date</label>
+                      <input id="docReviewDate" class="field" type="date" />
+                    </div>
+                    <div>
+                      <label for="docExpiryDate">Expiry date</label>
+                      <input id="docExpiryDate" class="field" type="date" />
+                    </div>
+                    <div>
+                      <label for="docApprovalStatus">Approval status</label>
+                      <select id="docApprovalStatus" class="sel">
+                        <option value="not_required">Not required</option>
+                        <option value="draft">Draft</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label for="docConfLevel">Confidentiality</label>
+                      <select id="docConfLevel" class="sel">
+                        <option value="standard">Standard</option>
+                        <option value="confidential">Confidential</option>
+                        <option value="restricted">Restricted</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label for="docInputText">Document content</label>
+                    <textarea
+                      id="docInputText"
+                      class="ta tall"
+                      rows="8"
+                      placeholder="Enter document content..."
+                    ></textarea>
+                  </div>
+
+                  <div class="form-card-actions" style="margin-top:12px;">
+                    <button id="createDocBtn" class="action" type="button">
+                      Create document
+                    </button>
+                    <button id="refreshDocsBtn" class="ghost" type="button">
+                      Refresh documents
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <label for="homePostcode">Postcode</label>
-                  <input id="homePostcode" class="field" type="text" />
-                </div>
-                <div>
-                  <label for="homeAddress">Address</label>
-                  <input id="homeAddress" class="field" type="text" />
-                </div>
-                <div>
-                  <label for="homeRegion">Region</label>
-                  <input id="homeRegion" class="field" type="text" />
-                </div>
-                <div>
-                  <label for="homeLocalAuthority">Local authority</label>
-                  <input id="homeLocalAuthority" class="field" type="text" />
-                </div>
-                <div>
-                  <label for="homeOfstedUrn">Ofsted URN</label>
-                  <input id="homeOfstedUrn" class="field" type="text" />
-                </div>
-                <div>
-                  <label for="homeProviderId">Provider</label>
-                  <select id="homeProviderId" class="sel">
-                    <option value="">Select provider</option>
+
+                <div class="filters">
+                  <input
+                    id="docSearch"
+                    class="field"
+                    type="text"
+                    placeholder="Search documents..."
+                  />
+                  <select id="docHomeFilter" class="sel">
+                    <option value="">All homes</option>
                   </select>
-                </div>
-                <div>
-                  <label for="homeRegisteredManagerId">Registered manager</label>
-                  <select id="homeRegisteredManagerId" class="sel">
-                    <option value="">Select manager</option>
-                  </select>
-                </div>
-                <div>
-                  <label for="homeGeofence">Geofence radius (m)</label>
-                  <input id="homeGeofence" class="field" type="number" min="0" />
-                </div>
-              </div>
-
-              <div class="form-card-actions" style="margin-top:12px;">
-                <button id="createHomeBtn" class="action" type="button">
-                  Create home
-                </button>
-                <button id="refreshHomesBtn" class="ghost" type="button">
-                  Refresh homes
-                </button>
-              </div>
-            </div>
-
-            <div id="homesList"></div>
-          </div>
-
-          <div id="tab-providers" class="admin-tab hidden">
-            <div class="form-card">
-              <h3>Create provider</h3>
-              <div class="grid-2">
-                <div>
-                  <label for="providerName">Provider name</label>
-                  <input id="providerName" class="field" type="text" />
-                </div>
-                <div>
-                  <label for="providerRegion">Region</label>
-                  <input id="providerRegion" class="field" type="text" />
-                </div>
-                <div>
-                  <label for="providerAddress">Address</label>
-                  <input id="providerAddress" class="field" type="text" />
-                </div>
-                <div>
-                  <label for="providerPostcode">Postcode</label>
-                  <input id="providerPostcode" class="field" type="text" />
-                </div>
-                <div>
-                  <label for="providerLA">Local authority</label>
-                  <input id="providerLA" class="field" type="text" />
-                </div>
-                <div>
-                  <label for="providerLeadName">Safeguarding lead name</label>
-                  <input id="providerLeadName" class="field" type="text" />
-                </div>
-                <div>
-                  <label for="providerLeadEmail">Safeguarding lead email</label>
-                  <input id="providerLeadEmail" class="field" type="email" />
-                </div>
-              </div>
-
-              <div class="form-card-actions" style="margin-top:12px;">
-                <button id="createProviderBtn" class="action" type="button">
-                  Create provider
-                </button>
-                <button id="refreshProvidersBtn" class="ghost" type="button">
-                  Refresh providers
-                </button>
-              </div>
-            </div>
-
-            <div id="providersList"></div>
-          </div>
-
-          <div id="tab-documents" class="admin-tab hidden">
-            <div class="form-card">
-              <h3>Create document</h3>
-              <div class="grid-2">
-                <div>
-                  <label for="docTitle">Title</label>
-                  <input id="docTitle" class="field" type="text" />
-                </div>
-                <div>
-                  <label for="docType">Type</label>
-                  <select id="docType" class="sel">
+                  <select id="docTypeFilter" class="sel">
+                    <option value="">All types</option>
                     <option value="policy">Policy</option>
                     <option value="procedure">Procedure</option>
                     <option value="guidance">Guidance</option>
@@ -1002,187 +1196,40 @@
                     <option value="template">Template</option>
                     <option value="home_document">Home document</option>
                   </select>
-                </div>
-                <div>
-                  <label for="docHomeId">Home</label>
-                  <select id="docHomeId" class="sel">
-                    <option value="">Select home</option>
-                  </select>
-                </div>
-                <div>
-                  <label for="docOwnerId">Owner</label>
-                  <select id="docOwnerId" class="sel">
-                    <option value="">Select owner</option>
-                  </select>
-                </div>
-                <div>
-                  <label for="docIssueDate">Issue date</label>
-                  <input id="docIssueDate" class="field" type="date" />
-                </div>
-                <div>
-                  <label for="docReviewDate">Review date</label>
-                  <input id="docReviewDate" class="field" type="date" />
-                </div>
-                <div>
-                  <label for="docExpiryDate">Expiry date</label>
-                  <input id="docExpiryDate" class="field" type="date" />
-                </div>
-                <div>
-                  <label for="docApprovalStatus">Approval status</label>
-                  <select id="docApprovalStatus" class="sel">
-                    <option value="not_required">Not required</option>
-                    <option value="draft">Draft</option>
-                    <option value="pending">Pending</option>
+                  <select id="docApprovalFilter" class="sel">
+                    <option value="">All approval states</option>
                     <option value="approved">Approved</option>
+                    <option value="pending">Pending</option>
+                    <option value="draft">Draft</option>
+                    <option value="not_required">Not required</option>
                   </select>
                 </div>
-                <div>
-                  <label for="docConfLevel">Confidentiality</label>
-                  <select id="docConfLevel" class="sel">
-                    <option value="standard">Standard</option>
-                    <option value="confidential">Confidential</option>
-                    <option value="restricted">Restricted</option>
-                  </select>
+
+                <div id="docsList"></div>
+              </div>
+
+              <div id="tab-billing" class="admin-tab hidden">
+                <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+                  <button id="refreshBillingBtn" class="ghost" type="button">
+                    Refresh billing
+                  </button>
                 </div>
+                <div id="billingStats"></div>
+                <div id="billingList"></div>
               </div>
 
-              <div>
-                <label for="docInputText">Document content</label>
-                <textarea
-                  id="docInputText"
-                  class="ta tall"
-                  rows="8"
-                  placeholder="Enter document content..."
-                ></textarea>
-              </div>
-
-              <div class="form-card-actions" style="margin-top:12px;">
-                <button id="createDocBtn" class="action" type="button">
-                  Create document
-                </button>
-                <button id="refreshDocsBtn" class="ghost" type="button">
-                  Refresh documents
-                </button>
+              <div id="tab-audit" class="admin-tab hidden">
+                <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+                  <button id="refreshAuditBtn" class="ghost" type="button">
+                    Refresh audit
+                  </button>
+                </div>
+                <div id="auditList"></div>
               </div>
             </div>
-
-            <div class="filters">
-              <input
-                id="docSearch"
-                class="field"
-                type="text"
-                placeholder="Search documents..."
-              />
-              <select id="docHomeFilter" class="sel">
-                <option value="">All homes</option>
-              </select>
-              <select id="docTypeFilter" class="sel">
-                <option value="">All types</option>
-                <option value="policy">Policy</option>
-                <option value="procedure">Procedure</option>
-                <option value="guidance">Guidance</option>
-                <option value="risk_assessment">Risk assessment</option>
-                <option value="form">Form</option>
-                <option value="template">Template</option>
-                <option value="home_document">Home document</option>
-              </select>
-              <select id="docApprovalFilter" class="sel">
-                <option value="">All approval states</option>
-                <option value="approved">Approved</option>
-                <option value="pending">Pending</option>
-                <option value="draft">Draft</option>
-                <option value="not_required">Not required</option>
-              </select>
-            </div>
-
-            <div id="docsList"></div>
           </div>
-
-          <div id="tab-billing" class="admin-tab hidden">
-            <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
-              <button id="refreshBillingBtn" class="ghost" type="button">
-                Refresh billing
-              </button>
-            </div>
-            <div id="billingStats"></div>
-            <div id="billingList"></div>
-          </div>
-
-          <div id="tab-audit" class="admin-tab hidden">
-            <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
-              <button id="refreshAuditBtn" class="ghost" type="button">
-                Refresh audit
-              </button>
-            </div>
-            <div id="auditList"></div>
-          </div>
-        </div>
-      </section>
-
-      <section id="inputWrap" class="input-wrap">
-        <div class="input-inner">
-          <div id="doc" class="doc">
-            <span id="docText"></span>
-            <button id="clearDoc" class="icon" type="button">✕</button>
-          </div>
-
-          <div class="ibox">
-            <div class="irow">
-              <label
-                for="upload"
-                class="icon attach-btn"
-                style="cursor:pointer;color:var(--muted)"
-              >
-                📎
-                <input
-                  id="upload"
-                  type="file"
-                  hidden
-                  accept=".txt,.docx,.pdf"
-                />
-              </label>
-
-              <button
-                id="mic"
-                class="icon"
-                type="button"
-                title="Speech to text"
-                aria-label="Speech to text"
-              >
-                🎙
-              </button>
-
-              <textarea
-                id="input"
-                class="ta"
-                rows="1"
-                placeholder="Describe situation..."
-              ></textarea>
-
-              <button
-                id="send"
-                class="send"
-                type="button"
-                aria-label="Send"
-              >
-                ➤
-              </button>
-            </div>
-          </div>
-
-          <div class="app-legal-footer">
-            <button id="footerTermsBtn" class="footer-link-btn" type="button">
-              Terms
-            </button>
-            <button id="footerPrivacyBtn" class="footer-link-btn" type="button">
-              Privacy
-            </button>
-            <button id="footerIPBtn" class="footer-link-btn" type="button">
-              IP notice
-            </button>
-          </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </main>
   </div>
 
