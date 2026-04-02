@@ -3,13 +3,51 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 from auth.current_user import get_current_user
 from db.connection import get_db
 from services.young_person_service import YoungPersonService
 
 router = APIRouter(prefix="/young-people", tags=["Young People Appointments"])
+
+
+class AppointmentCreatePayload(BaseModel):
+    title: str
+    appointment_type: str | None = "general"
+    appointment_date: str | None = None
+    end_datetime: str | None = None
+    location: str | None = None
+    professional_name: str | None = None
+    professional_role: str | None = None
+    linked_plan_id: int | None = None
+    summary: str | None = None
+    purpose: str | None = None
+    child_voice: str | None = None
+    preparation_notes: str | None = None
+    outcome_notes: str | None = None
+    follow_up_actions: str | None = None
+    reminder_minutes_before: int | None = 30
+    status: str | None = "scheduled"
+
+
+class AppointmentUpdatePayload(BaseModel):
+    title: str | None = None
+    appointment_type: str | None = None
+    appointment_date: str | None = None
+    end_datetime: str | None = None
+    location: str | None = None
+    professional_name: str | None = None
+    professional_role: str | None = None
+    linked_plan_id: int | None = None
+    summary: str | None = None
+    purpose: str | None = None
+    child_voice: str | None = None
+    preparation_notes: str | None = None
+    outcome_notes: str | None = None
+    follow_up_actions: str | None = None
+    reminder_minutes_before: int | None = None
+    status: str | None = None
 
 
 def _safe_int(value: Any) -> int | None:
@@ -85,54 +123,9 @@ def _load_and_check_appointment(
     if not row:
         raise HTTPException(status_code=404, detail="Appointment not found")
 
+    row = dict(row)
     _assert_home_access(current_user, _safe_int(row.get("home_id")))
-    return dict(row)
-
-
-class AppointmentCreatePayload(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-    title: str
-    appointment_type: str | None = "general"
-    appointment_date: str
-    end_datetime: str | None = None
-    location: str | None = None
-    professional_name: str | None = None
-    professional_role: str | None = None
-    linked_plan_id: int | None = None
-    summary: str | None = None
-    purpose: str | None = None
-    child_voice: str | None = None
-    preparation_notes: str | None = None
-    outcome_notes: str | None = None
-    follow_up_actions: str | None = None
-    reminder_minutes_before: int | None = 30
-    status: str | None = "scheduled"
-
-
-class AppointmentUpdatePayload(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-    title: str | None = None
-    appointment_type: str | None = None
-    appointment_date: str | None = None
-    end_datetime: str | None = None
-    location: str | None = None
-    professional_name: str | None = None
-    professional_role: str | None = None
-    linked_plan_id: int | None = None
-    summary: str | None = None
-    purpose: str | None = None
-    child_voice: str | None = None
-    preparation_notes: str | None = None
-    outcome_notes: str | None = None
-    follow_up_actions: str | None = None
-    reminder_minutes_before: int | None = None
-    status: str | None = None
-
-
-class AppointmentDecisionPayload(BaseModel):
-    review_note: str | None = None
+    return row
 
 
 @router.get("/{young_person_id}/appointments")
@@ -167,44 +160,30 @@ def list_appointments(
                     a.reminder_minutes_before,
                     a.status,
                     a.created_by,
-                    a.completed_at,
-                    a.cancelled_at,
                     a.created_at,
                     a.updated_at
                 FROM young_person_appointments a
                 WHERE a.young_person_id = %s
-                ORDER BY a.appointment_date ASC, a.id DESC
+                ORDER BY a.appointment_date ASC NULLS LAST, a.id DESC
                 """,
                 (young_person_id,),
             )
             rows = cur.fetchall() or []
 
+        items = [dict(row) for row in rows]
+        for item in items:
+            item["record_type"] = "appointment"
+            item["recorded_at"] = item.get("appointment_date") or item.get("created_at")
+
         return {
-            "items": [dict(row) for row in rows],
-            "count": len(rows),
+            "items": items,
+            "count": len(items),
         }
+
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load appointments: {str(e)}")
-
-
-@router.get("/appointments/{appointment_id}")
-def get_appointment(
-    appointment_id: int,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    try:
-        row = _load_and_check_appointment(conn, appointment_id, current_user)
-        return {
-            "ok": True,
-            "appointment": row,
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load appointment: {str(e)}")
 
 
 @router.post("/{young_person_id}/appointments")
@@ -246,8 +225,7 @@ def create_appointment(
                     updated_at
                 )
                 VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                    %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW()
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW()
                 )
                 RETURNING *
                 """,
@@ -267,7 +245,7 @@ def create_appointment(
                     payload.preparation_notes,
                     payload.outcome_notes,
                     payload.follow_up_actions,
-                    payload.reminder_minutes_before or 30,
+                    payload.reminder_minutes_before,
                     payload.status or "scheduled",
                     actor_user_id,
                 ),
@@ -275,10 +253,16 @@ def create_appointment(
             row = cur.fetchone()
 
         conn.commit()
+
+        appointment = dict(row) if row else {}
+        appointment["record_type"] = "appointment"
+        appointment["recorded_at"] = appointment.get("appointment_date") or appointment.get("created_at")
+
         return {
             "ok": True,
-            "appointment": dict(row) if row else None,
+            "appointment": appointment,
         }
+
     except HTTPException:
         raise
     except Exception as e:
@@ -286,8 +270,29 @@ def create_appointment(
         raise HTTPException(status_code=500, detail=f"Failed to create appointment: {str(e)}")
 
 
+@router.get("/appointments/{appointment_id}")
+def get_appointment(
+    appointment_id: int,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    try:
+        row = _load_and_check_appointment(conn, appointment_id, current_user)
+        row["record_type"] = "appointment"
+        row["recorded_at"] = row.get("appointment_date") or row.get("created_at")
+
+        return {
+            "ok": True,
+            "appointment": row,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load appointment: {str(e)}")
+
+
 @router.patch("/appointments/{appointment_id}")
-@router.put("/appointments/{appointment_id}")
 def update_appointment(
     appointment_id: int,
     payload: AppointmentUpdatePayload,
@@ -298,23 +303,18 @@ def update_appointment(
     _load_and_check_appointment(conn, appointment_id, current_user)
 
     try:
-        update_data = payload.model_dump(exclude_unset=True)
-
-        if not update_data:
-            raise HTTPException(status_code=400, detail="No fields provided for update")
-
-        update_data["updated_at"] = "NOW()"
+        updates = payload.model_dump(exclude_unset=True)
+        if not updates:
+            raise HTTPException(status_code=400, detail="No changes provided")
 
         set_parts: list[str] = []
         values: list[Any] = []
 
-        for field, value in update_data.items():
-            if field == "updated_at":
-                set_parts.append("updated_at = NOW()")
-            else:
-                set_parts.append(f"{field} = %s")
-                values.append(value)
+        for field, value in updates.items():
+            set_parts.append(f"{field} = %s")
+            values.append(value)
 
+        set_parts.append("updated_at = NOW()")
         values.append(appointment_id)
 
         with conn.cursor() as cur:
@@ -333,10 +333,16 @@ def update_appointment(
             raise HTTPException(status_code=404, detail="Appointment not found")
 
         conn.commit()
+
+        appointment = dict(row)
+        appointment["record_type"] = "appointment"
+        appointment["recorded_at"] = appointment.get("appointment_date") or appointment.get("created_at")
+
         return {
             "ok": True,
-            "appointment": dict(row),
+            "appointment": appointment,
         }
+
     except HTTPException:
         raise
     except Exception as e:
@@ -347,7 +353,6 @@ def update_appointment(
 @router.post("/appointments/{appointment_id}/complete")
 def complete_appointment(
     appointment_id: int,
-    payload: AppointmentDecisionPayload | None = None,
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
@@ -361,7 +366,6 @@ def complete_appointment(
                 UPDATE young_person_appointments
                 SET
                     status = 'completed',
-                    completed_at = NOW(),
                     updated_at = NOW()
                 WHERE id = %s
                 RETURNING *
@@ -374,10 +378,16 @@ def complete_appointment(
             raise HTTPException(status_code=404, detail="Appointment not found")
 
         conn.commit()
+
+        appointment = dict(row)
+        appointment["record_type"] = "appointment"
+        appointment["recorded_at"] = appointment.get("appointment_date") or appointment.get("created_at")
+
         return {
             "ok": True,
-            "appointment": dict(row),
+            "appointment": appointment,
         }
+
     except HTTPException:
         raise
     except Exception as e:
@@ -388,7 +398,6 @@ def complete_appointment(
 @router.post("/appointments/{appointment_id}/cancel")
 def cancel_appointment(
     appointment_id: int,
-    payload: AppointmentDecisionPayload | None = None,
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
@@ -402,7 +411,6 @@ def cancel_appointment(
                 UPDATE young_person_appointments
                 SET
                     status = 'cancelled',
-                    cancelled_at = NOW(),
                     updated_at = NOW()
                 WHERE id = %s
                 RETURNING *
@@ -415,10 +423,16 @@ def cancel_appointment(
             raise HTTPException(status_code=404, detail="Appointment not found")
 
         conn.commit()
+
+        appointment = dict(row)
+        appointment["record_type"] = "appointment"
+        appointment["recorded_at"] = appointment.get("appointment_date") or appointment.get("created_at")
+
         return {
             "ok": True,
-            "appointment": dict(row),
+            "appointment": appointment,
         }
+
     except HTTPException:
         raise
     except Exception as e:
