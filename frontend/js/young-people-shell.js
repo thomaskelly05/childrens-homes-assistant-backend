@@ -572,7 +572,7 @@ async function askAssistant(question) {
     let replyText = "";
 
     try {
-      const response = await apiSend("/chat", "POST", payload);
+      const response = await apiSend("/young-people/assistant", "POST", payload);
       replyText =
         response.reply ||
         response.message ||
