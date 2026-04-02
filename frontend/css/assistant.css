@@ -25,7 +25,6 @@
   --radius-sm:12px;
   --sidebar:296px;
   --header-h:72px;
-  --composer-h:112px;
   --mobile-nav:74px;
   --content-max:1120px;
 }
@@ -463,6 +462,12 @@ body.theme-dark .hero-card{
   background:linear-gradient(180deg, rgba(17,27,46,.94), rgba(13,22,40,.98));
 }
 
+.hero-card-minimal{
+  padding:16px 18px;
+  gap:16px;
+  align-items:start;
+}
+
 .eyebrow{
   display:inline-flex;
   align-items:center;
@@ -483,10 +488,21 @@ body.theme-dark .hero-card{
   margin-bottom:10px;
 }
 
+.hero-card-minimal .hero-copy h1{
+  font-size:1.75rem;
+  margin-bottom:8px;
+}
+
 .hero-copy p{
   color:var(--muted);
   line-height:1.7;
   max-width:62ch;
+}
+
+.hero-card-minimal .hero-copy p{
+  max-width:54ch;
+  font-size:.98rem;
+  line-height:1.6;
 }
 
 .hero-helper{
@@ -496,6 +512,10 @@ body.theme-dark .hero-card{
   color:var(--muted);
   font-size:.77rem;
   margin-top:16px;
+}
+
+.hero-card-minimal .hero-helper{
+  margin-top:12px;
 }
 
 .hero-helper span{
@@ -512,6 +532,11 @@ body.theme-dark .hero-card{
   align-content:start;
 }
 
+.hero-actions-minimal{
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
 .quick-card{
   display:flex;
   align-items:flex-start;
@@ -523,6 +548,11 @@ body.theme-dark .hero-card{
   border-radius:18px;
   background:var(--panel);
   transition:.18s ease;
+}
+
+.hero-actions-minimal .quick-card{
+  min-height:76px;
+  padding:12px 13px;
 }
 
 .quick-card:hover{
@@ -552,6 +582,10 @@ body.theme-dark .hero-card{
   display:block;
   color:var(--muted);
   line-height:1.45;
+}
+
+.hero-actions-minimal .quick-card small{
+  font-size:.84rem;
 }
 
 .conversation-stage{
@@ -1570,15 +1604,25 @@ body.theme-dark .status{
     border-radius:22px;
   }
 
+  .hero-card-minimal{
+    padding:14px;
+  }
+
   .hero-copy h1{
     font-size:1.68rem;
   }
 
-  .hero-actions{
+  .hero-card-minimal .hero-copy h1{
+    font-size:1.5rem;
+  }
+
+  .hero-actions,
+  .hero-actions-minimal{
     grid-template-columns:1fr;
   }
 
-  .quick-card{
+  .quick-card,
+  .hero-actions-minimal .quick-card{
     min-height:auto;
   }
 
