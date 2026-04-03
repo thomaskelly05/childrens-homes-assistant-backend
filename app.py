@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import importlib
 import logging
 import os
@@ -12,8 +14,9 @@ from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from auth.legal_acceptance import CURRENT_LEGAL_VERSION
 from auth.mfa_guard import (
@@ -23,6 +26,7 @@ from auth.mfa_guard import (
     path_allowed_during_mfa,
     user_has_enabled_mfa,
 )
+from auth.routes import settings as auth_settings
 from auth.tokens import decode_session_token
 from db.connection import (
     close_db_pool,
@@ -35,7 +39,12 @@ from db.legal_acceptance_db import (
     init_legal_acceptance_table,
 )
 from db.mfa_db import init_mfa_tables
+from security.middleware import CSRFMiddleware, SecurityHeadersMiddleware
 
+
+# ---------------------------------------------------------
+# Settings
+# ---------------------------------------------------------
 
 @dataclass(frozen=True)
 class Settings:
@@ -48,6 +57,10 @@ class Settings:
     sentry_traces_sample_rate: float
     sentry_profiles_sample_rate: float
     app_revision: str | None
+    enable_https_redirect: bool
+    enable_trusted_hosts: bool
+    allowed_origins: list[str]
+    allowed_hosts: list[str]
 
     @classmethod
     def load(cls) -> "Settings":
@@ -62,8 +75,29 @@ class Settings:
                 f"Missing required environment variables: {', '.join(missing)}"
             )
 
+        app_env = os.getenv("APP_ENV", "production").lower()
+        is_production = app_env == "production"
+
+        allowed_origins = [
+            origin.strip()
+            for origin in os.getenv(
+                "ALLOWED_ORIGINS",
+                "https://app.indicare.co.uk,http://localhost:3000,http://127.0.0.1:3000",
+            ).split(",")
+            if origin.strip()
+        ]
+
+        allowed_hosts = [
+            host.strip()
+            for host in os.getenv(
+                "ALLOWED_HOSTS",
+                "app.indicare.co.uk,localhost,127.0.0.1",
+            ).split(",")
+            if host.strip()
+        ]
+
         return cls(
-            app_env=os.getenv("APP_ENV", "production"),
+            app_env=app_env,
             log_level=os.getenv("LOG_LEVEL", "INFO"),
             session_secret=os.environ["SESSION_SECRET"],
             openai_api_key=os.environ["OPENAI_API_KEY"],
@@ -76,16 +110,31 @@ class Settings:
                 os.getenv("SENTRY_PROFILES_SAMPLE_RATE", "1.0")
             ),
             app_revision=os.getenv("APP_REVISION"),
+            enable_https_redirect=os.getenv(
+                "ENABLE_HTTPS_REDIRECT",
+                "true" if is_production else "false",
+            ).lower() == "true",
+            enable_trusted_hosts=os.getenv(
+                "ENABLE_TRUSTED_HOSTS",
+                "true" if is_production else "false",
+            ).lower() == "true",
+            allowed_origins=allowed_origins,
+            allowed_hosts=allowed_hosts,
         )
 
 
 settings = Settings.load()
 
 logging.basicConfig(
-    level=settings.log_level,
+    level=settings.log_level.upper(),
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("indicare.app")
+
+
+# ---------------------------------------------------------
+# Paths
+# ---------------------------------------------------------
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
@@ -94,7 +143,12 @@ JS_DIR = os.path.join(FRONTEND_DIR, "js")
 ASSETS_DIR = os.path.join(FRONTEND_DIR, "assets")
 COMPONENTS_DIR = os.path.join(FRONTEND_DIR, "components")
 
-SESSION_COOKIE_NAME = "indicare_session"
+
+# IMPORTANT:
+# Use the hardened auth cookie name from auth settings,
+# not a separate hard-coded value.
+SESSION_COOKIE_NAME = auth_settings.session_cookie_name
+
 
 PUBLIC_PREFIXES = (
     "/login",
@@ -109,6 +163,7 @@ PUBLIC_PREFIXES = (
     "/auth/logout",
     "/auth/check",
     "/auth/mfa",
+    "/auth/auth-policy",
     "/css",
     "/js",
     "/assets",
@@ -189,6 +244,10 @@ ROUTERS = [
 ]
 
 
+# ---------------------------------------------------------
+# Sentry
+# ---------------------------------------------------------
+
 def configure_sentry() -> None:
     if settings.sentry_dsn:
         sentry_sdk.init(
@@ -199,6 +258,10 @@ def configure_sentry() -> None:
             release=settings.app_revision,
         )
 
+
+# ---------------------------------------------------------
+# Lifespan
+# ---------------------------------------------------------
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -212,6 +275,10 @@ async def lifespan(_: FastAPI):
         close_db_pool()
         logger.info("IndiCare API stopped")
 
+
+# ---------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------
 
 def path_is_public(path: str) -> bool:
     if path in PUBLIC_EXACT_PATHS:
@@ -245,6 +312,16 @@ def get_authenticated_user_id_from_request(request: Request) -> int | None:
         return int(raw_user_id) if raw_user_id is not None else None
     except (TypeError, ValueError):
         return None
+
+
+# ---------------------------------------------------------
+# Security enforcement middleware
+# IMPORTANT: this must run AFTER SessionMiddleware is available.
+# With FastAPI/Starlette middleware stacking, add SessionMiddleware
+# before adding this custom middleware.
+# ---------------------------------------------------------
+
+from starlette.middleware.base import BaseHTTPMiddleware
 
 
 class SecurityEnforcementMiddleware(BaseHTTPMiddleware):
@@ -316,6 +393,10 @@ class SecurityEnforcementMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+# ---------------------------------------------------------
+# Routers
+# ---------------------------------------------------------
+
 def include_router(app: FastAPI, module_path: str) -> None:
     try:
         module = importlib.import_module(module_path)
@@ -336,6 +417,10 @@ def include_router(app: FastAPI, module_path: str) -> None:
         app.include_router(compat_router)
         logger.info("[IndiCare] Loaded router: %s (compat_router)", module_path)
 
+
+# ---------------------------------------------------------
+# Frontend serving
+# ---------------------------------------------------------
 
 def serve_page(file_name: str):
     path = os.path.join(FRONTEND_DIR, file_name)
@@ -463,6 +548,10 @@ def register_frontend_routes(app: FastAPI) -> None:
         return FileResponse(os.path.join(FRONTEND_DIR, "ai-notes.js"))
 
 
+# ---------------------------------------------------------
+# Health
+# ---------------------------------------------------------
+
 def register_health_routes(app: FastAPI) -> None:
     @app.get("/health")
     def health():
@@ -487,6 +576,10 @@ def register_health_routes(app: FastAPI) -> None:
             release_db_connection(conn)
 
 
+# ---------------------------------------------------------
+# Exceptions
+# ---------------------------------------------------------
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
@@ -500,6 +593,10 @@ def register_exception_handlers(app: FastAPI) -> None:
         )
 
 
+# ---------------------------------------------------------
+# App factory
+# ---------------------------------------------------------
+
 def create_app() -> FastAPI:
     configure_sentry()
 
@@ -509,31 +606,55 @@ def create_app() -> FastAPI:
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-    app.add_middleware(SecurityEnforcementMiddleware)
+    # 1. Trusted hosts
+    if settings.enable_trusted_hosts and settings.allowed_hosts:
+        app.add_middleware(
+            TrustedHostMiddleware,
+            allowed_hosts=settings.allowed_hosts,
+        )
 
+    # 2. HTTPS redirect
+    if settings.enable_https_redirect:
+        app.add_middleware(HTTPSRedirectMiddleware)
+
+    # 3. CORS
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.allowed_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
+    )
+
+    # 4. Server-side session
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.session_secret,
-        same_site="lax",
-        https_only=settings.app_env.lower() == "production",
-        max_age=60 * 60 * 12,
+        same_site=auth_settings.cookie_samesite,
+        https_only=auth_settings.cookie_secure,
+        session_cookie="indicare_server_session",
+        max_age=auth_settings.cookie_max_age_short,
     )
 
+    # 5. Security headers
+    app.add_middleware(SecurityHeadersMiddleware)
+
+    # 6. CSRF protection
     app.add_middleware(
-        CORSMiddleware,
-        allow_origins=[
-            "https://app.indicare.co.uk",
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-        ],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        CSRFMiddleware,
+        csrf_cookie_name=auth_settings.csrf_cookie_name,
+        session_cookie_name=auth_settings.session_cookie_name,
+        allowed_origins=settings.allowed_origins,
     )
 
+    # 7. Auth / legal / MFA enforcement
+    app.add_middleware(SecurityEnforcementMiddleware)
+
+    # Routers
     for route in ROUTERS:
         include_router(app, route)
 
+    # Static mounts
     app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
     app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
     app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
