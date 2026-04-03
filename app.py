@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -41,10 +42,6 @@ from db.legal_acceptance_db import (
 from db.mfa_db import init_mfa_tables
 from security.middleware import CSRFMiddleware, SecurityHeadersMiddleware
 
-
-# ---------------------------------------------------------
-# Settings
-# ---------------------------------------------------------
 
 @dataclass(frozen=True)
 class Settings:
@@ -131,11 +128,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger("indicare.app")
 
-
-# ---------------------------------------------------------
-# Paths
-# ---------------------------------------------------------
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 CSS_DIR = os.path.join(FRONTEND_DIR, "css")
@@ -143,12 +135,7 @@ JS_DIR = os.path.join(FRONTEND_DIR, "js")
 ASSETS_DIR = os.path.join(FRONTEND_DIR, "assets")
 COMPONENTS_DIR = os.path.join(FRONTEND_DIR, "components")
 
-
-# IMPORTANT:
-# Use the hardened auth cookie name from auth settings,
-# not a separate hard-coded value.
 SESSION_COOKIE_NAME = auth_settings.session_cookie_name
-
 
 PUBLIC_PREFIXES = (
     "/login",
@@ -244,10 +231,6 @@ ROUTERS = [
 ]
 
 
-# ---------------------------------------------------------
-# Sentry
-# ---------------------------------------------------------
-
 def configure_sentry() -> None:
     if settings.sentry_dsn:
         sentry_sdk.init(
@@ -258,10 +241,6 @@ def configure_sentry() -> None:
             release=settings.app_revision,
         )
 
-
-# ---------------------------------------------------------
-# Lifespan
-# ---------------------------------------------------------
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -275,10 +254,6 @@ async def lifespan(_: FastAPI):
         close_db_pool()
         logger.info("IndiCare API stopped")
 
-
-# ---------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------
 
 def path_is_public(path: str) -> bool:
     if path in PUBLIC_EXACT_PATHS:
@@ -312,16 +287,6 @@ def get_authenticated_user_id_from_request(request: Request) -> int | None:
         return int(raw_user_id) if raw_user_id is not None else None
     except (TypeError, ValueError):
         return None
-
-
-# ---------------------------------------------------------
-# Security enforcement middleware
-# IMPORTANT: this must run AFTER SessionMiddleware is available.
-# With FastAPI/Starlette middleware stacking, add SessionMiddleware
-# before adding this custom middleware.
-# ---------------------------------------------------------
-
-from starlette.middleware.base import BaseHTTPMiddleware
 
 
 class SecurityEnforcementMiddleware(BaseHTTPMiddleware):
@@ -393,10 +358,6 @@ class SecurityEnforcementMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
-# ---------------------------------------------------------
-# Routers
-# ---------------------------------------------------------
-
 def include_router(app: FastAPI, module_path: str) -> None:
     try:
         module = importlib.import_module(module_path)
@@ -417,10 +378,6 @@ def include_router(app: FastAPI, module_path: str) -> None:
         app.include_router(compat_router)
         logger.info("[IndiCare] Loaded router: %s (compat_router)", module_path)
 
-
-# ---------------------------------------------------------
-# Frontend serving
-# ---------------------------------------------------------
 
 def serve_page(file_name: str):
     path = os.path.join(FRONTEND_DIR, file_name)
@@ -548,10 +505,6 @@ def register_frontend_routes(app: FastAPI) -> None:
         return FileResponse(os.path.join(FRONTEND_DIR, "ai-notes.js"))
 
 
-# ---------------------------------------------------------
-# Health
-# ---------------------------------------------------------
-
 def register_health_routes(app: FastAPI) -> None:
     @app.get("/health")
     def health():
@@ -576,14 +529,16 @@ def register_health_routes(app: FastAPI) -> None:
             release_db_connection(conn)
 
 
-# ---------------------------------------------------------
-# Exceptions
-# ---------------------------------------------------------
-
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
-        logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+        logger.exception(
+            "Unhandled error on %s %s | type=%s | detail=%s",
+            request.method,
+            request.url.path,
+            exc.__class__.__name__,
+            str(exc),
+        )
         return JSONResponse(
             status_code=500,
             content={
@@ -592,10 +547,6 @@ def register_exception_handlers(app: FastAPI) -> None:
             },
         )
 
-
-# ---------------------------------------------------------
-# App factory
-# ---------------------------------------------------------
 
 def create_app() -> FastAPI:
     configure_sentry()
@@ -606,18 +557,15 @@ def create_app() -> FastAPI:
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-    # 1. Trusted hosts
     if settings.enable_trusted_hosts and settings.allowed_hosts:
         app.add_middleware(
             TrustedHostMiddleware,
             allowed_hosts=settings.allowed_hosts,
         )
 
-    # 2. HTTPS redirect
     if settings.enable_https_redirect:
         app.add_middleware(HTTPSRedirectMiddleware)
 
-    # 3. CORS
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins,
@@ -626,7 +574,6 @@ def create_app() -> FastAPI:
         allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
     )
 
-    # 4. Server-side session
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.session_secret,
@@ -636,10 +583,8 @@ def create_app() -> FastAPI:
         max_age=auth_settings.cookie_max_age_short,
     )
 
-    # 5. Security headers
     app.add_middleware(SecurityHeadersMiddleware)
 
-    # 6. CSRF protection
     app.add_middleware(
         CSRFMiddleware,
         csrf_cookie_name=auth_settings.csrf_cookie_name,
@@ -647,14 +592,11 @@ def create_app() -> FastAPI:
         allowed_origins=settings.allowed_origins,
     )
 
-    # 7. Auth / legal / MFA enforcement
     app.add_middleware(SecurityEnforcementMiddleware)
 
-    # Routers
     for route in ROUTERS:
         include_router(app, route)
 
-    # Static mounts
     app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
     app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
     app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
