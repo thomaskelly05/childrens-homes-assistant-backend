@@ -361,10 +361,50 @@ def _normalise_runtime(value: Any) -> dict[str, Any]:
         "user_role_profile": value.get("user_role_profile"),
         "retrieval_level": value.get("retrieval_level"),
         "reflection_level": value.get("reflection_level"),
+        "response_stance": value.get("response_stance"),
+        "classification_confidence": value.get("classification_confidence"),
+        "secondary_intents": value.get("secondary_intents") or [],
         "suggested_actions": value.get("suggested_actions") or [],
+        "regulation_basis": value.get("regulation_basis") or [],
     }
 
     return {k: v for k, v in runtime.items() if v not in (None, "", [])}
+
+
+def _normalise_explainability(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+
+    payload = {
+        "request_summary": value.get("request_summary"),
+        "mode": value.get("mode"),
+        "mode_label": value.get("mode_label"),
+        "task_type": value.get("task_type"),
+        "output_type": value.get("output_type"),
+        "output_label": value.get("output_label"),
+        "safeguarding_level": value.get("safeguarding_level"),
+        "urgency": value.get("urgency"),
+        "response_stance": value.get("response_stance"),
+        "classification_confidence": value.get("classification_confidence"),
+        "secondary_intents": value.get("secondary_intents") or [],
+        "classification_signals": value.get("classification_signals") or [],
+        "guidance_search_enabled": value.get("guidance_search_enabled"),
+        "guidance_search_reason": value.get("guidance_search_reason"),
+        "model": value.get("model"),
+        "temperature": value.get("temperature"),
+        "max_tokens": value.get("max_tokens"),
+        "selected_mode": value.get("selected_mode"),
+        "has_document": value.get("has_document"),
+        "regulation_basis": value.get("regulation_basis") or [],
+        "planning_reasons": value.get("planning_reasons") or [],
+    }
+
+    return {k: v for k, v in payload.items() if v not in (None, "", [])}
+
+
+def _normalise_progress_text(value: Any) -> str:
+    text = str(value or "").strip()
+    return text[:260] if text else ""
 
 
 @router.post("/upload")
@@ -518,6 +558,7 @@ async def chat(
         ai_text = ""
         sources: list[dict[str, Any]] = []
         runtime: dict[str, Any] = {}
+        explainability: dict[str, Any] = {}
 
         try:
             generator = generate_ai_stream(
@@ -549,6 +590,12 @@ async def chat(
                             yield sse(token)
                         continue
 
+                    if item_type == "progress":
+                        progress_text = _normalise_progress_text(item.get("content"))
+                        if progress_text:
+                            yield sse_event("progress", {"content": progress_text})
+                        continue
+
                     if item_type == "sources":
                         sources = _normalise_sources(item.get("sources"))
                         continue
@@ -560,8 +607,12 @@ async def chat(
                     if item_type == "meta":
                         sources = _normalise_sources(item.get("sources")) or sources
                         merged_runtime = _normalise_runtime(item.get("runtime"))
+                        merged_explainability = _normalise_explainability(item.get("explainability"))
+
                         if merged_runtime:
                             runtime = merged_runtime
+                        if merged_explainability:
+                            explainability = merged_explainability
                         continue
 
                     logger.debug("Unhandled AI stream item type=%s", item_type)
@@ -577,13 +628,14 @@ async def chat(
             if ai_text.strip():
                 save_ai_message(conversation_id, ai_text)
 
-            if sources or runtime:
+            if sources or runtime or explainability:
                 yield sse_event(
                     "meta",
                     {
                         "conversation_id": conversation_id,
                         "sources": sources,
                         "runtime": runtime,
+                        "explainability": explainability,
                     },
                 )
 
@@ -700,6 +752,7 @@ async def edit_message_and_regenerate(
         ai_text = ""
         sources: list[dict[str, Any]] = []
         runtime: dict[str, Any] = {}
+        explainability: dict[str, Any] = {}
 
         try:
             generator = generate_ai_stream(
@@ -731,6 +784,12 @@ async def edit_message_and_regenerate(
                             yield sse(token)
                         continue
 
+                    if item_type == "progress":
+                        progress_text = _normalise_progress_text(item.get("content"))
+                        if progress_text:
+                            yield sse_event("progress", {"content": progress_text})
+                        continue
+
                     if item_type == "sources":
                         sources = _normalise_sources(item.get("sources"))
                         continue
@@ -742,8 +801,12 @@ async def edit_message_and_regenerate(
                     if item_type == "meta":
                         sources = _normalise_sources(item.get("sources")) or sources
                         merged_runtime = _normalise_runtime(item.get("runtime"))
+                        merged_explainability = _normalise_explainability(item.get("explainability"))
+
                         if merged_runtime:
                             runtime = merged_runtime
+                        if merged_explainability:
+                            explainability = merged_explainability
                         continue
 
                     logger.debug("Unhandled AI regenerate item type=%s", item_type)
@@ -759,13 +822,14 @@ async def edit_message_and_regenerate(
             if ai_text.strip():
                 save_ai_message(conversation_id, ai_text)
 
-            if sources or runtime:
+            if sources or runtime or explainability:
                 yield sse_event(
                     "meta",
                     {
                         "conversation_id": conversation_id,
                         "sources": sources,
                         "runtime": runtime,
+                        "explainability": explainability,
                     },
                 )
 
