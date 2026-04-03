@@ -4,6 +4,10 @@ import asyncio
 import logging
 import os
 
+from assistant.explainability import (
+    build_explainability_payload,
+    build_loading_updates,
+)
 from assistant.llm_provider import ChatStreamRequest, get_llm_provider
 from assistant.orchestrator import OrchestratorRequest, build_orchestrator_result
 from assistant.web_search import web_search
@@ -79,12 +83,46 @@ async def generate_ai_stream(
     runtime_payload = orchestration.runtime_payload
     guidance_plan = orchestration.guidance_plan
     model_plan = orchestration.model_plan
+    regulation_payload = orchestration.regulation_payload
+
+    explainability_payload = build_explainability_payload(
+        user_message=message,
+        orchestration=orchestration,
+    )
+
+    # ---------------------------------------------
+    # Progress update 1: what the assistant is doing
+    # ---------------------------------------------
+    for sentence in build_loading_updates(
+        stage="initial_review",
+        orchestration=orchestration,
+        search_enabled=guidance_plan.enabled,
+        has_search_results=False,
+    ):
+        yield {
+            "type": "progress",
+            "content": sentence,
+        }
 
     search_results = await maybe_run_guidance_search(
         message=message,
         enabled=guidance_plan.enabled,
         search_query=guidance_plan.search_query,
     )
+
+    # ---------------------------------------------
+    # Progress update 2: after search / before draft
+    # ---------------------------------------------
+    for sentence in build_loading_updates(
+        stage="post_search",
+        orchestration=orchestration,
+        search_enabled=guidance_plan.enabled,
+        has_search_results=bool(search_results),
+    ):
+        yield {
+            "type": "progress",
+            "content": sentence,
+        }
 
     if search_results:
         system_prompt += f"""
@@ -109,7 +147,8 @@ Do not let this stop you completing practical drafting tasks directly.
         (
             "Starting AI stream session_id=%s mode=%s safeguarding=%s "
             "response_mode=%s model=%s max_tokens=%s history_count=%s "
-            "has_document=%s sources=%s guidance_enabled=%s guidance_reason=%s"
+            "has_document=%s sources=%s guidance_enabled=%s guidance_reason=%s "
+            "regulation_refs=%s"
         ),
         session_id,
         mode,
@@ -122,6 +161,7 @@ Do not let this stop you completing practical drafting tasks directly.
         len(sources_used),
         guidance_plan.enabled,
         guidance_plan.reason,
+        len(regulation_payload),
     )
 
     provider = get_llm_provider()
@@ -152,6 +192,7 @@ Do not let this stop you completing practical drafting tasks directly.
         "type": "meta",
         "sources": sources_used,
         "runtime": runtime_payload,
+        "explainability": explainability_payload,
     }
 
     logger.info("Completed AI stream session_id=%s", session_id)
