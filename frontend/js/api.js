@@ -1,12 +1,39 @@
 const API_BASE = window.location.origin;
 
+function getCookie(name) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = document.cookie.match(
+    new RegExp("(^|;\\s*)" + escaped + "=([^;]*)")
+  );
+  return match ? decodeURIComponent(match[2]) : "";
+}
+
+function getCsrfToken() {
+  return (
+    getCookie("__Host-indicare_csrf") ||
+    getCookie("indicare_csrf") ||
+    ""
+  );
+}
+
 async function apiRequest(path, options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
+  const isFormData = options.body instanceof FormData;
+  const needsCsrf = ["POST", "PUT", "PATCH", "DELETE"].includes(method);
+
   const headers = {
     ...(options.headers || {}),
   };
 
-  if (!(options.body instanceof FormData) && !headers["Content-Type"]) {
+  if (!isFormData && options.body && !headers["Content-Type"]) {
     headers["Content-Type"] = "application/json";
+  }
+
+  if (needsCsrf) {
+    const csrfToken = getCsrfToken();
+    if (csrfToken) {
+      headers["X-CSRF-Token"] = csrfToken;
+    }
   }
 
   let response;
@@ -14,6 +41,7 @@ async function apiRequest(path, options = {}) {
   try {
     response = await fetch(`${API_BASE}${path}`, {
       ...options,
+      method,
       headers,
       credentials: "include",
     });
@@ -63,3 +91,4 @@ async function apiRequest(path, options = {}) {
 }
 
 window.apiRequest = apiRequest;
+window.getCsrfToken = getCsrfToken;
