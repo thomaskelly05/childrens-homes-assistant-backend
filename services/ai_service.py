@@ -3,16 +3,12 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from typing import Any
 
-from openai import AsyncOpenAI
-
+from assistant.llm_provider import ChatStreamRequest, get_llm_provider
 from assistant.orchestrator import OrchestratorRequest, build_orchestrator_result
 from assistant.web_search import web_search
 
 logger = logging.getLogger(__name__)
-
-client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 SEARCH_TIMEOUT_SECONDS = float(os.getenv("GUIDANCE_SEARCH_TIMEOUT_SECONDS", "3.0"))
 
@@ -103,12 +99,15 @@ Use this only where it genuinely improves accuracy.
 Prefer statutory guidance, legislation, Ofsted, and official frameworks where relevant.
 Do not let this stop you completing practical drafting tasks directly.
 """
-        # Rebuild messages so the updated system prompt is included
-        messages = [{"role": "system", "content": system_prompt}, *orchestration.trimmed_history, {"role": "user", "content": orchestration.user_message}]
+        messages = [
+            {"role": "system", "content": system_prompt},
+            *orchestration.trimmed_history,
+            {"role": "user", "content": orchestration.user_message},
+        ]
 
     logger.info(
         (
-            "Starting OpenAI stream session_id=%s mode=%s safeguarding=%s "
+            "Starting AI stream session_id=%s mode=%s safeguarding=%s "
             "response_mode=%s model=%s max_tokens=%s history_count=%s "
             "has_document=%s sources=%s guidance_enabled=%s guidance_reason=%s"
         ),
@@ -125,26 +124,29 @@ Do not let this stop you completing practical drafting tasks directly.
         guidance_plan.reason,
     )
 
-    stream = await client.chat.completions.create(
-        model=model_plan.model,
-        messages=messages,
-        stream=True,
-        temperature=model_plan.temperature,
-        max_tokens=model_plan.max_tokens,
-    )
+    provider = get_llm_provider()
 
-    async for chunk in stream:
-        if not chunk.choices:
-            continue
+    try:
+        async for content in provider.stream_chat(
+            ChatStreamRequest(
+                messages=messages,
+                model=model_plan.model,
+                temperature=model_plan.temperature,
+                max_tokens=model_plan.max_tokens,
+            )
+        ):
+            if content:
+                yield {
+                    "type": "token",
+                    "content": content,
+                }
 
-        delta = chunk.choices[0].delta
-        content = getattr(delta, "content", None)
-
-        if content:
-            yield {
-                "type": "token",
-                "content": content,
-            }
+    except Exception:
+        logger.exception("AI provider stream failed for session_id=%s", session_id)
+        yield {
+            "type": "token",
+            "content": "Sorry, something went wrong while generating the response.",
+        }
 
     yield {
         "type": "meta",
@@ -152,4 +154,4 @@ Do not let this stop you completing practical drafting tasks directly.
         "runtime": runtime_payload,
     }
 
-    logger.info("Completed OpenAI stream session_id=%s", session_id)
+    logger.info("Completed AI stream session_id=%s", session_id)
