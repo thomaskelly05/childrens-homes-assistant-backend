@@ -47,7 +47,10 @@ let lastAssistantText = "";
 let currentStreamMeta = {
   sources: [],
   runtime: {},
+  explainability: {},
 };
+
+let currentProgressLines = [];
 
 let contextState = {
   child: "",
@@ -77,7 +80,6 @@ const LEGAL_VERSION = "2026-03-29-v1";
 const LEGAL_ACCEPTANCE_KEY = "indicare_legal_acceptance";
 const LEGAL_TABS = ["terms", "privacy", "ip", "acceptance"];
 const ASSISTANT_REDIRECT_GUARD_KEY = "indicare_assistant_redirect_guard";
-const MOBILE_BREAKPOINT = 920;
 
 const $ = (id) => document.getElementById(id);
 const has = (id) => !!document.getElementById(id);
@@ -117,7 +119,10 @@ function hasRecentAssistantRedirectGuard() {
 
 function markAssistantRedirectGuard() {
   try {
-    sessionStorage.setItem(ASSISTANT_REDIRECT_GUARD_KEY, String(Date.now()));
+    sessionStorage.setItem(
+      ASSISTANT_REDIRECT_GUARD_KEY,
+      String(Date.now())
+    );
   } catch (_) {}
 }
 
@@ -125,10 +130,6 @@ function clearAssistantRedirectGuard() {
   try {
     sessionStorage.removeItem(ASSISTANT_REDIRECT_GUARD_KEY);
   } catch (_) {}
-}
-
-function isMobileView() {
-  return window.innerWidth <= MOBILE_BREAKPOINT;
 }
 
 function banner(t, ms = 2400) {
@@ -154,7 +155,7 @@ function resize() {
   if (!has("input")) return;
   const t = $("input");
   t.style.height = "auto";
-  t.style.height = Math.min(t.scrollHeight, 140) + "px";
+  t.style.height = Math.min(t.scrollHeight, 120) + "px";
 }
 
 function docShow(name) {
@@ -167,13 +168,6 @@ function docHide() {
   if (!has("docText") || !has("doc")) return;
   $("docText").textContent = "";
   $("doc").classList.remove("show");
-}
-
-function syncMobileAssistantState() {
-  if (!has("mobileNavAssistant")) return;
-  const active =
-    has("assistantPanel") && !$("assistantPanel").classList.contains("hidden");
-  $("mobileNavAssistant").classList.toggle("active", !!active);
 }
 
 function syncHelpers() {
@@ -203,7 +197,6 @@ function syncHelpers() {
   if (has("voiceReplies")) {
     $("voiceReplies").classList.toggle("active", speechEnabled);
   }
-  syncMobileAssistantState();
 }
 
 function userInitials() {
@@ -222,19 +215,9 @@ function setWelcome() {
     $("welcomeTitle").textContent =
       GREET[Math.floor(Math.random() * GREET.length)](firstName());
   }
-
   if (has("welcomeText")) {
-    const r = role();
-    if (r === "manager") {
-      $("welcomeText").textContent =
-        "Safer support for records, safeguarding, reviews, oversight, and professional writing.";
-    } else if (r === "admin" || r === "provider_admin") {
-      $("welcomeText").textContent =
-        "Safer support for operational writing, oversight, guidance, and role-based practice.";
-    } else {
-      $("welcomeText").textContent =
-        "Safer support for records, safeguarding, reflection, and professional writing.";
-    }
+    $("welcomeText").textContent =
+      "Your assistant is ready to help with records, safeguarding, risk, guidance, and drafting.";
   }
 }
 
@@ -254,27 +237,12 @@ function closeSettings() {
   if (has("settings")) $("settings").classList.remove("open");
 }
 
-function openSidebarMobile() {
-  if (!isMobileView()) return;
-  has("sidebar") && $("sidebar").classList.add("open");
-  has("overlay") && $("overlay").classList.add("show");
-}
-
-function closeMobilePanels() {
-  if (isMobileView()) {
-    has("sidebar") && $("sidebar").classList.remove("open");
-    has("overlay") && $("overlay").classList.remove("show");
-    closeSettings();
-  }
-}
-
 function summariseTitle(text) {
   const clean = stripSystem(text)
     .replace(/[^\p{L}\p{N}\s'-]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
   if (!clean) return "New Log";
-
   const stop = new Set([
     "the",
     "a",
@@ -303,15 +271,10 @@ function summariseTitle(text) {
     "good",
     "morning",
     "indicare",
-    "help",
-    "me",
-    "this",
   ]);
-
   const words = clean.split(" ").filter(Boolean);
   const pool = words.filter((w) => !stop.has(w.toLowerCase()));
   const picked = (pool.length ? pool : words).slice(0, 3);
-
   return (
     picked.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") ||
     "New Log"
@@ -602,8 +565,6 @@ function legalControlsDisabled(disabled) {
     "openSettings",
     "sideToggle",
     "mobileMenu",
-    "mobileNavAssistant",
-    "mobileNavMore",
   ].forEach((id) => {
     if (!has(id)) return;
     $(id).disabled = !!disabled;
@@ -661,7 +622,7 @@ async function acceptLegalTerms() {
 
 async function declineLegalTerms() {
   clearLegalAcceptance();
-  banner("You must accept the legal terms to use IndiCare.");
+  banner("You must accept the legal terms to use IndiCare OS.");
   await logoutNow();
 }
 
@@ -973,6 +934,14 @@ async function loadMe() {
   }
 }
 
+function closeMobilePanels() {
+  if (window.innerWidth <= 768) {
+    has("sidebar") && $("sidebar").classList.remove("open");
+    has("overlay") && $("overlay").classList.remove("show");
+    closeSettings();
+  }
+}
+
 function hideAllPanels() {
   ["assistantPanel", "libraryPanel", "managerPanel", "adminPanel"].forEach(
     (id) => has(id) && $(id).classList.add("hidden")
@@ -995,17 +964,16 @@ function showAssistantView() {
       : "Intelligence for Care"
   );
   closeMobilePanels();
-  syncMobileAssistantState();
 }
 
 function showLibraryView() {
   if (!legalAcceptanceValid()) return openLegalModal("acceptance");
   hideAllPanels();
   has("libraryPanel") && $("libraryPanel").classList.remove("hidden");
+  has("inputWrap") && $("inputWrap").classList.add("hidden");
   has("navLibrary") && $("navLibrary").classList.add("active");
-  setTitle("Policies & Guidance");
+  setTitle("Policies");
   closeMobilePanels();
-  syncMobileAssistantState();
   loadLibrary().catch((e) => {
     console.error("showLibraryView failed", e);
     banner(indiCareCopy("libraryLoadFail"));
@@ -1017,10 +985,10 @@ async function showManagerView() {
   if (!isManager()) return banner("Manager access required");
   hideAllPanels();
   has("managerPanel") && $("managerPanel").classList.remove("hidden");
+  has("inputWrap") && $("inputWrap").classList.add("hidden");
   has("navManager") && $("navManager").classList.add("active");
-  setTitle("Manager tools");
+  setTitle("Manager");
   closeMobilePanels();
-  syncMobileAssistantState();
   try {
     await loadManager();
   } catch (e) {
@@ -1034,10 +1002,10 @@ async function showAdminView() {
   if (!isAdmin()) return banner("Admin access required");
   hideAllPanels();
   has("adminPanel") && $("adminPanel").classList.remove("hidden");
+  has("inputWrap") && $("inputWrap").classList.add("hidden");
   has("navAdmin") && $("navAdmin").classList.add("active");
-  setTitle("Admin tools");
+  setTitle("Admin");
   closeMobilePanels();
-  syncMobileAssistantState();
   try {
     await loadAdminReferenceData();
     await loadActiveAdminTab();
@@ -1051,16 +1019,14 @@ function resetWelcome() {
   conversationId = null;
   currentDocumentText = null;
   currentDocumentName = null;
-  currentStreamMeta = { sources: [], runtime: {} };
+  currentStreamMeta = { sources: [], runtime: {}, explainability: {} };
+  currentProgressLines = [];
   stopSpeaking();
-
   if (has("messages")) {
     $("messages").innerHTML = "";
     $("messages").classList.add("hidden");
   }
-
   has("empty") && $("empty").classList.remove("hidden");
-
   if (has("input")) $("input").value = "";
   resize();
   docHide();
@@ -1081,16 +1047,9 @@ function renderHistory(rows) {
     item.className = `item ${
       Number(r?.id) === Number(conversationId) ? "active" : ""
     }`;
-
-    item.innerHTML = `
-      <div class="row">
-        <button class="mainbtn" type="button">
-          <div class="ttl">${safe(stripSystem(r?.title || "Observation"))}</div>
-        </button>
-        <button class="mini" type="button">⧉</button>
-        <button class="mini danger" type="button">🗑</button>
-      </div>
-    `;
+    item.innerHTML = `<div class="row"><button class="mainbtn"><div class="ttl">${safe(
+      stripSystem(r?.title || "Observation")
+    )}</div></button><button class="mini">⧉</button><button class="mini danger">🗑</button></div>`;
 
     const buttons = item.querySelectorAll("button");
     const main = buttons[0];
@@ -1149,7 +1108,8 @@ async function openConversation(id, title) {
   if (!data) return;
 
   conversationId = id;
-  currentStreamMeta = { sources: [], runtime: {} };
+  currentStreamMeta = { sources: [], runtime: {}, explainability: {} };
+  currentProgressLines = [];
 
   if (has("messages")) {
     $("messages").innerHTML = "";
@@ -1178,7 +1138,6 @@ async function openConversation(id, title) {
   setTitle(title || "Observation");
   filterConversations();
   closeMobilePanels();
-  syncMobileAssistantState();
 }
 
 async function renameShort(id, prompt) {
@@ -1206,7 +1165,9 @@ async function deleteConversation(id) {
 
 function renderSourceCard(source) {
   const type = safe(source?.type || "source");
-  const label = safe(source?.label || source?.document_title || "Source");
+  const label = safe(
+    source?.label || source?.document_title || "Source"
+  );
   const excerpt = safe(source?.excerpt || "");
   const section = safe(source?.section || "");
   const page =
@@ -1244,68 +1205,9 @@ function renderSourcesHtml(sources) {
   if (!rows.length) return "";
   return `
     <div class="card" style="margin-top:10px;padding:12px;">
-      <div style="font-weight:700;margin-bottom:6px;">Sources used</div>
+      <div style="font-weight:600;margin-bottom:6px;">Sources used</div>
       <div class="entity-meta">This response used the following source material.</div>
       ${rows.map(renderSourceCard).join("")}
-    </div>
-  `;
-}
-
-function renderRuntimeHtml(runtime) {
-  const data = normObj(runtime);
-  if (!Object.keys(data).length) return "";
-
-  const chips = [];
-  if (data.mode) {
-    chips.push(`<span class="tag neutral">${safe(data.mode)}</span>`);
-  }
-  if (data.task_type) {
-    chips.push(`<span class="tag neutral">${safe(data.task_type)}</span>`);
-  }
-  if (data.output_type) {
-    chips.push(`<span class="tag neutral">${safe(data.output_type)}</span>`);
-  }
-  if (data.urgency) {
-    chips.push(
-      `<span class="tag ${
-        data.urgency === "urgent"
-          ? "bad"
-          : data.urgency === "heightened"
-          ? "warn"
-          : "neutral"
-      }">${safe(data.urgency)}</span>`
-    );
-  }
-  if (data.safeguarding_level) {
-    chips.push(
-      `<span class="tag ${
-        data.safeguarding_level === "urgent"
-          ? "bad"
-          : data.safeguarding_level === "heightened"
-          ? "warn"
-          : "neutral"
-      }">${safe(data.safeguarding_level)}</span>`
-    );
-  }
-
-  const actions = normArray(data.suggested_actions);
-
-  return `
-    <div class="card" style="margin-top:10px;padding:12px;">
-      <div style="font-weight:700;margin-bottom:8px;">IndiCare reasoning</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">${chips.join("")}</div>
-      ${
-        actions.length
-          ? `
-        <div class="entity-meta" style="margin-top:10px;font-weight:700;">Suggested priorities</div>
-        <ul style="margin:8px 0 0 18px;">
-          ${actions
-            .map((a) => `<li style="margin-bottom:6px;">${safe(a)}</li>`)
-            .join("")}
-        </ul>
-      `
-          : ""
-      }
     </div>
   `;
 }
@@ -1318,9 +1220,7 @@ function attachMetaToWrap(wrap, meta = {}) {
   let oldMetaBox = wrap.querySelector(".assistant-source-box");
   if (oldMetaBox) oldMetaBox.remove();
 
-  const html = `${renderRuntimeHtml(meta.runtime)}${renderSourcesHtml(
-    meta.sources
-  )}`;
+  const html = `${renderSourcesHtml(meta.sources)}`;
   if (!html) return;
 
   const box = document.createElement("div");
@@ -1333,6 +1233,88 @@ function attachMetaToStreamingMessage(meta = {}) {
   const wrap = document.getElementById("streaming");
   if (!wrap) return;
   attachMetaToWrap(wrap, meta);
+}
+
+function ensureStreamingProgressHost() {
+  const wrap = document.getElementById("streaming");
+  if (!wrap) return null;
+  const block = wrap.querySelector(".block");
+  if (!block) return null;
+
+  let host = wrap.querySelector(".assistant-progress-box");
+  if (!host) {
+    host = document.createElement("div");
+    host.className = "assistant-progress-box";
+    host.style.marginBottom = "10px";
+    host.style.padding = "12px 14px";
+    host.style.border = "1px solid var(--line)";
+    host.style.borderRadius = "14px";
+    host.style.background = "var(--panel)";
+    host.style.color = "var(--muted)";
+    host.style.lineHeight = "1.6";
+    host.style.fontSize = ".9rem";
+    host.style.transition = "opacity .2s ease, transform .2s ease";
+    host.style.opacity = "1";
+    host.style.transform = "translateY(0)";
+    block.insertBefore(host, block.querySelector(".msg"));
+  }
+  return host;
+}
+
+function renderStreamingProgress() {
+  const host = ensureStreamingProgressHost();
+  if (!host) return;
+
+  const lines = currentProgressLines.slice(-3);
+  if (!lines.length) {
+    host.remove();
+    return;
+  }
+
+  host.innerHTML = `
+    <div style="font-weight:600;color:var(--text);margin-bottom:6px;">Working through this</div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      ${lines
+        .map(
+          (line) =>
+            `<div style="display:flex;gap:8px;align-items:flex-start;"><span style="color:var(--accent);font-weight:700;">•</span><span>${safe(
+              line
+            )}</span></div>`
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function pushStreamingProgress(text) {
+  const clean = String(text || "").trim();
+  if (!clean) return;
+  if (!currentProgressLines.includes(clean)) {
+    currentProgressLines.push(clean);
+  }
+  currentProgressLines = currentProgressLines.slice(-3);
+  renderStreamingProgress();
+}
+
+function clearStreamingProgress(immediate = false) {
+  currentProgressLines = [];
+  const wrap = document.getElementById("streaming");
+  if (!wrap) return;
+  const host = wrap.querySelector(".assistant-progress-box");
+  if (!host) return;
+
+  if (immediate) {
+    host.remove();
+    return;
+  }
+
+  host.style.opacity = "0";
+  host.style.transform = "translateY(-4px)";
+  setTimeout(() => {
+    try {
+      host.remove();
+    } catch (_) {}
+  }, 180);
 }
 
 function appendMessage(roleName, text, opts = {}) {
@@ -1364,7 +1346,6 @@ function appendMessage(roleName, text, opts = {}) {
     if (!actions) return;
     const b = document.createElement("button");
     b.className = "chip";
-    b.type = "button";
     b.textContent = label;
     b.onclick = fn;
     actions.appendChild(b);
@@ -1398,10 +1379,11 @@ function appendMessage(roleName, text, opts = {}) {
     addChip("Edit", () => editMessage(opts.messageId, shown));
   }
 
-  if (roleName === "assistant" && (opts.sources || opts.runtime)) {
+  if (roleName === "assistant" && (opts.sources || opts.runtime || opts.explainability)) {
     attachMetaToWrap(wrap, {
       sources: opts.sources || [],
       runtime: opts.runtime || {},
+      explainability: opts.explainability || {},
     });
   }
 
@@ -1415,6 +1397,8 @@ function createStreamMsg() {
   if (!has("messages")) return null;
   const old = $("streaming");
   if (old) old.remove();
+
+  currentProgressLines = [];
 
   const wrap = document.createElement("div");
   wrap.id = "streaming";
@@ -1447,9 +1431,17 @@ function startTyping() {
   }
 
   let raw = el.getAttribute("data-raw") || "";
+  let clearedProgress = false;
+
   const tick = setInterval(() => {
     if (queue.length) {
       raw += queue.shift();
+
+      if (!clearedProgress && raw.trim()) {
+        clearStreamingProgress();
+        clearedProgress = true;
+      }
+
       el.innerHTML = render(raw, "assistant");
       el.setAttribute("data-raw", raw);
       if (has("assistantPanel")) {
@@ -1461,6 +1453,7 @@ function startTyping() {
       el.classList.remove("typing");
       const finalRaw = el.getAttribute("data-raw") || "";
       lastAssistantText = finalRaw;
+      clearStreamingProgress(true);
       attachMetaToStreamingMessage(currentStreamMeta);
       speakText(finalRaw);
     }
@@ -1505,16 +1498,34 @@ function handleMetaEvent(payload) {
   currentStreamMeta = {
     sources: normArray(parsed.sources),
     runtime: normObj(parsed.runtime),
+    explainability: normObj(parsed.explainability),
   };
 
   attachMetaToStreamingMessage(currentStreamMeta);
+}
+
+function handleProgressEvent(payload) {
+  let parsed = {};
+  try {
+    parsed = JSON.parse(payload || "{}");
+  } catch {
+    parsed = {};
+  }
+
+  const content =
+    typeof parsed === "string"
+      ? parsed
+      : parsed?.content || "";
+
+  pushStreamingProgress(content);
 }
 
 async function stream(url, body) {
   body = normObj(body);
 
   currentIntent = body.intent || detectIntent(body.message || "");
-  currentStreamMeta = { sources: [], runtime: {} };
+  currentStreamMeta = { sources: [], runtime: {}, explainability: {} };
+  currentProgressLines = [];
 
   const promptPrefix =
     copilotPrompt() +
@@ -1576,6 +1587,7 @@ async function stream(url, body) {
     appendMessage("assistant", reply, {
       sources: normArray(data.sources),
       runtime: normObj(data.runtime),
+      explainability: normObj(data.explainability),
     });
     speakText(reply);
     return;
@@ -1599,6 +1611,11 @@ async function stream(url, body) {
 
       if (eventName === "meta") {
         handleMetaEvent(payload);
+        return;
+      }
+
+      if (eventName === "progress") {
+        handleProgressEvent(payload);
         return;
       }
 
@@ -1674,6 +1691,7 @@ async function sendMessage() {
   currentIntent = detectIntent(text);
 
   isStreaming = true;
+  currentProgressLines = [];
   if (has("send")) $("send").disabled = true;
   if (has("empty")) $("empty").classList.add("hidden");
   if (has("messages")) $("messages").classList.remove("hidden");
@@ -1681,7 +1699,6 @@ async function sendMessage() {
   appendMessage("user", text, {
     meta: `Mode: ${RESP[selectedMode()]} · Intent: ${currentIntent}`,
   });
-
   $("input").value = "";
   resize();
 
@@ -1698,13 +1715,17 @@ async function sendMessage() {
     const streamEl = document.querySelector("#streaming .msg");
     if (streamEl) {
       streamEl.classList.remove("typing");
+      clearStreamingProgress(true);
       streamEl.innerHTML = render(
         `Sorry, there was a problem: ${e.message}`,
         "assistant"
       );
       attachMetaToStreamingMessage(currentStreamMeta);
     } else {
-      appendMessage("assistant", `Sorry, there was a problem: ${e.message}`);
+      appendMessage(
+        "assistant",
+        `Sorry, there was a problem: ${e.message}`
+      );
     }
   } finally {
     isStreaming = false;
@@ -1719,12 +1740,21 @@ async function sendMessage() {
   }
 }
 
-function fillPrompt(text) {
+function quick(type) {
   if (!has("input")) return;
   if (!legalAcceptanceValid()) return openLegalModal("acceptance");
-  $("input").value = text || "";
+
+  const prompts = {
+    ofsted:
+      "Rewrite the above documentation so it aligns with Ofsted Quality Standards and is ready for professional review.",
+    risk:
+      "Generate a formal risk assessment based on this situation. Include presenting risks, protective factors, staff actions, and follow-up actions.",
+  };
+
+  $("input").value =
+    prompts[type] || "Rewrite this in a more formal professional format.";
   resize();
-  $("input").focus();
+  sendMessage();
 }
 
 function startSpeech() {
@@ -1753,13 +1783,7 @@ function startSpeech() {
   rec.start();
 }
 
-function fillSelect(
-  id,
-  rows,
-  placeholder,
-  valueKey = "id",
-  labelFn = (r) => r.name
-) {
+function fillSelect(id, rows, placeholder, valueKey = "id", labelFn = (r) => r.name) {
   if (!has(id)) return;
   const sel = $(id);
   const current = sel.value;
@@ -1792,7 +1816,9 @@ function setAdminTab(name) {
   document
     .querySelectorAll(".tabbtn[data-tab]")
     .forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
-  document.querySelectorAll(".admin-tab").forEach((t) => t.classList.add("hidden"));
+  document
+    .querySelectorAll(".admin-tab")
+    .forEach((t) => t.classList.add("hidden"));
   if (has("tab-" + name)) $("tab-" + name).classList.remove("hidden");
   localStorage.setItem("indicare_admin_tab", name);
 }
@@ -1818,7 +1844,9 @@ function setManagerTab(name) {
     .forEach((b) =>
       b.classList.toggle("active", b.dataset.managerTab === name)
     );
-  document.querySelectorAll(".manager-tab").forEach((t) => t.classList.add("hidden"));
+  document
+    .querySelectorAll(".manager-tab")
+    .forEach((t) => t.classList.add("hidden"));
   if (has("manager-" + name + "-tab")) {
     $("manager-" + name + "-tab").classList.remove("hidden");
   }
@@ -1853,7 +1881,9 @@ async function loadAdminReferenceData() {
     "Select manager",
     "id",
     (r) =>
-      `${r?.first_name || ""} ${r?.last_name || ""}`.trim() || r?.email || ""
+      `${r?.first_name || ""} ${r?.last_name || ""}`.trim() ||
+      r?.email ||
+      ""
   );
   fillSelect(
     "docOwnerId",
@@ -1861,7 +1891,9 @@ async function loadAdminReferenceData() {
     "Select owner",
     "id",
     (r) =>
-      `${r?.first_name || ""} ${r?.last_name || ""}`.trim() || r?.email || ""
+      `${r?.first_name || ""} ${r?.last_name || ""}`.trim() ||
+      r?.email ||
+      ""
   );
   fillSelect(
     "libraryOwnerId",
@@ -1869,7 +1901,9 @@ async function loadAdminReferenceData() {
     "Select owner",
     "id",
     (r) =>
-      `${r?.first_name || ""} ${r?.last_name || ""}`.trim() || r?.email || ""
+      `${r?.first_name || ""} ${r?.last_name || ""}`.trim() ||
+      r?.email ||
+      ""
   );
 
   updateAdminSummary();
@@ -1950,8 +1984,7 @@ function renderAdminUsers() {
   host.innerHTML = "";
 
   if (!adminUsers.length) {
-    host.innerHTML = `<div class="entity-row"><div>No users found.</div></div>`;
-    return;
+    return (host.innerHTML = `<div class="entity-row"><div>No users found.</div></div>`);
   }
 
   adminUsers.forEach((user) => {
@@ -1975,7 +2008,6 @@ function renderAdminUsers() {
       if (!right) return;
       const b = document.createElement("button");
       b.className = "chip";
-      b.type = "button";
       b.textContent = label;
       b.onclick = fn;
       right.appendChild(b);
@@ -2031,7 +2063,9 @@ function renderAdminUsers() {
     });
 
     add("Reset password", async () => {
-      const password = prompt(`Set new password for ${user?.email || "user"}`);
+      const password = prompt(
+        `Set new password for ${user?.email || "user"}`
+      );
       if (password === null || !password.trim()) {
         return banner("Password cannot be empty");
       }
@@ -2103,8 +2137,7 @@ function renderHomes() {
   host.innerHTML = "";
 
   if (!homes.length) {
-    host.innerHTML = `<div class="entity-row"><div>No homes found.</div></div>`;
-    return;
+    return (host.innerHTML = `<div class="entity-row"><div>No homes found.</div></div>`);
   }
 
   homes.forEach((home) => {
@@ -2148,7 +2181,6 @@ function renderHomes() {
     ].forEach(([label, fn]) => {
       const b = document.createElement("button");
       b.className = "chip";
-      b.type = "button";
       b.textContent = label;
       b.onclick = fn;
       right && right.appendChild(b);
@@ -2162,7 +2194,9 @@ async function createProvider() {
   const p = {
     name: has("providerName") ? $("providerName").value.trim() : "",
     region: has("providerRegion") ? $("providerRegion").value.trim() || null : null,
-    address: has("providerAddress") ? $("providerAddress").value.trim() || null : null,
+    address: has("providerAddress")
+      ? $("providerAddress").value.trim() || null
+      : null,
     postcode: has("providerPostcode")
       ? $("providerPostcode").value.trim() || null
       : null,
@@ -2206,8 +2240,7 @@ function renderProviders() {
   host.innerHTML = "";
 
   if (!providers.length) {
-    host.innerHTML = `<div class="entity-row"><div>No providers found.</div></div>`;
-    return;
+    return (host.innerHTML = `<div class="entity-row"><div>No providers found.</div></div>`);
   }
 
   providers.forEach((provider) => {
@@ -2251,7 +2284,6 @@ function renderProviders() {
     ].forEach(([label, fn]) => {
       const b = document.createElement("button");
       b.className = "chip";
-      b.type = "button";
       b.textContent = label;
       b.onclick = fn;
       right && right.appendChild(b);
@@ -2335,8 +2367,7 @@ function renderDocuments() {
   host.innerHTML = "";
 
   if (!docs.length) {
-    host.innerHTML = `<div class="entity-row"><div>No documents found.</div></div>`;
-    return;
+    return (host.innerHTML = `<div class="entity-row"><div>No documents found.</div></div>`);
   }
 
   docs.forEach((doc) => {
@@ -2382,7 +2413,6 @@ function renderDocuments() {
     ].forEach(([label, fn]) => {
       const b = document.createElement("button");
       b.className = "chip";
-      b.type = "button";
       b.textContent = label;
       b.onclick = fn;
       right && right.appendChild(b);
@@ -2466,8 +2496,7 @@ function renderAudit() {
   host.innerHTML = "";
 
   if (!audit.length) {
-    host.innerHTML = `<div class="entity-row"><div>No audit entries found.</div></div>`;
-    return;
+    return (host.innerHTML = `<div class="entity-row"><div>No audit entries found.</div></div>`);
   }
 
   audit.forEach((a) => {
@@ -2521,8 +2550,7 @@ function renderLibraryList() {
   host.innerHTML = "";
 
   if (!libraryDocs.length) {
-    host.innerHTML = `<div class="entity-row"><div>No documents available for your home.</div></div>`;
-    return;
+    return (host.innerHTML = `<div class="entity-row"><div>No documents available for your home.</div></div>`);
   }
 
   libraryDocs.forEach((doc) => {
@@ -2552,7 +2580,6 @@ function renderLibraryList() {
     ].forEach(([label, fn]) => {
       const b = document.createElement("button");
       b.className = "chip";
-      b.type = "button";
       b.textContent = label;
       b.onclick = fn;
       right && right.appendChild(b);
@@ -2568,12 +2595,10 @@ function renderManagerLibraryList() {
   host.innerHTML = "";
 
   if (!canManageLibrary()) {
-    host.innerHTML = `<div class="entity-row"><div>Read-only access.</div></div>`;
-    return;
+    return (host.innerHTML = `<div class="entity-row"><div>Read-only access.</div></div>`);
   }
   if (!libraryDocs.length) {
-    host.innerHTML = `<div class="entity-row"><div>No home documents found.</div></div>`;
-    return;
+    return (host.innerHTML = `<div class="entity-row"><div>No home documents found.</div></div>`);
   }
 
   libraryDocs.forEach((doc) => {
@@ -2583,7 +2608,7 @@ function renderManagerLibraryList() {
         doc?.title || "Untitled document"
       )}</div><div class="entity-meta">${safe(
         doc?.document_type || "—"
-      )} · review ${safe(doc?.review_date || "—")}</div></div><div class="entity-actions"><button class="chip" type="button" data-doc-edit="${safe(
+      )} · review ${safe(doc?.review_date || "—")}</div></div><div class="entity-actions"><button class="chip" data-doc-edit="${safe(
         String(doc?.id ?? "")
       )}">Edit</button></div></div>`
     );
@@ -2809,8 +2834,7 @@ function renderManagerUsers() {
   host.innerHTML = "";
 
   if (!managerUsers.length) {
-    host.innerHTML = `<div class="entity-row"><div>No staff found.</div></div>`;
-    return;
+    return (host.innerHTML = `<div class="entity-row"><div>No staff found.</div></div>`);
   }
 
   managerUsers.forEach((u) => {
@@ -2841,8 +2865,7 @@ function renderManagerDocuments() {
   host.innerHTML = "";
 
   if (!managerDocuments.length) {
-    host.innerHTML = `<div class="entity-row"><div>No home documents found.</div></div>`;
-    return;
+    return (host.innerHTML = `<div class="entity-row"><div>No home documents found.</div></div>`);
   }
 
   managerDocuments.forEach((d) => {
@@ -2941,41 +2964,21 @@ function bindLegalControls() {
   });
 }
 
-function bindQuickCards() {
-  document.querySelectorAll("[data-quick-fill]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      fillPrompt(btn.getAttribute("data-quick-fill") || "");
-    });
-  });
-}
-
-function bindMobileNav() {
-  on("mobileNavAssistant", "click", showAssistantView);
-  on("mobileNavMore", "click", openSidebarMobile);
-}
-
-function bindWorkspaceLinks() {
-  document.querySelectorAll(".navlink").forEach((link) => {
-    link.addEventListener("click", closeMobilePanels);
-  });
-}
-
 function bind() {
   on("sideToggle", "click", () => {
-    if (isMobileView()) {
-      if (has("sidebar")) {
-        const open = $("sidebar").classList.toggle("open");
-        has("overlay") && $("overlay").classList.toggle("show", open);
-      }
-      return;
-    }
-
-    if (has("sidebar")) {
-      $("sidebar").classList.toggle("open");
+    if (has("sidebar")) $("sidebar").classList.toggle("open");
+    if (window.innerWidth <= 768 && has("overlay")) {
+      $("overlay").classList.toggle(
+        "show",
+        has("sidebar") && $("sidebar").classList.contains("open")
+      );
     }
   });
 
-  on("mobileMenu", "click", openSidebarMobile);
+  on("mobileMenu", "click", () => {
+    if (has("sidebar")) $("sidebar").classList.add("open");
+    if (has("overlay")) $("overlay").classList.add("show");
+  });
 
   on("overlay", "click", () => {
     if (has("sidebar")) $("sidebar").classList.remove("open");
@@ -3046,17 +3049,12 @@ function bind() {
   document
     .querySelectorAll(".tabbtn[data-library-tab]")
     .forEach((btn) =>
-      btn.addEventListener("click", () =>
-        setLibraryTab(btn.dataset.libraryTab)
-      )
+      btn.addEventListener("click", () => setLibraryTab(btn.dataset.libraryTab))
     );
-
   document
     .querySelectorAll(".tabbtn[data-manager-tab]")
     .forEach((btn) =>
-      btn.addEventListener("click", () =>
-        setManagerTab(btn.dataset.managerTab)
-      )
+      btn.addEventListener("click", () => setManagerTab(btn.dataset.managerTab))
     );
 
   on("search", "input", filterConversations);
@@ -3151,19 +3149,7 @@ function bind() {
   on("refreshManagerBtn", "click", loadManager);
   on("refreshManagerDocsBtn", "click", loadManager);
 
-  bindQuickCards();
-  bindMobileNav();
-  bindWorkspaceLinks();
   bindLegalControls();
-
-  window.addEventListener("resize", () => {
-    if (!isMobileView()) {
-      has("overlay") && $("overlay").classList.remove("show");
-      has("sidebar") && $("sidebar").classList.remove("open");
-    }
-    syncMobileAssistantState();
-    resize();
-  });
 }
 
 async function init() {
@@ -3214,7 +3200,6 @@ async function init() {
 
   showAssistantView();
   enforceLegalGate();
-  syncHelpers();
 }
 
 document.addEventListener("DOMContentLoaded", init);
