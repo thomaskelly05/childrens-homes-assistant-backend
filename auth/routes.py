@@ -1,1347 +1,654 @@
-import json
-import logging
+import os
+import re
+import secrets
+import time
+from dataclasses import dataclass
+from typing import Any
 
 import bcrypt
-from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, EmailStr
-from psycopg2 import IntegrityError, OperationalError
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
+from pydantic import BaseModel, EmailStr, field_validator
 from psycopg2.extras import RealDictCursor
 
-from auth.current_user import get_current_user
+from auth.mfa_guard import (
+    SESSION_MFA_VERIFIED_KEY,
+    SESSION_USER_EMAIL_KEY,
+    SESSION_USER_ID_KEY,
+)
+from auth.tokens import create_session_token, decode_session_token
+from db.billing_db import get_user_billing_by_user_id
 from db.connection import get_db
+from db.mfa_db import get_user_mfa, log_auth_event
 
-logger = logging.getLogger(__name__)
-
-router = APIRouter(prefix="/admin", tags=["Admin"])
-
-ALLOWED_ROLES = {"admin", "provider_admin", "manager", "staff"}
-ADMIN_ROLES = {"admin", "provider_admin"}
+router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-class CreateUserRequest(BaseModel):
-    first_name: str
-    last_name: str
+# -------------------------------------------------------------------
+# In-memory throttling / lockout
+# Move to Redis for multi-instance production.
+# -------------------------------------------------------------------
+
+FAILED_BY_IP: dict[str, list[float]] = {}
+FAILED_BY_EMAIL: dict[str, list[float]] = {}
+LOCKED_IPS: dict[str, float] = {}
+LOCKED_EMAILS: dict[str, float] = {}
+
+THROTTLE_WINDOW_SECONDS = int(os.getenv("AUTH_THROTTLE_WINDOW_SECONDS", "900"))
+MAX_FAILED_ATTEMPTS_PER_IP = int(os.getenv("AUTH_MAX_FAILED_ATTEMPTS_PER_IP", "20"))
+MAX_FAILED_ATTEMPTS_PER_EMAIL = int(os.getenv("AUTH_MAX_FAILED_ATTEMPTS_PER_EMAIL", "8"))
+LOCKOUT_SECONDS = int(os.getenv("AUTH_LOCKOUT_SECONDS", "900"))
+
+# Valid bcrypt hash used only to flatten timing when user is unknown.
+DUMMY_BCRYPT_HASH = b"$2b$12$yAc2mW0pYv4B4xXj3H3oJ.5XQmsx3M3uVJfY0jQnR8iW0VtT1hN3K"
+
+
+@dataclass(frozen=True)
+class AuthSettings:
+    session_cookie_name: str
+    csrf_cookie_name: str
+    app_env: str
+    is_production: bool
+    cookie_secure: bool
+    cookie_samesite: str
+    cookie_max_age_short: int
+    cookie_max_age_long: int
+    force_mfa_for_sensitive_roles: bool
+
+    @classmethod
+    def load(cls) -> "AuthSettings":
+        app_env = os.environ.get("APP_ENV", "development").lower()
+        is_production = app_env == "production"
+
+        cookie_secure = os.getenv(
+            "COOKIE_SECURE",
+            "true" if is_production else "false",
+        ).lower() == "true"
+
+        cookie_samesite = os.getenv("COOKIE_SAMESITE", "strict").strip().lower()
+        if cookie_samesite not in {"lax", "strict", "none"}:
+            cookie_samesite = "strict"
+
+        # __Host- cookies require Secure + Path=/ + no Domain
+        session_cookie_name = "__Host-indicare_session" if cookie_secure else "indicare_session"
+        csrf_cookie_name = "__Host-indicare_csrf" if cookie_secure else "indicare_csrf"
+
+        return cls(
+            session_cookie_name=session_cookie_name,
+            csrf_cookie_name=csrf_cookie_name,
+            app_env=app_env,
+            is_production=is_production,
+            cookie_secure=cookie_secure,
+            cookie_samesite=cookie_samesite,
+            cookie_max_age_short=60 * 60 * 8,         # 8h
+            cookie_max_age_long=60 * 60 * 24 * 14,    # 14d
+            force_mfa_for_sensitive_roles=True,
+        )
+
+
+settings = AuthSettings.load()
+
+
+class LoginRequest(BaseModel):
     email: EmailStr
     password: str
-    role: str
-    home_id: int
-    is_active: bool = True
+    remember: bool | None = False
+
+    @field_validator("password")
+    @classmethod
+    def validate_password_present(cls, value: str) -> str:
+        if not value or not value.strip():
+            raise ValueError("Password is required")
+        return value
 
 
-class UpdateUserRequest(BaseModel):
-    first_name: str | None = None
-    last_name: str | None = None
-    email: EmailStr | None = None
-    role: str | None = None
-    home_id: int | None = None
-    is_active: bool | None = None
-    archived: bool | None = None
+def _normalise_email(email: str) -> str:
+    return (email or "").strip().lower()
 
 
-class ResetPasswordRequest(BaseModel):
-    password: str
+def _now() -> float:
+    return time.time()
 
 
-class CreateHomeRequest(BaseModel):
-    name: str
-    address: str | None = None
-    postcode: str | None = None
-    region: str | None = None
-    local_authority: str | None = None
-    ofsted_urn: str | None = None
-    provider_id: int | None = None
-    registered_manager_id: int | None = None
-    latitude: float | None = None
-    longitude: float | None = None
-    geofence_radius_m: int | None = None
-    archived: bool = False
+def _extract_token(request: Request, authorization: str | None = None) -> str | None:
+    cookie_token = (request.cookies.get(settings.session_cookie_name) or "").strip()
+    if cookie_token:
+        return cookie_token
 
-
-class UpdateHomeRequest(BaseModel):
-    name: str | None = None
-    address: str | None = None
-    postcode: str | None = None
-    region: str | None = None
-    local_authority: str | None = None
-    ofsted_urn: str | None = None
-    provider_id: int | None = None
-    registered_manager_id: int | None = None
-    latitude: float | None = None
-    longitude: float | None = None
-    geofence_radius_m: int | None = None
-    archived: bool | None = None
-
-
-class CreateProviderRequest(BaseModel):
-    name: str
-    region: str | None = None
-    address: str | None = None
-    postcode: str | None = None
-    local_authority: str | None = None
-    safeguarding_lead_name: str | None = None
-    safeguarding_lead_email: EmailStr | None = None
-    archived: bool = False
-
-
-class UpdateProviderRequest(BaseModel):
-    name: str | None = None
-    region: str | None = None
-    address: str | None = None
-    postcode: str | None = None
-    local_authority: str | None = None
-    safeguarding_lead_name: str | None = None
-    safeguarding_lead_email: EmailStr | None = None
-    archived: bool | None = None
-
-
-class CreateDocumentRequest(BaseModel):
-    home_id: int | None = None
-    user_id: int | None = None
-    young_person_id: int | None = None
-    document_type: str | None = None
-    title: str | None = None
-    input_text: str | None = None
-    generated_text: str | None = None
-    issue_date: str | None = None
-    review_date: str | None = None
-    expiry_date: str | None = None
-    owner_id: int | None = None
-    approval_required: bool = False
-    approval_status: str | None = "not_required"
-    confidentiality_level: str | None = "standard"
-
-
-class UpdateDocumentRequest(BaseModel):
-    home_id: int | None = None
-    user_id: int | None = None
-    young_person_id: int | None = None
-    document_type: str | None = None
-    title: str | None = None
-    input_text: str | None = None
-    generated_text: str | None = None
-    issue_date: str | None = None
-    review_date: str | None = None
-    expiry_date: str | None = None
-    owner_id: int | None = None
-    approval_required: bool | None = None
-    approval_status: str | None = None
-    confidentiality_level: str | None = None
-
-
-def get_current_admin(current_user=Depends(get_current_user)):
-    if not isinstance(current_user, dict):
-        raise HTTPException(status_code=401, detail="Invalid user session")
-
-    role = str(current_user.get("role") or "").strip().lower()
-    user_id = current_user.get("user_id")
-
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid user session")
-
-    if role not in ADMIN_ROLES:
-        raise HTTPException(status_code=403, detail="Admin access required")
-
-    return current_user
-
-
-def normalise_role(role: str) -> str:
-    value = role.strip().lower()
-    if value not in ALLOWED_ROLES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid role. Allowed roles: {', '.join(sorted(ALLOWED_ROLES))}",
-        )
-    return value
-
-
-def normalise_optional_text(value: str | None) -> str | None:
-    if value is None:
+    if not authorization:
         return None
-    cleaned = value.strip()
-    return cleaned or None
+
+    parts = authorization.split(" ", 1)
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        return None
+
+    token = parts[1].strip()
+    return token or None
 
 
-def parse_admin_user_id(admin: dict) -> int | None:
+def _safe_session_reset(request: Request) -> None:
     try:
-        return int(admin.get("user_id")) if admin.get("user_id") is not None else None
-    except (TypeError, ValueError):
-        return None
+        request.session.clear()
+    except Exception:
+        pass
 
 
-def log_admin_action(
-    conn,
-    admin_user_id: int | None,
-    action: str,
-    target_type: str,
-    target_id: int | None,
-    details: dict | None = None,
-):
-    with conn.cursor() as cur:
+def _ensure_password_hash_bytes(password_hash: str | bytes | None) -> bytes:
+    if password_hash is None:
+        return b""
+    if isinstance(password_hash, bytes):
+        return password_hash
+    return password_hash.encode("utf-8")
+
+
+def _dummy_bcrypt_check(password: str) -> None:
+    try:
+        bcrypt.checkpw(password.encode("utf-8"), DUMMY_BCRYPT_HASH)
+    except Exception:
+        pass
+
+
+def _check_password_policy(password: str) -> str | None:
+    if len(password) < 12:
+        return "Password must be at least 12 characters long."
+    if not re.search(r"[A-Z]", password):
+        return "Password must include at least one uppercase letter."
+    if not re.search(r"[a-z]", password):
+        return "Password must include at least one lowercase letter."
+    if not re.search(r"\d", password):
+        return "Password must include at least one number."
+    return None
+
+
+def _client_ip(request: Request) -> str | None:
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    if request.client:
+        return request.client.host
+    return None
+
+
+def _user_agent(request: Request) -> str | None:
+    return request.headers.get("user-agent")
+
+
+def _log_auth(
+    *,
+    request: Request,
+    user_id: int | None,
+    email: str | None,
+    event_type: str,
+    detail: str,
+) -> None:
+    try:
+        log_auth_event(
+            user_id=user_id,
+            email=email,
+            event_type=event_type,
+            ip_address=_client_ip(request),
+            user_agent=_user_agent(request),
+            detail=detail,
+        )
+    except Exception:
+        pass
+
+
+def _prune_attempts(bag: dict[str, list[float]], key: str) -> list[float]:
+    current = _now()
+    values = [t for t in bag.get(key, []) if current - t <= THROTTLE_WINDOW_SECONDS]
+    bag[key] = values
+    return values
+
+
+def _is_locked(lock_map: dict[str, float], key: str) -> bool:
+    if not key:
+        return False
+    until = lock_map.get(key)
+    if not until:
+        return False
+    if until <= _now():
+        lock_map.pop(key, None)
+        return False
+    return True
+
+
+def _register_failure(ip: str | None, email: str | None) -> None:
+    current = _now()
+
+    if ip:
+        attempts = _prune_attempts(FAILED_BY_IP, ip)
+        attempts.append(current)
+        FAILED_BY_IP[ip] = attempts
+        if len(attempts) >= MAX_FAILED_ATTEMPTS_PER_IP:
+            LOCKED_IPS[ip] = current + LOCKOUT_SECONDS
+
+    if email:
+        attempts = _prune_attempts(FAILED_BY_EMAIL, email)
+        attempts.append(current)
+        FAILED_BY_EMAIL[email] = attempts
+        if len(attempts) >= MAX_FAILED_ATTEMPTS_PER_EMAIL:
+            LOCKED_EMAILS[email] = current + LOCKOUT_SECONDS
+
+
+def _clear_failures(ip: str | None, email: str | None) -> None:
+    if ip:
+        FAILED_BY_IP.pop(ip, None)
+        LOCKED_IPS.pop(ip, None)
+    if email:
+        FAILED_BY_EMAIL.pop(email, None)
+        LOCKED_EMAILS.pop(email, None)
+
+
+def _assert_not_locked(request: Request, email: str | None) -> None:
+    ip = _client_ip(request)
+
+    if ip and _is_locked(LOCKED_IPS, ip):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many failed sign-in attempts. Please try again later.",
+        )
+
+    if email and _is_locked(LOCKED_EMAILS, email):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many failed sign-in attempts. Please try again later.",
+        )
+
+
+def _mfa_required_for_role(role: str | None) -> bool:
+    role_value = (role or "").strip().lower()
+    return settings.force_mfa_for_sensitive_roles and role_value in {
+        "admin",
+        "provider_admin",
+        "manager",
+    }
+
+
+def _get_user_by_id(conn: Any, user_id: int) -> dict[str, Any] | None:
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
-            INSERT INTO admin_audit_log (
-                admin_user_id,
-                action,
-                target_type,
-                target_id,
-                details,
-                created_at
-            )
-            VALUES (%s, %s, %s, %s, %s::jsonb, NOW())
-            """,
-            (
-                admin_user_id,
-                action,
-                target_type,
-                target_id,
-                json.dumps(details) if details is not None else None,
-            ),
-        )
-
-
-def handle_integrity_error(exc: Exception, fallback_detail: str = "Database integrity error"):
-    logger.warning("Integrity error: %s", str(exc))
-    raise HTTPException(status_code=400, detail=fallback_detail)
-
-
-@router.get("/users")
-def list_users(
-    q: str | None = Query(default=None),
-    role: str | None = Query(default=None),
-    home_id: int | None = Query(default=None),
-    active: bool | None = Query(default=None),
-    archived: bool | None = Query(default=None),
-    admin=Depends(get_current_admin),
-    conn=Depends(get_db),
-):
-    query = """
-        SELECT
-            id,
-            first_name,
-            last_name,
-            email,
-            role,
-            home_id,
-            is_active,
-            archived,
-            created_at,
-            updated_at
-        FROM users
-        WHERE 1=1
-    """
-    values: list = []
-
-    if q:
-        search = f"%{q.strip().lower()}%"
-        query += """
-            AND (
-                LOWER(first_name) LIKE %s
-                OR LOWER(last_name) LIKE %s
-                OR LOWER(email) LIKE %s
-            )
-        """
-        values.extend([search, search, search])
-
-    if role:
-        query += " AND role = %s"
-        values.append(role.strip().lower())
-
-    if home_id is not None:
-        query += " AND home_id = %s"
-        values.append(home_id)
-
-    if active is not None:
-        query += " AND is_active = %s"
-        values.append(active)
-
-    if archived is not None:
-        query += " AND archived = %s"
-        values.append(archived)
-
-    query += " ORDER BY created_at DESC"
-
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(query, tuple(values))
-        rows = cur.fetchall()
-
-    return {"ok": True, "users": rows}
-
-
-@router.post("/users")
-def create_user(
-    payload: CreateUserRequest,
-    admin=Depends(get_current_admin),
-    conn=Depends(get_db),
-):
-    admin_user_id = parse_admin_user_id(admin)
-    email = str(payload.email).strip().lower()
-    role = normalise_role(payload.role)
-
-    first_name = payload.first_name.strip()
-    last_name = payload.last_name.strip()
-    password = payload.password.strip()
-
-    if not first_name:
-        raise HTTPException(status_code=400, detail="First name is required")
-    if not last_name:
-        raise HTTPException(status_code=400, detail="Last name is required")
-    if not password:
-        raise HTTPException(status_code=400, detail="Password is required")
-
-    try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT id FROM users WHERE lower(email) = %s LIMIT 1", (email,))
-            existing = cur.fetchone()
-            if existing:
-                raise HTTPException(status_code=400, detail="Email already exists")
-
-            password_hash = bcrypt.hashpw(
-                password.encode("utf-8"),
-                bcrypt.gensalt(),
-            ).decode("utf-8")
-
-            cur.execute(
-                """
-                INSERT INTO users (
-                    first_name,
-                    last_name,
-                    email,
-                    password_hash,
-                    role,
-                    home_id,
-                    is_active,
-                    archived,
-                    created_at,
-                    updated_at
-                )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, false, NOW(), NOW())
-                RETURNING
-                    id,
-                    first_name,
-                    last_name,
-                    email,
-                    role,
-                    home_id,
-                    is_active,
-                    archived,
-                    created_at,
-                    updated_at
-                """,
-                (
-                    first_name,
-                    last_name,
-                    email,
-                    password_hash,
-                    role,
-                    payload.home_id,
-                    payload.is_active,
-                ),
-            )
-            user = cur.fetchone()
-
-        log_admin_action(
-            conn,
-            admin_user_id=admin_user_id,
-            action="create_user",
-            target_type="user",
-            target_id=user["id"],
-            details={
-                "email": user["email"],
-                "role": user["role"],
-                "home_id": user["home_id"],
-            },
-        )
-
-        return {"ok": True, "user": user}
-
-    except HTTPException:
-        raise
-    except IntegrityError as exc:
-        handle_integrity_error(exc, "Unable to create user. Check related records and unique fields.")
-    except OperationalError:
-        logger.exception("Database operational error in create_user")
-        raise HTTPException(status_code=500, detail="Database unavailable")
-
-
-@router.patch("/users/{user_id}")
-def update_user(
-    user_id: int,
-    payload: UpdateUserRequest,
-    admin=Depends(get_current_admin),
-    conn=Depends(get_db),
-):
-    admin_user_id = parse_admin_user_id(admin)
-    fields: list[str] = []
-    values: list = []
-
-    try:
-        if payload.first_name is not None:
-            first_name = payload.first_name.strip()
-            if not first_name:
-                raise HTTPException(status_code=400, detail="First name cannot be empty")
-            fields.append("first_name = %s")
-            values.append(first_name)
-
-        if payload.last_name is not None:
-            last_name = payload.last_name.strip()
-            if not last_name:
-                raise HTTPException(status_code=400, detail="Last name cannot be empty")
-            fields.append("last_name = %s")
-            values.append(last_name)
-
-        if payload.email is not None:
-            new_email = str(payload.email).strip().lower()
-            with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute(
-                    "SELECT id FROM users WHERE lower(email) = %s AND id != %s LIMIT 1",
-                    (new_email, user_id),
-                )
-                existing = cur.fetchone()
-            if existing:
-                raise HTTPException(status_code=400, detail="Email already exists")
-            fields.append("email = %s")
-            values.append(new_email)
-
-        if payload.role is not None:
-            new_role = normalise_role(payload.role)
-            if admin_user_id == user_id and new_role not in ADMIN_ROLES:
-                raise HTTPException(status_code=400, detail="You cannot remove your own admin role")
-            fields.append("role = %s")
-            values.append(new_role)
-
-        if payload.home_id is not None:
-            fields.append("home_id = %s")
-            values.append(payload.home_id)
-
-        if payload.is_active is not None:
-            if admin_user_id == user_id and payload.is_active is False:
-                raise HTTPException(status_code=400, detail="You cannot deactivate your own account")
-            fields.append("is_active = %s")
-            values.append(payload.is_active)
-
-        if payload.archived is not None:
-            if admin_user_id == user_id and payload.archived is True:
-                raise HTTPException(status_code=400, detail="You cannot archive your own account")
-            fields.append("archived = %s")
-            values.append(payload.archived)
-
-        if not fields:
-            raise HTTPException(status_code=400, detail="No fields to update")
-
-        fields.append("updated_at = NOW()")
-        values.append(user_id)
-
-        query = f"""
-            UPDATE users
-            SET {", ".join(fields)}
-            WHERE id = %s
-            RETURNING
+            SELECT
                 id,
-                first_name,
-                last_name,
                 email,
                 role,
                 home_id,
-                is_active,
-                archived,
-                created_at,
-                updated_at
-        """
-
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(query, tuple(values))
-            user = cur.fetchone()
-
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-
-        log_admin_action(
-            conn,
-            admin_user_id=admin_user_id,
-            action="update_user",
-            target_type="user",
-            target_id=user_id,
-            details={"email": user["email"]},
-        )
-
-        return {"ok": True, "user": user}
-
-    except HTTPException:
-        raise
-    except IntegrityError as exc:
-        handle_integrity_error(exc, "Unable to update user. Check related records and unique fields.")
-    except OperationalError:
-        logger.exception("Database operational error in update_user")
-        raise HTTPException(status_code=500, detail="Database unavailable")
-
-
-@router.post("/users/{user_id}/reset-password")
-def reset_password(
-    user_id: int,
-    payload: ResetPasswordRequest,
-    admin=Depends(get_current_admin),
-    conn=Depends(get_db),
-):
-    admin_user_id = parse_admin_user_id(admin)
-    password = payload.password.strip()
-
-    if not password:
-        raise HTTPException(status_code=400, detail="Password is required")
-
-    try:
-        password_hash = bcrypt.hashpw(
-            password.encode("utf-8"),
-            bcrypt.gensalt(),
-        ).decode("utf-8")
-
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                """
-                UPDATE users
-                SET
-                    password_hash = %s,
-                    password_reset_expiry = NULL,
-                    updated_at = NOW()
-                WHERE id = %s
-                RETURNING id, email, first_name, last_name
-                """,
-                (password_hash, user_id),
-            )
-            user = cur.fetchone()
-
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-
-        log_admin_action(
-            conn,
-            admin_user_id=admin_user_id,
-            action="reset_password",
-            target_type="user",
-            target_id=user_id,
-            details={"email": user["email"]},
-        )
-
-        return {"ok": True, "message": "Password reset", "user": user}
-
-    except HTTPException:
-        raise
-    except OperationalError:
-        logger.exception("Database operational error in reset_password")
-        raise HTTPException(status_code=500, detail="Database unavailable")
-
-
-@router.get("/homes")
-def list_homes(
-    include_archived: bool = Query(default=False),
-    admin=Depends(get_current_admin),
-    conn=Depends(get_db),
-):
-    query = """
-        SELECT
-            h.id,
-            h.name,
-            h.address,
-            h.postcode,
-            h.region,
-            h.local_authority,
-            h.ofsted_urn,
-            h.provider_id,
-            h.registered_manager_id,
-            h.latitude,
-            h.longitude,
-            h.geofence_radius_m,
-            h.archived,
-            h.created_at,
-            h.updated_at,
-            COALESCE(uc.user_count, 0) AS user_count
-        FROM homes h
-        LEFT JOIN (
-            SELECT
-                home_id,
-                COUNT(*) AS user_count
-            FROM users
-            WHERE COALESCE(archived, false) = false
-            GROUP BY home_id
-        ) uc
-            ON uc.home_id = h.id
-    """
-
-    if not include_archived:
-        query += " WHERE COALESCE(h.archived, false) = false"
-
-    query += " ORDER BY h.name ASC"
-
-    try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(query)
-            rows = cur.fetchall()
-
-        return {"ok": True, "homes": rows}
-
-    except OperationalError:
-        logger.exception("Database operational error in list_homes")
-        raise HTTPException(status_code=500, detail="Database unavailable")
-
-
-@router.post("/homes")
-def create_home(
-    payload: CreateHomeRequest,
-    admin=Depends(get_current_admin),
-    conn=Depends(get_db),
-):
-    admin_user_id = parse_admin_user_id(admin)
-
-    name = payload.name.strip()
-    if not name:
-        raise HTTPException(status_code=400, detail="Home name is required")
-
-    try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                """
-                INSERT INTO homes (
-                    name,
-                    address,
-                    postcode,
-                    region,
-                    local_authority,
-                    ofsted_urn,
-                    provider_id,
-                    registered_manager_id,
-                    latitude,
-                    longitude,
-                    geofence_radius_m,
-                    archived,
-                    created_at,
-                    updated_at
-                )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
-                RETURNING
-                    id,
-                    name,
-                    address,
-                    postcode,
-                    region,
-                    local_authority,
-                    ofsted_urn,
-                    provider_id,
-                    registered_manager_id,
-                    latitude,
-                    longitude,
-                    geofence_radius_m,
-                    archived,
-                    created_at,
-                    updated_at
-                """,
-                (
-                    name,
-                    normalise_optional_text(payload.address),
-                    normalise_optional_text(payload.postcode),
-                    normalise_optional_text(payload.region),
-                    normalise_optional_text(payload.local_authority),
-                    normalise_optional_text(payload.ofsted_urn),
-                    payload.provider_id,
-                    payload.registered_manager_id,
-                    payload.latitude,
-                    payload.longitude,
-                    payload.geofence_radius_m,
-                    payload.archived,
-                ),
-            )
-            home = cur.fetchone()
-
-        log_admin_action(
-            conn,
-            admin_user_id=admin_user_id,
-            action="create_home",
-            target_type="home",
-            target_id=home["id"],
-            details={"name": home["name"]},
-        )
-
-        return {"ok": True, "home": home}
-
-    except HTTPException:
-        raise
-    except IntegrityError as exc:
-        handle_integrity_error(exc, "Unable to create home. Check provider and manager references.")
-    except OperationalError:
-        logger.exception("Database operational error in create_home")
-        raise HTTPException(status_code=500, detail="Database unavailable")
-
-
-@router.patch("/homes/{home_id}")
-def update_home(
-    home_id: int,
-    payload: UpdateHomeRequest,
-    admin=Depends(get_current_admin),
-    conn=Depends(get_db),
-):
-    admin_user_id = parse_admin_user_id(admin)
-    fields: list[str] = []
-    values: list = []
-
-    try:
-        if payload.name is not None:
-            name = payload.name.strip()
-            if not name:
-                raise HTTPException(status_code=400, detail="Home name cannot be empty")
-            fields.append("name = %s")
-            values.append(name)
-
-        if payload.address is not None:
-            fields.append("address = %s")
-            values.append(normalise_optional_text(payload.address))
-
-        if payload.postcode is not None:
-            fields.append("postcode = %s")
-            values.append(normalise_optional_text(payload.postcode))
-
-        if payload.region is not None:
-            fields.append("region = %s")
-            values.append(normalise_optional_text(payload.region))
-
-        if payload.local_authority is not None:
-            fields.append("local_authority = %s")
-            values.append(normalise_optional_text(payload.local_authority))
-
-        if payload.ofsted_urn is not None:
-            fields.append("ofsted_urn = %s")
-            values.append(normalise_optional_text(payload.ofsted_urn))
-
-        if payload.provider_id is not None:
-            fields.append("provider_id = %s")
-            values.append(payload.provider_id)
-
-        if payload.registered_manager_id is not None:
-            fields.append("registered_manager_id = %s")
-            values.append(payload.registered_manager_id)
-
-        if payload.latitude is not None:
-            fields.append("latitude = %s")
-            values.append(payload.latitude)
-
-        if payload.longitude is not None:
-            fields.append("longitude = %s")
-            values.append(payload.longitude)
-
-        if payload.geofence_radius_m is not None:
-            fields.append("geofence_radius_m = %s")
-            values.append(payload.geofence_radius_m)
-
-        if payload.archived is not None:
-            fields.append("archived = %s")
-            values.append(payload.archived)
-
-        if not fields:
-            raise HTTPException(status_code=400, detail="No fields to update")
-
-        fields.append("updated_at = NOW()")
-        values.append(home_id)
-
-        query = f"""
-            UPDATE homes
-            SET {", ".join(fields)}
-            WHERE id = %s
-            RETURNING
-                id,
-                name,
-                address,
-                postcode,
-                region,
-                local_authority,
-                ofsted_urn,
-                provider_id,
-                registered_manager_id,
-                latitude,
-                longitude,
-                geofence_radius_m,
-                archived,
-                created_at,
-                updated_at
-        """
-
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(query, tuple(values))
-            home = cur.fetchone()
-
-        if not home:
-            raise HTTPException(status_code=404, detail="Home not found")
-
-        log_admin_action(
-            conn,
-            admin_user_id=admin_user_id,
-            action="update_home",
-            target_type="home",
-            target_id=home_id,
-            details={"name": home["name"]},
-        )
-
-        return {"ok": True, "home": home}
-
-    except HTTPException:
-        raise
-    except IntegrityError as exc:
-        handle_integrity_error(exc, "Unable to update home. Check provider and manager references.")
-    except OperationalError:
-        logger.exception("Database operational error in update_home")
-        raise HTTPException(status_code=500, detail="Database unavailable")
-
-
-@router.get("/providers")
-def list_providers(
-    include_archived: bool = Query(default=False),
-    admin=Depends(get_current_admin),
-    conn=Depends(get_db),
-):
-    query = """
-        SELECT
-            p.id,
-            p.name,
-            p.region,
-            p.address,
-            p.postcode,
-            p.local_authority,
-            p.safeguarding_lead_name,
-            p.safeguarding_lead_email,
-            p.archived,
-            p.created_at,
-            p.updated_at,
-            COUNT(h.id) FILTER (WHERE COALESCE(h.archived, false) = false) AS home_count
-        FROM providers p
-        LEFT JOIN homes h
-            ON h.provider_id = p.id
-    """
-
-    if not include_archived:
-        query += " WHERE COALESCE(p.archived, false) = false"
-
-    query += """
-        GROUP BY
-            p.id, p.name, p.region, p.address, p.postcode, p.local_authority,
-            p.safeguarding_lead_name, p.safeguarding_lead_email, p.archived,
-            p.created_at, p.updated_at
-        ORDER BY p.name ASC
-    """
-
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(query)
-        rows = cur.fetchall()
-
-    return {"ok": True, "providers": rows}
-
-
-@router.post("/providers")
-def create_provider(
-    payload: CreateProviderRequest,
-    admin=Depends(get_current_admin),
-    conn=Depends(get_db),
-):
-    admin_user_id = parse_admin_user_id(admin)
-
-    name = payload.name.strip()
-    if not name:
-        raise HTTPException(status_code=400, detail="Provider name is required")
-
-    try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                """
-                INSERT INTO providers (
-                    name,
-                    region,
-                    address,
-                    postcode,
-                    local_authority,
-                    safeguarding_lead_name,
-                    safeguarding_lead_email,
-                    archived,
-                    created_at,
-                    updated_at
-                )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
-                RETURNING
-                    id,
-                    name,
-                    region,
-                    address,
-                    postcode,
-                    local_authority,
-                    safeguarding_lead_name,
-                    safeguarding_lead_email,
-                    archived,
-                    created_at,
-                    updated_at
-                """,
-                (
-                    name,
-                    normalise_optional_text(payload.region),
-                    normalise_optional_text(payload.address),
-                    normalise_optional_text(payload.postcode),
-                    normalise_optional_text(payload.local_authority),
-                    normalise_optional_text(payload.safeguarding_lead_name),
-                    str(payload.safeguarding_lead_email).strip().lower() if payload.safeguarding_lead_email else None,
-                    payload.archived,
-                ),
-            )
-            provider = cur.fetchone()
-
-        log_admin_action(
-            conn,
-            admin_user_id=admin_user_id,
-            action="create_provider",
-            target_type="provider",
-            target_id=provider["id"],
-            details={"name": provider["name"]},
-        )
-
-        return {"ok": True, "provider": provider}
-
-    except HTTPException:
-        raise
-    except IntegrityError as exc:
-        handle_integrity_error(exc, "Unable to create provider.")
-    except OperationalError:
-        logger.exception("Database operational error in create_provider")
-        raise HTTPException(status_code=500, detail="Database unavailable")
-
-
-@router.patch("/providers/{provider_id}")
-def update_provider(
-    provider_id: int,
-    payload: UpdateProviderRequest,
-    admin=Depends(get_current_admin),
-    conn=Depends(get_db),
-):
-    admin_user_id = parse_admin_user_id(admin)
-    fields: list[str] = []
-    values: list = []
-
-    try:
-        if payload.name is not None:
-            name = payload.name.strip()
-            if not name:
-                raise HTTPException(status_code=400, detail="Provider name cannot be empty")
-            fields.append("name = %s")
-            values.append(name)
-
-        if payload.region is not None:
-            fields.append("region = %s")
-            values.append(normalise_optional_text(payload.region))
-
-        if payload.address is not None:
-            fields.append("address = %s")
-            values.append(normalise_optional_text(payload.address))
-
-        if payload.postcode is not None:
-            fields.append("postcode = %s")
-            values.append(normalise_optional_text(payload.postcode))
-
-        if payload.local_authority is not None:
-            fields.append("local_authority = %s")
-            values.append(normalise_optional_text(payload.local_authority))
-
-        if payload.safeguarding_lead_name is not None:
-            fields.append("safeguarding_lead_name = %s")
-            values.append(normalise_optional_text(payload.safeguarding_lead_name))
-
-        if payload.safeguarding_lead_email is not None:
-            fields.append("safeguarding_lead_email = %s")
-            values.append(str(payload.safeguarding_lead_email).strip().lower())
-
-        if payload.archived is not None:
-            fields.append("archived = %s")
-            values.append(payload.archived)
-
-        if not fields:
-            raise HTTPException(status_code=400, detail="No fields to update")
-
-        fields.append("updated_at = NOW()")
-        values.append(provider_id)
-
-        query = f"""
-            UPDATE providers
-            SET {", ".join(fields)}
-            WHERE id = %s
-            RETURNING
-                id,
-                name,
-                region,
-                address,
-                postcode,
-                local_authority,
-                safeguarding_lead_name,
-                safeguarding_lead_email,
-                archived,
-                created_at,
-                updated_at
-        """
-
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(query, tuple(values))
-            provider = cur.fetchone()
-
-        if not provider:
-            raise HTTPException(status_code=404, detail="Provider not found")
-
-        log_admin_action(
-            conn,
-            admin_user_id=admin_user_id,
-            action="update_provider",
-            target_type="provider",
-            target_id=provider_id,
-            details={"name": provider["name"]},
-        )
-
-        return {"ok": True, "provider": provider}
-
-    except HTTPException:
-        raise
-    except IntegrityError as exc:
-        handle_integrity_error(exc, "Unable to update provider.")
-    except OperationalError:
-        logger.exception("Database operational error in update_provider")
-        raise HTTPException(status_code=500, detail="Database unavailable")
-
-
-@router.get("/documents")
-def list_documents(
-    q: str | None = Query(default=None),
-    home_id: int | None = Query(default=None),
-    document_type: str | None = Query(default=None),
-    approval_status: str | None = Query(default=None),
-    admin=Depends(get_current_admin),
-    conn=Depends(get_db),
-):
-    query = """
-        SELECT
-            d.id,
-            d.user_id,
-            d.home_id,
-            d.document_type,
-            d.input_text,
-            d.generated_text,
-            d.created_at,
-            d.young_person_id,
-            d.title,
-            d.issue_date,
-            d.review_date,
-            d.expiry_date,
-            d.owner_id,
-            d.approval_required,
-            d.approval_status,
-            d.confidentiality_level,
-            d.updated_at,
-            h.name AS home_name
-        FROM documents d
-        LEFT JOIN homes h
-            ON h.id = d.home_id
-        WHERE 1=1
-    """
-    values: list = []
-
-    if q:
-        search = f"%{q.strip().lower()}%"
-        query += " AND (LOWER(COALESCE(d.title, '')) LIKE %s OR LOWER(COALESCE(d.document_type, '')) LIKE %s)"
-        values.extend([search, search])
-
-    if home_id is not None:
-        query += " AND d.home_id = %s"
-        values.append(home_id)
-
-    if document_type:
-        query += " AND d.document_type = %s"
-        values.append(document_type.strip())
-
-    if approval_status:
-        query += " AND d.approval_status = %s"
-        values.append(approval_status.strip())
-
-    query += " ORDER BY d.created_at DESC LIMIT 200"
-
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(query, tuple(values))
-        rows = cur.fetchall()
-
-    return {"ok": True, "documents": rows}
-
-
-@router.post("/documents")
-def create_document(
-    payload: CreateDocumentRequest,
-    admin=Depends(get_current_admin),
-    conn=Depends(get_db),
-):
-    admin_user_id = parse_admin_user_id(admin)
-
-    try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                """
-                INSERT INTO documents (
-                    user_id,
-                    home_id,
-                    document_type,
-                    input_text,
-                    generated_text,
-                    created_at,
-                    young_person_id,
-                    title,
-                    issue_date,
-                    review_date,
-                    expiry_date,
-                    owner_id,
-                    approval_required,
-                    approval_status,
-                    confidentiality_level,
-                    updated_at
-                )
-                VALUES (%s, %s, %s, %s, %s, NOW(), %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
-                RETURNING
-                    id,
-                    user_id,
-                    home_id,
-                    document_type,
-                    input_text,
-                    generated_text,
-                    created_at,
-                    young_person_id,
-                    title,
-                    issue_date,
-                    review_date,
-                    expiry_date,
-                    owner_id,
-                    approval_required,
-                    approval_status,
-                    confidentiality_level,
-                    updated_at
-                """,
-                (
-                    payload.user_id,
-                    payload.home_id,
-                    normalise_optional_text(payload.document_type),
-                    payload.input_text,
-                    payload.generated_text,
-                    payload.young_person_id,
-                    normalise_optional_text(payload.title),
-                    payload.issue_date,
-                    payload.review_date,
-                    payload.expiry_date,
-                    payload.owner_id,
-                    payload.approval_required,
-                    payload.approval_status or "not_required",
-                    payload.confidentiality_level or "standard",
-                ),
-            )
-            document = cur.fetchone()
-
-        log_admin_action(
-            conn,
-            admin_user_id=admin_user_id,
-            action="create_document",
-            target_type="document",
-            target_id=document["id"],
-            details={"title": document["title"], "document_type": document["document_type"]},
-        )
-
-        return {"ok": True, "document": document}
-
-    except HTTPException:
-        raise
-    except IntegrityError as exc:
-        handle_integrity_error(exc, "Unable to create document. Check related records.")
-    except OperationalError:
-        logger.exception("Database operational error in create_document")
-        raise HTTPException(status_code=500, detail="Database unavailable")
-
-
-@router.patch("/documents/{document_id}")
-def update_document(
-    document_id: int,
-    payload: UpdateDocumentRequest,
-    admin=Depends(get_current_admin),
-    conn=Depends(get_db),
-):
-    admin_user_id = parse_admin_user_id(admin)
-    fields: list[str] = []
-    values: list = []
-
-    try:
-        field_map = {
-            "user_id": payload.user_id,
-            "home_id": payload.home_id,
-            "young_person_id": payload.young_person_id,
-            "owner_id": payload.owner_id,
-            "approval_required": payload.approval_required,
-        }
-
-        for key, value in field_map.items():
-            if value is not None:
-                fields.append(f"{key} = %s")
-                values.append(value)
-
-        if payload.document_type is not None:
-            fields.append("document_type = %s")
-            values.append(normalise_optional_text(payload.document_type))
-
-        if payload.title is not None:
-            fields.append("title = %s")
-            values.append(normalise_optional_text(payload.title))
-
-        if payload.input_text is not None:
-            fields.append("input_text = %s")
-            values.append(payload.input_text)
-
-        if payload.generated_text is not None:
-            fields.append("generated_text = %s")
-            values.append(payload.generated_text)
-
-        if payload.issue_date is not None:
-            fields.append("issue_date = %s")
-            values.append(payload.issue_date)
-
-        if payload.review_date is not None:
-            fields.append("review_date = %s")
-            values.append(payload.review_date)
-
-        if payload.expiry_date is not None:
-            fields.append("expiry_date = %s")
-            values.append(payload.expiry_date)
-
-        if payload.approval_status is not None:
-            fields.append("approval_status = %s")
-            values.append(payload.approval_status)
-
-        if payload.confidentiality_level is not None:
-            fields.append("confidentiality_level = %s")
-            values.append(payload.confidentiality_level)
-
-        if not fields:
-            raise HTTPException(status_code=400, detail="No fields to update")
-
-        fields.append("updated_at = NOW()")
-        values.append(document_id)
-
-        query = f"""
-            UPDATE documents
-            SET {", ".join(fields)}
-            WHERE id = %s
-            RETURNING
-                id,
-                user_id,
-                home_id,
-                document_type,
-                input_text,
-                generated_text,
-                created_at,
-                young_person_id,
-                title,
-                issue_date,
-                review_date,
-                expiry_date,
-                owner_id,
-                approval_required,
-                approval_status,
-                confidentiality_level,
-                updated_at
-        """
-
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(query, tuple(values))
-            document = cur.fetchone()
-
-        if not document:
-            raise HTTPException(status_code=404, detail="Document not found")
-
-        log_admin_action(
-            conn,
-            admin_user_id=admin_user_id,
-            action="update_document",
-            target_type="document",
-            target_id=document_id,
-            details={"title": document["title"], "document_type": document["document_type"]},
-        )
-
-        return {"ok": True, "document": document}
-
-    except HTTPException:
-        raise
-    except IntegrityError as exc:
-        handle_integrity_error(exc, "Unable to update document. Check related records.")
-    except OperationalError:
-        logger.exception("Database operational error in update_document")
-        raise HTTPException(status_code=500, detail="Database unavailable")
-
-
-@router.get("/billing/overview")
-def billing_overview(
-    admin=Depends(get_current_admin),
-    conn=Depends(get_db),
-):
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(
-            """
-            SELECT
-                COUNT(*) AS total_users,
-                COUNT(*) FILTER (WHERE COALESCE(is_active, false) = true) AS active_users,
-                COUNT(*) FILTER (WHERE COALESCE(archived, false) = true) AS archived_users,
-                COUNT(*) FILTER (WHERE subscription_status = 'active') AS active_subscriptions,
-                COUNT(*) FILTER (WHERE subscription_status IS NULL OR subscription_status != 'active') AS inactive_subscriptions
-            FROM users
-            """
-        )
-        totals = cur.fetchone()
-
-        cur.execute(
-            """
-            SELECT
-                id,
                 first_name,
                 last_name,
-                email,
-                plan_name,
-                subscription_status,
-                current_period_end,
-                stripe_customer_id,
-                stripe_subscription_id
+                is_active,
+                archived,
+                password_hash,
+                updated_at,
+                created_at
             FROM users
-            ORDER BY created_at DESC
-            LIMIT 100
-            """
+            WHERE id = %s
+            LIMIT 1
+            """,
+            (user_id,),
         )
-        users = cur.fetchall()
-
-    return {"ok": True, "totals": totals, "users": users}
+        return cur.fetchone()
 
 
-@router.get("/audit")
-def list_audit(
-    limit: int = Query(default=100, ge=1, le=500),
-    admin=Depends(get_current_admin),
-    conn=Depends(get_db),
-):
+def _get_user_by_email(conn: Any, email: str) -> dict[str, Any] | None:
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
             SELECT
-                a.id,
-                a.admin_user_id,
-                a.action,
-                a.target_type,
-                a.target_id,
-                a.details,
-                a.created_at,
-                u.first_name,
-                u.last_name,
-                u.email
-            FROM admin_audit_log a
-            LEFT JOIN users u
-                ON u.id = a.admin_user_id
-            ORDER BY a.created_at DESC
-            LIMIT %s
+                id,
+                email,
+                password_hash,
+                role,
+                home_id,
+                first_name,
+                last_name,
+                is_active,
+                archived
+            FROM users
+            WHERE lower(email) = %s
+            LIMIT 1
             """,
-            (limit,),
+            (email,),
         )
-        rows = cur.fetchall()
+        return cur.fetchone()
 
-    return {"ok": True, "audit": rows}
+
+def _set_session_cookie(response: Response, token: str, remember: bool = False) -> None:
+    max_age = settings.cookie_max_age_long if remember else settings.cookie_max_age_short
+    response.set_cookie(
+        key=settings.session_cookie_name,
+        value=token,
+        httponly=True,
+        secure=settings.cookie_secure,
+        samesite=settings.cookie_samesite,
+        max_age=max_age,
+        path="/",
+        # no domain -> preserves __Host- requirements when secure
+    )
+
+
+def _set_csrf_cookie(response: Response, csrf_token: str, remember: bool = False) -> None:
+    max_age = settings.cookie_max_age_long if remember else settings.cookie_max_age_short
+    response.set_cookie(
+        key=settings.csrf_cookie_name,
+        value=csrf_token,
+        httponly=False,  # JS must read and echo it in header
+        secure=settings.cookie_secure,
+        samesite=settings.cookie_samesite,
+        max_age=max_age,
+        path="/",
+    )
+
+
+def _clear_auth_cookies(response: Response) -> None:
+    response.delete_cookie(key=settings.session_cookie_name, path="/")
+    response.delete_cookie(key=settings.csrf_cookie_name, path="/")
+
+
+def _get_billing_safe(conn: Any, user_id: int) -> dict[str, Any] | None:
+    try:
+        return get_user_billing_by_user_id(conn, user_id)
+    except Exception:
+        return None
+
+
+def _get_mfa_safe(user_id: int) -> dict[str, Any] | None:
+    try:
+        return get_user_mfa(user_id)
+    except Exception:
+        return None
+
+
+def _session_user_payload(user: dict[str, Any], billing: dict[str, Any] | None) -> dict[str, Any]:
+    return {
+        "id": user["id"],
+        "email": user["email"],
+        "role": user["role"],
+        "home_id": user.get("home_id"),
+        "first_name": user.get("first_name"),
+        "last_name": user.get("last_name"),
+        "is_active": bool(user.get("is_active")),
+        "subscription_active": bool(billing and billing.get("subscription_active")),
+        "subscription_status": billing.get("subscription_status") if billing else "inactive",
+        "plan_name": billing.get("plan_name") if billing else None,
+    }
+
+
+def _full_user_payload(
+    user: dict[str, Any],
+    billing: dict[str, Any] | None,
+    *,
+    mfa_enabled: bool,
+    mfa_verified: bool,
+) -> dict[str, Any]:
+    return {
+        "id": user["id"],
+        "email": user["email"],
+        "role": user["role"],
+        "home_id": user.get("home_id"),
+        "first_name": user.get("first_name"),
+        "last_name": user.get("last_name"),
+        "archived": user.get("archived"),
+        "updated_at": user.get("updated_at"),
+        "created_at": user.get("created_at"),
+        "is_active": bool(user.get("is_active")),
+        "subscription_active": bool(billing and billing.get("subscription_active")),
+        "subscription_status": billing.get("subscription_status") if billing else "inactive",
+        "plan_name": billing.get("plan_name") if billing else None,
+        "stripe_customer_id": billing.get("stripe_customer_id") if billing else None,
+        "stripe_subscription_id": billing.get("stripe_subscription_id") if billing else None,
+        "current_period_end": billing.get("current_period_end") if billing else None,
+        "mfa_enabled": mfa_enabled,
+        "mfa_verified": mfa_verified,
+    }
+
+
+def _validate_active_user(user: dict[str, Any] | None) -> dict[str, Any]:
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    if user.get("archived") is True:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is archived")
+    if user.get("is_active") is False:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive")
+    return user
+
+
+def _get_session_user_from_request(
+    request: Request,
+    conn: Any,
+    authorization: str | None,
+    *,
+    raise_on_missing: bool,
+) -> tuple[dict[str, Any] | None, int | None]:
+    token = _extract_token(request, authorization)
+    payload = decode_session_token(token) if token else None
+
+    if not payload:
+        if raise_on_missing:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+        return None, None
+
+    raw_user_id = payload.get("sub")
+    try:
+        user_id = int(raw_user_id)
+    except (TypeError, ValueError):
+        if raise_on_missing:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
+        return None, None
+
+    user = _get_user_by_id(conn, user_id)
+    return user, user_id
+
+
+@router.post("/login")
+def login(
+    payload: LoginRequest,
+    request: Request,
+    response: Response,
+    conn=Depends(get_db),
+):
+    email = _normalise_email(payload.email)
+    password = payload.password or ""
+    remember = bool(payload.remember)
+
+    _assert_not_locked(request, email)
+
+    if not email or not password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email and password are required",
+        )
+
+    user = _get_user_by_email(conn, email)
+
+    if not user:
+        _dummy_bcrypt_check(password)
+        _register_failure(_client_ip(request), email)
+        _log_auth(
+            request=request,
+            user_id=None,
+            email=email,
+            event_type="login_failed",
+            detail="Invalid credentials",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+
+    if user.get("archived") is True:
+        _register_failure(_client_ip(request), email)
+        _log_auth(
+            request=request,
+            user_id=user["id"],
+            email=user["email"],
+            event_type="login_blocked",
+            detail="Archived user",
+        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is archived")
+
+    if user.get("is_active") is False:
+        _register_failure(_client_ip(request), email)
+        _log_auth(
+            request=request,
+            user_id=user["id"],
+            email=user["email"],
+            event_type="login_blocked",
+            detail="Inactive user",
+        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive")
+
+    password_hash = _ensure_password_hash_bytes(user.get("password_hash"))
+    try:
+        password_ok = bool(password_hash) and bcrypt.checkpw(password.encode("utf-8"), password_hash)
+    except ValueError:
+        password_ok = False
+
+    if not password_ok:
+        _register_failure(_client_ip(request), email)
+        _log_auth(
+            request=request,
+            user_id=user["id"],
+            email=user["email"],
+            event_type="login_failed",
+            detail="Invalid credentials",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+
+    _clear_failures(_client_ip(request), email)
+
+    token = create_session_token(user["id"])
+    csrf_token = secrets.token_urlsafe(32)
+
+    _set_session_cookie(response, token, remember=remember)
+    _set_csrf_cookie(response, csrf_token, remember=remember)
+
+    try:
+        _safe_session_reset(request)
+        request.session[SESSION_USER_ID_KEY] = int(user["id"])
+        request.session[SESSION_USER_EMAIL_KEY] = user["email"]
+        request.session[SESSION_MFA_VERIFIED_KEY] = False
+        request.session["csrf_token"] = csrf_token
+        request.session["remember"] = remember
+        request.session["login_at"] = int(_now())
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Session could not be created",
+        )
+
+    mfa_row = _get_mfa_safe(int(user["id"]))
+    mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
+    billing = _get_billing_safe(conn, user["id"])
+    force_mfa = _mfa_required_for_role(user.get("role"))
+
+    _log_auth(
+        request=request,
+        user_id=user["id"],
+        email=user["email"],
+        event_type="login_password_passed",
+        detail="Primary credential check passed",
+    )
+
+    return {
+        "ok": True,
+        "message": "Password accepted. MFA required.",
+        "mfa_required": True,
+        "mfa_enabled": mfa_enabled,
+        "mfa_mandatory": force_mfa,
+        "user": _session_user_payload(user, billing),
+    }
+
+
+@router.post("/logout")
+def logout(request: Request, response: Response):
+    _clear_auth_cookies(response)
+    _safe_session_reset(request)
+    return {"ok": True, "message": "Logged out"}
+
+
+@router.get("/check")
+def check_auth(
+    request: Request,
+    authorization: str | None = Header(default=None),
+    conn=Depends(get_db),
+):
+    user, user_id = _get_session_user_from_request(
+        request,
+        conn,
+        authorization,
+        raise_on_missing=False,
+    )
+
+    if not user or user_id is None:
+        return {"authenticated": False}
+
+    if user.get("archived") is True or user.get("is_active") is False:
+        return {"authenticated": False}
+
+    billing = _get_billing_safe(conn, user_id)
+    mfa_row = _get_mfa_safe(user_id)
+    mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
+    mfa_verified = request.session.get(SESSION_MFA_VERIFIED_KEY) is True
+
+    return {
+        "authenticated": True,
+        "user_id": user["id"],
+        "email": user["email"],
+        "role": user["role"],
+        "home_id": user.get("home_id"),
+        "is_active": bool(user.get("is_active")),
+        "subscription_active": bool(billing and billing.get("subscription_active")),
+        "subscription_status": billing.get("subscription_status") if billing else "inactive",
+        "plan_name": billing.get("plan_name") if billing else None,
+        "mfa_enabled": mfa_enabled,
+        "mfa_verified": mfa_verified,
+        "mfa_mandatory": _mfa_required_for_role(user.get("role")),
+    }
+
+
+@router.get("/me")
+def get_me(
+    request: Request,
+    authorization: str | None = Header(default=None),
+    conn=Depends(get_db),
+):
+    user, user_id = _get_session_user_from_request(
+        request,
+        conn,
+        authorization,
+        raise_on_missing=True,
+    )
+
+    if user_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
+
+    user = _validate_active_user(user)
+
+    billing = _get_billing_safe(conn, user_id)
+    mfa_row = _get_mfa_safe(user_id)
+    mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
+    mfa_verified = request.session.get(SESSION_MFA_VERIFIED_KEY) is True
+
+    return {
+        "ok": True,
+        "user": _full_user_payload(
+            user,
+            billing,
+            mfa_enabled=mfa_enabled,
+            mfa_verified=mfa_verified,
+        ),
+        "mfa_mandatory": _mfa_required_for_role(user.get("role")),
+    }
+
+
+@router.get("/auth-policy")
+def auth_policy():
+    return {
+        "password_min_length": 12,
+        "mfa_required_for_sensitive_roles": settings.force_mfa_for_sensitive_roles,
+        "cookie_samesite": settings.cookie_samesite,
+        "cookie_secure": settings.cookie_secure,
+    }
