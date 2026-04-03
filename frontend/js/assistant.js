@@ -1217,10 +1217,10 @@ function attachMetaToWrap(wrap, meta = {}) {
   const block = wrap.querySelector(".block");
   if (!block) return;
 
-  let oldMetaBox = wrap.querySelector(".assistant-source-box");
+  const oldMetaBox = wrap.querySelector(".assistant-source-box");
   if (oldMetaBox) oldMetaBox.remove();
 
-  const html = `${renderSourcesHtml(meta.sources)}`;
+  const html = renderSourcesHtml(meta.sources);
   if (!html) return;
 
   const box = document.createElement("div");
@@ -1235,86 +1235,78 @@ function attachMetaToStreamingMessage(meta = {}) {
   attachMetaToWrap(wrap, meta);
 }
 
-function ensureStreamingProgressHost() {
-  const wrap = document.getElementById("streaming");
-  if (!wrap) return null;
-  const block = wrap.querySelector(".block");
-  if (!block) return null;
+function renderProgressLines(lines = []) {
+  const cleaned = normArray(lines)
+    .map((line) => String(line || "").trim())
+    .filter(Boolean)
+    .slice(-3);
 
-  let host = wrap.querySelector(".assistant-progress-box");
-  if (!host) {
-    host = document.createElement("div");
-    host.className = "assistant-progress-box";
-    host.style.marginBottom = "10px";
-    host.style.padding = "12px 14px";
-    host.style.border = "1px solid var(--line)";
-    host.style.borderRadius = "14px";
-    host.style.background = "var(--panel)";
-    host.style.color = "var(--muted)";
-    host.style.lineHeight = "1.6";
-    host.style.fontSize = ".9rem";
-    host.style.transition = "opacity .2s ease, transform .2s ease";
-    host.style.opacity = "1";
-    host.style.transform = "translateY(0)";
-    block.insertBefore(host, block.querySelector(".msg"));
-  }
-  return host;
-}
+  if (!cleaned.length) return "";
 
-function renderStreamingProgress() {
-  const host = ensureStreamingProgressHost();
-  if (!host) return;
-
-  const lines = currentProgressLines.slice(-3);
-  if (!lines.length) {
-    host.remove();
-    return;
-  }
-
-  host.innerHTML = `
-    <div style="font-weight:600;color:var(--text);margin-bottom:6px;">Working through this</div>
-    <div style="display:flex;flex-direction:column;gap:6px;">
-      ${lines
+  return `
+    <div class="stream-progress">
+      ${cleaned
         .map(
           (line) =>
-            `<div style="display:flex;gap:8px;align-items:flex-start;"><span style="color:var(--accent);font-weight:700;">•</span><span>${safe(
-              line
-            )}</span></div>`
+            `<div class="stream-progress-line">${safe(line)}</div>`
         )
         .join("")}
     </div>
   `;
 }
 
-function pushStreamingProgress(text) {
-  const clean = String(text || "").trim();
-  if (!clean) return;
-  if (!currentProgressLines.includes(clean)) {
-    currentProgressLines.push(clean);
-  }
-  currentProgressLines = currentProgressLines.slice(-3);
-  renderStreamingProgress();
-}
-
-function clearStreamingProgress(immediate = false) {
-  currentProgressLines = [];
+function updateStreamingProgress() {
   const wrap = document.getElementById("streaming");
   if (!wrap) return;
-  const host = wrap.querySelector(".assistant-progress-box");
-  if (!host) return;
+  const block = wrap.querySelector(".block");
+  if (!block) return;
 
-  if (immediate) {
-    host.remove();
+  let box = wrap.querySelector(".stream-progress-box");
+  const html = renderProgressLines(currentProgressLines);
+
+  if (!html) {
+    if (box) box.remove();
     return;
   }
 
-  host.style.opacity = "0";
-  host.style.transform = "translateY(-4px)";
-  setTimeout(() => {
-    try {
-      host.remove();
-    } catch (_) {}
-  }, 180);
+  if (!box) {
+    box = document.createElement("div");
+    box.className = "stream-progress-box";
+    const msg = block.querySelector(".msg");
+    if (msg && msg.nextSibling) {
+      block.insertBefore(box, msg.nextSibling);
+    } else if (msg) {
+      block.appendChild(box);
+    } else {
+      block.prepend(box);
+    }
+  }
+
+  box.innerHTML = html;
+}
+
+function clearStreamingProgress() {
+  currentProgressLines = [];
+  const wrap = document.getElementById("streaming");
+  if (!wrap) return;
+  const box = wrap.querySelector(".stream-progress-box");
+  if (box) box.remove();
+}
+
+function handleProgressEvent(payload) {
+  let parsed = {};
+  try {
+    parsed = JSON.parse(payload || "{}");
+  } catch {
+    parsed = {};
+  }
+
+  const content = String(parsed?.content || "").trim();
+  if (!content) return;
+
+  currentProgressLines.push(content);
+  currentProgressLines = currentProgressLines.filter(Boolean).slice(-3);
+  updateStreamingProgress();
 }
 
 function appendMessage(roleName, text, opts = {}) {
@@ -1379,11 +1371,9 @@ function appendMessage(roleName, text, opts = {}) {
     addChip("Edit", () => editMessage(opts.messageId, shown));
   }
 
-  if (roleName === "assistant" && (opts.sources || opts.runtime || opts.explainability)) {
+  if (roleName === "assistant" && opts.sources) {
     attachMetaToWrap(wrap, {
       sources: opts.sources || [],
-      runtime: opts.runtime || {},
-      explainability: opts.explainability || {},
     });
   }
 
@@ -1397,8 +1387,6 @@ function createStreamMsg() {
   if (!has("messages")) return null;
   const old = $("streaming");
   if (old) old.remove();
-
-  currentProgressLines = [];
 
   const wrap = document.createElement("div");
   wrap.id = "streaming";
@@ -1414,6 +1402,8 @@ function createStreamMsg() {
   `;
 
   $("messages").appendChild(wrap);
+  updateStreamingProgress();
+
   if (has("assistantPanel")) {
     $("assistantPanel").scrollTop = $("assistantPanel").scrollHeight;
   }
@@ -1431,17 +1421,9 @@ function startTyping() {
   }
 
   let raw = el.getAttribute("data-raw") || "";
-  let clearedProgress = false;
-
   const tick = setInterval(() => {
     if (queue.length) {
       raw += queue.shift();
-
-      if (!clearedProgress && raw.trim()) {
-        clearStreamingProgress();
-        clearedProgress = true;
-      }
-
       el.innerHTML = render(raw, "assistant");
       el.setAttribute("data-raw", raw);
       if (has("assistantPanel")) {
@@ -1453,7 +1435,7 @@ function startTyping() {
       el.classList.remove("typing");
       const finalRaw = el.getAttribute("data-raw") || "";
       lastAssistantText = finalRaw;
-      clearStreamingProgress(true);
+      clearStreamingProgress();
       attachMetaToStreamingMessage(currentStreamMeta);
       speakText(finalRaw);
     }
@@ -1502,22 +1484,6 @@ function handleMetaEvent(payload) {
   };
 
   attachMetaToStreamingMessage(currentStreamMeta);
-}
-
-function handleProgressEvent(payload) {
-  let parsed = {};
-  try {
-    parsed = JSON.parse(payload || "{}");
-  } catch {
-    parsed = {};
-  }
-
-  const content =
-    typeof parsed === "string"
-      ? parsed
-      : parsed?.content || "";
-
-  pushStreamingProgress(content);
 }
 
 async function stream(url, body) {
@@ -1586,8 +1552,6 @@ async function stream(url, body) {
     const reply = data.reply || data.message || data.output || "Done.";
     appendMessage("assistant", reply, {
       sources: normArray(data.sources),
-      runtime: normObj(data.runtime),
-      explainability: normObj(data.explainability),
     });
     speakText(reply);
     return;
@@ -1691,7 +1655,6 @@ async function sendMessage() {
   currentIntent = detectIntent(text);
 
   isStreaming = true;
-  currentProgressLines = [];
   if (has("send")) $("send").disabled = true;
   if (has("empty")) $("empty").classList.add("hidden");
   if (has("messages")) $("messages").classList.remove("hidden");
@@ -1715,11 +1678,11 @@ async function sendMessage() {
     const streamEl = document.querySelector("#streaming .msg");
     if (streamEl) {
       streamEl.classList.remove("typing");
-      clearStreamingProgress(true);
       streamEl.innerHTML = render(
         `Sorry, there was a problem: ${e.message}`,
         "assistant"
       );
+      clearStreamingProgress();
       attachMetaToStreamingMessage(currentStreamMeta);
     } else {
       appendMessage(
