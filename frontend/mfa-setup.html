@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -17,9 +17,7 @@
       --primary: #2348a5;
       --primary-strong: #18357f;
       --error: #9f1239;
-      --error-bg: #fff1f2;
       --success: #166534;
-      --success-bg: #effaf3;
       --shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
       --radius: 22px;
       --focus-ring: 0 0 0 4px rgba(35, 72, 165, 0.14);
@@ -71,12 +69,7 @@
       line-height: 1.15;
     }
 
-    h2 {
-      margin: 0 0 10px;
-      font-size: 1rem;
-    }
-
-    h3 {
+    h2, h3 {
       margin: 0 0 10px;
       font-size: 1rem;
     }
@@ -95,28 +88,8 @@
       margin-top: 16px;
     }
 
-    .qr-wrap {
-      display: grid;
-      place-items: center;
-      min-height: 220px;
-      margin-top: 12px;
-      padding: 16px;
-      background: #fafcff;
-      border: 1px dashed var(--border);
-      border-radius: 16px;
-      overflow: hidden;
-      text-align: center;
-      color: var(--muted);
-    }
-
-    .qr-wrap img {
-      width: 100%;
-      max-width: 260px;
-      height: auto;
-      display: block;
-    }
-
-    .secret-box {
+    .secret-box,
+    .uri-box {
       margin-top: 12px;
       padding: 12px 14px;
       border-radius: 14px;
@@ -127,6 +100,16 @@
       font-size: 0.95rem;
       color: var(--text);
       line-height: 1.6;
+    }
+
+    details {
+      margin-top: 14px;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--primary);
     }
 
     form {
@@ -250,15 +233,16 @@
 
     <div class="panel">
       <h2>Step 1</h2>
-      <p>Open your authenticator app and scan the QR code below.</p>
+      <p>
+        Open your authenticator app and add a new account using the manual setup key below.
+      </p>
 
-      <div id="qrWrap" class="qr-wrap">
-        <span id="qrLoading">Preparing QR code...</span>
-        <img id="qrImage" class="hidden" alt="MFA QR code" />
-      </div>
-
-      <p style="margin-top:12px;">If you cannot scan the code, enter this setup key manually:</p>
       <div id="secretBox" class="secret-box">Loading setup key...</div>
+
+      <details>
+        <summary>Advanced setup details</summary>
+        <div id="uriBox" class="uri-box" style="margin-top:12px;">Loading provisioning details...</div>
+      </details>
     </div>
 
     <div class="panel">
@@ -298,7 +282,7 @@
     </div>
 
     <div class="actions">
-      <button id="reloadSetupBtn" type="button" class="ghost">Generate a new setup code</button>
+      <button id="reloadSetupBtn" type="button" class="ghost">Generate a new setup key</button>
     </div>
 
     <div class="helper">
@@ -310,9 +294,8 @@
   <script src="/js/auth.js"></script>
   <script>
     (function () {
-      const qrLoading = document.getElementById("qrLoading");
-      const qrImage = document.getElementById("qrImage");
       const secretBox = document.getElementById("secretBox");
+      const uriBox = document.getElementById("uriBox");
       const form = document.getElementById("mfaSetupForm");
       const codeInput = document.getElementById("code");
       const enableBtn = document.getElementById("enableBtn");
@@ -325,9 +308,7 @@
       function setStatus(message, type) {
         statusEl.textContent = message || "";
         statusEl.className = "status";
-        if (type) {
-          statusEl.classList.add(type);
-        }
+        if (type) statusEl.classList.add(type);
       }
 
       function setLoading(isLoading) {
@@ -338,18 +319,13 @@
       }
 
       function setSetupLoading(message) {
-        qrLoading.textContent = message || "Preparing QR code...";
-        qrLoading.classList.remove("hidden");
-        qrImage.classList.add("hidden");
-        qrImage.removeAttribute("src");
-        secretBox.textContent = "Loading setup key...";
+        secretBox.textContent = message || "Loading setup key...";
+        uriBox.textContent = "Loading provisioning details...";
       }
 
       function showSetup(data) {
-        qrLoading.classList.add("hidden");
-        qrImage.classList.remove("hidden");
-        qrImage.src = data.qr_code_data_url || "";
         secretBox.textContent = data.secret || "No setup key returned.";
+        uriBox.textContent = data.provisioning_uri || "No provisioning URI returned.";
       }
 
       function showRecoveryCodes(codes) {
@@ -397,14 +373,14 @@
 
       async function loadSetup() {
         setLoading(true);
-        setSetupLoading("Preparing QR code...");
+        setSetupLoading("Preparing setup key...");
         setStatus("");
         recoveryBox.classList.add("hidden");
         recoveryList.innerHTML = "";
 
         try {
           const data = await window.apiRequest("/auth/mfa/setup", {
-            method: "POST"
+            method: "GET"
           });
 
           if (!data || data.ok !== true) {
@@ -413,7 +389,7 @@
 
           showSetup(data);
         } catch (error) {
-          setSetupLoading("Could not load QR code.");
+          setSetupLoading("Could not load setup key.");
           setStatus(error?.message || "Could not start MFA setup.", "error");
         } finally {
           setLoading(false);
@@ -434,7 +410,7 @@
         setStatus("Checking your code...");
 
         try {
-          const data = await window.apiRequest("/auth/mfa/enable", {
+          const data = await window.apiRequest("/auth/mfa/setup", {
             method: "POST",
             body: JSON.stringify({ code: value })
           });
@@ -467,8 +443,6 @@
             );
           }
 
-          await window.auth.validateSession();
-
           setStatus(
             "MFA enabled successfully. Save your recovery codes before continuing.",
             "success"
@@ -482,8 +456,7 @@
         }
       });
 
-      continueBtn.addEventListener("click", async function () {
-        await window.auth.validateSession();
+      continueBtn.addEventListener("click", function () {
         window.location.href = "/assistant";
       });
 
