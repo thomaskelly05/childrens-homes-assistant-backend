@@ -4,8 +4,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
+from assistant.classification import classify_intent
 from assistant.memory import get_memory_context
-from assistant.mode_detector import detect_mode
 from assistant.prompts import build_chat_prompt
 from assistant.reflection_engine import maybe_build_reflection_context
 from assistant.response_schemas import get_schema_for_mode, schema_to_prompt_block
@@ -214,6 +214,10 @@ class AssistantRuntimeContext:
     user_role_profile: str = "staff"
     retrieval_level: str = "none"
     reflection_level: str = "none"
+    response_stance: str = "practice_support"
+    classification_confidence: float = 0.0
+    classification_signals: list[str] = field(default_factory=list)
+    secondary_intents: list[str] = field(default_factory=list)
     memory_context: str = ""
     retrieval_context: str = ""
     reflection_context: str = ""
@@ -382,7 +386,7 @@ def _derive_task_type(message: str, mode: str, document_text: str | None) -> str
     return "guidance"
 
 
-def _derive_output_type(mode: str, task_type: str, message: str) -> str:
+def _legacy_output_type_from_mode(mode: str, task_type: str, message: str) -> str:
     text = (message or "").lower()
 
     if "chronology" in text or mode == "chronology":
@@ -402,6 +406,27 @@ def _derive_output_type(mode: str, task_type: str, message: str) -> str:
     if task_type == "recording":
         return "structured_record"
     return "plain_response"
+
+
+def _map_classifier_output_to_runtime(
+    classification_output_format: str,
+    legacy_mode: str,
+    task_type: str,
+    message: str,
+) -> str:
+    mapping = {
+        "handover_note": "handover_note",
+        "incident_record": "incident_record",
+        "chronology_entry": "chronology_entry",
+        "daily_log": "daily_note",
+        "support_plan": "risk_summary",
+        "manager_update": "manager_review",
+        "reflective_debrief": "supervision_reflection",
+        "professional_rewrite": "structured_record",
+        "safeguarding_note": "structured_record",
+        "plain_response": _legacy_output_type_from_mode(legacy_mode, task_type, message),
+    }
+    return mapping.get(classification_output_format, _legacy_output_type_from_mode(legacy_mode, task_type, message))
 
 
 def _derive_urgency(message: str, safeguarding_level: str) -> str:
@@ -493,18 +518,30 @@ def _should_use_leadership_lens(mode: str, message: str, speed: str, role_profil
 
 
 def _build_runtime_mode_context(runtime: AssistantRuntimeContext, speed: str) -> str:
-    return (
-        f"Detected task mode: {runtime.mode}\n"
-        f"Detected task type: {runtime.task_type}\n"
-        f"Detected output type: {runtime.output_type}\n"
-        f"Safeguarding level: {runtime.safeguarding_level}\n"
-        f"Urgency: {runtime.urgency}\n"
-        f"Selected response mode: {speed}\n"
-        f"Detected user role profile: {runtime.user_role_profile}\n"
-        f"Retrieval level: {runtime.retrieval_level}\n"
-        f"Reflection level: {runtime.reflection_level}\n\n"
-        f"Use these as working signals for tone, structure, caution, accountability, and practical focus."
-    )
+    lines = [
+        f"Detected task mode: {runtime.mode}",
+        f"Detected task type: {runtime.task_type}",
+        f"Detected output type: {runtime.output_type}",
+        f"Safeguarding level: {runtime.safeguarding_level}",
+        f"Urgency: {runtime.urgency}",
+        f"Selected response mode: {speed}",
+        f"Detected user role profile: {runtime.user_role_profile}",
+        f"Response stance: {runtime.response_stance}",
+        f"Classification confidence: {runtime.classification_confidence}",
+        f"Retrieval level: {runtime.retrieval_level}",
+        f"Reflection level: {runtime.reflection_level}",
+    ]
+
+    if runtime.secondary_intents:
+        lines.append(f"Secondary intents: {', '.join(runtime.secondary_intents)}")
+
+    if runtime.classification_signals:
+        lines.append(f"Classification signals: {', '.join(runtime.classification_signals[:8])}")
+
+    lines.append("")
+    lines.append("Use these as working signals for tone, structure, caution, accountability, and practical focus.")
+
+    return "\n".join(lines)
 
 
 def _build_role_lens_context(role_profile: str) -> str:
@@ -743,18 +780,12 @@ def _build_document_source(document_name: str | None) -> dict[str, Any]:
     }
 
 
-def _safe_detect_mode(message: str, history: list[dict[str, Any]]) -> str:
+def _safe_classify_intent(message: str, history: list[dict[str, Any]], role: str):
     try:
-        return detect_mode(message=message, history=history)
-    except TypeError:
-        try:
-            return detect_mode(message)
-        except Exception:
-            logger.exception("Mode detection failed")
-            return "general_practice"
+        return classify_intent(message=message, history=history, role=role)
     except Exception:
-        logger.exception("Mode detection failed")
-        return "general_practice"
+        logger.exception("Intent classification failed")
+        return classify_intent(message=message, history=[], role=role)
 
 
 def _safe_assess_safeguarding(message: str, history: list[dict[str, Any]]) -> str:
@@ -897,11 +928,23 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
 
     runtime = AssistantRuntimeContext()
 
-    runtime.mode = _safe_detect_mode(message, history)
+    classification = _safe_classify_intent(message, history, req.role)
+
+    runtime.mode = classification.legacy_mode or "general_practice"
+    runtime.response_stance = classification.response_stance or "practice_support"
+    runtime.classification_confidence = classification.confidence or 0.0
+    runtime.classification_signals = classification.matched_signals or []
+    runtime.secondary_intents = classification.secondary_intents or []
+
     runtime.safeguarding_level = _safe_assess_safeguarding(message, history)
     runtime.user_role_profile = _normalise_user_role_profile(req.role, req.user_context)
     runtime.task_type = _derive_task_type(message, runtime.mode, req.document_text)
-    runtime.output_type = _derive_output_type(runtime.mode, runtime.task_type, message)
+    runtime.output_type = _map_classifier_output_to_runtime(
+        classification.output_format,
+        runtime.mode,
+        runtime.task_type,
+        message,
+    )
     runtime.urgency = _derive_urgency(message, runtime.safeguarding_level)
     runtime.retrieval_level = _retrieval_level(
         runtime.mode,
@@ -1056,7 +1099,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
             "Assistant prompt package built "
             "session_id=%s mode=%s task_type=%s output_type=%s "
             "safeguarding=%s urgency=%s response_mode=%s role_profile=%s "
-            "retrieval_level=%s reflection_level=%s "
+            "stance=%s confidence=%s retrieval_level=%s reflection_level=%s "
             "memory=%s retrieval=%s reflection=%s supervision=%s leadership_lens=%s suggested_actions=%s sources=%s"
         ),
         req.session_id,
@@ -1067,6 +1110,8 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         runtime.urgency,
         speed,
         runtime.user_role_profile,
+        runtime.response_stance,
+        runtime.classification_confidence,
         runtime.retrieval_level,
         runtime.reflection_level,
         bool(runtime.memory_context),
