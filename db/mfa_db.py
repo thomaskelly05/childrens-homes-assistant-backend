@@ -9,10 +9,6 @@ from psycopg2.extras import RealDictCursor
 from db.connection import get_db_connection, release_db_connection
 
 
-# ---------------------------------------------------------
-# Recovery code helpers
-# ---------------------------------------------------------
-
 def hash_recovery_code(code: str) -> str:
     return hashlib.sha256(code.encode("utf-8")).hexdigest()
 
@@ -21,14 +17,13 @@ def generate_recovery_code() -> str:
     return f"{secrets.token_hex(4)}-{secrets.token_hex(4)}".upper()
 
 
-# ---------------------------------------------------------
-# Table init
-# ---------------------------------------------------------
-
 def init_mfa_tables() -> None:
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
+            # -------------------------------------------------
+            # user_mfa
+            # -------------------------------------------------
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS user_mfa (
@@ -46,6 +41,56 @@ def init_mfa_tables() -> None:
 
             cur.execute(
                 """
+                ALTER TABLE user_mfa
+                ADD COLUMN IF NOT EXISTS email TEXT
+                """
+            )
+            cur.execute(
+                """
+                ALTER TABLE user_mfa
+                ADD COLUMN IF NOT EXISTS totp_secret TEXT
+                """
+            )
+            cur.execute(
+                """
+                ALTER TABLE user_mfa
+                ADD COLUMN IF NOT EXISTS is_enabled BOOLEAN NOT NULL DEFAULT FALSE
+                """
+            )
+            cur.execute(
+                """
+                ALTER TABLE user_mfa
+                ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                """
+            )
+            cur.execute(
+                """
+                ALTER TABLE user_mfa
+                ADD COLUMN IF NOT EXISTS enabled_at TIMESTAMPTZ
+                """
+            )
+            cur.execute(
+                """
+                ALTER TABLE user_mfa
+                ADD COLUMN IF NOT EXISTS last_verified_at TIMESTAMPTZ
+                """
+            )
+
+            # Backfill any null secrets if old schema was odd.
+            # Only do this if column exists and may be nullable.
+            cur.execute(
+                """
+                UPDATE user_mfa
+                SET totp_secret = COALESCE(totp_secret, '')
+                WHERE totp_secret IS NULL
+                """
+            )
+
+            # -------------------------------------------------
+            # user_mfa_recovery_codes
+            # -------------------------------------------------
+            cur.execute(
+                """
                 CREATE TABLE IF NOT EXISTS user_mfa_recovery_codes (
                     id SERIAL PRIMARY KEY,
                     user_id INTEGER NOT NULL,
@@ -54,6 +99,31 @@ def init_mfa_tables() -> None:
                     used_at TIMESTAMPTZ,
                     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 )
+                """
+            )
+
+            cur.execute(
+                """
+                ALTER TABLE user_mfa_recovery_codes
+                ADD COLUMN IF NOT EXISTS code_hash TEXT
+                """
+            )
+            cur.execute(
+                """
+                ALTER TABLE user_mfa_recovery_codes
+                ADD COLUMN IF NOT EXISTS is_used BOOLEAN NOT NULL DEFAULT FALSE
+                """
+            )
+            cur.execute(
+                """
+                ALTER TABLE user_mfa_recovery_codes
+                ADD COLUMN IF NOT EXISTS used_at TIMESTAMPTZ
+                """
+            )
+            cur.execute(
+                """
+                ALTER TABLE user_mfa_recovery_codes
+                ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 """
             )
 
@@ -71,6 +141,9 @@ def init_mfa_tables() -> None:
                 """
             )
 
+            # -------------------------------------------------
+            # auth_audit_log
+            # -------------------------------------------------
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS auth_audit_log (
@@ -83,6 +156,67 @@ def init_mfa_tables() -> None:
                     detail TEXT,
                     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 )
+                """
+            )
+
+            # Repair older versions of the table
+            cur.execute(
+                """
+                ALTER TABLE auth_audit_log
+                ADD COLUMN IF NOT EXISTS user_id INTEGER
+                """
+            )
+            cur.execute(
+                """
+                ALTER TABLE auth_audit_log
+                ADD COLUMN IF NOT EXISTS email TEXT
+                """
+            )
+            cur.execute(
+                """
+                ALTER TABLE auth_audit_log
+                ADD COLUMN IF NOT EXISTS event_type TEXT
+                """
+            )
+            cur.execute(
+                """
+                ALTER TABLE auth_audit_log
+                ADD COLUMN IF NOT EXISTS ip_address TEXT
+                """
+            )
+            cur.execute(
+                """
+                ALTER TABLE auth_audit_log
+                ADD COLUMN IF NOT EXISTS user_agent TEXT
+                """
+            )
+            cur.execute(
+                """
+                ALTER TABLE auth_audit_log
+                ADD COLUMN IF NOT EXISTS detail TEXT
+                """
+            )
+            cur.execute(
+                """
+                ALTER TABLE auth_audit_log
+                ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                """
+            )
+
+            # Backfill required column before applying NOT NULL
+            cur.execute(
+                """
+                UPDATE auth_audit_log
+                SET event_type = COALESCE(event_type, 'legacy_event')
+                WHERE event_type IS NULL
+                """
+            )
+
+            # Only now make sure event_type is NOT NULL
+            cur.execute(
+                """
+                ALTER TABLE auth_audit_log
+                ALTER COLUMN event_type SET NOT NULL
                 """
             )
 
@@ -111,10 +245,6 @@ def init_mfa_tables() -> None:
     finally:
         release_db_connection(conn)
 
-
-# ---------------------------------------------------------
-# Audit logging
-# ---------------------------------------------------------
 
 def log_auth_event(
     *,
@@ -148,14 +278,7 @@ def log_auth_event(
         release_db_connection(conn)
 
 
-# ---------------------------------------------------------
-# MFA core
-# ---------------------------------------------------------
-
 def get_user_mfa(user_id: int) -> dict[str, Any] | None:
-    """
-    Returns MFA row plus all unused recovery codes.
-    """
     conn = get_db_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -180,28 +303,10 @@ def get_user_mfa(user_id: int) -> dict[str, Any] | None:
             if not row:
                 return None
 
-            cur.execute(
-                """
-                SELECT code_hash, is_used, used_at, created_at
-                FROM user_mfa_recovery_codes
-                WHERE user_id = %s
-                ORDER BY created_at ASC, id ASC
-                """,
-                (user_id,),
-            )
-            recovery_rows = cur.fetchall() or []
-
             result = dict(row)
-            # Route file expects "secret"
             result["secret"] = result.get("totp_secret")
-            # Route file expects "recovery_codes"
-            # Only unhashed codes can be shown at creation time, so for stored data
-            # we expose only metadata count via helper functions. Keep this empty here.
-            # The route will use use_recovery_code()/save_recovery_codes().
             result["recovery_codes"] = []
-            result["recovery_code_count"] = sum(
-                1 for item in recovery_rows if not item.get("is_used")
-            )
+            result["recovery_code_count"] = count_unused_recovery_codes(user_id)
             return result
     finally:
         release_db_connection(conn)
@@ -239,10 +344,6 @@ def upsert_user_mfa_secret(user_id: int, email: str | None, totp_secret: str) ->
 
 
 def enable_user_mfa(user_id: int, secret: str | None = None) -> None:
-    """
-    If secret is supplied, store it and enable MFA in one call.
-    This makes it compatible with the hardened route file.
-    """
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
@@ -292,7 +393,6 @@ def disable_user_mfa(user_id: int) -> None:
                 """,
                 (user_id,),
             )
-
             cur.execute(
                 """
                 DELETE FROM user_mfa_recovery_codes
@@ -300,7 +400,6 @@ def disable_user_mfa(user_id: int) -> None:
                 """,
                 (user_id,),
             )
-
         conn.commit()
     finally:
         release_db_connection(conn)
@@ -323,16 +422,7 @@ def update_last_verified(user_id: int) -> None:
         release_db_connection(conn)
 
 
-# ---------------------------------------------------------
-# Recovery code storage
-# ---------------------------------------------------------
-
 def save_recovery_codes(user_id: int, recovery_codes: list[str]) -> list[str]:
-    """
-    Replaces all recovery codes for a user with a new set.
-    Stores only hashes, never plaintext.
-    Returns plaintext codes so caller can show them once.
-    """
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
@@ -365,9 +455,6 @@ def save_recovery_codes(user_id: int, recovery_codes: list[str]) -> list[str]:
 
 
 def replace_recovery_codes(user_id: int, codes: list[str]) -> list[str]:
-    """
-    Backwards-compatible alias.
-    """
     return save_recovery_codes(user_id, codes)
 
 
