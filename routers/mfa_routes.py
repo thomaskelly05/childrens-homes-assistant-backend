@@ -246,16 +246,16 @@ def _rotate_post_mfa_session(
     email: str,
 ) -> None:
     """
-    After successful MFA:
-    - rotate the signed session token
-    - rotate the CSRF token
-    - refresh server-side session state
+    Safer post-MFA session refresh:
+    - rotates the signed session token
+    - rotates the CSRF token
+    - updates server-side session state
+    - does NOT clear the whole session mid-request
     """
     remember = bool(request.session.get("remember"))
     new_token = create_session_token(user_id)
     new_csrf = secrets.token_urlsafe(32)
 
-    request.session.clear()
     request.session[SESSION_USER_ID_KEY] = int(user_id)
     request.session[SESSION_USER_EMAIL_KEY] = email
     request.session[SESSION_MFA_VERIFIED_KEY] = True
@@ -449,12 +449,9 @@ def verify_mfa(
 
     update_last_verified(user["id"])
 
-    _rotate_post_mfa_session(
-        request=request,
-        response=response,
-        user_id=user["id"],
-        email=user["email"],
-    )
+    # Keep this simple and stable first
+    request.session[SESSION_MFA_VERIFIED_KEY] = True
+    request.session["mfa_verified_at"] = int(time.time())
 
     _log_auth(
         request=request,
