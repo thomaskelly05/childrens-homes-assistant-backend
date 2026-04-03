@@ -4,6 +4,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
+from assistant.ai_boundaries import append_ai_boundaries
 from assistant.classification import classify_intent
 from assistant.memory import get_memory_context
 from assistant.prompts import build_chat_prompt
@@ -426,7 +427,10 @@ def _map_classifier_output_to_runtime(
         "safeguarding_note": "structured_record",
         "plain_response": _legacy_output_type_from_mode(legacy_mode, task_type, message),
     }
-    return mapping.get(classification_output_format, _legacy_output_type_from_mode(legacy_mode, task_type, message))
+    return mapping.get(
+        classification_output_format,
+        _legacy_output_type_from_mode(legacy_mode, task_type, message),
+    )
 
 
 def _derive_urgency(message: str, safeguarding_level: str) -> str:
@@ -650,7 +654,6 @@ def _build_suggested_actions_context(
                 "Record exact times, actions taken, who was informed, and the immediate outcome.",
             ]
         )
-
     elif safeguarding_level == "heightened":
         actions.extend(
             [
@@ -668,11 +671,7 @@ def _build_suggested_actions_context(
         )
 
     if output_type == "handover_note":
-        actions.extend(
-            [
-                "Highlight outstanding risks, unfinished actions, and what the next shift needs to know.",
-            ]
-        )
+        actions.append("Highlight outstanding risks, unfinished actions, and what the next shift needs to know.")
 
     if task_type == "planning":
         actions.extend(
@@ -691,11 +690,7 @@ def _build_suggested_actions_context(
         )
 
     if role_profile in {"manager", "provider"}:
-        actions.extend(
-            [
-                "Notice any pattern, consistency issue, drift, or management follow-up requirement.",
-            ]
-        )
+        actions.append("Notice any pattern, consistency issue, drift, or management follow-up requirement.")
 
     if _contains_any(text, ESCALATION_KEYWORDS):
         actions.append("Be explicit about who should be informed, by whom, and on what timescale.")
@@ -751,7 +746,6 @@ def _build_escalation_context(urgency: str, safeguarding_level: str, role_profil
             "• Lead with urgent actions before reflective or stylistic detail.\n"
             "• Be explicit about escalation, who needs to be informed, and what should be recorded immediately."
         )
-
     elif safeguarding_level == "heightened":
         blocks.append(
             "HEIGHTENED SAFEGUARDING PRIORITY:\n"
@@ -1046,6 +1040,8 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         training_mode=req.training_mode,
         speed=speed,
     )
+
+    system_prompt = append_ai_boundaries(system_prompt)
 
     system_prompt = _append_section(
         system_prompt,
