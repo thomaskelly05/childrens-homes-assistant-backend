@@ -4,6 +4,11 @@ import asyncio
 import logging
 import os
 
+from assistant.audit_logger import (
+    AssistantAuditTimer,
+    log_assistant_request_finished,
+    log_assistant_request_started,
+)
 from assistant.explainability import (
     build_explainability_payload,
     build_loading_updates,
@@ -139,9 +144,13 @@ async def generate_ai_stream(
     speed: str = "balanced",
     user_context: dict | None = None,
     response_mode: str = "balanced",
+    user_id: str | int | None = None,
+    conversation_id: str | int | None = None,
 ):
     history = history or []
     user_context = user_context or {}
+    timer = AssistantAuditTimer.start()
+    request_audit_event = None
 
     selected_mode = _normalise_response_mode(response_mode, speed)
     trimmed_document_text = _trim_document_text(document_text, selected_mode)
@@ -178,6 +187,16 @@ async def generate_ai_stream(
     runtime_payload = orchestration.runtime_payload
     explainability_payload = build_explainability_payload(
         user_message=message,
+        orchestration=orchestration,
+    )
+
+    request_audit_event = log_assistant_request_started(
+        session_id=session_id,
+        conversation_id=_safe_string(conversation_id or session_id),
+        user_id=user_id,
+        role=role,
+        message=message,
+        selected_mode=selected_mode,
         orchestration=orchestration,
     )
 
@@ -241,6 +260,9 @@ async def generate_ai_stream(
     )
 
     provider = get_llm_provider()
+    provider_success = False
+    provider_error_code = None
+    provider_error_message = None
 
     try:
         async for content in provider.stream_chat(
@@ -256,6 +278,8 @@ async def generate_ai_stream(
                     "output_type": output_type,
                     "safeguarding_level": safeguarding_level,
                     "response_mode": selected_mode,
+                    "conversation_id": _safe_string(conversation_id or session_id),
+                    "user_id": _safe_string(user_id),
                 },
             )
         ):
@@ -265,12 +289,35 @@ async def generate_ai_stream(
                     "content": content,
                 }
 
-    except Exception:
+        provider_success = True
+
+    except Exception as exc:
+        provider_error_code = "provider_stream_failed"
+        provider_error_message = _safe_string(exc) or "AI provider stream failed"
         logger.exception("AI provider stream failed for session_id=%s", session_id)
+
         yield {
             "type": "token",
             "content": "Sorry, something went wrong while generating the response.",
         }
+
+    finally:
+        duration_ms = timer.duration_ms()
+
+        if request_audit_event is not None:
+            log_assistant_request_finished(
+                base_event=request_audit_event,
+                duration_ms=duration_ms,
+                success=provider_success,
+                source_count=len(sources_used),
+                error_code=provider_error_code,
+                error_message=provider_error_message,
+                extra={
+                    "guidance_results_used": bool(search_results),
+                    "trimmed_history_count": len(trimmed_history),
+                    "message_count": len(messages),
+                },
+            )
 
     yield {
         "type": "meta",
