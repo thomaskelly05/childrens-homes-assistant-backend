@@ -9,6 +9,12 @@ from assistant.assistant_engine import (
     AssistantRuntimeContext,
     build_assistant_prompt_package,
 )
+from assistant.response_planner import (
+    GuidancePlan,
+    ModelPlan,
+    ResponsePlan,
+    build_response_plan,
+)
 
 logger = logging.getLogger("indicare.orchestrator")
 
@@ -32,20 +38,6 @@ class OrchestratorRequest:
 
 
 @dataclass
-class GuidancePlan:
-    enabled: bool = False
-    reason: str = ""
-    search_query: str = ""
-
-
-@dataclass
-class ModelPlan:
-    model: str = "gpt-4o-mini"
-    temperature: float = 0.2
-    max_tokens: int = 850
-
-
-@dataclass
 class OrchestratorResult:
     system_prompt: str
     user_message: str
@@ -56,50 +48,9 @@ class OrchestratorResult:
     trimmed_document_text: str | None
     sources: list[dict[str, Any]] = field(default_factory=list)
     runtime_payload: dict[str, Any] = field(default_factory=dict)
+    response_plan: ResponsePlan = field(default_factory=ResponsePlan)
     guidance_plan: GuidancePlan = field(default_factory=GuidancePlan)
     model_plan: ModelPlan = field(default_factory=ModelPlan)
-
-
-# ---------------------------------------------------------
-# Constants
-# ---------------------------------------------------------
-
-GUIDANCE_KEYWORDS = [
-    "regulation",
-    "regulations",
-    "law",
-    "legal",
-    "policy",
-    "guidance",
-    "statutory",
-    "ofsted",
-    "inspection",
-    "framework",
-    "standard",
-    "procedure",
-    "quality standard",
-    "quality standards",
-    "children's homes regulations",
-    "childrens homes regulations",
-    "sccif",
-]
-
-LEADERSHIP_TRIGGER_KEYWORDS = [
-    "registered manager",
-    "manager review",
-    "manager oversight",
-    "audit",
-    "quality assurance",
-    "qa",
-    "inspection",
-    "ofsted",
-    "responsible individual",
-    "provider oversight",
-    "governance",
-    "action plan",
-    "service issue",
-    "pattern",
-]
 
 
 # ---------------------------------------------------------
@@ -134,7 +85,6 @@ def _trim_history(history: list[dict[str, Any]], selected_mode: str) -> list[dic
 
     trimmed = history[-limit:]
 
-    # Prevent duplicate latest user turn if route already stored current user message
     if trimmed and trimmed[-1].get("role") == "user":
         trimmed = trimmed[:-1]
 
@@ -247,100 +197,6 @@ def _serialise_runtime(runtime: AssistantRuntimeContext | None) -> dict[str, Any
 
 
 # ---------------------------------------------------------
-# Planning helpers
-# ---------------------------------------------------------
-
-def _contains_guidance_keyword(text: str) -> bool:
-    lower = _safe_string(text).lower()
-    return any(keyword in lower for keyword in GUIDANCE_KEYWORDS)
-
-
-def _contains_leadership_trigger(text: str) -> bool:
-    lower = _safe_string(text).lower()
-    return any(keyword in lower for keyword in LEADERSHIP_TRIGGER_KEYWORDS)
-
-
-def build_guidance_plan(
-    message: str,
-    mode: str,
-    safeguarding_level: str,
-    selected_mode: str,
-) -> GuidancePlan:
-    text = _safe_string(message).lower()
-
-    if selected_mode == "quick":
-        return GuidancePlan(enabled=False, reason="quick_mode")
-
-    if safeguarding_level in {"heightened", "urgent"}:
-        return GuidancePlan(enabled=False, reason="safeguarding_override")
-
-    if mode in {"handover", "recording", "incident_summary", "rewrite", "chronology"}:
-        if _contains_guidance_keyword(text):
-            return GuidancePlan(
-                enabled=True,
-                reason="guidance_keywords_in_operational_task",
-                search_query=message,
-            )
-        return GuidancePlan(enabled=False, reason="operational_task_without_guidance_need")
-
-    if _contains_guidance_keyword(text):
-        return GuidancePlan(
-            enabled=True,
-            reason="guidance_keywords_present",
-            search_query=message,
-        )
-
-    return GuidancePlan(enabled=False, reason="no_guidance_trigger")
-
-
-def _should_use_leadership_grade_reasoning(
-    message: str,
-    mode: str,
-    selected_mode: str,
-) -> bool:
-    text = _safe_string(message).lower()
-
-    if selected_mode == "quick":
-        return _contains_leadership_trigger(text)
-
-    if mode in {"manager_review", "supervision", "support_planning", "document_review", "reflective"}:
-        return True
-
-    return _contains_leadership_trigger(text)
-
-
-def build_model_plan(
-    message: str,
-    mode: str,
-    safeguarding_level: str,
-    selected_mode: str,
-    has_document: bool,
-) -> ModelPlan:
-    if safeguarding_level == "urgent":
-        return ModelPlan(model="gpt-4o-mini", temperature=0.15, max_tokens=500)
-
-    if selected_mode == "quick":
-        return ModelPlan(model="gpt-4o-mini", temperature=0.15, max_tokens=350)
-
-    if selected_mode == "deep":
-        return ModelPlan(model="gpt-4o", temperature=0.3, max_tokens=1200)
-
-    if _should_use_leadership_grade_reasoning(message, mode, selected_mode):
-        return ModelPlan(model="gpt-4o", temperature=0.2, max_tokens=1000)
-
-    if has_document and mode in {"document_review", "rewrite"}:
-        return ModelPlan(model="gpt-4o", temperature=0.2, max_tokens=1000)
-
-    if mode in {"incident_summary", "recording", "chronology", "handover"}:
-        return ModelPlan(model="gpt-4o-mini", temperature=0.1, max_tokens=600)
-
-    if mode in {"manager_review", "supervision", "support_planning", "document_review"}:
-        return ModelPlan(model="gpt-4o-mini", temperature=0.2, max_tokens=1000)
-
-    return ModelPlan(model="gpt-4o-mini", temperature=0.2, max_tokens=850)
-
-
-# ---------------------------------------------------------
 # Main orchestration
 # ---------------------------------------------------------
 
@@ -377,25 +233,26 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
     user_message = prompt_package.user_message
 
     mode = getattr(runtime, "mode", "general_practice")
+    task_type = getattr(runtime, "task_type", "guidance")
+    output_type = getattr(runtime, "output_type", "plain_response")
     safeguarding_level = getattr(runtime, "safeguarding_level", "normal")
+    urgency = getattr(runtime, "urgency", "routine")
+    user_role_profile = getattr(runtime, "user_role_profile", "staff")
 
-    sources = _normalise_sources(getattr(runtime, "sources_used", []))
-    runtime_payload = _serialise_runtime(runtime)
-
-    guidance_plan = build_guidance_plan(
+    response_plan = build_response_plan(
         message=req.message,
         mode=mode,
+        task_type=task_type,
+        output_type=output_type,
         safeguarding_level=safeguarding_level,
-        selected_mode=selected_mode,
-    )
-
-    model_plan = build_model_plan(
-        message=req.message,
-        mode=mode,
-        safeguarding_level=safeguarding_level,
+        urgency=urgency,
+        user_role_profile=user_role_profile,
         selected_mode=selected_mode,
         has_document=bool(trimmed_document_text),
     )
+
+    sources = _normalise_sources(getattr(runtime, "sources_used", []))
+    runtime_payload = _serialise_runtime(runtime)
 
     messages = _build_messages(
         system_prompt=system_prompt,
@@ -405,17 +262,29 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
 
     logger.info(
         (
-            "Orchestrator built session_id=%s mode=%s safeguarding=%s "
-            "guidance_enabled=%s guidance_reason=%s model=%s temp=%s max_tokens=%s sources=%s"
+            "Orchestrator built session_id=%s mode=%s task_type=%s output_type=%s "
+            "safeguarding=%s urgency=%s response_mode=%s stance=%s "
+            "guidance_enabled=%s guidance_reason=%s model=%s temp=%s max_tokens=%s "
+            "memory=%s retrieval=%s reflection=%s supervision=%s leadership=%s sources=%s"
         ),
         req.session_id,
         mode,
+        task_type,
+        output_type,
         safeguarding_level,
-        guidance_plan.enabled,
-        guidance_plan.reason,
-        model_plan.model,
-        model_plan.temperature,
-        model_plan.max_tokens,
+        urgency,
+        response_plan.selected_mode,
+        response_plan.response_stance,
+        response_plan.guidance_plan.enabled,
+        response_plan.guidance_plan.reason,
+        response_plan.model_plan.model,
+        response_plan.model_plan.temperature,
+        response_plan.model_plan.max_tokens,
+        response_plan.should_use_memory,
+        response_plan.should_use_retrieval,
+        response_plan.should_use_reflection,
+        response_plan.should_use_supervision,
+        response_plan.should_use_leadership_lens,
         len(sources),
     )
 
@@ -424,11 +293,12 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
         user_message=user_message,
         runtime=runtime,
         messages=messages,
-        selected_mode=selected_mode,
+        selected_mode=response_plan.selected_mode,
         trimmed_history=trimmed_history,
         trimmed_document_text=trimmed_document_text,
         sources=sources,
         runtime_payload=runtime_payload,
-        guidance_plan=guidance_plan,
-        model_plan=model_plan,
+        response_plan=response_plan,
+        guidance_plan=response_plan.guidance_plan,
+        model_plan=response_plan.model_plan,
     )
