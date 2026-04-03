@@ -1,10 +1,12 @@
 import os
+import re
+import time
 from dataclasses import dataclass
 from typing import Any
 
 import bcrypt
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from psycopg2.extras import RealDictCursor
 
 from auth.mfa_guard import (
@@ -19,15 +21,35 @@ from db.mfa_db import get_user_mfa, log_auth_event
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
+# -------------------------------------------------------------------
+# In-memory throttling / lockout
+# Replace with Redis or DB-backed storage in production at scale.
+# -------------------------------------------------------------------
+
+FAILED_BY_IP: dict[str, list[float]] = {}
+FAILED_BY_EMAIL: dict[str, list[float]] = {}
+LOCKED_IPS: dict[str, float] = {}
+LOCKED_EMAILS: dict[str, float] = {}
+
+THROTTLE_WINDOW_SECONDS = int(os.getenv("AUTH_THROTTLE_WINDOW_SECONDS", "900"))  # 15 mins
+MAX_FAILED_ATTEMPTS_PER_IP = int(os.getenv("AUTH_MAX_FAILED_ATTEMPTS_PER_IP", "20"))
+MAX_FAILED_ATTEMPTS_PER_EMAIL = int(os.getenv("AUTH_MAX_FAILED_ATTEMPTS_PER_EMAIL", "8"))
+LOCKOUT_SECONDS = int(os.getenv("AUTH_LOCKOUT_SECONDS", "900"))  # 15 mins
+
+DUMMY_BCRYPT_HASH = b"$2b$12$wQhQW3f0KoLwG0sGQY8k2eVwB7Q2Rk0c6q2Q0nXxw7sKqXW0aV6uG"  # dummy timing path
+
 
 @dataclass(frozen=True)
 class AuthSettings:
     session_cookie_name: str
+    csrf_cookie_name: str
     app_env: str
     is_production: bool
     cookie_secure: bool
     cookie_samesite: str
-    cookie_max_age: int
+    cookie_max_age_short: int
+    cookie_max_age_long: int
+    force_mfa_for_sensitive_roles: bool
 
     @classmethod
     def load(cls) -> "AuthSettings":
@@ -45,11 +67,14 @@ class AuthSettings:
 
         return cls(
             session_cookie_name="indicare_session",
+            csrf_cookie_name="indicare_csrf",
             app_env=app_env,
             is_production=is_production,
             cookie_secure=cookie_secure,
             cookie_samesite=cookie_samesite,
-            cookie_max_age=60 * 60 * 12,
+            cookie_max_age_short=60 * 60 * 8,          # 8 hours
+            cookie_max_age_long=60 * 60 * 24 * 14,     # 14 days
+            force_mfa_for_sensitive_roles=True,
         )
 
 
@@ -60,6 +85,13 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
     remember: bool | None = False
+
+    @field_validator("password")
+    @classmethod
+    def validate_password_present(cls, value: str) -> str:
+        if not value or not value.strip():
+            raise ValueError("Password is required")
+        return value
 
 
 def _normalise_email(email: str) -> str:
@@ -83,6 +115,16 @@ def _extract_token(
 
     token = parts[1].strip()
     return token or None
+
+
+def _safe_session_reset(request: Request) -> None:
+    """
+    Prevent old session state hanging around between logins.
+    """
+    try:
+        request.session.clear()
+    except Exception:
+        pass
 
 
 def _get_user_by_id(conn: Any, user_id: int) -> dict[str, Any] | None:
@@ -133,14 +175,16 @@ def _get_user_by_email(conn: Any, email: str) -> dict[str, Any] | None:
         return cur.fetchone()
 
 
-def _set_session_cookie(response: Response, token: str) -> None:
+def _set_session_cookie(response: Response, token: str, remember: bool = False) -> None:
+    max_age = settings.cookie_max_age_long if remember else settings.cookie_max_age_short
+
     response.set_cookie(
         key=settings.session_cookie_name,
         value=token,
         httponly=True,
         secure=settings.cookie_secure,
         samesite=settings.cookie_samesite,
-        max_age=settings.cookie_max_age,
+        max_age=max_age,
         path="/",
     )
 
@@ -148,6 +192,10 @@ def _set_session_cookie(response: Response, token: str) -> None:
 def _clear_session_cookie(response: Response) -> None:
     response.delete_cookie(
         key=settings.session_cookie_name,
+        path="/",
+    )
+    response.delete_cookie(
+        key=settings.csrf_cookie_name,
         path="/",
     )
 
@@ -310,6 +358,105 @@ def _get_session_user_from_request(
     return user, user_id
 
 
+# -------------------------------------------------------------------
+# Hardening helpers
+# -------------------------------------------------------------------
+
+def _now() -> float:
+    return time.time()
+
+
+def _prune_attempts(bag: dict[str, list[float]], key: str) -> list[float]:
+    current = _now()
+    values = [t for t in bag.get(key, []) if current - t <= THROTTLE_WINDOW_SECONDS]
+    bag[key] = values
+    return values
+
+
+def _is_locked(lock_map: dict[str, float], key: str) -> bool:
+    if not key:
+        return False
+    until = lock_map.get(key)
+    if not until:
+        return False
+    if until <= _now():
+        lock_map.pop(key, None)
+        return False
+    return True
+
+
+def _register_failure(ip: str | None, email: str | None) -> None:
+    current = _now()
+
+    if ip:
+        attempts = _prune_attempts(FAILED_BY_IP, ip)
+        attempts.append(current)
+        FAILED_BY_IP[ip] = attempts
+        if len(attempts) >= MAX_FAILED_ATTEMPTS_PER_IP:
+            LOCKED_IPS[ip] = current + LOCKOUT_SECONDS
+
+    if email:
+        attempts = _prune_attempts(FAILED_BY_EMAIL, email)
+        attempts.append(current)
+        FAILED_BY_EMAIL[email] = attempts
+        if len(attempts) >= MAX_FAILED_ATTEMPTS_PER_EMAIL:
+            LOCKED_EMAILS[email] = current + LOCKOUT_SECONDS
+
+
+def _clear_failures(ip: str | None, email: str | None) -> None:
+    if ip:
+        FAILED_BY_IP.pop(ip, None)
+        LOCKED_IPS.pop(ip, None)
+    if email:
+        FAILED_BY_EMAIL.pop(email, None)
+        LOCKED_EMAILS.pop(email, None)
+
+
+def _assert_not_locked(request: Request, email: str | None) -> None:
+    ip = _client_ip(request)
+
+    if ip and _is_locked(LOCKED_IPS, ip):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many failed sign-in attempts. Please try again later.",
+        )
+
+    if email and _is_locked(LOCKED_EMAILS, email):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many failed sign-in attempts. Please try again later.",
+        )
+
+
+def _check_password_policy(password: str) -> str | None:
+    if len(password) < 12:
+        return "Password must be at least 12 characters long."
+    if not re.search(r"[A-Z]", password):
+        return "Password must include at least one uppercase letter."
+    if not re.search(r"[a-z]", password):
+        return "Password must include at least one lowercase letter."
+    if not re.search(r"\d", password):
+        return "Password must include at least one number."
+    return None
+
+
+def _dummy_bcrypt_check(password: str) -> None:
+    """
+    Helps reduce email-enumeration timing differences when user is not found.
+    """
+    try:
+        bcrypt.checkpw(password.encode("utf-8"), DUMMY_BCRYPT_HASH)
+    except Exception:
+        pass
+
+
+def _mfa_required_for_role(role: str | None) -> bool:
+    role_value = (role or "").strip().lower()
+    if not settings.force_mfa_for_sensitive_roles:
+        return False
+    return role_value in {"admin", "provider_admin", "manager"}
+
+
 @router.post("/login")
 def login(
     payload: LoginRequest,
@@ -319,6 +466,7 @@ def login(
 ):
     email = _normalise_email(payload.email)
     password = payload.password or ""
+    remember = bool(payload.remember)
 
     if not email or not password:
         raise HTTPException(
@@ -326,15 +474,19 @@ def login(
             detail="Email and password are required",
         )
 
+    _assert_not_locked(request, email)
+
     user = _get_user_by_email(conn, email)
 
     if not user:
+        _dummy_bcrypt_check(password)
+        _register_failure(_client_ip(request), email)
         _log_auth(
             request=request,
             user_id=None,
             email=email,
             event_type="login_failed",
-            detail="Unknown email",
+            detail="Invalid credentials",
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -342,6 +494,7 @@ def login(
         )
 
     if user.get("archived") is True:
+        _register_failure(_client_ip(request), email)
         _log_auth(
             request=request,
             user_id=user["id"],
@@ -355,6 +508,7 @@ def login(
         )
 
     if user.get("is_active") is False:
+        _register_failure(_client_ip(request), email)
         _log_auth(
             request=request,
             user_id=user["id"],
@@ -369,6 +523,7 @@ def login(
 
     password_hash = _ensure_password_hash_bytes(user.get("password_hash"))
     if not password_hash:
+        _register_failure(_client_ip(request), email)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
@@ -380,25 +535,32 @@ def login(
         password_ok = False
 
     if not password_ok:
+        _register_failure(_client_ip(request), email)
         _log_auth(
             request=request,
             user_id=user["id"],
             email=user["email"],
             event_type="login_failed",
-            detail="Invalid password",
+            detail="Invalid credentials",
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
 
+    # Successful password step; clear throttle state
+    _clear_failures(_client_ip(request), email)
+
     token = create_session_token(user["id"])
-    _set_session_cookie(response, token)
+    _set_session_cookie(response, token, remember=remember)
 
     try:
+        _safe_session_reset(request)
         request.session[SESSION_USER_ID_KEY] = int(user["id"])
         request.session[SESSION_USER_EMAIL_KEY] = user["email"]
         request.session[SESSION_MFA_VERIFIED_KEY] = False
+        request.session["remember"] = remember
+        request.session["login_at"] = int(_now())
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -408,6 +570,7 @@ def login(
     mfa_row = _get_mfa_safe(int(user["id"]))
     mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
     billing = _get_billing_safe(conn, user["id"])
+    force_mfa = _mfa_required_for_role(user.get("role"))
 
     _log_auth(
         request=request,
@@ -422,6 +585,7 @@ def login(
         "message": "Password accepted. MFA required.",
         "mfa_required": True,
         "mfa_enabled": mfa_enabled,
+        "mfa_mandatory": force_mfa,
         "user": _session_user_payload(user, billing),
     }
 
@@ -429,7 +593,7 @@ def login(
 @router.post("/logout")
 def logout(request: Request, response: Response):
     _clear_session_cookie(response)
-    request.session.clear()
+    _safe_session_reset(request)
     return {
         "ok": True,
         "message": "Logged out",
@@ -472,6 +636,7 @@ def check_auth(
         "plan_name": billing.get("plan_name") if billing else None,
         "mfa_enabled": mfa_enabled,
         "mfa_verified": mfa_verified,
+        "mfa_mandatory": _mfa_required_for_role(user.get("role")),
     }
 
 
@@ -506,4 +671,18 @@ def get_me(
             mfa_enabled=mfa_enabled,
             mfa_verified=mfa_verified,
         ),
+        "mfa_mandatory": _mfa_required_for_role(user.get("role")),
+    }
+
+
+@router.get("/auth-policy")
+def auth_policy():
+    """
+    Small helper endpoint so the frontend knows what is enforced.
+    """
+    return {
+        "password_min_length": 12,
+        "mfa_required_for_sensitive_roles": settings.force_mfa_for_sensitive_roles,
+        "cookie_samesite": settings.cookie_samesite,
+        "cookie_secure": settings.cookie_secure,
     }
