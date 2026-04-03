@@ -9,6 +9,12 @@ from assistant.assistant_engine import (
     AssistantRuntimeContext,
     build_assistant_prompt_package,
 )
+from assistant.regulation_mapper import (
+    RegulationMappingResult,
+    build_regulation_context_block,
+    map_regulation_references,
+    serialise_regulation_mapping,
+)
 from assistant.response_planner import (
     GuidancePlan,
     ModelPlan,
@@ -51,6 +57,8 @@ class OrchestratorResult:
     response_plan: ResponsePlan = field(default_factory=ResponsePlan)
     guidance_plan: GuidancePlan = field(default_factory=GuidancePlan)
     model_plan: ModelPlan = field(default_factory=ModelPlan)
+    regulation_mapping: RegulationMappingResult = field(default_factory=RegulationMappingResult)
+    regulation_payload: list[dict[str, str]] = field(default_factory=list)
 
 
 # ---------------------------------------------------------
@@ -168,7 +176,10 @@ def _normalise_sources(sources: Any) -> list[dict[str, Any]]:
     return cleaned
 
 
-def _serialise_runtime(runtime: AssistantRuntimeContext | None) -> dict[str, Any]:
+def _serialise_runtime(
+    runtime: AssistantRuntimeContext | None,
+    regulation_payload: list[dict[str, str]] | None = None,
+) -> dict[str, Any]:
     if runtime is None:
         return {}
 
@@ -190,7 +201,11 @@ def _serialise_runtime(runtime: AssistantRuntimeContext | None) -> dict[str, Any
         "user_role_profile": getattr(runtime, "user_role_profile", None),
         "retrieval_level": getattr(runtime, "retrieval_level", None),
         "reflection_level": getattr(runtime, "reflection_level", None),
+        "response_stance": getattr(runtime, "response_stance", None),
+        "classification_confidence": getattr(runtime, "classification_confidence", None),
+        "secondary_intents": getattr(runtime, "secondary_intents", None),
         "suggested_actions": suggested_actions,
+        "regulation_basis": regulation_payload or [],
     }
 
     return {k: v for k, v in payload.items() if v not in (None, "", [])}
@@ -238,6 +253,7 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
     safeguarding_level = getattr(runtime, "safeguarding_level", "normal")
     urgency = getattr(runtime, "urgency", "routine")
     user_role_profile = getattr(runtime, "user_role_profile", "staff")
+    response_stance = getattr(runtime, "response_stance", "practice_support")
 
     response_plan = build_response_plan(
         message=req.message,
@@ -251,8 +267,29 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
         has_document=bool(trimmed_document_text),
     )
 
+    regulation_mapping = map_regulation_references(
+        message=req.message,
+        mode=mode,
+        task_type=task_type,
+        output_type=output_type,
+        safeguarding_level=safeguarding_level,
+        urgency=urgency,
+        user_role_profile=user_role_profile,
+        response_stance=response_stance,
+    )
+    regulation_payload = serialise_regulation_mapping(regulation_mapping)
+    regulation_context_block = build_regulation_context_block(regulation_mapping)
+
+    if regulation_context_block:
+        system_prompt = (
+            f"{system_prompt}\n\n"
+            "============================================================\n"
+            "REGULATION AND STANDARDS CONTEXT\n\n"
+            f"{regulation_context_block}"
+        ).strip()
+
     sources = _normalise_sources(getattr(runtime, "sources_used", []))
-    runtime_payload = _serialise_runtime(runtime)
+    runtime_payload = _serialise_runtime(runtime, regulation_payload=regulation_payload)
 
     messages = _build_messages(
         system_prompt=system_prompt,
@@ -265,7 +302,8 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
             "Orchestrator built session_id=%s mode=%s task_type=%s output_type=%s "
             "safeguarding=%s urgency=%s response_mode=%s stance=%s "
             "guidance_enabled=%s guidance_reason=%s model=%s temp=%s max_tokens=%s "
-            "memory=%s retrieval=%s reflection=%s supervision=%s leadership=%s sources=%s"
+            "memory=%s retrieval=%s reflection=%s supervision=%s leadership=%s "
+            "regulation_refs=%s sources=%s"
         ),
         req.session_id,
         mode,
@@ -285,6 +323,7 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
         response_plan.should_use_reflection,
         response_plan.should_use_supervision,
         response_plan.should_use_leadership_lens,
+        len(regulation_payload),
         len(sources),
     )
 
@@ -301,4 +340,6 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
         response_plan=response_plan,
         guidance_plan=response_plan.guidance_plan,
         model_plan=response_plan.model_plan,
+        regulation_mapping=regulation_mapping,
+        regulation_payload=regulation_payload,
     )
