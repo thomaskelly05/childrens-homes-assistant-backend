@@ -20,11 +20,15 @@ from auth.routes import settings as auth_settings
 from auth.tokens import create_session_token, decode_session_token
 from db.connection import get_db
 from db.mfa_db import (
+    count_unused_recovery_codes,
     disable_user_mfa,
     enable_user_mfa,
     get_user_mfa,
     log_auth_event,
     save_recovery_codes,
+    update_last_verified,
+    upsert_user_mfa_secret,
+    use_recovery_code,
 )
 
 router = APIRouter(prefix="/auth/mfa", tags=["MFA"])
@@ -289,6 +293,7 @@ def mfa_status(request: Request, conn=Depends(get_db)):
         "email": user["email"],
         "mfa_enabled": bool(mfa_row and mfa_row.get("is_enabled")),
         "mfa_verified": request.session.get(SESSION_MFA_VERIFIED_KEY) is True,
+        "recovery_code_count": count_unused_recovery_codes(user["id"]),
     }
 
 
@@ -303,6 +308,7 @@ def get_mfa_setup(request: Request, conn=Depends(get_db)):
             "ok": True,
             "already_enabled": True,
             "mfa_enabled": True,
+            "recovery_code_count": count_unused_recovery_codes(user["id"]),
         }
 
     secret = pyotp.random_base32()
@@ -367,6 +373,11 @@ def complete_mfa_setup(
 
     recovery_codes = _generate_recovery_codes()
 
+    upsert_user_mfa_secret(
+        user_id=user["id"],
+        email=user["email"],
+        totp_secret=secret,
+    )
     enable_user_mfa(
         user_id=user["id"],
         secret=secret,
@@ -375,8 +386,10 @@ def complete_mfa_setup(
         user_id=user["id"],
         recovery_codes=recovery_codes,
     )
+    update_last_verified(user["id"])
 
     request.session.pop("pending_mfa_secret", None)
+
     _rotate_post_mfa_session(
         request=request,
         response=response,
@@ -434,6 +447,8 @@ def verify_mfa(
             detail="Invalid verification code",
         )
 
+    update_last_verified(user["id"])
+
     _rotate_post_mfa_session(
         request=request,
         response=response,
@@ -473,10 +488,9 @@ def verify_recovery_code(
             detail="MFA is not enabled for this user",
         )
 
-    code = _normalise_code(payload.code).upper()
-    existing_codes = mfa_row.get("recovery_codes") or []
+    code = _safe_string(payload.code).upper()
 
-    if code not in existing_codes:
+    if not use_recovery_code(user["id"], code):
         _log_auth(
             request=request,
             user_id=user["id"],
@@ -489,11 +503,7 @@ def verify_recovery_code(
             detail="Invalid recovery code",
         )
 
-    remaining_codes = [c for c in existing_codes if c != code]
-    save_recovery_codes(
-        user_id=user["id"],
-        recovery_codes=remaining_codes,
-    )
+    update_last_verified(user["id"])
 
     _rotate_post_mfa_session(
         request=request,
@@ -514,12 +524,12 @@ def verify_recovery_code(
         "ok": True,
         "message": "Recovery code accepted",
         "mfa_verified": True,
-        "remaining_recovery_codes": len(remaining_codes),
+        "remaining_recovery_codes": count_unused_recovery_codes(user["id"]),
     }
 
 
 @router.post("/disable")
-def disable_mfa(
+def disable_mfa_route(
     payload: DisableMFARequest,
     request: Request,
     conn=Depends(get_db),
@@ -618,4 +628,5 @@ def regenerate_recovery_codes(
         "ok": True,
         "message": "Recovery codes regenerated",
         "recovery_codes": recovery_codes,
+        "remaining_recovery_codes": len(recovery_codes),
     }
