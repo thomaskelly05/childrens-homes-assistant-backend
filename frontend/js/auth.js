@@ -286,9 +286,9 @@ async function verifyMfaCode(code) {
 }
 
 async function verifyRecoveryCode(recoveryCode) {
-  const data = await apiFetchJson("/auth/mfa/verify-recovery", {
+  const data = await apiFetchJson("/auth/mfa/recovery", {
     method: "POST",
-    body: JSON.stringify({ recovery_code: recoveryCode }),
+    body: JSON.stringify({ code: recoveryCode }),
   });
 
   if (!data?.ok) {
@@ -308,17 +308,17 @@ async function getMfaStatus() {
 }
 
 async function beginMfaSetup() {
-  return apiFetchJson("/auth/mfa/setup", { method: "POST" });
+  return apiFetchJson("/auth/mfa/setup", { method: "GET" });
 }
 
-async function enableMfa(code) {
-  const data = await apiFetchJson("/auth/mfa/enable", {
+async function completeMfaSetup(code) {
+  const data = await apiFetchJson("/auth/mfa/setup", {
     method: "POST",
     body: JSON.stringify({ code }),
   });
 
   if (!data?.ok) {
-    throw new Error("MFA enable failed");
+    throw new Error("MFA setup failed");
   }
 
   updateStoredUser({
@@ -333,9 +333,10 @@ async function enableMfa(code) {
   return data;
 }
 
-async function regenerateRecoveryCodes() {
-  const data = await apiFetchJson("/auth/mfa/regenerate-recovery-codes", {
+async function regenerateRecoveryCodes(code) {
+  const data = await apiFetchJson("/auth/mfa/recovery-codes/regenerate", {
     method: "POST",
+    body: JSON.stringify({ code }),
   });
 
   if (!data?.ok) {
@@ -369,7 +370,7 @@ window.auth = {
   verifyRecoveryCode,
   getMfaStatus,
   beginMfaSetup,
-  enableMfa,
+  completeMfaSetup,
   regenerateRecoveryCodes,
   saveRecoveryCodes,
   clearRecoveryCodes,
