@@ -574,15 +574,6 @@ def create_app() -> FastAPI:
         allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
     )
 
-    app.add_middleware(
-        SessionMiddleware,
-        secret_key=settings.session_secret,
-        same_site=auth_settings.cookie_samesite,
-        https_only=auth_settings.cookie_secure,
-        session_cookie="indicare_server_session",
-        max_age=auth_settings.cookie_max_age_short,
-    )
-
     app.add_middleware(SecurityHeadersMiddleware)
 
     app.add_middleware(
@@ -593,6 +584,15 @@ def create_app() -> FastAPI:
     )
 
     app.add_middleware(SecurityEnforcementMiddleware)
+
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=settings.session_secret,
+        same_site=auth_settings.cookie_samesite,
+        https_only=auth_settings.cookie_secure,
+        session_cookie="indicare_server_session",
+        max_age=auth_settings.cookie_max_age_short,
+    )
 
     for route in ROUTERS:
         include_router(app, route)
