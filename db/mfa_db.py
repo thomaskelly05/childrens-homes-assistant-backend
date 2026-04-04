@@ -76,13 +76,28 @@ def init_mfa_tables() -> None:
                 """
             )
 
-            # Backfill any null secrets if old schema was odd.
-            # Only do this if column exists and may be nullable.
             cur.execute(
                 """
                 UPDATE user_mfa
                 SET totp_secret = COALESCE(totp_secret, '')
                 WHERE totp_secret IS NULL
+                """
+            )
+
+            # Remove duplicate rows before adding the unique index if any legacy data exists.
+            cur.execute(
+                """
+                DELETE FROM user_mfa a
+                USING user_mfa b
+                WHERE a.user_id = b.user_id
+                  AND a.id < b.id
+                """
+            )
+
+            cur.execute(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_user_mfa_user_id_unique
+                ON user_mfa (user_id)
                 """
             )
 
@@ -159,7 +174,6 @@ def init_mfa_tables() -> None:
                 """
             )
 
-            # Repair older versions of the table
             cur.execute(
                 """
                 ALTER TABLE auth_audit_log
@@ -203,7 +217,6 @@ def init_mfa_tables() -> None:
                 """
             )
 
-            # Backfill required column before applying NOT NULL
             cur.execute(
                 """
                 UPDATE auth_audit_log
@@ -212,7 +225,6 @@ def init_mfa_tables() -> None:
                 """
             )
 
-            # Only now make sure event_type is NOT NULL
             cur.execute(
                 """
                 ALTER TABLE auth_audit_log
@@ -305,8 +317,19 @@ def get_user_mfa(user_id: int) -> dict[str, Any] | None:
 
             result = dict(row)
             result["secret"] = result.get("totp_secret")
+
+            cur.execute(
+                """
+                SELECT COUNT(*) AS c
+                FROM user_mfa_recovery_codes
+                WHERE user_id = %s
+                  AND is_used = FALSE
+                """,
+                (user_id,),
+            )
+            count_row = cur.fetchone()
             result["recovery_codes"] = []
-            result["recovery_code_count"] = count_unused_recovery_codes(user_id)
+            result["recovery_code_count"] = int(count_row["c"]) if count_row else 0
             return result
     finally:
         release_db_connection(conn)
