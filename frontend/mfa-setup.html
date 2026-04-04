@@ -24,9 +24,7 @@
       --code-bg: #f8fbfe;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     html, body {
       margin: 0;
@@ -63,16 +61,8 @@
       color: var(--primary);
     }
 
-    h1 {
-      margin: 0 0 12px;
-      font-size: 1.9rem;
-      line-height: 1.15;
-    }
-
-    h2, h3 {
-      margin: 0 0 10px;
-      font-size: 1rem;
-    }
+    h1 { margin: 0 0 12px; font-size: 1.9rem; line-height: 1.15; }
+    h2, h3 { margin: 0 0 10px; font-size: 1rem; }
 
     p {
       margin: 0 0 16px;
@@ -86,6 +76,27 @@
       padding: 16px;
       background: #fbfdff;
       margin-top: 16px;
+    }
+
+    .qr-wrap {
+      display: grid;
+      place-items: center;
+      min-height: 220px;
+      margin-top: 12px;
+      padding: 16px;
+      background: #fafcff;
+      border: 1px dashed var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .qr-wrap img {
+      width: 100%;
+      max-width: 260px;
+      height: auto;
+      display: block;
     }
 
     .secret-box,
@@ -102,15 +113,8 @@
       line-height: 1.6;
     }
 
-    details {
-      margin-top: 14px;
-    }
-
-    summary {
-      cursor: pointer;
-      font-weight: 700;
-      color: var(--primary);
-    }
+    details { margin-top: 14px; }
+    summary { cursor: pointer; font-weight: 700; color: var(--primary); }
 
     form {
       display: grid;
@@ -180,13 +184,8 @@
       line-height: 1.5;
     }
 
-    .status.success {
-      color: var(--success);
-    }
-
-    .status.error {
-      color: var(--error);
-    }
+    .status.success { color: var(--success); }
+    .status.error { color: var(--error); }
 
     .helper {
       margin-top: 16px;
@@ -195,9 +194,7 @@
       line-height: 1.6;
     }
 
-    .hidden {
-      display: none !important;
-    }
+    .hidden { display: none !important; }
 
     .recovery-box {
       margin-top: 18px;
@@ -217,9 +214,7 @@
     }
 
     @media (max-width: 760px) {
-      .card {
-        padding: 20px;
-      }
+      .card { padding: 20px; }
     }
   </style>
 </head>
@@ -227,16 +222,18 @@
   <main class="card">
     <div class="eyebrow">Secure access</div>
     <h1>Set up multi-factor authentication</h1>
-    <p>
-      To continue using IndiCare, you must set up multi-factor authentication for your account.
-    </p>
+    <p>To continue using IndiCare, you must set up multi-factor authentication for your account.</p>
 
     <div class="panel">
       <h2>Step 1</h2>
-      <p>
-        Open your authenticator app and add a new account using the manual setup key below.
-      </p>
+      <p>Open your authenticator app and scan the QR code below.</p>
 
+      <div id="qrWrap" class="qr-wrap">
+        <span id="qrLoading">Preparing QR code...</span>
+        <img id="qrImage" class="hidden" alt="MFA QR code" />
+      </div>
+
+      <p style="margin-top:12px;">If you cannot scan the code, enter this setup key manually:</p>
       <div id="secretBox" class="secret-box">Loading setup key...</div>
 
       <details>
@@ -272,9 +269,7 @@
 
     <div id="recoveryBox" class="recovery-box hidden">
       <h3>Recovery codes</h3>
-      <p style="margin-bottom:12px;">
-        Save these recovery codes somewhere secure. Each code can only be used once.
-      </p>
+      <p style="margin-bottom:12px;">Save these recovery codes somewhere secure. Each code can only be used once.</p>
       <ul id="recoveryList" class="recovery-list"></ul>
       <div class="actions">
         <button id="continueBtn" type="button" class="primary-btn">Continue to assistant</button>
@@ -294,6 +289,8 @@
   <script src="/js/auth.js"></script>
   <script>
     (function () {
+      const qrLoading = document.getElementById("qrLoading");
+      const qrImage = document.getElementById("qrImage");
       const secretBox = document.getElementById("secretBox");
       const uriBox = document.getElementById("uriBox");
       const form = document.getElementById("mfaSetupForm");
@@ -319,11 +316,23 @@
       }
 
       function setSetupLoading(message) {
-        secretBox.textContent = message || "Loading setup key...";
+        qrLoading.textContent = message || "Preparing QR code...";
+        qrLoading.classList.remove("hidden");
+        qrImage.classList.add("hidden");
+        qrImage.removeAttribute("src");
+        secretBox.textContent = "Loading setup key...";
         uriBox.textContent = "Loading provisioning details...";
       }
 
       function showSetup(data) {
+        if (data.qr_code_data_url) {
+          qrImage.src = data.qr_code_data_url;
+          qrImage.classList.remove("hidden");
+          qrLoading.classList.add("hidden");
+        } else {
+          qrLoading.textContent = "QR code unavailable. Use the manual setup key below.";
+        }
+
         secretBox.textContent = data.secret || "No setup key returned.";
         uriBox.textContent = data.provisioning_uri || "No provisioning URI returned.";
       }
@@ -373,7 +382,7 @@
 
       async function loadSetup() {
         setLoading(true);
-        setSetupLoading("Preparing setup key...");
+        setSetupLoading("Preparing QR code...");
         setStatus("");
         recoveryBox.classList.add("hidden");
         recoveryList.innerHTML = "";
@@ -389,7 +398,7 @@
 
           showSetup(data);
         } catch (error) {
-          setSetupLoading("Could not load setup key.");
+          setSetupLoading("Could not load setup details.");
           setStatus(error?.message || "Could not start MFA setup.", "error");
         } finally {
           setLoading(false);
