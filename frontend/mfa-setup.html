@@ -425,7 +425,7 @@
           }
 
           const existing = getStoredUserSafe();
-          const remember = !!localStorage.getItem("current_user");
+          const remember = localStorage.getItem("indicare_remember_me") === "true";
           const merged = {
             ...existing,
             mfa_enabled: true,
