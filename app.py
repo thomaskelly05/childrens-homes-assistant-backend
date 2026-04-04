@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import importlib
 import logging
 import os
@@ -544,6 +542,8 @@ def register_exception_handlers(app: FastAPI) -> None:
             content={
                 "ok": False,
                 "error": "Internal server error",
+                "exception_type": exc.__class__.__name__,
+                "detail": str(exc),
             },
         )
 
