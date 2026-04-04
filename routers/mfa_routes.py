@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import io
 import os
 import secrets
 import time
@@ -7,6 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import pyotp
+import qrcode
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 from psycopg2.extras import RealDictCursor
@@ -38,10 +41,6 @@ RECOVERY_CODE_LENGTH = int(os.getenv("MFA_RECOVERY_CODE_LENGTH", "10"))
 MFA_WINDOW = int(os.getenv("MFA_TOTP_WINDOW", "1"))
 
 
-# ---------------------------------------------------------
-# Models
-# ---------------------------------------------------------
-
 class VerifyMFARequest(BaseModel):
     code: str = Field(min_length=6, max_length=32)
 
@@ -57,10 +56,6 @@ class DisableMFARequest(BaseModel):
 class RecoveryCodeLoginRequest(BaseModel):
     code: str = Field(min_length=6, max_length=64)
 
-
-# ---------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------
 
 @dataclass(frozen=True)
 class SessionUser:
@@ -245,13 +240,6 @@ def _rotate_post_mfa_session(
     user_id: int,
     email: str,
 ) -> None:
-    """
-    Safer post-MFA session refresh:
-    - rotates the signed session token
-    - rotates the CSRF token
-    - updates server-side session state
-    - does NOT clear the whole session mid-request
-    """
     remember = bool(request.session.get("remember"))
     new_token = create_session_token(user_id)
     new_csrf = secrets.token_urlsafe(32)
@@ -277,9 +265,21 @@ def _verify_totp(secret: str, code: str) -> bool:
         return False
 
 
-# ---------------------------------------------------------
-# Routes
-# ---------------------------------------------------------
+def _build_qr_code_data_url(value: str) -> str:
+    qr = qrcode.QRCode(
+        version=1,
+        box_size=8,
+        border=4,
+    )
+    qr.add_data(value)
+    qr.make(fit=True)
+
+    image = qr.make_image(fill_color="black", back_color="white")
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
+
 
 @router.get("/status")
 def mfa_status(request: Request, conn=Depends(get_db)):
@@ -299,45 +299,61 @@ def mfa_status(request: Request, conn=Depends(get_db)):
 
 @router.get("/setup")
 def get_mfa_setup(request: Request, conn=Depends(get_db)):
-    session_user = _get_session_user(request)
-    user = _assert_active_user(_get_user_row(conn, session_user.user_id))
+    try:
+        session_user = _get_session_user(request)
+        user = _assert_active_user(_get_user_row(conn, session_user.user_id))
 
-    mfa_row = get_user_mfa(session_user.user_id)
-    if mfa_row and mfa_row.get("is_enabled"):
+        mfa_row = get_user_mfa(session_user.user_id)
+        if mfa_row and mfa_row.get("is_enabled"):
+            return {
+                "ok": True,
+                "already_enabled": True,
+                "mfa_enabled": True,
+                "recovery_code_count": count_unused_recovery_codes(user["id"]),
+            }
+
+        secret = pyotp.random_base32()
+        issuer = os.getenv("MFA_ISSUER_NAME", "IndiCare")
+        account_name = user.get("email") or session_user.email or f"user-{user['id']}@indicare.local"
+
+        provisioning_uri = pyotp.TOTP(secret).provisioning_uri(
+            name=account_name,
+            issuer_name=issuer,
+        )
+
+        qr_code_data_url = _build_qr_code_data_url(provisioning_uri)
+
+        request.session["pending_mfa_secret"] = secret
+
+        _log_auth(
+            request=request,
+            user_id=user["id"],
+            email=user["email"],
+            event_type="mfa_setup_started",
+            detail="MFA setup initiated",
+        )
+
         return {
             "ok": True,
-            "already_enabled": True,
-            "mfa_enabled": True,
-            "recovery_code_count": count_unused_recovery_codes(user["id"]),
+            "already_enabled": False,
+            "secret": secret,
+            "provisioning_uri": provisioning_uri,
+            "issuer": issuer,
+            "account_name": account_name,
+            "qr_code_data_url": qr_code_data_url,
         }
 
-    secret = pyotp.random_base32()
-    issuer = os.getenv("MFA_ISSUER_NAME", "IndiCare")
-    account_name = user["email"]
-
-    provisioning_uri = pyotp.TOTP(secret).provisioning_uri(
-        name=account_name,
-        issuer_name=issuer,
-    )
-
-    request.session["pending_mfa_secret"] = secret
-
-    _log_auth(
-        request=request,
-        user_id=user["id"],
-        email=user["email"],
-        event_type="mfa_setup_started",
-        detail="MFA setup initiated",
-    )
-
-    return {
-        "ok": True,
-        "already_enabled": False,
-        "secret": secret,
-        "provisioning_uri": provisioning_uri,
-        "issuer": issuer,
-        "account_name": account_name,
-    }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        _log_auth(
+            request=request,
+            user_id=None,
+            email=None,
+            event_type="mfa_setup_error",
+            detail=repr(exc),
+        )
+        raise
 
 
 @router.post("/setup")
@@ -448,8 +464,6 @@ def verify_mfa(
         )
 
     update_last_verified(user["id"])
-
-    # Keep this simple and stable first
     request.session[SESSION_MFA_VERIFIED_KEY] = True
     request.session["mfa_verified_at"] = int(time.time())
 
