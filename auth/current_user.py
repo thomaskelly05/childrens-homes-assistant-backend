@@ -6,6 +6,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from psycopg2 import OperationalError, ProgrammingError
 from psycopg2.extras import RealDictCursor
 
+from auth.routes import settings as auth_settings
 from auth.tokens import decode_session_token
 from db.billing_db import get_user_billing_by_user_id
 from db.connection import get_db
@@ -13,7 +14,7 @@ from db.connection import get_db
 logger = logging.getLogger(__name__)
 
 security = HTTPBearer(auto_error=False)
-SESSION_COOKIE_NAME = "indicare_session"
+SESSION_COOKIE_NAME = auth_settings.session_cookie_name
 
 BILLING_EXEMPT_PREFIXES = (
     "/billing/webhook",
