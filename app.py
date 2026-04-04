@@ -88,7 +88,7 @@ class Settings:
             host.strip()
             for host in os.getenv(
                 "ALLOWED_HOSTS",
-                "app.indicare.co.uk,localhost,127.0.0.1",
+                "app.indicare.co.uk,childrens-homes-assistant-backend-new.onrender.com,localhost,127.0.0.1",
             ).split(",")
             if host.strip()
         ]
