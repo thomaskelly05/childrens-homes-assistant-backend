@@ -1515,6 +1515,10 @@ function handleMetaEvent(payload) {
     parsed = {};
   }
 
+  if (parsed.conversation_id) {
+    state.conversationId = Number(parsed.conversation_id);
+  }
+
   state.currentStreamMeta = {
     sources: normArray(parsed.sources),
     runtime: normObj(parsed.runtime),
@@ -1945,9 +1949,9 @@ async function sendMessage() {
     if (has("send")) $("send").disabled = false;
 
     try {
-      const rows = await loadConversations();
-      if (!prevConversationId && !state.conversationId && rows.length) {
-        state.conversationId = rows[0]?.id;
+      await loadConversations();
+
+      if (!prevConversationId && state.conversationId) {
         await renameShort(state.conversationId, state.lastPrompt);
       }
     } catch {}
