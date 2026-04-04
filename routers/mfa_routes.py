@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import io
+import logging
 import os
 import secrets
 import time
@@ -34,16 +35,14 @@ from db.mfa_db import (
     use_recovery_code,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/auth/mfa", tags=["MFA"])
 
 RECOVERY_CODE_COUNT = int(os.getenv("MFA_RECOVERY_CODE_COUNT", "8"))
 RECOVERY_CODE_LENGTH = int(os.getenv("MFA_RECOVERY_CODE_LENGTH", "10"))
 MFA_WINDOW = int(os.getenv("MFA_TOTP_WINDOW", "1"))
 
-
-# ---------------------------------------------------------
-# Models
-# ---------------------------------------------------------
 
 class VerifyMFARequest(BaseModel):
     code: str = Field(min_length=6, max_length=32)
@@ -60,10 +59,6 @@ class DisableMFARequest(BaseModel):
 class RecoveryCodeLoginRequest(BaseModel):
     code: str = Field(min_length=6, max_length=64)
 
-
-# ---------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------
 
 @dataclass(frozen=True)
 class SessionUser:
@@ -115,7 +110,7 @@ def _log_auth(
             detail=detail,
         )
     except Exception:
-        pass
+        logger.exception("Failed to write auth audit log")
 
 
 def _extract_session_token(request: Request) -> str | None:
@@ -147,14 +142,23 @@ def _get_session_user(request: Request) -> SessionUser:
             detail="Invalid session",
         )
 
-    email = _safe_string(request.session.get(SESSION_USER_EMAIL_KEY))
     session_user_id = request.session.get(SESSION_USER_ID_KEY)
+    if session_user_id is not None:
+        try:
+            if int(session_user_id) != user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Session mismatch",
+                )
+        except (TypeError, ValueError):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid session state",
+            )
 
-    if session_user_id is None or int(session_user_id) != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Session mismatch",
-        )
+    email = _safe_string(request.session.get(SESSION_USER_EMAIL_KEY))
+    request.session[SESSION_USER_ID_KEY] = user_id
+    request.session.setdefault(SESSION_USER_EMAIL_KEY, email)
 
     return SessionUser(
         user_id=user_id,
@@ -174,7 +178,8 @@ def _get_user_row(conn: Any, user_id: int) -> dict[str, Any] | None:
             """,
             (user_id,),
         )
-        return cur.fetchone()
+        row = cur.fetchone()
+        return dict(row) if row else None
 
 
 def _assert_active_user(user: dict[str, Any] | None) -> dict[str, Any]:
@@ -248,11 +253,6 @@ def _rotate_post_mfa_session(
     user_id: int,
     email: str,
 ) -> None:
-    """
-    Safer post-MFA session refresh.
-    Not used by the core setup/verify success path until stable,
-    but kept for recovery flow and future use.
-    """
     remember = bool(request.session.get("remember"))
     new_token = create_session_token(user_id)
     new_csrf = secrets.token_urlsafe(32)
@@ -290,10 +290,6 @@ def _build_qr_code_data_url(value: str) -> str:
     return f"data:image/png;base64,{encoded}"
 
 
-# ---------------------------------------------------------
-# Routes
-# ---------------------------------------------------------
-
 @router.get("/status")
 def mfa_status(request: Request, conn=Depends(get_db)):
     session_user = _get_session_user(request)
@@ -327,7 +323,11 @@ def get_mfa_setup(request: Request, conn=Depends(get_db)):
 
         secret = pyotp.random_base32()
         issuer = os.getenv("MFA_ISSUER_NAME", "IndiCare")
-        account_name = user.get("email") or session_user.email or f"user-{user['id']}@indicare.local"
+        account_name = (
+            user.get("email")
+            or session_user.email
+            or f"user-{user['id']}@indicare.local"
+        )
 
         provisioning_uri = pyotp.TOTP(secret).provisioning_uri(
             name=account_name,
@@ -369,6 +369,7 @@ def get_mfa_setup(request: Request, conn=Depends(get_db)):
     except HTTPException:
         raise
     except Exception as exc:
+        logger.exception("Fatal MFA setup error")
         _log_auth(
             request=request,
             user_id=None,
@@ -376,7 +377,10 @@ def get_mfa_setup(request: Request, conn=Depends(get_db)):
             event_type="mfa_setup_error",
             detail=repr(exc),
         )
-        raise
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"MFA setup failed: {exc.__class__.__name__}: {str(exc)}",
+        )
 
 
 @router.post("/setup")
@@ -428,8 +432,6 @@ def complete_mfa_setup(
     update_last_verified(user["id"])
 
     request.session.pop("pending_mfa_secret", None)
-
-    # Keep setup stable and simple
     request.session[SESSION_MFA_VERIFIED_KEY] = True
     request.session["mfa_verified_at"] = int(time.time())
 
