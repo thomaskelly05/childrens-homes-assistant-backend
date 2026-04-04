@@ -41,6 +41,10 @@ RECOVERY_CODE_LENGTH = int(os.getenv("MFA_RECOVERY_CODE_LENGTH", "10"))
 MFA_WINDOW = int(os.getenv("MFA_TOTP_WINDOW", "1"))
 
 
+# ---------------------------------------------------------
+# Models
+# ---------------------------------------------------------
+
 class VerifyMFARequest(BaseModel):
     code: str = Field(min_length=6, max_length=32)
 
@@ -56,6 +60,10 @@ class DisableMFARequest(BaseModel):
 class RecoveryCodeLoginRequest(BaseModel):
     code: str = Field(min_length=6, max_length=64)
 
+
+# ---------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------
 
 @dataclass(frozen=True)
 class SessionUser:
@@ -240,6 +248,11 @@ def _rotate_post_mfa_session(
     user_id: int,
     email: str,
 ) -> None:
+    """
+    Safer post-MFA session refresh.
+    Not used by the core setup/verify success path until stable,
+    but kept for recovery flow and future use.
+    """
     remember = bool(request.session.get("remember"))
     new_token = create_session_token(user_id)
     new_csrf = secrets.token_urlsafe(32)
@@ -266,11 +279,7 @@ def _verify_totp(secret: str, code: str) -> bool:
 
 
 def _build_qr_code_data_url(value: str) -> str:
-    qr = qrcode.QRCode(
-        version=1,
-        box_size=8,
-        border=4,
-    )
+    qr = qrcode.QRCode(version=1, box_size=8, border=4)
     qr.add_data(value)
     qr.make(fit=True)
 
@@ -280,6 +289,10 @@ def _build_qr_code_data_url(value: str) -> str:
     encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
     return f"data:image/png;base64,{encoded}"
 
+
+# ---------------------------------------------------------
+# Routes
+# ---------------------------------------------------------
 
 @router.get("/status")
 def mfa_status(request: Request, conn=Depends(get_db)):
@@ -321,7 +334,17 @@ def get_mfa_setup(request: Request, conn=Depends(get_db)):
             issuer_name=issuer,
         )
 
-        qr_code_data_url = _build_qr_code_data_url(provisioning_uri)
+        qr_code_data_url = None
+        try:
+            qr_code_data_url = _build_qr_code_data_url(provisioning_uri)
+        except Exception as exc:
+            _log_auth(
+                request=request,
+                user_id=user["id"],
+                email=user["email"],
+                event_type="mfa_setup_qr_warning",
+                detail=repr(exc),
+            )
 
         request.session["pending_mfa_secret"] = secret
 
@@ -406,12 +429,9 @@ def complete_mfa_setup(
 
     request.session.pop("pending_mfa_secret", None)
 
-    _rotate_post_mfa_session(
-        request=request,
-        response=response,
-        user_id=user["id"],
-        email=user["email"],
-    )
+    # Keep setup stable and simple
+    request.session[SESSION_MFA_VERIFIED_KEY] = True
+    request.session["mfa_verified_at"] = int(time.time())
 
     _log_auth(
         request=request,
@@ -448,7 +468,7 @@ def verify_mfa(
         )
 
     code = _normalise_code(payload.code)
-    secret = _safe_string(mfa_row.get("secret"))
+    secret = _safe_string(mfa_row.get("totp_secret") or mfa_row.get("secret"))
 
     if not _verify_totp(secret, code):
         _log_auth(
@@ -556,7 +576,7 @@ def disable_mfa_route(
         )
 
     code = _normalise_code(payload.code)
-    secret = _safe_string(mfa_row.get("secret"))
+    secret = _safe_string(mfa_row.get("totp_secret") or mfa_row.get("secret"))
 
     if not _verify_totp(secret, code):
         _log_auth(
@@ -606,7 +626,7 @@ def regenerate_recovery_codes(
         )
 
     code = _normalise_code(payload.code)
-    secret = _safe_string(mfa_row.get("secret"))
+    secret = _safe_string(mfa_row.get("totp_secret") or mfa_row.get("secret"))
 
     if not _verify_totp(secret, code):
         _log_auth(
