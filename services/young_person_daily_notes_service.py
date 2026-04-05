@@ -5,6 +5,8 @@ from typing import Any
 
 from fastapi import HTTPException
 
+from services.os_sync_hooks import archive_after_status_change, sync_after_save
+
 
 class YoungPersonDailyNotesService:
     @staticmethod
@@ -221,6 +223,23 @@ class YoungPersonDailyNotesService:
         return f"{shift} daily note - {date_part}"
 
     @staticmethod
+    def _run_os_sync_after_save(
+        conn,
+        *,
+        daily_note_id: int,
+    ) -> None:
+        try:
+            note = YoungPersonDailyNotesService.get_daily_note(conn, daily_note_id)
+            sync_after_save(
+                source_table="daily_notes",
+                record=note,
+                recorded_by_name=note.get("author_name"),
+            )
+        except Exception:
+            # Keep the source record write successful even if OS sync fails.
+            pass
+
+    @staticmethod
     def list_daily_notes_for_young_person(
         conn,
         *,
@@ -411,6 +430,8 @@ class YoungPersonDailyNotesService:
             )
 
         conn.commit()
+        YoungPersonDailyNotesService._run_os_sync_after_save(conn, daily_note_id=daily_note_id)
+
         return {
             "message": "Daily note created successfully",
             "id": daily_note_id,
@@ -472,6 +493,8 @@ class YoungPersonDailyNotesService:
             raise HTTPException(status_code=404, detail="Daily note not found")
 
         conn.commit()
+        YoungPersonDailyNotesService._run_os_sync_after_save(conn, daily_note_id=daily_note_id)
+
         return {"message": "Daily note updated successfully", "id": row["id"]}
 
     @staticmethod
@@ -540,6 +563,8 @@ class YoungPersonDailyNotesService:
             )
 
         conn.commit()
+        YoungPersonDailyNotesService._run_os_sync_after_save(conn, daily_note_id=daily_note_id)
+
         return {
             "ok": True,
             "status": "submitted",
@@ -616,6 +641,8 @@ class YoungPersonDailyNotesService:
             )
 
         conn.commit()
+        YoungPersonDailyNotesService._run_os_sync_after_save(conn, daily_note_id=daily_note_id)
+
         return {
             "ok": True,
             "status": "approved",
@@ -688,6 +715,8 @@ class YoungPersonDailyNotesService:
             )
 
         conn.commit()
+        YoungPersonDailyNotesService._run_os_sync_after_save(conn, daily_note_id=daily_note_id)
+
         return {
             "ok": True,
             "status": "returned",
@@ -756,6 +785,16 @@ class YoungPersonDailyNotesService:
             )
 
         conn.commit()
+
+        try:
+            archive_after_status_change(
+                young_person_id=row["young_person_id"],
+                source_table="daily_notes",
+                source_id=daily_note_id,
+            )
+        except Exception:
+            pass
+
         return {
             "ok": True,
             "status": "archived",
