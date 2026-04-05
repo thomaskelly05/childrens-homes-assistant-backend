@@ -89,10 +89,9 @@ class ChildRecordSyncService:
         source_id: int,
         links: list[RecordLinkInput],
     ) -> None:
-        # grouped by relationship type so each source/type combination is replaced cleanly
         grouped: dict[str, list[tuple[str, int]]] = {}
-
         created_by = None
+
         for link in links:
             grouped.setdefault(link.relationship_type, []).append((link.to_table, link.to_id))
             if created_by is None:
