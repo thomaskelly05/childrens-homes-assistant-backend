@@ -7,6 +7,8 @@ from typing import Any
 from fastapi import HTTPException
 from fastapi.responses import PlainTextResponse
 
+from services.os_sync_hooks import archive_after_status_change, sync_after_save
+
 
 class YoungPersonIncidentsService:
     INCIDENT_TYPE_OPTIONS = [
@@ -307,6 +309,23 @@ class YoungPersonIncidentsService:
         return "\n".join([p for p in parts if p]) or "Incident recorded"
 
     @staticmethod
+    def _run_os_sync_after_save(
+        conn,
+        *,
+        incident_id: int,
+    ) -> None:
+        try:
+            incident = YoungPersonIncidentsService.get_incident(conn, incident_id)
+            sync_after_save(
+                source_table="incidents",
+                record=incident,
+                recorded_by_name=incident.get("staff_name"),
+            )
+        except Exception:
+            # Keep the source record write successful even if OS sync fails.
+            pass
+
+    @staticmethod
     def create_incident(
         conn,
         *,
@@ -445,6 +464,8 @@ class YoungPersonIncidentsService:
             )
 
         conn.commit()
+        YoungPersonIncidentsService._run_os_sync_after_save(conn, incident_id=incident_id)
+
         return {
             "message": "Incident created successfully",
             "id": incident_id,
@@ -528,6 +549,8 @@ class YoungPersonIncidentsService:
             raise HTTPException(status_code=404, detail="Incident not found")
 
         conn.commit()
+        YoungPersonIncidentsService._run_os_sync_after_save(conn, incident_id=incident_id)
+
         return {"message": "Incident updated successfully", "id": row["id"]}
 
     @staticmethod
@@ -599,6 +622,8 @@ class YoungPersonIncidentsService:
             )
 
         conn.commit()
+        YoungPersonIncidentsService._run_os_sync_after_save(conn, incident_id=incident_id)
+
         return {"ok": True, "status": "submitted", "id": updated["id"], "workflow": workflow_result}
 
     @staticmethod
@@ -680,6 +705,8 @@ class YoungPersonIncidentsService:
             )
 
         conn.commit()
+        YoungPersonIncidentsService._run_os_sync_after_save(conn, incident_id=incident_id)
+
         return {"ok": True, "status": "approved", "id": updated["id"], "workflow": workflow_result}
 
     @staticmethod
@@ -754,6 +781,8 @@ class YoungPersonIncidentsService:
             )
 
         conn.commit()
+        YoungPersonIncidentsService._run_os_sync_after_save(conn, incident_id=incident_id)
+
         return {"ok": True, "status": "returned", "id": updated["id"], "workflow": workflow_result}
 
     @staticmethod
@@ -814,6 +843,16 @@ class YoungPersonIncidentsService:
             )
 
         conn.commit()
+
+        try:
+            archive_after_status_change(
+                young_person_id=row["young_person_id"],
+                source_table="incidents",
+                source_id=incident_id,
+            )
+        except Exception:
+            pass
+
         return {"ok": True, "status": "archived", "id": updated["id"], "workflow": workflow_result}
 
     @staticmethod
