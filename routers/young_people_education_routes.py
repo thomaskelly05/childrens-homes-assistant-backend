@@ -154,7 +154,7 @@ def create_education_record(
         young_person_id=young_person_id,
         payload=payload.model_dump(exclude_none=True),
         actor_user_id=_safe_int(current_user.get("user_id")),
-        linking_service=YoungPeopleLinkingService,
+        linking_service=YoungPeopleLinkingService(),
     )
 
 
