@@ -39,10 +39,6 @@ class RecordLinkInput:
 
 
 class RecordLinkService:
-    """
-    Canonical service for linking related young person records.
-    """
-
     def create_link(self, payload: RecordLinkInput) -> int:
         relationship_type = _normalise_relationship_type(payload.relationship_type)
 
@@ -162,19 +158,6 @@ class RecordLinkService:
         targets: Iterable[tuple[str, int]],
         created_by: int | None = None,
     ) -> None:
-        """
-        Replace all links of one relationship type from a source record.
-
-        Example:
-            replace_links_for_source(
-                young_person_id=3,
-                from_table="incidents",
-                from_id=10,
-                relationship_type="supports",
-                targets=[("risk_assessments", 5), ("support_plans", 2)],
-                created_by=7,
-            )
-        """
         normalised_type = _normalise_relationship_type(relationship_type)
         deduped_targets = {(table, int(record_id)) for table, record_id in targets}
 
