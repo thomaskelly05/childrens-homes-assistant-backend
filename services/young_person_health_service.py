@@ -5,6 +5,8 @@ from typing import Any
 
 from fastapi import HTTPException
 
+from services.os_sync_hooks import sync_after_save
+
 
 class YoungPersonHealthService:
     @staticmethod
@@ -104,6 +106,24 @@ class YoungPersonHealthService:
             "created_at": row.get("created_at"),
             "updated_at": row.get("updated_at"),
         }
+
+    @staticmethod
+    def _run_os_sync_after_health_record_save(
+        conn,
+        *,
+        record_id: int,
+    ) -> None:
+        try:
+            row = YoungPersonHealthService.get_health_record(conn, record_id)
+            record = YoungPersonHealthService.transform_health_record(row)
+            sync_after_save(
+                source_table="health_records",
+                record=record,
+                recorded_by_name=record.get("created_by_name"),
+            )
+        except Exception:
+            # Keep the source record write successful even if OS sync fails.
+            pass
 
     @staticmethod
     def get_health_bundle(conn, young_person_id: int) -> dict[str, Any]:
@@ -482,6 +502,8 @@ class YoungPersonHealthService:
             )
 
         conn.commit()
+        YoungPersonHealthService._run_os_sync_after_health_record_save(conn, record_id=record_id)
+
         return {
             "message": "Health record created successfully",
             "id": record_id,
@@ -521,6 +543,8 @@ class YoungPersonHealthService:
             raise HTTPException(status_code=404, detail="Health record not found")
 
         conn.commit()
+        YoungPersonHealthService._run_os_sync_after_health_record_save(conn, record_id=record_id)
+
         return {"message": "Health record updated successfully", "id": row["id"]}
 
     @staticmethod
