@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Any
 
+from services.os_sync_hooks import archive_after_status_change, sync_after_save
+
 
 class YoungPersonAppointmentsService:
     # ---------------------------
@@ -21,6 +23,20 @@ class YoungPersonAppointmentsService:
     @staticmethod
     def _dict(row) -> dict[str, Any]:
         return dict(row) if row else {}
+
+    @staticmethod
+    def _run_os_sync_after_save(record: dict[str, Any] | None) -> None:
+        if not record:
+            return
+        try:
+            sync_after_save(
+                source_table="appointments",
+                record=record,
+                recorded_by_name=None,
+            )
+        except Exception:
+            # Keep the source record write successful even if OS sync fails.
+            pass
 
     # ---------------------------
     # Core loaders
@@ -213,7 +229,10 @@ class YoungPersonAppointmentsService:
                 created_by=actor_user_id,
             )
 
-        return {"ok": True, "appointment": dict(row)}
+        appointment = dict(row) if row else None
+        YoungPersonAppointmentsService._run_os_sync_after_save(appointment)
+
+        return {"ok": True, "appointment": appointment}
 
     # ---------------------------
     # Update
@@ -250,7 +269,10 @@ class YoungPersonAppointmentsService:
 
         conn.commit()
 
-        return {"ok": True, "appointment": dict(row)}
+        appointment = dict(row) if row else None
+        YoungPersonAppointmentsService._run_os_sync_after_save(appointment)
+
+        return {"ok": True, "appointment": appointment}
 
     # ---------------------------
     # Status changes
@@ -273,7 +295,11 @@ class YoungPersonAppointmentsService:
             row = cur.fetchone()
 
         conn.commit()
-        return {"ok": True, "appointment": dict(row)}
+
+        appointment = dict(row) if row else None
+        YoungPersonAppointmentsService._run_os_sync_after_save(appointment)
+
+        return {"ok": True, "appointment": appointment}
 
     @staticmethod
     def complete_appointment(conn, *, appointment_id: int, actor_user_id: int | None, outcome: str | None, linking_service):
@@ -302,4 +328,17 @@ class YoungPersonAppointmentsService:
             row = cur.fetchone()
 
         conn.commit()
-        return {"ok": True, "appointment": dict(row)}
+
+        appointment = dict(row) if row else None
+
+        try:
+            if appointment:
+                archive_after_status_change(
+                    young_person_id=appointment["young_person_id"],
+                    source_table="appointments",
+                    source_id=appointment["id"],
+                )
+        except Exception:
+            pass
+
+        return {"ok": True, "appointment": appointment}
