@@ -4,13 +4,6 @@ from services.standards_link_service import StandardLinkInput
 
 
 class StandardsMapper:
-    """
-    Rule-based mapper from source records to Quality Standards and judgement areas.
-
-    This is intentionally simple first.
-    You can deepen the logic later.
-    """
-
     def map_record(
         self,
         *,
@@ -32,10 +25,16 @@ class StandardsMapper:
             linked_by=linked_by,
         )
 
-    def _map_daily_notes(self, *, young_person_id: int, source_table: str, source_id: int, record: dict, linked_by: int | None) -> list[StandardLinkInput]:
-        links: list[StandardLinkInput] = []
-
-        links.append(
+    def _map_daily_notes(
+        self,
+        *,
+        young_person_id: int,
+        source_table: str,
+        source_id: int,
+        record: dict,
+        linked_by: int | None,
+    ) -> list[StandardLinkInput]:
+        links: list[StandardLinkInput] = [
             StandardLinkInput(
                 young_person_id=young_person_id,
                 source_table=source_table,
@@ -47,7 +46,7 @@ class StandardsMapper:
                 auto_linked=True,
                 judgement_area="experiences_and_progress",
             )
-        )
+        ]
 
         if record.get("young_person_voice"):
             links.append(
@@ -96,7 +95,15 @@ class StandardsMapper:
 
         return links
 
-    def _map_incidents(self, *, young_person_id: int, source_table: str, source_id: int, record: dict, linked_by: int | None) -> list[StandardLinkInput]:
+    def _map_incidents(
+        self,
+        *,
+        young_person_id: int,
+        source_table: str,
+        source_id: int,
+        record: dict,
+        linked_by: int | None,
+    ) -> list[StandardLinkInput]:
         links = [
             StandardLinkInput(
                 young_person_id=young_person_id,
@@ -143,8 +150,16 @@ class StandardsMapper:
 
         return links
 
-    def _map_risk_assessments(self, *, young_person_id: int, source_table: str, source_id: int, record: dict, linked_by: int | None) -> list[StandardLinkInput]:
-        return [
+    def _map_risk_assessments(
+        self,
+        *,
+        young_person_id: int,
+        source_table: str,
+        source_id: int,
+        record: dict,
+        linked_by: int | None,
+    ) -> list[StandardLinkInput]:
+        links = [
             StandardLinkInput(
                 young_person_id=young_person_id,
                 source_table=source_table,
@@ -169,7 +184,32 @@ class StandardsMapper:
             ),
         ]
 
-    def _map_support_plans(self, *, young_person_id: int, source_table: str, source_id: int, record: dict, linked_by: int | None) -> list[StandardLinkInput]:
+        if record.get("child_views"):
+            links.append(
+                StandardLinkInput(
+                    young_person_id=young_person_id,
+                    source_table=source_table,
+                    source_id=source_id,
+                    standard_code="QS02",
+                    evidence_strength="moderate",
+                    rationale="Risk assessment includes the child's views.",
+                    linked_by=linked_by,
+                    auto_linked=True,
+                    judgement_area="experiences_and_progress",
+                )
+            )
+
+        return links
+
+    def _map_support_plans(
+        self,
+        *,
+        young_person_id: int,
+        source_table: str,
+        source_id: int,
+        record: dict,
+        linked_by: int | None,
+    ) -> list[StandardLinkInput]:
         links = [
             StandardLinkInput(
                 young_person_id=young_person_id,
@@ -212,9 +252,16 @@ class StandardsMapper:
 
         return links
 
-    def _map_young_person_appointments(self, *, young_person_id: int, source_table: str, source_id: int, record: dict, linked_by: int | None) -> list[StandardLinkInput]:
+    def _map_young_person_appointments(
+        self,
+        *,
+        young_person_id: int,
+        source_table: str,
+        source_id: int,
+        record: dict,
+        linked_by: int | None,
+    ) -> list[StandardLinkInput]:
         links: list[StandardLinkInput] = []
-
         appointment_type = str(record.get("appointment_type") or "").lower()
 
         if appointment_type in {"health", "therapy"}:
@@ -263,3 +310,181 @@ class StandardsMapper:
             )
 
         return links
+
+    def _map_keywork_sessions(
+        self,
+        *,
+        young_person_id: int,
+        source_table: str,
+        source_id: int,
+        record: dict,
+        linked_by: int | None,
+    ) -> list[StandardLinkInput]:
+        links = [
+            StandardLinkInput(
+                young_person_id=young_person_id,
+                source_table=source_table,
+                source_id=source_id,
+                standard_code="QS01",
+                evidence_strength="moderate",
+                rationale="Keywork evidences direct planned work with the young person.",
+                linked_by=linked_by,
+                auto_linked=True,
+                judgement_area="experiences_and_progress",
+            )
+        ]
+
+        if record.get("child_voice"):
+            links.append(
+                StandardLinkInput(
+                    young_person_id=young_person_id,
+                    source_table=source_table,
+                    source_id=source_id,
+                    standard_code="QS02",
+                    evidence_strength="strong",
+                    rationale="Keywork includes the child's views or voice.",
+                    linked_by=linked_by,
+                    auto_linked=True,
+                    judgement_area="experiences_and_progress",
+                )
+            )
+
+        return links
+
+    def _map_health_records(
+        self,
+        *,
+        young_person_id: int,
+        source_table: str,
+        source_id: int,
+        record: dict,
+        linked_by: int | None,
+    ) -> list[StandardLinkInput]:
+        return [
+            StandardLinkInput(
+                young_person_id=young_person_id,
+                source_table=source_table,
+                source_id=source_id,
+                standard_code="QS07",
+                evidence_strength="moderate",
+                rationale="Health record evidences health and wellbeing support.",
+                linked_by=linked_by,
+                auto_linked=True,
+                judgement_area="experiences_and_progress",
+            )
+        ]
+
+    def _map_education_records(
+        self,
+        *,
+        young_person_id: int,
+        source_table: str,
+        source_id: int,
+        record: dict,
+        linked_by: int | None,
+    ) -> list[StandardLinkInput]:
+        return [
+            StandardLinkInput(
+                young_person_id=young_person_id,
+                source_table=source_table,
+                source_id=source_id,
+                standard_code="QS08",
+                evidence_strength="moderate",
+                rationale="Education record evidences education engagement and support.",
+                linked_by=linked_by,
+                auto_linked=True,
+                judgement_area="experiences_and_progress",
+            )
+        ]
+
+    def _map_family_contact_records(
+        self,
+        *,
+        young_person_id: int,
+        source_table: str,
+        source_id: int,
+        record: dict,
+        linked_by: int | None,
+    ) -> list[StandardLinkInput]:
+        return [
+            StandardLinkInput(
+                young_person_id=young_person_id,
+                source_table=source_table,
+                source_id=source_id,
+                standard_code="QS11",
+                evidence_strength="moderate",
+                rationale="Family contact record evidences support for positive relationships.",
+                linked_by=linked_by,
+                auto_linked=True,
+                judgement_area="experiences_and_progress",
+            )
+        ]
+
+    def _map_safeguarding_records(
+        self,
+        *,
+        young_person_id: int,
+        source_table: str,
+        source_id: int,
+        record: dict,
+        linked_by: int | None,
+    ) -> list[StandardLinkInput]:
+        return [
+            StandardLinkInput(
+                young_person_id=young_person_id,
+                source_table=source_table,
+                source_id=source_id,
+                standard_code="QS12",
+                evidence_strength="strong",
+                rationale="Safeguarding record evidences response to child protection concerns.",
+                linked_by=linked_by,
+                auto_linked=True,
+                judgement_area="helped_and_protected",
+            )
+        ]
+
+    def _map_missing_episodes(
+        self,
+        *,
+        young_person_id: int,
+        source_table: str,
+        source_id: int,
+        record: dict,
+        linked_by: int | None,
+    ) -> list[StandardLinkInput]:
+        return [
+            StandardLinkInput(
+                young_person_id=young_person_id,
+                source_table=source_table,
+                source_id=source_id,
+                standard_code="QS12",
+                evidence_strength="strong",
+                rationale="Missing episode record evidences protective response and review of vulnerability.",
+                linked_by=linked_by,
+                auto_linked=True,
+                judgement_area="helped_and_protected",
+            )
+        ]
+
+    def _map_achievement_records(
+        self,
+        *,
+        young_person_id: int,
+        source_table: str,
+        source_id: int,
+        record: dict,
+        linked_by: int | None,
+    ) -> list[StandardLinkInput]:
+        return [
+            StandardLinkInput(
+                young_person_id=young_person_id,
+                source_table=source_table,
+                source_id=source_id,
+                standard_code="QS06",
+                evidence_strength="moderate",
+                rationale="Achievement record evidences progress and positive experiences.",
+                linked_by=linked_by,
+                auto_linked=True,
+                judgement_area="experiences_and_progress",
+            )
+        ]
