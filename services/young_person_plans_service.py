@@ -6,6 +6,8 @@ from typing import Any
 from fastapi import HTTPException
 from fastapi.responses import PlainTextResponse
 
+from services.os_sync_hooks import archive_after_status_change, sync_after_save
+
 
 class YoungPersonPlansService:
     VALID_STATUSES = {"draft", "active", "completed", "archived"}
@@ -177,6 +179,23 @@ class YoungPersonPlansService:
             raise HTTPException(status_code=404, detail="Support plan not found")
 
         return row
+
+    @staticmethod
+    def _run_os_sync_after_save(
+        conn,
+        *,
+        plan_id: int,
+    ) -> None:
+        try:
+            plan = YoungPersonPlansService.get_support_plan(conn, plan_id)
+            sync_after_save(
+                source_table="support_plans",
+                record=plan,
+                recorded_by_name=plan.get("created_by_name") or plan.get("owner_name"),
+            )
+        except Exception:
+            # Keep the source record write successful even if OS sync fails.
+            pass
 
     @staticmethod
     def list_plans_for_young_person(
@@ -380,6 +399,8 @@ class YoungPersonPlansService:
             )
 
         conn.commit()
+        YoungPersonPlansService._run_os_sync_after_save(conn, plan_id=plan_id)
+
         return {
             "message": "Support plan created successfully",
             "id": plan_id,
@@ -438,6 +459,8 @@ class YoungPersonPlansService:
             raise HTTPException(status_code=404, detail="Support plan not found")
 
         conn.commit()
+        YoungPersonPlansService._run_os_sync_after_save(conn, plan_id=plan_id)
+
         return {"message": "Support plan updated successfully", "id": row["id"]}
 
     @staticmethod
@@ -501,6 +524,8 @@ class YoungPersonPlansService:
             )
 
         conn.commit()
+        YoungPersonPlansService._run_os_sync_after_save(conn, plan_id=plan_id)
+
         return {"ok": True, "status": "submitted", "id": updated["id"], "workflow": workflow_result}
 
     @staticmethod
@@ -569,6 +594,8 @@ class YoungPersonPlansService:
             )
 
         conn.commit()
+        YoungPersonPlansService._run_os_sync_after_save(conn, plan_id=plan_id)
+
         return {"ok": True, "status": "approved", "id": updated["id"], "workflow": workflow_result}
 
     @staticmethod
@@ -632,6 +659,8 @@ class YoungPersonPlansService:
             )
 
         conn.commit()
+        YoungPersonPlansService._run_os_sync_after_save(conn, plan_id=plan_id)
+
         return {
             "ok": True,
             "status": "returned",
@@ -698,6 +727,16 @@ class YoungPersonPlansService:
             )
 
         conn.commit()
+
+        try:
+            archive_after_status_change(
+                young_person_id=row["young_person_id"],
+                source_table="support_plans",
+                source_id=plan_id,
+            )
+        except Exception:
+            pass
+
         return {"ok": True, "status": "archived", "id": updated["id"], "workflow": workflow_result}
 
     @staticmethod
