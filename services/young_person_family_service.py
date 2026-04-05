@@ -5,6 +5,8 @@ from typing import Any
 
 from fastapi import HTTPException
 
+from services.os_sync_hooks import sync_after_save
+
 
 class YoungPersonFamilyService:
     @staticmethod
@@ -83,6 +85,24 @@ class YoungPersonFamilyService:
             "quality_standards": ["positive_relationships", "wishes_and_feelings"],
             "judgement_areas": ["experiences_and_progress"],
         }
+
+    @staticmethod
+    def _run_os_sync_after_family_contact_record_save(
+        conn,
+        *,
+        record_id: int,
+    ) -> None:
+        try:
+            row = YoungPersonFamilyService.get_family_contact_record_row(conn, record_id)
+            record = YoungPersonFamilyService.transform_family_contact_record(row)
+            sync_after_save(
+                source_table="family_contact_records",
+                record=record,
+                recorded_by_name=record.get("created_by_name"),
+            )
+        except Exception:
+            # Keep the source record write successful even if OS sync fails.
+            pass
 
     @staticmethod
     def get_family_bundle(conn, young_person_id: int) -> dict[str, Any]:
@@ -388,6 +408,8 @@ class YoungPersonFamilyService:
             )
 
         conn.commit()
+        YoungPersonFamilyService._run_os_sync_after_family_contact_record_save(conn, record_id=record_id)
+
         return {
             "message": "Family contact record created successfully",
             "id": record_id,
@@ -429,4 +451,6 @@ class YoungPersonFamilyService:
             raise HTTPException(status_code=404, detail="Family contact record not found")
 
         conn.commit()
+        YoungPersonFamilyService._run_os_sync_after_family_contact_record_save(conn, record_id=record_id)
+
         return {"message": "Family contact record updated successfully", "id": row["id"]}
