@@ -5,6 +5,8 @@ from typing import Any
 
 from fastapi import HTTPException
 
+from services.os_sync_hooks import archive_after_status_change, sync_after_save
+
 
 class YoungPersonRiskService:
     VALID_SEVERITIES = {"low", "medium", "high", "critical"}
@@ -174,6 +176,23 @@ class YoungPersonRiskService:
             raise HTTPException(status_code=404, detail="Risk assessment not found")
 
         return row
+
+    @staticmethod
+    def _run_os_sync_after_save(
+        conn,
+        *,
+        risk_id: int,
+    ) -> None:
+        try:
+            risk = YoungPersonRiskService.get_risk(conn, risk_id)
+            sync_after_save(
+                source_table="risk_assessments",
+                record=risk,
+                recorded_by_name=risk.get("created_by_name") or risk.get("owner_name"),
+            )
+        except Exception:
+            # Keep the source record write successful even if OS sync fails.
+            pass
 
     @staticmethod
     def list_risk_for_young_person(
@@ -361,6 +380,8 @@ class YoungPersonRiskService:
             )
 
         conn.commit()
+        YoungPersonRiskService._run_os_sync_after_save(conn, risk_id=risk_id)
+
         return {
             "message": "Risk assessment created successfully",
             "id": risk_id,
@@ -418,6 +439,8 @@ class YoungPersonRiskService:
             raise HTTPException(status_code=404, detail="Risk assessment not found")
 
         conn.commit()
+        YoungPersonRiskService._run_os_sync_after_save(conn, risk_id=risk_id)
+
         return {"message": "Risk assessment updated successfully", "id": row["id"]}
 
     @staticmethod
@@ -482,6 +505,8 @@ class YoungPersonRiskService:
             )
 
         conn.commit()
+        YoungPersonRiskService._run_os_sync_after_save(conn, risk_id=risk_id)
+
         return {"ok": True, "status": "submitted", "id": updated["id"], "workflow": workflow_result}
 
     @staticmethod
@@ -550,6 +575,8 @@ class YoungPersonRiskService:
             )
 
         conn.commit()
+        YoungPersonRiskService._run_os_sync_after_save(conn, risk_id=risk_id)
+
         return {"ok": True, "status": "approved", "id": updated["id"], "workflow": workflow_result}
 
     @staticmethod
@@ -613,6 +640,8 @@ class YoungPersonRiskService:
             )
 
         conn.commit()
+        YoungPersonRiskService._run_os_sync_after_save(conn, risk_id=risk_id)
+
         return {"ok": True, "status": "returned", "id": updated["id"], "workflow": workflow_result}
 
     @staticmethod
@@ -674,4 +703,14 @@ class YoungPersonRiskService:
             )
 
         conn.commit()
+
+        try:
+            archive_after_status_change(
+                young_person_id=row["young_person_id"],
+                source_table="risk_assessments",
+                source_id=risk_id,
+            )
+        except Exception:
+            pass
+
         return {"ok": True, "status": "archived", "id": updated["id"], "workflow": workflow_result}
