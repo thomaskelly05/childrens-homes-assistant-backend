@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, time
 from typing import Any
 
 from db.connection import get_db_connection, release_db_connection
@@ -13,22 +13,22 @@ VALID_WORKFLOW_STATUS = {"draft", "submitted", "approved", "returned", "archived
 
 
 def _normalise_significance(value: str | None) -> str:
-    value = (value or "medium").strip().lower()
-    return value if value in VALID_SIGNIFICANCE else "medium"
+    cleaned = (value or "medium").strip().lower()
+    return cleaned if cleaned in VALID_SIGNIFICANCE else "medium"
 
 
 def _normalise_severity(value: str | None) -> str | None:
     if not value:
         return None
-    value = value.strip().lower()
-    return value if value in VALID_SEVERITY else None
+    cleaned = value.strip().lower()
+    return cleaned if cleaned in VALID_SEVERITY else None
 
 
 def _normalise_workflow_status(value: str | None) -> str | None:
     if not value:
         return None
-    value = value.strip().lower()
-    return value if value in VALID_WORKFLOW_STATUS else None
+    cleaned = value.strip().lower()
+    return cleaned if cleaned in VALID_WORKFLOW_STATUS else None
 
 
 def _coerce_datetime(value: datetime | date | str | None) -> datetime | None:
@@ -37,30 +37,33 @@ def _coerce_datetime(value: datetime | date | str | None) -> datetime | None:
     if isinstance(value, datetime):
         return value
     if isinstance(value, date):
-        return datetime.combine(value, datetime.min.time())
+        return datetime.combine(value, time.min)
     if isinstance(value, str):
         raw = value.strip()
         if not raw:
             return None
-        for parser in (datetime.fromisoformat,):
+        try:
+            return datetime.fromisoformat(raw)
+        except ValueError:
             try:
-                return parser(raw)
+                return datetime.combine(date.fromisoformat(raw), time.min)
             except ValueError:
-                continue
+                return None
     return None
 
 
 @dataclass(slots=True)
 class ChronologyEventInput:
     young_person_id: int
-    home_id: int | None
     source_table: str
     source_id: int
     event_datetime: datetime | date | str | None
     category: str
+    title: str
+    summary: str
+
+    home_id: int | None = None
     subcategory: str | None = None
-    title: str = ""
-    summary: str = ""
     significance: str = "medium"
     created_by: int | None = None
     auto_generated: bool = True
@@ -82,15 +85,6 @@ class ChronologyEventInput:
 
 
 class ChronologyWriter:
-    """
-    Shared service for creating/updating chronology entries.
-
-    Intended usage:
-    - create source record
-    - call upsert_event(...)
-    - optionally add record links / standard links
-    """
-
     def upsert_event(self, payload: ChronologyEventInput) -> int:
         conn = None
         try:
@@ -111,10 +105,10 @@ class ChronologyWriter:
                         payload.young_person_id,
                     ),
                 )
-                row = cur.fetchone()
+                existing = cur.fetchone()
 
-                if row:
-                    chronology_event_id = int(row[0])
+                if existing:
+                    chronology_event_id = int(existing[0])
                     self._update_event(cur, chronology_event_id, payload)
                 else:
                     chronology_event_id = self._insert_event(cur, payload)
@@ -258,8 +252,8 @@ class ChronologyWriter:
                 payload.tags_json or [],
                 payload.recorded_by_name,
                 _normalise_workflow_status(payload.workflow_status),
-                payload.safeguarding_flag,
-                payload.child_voice_present,
+                bool(payload.safeguarding_flag),
+                bool(payload.child_voice_present),
                 _normalise_severity(payload.severity),
                 payload.primary_record_type or payload.category,
             ),
@@ -320,8 +314,8 @@ class ChronologyWriter:
                 payload.tags_json or [],
                 payload.recorded_by_name,
                 _normalise_workflow_status(payload.workflow_status),
-                payload.safeguarding_flag,
-                payload.child_voice_present,
+                bool(payload.safeguarding_flag),
+                bool(payload.child_voice_present),
                 _normalise_severity(payload.severity),
                 payload.primary_record_type or payload.category,
                 chronology_event_id,
