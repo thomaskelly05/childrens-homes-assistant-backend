@@ -1,9 +1,11 @@
-from __future__ import annotations
+=from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
 
 from fastapi import HTTPException
+
+from services.os_sync_hooks import sync_after_save
 
 
 class YoungPersonEducationService:
@@ -63,6 +65,24 @@ class YoungPersonEducationService:
             "quality_standards": ["education"],
             "judgement_areas": ["experiences_and_progress"],
         }
+
+    @staticmethod
+    def _run_os_sync_after_education_record_save(
+        conn,
+        *,
+        record_id: int,
+    ) -> None:
+        try:
+            row = YoungPersonEducationService.get_education_record_row(conn, record_id)
+            record = YoungPersonEducationService.transform_education_record(row)
+            sync_after_save(
+                source_table="education_records",
+                record=record,
+                recorded_by_name=record.get("created_by_name"),
+            )
+        except Exception:
+            # Keep the source record write successful even if OS sync fails.
+            pass
 
     @staticmethod
     def get_education_bundle(conn, young_person_id: int) -> dict[str, Any]:
@@ -329,6 +349,8 @@ class YoungPersonEducationService:
             )
 
         conn.commit()
+        YoungPersonEducationService._run_os_sync_after_education_record_save(conn, record_id=record_id)
+
         return {
             "message": "Education record created successfully",
             "id": record_id,
@@ -369,4 +391,6 @@ class YoungPersonEducationService:
             raise HTTPException(status_code=404, detail="Record not found")
 
         conn.commit()
+        YoungPersonEducationService._run_os_sync_after_education_record_save(conn, record_id=record_id)
+
         return {"message": "Education record updated successfully", "id": row["id"]}
