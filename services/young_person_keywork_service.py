@@ -5,6 +5,8 @@ from typing import Any
 
 from fastapi import HTTPException
 
+from services.os_sync_hooks import archive_after_status_change, sync_after_save
+
 
 class YoungPersonKeyworkService:
     VALID_STATUSES = {"draft", "submitted", "approved", "returned", "archived"}
@@ -111,6 +113,23 @@ class YoungPersonKeyworkService:
     def get_keywork(conn, keywork_id: int) -> dict[str, Any]:
         row = YoungPersonKeyworkService.get_keywork_row(conn, keywork_id)
         return YoungPersonKeyworkService.transform_keywork_row(row)
+
+    @staticmethod
+    def _run_os_sync_after_save(
+        conn,
+        *,
+        keywork_id: int,
+    ) -> None:
+        try:
+            keywork = YoungPersonKeyworkService.get_keywork(conn, keywork_id)
+            sync_after_save(
+                source_table="keywork_sessions",
+                record=keywork,
+                recorded_by_name=keywork.get("worker_name"),
+            )
+        except Exception:
+            # Keep the source record write successful even if OS sync fails.
+            pass
 
     @staticmethod
     def list_keywork(conn, young_person_id: int) -> list[dict[str, Any]]:
@@ -248,6 +267,8 @@ class YoungPersonKeyworkService:
             )
 
         conn.commit()
+        YoungPersonKeyworkService._run_os_sync_after_save(conn, keywork_id=keywork_id)
+
         return {
             "message": "Keywork session created successfully",
             "id": keywork_id,
@@ -291,6 +312,8 @@ class YoungPersonKeyworkService:
             raise HTTPException(status_code=404, detail="Keywork session not found")
 
         conn.commit()
+        YoungPersonKeyworkService._run_os_sync_after_save(conn, keywork_id=keywork_id)
+
         return {"ok": True, "id": row["id"]}
 
     @staticmethod
@@ -355,6 +378,8 @@ class YoungPersonKeyworkService:
             )
 
         conn.commit()
+        YoungPersonKeyworkService._run_os_sync_after_save(conn, keywork_id=keywork_id)
+
         return {"status": "submitted", "id": updated["id"], "workflow": workflow_result}
 
     @staticmethod
@@ -422,6 +447,8 @@ class YoungPersonKeyworkService:
             )
 
         conn.commit()
+        YoungPersonKeyworkService._run_os_sync_after_save(conn, keywork_id=keywork_id)
+
         return {"status": "approved", "id": updated["id"], "workflow": workflow_result}
 
     @staticmethod
@@ -485,6 +512,8 @@ class YoungPersonKeyworkService:
             )
 
         conn.commit()
+        YoungPersonKeyworkService._run_os_sync_after_save(conn, keywork_id=keywork_id)
+
         return {"status": "returned", "id": updated["id"], "workflow": workflow_result}
 
     @staticmethod
@@ -544,4 +573,14 @@ class YoungPersonKeyworkService:
             )
 
         conn.commit()
+
+        try:
+            archive_after_status_change(
+                young_person_id=row["young_person_id"],
+                source_table="keywork_sessions",
+                source_id=keywork_id,
+            )
+        except Exception:
+            pass
+
         return {"status": "archived", "id": updated["id"], "workflow": workflow_result}
