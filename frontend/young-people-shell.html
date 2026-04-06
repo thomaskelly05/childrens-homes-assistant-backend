@@ -3,120 +3,216 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IndiCare OS • Young Person</title>
+  <title>IndiCare OS • Young Person Workspace</title>
   <link rel="stylesheet" href="/css/young-people-shell.css" />
 </head>
 <body>
-  <div class="app-shell">
+  <div class="shell">
     <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark">IC</div>
-        <div class="brand-copy">
-          <h1>IndiCare OS</h1>
-          <p>Children’s Residential</p>
-        </div>
+      <div class="sidebar-brand">
+        <h1>IndiCare OS</h1>
+        <p>Children’s Residential Workspace</p>
       </div>
 
-      <section class="person-summary card-soft">
-        <div id="personAvatar" class="person-avatar">YP</div>
-        <div class="person-text">
-          <h2 id="personName">No young person selected</h2>
-          <p id="personMeta">Choose from the selector</p>
-        </div>
-      </section>
+      <div class="sidebar-section-label">Workspace</div>
+      <nav id="sidebarNav" class="sidebar-nav">
+        <button class="nav-btn active" data-view="home" type="button">
+          <span class="nav-btn-title">Home</span>
+          <span class="nav-btn-subtitle">What matters now</span>
+        </button>
 
-      <button id="changePersonBtn" class="sidebar-btn" type="button">Change young person</button>
+        <button class="nav-btn" data-view="profile" type="button">
+          <span class="nav-btn-title">Profile</span>
+          <span class="nav-btn-subtitle">Identity and needs</span>
+        </button>
 
-      <div class="nav-group">
-        <div class="nav-group-title">Main</div>
-        <nav id="sidebarNav" class="sidebar-nav">
-          <button class="nav-btn active" data-view="home" type="button">Home</button>
-          <button class="nav-btn" data-view="write" type="button">Write</button>
-          <button class="nav-btn" data-view="timeline" type="button">Timeline</button>
-          <button class="nav-btn" data-view="actions" type="button">Actions</button>
-          <button class="nav-btn" data-view="reports" type="button">Reports</button>
-          <button class="nav-btn" data-view="profile" type="button">Profile &amp; settings</button>
-        </nav>
-      </div>
+        <button class="nav-btn" data-view="calendar" type="button">
+          <span class="nav-btn-title">Calendar</span>
+          <span class="nav-btn-subtitle">Day by day view</span>
+        </button>
 
-      <div class="sidebar-footer card-soft">
-        <h3>Today’s aim</h3>
-        <p>Keep recording clear, kind, chronological and useful for the next adult.</p>
+        <button class="nav-btn" data-view="timeline" type="button">
+          <span class="nav-btn-title">What happened</span>
+          <span class="nav-btn-subtitle">Chronology and patterns</span>
+        </button>
+
+        <button class="nav-btn" data-view="handover" type="button">
+          <span class="nav-btn-title">Handover</span>
+          <span class="nav-btn-subtitle">What staff need next</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-section-label">Recording</div>
+      <nav class="sidebar-nav">
+        <button class="nav-btn" data-view="daily-notes" type="button">
+          <span class="nav-btn-title">Daily notes</span>
+          <span class="nav-btn-subtitle">Shift recording</span>
+        </button>
+
+        <button class="nav-btn" data-view="incidents" type="button">
+          <span class="nav-btn-title">Incidents</span>
+          <span class="nav-btn-subtitle">Concerns and events</span>
+        </button>
+
+        <button class="nav-btn" data-view="risk" type="button">
+          <span class="nav-btn-title">Risks</span>
+          <span class="nav-btn-subtitle">Triggers and guidance</span>
+        </button>
+
+        <button class="nav-btn" data-view="plans" type="button">
+          <span class="nav-btn-title">Plans</span>
+          <span class="nav-btn-subtitle">Support and care plans</span>
+        </button>
+
+        <button class="nav-btn" data-view="appointments" type="button">
+          <span class="nav-btn-title">Appointments</span>
+          <span class="nav-btn-subtitle">Young person appointments</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-section-label">Care and progress</div>
+      <nav class="sidebar-nav">
+        <button class="nav-btn" data-view="health" type="button">
+          <span class="nav-btn-title">Health</span>
+          <span class="nav-btn-subtitle">Health and wellbeing</span>
+        </button>
+
+        <button class="nav-btn" data-view="education" type="button">
+          <span class="nav-btn-title">Education</span>
+          <span class="nav-btn-subtitle">School and learning</span>
+        </button>
+
+        <button class="nav-btn" data-view="family" type="button">
+          <span class="nav-btn-title">Family</span>
+          <span class="nav-btn-subtitle">Relationships and contact</span>
+        </button>
+
+        <button class="nav-btn" data-view="keywork" type="button">
+          <span class="nav-btn-title">Keywork</span>
+          <span class="nav-btn-subtitle">Sessions and reflection</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-section-label">Oversight</div>
+      <nav class="sidebar-nav">
+        <button class="nav-btn" data-view="evidence" type="button">
+          <span class="nav-btn-title">Evidence</span>
+          <span class="nav-btn-subtitle">Inspection readiness</span>
+        </button>
+
+        <button class="nav-btn" data-view="compliance" type="button">
+          <span class="nav-btn-title">Compliance</span>
+          <span class="nav-btn-subtitle">Checks and due items</span>
+        </button>
+
+        <button class="nav-btn" data-view="manager" type="button">
+          <span class="nav-btn-title">Manager overview</span>
+          <span class="nav-btn-subtitle">Review and leadership</span>
+        </button>
+
+        <button class="nav-btn" data-view="reports" type="button">
+          <span class="nav-btn-title">Reports</span>
+          <span class="nav-btn-subtitle">Summaries and outputs</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        Therapeutic, child-focused, evidence-led recording.
       </div>
     </aside>
 
     <main class="main">
       <header class="topbar">
-        <div>
-          <div class="eyebrow">Young Person Workspace</div>
-          <h2 id="pageTitle">Select a young person</h2>
-          <p id="pageSubtitle">Open a workspace to begin</p>
+        <div class="topbar-left">
+          <div id="personAvatar" class="avatar">YP</div>
+
+          <div class="person-block">
+            <h2 id="personName">No young person selected</h2>
+            <p id="personMeta">Choose from the selector to begin</p>
+          </div>
+        </div>
+
+        <div class="topbar-centre">
+          <div class="page-heading">
+            <h3 id="pageTitle">Young person workspace</h3>
+            <p id="pageSubtitle">Select a young person to begin</p>
+          </div>
         </div>
 
         <div class="topbar-actions">
-          <button id="alertsBtn" class="secondary-btn" type="button">Alerts</button>
+          <button id="changePersonBtn" class="secondary-btn" type="button">Change young person</button>
           <button id="refreshBtn" class="secondary-btn hidden" type="button">Refresh</button>
+          <button id="assistantLauncher" class="primary-btn hidden" type="button">Open assistant</button>
         </div>
       </header>
 
-      <section id="statusBar" class="status-bar hidden" role="status" aria-live="polite"></section>
-
-      <section id="selectorPanel" class="panel hidden">
-        <div class="panel-header">
-          <div>
-            <h3>Select a young person</h3>
-            <p class="panel-subtitle">Open one record to view profile, chronology, writing workflow, actions and reports.</p>
-          </div>
-        </div>
-
-        <div class="selector-toolbar">
-          <input
-            id="selectorSearch"
-            class="text-input"
-            type="text"
-            placeholder="Search by name, preferred name, placement status or risk..."
-            autocomplete="off"
-          />
-          <button id="selectorRefreshBtn" class="secondary-btn" type="button">Refresh</button>
-        </div>
-
-        <div id="selectorList" class="selector-list"></div>
-      </section>
-
-      <section id="workspacePanel" class="workspace">
-        <section id="quickActions" class="quick-actions hidden">
-          <button class="quick-action primary" data-action="daily-note" type="button">
-            <span class="quick-action-title">Add daily note</span>
-            <span class="quick-action-subtitle">Record this shift clearly</span>
-          </button>
-          <button class="quick-action" data-action="incident" type="button">
-            <span class="quick-action-title">Log incident</span>
-            <span class="quick-action-subtitle">Capture the event and meaning</span>
-          </button>
-          <button class="quick-action" data-action="risk" type="button">
-            <span class="quick-action-title">Update risk</span>
-            <span class="quick-action-subtitle">Review what helps and what changes</span>
-          </button>
-          <button class="quick-action" data-action="plan" type="button">
-            <span class="quick-action-title">Add plan</span>
-            <span class="quick-action-subtitle">Guide adults with practical support</span>
-          </button>
-        </section>
-
-        <section id="workflowStrip" class="workflow-strip hidden">
-          <div class="workflow-step active">Draft</div>
-          <div class="workflow-step">Check</div>
-          <div class="workflow-step">AI review</div>
-          <div class="workflow-step">Submit</div>
+      <section class="workflow-strip">
+        <div class="workflow-steps">
+          <div class="workflow-step active">Create note</div>
+          <div class="workflow-step">Check spelling and grammar</div>
+          <div class="workflow-step">AI guidance</div>
+          <div class="workflow-step">Send for approval</div>
           <div class="workflow-step">Manager review</div>
           <div class="workflow-step">Signed off</div>
+        </div>
+      </section>
+
+      <section id="statusBar" class="status-bar hidden" role="status" aria-live="polite"></section>
+
+      <section class="workspace">
+        <section id="selectorPanel" class="selector-panel">
+          <div class="selector-header">
+            <div>
+              <h3>Select a young person</h3>
+              <p>Open one workspace to view profile, chronology, daily work, handover, evidence and reports.</p>
+            </div>
+
+            <div class="selector-tools">
+              <input
+                id="selectorSearch"
+                class="search-input"
+                type="text"
+                placeholder="Search by name, preferred name, placement status or risk..."
+                autocomplete="off"
+              />
+              <button id="selectorRefreshBtn" class="secondary-btn" type="button">Refresh</button>
+            </div>
+          </div>
+
+          <div id="selectorList" class="selector-list"></div>
         </section>
 
-        <section id="viewContent" class="view-content">
-          <div class="loading-state">
-            <div class="spinner"></div>
-            <p>Loading workspace...</p>
-          </div>
+        <section id="workspacePanel" class="workspace-panel hidden">
+          <section id="quickActions" class="quick-actions">
+            <button class="quick-action" type="button" data-action="daily-note">
+              <span class="quick-action-title">Add daily note</span>
+              <span class="quick-action-subtitle">Record this shift clearly and therapeutically</span>
+            </button>
+
+            <button class="quick-action" type="button" data-action="incident">
+              <span class="quick-action-title">Log incident</span>
+              <span class="quick-action-subtitle">Record a concern, event or safeguarding matter</span>
+            </button>
+
+            <button class="quick-action" type="button" data-action="risk">
+              <span class="quick-action-title">Update risk</span>
+              <span class="quick-action-subtitle">Review current risk, triggers and responses</span>
+            </button>
+
+            <button class="quick-action" type="button" data-action="plan">
+              <span class="quick-action-title">Add plan</span>
+              <span class="quick-action-subtitle">Create support guidance for adults around the child</span>
+            </button>
+          </section>
+
+          <section id="viewContent">
+            <div class="loading-state">
+              <div>
+                <div class="spinner"></div>
+                <p>Loading workspace...</p>
+              </div>
+            </div>
+          </section>
         </section>
       </section>
     </main>
@@ -124,25 +220,24 @@
 
   <div id="recordDrawerBackdrop" class="drawer-backdrop hidden"></div>
 
-  <aside id="recordDrawer" class="record-drawer hidden" aria-hidden="true">
-    <div class="record-drawer-header">
+  <aside id="recordDrawer" class="drawer hidden" aria-hidden="true">
+    <div class="drawer-header">
       <div>
-        <div class="eyebrow">Record</div>
         <h3 id="recordDrawerTitle">Record details</h3>
         <p id="recordDrawerSubtitle">Open a record to view details</p>
       </div>
-      <button id="closeRecordDrawerBtn" class="drawer-close-btn" type="button" aria-label="Close record drawer">✕</button>
+      <button id="closeRecordDrawerBtn" class="secondary-btn icon-btn" type="button" aria-label="Close">✕</button>
     </div>
 
-    <div id="recordDrawerActions" class="record-drawer-actions hidden">
+    <div id="recordDrawerActions" class="drawer-actions hidden">
       <button id="drawerEditBtn" class="secondary-btn" type="button">Edit</button>
-      <button id="drawerSubmitBtn" class="secondary-btn" type="button">Submit</button>
-      <button id="drawerApproveBtn" class="secondary-btn" type="button">Approve</button>
+      <button id="drawerSubmitBtn" class="secondary-btn" type="button">Send for approval</button>
+      <button id="drawerApproveBtn" class="primary-btn" type="button">Approve</button>
       <button id="drawerReturnBtn" class="secondary-btn" type="button">Return</button>
-      <button id="drawerArchiveBtn" class="secondary-btn" type="button">Archive</button>
+      <button id="drawerArchiveBtn" class="ghost-btn" type="button">Archive</button>
     </div>
 
-    <div id="recordDrawerBody" class="record-drawer-body">
+    <div id="recordDrawerBody" class="drawer-body">
       <div class="empty-state">
         <p>Select a record to view it here.</p>
       </div>
@@ -151,119 +246,62 @@
 
   <div id="modalBackdrop" class="modal-backdrop hidden"></div>
 
-  <section id="recordModal" class="record-modal hidden" aria-hidden="true">
-    <div class="record-modal-header">
+  <section id="recordModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-header">
       <div>
-        <div class="eyebrow">Document</div>
-        <h3 id="recordModalTitle">Create document</h3>
+        <h3 id="recordModalTitle">Create record</h3>
         <p id="recordModalSubtitle">Complete the form below</p>
       </div>
-      <button id="closeRecordModalBtn" class="drawer-close-btn" type="button" aria-label="Close document modal">✕</button>
+      <button id="closeRecordModalBtn" class="secondary-btn icon-btn" type="button" aria-label="Close">✕</button>
     </div>
 
-    <form id="recordModalForm" class="record-modal-body">
-      <div class="guided-form-top">
-        <section class="panel guidance-panel">
-          <div class="panel-header">
-            <div>
-              <h3>Quality check</h3>
-              <p class="panel-subtitle">Use these prompts to keep recording child-focused and clear.</p>
-            </div>
-          </div>
-          <div class="quality-checklist">
-            <label><input type="checkbox" /> Child voice included</label>
-            <label><input type="checkbox" /> Clear chronology</label>
-            <label><input type="checkbox" /> Context explained</label>
-            <label><input type="checkbox" /> What helped recorded</label>
-            <label><input type="checkbox" /> Outcome and next steps clear</label>
-            <label><input type="checkbox" /> Safeguarding considered</label>
-          </div>
-        </section>
-      </div>
-
+    <form id="recordModalForm" class="modal-form">
       <div id="recordModalFields" class="form-grid"></div>
-
-      <div class="record-modal-footer">
-        <button type="button" id="recordModalCancelBtn" class="secondary-btn">Cancel</button>
-        <button type="submit" id="recordModalSaveBtn" class="primary-btn">Save</button>
-      </div>
     </form>
+
+    <div class="modal-footer">
+      <button id="recordModalCancelBtn" class="secondary-btn" type="button">Cancel</button>
+      <button id="recordModalSaveBtn" class="primary-btn" type="submit" form="recordModalForm">Save</button>
+    </div>
   </section>
 
-  <button
-    id="assistantLauncher"
-    class="assistant-launcher hidden"
-    type="button"
-    aria-label="Open assistant"
-    title="Ask the assistant"
-  >
-    <span class="assistant-launcher-avatar">AI</span>
-    <span class="assistant-launcher-pulse"></span>
-  </button>
-
-  <div id="assistantBackdrop" class="modal-backdrop hidden"></div>
+  <div id="assistantBackdrop" class="assistant-backdrop hidden"></div>
 
   <section id="assistantModal" class="assistant-modal hidden" aria-hidden="true">
-    <div class="assistant-modal-header">
+    <div class="assistant-header">
       <div>
-        <div class="eyebrow">Young Person Assistant</div>
-        <h3 id="assistantTitle">Ask about this young person</h3>
-        <p id="assistantSubtitle">Support with chronology, reflection, actions, reports and evidence.</p>
+        <h3 id="assistantTitle">Young person assistant</h3>
+        <p id="assistantSubtitle">Ask for help with handover, evidence, chronology and writing support.</p>
       </div>
-      <button id="closeAssistantBtn" class="drawer-close-btn" type="button" aria-label="Close assistant">✕</button>
+      <button id="closeAssistantBtn" class="secondary-btn icon-btn" type="button" aria-label="Close">✕</button>
     </div>
 
-    <div class="assistant-modal-body">
-      <section class="panel assistant-context-panel">
-        <div class="panel-header">
-          <div>
-            <h3>Current context</h3>
-            <p class="panel-subtitle">The assistant answers using the current young person workspace.</p>
-          </div>
+    <div id="assistantContext" class="assistant-context">No young person selected.</div>
+
+    <div id="assistantSuggestions" class="assistant-suggestions"></div>
+
+    <div id="assistantMessages" class="assistant-messages">
+      <article class="assistant-message assistant-message-system">
+        <div class="assistant-message-role">Assistant</div>
+        <div class="assistant-message-body">
+          Ask a question about this young person. The assistant can help with handovers, reports, planning, risks, appointments, evidence and Ofsted preparation.
         </div>
-        <div id="assistantContext" class="helper-note">No young person selected.</div>
-      </section>
+      </article>
+    </div>
 
-      <section class="panel assistant-suggestions-panel">
-        <div class="panel-header">
-          <div>
-            <h3>Quick prompts</h3>
-            <p class="panel-subtitle">Helpful starting points for staff.</p>
-          </div>
-        </div>
-        <div class="assistant-suggestions" id="assistantSuggestions"></div>
-      </section>
+    <form id="assistantForm" class="assistant-form">
+      <input
+        id="assistantInput"
+        class="text-input"
+        type="text"
+        placeholder="Ask a question about this young person..."
+        autocomplete="off"
+      />
+      <button id="assistantSendBtn" class="primary-btn" type="submit">Send</button>
+    </form>
 
-      <section class="panel assistant-chat-panel">
-        <div class="panel-header">
-          <div>
-            <h3>Assistant</h3>
-            <p class="panel-subtitle">Ask questions about chronology, plans, risks, appointments, reports and evidence.</p>
-          </div>
-        </div>
-
-        <div id="assistantMessages" class="assistant-messages">
-          <article class="assistant-message assistant-message-system">
-            <div class="assistant-message-role">Assistant</div>
-            <div class="assistant-message-body">
-              Ask a question about this young person. The assistant can help with handovers, reports, planning, risks, appointments, evidence and Ofsted preparation.
-            </div>
-          </article>
-        </div>
-
-        <form id="assistantForm" class="assistant-form">
-          <textarea
-            id="assistantInput"
-            class="textarea-input assistant-input"
-            placeholder="Ask a question about this young person..."
-          ></textarea>
-
-          <div class="assistant-form-actions">
-            <button id="assistantClearBtn" class="secondary-btn" type="button">Clear</button>
-            <button id="assistantSendBtn" class="primary-btn" type="submit">Ask assistant</button>
-          </div>
-        </form>
-      </section>
+    <div class="assistant-footer">
+      <button id="assistantClearBtn" class="secondary-btn" type="button">Clear chat</button>
     </div>
   </section>
 
