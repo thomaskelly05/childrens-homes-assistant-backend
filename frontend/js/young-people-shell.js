@@ -73,11 +73,12 @@ const els = {
 };
 
 const VIEW_CONFIG = {
-  home: { title: "Home", subtitle: "What staff need first", loader: loadHome },
+  home: { title: "Home", subtitle: "What matters now, what has changed, and what adults need next", loader: loadHome },
   profile: { title: "Profile", subtitle: "Identity, communication, legal and contact information", loader: loadProfile },
   calendar: { title: "Calendar", subtitle: "All records, appointments and alerts by day", loader: loadCalendarView },
-  timeline: { title: "What happened", subtitle: "Chronology across all records", loader: loadTimeline },
+  timeline: { title: "What happened", subtitle: "Chronology across all records, child voice, patterns and linked evidence", loader: loadTimeline },
   handover: { title: "Handover", subtitle: "What the next staff need to know", loader: loadHandover },
+
   "daily-notes": {
     title: "Daily notes",
     subtitle: "Shift recording",
@@ -89,35 +90,47 @@ const VIEW_CONFIG = {
     loader: () => loadRecordList(RECORD_CONFIG.incident.listUrl(state.youngPersonId), "Incidents"),
   },
   risk: {
-    title: "Risks",
-    subtitle: "Current risks and concerns",
+    title: "Risks and what helps",
+    subtitle: "Current risks, triggers, protective factors and staff guidance",
     loader: () => loadRecordList(RECORD_CONFIG.risk.listUrl(state.youngPersonId), "Risk assessments"),
   },
   plans: {
-    title: "Plans",
+    title: "Plans and guidance",
     subtitle: "Support, care and placement guidance",
     loader: () => loadRecordList(RECORD_CONFIG.support_plan.listUrl(state.youngPersonId), "Plans"),
   },
   appointments: {
-    title: "Appointments",
+    title: "Young person appointments",
     subtitle: "Appointments, reminders and linked plans",
     loader: loadAppointments,
   },
-  health: { title: "Health", subtitle: "Health profile, records and medication", loader: loadHealth },
+
+  health: { title: "Health and wellbeing", subtitle: "Health profile, records and medication", loader: loadHealth },
   education: { title: "Education", subtitle: "Education profile and records", loader: loadEducation },
-  family: { title: "Family", subtitle: "Family and contact records", loader: loadFamily },
+  family: { title: "Family, relationships and contact", subtitle: "Family and contact records", loader: loadFamily },
   keywork: {
     title: "Keywork",
-    subtitle: "Keywork sessions",
+    subtitle: "Keywork sessions, reflection and actions agreed",
     loader: () => loadRecordList(`/young-people/${state.youngPersonId}/keywork`, "Keywork"),
   },
+
+  evidence: {
+    title: "Evidence and inspection",
+    subtitle: "Child voice, standards evidence, chronology strength and what is missing",
+    loader: loadEvidenceView,
+  },
   compliance: {
-    title: "Compliance",
+    title: "Checks, reviews and what is due",
     subtitle: "Checks, gaps, deadlines and evidence readiness",
     loader: loadCompliance,
   },
+  manager: {
+    title: "Manager overview",
+    subtitle: "What needs review, what is overdue and what requires leadership attention",
+    loader: loadManagerView,
+  },
   reports: {
-    title: "Reports",
+    title: "Summaries and reports",
     subtitle: "Reports, evidence links and inspection outputs",
     loader: loadReports,
   },
@@ -329,9 +342,9 @@ function formatShortTime(value) {
 
 function statusBadgeClass(value) {
   const v = String(value || "").toLowerCase();
-  if (["approved", "active", "recorded", "low", "completed", "ok", "scheduled"].includes(v)) return "success";
-  if (["submitted", "pending", "medium", "due_soon", "draft"].includes(v)) return "warning";
-  if (["returned", "high", "critical", "archived", "overdue", "cancelled"].includes(v)) return "danger";
+  if (["approved", "active", "recorded", "low", "completed", "ok", "scheduled", "evidence", "inspection_ready", "child_voice"].includes(v)) return "success";
+  if (["submitted", "pending", "medium", "due_soon", "draft", "follow_up", "standard_linked"].includes(v)) return "warning";
+  if (["returned", "high", "critical", "archived", "overdue", "cancelled", "safeguarding"].includes(v)) return "danger";
   return "";
 }
 
@@ -341,6 +354,236 @@ function renderBadges(values = []) {
   return `
     <div class="badge-row">
       ${filtered.map((value) => `<span class="badge ${statusBadgeClass(value)}">${escapeHtml(value)}</span>`).join("")}
+    </div>
+  `;
+}
+
+function recordTypeLabel(value) {
+  const raw = String(value || "").replaceAll("_", " ").trim();
+  return raw || "record";
+}
+
+function itemHasChildVoice(item) {
+  return Boolean(item.child_voice || item.young_person_voice || item.child_voice_summary);
+}
+
+function extractStandards(item) {
+  const standards = item.quality_standards || item.standards || [];
+  return Array.isArray(standards) ? standards.filter(Boolean) : [];
+}
+
+function buildInsightBadges(item) {
+  const badges = [
+    item.workflow_status,
+    item.severity,
+    item.status,
+    item.approval_status,
+    item.significance,
+  ].filter(Boolean);
+
+  if (itemHasChildVoice(item)) badges.push("child_voice");
+  if (item.safeguarding_flag) badges.push("safeguarding");
+  if (extractStandards(item).length) badges.push("standard_linked");
+  if (item.follow_up_required || item.actions_required || item.response_actions || item.action_taken || item.follow_up_actions) badges.push("follow_up");
+  return badges;
+}
+
+function summariseStandardsFromItems(items = []) {
+  const counts = {};
+  items.forEach((item) => {
+    extractStandards(item).forEach((standard) => {
+      counts[standard] = (counts[standard] || 0) + 1;
+    });
+  });
+  return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+}
+
+function renderStandardsSnapshot(items = []) {
+  const standards = summariseStandardsFromItems(items);
+  if (!standards.length) {
+    return `<div class="empty-state">No standards evidence linked yet.</div>`;
+  }
+
+  return `
+    <div class="record-list">
+      ${standards.map(([code, count]) => `
+        <article class="record-card">
+          <div class="record-card-header">
+            <div>
+              <h4>${escapeHtml(code.replaceAll("_", " "))}</h4>
+              <div class="record-meta">${escapeHtml(String(count))} linked item${count === 1 ? "" : "s"}</div>
+            </div>
+          </div>
+          ${renderBadges(["evidence", "inspection_ready"])}
+        </article>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderChildVoiceFeed(items = []) {
+  const childVoiceItems = items.filter(itemHasChildVoice).slice(0, 8);
+  if (!childVoiceItems.length) {
+    return `<div class="empty-state">No recent child voice captured.</div>`;
+  }
+
+  return `
+    <div class="record-list">
+      ${childVoiceItems.map((item) => `
+        <article class="record-card">
+          <div class="record-card-header">
+            <div>
+              <h4>${escapeHtml(item.title || "Child voice")}</h4>
+              <div class="record-meta">
+                ${escapeHtml(recordTypeLabel(item.record_type || item.event_type || item.category))}
+                • ${escapeHtml(formatDate(item.recorded_at || item.occurred_at || item.event_datetime || item.created_at))}
+              </div>
+            </div>
+          </div>
+          <div class="record-body">${escapeHtml(item.child_voice || item.young_person_voice || item.child_voice_summary || "Child voice recorded.")}</div>
+          ${renderBadges(["child_voice"])}
+          <div class="day-record-actions">
+            <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>
+          </div>
+        </article>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderDueActionsPanel(items = []) {
+  if (!items.length) {
+    return `<div class="empty-state">No overdue or due soon items.</div>`;
+  }
+
+  return `
+    <div class="record-list">
+      ${items.slice(0, 8).map((item) => renderRecordCard({ ...item, summary: item.summary || item.title || "Action due." })).join("")}
+    </div>
+  `;
+}
+
+function renderOfstedReadinessPanel(items = [], complianceItems = []) {
+  const standardsCount = summariseStandardsFromItems(items).length;
+  const childVoiceCount = items.filter(itemHasChildVoice).length;
+  const safeguardingCount = items.filter((item) => item.safeguarding_flag).length;
+  const overdueCount = complianceItems.filter((item) => (item.compliance_status || item.status) === "overdue").length;
+
+  return `
+    <div class="grid grid-4">
+      <div class="stat-card">
+        <div class="stat-label">Standards evidenced</div>
+        <div class="stat-value">${standardsCount}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Child voice entries</div>
+        <div class="stat-value">${childVoiceCount}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Safeguarding-significant</div>
+        <div class="stat-value">${safeguardingCount}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Overdue checks</div>
+        <div class="stat-value">${overdueCount}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderEvidenceGapsPanel(items = [], complianceItems = []) {
+  const gaps = [];
+
+  if (!items.filter(itemHasChildVoice).length) gaps.push("No visible recent child voice.");
+  if (!summariseStandardsFromItems(items).length) gaps.push("No visible linked quality standards evidence.");
+  if (!items.some((x) => String(x.event_type || x.category || x.record_type || "").toLowerCase().includes("incident"))) gaps.push("No recent incident evidence visible.");
+  if (!items.some((x) => String(x.event_type || x.category || x.record_type || "").toLowerCase().includes("daily_note"))) gaps.push("No recent daily note evidence visible.");
+  if (complianceItems.some((x) => (x.compliance_status || x.status) === "overdue")) gaps.push("There are overdue checks or reviews.");
+  if (!items.some((x) => extractStandards(x).length > 0)) gaps.push("Records appear weakly linked to standards.");
+
+  if (!gaps.length) {
+    return `<div class="empty-state">No obvious evidence gaps found from the current linked record set.</div>`;
+  }
+
+  return `
+    <div class="record-list">
+      ${gaps.map((gap) => `
+        <article class="record-card">
+          <div class="record-card-header">
+            <div><h4>Evidence gap</h4></div>
+          </div>
+          <div class="record-body">${escapeHtml(gap)}</div>
+          ${renderBadges(["inspection_ready", "follow_up"])}
+        </article>
+      `).join("")}
+    </div>
+  `;
+}
+
+function buildTimelineFilterChips() {
+  const chips = [
+    ["", "All"],
+    ["daily_note", "Daily notes"],
+    ["incident", "Incidents"],
+    ["risk", "Risks"],
+    ["support_plan", "Plans"],
+    ["appointment", "Appointments"],
+    ["health", "Health"],
+    ["education", "Education"],
+    ["family", "Family"],
+    ["keywork", "Keywork"],
+    ["child_voice", "Child voice"],
+    ["safeguarding", "Safeguarding"],
+  ];
+
+  return `
+    <div class="badge-row timeline-chip-row">
+      ${chips.map(([value, label]) => `
+        <button class="ghost-btn timeline-chip-btn" type="button" data-chip-filter="${escapeHtml(value)}">${escapeHtml(label)}</button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderLinkedContextSection(detailData, baseItem) {
+  const standards = extractStandards(detailData).length ? extractStandards(detailData) : extractStandards(baseItem);
+  const childVoice = detailData.child_voice || detailData.young_person_voice || baseItem.child_voice || baseItem.young_person_voice;
+  const nextActions =
+    detailData.actions_required ||
+    detailData.response_actions ||
+    detailData.follow_up_actions ||
+    detailData.action_taken ||
+    detailData.outcome_notes ||
+    detailData.next_action_date ||
+    baseItem.actions_required ||
+    baseItem.response_actions ||
+    baseItem.follow_up_actions;
+
+  return `
+    <div class="detail-section">
+      <h4>Linked context</h4>
+      <div class="detail-list">
+        <div class="detail-row">
+          <div class="detail-key">Record type</div>
+          <div class="detail-value">${escapeHtml(recordTypeLabel(baseItem.record_type || baseItem.event_type || baseItem.category || detailData.record_type))}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-key">Workflow</div>
+          <div class="detail-value">${escapeHtml(baseItem.workflow_status || detailData.workflow_status || detailData.status || "recorded")}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-key">Child voice present</div>
+          <div class="detail-value">${escapeHtml(childVoice ? "Yes" : "No")}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-key">Linked standards</div>
+          <div class="detail-value">${escapeHtml(standards.length ? standards.join(", ") : "No linked standards visible on this record yet")}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-key">What adults need next</div>
+          <div class="detail-value">${escapeHtml(nextActions || "No immediate next actions recorded.")}</div>
+        </div>
+      </div>
     </div>
   `;
 }
@@ -498,6 +741,62 @@ function toggleAssistantLauncher() {
   }
 }
 
+function assistantPromptsForView(view) {
+  const defaults = [
+    "Give me a short handover for this young person.",
+    "Summarise current risks and what helps.",
+    "What are the key patterns in recent incidents and daily notes?",
+    "What evidence would support Ofsted for this young person right now?",
+    "What appointments, reviews or compliance items are due soon?",
+    "Help me write a therapeutic, child-focused daily note for this shift.",
+  ];
+
+  const byView = {
+    evidence: [
+      "What evidence would support Ofsted for this young person right now?",
+      "What child voice is visible in the current record and what is missing?",
+      "Which quality standards have the strongest evidence and which are weaker?",
+      "What records would strengthen inspection readiness next?",
+    ],
+    manager: [
+      "What would a manager need to review or prioritise right now?",
+      "Which records are overdue, returned or waiting for approval?",
+      "What are the biggest current operational risks for this young person?",
+      "What leadership actions should happen next?",
+    ],
+    timeline: [
+      "What are the key patterns in recent incidents and daily notes?",
+      "Summarise what has changed recently for this young person.",
+      "What does the chronology suggest adults should understand better?",
+    ],
+    handover: [
+      "Give me a short handover for this young person.",
+      "What does the next shift most need to know?",
+      "What are the immediate risks, actions and appointments?",
+    ],
+    risk: [
+      "Summarise current risks and what helps.",
+      "What triggers, warning signs and protective factors are visible?",
+      "How should staff respond in a therapeutic way?",
+    ],
+    reports: [
+      "What evidence would support Ofsted for this young person right now?",
+      "Summarise current progress, risks and actions.",
+      "What should go into a monthly summary?",
+    ],
+  };
+
+  return byView[view] || defaults;
+}
+
+function renderAssistantSuggestionButtons() {
+  if (!els.assistantSuggestions) return;
+  const prompts = assistantPromptsForView(state.currentView);
+  els.assistantSuggestions.innerHTML = prompts.map((prompt) => `
+    <button class="secondary-btn assistant-prompt-btn" type="button" data-prompt="${escapeHtml(prompt)}">${escapeHtml(prompt)}</button>
+  `).join("");
+}
+
 function assistantContextSummary() {
   if (!state.youngPerson) return "No young person selected.";
   const fullName =
@@ -520,6 +819,7 @@ function updateAssistantContext() {
   if (els.assistantContext) {
     els.assistantContext.textContent = assistantContextSummary();
   }
+  renderAssistantSuggestionButtons();
 }
 
 function renderAssistantMessages() {
@@ -670,7 +970,7 @@ function getModalSchema(recordType, item = null) {
         label: "Incident time",
         type: "datetime-local",
         value: item?.incident_datetime
-          ? item.incident_datetime.slice(0, 16)
+          ? String(item.incident_datetime).slice(0, 16)
           : (item?.occurred_at ? String(item.occurred_at).slice(0, 16) : ""),
       },
       { name: "incident_type", label: "Incident type", type: "text", value: item?.incident_type || "" },
@@ -1133,6 +1433,8 @@ async function openRecordDetail(item) {
         </div>
       </div>
 
+      ${renderLinkedContextSection(detailData, item)}
+
       <div class="detail-section">
         <h4>Details</h4>
         <div class="detail-list">
@@ -1162,7 +1464,7 @@ async function openRecordDetail(item) {
 
 function renderRecordCard(item) {
   const title = item.title || item.topic || item.contact_person || item.record_type || "Record";
-  const summary = item.summary || item.narrative || item.description || item.concern_summary || "No summary available.";
+  const summary = item.summary || item.narrative || item.description || item.concern_summary || item.report_text || "No summary available.";
 
   const meta = [
     item.occurred_at ? formatDate(item.occurred_at) : null,
@@ -1177,15 +1479,6 @@ function renderRecordCard(item) {
     item.professional_name || null,
   ].filter(Boolean);
 
-  const badges = [
-    item.workflow_status,
-    item.severity,
-    item.status,
-    item.approval_status,
-    item.compliance_status,
-    item.report_type,
-  ].filter(Boolean);
-
   return `
     <article class="record-card">
       <div class="record-card-header">
@@ -1195,7 +1488,7 @@ function renderRecordCard(item) {
         </div>
       </div>
       <div class="record-body">${escapeHtml(summary)}</div>
-      ${renderBadges(badges)}
+      ${renderBadges(buildInsightBadges(item))}
       <div class="day-record-actions">
         <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>
       </div>
@@ -1217,7 +1510,7 @@ function renderTimelineItem(item) {
         </div>
       </div>
       <div class="record-body">${escapeHtml(item.summary || item.narrative || "No summary available.")}</div>
-      ${renderBadges([item.severity || item.significance, item.workflow_status || item.event_status])}
+      ${renderBadges(buildInsightBadges(item))}
       <div class="day-record-actions">
         <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>
       </div>
@@ -1233,7 +1526,7 @@ function groupTimelineItems(items) {
   startOfWeek.setDate(startOfToday.getDate() - 6);
 
   items.forEach((item) => {
-    const raw = item.occurred_at || item.event_datetime || item.created_at;
+    const raw = item.occurred_at || item.event_datetime || item.created_at || item.recorded_at;
     const d = new Date(raw);
 
     if (Number.isNaN(d.getTime())) groups.earlier.push(item);
@@ -1294,6 +1587,25 @@ function renderHandoverItem(title, body, badges = []) {
       <div class="record-body">${escapeHtml(body || "—")}</div>
       ${renderBadges(badges)}
     </article>
+  `;
+}
+
+function renderManagerPriorityCards(reviewItems = [], overdueItems = [], incidents = []) {
+  return `
+    <div class="grid grid-3">
+      <div class="stat-card">
+        <div class="stat-label">Needs review</div>
+        <div class="stat-value">${reviewItems.length}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Overdue</div>
+        <div class="stat-value">${overdueItems.length}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Safeguarding / incidents</div>
+        <div class="stat-value">${incidents.length}</div>
+      </div>
+    </div>
   `;
 }
 
@@ -1609,12 +1921,13 @@ Notes: ${escapeHtml(contact.notes || "—")}</div>
 async function loadHome() {
   setLoading("Loading home...");
 
-  const [overviewData, timelineData, plansData, riskData, appointmentsData] = await Promise.all([
+  const [overviewData, timelineData, plansData, riskData, appointmentsData, complianceData] = await Promise.all([
     apiGet(`/young-people/${state.youngPersonId}/overview`),
     apiGet(`/young-people/${state.youngPersonId}/timeline?limit=50`),
     apiGet(`/young-people/${state.youngPersonId}/plans`).catch(() => ({ items: [] })),
     apiGet(`/young-people/${state.youngPersonId}/risk`).catch(() => ({ items: [] })),
     apiGet(`/young-people/${state.youngPersonId}/appointments`).catch(() => ({ items: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/compliance`).catch(() => ({ items: [] })),
   ]);
 
   const yp = overviewData.young_person || {};
@@ -1624,6 +1937,7 @@ async function loadHome() {
   const plans = (plansData.items || []).slice(0, 3);
   const risks = (riskData.items || []).slice(0, 3);
   const appointments = (appointmentsData.items || []).slice(0, 3);
+  const complianceItems = complianceData.compliance_items || complianceData.items || [];
 
   state.timelineCache = timelineData.timeline || [];
 
@@ -1712,6 +2026,18 @@ async function loadHome() {
         ${recent.length ? renderGroupedTimelineFromItems(recent) : `<div class="empty-state">No recent activity.</div>`}
       </div>
     </div>
+
+    <div class="callout-grid">
+      <div class="panel">
+        <div class="panel-header"><div><h3>Child voice</h3><p class="panel-subtitle">Recent examples of the young person's voice.</p></div></div>
+        ${renderChildVoiceFeed(recent)}
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><div><h3>Inspection readiness</h3><p class="panel-subtitle">Quick evidence view for this child.</p></div></div>
+        ${renderOfstedReadinessPanel(recent, complianceItems)}
+      </div>
+    </div>
   `;
 
   bindDynamicOpenRecordButtons();
@@ -1720,12 +2046,13 @@ async function loadHome() {
 async function loadHandover() {
   setLoading("Loading handover...");
 
-  const [overviewData, timelineData, riskData, plansData, handoverData] = await Promise.all([
+  const [overviewData, timelineData, riskData, plansData, handoverData, appointmentsData] = await Promise.all([
     apiGet(`/young-people/${state.youngPersonId}/overview`),
     apiGet(`/young-people/${state.youngPersonId}/timeline?limit=25`),
     apiGet(`/young-people/${state.youngPersonId}/risk`).catch(() => ({ items: [] })),
     apiGet(`/young-people/${state.youngPersonId}/plans`).catch(() => ({ items: [] })),
     apiGet(`/young-people/${state.youngPersonId}/handover`).catch(() => ({ items: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/appointments`).catch(() => ({ items: [] })),
   ]);
 
   const alerts = overviewData.alerts || [];
@@ -1733,6 +2060,7 @@ async function loadHandover() {
   const risks = (riskData.items || []).slice(0, 5);
   const plans = (plansData.items || []).slice(0, 5);
   const handovers = handoverData.items || [];
+  const appointments = (appointmentsData.items || []).filter((x) => (x.status || "").toLowerCase() === "scheduled").slice(0, 5);
 
   const incidents = recent.filter((item) => String(item.event_type || item.category || "").toLowerCase().includes("incident"));
   const dailyNotes = recent.filter((item) => String(item.event_type || item.category || "").toLowerCase().includes("daily_note"));
@@ -1820,14 +2148,14 @@ async function loadHandover() {
       <section class="panel">
         <div class="panel-header">
           <div>
-            <h3>Plans staff may need to follow</h3>
-            <p class="panel-subtitle">Current plans and guidance likely to matter next shift.</p>
+            <h3>Plans and upcoming appointments</h3>
+            <p class="panel-subtitle">Current plans and scheduled appointments likely to matter next shift.</p>
           </div>
         </div>
         ${
-          plans.length
-            ? `<div class="record-list">${plans.map(renderRecordCard).join("")}</div>`
-            : `<div class="empty-state">No current plans recorded.</div>`
+          plans.length || appointments.length
+            ? `<div class="record-list">${[...plans, ...appointments].slice(0, 8).map(renderRecordCard).join("")}</div>`
+            : `<div class="empty-state">No current plans or appointments recorded.</div>`
         }
       </section>
     </div>
@@ -1876,7 +2204,7 @@ async function loadAppointments() {
     <div class="panel">
       <div class="panel-header">
         <div>
-          <h3>Appointments</h3>
+          <h3>Young person appointments</h3>
           <p class="panel-subtitle">Each appointment should connect to the most relevant plan and support follow-up.</p>
         </div>
         <div class="day-record-actions">
@@ -1908,14 +2236,196 @@ async function loadAppointments() {
   bindDynamicOpenRecordButtons();
 }
 
+async function loadHealth() {
+  setLoading("Loading health...");
+  const data = await apiGet(`/young-people/${state.youngPersonId}/health`);
+  const profile = data.health_profile || data.profile || {};
+  const records = data.health_records || [];
+  const medicationProfiles = data.medication_profiles || [];
+  const medicationRecords = data.medication_records || [];
+
+  els.content.innerHTML = `
+    <div class="panel">
+      <div class="panel-header"><div><h3>Health profile</h3><p class="panel-subtitle">Key health information.</p></div></div>
+      <div class="kv">
+        <div class="kv-key">GP</div><div>${escapeHtml(profile.gp_name || "—")}</div>
+        <div class="kv-key">Allergies</div><div>${escapeHtml(profile.allergies || "—")}</div>
+        <div class="kv-key">Diagnoses</div><div>${escapeHtml(profile.diagnoses || "—")}</div>
+        <div class="kv-key">Mental health</div><div>${escapeHtml(profile.mental_health_summary || "—")}</div>
+        <div class="kv-key">Medication summary</div><div>${escapeHtml(profile.medication_summary || "—")}</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><div><h3>Health records</h3></div></div>
+      ${records.length ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>` : `<div class="empty-state">No health records.</div>`}
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><div><h3>Medication profiles</h3></div></div>
+      ${
+        medicationProfiles.length
+          ? `<div class="record-list">${medicationProfiles.map((item) => `
+              <article class="record-card">
+                <div class="record-card-header">
+                  <div>
+                    <h4>${escapeHtml(item.medication_name || "Medication")}</h4>
+                    <div class="record-meta">${escapeHtml(item.dosage || item.dose || "—")} • ${escapeHtml(item.frequency || "—")}</div>
+                  </div>
+                </div>
+                <div class="record-body">${escapeHtml(item.notes || item.prn_guidance || item.reason || "No notes.")}</div>
+                ${renderBadges([item.is_active ? "active" : "inactive"])}
+              </article>
+            `).join("")}</div>`
+          : `<div class="empty-state">No medication profiles.</div>`
+      }
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><div><h3>Medication records</h3></div></div>
+      ${medicationRecords.length ? `<div class="record-list">${medicationRecords.map(renderRecordCard).join("")}</div>` : `<div class="empty-state">No medication records.</div>`}
+    </div>
+  `;
+  bindDynamicOpenRecordButtons();
+}
+
+async function loadEducation() {
+  setLoading("Loading education...");
+  const data = await apiGet(`/young-people/${state.youngPersonId}/education`);
+  const profile = data.education_profile || data.profile || {};
+  const records = data.education_records || data.items || [];
+
+  els.content.innerHTML = `
+    <div class="panel">
+      <div class="panel-header"><div><h3>Education profile</h3><p class="panel-subtitle">Current school and support information.</p></div></div>
+      <div class="kv">
+        <div class="kv-key">School</div><div>${escapeHtml(profile.school_name || "—")}</div>
+        <div class="kv-key">Year group</div><div>${escapeHtml(profile.year_group || "—")}</div>
+        <div class="kv-key">Education status</div><div>${escapeHtml(profile.education_status || "—")}</div>
+        <div class="kv-key">SEN status</div><div>${escapeHtml(profile.sen_status || "—")}</div>
+        <div class="kv-key">Support summary</div><div>${escapeHtml(profile.support_summary || "—")}</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><div><h3>Education records</h3></div></div>
+      ${records.length ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>` : `<div class="empty-state">No education records.</div>`}
+    </div>
+  `;
+  bindDynamicOpenRecordButtons();
+}
+
+async function loadFamily() {
+  setLoading("Loading family...");
+  const data = await apiGet(`/young-people/${state.youngPersonId}/family`);
+  const contacts = data.contacts || [];
+  const records = data.family_contact_records || data.items || [];
+
+  els.content.innerHTML = `
+    <div class="panel">
+      <div class="panel-header"><div><h3>Family contacts</h3><p class="panel-subtitle">Family and contact information.</p></div></div>
+      ${contacts.length ? `<div class="record-list">${contacts.map((contact) => `
+        <article class="record-card">
+          <div class="record-card-header">
+            <div>
+              <h4>${escapeHtml(contact.full_name || "Contact")}</h4>
+              <div class="record-meta">${escapeHtml(contact.relationship_to_young_person || contact.contact_type || "Contact")}</div>
+            </div>
+          </div>
+          <div class="record-body">Phone: ${escapeHtml(contact.phone || "—")}
+Email: ${escapeHtml(contact.email || "—")}
+Notes: ${escapeHtml(contact.notes || "—")}</div>
+        </article>
+      `).join("")}</div>` : `<div class="empty-state">No family contacts.</div>`}
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><div><h3>Family records</h3></div></div>
+      ${records.length ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>` : `<div class="empty-state">No family contact records.</div>`}
+    </div>
+  `;
+  bindDynamicOpenRecordButtons();
+}
+
+async function loadEvidenceView() {
+  setLoading("Loading evidence view...");
+
+  const [timelineData, complianceData] = await Promise.all([
+    apiGet(`/young-people/${state.youngPersonId}/timeline?limit=150`).catch(() => ({ timeline: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/compliance`).catch(() => ({ items: [] })),
+  ]);
+
+  const items = timelineData.timeline || [];
+  const complianceItems = complianceData.compliance_items || complianceData.items || [];
+
+  els.content.innerHTML = `
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h3>Inspection readiness</h3>
+          <p class="panel-subtitle">High-level evidence snapshot across chronology, standards and child voice.</p>
+        </div>
+      </div>
+      ${renderOfstedReadinessPanel(items, complianceItems)}
+    </section>
+
+    <div class="callout-grid">
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>Linked standards evidence</h3>
+            <p class="panel-subtitle">What standards are currently most visible in the record.</p>
+          </div>
+        </div>
+        ${renderStandardsSnapshot(items)}
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>Recent child voice</h3>
+            <p class="panel-subtitle">What the current record shows the young person has said, expressed or communicated.</p>
+          </div>
+        </div>
+        ${renderChildVoiceFeed(items)}
+      </section>
+    </div>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h3>Evidence gaps</h3>
+          <p class="panel-subtitle">The most obvious weaknesses from the current linked record set.</p>
+        </div>
+      </div>
+      ${renderEvidenceGapsPanel(items, complianceItems)}
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h3>Chronology evidence trail</h3>
+          <p class="panel-subtitle">Recent events that currently form the evidence picture.</p>
+        </div>
+      </div>
+      ${items.length ? renderGroupedTimelineFromItems(items.slice(0, 30)) : `<div class="empty-state">No chronology items.</div>`}
+    </section>
+  `;
+
+  bindDynamicOpenRecordButtons();
+}
+
 async function loadCompliance() {
   setLoading("Loading compliance...");
   const data = await apiGet(`/young-people/${state.youngPersonId}/compliance`);
   const items = data.compliance_items || data.items || [];
 
-  const overdue = items.filter((x) => x.compliance_status === "overdue").length;
-  const dueSoon = items.filter((x) => x.compliance_status === "due_soon").length;
-  const ok = items.filter((x) => !x.compliance_status || x.compliance_status === "ok").length;
+  const overdue = items.filter((x) => (x.compliance_status || x.status) === "overdue").length;
+  const dueSoon = items.filter((x) => (x.compliance_status || x.status) === "due_soon").length;
+  const ok = items.filter((x) => {
+    const v = x.compliance_status || x.status;
+    return !v || v === "ok" || v === "completed";
+  }).length;
 
   els.content.innerHTML = `
     <div class="grid grid-3">
@@ -1945,6 +2455,86 @@ async function loadCompliance() {
           ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
           : `<div class="empty-state">No compliance items found.</div>`
       }
+    </div>
+  `;
+
+  bindDynamicOpenRecordButtons();
+}
+
+async function loadManagerView() {
+  setLoading("Loading manager view...");
+
+  const [timelineData, complianceData, riskData, plansData] = await Promise.all([
+    apiGet(`/young-people/${state.youngPersonId}/timeline?limit=150`).catch(() => ({ timeline: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/compliance`).catch(() => ({ items: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/risk`).catch(() => ({ items: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/plans`).catch(() => ({ items: [] })),
+  ]);
+
+  const timelineItems = timelineData.timeline || [];
+  const complianceItems = complianceData.compliance_items || complianceData.items || [];
+  const riskItems = riskData.items || [];
+  const planItems = plansData.items || [];
+
+  const reviewItems = timelineItems.filter((item) => ["submitted", "returned", "pending"].includes(String(item.workflow_status || item.approval_status || "").toLowerCase()));
+  const overdueItems = complianceItems.filter((item) => (item.compliance_status || item.status) === "overdue");
+  const incidentItems = timelineItems.filter((item) => String(item.event_type || item.category || item.record_type || "").toLowerCase().includes("incident"));
+
+  els.content.innerHTML = `
+    ${renderManagerPriorityCards(reviewItems, overdueItems, incidentItems)}
+
+    <div class="callout-grid">
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>Needs manager review</h3>
+            <p class="panel-subtitle">Submitted, returned or pending items.</p>
+          </div>
+        </div>
+        ${reviewItems.length ? `<div class="record-list">${reviewItems.slice(0, 12).map(renderRecordCard).join("")}</div>` : `<div class="empty-state">Nothing currently needs manager review.</div>`}
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>Overdue or due soon</h3>
+            <p class="panel-subtitle">Checks, reviews and actions requiring leadership attention.</p>
+          </div>
+        </div>
+        ${renderDueActionsPanel([...overdueItems, ...complianceItems.filter((x) => (x.compliance_status || x.status) === "due_soon")])}
+      </section>
+    </div>
+
+    <div class="callout-grid">
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>Current high-risk picture</h3>
+            <p class="panel-subtitle">Most significant risks and incidents.</p>
+          </div>
+        </div>
+        ${
+          [...riskItems.filter((x) => ["high", "critical"].includes(String(x.severity || "").toLowerCase())), ...incidentItems]
+            .slice(0, 10)
+            .length
+            ? `<div class="record-list">${[...riskItems.filter((x) => ["high", "critical"].includes(String(x.severity || "").toLowerCase())), ...incidentItems].slice(0, 10).map(renderRecordCard).join("")}</div>`
+            : `<div class="empty-state">No current high-risk picture visible.</div>`
+        }
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>Plans needing leadership attention</h3>
+            <p class="panel-subtitle">Returned, submitted or review-due plans.</p>
+          </div>
+        </div>
+        ${
+          planItems.length
+            ? `<div class="record-list">${planItems.slice(0, 10).map(renderRecordCard).join("")}</div>`
+            : `<div class="empty-state">No current plans.</div>`
+        }
+      </section>
     </div>
   `;
 
@@ -2131,7 +2721,7 @@ function renderDayRecords(records) {
               • ${escapeHtml(staffName)}
             </div>
           </div>
-          <div>${renderBadges([item.workflow_status, item.severity || item.significance, item.status])}</div>
+          <div>${renderBadges(buildInsightBadges(item))}</div>
         </div>
         <div class="day-record-summary">${escapeHtml(summary)}</div>
         <div class="day-record-actions">
@@ -2335,8 +2925,12 @@ function renderTimelinePanel(items) {
           <option value="family">Family</option>
           <option value="keywork">Keywork</option>
           <option value="support_plan">Plans</option>
+          <option value="child_voice">Child voice</option>
+          <option value="safeguarding">Safeguarding</option>
         </select>
       </div>
+
+      ${buildTimelineFilterChips()}
 
       <div id="timelineResults">
         ${items.length ? renderGroupedTimelineFromItems(items) : `<div class="empty-state">No timeline items.</div>`}
@@ -2348,14 +2942,30 @@ function renderTimelinePanel(items) {
   const typeEl = document.getElementById("timelineType");
   const resultsEl = document.getElementById("timelineResults");
 
-  function applyTimelineFilters() {
+  function applyTimelineFilters(explicitType = null) {
     const term = (searchEl.value || "").trim().toLowerCase();
-    const type = (typeEl.value || "").trim().toLowerCase();
+    const type = explicitType !== null ? explicitType : (typeEl.value || "").trim().toLowerCase();
+
+    if (explicitType !== null) {
+      typeEl.value = ["child_voice", "safeguarding"].includes(explicitType) ? "" : explicitType;
+    }
 
     const filtered = state.timelineCache.filter((item) => {
-      const haystack = [item.title, item.summary, item.narrative, item.event_type, item.category, item.subcategory]
-        .filter(Boolean).join(" ").toLowerCase();
-      const typeValue = String(item.event_type || item.category || "").toLowerCase();
+      const haystack = [
+        item.title, item.summary, item.narrative, item.event_type, item.category, item.subcategory,
+        item.child_voice, item.young_person_voice,
+      ].filter(Boolean).join(" ").toLowerCase();
+
+      const typeValue = String(item.event_type || item.category || item.record_type || "").toLowerCase();
+
+      if (type === "child_voice") {
+        return (!term || haystack.includes(term)) && itemHasChildVoice(item);
+      }
+
+      if (type === "safeguarding") {
+        return (!term || haystack.includes(term)) && Boolean(item.safeguarding_flag);
+      }
+
       return (!term || haystack.includes(term)) && (!type || typeValue === type);
     });
 
@@ -2366,8 +2976,13 @@ function renderTimelinePanel(items) {
     bindDynamicOpenRecordButtons();
   }
 
-  searchEl.addEventListener("input", applyTimelineFilters);
-  typeEl.addEventListener("change", applyTimelineFilters);
+  searchEl.addEventListener("input", () => applyTimelineFilters());
+  typeEl.addEventListener("change", () => applyTimelineFilters());
+
+  els.content.querySelectorAll("[data-chip-filter]").forEach((btn) => {
+    btn.addEventListener("click", () => applyTimelineFilters(btn.dataset.chipFilter || ""));
+  });
+
   bindDynamicOpenRecordButtons();
 }
 
@@ -2376,131 +2991,23 @@ async function loadRecordList(url, label) {
   const data = await apiGet(url);
   const items = data.items || data.timeline || data.records || [];
 
-  if (!items.length) {
-    setEmpty(`No ${label.toLowerCase()} found.`);
-    return;
-  }
-
-  els.content.innerHTML = `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`;
-  bindDynamicOpenRecordButtons();
-}
-
-async function loadHealth() {
-  setLoading("Loading health...");
-  const data = await apiGet(`/young-people/${state.youngPersonId}/health`);
-  const profile = data.health_profile || data.profile || {};
-  const records = data.health_records || [];
-  const medicationProfiles = data.medication_profiles || [];
-  const medicationRecords = data.medication_records || [];
-
   els.content.innerHTML = `
     <div class="panel">
-      <div class="panel-header"><div><h3>Health profile</h3><p class="panel-subtitle">Key health information.</p></div></div>
-      <div class="kv">
-        <div class="kv-key">GP</div><div>${escapeHtml(profile.gp_name || "—")}</div>
-        <div class="kv-key">Allergies</div><div>${escapeHtml(profile.allergies || "—")}</div>
-        <div class="kv-key">Diagnoses</div><div>${escapeHtml(profile.diagnoses || "—")}</div>
-        <div class="kv-key">Mental health</div><div>${escapeHtml(profile.mental_health_summary || "—")}</div>
-        <div class="kv-key">Medication summary</div><div>${escapeHtml(profile.medication_summary || "—")}</div>
+      <div class="panel-header">
+        <div>
+          <h3>${escapeHtml(label)}</h3>
+          <p class="panel-subtitle">Open records to read the full detail, linked context and actions.</p>
+        </div>
       </div>
-    </div>
-
-    <div class="panel"><h3>Health records</h3>${records.length ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>` : `<div class="empty-state">No health records.</div>`}</div>
-
-    <div class="panel">
-      <h3>Medication profiles</h3>
       ${
-        medicationProfiles.length
-          ? `<div class="record-list">${medicationProfiles.map((item) => `
-              <article class="record-card">
-                <div class="record-card-header">
-                  <div>
-                    <h4>${escapeHtml(item.medication_name || "Medication")}</h4>
-                    <div class="record-meta">${escapeHtml(item.dosage || item.dose || "—")} • ${escapeHtml(item.frequency || "—")}</div>
-                  </div>
-                </div>
-                <div class="record-body">${escapeHtml(item.notes || item.prn_guidance || item.reason || "No notes.")}</div>
-              </article>
-            `).join("")}</div>`
-          : `<div class="empty-state">No medication profiles.</div>`
+        items.length
+          ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
+          : `<div class="empty-state">No ${escapeHtml(label.toLowerCase())} found.</div>`
       }
     </div>
-
-    <div class="panel"><h3>Medication records</h3>${medicationRecords.length ? `<div class="record-list">${medicationRecords.map(renderRecordCard).join("")}</div>` : `<div class="empty-state">No medication records.</div>`}</div>
   `;
+
   bindDynamicOpenRecordButtons();
-}
-
-async function loadEducation() {
-  setLoading("Loading education...");
-  const data = await apiGet(`/young-people/${state.youngPersonId}/education`);
-  const profile = data.education_profile || data.profile || {};
-  const records = data.education_records || data.items || [];
-
-  els.content.innerHTML = `
-    <div class="panel">
-      <div class="panel-header"><div><h3>Education profile</h3><p class="panel-subtitle">Current school and support information.</p></div></div>
-      <div class="kv">
-        <div class="kv-key">School</div><div>${escapeHtml(profile.school_name || "—")}</div>
-        <div class="kv-key">Year group</div><div>${escapeHtml(profile.year_group || "—")}</div>
-        <div class="kv-key">Education status</div><div>${escapeHtml(profile.education_status || "—")}</div>
-        <div class="kv-key">SEN status</div><div>${escapeHtml(profile.sen_status || "—")}</div>
-        <div class="kv-key">Support summary</div><div>${escapeHtml(profile.support_summary || "—")}</div>
-      </div>
-    </div>
-
-    <div class="panel"><h3>Education records</h3>${records.length ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>` : `<div class="empty-state">No education records.</div>`}</div>
-  `;
-  bindDynamicOpenRecordButtons();
-}
-
-async function loadFamily() {
-  setLoading("Loading family...");
-  const data = await apiGet(`/young-people/${state.youngPersonId}/family`);
-  const contacts = data.contacts || [];
-  const records = data.family_contact_records || data.items || [];
-
-  els.content.innerHTML = `
-    <div class="panel">
-      <div class="panel-header"><div><h3>Family contacts</h3><p class="panel-subtitle">Family and contact information.</p></div></div>
-      ${contacts.length ? `<div class="record-list">${contacts.map((contact) => `
-        <article class="record-card">
-          <div class="record-card-header">
-            <div>
-              <h4>${escapeHtml(contact.full_name || "Contact")}</h4>
-              <div class="record-meta">${escapeHtml(contact.relationship_to_young_person || contact.contact_type || "Contact")}</div>
-            </div>
-          </div>
-          <div class="record-body">Phone: ${escapeHtml(contact.phone || "—")}
-Email: ${escapeHtml(contact.email || "—")}
-Notes: ${escapeHtml(contact.notes || "—")}</div>
-        </article>
-      `).join("")}</div>` : `<div class="empty-state">No family contacts.</div>`}
-    </div>
-
-    <div class="panel"><h3>Family records</h3>${records.length ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>` : `<div class="empty-state">No family contact records.</div>`}</div>
-  `;
-  bindDynamicOpenRecordButtons();
-}
-
-async function loadCurrentView() {
-  clearError();
-  updateHeaderForView(state.currentView);
-  markActiveNav(state.currentView);
-
-  const config = VIEW_CONFIG[state.currentView];
-  if (!config) {
-    setEmpty("Unknown view.");
-    return;
-  }
-
-  try {
-    await config.loader();
-  } catch (error) {
-    console.error(error);
-    showError(error.message || "Something went wrong.");
-    setEmpty("Unable to load this workspace.");
-  }
 }
 
 function bindDynamicOpenRecordButtons() {
@@ -2556,7 +3063,7 @@ function bindEvents() {
     loadCurrentView();
   });
 
-  els.refreshBtn.addEventListener("click", () => {
+  els.refreshBtn?.addEventListener("click", () => {
     if (!state.youngPersonId) {
       loadYoungPersonSelector();
       return;
@@ -2567,17 +3074,17 @@ function bindEvents() {
     });
   });
 
-  els.selectorRefreshBtn.addEventListener("click", loadYoungPersonSelector);
-  els.selectorSearch.addEventListener("input", filterSelectorList);
+  els.selectorRefreshBtn?.addEventListener("click", loadYoungPersonSelector);
+  els.selectorSearch?.addEventListener("input", filterSelectorList);
 
-  els.selectorList.addEventListener("click", (event) => {
+  els.selectorList?.addEventListener("click", (event) => {
     const btn = event.target.closest("[data-open-young-person]");
     if (!btn) return;
     const id = Number(btn.dataset.openYoungPerson);
     if (id) openYoungPerson(id);
   });
 
-  els.changePersonBtn.addEventListener("click", () => {
+  els.changePersonBtn?.addEventListener("click", () => {
     state.youngPersonId = null;
     state.youngPerson = null;
     state.timelineCache = [];
@@ -2595,7 +3102,7 @@ function bindEvents() {
     loadYoungPersonSelector();
   });
 
-  els.quickActions.addEventListener("click", (event) => {
+  els.quickActions?.addEventListener("click", (event) => {
     const btn = event.target.closest("[data-action]");
     if (!btn) return;
 
@@ -2606,10 +3113,10 @@ function bindEvents() {
     if (action === "plan") openRecordModal("support_plan", "create");
   });
 
-  els.closeDrawerBtn.addEventListener("click", closeDrawer);
-  els.drawerBackdrop.addEventListener("click", closeDrawer);
+  els.closeDrawerBtn?.addEventListener("click", closeDrawer);
+  els.drawerBackdrop?.addEventListener("click", closeDrawer);
 
-  els.drawerEditBtn.addEventListener("click", () => {
+  els.drawerEditBtn?.addEventListener("click", () => {
     if (!state.activeRecordItem || !state.activeRecordType) return;
     if (!RECORD_CONFIG[state.activeRecordType]) {
       showError("This record type cannot be edited from the workspace yet.");
@@ -2618,15 +3125,15 @@ function bindEvents() {
     openRecordModal(state.activeRecordType, "edit", state.activeRecordItem);
   });
 
-  els.drawerSubmitBtn.addEventListener("click", () => runDrawerWorkflow("submit"));
-  els.drawerApproveBtn.addEventListener("click", () => runDrawerWorkflow("approve"));
-  els.drawerReturnBtn.addEventListener("click", () => runDrawerWorkflow("return"));
-  els.drawerArchiveBtn.addEventListener("click", () => runDrawerWorkflow("archive"));
+  els.drawerSubmitBtn?.addEventListener("click", () => runDrawerWorkflow("submit"));
+  els.drawerApproveBtn?.addEventListener("click", () => runDrawerWorkflow("approve"));
+  els.drawerReturnBtn?.addEventListener("click", () => runDrawerWorkflow("return"));
+  els.drawerArchiveBtn?.addEventListener("click", () => runDrawerWorkflow("archive"));
 
-  els.closeModalBtn.addEventListener("click", closeModal);
-  els.modalCancelBtn.addEventListener("click", closeModal);
-  els.modalBackdrop.addEventListener("click", closeModal);
-  els.modalForm.addEventListener("submit", handleModalSubmit);
+  els.closeModalBtn?.addEventListener("click", closeModal);
+  els.modalCancelBtn?.addEventListener("click", closeModal);
+  els.modalBackdrop?.addEventListener("click", closeModal);
+  els.modalForm?.addEventListener("submit", handleModalSubmit);
 
   bindAssistantEvents();
 
@@ -2637,6 +3144,26 @@ function bindEvents() {
       closeAssistant();
     }
   });
+}
+
+async function loadCurrentView() {
+  clearError();
+  updateHeaderForView(state.currentView);
+  markActiveNav(state.currentView);
+
+  const config = VIEW_CONFIG[state.currentView];
+  if (!config) {
+    setEmpty("Unknown view.");
+    return;
+  }
+
+  try {
+    await config.loader();
+  } catch (error) {
+    console.error(error);
+    showError(error.message || "Something went wrong.");
+    setEmpty("Unable to load this workspace.");
+  }
 }
 
 async function init() {
