@@ -3,11 +3,6 @@ const state = {
   youngPerson: null,
   currentView: "home",
   selectorItems: [],
-  timelineCache: [],
-  calendarDate: new Date(),
-  selectedDate: toDateInputValue(new Date()),
-  calendarMonthSummary: [],
-  selectedDayRecords: [],
   activeRecordItem: null,
   activeRecordType: null,
   modalMode: "create",
@@ -23,11 +18,10 @@ const els = {
   pageSubtitle: document.getElementById("pageSubtitle"),
   statusBar: document.getElementById("statusBar"),
   refreshBtn: document.getElementById("refreshBtn"),
-  alertsBtn: document.getElementById("alertsBtn"),
-  workflowStrip: document.getElementById("workflowStrip"),
   personName: document.getElementById("personName"),
   personMeta: document.getElementById("personMeta"),
   personAvatar: document.getElementById("personAvatar"),
+
   selectorPanel: document.getElementById("selectorPanel"),
   selectorList: document.getElementById("selectorList"),
   selectorSearch: document.getElementById("selectorSearch"),
@@ -73,57 +67,32 @@ const els = {
 };
 
 const VIEW_CONFIG = {
-  home: {
-    title: "Home",
-    subtitle: "What matters now, what has changed, and what adults need next",
-    loader: loadHome,
-    showQuickActions: true,
-    showWorkflow: false,
-  },
-  write: {
-    title: "Write",
-    subtitle: "Create clear, child-focused records with guided prompts",
-    loader: loadWriteHub,
-    showQuickActions: true,
-    showWorkflow: true,
-  },
-  timeline: {
-    title: "Timeline",
-    subtitle: "Chronology across all records, patterns, child voice and linked evidence",
-    loader: loadTimeline,
-    showQuickActions: false,
-    showWorkflow: false,
-  },
-  actions: {
-    title: "Actions",
-    subtitle: "What is due, what is returned, and what needs attention",
-    loader: loadActionsView,
-    showQuickActions: false,
-    showWorkflow: false,
-  },
-  reports: {
-    title: "Reports",
-    subtitle: "Summaries, evidence links and inspection outputs",
-    loader: loadReports,
-    showQuickActions: false,
-    showWorkflow: false,
-  },
-  profile: {
-    title: "Profile & settings",
-    subtitle: "Identity, communication, legal status, relationships and everyday guidance",
-    loader: loadProfile,
-    showQuickActions: false,
-    showWorkflow: false,
-  },
+  home: { title: "Home", subtitle: "What matters now", loader: loadHome },
+  profile: { title: "Profile", subtitle: "Identity, communication and legal information", loader: loadProfile },
+  timeline: { title: "What happened", subtitle: "Chronology across records", loader: loadTimeline },
+  handover: { title: "Handover", subtitle: "What the next staff need to know", loader: loadHandover },
+  "daily-notes": { title: "Daily notes", subtitle: "Shift recording", loader: () => loadRecordList(`/young-people/${state.youngPersonId}/daily-notes`, "Daily notes") },
+  incidents: { title: "Incidents", subtitle: "Incidents and concerns", loader: () => loadRecordList(`/young-people/${state.youngPersonId}/incidents`, "Incidents") },
+  risk: { title: "Risks", subtitle: "Risks and what helps", loader: () => loadRecordList(`/young-people/${state.youngPersonId}/risk`, "Risk assessments") },
+  plans: { title: "Plans", subtitle: "Support and care plans", loader: () => loadRecordList(`/young-people/${state.youngPersonId}/plans`, "Plans") },
+  appointments: { title: "Appointments", subtitle: "Young person appointments", loader: loadAppointments },
+  health: { title: "Health", subtitle: "Health and medication", loader: loadHealth },
+  education: { title: "Education", subtitle: "Education and progress", loader: loadEducation },
+  family: { title: "Family", subtitle: "Relationships and contact", loader: loadFamily },
+  keywork: { title: "Keywork", subtitle: "Sessions and reflection", loader: () => loadRecordList(`/young-people/${state.youngPersonId}/keywork`, "Keywork") },
+  evidence: { title: "Evidence", subtitle: "Inspection readiness", loader: loadEvidenceView },
+  compliance: { title: "Compliance", subtitle: "Checks and due items", loader: loadCompliance },
+  manager: { title: "Manager overview", subtitle: "Leadership and review", loader: loadManagerView },
+  reports: { title: "Reports", subtitle: "Summaries and outputs", loader: loadReports },
+  calendar: { title: "Calendar", subtitle: "Daily record view", loader: loadCalendarView },
 };
 
 const RECORD_CONFIG = {
   daily_note: {
     label: "Daily note",
-    listUrl: (youngPersonId) => `/young-people/${youngPersonId}/daily-notes`,
-    createUrl: (youngPersonId) => `/young-people/${youngPersonId}/daily-notes`,
-    detailUrl: (id) => `/young-people/daily-notes/${id}`,
+    createUrl: (id) => `/young-people/${id}/daily-notes`,
     updateUrl: (id) => `/young-people/daily-notes/${id}`,
+    detailUrl: (id) => `/young-people/daily-notes/${id}`,
     updateMethod: "PATCH",
     submitUrl: (id) => `/young-people/daily-notes/${id}/submit`,
     approveUrl: (id) => `/young-people/daily-notes/${id}/approve`,
@@ -132,10 +101,9 @@ const RECORD_CONFIG = {
   },
   incident: {
     label: "Incident",
-    listUrl: (youngPersonId) => `/young-people/${youngPersonId}/incidents`,
-    createUrl: (youngPersonId) => `/young-people/${youngPersonId}/incidents`,
-    detailUrl: (id) => `/young-people/incidents/${id}`,
+    createUrl: (id) => `/young-people/${id}/incidents`,
     updateUrl: (id) => `/young-people/incidents/${id}`,
+    detailUrl: (id) => `/young-people/incidents/${id}`,
     updateMethod: "PATCH",
     submitUrl: (id) => `/young-people/incidents/${id}/submit`,
     approveUrl: (id) => `/young-people/incidents/${id}/approve`,
@@ -144,10 +112,9 @@ const RECORD_CONFIG = {
   },
   risk: {
     label: "Risk assessment",
-    listUrl: (youngPersonId) => `/young-people/${youngPersonId}/risk`,
-    createUrl: (youngPersonId) => `/young-people/${youngPersonId}/risk`,
-    detailUrl: (id) => `/young-people/risk/${id}`,
+    createUrl: (id) => `/young-people/${id}/risk`,
     updateUrl: (id) => `/young-people/risk/${id}`,
+    detailUrl: (id) => `/young-people/risk/${id}`,
     updateMethod: "PUT",
     submitUrl: (id) => `/young-people/risk/${id}/submit`,
     approveUrl: (id) => `/young-people/risk/${id}/approve`,
@@ -156,10 +123,9 @@ const RECORD_CONFIG = {
   },
   support_plan: {
     label: "Plan",
-    listUrl: (youngPersonId) => `/young-people/${youngPersonId}/plans`,
-    createUrl: (youngPersonId) => `/young-people/${youngPersonId}/plans`,
-    detailUrl: (id) => `/young-people/plans/${id}`,
+    createUrl: (id) => `/young-people/${id}/plans`,
     updateUrl: (id) => `/young-people/plans/${id}`,
+    detailUrl: (id) => `/young-people/plans/${id}`,
     updateMethod: "PUT",
     submitUrl: (id) => `/young-people/plans/${id}/submit`,
     approveUrl: (id) => `/young-people/plans/${id}/approve`,
@@ -168,13 +134,12 @@ const RECORD_CONFIG = {
   },
   appointment: {
     label: "Appointment",
-    listUrl: (youngPersonId) => `/young-people/${youngPersonId}/appointments`,
-    createUrl: (youngPersonId) => `/young-people/${youngPersonId}/appointments`,
-    detailUrl: (id) => `/young-people/appointments/${id}`,
+    createUrl: (id) => `/young-people/${id}/appointments`,
     updateUrl: (id) => `/young-people/appointments/${id}`,
+    detailUrl: (id) => `/young-people/appointments/${id}`,
     updateMethod: "PATCH",
-    completeUrl: (id) => `/young-people/appointments/${id}/complete`,
-    cancelUrl: (id) => `/young-people/appointments/${id}/cancel`,
+    approveUrl: (id) => `/young-people/appointments/${id}/complete`,
+    returnUrl: (id) => `/young-people/appointments/${id}/cancel`,
   },
 };
 
@@ -309,24 +274,10 @@ function formatDate(value) {
   });
 }
 
-function formatShortTime(value) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function monthName(date) {
-  return date.toLocaleString("en-GB", { month: "long", year: "numeric" });
-}
-
 function statusBadgeClass(value) {
   const v = String(value || "").toLowerCase();
-  if (["approved", "active", "recorded", "low", "completed", "ok", "scheduled"].includes(v)) return "success";
-  if (["submitted", "pending", "medium", "due_soon", "draft"].includes(v)) return "warning";
+  if (["approved", "active", "recorded", "completed", "scheduled"].includes(v)) return "success";
+  if (["submitted", "pending", "draft", "medium"].includes(v)) return "warning";
   if (["returned", "high", "critical", "archived", "overdue", "cancelled"].includes(v)) return "danger";
   return "";
 }
@@ -334,25 +285,15 @@ function statusBadgeClass(value) {
 function renderBadges(values = []) {
   const filtered = values.filter(Boolean);
   if (!filtered.length) return "";
-  return `
-    <div class="badge-row">
-      ${filtered.map((value) => `<span class="badge ${statusBadgeClass(value)}">${escapeHtml(value)}</span>`).join("")}
-    </div>
-  `;
+  return `<div class="badge-row">${filtered.map(v => `<span class="badge ${statusBadgeClass(v)}">${escapeHtml(v)}</span>`).join("")}</div>`;
 }
 
-function normaliseRecordType(item) {
-  const raw = String(item.record_type || item.event_type || item.category || "").toLowerCase();
-  if (raw === "plan") return "support_plan";
-  if (raw === "risk_assessment") return "risk";
-  if (raw === "daily_notes") return "daily_note";
-  if (raw === "incidents") return "incident";
-  if (raw === "keywork_session") return "keywork";
-  return raw;
+function recordTypeLabel(value) {
+  return String(value || "record").replaceAll("_", " ");
 }
 
 function getRecordUrl(item) {
-  const type = normaliseRecordType(item);
+  const type = String(item.record_type || item.event_type || item.category || "").toLowerCase();
   const id = item.record_id || item.source_id || item.id;
   if (!id) return null;
 
@@ -360,7 +301,9 @@ function getRecordUrl(item) {
     daily_note: RECORD_CONFIG.daily_note.detailUrl(id),
     incident: RECORD_CONFIG.incident.detailUrl(id),
     risk: RECORD_CONFIG.risk.detailUrl(id),
+    risk_assessment: RECORD_CONFIG.risk.detailUrl(id),
     support_plan: RECORD_CONFIG.support_plan.detailUrl(id),
+    plan: RECORD_CONFIG.support_plan.detailUrl(id),
     appointment: RECORD_CONFIG.appointment.detailUrl(id),
     health: `/young-people/health-records/${id}`,
     health_record: `/young-people/health-records/${id}`,
@@ -371,47 +314,38 @@ function getRecordUrl(item) {
     family: `/young-people/family/records/${id}`,
     family_contact: `/young-people/family/records/${id}`,
     keywork: `/young-people/keywork/${id}`,
+    keywork_session: `/young-people/keywork/${id}`,
     report: `/young-people/reports/${id}`,
   };
 
   return map[type] || null;
 }
 
-function normaliseDetailEntries(data) {
-  const skipKeys = new Set(["id", "record_id", "young_person_id", "created_at", "updated_at", "title", "summary", "narrative", "report_text"]);
-  return Object.entries(data || {})
-    .filter(([key, value]) => !skipKeys.has(key) && value !== null && value !== "" && value !== undefined)
-    .map(([key, value]) => ({
-      key: key.replaceAll("_", " "),
-      value: typeof value === "object" ? JSON.stringify(value, null, 2) : String(value),
-    }));
-}
-
-function recordSummary(item) {
-  return item.summary || item.narrative || item.description || item.concern_summary || item.outcome || "No summary available.";
+function normaliseRecordType(item) {
+  const raw = String(item.record_type || item.event_type || item.category || "").toLowerCase();
+  if (raw === "plan") return "support_plan";
+  if (raw === "risk_assessment") return "risk";
+  if (raw === "keywork_session") return "keywork";
+  return raw;
 }
 
 function renderRecordCard(item) {
-  const title = item.title || item.topic || item.contact_person || item.record_type || "Record";
-  const meta = [
-    item.recorded_at ? formatDate(item.recorded_at) : null,
-    item.occurred_at ? formatDate(item.occurred_at) : null,
-    item.event_datetime ? formatDate(item.event_datetime) : null,
-    item.appointment_date ? formatDate(item.appointment_date) : null,
-    item.created_at ? formatDate(item.created_at) : null,
-    item.author_name || item.created_by_name || item.owner_name || item.worker_name || item.professional_name || null,
-  ].filter(Boolean);
+  const title = item.title || item.topic || item.contact_person || recordTypeLabel(item.record_type || item.event_type || item.category);
+  const summary = item.summary || item.narrative || item.description || item.concern_summary || "No summary available.";
+  const when = item.recorded_at || item.occurred_at || item.event_datetime || item.created_at || item.note_date || item.record_date || item.appointment_date;
+  const who = item.recorded_by_name || item.author_name || item.created_by_name || item.worker_name || item.owner_name || item.professional_name;
+  const badges = [item.workflow_status, item.status, item.approval_status, item.severity].filter(Boolean);
 
   return `
     <article class="record-card">
       <div class="record-card-header">
         <div>
           <h4>${escapeHtml(title)}</h4>
-          <div class="record-meta">${escapeHtml(meta.join(" • ") || "Record")}</div>
+          <div class="record-meta">${escapeHtml(formatDate(when))}${who ? ` • ${escapeHtml(who)}` : ""}</div>
         </div>
       </div>
-      <div class="record-body">${escapeHtml(recordSummary(item))}</div>
-      ${renderBadges([item.workflow_status, item.severity, item.status, item.approval_status])}
+      <div class="record-body">${escapeHtml(summary)}</div>
+      ${renderBadges(badges)}
       <div class="day-record-actions">
         <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>
       </div>
@@ -422,7 +356,9 @@ function renderRecordCard(item) {
 function renderProfileSection(title, rows = []) {
   return `
     <section class="panel">
-      <div class="panel-header"><div><h3>${escapeHtml(title)}</h3></div></div>
+      <div class="panel-header">
+        <div><h3>${escapeHtml(title)}</h3></div>
+      </div>
       <div class="kv">
         ${rows.map((row) => `
           <div class="kv-key">${escapeHtml(row.label)}</div>
@@ -433,319 +369,34 @@ function renderProfileSection(title, rows = []) {
   `;
 }
 
-function renderWorkflowStrip(step = "Draft") {
-  if (!els.workflowStrip) return;
-  const steps = Array.from(els.workflowStrip.querySelectorAll(".workflow-step"));
-  const order = ["Draft", "Check", "AI review", "Submit", "Manager review", "Signed off"];
-  const idx = Math.max(order.indexOf(step), 0);
-  steps.forEach((el, i) => {
-    el.classList.toggle("active", i <= idx);
-  });
-}
-
-function updateHeaderForView(view) {
-  const config = VIEW_CONFIG[view];
-  if (!config) return;
-  els.pageTitle.textContent = config.title;
-  els.pageSubtitle.textContent = config.subtitle;
-  els.quickActions.classList.toggle("hidden", !config.showQuickActions);
-  els.workflowStrip.classList.toggle("hidden", !config.showWorkflow);
-  renderWorkflowStrip(config.showWorkflow ? "Draft" : "Draft");
-  updateAssistantContext();
-}
-
-function markActiveNav(view) {
-  document.querySelectorAll(".nav-btn").forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.view === view);
-  });
-}
-
-function showSelectorMode() {
-  els.selectorPanel.classList.remove("hidden");
-  els.workspacePanel.classList.add("hidden");
-  els.refreshBtn.classList.add("hidden");
-  els.personName.textContent = "No young person selected";
-  els.personMeta.textContent = "Choose from the selector";
-  els.personAvatar.textContent = "YP";
-  toggleAssistantLauncher();
-  updateAssistantContext();
-}
-
-function hideSelectorMode() {
-  els.selectorPanel.classList.add("hidden");
-  els.workspacePanel.classList.remove("hidden");
-  els.refreshBtn.classList.remove("hidden");
-  toggleAssistantLauncher();
-}
-
-function assistantPromptsForView(view) {
-  const defaults = [
-    "Give me a short handover for this young person.",
-    "Summarise current risks and what helps.",
-    "What are the key patterns in recent incidents and daily notes?",
-    "What evidence would support Ofsted for this young person right now?",
-  ];
-  const byView = {
-    actions: [
-      "What is due soon for this young person?",
-      "What needs manager attention right now?",
-      "Which records are still drafts or returned?",
-    ],
-    reports: [
-      "What should go into a monthly summary?",
-      "What evidence would support Ofsted for this young person right now?",
-      "Summarise current progress, risks and actions.",
-    ],
-    timeline: [
-      "Summarise what has changed recently for this young person.",
-      "What patterns are visible in recent records?",
-    ],
-  };
-  return byView[view] || defaults;
-}
-
-function renderAssistantSuggestionButtons() {
-  if (!els.assistantSuggestions) return;
-  const prompts = assistantPromptsForView(state.currentView);
-  els.assistantSuggestions.innerHTML = prompts.map((prompt) => `
-    <button class="secondary-btn assistant-prompt-btn" type="button" data-prompt="${escapeHtml(prompt)}">${escapeHtml(prompt)}</button>
-  `).join("");
-}
-
-function assistantContextSummary() {
-  if (!state.youngPerson) return "No young person selected.";
-  const fullName = [state.youngPerson.first_name, state.youngPerson.last_name].filter(Boolean).join(" ").trim() || state.youngPerson.preferred_name || "Young Person";
-  const parts = [
-    `Young person: ${fullName}`,
-    state.youngPerson.preferred_name ? `Preferred name: ${state.youngPerson.preferred_name}` : null,
-    state.youngPerson.placement_status ? `Placement status: ${state.youngPerson.placement_status}` : null,
-    state.youngPerson.summary_risk_level ? `Risk level: ${state.youngPerson.summary_risk_level}` : null,
-    `Current view: ${state.currentView}`,
-  ].filter(Boolean);
-  return parts.join(" • ");
-}
-
-function updateAssistantContext() {
-  if (els.assistantContext) {
-    els.assistantContext.textContent = assistantContextSummary();
-  }
-  renderAssistantSuggestionButtons();
-}
-
-function renderAssistantMessages() {
-  if (!els.assistantMessages) return;
-  const base = `
-    <article class="assistant-message assistant-message-system">
-      <div class="assistant-message-role">Assistant</div>
-      <div class="assistant-message-body">Ask a question about this young person. The assistant can help with handovers, reports, planning, risks, appointments, evidence and next steps.</div>
-    </article>
-  `;
-  const messagesHtml = state.assistantMessages.map((message) => `
-    <article class="assistant-message assistant-message-${escapeHtml(message.role)}">
-      <div class="assistant-message-role">${escapeHtml(message.role === "user" ? "You" : "Assistant")}</div>
-      <div class="assistant-message-body">${escapeHtml(message.content)}</div>
-    </article>
-  `).join("");
-  els.assistantMessages.innerHTML = base + messagesHtml;
-  els.assistantMessages.scrollTop = els.assistantMessages.scrollHeight;
-}
-
-function pushAssistantMessage(role, content) {
-  state.assistantMessages.push({ role, content });
-  renderAssistantMessages();
-}
-
-async function askAssistant(question) {
-  const trimmed = String(question || "").trim();
-  if (!trimmed) return;
-  pushAssistantMessage("user", trimmed);
-  try {
-    els.assistantSendBtn.disabled = true;
-    const payload = {
-      message: trimmed,
-      context: {
-        scope: "young_person",
-        young_person_id: state.youngPersonId,
-        current_view: state.currentView,
-        young_person_name: els.personName?.textContent || "",
-      },
-    };
-    const response = await apiSend("/young-people/assistant", "POST", payload);
-    const replyText = response.reply || response.message || response.answer || response.output_text || response.text || "No assistant reply returned.";
-    pushAssistantMessage("assistant", replyText);
-  } catch (error) {
-    console.error(error);
-    pushAssistantMessage("assistant", error.message || "The assistant could not answer right now.");
-  } finally {
-    els.assistantSendBtn.disabled = false;
-  }
-}
-
-function buildFormField(field) {
-  const common = `<label class="form-label" for="${field.name}">${escapeHtml(field.label)}</label>`;
-  if (field.type === "textarea") {
-    return `
-      <div class="form-field ${field.full ? "full" : ""}">
-        ${common}
-        <textarea id="${field.name}" name="${field.name}" class="textarea-input" placeholder="${escapeHtml(field.placeholder || "")}">${escapeHtml(field.value || "")}</textarea>
-      </div>
-    `;
-  }
-  if (field.type === "select") {
-    return `
-      <div class="form-field ${field.full ? "full" : ""}">
-        ${common}
-        <select id="${field.name}" name="${field.name}" class="select-input">
-          ${(field.options || []).map((opt) => `
-            <option value="${escapeHtml(opt.value)}" ${String(opt.value) === String(field.value || "") ? "selected" : ""}>${escapeHtml(opt.label)}</option>
-          `).join("")}
-        </select>
-      </div>
-    `;
-  }
-  return `
-    <div class="form-field ${field.full ? "full" : ""}">
-      ${common}
-      <input id="${field.name}" name="${field.name}" type="${field.type || "text"}" class="text-input" placeholder="${escapeHtml(field.placeholder || "")}" value="${escapeHtml(field.value || "")}" />
-    </div>
-  `;
-}
-
-function getModalSchema(recordType, item = null) {
-  const today = toDateInputValue(new Date());
-  if (recordType === "daily_note") {
-    return [
-      { name: "note_date", label: "Date", type: "date", value: item?.note_date || today },
-      { name: "shift_type", label: "Shift type", type: "select", value: item?.shift_type || "day", options: [{ value: "day", label: "Day" }, { value: "evening", label: "Evening" }, { value: "night", label: "Night" }, { value: "waking_night", label: "Waking night" }] },
-      { name: "mood", label: "Mood", type: "text", value: item?.mood || "" },
-      { name: "presentation", label: "How the child presented", type: "textarea", full: true, value: item?.presentation || "" },
-      { name: "activities", label: "What happened during the shift", type: "textarea", full: true, value: item?.activities || "" },
-      { name: "behaviour_update", label: "What adults noticed and how they responded", type: "textarea", full: true, value: item?.behaviour_update || "" },
-      { name: "young_person_voice", label: "Child voice", type: "textarea", full: true, value: item?.young_person_voice || item?.child_voice || "" },
-      { name: "positives", label: "What went well", type: "textarea", full: true, value: item?.positives || "" },
-      { name: "actions_required", label: "What adults need next", type: "textarea", full: true, value: item?.actions_required || "" },
-    ];
-  }
-  if (recordType === "incident") {
-    return [
-      { name: "incident_datetime", label: "Incident time", type: "datetime-local", value: item?.incident_datetime ? String(item.incident_datetime).slice(0, 16) : (item?.occurred_at ? String(item.occurred_at).slice(0, 16) : "") },
-      { name: "incident_type", label: "Incident type", type: "text", value: item?.incident_type || "" },
-      { name: "severity", label: "Severity", type: "select", value: item?.severity || "medium", options: [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" }, { value: "critical", label: "Critical" }] },
-      { name: "location", label: "Location", type: "text", value: item?.location || "" },
-      { name: "description", label: "What happened", type: "textarea", full: true, value: item?.description || item?.narrative || "" },
-      { name: "antecedent", label: "What was happening before", type: "textarea", full: true, value: item?.antecedent || "" },
-      { name: "staff_response", label: "What adults noticed and did", type: "textarea", full: true, value: item?.staff_response || "" },
-      { name: "child_voice", label: "What the child communicated", type: "textarea", full: true, value: item?.child_voice || "" },
-      { name: "outcome", label: "Outcome and what needs to happen next", type: "textarea", full: true, value: item?.outcome || "" },
-    ];
-  }
-  if (recordType === "risk") {
-    return [
-      { name: "category", label: "Category", type: "text", value: item?.category || "" },
-      { name: "title", label: "Title", type: "text", value: item?.title || "" },
-      { name: "severity", label: "Severity", type: "select", value: item?.severity || "medium", options: [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" }] },
-      { name: "likelihood", label: "Likelihood", type: "select", value: item?.likelihood || "medium", options: [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" }] },
-      { name: "review_date", label: "Review date", type: "date", value: item?.review_date || today },
-      { name: "concern_summary", label: "Main concern", type: "textarea", full: true, value: item?.concern_summary || item?.formulation || "" },
-      { name: "known_triggers", label: "Known triggers or pressures", type: "textarea", full: true, value: item?.known_triggers || "" },
-      { name: "current_controls", label: "What helps and what adults should do", type: "textarea", full: true, value: item?.current_controls || item?.staff_guidance || "" },
-      { name: "response_actions", label: "What needs to happen next", type: "textarea", full: true, value: item?.response_actions || "" },
-    ];
-  }
-  if (recordType === "appointment") {
-    return [
-      { name: "title", label: "Appointment title", type: "text", value: item?.title || "" },
-      { name: "appointment_type", label: "Appointment type", type: "select", value: item?.appointment_type || "general", options: [{ value: "general", label: "General" }, { value: "health", label: "Health" }, { value: "education", label: "Education" }, { value: "family", label: "Family" }, { value: "therapy", label: "Therapy" }, { value: "review", label: "Review" }] },
-      { name: "appointment_date", label: "Appointment date and time", type: "datetime-local", value: item?.appointment_date ? toDateTimeLocalValue(item.appointment_date) : "" },
-      { name: "end_datetime", label: "End time", type: "datetime-local", value: item?.end_datetime ? toDateTimeLocalValue(item.end_datetime) : "" },
-      { name: "location", label: "Location", type: "text", value: item?.location || "" },
-      { name: "professional_name", label: "Professional name", type: "text", value: item?.professional_name || "" },
-      { name: "professional_role", label: "Professional role", type: "text", value: item?.professional_role || "" },
-      { name: "linked_plan_id", label: "Linked plan id", type: "number", value: item?.linked_plan_id || "" },
-      { name: "summary", label: "Summary", type: "textarea", full: true, value: item?.summary || "" },
-      { name: "purpose", label: "Purpose", type: "textarea", full: true, value: item?.purpose || "" },
-      { name: "child_voice", label: "Child voice", type: "textarea", full: true, value: item?.child_voice || "" },
-      { name: "preparation_notes", label: "Preparation notes", type: "textarea", full: true, value: item?.preparation_notes || "" },
-      { name: "follow_up_actions", label: "Follow-up actions", type: "textarea", full: true, value: item?.follow_up_actions || "" },
-      { name: "reminder_minutes_before", label: "Reminder minutes before", type: "number", value: item?.reminder_minutes_before ?? 30 },
-    ];
-  }
-  return [
-    { name: "plan_type", label: "Plan type", type: "text", value: item?.plan_type || "support_plan" },
-    { name: "title", label: "Title", type: "text", value: item?.title || "" },
-    { name: "review_date", label: "Review date", type: "date", value: item?.review_date || today },
-    { name: "presenting_need", label: "What adults need to understand", type: "textarea", full: true, value: item?.presenting_need || item?.formulation || "" },
-    { name: "summary", label: "Summary", type: "textarea", full: true, value: item?.summary || "" },
-    { name: "child_voice", label: "Child voice", type: "textarea", full: true, value: item?.child_voice || "" },
-    { name: "proactive_strategies", label: "What helps and what adults should do", type: "textarea", full: true, value: item?.proactive_strategies || item?.staff_guidance || "" },
-    { name: "triggers", label: "Triggers or pressures", type: "textarea", full: true, value: item?.triggers || "" },
-    { name: "protective_factors", label: "Protective factors", type: "textarea", full: true, value: item?.protective_factors || "" },
-  ];
-}
-
-function renderDocumentHint(recordType) {
-  const hints = {
-    daily_note: { title: "Daily note guidance", text: "Write clearly and kindly. Show what happened, how the child presented, their voice, what helped, and what adults need next." },
-    incident: { title: "Incident guidance", text: "Describe what happened in order, what may have been going on for the child, what adults noticed and did, and what needs to happen next." },
-    risk: { title: "Risk guidance", text: "Focus on triggers, pressures, warning signs, what helps, and the practical guidance adults need to follow consistently." },
-    support_plan: { title: "Plan guidance", text: "Write this like guidance for adults. Keep the child at the centre and explain what adults need to understand and do." },
-    appointment: { title: "Appointment guidance", text: "Record the purpose, child voice, preparation, who is involved, and any follow-up actions for adults afterwards." },
-  };
-  const hint = hints[recordType];
-  if (!hint) return "";
-  return `
-    <section class="panel">
-      <div class="panel-header"><div><h3>${escapeHtml(hint.title)}</h3><p class="panel-subtitle">Use the prompts to keep the record thoughtful, respectful and useful.</p></div></div>
-      <div class="record-body">${escapeHtml(hint.text)}</div>
-    </section>
-  `;
-}
-
-function openRecordModal(recordType, mode = "create", item = null) {
-  state.modalRecordType = recordType;
-  state.modalMode = mode;
-  state.modalEditItem = item;
-  const config = RECORD_CONFIG[recordType] || RECORD_CONFIG.support_plan;
-  const label = config.label || "Record";
-  els.modalTitle.textContent = mode === "edit" ? `Edit ${label}` : `Add ${label}`;
-  els.modalSubtitle.textContent = mode === "edit" ? "Review and update this record carefully" : "Complete this record using the guided prompts";
-  els.modalSaveBtn.textContent = mode === "edit" ? "Save changes" : "Save";
-  const schema = getModalSchema(recordType, item);
-  els.modalFields.innerHTML = `
-    ${renderDocumentHint(recordType)}
-    <section class="panel">
-      <div class="panel-header">
-        <div>
-          <h3>${escapeHtml(label)} form</h3>
-          <p class="panel-subtitle">Keep this clear, respectful, child-focused and useful for the next adult.</p>
-        </div>
-      </div>
-      <div class="form-grid">${schema.map(buildFormField).join("")}</div>
-    </section>
-  `;
-  els.modal.classList.remove("hidden");
-  els.modalBackdrop.classList.remove("hidden");
-}
-
-function closeModal() {
-  els.modal.classList.add("hidden");
-  els.modalBackdrop.classList.add("hidden");
-  state.modalMode = "create";
-  state.modalRecordType = null;
-  state.modalEditItem = null;
-  els.modalFields.innerHTML = "";
-}
-
 function openDrawer() {
   els.drawer.classList.remove("hidden");
   els.drawerBackdrop.classList.remove("hidden");
+  els.drawer.setAttribute("aria-hidden", "false");
 }
 
 function closeDrawer() {
   els.drawer.classList.add("hidden");
   els.drawerBackdrop.classList.add("hidden");
+  els.drawer.setAttribute("aria-hidden", "true");
   state.activeRecordItem = null;
   state.activeRecordType = null;
+}
+
+function openModal() {
+  els.modal.classList.remove("hidden");
+  els.modalBackdrop.classList.remove("hidden");
+  els.modal.setAttribute("aria-hidden", "false");
+}
+
+function closeModal() {
+  els.modal.classList.add("hidden");
+  els.modalBackdrop.classList.add("hidden");
+  els.modal.setAttribute("aria-hidden", "true");
+  state.modalMode = "create";
+  state.modalRecordType = null;
+  state.modalEditItem = null;
+  els.modalFields.innerHTML = "";
 }
 
 function openAssistant() {
@@ -760,8 +411,219 @@ function closeAssistant() {
 }
 
 function toggleAssistantLauncher() {
-  if (state.youngPersonId) els.assistantLauncher?.classList.remove("hidden");
-  else els.assistantLauncher?.classList.add("hidden");
+  if (state.youngPersonId) els.assistantLauncher.classList.remove("hidden");
+  else els.assistantLauncher.classList.add("hidden");
+}
+
+function assistantPromptsForView(view) {
+  const map = {
+    home: ["Give me a short handover for this young person.", "What matters most right now?"],
+    timeline: ["What patterns are visible?", "Summarise what has changed recently."],
+    evidence: ["What evidence would support Ofsted right now?", "What child voice is visible and what is missing?"],
+    risk: ["Summarise current risks and what helps.", "How should staff respond therapeutically?"],
+    manager: ["What needs manager review right now?", "What is overdue or waiting for approval?"],
+  };
+  return map[view] || [
+    "Give me a short handover for this young person.",
+    "Summarise current risks and what helps.",
+    "What evidence would support Ofsted right now?",
+  ];
+}
+
+function renderAssistantSuggestionButtons() {
+  const prompts = assistantPromptsForView(state.currentView);
+  els.assistantSuggestions.innerHTML = prompts.map((prompt) => `
+    <button class="secondary-btn" type="button" data-prompt="${escapeHtml(prompt)}">${escapeHtml(prompt)}</button>
+  `).join("");
+}
+
+function assistantContextSummary() {
+  if (!state.youngPerson) return "No young person selected.";
+  const fullName = [state.youngPerson.first_name, state.youngPerson.last_name].filter(Boolean).join(" ").trim() || state.youngPerson.preferred_name || "Young Person";
+  return [
+    `Young person: ${fullName}`,
+    state.youngPerson.placement_status ? `Placement: ${state.youngPerson.placement_status}` : null,
+    state.youngPerson.summary_risk_level ? `Risk: ${state.youngPerson.summary_risk_level}` : null,
+    `View: ${state.currentView.replaceAll("-", " ")}`,
+  ].filter(Boolean).join(" • ");
+}
+
+function updateAssistantContext() {
+  els.assistantContext.textContent = assistantContextSummary();
+  renderAssistantSuggestionButtons();
+}
+
+function renderAssistantMessages() {
+  const base = `
+    <article class="assistant-message assistant-message-system">
+      <div class="assistant-message-role">Assistant</div>
+      <div class="assistant-message-body">Ask a question about this young person.</div>
+    </article>
+  `;
+  const html = state.assistantMessages.map((m) => `
+    <article class="assistant-message ${m.role === "user" ? "assistant-message-user" : ""}">
+      <div class="assistant-message-role">${m.role === "user" ? "You" : "Assistant"}</div>
+      <div class="assistant-message-body">${escapeHtml(m.content)}</div>
+    </article>
+  `).join("");
+  els.assistantMessages.innerHTML = base + html;
+  els.assistantMessages.scrollTop = els.assistantMessages.scrollHeight;
+}
+
+function pushAssistantMessage(role, content) {
+  state.assistantMessages.push({ role, content });
+  renderAssistantMessages();
+}
+
+async function askAssistant(question) {
+  const trimmed = String(question || "").trim();
+  if (!trimmed) return;
+  pushAssistantMessage("user", trimmed);
+
+  try {
+    els.assistantSendBtn.disabled = true;
+    const response = await apiSend("/young-people/assistant", "POST", {
+      message: trimmed,
+      context: {
+        scope: "young_person",
+        young_person_id: state.youngPersonId,
+        current_view: state.currentView,
+        young_person_name: els.personName.textContent || "",
+      },
+    });
+    pushAssistantMessage("assistant", response.reply || response.message || response.answer || "No assistant reply returned.");
+  } catch (error) {
+    pushAssistantMessage("assistant", error.message || "The assistant could not answer right now.");
+  } finally {
+    els.assistantSendBtn.disabled = false;
+  }
+}
+
+function buildFormField(field) {
+  const label = `<label class="form-label" for="${field.name}">${escapeHtml(field.label)}</label>`;
+
+  if (field.type === "textarea") {
+    return `
+      <div class="form-field ${field.full ? "full" : ""}">
+        ${label}
+        <textarea id="${field.name}" name="${field.name}" class="textarea-input">${escapeHtml(field.value || "")}</textarea>
+      </div>
+    `;
+  }
+
+  if (field.type === "select") {
+    return `
+      <div class="form-field ${field.full ? "full" : ""}">
+        ${label}
+        <select id="${field.name}" name="${field.name}" class="select-input">
+          ${(field.options || []).map((opt) => `
+            <option value="${escapeHtml(opt.value)}" ${String(opt.value) === String(field.value || "") ? "selected" : ""}>${escapeHtml(opt.label)}</option>
+          `).join("")}
+        </select>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="form-field ${field.full ? "full" : ""}">
+      ${label}
+      <input id="${field.name}" name="${field.name}" type="${field.type || "text"}" class="text-input" value="${escapeHtml(field.value || "")}" />
+    </div>
+  `;
+}
+
+function getModalSchema(recordType, item = null) {
+  const today = toDateInputValue(new Date());
+
+  if (recordType === "daily_note") {
+    return [
+      { name: "note_date", label: "Date", type: "date", value: item?.note_date || today },
+      { name: "shift_type", label: "Shift type", type: "select", value: item?.shift_type || "day", options: [
+        { value: "day", label: "Day" },
+        { value: "evening", label: "Evening" },
+        { value: "night", label: "Night" },
+        { value: "waking_night", label: "Waking night" },
+      ]},
+      { name: "presentation", label: "Presentation", type: "textarea", full: true, value: item?.presentation || "" },
+      { name: "activities", label: "Activities", type: "textarea", full: true, value: item?.activities || "" },
+      { name: "young_person_voice", label: "Young person voice", type: "textarea", full: true, value: item?.young_person_voice || "" },
+      { name: "positives", label: "Positives", type: "textarea", full: true, value: item?.positives || "" },
+      { name: "actions_required", label: "Actions required", type: "textarea", full: true, value: item?.actions_required || "" },
+    ];
+  }
+
+  if (recordType === "incident") {
+    return [
+      { name: "incident_datetime", label: "Incident time", type: "datetime-local", value: item?.incident_datetime ? String(item.incident_datetime).slice(0, 16) : "" },
+      { name: "incident_type", label: "Incident type", type: "text", value: item?.incident_type || "" },
+      { name: "severity", label: "Severity", type: "select", value: item?.severity || "medium", options: [
+        { value: "low", label: "Low" },
+        { value: "medium", label: "Medium" },
+        { value: "high", label: "High" },
+        { value: "critical", label: "Critical" },
+      ]},
+      { name: "description", label: "Description", type: "textarea", full: true, value: item?.description || "" },
+      { name: "staff_response", label: "Staff response", type: "textarea", full: true, value: item?.staff_response || "" },
+      { name: "child_voice", label: "Child voice", type: "textarea", full: true, value: item?.child_voice || "" },
+      { name: "outcome", label: "Outcome", type: "textarea", full: true, value: item?.outcome || "" },
+    ];
+  }
+
+  if (recordType === "risk") {
+    return [
+      { name: "category", label: "Category", type: "text", value: item?.category || "" },
+      { name: "title", label: "Title", type: "text", value: item?.title || "" },
+      { name: "severity", label: "Severity", type: "select", value: item?.severity || "medium", options: [
+        { value: "low", label: "Low" },
+        { value: "medium", label: "Medium" },
+        { value: "high", label: "High" },
+      ]},
+      { name: "likelihood", label: "Likelihood", type: "select", value: item?.likelihood || "medium", options: [
+        { value: "low", label: "Low" },
+        { value: "medium", label: "Medium" },
+        { value: "high", label: "High" },
+      ]},
+      { name: "review_date", label: "Review date", type: "date", value: item?.review_date || today },
+      { name: "concern_summary", label: "Concern summary", type: "textarea", full: true, value: item?.concern_summary || "" },
+      { name: "current_controls", label: "Current controls", type: "textarea", full: true, value: item?.current_controls || "" },
+      { name: "response_actions", label: "Response actions", type: "textarea", full: true, value: item?.response_actions || "" },
+    ];
+  }
+
+  if (recordType === "appointment") {
+    return [
+      { name: "title", label: "Appointment title", type: "text", value: item?.title || "" },
+      { name: "appointment_type", label: "Appointment type", type: "text", value: item?.appointment_type || "" },
+      { name: "appointment_date", label: "Appointment date", type: "datetime-local", value: item?.appointment_date ? toDateTimeLocalValue(item.appointment_date) : "" },
+      { name: "end_datetime", label: "End time", type: "datetime-local", value: item?.end_datetime ? toDateTimeLocalValue(item.end_datetime) : "" },
+      { name: "location", label: "Location", type: "text", value: item?.location || "" },
+      { name: "professional_name", label: "Professional", type: "text", value: item?.professional_name || "" },
+      { name: "summary", label: "Summary", type: "textarea", full: true, value: item?.summary || "" },
+      { name: "child_voice", label: "Child voice", type: "textarea", full: true, value: item?.child_voice || "" },
+      { name: "follow_up_actions", label: "Follow-up actions", type: "textarea", full: true, value: item?.follow_up_actions || "" },
+    ];
+  }
+
+  return [
+    { name: "title", label: "Title", type: "text", value: item?.title || "" },
+    { name: "review_date", label: "Review date", type: "date", value: item?.review_date || today },
+    { name: "presenting_need", label: "Presenting need", type: "textarea", full: true, value: item?.presenting_need || "" },
+    { name: "summary", label: "Summary", type: "textarea", full: true, value: item?.summary || "" },
+    { name: "child_voice", label: "Child voice", type: "textarea", full: true, value: item?.child_voice || "" },
+    { name: "proactive_strategies", label: "Proactive strategies", type: "textarea", full: true, value: item?.proactive_strategies || "" },
+  ];
+}
+
+function openRecordModal(recordType, mode = "create", item = null) {
+  state.modalRecordType = recordType;
+  state.modalMode = mode;
+  state.modalEditItem = item;
+
+  const config = RECORD_CONFIG[recordType] || RECORD_CONFIG.support_plan;
+  els.modalTitle.textContent = mode === "edit" ? `Edit ${config.label}` : `Add ${config.label}`;
+  els.modalSubtitle.textContent = "Child-focused recording";
+  els.modalFields.innerHTML = getModalSchema(recordType, item).map(buildFormField).join("");
+  openModal();
 }
 
 function serialiseValue(key, value) {
@@ -773,11 +635,8 @@ function serialiseValue(key, value) {
 function serializeModalForm() {
   const formData = new FormData(els.modalForm);
   const obj = {};
-  for (const [key, value] of formData.entries()) {
-    obj[key] = serialiseValue(key, value);
-  }
+  for (const [key, value] of formData.entries()) obj[key] = serialiseValue(key, value);
   obj.young_person_id = state.youngPersonId;
-  if (obj.appointment_date && !obj.start_datetime) obj.start_datetime = obj.appointment_date;
   return obj;
 }
 
@@ -785,13 +644,13 @@ async function handleModalSubmit(event) {
   event.preventDefault();
   const recordType = state.modalRecordType;
   const config = RECORD_CONFIG[recordType];
-  if (!config) {
-    showError("This record type is not configured.");
-    return;
-  }
+  if (!config) return showError("This record type is not configured.");
+
   const payload = serializeModalForm();
+
   try {
     els.modalSaveBtn.disabled = true;
+
     if (state.modalMode === "edit" && state.modalEditItem?.id) {
       await apiSend(config.updateUrl(state.modalEditItem.id), config.updateMethod || "PATCH", payload);
       showMessage(`${config.label} updated.`);
@@ -799,10 +658,10 @@ async function handleModalSubmit(event) {
       await apiSend(config.createUrl(state.youngPersonId), "POST", payload);
       showMessage(`${config.label} created.`);
     }
+
     closeModal();
     await loadCurrentView();
   } catch (error) {
-    console.error(error);
     showError(error.message || "Could not save record.");
   } finally {
     els.modalSaveBtn.disabled = false;
@@ -814,15 +673,16 @@ async function runDrawerWorkflow(action) {
   const type = state.activeRecordType;
   const config = RECORD_CONFIG[type];
   if (!item || !config) return showError("No record selected.");
+
   const id = item.record_id || item.source_id || item.id;
   if (!id) return showError("This record has no id.");
+
   let url = null;
   let body = null;
-  const method = "POST";
+
   if (type === "appointment") {
-    if (action === "approve") url = config.completeUrl?.(id);
-    if (action === "return") url = config.cancelUrl?.(id);
-    if (["submit", "archive"].includes(action)) return showError("That action is not used for appointments.");
+    if (action === "approve") url = config.approveUrl?.(id);
+    if (action === "return") url = config.returnUrl?.(id);
   } else {
     if (action === "submit") url = config.submitUrl?.(id);
     if (action === "approve") {
@@ -835,115 +695,126 @@ async function runDrawerWorkflow(action) {
     }
     if (action === "archive") url = config.archiveUrl?.(id);
   }
+
   if (!url) return showError(`No ${action} route is configured for this record.`);
+
   try {
-    await apiSend(url, method, body);
+    await apiSend(url, "POST", body);
     showMessage(`${config.label} ${action}ed.`);
-    await loadCurrentView();
     closeDrawer();
+    await loadCurrentView();
   } catch (error) {
-    console.error(error);
     showError(error.message || `Could not ${action} record.`);
   }
 }
 
-function renderLinkedContextSection(detailData, baseItem) {
-  const childVoice = detailData.child_voice || detailData.young_person_voice || baseItem.child_voice || baseItem.young_person_voice;
-  const nextActions = detailData.actions_required || detailData.response_actions || detailData.follow_up_actions || detailData.action_taken || detailData.outcome_notes || baseItem.actions_required || baseItem.response_actions || "No immediate next actions recorded.";
-  return `
-    <div class="detail-section">
-      <h4>Linked context</h4>
-      <div class="detail-list">
-        <div class="detail-row"><div class="detail-key">Workflow</div><div class="detail-value">${escapeHtml(baseItem.workflow_status || detailData.workflow_status || detailData.status || "recorded")}</div></div>
-        <div class="detail-row"><div class="detail-key">Child voice present</div><div class="detail-value">${escapeHtml(childVoice ? "Yes" : "No")}</div></div>
-        <div class="detail-row"><div class="detail-key">What adults need next</div><div class="detail-value">${escapeHtml(nextActions)}</div></div>
-      </div>
-    </div>
-  `;
-}
-
 async function openRecordDetail(item) {
   const type = normaliseRecordType(item);
-  if (type === "report") {
-    return openReportDetail(item);
-  }
   const url = getRecordUrl(item);
   if (!url) return showError("This record cannot be opened yet.");
 
   state.activeRecordItem = item;
   state.activeRecordType = type;
+
   openDrawer();
-  els.drawerActions.classList.toggle("hidden", !RECORD_CONFIG[type]);
-  els.drawerApproveBtn.textContent = type === "appointment" ? "Complete" : "Approve";
-  els.drawerReturnBtn.textContent = type === "appointment" ? "Cancel" : "Return";
   els.drawerTitle.textContent = item.title || "Record details";
   els.drawerSubtitle.textContent = "Loading record...";
   els.drawerBody.innerHTML = `<div class="loading-state"><div><div class="spinner"></div><p>Loading record details...</p></div></div>`;
 
+  els.drawerActions.classList.toggle("hidden", !RECORD_CONFIG[type]);
+
   try {
     const data = await apiGet(url);
-    const detailData = data?.daily_note || data?.incident || data?.risk || data?.support_plan || data?.appointment || data?.health_record || data?.medication_profile || data?.medication_record || data?.education_record || data?.family_contact_record || data?.contact || data?.keywork || data;
-    const entries = normaliseDetailEntries(detailData);
-    els.drawerTitle.textContent = item.title || detailData.title || "Record details";
-    els.drawerSubtitle.textContent = `${String(item.record_type || item.event_type || item.category || "record").replaceAll("_", " ")} • ${formatDate(item.recorded_at || item.occurred_at || item.event_datetime || detailData.created_at)}`;
+    const detail = data.daily_note || data.incident || data.risk || data.support_plan || data.appointment || data.health_record || data.medication_profile || data.medication_record || data.education_record || data.family_contact_record || data.contact || data.keywork || data.report || data;
+
+    const fields = Object.entries(detail || {})
+      .filter(([k, v]) => !["id", "young_person_id"].includes(k) && v !== null && v !== "" && v !== undefined)
+      .slice(0, 20)
+      .map(([k, v]) => `
+        <div class="detail-row">
+          <div class="detail-key">${escapeHtml(k.replaceAll("_", " "))}</div>
+          <div class="detail-value">${escapeHtml(typeof v === "object" ? JSON.stringify(v) : String(v))}</div>
+        </div>
+      `).join("");
+
+    els.drawerTitle.textContent = item.title || detail.title || "Record details";
+    els.drawerSubtitle.textContent = `${escapeHtml(recordTypeLabel(type))} • ${escapeHtml(formatDate(item.recorded_at || item.occurred_at || item.created_at || detail.created_at))}`;
     els.drawerBody.innerHTML = `
-      ${renderDocumentHint(type)}
       <div class="detail-section">
         <h4>Summary</h4>
         <div class="detail-list">
-          <div class="detail-row"><div class="detail-key">Title</div><div class="detail-value">${escapeHtml(item.title || detailData.title || "—")}</div></div>
-          <div class="detail-row"><div class="detail-key">Recorded at</div><div class="detail-value">${escapeHtml(formatDate(item.recorded_at || item.occurred_at || item.event_datetime || detailData.created_at || detailData.updated_at || detailData.appointment_date))}</div></div>
-          <div class="detail-row"><div class="detail-key">Recorded by</div><div class="detail-value">${escapeHtml(item.recorded_by_name || item.author_name || item.created_by_name || item.worker_name || detailData.created_by_name || detailData.owner_name || "Unknown")}</div></div>
-          <div class="detail-row"><div class="detail-key">Summary</div><div class="detail-value">${escapeHtml(recordSummary({ ...item, ...detailData }))}</div></div>
+          <div class="detail-row"><div class="detail-key">Title</div><div class="detail-value">${escapeHtml(item.title || detail.title || "—")}</div></div>
+          <div class="detail-row"><div class="detail-key">Status</div><div class="detail-value">${escapeHtml(item.workflow_status || detail.workflow_status || detail.status || detail.approval_status || "—")}</div></div>
+          <div class="detail-row"><div class="detail-key">Summary</div><div class="detail-value">${escapeHtml(item.summary || detail.summary || detail.description || detail.concern_summary || "—")}</div></div>
         </div>
       </div>
-      ${renderLinkedContextSection(detailData, item)}
       <div class="detail-section">
         <h4>Details</h4>
-        <div class="detail-list">
-          ${entries.length ? entries.map((entry) => `<div class="detail-row"><div class="detail-key">${escapeHtml(entry.key)}</div><div class="detail-value">${escapeHtml(entry.value)}</div></div>`).join("") : `<div class="detail-row"><div class="detail-key">Details</div><div class="detail-value">No additional details.</div></div>`}
-        </div>
+        <div class="detail-list">${fields || `<div class="detail-row"><div class="detail-key">Details</div><div class="detail-value">No additional details.</div></div>`}</div>
       </div>
     `;
   } catch (error) {
-    console.error(error);
-    els.drawerSubtitle.textContent = "Could not load record";
     els.drawerBody.innerHTML = `<div class="empty-state"><p>${escapeHtml(error.message || "Failed to load record details.")}</p></div>`;
   }
 }
 
-async function openReportDetail(item) {
-  state.activeRecordItem = item;
-  state.activeRecordType = "report";
-  openDrawer();
-  els.drawerActions.classList.add("hidden");
-  els.drawerTitle.textContent = item.title || "Report";
-  els.drawerSubtitle.textContent = "Loading report...";
-  els.drawerBody.innerHTML = `<div class="loading-state"><div><div class="spinner"></div><p>Loading report...</p></div></div>`;
-  try {
-    const [reportData, linksData] = await Promise.all([
-      apiGet(`/young-people/reports/${item.id || item.report_id || item.record_id}`),
-      apiGet(`/young-people/reports/${item.id || item.report_id || item.record_id}/links`).catch(() => ({ items: [] })),
-    ]);
-    const report = reportData?.report || reportData || {};
-    const links = linksData?.items || [];
-    els.drawerTitle.textContent = report.title || "Report";
-    els.drawerSubtitle.textContent = `${String(report.report_type || "report").replaceAll("_", " ")} • ${formatDate(report.created_at)}`;
-    els.drawerBody.innerHTML = `
-      <div class="detail-section"><h4>Report summary</h4><div class="detail-list">
-      <div class="detail-row"><div class="detail-key">Title</div><div class="detail-value">${escapeHtml(report.title || "—")}</div></div>
-      <div class="detail-row"><div class="detail-key">Type</div><div class="detail-value">${escapeHtml(report.report_type || "—")}</div></div>
-      <div class="detail-row"><div class="detail-key">Status</div><div class="detail-value">${escapeHtml(report.status || "—")}</div></div>
-      <div class="detail-row"><div class="detail-key">Created</div><div class="detail-value">${escapeHtml(formatDate(report.created_at))}</div></div>
-      </div></div>
-      <div class="detail-section"><h4>Report text</h4><div class="detail-value">${escapeHtml(report.report_text || "No report text.")}</div></div>
-      <div class="detail-section"><h4>Linked evidence</h4><div class="detail-list">${links.length ? links.map((link) => `<div class="detail-row"><div class="detail-key">${escapeHtml(link.source_table || "source")}</div><div class="detail-value">Source ID: ${escapeHtml(link.source_id || "—")} ${link.link_reason ? `• ${escapeHtml(link.link_reason)}` : ""}</div></div>`).join("") : `<div class="detail-row"><div class="detail-key">Evidence</div><div class="detail-value">No linked evidence.</div></div>`}</div></div>
-    `;
-  } catch (error) {
-    console.error(error);
-    els.drawerSubtitle.textContent = "Could not load report";
-    els.drawerBody.innerHTML = `<div class="empty-state"><p>${escapeHtml(error.message || "Failed to load report.")}</p></div>`;
-  }
+function bindDynamicOpenRecordButtons() {
+  els.content.querySelectorAll("[data-open-record]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      try {
+        openRecordDetail(JSON.parse(btn.dataset.openRecord));
+      } catch (_) {
+        showError("Could not open record.");
+      }
+    });
+  });
+}
+
+function updateHeaderForView(view) {
+  const config = VIEW_CONFIG[view];
+  if (!config) return;
+  els.pageTitle.textContent = config.title;
+  els.pageSubtitle.textContent = config.subtitle;
+  updateAssistantContext();
+}
+
+function markActiveNav(view) {
+  document.querySelectorAll(".nav-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.view === view);
+  });
+}
+
+function showSelectorMode() {
+  els.selectorPanel.classList.remove("hidden");
+  els.workspacePanel.classList.add("hidden");
+  els.refreshBtn.classList.add("hidden");
+  els.personName.textContent = "No young person selected";
+  els.personMeta.textContent = "Choose from the selector to begin";
+  els.personAvatar.textContent = "YP";
+  toggleAssistantLauncher();
+}
+
+function hideSelectorMode() {
+  els.selectorPanel.classList.add("hidden");
+  els.workspacePanel.classList.remove("hidden");
+  els.refreshBtn.classList.remove("hidden");
+  toggleAssistantLauncher();
+}
+
+function openYoungPerson(id) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("id", String(id));
+  window.history.replaceState({}, "", url.toString());
+
+  state.youngPersonId = Number(id);
+  state.currentView = "home";
+
+  hideSelectorMode();
+  loadYoungPerson()
+    .then(loadCurrentView)
+    .catch((error) => {
+      showError(error.message || "Failed to load young person.");
+    });
 }
 
 function renderSelectorList(items) {
@@ -951,9 +822,15 @@ function renderSelectorList(items) {
     els.selectorList.innerHTML = `<div class="empty-state"><p>No young people found.</p></div>`;
     return;
   }
+
   els.selectorList.innerHTML = items.map((item) => {
     const name = [item.first_name, item.last_name].filter(Boolean).join(" ").trim() || item.preferred_name || "Young Person";
-    const meta = [item.preferred_name ? `Preferred: ${item.preferred_name}` : null, item.placement_status || null, item.summary_risk_level ? `Risk: ${item.summary_risk_level}` : null].filter(Boolean).join(" • ");
+    const meta = [
+      item.preferred_name ? `Preferred: ${item.preferred_name}` : null,
+      item.placement_status || null,
+      item.summary_risk_level ? `Risk: ${item.summary_risk_level}` : null,
+    ].filter(Boolean).join(" • ");
+
     return `
       <article class="selector-card">
         <div class="selector-card-left">
@@ -972,7 +849,15 @@ function renderSelectorList(items) {
 function filterSelectorList() {
   const term = (els.selectorSearch.value || "").trim().toLowerCase();
   if (!term) return renderSelectorList(state.selectorItems);
-  const filtered = state.selectorItems.filter((item) => [item.first_name, item.last_name, item.preferred_name, item.placement_status, item.summary_risk_level].filter(Boolean).join(" ").toLowerCase().includes(term));
+
+  const filtered = state.selectorItems.filter((item) => {
+    const haystack = [item.first_name, item.last_name, item.preferred_name, item.placement_status, item.summary_risk_level]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(term);
+  });
+
   renderSelectorList(filtered);
 }
 
@@ -980,12 +865,12 @@ async function loadYoungPersonSelector() {
   clearError();
   showSelectorMode();
   els.selectorList.innerHTML = `<div class="loading-state"><div><div class="spinner"></div><p>Loading young people...</p></div></div>`;
+
   try {
     const data = await apiGet("/young-people");
     state.selectorItems = data.young_people || data.items || [];
     renderSelectorList(state.selectorItems);
   } catch (error) {
-    console.error(error);
     showError(error.message || "Failed to load young people.");
     els.selectorList.innerHTML = `<div class="empty-state"><p>Unable to load young people.</p></div>`;
   }
@@ -995,29 +880,52 @@ async function loadYoungPerson() {
   const data = await apiGet(`/young-people/${state.youngPersonId}`);
   const youngPerson = data.young_person || data.bundle?.young_person || data;
   state.youngPerson = youngPerson;
+
   const fullName = [youngPerson.first_name, youngPerson.last_name].filter(Boolean).join(" ").trim() || youngPerson.preferred_name || "Young Person";
-  const meta = [youngPerson.preferred_name ? `Preferred: ${youngPerson.preferred_name}` : null, youngPerson.placement_status || null, youngPerson.summary_risk_level ? `Risk: ${youngPerson.summary_risk_level}` : null].filter(Boolean).join(" • ");
+  const meta = [
+    youngPerson.preferred_name ? `Preferred: ${youngPerson.preferred_name}` : null,
+    youngPerson.placement_status || null,
+    youngPerson.summary_risk_level ? `Risk: ${youngPerson.summary_risk_level}` : null,
+  ].filter(Boolean).join(" • ");
+
   els.personName.textContent = fullName;
   els.personMeta.textContent = meta || "Young person record";
   els.personAvatar.textContent = initialsFromName(fullName);
   toggleAssistantLauncher();
-  updateAssistantContext();
 }
 
-function openYoungPerson(id) {
-  const url = new URL(window.location.href);
-  url.searchParams.set("id", String(id));
-  url.searchParams.delete("young_person_id");
-  window.history.replaceState({}, "", url.toString());
-  state.youngPersonId = Number(id);
-  state.youngPerson = null;
-  state.currentView = "home";
-  hideSelectorMode();
-  loadYoungPerson().then(loadCurrentView).catch((error) => {
-    console.error(error);
-    showError(error.message || "Failed to load young person.");
-    setEmpty("Unable to load workspace.");
-  });
+async function loadHome() {
+  setLoading("Loading home...");
+  const [overviewData, timelineData] = await Promise.all([
+    apiGet(`/young-people/${state.youngPersonId}/overview`).catch(() => ({})),
+    apiGet(`/young-people/${state.youngPersonId}/timeline?limit=10`).catch(() => ({ timeline: [] })),
+  ]);
+
+  const yp = overviewData.young_person || {};
+  const alerts = overviewData.alerts || [];
+  const recent = timelineData.timeline || [];
+
+  els.content.innerHTML = `
+    <div class="grid grid-4">
+      <div class="stat-card"><div class="stat-label">Placement status</div><div class="stat-value">${escapeHtml(yp.placement_status || "—")}</div></div>
+      <div class="stat-card"><div class="stat-label">Risk level</div><div class="stat-value">${escapeHtml(yp.summary_risk_level || "—")}</div></div>
+      <div class="stat-card"><div class="stat-label">Active alerts</div><div class="stat-value">${alerts.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Recent records</div><div class="stat-value">${recent.length}</div></div>
+    </div>
+
+    <div class="callout-grid">
+      <section class="panel">
+        <div class="panel-header"><div><h3>Alerts</h3><p class="panel-subtitle">What adults need to know now.</p></div></div>
+        ${alerts.length ? `<div class="record-list">${alerts.map(renderRecordCard).join("")}</div>` : `<div class="empty-state"><p>No active alerts.</p></div>`}
+      </section>
+
+      <section class="panel">
+        <div class="panel-header"><div><h3>Recent activity</h3><p class="panel-subtitle">Latest chronology across the record.</p></div></div>
+        ${recent.length ? `<div class="record-list">${recent.map(renderRecordCard).join("")}</div>` : `<div class="empty-state"><p>No recent activity.</p></div>`}
+      </section>
+    </div>
+  `;
+  bindDynamicOpenRecordButtons();
 }
 
 async function loadProfile() {
@@ -1030,125 +938,44 @@ async function loadProfile() {
   const health = bundle.health_profile || {};
   const identity = bundle.identity_profile || {};
   const legal = bundle.legal_status || {};
-  const contacts = bundle.contacts || [];
+
   els.content.innerHTML = `
     <div class="callout-grid">
       <div class="record-list">
-        ${renderProfileSection("Who this young person is", [
-          { label: "Preferred name", value: yp.preferred_name || "—" },
+        ${renderProfileSection("Core profile", [
+          { label: "Preferred name", value: yp.preferred_name },
           { label: "Date of birth", value: formatDate(yp.date_of_birth) },
-          { label: "Placement status", value: yp.placement_status || "—" },
-          { label: "Risk level", value: yp.summary_risk_level || "—" },
+          { label: "Gender", value: yp.gender },
+          { label: "Ethnicity", value: yp.ethnicity },
+          { label: "Admission date", value: formatDate(yp.admission_date) },
+          { label: "Placement status", value: yp.placement_status },
         ])}
-        ${renderProfileSection("Communication and what helps", [
-          { label: "Communication style", value: communication.communication_style || "—" },
-          { label: "Sensory profile", value: communication.sensory_profile || "—" },
-          { label: "Signs of distress", value: communication.signs_of_distress || "—" },
-          { label: "What helps", value: communication.what_helps || "—" },
-        ])}
-        ${renderProfileSection("Identity and what matters", [
-          { label: "Interests", value: identity.interests || "—" },
-          { label: "Strengths", value: identity.strengths_summary || "—" },
-          { label: "What matters to me", value: identity.what_matters_to_me || "—" },
+        ${renderProfileSection("Communication", [
+          { label: "Communication style", value: communication.communication_style },
+          { label: "Sensory profile", value: communication.sensory_profile },
+          { label: "Processing needs", value: communication.processing_needs },
+          { label: "Signs of distress", value: communication.signs_of_distress },
+          { label: "What helps", value: communication.what_helps },
         ])}
       </div>
+
       <div class="record-list">
-        ${renderProfileSection("Legal and contact", [
-          { label: "Legal status", value: legal.legal_status || "—" },
-          { label: "Order type", value: legal.order_type || "—" },
-          { label: "Restrictions", value: legal.restrictions_text || "—" },
-          { label: "Consent arrangements", value: legal.consent_arrangements || "—" },
+        ${renderProfileSection("Identity", [
+          { label: "Religion or faith", value: identity.religion_or_faith },
+          { label: "Cultural identity", value: identity.cultural_identity },
+          { label: "First language", value: identity.first_language },
+          { label: "Interests", value: identity.interests },
+          { label: "Strengths", value: identity.strengths_summary },
         ])}
-        ${renderProfileSection("Education and health", [
-          { label: "School", value: education.school_name || "—" },
-          { label: "Education status", value: education.education_status || "—" },
-          { label: "GP", value: health.gp_name || "—" },
-          { label: "Allergies", value: health.allergies || "—" },
+        ${renderProfileSection("Legal, education and health", [
+          { label: "Legal status", value: legal.legal_status },
+          { label: "Order type", value: legal.order_type },
+          { label: "School", value: education.school_name },
+          { label: "Education status", value: education.education_status },
+          { label: "GP", value: health.gp_name },
+          { label: "Allergies", value: health.allergies },
         ])}
-        <section class="panel">
-          <div class="panel-header"><div><h3>Important contacts</h3><p class="panel-subtitle">Adults involved around this child.</p></div></div>
-          ${contacts.length ? `<div class="record-list">${contacts.slice(0, 6).map((contact) => `<article class="record-card"><div class="record-card-header"><div><h4>${escapeHtml(contact.full_name || "Contact")}</h4><div class="record-meta">${escapeHtml(contact.relationship_to_young_person || contact.contact_type || "Contact")}</div></div></div><div class="record-body">Phone: ${escapeHtml(contact.phone || "—")} Email: ${escapeHtml(contact.email || "—")}</div></article>`).join("")}</div>` : `<div class="empty-state"><p>No contacts recorded.</p></div>`}
-        </section>
       </div>
-    </div>
-  `;
-}
-
-async function loadHome() {
-  setLoading("Loading home...");
-  const [overviewData, timelineData, appointmentsData] = await Promise.all([
-    apiGet(`/young-people/${state.youngPersonId}/overview`),
-    apiGet(`/young-people/${state.youngPersonId}/timeline?limit=20`),
-    apiGet(`/young-people/${state.youngPersonId}/appointments`).catch(() => ({ items: [] })),
-  ]);
-  const yp = overviewData.young_person || {};
-  const counts = overviewData.dashboard_counts || {};
-  const alerts = overviewData.alerts || [];
-  const recent = (timelineData.timeline || []).slice(0, 6);
-  const appointments = (appointmentsData.items || []).slice(0, 4);
-  state.timelineCache = timelineData.timeline || [];
-  els.content.innerHTML = `
-    <div class="grid grid-4">
-      <div class="stat-card"><div class="stat-label">Placement status</div><div class="stat-value">${escapeHtml(yp.placement_status || "—")}</div></div>
-      <div class="stat-card"><div class="stat-label">Risk level</div><div class="stat-value">${escapeHtml(yp.summary_risk_level || "—")}</div></div>
-      <div class="stat-card"><div class="stat-label">Open alerts</div><div class="stat-value">${alerts.length}</div></div>
-      <div class="stat-card"><div class="stat-label">Upcoming appointments</div><div class="stat-value">${appointments.length}</div></div>
-    </div>
-    <div class="callout-grid">
-      <section class="panel">
-        <div class="panel-header"><div><h3>What matters now</h3><p class="panel-subtitle">The most important things adults need to know today.</p></div></div>
-        ${alerts.length ? `<div class="record-list">${alerts.map((alert) => `<article class="record-card"><div class="record-card-header"><div><h4>${escapeHtml(alert.title || "Alert")}</h4><div class="record-meta">${escapeHtml(alert.alert_type || "Alert")}</div></div></div><div class="record-body">${escapeHtml(alert.description || "No description.")}</div>${renderBadges([alert.severity, alert.is_active ? "active" : null])}</article>`).join("")}</div>` : `<div class="empty-state"><p>No active alerts.</p></div>`}
-      </section>
-      <section class="panel">
-        <div class="panel-header"><div><h3>At a glance</h3><p class="panel-subtitle">Useful information for this shift.</p></div></div>
-        <div class="record-list">
-          <div class="mini-item"><div class="mini-item-title">Daily notes</div><div class="mini-item-subtitle">${escapeHtml(String(counts.daily_notes || 0))} recorded</div></div>
-          <div class="mini-item"><div class="mini-item-title">Incidents</div><div class="mini-item-subtitle">${escapeHtml(String(counts.incidents || 0))} recorded</div></div>
-          <div class="mini-item"><div class="mini-item-title">Risk assessments</div><div class="mini-item-subtitle">${escapeHtml(String(counts.risk_assessments || 0))} on file</div></div>
-          <div class="mini-item"><div class="mini-item-title">Plans</div><div class="mini-item-subtitle">${escapeHtml(String(counts.support_plans || 0))} on file</div></div>
-        </div>
-      </section>
-    </div>
-    <div class="callout-grid">
-      <section class="panel"><div class="panel-header"><div><h3>Upcoming appointments</h3><p class="panel-subtitle">Appointments linked to care and planning.</p></div></div>${appointments.length ? `<div class="record-list">${appointments.map(renderRecordCard).join("")}</div>` : `<div class="empty-state"><p>No upcoming appointments.</p></div>`}</section>
-      <section class="panel"><div class="panel-header"><div><h3>Recent chronology</h3><p class="panel-subtitle">Recent recorded activity across the record.</p></div></div>${recent.length ? `<div class="record-list">${recent.map(renderRecordCard).join("")}</div>` : `<div class="empty-state"><p>No recent activity.</p></div>`}</section>
-    </div>
-  `;
-  bindDynamicOpenRecordButtons();
-}
-
-function renderWriteTile(title, subtitle, action) {
-  return `
-    <button class="quick-action" type="button" data-action="${escapeHtml(action)}">
-      <span class="quick-action-title">${escapeHtml(title)}</span>
-      <span class="quick-action-subtitle">${escapeHtml(subtitle)}</span>
-    </button>
-  `;
-}
-
-async function loadWriteHub() {
-  els.content.innerHTML = `
-    <div class="callout-grid">
-      <section class="panel">
-        <div class="panel-header"><div><h3>Write a record</h3><p class="panel-subtitle">Choose the kind of record you want to write. Each form uses guided prompts.</p></div></div>
-        <div class="quick-actions">
-          ${renderWriteTile("Daily note", "Record the shift clearly", "daily-note")}
-          ${renderWriteTile("Incident", "Record what happened and what it means", "incident")}
-          ${renderWriteTile("Risk update", "Review what helps and what needs to change", "risk")}
-          ${renderWriteTile("Plan", "Create practical guidance for adults", "plan")}
-        </div>
-      </section>
-      <section class="panel">
-        <div class="panel-header"><div><h3>Shared workflow</h3><p class="panel-subtitle">Every written form follows the same simple path.</p></div></div>
-        <div class="record-list">
-          <div class="mini-item"><div class="mini-item-title">1. Draft</div><div class="mini-item-subtitle">Write clearly and thoroughly.</div></div>
-          <div class="mini-item"><div class="mini-item-title">2. Check</div><div class="mini-item-subtitle">Use the prompts and checklist.</div></div>
-          <div class="mini-item"><div class="mini-item-title">3. AI review</div><div class="mini-item-subtitle">Spot gaps, tone and safeguarding concerns.</div></div>
-          <div class="mini-item"><div class="mini-item-title">4. Submit</div><div class="mini-item-subtitle">Send for manager review.</div></div>
-          <div class="mini-item"><div class="mini-item-title">5. Manager review</div><div class="mini-item-subtitle">Comments, approval or return.</div></div>
-          <div class="mini-item"><div class="mini-item-title">6. Signed off</div><div class="mini-item-subtitle">Final approved version.</div></div>
-        </div>
-      </section>
     </div>
   `;
 }
@@ -1157,205 +984,68 @@ async function loadTimeline() {
   setLoading("Loading timeline...");
   const data = await apiGet(`/young-people/${state.youngPersonId}/timeline?limit=100`);
   const items = data.timeline || [];
-  state.timelineCache = items;
-  els.content.innerHTML = `
-    <section class="panel">
-      <div class="panel-header"><div><h3>Timeline</h3><p class="panel-subtitle">Chronology across all records.</p></div></div>
-      <div class="record-list">${items.length ? items.map(renderRecordCard).join("") : `<div class="empty-state"><p>No timeline items.</p></div>`}</div>
-    </section>
-  `;
+  els.content.innerHTML = items.length
+    ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
+    : `<div class="empty-state"><p>No timeline items found.</p></div>`;
   bindDynamicOpenRecordButtons();
 }
 
-async function loadActionsView() {
-  setLoading("Loading actions...");
-  const [complianceData, appointmentsData, dailyNotesData, incidentsData] = await Promise.all([
-    apiGet(`/young-people/${state.youngPersonId}/compliance`).catch(() => ({ items: [] })),
-    apiGet(`/young-people/${state.youngPersonId}/appointments`).catch(() => ({ items: [] })),
-    apiGet(`/young-people/${state.youngPersonId}/daily-notes`).catch(() => ({ items: [] })),
-    apiGet(`/young-people/${state.youngPersonId}/incidents`).catch(() => ({ items: [] })),
+async function loadHandover() {
+  setLoading("Loading handover...");
+  const [timelineData, riskData] = await Promise.all([
+    apiGet(`/young-people/${state.youngPersonId}/timeline?limit=8`).catch(() => ({ timeline: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/risk`).catch(() => ({ items: [] })),
   ]);
-  const complianceItems = complianceData.compliance_items || complianceData.items || [];
-  const appointments = appointmentsData.items || [];
-  const dueAppointments = appointments.filter((x) => String(x.status || "").toLowerCase() === "scheduled").slice(0, 6);
-  const drafts = [...(dailyNotesData.items || []), ...(incidentsData.items || [])].filter((x) => ["draft", "returned", "submitted"].includes(String(x.workflow_status || x.status || x.approval_status || "").toLowerCase())).slice(0, 8);
+
+  const recent = timelineData.timeline || [];
+  const risks = riskData.items || [];
+
   els.content.innerHTML = `
     <div class="callout-grid">
-      <section class="panel"><div class="panel-header"><div><h3>Due and overdue</h3><p class="panel-subtitle">Checks, reviews and compliance items that need attention.</p></div></div>${complianceItems.length ? `<div class="record-list">${complianceItems.slice(0, 8).map(renderRecordCard).join("")}</div>` : `<div class="empty-state"><p>No due items found.</p></div>`}</section>
-      <section class="panel"><div class="panel-header"><div><h3>Records in workflow</h3><p class="panel-subtitle">Drafts, submissions and returned records.</p></div></div>${drafts.length ? `<div class="record-list">${drafts.map(renderRecordCard).join("")}</div>` : `<div class="empty-state"><p>No workflow items found.</p></div>`}</section>
+      <section class="panel">
+        <div class="panel-header"><div><h3>Recent activity</h3><p class="panel-subtitle">Latest record activity.</p></div></div>
+        ${recent.length ? `<div class="record-list">${recent.map(renderRecordCard).join("")}</div>` : `<div class="empty-state"><p>No recent activity.</p></div>`}
+      </section>
+      <section class="panel">
+        <div class="panel-header"><div><h3>Current risks</h3><p class="panel-subtitle">What staff need to understand.</p></div></div>
+        ${risks.length ? `<div class="record-list">${risks.map(renderRecordCard).join("")}</div>` : `<div class="empty-state"><p>No current risks.</p></div>`}
+      </section>
     </div>
-    <section class="panel"><div class="panel-header"><div><h3>Upcoming appointments</h3><p class="panel-subtitle">Appointments adults need to prepare for.</p></div></div>${dueAppointments.length ? `<div class="record-list">${dueAppointments.map(renderRecordCard).join("")}</div>` : `<div class="empty-state"><p>No upcoming appointments.</p></div>`}</section>
   `;
   bindDynamicOpenRecordButtons();
 }
 
-async function loadReports() {
-  setLoading("Loading reports...");
-  const reportsData = await apiGet(`/young-people/${state.youngPersonId}/reports`).catch(() => ({ items: [] }));
-  const reports = reportsData.items || [];
-  els.content.innerHTML = `
-    <section class="panel">
-      <div class="panel-header">
-        <div><h3>Summaries and reports</h3><p class="panel-subtitle">Generate evidence-led reports and outputs for this young person.</p></div>
-        <div class="day-record-actions">
-          <button id="generateHandoverReportBtn" class="primary-btn" type="button">Generate handover summary</button>
-          <button id="generateMonthlyReportBtn" class="secondary-btn" type="button">Generate monthly summary</button>
-          <button id="generateOfstedReportBtn" class="secondary-btn" type="button">Generate evidence summary</button>
-        </div>
-      </div>
-      ${reports.length ? `<div class="record-list">${reports.map((report) => renderRecordCard({ ...report, record_type: "report", title: report.title || "Report", summary: report.report_text || "Report ready.", workflow_status: report.status, recorded_at: report.created_at })).join("")}</div>` : `<div class="empty-state"><p>No reports have been generated yet.</p></div>`}
-    </section>
-  `;
-  async function generateReport(reportType, title) {
-    try {
-      showMessage("Generating report...");
-      const response = await apiSend(`/young-people/${state.youngPersonId}/reports/generate`, "POST", { report_type: reportType, title });
-      showMessage("Report generated.");
-      await loadCurrentView();
-      const report = response?.report;
-      if (report) {
-        openRecordDetail({ ...report, record_type: "report", title: report.title || "Report", summary: report.report_text || "Report ready.", workflow_status: report.status, recorded_at: report.created_at });
-      }
-    } catch (error) {
-      console.error(error);
-      showError(error.message || "Could not generate report.");
-    }
-  }
-  document.getElementById("generateHandoverReportBtn")?.addEventListener("click", () => generateReport("handover_summary", "Handover Summary"));
-  document.getElementById("generateMonthlyReportBtn")?.addEventListener("click", () => generateReport("monthly_summary", "Monthly Summary"));
-  document.getElementById("generateOfstedReportBtn")?.addEventListener("click", () => generateReport("ofsted_evidence_summary", "Ofsted Evidence Summary"));
+async function loadRecordList(url, label) {
+  setLoading(`Loading ${label.toLowerCase()}...`);
+  const data = await apiGet(url);
+  const items = data.items || data.timeline || data.records || [];
+  els.content.innerHTML = items.length
+    ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
+    : `<div class="empty-state"><p>No ${escapeHtml(label.toLowerCase())} found.</p></div>`;
   bindDynamicOpenRecordButtons();
 }
 
-async function loadCalendarMonthSummary() {
-  const year = state.calendarDate.getFullYear();
-  const month = state.calendarDate.getMonth() + 1;
-  const data = await apiGet(`/young-people/${state.youngPersonId}/calendar-summary?year=${year}&month=${month}`);
-  state.calendarMonthSummary = data.days || data.items || [];
-}
-
-async function loadSelectedDayRecords() {
-  const data = await apiGet(`/young-people/${state.youngPersonId}/records-by-date?date=${state.selectedDate}`);
-  state.selectedDayRecords = data.items || [];
-}
-
-function getMonthDayMeta(dateString) {
-  return state.calendarMonthSummary.find((item) => item.date === dateString) || null;
-}
-
-function buildCalendarGrid() {
-  const current = new Date(state.calendarDate.getFullYear(), state.calendarDate.getMonth(), 1);
-  const firstDay = new Date(current);
-  const startWeekday = (firstDay.getDay() + 6) % 7;
-  firstDay.setDate(firstDay.getDate() - startWeekday);
-  const days = [];
-  for (let i = 0; i < 42; i += 1) {
-    const day = new Date(firstDay);
-    day.setDate(firstDay.getDate() + i);
-    const dateString = toDateInputValue(day);
-    const meta = getMonthDayMeta(dateString);
-    const isCurrentMonth = day.getMonth() === state.calendarDate.getMonth();
-    const isToday = dateString === toDateInputValue(new Date());
-    const isSelected = dateString === state.selectedDate;
-    const markers = meta?.record_types || meta?.types || [];
-    days.push(`
-      <button class="calendar-day ${isCurrentMonth ? "" : "other-month"} ${isToday ? "today" : ""} ${isSelected ? "selected" : ""}" data-calendar-date="${dateString}" type="button">
-        <div class="calendar-day-number">${day.getDate()}</div>
-        <div class="calendar-day-markers">${markers.slice(0, 8).map(() => `<span class="calendar-marker"></span>`).join("")}</div>
-      </button>
-    `);
-  }
-  return days.join("");
-}
-
-function renderDayRecords(records) {
-  if (!records.length) return `<div class="empty-state"><p>No records were recorded on this day.</p></div>`;
-  return records.map((item) => `
-    <article class="day-record-card">
-      <div class="day-record-top">
-        <div>
-          <div class="day-record-title">${escapeHtml(item.title || item.record_type || item.event_type || item.category || "Record")}</div>
-          <div class="record-meta">${escapeHtml(String(item.record_type || item.event_type || item.category || "record").replaceAll("_", " "))} • ${escapeHtml(formatShortTime(item.recorded_at || item.occurred_at || item.event_datetime || item.created_at || item.appointment_date))}</div>
-        </div>
-      </div>
-      <div class="day-record-summary">${escapeHtml(recordSummary(item))}</div>
-      ${renderBadges([item.workflow_status, item.severity || item.significance, item.status])}
-      <div class="day-record-actions"><button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button></div>
-    </article>
-  `).join("");
-}
-
-function buildDaySummary(records) {
-  const total = records.length;
-  const incidents = records.filter((x) => String(x.record_type || x.event_type || x.category || "").toLowerCase().includes("incident")).length;
-  const dailyNotes = records.filter((x) => String(x.record_type || x.event_type || x.category || "").toLowerCase().includes("daily_note")).length;
-  return { total, incidents, dailyNotes };
-}
-
-async function loadCalendarView() {
-  setLoading("Loading calendar...");
-  try {
-    await Promise.all([loadCalendarMonthSummary(), loadSelectedDayRecords()]);
-    const selectedDateLabel = formatDate(`${state.selectedDate}T12:00:00`);
-    const summary = buildDaySummary(state.selectedDayRecords);
-    els.content.innerHTML = `
-      <div class="calendar-shell">
-        <section class="calendar-panel">
-          <div class="calendar-header"><div class="calendar-title">${escapeHtml(monthName(state.calendarDate))}</div><div class="calendar-controls"><button class="calendar-icon-btn" id="calendarPrevBtn" type="button">←</button><button class="calendar-icon-btn" id="calendarTodayBtn" type="button">Today</button><button class="calendar-icon-btn" id="calendarNextBtn" type="button">→</button></div></div>
-          <div class="calendar-weekdays"><div class="calendar-weekday">Mon</div><div class="calendar-weekday">Tue</div><div class="calendar-weekday">Wed</div><div class="calendar-weekday">Thu</div><div class="calendar-weekday">Fri</div><div class="calendar-weekday">Sat</div><div class="calendar-weekday">Sun</div></div>
-          <div class="calendar-grid">${buildCalendarGrid()}</div>
-        </section>
-        <section class="day-panel">
-          <div class="panel-header"><div><h3>${escapeHtml(selectedDateLabel)}</h3><p class="panel-subtitle">Everything recorded on this day.</p></div></div>
-          <div class="day-summary-row"><div class="day-summary-card"><div class="day-summary-label">Total records</div><div class="day-summary-value">${summary.total}</div></div><div class="day-summary-card"><div class="day-summary-label">Incidents</div><div class="day-summary-value">${summary.incidents}</div></div><div class="day-summary-card"><div class="day-summary-label">Daily notes</div><div class="day-summary-value">${summary.dailyNotes}</div></div></div>
-          <div id="dayRecordsResults">${renderDayRecords(state.selectedDayRecords)}</div>
-        </section>
-      </div>
-    `;
-    bindCalendarEvents();
-  } catch (error) {
-    console.error(error);
-    showError(error.message || "Failed to load calendar.");
-    setEmpty("Unable to load calendar.");
-  }
-}
-
-function bindCalendarEvents() {
-  document.getElementById("calendarPrevBtn")?.addEventListener("click", async () => {
-    state.calendarDate = new Date(state.calendarDate.getFullYear(), state.calendarDate.getMonth() - 1, 1);
-    await loadCalendarView();
-  });
-  document.getElementById("calendarNextBtn")?.addEventListener("click", async () => {
-    state.calendarDate = new Date(state.calendarDate.getFullYear(), state.calendarDate.getMonth() + 1, 1);
-    await loadCalendarView();
-  });
-  document.getElementById("calendarTodayBtn")?.addEventListener("click", async () => {
-    const today = new Date();
-    state.calendarDate = new Date(today.getFullYear(), today.getMonth(), 1);
-    state.selectedDate = toDateInputValue(today);
-    await loadCalendarView();
-  });
-  els.content.querySelectorAll("[data-calendar-date]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      state.selectedDate = btn.dataset.calendarDate;
-      await loadCalendarView();
-    });
-  });
-  bindDynamicOpenRecordButtons();
+async function loadAppointments() {
+  return loadRecordList(`/young-people/${state.youngPersonId}/appointments`, "Appointments");
 }
 
 async function loadHealth() {
   setLoading("Loading health...");
   const data = await apiGet(`/young-people/${state.youngPersonId}/health`);
-  const profile = data.health_profile || data.profile || {};
+  const profile = data.health_profile || {};
   const records = data.health_records || [];
-  const medicationProfiles = data.medication_profiles || [];
-  const medicationRecords = data.medication_records || [];
   els.content.innerHTML = `
-    <section class="panel"><div class="panel-header"><div><h3>Health profile</h3><p class="panel-subtitle">Key health information.</p></div></div><div class="kv"><div class="kv-key">GP</div><div>${escapeHtml(profile.gp_name || "—")}</div><div class="kv-key">Allergies</div><div>${escapeHtml(profile.allergies || "—")}</div><div class="kv-key">Diagnoses</div><div>${escapeHtml(profile.diagnoses || "—")}</div><div class="kv-key">Mental health</div><div>${escapeHtml(profile.mental_health_summary || "—")}</div></div></section>
-    <section class="panel"><div class="panel-header"><div><h3>Health records</h3></div></div>${records.length ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>` : `<div class="empty-state"><p>No health records.</p></div>`}</section>
-    <section class="panel"><div class="panel-header"><div><h3>Medication profiles</h3></div></div>${medicationProfiles.length ? `<div class="record-list">${medicationProfiles.map((item) => `<article class="record-card"><div class="record-card-header"><div><h4>${escapeHtml(item.medication_name || "Medication")}</h4><div class="record-meta">${escapeHtml(item.dosage || item.dose || "—")} • ${escapeHtml(item.frequency || "—")}</div></div></div><div class="record-body">${escapeHtml(item.notes || item.prn_guidance || item.reason || "No notes.")}</div></article>`).join("")}</div>` : `<div class="empty-state"><p>No medication profiles.</p></div>`}</section>
-    <section class="panel"><div class="panel-header"><div><h3>Medication records</h3></div></div>${medicationRecords.length ? `<div class="record-list">${medicationRecords.map(renderRecordCard).join("")}</div>` : `<div class="empty-state"><p>No medication records.</p></div>`}</section>
+    ${renderProfileSection("Health profile", [
+      { label: "GP", value: profile.gp_name },
+      { label: "Allergies", value: profile.allergies },
+      { label: "Diagnoses", value: profile.diagnoses },
+      { label: "Mental health", value: profile.mental_health_summary },
+      { label: "Medication summary", value: profile.medication_summary },
+    ])}
+    <section class="panel">
+      <div class="panel-header"><div><h3>Health records</h3></div></div>
+      ${records.length ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>` : `<div class="empty-state"><p>No health records.</p></div>`}
+    </section>
   `;
   bindDynamicOpenRecordButtons();
 }
@@ -1363,11 +1053,20 @@ async function loadHealth() {
 async function loadEducation() {
   setLoading("Loading education...");
   const data = await apiGet(`/young-people/${state.youngPersonId}/education`);
-  const profile = data.education_profile || data.profile || {};
+  const profile = data.education_profile || {};
   const records = data.education_records || data.items || [];
   els.content.innerHTML = `
-    <section class="panel"><div class="panel-header"><div><h3>Education profile</h3><p class="panel-subtitle">Current school and support information.</p></div></div><div class="kv"><div class="kv-key">School</div><div>${escapeHtml(profile.school_name || "—")}</div><div class="kv-key">Year group</div><div>${escapeHtml(profile.year_group || "—")}</div><div class="kv-key">Education status</div><div>${escapeHtml(profile.education_status || "—")}</div><div class="kv-key">Support summary</div><div>${escapeHtml(profile.support_summary || "—")}</div></div></section>
-    <section class="panel"><div class="panel-header"><div><h3>Education records</h3></div></div>${records.length ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>` : `<div class="empty-state"><p>No education records.</p></div>`}</section>
+    ${renderProfileSection("Education profile", [
+      { label: "School", value: profile.school_name },
+      { label: "Year group", value: profile.year_group },
+      { label: "Education status", value: profile.education_status },
+      { label: "SEN status", value: profile.sen_status },
+      { label: "Support summary", value: profile.support_summary },
+    ])}
+    <section class="panel">
+      <div class="panel-header"><div><h3>Education records</h3></div></div>
+      ${records.length ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>` : `<div class="empty-state"><p>No education records.</p></div>`}
+    </section>
   `;
   bindDynamicOpenRecordButtons();
 }
@@ -1375,133 +1074,150 @@ async function loadEducation() {
 async function loadFamily() {
   setLoading("Loading family...");
   const data = await apiGet(`/young-people/${state.youngPersonId}/family`);
-  const contacts = data.contacts || [];
   const records = data.family_contact_records || data.items || [];
   els.content.innerHTML = `
-    <section class="panel"><div class="panel-header"><div><h3>Family contacts</h3><p class="panel-subtitle">Important relationships and contact information.</p></div></div>${contacts.length ? `<div class="record-list">${contacts.map((contact) => `<article class="record-card"><div class="record-card-header"><div><h4>${escapeHtml(contact.full_name || "Contact")}</h4><div class="record-meta">${escapeHtml(contact.relationship_to_young_person || contact.contact_type || "Contact")}</div></div></div><div class="record-body">Phone: ${escapeHtml(contact.phone || "—")} Email: ${escapeHtml(contact.email || "—")}</div></article>`).join("")}</div>` : `<div class="empty-state"><p>No family contacts.</p></div>`}</section>
-    <section class="panel"><div class="panel-header"><div><h3>Family records</h3></div></div>${records.length ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>` : `<div class="empty-state"><p>No family contact records.</p></div>`}</section>
+    <section class="panel">
+      <div class="panel-header"><div><h3>Family contact records</h3></div></div>
+      ${records.length ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>` : `<div class="empty-state"><p>No family records.</p></div>`}
+    </section>
   `;
   bindDynamicOpenRecordButtons();
 }
 
-async function loadAppointments() {
-  setLoading("Loading appointments...");
-  const appointmentsData = await apiGet(`/young-people/${state.youngPersonId}/appointments`);
-  const appointments = appointmentsData.items || [];
+async function loadEvidenceView() {
+  setLoading("Loading evidence...");
+  const data = await apiGet(`/young-people/${state.youngPersonId}/timeline?limit=50`).catch(() => ({ timeline: [] }));
+  const items = data.timeline || [];
   els.content.innerHTML = `
     <section class="panel">
-      <div class="panel-header"><div><h3>Young person appointments</h3><p class="panel-subtitle">Appointments should connect to the most relevant plan and follow-up.</p></div><div class="day-record-actions"><button id="addAppointmentBtn" class="primary-btn" type="button">Add appointment</button></div></div>
-      ${appointments.length ? `<div class="record-list">${appointments.map(renderRecordCard).join("")}</div>` : `<div class="empty-state"><p>No appointments recorded.</p></div>`}
+      <div class="panel-header"><div><h3>Evidence view</h3><p class="panel-subtitle">Recent linked records.</p></div></div>
+      ${items.length ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>` : `<div class="empty-state"><p>No evidence found.</p></div>`}
     </section>
   `;
-  document.getElementById("addAppointmentBtn")?.addEventListener("click", () => openRecordModal("appointment", "create"));
   bindDynamicOpenRecordButtons();
+}
+
+async function loadCompliance() {
+  setLoading("Loading compliance...");
+  const data = await apiGet(`/young-people/${state.youngPersonId}/compliance`).catch(() => ({ items: [] }));
+  const items = data.compliance_items || data.items || [];
+  els.content.innerHTML = items.length
+    ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
+    : `<div class="empty-state"><p>No compliance items found.</p></div>`;
+  bindDynamicOpenRecordButtons();
+}
+
+async function loadManagerView() {
+  setLoading("Loading manager overview...");
+  const [compliance, timeline] = await Promise.all([
+    apiGet(`/young-people/${state.youngPersonId}/compliance`).catch(() => ({ items: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/timeline?limit=20`).catch(() => ({ timeline: [] })),
+  ]);
+
+  const items = compliance.compliance_items || compliance.items || [];
+  const recent = timeline.timeline || [];
+
+  els.content.innerHTML = `
+    <div class="callout-grid">
+      <section class="panel">
+        <div class="panel-header"><div><h3>Items needing attention</h3></div></div>
+        ${items.length ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>` : `<div class="empty-state"><p>No urgent items.</p></div>`}
+      </section>
+      <section class="panel">
+        <div class="panel-header"><div><h3>Recent record activity</h3></div></div>
+        ${recent.length ? `<div class="record-list">${recent.map(renderRecordCard).join("")}</div>` : `<div class="empty-state"><p>No recent activity.</p></div>`}
+      </section>
+    </div>
+  `;
+  bindDynamicOpenRecordButtons();
+}
+
+async function loadReports() {
+  setLoading("Loading reports...");
+  const data = await apiGet(`/young-people/${state.youngPersonId}/reports`).catch(() => ({ items: [] }));
+  const reports = data.items || [];
+  els.content.innerHTML = reports.length
+    ? `<div class="record-list">${reports.map((report) => renderRecordCard({ ...report, record_type: "report", summary: report.report_text || "Report ready." })).join("")}</div>`
+    : `<div class="empty-state"><p>No reports found.</p></div>`;
+  bindDynamicOpenRecordButtons();
+}
+
+async function loadCalendarView() {
+  setLoading("Loading calendar...");
+  els.content.innerHTML = `<div class="empty-state"><p>Calendar view can be added next once the simpler workflow is settled.</p></div>`;
 }
 
 async function loadCurrentView() {
   clearError();
-  const config = VIEW_CONFIG[state.currentView];
-  if (!config) return setEmpty("Unknown view.");
   updateHeaderForView(state.currentView);
   markActiveNav(state.currentView);
+  const config = VIEW_CONFIG[state.currentView];
+  if (!config) return setEmpty("Unknown view.");
   try {
     await config.loader();
   } catch (error) {
-    console.error(error);
     showError(error.message || "Something went wrong.");
     setEmpty("Unable to load this workspace.");
   }
-}
-
-function bindDynamicOpenRecordButtons() {
-  els.content.querySelectorAll("[data-open-record]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      try {
-        const item = JSON.parse(btn.dataset.openRecord);
-        openRecordDetail(item);
-      } catch (error) {
-        console.error(error);
-        showError("Could not open record.");
-      }
-    });
-  });
 }
 
 function bindAssistantEvents() {
   els.assistantLauncher?.addEventListener("click", openAssistant);
   els.closeAssistantBtn?.addEventListener("click", closeAssistant);
   els.assistantBackdrop?.addEventListener("click", closeAssistant);
+
   els.assistantClearBtn?.addEventListener("click", () => {
     state.assistantMessages = [];
     renderAssistantMessages();
-    els.assistantInput.value = "";
   });
+
   els.assistantForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const value = els.assistantInput.value;
     els.assistantInput.value = "";
     await askAssistant(value);
   });
+
   els.assistantSuggestions?.addEventListener("click", async (event) => {
     const btn = event.target.closest("[data-prompt]");
     if (!btn) return;
-    const prompt = btn.dataset.prompt || "";
-    els.assistantInput.value = prompt;
-    await askAssistant(prompt);
+    await askAssistant(btn.dataset.prompt || "");
   });
 }
 
 function bindEvents() {
   document.addEventListener("click", (event) => {
     const navBtn = event.target.closest(".nav-btn");
-    if (navBtn && navBtn.dataset.view) {
+    if (navBtn) {
       if (!state.youngPersonId) return showError("Select a young person first.");
       state.currentView = navBtn.dataset.view;
       loadCurrentView();
       return;
     }
 
-    const quickAction = event.target.closest("[data-action]");
-    if (quickAction && quickAction.dataset.action) {
-      const action = quickAction.dataset.action;
-      if (action === "daily-note") openRecordModal("daily_note", "create");
-      if (action === "incident") openRecordModal("incident", "create");
-      if (action === "risk") openRecordModal("risk", "create");
-      if (action === "plan") openRecordModal("support_plan", "create");
+    const openBtn = event.target.closest("[data-open-young-person]");
+    if (openBtn) {
+      openYoungPerson(Number(openBtn.dataset.openYoungPerson));
+      return;
     }
   });
 
   els.refreshBtn?.addEventListener("click", () => {
     if (!state.youngPersonId) return loadYoungPersonSelector();
-    loadYoungPerson().then(loadCurrentView).catch((error) => {
-      console.error(error);
-      showError(error.message || "Failed to refresh.");
-    });
-  });
-
-  els.alertsBtn?.addEventListener("click", () => {
-    if (!state.youngPersonId) return showError("Select a young person first.");
-    state.currentView = "actions";
-    loadCurrentView();
+    loadYoungPerson().then(loadCurrentView).catch((error) => showError(error.message || "Failed to refresh."));
   });
 
   els.selectorRefreshBtn?.addEventListener("click", loadYoungPersonSelector);
   els.selectorSearch?.addEventListener("input", filterSelectorList);
-  els.selectorList?.addEventListener("click", (event) => {
-    const btn = event.target.closest("[data-open-young-person]");
-    if (!btn) return;
-    const id = Number(btn.dataset.openYoungPerson);
-    if (id) openYoungPerson(id);
-  });
 
   els.changePersonBtn?.addEventListener("click", () => {
     state.youngPersonId = null;
     state.youngPerson = null;
-    state.timelineCache = [];
     state.assistantMessages = [];
     closeDrawer();
     closeModal();
     closeAssistant();
+
     const url = new URL(window.location.href);
     url.searchParams.delete("id");
     url.searchParams.delete("young_person_id");
@@ -1509,13 +1225,23 @@ function bindEvents() {
     loadYoungPersonSelector();
   });
 
+  els.quickActions?.addEventListener("click", (event) => {
+    const btn = event.target.closest("[data-action]");
+    if (!btn) return;
+    if (btn.dataset.action === "daily-note") openRecordModal("daily_note", "create");
+    if (btn.dataset.action === "incident") openRecordModal("incident", "create");
+    if (btn.dataset.action === "risk") openRecordModal("risk", "create");
+    if (btn.dataset.action === "plan") openRecordModal("support_plan", "create");
+  });
+
   els.closeDrawerBtn?.addEventListener("click", closeDrawer);
   els.drawerBackdrop?.addEventListener("click", closeDrawer);
+
   els.drawerEditBtn?.addEventListener("click", () => {
-    if (!state.activeRecordItem || !state.activeRecordType) return;
-    if (!RECORD_CONFIG[state.activeRecordType]) return showError("This record type cannot be edited here yet.");
+    if (!state.activeRecordItem || !state.activeRecordType || !RECORD_CONFIG[state.activeRecordType]) return;
     openRecordModal(state.activeRecordType, "edit", state.activeRecordItem);
   });
+
   els.drawerSubmitBtn?.addEventListener("click", () => runDrawerWorkflow("submit"));
   els.drawerApproveBtn?.addEventListener("click", () => runDrawerWorkflow("approve"));
   els.drawerReturnBtn?.addEventListener("click", () => runDrawerWorkflow("return"));
@@ -1543,16 +1269,17 @@ async function init() {
   renderAssistantMessages();
   toggleAssistantLauncher();
   updateAssistantContext();
+
   if (!state.youngPersonId) {
     await loadYoungPersonSelector();
     return;
   }
+
   try {
     hideSelectorMode();
     await loadYoungPerson();
     await loadCurrentView();
   } catch (error) {
-    console.error(error);
     showError(error.message || "Failed to load young person.");
     await loadYoungPersonSelector();
   }
