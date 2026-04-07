@@ -19,7 +19,7 @@
         </div>
 
         <div class="top-shell-actions">
-          <button id="assistantLauncher" class="primary-btn hidden" type="button">Ask assistant</button>
+          <button id="assistantLauncher" class="secondary-btn hidden" type="button">Assistant</button>
           <button id="refreshBtn" class="secondary-btn hidden" type="button">Refresh</button>
         </div>
       </div>
@@ -38,7 +38,7 @@
         </div>
       </div>
 
-      <nav id="sidebarNav" class="top-nav">
+      <nav id="sidebarNav" class="top-nav" aria-label="Primary">
         <button class="nav-btn nav-home active" data-view="home" type="button">Home</button>
 
         <details class="nav-group">
@@ -131,7 +131,7 @@
 
           <button class="quick-action" type="button" data-action="incident">
             <span class="quick-action-title">Log incident</span>
-            <span class="quick-action-subtitle">Capture concern, context, response and next steps</span>
+            <span class="quick-action-subtitle">Capture concern, context, response and follow-up</span>
           </button>
 
           <button class="quick-action" type="button" data-action="risk">
@@ -183,24 +183,69 @@
     </div>
   </aside>
 
-  <div id="modalBackdrop" class="modal-backdrop hidden"></div>
+  <section id="recordComposerPage" class="composer-page hidden" aria-hidden="true">
+    <div class="composer-shell">
+      <header class="composer-header">
+        <div class="composer-header-left">
+          <div class="eyebrow">Record composer</div>
+          <h2 id="composerTitle">Create record</h2>
+          <p id="composerSubtitle">Write clearly, therapeutically and with the young person at the centre.</p>
+        </div>
 
-  <section id="recordModal" class="modal hidden" aria-hidden="true">
-    <div class="modal-header">
-      <div>
-        <h3 id="recordModalTitle">Create record</h3>
-        <p id="recordModalSubtitle">Complete the form below</p>
+        <div class="composer-header-actions">
+          <button id="closeComposerBtn" class="secondary-btn" type="button">Back</button>
+          <button id="composerSaveDraftBtn" class="secondary-btn" type="button">Save draft</button>
+          <button id="composerCheckBtn" class="secondary-btn" type="button">Run check</button>
+          <button id="composerSubmitBtn" class="primary-btn" type="button">Send for approval</button>
+        </div>
+      </header>
+
+      <section class="composer-progress">
+        <div class="composer-progress-step active">Write</div>
+        <div class="composer-progress-step">Check</div>
+        <div class="composer-progress-step">Guidance</div>
+        <div class="composer-progress-step">Review</div>
+        <div class="composer-progress-step">Approval</div>
+      </section>
+
+      <div class="composer-layout">
+        <section class="composer-main">
+          <form id="recordComposerForm" class="composer-form">
+            <div id="recordComposerFields" class="composer-fields"></div>
+          </form>
+        </section>
+
+        <aside class="composer-side">
+          <section class="composer-side-card">
+            <h3>Writing guidance</h3>
+            <div id="composerGuidanceText" class="composer-side-body">
+              Keep the young person at the centre. Be clear, factual, kind and reflective.
+            </div>
+          </section>
+
+          <section class="composer-side-card">
+            <h3>Practice prompts</h3>
+            <div id="composerPrompts" class="composer-prompt-list">
+              <div class="composer-prompt">What may the young person have been communicating?</div>
+              <div class="composer-prompt">What helped or reduced distress?</div>
+              <div class="composer-prompt">What should adults do next?</div>
+            </div>
+          </section>
+
+          <section class="composer-side-card">
+            <h3>AI review</h3>
+            <div class="composer-ai-actions">
+              <button id="composerGrammarBtn" class="secondary-btn" type="button">Spelling and grammar</button>
+              <button id="composerClarityBtn" class="secondary-btn" type="button">Improve clarity</button>
+              <button id="composerSafeguardingBtn" class="secondary-btn" type="button">Safeguarding review</button>
+              <button id="composerChildVoiceBtn" class="secondary-btn" type="button">Check child voice</button>
+            </div>
+            <div id="composerAiFeedback" class="composer-side-body composer-ai-feedback">
+              No AI review run yet.
+            </div>
+          </section>
+        </aside>
       </div>
-      <button id="closeRecordModalBtn" class="secondary-btn icon-btn" type="button" aria-label="Close">✕</button>
-    </div>
-
-    <form id="recordModalForm" class="modal-form">
-      <div id="recordModalFields" class="form-grid"></div>
-    </form>
-
-    <div class="modal-footer">
-      <button id="recordModalCancelBtn" class="secondary-btn" type="button">Cancel</button>
-      <button id="recordModalSaveBtn" class="primary-btn" type="submit" form="recordModalForm">Save</button>
     </div>
   </section>
 
