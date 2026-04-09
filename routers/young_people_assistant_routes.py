@@ -181,7 +181,6 @@ async def ask_young_person_assistant(
                 user_context=assistant_prompt_bundle.get("context") or context,
                 user_id=current_user["user_id"],
                 conversation_id=f"young-person-{payload.context.young_person_id}",
-                scope=scope,
             )
 
             async for item in generator:
@@ -281,7 +280,8 @@ async def ask_young_person_assistant(
                 "meta",
                 {
                     "young_person_id": payload.context.young_person_id,
-                    "young_person_name": assistant_context_meta.get("young_person", {}).get("name")
+                    "young_person_name": assistant_context_meta.get("young_person", {}).get("preferred_name")
+                    or assistant_context_meta.get("young_person", {}).get("first_name")
                     or context.get("young_person_name"),
                     "sources": sources,
                     "runtime": final_runtime,
