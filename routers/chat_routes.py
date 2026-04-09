@@ -15,6 +15,7 @@ from slowapi.util import get_remote_address
 from auth.current_user import get_current_user
 from db.connection import get_db, get_db_connection, release_db_connection
 from services.ai_service import generate_ai_stream
+from services.assistant_orchestrator import build_assistant_prompt
 
 try:
     from docx import Document
@@ -40,12 +41,19 @@ MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
 HEARTBEAT_MARKER = "__heartbeat__"
 
 
+class AssistantScope(BaseModel):
+    scope_type: Literal["global", "young_person"] = "global"
+    home_id: int | None = None
+    young_person_id: int | None = None
+
+
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=MAX_MESSAGE_CHARS)
     conversation_id: int | None = None
     document_text: str | None = None
     document_name: str | None = None
     response_mode: Literal["quick", "balanced", "deep"] = "balanced"
+    scope: AssistantScope | None = None
 
 
 class RenameConversation(BaseModel):
@@ -57,6 +65,7 @@ class EditMessagePayload(BaseModel):
     document_text: str | None = None
     document_name: str | None = None
     response_mode: Literal["quick", "balanced", "deep"] = "balanced"
+    scope: AssistantScope | None = None
 
 
 def clip(text: str | None, max_len: int):
@@ -484,6 +493,7 @@ async def chat(
     conversation_id = body.conversation_id
     document_text = clip(body.document_text, MAX_DOCUMENT_CHARS)
     document_name = body.document_name
+    scope = body.scope.model_dump() if body.scope else None
 
     if not message:
         raise HTTPException(status_code=400, detail="Message required")
@@ -518,6 +528,14 @@ async def chat(
         history = get_history(conn, conversation_id)
         doc = get_doc(conn, conversation_id)
 
+        assistant_prompt_bundle = build_assistant_prompt(
+            conn,
+            user_id=user_id,
+            message=message,
+            scope=scope,
+            history=history,
+        )
+
     except HTTPException:
         raise
     except Exception:
@@ -532,7 +550,7 @@ async def chat(
 
         try:
             generator = generate_ai_stream(
-                message=message,
+                message=assistant_prompt_bundle["prompt"],
                 session_id=str(conversation_id),
                 history=history,
                 document_text=doc["document_text"] if doc else None,
@@ -605,16 +623,23 @@ async def chat(
             if ai_text.strip():
                 save_ai_message(conversation_id, ai_text)
 
-            if sources or runtime or explainability:
-                yield sse_event(
-                    "meta",
-                    {
-                        "conversation_id": conversation_id,
-                        "sources": sources,
-                        "runtime": runtime,
-                        "explainability": explainability,
-                    },
-                )
+            final_runtime = dict(runtime)
+            prompt_runtime = assistant_prompt_bundle.get("runtime") or {}
+            for key, value in prompt_runtime.items():
+                if value not in (None, "", []):
+                    final_runtime.setdefault(key, value)
+
+            yield sse_event(
+                "meta",
+                {
+                    "conversation_id": conversation_id,
+                    "sources": sources,
+                    "runtime": final_runtime,
+                    "explainability": explainability,
+                    "assistant_scope": scope or {"scope_type": "global"},
+                    "assistant_context": assistant_prompt_bundle.get("context"),
+                },
+            )
 
             yield sse_done()
 
@@ -672,6 +697,7 @@ async def edit_message_and_regenerate(
 ):
     user_id = current_user["user_id"]
     new_message = payload.message.strip()
+    scope = payload.scope.model_dump() if payload.scope else None
 
     if not new_message:
         raise HTTPException(status_code=400, detail="Message is required")
@@ -719,6 +745,14 @@ async def edit_message_and_regenerate(
         history = get_history(conn, conversation_id)
         doc = get_doc(conn, conversation_id)
 
+        assistant_prompt_bundle = build_assistant_prompt(
+            conn,
+            user_id=user_id,
+            message=new_message,
+            scope=scope,
+            history=history,
+        )
+
     except HTTPException:
         raise
     except Exception:
@@ -733,7 +767,7 @@ async def edit_message_and_regenerate(
 
         try:
             generator = generate_ai_stream(
-                message=new_message,
+                message=assistant_prompt_bundle["prompt"],
                 session_id=str(conversation_id),
                 history=history,
                 document_text=doc["document_text"] if doc else None,
@@ -806,16 +840,23 @@ async def edit_message_and_regenerate(
             if ai_text.strip():
                 save_ai_message(conversation_id, ai_text)
 
-            if sources or runtime or explainability:
-                yield sse_event(
-                    "meta",
-                    {
-                        "conversation_id": conversation_id,
-                        "sources": sources,
-                        "runtime": runtime,
-                        "explainability": explainability,
-                    },
-                )
+            final_runtime = dict(runtime)
+            prompt_runtime = assistant_prompt_bundle.get("runtime") or {}
+            for key, value in prompt_runtime.items():
+                if value not in (None, "", []):
+                    final_runtime.setdefault(key, value)
+
+            yield sse_event(
+                "meta",
+                {
+                    "conversation_id": conversation_id,
+                    "sources": sources,
+                    "runtime": final_runtime,
+                    "explainability": explainability,
+                    "assistant_scope": scope or {"scope_type": "global"},
+                    "assistant_context": assistant_prompt_bundle.get("context"),
+                },
+            )
 
             yield sse_done()
 
