@@ -356,17 +356,16 @@ function setEmpty(message = "No records found.") {
 
 function getCookie(name) {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = document.cookie.match(
-    new RegExp("(^|;\\s*)" + escaped + "=([^;]*)")
-  );
+  const match = document.cookie.match(new RegExp("(^|;\\s*)" + escaped + "=([^;]*)"));
   return match ? decodeURIComponent(match[2]) : "";
 }
 
-function getCsrfToken() {
-  if (typeof window.getCsrfToken === "function") {
-    return window.getCsrfToken();
-  }
+function getLocalCsrfToken() {
   return getCookie("__Host-indicare_csrf") || getCookie("indicare_csrf") || "";
+}
+
+function getCsrfToken() {
+  return getLocalCsrfToken();
 }
 
 function withCsrfHeaders(method, headers = {}) {
@@ -410,6 +409,7 @@ async function apiSend(url, method, body) {
     return window.apiRequest(url, {
       method,
       headers: {
+        "Content-Type": "application/json",
         Accept: "application/json",
       },
       body: body ? JSON.stringify(body) : null,
@@ -534,7 +534,7 @@ function renderRecordCard(item) {
       ${renderBadges(badges)}
 
       <div class="day-record-actions">
-        <button class="ghost-btn" type="button" data-open-record='${encodeURIComponent(JSON.stringify(item))}'>Open</button>
+        <button class="ghost-btn" type="button" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>
       </div>
     </article>
   `;
@@ -704,8 +704,7 @@ function updateAssistantScopeDataset() {
 
   els.app.dataset.assistantScopeType = state.youngPersonId ? "young_person" : "global";
   els.app.dataset.youngPersonId = state.youngPersonId ? String(state.youngPersonId) : "";
-  els.app.dataset.homeId =
-    state.youngPerson?.home_id != null ? String(state.youngPerson.home_id) : "";
+  els.app.dataset.homeId = state.youngPerson?.home_id != null ? String(state.youngPerson.home_id) : "";
 }
 
 function renderAssistantScopeBadges() {
@@ -1311,7 +1310,7 @@ function bindDynamicOpenRecordButtons() {
   els.content.querySelectorAll("[data-open-record]").forEach((btn) => {
     btn.addEventListener("click", () => {
       try {
-        openRecordDetail(JSON.parse(decodeURIComponent(btn.dataset.openRecord)));
+        openRecordDetail(JSON.parse(btn.dataset.openRecord));
       } catch (_) {
         showError("Could not open record.");
       }
@@ -1861,9 +1860,7 @@ function serialiseValue(key, value) {
   if (value === "") return null;
 
   if (["linked_plan_id", "reminder_minutes_before", "physical_intervention_duration_minutes"].includes(key)) {
-    if (value === "" || value == null) return null;
-    const num = Number(value);
-    return Number.isNaN(num) ? null : num;
+    return Number(value);
   }
 
   if (["physical_intervention_used", "body_map_required", "external_notification_required"].includes(key)) {
@@ -1892,7 +1889,6 @@ function serializeComposerForm() {
   }
 
   obj.young_person_id = state.youngPersonId;
-
   return obj;
 }
 
@@ -2173,6 +2169,10 @@ function inferAssistantSuggestedActions() {
     actions.push("Review outstanding tasks");
   }
 
+  if (Array.isArray(state.assistantMeta.suggested_actions)) {
+    actions.push(...state.assistantMeta.suggested_actions);
+  }
+
   return [...new Set(actions)].slice(0, 6);
 }
 
@@ -2222,10 +2222,7 @@ function renderAssistantInsights() {
     els.assistantScopeSummary.innerHTML = rows.join("");
   }
 
-  const suggestedActions = state.assistantMeta.suggested_actions?.length
-    ? state.assistantMeta.suggested_actions
-    : inferAssistantSuggestedActions();
-
+  const suggestedActions = inferAssistantSuggestedActions();
   if (els.assistantActions) {
     els.assistantActions.innerHTML = suggestedActions.length
       ? suggestedActions.map((item) => `<button class="chip" type="button" data-assistant-chip="${escapeHtml(item)}">${escapeHtml(item)}</button>`).join("")
@@ -2384,16 +2381,6 @@ async function askAssistant(question) {
   }
 }
 
-function workflowActionLabel(action) {
-  const map = {
-    submit: "submitted",
-    approve: "approved",
-    return: "returned",
-    archive: "archived",
-  };
-  return map[action] || action;
-}
-
 function openYoungPerson(id) {
   const url = new URL(window.location.href);
   url.searchParams.set("id", String(id));
@@ -2407,6 +2394,56 @@ function openYoungPerson(id) {
   loadYoungPerson()
     .then(loadCurrentView)
     .catch((error) => showError(error.message || "Failed to load young person."));
+}
+
+async function runDrawerWorkflow(action) {
+  const item = state.activeRecordItem;
+  const type = state.activeRecordType;
+  const config = RECORD_CONFIG[type];
+
+  if (!item || !config) {
+    showError("No record selected.");
+    return;
+  }
+
+  const id = item.record_id || item.source_id || item.id;
+  if (!id) {
+    showError("This record has no id.");
+    return;
+  }
+
+  let url = null;
+  let body = null;
+
+  if (type === "appointment") {
+    if (action === "approve") url = config.approveUrl?.(id);
+    if (action === "return") url = config.returnUrl?.(id);
+  } else {
+    if (action === "submit") url = config.submitUrl?.(id);
+    if (action === "approve") {
+      url = config.approveUrl?.(id);
+      body = { review_note: "Approved in workspace" };
+    }
+    if (action === "return") {
+      url = config.returnUrl?.(id);
+      body = { review_note: "Returned in workspace" };
+    }
+    if (action === "archive") url = config.archiveUrl?.(id);
+  }
+
+  if (!url) {
+    showError(`No ${action} route is configured for this record.`);
+    return;
+  }
+
+  try {
+    await apiSend(url, "POST", body);
+    showMessage(`${config.label} ${action}ed.`);
+    closeDrawer();
+    await loadCurrentView();
+  } catch (error) {
+    showError(error.message || `Could not ${action} record.`);
+  }
 }
 
 function bindEvents() {
@@ -2524,7 +2561,6 @@ function bindEvents() {
     if (btn.dataset.action === "incident") openComposerFor("incident", "create");
     if (btn.dataset.action === "risk") openComposerFor("risk", "create");
     if (btn.dataset.action === "plan") openComposerFor("support_plan", "create");
-    if (btn.dataset.action === "appointment") openComposerFor("appointment", "create");
   });
 
   els.closeDrawerBtn?.addEventListener("click", closeDrawer);
@@ -2614,56 +2650,6 @@ function bindEvents() {
       closeAllNavGroups();
     }
   });
-}
-
-async function runDrawerWorkflow(action) {
-  const item = state.activeRecordItem;
-  const type = state.activeRecordType;
-  const config = RECORD_CONFIG[type];
-
-  if (!item || !config) {
-    showError("No record selected.");
-    return;
-  }
-
-  const id = item.record_id || item.source_id || item.id;
-  if (!id) {
-    showError("This record has no id.");
-    return;
-  }
-
-  let url = null;
-  let body = null;
-
-  if (type === "appointment") {
-    if (action === "approve") url = config.approveUrl?.(id);
-    if (action === "return") url = config.returnUrl?.(id);
-  } else {
-    if (action === "submit") url = config.submitUrl?.(id);
-    if (action === "approve") {
-      url = config.approveUrl?.(id);
-      body = { review_note: "Approved in workspace" };
-    }
-    if (action === "return") {
-      url = config.returnUrl?.(id);
-      body = { review_note: "Returned in workspace" };
-    }
-    if (action === "archive") url = config.archiveUrl?.(id);
-  }
-
-  if (!url) {
-    showError(`No ${action} route is configured for this record.`);
-    return;
-  }
-
-  try {
-    await apiSend(url, "POST", body);
-    showMessage(`${config.label} ${workflowActionLabel(action)}.`);
-    closeDrawer();
-    await loadCurrentView();
-  } catch (error) {
-    showError(error.message || `Could not ${action} record.`);
-  }
 }
 
 async function init() {
