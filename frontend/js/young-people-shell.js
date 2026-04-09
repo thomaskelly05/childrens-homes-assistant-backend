@@ -363,6 +363,9 @@ function getCookie(name) {
 }
 
 function getCsrfToken() {
+  if (typeof window.getCsrfToken === "function") {
+    return window.getCsrfToken();
+  }
   return getCookie("__Host-indicare_csrf") || getCookie("indicare_csrf") || "";
 }
 
@@ -377,6 +380,13 @@ function withCsrfHeaders(method, headers = {}) {
 }
 
 async function apiGet(url) {
+  if (typeof window.apiRequest === "function") {
+    return window.apiRequest(url, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+  }
+
   const response = await fetch(url, {
     method: "GET",
     credentials: "include",
@@ -396,6 +406,16 @@ async function apiGet(url) {
 }
 
 async function apiSend(url, method, body) {
+  if (typeof window.apiRequest === "function") {
+    return window.apiRequest(url, {
+      method,
+      headers: {
+        Accept: "application/json",
+      },
+      body: body ? JSON.stringify(body) : null,
+    });
+  }
+
   const response = await fetch(url, {
     method,
     credentials: "include",
@@ -409,8 +429,8 @@ async function apiSend(url, method, body) {
   if (!response.ok) {
     let message = `Request failed (${response.status})`;
     try {
-      const body = await response.json();
-      message = body.detail || body.error || message;
+      const parsed = await response.json();
+      message = parsed.detail || parsed.error || message;
     } catch (_) {}
     throw new Error(message);
   }
@@ -422,10 +442,24 @@ async function apiSend(url, method, body) {
   }
 }
 
+function unwrapCreateResponse(recordType, response) {
+  if (!response || typeof response !== "object") return null;
+
+  const map = {
+    daily_note: response.daily_note,
+    incident: response.incident,
+    risk: response.risk || response.risk_assessment,
+    support_plan: response.support_plan || response.plan,
+    appointment: response.appointment,
+  };
+
+  return map[recordType] || response;
+}
+
 function statusBadgeClass(value) {
   const v = String(value || "").toLowerCase();
   if (["approved", "active", "recorded", "completed", "scheduled", "success"].includes(v)) return "success";
-  if (["submitted", "pending", "draft", "warning", "medium", "due_soon"].includes(v)) return "warning";
+  if (["submitted", "pending", "draft", "warning", "medium", "due_soon", "not_required"].includes(v)) return "warning";
   if (["returned", "archived", "cancelled", "high", "critical", "overdue", "danger"].includes(v)) return "danger";
   return "";
 }
@@ -455,6 +489,7 @@ function renderRecordCard(item) {
     item.description ||
     item.concern_summary ||
     item.outcome ||
+    item.presenting_need ||
     "Open to view details.";
 
   const when =
@@ -499,7 +534,7 @@ function renderRecordCard(item) {
       ${renderBadges(badges)}
 
       <div class="day-record-actions">
-        <button class="ghost-btn" type="button" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>
+        <button class="ghost-btn" type="button" data-open-record='${encodeURIComponent(JSON.stringify(item))}'>Open</button>
       </div>
     </article>
   `;
@@ -1276,7 +1311,7 @@ function bindDynamicOpenRecordButtons() {
   els.content.querySelectorAll("[data-open-record]").forEach((btn) => {
     btn.addEventListener("click", () => {
       try {
-        openRecordDetail(JSON.parse(btn.dataset.openRecord));
+        openRecordDetail(JSON.parse(decodeURIComponent(btn.dataset.openRecord)));
       } catch (_) {
         showError("Could not open record.");
       }
@@ -1329,7 +1364,9 @@ async function openRecordDetail(item) {
       data.daily_note ||
       data.incident ||
       data.risk ||
+      data.risk_assessment ||
       data.support_plan ||
+      data.plan ||
       data.appointment ||
       data.health_record ||
       data.medication_profile ||
@@ -1342,12 +1379,21 @@ async function openRecordDetail(item) {
       data;
 
     const entries = Object.entries(detail || {})
-      .filter(([key, value]) => !["id", "young_person_id"].includes(key) && value !== null && value !== "" && value !== undefined)
-      .slice(0, 24);
+      .filter(([key, value]) => !["id", "young_person_id", "home_id"].includes(key) && value !== null && value !== "" && value !== undefined)
+      .slice(0, 32);
 
     if (els.drawerTitle) els.drawerTitle.textContent = item.title || detail.title || "Record details";
     if (els.drawerSubtitle) {
-      els.drawerSubtitle.textContent = `${String(type).replaceAll("_", " ")} • ${formatDate(item.recorded_at || item.occurred_at || item.created_at || detail.created_at)}`;
+      els.drawerSubtitle.textContent = `${String(type).replaceAll("_", " ")} • ${formatDate(
+        item.recorded_at ||
+        item.occurred_at ||
+        item.created_at ||
+        detail.recorded_at ||
+        detail.appointment_date ||
+        detail.incident_datetime ||
+        detail.note_date ||
+        detail.created_at
+      )}`;
     }
 
     if (els.drawerBody) {
@@ -1361,11 +1407,24 @@ async function openRecordDetail(item) {
             </div>
             <div class="detail-row">
               <div class="detail-key">Status</div>
-              <div class="detail-value">${escapeHtml(item.workflow_status || detail.workflow_status || detail.status || detail.approval_status || "—")}</div>
+              <div class="detail-value">${escapeHtml(
+                item.workflow_status ||
+                detail.workflow_status ||
+                detail.status ||
+                detail.approval_status ||
+                "—"
+              )}</div>
             </div>
             <div class="detail-row">
               <div class="detail-key">Summary</div>
-              <div class="detail-value">${escapeHtml(item.summary || detail.summary || detail.description || detail.concern_summary || "—")}</div>
+              <div class="detail-value">${escapeHtml(
+                item.summary ||
+                detail.summary ||
+                detail.description ||
+                detail.concern_summary ||
+                detail.presenting_need ||
+                "—"
+              )}</div>
             </div>
           </div>
         </div>
@@ -1431,6 +1490,17 @@ function buildFormField(field) {
     `;
   }
 
+  if (field.type === "checkbox") {
+    return `
+      <div class="composer-field ${field.full ? "full" : ""}">
+        <label class="checkbox-row" for="${field.name}">
+          <input id="${field.name}" name="${field.name}" type="checkbox" ${field.value ? "checked" : ""} />
+          <span>${escapeHtml(field.label)}</span>
+        </label>
+      </div>
+    `;
+  }
+
   return `
     <div class="composer-field ${field.full ? "full" : ""}">
       ${label}
@@ -1459,6 +1529,7 @@ function getComposerContent(recordType, item = null) {
           title: "Shift details",
           subtitle: "Start with the basic context for this record.",
           fields: [
+            { name: "title", label: "Title", type: "text", value: item?.title || "" },
             { name: "note_date", label: "Date", type: "date", value: item?.note_date || today },
             {
               name: "shift_type",
@@ -1473,6 +1544,18 @@ function getComposerContent(recordType, item = null) {
               ],
             },
             { name: "mood", label: "Mood", type: "text", value: item?.mood || "" },
+            {
+              name: "significance",
+              label: "Significance",
+              type: "select",
+              value: item?.significance || "",
+              options: [
+                { value: "", label: "Select significance" },
+                { value: "low", label: "Low" },
+                { value: "medium", label: "Medium" },
+                { value: "high", label: "High" },
+              ],
+            },
           ],
         },
         {
@@ -1482,6 +1565,9 @@ function getComposerContent(recordType, item = null) {
             { name: "presentation", label: "Presentation", type: "textarea", full: true, value: item?.presentation || "" },
             { name: "activities", label: "Activities", type: "textarea", full: true, value: item?.activities || "" },
             { name: "behaviour_update", label: "Behaviour update", type: "textarea", full: true, value: item?.behaviour_update || "" },
+            { name: "education_update", label: "Education update", type: "textarea", full: true, value: item?.education_update || "" },
+            { name: "health_update", label: "Health update", type: "textarea", full: true, value: item?.health_update || "" },
+            { name: "family_update", label: "Family update", type: "textarea", full: true, value: item?.family_update || "" },
           ],
         },
         {
@@ -1534,6 +1620,7 @@ function getComposerContent(recordType, item = null) {
               ],
             },
             { name: "location", label: "Location", type: "text", value: item?.location || "" },
+            { name: "presentation", label: "Presentation", type: "textarea", full: true, value: item?.presentation || "" },
           ],
         },
         {
@@ -1542,6 +1629,7 @@ function getComposerContent(recordType, item = null) {
           fields: [
             { name: "antecedent", label: "Antecedent", type: "textarea", full: true, value: item?.antecedent || "" },
             { name: "description", label: "Description", type: "textarea", full: true, value: item?.description || "" },
+            { name: "trauma_informed_formulation", label: "Trauma-informed formulation", type: "textarea", full: true, value: item?.trauma_informed_formulation || "" },
           ],
         },
         {
@@ -1551,6 +1639,20 @@ function getComposerContent(recordType, item = null) {
             { name: "staff_response", label: "Staff response", type: "textarea", full: true, value: item?.staff_response || "" },
             { name: "child_voice", label: "Child voice", type: "textarea", full: true, value: item?.child_voice || "" },
             { name: "outcome", label: "Outcome", type: "textarea", full: true, value: item?.outcome || "" },
+            { name: "restorative_follow_up", label: "Restorative follow-up", type: "textarea", full: true, value: item?.restorative_follow_up || "" },
+            { name: "follow_up_required", label: "Follow-up required", type: "textarea", full: true, value: item?.follow_up_required || "" },
+          ],
+        },
+        {
+          title: "Additional incident detail",
+          subtitle: "Use these fields where relevant.",
+          fields: [
+            { name: "physical_intervention_used", label: "Physical intervention used", type: "checkbox", value: !!item?.physical_intervention_used },
+            { name: "physical_intervention_type", label: "Intervention type", type: "text", value: item?.physical_intervention_type || "" },
+            { name: "physical_intervention_duration_minutes", label: "Duration (minutes)", type: "number", value: item?.physical_intervention_duration_minutes || "" },
+            { name: "body_map_required", label: "Body map required", type: "checkbox", value: !!item?.body_map_required },
+            { name: "external_notification_required", label: "External notification required", type: "checkbox", value: !!item?.external_notification_required },
+            { name: "external_notification_details", label: "External notification details", type: "textarea", full: true, value: item?.external_notification_details || "" },
           ],
         },
       ],
@@ -1607,6 +1709,8 @@ function getComposerContent(recordType, item = null) {
           fields: [
             { name: "concern_summary", label: "Concern summary", type: "textarea", full: true, value: item?.concern_summary || "" },
             { name: "known_triggers", label: "Known triggers", type: "textarea", full: true, value: item?.known_triggers || "" },
+            { name: "early_warning_signs", label: "Early warning signs", type: "textarea", full: true, value: item?.early_warning_signs || "" },
+            { name: "contextual_factors", label: "Contextual factors", type: "textarea", full: true, value: item?.contextual_factors || "" },
           ],
         },
         {
@@ -1614,6 +1718,8 @@ function getComposerContent(recordType, item = null) {
           subtitle: "Be specific and practical for staff.",
           fields: [
             { name: "current_controls", label: "Current controls", type: "textarea", full: true, value: item?.current_controls || "" },
+            { name: "deescalation_strategies", label: "De-escalation strategies", type: "textarea", full: true, value: item?.deescalation_strategies || "" },
+            { name: "child_views", label: "Child views", type: "textarea", full: true, value: item?.child_views || "" },
             { name: "response_actions", label: "Response actions", type: "textarea", full: true, value: item?.response_actions || "" },
           ],
         },
@@ -1644,15 +1750,26 @@ function getComposerContent(recordType, item = null) {
             { name: "end_datetime", label: "End time", type: "datetime-local", value: item?.end_datetime ? toDateTimeLocalValue(item.end_datetime) : "" },
             { name: "location", label: "Location", type: "text", value: item?.location || "" },
             { name: "professional_name", label: "Professional name", type: "text", value: item?.professional_name || "" },
+            { name: "professional_role", label: "Professional role", type: "text", value: item?.professional_role || "" },
           ],
         },
         {
           title: "Purpose and support",
           subtitle: "Help adults understand the meaning and support needed.",
           fields: [
+            { name: "purpose", label: "Purpose", type: "textarea", full: true, value: item?.purpose || "" },
             { name: "summary", label: "Summary", type: "textarea", full: true, value: item?.summary || "" },
             { name: "child_voice", label: "Child voice", type: "textarea", full: true, value: item?.child_voice || "" },
+            { name: "preparation_notes", label: "Preparation notes", type: "textarea", full: true, value: item?.preparation_notes || "" },
+          ],
+        },
+        {
+          title: "Follow-up",
+          subtitle: "Record outcomes and next steps.",
+          fields: [
+            { name: "outcome_notes", label: "Outcome notes", type: "textarea", full: true, value: item?.outcome_notes || "" },
             { name: "follow_up_actions", label: "Follow-up actions", type: "textarea", full: true, value: item?.follow_up_actions || "" },
+            { name: "reminder_minutes_before", label: "Reminder minutes before", type: "number", value: item?.reminder_minutes_before ?? 30 },
           ],
         },
       ],
@@ -1676,7 +1793,10 @@ function getComposerContent(recordType, item = null) {
         subtitle: "Set out the core plan information.",
         fields: [
           { name: "title", label: "Title", type: "text", value: item?.title || "" },
+          { name: "plan_type", label: "Plan type", type: "text", value: item?.plan_type || "support_plan" },
+          { name: "start_date", label: "Start date", type: "date", value: item?.start_date || today },
           { name: "review_date", label: "Review date", type: "date", value: item?.review_date || today },
+          { name: "pace_guidance", label: "PACE guidance", type: "textarea", full: true, value: item?.pace_guidance || "" },
         ],
       },
       {
@@ -1686,6 +1806,7 @@ function getComposerContent(recordType, item = null) {
           { name: "presenting_need", label: "Presenting need", type: "textarea", full: true, value: item?.presenting_need || "" },
           { name: "summary", label: "Summary", type: "textarea", full: true, value: item?.summary || "" },
           { name: "child_voice", label: "Child voice", type: "textarea", full: true, value: item?.child_voice || "" },
+          { name: "formulation", label: "Formulation", type: "textarea", full: true, value: item?.formulation || "" },
         ],
       },
       {
@@ -1695,6 +1816,7 @@ function getComposerContent(recordType, item = null) {
           { name: "proactive_strategies", label: "Proactive strategies", type: "textarea", full: true, value: item?.proactive_strategies || "" },
           { name: "triggers", label: "Triggers", type: "textarea", full: true, value: item?.triggers || "" },
           { name: "protective_factors", label: "Protective factors", type: "textarea", full: true, value: item?.protective_factors || "" },
+          { name: "staff_guidance", label: "Staff guidance", type: "textarea", full: true, value: item?.staff_guidance || "" },
         ],
       },
     ],
@@ -1737,7 +1859,17 @@ function openComposerFor(recordType, mode = "create", item = null) {
 
 function serialiseValue(key, value) {
   if (value === "") return null;
-  if (["linked_plan_id", "reminder_minutes_before"].includes(key)) return Number(value);
+
+  if (["linked_plan_id", "reminder_minutes_before", "physical_intervention_duration_minutes"].includes(key)) {
+    if (value === "" || value == null) return null;
+    const num = Number(value);
+    return Number.isNaN(num) ? null : num;
+  }
+
+  if (["physical_intervention_used", "body_map_required", "external_notification_required"].includes(key)) {
+    return value === "on";
+  }
+
   return value;
 }
 
@@ -1745,15 +1877,21 @@ function serializeComposerForm() {
   const formData = new FormData(els.composerForm);
   const obj = {};
 
+  const checkboxNames = [
+    "physical_intervention_used",
+    "body_map_required",
+    "external_notification_required",
+  ];
+
+  for (const name of checkboxNames) {
+    obj[name] = false;
+  }
+
   for (const [key, value] of formData.entries()) {
     obj[key] = serialiseValue(key, value);
   }
 
   obj.young_person_id = state.youngPersonId;
-
-  if (obj.appointment_date && !obj.start_datetime) {
-    obj.start_datetime = obj.appointment_date;
-  }
 
   return obj;
 }
@@ -1771,8 +1909,9 @@ async function saveComposer(mode = "draft") {
 
   if (mode === "submit" && recordType !== "appointment") {
     if (!state.composerRecordId) {
-      const created = await apiSend(config.createUrl(state.youngPersonId), "POST", payload);
-      state.composerRecordId = created.id || created.record_id || state.composerRecordId;
+      const createdResponse = await apiSend(config.createUrl(state.youngPersonId), "POST", payload);
+      const created = unwrapCreateResponse(recordType, createdResponse);
+      state.composerRecordId = created?.id || created?.record_id || state.composerRecordId;
     } else {
       await apiSend(config.updateUrl(state.composerRecordId), config.updateMethod || "PATCH", payload);
     }
@@ -1788,8 +1927,9 @@ async function saveComposer(mode = "draft") {
     await apiSend(config.updateUrl(state.composerRecordId), config.updateMethod || "PATCH", payload);
     showMessage(`${config.label} updated.`);
   } else {
-    const created = await apiSend(config.createUrl(state.youngPersonId), "POST", payload);
-    state.composerRecordId = created.id || created.record_id || state.composerRecordId;
+    const createdResponse = await apiSend(config.createUrl(state.youngPersonId), "POST", payload);
+    const created = unwrapCreateResponse(recordType, createdResponse);
+    state.composerRecordId = created?.id || created?.record_id || state.composerRecordId;
     state.composerMode = "edit";
     showMessage(`${config.label} saved.`);
   }
@@ -2082,7 +2222,10 @@ function renderAssistantInsights() {
     els.assistantScopeSummary.innerHTML = rows.join("");
   }
 
-  const suggestedActions = inferAssistantSuggestedActions();
+  const suggestedActions = state.assistantMeta.suggested_actions?.length
+    ? state.assistantMeta.suggested_actions
+    : inferAssistantSuggestedActions();
+
   if (els.assistantActions) {
     els.assistantActions.innerHTML = suggestedActions.length
       ? suggestedActions.map((item) => `<button class="chip" type="button" data-assistant-chip="${escapeHtml(item)}">${escapeHtml(item)}</button>`).join("")
@@ -2112,21 +2255,16 @@ function renderAssistantInsights() {
   }
 }
 
-function buildAssistantScopePayload() {
-  return {
-    scope_type: "young_person",
-    young_person_id: state.youngPersonId,
-    home_id: state.youngPerson?.home_id ?? null,
-  };
-}
-
 function buildAssistantContextPayload() {
   return {
+    scope: "young_person",
+    young_person_id: state.youngPersonId,
     current_view: state.currentView,
     young_person_name: getFullYoungPersonName(),
     placement_status: state.youngPerson?.placement_status || null,
     summary_risk_level: state.youngPerson?.summary_risk_level || null,
     composer_record_type: state.composerRecordType || null,
+    home_name: state.youngPerson?.home_name || null,
   };
 }
 
@@ -2183,7 +2321,6 @@ async function askAssistant(question) {
         message: trimmed,
         response_mode: detectAssistantResponseMode(trimmed),
         context: buildAssistantContextPayload(),
-        scope: buildAssistantScopePayload(),
       }),
     });
 
@@ -2221,8 +2358,9 @@ async function askAssistant(question) {
               sources: Array.isArray(meta.sources) ? meta.sources : [],
               runtime: meta.runtime || {},
               explainability: meta.explainability || {},
-              assistant_scope: meta.assistant_scope || buildAssistantScopePayload(),
+              assistant_scope: meta.assistant_scope || {},
               assistant_context: meta.assistant_context || {},
+              suggested_actions: Array.isArray(meta.suggested_actions) ? meta.suggested_actions : [],
             };
             renderAssistantInsights();
           } catch (_) {}
@@ -2244,6 +2382,16 @@ async function askAssistant(question) {
   } finally {
     setAssistantSending(false);
   }
+}
+
+function workflowActionLabel(action) {
+  const map = {
+    submit: "submitted",
+    approve: "approved",
+    return: "returned",
+    archive: "archived",
+  };
+  return map[action] || action;
 }
 
 function openYoungPerson(id) {
@@ -2376,6 +2524,7 @@ function bindEvents() {
     if (btn.dataset.action === "incident") openComposerFor("incident", "create");
     if (btn.dataset.action === "risk") openComposerFor("risk", "create");
     if (btn.dataset.action === "plan") openComposerFor("support_plan", "create");
+    if (btn.dataset.action === "appointment") openComposerFor("appointment", "create");
   });
 
   els.closeDrawerBtn?.addEventListener("click", closeDrawer);
@@ -2509,7 +2658,7 @@ async function runDrawerWorkflow(action) {
 
   try {
     await apiSend(url, "POST", body);
-    showMessage(`${config.label} ${action}ed.`);
+    showMessage(`${config.label} ${workflowActionLabel(action)}.`);
     closeDrawer();
     await loadCurrentView();
   } catch (error) {
