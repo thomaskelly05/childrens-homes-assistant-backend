@@ -150,7 +150,6 @@ async def ask_young_person_assistant(
             message=payload.message,
             scope=scope,
             history=[],
-            context=context,
         )
 
     except HTTPException:
@@ -167,7 +166,7 @@ async def ask_young_person_assistant(
         runtime: dict[str, Any] = {}
         explainability: dict[str, Any] = {}
         assistant_scope_meta: dict[str, Any] = dict(scope)
-        assistant_context_meta: dict[str, Any] = dict(assistant_prompt_bundle.get("context") or context)
+        assistant_context_meta: dict[str, Any] = assistant_prompt_bundle.get("context") or {}
         suggested_actions: list[str] = []
 
         try:
@@ -178,7 +177,7 @@ async def ask_young_person_assistant(
                 document_text=None,
                 document_name=None,
                 response_mode=response_mode,
-                user_context=assistant_prompt_bundle.get("context") or context,
+                user_context=assistant_prompt_bundle.get("context") or {},
                 user_id=current_user["user_id"],
                 conversation_id=f"young-person-{payload.context.young_person_id}",
             )
@@ -246,8 +245,12 @@ async def ask_young_person_assistant(
                         ]
                     continue
 
-        except Exception as exc:
-            fallback = f"Sorry, something went wrong while running the young person assistant: {str(exc)}"
+        except Exception:
+            fallback = (
+                "Sorry, the assistant could not generate that response just now. "
+                "Please try again, or ask a shorter question such as "
+                "'summarise recent incidents' or 'draft a short handover'."
+            )
             ai_text += fallback
             yield _sse(fallback)
 
@@ -257,6 +260,12 @@ async def ask_young_person_assistant(
             for key, value in prompt_runtime.items():
                 if value not in (None, "", []):
                     final_runtime.setdefault(key, value)
+
+            if context:
+                final_runtime.setdefault("current_view", context.get("current_view"))
+                final_runtime.setdefault("young_person_name", context.get("young_person_name"))
+                final_runtime.setdefault("placement_status", context.get("placement_status"))
+                final_runtime.setdefault("summary_risk_level", context.get("summary_risk_level"))
 
             if suggested_actions:
                 existing_actions = final_runtime.get("suggested_actions") or []
@@ -280,9 +289,7 @@ async def ask_young_person_assistant(
                 "meta",
                 {
                     "young_person_id": payload.context.young_person_id,
-                    "young_person_name": assistant_context_meta.get("young_person", {}).get("preferred_name")
-                    or assistant_context_meta.get("young_person", {}).get("first_name")
-                    or context.get("young_person_name"),
+                    "young_person_name": context.get("young_person_name"),
                     "sources": sources,
                     "runtime": final_runtime,
                     "explainability": explainability,
