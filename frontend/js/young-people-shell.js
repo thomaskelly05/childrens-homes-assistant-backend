@@ -264,6 +264,40 @@ const RECORD_CONFIG = {
   },
 };
 
+function exists(el) {
+  return !!el;
+}
+
+function setText(el, value) {
+  if (!el) return;
+  el.textContent = value;
+}
+
+function setHTML(el, value) {
+  if (!el) return;
+  el.innerHTML = value;
+}
+
+function show(el) {
+  if (!el) return;
+  el.classList.remove("hidden");
+}
+
+function hide(el) {
+  if (!el) return;
+  el.classList.add("hidden");
+}
+
+function toggleHidden(el, hidden) {
+  if (!el) return;
+  el.classList.toggle("hidden", !!hidden);
+}
+
+function setDisabled(el, disabled) {
+  if (!el) return;
+  el.disabled = !!disabled;
+}
+
 function getYoungPersonId() {
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id") || params.get("young_person_id");
@@ -316,37 +350,43 @@ function initialsFromName(name) {
 }
 
 function showError(message) {
-  els.statusBar.classList.remove("hidden");
-  els.statusBar.textContent = message;
+  show(els.statusBar);
+  setText(els.statusBar, message);
 }
 
 function showMessage(message) {
-  els.statusBar.classList.remove("hidden");
-  els.statusBar.textContent = message;
+  show(els.statusBar);
+  setText(els.statusBar, message);
 }
 
 function clearStatus() {
-  els.statusBar.classList.add("hidden");
-  els.statusBar.textContent = "";
+  hide(els.statusBar);
+  setText(els.statusBar, "");
 }
 
 function setLoading(message = "Loading...") {
-  els.content.innerHTML = `
+  setHTML(
+    els.content,
+    `
     <div class="loading-state">
       <div>
         <div class="spinner"></div>
         <p>${escapeHtml(message)}</p>
       </div>
     </div>
-  `;
+  `
+  );
 }
 
 function setEmpty(message = "No records found.") {
-  els.content.innerHTML = `
+  setHTML(
+    els.content,
+    `
     <div class="empty-state">
       <p>${escapeHtml(message)}</p>
     </div>
-  `;
+  `
+  );
 }
 
 function getCookie(name) {
@@ -562,8 +602,8 @@ function getRecordUrl(item) {
 function updatePageHeader() {
   const config = VIEW_CONFIG[state.currentView];
   if (!config) return;
-  els.pageTitle.textContent = config.title;
-  els.pageSubtitle.textContent = config.subtitle;
+  setText(els.pageTitle, config.title);
+  setText(els.pageSubtitle, config.subtitle);
 }
 
 function updateActiveNav() {
@@ -579,40 +619,40 @@ function closeAllNavGroups(except = null) {
 }
 
 function showSelectorMode() {
-  els.selectorPanel.classList.remove("hidden");
-  els.workspacePanel.classList.add("hidden");
-  els.refreshBtn.classList.add("hidden");
-  els.personName.textContent = "No young person selected";
-  els.personMeta.textContent = "Choose a young person to begin";
-  els.personAvatar.textContent = "YP";
+  show(els.selectorPanel);
+  hide(els.workspacePanel);
+  hide(els.refreshBtn);
+  setText(els.personName, "No young person selected");
+  setText(els.personMeta, "Choose a young person to begin");
+  setText(els.personAvatar, "YP");
   toggleAssistantLauncher();
 }
 
 function showWorkspaceMode() {
-  els.selectorPanel.classList.add("hidden");
-  els.workspacePanel.classList.remove("hidden");
-  els.refreshBtn.classList.remove("hidden");
+  hide(els.selectorPanel);
+  show(els.workspacePanel);
+  show(els.refreshBtn);
   toggleAssistantLauncher();
 }
 
 function openDrawer() {
-  els.drawer.classList.remove("hidden");
-  els.drawerBackdrop.classList.remove("hidden");
-  els.drawer.setAttribute("aria-hidden", "false");
+  show(els.drawer);
+  show(els.drawerBackdrop);
+  if (els.drawer) els.drawer.setAttribute("aria-hidden", "false");
 }
 
 function closeDrawer() {
-  els.drawer.classList.add("hidden");
-  els.drawerBackdrop.classList.add("hidden");
-  els.drawer.setAttribute("aria-hidden", "true");
+  hide(els.drawer);
+  hide(els.drawerBackdrop);
+  if (els.drawer) els.drawer.setAttribute("aria-hidden", "true");
   state.activeRecordItem = null;
   state.activeRecordType = null;
 }
 
 function openComposer() {
   state.composerOpen = true;
-  els.composerPage.classList.remove("hidden");
-  els.composerPage.setAttribute("aria-hidden", "false");
+  show(els.composerPage);
+  if (els.composerPage) els.composerPage.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
 }
 
@@ -623,29 +663,29 @@ function closeComposer() {
   state.composerRecordId = null;
   state.composerEditItem = null;
 
-  els.composerPage.classList.add("hidden");
-  els.composerPage.setAttribute("aria-hidden", "true");
-  els.composerFields.innerHTML = "";
-  els.composerAiFeedback.textContent = "No AI review run yet.";
+  hide(els.composerPage);
+  if (els.composerPage) els.composerPage.setAttribute("aria-hidden", "true");
+  setHTML(els.composerFields, "");
+  setText(els.composerAiFeedback, "No AI review run yet.");
   document.body.style.overflow = "";
 }
 
 function openAssistant() {
   updateAssistantContext();
-  els.assistantModal.classList.remove("hidden");
-  els.assistantBackdrop.classList.remove("hidden");
+  show(els.assistantModal);
+  show(els.assistantBackdrop);
 }
 
 function closeAssistant() {
-  els.assistantModal.classList.add("hidden");
-  els.assistantBackdrop.classList.add("hidden");
+  hide(els.assistantModal);
+  hide(els.assistantBackdrop);
 }
 
 function toggleAssistantLauncher() {
   if (state.youngPersonId) {
-    els.assistantLauncher.classList.remove("hidden");
+    show(els.assistantLauncher);
   } else {
-    els.assistantLauncher.classList.add("hidden");
+    hide(els.assistantLauncher);
   }
 }
 
@@ -674,99 +714,80 @@ function renderAssistantScopeBadges() {
 
   const childText = getFullYoungPersonName();
 
-  if (els.scopeBadge) {
-    els.scopeBadge.textContent = state.youngPersonId ? "Young person assistant" : "Assistant";
-  }
+  setText(els.scopeBadge, state.youngPersonId ? "Young person assistant" : "Assistant");
 
   if (els.scopeHomeBadge) {
-    if (homeText) {
-      els.scopeHomeBadge.textContent = homeText;
-      els.scopeHomeBadge.classList.remove("hidden");
-    } else {
-      els.scopeHomeBadge.textContent = "";
-      els.scopeHomeBadge.classList.add("hidden");
-    }
+    setText(els.scopeHomeBadge, homeText || "");
+    toggleHidden(els.scopeHomeBadge, !homeText);
   }
 
   if (els.scopeChildBadge) {
-    if (childText) {
-      els.scopeChildBadge.textContent = childText;
-      els.scopeChildBadge.classList.remove("hidden");
-    } else {
-      els.scopeChildBadge.textContent = "";
-      els.scopeChildBadge.classList.add("hidden");
-    }
+    setText(els.scopeChildBadge, childText || "");
+    toggleHidden(els.scopeChildBadge, !childText);
   }
 
   if (els.scopeShiftBadge) {
-    els.scopeShiftBadge.textContent = state.currentView ? state.currentView.replaceAll("-", " ") : "";
-    if (state.currentView) {
-      els.scopeShiftBadge.classList.remove("hidden");
-    } else {
-      els.scopeShiftBadge.classList.add("hidden");
-    }
+    const shift = state.currentView ? state.currentView.replaceAll("-", " ") : "";
+    setText(els.scopeShiftBadge, shift);
+    toggleHidden(els.scopeShiftBadge, !shift);
   }
 
   if (els.modalScopeHomeBadge) {
-    if (homeText) {
-      els.modalScopeHomeBadge.textContent = homeText;
-      els.modalScopeHomeBadge.classList.remove("hidden");
-    } else {
-      els.modalScopeHomeBadge.textContent = "";
-      els.modalScopeHomeBadge.classList.add("hidden");
-    }
+    setText(els.modalScopeHomeBadge, homeText || "");
+    toggleHidden(els.modalScopeHomeBadge, !homeText);
   }
 
   if (els.modalScopeChildBadge) {
-    if (childText) {
-      els.modalScopeChildBadge.textContent = childText;
-      els.modalScopeChildBadge.classList.remove("hidden");
-    } else {
-      els.modalScopeChildBadge.textContent = "";
-      els.modalScopeChildBadge.classList.add("hidden");
-    }
+    setText(els.modalScopeChildBadge, childText || "");
+    toggleHidden(els.modalScopeChildBadge, !childText);
   }
 }
 
 function renderSelectorList(items) {
   if (!items.length) {
-    els.selectorList.innerHTML = `
+    setHTML(
+      els.selectorList,
+      `
       <div class="empty-state">
         <p>No young people found.</p>
       </div>
-    `;
+    `
+    );
     return;
   }
 
-  els.selectorList.innerHTML = items.map((item) => {
-    const fullName =
-      [item.first_name, item.last_name].filter(Boolean).join(" ").trim() ||
-      item.preferred_name ||
-      "Young Person";
+  setHTML(
+    els.selectorList,
+    items.map((item) => {
+      const fullName =
+        [item.first_name, item.last_name].filter(Boolean).join(" ").trim() ||
+        item.preferred_name ||
+        "Young Person";
 
-    const meta = [
-      item.preferred_name ? `Preferred: ${item.preferred_name}` : null,
-      item.placement_status || null,
-      item.summary_risk_level ? `Risk: ${item.summary_risk_level}` : null,
-    ].filter(Boolean).join(" • ");
+      const meta = [
+        item.preferred_name ? `Preferred: ${item.preferred_name}` : null,
+        item.placement_status || null,
+        item.summary_risk_level ? `Risk: ${item.summary_risk_level}` : null,
+      ].filter(Boolean).join(" • ");
 
-    return `
-      <article class="selector-card">
-        <div class="selector-card-left">
-          <div class="selector-card-avatar">${escapeHtml(initialsFromName(fullName))}</div>
-          <div>
-            <h4>${escapeHtml(fullName)}</h4>
-            <p>${escapeHtml(meta || "Young person record")}</p>
+      return `
+        <article class="selector-card">
+          <div class="selector-card-left">
+            <div class="selector-card-avatar">${escapeHtml(initialsFromName(fullName))}</div>
+            <div>
+              <h4>${escapeHtml(fullName)}</h4>
+              <p>${escapeHtml(meta || "Young person record")}</p>
+            </div>
           </div>
-        </div>
-        <button class="primary-btn" data-open-young-person="${item.id}">Open</button>
-      </article>
-    `;
-  }).join("");
+          <button class="primary-btn" data-open-young-person="${item.id}">Open</button>
+        </article>
+      `;
+    }).join("")
+  );
 }
 
 function filterSelectorList() {
-  const term = (els.selectorSearch.value || "").trim().toLowerCase();
+  const term = (els.selectorSearch?.value || "").trim().toLowerCase();
 
   if (!term) {
     renderSelectorList(state.selectorItems);
@@ -792,14 +813,17 @@ async function loadYoungPersonSelector() {
   clearStatus();
   showSelectorMode();
 
-  els.selectorList.innerHTML = `
+  setHTML(
+    els.selectorList,
+    `
     <div class="loading-state">
       <div>
         <div class="spinner"></div>
         <p>Loading young people...</p>
       </div>
     </div>
-  `;
+  `
+  );
 
   try {
     const data = await apiGet("/young-people");
@@ -807,11 +831,14 @@ async function loadYoungPersonSelector() {
     renderSelectorList(state.selectorItems);
   } catch (error) {
     showError(error.message || "Failed to load young people.");
-    els.selectorList.innerHTML = `
+    setHTML(
+      els.selectorList,
+      `
       <div class="empty-state">
         <p>Unable to load young people.</p>
       </div>
-    `;
+    `
+    );
   }
 }
 
@@ -831,9 +858,9 @@ async function loadYoungPerson() {
     youngPerson.summary_risk_level ? `Risk: ${youngPerson.summary_risk_level}` : null,
   ].filter(Boolean).join(" • ");
 
-  els.personName.textContent = fullName;
-  els.personMeta.textContent = meta || "Young person record";
-  els.personAvatar.textContent = initialsFromName(fullName);
+  setText(els.personName, fullName);
+  setText(els.personMeta, meta || "Young person record");
+  setText(els.personAvatar, initialsFromName(fullName));
 
   updateAssistantScopeDataset();
   updateAssistantContext();
@@ -880,7 +907,9 @@ async function loadHome() {
     compliance.length ? `${compliance.length} compliance item${compliance.length === 1 ? "" : "s"}` : "No compliance items",
   ].filter(Boolean).join(" • ");
 
-  els.content.innerHTML = `
+  setHTML(
+    els.content,
+    `
     <div class="grid grid-4">
       ${renderStat("Placement status", yp.placement_status || "—")}
       ${renderStat("Risk level", yp.summary_risk_level || "—")}
@@ -942,7 +971,8 @@ async function loadHome() {
         `
       )}
     </div>
-  `;
+  `
+  );
 
   bindDynamicOpenRecordButtons();
 }
@@ -952,9 +982,12 @@ async function loadTimeline() {
   const data = await apiGet(`/young-people/${state.youngPersonId}/timeline?limit=100`);
   const items = data.timeline || [];
 
-  els.content.innerHTML = items.length
-    ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
-    : `<div class="empty-state"><p>No timeline items found.</p></div>`;
+  setHTML(
+    els.content,
+    items.length
+      ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
+      : `<div class="empty-state"><p>No timeline items found.</p></div>`
+  );
 
   bindDynamicOpenRecordButtons();
 }
@@ -970,7 +1003,9 @@ async function loadHandover() {
   const recent = timelineData.timeline || [];
   const risks = riskData.items || [];
 
-  els.content.innerHTML = `
+  setHTML(
+    els.content,
+    `
     <div class="callout-grid">
       ${renderSimpleSection(
         "Recent activity",
@@ -988,7 +1023,8 @@ async function loadHandover() {
           : `<div class="empty-state"><p>No current risks.</p></div>`
       )}
     </div>
-  `;
+  `
+  );
 
   bindDynamicOpenRecordButtons();
 }
@@ -999,9 +1035,12 @@ async function loadRecordList(url, label) {
   const data = await apiGet(url);
   const items = data.items || data.records || data.timeline || [];
 
-  els.content.innerHTML = items.length
-    ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
-    : `<div class="empty-state"><p>No ${escapeHtml(label.toLowerCase())} found.</p></div>`;
+  setHTML(
+    els.content,
+    items.length
+      ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
+      : `<div class="empty-state"><p>No ${escapeHtml(label.toLowerCase())} found.</p></div>`
+  );
 
   bindDynamicOpenRecordButtons();
 }
@@ -1011,17 +1050,20 @@ async function loadReports() {
   const data = await apiGet(`/young-people/${state.youngPersonId}/reports`).catch(() => ({ items: [] }));
   const reports = data.items || [];
 
-  els.content.innerHTML = reports.length
-    ? `<div class="record-list">${
-        reports.map((report) =>
-          renderRecordCard({
-            ...report,
-            record_type: "report",
-            summary: report.report_text || "Report ready.",
-          })
-        ).join("")
-      }</div>`
-    : `<div class="empty-state"><p>No reports found.</p></div>`;
+  setHTML(
+    els.content,
+    reports.length
+      ? `<div class="record-list">${
+          reports.map((report) =>
+            renderRecordCard({
+              ...report,
+              record_type: "report",
+              summary: report.report_text || "Report ready.",
+            })
+          ).join("")
+        }</div>`
+      : `<div class="empty-state"><p>No reports found.</p></div>`
+  );
 
   bindDynamicOpenRecordButtons();
 }
@@ -1037,7 +1079,9 @@ async function loadProfile() {
   const health = bundle.health_profile || {};
   const legal = bundle.legal_status || {};
 
-  els.content.innerHTML = `
+  setHTML(
+    els.content,
+    `
     <div class="callout-grid">
       ${renderSimpleSection(
         "Core profile",
@@ -1079,7 +1123,8 @@ async function loadProfile() {
         `
       )}
     </div>
-  `;
+  `
+  );
 }
 
 async function loadHealth() {
@@ -1088,7 +1133,9 @@ async function loadHealth() {
   const profile = data.health_profile || {};
   const records = data.health_records || [];
 
-  els.content.innerHTML = `
+  setHTML(
+    els.content,
+    `
     ${renderSimpleSection(
       "Health profile",
       "",
@@ -1110,7 +1157,8 @@ async function loadHealth() {
         ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>`
         : `<div class="empty-state"><p>No health records.</p></div>`
     )}
-  `;
+  `
+  );
 
   bindDynamicOpenRecordButtons();
 }
@@ -1121,7 +1169,9 @@ async function loadEducation() {
   const profile = data.education_profile || {};
   const records = data.education_records || data.items || [];
 
-  els.content.innerHTML = `
+  setHTML(
+    els.content,
+    `
     ${renderSimpleSection(
       "Education profile",
       "",
@@ -1142,7 +1192,8 @@ async function loadEducation() {
         ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>`
         : `<div class="empty-state"><p>No education records.</p></div>`
     )}
-  `;
+  `
+  );
 
   bindDynamicOpenRecordButtons();
 }
@@ -1152,12 +1203,15 @@ async function loadFamily() {
   const data = await apiGet(`/young-people/${state.youngPersonId}/family`);
   const records = data.family_contact_records || data.items || [];
 
-  els.content.innerHTML = renderSimpleSection(
-    "Family contact records",
-    "",
-    records.length
-      ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>`
-      : `<div class="empty-state"><p>No family records.</p></div>`
+  setHTML(
+    els.content,
+    renderSimpleSection(
+      "Family contact records",
+      "",
+      records.length
+        ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>`
+        : `<div class="empty-state"><p>No family records.</p></div>`
+    )
   );
 
   bindDynamicOpenRecordButtons();
@@ -1168,12 +1222,15 @@ async function loadEvidence() {
   const data = await apiGet(`/young-people/${state.youngPersonId}/timeline?limit=40`).catch(() => ({ timeline: [] }));
   const items = data.timeline || [];
 
-  els.content.innerHTML = renderSimpleSection(
-    "Inspection evidence",
-    "Recent linked records",
-    items.length
-      ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
-      : `<div class="empty-state"><p>No evidence found.</p></div>`
+  setHTML(
+    els.content,
+    renderSimpleSection(
+      "Inspection evidence",
+      "Recent linked records",
+      items.length
+        ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
+        : `<div class="empty-state"><p>No evidence found.</p></div>`
+    )
   );
 
   bindDynamicOpenRecordButtons();
@@ -1184,9 +1241,12 @@ async function loadCompliance() {
   const data = await apiGet(`/young-people/${state.youngPersonId}/compliance`).catch(() => ({ items: [] }));
   const items = data.compliance_items || data.items || [];
 
-  els.content.innerHTML = items.length
-    ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
-    : `<div class="empty-state"><p>No compliance items found.</p></div>`;
+  setHTML(
+    els.content,
+    items.length
+      ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
+      : `<div class="empty-state"><p>No compliance items found.</p></div>`
+  );
 
   bindDynamicOpenRecordButtons();
 }
@@ -1202,7 +1262,9 @@ async function loadManager() {
   const compliance = complianceData.compliance_items || complianceData.items || [];
   const recent = timelineData.timeline || [];
 
-  els.content.innerHTML = `
+  setHTML(
+    els.content,
+    `
     <div class="callout-grid">
       ${renderSimpleSection(
         "Needs manager attention",
@@ -1220,7 +1282,8 @@ async function loadManager() {
           : `<div class="empty-state"><p>No recent activity.</p></div>`
       )}
     </div>
-  `;
+  `
+  );
 
   bindDynamicOpenRecordButtons();
 }
@@ -1230,6 +1293,7 @@ async function loadCurrentView() {
   updatePageHeader();
   updateActiveNav();
   updateAssistantContext();
+  renderAssistantScopeBadges();
 
   const config = VIEW_CONFIG[state.currentView];
   if (!config) {
@@ -1246,6 +1310,8 @@ async function loadCurrentView() {
 }
 
 function bindDynamicOpenRecordButtons() {
+  if (!els.content) return;
+
   els.content.querySelectorAll("[data-open-record]").forEach((btn) => {
     btn.addEventListener("click", () => {
       try {
@@ -1270,28 +1336,31 @@ async function openRecordDetail(item) {
   state.activeRecordType = type;
 
   openDrawer();
-  els.drawerActions.classList.toggle("hidden", !RECORD_CONFIG[type]);
-  els.drawerTitle.textContent = item.title || "Record details";
-  els.drawerSubtitle.textContent = "Loading...";
-  els.drawerBody.innerHTML = `
+  toggleHidden(els.drawerActions, !RECORD_CONFIG[type]);
+  setText(els.drawerTitle, item.title || "Record details");
+  setText(els.drawerSubtitle, "Loading...");
+  setHTML(
+    els.drawerBody,
+    `
     <div class="loading-state">
       <div>
         <div class="spinner"></div>
         <p>Loading record details...</p>
       </div>
     </div>
-  `;
+  `
+  );
 
   if (type === "appointment") {
-    els.drawerApproveBtn.textContent = "Complete";
-    els.drawerReturnBtn.textContent = "Cancel";
-    els.drawerSubmitBtn.classList.add("hidden");
-    els.drawerArchiveBtn.classList.add("hidden");
+    setText(els.drawerApproveBtn, "Complete");
+    setText(els.drawerReturnBtn, "Cancel");
+    hide(els.drawerSubmitBtn);
+    hide(els.drawerArchiveBtn);
   } else {
-    els.drawerApproveBtn.textContent = "Approve";
-    els.drawerReturnBtn.textContent = "Return";
-    els.drawerSubmitBtn.classList.remove("hidden");
-    els.drawerArchiveBtn.classList.remove("hidden");
+    setText(els.drawerApproveBtn, "Approve");
+    setText(els.drawerReturnBtn, "Return");
+    show(els.drawerSubmitBtn);
+    show(els.drawerArchiveBtn);
   }
 
   try {
@@ -1316,10 +1385,15 @@ async function openRecordDetail(item) {
       .filter(([key, value]) => !["id", "young_person_id"].includes(key) && value !== null && value !== "" && value !== undefined)
       .slice(0, 24);
 
-    els.drawerTitle.textContent = item.title || detail.title || "Record details";
-    els.drawerSubtitle.textContent = `${String(type).replaceAll("_", " ")} • ${formatDate(item.recorded_at || item.occurred_at || item.created_at || detail.created_at)}`;
+    setText(els.drawerTitle, item.title || detail.title || "Record details");
+    setText(
+      els.drawerSubtitle,
+      `${String(type).replaceAll("_", " ")} • ${formatDate(item.recorded_at || item.occurred_at || item.created_at || detail.created_at)}`
+    );
 
-    els.drawerBody.innerHTML = `
+    setHTML(
+      els.drawerBody,
+      `
       <div class="detail-section">
         <h4>Summary</h4>
         <div class="detail-list">
@@ -1358,14 +1432,18 @@ async function openRecordDetail(item) {
           }
         </div>
       </div>
-    `;
+    `
+    );
   } catch (error) {
-    els.drawerSubtitle.textContent = "Could not load";
-    els.drawerBody.innerHTML = `
+    setText(els.drawerSubtitle, "Could not load");
+    setHTML(
+      els.drawerBody,
+      `
       <div class="empty-state">
         <p>${escapeHtml(error.message || "Failed to load record details.")}</p>
       </div>
-    `;
+    `
+    );
   }
 }
 
@@ -1686,14 +1764,17 @@ function openComposerFor(recordType, mode = "create", item = null) {
 
   const content = getComposerContent(recordType, item);
 
-  els.composerTitle.textContent = content.title;
-  els.composerSubtitle.textContent = content.subtitle;
-  els.composerGuidanceText.textContent = content.guidance;
-  els.composerPrompts.innerHTML = content.prompts.map((prompt) => `
-    <div class="composer-prompt">${escapeHtml(prompt)}</div>
-  `).join("");
-  els.composerFields.innerHTML = renderComposerSections(content);
-  els.composerAiFeedback.textContent = "No AI review run yet.";
+  setText(els.composerTitle, content.title);
+  setText(els.composerSubtitle, content.subtitle);
+  setText(els.composerGuidanceText, content.guidance);
+  setHTML(
+    els.composerPrompts,
+    content.prompts.map((prompt) => `
+      <div class="composer-prompt">${escapeHtml(prompt)}</div>
+    `).join("")
+  );
+  setHTML(els.composerFields, renderComposerSections(content));
+  setText(els.composerAiFeedback, "No AI review run yet.");
 
   openComposer();
 }
@@ -1846,9 +1927,7 @@ function updateAssistantContext() {
   const fullName = getFullYoungPersonName();
 
   if (!state.youngPerson) {
-    if (els.assistantContext) {
-      els.assistantContext.textContent = "No young person selected.";
-    }
+    setText(els.assistantContext, "No young person selected.");
   } else {
     const text = [
       `Young person: ${fullName}`,
@@ -1857,17 +1936,16 @@ function updateAssistantContext() {
       `View: ${state.currentView.replaceAll("-", " ")}`,
     ].filter(Boolean).join(" • ");
 
-    if (els.assistantContext) {
-      els.assistantContext.textContent = text;
-    }
+    setText(els.assistantContext, text);
   }
 
   const prompts = assistantPromptsForView(state.currentView);
-  if (els.assistantSuggestions) {
-    els.assistantSuggestions.innerHTML = prompts.map((prompt) => `
+  setHTML(
+    els.assistantSuggestions,
+    prompts.map((prompt) => `
       <button class="secondary-btn" type="button" data-prompt="${escapeHtml(prompt)}">${escapeHtml(prompt)}</button>
-    `).join("");
-  }
+    `).join("")
+  );
 }
 
 function renderAssistantMessageList(host, messages) {
@@ -1893,33 +1971,62 @@ function renderAssistantMessageList(host, messages) {
 
 function renderAssistantMessages() {
   renderAssistantMessageList(els.assistantMessages, state.assistantMessages);
-  renderAssistantMessageList(els.assistantModalMessages, state.assistantModalMessages);
+
+  if (els.assistantModalMessages) {
+    renderAssistantMessageList(els.assistantModalMessages, state.assistantModalMessages);
+  } else if (els.assistantMessages) {
+    renderAssistantMessageList(els.assistantMessages, state.assistantMessages);
+  }
 }
 
-function pushAssistantMessage(role, content) {
-  const entry = { role, content };
-  state.assistantMessages.push(entry);
-  state.assistantModalMessages.push(entry);
+function pushAssistantMessage(role, content, streaming = false) {
+  const entry = { role, content, _streaming: streaming };
+
+  state.assistantMessages.push({ ...entry });
+
+  if (els.assistantModalMessages) {
+    state.assistantModalMessages.push({ ...entry });
+  } else {
+    state.assistantModalMessages = state.assistantMessages.map((x) => ({ ...x }));
+  }
+
   renderAssistantMessages();
 }
 
 function replaceLastAssistantPlaceholder(text) {
-  const lists = [state.assistantMessages, state.assistantModalMessages];
-  lists.forEach((list) => {
+  const updateList = (list) => {
+    if (!list.length) return;
+    const last = list[list.length - 1];
+    if (last.role === "assistant" && last._streaming) {
+      last.content = text;
+      last._streaming = true;
+    }
+  };
+
+  updateList(state.assistantMessages);
+  updateList(state.assistantModalMessages);
+  renderAssistantMessages();
+}
+
+function finaliseLastAssistantMessage(text) {
+  const updateList = (list) => {
     if (!list.length) return;
     const last = list[list.length - 1];
     if (last.role === "assistant" && last._streaming) {
       last.content = text;
       last._streaming = false;
     }
-  });
+  };
+
+  updateList(state.assistantMessages);
+  updateList(state.assistantModalMessages);
   renderAssistantMessages();
 }
 
 function setAssistantSending(flag) {
   state.assistantSending = !!flag;
-  if (els.assistantSendBtn) els.assistantSendBtn.disabled = flag;
-  if (els.assistantModalSendBtn) els.assistantModalSendBtn.disabled = flag;
+  setDisabled(els.assistantSendBtn, flag);
+  setDisabled(els.assistantModalSendBtn, flag);
 }
 
 function prettyJson(value) {
@@ -1978,7 +2085,11 @@ function inferAssistantSuggestedActions() {
     actions.push("Review outstanding tasks");
   }
 
-  return [...new Set(actions)].slice(0, 6);
+  if (Array.isArray(state.assistantMeta.suggested_actions)) {
+    actions.push(...state.assistantMeta.suggested_actions);
+  }
+
+  return [...new Set(actions.filter(Boolean))].slice(0, 6);
 }
 
 function renderAssistantInsights() {
@@ -2062,6 +2173,13 @@ function buildAssistantScopePayload() {
     scope_type: "young_person",
     young_person_id: state.youngPersonId,
     home_id: state.youngPerson?.home_id ?? null,
+    record_type: state.activeRecordType || state.composerRecordType || null,
+    record_id:
+      state.activeRecordItem?.id ||
+      state.activeRecordItem?.record_id ||
+      state.activeRecordItem?.source_id ||
+      state.composerRecordId ||
+      null,
   };
 }
 
@@ -2104,12 +2222,8 @@ async function askAssistant(question) {
   const trimmed = String(question || "").trim();
   if (!trimmed || !state.youngPersonId || state.assistantSending) return;
 
-  pushAssistantMessage("user", trimmed);
-
-  const placeholder = { role: "assistant", content: "Thinking...", _streaming: true };
-  state.assistantMessages.push({ ...placeholder });
-  state.assistantModalMessages.push({ ...placeholder });
-  renderAssistantMessages();
+  pushAssistantMessage("user", trimmed, false);
+  pushAssistantMessage("assistant", "Thinking...", true);
 
   setAssistantSending(true);
 
@@ -2124,8 +2238,8 @@ async function askAssistant(question) {
       body: JSON.stringify({
         message: trimmed,
         response_mode: "balanced",
-        context: buildAssistantContextPayload(),
         scope: buildAssistantScopePayload(),
+        context: buildAssistantContextPayload(),
       }),
     });
 
@@ -2165,13 +2279,16 @@ async function askAssistant(question) {
               explainability: meta.explainability || {},
               assistant_scope: meta.assistant_scope || buildAssistantScopePayload(),
               assistant_context: meta.assistant_context || {},
+              suggested_actions: Array.isArray(meta.suggested_actions) ? meta.suggested_actions : [],
             };
             renderAssistantInsights();
           } catch (_) {}
           return;
         }
 
-        if (eventName === "progress") return;
+        if (eventName === "progress") {
+          return;
+        }
 
         if (eventName === "message") {
           streamedText += payload || "";
@@ -2180,11 +2297,9 @@ async function askAssistant(question) {
       });
     }
 
-    if (!streamedText.trim()) {
-      replaceLastAssistantPlaceholder("No assistant reply returned.");
-    }
+    finaliseLastAssistantMessage(streamedText.trim() || "No assistant reply returned.");
   } catch (error) {
-    replaceLastAssistantPlaceholder(error.message || "The assistant could not answer right now.");
+    finaliseLastAssistantMessage(error.message || "The assistant could not answer right now.");
   } finally {
     setAssistantSending(false);
   }
@@ -2242,6 +2357,7 @@ function bindEvents() {
     if (assistantChip) {
       const text = assistantChip.dataset.assistantChip || "";
       if (els.assistantInput) els.assistantInput.value = text;
+      if (els.assistantModalInput) els.assistantModalInput.value = text;
       return;
     }
 
@@ -2347,24 +2463,24 @@ function bindEvents() {
   });
 
   els.composerCheckBtn?.addEventListener("click", () => {
-    els.composerAiFeedback.textContent = buildAiFeedback("clarity");
+    setText(els.composerAiFeedback, buildAiFeedback("clarity"));
     showMessage("Review prompts generated.");
   });
 
   els.composerGrammarBtn?.addEventListener("click", () => {
-    els.composerAiFeedback.textContent = buildAiFeedback("grammar");
+    setText(els.composerAiFeedback, buildAiFeedback("grammar"));
   });
 
   els.composerClarityBtn?.addEventListener("click", () => {
-    els.composerAiFeedback.textContent = buildAiFeedback("clarity");
+    setText(els.composerAiFeedback, buildAiFeedback("clarity"));
   });
 
   els.composerSafeguardingBtn?.addEventListener("click", () => {
-    els.composerAiFeedback.textContent = buildAiFeedback("safeguarding");
+    setText(els.composerAiFeedback, buildAiFeedback("safeguarding"));
   });
 
   els.composerChildVoiceBtn?.addEventListener("click", () => {
-    els.composerAiFeedback.textContent = buildAiFeedback("child_voice");
+    setText(els.composerAiFeedback, buildAiFeedback("child_voice"));
   });
 
   els.assistantLauncher?.addEventListener("click", openAssistant);
@@ -2386,15 +2502,15 @@ function bindEvents() {
 
   els.assistantForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const question = els.assistantInput.value;
-    els.assistantInput.value = "";
+    const question = els.assistantInput?.value || "";
+    if (els.assistantInput) els.assistantInput.value = "";
     await askAssistant(question);
   });
 
   els.assistantModalForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const question = els.assistantModalInput.value;
-    els.assistantModalInput.value = "";
+    const question = els.assistantModalInput?.value || "";
+    if (els.assistantModalInput) els.assistantModalInput.value = "";
     await askAssistant(question);
   });
 
