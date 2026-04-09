@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from typing import Any
 
 from assistant.audit_logger import (
     AssistantAuditTimer,
@@ -133,169 +132,6 @@ def _normalise_sources(value) -> list[dict]:
     return cleaned
 
 
-def _normalise_scope(scope: dict | None) -> dict[str, Any]:
-    scope = scope or {}
-
-    return {
-        "scope_type": _safe_string(scope.get("scope_type") or scope.get("scope") or "global").lower() or "global",
-        "young_person_id": scope.get("young_person_id"),
-        "home_id": scope.get("home_id"),
-        "record_type": _safe_string(scope.get("record_type")),
-        "record_id": scope.get("record_id"),
-    }
-
-
-def _normalise_context(user_context: dict | None) -> dict[str, Any]:
-    user_context = user_context or {}
-
-    return {
-        "current_view": _safe_string(user_context.get("current_view")),
-        "young_person_name": _safe_string(user_context.get("young_person_name")),
-        "placement_status": _safe_string(user_context.get("placement_status")),
-        "summary_risk_level": _safe_string(user_context.get("summary_risk_level")),
-        "composer_record_type": _safe_string(user_context.get("composer_record_type")),
-        "home_name": _safe_string(user_context.get("home_name")),
-        "shift_context": _safe_string(user_context.get("shift_context")),
-    }
-
-
-def _build_scope_prefix(scope: dict[str, Any], context: dict[str, Any]) -> str:
-    scope_type = scope.get("scope_type") or "global"
-
-    if scope_type != "young_person":
-        return ""
-
-    lines: list[str] = [
-        "============================================================",
-        "ASSISTANT SCOPE",
-        "",
-        "This request is scoped to a single young person workspace.",
-        "Answer in a way that is directly useful for that young person's current record, handover, review, planning, or oversight context.",
-    ]
-
-    if context.get("young_person_name"):
-        lines.append(f"Young person name: {context['young_person_name']}")
-    if scope.get("young_person_id") is not None:
-        lines.append(f"Young person id: {scope['young_person_id']}")
-    if scope.get("home_id") is not None:
-        lines.append(f"Home id: {scope['home_id']}")
-    if context.get("placement_status"):
-        lines.append(f"Placement status: {context['placement_status']}")
-    if context.get("summary_risk_level"):
-        lines.append(f"Summary risk level: {context['summary_risk_level']}")
-    if context.get("current_view"):
-        lines.append(f"Current workspace view: {context['current_view']}")
-    if context.get("composer_record_type"):
-        lines.append(f"Open composer record type: {context['composer_record_type']}")
-
-    lines.extend(
-        [
-            "",
-            "Prioritise:",
-            "- concise, practice-ready wording",
-            "- child-centred, safeguarding-aware reasoning",
-            "- direct usefulness for staff handover, records, manager review, or planning",
-        ]
-    )
-
-    return "\n".join(lines).strip()
-
-
-def _append_scope_context(
-    system_prompt: str,
-    *,
-    scope: dict[str, Any],
-    context: dict[str, Any],
-) -> str:
-    scope_prefix = _build_scope_prefix(scope, context)
-    if not scope_prefix:
-        return system_prompt
-
-    return f"{system_prompt}\n\n{scope_prefix}".strip()
-
-
-def _build_assistant_context_payload(
-    *,
-    scope: dict[str, Any],
-    context: dict[str, Any],
-    orchestration,
-) -> dict[str, Any]:
-    return {
-        "scope_type": scope.get("scope_type") or "global",
-        "young_person": {
-            "id": scope.get("young_person_id"),
-            "name": context.get("young_person_name"),
-            "placement_status": context.get("placement_status"),
-            "summary_risk_level": context.get("summary_risk_level"),
-        }
-        if scope.get("scope_type") == "young_person"
-        else {},
-        "workspace": {
-            "current_view": context.get("current_view"),
-            "composer_record_type": context.get("composer_record_type"),
-            "home_name": context.get("home_name"),
-            "shift_context": context.get("shift_context"),
-        },
-        "orchestration": {
-            "mode": getattr(orchestration.runtime, "mode", None),
-            "task_type": getattr(orchestration.runtime, "task_type", None),
-            "output_type": getattr(orchestration.runtime, "output_type", None),
-            "safeguarding_level": getattr(orchestration.runtime, "safeguarding_level", None),
-        },
-    }
-
-
-def _build_suggested_actions(
-    *,
-    scope: dict[str, Any],
-    context: dict[str, Any],
-    runtime_payload: dict[str, Any],
-) -> list[str]:
-    actions: list[str] = []
-
-    if scope.get("scope_type") == "young_person":
-        actions.extend(
-            [
-                "Summarise current risks",
-                "Draft handover",
-                "Pull child voice themes",
-                "Summarise recent incidents",
-            ]
-        )
-
-        current_view = _safe_string(context.get("current_view")).lower()
-
-        if current_view == "handover":
-            actions.append("Write next shift handover")
-        elif current_view == "risk":
-            actions.append("Review risk wording")
-        elif current_view == "incidents":
-            actions.append("Summarise incident patterns")
-        elif current_view == "manager":
-            actions.append("Highlight manager priorities")
-        elif current_view == "evidence":
-            actions.append("Pull Ofsted-ready evidence points")
-
-    suggested_runtime_actions = runtime_payload.get("suggested_actions") or []
-    if isinstance(suggested_runtime_actions, list):
-        for item in suggested_runtime_actions:
-            text = _safe_string(item)
-            if text:
-                actions.append(text)
-
-    deduped: list[str] = []
-    seen: set[str] = set()
-
-    for action in actions:
-        normalised = action.strip().lower()
-        if not normalised or normalised in seen:
-            continue
-        seen.add(normalised)
-        deduped.append(action.strip())
-
-    return deduped[:8]
-
-
 async def generate_ai_stream(
     message: str,
     session_id: str,
@@ -310,7 +146,6 @@ async def generate_ai_stream(
     response_mode: str = "balanced",
     user_id: str | int | None = None,
     conversation_id: str | int | None = None,
-    scope: dict | None = None,
 ):
     history = history or []
     user_context = user_context or {}
@@ -319,8 +154,6 @@ async def generate_ai_stream(
 
     selected_mode = _normalise_response_mode(response_mode, speed)
     trimmed_document_text = _trim_document_text(document_text, selected_mode)
-    normalised_scope = _normalise_scope(scope)
-    normalised_context = _normalise_context(user_context)
 
     orchestration = build_orchestrator_result(
         OrchestratorRequest(
@@ -333,11 +166,7 @@ async def generate_ai_stream(
             ld_lens=ld_lens,
             training_mode=training_mode,
             speed=selected_mode,
-            user_context={
-                **user_context,
-                "scope": normalised_scope,
-                "normalised_context": normalised_context,
-            },
+            user_context=user_context,
         )
     )
 
@@ -359,18 +188,6 @@ async def generate_ai_stream(
     explainability_payload = build_explainability_payload(
         user_message=message,
         orchestration=orchestration,
-    )
-
-    assistant_context_payload = _build_assistant_context_payload(
-        scope=normalised_scope,
-        context=normalised_context,
-        orchestration=orchestration,
-    )
-
-    suggested_actions = _build_suggested_actions(
-        scope=normalised_scope,
-        context=normalised_context,
-        runtime_payload=runtime_payload,
     )
 
     request_audit_event = log_assistant_request_started(
@@ -413,11 +230,6 @@ async def generate_ai_stream(
             }
 
     final_system_prompt = _append_live_guidance_context(system_prompt, search_results)
-    final_system_prompt = _append_scope_context(
-        final_system_prompt,
-        scope=normalised_scope,
-        context=normalised_context,
-    )
 
     messages = [
         {"role": "system", "content": final_system_prompt},
@@ -429,8 +241,7 @@ async def generate_ai_stream(
         (
             "Starting AI stream session_id=%s mode=%s task_type=%s output_type=%s "
             "safeguarding=%s response_mode=%s model=%s temperature=%s max_tokens=%s "
-            "history_count=%s has_document=%s sources=%s guidance_enabled=%s guidance_reason=%s "
-            "scope_type=%s young_person_id=%s home_id=%s current_view=%s"
+            "history_count=%s has_document=%s sources=%s guidance_enabled=%s guidance_reason=%s"
         ),
         session_id,
         mode,
@@ -446,10 +257,6 @@ async def generate_ai_stream(
         len(sources_used),
         guidance_plan.enabled,
         guidance_plan.reason,
-        normalised_scope.get("scope_type"),
-        normalised_scope.get("young_person_id"),
-        normalised_scope.get("home_id"),
-        normalised_context.get("current_view"),
     )
 
     provider = get_llm_provider()
@@ -473,10 +280,6 @@ async def generate_ai_stream(
                     "response_mode": selected_mode,
                     "conversation_id": _safe_string(conversation_id or session_id),
                     "user_id": _safe_string(user_id),
-                    "scope_type": _safe_string(normalised_scope.get("scope_type")),
-                    "young_person_id": _safe_string(normalised_scope.get("young_person_id")),
-                    "home_id": _safe_string(normalised_scope.get("home_id")),
-                    "current_view": _safe_string(normalised_context.get("current_view")),
                 },
             )
         ):
@@ -491,11 +294,19 @@ async def generate_ai_stream(
     except Exception as exc:
         provider_error_code = "provider_stream_failed"
         provider_error_message = _safe_string(exc) or "AI provider stream failed"
-        logger.exception("AI provider stream failed for session_id=%s", session_id)
+        logger.exception(
+            "AI provider stream failed for session_id=%s error=%s",
+            session_id,
+            provider_error_message,
+        )
 
         yield {
             "type": "token",
-            "content": "Sorry, something went wrong while generating the response.",
+            "content": (
+                "Sorry, the assistant could not generate that response just now. "
+                "Please try again, or ask a shorter question such as "
+                "'summarise recent incidents' or 'draft a short handover'."
+            ),
         }
 
     finally:
@@ -513,10 +324,6 @@ async def generate_ai_stream(
                     "guidance_results_used": bool(search_results),
                     "trimmed_history_count": len(trimmed_history),
                     "message_count": len(messages),
-                    "scope_type": normalised_scope.get("scope_type"),
-                    "young_person_id": normalised_scope.get("young_person_id"),
-                    "home_id": normalised_scope.get("home_id"),
-                    "current_view": normalised_context.get("current_view"),
                 },
             )
 
@@ -525,9 +332,6 @@ async def generate_ai_stream(
         "sources": sources_used,
         "runtime": runtime_payload,
         "explainability": explainability_payload,
-        "assistant_scope": normalised_scope,
-        "assistant_context": assistant_context_payload,
-        "suggested_actions": suggested_actions,
     }
 
     logger.info("Completed AI stream session_id=%s", session_id)
