@@ -174,7 +174,7 @@ def _build_compact_young_person_context(context: dict[str, Any]) -> dict[str, An
                     "interests",
                     "strengths_summary",
                     "cultural_identity",
-                    "religion",
+                    "religion_or_faith",
                     "updated_at",
                 ],
             ),
@@ -182,9 +182,11 @@ def _build_compact_young_person_context(context: dict[str, Any]) -> dict[str, An
                 identity.get("legal_status"),
                 [
                     "legal_status",
-                    "local_authority",
-                    "social_worker_name",
-                    "social_worker_email",
+                    "order_type",
+                    "order_details",
+                    "effective_from",
+                    "effective_to",
+                    "is_current",
                     "updated_at",
                 ],
             ),
@@ -350,7 +352,7 @@ def _build_compact_young_person_context(context: dict[str, Any]) -> dict[str, An
                         "record_date",
                         "title",
                         "summary",
-                        "attendance",
+                        "attendance_status",
                         "created_at",
                     ],
                 )
@@ -390,8 +392,7 @@ def _build_compact_young_person_context(context: dict[str, Any]) -> dict[str, An
                     [
                         "id",
                         "start_datetime",
-                        "end_datetime",
-                        "summary",
+                        "return_datetime",
                         "outcome",
                         "created_at",
                     ],
@@ -404,9 +405,9 @@ def _build_compact_young_person_context(context: dict[str, Any]) -> dict[str, An
                     [
                         "id",
                         "concern_datetime",
-                        "title",
-                        "summary",
-                        "status",
+                        "safeguarding_category",
+                        "concern_details",
+                        "outcome",
                         "created_at",
                     ],
                 )
@@ -419,7 +420,7 @@ def _build_compact_young_person_context(context: dict[str, Any]) -> dict[str, An
                         "id",
                         "achievement_date",
                         "title",
-                        "summary",
+                        "description",
                         "created_at",
                     ],
                 )
@@ -503,16 +504,10 @@ def _build_young_person_summary(context: dict[str, Any]) -> str:
     ]
 
     current_formulation = identity.get("current_formulation")
-    if current_formulation:
-        lines.append("- Current formulation available: yes")
-    else:
-        lines.append("- Current formulation available: no")
+    lines.append(f"- Current formulation available: {'yes' if current_formulation else 'no'}")
 
     communication_profile = identity.get("communication_profile")
-    if communication_profile:
-        lines.append("- Communication profile available: yes")
-    else:
-        lines.append("- Communication profile available: no")
+    lines.append(f"- Communication profile available: {'yes' if communication_profile else 'no'}")
 
     return "\n".join(lines)
 
@@ -522,6 +517,7 @@ def _build_prompt(
     message: str,
     context: dict[str, Any],
     history: list[dict[str, Any]] | None = None,
+    extra_context: dict[str, Any] | None = None,
 ) -> str:
     scope = context.get("scope") or {}
     scope_type = scope.get("scope_type")
@@ -539,6 +535,7 @@ def _build_prompt(
             history_lines.append(f"{role.upper()}: {content}")
 
     history_text = "\n".join(history_lines[-12:]).strip()
+    extra_context_text = json.dumps(extra_context or {}, ensure_ascii=False, default=_json_safe, indent=2)
 
     return f"""
 You are the IndiCare assistant.
@@ -552,8 +549,11 @@ If the request relates to a young person, stay child-centred, trauma-informed an
 === CONTEXT SUMMARY ===
 {summary}
 
+=== FRONTEND / VIEW CONTEXT ===
+{extra_context_text}
+
 === STRUCTURED CONTEXT ===
-{context}
+{json.dumps(context, ensure_ascii=False, default=_json_safe, indent=2)}
 
 === CONVERSATION HISTORY ===
 {history_text}
@@ -570,19 +570,21 @@ def build_assistant_prompt(
     message: str,
     scope: dict[str, Any] | None = None,
     history: list[dict[str, Any]] | None = None,
+    context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    context = build_assistant_context(
+    built_context = build_assistant_context(
         conn,
         user_id=user_id,
         scope=scope,
     )
 
-    compact_context = _build_compact_context(context)
+    compact_context = _build_compact_context(built_context)
 
     prompt = _build_prompt(
         message=message,
-        context=context,
+        context=built_context,
         history=history,
+        extra_context=context,
     )
 
     json_safe_context = json.loads(
@@ -593,12 +595,26 @@ def build_assistant_prompt(
         )
     )
 
+    json_safe_frontend_context = json.loads(
+        json.dumps(
+            context or {},
+            ensure_ascii=False,
+            default=_json_safe,
+        )
+    )
+
+    merged_context = dict(json_safe_context)
+    if json_safe_frontend_context:
+        merged_context["frontend_context"] = json_safe_frontend_context
+
     return {
         "prompt": prompt,
-        "context": json_safe_context,
+        "context": merged_context,
         "runtime": {
-            "scope_type": (context.get("scope") or {}).get("scope_type"),
-            "home_id": (context.get("scope") or {}).get("home_id"),
-            "young_person_id": (context.get("scope") or {}).get("young_person_id"),
+            "scope_type": (built_context.get("scope") or {}).get("scope_type"),
+            "home_id": (built_context.get("scope") or {}).get("home_id"),
+            "young_person_id": (built_context.get("scope") or {}).get("young_person_id"),
+            "current_view": (context or {}).get("current_view"),
+            "composer_record_type": (context or {}).get("composer_record_type"),
         },
     }
