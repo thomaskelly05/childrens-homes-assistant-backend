@@ -40,6 +40,68 @@ function normObj(value) {
   return value && typeof value === "object" ? value : {};
 }
 
+function prettyJson(value) {
+  try {
+    return JSON.stringify(value || {}, null, 2);
+  } catch {
+    return "{}";
+  }
+}
+
+function setHtml(id, html) {
+  if (!has(id)) return;
+  $(id).innerHTML = html;
+}
+
+function setText(id, text) {
+  if (!has(id)) return;
+  $(id).textContent = text;
+}
+
+/* ---------------------------------------------------------
+ * App dataset / assistant scope helpers
+ * --------------------------------------------------------- */
+
+function appRoot() {
+  return $("app");
+}
+
+function datasetValue(key) {
+  const app = appRoot();
+  if (!app || !app.dataset) return "";
+  return String(app.dataset[key] || "").trim();
+}
+
+function parseOptionalNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function getPageAssistantScope() {
+  const scopeType = datasetValue("assistantScopeType") || "global";
+  const youngPersonId = parseOptionalNumber(datasetValue("youngPersonId"));
+  const homeId = parseOptionalNumber(datasetValue("homeId"));
+  const workspace = datasetValue("workspace") || "assistant";
+
+  return {
+    scope_type: scopeType === "young_person" ? "young_person" : "global",
+    young_person_id: youngPersonId,
+    home_id: homeId,
+    workspace,
+  };
+}
+
+function setPageAssistantScope(scope = {}) {
+  const app = appRoot();
+  if (!app) return;
+
+  app.dataset.assistantScopeType = scope.scope_type || "global";
+  app.dataset.youngPersonId =
+    scope.young_person_id != null ? String(scope.young_person_id) : "";
+  app.dataset.homeId = scope.home_id != null ? String(scope.home_id) : "";
+}
+
 /* ---------------------------------------------------------
  * State
  * --------------------------------------------------------- */
@@ -81,6 +143,9 @@ const state = {
     sources: [],
     runtime: {},
     explainability: {},
+    assistant_scope: { scope_type: "global" },
+    assistant_context: {},
+    suggested_actions: [],
   },
 
   currentProgressLines: [],
@@ -274,7 +339,7 @@ function setWelcome() {
 
   if (has("welcomeText")) {
     $("welcomeText").textContent =
-      "Your assistant is ready to help with records, safeguarding, risk, guidance, and drafting.";
+      "Your assistant is ready to help with records, safeguarding, risk, guidance, drafting, and young person context.";
   }
 }
 
@@ -566,6 +631,18 @@ function loadContextState() {
   if (has("contextChild")) $("contextChild").value = state.contextState.child;
   if (has("contextHome")) $("contextHome").value = state.contextState.home;
   if (has("contextShift")) $("contextShift").value = state.contextState.shift;
+
+  const pageScope = getPageAssistantScope();
+
+  if (has("contextYoungPersonId")) {
+    $("contextYoungPersonId").value =
+      pageScope.young_person_id != null ? String(pageScope.young_person_id) : "";
+  }
+
+  if (has("contextHomeId")) {
+    $("contextHomeId").value =
+      pageScope.home_id != null ? String(pageScope.home_id) : "";
+  }
 }
 
 function saveContextState() {
@@ -579,6 +656,28 @@ function saveContextState() {
     "indicare_context_state",
     JSON.stringify(state.contextState)
   );
+
+  const currentScope = getPageAssistantScope();
+
+  const nextScope = {
+    scope_type:
+      currentScope.scope_type === "young_person" ||
+      (has("contextYoungPersonId") && $("contextYoungPersonId").value.trim())
+        ? "young_person"
+        : "global",
+    young_person_id:
+      has("contextYoungPersonId") && $("contextYoungPersonId").value.trim()
+        ? Number($("contextYoungPersonId").value.trim())
+        : currentScope.young_person_id,
+    home_id:
+      has("contextHomeId") && $("contextHomeId").value.trim()
+        ? Number($("contextHomeId").value.trim())
+        : currentScope.home_id,
+  };
+
+  setPageAssistantScope(nextScope);
+  renderScopeBadges(nextScope);
+  renderAssistantScopeSummary();
 
   banner(indiCareCopy("contextSaved"));
 }
@@ -1083,6 +1182,273 @@ async function loadMe() {
 }
 
 /* ---------------------------------------------------------
+ * Assistant scope / insights rendering
+ * --------------------------------------------------------- */
+
+function renderScopeBadges(scope = null) {
+  const current = scope || state.currentStreamMeta.assistant_scope || getPageAssistantScope();
+
+  if (has("scopeBadge")) {
+    $("scopeBadge").textContent =
+      current?.scope_type === "young_person" ? "Young person assistant" : "Global assistant";
+  }
+
+  if (has("scopeHomeBadge")) {
+    const homeText =
+      state.contextState.home ||
+      (current?.home_id != null ? `Home ${current.home_id}` : "");
+
+    if (homeText) {
+      $("scopeHomeBadge").textContent = homeText;
+      $("scopeHomeBadge").classList.remove("hidden");
+    } else {
+      $("scopeHomeBadge").textContent = "";
+      $("scopeHomeBadge").classList.add("hidden");
+    }
+  }
+
+  if (has("scopeChildBadge")) {
+    const childText =
+      state.contextState.child ||
+      (current?.scope_type === "young_person"
+        ? current?.young_person_id != null
+          ? `Young person ${current.young_person_id}`
+          : "Young person"
+        : "");
+
+    if (childText) {
+      $("scopeChildBadge").textContent = childText;
+      $("scopeChildBadge").classList.remove("hidden");
+    } else {
+      $("scopeChildBadge").textContent = "";
+      $("scopeChildBadge").classList.add("hidden");
+    }
+  }
+
+  if (has("scopeShiftBadge")) {
+    if (state.contextState.shift) {
+      $("scopeShiftBadge").textContent = state.contextState.shift;
+      $("scopeShiftBadge").classList.remove("hidden");
+    } else {
+      $("scopeShiftBadge").textContent = "";
+      $("scopeShiftBadge").classList.add("hidden");
+    }
+  }
+}
+
+function inferSuggestedActions(meta = {}) {
+  const runtime = normObj(meta.runtime);
+  const actions = normArray(runtime.suggested_actions);
+  if (actions.length) return actions;
+
+  const context = normObj(meta.assistant_context);
+  const scope = normObj(meta.assistant_scope);
+
+  const inferred = [];
+
+  if (scope.scope_type === "young_person") {
+    inferred.push("Summarise current risks");
+    inferred.push("Draft handover");
+    inferred.push("Pull child voice themes");
+  } else {
+    inferred.push("Summarise priority tasks");
+    inferred.push("Draft shift overview");
+  }
+
+  const activeWork = normObj(context.active_work);
+  const recentRecords = normObj(context.recent_records);
+
+  if (normArray(activeWork.tasks).length) inferred.push("Review outstanding tasks");
+  if (normArray(recentRecords.incidents).length) inferred.push("Review recent incidents");
+  if (normArray(recentRecords.chronology).length) inferred.push("Update chronology summary");
+
+  return [...new Set(inferred)].slice(0, 8);
+}
+
+function renderAssistantScopeSummary() {
+  if (!has("assistantScopeSummary")) return;
+
+  const scope = normObj(state.currentStreamMeta.assistant_scope);
+  const context = normObj(state.currentStreamMeta.assistant_context);
+  const pageScope = getPageAssistantScope();
+  const effectiveScope = Object.keys(scope).length ? scope : pageScope;
+
+  const rows = [];
+
+  rows.push(
+    `<div class="entity-row"><div><div class="entity-title">${
+      effectiveScope.scope_type === "young_person" ? "Young person scope" : "Global scope"
+    }</div><div class="entity-meta">Workspace: ${safe(
+      getPageAssistantScope().workspace || "assistant"
+    )}</div></div></div>`
+  );
+
+  if (effectiveScope.home_id != null) {
+    rows.push(
+      `<div class="entity-row"><div><div class="entity-title">Home</div><div class="entity-meta">ID ${safe(
+        String(effectiveScope.home_id)
+      )}</div></div></div>`
+    );
+  }
+
+  if (effectiveScope.young_person_id != null) {
+    rows.push(
+      `<div class="entity-row"><div><div class="entity-title">Young person</div><div class="entity-meta">ID ${safe(
+        String(effectiveScope.young_person_id)
+      )}</div></div></div>`
+    );
+  }
+
+  const youngPerson = normObj(context.young_person);
+  if (youngPerson.id) {
+    const displayName =
+      youngPerson.preferred_name ||
+      [youngPerson.first_name, youngPerson.last_name].filter(Boolean).join(" ") ||
+      `Young person ${youngPerson.id}`;
+
+    rows.push(
+      `<div class="entity-row"><div><div class="entity-title">${safe(
+        displayName
+      )}</div><div class="entity-meta">Placement: ${safe(
+        youngPerson.placement_status || "—"
+      )} · Risk: ${safe(youngPerson.summary_risk_level || "—")}</div></div></div>`
+    );
+  }
+
+  if (!rows.length) {
+    setHtml("assistantScopeSummary", "<p>No scoped context loaded.</p>");
+    return;
+  }
+
+  setHtml("assistantScopeSummary", rows.join(""));
+}
+
+function renderAssistantActions() {
+  if (!has("assistantActions")) return;
+
+  const actions = inferSuggestedActions(state.currentStreamMeta);
+  if (!actions.length) {
+    setHtml("assistantActions", "<p>No suggested actions yet.</p>");
+    return;
+  }
+
+  setHtml(
+    "assistantActions",
+    actions
+      .map(
+        (item) =>
+          `<button class="chip" type="button" data-suggested-action="${safe(item)}">${safe(
+            item
+          )}</button>`
+      )
+      .join("")
+  );
+
+  document.querySelectorAll("[data-suggested-action]").forEach((btn) => {
+    btn.onclick = () => {
+      if (!has("input")) return;
+      $("input").value = btn.dataset.suggestedAction || "";
+      resize();
+      $("input").focus();
+    };
+  });
+}
+
+function renderSourceCard(source) {
+  const type = safe(source?.type || "source");
+  const label = safe(source?.label || source?.document_title || "Source");
+  const excerpt = safe(source?.excerpt || "");
+  const section = safe(source?.section || "");
+  const page =
+    source?.page_number != null ? safe(String(source.page_number)) : "";
+  const url = source?.url ? String(source.url) : "";
+
+  return `
+    <div class="entity-row" style="padding:10px 12px;margin-top:8px;">
+      <div style="width:100%;">
+        <div class="entity-title" style="font-size:.88rem;">${label}</div>
+        <div class="entity-meta">
+          <span class="tag neutral">${type}</span>
+          ${section ? `<span>${section}</span>` : ""}
+          ${page ? `<span> · p.${page}</span>` : ""}
+        </div>
+        ${
+          excerpt
+            ? `<div class="entity-meta" style="margin-top:8px;line-height:1.55;">${excerpt}</div>`
+            : ""
+        }
+        ${
+          url
+            ? `<div class="entity-meta" style="margin-top:8px;"><a href="${safe(
+                url
+              )}" target="_blank" rel="noopener noreferrer">Open source</a></div>`
+            : ""
+        }
+      </div>
+    </div>
+  `;
+}
+
+function renderSourcesHtml(sources) {
+  const rows = normArray(sources);
+  if (!rows.length) return "";
+
+  return `
+    <div class="card" style="margin-top:10px;padding:12px;">
+      <div style="font-weight:600;margin-bottom:6px;">Sources used</div>
+      <div class="entity-meta">This response used the following source material.</div>
+      ${rows.map(renderSourceCard).join("")}
+    </div>
+  `;
+}
+
+function renderAssistantSources() {
+  if (!has("assistantSources")) return;
+
+  const rows = normArray(state.currentStreamMeta.sources);
+  if (!rows.length) {
+    setHtml("assistantSources", "<p>Sources will appear here after a response.</p>");
+    return;
+  }
+
+  setHtml("assistantSources", rows.map(renderSourceCard).join(""));
+}
+
+function renderAssistantRuntime() {
+  if (!has("assistantRuntime")) return;
+  setText("assistantRuntime", prettyJson(state.currentStreamMeta.runtime || {}));
+}
+
+function renderAssistantExplainability() {
+  if (!has("assistantExplainability")) return;
+  setText(
+    "assistantExplainability",
+    prettyJson(state.currentStreamMeta.explainability || {})
+  );
+}
+
+function renderAssistantInsights() {
+  renderScopeBadges();
+  renderAssistantScopeSummary();
+  renderAssistantActions();
+  renderAssistantSources();
+  renderAssistantRuntime();
+  renderAssistantExplainability();
+}
+
+function resetAssistantInsights() {
+  state.currentStreamMeta = {
+    sources: [],
+    runtime: {},
+    explainability: {},
+    assistant_scope: getPageAssistantScope(),
+    assistant_context: {},
+    suggested_actions: [],
+  };
+  renderAssistantInsights();
+}
+
+/* ---------------------------------------------------------
  * Panel navigation
  * --------------------------------------------------------- */
 
@@ -1180,9 +1546,10 @@ function resetWelcome() {
   state.conversationId = null;
   state.currentDocumentText = null;
   state.currentDocumentName = null;
-  state.currentStreamMeta = { sources: [], runtime: {}, explainability: {} };
   state.currentProgressLines = [];
   stopSpeaking();
+
+  resetAssistantInsights();
 
   if (has("messages")) {
     $("messages").innerHTML = "";
@@ -1291,8 +1658,8 @@ async function openConversation(id, title) {
   if (!data) return;
 
   state.conversationId = id;
-  state.currentStreamMeta = { sources: [], runtime: {}, explainability: {} };
   state.currentProgressLines = [];
+  resetAssistantInsights();
 
   if (has("messages")) {
     $("messages").innerHTML = "";
@@ -1360,54 +1727,6 @@ async function deleteConversation(id) {
 /* ---------------------------------------------------------
  * Sources / meta rendering
  * --------------------------------------------------------- */
-
-function renderSourceCard(source) {
-  const type = safe(source?.type || "source");
-  const label = safe(source?.label || source?.document_title || "Source");
-  const excerpt = safe(source?.excerpt || "");
-  const section = safe(source?.section || "");
-  const page =
-    source?.page_number != null ? safe(String(source.page_number)) : "";
-  const url = source?.url ? String(source.url) : "";
-
-  return `
-    <div class="entity-row" style="padding:10px 12px;margin-top:8px;">
-      <div style="width:100%;">
-        <div class="entity-title" style="font-size:.88rem;">${label}</div>
-        <div class="entity-meta">
-          <span class="tag neutral">${type}</span>
-          ${section ? `<span>${section}</span>` : ""}
-          ${page ? `<span> · p.${page}</span>` : ""}
-        </div>
-        ${
-          excerpt
-            ? `<div class="entity-meta" style="margin-top:8px;line-height:1.55;">${excerpt}</div>`
-            : ""
-        }
-        ${
-          url
-            ? `<div class="entity-meta" style="margin-top:8px;"><a href="${safe(
-                url
-              )}" target="_blank" rel="noopener noreferrer">Open source</a></div>`
-            : ""
-        }
-      </div>
-    </div>
-  `;
-}
-
-function renderSourcesHtml(sources) {
-  const rows = normArray(sources);
-  if (!rows.length) return "";
-
-  return `
-    <div class="card" style="margin-top:10px;padding:12px;">
-      <div style="font-weight:600;margin-bottom:6px;">Sources used</div>
-      <div class="entity-meta">This response used the following source material.</div>
-      ${rows.map(renderSourceCard).join("")}
-    </div>
-  `;
-}
 
 function attachMetaToWrap(wrap, meta = {}) {
   if (!wrap) return;
@@ -1523,9 +1842,17 @@ function handleMetaEvent(payload) {
     sources: normArray(parsed.sources),
     runtime: normObj(parsed.runtime),
     explainability: normObj(parsed.explainability),
+    assistant_scope: normObj(parsed.assistant_scope),
+    assistant_context: normObj(parsed.assistant_context),
+    suggested_actions: inferSuggestedActions(parsed),
   };
 
+  if (parsed.assistant_scope) {
+    setPageAssistantScope(parsed.assistant_scope);
+  }
+
   attachMetaToStreamingMessage(state.currentStreamMeta);
+  renderAssistantInsights();
 }
 
 /* ---------------------------------------------------------
@@ -1663,6 +1990,7 @@ function startTyping() {
       state.lastAssistantText = finalRaw;
       clearStreamingProgress();
       attachMetaToStreamingMessage(state.currentStreamMeta);
+      renderAssistantInsights();
       speakText(finalRaw);
     }
   }, 2);
@@ -1703,8 +2031,15 @@ async function stream(url, body) {
   body = normObj(body);
 
   state.currentIntent = body.intent || detectIntent(body.message || "");
-  state.currentStreamMeta = { sources: [], runtime: {}, explainability: {} };
   state.currentProgressLines = [];
+  state.currentStreamMeta = {
+    sources: [],
+    runtime: {},
+    explainability: {},
+    assistant_scope: getPageAssistantScope(),
+    assistant_context: {},
+    suggested_actions: [],
+  };
 
   const promptPrefix =
     copilotPrompt() +
@@ -1719,12 +2054,20 @@ async function stream(url, body) {
     REG_PROMPT +
     buildLangInstruction();
 
+  const pageScope = getPageAssistantScope();
+
   body.intent = state.currentIntent;
   body.structured = true;
   body.reply_language = selectedLang();
   body.reply_language_label = LANG[selectedLang()] || "English";
   body.response_mode = selectedMode();
   body.context = state.contextState;
+  body.scope = {
+    scope_type: pageScope.scope_type || "global",
+    young_person_id:
+      pageScope.young_person_id != null ? pageScope.young_person_id : null,
+    home_id: pageScope.home_id != null ? pageScope.home_id : null,
+  };
 
   const headers = withCsrfHeaders("POST", {
     "Content-Type": "application/json",
@@ -1769,9 +2112,20 @@ async function stream(url, body) {
     } catch {}
 
     const reply = data.reply || data.message || data.output || "Done.";
+
+    state.currentStreamMeta = {
+      sources: normArray(data.sources),
+      runtime: normObj(data.runtime),
+      explainability: normObj(data.explainability),
+      assistant_scope: normObj(data.assistant_scope || body.scope),
+      assistant_context: normObj(data.assistant_context),
+      suggested_actions: inferSuggestedActions(data),
+    };
+
     appendMessage("assistant", reply, {
       sources: normArray(data.sources),
     });
+    renderAssistantInsights();
     speakText(reply);
     return;
   }
@@ -1941,6 +2295,7 @@ async function sendMessage() {
       );
       clearStreamingProgress();
       attachMetaToStreamingMessage(state.currentStreamMeta);
+      renderAssistantInsights();
     } else {
       appendMessage("assistant", `Sorry, there was a problem: ${e.message}`);
     }
@@ -3238,6 +3593,8 @@ function restorePrefs() {
   syncHelpers();
   setLibraryTab("list");
   setManagerTab("staff");
+  renderScopeBadges(getPageAssistantScope());
+  renderAssistantInsights();
 }
 
 /* ---------------------------------------------------------
@@ -3348,6 +3705,15 @@ function bind() {
   on("navLibrary", "click", showLibraryView);
   on("navManager", "click", showManagerView);
   on("navAdmin", "click", showAdminView);
+
+  on("toggleInsights", "click", () => {
+    if (!has("assistantInsights")) return;
+    const open = !$("assistantInsights").classList.contains("hidden");
+    $("assistantInsights").classList.toggle("hidden", open);
+    if (has("toggleInsights")) {
+      $("toggleInsights").setAttribute("aria-expanded", open ? "false" : "true");
+    }
+  });
 
   document.querySelectorAll(".tabbtn[data-tab]").forEach((btn) =>
     btn.addEventListener("click", async () => {
@@ -3513,6 +3879,9 @@ async function init() {
   } catch (e) {
     console.error("loadLibrary failed", e);
   }
+
+  renderScopeBadges(getPageAssistantScope());
+  renderAssistantInsights();
 
   showAssistantView();
   enforceLegalGate();
