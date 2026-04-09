@@ -3,10 +3,13 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from auth.current_user import get_current_user
 from db.connection import get_db
+from services.ai_service import generate_ai_stream
+from services.assistant_orchestrator import build_assistant_prompt
 from services.young_person_service import YoungPersonService
 
 router = APIRouter(prefix="/young-people", tags=["Young People Assistant"])
@@ -17,11 +20,19 @@ class YoungPersonAssistantContext(BaseModel):
     young_person_id: int
     current_view: str | None = None
     young_person_name: str | None = None
+    placement_status: str | None = None
+    summary_risk_level: str | None = None
+    composer_record_type: str | None = None
+    home_name: str | None = None
+    shift_context: str | None = None
+    record_type: str | None = None
+    record_id: int | None = None
 
 
 class YoungPersonAssistantPayload(BaseModel):
-    message: str = Field(..., min_length=1)
+    message: str = Field(..., min_length=1, max_length=20000)
     context: YoungPersonAssistantContext
+    response_mode: str | None = "balanced"
 
 
 def _safe_int(value: Any) -> int | None:
@@ -67,316 +78,61 @@ def _load_and_check_young_person(
     return record
 
 
-def _fetch_overview_context(conn, young_person_id: int) -> dict[str, Any]:
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            SELECT
-                yp.id,
-                yp.first_name,
-                yp.last_name,
-                yp.preferred_name,
-                yp.placement_status,
-                yp.summary_risk_level
-            FROM young_people yp
-            WHERE yp.id = %s
-            LIMIT 1
-            """,
-            (young_person_id,),
-        )
-        young_person = cur.fetchone()
+def _normalise_response_mode(value: str | None) -> str:
+    mode = str(value or "balanced").strip().lower()
+    if mode in {"quick", "balanced", "deep"}:
+        return mode
+    return "balanced"
 
-        cur.execute(
-            """
-            SELECT
-                title,
-                description,
-                severity,
-                is_active
-            FROM young_person_alerts
-            WHERE young_person_id = %s
-              AND COALESCE(is_active, TRUE) = TRUE
-            ORDER BY created_at DESC, id DESC
-            LIMIT 5
-            """,
-            (young_person_id,),
-        )
-        alerts = cur.fetchall() or []
 
-        cur.execute(
-            """
-            SELECT
-                title,
-                concern_summary,
-                severity,
-                status,
-                approval_status,
-                review_date
-            FROM risk_assessments
-            WHERE young_person_id = %s
-              AND COALESCE(archived, FALSE) = FALSE
-            ORDER BY updated_at DESC, id DESC
-            LIMIT 5
-            """,
-            (young_person_id,),
-        )
-        risks = cur.fetchall() or []
-
-        cur.execute(
-            """
-            SELECT
-                title,
-                summary,
-                approval_status,
-                review_date,
-                plan_type
-            FROM support_plans
-            WHERE young_person_id = %s
-              AND COALESCE(archived, FALSE) = FALSE
-            ORDER BY updated_at DESC, id DESC
-            LIMIT 5
-            """,
-            (young_person_id,),
-        )
-        plans = cur.fetchall() or []
-
-        cur.execute(
-            """
-            SELECT
-                title,
-                appointment_type,
-                appointment_date,
-                status,
-                location,
-                professional_name,
-                linked_plan_id
-            FROM young_person_appointments
-            WHERE young_person_id = %s
-            ORDER BY appointment_date ASC, id DESC
-            LIMIT 10
-            """,
-            (young_person_id,),
-        )
-        appointments = cur.fetchall() or []
-
-        cur.execute(
-            """
-            SELECT
-                title,
-                summary,
-                category,
-                subcategory,
-                event_datetime,
-                significance
-            FROM chronology_events
-            WHERE young_person_id = %s
-              AND COALESCE(is_visible, TRUE) = TRUE
-            ORDER BY event_datetime DESC, created_at DESC, id DESC
-            LIMIT 12
-            """,
-            (young_person_id,),
-        )
-        chronology = cur.fetchall() or []
-
-        cur.execute(
-            """
-            SELECT
-                compliance_type,
-                title,
-                due_date,
-                status,
-                approval_status
-            FROM (
-                SELECT
-                    'support_plan_review' AS compliance_type,
-                    COALESCE(sp.title, sp.plan_type, 'Plan review') AS title,
-                    sp.review_date AS due_date,
-                    sp.status,
-                    sp.approval_status,
-                    sp.created_at
-                FROM support_plans sp
-                WHERE sp.young_person_id = %s
-                  AND sp.review_date IS NOT NULL
-                  AND COALESCE(sp.archived, FALSE) = FALSE
-
-                UNION ALL
-
-                SELECT
-                    'risk_review' AS compliance_type,
-                    COALESCE(r.title, r.category, 'Risk review') AS title,
-                    r.review_date AS due_date,
-                    r.status,
-                    r.approval_status,
-                    r.created_at
-                FROM risk_assessments r
-                WHERE r.young_person_id = %s
-                  AND r.review_date IS NOT NULL
-                  AND COALESCE(r.archived, FALSE) = FALSE
-
-                UNION ALL
-
-                SELECT
-                    'appointment' AS compliance_type,
-                    COALESCE(a.title, a.appointment_type, 'Appointment') AS title,
-                    a.appointment_date::date AS due_date,
-                    a.status,
-                    NULL::text AS approval_status,
-                    a.created_at
-                FROM young_person_appointments a
-                WHERE a.young_person_id = %s
-                  AND a.appointment_date IS NOT NULL
-            ) x
-            ORDER BY due_date ASC NULLS LAST
-            LIMIT 12
-            """,
-            (young_person_id, young_person_id, young_person_id),
-        )
-        due_items = cur.fetchall() or []
-
+def _normalise_scope(payload: YoungPersonAssistantPayload, current_user: dict[str, Any]) -> dict[str, Any]:
     return {
-        "young_person": dict(young_person) if young_person else {},
-        "alerts": [dict(x) for x in alerts],
-        "risks": [dict(x) for x in risks],
-        "plans": [dict(x) for x in plans],
-        "appointments": [dict(x) for x in appointments],
-        "chronology": [dict(x) for x in chronology],
-        "due_items": [dict(x) for x in due_items],
+        "scope_type": "young_person",
+        "home_id": _user_home_id(current_user),
+        "young_person_id": int(payload.context.young_person_id),
+        "record_type": (payload.context.record_type or "").strip() or None,
+        "record_id": payload.context.record_id,
     }
 
 
-def _build_context_text(bundle: dict[str, Any], current_view: str | None) -> str:
-    yp = bundle.get("young_person") or {}
-    name = " ".join(
-        [x for x in [yp.get("first_name"), yp.get("last_name")] if x]
-    ).strip() or yp.get("preferred_name") or "Young person"
-
-    lines: list[str] = [
-        f"Current workspace view: {current_view or 'home'}",
-        f"Young person: {name}",
-        f"Preferred name: {yp.get('preferred_name') or 'Not recorded'}",
-        f"Placement status: {yp.get('placement_status') or 'Not recorded'}",
-        f"Risk level: {yp.get('summary_risk_level') or 'Not recorded'}",
-        "",
-        "Active alerts:",
-    ]
-
-    alerts = bundle.get("alerts") or []
-    if alerts:
-        for row in alerts:
-            lines.append(
-                f"- {row.get('title') or 'Alert'} | severity={row.get('severity') or 'standard'} | {row.get('description') or 'No description'}"
-            )
-    else:
-        lines.append("- None recorded")
-
-    lines.append("")
-    lines.append("Current risks:")
-    risks = bundle.get("risks") or []
-    if risks:
-        for row in risks:
-            lines.append(
-                f"- {row.get('title') or 'Risk'} | severity={row.get('severity') or 'medium'} | status={row.get('status') or row.get('approval_status') or 'draft'} | {row.get('concern_summary') or 'No summary'}"
-            )
-    else:
-        lines.append("- None recorded")
-
-    lines.append("")
-    lines.append("Current plans:")
-    plans = bundle.get("plans") or []
-    if plans:
-        for row in plans:
-            lines.append(
-                f"- {row.get('title') or 'Plan'} | type={row.get('plan_type') or 'support_plan'} | status={row.get('approval_status') or 'draft'} | review={row.get('review_date') or 'Not set'} | {row.get('summary') or 'No summary'}"
-            )
-    else:
-        lines.append("- None recorded")
-
-    lines.append("")
-    lines.append("Appointments:")
-    appointments = bundle.get("appointments") or []
-    if appointments:
-        for row in appointments:
-            lines.append(
-                f"- {row.get('title') or 'Appointment'} | type={row.get('appointment_type') or 'general'} | when={row.get('appointment_date') or 'Not set'} | status={row.get('status') or 'scheduled'} | location={row.get('location') or 'Not set'} | professional={row.get('professional_name') or 'Not set'} | linked_plan_id={row.get('linked_plan_id') or 'None'}"
-            )
-    else:
-        lines.append("- None recorded")
-
-    lines.append("")
-    lines.append("Recent chronology:")
-    chronology = bundle.get("chronology") or []
-    if chronology:
-        for row in chronology:
-            lines.append(
-                f"- {row.get('event_datetime') or 'Unknown time'} | {row.get('title') or row.get('category') or 'Record'} | {row.get('summary') or 'No summary'}"
-            )
-    else:
-        lines.append("- None recorded")
-
-    lines.append("")
-    lines.append("Due soon / compliance items:")
-    due_items = bundle.get("due_items") or []
-    if due_items:
-        for row in due_items:
-            lines.append(
-                f"- {row.get('compliance_type') or 'item'} | {row.get('title') or 'Untitled'} | due={row.get('due_date') or 'Not set'} | status={row.get('status') or row.get('approval_status') or 'unknown'}"
-            )
-    else:
-        lines.append("- None recorded")
-
-    return "\n".join(lines)
-
-
-def _local_assistant_reply(user_message: str, context_text: str) -> str:
-    msg = (user_message or "").strip().lower()
-
-    if "handover" in msg:
-        return (
-            "Here is a short handover-style response based on the current young person context.\n\n"
-            "Focus first on current alerts, the most relevant risks, any appointments due soon, and the plans staff need to follow. "
-            "Then check recent chronology for any changes in presentation, incidents, family contact, education or health. "
-            "Use the context below to finalise the handover in the young person’s voice, keeping it clear, child-focused and practical.\n\n"
-            f"{context_text}"
-        )
-
-    if "risk" in msg:
-        return (
-            "Use the current risks, alerts, plans and chronology together. "
-            "Summarise what is worrying, what the behaviour may be communicating, what helps, and what adults should do next using a calm, PACE-informed response.\n\n"
-            f"{context_text}"
-        )
-
-    if "ofsted" in msg or "evidence" in msg or "inspection" in msg:
-        return (
-            "For Ofsted and evidence readiness, pull together: current plans, risk reviews, appointments, chronology, compliance deadlines and linked reports. "
-            "Show the child’s lived experience, how adults understand and respond, and evidence of review and follow-through.\n\n"
-            f"{context_text}"
-        )
-
-    if "appointment" in msg or "due" in msg or "review" in msg:
-        return (
-            "Use the appointments and due-items sections first. "
-            "Check which reviews, meetings or appointments are coming up, whether they are linked to plans, and what preparation or follow-up is needed.\n\n"
-            f"{context_text}"
-        )
-
-    if "daily note" in msg or "write" in msg:
-        return (
-            "Write in a therapeutic, child-focused way. "
-            "Describe presentation, significant events, young person voice, what helped, and what adults need next. "
-            "Keep language respectful, clear and evidence-based.\n\n"
-            f"{context_text}"
-        )
-
-    return (
-        "I have the current young person workspace context. "
-        "Use it to answer the staff member’s question in a child-focused, therapeutically informed way, with practical guidance for adults, links to plans, quality standards, reports and Ofsted readiness where relevant.\n\n"
-        f"{context_text}"
+def _normalise_context(payload: YoungPersonAssistantPayload, record: dict[str, Any]) -> dict[str, Any]:
+    full_name = (
+        " ".join(
+            [x for x in [record.get("first_name"), record.get("last_name")] if x]
+        ).strip()
+        or record.get("preferred_name")
+        or "Young person"
     )
+
+    return {
+        "current_view": payload.context.current_view,
+        "young_person_name": payload.context.young_person_name or full_name,
+        "placement_status": payload.context.placement_status or record.get("placement_status"),
+        "summary_risk_level": payload.context.summary_risk_level or record.get("summary_risk_level"),
+        "composer_record_type": payload.context.composer_record_type,
+        "home_name": payload.context.home_name,
+        "shift_context": payload.context.shift_context,
+    }
+
+
+def _sse(data: str) -> str:
+    safe = (data or "").replace("\r\n", "\n").replace("\r", "\n")
+    return "".join(f"data: {line}\n" for line in safe.split("\n")) + "\n"
+
+
+def _sse_event(event: str, payload: Any) -> str:
+    import json
+
+    body = json.dumps(payload, ensure_ascii=False)
+    return f"event: {event}\ndata: {body}\n\n"
+
+
+def _sse_done() -> str:
+    return "event: done\ndata: [DONE]\n\n"
 
 
 @router.post("/assistant")
-def ask_young_person_assistant(
+async def ask_young_person_assistant(
     payload: YoungPersonAssistantPayload,
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
@@ -384,32 +140,165 @@ def ask_young_person_assistant(
     record = _load_and_check_young_person(payload.context.young_person_id, current_user)
 
     try:
-        bundle = _fetch_overview_context(conn, payload.context.young_person_id)
-        context_text = _build_context_text(bundle, payload.context.current_view)
-        reply = _local_assistant_reply(payload.message, context_text)
+        scope = _normalise_scope(payload, current_user)
+        context = _normalise_context(payload, record)
+        response_mode = _normalise_response_mode(payload.response_mode)
 
-        return {
-            "ok": True,
-            "reply": reply,
-            "young_person_id": payload.context.young_person_id,
-            "young_person_name": payload.context.young_person_name
-            or " ".join(
-                [x for x in [record.get("first_name"), record.get("last_name")] if x]
-            ).strip()
-            or record.get("preferred_name")
-            or "Young person",
-            "context_used": {
-                "current_view": payload.context.current_view,
-                "alerts_count": len(bundle.get("alerts") or []),
-                "risks_count": len(bundle.get("risks") or []),
-                "plans_count": len(bundle.get("plans") or []),
-                "appointments_count": len(bundle.get("appointments") or []),
-                "chronology_count": len(bundle.get("chronology") or []),
-                "due_items_count": len(bundle.get("due_items") or []),
-            },
-        }
+        assistant_prompt_bundle = build_assistant_prompt(
+            conn,
+            user_id=int(current_user["user_id"]),
+            message=payload.message,
+            scope=scope,
+            history=[],
+            context=context,
+        )
 
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to run young person assistant: {str(e)}")
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to prepare young person assistant: {str(exc)}",
+        )
+
+    async def stream():
+        ai_text = ""
+        sources: list[dict[str, Any]] = []
+        runtime: dict[str, Any] = {}
+        explainability: dict[str, Any] = {}
+        assistant_scope_meta: dict[str, Any] = dict(scope)
+        assistant_context_meta: dict[str, Any] = dict(assistant_prompt_bundle.get("context") or context)
+        suggested_actions: list[str] = []
+
+        try:
+            generator = generate_ai_stream(
+                message=assistant_prompt_bundle["prompt"],
+                session_id=f"young-person-{payload.context.young_person_id}",
+                history=[],
+                document_text=None,
+                document_name=None,
+                response_mode=response_mode,
+                user_context=assistant_prompt_bundle.get("context") or context,
+                user_id=current_user["user_id"],
+                conversation_id=f"young-person-{payload.context.young_person_id}",
+                scope=scope,
+            )
+
+            async for item in generator:
+                if isinstance(item, str):
+                    ai_text += item
+                    yield _sse(item)
+                    continue
+
+                if not isinstance(item, dict):
+                    continue
+
+                item_type = item.get("type")
+
+                if item_type == "progress":
+                    content = str(item.get("content") or "").strip()
+                    if content:
+                        yield _sse_event("progress", {"content": content})
+                    continue
+
+                if item_type == "token":
+                    token = str(item.get("content") or "")
+                    if token:
+                        ai_text += token
+                        yield _sse(token)
+                    continue
+
+                if item_type == "sources":
+                    if isinstance(item.get("sources"), list):
+                        sources = item.get("sources") or []
+                    continue
+
+                if item_type == "runtime":
+                    if isinstance(item.get("runtime"), dict):
+                        runtime = item.get("runtime") or {}
+                    continue
+
+                if item_type == "explainability":
+                    if isinstance(item.get("explainability"), dict):
+                        explainability = item.get("explainability") or {}
+                    continue
+
+                if item_type == "meta":
+                    if isinstance(item.get("sources"), list):
+                        sources = item.get("sources") or sources
+
+                    if isinstance(item.get("runtime"), dict):
+                        runtime = item.get("runtime") or runtime
+
+                    if isinstance(item.get("explainability"), dict):
+                        explainability = item.get("explainability") or explainability
+
+                    if isinstance(item.get("assistant_scope"), dict):
+                        assistant_scope_meta = item.get("assistant_scope") or assistant_scope_meta
+
+                    if isinstance(item.get("assistant_context"), dict):
+                        assistant_context_meta = item.get("assistant_context") or assistant_context_meta
+
+                    if isinstance(item.get("suggested_actions"), list):
+                        suggested_actions = [
+                            str(x).strip()
+                            for x in item.get("suggested_actions")
+                            if str(x).strip()
+                        ]
+                    continue
+
+        except Exception as exc:
+            fallback = f"Sorry, something went wrong while running the young person assistant: {str(exc)}"
+            ai_text += fallback
+            yield _sse(fallback)
+
+        finally:
+            final_runtime = dict(runtime)
+            prompt_runtime = assistant_prompt_bundle.get("runtime") or {}
+            for key, value in prompt_runtime.items():
+                if value not in (None, "", []):
+                    final_runtime.setdefault(key, value)
+
+            if suggested_actions:
+                existing_actions = final_runtime.get("suggested_actions") or []
+                if isinstance(existing_actions, list):
+                    merged: list[str] = []
+                    seen: set[str] = set()
+
+                    for action in [*existing_actions, *suggested_actions]:
+                        normalised = str(action).strip()
+                        if not normalised:
+                            continue
+                        lowered = normalised.lower()
+                        if lowered in seen:
+                            continue
+                        seen.add(lowered)
+                        merged.append(normalised)
+
+                    final_runtime["suggested_actions"] = merged
+
+            yield _sse_event(
+                "meta",
+                {
+                    "young_person_id": payload.context.young_person_id,
+                    "young_person_name": assistant_context_meta.get("young_person", {}).get("name")
+                    or context.get("young_person_name"),
+                    "sources": sources,
+                    "runtime": final_runtime,
+                    "explainability": explainability,
+                    "assistant_scope": assistant_scope_meta,
+                    "assistant_context": assistant_context_meta,
+                    "suggested_actions": suggested_actions,
+                },
+            )
+            yield _sse_done()
+
+    return StreamingResponse(
+        stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
