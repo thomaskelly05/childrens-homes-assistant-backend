@@ -69,6 +69,10 @@ code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
+button {
+  appearance: none;
+}
+
 .hidden {
   display: none !important;
 }
@@ -89,7 +93,11 @@ code {
   flex-direction: column;
   gap: 12px;
   padding-bottom: 14px;
-  background: linear-gradient(180deg, rgba(250, 252, 255, 0.96) 0%, rgba(245, 247, 251, 0.93) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(250, 252, 255, 0.96) 0%,
+    rgba(245, 247, 251, 0.93) 100%
+  );
   backdrop-filter: blur(14px);
 }
 
@@ -135,6 +143,7 @@ code {
   color: #fff;
   font-weight: 800;
   letter-spacing: 0.02em;
+  flex: 0 0 auto;
 }
 
 .brand-copy h1 {
@@ -153,6 +162,7 @@ code {
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .person-strip {
@@ -168,6 +178,7 @@ code {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
 
 .person-avatar {
@@ -179,6 +190,11 @@ code {
   background: var(--panel-muted);
   color: var(--text);
   font-weight: 800;
+  flex: 0 0 auto;
+}
+
+.person-copy {
+  min-width: 0;
 }
 
 .person-copy h2 {
@@ -384,6 +400,7 @@ code {
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .selector-list {
@@ -404,6 +421,7 @@ code {
   display: flex;
   gap: 12px;
   align-items: center;
+  min-width: 0;
 }
 
 .selector-card-avatar {
@@ -415,6 +433,7 @@ code {
   place-items: center;
   font-weight: 800;
   color: var(--text);
+  flex: 0 0 auto;
 }
 
 .selector-card h4 {
@@ -443,6 +462,7 @@ code {
   cursor: pointer;
   box-shadow: var(--shadow-sm);
   transition: 0.15s ease;
+  min-width: 0;
 }
 
 .quick-action:hover {
@@ -488,6 +508,7 @@ code {
 .workspace-side-card {
   border-radius: var(--radius);
   padding: 16px;
+  min-width: 0;
 }
 
 .workspace-side-card h3 {
@@ -554,6 +575,7 @@ code {
   font-size: 0.82rem;
   font-weight: 700;
   line-height: 1;
+  text-decoration: none;
 }
 
 .scope-badge {
@@ -845,10 +867,20 @@ code {
   cursor: pointer;
   transition: 0.15s ease;
   font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.primary-btn:disabled,
+.secondary-btn:disabled,
+.ghost-btn:disabled,
+.chip:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .primary-btn {
-  border: 1px solid var(--brand);
+  border-color: var(--brand);
   background: linear-gradient(180deg, var(--brand) 0%, var(--brand-strong) 100%);
   color: #fff;
 }
@@ -858,7 +890,7 @@ code {
 }
 
 .secondary-btn {
-  border: 1px solid var(--border-strong);
+  border-color: var(--border-strong);
   background: #fff;
   color: var(--text);
 }
@@ -868,7 +900,7 @@ code {
 }
 
 .ghost-btn {
-  border: 1px solid var(--border);
+  border-color: var(--border);
   background: transparent;
   color: var(--text);
 }
@@ -881,6 +913,9 @@ code {
   width: 42px;
   height: 42px;
   padding: 0;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
 }
 
 /* drawer */
