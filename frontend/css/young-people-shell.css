@@ -69,10 +69,6 @@ code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
-button {
-  appearance: none;
-}
-
 .hidden {
   display: none !important;
 }
@@ -93,11 +89,7 @@ button {
   flex-direction: column;
   gap: 12px;
   padding-bottom: 14px;
-  background: linear-gradient(
-    180deg,
-    rgba(250, 252, 255, 0.96) 0%,
-    rgba(245, 247, 251, 0.93) 100%
-  );
+  background: linear-gradient(180deg, rgba(250, 252, 255, 0.96) 0%, rgba(245, 247, 251, 0.93) 100%);
   backdrop-filter: blur(14px);
 }
 
@@ -143,7 +135,6 @@ button {
   color: #fff;
   font-weight: 800;
   letter-spacing: 0.02em;
-  flex: 0 0 auto;
 }
 
 .brand-copy h1 {
@@ -162,7 +153,6 @@ button {
   display: flex;
   gap: 10px;
   align-items: center;
-  flex-wrap: wrap;
 }
 
 .person-strip {
@@ -178,7 +168,6 @@ button {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-width: 0;
 }
 
 .person-avatar {
@@ -190,11 +179,6 @@ button {
   background: var(--panel-muted);
   color: var(--text);
   font-weight: 800;
-  flex: 0 0 auto;
-}
-
-.person-copy {
-  min-width: 0;
 }
 
 .person-copy h2 {
@@ -219,6 +203,7 @@ button {
   align-items: center;
 }
 
+.nav-btn,
 .nav-home,
 .nav-group summary {
   min-height: 42px;
@@ -233,11 +218,13 @@ button {
 }
 
 .nav-home:hover,
-.nav-group summary:hover {
+.nav-group summary:hover,
+.nav-btn:hover {
   background: var(--panel-muted);
 }
 
 .nav-home.active,
+.nav-btn.active,
 .nav-group[open] summary {
   background: var(--brand-soft);
   color: var(--brand);
@@ -267,23 +254,11 @@ button {
 
 .nav-menu .nav-btn {
   width: 100%;
-  border: none;
-  background: transparent;
-  padding: 10px 12px;
-  border-radius: 8px;
   text-align: left;
-  cursor: pointer;
   font-weight: 500;
-  color: var(--text);
-}
-
-.nav-menu .nav-btn:hover {
-  background: var(--panel-muted);
 }
 
 .nav-menu .nav-btn.active {
-  background: var(--brand-soft);
-  color: var(--brand);
   font-weight: 600;
 }
 
@@ -400,7 +375,6 @@ button {
   display: flex;
   gap: 10px;
   align-items: center;
-  flex-wrap: wrap;
 }
 
 .selector-list {
@@ -421,7 +395,6 @@ button {
   display: flex;
   gap: 12px;
   align-items: center;
-  min-width: 0;
 }
 
 .selector-card-avatar {
@@ -433,7 +406,6 @@ button {
   place-items: center;
   font-weight: 800;
   color: var(--text);
-  flex: 0 0 auto;
 }
 
 .selector-card h4 {
@@ -462,7 +434,6 @@ button {
   cursor: pointer;
   box-shadow: var(--shadow-sm);
   transition: 0.15s ease;
-  min-width: 0;
 }
 
 .quick-action:hover {
@@ -508,7 +479,6 @@ button {
 .workspace-side-card {
   border-radius: var(--radius);
   padding: 16px;
-  min-width: 0;
 }
 
 .workspace-side-card h3 {
@@ -575,7 +545,6 @@ button {
   font-size: 0.82rem;
   font-weight: 700;
   line-height: 1;
-  text-decoration: none;
 }
 
 .scope-badge {
@@ -867,20 +836,10 @@ button {
   cursor: pointer;
   transition: 0.15s ease;
   font-weight: 600;
-  border: 1px solid transparent;
-}
-
-.primary-btn:disabled,
-.secondary-btn:disabled,
-.ghost-btn:disabled,
-.chip:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  transform: none;
 }
 
 .primary-btn {
-  border-color: var(--brand);
+  border: 1px solid var(--brand);
   background: linear-gradient(180deg, var(--brand) 0%, var(--brand-strong) 100%);
   color: #fff;
 }
@@ -890,7 +849,7 @@ button {
 }
 
 .secondary-btn {
-  border-color: var(--border-strong);
+  border: 1px solid var(--border-strong);
   background: #fff;
   color: var(--text);
 }
@@ -900,7 +859,7 @@ button {
 }
 
 .ghost-btn {
-  border-color: var(--border);
+  border: 1px solid var(--border);
   background: transparent;
   color: var(--text);
 }
@@ -913,9 +872,6 @@ button {
   width: 42px;
   height: 42px;
   padding: 0;
-  display: inline-grid;
-  place-items: center;
-  flex: 0 0 auto;
 }
 
 /* drawer */
