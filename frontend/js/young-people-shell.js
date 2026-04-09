@@ -5,7 +5,18 @@ const state = {
   selectorItems: [],
   activeRecordItem: null,
   activeRecordType: null,
+
   assistantMessages: [],
+  assistantModalMessages: [],
+  assistantSending: false,
+  assistantMeta: {
+    sources: [],
+    runtime: {},
+    explainability: {},
+    assistant_scope: {},
+    assistant_context: {},
+    suggested_actions: [],
+  },
 
   composerOpen: false,
   composerMode: "create",
@@ -15,6 +26,8 @@ const state = {
 };
 
 const els = {
+  app: document.getElementById("app"),
+
   nav: document.getElementById("sidebarNav"),
   content: document.getElementById("viewContent"),
   pageTitle: document.getElementById("pageTitle"),
@@ -66,9 +79,11 @@ const els = {
   composerChildVoiceBtn: document.getElementById("composerChildVoiceBtn"),
 
   assistantLauncher: document.getElementById("assistantLauncher"),
+  assistantExpandBtn: document.getElementById("assistantExpandBtn"),
   assistantBackdrop: document.getElementById("assistantBackdrop"),
   assistantModal: document.getElementById("assistantModal"),
   closeAssistantBtn: document.getElementById("closeAssistantBtn"),
+
   assistantContext: document.getElementById("assistantContext"),
   assistantSuggestions: document.getElementById("assistantSuggestions"),
   assistantMessages: document.getElementById("assistantMessages"),
@@ -76,6 +91,28 @@ const els = {
   assistantInput: document.getElementById("assistantInput"),
   assistantSendBtn: document.getElementById("assistantSendBtn"),
   assistantClearBtn: document.getElementById("assistantClearBtn"),
+
+  assistantModalMessages: document.getElementById("assistantModalMessages"),
+  assistantModalForm: document.getElementById("assistantModalForm"),
+  assistantModalInput: document.getElementById("assistantModalInput"),
+  assistantModalSendBtn: document.getElementById("assistantModalSendBtn"),
+
+  scopeBadge: document.getElementById("scopeBadge"),
+  scopeHomeBadge: document.getElementById("scopeHomeBadge"),
+  scopeChildBadge: document.getElementById("scopeChildBadge"),
+  scopeShiftBadge: document.getElementById("scopeShiftBadge"),
+
+  modalScopeHomeBadge: document.getElementById("modalScopeHomeBadge"),
+  modalScopeChildBadge: document.getElementById("modalScopeChildBadge"),
+
+  assistantScopeSummary: document.getElementById("assistantScopeSummary"),
+  assistantActions: document.getElementById("assistantActions"),
+  assistantSources: document.getElementById("assistantSources"),
+  assistantRuntime: document.getElementById("assistantRuntime"),
+  assistantExplainability: document.getElementById("assistantExplainability"),
+
+  assistantModalScopeSummary: document.getElementById("assistantModalScopeSummary"),
+  assistantModalSources: document.getElementById("assistantModalSources"),
 };
 
 const VIEW_CONFIG = {
@@ -312,6 +349,28 @@ function setEmpty(message = "No records found.") {
   `;
 }
 
+function getCookie(name) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = document.cookie.match(
+    new RegExp("(^|;\\s*)" + escaped + "=([^;]*)")
+  );
+  return match ? decodeURIComponent(match[2]) : "";
+}
+
+function getCsrfToken() {
+  return getCookie("__Host-indicare_csrf") || getCookie("indicare_csrf") || "";
+}
+
+function withCsrfHeaders(method, headers = {}) {
+  const m = String(method || "GET").toUpperCase();
+  const next = { ...headers };
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(m)) {
+    const token = getCsrfToken();
+    if (token) next["X-CSRF-Token"] = token;
+  }
+  return next;
+}
+
 async function apiGet(url) {
   const response = await fetch(url, {
     method: "GET",
@@ -335,10 +394,10 @@ async function apiSend(url, method, body) {
   const response = await fetch(url, {
     method,
     credentials: "include",
-    headers: {
+    headers: withCsrfHeaders(method, {
       "Content-Type": "application/json",
       Accept: "application/json",
-    },
+    }),
     body: body ? JSON.stringify(body) : null,
   });
 
@@ -590,6 +649,85 @@ function toggleAssistantLauncher() {
   }
 }
 
+function getFullYoungPersonName() {
+  if (!state.youngPerson) return "";
+  return (
+    [state.youngPerson.first_name, state.youngPerson.last_name].filter(Boolean).join(" ").trim() ||
+    state.youngPerson.preferred_name ||
+    "Young Person"
+  );
+}
+
+function updateAssistantScopeDataset() {
+  if (!els.app) return;
+
+  els.app.dataset.assistantScopeType = state.youngPersonId ? "young_person" : "global";
+  els.app.dataset.youngPersonId = state.youngPersonId ? String(state.youngPersonId) : "";
+  els.app.dataset.homeId =
+    state.youngPerson?.home_id != null ? String(state.youngPerson.home_id) : "";
+}
+
+function renderAssistantScopeBadges() {
+  const homeText =
+    state.youngPerson?.home_name ||
+    (state.youngPerson?.home_id != null ? `Home ${state.youngPerson.home_id}` : "");
+
+  const childText = getFullYoungPersonName();
+
+  if (els.scopeBadge) {
+    els.scopeBadge.textContent = state.youngPersonId ? "Young person assistant" : "Assistant";
+  }
+
+  if (els.scopeHomeBadge) {
+    if (homeText) {
+      els.scopeHomeBadge.textContent = homeText;
+      els.scopeHomeBadge.classList.remove("hidden");
+    } else {
+      els.scopeHomeBadge.textContent = "";
+      els.scopeHomeBadge.classList.add("hidden");
+    }
+  }
+
+  if (els.scopeChildBadge) {
+    if (childText) {
+      els.scopeChildBadge.textContent = childText;
+      els.scopeChildBadge.classList.remove("hidden");
+    } else {
+      els.scopeChildBadge.textContent = "";
+      els.scopeChildBadge.classList.add("hidden");
+    }
+  }
+
+  if (els.scopeShiftBadge) {
+    els.scopeShiftBadge.textContent = state.currentView ? state.currentView.replaceAll("-", " ") : "";
+    if (state.currentView) {
+      els.scopeShiftBadge.classList.remove("hidden");
+    } else {
+      els.scopeShiftBadge.classList.add("hidden");
+    }
+  }
+
+  if (els.modalScopeHomeBadge) {
+    if (homeText) {
+      els.modalScopeHomeBadge.textContent = homeText;
+      els.modalScopeHomeBadge.classList.remove("hidden");
+    } else {
+      els.modalScopeHomeBadge.textContent = "";
+      els.modalScopeHomeBadge.classList.add("hidden");
+    }
+  }
+
+  if (els.modalScopeChildBadge) {
+    if (childText) {
+      els.modalScopeChildBadge.textContent = childText;
+      els.modalScopeChildBadge.classList.remove("hidden");
+    } else {
+      els.modalScopeChildBadge.textContent = "";
+      els.modalScopeChildBadge.classList.add("hidden");
+    }
+  }
+}
+
 function renderSelectorList(items) {
   if (!items.length) {
     els.selectorList.innerHTML = `
@@ -696,7 +834,11 @@ async function loadYoungPerson() {
   els.personName.textContent = fullName;
   els.personMeta.textContent = meta || "Young person record";
   els.personAvatar.textContent = initialsFromName(fullName);
+
+  updateAssistantScopeDataset();
   updateAssistantContext();
+  renderAssistantScopeBadges();
+  renderAssistantInsights();
   toggleAssistantLauncher();
 }
 
@@ -1701,29 +1843,36 @@ function assistantPromptsForView(view) {
 }
 
 function updateAssistantContext() {
-  if (!state.youngPerson) {
-    els.assistantContext.textContent = "No young person selected.";
-  } else {
-    const fullName =
-      [state.youngPerson.first_name, state.youngPerson.last_name].filter(Boolean).join(" ").trim() ||
-      state.youngPerson.preferred_name ||
-      "Young Person";
+  const fullName = getFullYoungPersonName();
 
-    els.assistantContext.textContent = [
+  if (!state.youngPerson) {
+    if (els.assistantContext) {
+      els.assistantContext.textContent = "No young person selected.";
+    }
+  } else {
+    const text = [
       `Young person: ${fullName}`,
       state.youngPerson.placement_status ? `Placement: ${state.youngPerson.placement_status}` : null,
       state.youngPerson.summary_risk_level ? `Risk: ${state.youngPerson.summary_risk_level}` : null,
       `View: ${state.currentView.replaceAll("-", " ")}`,
     ].filter(Boolean).join(" • ");
+
+    if (els.assistantContext) {
+      els.assistantContext.textContent = text;
+    }
   }
 
   const prompts = assistantPromptsForView(state.currentView);
-  els.assistantSuggestions.innerHTML = prompts.map((prompt) => `
-    <button class="secondary-btn" type="button" data-prompt="${escapeHtml(prompt)}">${escapeHtml(prompt)}</button>
-  `).join("");
+  if (els.assistantSuggestions) {
+    els.assistantSuggestions.innerHTML = prompts.map((prompt) => `
+      <button class="secondary-btn" type="button" data-prompt="${escapeHtml(prompt)}">${escapeHtml(prompt)}</button>
+    `).join("");
+  }
 }
 
-function renderAssistantMessages() {
+function renderAssistantMessageList(host, messages) {
+  if (!host) return;
+
   const base = `
     <article class="assistant-message assistant-message-system">
       <div class="assistant-message-role">Assistant</div>
@@ -1731,55 +1880,313 @@ function renderAssistantMessages() {
     </article>
   `;
 
-  const messagesHtml = state.assistantMessages.map((message) => `
+  const messagesHtml = messages.map((message) => `
     <article class="assistant-message ${message.role === "user" ? "assistant-message-user" : ""}">
       <div class="assistant-message-role">${message.role === "user" ? "You" : "Assistant"}</div>
       <div class="assistant-message-body">${escapeHtml(message.content)}</div>
     </article>
   `).join("");
 
-  els.assistantMessages.innerHTML = base + messagesHtml;
-  els.assistantMessages.scrollTop = els.assistantMessages.scrollHeight;
+  host.innerHTML = base + messagesHtml;
+  host.scrollTop = host.scrollHeight;
+}
+
+function renderAssistantMessages() {
+  renderAssistantMessageList(els.assistantMessages, state.assistantMessages);
+  renderAssistantMessageList(els.assistantModalMessages, state.assistantModalMessages);
 }
 
 function pushAssistantMessage(role, content) {
-  state.assistantMessages.push({ role, content });
+  const entry = { role, content };
+  state.assistantMessages.push(entry);
+  state.assistantModalMessages.push(entry);
   renderAssistantMessages();
+}
+
+function replaceLastAssistantPlaceholder(text) {
+  const lists = [state.assistantMessages, state.assistantModalMessages];
+  lists.forEach((list) => {
+    if (!list.length) return;
+    const last = list[list.length - 1];
+    if (last.role === "assistant" && last._streaming) {
+      last.content = text;
+      last._streaming = false;
+    }
+  });
+  renderAssistantMessages();
+}
+
+function setAssistantSending(flag) {
+  state.assistantSending = !!flag;
+  if (els.assistantSendBtn) els.assistantSendBtn.disabled = flag;
+  if (els.assistantModalSendBtn) els.assistantModalSendBtn.disabled = flag;
+}
+
+function prettyJson(value) {
+  try {
+    return JSON.stringify(value || {}, null, 2);
+  } catch {
+    return "{}";
+  }
+}
+
+function renderAssistantSourcesHtml(sources) {
+  if (!Array.isArray(sources) || !sources.length) {
+    return `<p>Sources will appear here after a response.</p>`;
+  }
+
+  return sources.map((source) => {
+    const type = escapeHtml(source?.type || "source");
+    const label = escapeHtml(source?.label || source?.document_title || "Source");
+    const excerpt = escapeHtml(source?.excerpt || "");
+    const section = escapeHtml(source?.section || "");
+    const page = source?.page_number != null ? escapeHtml(String(source.page_number)) : "";
+
+    return `
+      <div class="entity-row">
+        <div>
+          <div class="entity-title">${label}</div>
+          <div class="entity-meta">
+            ${type}
+            ${section ? ` • ${section}` : ""}
+            ${page ? ` • p.${page}` : ""}
+          </div>
+          ${excerpt ? `<div class="entity-meta" style="margin-top:6px;">${excerpt}</div>` : ""}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function inferAssistantSuggestedActions() {
+  const actions = [];
+  const scope = state.assistantMeta.assistant_scope || {};
+  const context = state.assistantMeta.assistant_context || {};
+
+  if (scope.scope_type === "young_person") {
+    actions.push("Summarise current risks");
+    actions.push("Draft handover");
+    actions.push("Pull child voice themes");
+    actions.push("Summarise recent incidents");
+  }
+
+  if (context.recent_records?.incidents?.length) {
+    actions.push("Review incident patterns");
+  }
+
+  if (context.active_work?.tasks?.length) {
+    actions.push("Review outstanding tasks");
+  }
+
+  return [...new Set(actions)].slice(0, 6);
+}
+
+function renderAssistantInsights() {
+  const scope = state.assistantMeta.assistant_scope || {};
+  const context = state.assistantMeta.assistant_context || {};
+  const sources = state.assistantMeta.sources || [];
+  const runtime = state.assistantMeta.runtime || {};
+  const explainability = state.assistantMeta.explainability || {};
+
+  if (els.assistantScopeSummary) {
+    const rows = [];
+
+    rows.push(`
+      <div class="entity-row">
+        <div>
+          <div class="entity-title">${scope.scope_type === "young_person" ? "Young person scope" : "Assistant scope"}</div>
+          <div class="entity-meta">View: ${escapeHtml(state.currentView.replaceAll("-", " "))}</div>
+        </div>
+      </div>
+    `);
+
+    if (state.youngPerson) {
+      rows.push(`
+        <div class="entity-row">
+          <div>
+            <div class="entity-title">${escapeHtml(getFullYoungPersonName())}</div>
+            <div class="entity-meta">
+              ${escapeHtml(state.youngPerson.placement_status || "—")} • Risk: ${escapeHtml(state.youngPerson.summary_risk_level || "—")}
+            </div>
+          </div>
+        </div>
+      `);
+    }
+
+    if (context.young_person && typeof context.young_person === "object") {
+      rows.push(`
+        <div class="entity-row">
+          <div>
+            <div class="entity-title">Context loaded</div>
+            <div class="entity-meta">Assistant context includes young person profile and recent records.</div>
+          </div>
+        </div>
+      `);
+    }
+
+    els.assistantScopeSummary.innerHTML = rows.join("");
+  }
+
+  const suggestedActions = inferAssistantSuggestedActions();
+  if (els.assistantActions) {
+    els.assistantActions.innerHTML = suggestedActions.length
+      ? suggestedActions.map((item) => `<button class="chip" type="button" data-assistant-chip="${escapeHtml(item)}">${escapeHtml(item)}</button>`).join("")
+      : `<p>No suggested actions yet.</p>`;
+  }
+
+  if (els.assistantSources) {
+    els.assistantSources.innerHTML = renderAssistantSourcesHtml(sources);
+  }
+
+  if (els.assistantRuntime) {
+    els.assistantRuntime.textContent = prettyJson(runtime);
+  }
+
+  if (els.assistantExplainability) {
+    els.assistantExplainability.textContent = prettyJson(explainability);
+  }
+
+  if (els.assistantModalScopeSummary) {
+    els.assistantModalScopeSummary.innerHTML = els.assistantScopeSummary
+      ? els.assistantScopeSummary.innerHTML
+      : `<p>No scoped context loaded.</p>`;
+  }
+
+  if (els.assistantModalSources) {
+    els.assistantModalSources.innerHTML = renderAssistantSourcesHtml(sources);
+  }
+}
+
+function buildAssistantScopePayload() {
+  return {
+    scope_type: "young_person",
+    young_person_id: state.youngPersonId,
+    home_id: state.youngPerson?.home_id ?? null,
+  };
+}
+
+function buildAssistantContextPayload() {
+  return {
+    current_view: state.currentView,
+    young_person_name: getFullYoungPersonName(),
+    placement_status: state.youngPerson?.placement_status || null,
+    summary_risk_level: state.youngPerson?.summary_risk_level || null,
+    composer_record_type: state.composerRecordType || null,
+  };
+}
+
+function parseSseChunk(buffer, onEvent) {
+  const parts = buffer.split("\n\n");
+  const complete = parts.slice(0, -1);
+  const remainder = parts[parts.length - 1] || "";
+
+  for (const block of complete) {
+    const lines = block.split("\n");
+    let eventName = "message";
+    const dataLines = [];
+
+    for (const line of lines) {
+      if (line.startsWith(":")) continue;
+      if (line.startsWith("event:")) {
+        eventName = line.slice(6).trim();
+      } else if (line.startsWith("data:")) {
+        dataLines.push(line.startsWith("data: ") ? line.slice(6) : line.slice(5));
+      }
+    }
+
+    onEvent(eventName, dataLines.join("\n"));
+  }
+
+  return remainder;
 }
 
 async function askAssistant(question) {
   const trimmed = String(question || "").trim();
-  if (!trimmed) return;
+  if (!trimmed || !state.youngPersonId || state.assistantSending) return;
 
   pushAssistantMessage("user", trimmed);
 
-  try {
-    els.assistantSendBtn.disabled = true;
+  const placeholder = { role: "assistant", content: "Thinking...", _streaming: true };
+  state.assistantMessages.push({ ...placeholder });
+  state.assistantModalMessages.push({ ...placeholder });
+  renderAssistantMessages();
 
-    const response = await apiSend("/young-people/assistant", "POST", {
-      message: trimmed,
-      context: {
-        scope: "young_person",
-        young_person_id: state.youngPersonId,
-        current_view: state.currentView,
-        young_person_name: els.personName.textContent || "",
-        composer_record_type: state.composerRecordType || null,
-      },
+  setAssistantSending(true);
+
+  try {
+    const response = await fetch("/chat/", {
+      method: "POST",
+      credentials: "include",
+      headers: withCsrfHeaders("POST", {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+      }),
+      body: JSON.stringify({
+        message: trimmed,
+        response_mode: "balanced",
+        context: buildAssistantContextPayload(),
+        scope: buildAssistantScopePayload(),
+      }),
     });
 
-    pushAssistantMessage(
-      "assistant",
-      response.reply ||
-      response.message ||
-      response.answer ||
-      response.output_text ||
-      response.text ||
-      "No assistant reply returned."
-    );
+    if (!response.ok) {
+      let message = `Request failed (${response.status})`;
+      try {
+        const body = await response.json();
+        message = body.detail || body.error || message;
+      } catch (_) {}
+      throw new Error(message);
+    }
+
+    if (!response.body) {
+      throw new Error("No assistant response stream was returned.");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let streamedText = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      buffer = parseSseChunk(buffer, (eventName, payload) => {
+        if (eventName === "done" || payload === "[DONE]") return;
+
+        if (eventName === "meta") {
+          try {
+            const meta = JSON.parse(payload || "{}");
+            state.assistantMeta = {
+              sources: Array.isArray(meta.sources) ? meta.sources : [],
+              runtime: meta.runtime || {},
+              explainability: meta.explainability || {},
+              assistant_scope: meta.assistant_scope || buildAssistantScopePayload(),
+              assistant_context: meta.assistant_context || {},
+            };
+            renderAssistantInsights();
+          } catch (_) {}
+          return;
+        }
+
+        if (eventName === "progress") return;
+
+        if (eventName === "message") {
+          streamedText += payload || "";
+          replaceLastAssistantPlaceholder(streamedText.trim() || "Thinking...");
+        }
+      });
+    }
+
+    if (!streamedText.trim()) {
+      replaceLastAssistantPlaceholder("No assistant reply returned.");
+    }
   } catch (error) {
-    pushAssistantMessage("assistant", error.message || "The assistant could not answer right now.");
+    replaceLastAssistantPlaceholder(error.message || "The assistant could not answer right now.");
   } finally {
-    els.assistantSendBtn.disabled = false;
+    setAssistantSending(false);
   }
 }
 
@@ -1808,6 +2215,8 @@ function bindEvents() {
       }
       state.currentView = navBtn.dataset.view;
       closeAllNavGroups();
+      updateAssistantContext();
+      renderAssistantScopeBadges();
       loadCurrentView();
       return;
     }
@@ -1815,6 +2224,24 @@ function bindEvents() {
     const openBtn = event.target.closest("[data-open-young-person]");
     if (openBtn) {
       openYoungPerson(Number(openBtn.dataset.openYoungPerson));
+      return;
+    }
+
+    const quickAssistantBtn = event.target.closest("[data-assistant-quick]");
+    if (quickAssistantBtn) {
+      const action = quickAssistantBtn.dataset.assistantQuick;
+      const prompts = {
+        handover: "Draft a handover for the next shift for this young person.",
+        priorities: "Summarise current risks and priorities for today.",
+      };
+      askAssistant(prompts[action] || "Summarise what matters most right now.");
+      return;
+    }
+
+    const assistantChip = event.target.closest("[data-assistant-chip]");
+    if (assistantChip) {
+      const text = assistantChip.dataset.assistantChip || "";
+      if (els.assistantInput) els.assistantInput.value = text;
       return;
     }
 
@@ -1851,6 +2278,16 @@ function bindEvents() {
     state.youngPersonId = null;
     state.youngPerson = null;
     state.assistantMessages = [];
+    state.assistantModalMessages = [];
+    state.assistantMeta = {
+      sources: [],
+      runtime: {},
+      explainability: {},
+      assistant_scope: {},
+      assistant_context: {},
+      suggested_actions: [],
+    };
+
     closeDrawer();
     closeComposer();
     closeAssistant();
@@ -1859,6 +2296,11 @@ function bindEvents() {
     url.searchParams.delete("id");
     url.searchParams.delete("young_person_id");
     window.history.replaceState({}, "", url.toString());
+
+    updateAssistantScopeDataset();
+    renderAssistantScopeBadges();
+    renderAssistantMessages();
+    renderAssistantInsights();
 
     await loadYoungPersonSelector();
   });
@@ -1926,11 +2368,13 @@ function bindEvents() {
   });
 
   els.assistantLauncher?.addEventListener("click", openAssistant);
+  els.assistantExpandBtn?.addEventListener("click", openAssistant);
   els.closeAssistantBtn?.addEventListener("click", closeAssistant);
   els.assistantBackdrop?.addEventListener("click", closeAssistant);
 
   els.assistantClearBtn?.addEventListener("click", () => {
     state.assistantMessages = [];
+    state.assistantModalMessages = [];
     renderAssistantMessages();
   });
 
@@ -1944,6 +2388,13 @@ function bindEvents() {
     event.preventDefault();
     const question = els.assistantInput.value;
     els.assistantInput.value = "";
+    await askAssistant(question);
+  });
+
+  els.assistantModalForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const question = els.assistantModalInput.value;
+    els.assistantModalInput.value = "";
     await askAssistant(question);
   });
 
@@ -2012,6 +2463,9 @@ async function init() {
 
   bindEvents();
   renderAssistantMessages();
+  renderAssistantInsights();
+  updateAssistantScopeDataset();
+  renderAssistantScopeBadges();
   updateAssistantContext();
   toggleAssistantLauncher();
 
