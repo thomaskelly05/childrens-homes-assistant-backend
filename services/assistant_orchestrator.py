@@ -11,12 +11,10 @@ def _safe_name(young_person: dict[str, Any] | None) -> str:
     if not young_person:
         return "the young person"
 
-    preferred = str(young_person.get("preferred_name") or "").strip()
-    first_name = str(young_person.get("first_name") or "").strip()
+    preferred = (young_person.get("preferred_name") or "").strip()
+    first_name = (young_person.get("first_name") or "").strip()
     full_name = " ".join(
-        str(part).strip()
-        for part in [young_person.get("first_name"), young_person.get("last_name")]
-        if str(part or "").strip()
+        part for part in [young_person.get("first_name"), young_person.get("last_name")] if part
     ).strip()
 
     return preferred or first_name or full_name or "the young person"
@@ -28,28 +26,432 @@ def _json_safe(value: Any):
     return str(value)
 
 
-def _compact_item(item: dict[str, Any], allowed_keys: list[str]) -> dict[str, Any]:
+def _trim_list(value: Any, limit: int = 5) -> list[Any]:
+    if not isinstance(value, list):
+        return []
+    return value[:limit]
+
+
+def _pick_fields(item: Any, allowed: list[str]) -> dict[str, Any]:
     if not isinstance(item, dict):
         return {}
     return {
         key: item.get(key)
-        for key in allowed_keys
+        for key in allowed
         if item.get(key) not in (None, "", [], {})
     }
 
 
-def _compact_list(
-    items: list[dict[str, Any]] | None,
-    allowed_keys: list[str],
-    limit: int,
-) -> list[dict[str, Any]]:
-    if not isinstance(items, list):
-        return []
-    return [
-        _compact_item(item, allowed_keys)
-        for item in items[:limit]
-        if isinstance(item, dict)
-    ]
+def _build_compact_global_context(context: dict[str, Any]) -> dict[str, Any]:
+    tasks = _trim_list(context.get("tasks"), 8)
+    manager_updates = _trim_list(context.get("manager_updates"), 5)
+    handover = _trim_list(context.get("handover"), 5)
+    chronology = _trim_list(context.get("chronology"), 8)
+
+    return {
+        "scope": context.get("scope") or {},
+        "home_id": context.get("home_id"),
+        "tasks": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "title",
+                    "description",
+                    "status",
+                    "priority",
+                    "due_date",
+                    "young_person_id",
+                    "created_at",
+                ],
+            )
+            for item in tasks
+        ],
+        "manager_updates": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "title",
+                    "message",
+                    "status",
+                    "created_at",
+                ],
+            )
+            for item in manager_updates
+        ],
+        "handover": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "title",
+                    "summary",
+                    "created_at",
+                    "shift_type",
+                ],
+            )
+            for item in handover
+        ],
+        "chronology": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "title",
+                    "summary",
+                    "event_datetime",
+                    "category",
+                    "significance",
+                    "young_person_id",
+                ],
+            )
+            for item in chronology
+        ],
+    }
+
+
+def _build_compact_young_person_context(context: dict[str, Any]) -> dict[str, Any]:
+    young_person = context.get("young_person") or {}
+    identity = context.get("identity") or {}
+    active_work = context.get("active_work") or {}
+    recent_records = context.get("recent_records") or {}
+
+    return {
+        "scope": context.get("scope") or {},
+        "young_person": _pick_fields(
+            young_person,
+            [
+                "id",
+                "home_id",
+                "first_name",
+                "last_name",
+                "preferred_name",
+                "placement_status",
+                "summary_risk_level",
+                "date_of_birth",
+                "admission_date",
+                "discharge_date",
+                "archived",
+                "created_at",
+                "updated_at",
+            ],
+        ),
+        "identity": {
+            "communication_profile": _pick_fields(
+                identity.get("communication_profile"),
+                [
+                    "communication_style",
+                    "what_helps",
+                    "triggers",
+                    "updated_at",
+                ],
+            ),
+            "education_profile": _pick_fields(
+                identity.get("education_profile"),
+                [
+                    "school_name",
+                    "education_status",
+                    "year_group",
+                    "support_summary",
+                    "updated_at",
+                ],
+            ),
+            "health_profile": _pick_fields(
+                identity.get("health_profile"),
+                [
+                    "gp_name",
+                    "allergies",
+                    "diagnoses",
+                    "mental_health_summary",
+                    "medication_summary",
+                    "updated_at",
+                ],
+            ),
+            "identity_profile": _pick_fields(
+                identity.get("identity_profile"),
+                [
+                    "interests",
+                    "strengths_summary",
+                    "cultural_identity",
+                    "religion",
+                    "updated_at",
+                ],
+            ),
+            "legal_status": _pick_fields(
+                identity.get("legal_status"),
+                [
+                    "legal_status",
+                    "local_authority",
+                    "social_worker_name",
+                    "social_worker_email",
+                    "updated_at",
+                ],
+            ),
+            "current_formulation": _pick_fields(
+                identity.get("current_formulation"),
+                [
+                    "summary",
+                    "hypothesis",
+                    "updated_at",
+                ],
+            ),
+            "active_alerts": [
+                _pick_fields(
+                    item,
+                    [
+                        "id",
+                        "title",
+                        "description",
+                        "severity",
+                        "is_active",
+                        "updated_at",
+                    ],
+                )
+                for item in _trim_list(identity.get("active_alerts"), 8)
+            ],
+        },
+        "active_work": {
+            "support_plans": [
+                _pick_fields(
+                    item,
+                    [
+                        "id",
+                        "title",
+                        "summary",
+                        "plan_type",
+                        "approval_status",
+                        "status",
+                        "review_date",
+                        "updated_at",
+                    ],
+                )
+                for item in _trim_list(active_work.get("support_plans"), 6)
+            ],
+            "risk_assessments": [
+                _pick_fields(
+                    item,
+                    [
+                        "id",
+                        "title",
+                        "category",
+                        "concern_summary",
+                        "severity",
+                        "likelihood",
+                        "approval_status",
+                        "status",
+                        "review_date",
+                        "updated_at",
+                    ],
+                )
+                for item in _trim_list(active_work.get("risk_assessments"), 6)
+            ],
+            "appointments": [
+                _pick_fields(
+                    item,
+                    [
+                        "id",
+                        "title",
+                        "appointment_type",
+                        "appointment_date",
+                        "status",
+                        "location",
+                        "professional_name",
+                        "follow_up_actions",
+                    ],
+                )
+                for item in _trim_list(active_work.get("appointments"), 6)
+            ],
+            "compliance_items": [
+                _pick_fields(
+                    item,
+                    [
+                        "id",
+                        "title",
+                        "compliance_type",
+                        "due_date",
+                        "status",
+                        "approval_status",
+                    ],
+                )
+                for item in _trim_list(active_work.get("compliance_items"), 8)
+            ],
+            "tasks": [
+                _pick_fields(
+                    item,
+                    [
+                        "id",
+                        "title",
+                        "description",
+                        "status",
+                        "priority",
+                        "due_date",
+                        "created_at",
+                    ],
+                )
+                for item in _trim_list(active_work.get("tasks"), 8)
+            ],
+        },
+        "recent_records": {
+            "daily_notes": [
+                _pick_fields(
+                    item,
+                    [
+                        "id",
+                        "note_date",
+                        "shift_type",
+                        "mood",
+                        "presentation",
+                        "young_person_voice",
+                        "actions_required",
+                        "created_at",
+                        "updated_at",
+                    ],
+                )
+                for item in _trim_list(recent_records.get("daily_notes"), 6)
+            ],
+            "incidents": [
+                _pick_fields(
+                    item,
+                    [
+                        "id",
+                        "incident_datetime",
+                        "incident_type",
+                        "severity",
+                        "location",
+                        "description",
+                        "child_voice",
+                        "outcome",
+                        "created_at",
+                        "updated_at",
+                    ],
+                )
+                for item in _trim_list(recent_records.get("incidents"), 6)
+            ],
+            "health_records": [
+                _pick_fields(
+                    item,
+                    [
+                        "id",
+                        "event_datetime",
+                        "title",
+                        "summary",
+                        "outcome",
+                        "created_at",
+                    ],
+                )
+                for item in _trim_list(recent_records.get("health_records"), 5)
+            ],
+            "education_records": [
+                _pick_fields(
+                    item,
+                    [
+                        "id",
+                        "record_date",
+                        "title",
+                        "summary",
+                        "attendance",
+                        "created_at",
+                    ],
+                )
+                for item in _trim_list(recent_records.get("education_records"), 5)
+            ],
+            "family_contact_records": [
+                _pick_fields(
+                    item,
+                    [
+                        "id",
+                        "contact_datetime",
+                        "contact_type",
+                        "summary",
+                        "outcome",
+                        "created_at",
+                    ],
+                )
+                for item in _trim_list(recent_records.get("family_contact_records"), 5)
+            ],
+            "keywork_sessions": [
+                _pick_fields(
+                    item,
+                    [
+                        "id",
+                        "session_date",
+                        "title",
+                        "summary",
+                        "child_voice",
+                        "created_at",
+                    ],
+                )
+                for item in _trim_list(recent_records.get("keywork_sessions"), 5)
+            ],
+            "missing_episodes": [
+                _pick_fields(
+                    item,
+                    [
+                        "id",
+                        "start_datetime",
+                        "end_datetime",
+                        "summary",
+                        "outcome",
+                        "created_at",
+                    ],
+                )
+                for item in _trim_list(recent_records.get("missing_episodes"), 5)
+            ],
+            "safeguarding_records": [
+                _pick_fields(
+                    item,
+                    [
+                        "id",
+                        "concern_datetime",
+                        "title",
+                        "summary",
+                        "status",
+                        "created_at",
+                    ],
+                )
+                for item in _trim_list(recent_records.get("safeguarding_records"), 5)
+            ],
+            "achievements": [
+                _pick_fields(
+                    item,
+                    [
+                        "id",
+                        "achievement_date",
+                        "title",
+                        "summary",
+                        "created_at",
+                    ],
+                )
+                for item in _trim_list(recent_records.get("achievements"), 5)
+            ],
+            "chronology": [
+                _pick_fields(
+                    item,
+                    [
+                        "id",
+                        "title",
+                        "summary",
+                        "event_datetime",
+                        "category",
+                        "significance",
+                        "created_at",
+                    ],
+                )
+                for item in _trim_list(recent_records.get("chronology"), 10)
+            ],
+        },
+    }
+
+
+def _build_compact_context(context: dict[str, Any]) -> dict[str, Any]:
+    scope = context.get("scope") or {}
+    scope_type = (scope.get("scope_type") or "global").strip().lower()
+
+    if scope_type == "young_person":
+        return _build_compact_young_person_context(context)
+
+    return _build_compact_global_context(context)
 
 
 def _build_global_summary(context: dict[str, Any]) -> str:
@@ -100,178 +502,19 @@ def _build_young_person_summary(context: dict[str, Any]) -> str:
         f"- Recent chronology loaded: {len(chronology)}",
     ]
 
-    lines.append(
-        f"- Current formulation available: {'yes' if identity.get('current_formulation') else 'no'}"
-    )
-    lines.append(
-        f"- Communication profile available: {'yes' if identity.get('communication_profile') else 'no'}"
-    )
+    current_formulation = identity.get("current_formulation")
+    if current_formulation:
+        lines.append("- Current formulation available: yes")
+    else:
+        lines.append("- Current formulation available: no")
+
+    communication_profile = identity.get("communication_profile")
+    if communication_profile:
+        lines.append("- Communication profile available: yes")
+    else:
+        lines.append("- Communication profile available: no")
 
     return "\n".join(lines)
-
-
-def _build_compact_context(context: dict[str, Any]) -> dict[str, Any]:
-    scope = context.get("scope") or {}
-    scope_type = scope.get("scope_type") or "global"
-
-    if scope_type != "young_person":
-        return {
-            "scope": scope,
-            "home_id": context.get("home_id"),
-            "tasks": _compact_list(
-                context.get("tasks"),
-                ["id", "title", "status", "due_date", "priority", "young_person_id"],
-                8,
-            ),
-            "manager_updates": _compact_list(
-                context.get("manager_updates"),
-                ["id", "title", "summary", "created_at"],
-                5,
-            ),
-            "handover": _compact_list(
-                context.get("handover"),
-                ["id", "title", "summary", "created_at"],
-                5,
-            ),
-            "chronology": _compact_list(
-                context.get("chronology"),
-                ["id", "title", "summary", "event_datetime", "category"],
-                8,
-            ),
-        }
-
-    young_person = context.get("young_person") or {}
-    identity = context.get("identity") or {}
-    active_work = context.get("active_work") or {}
-    recent_records = context.get("recent_records") or {}
-
-    return {
-        "scope": scope,
-        "young_person": _compact_item(
-            young_person,
-            [
-                "id",
-                "home_id",
-                "first_name",
-                "last_name",
-                "preferred_name",
-                "placement_status",
-                "summary_risk_level",
-                "date_of_birth",
-                "admission_date",
-            ],
-        ),
-        "identity": {
-            "communication_profile": _compact_item(
-                identity.get("communication_profile") or {},
-                ["communication_style", "what_helps", "sensory_needs", "distress_indicators"],
-            ),
-            "education_profile": _compact_item(
-                identity.get("education_profile") or {},
-                ["school_name", "education_status", "year_group"],
-            ),
-            "health_profile": _compact_item(
-                identity.get("health_profile") or {},
-                ["allergies", "diagnoses", "medication_summary", "mental_health_summary"],
-            ),
-            "identity_profile": _compact_item(
-                identity.get("identity_profile") or {},
-                ["interests", "strengths_summary", "identity_notes"],
-            ),
-            "legal_status": _compact_item(
-                identity.get("legal_status") or {},
-                ["legal_status", "local_authority", "delegated_authority_notes"],
-            ),
-            "current_formulation": _compact_item(
-                identity.get("current_formulation") or {},
-                ["title", "summary", "updated_at"],
-            ),
-            "active_alerts": _compact_list(
-                identity.get("active_alerts"),
-                ["id", "title", "description", "severity", "updated_at"],
-                6,
-            ),
-        },
-        "active_work": {
-            "support_plans": _compact_list(
-                active_work.get("support_plans"),
-                ["id", "title", "summary", "approval_status", "review_date", "updated_at"],
-                6,
-            ),
-            "risk_assessments": _compact_list(
-                active_work.get("risk_assessments"),
-                ["id", "title", "category", "concern_summary", "severity", "review_date", "updated_at"],
-                6,
-            ),
-            "appointments": _compact_list(
-                active_work.get("appointments"),
-                ["id", "title", "appointment_type", "appointment_date", "status", "location", "professional_name"],
-                6,
-            ),
-            "compliance_items": _compact_list(
-                active_work.get("compliance_items"),
-                ["id", "title", "status", "approval_status", "due_date", "compliance_type"],
-                8,
-            ),
-            "tasks": _compact_list(
-                active_work.get("tasks"),
-                ["id", "title", "status", "priority", "due_date"],
-                8,
-            ),
-        },
-        "recent_records": {
-            "daily_notes": _compact_list(
-                recent_records.get("daily_notes"),
-                ["id", "note_date", "shift_type", "mood", "presentation", "young_person_voice", "updated_at"],
-                4,
-            ),
-            "incidents": _compact_list(
-                recent_records.get("incidents"),
-                ["id", "incident_datetime", "incident_type", "severity", "description", "outcome", "updated_at"],
-                4,
-            ),
-            "health_records": _compact_list(
-                recent_records.get("health_records"),
-                ["id", "event_datetime", "title", "summary", "outcome"],
-                3,
-            ),
-            "education_records": _compact_list(
-                recent_records.get("education_records"),
-                ["id", "record_date", "title", "summary"],
-                3,
-            ),
-            "family_contact_records": _compact_list(
-                recent_records.get("family_contact_records"),
-                ["id", "contact_datetime", "title", "summary", "outcome"],
-                3,
-            ),
-            "keywork_sessions": _compact_list(
-                recent_records.get("keywork_sessions"),
-                ["id", "session_date", "title", "summary", "child_voice"],
-                3,
-            ),
-            "missing_episodes": _compact_list(
-                recent_records.get("missing_episodes"),
-                ["id", "start_datetime", "end_datetime", "summary", "outcome"],
-                3,
-            ),
-            "safeguarding_records": _compact_list(
-                recent_records.get("safeguarding_records"),
-                ["id", "concern_datetime", "title", "summary", "status"],
-                3,
-            ),
-            "achievements": _compact_list(
-                recent_records.get("achievements"),
-                ["id", "achievement_date", "title", "summary"],
-                3,
-            ),
-            "chronology": _compact_list(
-                recent_records.get("chronology"),
-                ["id", "event_datetime", "title", "summary", "category", "subcategory", "significance"],
-                8,
-            ),
-        },
-    }
 
 
 def _build_prompt(
@@ -295,39 +538,25 @@ def _build_prompt(
         if role and content:
             history_lines.append(f"{role.upper()}: {content}")
 
-    history_text = "\n".join(history_lines[-8:]).strip()
-
-    compact_context = _build_compact_context(context)
-    compact_context_json = json.dumps(
-        compact_context,
-        ensure_ascii=False,
-        default=_json_safe,
-        indent=2,
-    )
+    history_text = "\n".join(history_lines[-12:]).strip()
 
     return f"""
 You are the IndiCare assistant.
 
 Use the context below to answer clearly, safely and practically for a children's home setting.
 Keep the answer grounded in the available data.
-If information is missing, say so clearly.
-If the user wants drafting, provide a structured draft.
-If the request relates to a young person, remain child-centred, trauma-informed and safeguarding-aware.
-
-Important:
-- Do not repeat the raw context back unless useful.
-- Prefer concise, practical answers.
-- Use chronology, plans, risks, incidents, daily notes and tasks only where relevant.
-- If the user asks for a time period summary, focus on patterns, risks, protective factors, progress, incidents, child voice, professional involvement, and actions.
+If there are gaps in the context, say so.
+If the request appears to need drafting, produce a structured draft.
+If the request relates to a young person, stay child-centred, trauma-informed and safeguarding-aware.
 
 === CONTEXT SUMMARY ===
 {summary}
 
-=== COMPACT STRUCTURED CONTEXT ===
-{compact_context_json}
+=== STRUCTURED CONTEXT ===
+{context}
 
-=== RECENT CONVERSATION HISTORY ===
-{history_text or "No prior history."}
+=== CONVERSATION HISTORY ===
+{history_text}
 
 === USER MESSAGE ===
 {message}
@@ -348,15 +577,25 @@ def build_assistant_prompt(
         scope=scope,
     )
 
+    compact_context = _build_compact_context(context)
+
     prompt = _build_prompt(
         message=message,
         context=context,
         history=history,
     )
 
+    json_safe_context = json.loads(
+        json.dumps(
+            compact_context,
+            ensure_ascii=False,
+            default=_json_safe,
+        )
+    )
+
     return {
         "prompt": prompt,
-        "context": _build_compact_context(context),
+        "context": json_safe_context,
         "runtime": {
             "scope_type": (context.get("scope") or {}).get("scope_type"),
             "home_id": (context.get("scope") or {}).get("home_id"),
