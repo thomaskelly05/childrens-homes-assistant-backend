@@ -183,6 +183,7 @@ ROUTERS = [
     "routers.ai_notes_routes",
     "routers.ai_note_templates_routes",
     "routers.ai_note_export_routes",
+    "routers.assistant_routes",
     "routers.chat_routes",
     "routers.document_library_routes",
     "routers.dashboard_routes",
