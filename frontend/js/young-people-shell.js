@@ -2172,7 +2172,7 @@ async function askAssistant(question) {
   setAssistantSending(true);
 
   try {
-    const response = await fetch("/chat/", {
+    const response = await fetch("/young-people/assistant", {
       method: "POST",
       credentials: "include",
       headers: withCsrfHeaders("POST", {
