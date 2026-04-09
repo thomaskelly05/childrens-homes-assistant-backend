@@ -7,7 +7,14 @@
   <link rel="stylesheet" href="/css/young-people-shell.css" />
 </head>
 <body>
-  <div class="app-shell">
+  <div
+    id="app"
+    class="app-shell"
+    data-assistant-scope-type="young_person"
+    data-young-person-id=""
+    data-home-id=""
+    data-workspace="young-person-shell"
+  >
     <header class="top-shell">
       <div class="top-shell-main">
         <div class="brand-block">
@@ -123,7 +130,7 @@
       </section>
 
       <section id="workspacePanel" class="workspace-panel hidden">
-        <section id="quickActions" class="quick-actions">
+        <section class="quick-actions">
           <button class="quick-action" type="button" data-action="daily-note">
             <span class="quick-action-title">Add daily note</span>
             <span class="quick-action-subtitle">Record the shift clearly and therapeutically</span>
@@ -143,16 +150,117 @@
             <span class="quick-action-title">Add plan</span>
             <span class="quick-action-subtitle">Create support guidance around the young person</span>
           </button>
+
+          <button class="quick-action" type="button" data-assistant-quick="handover">
+            <span class="quick-action-title">Draft handover</span>
+            <span class="quick-action-subtitle">Pull together current risks, updates and actions</span>
+          </button>
+
+          <button class="quick-action" type="button" data-assistant-quick="priorities">
+            <span class="quick-action-title">Today’s priorities</span>
+            <span class="quick-action-subtitle">Summarise what matters most right now</span>
+          </button>
         </section>
 
-        <section id="viewContent">
-          <div class="loading-state">
-            <div>
-              <div class="spinner"></div>
-              <p>Loading workspace...</p>
-            </div>
-          </div>
-        </section>
+        <div class="workspace-layout">
+          <section class="workspace-main">
+            <section id="viewContent">
+              <div class="loading-state">
+                <div>
+                  <div class="spinner"></div>
+                  <p>Loading workspace...</p>
+                </div>
+              </div>
+            </section>
+          </section>
+
+          <aside class="workspace-side">
+            <section class="workspace-side-card">
+              <div class="workspace-side-head">
+                <div>
+                  <h3>Young person assistant</h3>
+                  <p>Same assistant, scoped to this young person.</p>
+                </div>
+                <button id="assistantExpandBtn" class="secondary-btn" type="button">Expand</button>
+              </div>
+
+              <div class="assistant-context-row">
+                <span id="scopeBadge" class="scope-badge">Young person assistant</span>
+                <span id="scopeHomeBadge" class="scope-chip hidden"></span>
+                <span id="scopeChildBadge" class="scope-chip hidden"></span>
+                <span id="scopeShiftBadge" class="scope-chip hidden"></span>
+              </div>
+
+              <div id="assistantContext" class="assistant-context">
+                No young person selected.
+              </div>
+
+              <div id="assistantSuggestions" class="assistant-suggestions">
+                <button class="chip" type="button" data-assistant-chip="Summarise current risks and priorities for today.">
+                  Today’s priorities
+                </button>
+                <button class="chip" type="button" data-assistant-chip="Draft a handover for the next shift for this young person.">
+                  Draft handover
+                </button>
+                <button class="chip" type="button" data-assistant-chip="Pull out child voice themes from recent records.">
+                  Child voice themes
+                </button>
+                <button class="chip" type="button" data-assistant-chip="Summarise recent incidents and key patterns.">
+                  Incident patterns
+                </button>
+              </div>
+
+              <div id="assistantMessages" class="assistant-messages">
+                <article class="assistant-message assistant-message-system">
+                  <div class="assistant-message-role">Assistant</div>
+                  <div class="assistant-message-body">Ask a question about this young person.</div>
+                </article>
+              </div>
+
+              <form id="assistantForm" class="assistant-form">
+                <input
+                  id="assistantInput"
+                  class="text-input"
+                  type="text"
+                  placeholder="Ask a question about this young person..."
+                  autocomplete="off"
+                />
+                <button id="assistantSendBtn" class="primary-btn" type="submit">Send</button>
+              </form>
+            </section>
+
+            <section class="workspace-side-card">
+              <h3>Assistant insights</h3>
+              <div id="assistantScopeSummary" class="assistant-side-block">
+                <p>No scoped context loaded.</p>
+              </div>
+            </section>
+
+            <section class="workspace-side-card">
+              <h3>Suggested actions</h3>
+              <div id="assistantActions" class="assistant-side-block">
+                <p>No suggested actions yet.</p>
+              </div>
+            </section>
+
+            <section class="workspace-side-card">
+              <h3>Sources</h3>
+              <div id="assistantSources" class="assistant-side-block">
+                <p>Sources will appear here after a response.</p>
+              </div>
+            </section>
+
+            <section class="workspace-side-card">
+              <h3>Runtime</h3>
+              <pre id="assistantRuntime" class="assistant-code-block">No runtime data yet.</pre>
+            </section>
+
+            <section class="workspace-side-card">
+              <h3>Explainability</h3>
+              <pre id="assistantExplainability" class="assistant-code-block">No explainability data yet.</pre>
+            </section>
+          </aside>
+        </div>
       </section>
     </main>
   </div>
@@ -255,31 +363,54 @@
     <div class="assistant-header">
       <div>
         <h3>Young person assistant</h3>
-        <p>Support with handover, evidence, chronology and writing.</p>
+        <p>Expanded assistant workspace for handover, evidence, chronology and drafting.</p>
       </div>
       <button id="closeAssistantBtn" class="secondary-btn icon-btn" type="button" aria-label="Close">✕</button>
     </div>
 
-    <div id="assistantContext" class="assistant-context">No young person selected.</div>
-    <div id="assistantSuggestions" class="assistant-suggestions"></div>
+    <div class="assistant-modal-layout">
+      <div class="assistant-modal-main">
+        <div class="assistant-context-row">
+          <span class="scope-badge">Young person assistant</span>
+          <span id="modalScopeHomeBadge" class="scope-chip hidden"></span>
+          <span id="modalScopeChildBadge" class="scope-chip hidden"></span>
+        </div>
 
-    <div id="assistantMessages" class="assistant-messages">
-      <article class="assistant-message assistant-message-system">
-        <div class="assistant-message-role">Assistant</div>
-        <div class="assistant-message-body">Ask a question about this young person.</div>
-      </article>
+        <div id="assistantModalMessages" class="assistant-messages">
+          <article class="assistant-message assistant-message-system">
+            <div class="assistant-message-role">Assistant</div>
+            <div class="assistant-message-body">Use this expanded space for longer scoped work.</div>
+          </article>
+        </div>
+
+        <form id="assistantModalForm" class="assistant-form">
+          <input
+            id="assistantModalInput"
+            class="text-input"
+            type="text"
+            placeholder="Ask a question about this young person..."
+            autocomplete="off"
+          />
+          <button id="assistantModalSendBtn" class="primary-btn" type="submit">Send</button>
+        </form>
+      </div>
+
+      <aside class="assistant-modal-side">
+        <section class="workspace-side-card">
+          <h3>Scope summary</h3>
+          <div id="assistantModalScopeSummary" class="assistant-side-block">
+            <p>No scoped context loaded.</p>
+          </div>
+        </section>
+
+        <section class="workspace-side-card">
+          <h3>Sources</h3>
+          <div id="assistantModalSources" class="assistant-side-block">
+            <p>Sources will appear here after a response.</p>
+          </div>
+        </section>
+      </aside>
     </div>
-
-    <form id="assistantForm" class="assistant-form">
-      <input
-        id="assistantInput"
-        class="text-input"
-        type="text"
-        placeholder="Ask a question..."
-        autocomplete="off"
-      />
-      <button id="assistantSendBtn" class="primary-btn" type="submit">Send</button>
-    </form>
 
     <div class="assistant-footer">
       <button id="assistantClearBtn" class="secondary-btn" type="button">Clear chat</button>
