@@ -17,6 +17,25 @@ def _fetch_all(conn, query: str, params: tuple[Any, ...]) -> list[dict[str, Any]
         return list(cur.fetchall())
 
 
+def _safe_string(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value.strip()
+    return str(value).strip()
+
+
+def _normalise_scope(scope: dict[str, Any] | None) -> dict[str, Any]:
+    scope = scope or {}
+    return {
+        "scope_type": _safe_string(scope.get("scope_type") or "global").lower() or "global",
+        "home_id": scope.get("home_id"),
+        "young_person_id": scope.get("young_person_id"),
+        "record_type": _safe_string(scope.get("record_type")),
+        "record_id": scope.get("record_id"),
+    }
+
+
 def _get_user_home(conn, user_id: int) -> int | None:
     row = _fetch_one(
         conn,
@@ -48,11 +67,14 @@ def _assert_young_person_access(conn, user_id: int, young_person_id: int) -> dic
             yp.date_of_birth,
             yp.gender,
             yp.ethnicity,
+            yp.nhs_number,
+            yp.local_id_number,
             yp.admission_date,
             yp.discharge_date,
             yp.placement_status,
             yp.primary_keyworker_id,
             yp.summary_risk_level,
+            yp.photo_url,
             yp.archived,
             yp.created_at,
             yp.updated_at
@@ -141,6 +163,17 @@ def _build_identity_context(conn, young_person_id: int) -> dict[str, Any]:
             """,
             (young_person_id,),
         ),
+        "contacts": _fetch_all(
+            conn,
+            """
+            SELECT *
+            FROM young_person_contacts
+            WHERE young_person_id = %s
+            ORDER BY updated_at DESC NULLS LAST, id DESC
+            LIMIT 20
+            """,
+            (young_person_id,),
+        ),
         "active_alerts": _fetch_all(
             conn,
             """
@@ -148,7 +181,7 @@ def _build_identity_context(conn, young_person_id: int) -> dict[str, Any]:
             FROM young_person_alerts
             WHERE young_person_id = %s
               AND is_active = TRUE
-            ORDER BY severity DESC, updated_at DESC NULLS LAST, id DESC
+            ORDER BY updated_at DESC NULLS LAST, id DESC
             LIMIT 20
             """,
             (young_person_id,),
@@ -235,6 +268,28 @@ def _build_active_work_context(conn, young_person_id: int) -> dict[str, Any]:
             WHERE young_person_id = %s
             ORDER BY due_date ASC NULLS LAST, created_at DESC NULLS LAST, id DESC
             LIMIT 20
+            """,
+            (young_person_id,),
+        ),
+        "monthly_reviews": _fetch_all(
+            conn,
+            """
+            SELECT *
+            FROM monthly_reviews
+            WHERE young_person_id = %s
+            ORDER BY review_month DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC
+            LIMIT 6
+            """,
+            (young_person_id,),
+        ),
+        "review_meetings": _fetch_all(
+            conn,
+            """
+            SELECT *
+            FROM review_meetings
+            WHERE young_person_id = %s
+            ORDER BY meeting_date DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC
+            LIMIT 10
             """,
             (young_person_id,),
         ),
@@ -355,6 +410,28 @@ def _build_recent_records_context(conn, young_person_id: int) -> dict[str, Any]:
             """,
             (young_person_id,),
         ),
+        "handover_records": _fetch_all(
+            conn,
+            """
+            SELECT *
+            FROM handover_records
+            WHERE young_person_id = %s
+            ORDER BY handover_date DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC
+            LIMIT 10
+            """,
+            (young_person_id,),
+        ),
+        "ai_generated_reports": _fetch_all(
+            conn,
+            """
+            SELECT *
+            FROM ai_generated_reports
+            WHERE young_person_id = %s
+            ORDER BY created_at DESC NULLS LAST, id DESC
+            LIMIT 10
+            """,
+            (young_person_id,),
+        ),
     }
 
 
@@ -404,10 +481,171 @@ def _build_links_context(conn, young_person_id: int) -> dict[str, Any]:
             """,
             (young_person_id,),
         ),
+        "monthly_review_record_links": _fetch_all(
+            conn,
+            """
+            SELECT *
+            FROM monthly_review_record_links mrrl
+            JOIN monthly_reviews mr ON mr.id = mrrl.monthly_review_id
+            WHERE mr.young_person_id = %s
+            ORDER BY mrrl.created_at DESC NULLS LAST, mrrl.id DESC
+            LIMIT 50
+            """,
+            (young_person_id,),
+        ),
     }
 
 
-def build_young_person_context(conn, *, user_id: int, young_person_id: int) -> dict[str, Any]:
+def _build_scoped_record_context(
+    conn,
+    *,
+    young_person_id: int,
+    record_type: str | None,
+    record_id: int | None,
+) -> dict[str, Any]:
+    record_type = _safe_string(record_type).lower()
+    if not record_type or record_id is None:
+        return {}
+
+    # Main detail record
+    record: dict[str, Any] | None = None
+
+    if record_type == "daily_note":
+        record = _fetch_one(
+            conn,
+            """
+            SELECT *
+            FROM daily_notes
+            WHERE id = %s
+              AND young_person_id = %s
+            LIMIT 1
+            """,
+            (record_id, young_person_id),
+        )
+
+    elif record_type == "incident":
+        record = _fetch_one(
+            conn,
+            """
+            SELECT *
+            FROM incidents
+            WHERE id = %s
+              AND young_person_id = %s
+            LIMIT 1
+            """,
+            (record_id, young_person_id),
+        )
+
+    elif record_type == "risk":
+        record = _fetch_one(
+            conn,
+            """
+            SELECT *
+            FROM risk_assessments
+            WHERE id = %s
+              AND young_person_id = %s
+            LIMIT 1
+            """,
+            (record_id, young_person_id),
+        )
+
+    elif record_type in {"support_plan", "plan"}:
+        record = _fetch_one(
+            conn,
+            """
+            SELECT *
+            FROM support_plans
+            WHERE id = %s
+              AND young_person_id = %s
+            LIMIT 1
+            """,
+            (record_id, young_person_id),
+        )
+        record_type = "support_plan"
+
+    elif record_type == "appointment":
+        record = _fetch_one(
+            conn,
+            """
+            SELECT *
+            FROM young_person_appointments
+            WHERE id = %s
+              AND young_person_id = %s
+            LIMIT 1
+            """,
+            (record_id, young_person_id),
+        )
+
+    elif record_type == "keywork":
+        record = _fetch_one(
+            conn,
+            """
+            SELECT *
+            FROM keywork_sessions
+            WHERE id = %s
+              AND young_person_id = %s
+            LIMIT 1
+            """,
+            (record_id, young_person_id),
+        )
+
+    related_workflow_events = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM record_workflow_events
+        WHERE young_person_id = %s
+          AND source_id = %s
+        ORDER BY created_at DESC NULLS LAST, id DESC
+        LIMIT 20
+        """,
+        (young_person_id, record_id),
+    )
+
+    related_standards = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM record_standard_links
+        WHERE young_person_id = %s
+          AND source_id = %s
+        ORDER BY updated_at DESC NULLS LAST, id DESC
+        LIMIT 20
+        """,
+        (young_person_id, record_id),
+    )
+
+    related_chronology = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM chronology_events
+        WHERE young_person_id = %s
+          AND source_id = %s
+        ORDER BY event_datetime DESC NULLS LAST, id DESC
+        LIMIT 20
+        """,
+        (young_person_id, record_id),
+    )
+
+    return {
+        "record_type": record_type,
+        "record_id": record_id,
+        "record": record,
+        "workflow_events": related_workflow_events,
+        "record_standard_links": related_standards,
+        "chronology_events": related_chronology,
+    }
+
+
+def build_young_person_context(
+    conn,
+    *,
+    user_id: int,
+    young_person_id: int,
+    scope: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    scope = _normalise_scope(scope)
     young_person = _assert_young_person_access(conn, user_id, young_person_id)
 
     return {
@@ -415,22 +653,34 @@ def build_young_person_context(conn, *, user_id: int, young_person_id: int) -> d
             "scope_type": "young_person",
             "young_person_id": young_person_id,
             "home_id": young_person.get("home_id"),
+            "record_type": scope.get("record_type"),
+            "record_id": scope.get("record_id"),
         },
         "young_person": young_person,
         "identity": _build_identity_context(conn, young_person_id),
         "active_work": _build_active_work_context(conn, young_person_id),
         "recent_records": _build_recent_records_context(conn, young_person_id),
         "links": _build_links_context(conn, young_person_id),
+        "scoped_record": _build_scoped_record_context(
+            conn,
+            young_person_id=young_person_id,
+            record_type=scope.get("record_type"),
+            record_id=scope.get("record_id"),
+        ),
     }
 
 
-def build_global_context(conn, *, user_id: int) -> dict[str, Any]:
+def build_global_context(conn, *, user_id: int, scope: dict[str, Any] | None = None) -> dict[str, Any]:
+    scope = _normalise_scope(scope)
     home_id = _get_user_home(conn, user_id)
 
-    recent_tasks = []
-    recent_updates = []
-    recent_handovers = []
-    recent_events = []
+    recent_tasks: list[dict[str, Any]] = []
+    recent_updates: list[dict[str, Any]] = []
+    recent_handovers: list[dict[str, Any]] = []
+    recent_events: list[dict[str, Any]] = []
+    recent_documents: list[dict[str, Any]] = []
+    recent_incidents: list[dict[str, Any]] = []
+    recent_compliance: list[dict[str, Any]] = []
 
     if home_id is not None:
         recent_tasks = _fetch_all(
@@ -477,17 +727,59 @@ def build_global_context(conn, *, user_id: int) -> dict[str, Any]:
             """,
             (home_id,),
         )
+        recent_documents = _fetch_all(
+            conn,
+            """
+            SELECT *
+            FROM documents
+            WHERE home_id = %s
+            ORDER BY updated_at DESC NULLS LAST, id DESC
+            LIMIT 20
+            """,
+            (home_id,),
+        )
+        recent_incidents = _fetch_all(
+            conn,
+            """
+            SELECT *
+            FROM incidents
+            WHERE home_id = %s
+            ORDER BY incident_datetime DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC
+            LIMIT 20
+            """,
+            (home_id,),
+        )
+        recent_compliance = _fetch_all(
+            conn,
+            """
+            SELECT *
+            FROM compliance_items ci
+            WHERE ci.young_person_id IN (
+                SELECT yp.id
+                FROM young_people yp
+                WHERE yp.home_id = %s
+            )
+            ORDER BY ci.due_date ASC NULLS LAST, ci.updated_at DESC NULLS LAST, ci.id DESC
+            LIMIT 30
+            """,
+            (home_id,),
+        )
 
     return {
         "scope": {
             "scope_type": "global",
             "home_id": home_id,
+            "record_type": scope.get("record_type"),
+            "record_id": scope.get("record_id"),
         },
         "home_id": home_id,
         "tasks": recent_tasks,
         "manager_updates": recent_updates,
         "handover": recent_handovers,
         "chronology": recent_events,
+        "documents": recent_documents,
+        "incidents": recent_incidents,
+        "compliance_items": recent_compliance,
     }
 
 
@@ -497,8 +789,8 @@ def build_assistant_context(
     user_id: int,
     scope: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    scope = scope or {"scope_type": "global"}
-    scope_type = (scope.get("scope_type") or "global").strip().lower()
+    scope = _normalise_scope(scope)
+    scope_type = scope.get("scope_type") or "global"
 
     if scope_type == "young_person":
         young_person_id = scope.get("young_person_id")
@@ -508,6 +800,11 @@ def build_assistant_context(
             conn,
             user_id=user_id,
             young_person_id=int(young_person_id),
+            scope=scope,
         )
 
-    return build_global_context(conn, user_id=user_id)
+    return build_global_context(
+        conn,
+        user_id=user_id,
+        scope=scope,
+    )
