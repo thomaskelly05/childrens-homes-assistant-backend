@@ -46,7 +46,7 @@ const els = {
   selectorRefreshBtn: document.getElementById("selectorRefreshBtn"),
 
   workspacePanel: document.getElementById("workspacePanel"),
-  quickActions: document.getElementById("quickActions"),
+  quickActions: document.querySelector(".quick-actions"),
 
   drawer: document.getElementById("recordDrawer"),
   drawerBackdrop: document.getElementById("recordDrawerBackdrop"),
@@ -264,40 +264,6 @@ const RECORD_CONFIG = {
   },
 };
 
-function exists(el) {
-  return !!el;
-}
-
-function setText(el, value) {
-  if (!el) return;
-  el.textContent = value;
-}
-
-function setHTML(el, value) {
-  if (!el) return;
-  el.innerHTML = value;
-}
-
-function show(el) {
-  if (!el) return;
-  el.classList.remove("hidden");
-}
-
-function hide(el) {
-  if (!el) return;
-  el.classList.add("hidden");
-}
-
-function toggleHidden(el, hidden) {
-  if (!el) return;
-  el.classList.toggle("hidden", !!hidden);
-}
-
-function setDisabled(el, disabled) {
-  if (!el) return;
-  el.disabled = !!disabled;
-}
-
 function getYoungPersonId() {
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id") || params.get("young_person_id");
@@ -350,43 +316,42 @@ function initialsFromName(name) {
 }
 
 function showError(message) {
-  show(els.statusBar);
-  setText(els.statusBar, message);
+  if (!els.statusBar) return;
+  els.statusBar.classList.remove("hidden");
+  els.statusBar.textContent = message;
 }
 
 function showMessage(message) {
-  show(els.statusBar);
-  setText(els.statusBar, message);
+  if (!els.statusBar) return;
+  els.statusBar.classList.remove("hidden");
+  els.statusBar.textContent = message;
 }
 
 function clearStatus() {
-  hide(els.statusBar);
-  setText(els.statusBar, "");
+  if (!els.statusBar) return;
+  els.statusBar.classList.add("hidden");
+  els.statusBar.textContent = "";
 }
 
 function setLoading(message = "Loading...") {
-  setHTML(
-    els.content,
-    `
+  if (!els.content) return;
+  els.content.innerHTML = `
     <div class="loading-state">
       <div>
         <div class="spinner"></div>
         <p>${escapeHtml(message)}</p>
       </div>
     </div>
-  `
-  );
+  `;
 }
 
 function setEmpty(message = "No records found.") {
-  setHTML(
-    els.content,
-    `
+  if (!els.content) return;
+  els.content.innerHTML = `
     <div class="empty-state">
       <p>${escapeHtml(message)}</p>
     </div>
-  `
-  );
+  `;
 }
 
 function getCookie(name) {
@@ -534,7 +499,7 @@ function renderRecordCard(item) {
       ${renderBadges(badges)}
 
       <div class="day-record-actions">
-        <button class="ghost-btn" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>
+        <button class="ghost-btn" type="button" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>
       </div>
     </article>
   `;
@@ -601,9 +566,9 @@ function getRecordUrl(item) {
 
 function updatePageHeader() {
   const config = VIEW_CONFIG[state.currentView];
-  if (!config) return;
-  setText(els.pageTitle, config.title);
-  setText(els.pageSubtitle, config.subtitle);
+  if (!config || !els.pageTitle || !els.pageSubtitle) return;
+  els.pageTitle.textContent = config.title;
+  els.pageSubtitle.textContent = config.subtitle;
 }
 
 function updateActiveNav() {
@@ -619,40 +584,40 @@ function closeAllNavGroups(except = null) {
 }
 
 function showSelectorMode() {
-  show(els.selectorPanel);
-  hide(els.workspacePanel);
-  hide(els.refreshBtn);
-  setText(els.personName, "No young person selected");
-  setText(els.personMeta, "Choose a young person to begin");
-  setText(els.personAvatar, "YP");
+  els.selectorPanel?.classList.remove("hidden");
+  els.workspacePanel?.classList.add("hidden");
+  els.refreshBtn?.classList.add("hidden");
+  if (els.personName) els.personName.textContent = "No young person selected";
+  if (els.personMeta) els.personMeta.textContent = "Choose a young person to begin";
+  if (els.personAvatar) els.personAvatar.textContent = "YP";
   toggleAssistantLauncher();
 }
 
 function showWorkspaceMode() {
-  hide(els.selectorPanel);
-  show(els.workspacePanel);
-  show(els.refreshBtn);
+  els.selectorPanel?.classList.add("hidden");
+  els.workspacePanel?.classList.remove("hidden");
+  els.refreshBtn?.classList.remove("hidden");
   toggleAssistantLauncher();
 }
 
 function openDrawer() {
-  show(els.drawer);
-  show(els.drawerBackdrop);
-  if (els.drawer) els.drawer.setAttribute("aria-hidden", "false");
+  els.drawer?.classList.remove("hidden");
+  els.drawerBackdrop?.classList.remove("hidden");
+  els.drawer?.setAttribute("aria-hidden", "false");
 }
 
 function closeDrawer() {
-  hide(els.drawer);
-  hide(els.drawerBackdrop);
-  if (els.drawer) els.drawer.setAttribute("aria-hidden", "true");
+  els.drawer?.classList.add("hidden");
+  els.drawerBackdrop?.classList.add("hidden");
+  els.drawer?.setAttribute("aria-hidden", "true");
   state.activeRecordItem = null;
   state.activeRecordType = null;
 }
 
 function openComposer() {
   state.composerOpen = true;
-  show(els.composerPage);
-  if (els.composerPage) els.composerPage.setAttribute("aria-hidden", "false");
+  els.composerPage?.classList.remove("hidden");
+  els.composerPage?.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
 }
 
@@ -663,29 +628,30 @@ function closeComposer() {
   state.composerRecordId = null;
   state.composerEditItem = null;
 
-  hide(els.composerPage);
-  if (els.composerPage) els.composerPage.setAttribute("aria-hidden", "true");
-  setHTML(els.composerFields, "");
-  setText(els.composerAiFeedback, "No AI review run yet.");
+  els.composerPage?.classList.add("hidden");
+  els.composerPage?.setAttribute("aria-hidden", "true");
+  if (els.composerFields) els.composerFields.innerHTML = "";
+  if (els.composerAiFeedback) els.composerAiFeedback.textContent = "No AI review run yet.";
   document.body.style.overflow = "";
 }
 
 function openAssistant() {
   updateAssistantContext();
-  show(els.assistantModal);
-  show(els.assistantBackdrop);
+  els.assistantModal?.classList.remove("hidden");
+  els.assistantBackdrop?.classList.remove("hidden");
 }
 
 function closeAssistant() {
-  hide(els.assistantModal);
-  hide(els.assistantBackdrop);
+  els.assistantModal?.classList.add("hidden");
+  els.assistantBackdrop?.classList.add("hidden");
 }
 
 function toggleAssistantLauncher() {
+  if (!els.assistantLauncher) return;
   if (state.youngPersonId) {
-    show(els.assistantLauncher);
+    els.assistantLauncher.classList.remove("hidden");
   } else {
-    hide(els.assistantLauncher);
+    els.assistantLauncher.classList.add("hidden");
   }
 }
 
@@ -714,76 +680,97 @@ function renderAssistantScopeBadges() {
 
   const childText = getFullYoungPersonName();
 
-  setText(els.scopeBadge, state.youngPersonId ? "Young person assistant" : "Assistant");
+  if (els.scopeBadge) {
+    els.scopeBadge.textContent = state.youngPersonId ? "Young person assistant" : "Assistant";
+  }
 
   if (els.scopeHomeBadge) {
-    setText(els.scopeHomeBadge, homeText || "");
-    toggleHidden(els.scopeHomeBadge, !homeText);
+    if (homeText) {
+      els.scopeHomeBadge.textContent = homeText;
+      els.scopeHomeBadge.classList.remove("hidden");
+    } else {
+      els.scopeHomeBadge.textContent = "";
+      els.scopeHomeBadge.classList.add("hidden");
+    }
   }
 
   if (els.scopeChildBadge) {
-    setText(els.scopeChildBadge, childText || "");
-    toggleHidden(els.scopeChildBadge, !childText);
+    if (childText) {
+      els.scopeChildBadge.textContent = childText;
+      els.scopeChildBadge.classList.remove("hidden");
+    } else {
+      els.scopeChildBadge.textContent = "";
+      els.scopeChildBadge.classList.add("hidden");
+    }
   }
 
   if (els.scopeShiftBadge) {
-    const shift = state.currentView ? state.currentView.replaceAll("-", " ") : "";
-    setText(els.scopeShiftBadge, shift);
-    toggleHidden(els.scopeShiftBadge, !shift);
+    els.scopeShiftBadge.textContent = state.currentView ? state.currentView.replaceAll("-", " ") : "";
+    if (state.currentView) {
+      els.scopeShiftBadge.classList.remove("hidden");
+    } else {
+      els.scopeShiftBadge.classList.add("hidden");
+    }
   }
 
   if (els.modalScopeHomeBadge) {
-    setText(els.modalScopeHomeBadge, homeText || "");
-    toggleHidden(els.modalScopeHomeBadge, !homeText);
+    if (homeText) {
+      els.modalScopeHomeBadge.textContent = homeText;
+      els.modalScopeHomeBadge.classList.remove("hidden");
+    } else {
+      els.modalScopeHomeBadge.textContent = "";
+      els.modalScopeHomeBadge.classList.add("hidden");
+    }
   }
 
   if (els.modalScopeChildBadge) {
-    setText(els.modalScopeChildBadge, childText || "");
-    toggleHidden(els.modalScopeChildBadge, !childText);
+    if (childText) {
+      els.modalScopeChildBadge.textContent = childText;
+      els.modalScopeChildBadge.classList.remove("hidden");
+    } else {
+      els.modalScopeChildBadge.textContent = "";
+      els.modalScopeChildBadge.classList.add("hidden");
+    }
   }
 }
 
 function renderSelectorList(items) {
+  if (!els.selectorList) return;
+
   if (!items.length) {
-    setHTML(
-      els.selectorList,
-      `
+    els.selectorList.innerHTML = `
       <div class="empty-state">
         <p>No young people found.</p>
       </div>
-    `
-    );
+    `;
     return;
   }
 
-  setHTML(
-    els.selectorList,
-    items.map((item) => {
-      const fullName =
-        [item.first_name, item.last_name].filter(Boolean).join(" ").trim() ||
-        item.preferred_name ||
-        "Young Person";
+  els.selectorList.innerHTML = items.map((item) => {
+    const fullName =
+      [item.first_name, item.last_name].filter(Boolean).join(" ").trim() ||
+      item.preferred_name ||
+      "Young Person";
 
-      const meta = [
-        item.preferred_name ? `Preferred: ${item.preferred_name}` : null,
-        item.placement_status || null,
-        item.summary_risk_level ? `Risk: ${item.summary_risk_level}` : null,
-      ].filter(Boolean).join(" • ");
+    const meta = [
+      item.preferred_name ? `Preferred: ${item.preferred_name}` : null,
+      item.placement_status || null,
+      item.summary_risk_level ? `Risk: ${item.summary_risk_level}` : null,
+    ].filter(Boolean).join(" • ");
 
-      return `
-        <article class="selector-card">
-          <div class="selector-card-left">
-            <div class="selector-card-avatar">${escapeHtml(initialsFromName(fullName))}</div>
-            <div>
-              <h4>${escapeHtml(fullName)}</h4>
-              <p>${escapeHtml(meta || "Young person record")}</p>
-            </div>
+    return `
+      <article class="selector-card">
+        <div class="selector-card-left">
+          <div class="selector-card-avatar">${escapeHtml(initialsFromName(fullName))}</div>
+          <div>
+            <h4>${escapeHtml(fullName)}</h4>
+            <p>${escapeHtml(meta || "Young person record")}</p>
           </div>
-          <button class="primary-btn" data-open-young-person="${item.id}">Open</button>
-        </article>
-      `;
-    }).join("")
-  );
+        </div>
+        <button class="primary-btn" type="button" data-open-young-person="${item.id}">Open</button>
+      </article>
+    `;
+  }).join("");
 }
 
 function filterSelectorList() {
@@ -813,17 +800,16 @@ async function loadYoungPersonSelector() {
   clearStatus();
   showSelectorMode();
 
-  setHTML(
-    els.selectorList,
-    `
-    <div class="loading-state">
-      <div>
-        <div class="spinner"></div>
-        <p>Loading young people...</p>
+  if (els.selectorList) {
+    els.selectorList.innerHTML = `
+      <div class="loading-state">
+        <div>
+          <div class="spinner"></div>
+          <p>Loading young people...</p>
+        </div>
       </div>
-    </div>
-  `
-  );
+    `;
+  }
 
   try {
     const data = await apiGet("/young-people");
@@ -831,14 +817,13 @@ async function loadYoungPersonSelector() {
     renderSelectorList(state.selectorItems);
   } catch (error) {
     showError(error.message || "Failed to load young people.");
-    setHTML(
-      els.selectorList,
-      `
-      <div class="empty-state">
-        <p>Unable to load young people.</p>
-      </div>
-    `
-    );
+    if (els.selectorList) {
+      els.selectorList.innerHTML = `
+        <div class="empty-state">
+          <p>Unable to load young people.</p>
+        </div>
+      `;
+    }
   }
 }
 
@@ -858,9 +843,9 @@ async function loadYoungPerson() {
     youngPerson.summary_risk_level ? `Risk: ${youngPerson.summary_risk_level}` : null,
   ].filter(Boolean).join(" • ");
 
-  setText(els.personName, fullName);
-  setText(els.personMeta, meta || "Young person record");
-  setText(els.personAvatar, initialsFromName(fullName));
+  if (els.personName) els.personName.textContent = fullName;
+  if (els.personMeta) els.personMeta.textContent = meta || "Young person record";
+  if (els.personAvatar) els.personAvatar.textContent = initialsFromName(fullName);
 
   updateAssistantScopeDataset();
   updateAssistantContext();
@@ -907,9 +892,9 @@ async function loadHome() {
     compliance.length ? `${compliance.length} compliance item${compliance.length === 1 ? "" : "s"}` : "No compliance items",
   ].filter(Boolean).join(" • ");
 
-  setHTML(
-    els.content,
-    `
+  if (!els.content) return;
+
+  els.content.innerHTML = `
     <div class="grid grid-4">
       ${renderStat("Placement status", yp.placement_status || "—")}
       ${renderStat("Risk level", yp.summary_risk_level || "—")}
@@ -971,8 +956,7 @@ async function loadHome() {
         `
       )}
     </div>
-  `
-  );
+  `;
 
   bindDynamicOpenRecordButtons();
 }
@@ -982,12 +966,10 @@ async function loadTimeline() {
   const data = await apiGet(`/young-people/${state.youngPersonId}/timeline?limit=100`);
   const items = data.timeline || [];
 
-  setHTML(
-    els.content,
-    items.length
-      ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
-      : `<div class="empty-state"><p>No timeline items found.</p></div>`
-  );
+  if (!els.content) return;
+  els.content.innerHTML = items.length
+    ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
+    : `<div class="empty-state"><p>No timeline items found.</p></div>`;
 
   bindDynamicOpenRecordButtons();
 }
@@ -1003,9 +985,8 @@ async function loadHandover() {
   const recent = timelineData.timeline || [];
   const risks = riskData.items || [];
 
-  setHTML(
-    els.content,
-    `
+  if (!els.content) return;
+  els.content.innerHTML = `
     <div class="callout-grid">
       ${renderSimpleSection(
         "Recent activity",
@@ -1023,8 +1004,7 @@ async function loadHandover() {
           : `<div class="empty-state"><p>No current risks.</p></div>`
       )}
     </div>
-  `
-  );
+  `;
 
   bindDynamicOpenRecordButtons();
 }
@@ -1035,12 +1015,10 @@ async function loadRecordList(url, label) {
   const data = await apiGet(url);
   const items = data.items || data.records || data.timeline || [];
 
-  setHTML(
-    els.content,
-    items.length
-      ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
-      : `<div class="empty-state"><p>No ${escapeHtml(label.toLowerCase())} found.</p></div>`
-  );
+  if (!els.content) return;
+  els.content.innerHTML = items.length
+    ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
+    : `<div class="empty-state"><p>No ${escapeHtml(label.toLowerCase())} found.</p></div>`;
 
   bindDynamicOpenRecordButtons();
 }
@@ -1050,20 +1028,18 @@ async function loadReports() {
   const data = await apiGet(`/young-people/${state.youngPersonId}/reports`).catch(() => ({ items: [] }));
   const reports = data.items || [];
 
-  setHTML(
-    els.content,
-    reports.length
-      ? `<div class="record-list">${
-          reports.map((report) =>
-            renderRecordCard({
-              ...report,
-              record_type: "report",
-              summary: report.report_text || "Report ready.",
-            })
-          ).join("")
-        }</div>`
-      : `<div class="empty-state"><p>No reports found.</p></div>`
-  );
+  if (!els.content) return;
+  els.content.innerHTML = reports.length
+    ? `<div class="record-list">${
+        reports.map((report) =>
+          renderRecordCard({
+            ...report,
+            record_type: "report",
+            summary: report.report_text || "Report ready.",
+          })
+        ).join("")
+      }</div>`
+    : `<div class="empty-state"><p>No reports found.</p></div>`;
 
   bindDynamicOpenRecordButtons();
 }
@@ -1079,9 +1055,8 @@ async function loadProfile() {
   const health = bundle.health_profile || {};
   const legal = bundle.legal_status || {};
 
-  setHTML(
-    els.content,
-    `
+  if (!els.content) return;
+  els.content.innerHTML = `
     <div class="callout-grid">
       ${renderSimpleSection(
         "Core profile",
@@ -1123,8 +1098,7 @@ async function loadProfile() {
         `
       )}
     </div>
-  `
-  );
+  `;
 }
 
 async function loadHealth() {
@@ -1133,9 +1107,8 @@ async function loadHealth() {
   const profile = data.health_profile || {};
   const records = data.health_records || [];
 
-  setHTML(
-    els.content,
-    `
+  if (!els.content) return;
+  els.content.innerHTML = `
     ${renderSimpleSection(
       "Health profile",
       "",
@@ -1157,8 +1130,7 @@ async function loadHealth() {
         ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>`
         : `<div class="empty-state"><p>No health records.</p></div>`
     )}
-  `
-  );
+  `;
 
   bindDynamicOpenRecordButtons();
 }
@@ -1169,9 +1141,8 @@ async function loadEducation() {
   const profile = data.education_profile || {};
   const records = data.education_records || data.items || [];
 
-  setHTML(
-    els.content,
-    `
+  if (!els.content) return;
+  els.content.innerHTML = `
     ${renderSimpleSection(
       "Education profile",
       "",
@@ -1192,8 +1163,7 @@ async function loadEducation() {
         ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>`
         : `<div class="empty-state"><p>No education records.</p></div>`
     )}
-  `
-  );
+  `;
 
   bindDynamicOpenRecordButtons();
 }
@@ -1203,15 +1173,13 @@ async function loadFamily() {
   const data = await apiGet(`/young-people/${state.youngPersonId}/family`);
   const records = data.family_contact_records || data.items || [];
 
-  setHTML(
-    els.content,
-    renderSimpleSection(
-      "Family contact records",
-      "",
-      records.length
-        ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>`
-        : `<div class="empty-state"><p>No family records.</p></div>`
-    )
+  if (!els.content) return;
+  els.content.innerHTML = renderSimpleSection(
+    "Family contact records",
+    "",
+    records.length
+      ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>`
+      : `<div class="empty-state"><p>No family records.</p></div>`
   );
 
   bindDynamicOpenRecordButtons();
@@ -1222,15 +1190,13 @@ async function loadEvidence() {
   const data = await apiGet(`/young-people/${state.youngPersonId}/timeline?limit=40`).catch(() => ({ timeline: [] }));
   const items = data.timeline || [];
 
-  setHTML(
-    els.content,
-    renderSimpleSection(
-      "Inspection evidence",
-      "Recent linked records",
-      items.length
-        ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
-        : `<div class="empty-state"><p>No evidence found.</p></div>`
-    )
+  if (!els.content) return;
+  els.content.innerHTML = renderSimpleSection(
+    "Inspection evidence",
+    "Recent linked records",
+    items.length
+      ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
+      : `<div class="empty-state"><p>No evidence found.</p></div>`
   );
 
   bindDynamicOpenRecordButtons();
@@ -1241,12 +1207,10 @@ async function loadCompliance() {
   const data = await apiGet(`/young-people/${state.youngPersonId}/compliance`).catch(() => ({ items: [] }));
   const items = data.compliance_items || data.items || [];
 
-  setHTML(
-    els.content,
-    items.length
-      ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
-      : `<div class="empty-state"><p>No compliance items found.</p></div>`
-  );
+  if (!els.content) return;
+  els.content.innerHTML = items.length
+    ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
+    : `<div class="empty-state"><p>No compliance items found.</p></div>`;
 
   bindDynamicOpenRecordButtons();
 }
@@ -1262,9 +1226,8 @@ async function loadManager() {
   const compliance = complianceData.compliance_items || complianceData.items || [];
   const recent = timelineData.timeline || [];
 
-  setHTML(
-    els.content,
-    `
+  if (!els.content) return;
+  els.content.innerHTML = `
     <div class="callout-grid">
       ${renderSimpleSection(
         "Needs manager attention",
@@ -1282,8 +1245,7 @@ async function loadManager() {
           : `<div class="empty-state"><p>No recent activity.</p></div>`
       )}
     </div>
-  `
-  );
+  `;
 
   bindDynamicOpenRecordButtons();
 }
@@ -1311,7 +1273,6 @@ async function loadCurrentView() {
 
 function bindDynamicOpenRecordButtons() {
   if (!els.content) return;
-
   els.content.querySelectorAll("[data-open-record]").forEach((btn) => {
     btn.addEventListener("click", () => {
       try {
@@ -1336,31 +1297,30 @@ async function openRecordDetail(item) {
   state.activeRecordType = type;
 
   openDrawer();
-  toggleHidden(els.drawerActions, !RECORD_CONFIG[type]);
-  setText(els.drawerTitle, item.title || "Record details");
-  setText(els.drawerSubtitle, "Loading...");
-  setHTML(
-    els.drawerBody,
-    `
-    <div class="loading-state">
-      <div>
-        <div class="spinner"></div>
-        <p>Loading record details...</p>
+  els.drawerActions?.classList.toggle("hidden", !RECORD_CONFIG[type]);
+  if (els.drawerTitle) els.drawerTitle.textContent = item.title || "Record details";
+  if (els.drawerSubtitle) els.drawerSubtitle.textContent = "Loading...";
+  if (els.drawerBody) {
+    els.drawerBody.innerHTML = `
+      <div class="loading-state">
+        <div>
+          <div class="spinner"></div>
+          <p>Loading record details...</p>
+        </div>
       </div>
-    </div>
-  `
-  );
+    `;
+  }
 
   if (type === "appointment") {
-    setText(els.drawerApproveBtn, "Complete");
-    setText(els.drawerReturnBtn, "Cancel");
-    hide(els.drawerSubmitBtn);
-    hide(els.drawerArchiveBtn);
+    if (els.drawerApproveBtn) els.drawerApproveBtn.textContent = "Complete";
+    if (els.drawerReturnBtn) els.drawerReturnBtn.textContent = "Cancel";
+    els.drawerSubmitBtn?.classList.add("hidden");
+    els.drawerArchiveBtn?.classList.add("hidden");
   } else {
-    setText(els.drawerApproveBtn, "Approve");
-    setText(els.drawerReturnBtn, "Return");
-    show(els.drawerSubmitBtn);
-    show(els.drawerArchiveBtn);
+    if (els.drawerApproveBtn) els.drawerApproveBtn.textContent = "Approve";
+    if (els.drawerReturnBtn) els.drawerReturnBtn.textContent = "Return";
+    els.drawerSubmitBtn?.classList.remove("hidden");
+    els.drawerArchiveBtn?.classList.remove("hidden");
   }
 
   try {
@@ -1385,65 +1345,62 @@ async function openRecordDetail(item) {
       .filter(([key, value]) => !["id", "young_person_id"].includes(key) && value !== null && value !== "" && value !== undefined)
       .slice(0, 24);
 
-    setText(els.drawerTitle, item.title || detail.title || "Record details");
-    setText(
-      els.drawerSubtitle,
-      `${String(type).replaceAll("_", " ")} • ${formatDate(item.recorded_at || item.occurred_at || item.created_at || detail.created_at)}`
-    );
+    if (els.drawerTitle) els.drawerTitle.textContent = item.title || detail.title || "Record details";
+    if (els.drawerSubtitle) {
+      els.drawerSubtitle.textContent = `${String(type).replaceAll("_", " ")} • ${formatDate(item.recorded_at || item.occurred_at || item.created_at || detail.created_at)}`;
+    }
 
-    setHTML(
-      els.drawerBody,
-      `
-      <div class="detail-section">
-        <h4>Summary</h4>
-        <div class="detail-list">
-          <div class="detail-row">
-            <div class="detail-key">Title</div>
-            <div class="detail-value">${escapeHtml(item.title || detail.title || "—")}</div>
-          </div>
-          <div class="detail-row">
-            <div class="detail-key">Status</div>
-            <div class="detail-value">${escapeHtml(item.workflow_status || detail.workflow_status || detail.status || detail.approval_status || "—")}</div>
-          </div>
-          <div class="detail-row">
-            <div class="detail-key">Summary</div>
-            <div class="detail-value">${escapeHtml(item.summary || detail.summary || detail.description || detail.concern_summary || "—")}</div>
+    if (els.drawerBody) {
+      els.drawerBody.innerHTML = `
+        <div class="detail-section">
+          <h4>Summary</h4>
+          <div class="detail-list">
+            <div class="detail-row">
+              <div class="detail-key">Title</div>
+              <div class="detail-value">${escapeHtml(item.title || detail.title || "—")}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-key">Status</div>
+              <div class="detail-value">${escapeHtml(item.workflow_status || detail.workflow_status || detail.status || detail.approval_status || "—")}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-key">Summary</div>
+              <div class="detail-value">${escapeHtml(item.summary || detail.summary || detail.description || detail.concern_summary || "—")}</div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="detail-section">
-        <h4>Details</h4>
-        <div class="detail-list">
-          ${
-            entries.length
-              ? entries.map(([key, value]) => `
-                <div class="detail-row">
-                  <div class="detail-key">${escapeHtml(key.replaceAll("_", " "))}</div>
-                  <div class="detail-value">${escapeHtml(typeof value === "object" ? JSON.stringify(value) : String(value))}</div>
-                </div>
-              `).join("")
-              : `
-                <div class="detail-row">
-                  <div class="detail-key">Details</div>
-                  <div class="detail-value">No additional details.</div>
-                </div>
-              `
-          }
+        <div class="detail-section">
+          <h4>Details</h4>
+          <div class="detail-list">
+            ${
+              entries.length
+                ? entries.map(([key, value]) => `
+                  <div class="detail-row">
+                    <div class="detail-key">${escapeHtml(key.replaceAll("_", " "))}</div>
+                    <div class="detail-value">${escapeHtml(typeof value === "object" ? JSON.stringify(value) : String(value))}</div>
+                  </div>
+                `).join("")
+                : `
+                  <div class="detail-row">
+                    <div class="detail-key">Details</div>
+                    <div class="detail-value">No additional details.</div>
+                  </div>
+                `
+            }
+          </div>
         </div>
-      </div>
-    `
-    );
+      `;
+    }
   } catch (error) {
-    setText(els.drawerSubtitle, "Could not load");
-    setHTML(
-      els.drawerBody,
-      `
-      <div class="empty-state">
-        <p>${escapeHtml(error.message || "Failed to load record details.")}</p>
-      </div>
-    `
-    );
+    if (els.drawerSubtitle) els.drawerSubtitle.textContent = "Could not load";
+    if (els.drawerBody) {
+      els.drawerBody.innerHTML = `
+        <div class="empty-state">
+          <p>${escapeHtml(error.message || "Failed to load record details.")}</p>
+        </div>
+      `;
+    }
   }
 }
 
@@ -1764,17 +1721,16 @@ function openComposerFor(recordType, mode = "create", item = null) {
 
   const content = getComposerContent(recordType, item);
 
-  setText(els.composerTitle, content.title);
-  setText(els.composerSubtitle, content.subtitle);
-  setText(els.composerGuidanceText, content.guidance);
-  setHTML(
-    els.composerPrompts,
-    content.prompts.map((prompt) => `
+  if (els.composerTitle) els.composerTitle.textContent = content.title;
+  if (els.composerSubtitle) els.composerSubtitle.textContent = content.subtitle;
+  if (els.composerGuidanceText) els.composerGuidanceText.textContent = content.guidance;
+  if (els.composerPrompts) {
+    els.composerPrompts.innerHTML = content.prompts.map((prompt) => `
       <div class="composer-prompt">${escapeHtml(prompt)}</div>
-    `).join("")
-  );
-  setHTML(els.composerFields, renderComposerSections(content));
-  setText(els.composerAiFeedback, "No AI review run yet.");
+    `).join("");
+  }
+  if (els.composerFields) els.composerFields.innerHTML = renderComposerSections(content);
+  if (els.composerAiFeedback) els.composerAiFeedback.textContent = "No AI review run yet.";
 
   openComposer();
 }
@@ -1927,7 +1883,9 @@ function updateAssistantContext() {
   const fullName = getFullYoungPersonName();
 
   if (!state.youngPerson) {
-    setText(els.assistantContext, "No young person selected.");
+    if (els.assistantContext) {
+      els.assistantContext.textContent = "No young person selected.";
+    }
   } else {
     const text = [
       `Young person: ${fullName}`,
@@ -1936,16 +1894,17 @@ function updateAssistantContext() {
       `View: ${state.currentView.replaceAll("-", " ")}`,
     ].filter(Boolean).join(" • ");
 
-    setText(els.assistantContext, text);
+    if (els.assistantContext) {
+      els.assistantContext.textContent = text;
+    }
   }
 
   const prompts = assistantPromptsForView(state.currentView);
-  setHTML(
-    els.assistantSuggestions,
-    prompts.map((prompt) => `
+  if (els.assistantSuggestions) {
+    els.assistantSuggestions.innerHTML = prompts.map((prompt) => `
       <button class="secondary-btn" type="button" data-prompt="${escapeHtml(prompt)}">${escapeHtml(prompt)}</button>
-    `).join("")
-  );
+    `).join("");
+  }
 }
 
 function renderAssistantMessageList(host, messages) {
@@ -1971,62 +1930,51 @@ function renderAssistantMessageList(host, messages) {
 
 function renderAssistantMessages() {
   renderAssistantMessageList(els.assistantMessages, state.assistantMessages);
-
-  if (els.assistantModalMessages) {
-    renderAssistantMessageList(els.assistantModalMessages, state.assistantModalMessages);
-  } else if (els.assistantMessages) {
-    renderAssistantMessageList(els.assistantMessages, state.assistantMessages);
-  }
+  renderAssistantMessageList(els.assistantModalMessages, state.assistantModalMessages);
 }
 
-function pushAssistantMessage(role, content, streaming = false) {
-  const entry = { role, content, _streaming: streaming };
+function pushAssistantMessage(role, content) {
+  const entry = { role, content };
+  state.assistantMessages.push(entry);
+  state.assistantModalMessages.push(entry);
+  renderAssistantMessages();
+}
 
-  state.assistantMessages.push({ ...entry });
-
-  if (els.assistantModalMessages) {
-    state.assistantModalMessages.push({ ...entry });
-  } else {
-    state.assistantModalMessages = state.assistantMessages.map((x) => ({ ...x }));
-  }
-
+function addAssistantPlaceholder() {
+  state.assistantMessages.push({ role: "assistant", content: "Thinking...", _streaming: true });
+  state.assistantModalMessages.push({ role: "assistant", content: "Thinking...", _streaming: true });
   renderAssistantMessages();
 }
 
 function replaceLastAssistantPlaceholder(text) {
-  const updateList = (list) => {
-    if (!list.length) return;
-    const last = list[list.length - 1];
-    if (last.role === "assistant" && last._streaming) {
-      last.content = text;
-      last._streaming = true;
-    }
-  };
-
-  updateList(state.assistantMessages);
-  updateList(state.assistantModalMessages);
-  renderAssistantMessages();
-}
-
-function finaliseLastAssistantMessage(text) {
-  const updateList = (list) => {
+  const lists = [state.assistantMessages, state.assistantModalMessages];
+  lists.forEach((list) => {
     if (!list.length) return;
     const last = list[list.length - 1];
     if (last.role === "assistant" && last._streaming) {
       last.content = text;
       last._streaming = false;
     }
-  };
+  });
+  renderAssistantMessages();
+}
 
-  updateList(state.assistantMessages);
-  updateList(state.assistantModalMessages);
+function updateLastAssistantStreamingText(text) {
+  const lists = [state.assistantMessages, state.assistantModalMessages];
+  lists.forEach((list) => {
+    if (!list.length) return;
+    const last = list[list.length - 1];
+    if (last.role === "assistant" && last._streaming) {
+      last.content = text;
+    }
+  });
   renderAssistantMessages();
 }
 
 function setAssistantSending(flag) {
   state.assistantSending = !!flag;
-  setDisabled(els.assistantSendBtn, flag);
-  setDisabled(els.assistantModalSendBtn, flag);
+  if (els.assistantSendBtn) els.assistantSendBtn.disabled = flag;
+  if (els.assistantModalSendBtn) els.assistantModalSendBtn.disabled = flag;
 }
 
 function prettyJson(value) {
@@ -2085,11 +2033,7 @@ function inferAssistantSuggestedActions() {
     actions.push("Review outstanding tasks");
   }
 
-  if (Array.isArray(state.assistantMeta.suggested_actions)) {
-    actions.push(...state.assistantMeta.suggested_actions);
-  }
-
-  return [...new Set(actions.filter(Boolean))].slice(0, 6);
+  return [...new Set(actions)].slice(0, 6);
 }
 
 function renderAssistantInsights() {
@@ -2173,13 +2117,6 @@ function buildAssistantScopePayload() {
     scope_type: "young_person",
     young_person_id: state.youngPersonId,
     home_id: state.youngPerson?.home_id ?? null,
-    record_type: state.activeRecordType || state.composerRecordType || null,
-    record_id:
-      state.activeRecordItem?.id ||
-      state.activeRecordItem?.record_id ||
-      state.activeRecordItem?.source_id ||
-      state.composerRecordId ||
-      null,
   };
 }
 
@@ -2191,6 +2128,14 @@ function buildAssistantContextPayload() {
     summary_risk_level: state.youngPerson?.summary_risk_level || null,
     composer_record_type: state.composerRecordType || null,
   };
+}
+
+function detectAssistantResponseMode(text) {
+  return /6 month|six month|12 month|twelve month|summary|timeline|chronology|review|report/i.test(
+    String(text || "")
+  )
+    ? "deep"
+    : "balanced";
 }
 
 function parseSseChunk(buffer, onEvent) {
@@ -2222,9 +2167,8 @@ async function askAssistant(question) {
   const trimmed = String(question || "").trim();
   if (!trimmed || !state.youngPersonId || state.assistantSending) return;
 
-  pushAssistantMessage("user", trimmed, false);
-  pushAssistantMessage("assistant", "Thinking...", true);
-
+  pushAssistantMessage("user", trimmed);
+  addAssistantPlaceholder();
   setAssistantSending(true);
 
   try {
@@ -2237,9 +2181,9 @@ async function askAssistant(question) {
       }),
       body: JSON.stringify({
         message: trimmed,
-        response_mode: "balanced",
-        scope: buildAssistantScopePayload(),
+        response_mode: detectAssistantResponseMode(trimmed),
         context: buildAssistantContextPayload(),
+        scope: buildAssistantScopePayload(),
       }),
     });
 
@@ -2279,27 +2223,24 @@ async function askAssistant(question) {
               explainability: meta.explainability || {},
               assistant_scope: meta.assistant_scope || buildAssistantScopePayload(),
               assistant_context: meta.assistant_context || {},
-              suggested_actions: Array.isArray(meta.suggested_actions) ? meta.suggested_actions : [],
             };
             renderAssistantInsights();
           } catch (_) {}
           return;
         }
 
-        if (eventName === "progress") {
-          return;
-        }
+        if (eventName === "progress") return;
 
         if (eventName === "message") {
           streamedText += payload || "";
-          replaceLastAssistantPlaceholder(streamedText.trim() || "Thinking...");
+          updateLastAssistantStreamingText(streamedText.trim() || "Thinking...");
         }
       });
     }
 
-    finaliseLastAssistantMessage(streamedText.trim() || "No assistant reply returned.");
+    replaceLastAssistantPlaceholder(streamedText.trim() || "No assistant reply returned.");
   } catch (error) {
-    finaliseLastAssistantMessage(error.message || "The assistant could not answer right now.");
+    replaceLastAssistantPlaceholder(error.message || "The assistant could not answer right now.");
   } finally {
     setAssistantSending(false);
   }
@@ -2358,6 +2299,12 @@ function bindEvents() {
       const text = assistantChip.dataset.assistantChip || "";
       if (els.assistantInput) els.assistantInput.value = text;
       if (els.assistantModalInput) els.assistantModalInput.value = text;
+      return;
+    }
+
+    const suggestionBtn = event.target.closest("[data-prompt]");
+    if (suggestionBtn) {
+      askAssistant(suggestionBtn.dataset.prompt || "");
       return;
     }
 
@@ -2463,24 +2410,26 @@ function bindEvents() {
   });
 
   els.composerCheckBtn?.addEventListener("click", () => {
-    setText(els.composerAiFeedback, buildAiFeedback("clarity"));
+    if (els.composerAiFeedback) {
+      els.composerAiFeedback.textContent = buildAiFeedback("clarity");
+    }
     showMessage("Review prompts generated.");
   });
 
   els.composerGrammarBtn?.addEventListener("click", () => {
-    setText(els.composerAiFeedback, buildAiFeedback("grammar"));
+    if (els.composerAiFeedback) els.composerAiFeedback.textContent = buildAiFeedback("grammar");
   });
 
   els.composerClarityBtn?.addEventListener("click", () => {
-    setText(els.composerAiFeedback, buildAiFeedback("clarity"));
+    if (els.composerAiFeedback) els.composerAiFeedback.textContent = buildAiFeedback("clarity");
   });
 
   els.composerSafeguardingBtn?.addEventListener("click", () => {
-    setText(els.composerAiFeedback, buildAiFeedback("safeguarding"));
+    if (els.composerAiFeedback) els.composerAiFeedback.textContent = buildAiFeedback("safeguarding");
   });
 
   els.composerChildVoiceBtn?.addEventListener("click", () => {
-    setText(els.composerAiFeedback, buildAiFeedback("child_voice"));
+    if (els.composerAiFeedback) els.composerAiFeedback.textContent = buildAiFeedback("child_voice");
   });
 
   els.assistantLauncher?.addEventListener("click", openAssistant);
@@ -2492,12 +2441,6 @@ function bindEvents() {
     state.assistantMessages = [];
     state.assistantModalMessages = [];
     renderAssistantMessages();
-  });
-
-  els.assistantSuggestions?.addEventListener("click", async (event) => {
-    const btn = event.target.closest("[data-prompt]");
-    if (!btn) return;
-    await askAssistant(btn.dataset.prompt || "");
   });
 
   els.assistantForm?.addEventListener("submit", async (event) => {
