@@ -4,241 +4,453 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IndiCare OS</title>
-  <meta name="theme-color" content="#111827" />
-  <link rel="stylesheet" href="styles.css" />
+  <meta name="theme-color" content="#0b1020" />
+  <link rel="stylesheet" href="/css/young-people-shell.css" />
 </head>
 <body>
-  <div class="app" id="app">
-    <!-- SIDEBAR -->
-    <aside class="sidebar" id="sidebar">
+  <div id="app" class="app-shell">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar" aria-label="Main navigation">
       <div class="sidebar-top">
         <div class="brand">
           <div class="brand-mark">IC</div>
-          <div class="brand-text">
+          <div class="brand-copy">
             <div class="brand-title">IndiCare OS</div>
-            <div class="brand-subtitle">Workspace</div>
+            <div class="brand-subtitle">Young People Workspace</div>
           </div>
         </div>
 
-        <button class="icon-btn mobile-only" id="closeSidebarBtn" aria-label="Close menu">✕</button>
+        <button id="sidebarToggle" class="icon-btn desktop-only" type="button" aria-label="Collapse sidebar">
+          <span>☰</span>
+        </button>
       </div>
 
-      <div class="sidebar-actions">
-        <button class="primary-btn full-width" id="newChatBtn">+ New chat</button>
-      </div>
+      <div class="sidebar-body">
+        <button id="newChatBtn" class="new-chat-btn" type="button">
+          <span class="btn-icon">＋</span>
+          <span class="btn-label">New chat</span>
+        </button>
 
-      <nav class="sidebar-nav" aria-label="Main navigation">
-        <button class="nav-item active" data-view="assistant">
-          <span class="nav-icon">✦</span>
-          <span>Assistant</span>
-        </button>
-        <button class="nav-item" data-view="youngPeople">
-          <span class="nav-icon">◉</span>
-          <span>Young People</span>
-        </button>
-        <button class="nav-item" data-view="inotes">
-          <span class="nav-icon">📝</span>
-          <span>iNotes</span>
-        </button>
-        <button class="nav-item" data-view="rostering">
-          <span class="nav-icon">🗓</span>
-          <span>Rostering</span>
-        </button>
-      </nav>
+        <div class="sidebar-section">
+          <div class="sidebar-label">Workspace</div>
 
-      <div class="sidebar-section">
-        <div class="sidebar-label">Recent chats</div>
-        <div class="history-list" id="historyList">
-          <button class="history-item active">Shift handover summary</button>
-          <button class="history-item">Incident wording review</button>
-          <button class="history-item">Risk assessment support</button>
-          <button class="history-item">Daily note rewrite</button>
+          <nav class="nav-list">
+            <button class="nav-item active" type="button" data-view="assistant">
+              <span class="nav-icon">✦</span>
+              <span class="nav-text">Assistant</span>
+            </button>
+
+            <a class="nav-item nav-link" href="https://app.indicare.co.uk/young-people-shell">
+              <span class="nav-icon">◉</span>
+              <span class="nav-text">Young People</span>
+            </a>
+
+            <a class="nav-item nav-link" href="https://app.indicare.co.uk/ai-notes">
+              <span class="nav-icon">📝</span>
+              <span class="nav-text">iNotes</span>
+            </a>
+
+            <a class="nav-item nav-link" href="https://app.indicare.co.uk/rostering">
+              <span class="nav-icon">🗓</span>
+              <span class="nav-text">Rostering</span>
+            </a>
+
+            <button class="nav-item" type="button" data-view="profiles">
+              <span class="nav-icon">👤</span>
+              <span class="nav-text">Profiles</span>
+            </button>
+
+            <button class="nav-item" type="button" data-view="timeline">
+              <span class="nav-icon">⏱</span>
+              <span class="nav-text">Timeline</span>
+            </button>
+
+            <button class="nav-item" type="button" data-view="plans">
+              <span class="nav-icon">✓</span>
+              <span class="nav-text">Plans</span>
+            </button>
+
+            <button class="nav-item" type="button" data-view="documents">
+              <span class="nav-icon">📄</span>
+              <span class="nav-text">Documents</span>
+            </button>
+          </nav>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-label">Recent chats</div>
+          <div id="historyList" class="history-list"></div>
         </div>
       </div>
 
       <div class="sidebar-footer">
-        <button class="ghost-btn full-width" id="settingsBtnSidebar">Settings</button>
+        <button id="openSettingsBtn" class="sidebar-footer-btn" type="button">
+          <span>⚙</span>
+          <span class="btn-label">Settings</span>
+        </button>
       </div>
     </aside>
 
-    <!-- MAIN -->
-    <main class="main">
-      <!-- TOPBAR -->
+    <!-- Mobile overlay -->
+    <div id="mobileOverlay" class="mobile-overlay"></div>
+
+    <!-- Main -->
+    <main class="main-shell">
       <header class="topbar">
         <div class="topbar-left">
-          <button class="icon-btn mobile-only" id="openSidebarBtn" aria-label="Open menu">☰</button>
+          <button id="mobileMenuBtn" class="icon-btn mobile-only" type="button" aria-label="Open menu">
+            ☰
+          </button>
+
           <div class="page-meta">
-            <div class="page-kicker">IndiCare workspace</div>
-            <h1 class="page-title" id="pageTitle">Assistant</h1>
+            <div class="page-eyebrow">IndiCare workspace</div>
+            <h1 id="pageTitle" class="page-title">Assistant</h1>
           </div>
         </div>
 
         <div class="topbar-right">
-          <button class="ghost-btn desktop-only" id="legalBtn">Legal</button>
-          <button class="ghost-btn" id="settingsBtnTop">Settings</button>
-          <button class="avatar-btn" title="Account">IC</button>
+          <button id="focusModeBtn" class="topbar-btn" type="button">Focus mode</button>
+          <button id="openContextBtn" class="topbar-btn" type="button">Context</button>
+          <button id="openToolsBtn" class="topbar-btn" type="button">Tools</button>
+          <button id="openSettingsTopBtn" class="avatar-btn" type="button" aria-label="Open settings">
+            IC
+          </button>
         </div>
       </header>
 
-      <!-- ASSISTANT VIEW -->
-      <section class="view active" id="assistantView">
-        <div class="assistant-shell">
-          <div class="hero-state" id="heroState">
-            <div class="hero-badge">Professional residential care support</div>
-            <h2 class="hero-title">How can I help today?</h2>
-            <p class="hero-copy">
-              Draft records, rewrite notes, support planning, and get safeguarding-aware help with less clutter and a cleaner workflow.
-            </p>
+      <section class="workspace-shell">
+        <!-- Assistant View -->
+        <section id="view-assistant" class="view active">
+          <div class="assistant-layout">
+            <div class="assistant-stage">
+              <div id="emptyState" class="empty-state">
+                <div class="hero">
+                  <div class="hero-badge">Safeguarding-aware support for residential care</div>
+                  <h2 class="hero-title">How can I help with this young person today?</h2>
+                  <p class="hero-copy">
+                    Draft factual records, improve professional wording, summarise risk, support planning,
+                    and prepare clear handover notes.
+                  </p>
 
-            <div class="chip-grid">
-              <button class="prompt-chip" data-prompt="Rewrite this incident note so it is factual, neutral, and inspection-ready.">
-                Rewrite an incident note
-              </button>
-              <button class="prompt-chip" data-prompt="Write a clear shift handover for the next staff team.">
-                Create a shift handover
-              </button>
-              <button class="prompt-chip" data-prompt="Turn this situation into a structured risk assessment summary.">
-                Build a risk summary
-              </button>
-              <button class="prompt-chip" data-prompt="Summarise this document into key actions and risks.">
-                Summarise a document
-              </button>
+                  <div class="hero-chips">
+                    <button class="chip" type="button" data-prompt="Write this as a factual daily note for the young person.">
+                      Daily note
+                    </button>
+                    <button class="chip" type="button" data-prompt="Write this as a neutral and professional incident record.">
+                      Incident record
+                    </button>
+                    <button class="chip" type="button" data-prompt="Create a concise handover for the next shift.">
+                      Shift handover
+                    </button>
+                    <button class="chip" type="button" data-prompt="Create a practical risk summary with triggers, risks, and responses.">
+                      Risk summary
+                    </button>
+                  </div>
+                </div>
+
+                <div class="hero-grid">
+                  <button class="feature-card" type="button" data-prompt="Summarise this young person’s current needs, strengths, and concerns in a clear overview.">
+                    <div class="feature-icon">◉</div>
+                    <div class="feature-title">Young person overview</div>
+                    <p class="feature-copy">Produce a concise child-centred summary.</p>
+                  </button>
+
+                  <button class="feature-card" type="button" data-prompt="Rewrite this note to sound clearer, calmer, and more professional.">
+                    <div class="feature-icon">✦</div>
+                    <div class="feature-title">Professional rewrite</div>
+                    <p class="feature-copy">Improve tone, structure, and defensibility.</p>
+                  </button>
+
+                  <button class="feature-card" type="button" data-prompt="Turn this information into a support plan with clear strategies and actions for staff.">
+                    <div class="feature-icon">✓</div>
+                    <div class="feature-title">Support planning</div>
+                    <p class="feature-copy">Turn rough notes into practical care actions.</p>
+                  </button>
+
+                  <button class="feature-card" type="button" data-prompt="Extract the key chronology points from this information in date order.">
+                    <div class="feature-icon">⏱</div>
+                    <div class="feature-title">Chronology extract</div>
+                    <p class="feature-copy">Pull out the most important timeline events.</p>
+                  </button>
+                </div>
+              </div>
+
+              <div id="messages" class="messages hidden" aria-live="polite"></div>
+            </div>
+
+            <aside class="context-rail">
+              <div class="context-card">
+                <div class="context-card-head">
+                  <div>
+                    <div class="context-label">Current context</div>
+                    <div class="context-title">Young person</div>
+                  </div>
+                  <button id="editContextBtn" class="text-btn" type="button">Edit</button>
+                </div>
+
+                <div class="context-list">
+                  <div class="context-row">
+                    <span class="context-key">Name</span>
+                    <span id="contextName" class="context-value">No young person selected</span>
+                  </div>
+                  <div class="context-row">
+                    <span class="context-key">Placement</span>
+                    <span id="contextPlacement" class="context-value">—</span>
+                  </div>
+                  <div class="context-row">
+                    <span class="context-key">Shift</span>
+                    <span id="contextShift" class="context-value">—</span>
+                  </div>
+                  <div class="context-row">
+                    <span class="context-key">Worker</span>
+                    <span id="contextWorker" class="context-value">—</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="context-card">
+                <div class="context-card-head">
+                  <div>
+                    <div class="context-label">Quick links</div>
+                    <div class="context-title">Modules</div>
+                  </div>
+                </div>
+
+                <div class="link-stack">
+                  <a class="module-link" href="https://app.indicare.co.uk/young-people-shell">
+                    <span>Young People</span>
+                    <span>↗</span>
+                  </a>
+                  <a class="module-link" href="https://app.indicare.co.uk/ai-notes">
+                    <span>iNotes</span>
+                    <span>↗</span>
+                  </a>
+                  <a class="module-link" href="https://app.indicare.co.uk/rostering">
+                    <span>Rostering</span>
+                    <span>↗</span>
+                  </a>
+                </div>
+              </div>
+
+              <div class="context-card">
+                <div class="context-card-head">
+                  <div>
+                    <div class="context-label">Suggested workflows</div>
+                    <div class="context-title">Start here</div>
+                  </div>
+                </div>
+
+                <div class="mini-list">
+                  <button class="mini-item" type="button" data-prompt="Create a concise but complete end-of-shift handover for this young person.">
+                    End-of-shift handover
+                  </button>
+                  <button class="mini-item" type="button" data-prompt="Summarise the current safeguarding concerns for this young person using neutral language.">
+                    Safeguarding summary
+                  </button>
+                  <button class="mini-item" type="button" data-prompt="Write a child-centred progress update for this young person.">
+                    Progress update
+                  </button>
+                  <button class="mini-item" type="button" data-prompt="Turn these notes into clear actions for staff on the next shift.">
+                    Next shift actions
+                  </button>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <!-- Profiles -->
+        <section id="view-profiles" class="view">
+          <div class="content-panel">
+            <div class="content-head">
+              <div>
+                <div class="content-eyebrow">Young People</div>
+                <h2 class="content-title">Profiles</h2>
+                <p class="content-copy">Select or review key profile information for a young person.</p>
+              </div>
+            </div>
+
+            <div class="content-grid two">
+              <div class="surface-card">
+                <h3>Current profile</h3>
+                <div class="detail-list">
+                  <div class="detail-row"><span>Name</span><strong id="profileName">Not set</strong></div>
+                  <div class="detail-row"><span>DOB</span><strong id="profileDob">Not set</strong></div>
+                  <div class="detail-row"><span>Placement</span><strong id="profilePlacement">Not set</strong></div>
+                  <div class="detail-row"><span>School / education</span><strong id="profileEducation">Not set</strong></div>
+                  <div class="detail-row"><span>Key worker</span><strong id="profileKeyWorker">Not set</strong></div>
+                </div>
+              </div>
+
+              <div class="surface-card">
+                <h3>Working summary</h3>
+                <p class="soft-copy">
+                  Use this area for a concise snapshot of needs, strengths, risks, communication style,
+                  and what good support looks like.
+                </p>
+                <textarea id="profileSummary" class="large-textarea" placeholder="Add a concise child-centred working summary..."></textarea>
+                <div class="inline-actions">
+                  <button id="saveProfileSummaryBtn" class="primary-btn" type="button">Save summary</button>
+                </div>
+              </div>
             </div>
           </div>
+        </section>
 
-          <div class="chat-thread hidden" id="chatThread">
-            <!-- messages injected here -->
+        <!-- Timeline -->
+        <section id="view-timeline" class="view">
+          <div class="content-panel">
+            <div class="content-head">
+              <div>
+                <div class="content-eyebrow">Young People</div>
+                <h2 class="content-title">Timeline</h2>
+                <p class="content-copy">A clean, modern chronology view for key events and updates.</p>
+              </div>
+            </div>
+
+            <div class="surface-card">
+              <div class="timeline" id="timelineList">
+                <div class="timeline-item">
+                  <div class="timeline-dot"></div>
+                  <div class="timeline-body">
+                    <div class="timeline-date">No timeline items yet</div>
+                    <div class="timeline-title">Add chronology entries from your data source when ready</div>
+                    <p class="timeline-copy">This can later show incidents, meetings, education updates, family contact, health, and review activity.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
+
+        <!-- Plans -->
+        <section id="view-plans" class="view">
+          <div class="content-panel">
+            <div class="content-head">
+              <div>
+                <div class="content-eyebrow">Young People</div>
+                <h2 class="content-title">Plans</h2>
+                <p class="content-copy">Support plans, behaviour support, risk planning, and daily actions.</p>
+              </div>
+            </div>
+
+            <div class="content-grid two">
+              <div class="surface-card">
+                <h3>Plan prompts</h3>
+                <div class="mini-list">
+                  <button class="mini-item" type="button" data-prompt="Create a support plan using child-centred language and clear actions for staff.">
+                    Create support plan
+                  </button>
+                  <button class="mini-item" type="button" data-prompt="Write a behaviour support plan with triggers, presentation, and de-escalation strategies.">
+                    Behaviour support plan
+                  </button>
+                  <button class="mini-item" type="button" data-prompt="Write a risk management plan with known triggers, risks, protective factors, and staff responses.">
+                    Risk management plan
+                  </button>
+                </div>
+              </div>
+
+              <div class="surface-card">
+                <h3>Plan workspace</h3>
+                <textarea id="planWorkspace" class="large-textarea" placeholder="Draft or paste planning content here..."></textarea>
+                <div class="inline-actions">
+                  <button id="savePlanBtn" class="primary-btn" type="button">Save draft</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Documents -->
+        <section id="view-documents" class="view">
+          <div class="content-panel">
+            <div class="content-head">
+              <div>
+                <div class="content-eyebrow">Young People</div>
+                <h2 class="content-title">Documents</h2>
+                <p class="content-copy">A lighter document workspace with less noise and clearer actions.</p>
+              </div>
+            </div>
+
+            <div class="content-grid two">
+              <div class="surface-card">
+                <h3>Document actions</h3>
+                <div class="mini-list">
+                  <button class="mini-item" type="button" data-prompt="Summarise this document into a concise professional overview.">
+                    Summarise document
+                  </button>
+                  <button class="mini-item" type="button" data-prompt="Extract the key risks, actions, and review points from this document.">
+                    Extract risks and actions
+                  </button>
+                  <button class="mini-item" type="button" data-prompt="Rewrite this document content to be clearer and more professional.">
+                    Rewrite content
+                  </button>
+                </div>
+
+                <label class="upload-box" for="docUpload">
+                  <input id="docUpload" type="file" accept=".txt,.pdf,.doc,.docx" hidden />
+                  <div class="upload-icon">📎</div>
+                  <div class="upload-title">Upload a document</div>
+                  <div class="upload-copy">TXT, PDF, DOC or DOCX</div>
+                </label>
+              </div>
+
+              <div class="surface-card">
+                <h3>Document notes</h3>
+                <textarea id="documentWorkspace" class="large-textarea" placeholder="Keep extracted notes, summaries, or key points here..."></textarea>
+                <div class="inline-actions">
+                  <button id="saveDocumentBtn" class="primary-btn" type="button">Save notes</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </section>
 
-      <!-- YOUNG PEOPLE VIEW -->
-      <section class="view" id="youngPeopleView">
-        <div class="module-shell">
-          <div class="module-header">
-            <h2>Young People</h2>
-            <p>Open focused child-centred records, plans, risks, evidence, and review workflows.</p>
-          </div>
-
-          <div class="module-grid">
-            <article class="module-card">
-              <div class="module-card-icon">◉</div>
-              <h3>Young person workspace</h3>
-              <p>Launch the dedicated workspace for records, support plans, chronology, education, health, and family information.</p>
-              <a class="primary-btn inline-btn" href="/young-people-shell">Open workspace</a>
-            </article>
-
-            <article class="module-card">
-              <div class="module-card-icon">✓</div>
-              <h3>Included areas</h3>
-              <ul class="clean-list">
-                <li>Daily notes and incidents</li>
-                <li>Risk and behaviour support plans</li>
-                <li>Health, education, and family records</li>
-                <li>Review, evidence, and chronology</li>
-              </ul>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <!-- INOTES VIEW -->
-      <section class="view" id="inotesView">
-        <div class="module-shell">
-          <div class="module-header">
-            <h2>iNotes</h2>
-            <p>Daily recording, operational notes, and practical documentation in a focused space.</p>
-          </div>
-
-          <div class="module-grid">
-            <article class="module-card">
-              <div class="module-card-icon">📝</div>
-              <h3>iNotes module</h3>
-              <p>Use this route for daily entries, operational updates, and note-taking without dashboard clutter.</p>
-              <a class="primary-btn inline-btn" href="/inotes">Open iNotes</a>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <!-- ROSTERING VIEW -->
-      <section class="view" id="rosteringView">
-        <div class="module-shell">
-          <div class="module-header">
-            <h2>Rostering</h2>
-            <p>Staffing visibility, rota planning, cover awareness, and cleaner team coordination.</p>
-          </div>
-
-          <div class="module-grid">
-            <article class="module-card">
-              <div class="module-card-icon">🗓</div>
-              <h3>Rostering module</h3>
-              <p>Go straight into shift planning and rota visibility without mixing it into the assistant workspace.</p>
-              <a class="primary-btn inline-btn" href="/rostering">Open rostering</a>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <!-- COMPOSER -->
+      <!-- Composer -->
       <div class="composer-wrap">
-        <div class="attachment-pill hidden" id="attachmentPill">
+        <div id="attachmentPill" class="attachment-pill hidden">
           <span class="attachment-icon">📄</span>
-          <span class="attachment-name" id="attachmentName">document.pdf</span>
-          <button class="attachment-remove" id="removeAttachmentBtn" aria-label="Remove attachment">✕</button>
+          <span id="attachmentName" class="attachment-name"></span>
+          <button id="clearAttachmentBtn" class="attachment-remove" type="button" aria-label="Remove attachment">×</button>
         </div>
 
         <div class="composer">
           <textarea
-            id="chatInput"
+            id="messageInput"
             rows="1"
-            placeholder="Ask IndiCare to help with records, safeguarding, planning, or guidance..."
+            placeholder="Ask IndiCare to help with records, safeguarding, planning, review, or handover..."
           ></textarea>
 
           <div class="composer-bar">
             <div class="composer-left">
-              <input id="fileInput" type="file" hidden accept=".txt,.pdf,.doc,.docx" />
-              <button class="icon-btn" id="attachBtn" aria-label="Attach file">📎</button>
+              <input id="messageUpload" type="file" accept=".txt,.pdf,.doc,.docx" hidden />
+              <button id="attachBtn" class="composer-btn" type="button" aria-label="Attach document">📎</button>
 
-              <div class="tools-menu-wrap">
-                <button class="ghost-btn" id="toolsToggleBtn" type="button">Tools</button>
-                <div class="tools-menu hidden" id="toolsMenu">
-                  <label class="tool-row">
-                    <span>Assistant mode</span>
-                    <select id="assistantMode">
-                      <option value="balanced" selected>Balanced</option>
-                      <option value="quick">Quick</option>
-                      <option value="deep">Deep</option>
-                    </select>
-                  </label>
+              <div class="select-wrap">
+                <select id="assistantMode" class="composer-select">
+                  <option value="balanced">Balanced</option>
+                  <option value="quick">Quick</option>
+                  <option value="deep">Deep</option>
+                </select>
+              </div>
 
-                  <label class="tool-row">
-                    <span>Specialist</span>
-                    <select id="specialistMode">
-                      <option value="default" selected>Default</option>
-                      <option value="documentation">Documentation</option>
-                      <option value="safeguarding">Safeguarding</option>
-                      <option value="manager">Manager</option>
-                      <option value="ofsted">Ofsted</option>
-                    </select>
-                  </label>
-
-                  <label class="tool-row">
-                    <span>Language</span>
-                    <select id="languageMode">
-                      <option value="en-GB" selected>English</option>
-                      <option value="pl-PL">Polish</option>
-                      <option value="ro-RO">Romanian</option>
-                      <option value="ur-PK">Urdu</option>
-                      <option value="ar">Arabic</option>
-                    </select>
-                  </label>
-                </div>
+              <div class="select-wrap desktop-only-inline">
+                <select id="assistantPersona" class="composer-select">
+                  <option value="default">Default</option>
+                  <option value="safeguarding">Safeguarding</option>
+                  <option value="manager">Manager</option>
+                  <option value="documentation">Documentation</option>
+                  <option value="ofsted">Ofsted</option>
+                </select>
               </div>
             </div>
 
             <div class="composer-right">
-              <button class="send-btn" id="sendBtn" aria-label="Send message">Send</button>
+              <button id="clearChatBtn" class="composer-text-btn" type="button">Clear</button>
+              <button id="sendBtn" class="send-btn" type="button" aria-label="Send message">
+                <span>Send</span>
+              </button>
             </div>
           </div>
         </div>
@@ -246,68 +458,154 @@
     </main>
   </div>
 
-  <!-- SETTINGS MODAL -->
-  <div class="modal-backdrop hidden" id="settingsModal">
-    <div class="modal-card">
-      <div class="modal-head">
-        <h3>Settings</h3>
-        <button class="icon-btn" id="closeSettingsBtn" aria-label="Close settings">✕</button>
+  <!-- Context Drawer -->
+  <div id="contextDrawerOverlay" class="drawer-overlay"></div>
+  <aside id="contextDrawer" class="drawer" aria-hidden="true">
+    <div class="drawer-head">
+      <div>
+        <div class="drawer-label">Workspace context</div>
+        <div class="drawer-title">Young person context</div>
+      </div>
+      <button id="closeContextBtn" class="icon-btn" type="button" aria-label="Close context">×</button>
+    </div>
+
+    <div class="drawer-body">
+      <div class="form-group">
+        <label for="inputName">Young person name</label>
+        <input id="inputName" class="field" type="text" placeholder="Name or initials" />
       </div>
 
-      <div class="modal-body">
-        <div class="settings-grid">
-          <label class="field-group">
-            <span>Current child</span>
-            <input type="text" class="field" placeholder="Child name or initials" />
-          </label>
-
-          <label class="field-group">
-            <span>Current home</span>
-            <input type="text" class="field" placeholder="Home name" />
-          </label>
-
-          <label class="field-group">
-            <span>Current shift</span>
-            <input type="text" class="field" placeholder="Day / night / handover context" />
-          </label>
-        </div>
+      <div class="form-group">
+        <label for="inputPlacement">Placement</label>
+        <input id="inputPlacement" class="field" type="text" placeholder="Placement type or home" />
       </div>
 
-      <div class="modal-foot">
-        <button class="ghost-btn" id="closeSettingsBtn2">Close</button>
-        <button class="primary-btn">Save</button>
+      <div class="form-group">
+        <label for="inputShift">Shift</label>
+        <input id="inputShift" class="field" type="text" placeholder="Day / night / handover" />
+      </div>
+
+      <div class="form-group">
+        <label for="inputWorker">Worker</label>
+        <input id="inputWorker" class="field" type="text" placeholder="Staff member name" />
+      </div>
+
+      <div class="form-group">
+        <label for="inputDob">DOB</label>
+        <input id="inputDob" class="field" type="text" placeholder="DD/MM/YYYY" />
+      </div>
+
+      <div class="form-group">
+        <label for="inputEducation">Education</label>
+        <input id="inputEducation" class="field" type="text" placeholder="School, college, provision" />
+      </div>
+
+      <div class="form-group">
+        <label for="inputKeyWorker">Key worker</label>
+        <input id="inputKeyWorker" class="field" type="text" placeholder="Key worker name" />
+      </div>
+
+      <div class="form-actions">
+        <button id="saveContextBtn" class="primary-btn" type="button">Save context</button>
       </div>
     </div>
-  </div>
+  </aside>
 
-  <!-- LEGAL MODAL -->
-  <div class="modal-backdrop hidden" id="legalModal">
-    <div class="modal-card large">
-      <div class="modal-head">
-        <h3>Legal terms and use</h3>
-        <button class="icon-btn" id="closeLegalBtn" aria-label="Close legal">✕</button>
+  <!-- Tools Drawer -->
+  <div id="toolsDrawerOverlay" class="drawer-overlay"></div>
+  <aside id="toolsDrawer" class="drawer" aria-hidden="true">
+    <div class="drawer-head">
+      <div>
+        <div class="drawer-label">Assistant controls</div>
+        <div class="drawer-title">Tools</div>
+      </div>
+      <button id="closeToolsBtn" class="icon-btn" type="button" aria-label="Close tools">×</button>
+    </div>
+
+    <div class="drawer-body">
+      <div class="form-group">
+        <label for="mobilePersona">Assistant persona</label>
+        <select id="mobilePersona" class="field">
+          <option value="default">Default</option>
+          <option value="safeguarding">Safeguarding</option>
+          <option value="manager">Manager</option>
+          <option value="documentation">Documentation</option>
+          <option value="ofsted">Ofsted</option>
+        </select>
       </div>
 
-      <div class="modal-body">
-        <div class="legal-copy">
-          <p>
-            IndiCare supports professional practice. It does not replace professional judgement, policy, supervision, or safeguarding procedures.
-          </p>
-          <ul class="clean-list">
-            <li>Review outputs before saving or sharing.</li>
-            <li>Do not rely on the assistant alone for urgent safeguarding decisions.</li>
-            <li>Follow internal procedures, management advice, and emergency processes where required.</li>
-          </ul>
-        </div>
+      <div class="form-group">
+        <label for="mobileMode">Response mode</label>
+        <select id="mobileMode" class="field">
+          <option value="balanced">Balanced</option>
+          <option value="quick">Quick</option>
+          <option value="deep">Deep</option>
+        </select>
       </div>
 
-      <div class="modal-foot">
-        <button class="ghost-btn" id="closeLegalBtn2">Close</button>
-        <button class="primary-btn">Accept</button>
+      <div class="form-group">
+        <label class="toggle-row">
+          <span>Focus mode</span>
+          <button id="focusModeToggleBtn" class="toggle-btn" type="button">Off</button>
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label class="toggle-row">
+          <span>Privacy blur</span>
+          <button id="privacyToggleBtn" class="toggle-btn" type="button">Off</button>
+        </label>
       </div>
     </div>
-  </div>
+  </aside>
 
-  <script src="app.js"></script>
+  <!-- Settings Drawer -->
+  <div id="settingsDrawerOverlay" class="drawer-overlay"></div>
+  <aside id="settingsDrawer" class="drawer" aria-hidden="true">
+    <div class="drawer-head">
+      <div>
+        <div class="drawer-label">Preferences</div>
+        <div class="drawer-title">Settings</div>
+      </div>
+      <button id="closeSettingsBtn" class="icon-btn" type="button" aria-label="Close settings">×</button>
+    </div>
+
+    <div class="drawer-body">
+      <div class="form-group">
+        <label for="themeSelect">Theme</label>
+        <select id="themeSelect" class="field">
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="densitySelect">Density</label>
+        <select id="densitySelect" class="field">
+          <option value="comfortable">Comfortable</option>
+          <option value="compact">Compact</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="languageSelect">Language</label>
+        <select id="languageSelect" class="field">
+          <option value="en-GB">English</option>
+          <option value="pl-PL">Polish</option>
+          <option value="ro-RO">Romanian</option>
+          <option value="ur-PK">Urdu</option>
+          <option value="ar">Arabic</option>
+        </select>
+      </div>
+
+      <div class="form-actions">
+        <button id="saveSettingsBtn" class="primary-btn" type="button">Save settings</button>
+      </div>
+    </div>
+  </aside>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="/js/young-people-shell.js"></script>
 </body>
 </html>
