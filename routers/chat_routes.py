@@ -45,6 +45,18 @@ class AssistantScope(BaseModel):
     scope_type: Literal["global", "young_person"] = "global"
     home_id: int | None = None
     young_person_id: int | None = None
+    record_type: str | None = None
+    record_id: int | None = None
+
+
+class AssistantContext(BaseModel):
+    current_view: str | None = None
+    young_person_name: str | None = None
+    placement_status: str | None = None
+    summary_risk_level: str | None = None
+    composer_record_type: str | None = None
+    home_name: str | None = None
+    shift_context: str | None = None
 
 
 class ChatRequest(BaseModel):
@@ -54,6 +66,7 @@ class ChatRequest(BaseModel):
     document_name: str | None = None
     response_mode: Literal["quick", "balanced", "deep"] = "balanced"
     scope: AssistantScope | None = None
+    context: AssistantContext | None = None
 
 
 class RenameConversation(BaseModel):
@@ -66,6 +79,7 @@ class EditMessagePayload(BaseModel):
     document_name: str | None = None
     response_mode: Literal["quick", "balanced", "deep"] = "balanced"
     scope: AssistantScope | None = None
+    context: AssistantContext | None = None
 
 
 def clip(text: str | None, max_len: int):
@@ -386,6 +400,30 @@ def _normalise_explainability(value: Any) -> dict[str, Any]:
     return {k: v for k, v in value.items() if v not in (None, "", [])}
 
 
+def _normalise_scope_dict(scope: dict[str, Any] | None) -> dict[str, Any]:
+    scope = scope or {}
+    return {
+        "scope_type": str(scope.get("scope_type") or "global").strip().lower() or "global",
+        "home_id": scope.get("home_id"),
+        "young_person_id": scope.get("young_person_id"),
+        "record_type": scope.get("record_type"),
+        "record_id": scope.get("record_id"),
+    }
+
+
+def _normalise_context_dict(context: dict[str, Any] | None) -> dict[str, Any]:
+    context = context or {}
+    return {
+        "current_view": context.get("current_view"),
+        "young_person_name": context.get("young_person_name"),
+        "placement_status": context.get("placement_status"),
+        "summary_risk_level": context.get("summary_risk_level"),
+        "composer_record_type": context.get("composer_record_type"),
+        "home_name": context.get("home_name"),
+        "shift_context": context.get("shift_context"),
+    }
+
+
 @router.post("/upload")
 @limiter.limit("10/minute")
 async def upload_chat_document(
@@ -493,7 +531,8 @@ async def chat(
     conversation_id = body.conversation_id
     document_text = clip(body.document_text, MAX_DOCUMENT_CHARS)
     document_name = body.document_name
-    scope = body.scope.model_dump() if body.scope else None
+    scope = _normalise_scope_dict(body.scope.model_dump() if body.scope else None)
+    context = _normalise_context_dict(body.context.model_dump() if body.context else None)
 
     if not message:
         raise HTTPException(status_code=400, detail="Message required")
@@ -534,6 +573,7 @@ async def chat(
             message=message,
             scope=scope,
             history=history,
+            context=context,
         )
 
     except HTTPException:
@@ -547,6 +587,9 @@ async def chat(
         sources: list[dict[str, Any]] = []
         runtime: dict[str, Any] = {}
         explainability: dict[str, Any] = {}
+        assistant_scope_meta: dict[str, Any] = dict(scope)
+        assistant_context_meta: dict[str, Any] = dict(assistant_prompt_bundle.get("context") or context)
+        suggested_actions: list[str] = []
 
         try:
             generator = generate_ai_stream(
@@ -556,8 +599,10 @@ async def chat(
                 document_text=doc["document_text"] if doc else None,
                 document_name=doc["filename"] if doc else None,
                 response_mode=body.response_mode,
+                user_context=assistant_prompt_bundle.get("context") or context,
                 user_id=user_id,
                 conversation_id=conversation_id,
+                scope=scope,
             )
 
             async for item in stream_with_heartbeat(generator):
@@ -608,6 +653,16 @@ async def chat(
                         merged_explainability = _normalise_explainability(item.get("explainability"))
                         if merged_explainability:
                             explainability = merged_explainability
+
+                        if isinstance(item.get("assistant_scope"), dict):
+                            assistant_scope_meta = _normalise_scope_dict(item.get("assistant_scope"))
+
+                        if isinstance(item.get("assistant_context"), dict):
+                            assistant_context_meta = item.get("assistant_context") or assistant_context_meta
+
+                        if isinstance(item.get("suggested_actions"), list):
+                            suggested_actions = [str(x).strip() for x in item.get("suggested_actions") if str(x).strip()]
+
                         continue
 
                     logger.debug("Unhandled AI stream item type=%s", item_type)
@@ -629,6 +684,22 @@ async def chat(
                 if value not in (None, "", []):
                     final_runtime.setdefault(key, value)
 
+            if suggested_actions:
+                existing_actions = final_runtime.get("suggested_actions") or []
+                if isinstance(existing_actions, list):
+                    merged = []
+                    seen = set()
+                    for action in [*existing_actions, *suggested_actions]:
+                        normalised = str(action).strip()
+                        if not normalised:
+                            continue
+                        lowered = normalised.lower()
+                        if lowered in seen:
+                            continue
+                        seen.add(lowered)
+                        merged.append(normalised)
+                    final_runtime["suggested_actions"] = merged
+
             yield sse_event(
                 "meta",
                 {
@@ -636,8 +707,9 @@ async def chat(
                     "sources": sources,
                     "runtime": final_runtime,
                     "explainability": explainability,
-                    "assistant_scope": scope or {"scope_type": "global"},
-                    "assistant_context": assistant_prompt_bundle.get("context"),
+                    "assistant_scope": assistant_scope_meta,
+                    "assistant_context": assistant_context_meta,
+                    "suggested_actions": suggested_actions,
                 },
             )
 
@@ -681,6 +753,8 @@ def delete_conversation(conversation_id: int, conn=Depends(get_db), current_user
     ensure_owner(conn, conversation_id, current_user["user_id"])
 
     with conn.cursor() as cur:
+        cur.execute("DELETE FROM messages WHERE conversation_id = %s", (conversation_id,))
+        cur.execute("DELETE FROM conversation_documents WHERE conversation_id = %s", (conversation_id,))
         cur.execute("DELETE FROM conversations WHERE id = %s", (conversation_id,))
 
     return {"ok": True, "message": "Conversation deleted"}
@@ -697,7 +771,8 @@ async def edit_message_and_regenerate(
 ):
     user_id = current_user["user_id"]
     new_message = payload.message.strip()
-    scope = payload.scope.model_dump() if payload.scope else None
+    scope = _normalise_scope_dict(payload.scope.model_dump() if payload.scope else None)
+    context = _normalise_context_dict(payload.context.model_dump() if payload.context else None)
 
     if not new_message:
         raise HTTPException(status_code=400, detail="Message is required")
@@ -751,6 +826,7 @@ async def edit_message_and_regenerate(
             message=new_message,
             scope=scope,
             history=history,
+            context=context,
         )
 
     except HTTPException:
@@ -764,6 +840,9 @@ async def edit_message_and_regenerate(
         sources: list[dict[str, Any]] = []
         runtime: dict[str, Any] = {}
         explainability: dict[str, Any] = {}
+        assistant_scope_meta: dict[str, Any] = dict(scope)
+        assistant_context_meta: dict[str, Any] = dict(assistant_prompt_bundle.get("context") or context)
+        suggested_actions: list[str] = []
 
         try:
             generator = generate_ai_stream(
@@ -773,8 +852,10 @@ async def edit_message_and_regenerate(
                 document_text=doc["document_text"] if doc else None,
                 document_name=doc["filename"] if doc else None,
                 response_mode=payload.response_mode,
+                user_context=assistant_prompt_bundle.get("context") or context,
                 user_id=user_id,
                 conversation_id=conversation_id,
+                scope=scope,
             )
 
             async for item in stream_with_heartbeat(generator):
@@ -825,6 +906,16 @@ async def edit_message_and_regenerate(
                         merged_explainability = _normalise_explainability(item.get("explainability"))
                         if merged_explainability:
                             explainability = merged_explainability
+
+                        if isinstance(item.get("assistant_scope"), dict):
+                            assistant_scope_meta = _normalise_scope_dict(item.get("assistant_scope"))
+
+                        if isinstance(item.get("assistant_context"), dict):
+                            assistant_context_meta = item.get("assistant_context") or assistant_context_meta
+
+                        if isinstance(item.get("suggested_actions"), list):
+                            suggested_actions = [str(x).strip() for x in item.get("suggested_actions") if str(x).strip()]
+
                         continue
 
                     logger.debug("Unhandled AI regenerate item type=%s", item_type)
@@ -846,6 +937,22 @@ async def edit_message_and_regenerate(
                 if value not in (None, "", []):
                     final_runtime.setdefault(key, value)
 
+            if suggested_actions:
+                existing_actions = final_runtime.get("suggested_actions") or []
+                if isinstance(existing_actions, list):
+                    merged = []
+                    seen = set()
+                    for action in [*existing_actions, *suggested_actions]:
+                        normalised = str(action).strip()
+                        if not normalised:
+                            continue
+                        lowered = normalised.lower()
+                        if lowered in seen:
+                            continue
+                        seen.add(lowered)
+                        merged.append(normalised)
+                    final_runtime["suggested_actions"] = merged
+
             yield sse_event(
                 "meta",
                 {
@@ -853,8 +960,9 @@ async def edit_message_and_regenerate(
                     "sources": sources,
                     "runtime": final_runtime,
                     "explainability": explainability,
-                    "assistant_scope": scope or {"scope_type": "global"},
-                    "assistant_context": assistant_prompt_bundle.get("context"),
+                    "assistant_scope": assistant_scope_meta,
+                    "assistant_context": assistant_context_meta,
+                    "suggested_actions": suggested_actions,
                 },
             )
 
