@@ -89,7 +89,11 @@ code {
   flex-direction: column;
   gap: 12px;
   padding-bottom: 14px;
-  background: linear-gradient(180deg, rgba(250, 252, 255, 0.96) 0%, rgba(245, 247, 251, 0.93) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(250, 252, 255, 0.96) 0%,
+    rgba(245, 247, 251, 0.93) 100%
+  );
   backdrop-filter: blur(14px);
 }
 
@@ -520,6 +524,7 @@ code {
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 /* assistant context */
@@ -681,6 +686,8 @@ code {
   line-height: 1.5;
   white-space: pre-wrap;
   font-size: 0.95rem;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* badges */
@@ -749,6 +756,8 @@ code {
   white-space: pre-wrap;
   line-height: 1.5;
   font-size: 0.95rem;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* empty/loading */
@@ -811,6 +820,16 @@ code {
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
 }
 
+input[type="number"] {
+  appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 /* form */
 
 .form-grid {
@@ -824,6 +843,22 @@ code {
   margin-bottom: 7px;
   font-weight: 700;
   font-size: 0.93rem;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.checkbox-row input {
+  margin: 0;
 }
 
 /* buttons */
@@ -872,6 +907,15 @@ code {
   width: 42px;
   height: 42px;
   padding: 0;
+}
+
+button:disabled,
+.primary-btn:disabled,
+.secondary-btn:disabled,
+.ghost-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 /* drawer */
@@ -935,6 +979,7 @@ code {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  scrollbar-width: thin;
 }
 
 .detail-section {
@@ -1099,6 +1144,8 @@ code {
   line-height: 1.55;
   font-size: 0.94rem;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .composer-prompt-list {
@@ -1169,6 +1216,7 @@ code {
   display: grid;
   gap: 16px;
   background: var(--bg-soft);
+  scrollbar-width: thin;
 }
 
 .assistant-messages {
@@ -1208,6 +1256,8 @@ code {
 .assistant-message-body {
   white-space: pre-wrap;
   line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .assistant-form {
@@ -1245,6 +1295,8 @@ code {
   color: var(--text-soft);
   font-size: 0.87rem;
   line-height: 1.45;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .entity-actions {
@@ -1271,12 +1323,15 @@ code {
 }
 
 @media (max-width: 1200px) {
-  .grid-4,
+  .grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .callout-grid,
   .composer-layout,
   .workspace-layout,
   .assistant-modal-layout {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 
   .workspace-side {
@@ -1285,12 +1340,6 @@ code {
 }
 
 @media (max-width: 960px) {
-  .composer-layout,
-  .workspace-layout,
-  .assistant-modal-layout {
-    grid-template-columns: 1fr;
-  }
-
   .composer-grid {
     grid-template-columns: 1fr;
   }
