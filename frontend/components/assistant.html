@@ -4,819 +4,241 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IndiCare OS</title>
-  <meta name="theme-color" content="#0f172a" />
-  <link rel="stylesheet" href="/css/assistant.css" />
+  <meta name="theme-color" content="#111827" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div id="app" class="app-shell indicare-hub">
-    <aside id="sidebar" class="sidebar" aria-label="Main navigation">
-      <div class="sidebar-header">
+  <div class="app" id="app">
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-top">
         <div class="brand">
           <div class="brand-mark">IC</div>
-          <div class="brand-copy">
+          <div class="brand-text">
             <div class="brand-title">IndiCare OS</div>
-            <div class="brand-sub">Operations Hub</div>
+            <div class="brand-subtitle">Workspace</div>
           </div>
         </div>
-        <button id="sideToggle" class="icon-btn desktop-only" type="button" aria-label="Collapse menu">☰</button>
+
+        <button class="icon-btn mobile-only" id="closeSidebarBtn" aria-label="Close menu">✕</button>
       </div>
 
-      <div class="sidebar-body">
-        <div class="sidebar-actions">
-          <button id="newChat" class="primary-action" type="button">New chat</button>
+      <div class="sidebar-actions">
+        <button class="primary-btn full-width" id="newChatBtn">+ New chat</button>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Main navigation">
+        <button class="nav-item active" data-view="assistant">
+          <span class="nav-icon">✦</span>
+          <span>Assistant</span>
+        </button>
+        <button class="nav-item" data-view="youngPeople">
+          <span class="nav-icon">◉</span>
+          <span>Young People</span>
+        </button>
+        <button class="nav-item" data-view="inotes">
+          <span class="nav-icon">📝</span>
+          <span>iNotes</span>
+        </button>
+        <button class="nav-item" data-view="rostering">
+          <span class="nav-icon">🗓</span>
+          <span>Rostering</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Recent chats</div>
+        <div class="history-list" id="historyList">
+          <button class="history-item active">Shift handover summary</button>
+          <button class="history-item">Incident wording review</button>
+          <button class="history-item">Risk assessment support</button>
+          <button class="history-item">Daily note rewrite</button>
         </div>
+      </div>
 
-        <div class="search-wrap">
-          <span class="search-icon">⌕</span>
-          <input id="search" type="text" placeholder="Search conversations" />
-        </div>
-
-        <div class="sidebar-section">
-          <div class="sidebar-label">Main</div>
-          <nav class="sidebar-nav">
-            <button id="navDashboard" class="nav-item active" type="button">
-              <span class="nav-icon">⌂</span>
-              <span>Dashboard</span>
-            </button>
-
-            <button id="navAssistant" class="nav-item" type="button">
-              <span class="nav-icon">✦</span>
-              <span>Assistant</span>
-            </button>
-
-            <button id="navYoungPeople" class="nav-item" type="button">
-              <span class="nav-icon">◉</span>
-              <span>Young People</span>
-            </button>
-
-            <button id="navINotes" class="nav-item" type="button">
-              <span class="nav-icon">📝</span>
-              <span>iNotes</span>
-            </button>
-
-            <button id="navRostering" class="nav-item" type="button">
-              <span class="nav-icon">🗓</span>
-              <span>Rostering</span>
-            </button>
-
-            <button id="navLibrary" class="nav-item hidden" type="button">
-              <span class="nav-icon">☰</span>
-              <span>Library</span>
-            </button>
-
-            <button id="navManager" class="nav-item hidden" type="button">
-              <span class="nav-icon">▣</span>
-              <span>Manager</span>
-            </button>
-
-            <button id="navAdmin" class="nav-item hidden" type="button">
-              <span class="nav-icon">⚙</span>
-              <span>Admin</span>
-            </button>
-          </nav>
-        </div>
-
-        <div class="sidebar-section sidebar-history">
-          <div class="sidebar-label">Conversations</div>
-          <div id="history" class="history"></div>
-        </div>
+      <div class="sidebar-footer">
+        <button class="ghost-btn full-width" id="settingsBtnSidebar">Settings</button>
       </div>
     </aside>
 
-    <main class="main-shell">
+    <!-- MAIN -->
+    <main class="main">
+      <!-- TOPBAR -->
       <header class="topbar">
         <div class="topbar-left">
-          <button id="mobileMenu" class="icon-btn mobile-only" type="button" aria-label="Open menu">☰</button>
-          <div class="page-heading">
-            <div class="page-overline">IndiCare workspace</div>
-            <div id="title" class="page-title">Dashboard</div>
+          <button class="icon-btn mobile-only" id="openSidebarBtn" aria-label="Open menu">☰</button>
+          <div class="page-meta">
+            <div class="page-kicker">IndiCare workspace</div>
+            <h1 class="page-title" id="pageTitle">Assistant</h1>
           </div>
         </div>
 
         <div class="topbar-right">
-          <button id="openLegalHeaderBtn" class="ghost-btn" type="button">Legal</button>
-          <button id="openSettings" class="ghost-btn" type="button">Settings</button>
-          <button id="logout" class="avatar-btn" type="button" title="Log out">IC</button>
+          <button class="ghost-btn desktop-only" id="legalBtn">Legal</button>
+          <button class="ghost-btn" id="settingsBtnTop">Settings</button>
+          <button class="avatar-btn" title="Account">IC</button>
         </div>
       </header>
 
-      <!-- DASHBOARD -->
-      <section id="dashboardPanel" class="panel">
-        <div class="panel-inner panel-workspace">
-          <div class="section-head">
-            <div>
-              <div class="section-title">Operations dashboard</div>
-              <div class="section-text">Your front door into Assistant, Young People, iNotes, Rostering, compliance, and oversight.</div>
-            </div>
-            <div class="toolbar">
-              <button id="refreshDashboardBtn" class="ghost-btn" type="button">Refresh</button>
+      <!-- ASSISTANT VIEW -->
+      <section class="view active" id="assistantView">
+        <div class="assistant-shell">
+          <div class="hero-state" id="heroState">
+            <div class="hero-badge">Professional residential care support</div>
+            <h2 class="hero-title">How can I help today?</h2>
+            <p class="hero-copy">
+              Draft records, rewrite notes, support planning, and get safeguarding-aware help with less clutter and a cleaner workflow.
+            </p>
+
+            <div class="chip-grid">
+              <button class="prompt-chip" data-prompt="Rewrite this incident note so it is factual, neutral, and inspection-ready.">
+                Rewrite an incident note
+              </button>
+              <button class="prompt-chip" data-prompt="Write a clear shift handover for the next staff team.">
+                Create a shift handover
+              </button>
+              <button class="prompt-chip" data-prompt="Turn this situation into a structured risk assessment summary.">
+                Build a risk summary
+              </button>
+              <button class="prompt-chip" data-prompt="Summarise this document into key actions and risks.">
+                Summarise a document
+              </button>
             </div>
           </div>
 
-          <div class="stat-grid">
-            <div class="stat">
-              <div id="dashStatYoungPeople" class="n">0</div>
-              <div class="l">Young people</div>
-            </div>
-            <div class="stat">
-              <div id="dashStatTasks" class="n">0</div>
-              <div class="l">Open tasks</div>
-            </div>
-            <div class="stat">
-              <div id="dashStatApprovals" class="n">0</div>
-              <div class="l">Awaiting approval</div>
-            </div>
-            <div class="stat">
-              <div id="dashStatAlerts" class="n">0</div>
-              <div class="l">Alerts</div>
-            </div>
-          </div>
-
-          <div class="workspace-grid two-col">
-            <div class="surface-card">
-              <h3>Quick launch</h3>
-              <p>Move straight into the area you need.</p>
-
-              <div class="quick-grid">
-                <button id="dashboardOpenAssistant" class="quick-card" type="button">
-                  <div class="quick-card-title">Assistant</div>
-                  <p class="quick-card-text">Draft, rewrite, summarise, and get safeguarding-aware support.</p>
-                </button>
-
-                <button id="dashboardOpenYoungPeople" class="quick-card" type="button">
-                  <div class="quick-card-title">Young People</div>
-                  <p class="quick-card-text">Open a young person workspace for records, risks, plans, and handover.</p>
-                </button>
-
-                <button id="dashboardOpenINotes" class="quick-card" type="button">
-                  <div class="quick-card-title">iNotes</div>
-                  <p class="quick-card-text">Go to daily recording, incidents, and operational notes.</p>
-                </button>
-
-                <button id="dashboardOpenRostering" class="quick-card" type="button">
-                  <div class="quick-card-title">Rostering</div>
-                  <p class="quick-card-text">Open staffing, rota visibility, and shift planning.</p>
-                </button>
-              </div>
-            </div>
-
-            <div class="surface-card">
-              <h3>Today’s priorities</h3>
-              <p>Use this as your operational starting point.</p>
-              <div id="dashboardPriorities">
-                <div class="entity-row">
-                  <div>
-                    <div class="entity-title">No priorities loaded yet</div>
-                    <div class="entity-meta">This area can later show alerts, approvals, overdue items, and handover priorities.</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="workspace-grid two-col">
-            <div class="surface-card">
-              <h3>Approvals and review</h3>
-              <p>Records waiting for manager oversight and sign-off.</p>
-              <div id="dashboardApprovals">
-                <div class="entity-row">
-                  <div>
-                    <div class="entity-title">No review items loaded yet</div>
-                    <div class="entity-meta">Connect this to submitted notes, incidents, plans, and risk assessments.</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="surface-card">
-              <h3>Recent activity</h3>
-              <p>Recent chronology, handover, and system activity across the home.</p>
-              <div id="dashboardActivity">
-                <div class="entity-row">
-                  <div>
-                    <div class="entity-title">No recent activity loaded yet</div>
-                    <div class="entity-meta">Connect this to chronology, manager updates, handover, and task feeds.</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="workspace-grid two-col">
-            <div class="surface-card">
-              <h3>Compliance and documents</h3>
-              <p>Policies, reviews, due items, and evidence readiness.</p>
-              <div id="dashboardCompliance">
-                <div class="entity-row">
-                  <div>
-                    <div class="entity-title">No compliance items loaded yet</div>
-                    <div class="entity-meta">Connect this to library documents, compliance deadlines, and evidence gaps.</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="surface-card">
-              <h3>Platform map</h3>
-              <p>How the whole IndiCare workspace fits together.</p>
-              <div class="record-list">
-                <div class="entity-row">
-                  <div>
-                    <div class="entity-title">Assistant</div>
-                    <div class="entity-meta">Global drafting, guidance, rewrite, analysis, and scoped support.</div>
-                  </div>
-                </div>
-                <div class="entity-row">
-                  <div>
-                    <div class="entity-title">Young People</div>
-                    <div class="entity-meta">Child-centred workspace for records, plans, risks, health, education, family, evidence, and review.</div>
-                  </div>
-                </div>
-                <div class="entity-row">
-                  <div>
-                    <div class="entity-title">iNotes</div>
-                    <div class="entity-meta">Operational note-taking and record capture.</div>
-                  </div>
-                </div>
-                <div class="entity-row">
-                  <div>
-                    <div class="entity-title">Rostering</div>
-                    <div class="entity-meta">Shift planning, staffing visibility, and rota management.</div>
-                  </div>
-                </div>
-                <div class="entity-row">
-                  <div>
-                    <div class="entity-title">Library / Manager / Admin</div>
-                    <div class="entity-meta">Governance, oversight, users, homes, providers, documents, billing, and audit.</div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div class="chat-thread hidden" id="chatThread">
+            <!-- messages injected here -->
           </div>
         </div>
       </section>
 
-      <!-- ASSISTANT -->
-      <section id="assistantPanel" class="panel panel-assistant hidden">
-        <div class="panel-inner panel-chat">
-          <div id="empty" class="empty-state">
-            <div class="empty-card">
-              <div class="empty-eyebrow">Professional residential care support</div>
-              <h1 id="welcomeTitle" class="empty-title">Welcome back.</h1>
-              <p id="welcomeText" class="empty-text">
-                Your assistant is ready to help with records, safeguarding, risk, guidance, drafting, and review.
-              </p>
-
-              <div class="quick-grid">
-                <button class="quick-card" type="button" onclick="quick('ofsted')">
-                  <div class="quick-card-title">Inspection-ready wording</div>
-                  <p class="quick-card-text">Rewrite notes so they are clearer, safer, and more defensible.</p>
-                </button>
-
-                <button class="quick-card" type="button" onclick="quick('risk')">
-                  <div class="quick-card-title">Risk assessment</div>
-                  <p class="quick-card-text">Turn a situation into a practical structured risk summary.</p>
-                </button>
-
-                <button class="quick-card" type="button" onclick="document.getElementById('input').value='Write this as a factual incident record.'; resize();">
-                  <div class="quick-card-title">Incident recording</div>
-                  <p class="quick-card-text">Draft neutral, factual, professional incident wording.</p>
-                </button>
-
-                <button class="quick-card" type="button" onclick="document.getElementById('input').value='Write me a clear handover for the next shift.'; resize();">
-                  <div class="quick-card-title">Shift handover</div>
-                  <p class="quick-card-text">Prepare a concise and useful operational handover.</p>
-                </button>
-              </div>
-            </div>
+      <!-- YOUNG PEOPLE VIEW -->
+      <section class="view" id="youngPeopleView">
+        <div class="module-shell">
+          <div class="module-header">
+            <h2>Young People</h2>
+            <p>Open focused child-centred records, plans, risks, evidence, and review workflows.</p>
           </div>
 
-          <div id="messages" class="messages hidden"></div>
-        </div>
-      </section>
-
-      <!-- YOUNG PEOPLE HUB -->
-      <section id="youngPeoplePanel" class="panel hidden">
-        <div class="panel-inner panel-workspace">
-          <div class="section-head">
-            <div>
-              <div class="section-title">Young People</div>
-              <div class="section-text">Open the child-centred workspace for records, risk, plans, evidence, and review.</div>
-            </div>
-          </div>
-
-          <div class="workspace-grid two-col">
-            <div class="surface-card">
+          <div class="module-grid">
+            <article class="module-card">
+              <div class="module-card-icon">◉</div>
               <h3>Young person workspace</h3>
-              <p>Launch the dedicated young person shell.</p>
-              <div class="form-actions">
-                <a href="/young-people-shell" class="primary-btn">Open Young People Workspace</a>
-              </div>
-            </div>
+              <p>Launch the dedicated workspace for records, support plans, chronology, education, health, and family information.</p>
+              <a class="primary-btn inline-btn" href="/young-people-shell">Open workspace</a>
+            </article>
 
-            <div class="surface-card">
-              <h3>What this includes</h3>
-              <div class="record-list">
-                <div class="entity-row"><div><div class="entity-title">Daily notes and incidents</div></div></div>
-                <div class="entity-row"><div><div class="entity-title">Risk and support plans</div></div></div>
-                <div class="entity-row"><div><div class="entity-title">Health, education, and family</div></div></div>
-                <div class="entity-row"><div><div class="entity-title">Timeline, evidence, compliance, and manager review</div></div></div>
-              </div>
-            </div>
+            <article class="module-card">
+              <div class="module-card-icon">✓</div>
+              <h3>Included areas</h3>
+              <ul class="clean-list">
+                <li>Daily notes and incidents</li>
+                <li>Risk and behaviour support plans</li>
+                <li>Health, education, and family records</li>
+                <li>Review, evidence, and chronology</li>
+              </ul>
+            </article>
           </div>
         </div>
       </section>
 
-      <!-- INOTES HUB -->
-      <section id="iNotesPanel" class="panel hidden">
-        <div class="panel-inner panel-workspace">
-          <div class="section-head">
-            <div>
-              <div class="section-title">iNotes</div>
-              <div class="section-text">Operational recording, note capture, and daily documentation.</div>
-            </div>
+      <!-- INOTES VIEW -->
+      <section class="view" id="inotesView">
+        <div class="module-shell">
+          <div class="module-header">
+            <h2>iNotes</h2>
+            <p>Daily recording, operational notes, and practical documentation in a focused space.</p>
           </div>
 
-          <div class="surface-card">
-            <h3>iNotes module</h3>
-            <p>This is the place to link your iNotes screen into the new front door.</p>
-            <div class="entity-row">
-              <div>
-                <div class="entity-title">Next step</div>
-                <div class="entity-meta">Point this button to your iNotes route when ready.</div>
-              </div>
-            </div>
-            <div class="form-actions">
-              <a href="/inotes" class="primary-btn">Open iNotes</a>
-            </div>
+          <div class="module-grid">
+            <article class="module-card">
+              <div class="module-card-icon">📝</div>
+              <h3>iNotes module</h3>
+              <p>Use this route for daily entries, operational updates, and note-taking without dashboard clutter.</p>
+              <a class="primary-btn inline-btn" href="/inotes">Open iNotes</a>
+            </article>
           </div>
         </div>
       </section>
 
-      <!-- ROSTERING HUB -->
-      <section id="rosteringPanel" class="panel hidden">
-        <div class="panel-inner panel-workspace">
-          <div class="section-head">
-            <div>
-              <div class="section-title">Rostering</div>
-              <div class="section-text">Staffing, rota planning, and cover visibility.</div>
-            </div>
+      <!-- ROSTERING VIEW -->
+      <section class="view" id="rosteringView">
+        <div class="module-shell">
+          <div class="module-header">
+            <h2>Rostering</h2>
+            <p>Staffing visibility, rota planning, cover awareness, and cleaner team coordination.</p>
           </div>
 
-          <div class="surface-card">
-            <h3>Rostering module</h3>
-            <p>This is the place to link your rostering screen into the new front door.</p>
-            <div class="entity-row">
-              <div>
-                <div class="entity-title">Next step</div>
-                <div class="entity-meta">Point this button to your rota route when ready.</div>
-              </div>
-            </div>
-            <div class="form-actions">
-              <a href="/rostering" class="primary-btn">Open Rostering</a>
-            </div>
+          <div class="module-grid">
+            <article class="module-card">
+              <div class="module-card-icon">🗓</div>
+              <h3>Rostering module</h3>
+              <p>Go straight into shift planning and rota visibility without mixing it into the assistant workspace.</p>
+              <a class="primary-btn inline-btn" href="/rostering">Open rostering</a>
+            </article>
           </div>
         </div>
       </section>
 
-      <!-- LIBRARY -->
-      <section id="libraryPanel" class="panel hidden">
-        <div class="panel-inner panel-workspace">
-          <div class="section-head">
-            <div>
-              <div class="section-title">Policies and documents</div>
-              <div class="section-text">Read approved documents and manage them where permitted.</div>
-            </div>
-            <div class="toolbar">
-              <button id="refreshLibraryBtn" class="ghost-btn" type="button">Refresh</button>
-            </div>
-          </div>
-
-          <div class="toolbar toolbar-wrap">
-            <input id="librarySearch" class="field" type="text" placeholder="Search documents" />
-            <select id="libraryTypeFilter" class="field field-sm">
-              <option value="">All types</option>
-              <option value="policy">Policy</option>
-              <option value="procedure">Procedure</option>
-              <option value="guidance">Guidance</option>
-              <option value="template">Template</option>
-              <option value="home_document">Home document</option>
-            </select>
-            <select id="libraryApprovalFilter" class="field field-sm">
-              <option value="">All approvals</option>
-              <option value="approved">Approved</option>
-              <option value="pending">Pending</option>
-              <option value="not_required">Not required</option>
-            </select>
-          </div>
-
-          <div class="toolbar toolbar-wrap">
-            <button class="tabbtn ghost-btn active" data-library-tab="list" type="button">Library</button>
-            <button id="managerEditorTab" class="tabbtn ghost-btn hidden" data-library-tab="editor" type="button">Editor</button>
-          </div>
-
-          <div id="library-list-tab" class="workspace-grid two-col">
-            <div class="surface-card">
-              <h3>Available documents</h3>
-              <p>Open documents for reading and local practice use.</p>
-              <div id="libraryList"></div>
-            </div>
-
-            <div class="surface-card">
-              <h3>Document viewer</h3>
-              <p>Selected document content appears here.</p>
-              <div id="libraryViewer">
-                <h3>Select a document</h3>
-                <p>Open a policy or document from the list to read it here.</p>
-              </div>
-            </div>
-          </div>
-
-          <div id="library-editor-tab" class="workspace-grid two-col hidden">
-            <div class="surface-card">
-              <h3 id="libraryFormTitle">Create document</h3>
-              <p>Create or edit a library document for your home.</p>
-
-              <input id="libraryDocTitle" class="field" type="text" placeholder="Document title" />
-              <select id="libraryDocType" class="field">
-                <option value="policy">Policy</option>
-                <option value="procedure">Procedure</option>
-                <option value="guidance">Guidance</option>
-                <option value="template">Template</option>
-                <option value="home_document">Home document</option>
-              </select>
-              <input id="libraryIssueDate" class="field" type="date" />
-              <input id="libraryReviewDate" class="field" type="date" />
-              <input id="libraryExpiryDate" class="field" type="date" />
-              <select id="libraryApprovalStatus" class="field">
-                <option value="not_required">Not required</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-              </select>
-              <select id="libraryConfidentiality" class="field">
-                <option value="standard">Standard</option>
-                <option value="restricted">Restricted</option>
-                <option value="confidential">Confidential</option>
-              </select>
-              <select id="libraryOwnerId" class="field">
-                <option value="">Select owner</option>
-              </select>
-              <textarea id="libraryInputText" class="field textarea-lg" placeholder="Document content"></textarea>
-
-              <div class="form-actions">
-                <button id="saveLibraryDocBtn" class="primary-btn" type="button">Save document</button>
-                <button id="resetLibraryDocBtn" class="secondary-btn" type="button">Reset</button>
-                <button id="deleteLibraryDocBtn" class="secondary-btn hidden" type="button">Delete</button>
-              </div>
-            </div>
-
-            <div class="surface-card">
-              <h3>Editable documents</h3>
-              <p>Quick access to home documents you can manage.</p>
-              <button id="refreshManagerLibraryBtn" class="ghost-btn" type="button">Refresh</button>
-              <div id="managerLibraryList"></div>
-            </div>
-          </div>
+      <!-- COMPOSER -->
+      <div class="composer-wrap">
+        <div class="attachment-pill hidden" id="attachmentPill">
+          <span class="attachment-icon">📄</span>
+          <span class="attachment-name" id="attachmentName">document.pdf</span>
+          <button class="attachment-remove" id="removeAttachmentBtn" aria-label="Remove attachment">✕</button>
         </div>
-      </section>
 
-      <!-- MANAGER -->
-      <section id="managerPanel" class="panel hidden">
-        <div class="panel-inner panel-workspace">
-          <div class="section-head">
-            <div>
-              <div class="section-title">Manager workspace</div>
-              <div class="section-text">Home staff, documents, and quick management actions.</div>
-            </div>
-            <div class="toolbar">
-              <button id="refreshManagerBtn" class="ghost-btn" type="button">Refresh</button>
-            </div>
-          </div>
+        <div class="composer">
+          <textarea
+            id="chatInput"
+            rows="1"
+            placeholder="Ask IndiCare to help with records, safeguarding, planning, or guidance..."
+          ></textarea>
 
-          <div class="stat-grid">
-            <div class="stat"><div id="mgrStatUsers" class="n">0</div><div class="l">Users</div></div>
-            <div class="stat"><div id="mgrStatDocs" class="n">0</div><div class="l">Documents</div></div>
-            <div class="stat"><div id="mgrStatManagers" class="n">0</div><div class="l">Managers</div></div>
-            <div class="stat"><div id="mgrStatStaffOnly" class="n">0</div><div class="l">Staff</div></div>
-          </div>
+          <div class="composer-bar">
+            <div class="composer-left">
+              <input id="fileInput" type="file" hidden accept=".txt,.pdf,.doc,.docx" />
+              <button class="icon-btn" id="attachBtn" aria-label="Attach file">📎</button>
 
-          <div class="toolbar toolbar-wrap">
-            <button class="tabbtn ghost-btn active" data-manager-tab="staff" type="button">Staff</button>
-            <button class="tabbtn ghost-btn" data-manager-tab="documents" type="button">Documents</button>
-            <button class="tabbtn ghost-btn" data-manager-tab="create-staff" type="button">Create staff</button>
-            <button class="tabbtn ghost-btn" data-manager-tab="create-document" type="button">Create document</button>
-          </div>
+              <div class="tools-menu-wrap">
+                <button class="ghost-btn" id="toolsToggleBtn" type="button">Tools</button>
+                <div class="tools-menu hidden" id="toolsMenu">
+                  <label class="tool-row">
+                    <span>Assistant mode</span>
+                    <select id="assistantMode">
+                      <option value="balanced" selected>Balanced</option>
+                      <option value="quick">Quick</option>
+                      <option value="deep">Deep</option>
+                    </select>
+                  </label>
 
-          <div id="manager-staff-tab" class="manager-tab surface-card">
-            <h3>Staff</h3>
-            <p>Staff visible within your home.</p>
-            <div id="mgrUsers"></div>
-          </div>
+                  <label class="tool-row">
+                    <span>Specialist</span>
+                    <select id="specialistMode">
+                      <option value="default" selected>Default</option>
+                      <option value="documentation">Documentation</option>
+                      <option value="safeguarding">Safeguarding</option>
+                      <option value="manager">Manager</option>
+                      <option value="ofsted">Ofsted</option>
+                    </select>
+                  </label>
 
-          <div id="manager-documents-tab" class="manager-tab surface-card hidden">
-            <h3>Documents</h3>
-            <p>Documents linked to your home.</p>
-            <button id="refreshManagerDocsBtn" class="ghost-btn" type="button">Refresh</button>
-            <div id="mgrDocs"></div>
-          </div>
-
-          <div id="manager-create-staff-tab" class="manager-tab surface-card hidden">
-            <h3>Create staff user</h3>
-            <p>Add a staff member to your home.</p>
-            <input id="mgrFirst" class="field" type="text" placeholder="First name" />
-            <input id="mgrLast" class="field" type="text" placeholder="Last name" />
-            <input id="mgrEmail" class="field" type="email" placeholder="Email" />
-            <input id="mgrPass" class="field" type="password" placeholder="Temporary password" />
-            <select id="mgrRole" class="field">
-              <option value="staff">Staff</option>
-              <option value="manager">Manager</option>
-            </select>
-            <div class="form-actions">
-              <button id="createStaff" class="primary-btn" type="button">Create staff</button>
-            </div>
-          </div>
-
-          <div id="manager-create-document-tab" class="manager-tab surface-card hidden">
-            <h3>Create home document</h3>
-            <p>Add a document for your home team.</p>
-            <input id="mgrDocTitle" class="field" type="text" placeholder="Document title" />
-            <textarea id="mgrDocText" class="field textarea-lg" placeholder="Document text"></textarea>
-            <div class="form-actions">
-              <button id="saveDoc" class="primary-btn" type="button">Save document</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ADMIN -->
-      <section id="adminPanel" class="panel hidden">
-        <div class="panel-inner panel-workspace">
-          <div class="section-head">
-            <div>
-              <div class="section-title">Admin workspace</div>
-              <div class="section-text">Users, homes, providers, documents, billing, and audit.</div>
-            </div>
-          </div>
-
-          <div class="stat-grid">
-            <div class="stat"><div id="sumUsers" class="n">0</div><div class="l">Users</div></div>
-            <div class="stat"><div id="sumHomes" class="n">0</div><div class="l">Homes</div></div>
-            <div class="stat"><div id="sumProviders" class="n">0</div><div class="l">Providers</div></div>
-            <div class="stat"><div id="sumDocs" class="n">0</div><div class="l">Documents</div></div>
-          </div>
-
-          <div class="toolbar toolbar-wrap">
-            <button class="tabbtn ghost-btn active" data-tab="users" type="button">Users</button>
-            <button class="tabbtn ghost-btn" data-tab="homes" type="button">Homes</button>
-            <button class="tabbtn ghost-btn" data-tab="providers" type="button">Providers</button>
-            <button class="tabbtn ghost-btn" data-tab="documents" type="button">Documents</button>
-            <button class="tabbtn ghost-btn" data-tab="billing" type="button">Billing</button>
-            <button class="tabbtn ghost-btn" data-tab="audit" type="button">Audit</button>
-          </div>
-
-          <div id="tab-users" class="admin-tab workspace-grid two-col">
-            <div class="surface-card">
-              <h3>Create user</h3>
-              <p>Create a staff, manager, or admin account.</p>
-              <input id="adminFirstName" class="field" type="text" placeholder="First name" />
-              <input id="adminLastName" class="field" type="text" placeholder="Last name" />
-              <input id="adminEmail" class="field" type="email" placeholder="Email" />
-              <input id="adminPassword" class="field" type="password" placeholder="Password" />
-              <select id="adminRole" class="field">
-                <option value="staff">Staff</option>
-                <option value="manager">Manager</option>
-                <option value="admin">Admin</option>
-                <option value="provider_admin">Provider admin</option>
-              </select>
-              <select id="adminHomeId" class="field">
-                <option value="">Select home</option>
-              </select>
-              <button id="adminActiveToggle" class="toggle-btn active" type="button">Create as active</button>
-              <div class="form-actions">
-                <button id="createUserBtn" class="primary-btn" type="button">Create user</button>
-              </div>
-            </div>
-
-            <div class="surface-card">
-              <h3>User list</h3>
-              <p>Search and manage existing users.</p>
-
-              <div class="toolbar toolbar-wrap compact-toolbar">
-                <input id="userSearch" class="field" type="text" placeholder="Search users" />
-                <select id="userRoleFilter" class="field field-sm">
-                  <option value="">All roles</option>
-                  <option value="staff">Staff</option>
-                  <option value="manager">Manager</option>
-                  <option value="admin">Admin</option>
-                  <option value="provider_admin">Provider admin</option>
-                </select>
-                <select id="userHomeFilter" class="field field-sm">
-                  <option value="">All homes</option>
-                </select>
-                <select id="userArchivedFilter" class="field field-sm">
-                  <option value="">All statuses</option>
-                  <option value="false">Live only</option>
-                  <option value="true">Archived only</option>
-                </select>
-                <button id="refreshUsersBtn" class="ghost-btn" type="button">Refresh</button>
-              </div>
-
-              <div id="adminUsersList"></div>
-            </div>
-          </div>
-
-          <div id="tab-homes" class="admin-tab workspace-grid two-col hidden">
-            <div class="surface-card">
-              <h3>Create home</h3>
-              <p>Add a children’s home to the system.</p>
-              <input id="homeName" class="field" type="text" placeholder="Home name" />
-              <input id="homeAddress" class="field" type="text" placeholder="Address" />
-              <input id="homePostcode" class="field" type="text" placeholder="Postcode" />
-              <input id="homeRegion" class="field" type="text" placeholder="Region" />
-              <input id="homeLocalAuthority" class="field" type="text" placeholder="Local authority" />
-              <input id="homeOfstedUrn" class="field" type="text" placeholder="Ofsted URN" />
-              <select id="homeProviderId" class="field">
-                <option value="">Select provider</option>
-              </select>
-              <select id="homeRegisteredManagerId" class="field">
-                <option value="">Select manager</option>
-              </select>
-              <input id="homeGeofence" class="field" type="number" placeholder="Geofence radius (m)" />
-              <div class="form-actions">
-                <button id="createHomeBtn" class="primary-btn" type="button">Create home</button>
-              </div>
-            </div>
-
-            <div class="surface-card">
-              <h3>Homes</h3>
-              <p>Review and update homes.</p>
-              <button id="refreshHomesBtn" class="ghost-btn" type="button">Refresh</button>
-              <div id="homesList"></div>
-            </div>
-          </div>
-
-          <div id="tab-providers" class="admin-tab workspace-grid two-col hidden">
-            <div class="surface-card">
-              <h3>Create provider</h3>
-              <p>Add a provider organisation.</p>
-              <input id="providerName" class="field" type="text" placeholder="Provider name" />
-              <input id="providerRegion" class="field" type="text" placeholder="Region" />
-              <input id="providerAddress" class="field" type="text" placeholder="Address" />
-              <input id="providerPostcode" class="field" type="text" placeholder="Postcode" />
-              <input id="providerLA" class="field" type="text" placeholder="Local authority" />
-              <input id="providerLeadName" class="field" type="text" placeholder="Safeguarding lead name" />
-              <input id="providerLeadEmail" class="field" type="email" placeholder="Safeguarding lead email" />
-              <div class="form-actions">
-                <button id="createProviderBtn" class="primary-btn" type="button">Create provider</button>
-              </div>
-            </div>
-
-            <div class="surface-card">
-              <h3>Providers</h3>
-              <p>Review and update providers.</p>
-              <button id="refreshProvidersBtn" class="ghost-btn" type="button">Refresh</button>
-              <div id="providersList"></div>
-            </div>
-          </div>
-
-          <div id="tab-documents" class="admin-tab workspace-grid two-col hidden">
-            <div class="surface-card">
-              <h3>Create document record</h3>
-              <p>Create an admin-level document entry.</p>
-              <input id="docTitle" class="field" type="text" placeholder="Title" />
-              <select id="docType" class="field">
-                <option value="policy">Policy</option>
-                <option value="procedure">Procedure</option>
-                <option value="guidance">Guidance</option>
-                <option value="template">Template</option>
-                <option value="home_document">Home document</option>
-              </select>
-              <select id="docHomeId" class="field">
-                <option value="">Select home</option>
-              </select>
-              <select id="docOwnerId" class="field">
-                <option value="">Select owner</option>
-              </select>
-              <input id="docIssueDate" class="field" type="date" />
-              <input id="docReviewDate" class="field" type="date" />
-              <input id="docExpiryDate" class="field" type="date" />
-              <select id="docApprovalStatus" class="field">
-                <option value="not_required">Not required</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-              </select>
-              <select id="docConfLevel" class="field">
-                <option value="standard">Standard</option>
-                <option value="restricted">Restricted</option>
-                <option value="confidential">Confidential</option>
-              </select>
-              <textarea id="docInputText" class="field textarea-lg" placeholder="Document text"></textarea>
-              <div class="form-actions">
-                <button id="createDocBtn" class="primary-btn" type="button">Create document</button>
-              </div>
-            </div>
-
-            <div class="surface-card">
-              <h3>Documents</h3>
-              <p>Search and manage document records.</p>
-              <div class="toolbar toolbar-wrap compact-toolbar">
-                <input id="docSearch" class="field" type="text" placeholder="Search documents" />
-                <select id="docHomeFilter" class="field field-sm">
-                  <option value="">All homes</option>
-                </select>
-                <select id="docTypeFilter" class="field field-sm">
-                  <option value="">All types</option>
-                  <option value="policy">Policy</option>
-                  <option value="procedure">Procedure</option>
-                  <option value="guidance">Guidance</option>
-                  <option value="template">Template</option>
-                  <option value="home_document">Home document</option>
-                </select>
-                <select id="docApprovalFilter" class="field field-sm">
-                  <option value="">All approvals</option>
-                  <option value="approved">Approved</option>
-                  <option value="pending">Pending</option>
-                  <option value="not_required">Not required</option>
-                </select>
-                <button id="refreshDocsBtn" class="ghost-btn" type="button">Refresh</button>
-              </div>
-
-              <div id="docsList"></div>
-            </div>
-          </div>
-
-          <div id="tab-billing" class="admin-tab hidden">
-            <div class="surface-card">
-              <div class="section-head">
-                <div>
-                  <h3>Billing overview</h3>
-                  <p>Subscription and plan visibility.</p>
+                  <label class="tool-row">
+                    <span>Language</span>
+                    <select id="languageMode">
+                      <option value="en-GB" selected>English</option>
+                      <option value="pl-PL">Polish</option>
+                      <option value="ro-RO">Romanian</option>
+                      <option value="ur-PK">Urdu</option>
+                      <option value="ar">Arabic</option>
+                    </select>
+                  </label>
                 </div>
-                <button id="refreshBillingBtn" class="ghost-btn" type="button">Refresh</button>
               </div>
-              <div id="billingStats" class="stat-grid"></div>
-              <div id="billingList"></div>
             </div>
-          </div>
 
-          <div id="tab-audit" class="admin-tab hidden">
-            <div class="surface-card">
-              <div class="section-head">
-                <div>
-                  <h3>Audit log</h3>
-                  <p>Recent administrative activity.</p>
-                </div>
-                <button id="refreshAuditBtn" class="ghost-btn" type="button">Refresh</button>
-              </div>
-              <div id="auditList"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- CHAT INPUT -->
-      <div id="inputWrap" class="composer-dock hidden">
-        <div class="composer-shell">
-          <div id="doc" class="doc-pill">
-            <span>📄</span>
-            <div id="docText" class="doc-name"></div>
-            <button id="clearDoc" type="button" aria-label="Remove document">×</button>
-          </div>
-
-          <div class="composer-card">
-            <textarea id="input" placeholder="Ask IndiCare to help with records, safeguarding, planning, or guidance..."></textarea>
-
-            <div class="composer-footer">
-              <div class="composer-tools">
-                <select id="copilot" class="field field-sm compact-field">
-                  <option value="default">Default</option>
-                  <option value="documentation">Documentation</option>
-                  <option value="safeguarding">Safeguarding</option>
-                  <option value="manager">Manager</option>
-                  <option value="ofsted">Ofsted</option>
-                </select>
-
-                <select id="lang" class="field field-sm compact-field">
-                  <option value="en-GB">English</option>
-                  <option value="pl-PL">Polish</option>
-                  <option value="ro-RO">Romanian</option>
-                  <option value="ur-PK">Urdu</option>
-                  <option value="ar">Arabic</option>
-                </select>
-
-                <select id="mode" class="field field-sm compact-field">
-                  <option value="quick">Quick</option>
-                  <option value="balanced" selected>Balanced</option>
-                  <option value="deep">Deep</option>
-                </select>
-
-                <input id="upload" type="file" accept=".txt,.docx,.pdf" hidden />
-                <button class="icon-btn" type="button" onclick="document.getElementById('upload').click();" aria-label="Upload document">📎</button>
-                <button id="mic" class="icon-btn" type="button" aria-label="Use microphone">🎤</button>
-                <button id="voiceReplies" class="icon-btn" type="button" aria-label="Toggle voice replies">🔊</button>
-              </div>
-
-              <button id="send" class="send-btn" type="button" aria-label="Send">➤</button>
+            <div class="composer-right">
+              <button class="send-btn" id="sendBtn" aria-label="Send message">Send</button>
             </div>
           </div>
         </div>
@@ -824,123 +246,68 @@
     </main>
   </div>
 
-  <div id="status" class="status" role="status" aria-live="polite"></div>
-  <div id="overlay" class="overlay"></div>
-
-  <div id="settingsOverlay" class="settings-overlay"></div>
-  <aside id="settings" class="settings" aria-hidden="true">
-    <div class="settings-head">
-      <div class="settings-title">Settings</div>
-      <button id="closeSettings" class="icon-btn" type="button" aria-label="Close settings">×</button>
-    </div>
-
-    <div class="settings-body">
-      <div class="settings-group">
-        <label class="settings-label" for="voiceSelect">Voice</label>
-        <select id="voiceSelect" class="field"></select>
-        <div class="settings-help">Choose a preferred voice for spoken replies.</div>
+  <!-- SETTINGS MODAL -->
+  <div class="modal-backdrop hidden" id="settingsModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>Settings</h3>
+        <button class="icon-btn" id="closeSettingsBtn" aria-label="Close settings">✕</button>
       </div>
 
-      <div class="settings-group">
-        <label class="settings-label">Quick preferences</label>
-        <div class="settings-stack">
-          <button id="theme" class="toggle-btn" type="button">Dark mode</button>
-          <button id="privacy" class="toggle-btn" type="button">Privacy blur</button>
-          <button id="stopVoiceBtn" class="toggle-btn" type="button">Stop voice</button>
-          <button id="openLegalFromSettings" class="toggle-btn" type="button">Open legal terms</button>
+      <div class="modal-body">
+        <div class="settings-grid">
+          <label class="field-group">
+            <span>Current child</span>
+            <input type="text" class="field" placeholder="Child name or initials" />
+          </label>
+
+          <label class="field-group">
+            <span>Current home</span>
+            <input type="text" class="field" placeholder="Home name" />
+          </label>
+
+          <label class="field-group">
+            <span>Current shift</span>
+            <input type="text" class="field" placeholder="Day / night / handover context" />
+          </label>
         </div>
-        <div id="langHelp" class="settings-help">Assistant replies in English.</div>
-        <div id="modeHelp" class="settings-help">Mode: Balanced</div>
       </div>
 
-      <hr class="soft" />
-
-      <div class="settings-group">
-        <label class="settings-label" for="contextChild">Current child</label>
-        <input id="contextChild" class="field" type="text" placeholder="Child name or initials" />
-      </div>
-
-      <div class="settings-group">
-        <label class="settings-label" for="contextHome">Current home</label>
-        <input id="contextHome" class="field" type="text" placeholder="Home name" />
-      </div>
-
-      <div class="settings-group">
-        <label class="settings-label" for="contextShift">Current shift</label>
-        <input id="contextShift" class="field" type="text" placeholder="Day / night / weekend / handover context" />
-      </div>
-
-      <div class="settings-group">
-        <button id="saveContextBtn" class="primary-btn" type="button">Save context</button>
+      <div class="modal-foot">
+        <button class="ghost-btn" id="closeSettingsBtn2">Close</button>
+        <button class="primary-btn">Save</button>
       </div>
     </div>
-  </aside>
+  </div>
 
-  <div id="legalOverlay" class="legal-overlay"></div>
-  <div id="legalModal" class="legal-modal" aria-hidden="true">
-    <div class="legal-head">
-      <div class="legal-title">Legal terms and use</div>
-      <button id="closeLegalModal" class="icon-btn" type="button" aria-label="Close legal modal">×</button>
-    </div>
+  <!-- LEGAL MODAL -->
+  <div class="modal-backdrop hidden" id="legalModal">
+    <div class="modal-card large">
+      <div class="modal-head">
+        <h3>Legal terms and use</h3>
+        <button class="icon-btn" id="closeLegalBtn" aria-label="Close legal">✕</button>
+      </div>
 
-    <div class="legal-tabs">
-      <button class="legal-tab active" data-legal-tab="terms" type="button">Terms</button>
-      <button class="legal-tab" data-legal-tab="privacy" type="button">Privacy</button>
-      <button class="legal-tab" data-legal-tab="ip" type="button">IP</button>
-      <button class="legal-tab" data-legal-tab="acceptance" type="button">Acceptance</button>
-    </div>
-
-    <div class="legal-body">
-      <div class="legal-panel" data-legal-panel="terms">
+      <div class="modal-body">
         <div class="legal-copy">
-          <h3>Terms of use</h3>
-          <p>IndiCare supports professional practice. It does not replace professional judgement, policy, supervision, or safeguarding procedures.</p>
-          <ul>
-            <li>Use outputs responsibly and review before saving or sharing.</li>
-            <li>Do not rely on the assistant as the sole basis for urgent safeguarding decisions.</li>
-            <li>Follow local procedures, management advice, and emergency routes where required.</li>
+          <p>
+            IndiCare supports professional practice. It does not replace professional judgement, policy, supervision, or safeguarding procedures.
+          </p>
+          <ul class="clean-list">
+            <li>Review outputs before saving or sharing.</li>
+            <li>Do not rely on the assistant alone for urgent safeguarding decisions.</li>
+            <li>Follow internal procedures, management advice, and emergency processes where required.</li>
           </ul>
         </div>
       </div>
 
-      <div class="legal-panel hidden" data-legal-panel="privacy">
-        <div class="legal-copy">
-          <h3>Privacy</h3>
-          <p>Use only information that is necessary and proportionate for the task. Avoid excessive personal data. Handle records in line with organisational policy, data protection requirements, and ICO principles.</p>
-        </div>
+      <div class="modal-foot">
+        <button class="ghost-btn" id="closeLegalBtn2">Close</button>
+        <button class="primary-btn">Accept</button>
       </div>
-
-      <div class="legal-panel hidden" data-legal-panel="ip">
-        <div class="legal-copy">
-          <h3>Intellectual property</h3>
-          <p>IndiCare OS, its workflows, structure, prompts, branding, and interface remain protected. Internal copying, reuse, or adaptation should follow the permissions set by the owner of the platform.</p>
-        </div>
-      </div>
-
-      <div class="legal-panel hidden" data-legal-panel="acceptance">
-        <div class="acceptance-box">
-          <div class="check-row">
-            <input id="acceptTermsCheck" type="checkbox" />
-            <label for="acceptTermsCheck">I have read and accept the terms of use.</label>
-          </div>
-          <div class="check-row">
-            <input id="acceptPrivacyCheck" type="checkbox" />
-            <label for="acceptPrivacyCheck">I understand the privacy and data handling expectations.</label>
-          </div>
-          <div class="check-row">
-            <input id="acceptIPCheck" type="checkbox" />
-            <label for="acceptIPCheck">I understand the platform and content protections.</label>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="legal-actions">
-      <button id="declineLegalBtn" class="secondary-btn" type="button">Decline</button>
-      <button id="acceptLegalBtn" class="primary-btn" type="button">Accept and continue</button>
     </div>
   </div>
 
-  <script src="/js/assistant.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
