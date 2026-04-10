@@ -8,6 +8,61 @@
   <link rel="stylesheet" href="/css/assistant.css" />
 </head>
 <body>
+  <!-- Icon sprite -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none;">
+    <symbol id="i-menu" viewBox="0 0 24 24">
+      <path d="M4 6h16M4 12h16M4 18h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24">
+      <path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3zm6 10l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8.8-1.9zM6 14l1.1 2.6L10 17.7l-2.9 1.1L6 21.4l-1.1-2.6L2 17.7l2.9-1.1L6 14z" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-users" viewBox="0 0 24 24">
+      <path d="M16 21v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V21M9.5 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zm8.5 10v-1a3.5 3.5 0 0 0-2.6-3.4M15 4.2a3.5 3.5 0 0 1 0 6.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-library" viewBox="0 0 24 24">
+      <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4H20v15.5A2.5 2.5 0 0 0 17.5 17H4V6.5zm0 0V17m0 0v1a2 2 0 0 0 2 2h11.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-briefcase" viewBox="0 0 24 24">
+      <path d="M9 6V4.8A1.8 1.8 0 0 1 10.8 3h2.4A1.8 1.8 0 0 1 15 4.8V6m-6 0h6m-11 4h16v8.2A1.8 1.8 0 0 1 18.2 20H5.8A1.8 1.8 0 0 1 4 18.2V10zm0 0V7.8A1.8 1.8 0 0 1 5.8 6h12.4A1.8 1.8 0 0 1 20 7.8V10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24">
+      <path d="M12 15.2A3.2 3.2 0 1 0 12 8.8a3.2 3.2 0 0 0 0 6.4zm8-3.2l-1.7-.6a6.7 6.7 0 0 0-.5-1.3l.8-1.6-1.8-1.8-1.6.8a6.7 6.7 0 0 0-1.3-.5L13 3h-2l-.6 1.7a6.7 6.7 0 0 0-1.3.5l-1.6-.8-1.8 1.8.8 1.6c-.2.4-.4.9-.5 1.3L3 11v2l1.7.6c.1.5.3.9.5 1.3l-.8 1.6 1.8 1.8 1.6-.8c.4.2.9.4 1.3.5L11 21h2l.6-1.7c.5-.1.9-.3 1.3-.5l1.6.8 1.8-1.8-.8-1.6c.2-.4.4-.8.5-1.3L20 13v-2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-search" viewBox="0 0 24 24">
+      <path d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-legal" viewBox="0 0 24 24">
+      <path d="M12 3l7 4v5c0 4.2-2.7 7.7-7 9-4.3-1.3-7-4.8-7-9V7l7-4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-paperclip" viewBox="0 0 24 24">
+      <path d="M21 11.5l-8.8 8.8a5 5 0 0 1-7.1-7.1l9.6-9.6a3.5 3.5 0 1 1 5 5l-10 10a2 2 0 1 1-2.8-2.8l8.7-8.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24">
+      <path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-4a3.5 3.5 0 1 0-7 0v4A3.5 3.5 0 0 0 12 15zm0 0v4m-4-4a4 4 0 0 0 8 0M8 21h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-volume" viewBox="0 0 24 24">
+      <path d="M5 9h4l5-4v14l-5-4H5V9zm12.5-1.5a6 6 0 0 1 0 9m-2.3-6.7a3 3 0 0 1 0 4.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-send" viewBox="0 0 24 24">
+      <path d="M21 3L10 14M21 3l-7 18-4-7-7-4 18-7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-close" viewBox="0 0 24 24">
+      <path d="M18 6L6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24">
+      <path d="M9 9h10v12H9zM5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24">
+      <path d="M4 7h16M9 7V4h6v3m-8 0l1 13h8l1-13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24">
+      <path d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.7 5.7l1.4 1.4M4.9 4.9l1.4 1.4m11.4-1.4l-1.4 1.4M6.3 17.7l-1.4 1.4M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24">
+      <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+  </svg>
+
   <div id="app" class="app-shell">
     <aside id="sidebar" class="sidebar" aria-label="Sidebar">
       <div class="sidebar-header">
@@ -18,7 +73,10 @@
             <div class="brand-sub">Assistant</div>
           </div>
         </div>
-        <button id="sideToggle" class="icon-btn desktop-only" type="button" aria-label="Collapse menu">☰</button>
+
+        <button id="sideToggle" class="icon-btn desktop-only" type="button" aria-label="Collapse menu">
+          <svg class="ui-icon"><use href="#i-menu"></use></svg>
+        </button>
       </div>
 
       <div class="sidebar-body">
@@ -27,7 +85,9 @@
         </div>
 
         <div class="search-wrap">
-          <span class="search-icon">⌕</span>
+          <span class="search-icon">
+            <svg class="ui-icon"><use href="#i-search"></use></svg>
+          </span>
           <input id="search" type="text" placeholder="Search conversations" />
         </div>
 
@@ -35,27 +95,37 @@
           <div class="sidebar-label">Workspace</div>
           <nav class="sidebar-nav">
             <button id="navAssistant" class="nav-item active" type="button">
-              <span class="nav-icon">✦</span>
+              <span class="nav-icon">
+                <svg class="ui-icon"><use href="#i-sparkles"></use></svg>
+              </span>
               <span>Assistant</span>
             </button>
 
             <button id="navYoungPeople" class="nav-item" type="button">
-              <span class="nav-icon">◫</span>
+              <span class="nav-icon">
+                <svg class="ui-icon"><use href="#i-users"></use></svg>
+              </span>
               <span>Young people</span>
             </button>
 
             <button id="navLibrary" class="nav-item hidden" type="button">
-              <span class="nav-icon">☰</span>
+              <span class="nav-icon">
+                <svg class="ui-icon"><use href="#i-library"></use></svg>
+              </span>
               <span>Library</span>
             </button>
 
             <button id="navManager" class="nav-item hidden" type="button">
-              <span class="nav-icon">▣</span>
+              <span class="nav-icon">
+                <svg class="ui-icon"><use href="#i-briefcase"></use></svg>
+              </span>
               <span>Manager</span>
             </button>
 
             <button id="navAdmin" class="nav-item hidden" type="button">
-              <span class="nav-icon">⚙</span>
+              <span class="nav-icon">
+                <svg class="ui-icon"><use href="#i-settings"></use></svg>
+              </span>
               <span>Admin</span>
             </button>
           </nav>
@@ -71,7 +141,10 @@
     <main class="main-shell">
       <header class="topbar">
         <div class="topbar-left">
-          <button id="mobileMenu" class="icon-btn mobile-only" type="button" aria-label="Open menu">☰</button>
+          <button id="mobileMenu" class="icon-btn mobile-only" type="button" aria-label="Open menu">
+            <svg class="ui-icon"><use href="#i-menu"></use></svg>
+          </button>
+
           <div class="page-heading">
             <div class="page-overline">IndiCare workspace</div>
             <div id="title" class="page-title">Assistant</div>
@@ -79,8 +152,16 @@
         </div>
 
         <div class="topbar-right">
-          <button id="openLegalHeaderBtn" class="ghost-btn" type="button">Legal</button>
-          <button id="openSettings" class="ghost-btn" type="button">Settings</button>
+          <button id="openLegalHeaderBtn" class="ghost-btn topbar-btn" type="button">
+            <svg class="ui-icon"><use href="#i-legal"></use></svg>
+            <span>Legal</span>
+          </button>
+
+          <button id="openSettings" class="ghost-btn topbar-btn" type="button">
+            <svg class="ui-icon"><use href="#i-settings"></use></svg>
+            <span>Settings</span>
+          </button>
+
           <button id="logout" class="avatar-btn" type="button" title="Log out">IC</button>
         </div>
       </header>
@@ -98,7 +179,7 @@
               </p>
 
               <div class="assistant-trust-row">
-                <div class="assistant-trust-pill">Clear drafting support</div>
+                <div id="themeAwarePill" class="assistant-trust-pill">Ready for your workspace</div>
                 <div class="assistant-trust-pill">Document-aware responses</div>
                 <div class="assistant-trust-pill">Built for everyday practice</div>
               </div>
@@ -141,7 +222,9 @@
 
             <div class="toolbar">
               <input id="libraryUpload" type="file" accept=".pdf,.doc,.docx,.txt" hidden />
-              <button id="libraryUploadBtn" class="primary-btn hidden" type="button">Upload document</button>
+              <button id="libraryUploadBtn" class="primary-btn hidden" type="button">
+                Upload document
+              </button>
               <button id="refreshLibraryBtn" class="ghost-btn" type="button">Refresh</button>
             </div>
           </div>
@@ -529,9 +612,13 @@
       <div id="inputWrap" class="composer-dock">
         <div class="composer-shell">
           <div id="doc" class="doc-pill">
-            <span>📄</span>
+            <span class="doc-pill-icon">
+              <svg class="ui-icon"><use href="#i-library"></use></svg>
+            </span>
             <div id="docText" class="doc-name"></div>
-            <button id="clearDoc" type="button" aria-label="Remove document">×</button>
+            <button id="clearDoc" type="button" aria-label="Remove document">
+              <svg class="ui-icon"><use href="#i-close"></use></svg>
+            </button>
           </div>
 
           <div class="composer-card modern-composer">
@@ -556,18 +643,29 @@
                 </select>
 
                 <select id="mode" class="field field-sm compact-field">
-                  <option value="quick">Quick</option>
+                  <option value="quick">Fast</option>
                   <option value="balanced" selected>Balanced</option>
-                  <option value="deep">Deep</option>
+                  <option value="deep">Detailed</option>
                 </select>
 
                 <input id="upload" type="file" accept=".txt,.doc,.docx,.pdf" hidden />
-                <button id="chatUploadBtn" class="icon-btn" type="button" aria-label="Upload document">＋</button>
-                <button id="mic" class="icon-btn" type="button" aria-label="Use microphone">🎤</button>
-                <button id="voiceReplies" class="icon-btn" type="button" aria-label="Toggle voice replies">🔊</button>
+
+                <button id="chatUploadBtn" class="icon-btn" type="button" aria-label="Attach document">
+                  <svg class="ui-icon"><use href="#i-paperclip"></use></svg>
+                </button>
+
+                <button id="mic" class="icon-btn" type="button" aria-label="Use microphone">
+                  <svg class="ui-icon"><use href="#i-mic"></use></svg>
+                </button>
+
+                <button id="voiceReplies" class="icon-btn" type="button" aria-label="Toggle voice replies">
+                  <svg class="ui-icon"><use href="#i-volume"></use></svg>
+                </button>
               </div>
 
-              <button id="send" class="send-btn" type="button" aria-label="Send">↑</button>
+              <button id="send" class="send-btn" type="button" aria-label="Send">
+                <svg class="ui-icon"><use href="#i-send"></use></svg>
+              </button>
             </div>
           </div>
         </div>
@@ -582,7 +680,9 @@
   <aside id="settings" class="settings" aria-hidden="true">
     <div class="settings-head">
       <div class="settings-title">Settings</div>
-      <button id="closeSettings" class="icon-btn" type="button" aria-label="Close settings">×</button>
+      <button id="closeSettings" class="icon-btn" type="button" aria-label="Close settings">
+        <svg class="ui-icon"><use href="#i-close"></use></svg>
+      </button>
     </div>
 
     <div class="settings-body">
@@ -595,7 +695,16 @@
       <div class="settings-group">
         <label class="settings-label">Quick preferences</label>
         <div class="settings-stack">
-          <button id="theme" class="toggle-btn" type="button">Dark mode</button>
+          <button id="theme" class="toggle-btn with-icon" type="button">
+            <span class="toggle-icon theme-icon-sun">
+              <svg class="ui-icon"><use href="#i-sun"></use></svg>
+            </span>
+            <span class="toggle-icon theme-icon-moon">
+              <svg class="ui-icon"><use href="#i-moon"></use></svg>
+            </span>
+            <span id="themeLabel">Theme</span>
+          </button>
+
           <button id="privacy" class="toggle-btn" type="button">Privacy blur</button>
           <button id="stopVoiceBtn" class="toggle-btn" type="button">Stop voice</button>
           <button id="openLegalFromSettings" class="toggle-btn" type="button">Open legal terms</button>
@@ -631,7 +740,9 @@
   <div id="legalModal" class="legal-modal" aria-hidden="true">
     <div class="legal-head">
       <div class="legal-title">Legal terms and use</div>
-      <button id="closeLegalModal" class="icon-btn" type="button" aria-label="Close legal modal">×</button>
+      <button id="closeLegalModal" class="icon-btn" type="button" aria-label="Close legal modal">
+        <svg class="ui-icon"><use href="#i-close"></use></svg>
+      </button>
     </div>
 
     <div class="legal-tabs">
