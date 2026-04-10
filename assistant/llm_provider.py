@@ -140,7 +140,6 @@ def _load_provider_config() -> ProviderConfig:
             project=_safe_string(os.getenv("OPENAI_PROJECT_ID")) or None,
         )
 
-    # Future providers can be added here.
     return ProviderConfig(
         provider_name=provider_name,
         api_key=os.getenv("OPENAI_API_KEY"),
@@ -227,11 +226,12 @@ class OpenAIProvider:
                     logger.exception("Error while reading streamed OpenAI chunk")
                     continue
 
-        except Exception:
+        except Exception as exc:
             logger.exception(
-                "LLM stream failed provider=%s model=%s",
+                "LLM stream failed provider=%s model=%s error=%r",
                 self._provider_name,
                 model,
+                exc,
             )
             raise
 
