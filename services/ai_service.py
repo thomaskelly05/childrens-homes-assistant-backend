@@ -294,11 +294,19 @@ async def generate_ai_stream(
     except Exception as exc:
         provider_error_code = "provider_stream_failed"
         provider_error_message = _safe_string(exc) or "AI provider stream failed"
-        logger.exception("AI provider stream failed for session_id=%s", session_id)
+        logger.exception(
+            "AI provider stream failed for session_id=%s model=%s error=%r",
+            session_id,
+            model_plan.model,
+            exc,
+        )
 
         yield {
             "type": "token",
-            "content": "Sorry, something went wrong while generating the response.",
+            "content": (
+                "Sorry, something went wrong while generating the response. "
+                f"Provider error: {provider_error_message}"
+            ),
         }
 
     finally:
