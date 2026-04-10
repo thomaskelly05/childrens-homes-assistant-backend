@@ -38,18 +38,22 @@
               <span class="nav-icon">✦</span>
               <span>Assistant</span>
             </button>
-            <button id="navYoungPeople" class="nav-item activeable" type="button">
+
+            <button id="navYoungPeople" class="nav-item" type="button">
               <span class="nav-icon">◫</span>
               <span>Young people</span>
             </button>
+
             <button id="navLibrary" class="nav-item hidden" type="button">
               <span class="nav-icon">☰</span>
               <span>Library</span>
             </button>
+
             <button id="navManager" class="nav-item hidden" type="button">
               <span class="nav-icon">▣</span>
               <span>Manager</span>
             </button>
+
             <button id="navAdmin" class="nav-item hidden" type="button">
               <span class="nav-icon">⚙</span>
               <span>Admin</span>
@@ -84,18 +88,41 @@
       <section id="assistantPanel" class="panel panel-assistant">
         <div class="assistant-layout">
           <div id="empty" class="assistant-empty">
-            <div class="assistant-empty-shell">
-              <div class="assistant-badge">IndiCare Assistant</div>
+            <div class="assistant-empty-inner">
+              <div class="assistant-kicker">IndiCare Assistant</div>
+
               <h1 id="welcomeTitle" class="assistant-title">Welcome back.</h1>
+
               <p id="welcomeText" class="assistant-subtitle">
-                Use Assistant to work across policy, documents, compliance, drafting, records, and operational support.
+                Use Assistant to help with records, policy, drafting, safeguarding support, and day-to-day operational work.
               </p>
 
-              <div class="assistant-starters">
-                <button class="starter-btn" type="button" onclick="quick('policy')">Search a policy</button>
-                <button class="starter-btn" type="button" onclick="quick('incident')">Draft an incident record</button>
-                <button class="starter-btn" type="button" onclick="quick('risk')">Create a risk summary</button>
-                <button class="starter-btn" type="button" onclick="quick('handover')">Write a handover</button>
+              <div class="assistant-trust-row">
+                <div class="assistant-trust-pill">Clear drafting support</div>
+                <div class="assistant-trust-pill">Document-aware responses</div>
+                <div class="assistant-trust-pill">Built for everyday practice</div>
+              </div>
+
+              <div class="assistant-starter-grid">
+                <button class="assistant-starter" type="button" onclick="quick('policy')">
+                  <span class="assistant-starter-title">Search policy</span>
+                  <span class="assistant-starter-text">Find and summarise the most relevant guidance or home document.</span>
+                </button>
+
+                <button class="assistant-starter" type="button" onclick="quick('incident')">
+                  <span class="assistant-starter-title">Draft incident record</span>
+                  <span class="assistant-starter-text">Turn rough notes into a clear, factual, professional record.</span>
+                </button>
+
+                <button class="assistant-starter" type="button" onclick="quick('risk')">
+                  <span class="assistant-starter-title">Create risk summary</span>
+                  <span class="assistant-starter-text">Structure key risks, protective factors, actions, and next steps.</span>
+                </button>
+
+                <button class="assistant-starter" type="button" onclick="quick('handover')">
+                  <span class="assistant-starter-title">Write handover</span>
+                  <span class="assistant-starter-text">Prepare a concise handover with what matters for the next shift.</span>
+                </button>
               </div>
             </div>
           </div>
@@ -111,6 +138,7 @@
               <div class="section-title">Policies and documents</div>
               <div class="section-text">Read approved documents and manage them where permitted.</div>
             </div>
+
             <div class="toolbar">
               <input id="libraryUpload" type="file" accept=".pdf,.doc,.docx,.txt" hidden />
               <button id="libraryUploadBtn" class="primary-btn hidden" type="button">Upload document</button>
@@ -507,7 +535,7 @@
           </div>
 
           <div class="composer-card modern-composer">
-            <textarea id="input" placeholder="Ask Assistant about policy, compliance, records, documents, drafting, or operations..."></textarea>
+            <textarea id="input" placeholder="Ask Assistant anything about records, policy, safeguarding, guidance, or operational work..."></textarea>
 
             <div class="composer-footer">
               <div class="composer-tools">
@@ -519,18 +547,18 @@
                   <option value="ofsted">Compliance</option>
                 </select>
 
-                <select id="mode" class="field field-sm compact-field">
-                  <option value="quick">Quick</option>
-                  <option value="balanced" selected>Balanced</option>
-                  <option value="deep">Deep</option>
-                </select>
-
                 <select id="lang" class="field field-sm compact-field">
                   <option value="en-GB">English</option>
                   <option value="pl-PL">Polish</option>
                   <option value="ro-RO">Romanian</option>
                   <option value="ur-PK">Urdu</option>
                   <option value="ar">Arabic</option>
+                </select>
+
+                <select id="mode" class="field field-sm compact-field">
+                  <option value="quick">Quick</option>
+                  <option value="balanced" selected>Balanced</option>
+                  <option value="deep">Deep</option>
                 </select>
 
                 <input id="upload" type="file" accept=".txt,.doc,.docx,.pdf" hidden />
@@ -579,8 +607,8 @@
       <hr class="soft" />
 
       <div class="settings-group">
-        <label class="settings-label" for="contextChild">Current context</label>
-        <input id="contextChild" class="field" type="text" placeholder="Topic, team, home, or work context" />
+        <label class="settings-label" for="contextChild">Current focus</label>
+        <input id="contextChild" class="field" type="text" placeholder="Current focus or subject" />
       </div>
 
       <div class="settings-group">
@@ -589,8 +617,8 @@
       </div>
 
       <div class="settings-group">
-        <label class="settings-label" for="contextShift">Current shift or focus</label>
-        <input id="contextShift" class="field" type="text" placeholder="Day / night / handover / audit / review" />
+        <label class="settings-label" for="contextShift">Current context</label>
+        <input id="contextShift" class="field" type="text" placeholder="Shift / task / review context" />
       </div>
 
       <div class="settings-group">
