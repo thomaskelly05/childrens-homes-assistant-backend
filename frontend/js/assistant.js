@@ -143,7 +143,8 @@ const role = () => String(state.currentUser?.role || "").toLowerCase();
 const isAdmin = () => ["admin", "provider_admin"].includes(role());
 const isManager = () => role() === "manager";
 const isStaff = () => role() === "staff";
-const canManageLibrary = () => isAdmin() || isManager();
+const isRi = () => role() === "ri";
+const canManageLibrary = () => isAdmin() || isManager() || isRi();
 
 const selectedLang = () =>
   has("lang") ? $("lang").value || DEFAULT_LANGUAGE : DEFAULT_LANGUAGE;
@@ -206,7 +207,7 @@ function stripSystem(s) {
   return String(s || "").replace(/\s*\[SYSTEM:[\s\S]*$/i, "").trim();
 }
 
-function setTitle(title = "Intelligence for Care") {
+function setTitle(title = "Assistant") {
   if (has("title")) $("title").textContent = title;
 }
 
@@ -214,7 +215,7 @@ function resize() {
   if (!has("input")) return;
   const input = $("input");
   input.style.height = "auto";
-  input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
+  input.style.height = `${Math.min(input.scrollHeight, 180)}px`;
 }
 
 function docShow(name) {
@@ -283,7 +284,7 @@ function setWelcome() {
 
   if (has("welcomeText")) {
     $("welcomeText").textContent =
-      "Your assistant is ready to help with records, safeguarding, risk, guidance, and drafting.";
+      "Use Assistant to work across documents, policy, compliance, drafting, and operational support.";
   }
 }
 
@@ -305,6 +306,11 @@ function indiCareCopy(key) {
     contextSaved: "Context saved.",
   };
   return map[key] || "";
+}
+
+function scrollMessagesToBottom() {
+  if (!has("messages")) return;
+  $("messages").scrollTop = $("messages").scrollHeight;
 }
 
 /* ---------------------------------------------------------
@@ -362,7 +368,7 @@ function summariseTitle(text) {
     .replace(/\s+/g, " ")
     .trim();
 
-  if (!clean) return "New Log";
+  if (!clean) return "New Conversation";
 
   const stop = new Set([
     "the",
@@ -392,6 +398,7 @@ function summariseTitle(text) {
     "good",
     "morning",
     "indicare",
+    "assistant",
   ]);
 
   const words = clean.split(" ").filter(Boolean);
@@ -400,7 +407,7 @@ function summariseTitle(text) {
 
   return (
     picked.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") ||
-    "New Log"
+    "New Conversation"
   );
 }
 
@@ -483,6 +490,7 @@ function detectIntent(text) {
   if (t.includes("safeguard")) return "safeguarding";
   if (t.includes("daily note")) return "daily_note";
   if (t.includes("report")) return "report";
+  if (t.includes("policy")) return "policy";
   return "general";
 }
 
@@ -506,6 +514,8 @@ function buildStructuredPrompt(intent) {
       "Write a daily note suitable for care records using clear, factual wording.",
     report:
       "Write a formal report summary using structured, professional language.",
+    policy:
+      "Summarise the most relevant policy, procedure, or guidance clearly and professionally. Highlight key expectations, actions, and compliance points.",
     general: "Respond clearly and professionally for care documentation.",
   };
 
@@ -522,7 +532,7 @@ function copilotPrompt() {
     return "You are IndiCare Manager Copilot. Focus on oversight, accountability, actions, and compliance.";
   }
   if (mode === "ofsted") {
-    return "You are IndiCare Ofsted Copilot. Write in a way that is defensible, inspection-ready, and aligned to standards.";
+    return "You are IndiCare Compliance Copilot. Write in a way that is defensible, inspection-ready, and aligned to standards.";
   }
   if (mode === "documentation") {
     return "You are IndiCare Documentation Copilot. Produce clear, factual, well-structured records ready to paste.";
@@ -578,23 +588,7 @@ function loadContextState() {
 }
 
 function renderContextSummary() {
-  if (!has("systemContextSummary")) return;
-
-  const bits = [
-    state.workspaceContext.youngPersonName || state.contextState.child
-      ? `Child: ${state.workspaceContext.youngPersonName || state.contextState.child}`
-      : null,
-    state.workspaceContext.home || state.contextState.home
-      ? `Home: ${state.workspaceContext.home || state.contextState.home}`
-      : null,
-    state.workspaceContext.view || state.contextState.shift
-      ? `Shift or view: ${state.workspaceContext.view || state.contextState.shift}`
-      : null,
-  ].filter(Boolean);
-
-  $("systemContextSummary").textContent = bits.length
-    ? bits.join(" • ")
-    : "No child, home or shift context is currently set.";
+  return;
 }
 
 function saveContextState() {
@@ -629,7 +623,9 @@ function applyAssistantBootstrap() {
   const nextContext = {
     child: payload.youngPersonName || state.contextState.child || "",
     home: state.contextState.home || "",
-    shift: payload.view ? String(payload.view).replaceAll("-", " ") : state.contextState.shift || "",
+    shift: payload.view
+      ? String(payload.view).replaceAll("-", " ")
+      : state.contextState.shift || "",
   };
 
   state.contextState = nextContext;
@@ -692,9 +688,9 @@ function buildYoungPeopleUrl() {
 
 function buildContextBlock() {
   const lines = [];
-  if (state.contextState.child) lines.push(`Current child: ${state.contextState.child}`);
+  if (state.contextState.child) lines.push(`Current focus: ${state.contextState.child}`);
   if (state.contextState.home) lines.push(`Current home: ${state.contextState.home}`);
-  if (state.contextState.shift) lines.push(`Current shift: ${state.contextState.shift}`);
+  if (state.contextState.shift) lines.push(`Current context: ${state.contextState.shift}`);
   return lines.length ? `[CONTEXT]\n${lines.join("\n")}\n\n` : "";
 }
 
@@ -1151,24 +1147,26 @@ async function loadMe() {
     localStorage.setItem("first_name", state.currentUser.first_name || "");
     clearAssistantRedirectGuard();
 
-    if (isAdmin() || isManager() || isStaff()) {
+    if (isAdmin() || isManager() || isStaff() || isRi()) {
       has("navYoungPeople") && $("navYoungPeople").classList.remove("hidden");
       has("navLibrary") && $("navLibrary").classList.remove("hidden");
     }
 
     if (isManager()) {
       has("navManager") && $("navManager").classList.remove("hidden");
-      has("launchManager") && $("launchManager").classList.remove("hidden");
     }
 
     if (isAdmin()) {
       has("navAdmin") && $("navAdmin").classList.remove("hidden");
-      has("launchAdmin") && $("launchAdmin").classList.remove("hidden");
     }
 
     if (canManageLibrary()) {
       has("managerEditorTab") &&
         $("managerEditorTab").classList.remove("hidden");
+    }
+
+    if (canManageLibrary() && has("libraryUploadBtn")) {
+      $("libraryUploadBtn").classList.remove("hidden");
     }
   } catch (e) {
     const message = String(e?.message || "");
@@ -1219,15 +1217,7 @@ function showAssistantView() {
   has("assistantPanel") && $("assistantPanel").classList.remove("hidden");
   has("inputWrap") && $("inputWrap").classList.remove("hidden");
   has("navAssistant") && $("navAssistant").classList.add("active");
-
-  setTitle(
-    state.conversationId
-      ? has("title")
-        ? $("title").textContent
-        : "Intelligence for Care"
-      : "Intelligence for Care"
-  );
-
+  setTitle("Assistant");
   closeMobilePanels();
 }
 
@@ -1243,7 +1233,7 @@ function showLibraryView() {
   has("libraryPanel") && $("libraryPanel").classList.remove("hidden");
   has("inputWrap") && $("inputWrap").classList.add("hidden");
   has("navLibrary") && $("navLibrary").classList.add("active");
-  setTitle("Policies");
+  setTitle("Library");
   closeMobilePanels();
 
   loadLibrary().catch((e) => {
@@ -1309,7 +1299,7 @@ function resetWelcome() {
   if (has("input")) $("input").value = "";
   resize();
   docHide();
-  setTitle();
+  setTitle("Assistant");
   setWelcome();
   filterConversations();
   closeSettings();
@@ -1335,7 +1325,7 @@ function renderHistory(rows) {
     item.innerHTML = `
       <div class="row">
         <button class="mainbtn">
-          <div class="ttl">${safe(stripSystem(row?.title || "Observation"))}</div>
+          <div class="ttl">${safe(stripSystem(row?.title || "Conversation"))}</div>
         </button>
         <button class="mini">⧉</button>
         <button class="mini danger">🗑</button>
@@ -1351,14 +1341,14 @@ function renderHistory(rows) {
       main.onclick = () => {
         if (!legalAcceptanceValid()) return openLegalModal("acceptance");
         showAssistantView();
-        openConversation(row?.id, stripSystem(row?.title || "Observation"));
+        openConversation(row?.id, stripSystem(row?.title || "Conversation"));
       };
     }
 
     if (copy) {
       copy.onclick = (e) => {
         e.stopPropagation();
-        navigator.clipboard.writeText(stripSystem(row?.title || "Observation"));
+        navigator.clipboard.writeText(stripSystem(row?.title || "Conversation"));
         banner(indiCareCopy("copied"));
       };
     }
@@ -1433,9 +1423,10 @@ async function openConversation(id, title) {
     docHide();
   }
 
-  setTitle(title || "Observation");
+  setTitle(title || "Conversation");
   filterConversations();
   closeMobilePanels();
+  scrollMessagesToBottom();
 }
 
 async function renameShort(id, prompt) {
@@ -1713,10 +1704,7 @@ function appendMessage(roleName, text, opts = {}) {
   }
 
   $("messages").appendChild(wrap);
-
-  if (has("assistantPanel")) {
-    $("assistantPanel").scrollTop = $("assistantPanel").scrollHeight;
-  }
+  scrollMessagesToBottom();
 }
 
 function createStreamMsg() {
@@ -1740,10 +1728,7 @@ function createStreamMsg() {
 
   $("messages").appendChild(wrap);
   updateStreamingProgress();
-
-  if (has("assistantPanel")) {
-    $("assistantPanel").scrollTop = $("assistantPanel").scrollHeight;
-  }
+  scrollMessagesToBottom();
 
   return wrap;
 }
@@ -1765,10 +1750,7 @@ function startTyping() {
       raw += state.queue.shift();
       el.innerHTML = render(raw, "assistant");
       el.setAttribute("data-raw", raw);
-
-      if (has("assistantPanel")) {
-        $("assistantPanel").scrollTop = $("assistantPanel").scrollHeight;
-      }
+      scrollMessagesToBottom();
     } else if (!state.isStreaming) {
       clearInterval(tick);
       state.typing = false;
@@ -1779,6 +1761,7 @@ function startTyping() {
       clearStreamingProgress();
       attachMetaToStreamingMessage(state.currentStreamMeta);
       speakText(finalRaw);
+      scrollMessagesToBottom();
     }
   }, 2);
 }
@@ -1971,6 +1954,19 @@ async function uploadDoc(file) {
   banner(`Document attached: ${state.currentDocumentName}`);
 }
 
+async function uploadLibraryDocument(file) {
+  const fd = new FormData();
+  fd.append("file", file);
+
+  const data = await api("/documents/library/upload", {
+    method: "POST",
+    body: fd,
+  });
+
+  banner(data?.message || "Library document uploaded");
+  await loadLibrary();
+}
+
 async function editMessage(messageId, currentText) {
   if (!messageId) return;
   if (!legalAcceptanceValid()) return openLegalModal("acceptance");
@@ -1997,7 +1993,7 @@ async function editMessage(messageId, currentText) {
     if (state.conversationId) {
       await openConversation(
         state.conversationId,
-        has("title") ? $("title").textContent : "Observation"
+        has("title") ? $("title").textContent : "Conversation"
       );
     }
 
@@ -2078,16 +2074,19 @@ function quick(type) {
   if (!legalAcceptanceValid()) return openLegalModal("acceptance");
 
   const prompts = {
-    ofsted:
-      "Rewrite the above documentation so it aligns with Ofsted Quality Standards and is ready for professional review.",
+    policy:
+      "Find the relevant policy or guidance for this issue and summarise the main points clearly.",
+    incident:
+      "Draft a factual, professional incident record using a calm and defensible tone.",
     risk:
-      "Generate a formal risk assessment based on this situation. Include presenting risks, protective factors, staff actions, and follow-up actions.",
+      "Create a structured risk summary with risks, protective factors, actions, and follow-up.",
+    handover:
+      "Write a concise handover with key information, current risks, actions completed, and next steps.",
   };
 
   $("input").value =
-    prompts[type] || "Rewrite this in a more formal professional format.";
+    prompts[type] || "Help me with this clearly and professionally.";
   resize();
-  sendMessage();
 }
 
 /* ---------------------------------------------------------
@@ -2191,7 +2190,7 @@ async function loadAdminReferenceData() {
   fillSelect("homeProviderId", state.providers, "Select provider");
 
   const managers = state.adminUsers.filter((u) =>
-    ["manager", "admin", "provider_admin"].includes(
+    ["manager", "admin", "provider_admin", "ri"].includes(
       String(u?.role || "").toLowerCase()
     )
   );
@@ -3467,10 +3466,6 @@ function bind() {
   on("navLibrary", "click", showLibraryView);
   on("navManager", "click", showManagerView);
   on("navAdmin", "click", showAdminView);
-  on("launchYoungPeople", "click", showYoungPeopleView);
-  on("launchLibrary", "click", showLibraryView);
-  on("launchManager", "click", showManagerView);
-  on("launchAdmin", "click", showAdminView);
 
   window.addEventListener("message", (event) => {
     const data = event?.data;
@@ -3528,6 +3523,9 @@ function bind() {
 
   on("send", "click", sendMessage);
   on("mic", "click", startSpeech);
+  on("chatUploadBtn", "click", () => {
+    if (has("upload")) $("upload").click();
+  });
 
   if (has("upload")) {
     $("upload").addEventListener("change", async (e) => {
@@ -3543,6 +3541,30 @@ function bind() {
         await uploadDoc(file);
       } catch (err) {
         banner(err.message || indiCareCopy("uploadFail"));
+      }
+
+      e.target.value = "";
+    });
+  }
+
+  on("libraryUploadBtn", "click", () => {
+    if (has("libraryUpload")) $("libraryUpload").click();
+  });
+
+  if (has("libraryUpload")) {
+    $("libraryUpload").addEventListener("change", async (e) => {
+      if (!legalAcceptanceValid()) {
+        e.target.value = "";
+        return openLegalModal("acceptance");
+      }
+
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      try {
+        await uploadLibraryDocument(file);
+      } catch (err) {
+        banner(err.message || "Library upload failed");
       }
 
       e.target.value = "";
