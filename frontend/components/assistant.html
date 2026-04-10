@@ -23,7 +23,7 @@
 
       <div class="sidebar-body">
         <div class="sidebar-actions">
-          <button id="newChat" class="primary-action" type="button">New chat</button>
+          <button id="newChat" class="primary-action" type="button">New conversation</button>
         </div>
 
         <div class="search-wrap">
@@ -38,7 +38,7 @@
               <span class="nav-icon">✦</span>
               <span>Assistant</span>
             </button>
-            <button id="navYoungPeople" class="nav-item" type="button">
+            <button id="navYoungPeople" class="nav-item activeable" type="button">
               <span class="nav-icon">◫</span>
               <span>Young people</span>
             </button>
@@ -82,90 +82,20 @@
       </header>
 
       <section id="assistantPanel" class="panel panel-assistant">
-        <div class="panel-inner panel-chat">
-          <div id="empty" class="empty-state">
-            <div class="empty-card">
-              <div class="front-door-hero">
-                <div class="front-door-copy">
-                  <div class="empty-eyebrow">Front door for care, records and oversight</div>
-                  <h1 id="welcomeTitle" class="empty-title">Welcome back.</h1>
-                  <p id="welcomeText" class="empty-text">
-                    Start here for young people records, safeguarding, planning, handover, guidance and operational oversight.
-                  </p>
-                </div>
+        <div class="assistant-layout">
+          <div id="empty" class="assistant-empty">
+            <div class="assistant-empty-shell">
+              <div class="assistant-badge">IndiCare Assistant</div>
+              <h1 id="welcomeTitle" class="assistant-title">Welcome back.</h1>
+              <p id="welcomeText" class="assistant-subtitle">
+                Use Assistant to work across policy, documents, compliance, drafting, records, and operational support.
+              </p>
 
-                <div class="front-door-context">
-                  <div class="front-door-context-label">Shared context</div>
-                  <div id="systemContextSummary" class="front-door-context-body">
-                    No child, home or shift context is currently set.
-                  </div>
-                </div>
-              </div>
-
-              <div class="front-door-section">
-                <div class="front-door-section-head">
-                  <div>
-                    <div class="section-title">System hub</div>
-                    <div class="section-text">Move into the main workspaces from one consistent front door.</div>
-                  </div>
-                </div>
-
-                <div class="launch-grid">
-                  <button id="launchYoungPeople" class="launch-card launch-card-primary" type="button">
-                    <div class="launch-card-kicker">Workspace</div>
-                    <div class="launch-card-title">Young people</div>
-                    <p class="launch-card-text">Open the full young people workspace for records, chronology, review, and care planning.</p>
-                  </button>
-
-                  <button id="launchLibrary" class="launch-card" type="button">
-                    <div class="launch-card-kicker">Reference</div>
-                    <div class="launch-card-title">Policies and library</div>
-                    <p class="launch-card-text">Move into approved policies, guidance, templates, and home documents.</p>
-                  </button>
-
-                  <button id="launchManager" class="launch-card hidden" type="button">
-                    <div class="launch-card-kicker">Oversight</div>
-                    <div class="launch-card-title">Manager workspace</div>
-                    <p class="launch-card-text">Review staffing, documents, and operational activity for your home.</p>
-                  </button>
-
-                  <button id="launchAdmin" class="launch-card hidden" type="button">
-                    <div class="launch-card-kicker">Control</div>
-                    <div class="launch-card-title">Admin workspace</div>
-                    <p class="launch-card-text">Manage users, homes, providers, billing and audit from the same system.</p>
-                  </button>
-                </div>
-              </div>
-
-              <div class="front-door-section">
-                <div class="front-door-section-head">
-                  <div>
-                    <div class="section-title">Assistant starters</div>
-                    <div class="section-text">Use the shared assistant for writing, analysis, safeguarding and practice guidance.</div>
-                  </div>
-                </div>
-
-                <div class="quick-grid">
-                  <button class="quick-card" type="button" onclick="quick('ofsted')">
-                    <div class="quick-card-title">Inspection-ready wording</div>
-                    <p class="quick-card-text">Rewrite notes so they are clearer, safer, and more defensible.</p>
-                  </button>
-
-                  <button class="quick-card" type="button" onclick="quick('risk')">
-                    <div class="quick-card-title">Risk assessment</div>
-                    <p class="quick-card-text">Turn a situation into a practical structured risk summary.</p>
-                  </button>
-
-                  <button class="quick-card" type="button" onclick="document.getElementById('input').value='Write this as a factual, child-centred, therapeutic incident record using a calm and PACE-informed tone.'; resize();">
-                    <div class="quick-card-title">Incident recording</div>
-                    <p class="quick-card-text">Draft factual, therapeutic, professional incident wording.</p>
-                  </button>
-
-                  <button class="quick-card" type="button" onclick="document.getElementById('input').value='Write me a concise full handover for the next shift, including what the young person may be communicating, what helped, and what adults need next.'; resize();">
-                    <div class="quick-card-title">Shift handover</div>
-                    <p class="quick-card-text">Prepare a useful handover with child voice, regulation and next-step support.</p>
-                  </button>
-                </div>
+              <div class="assistant-starters">
+                <button class="starter-btn" type="button" onclick="quick('policy')">Search a policy</button>
+                <button class="starter-btn" type="button" onclick="quick('incident')">Draft an incident record</button>
+                <button class="starter-btn" type="button" onclick="quick('risk')">Create a risk summary</button>
+                <button class="starter-btn" type="button" onclick="quick('handover')">Write a handover</button>
               </div>
             </div>
           </div>
@@ -182,6 +112,8 @@
               <div class="section-text">Read approved documents and manage them where permitted.</div>
             </div>
             <div class="toolbar">
+              <input id="libraryUpload" type="file" accept=".pdf,.doc,.docx,.txt" hidden />
+              <button id="libraryUploadBtn" class="primary-btn hidden" type="button">Upload document</button>
               <button id="refreshLibraryBtn" class="ghost-btn" type="button">Refresh</button>
             </div>
           </div>
@@ -574,17 +506,23 @@
             <button id="clearDoc" type="button" aria-label="Remove document">×</button>
           </div>
 
-          <div class="composer-card">
-            <textarea id="input" placeholder="Ask IndiCare to help with records, safeguarding, planning, or guidance..."></textarea>
+          <div class="composer-card modern-composer">
+            <textarea id="input" placeholder="Ask Assistant about policy, compliance, records, documents, drafting, or operations..."></textarea>
 
             <div class="composer-footer">
               <div class="composer-tools">
                 <select id="copilot" class="field field-sm compact-field">
-                  <option value="default">Default</option>
+                  <option value="default">Assistant</option>
                   <option value="documentation">Documentation</option>
                   <option value="safeguarding">Safeguarding</option>
                   <option value="manager">Manager</option>
-                  <option value="ofsted">Ofsted</option>
+                  <option value="ofsted">Compliance</option>
+                </select>
+
+                <select id="mode" class="field field-sm compact-field">
+                  <option value="quick">Quick</option>
+                  <option value="balanced" selected>Balanced</option>
+                  <option value="deep">Deep</option>
                 </select>
 
                 <select id="lang" class="field field-sm compact-field">
@@ -595,19 +533,13 @@
                   <option value="ar">Arabic</option>
                 </select>
 
-                <select id="mode" class="field field-sm compact-field">
-                  <option value="quick">Quick</option>
-                  <option value="balanced" selected>Balanced</option>
-                  <option value="deep">Deep</option>
-                </select>
-
-                <input id="upload" type="file" accept=".txt,.docx,.pdf" hidden />
-                <button class="icon-btn" type="button" onclick="document.getElementById('upload').click();" aria-label="Upload document">📎</button>
+                <input id="upload" type="file" accept=".txt,.doc,.docx,.pdf" hidden />
+                <button id="chatUploadBtn" class="icon-btn" type="button" aria-label="Upload document">＋</button>
                 <button id="mic" class="icon-btn" type="button" aria-label="Use microphone">🎤</button>
                 <button id="voiceReplies" class="icon-btn" type="button" aria-label="Toggle voice replies">🔊</button>
               </div>
 
-              <button id="send" class="send-btn" type="button" aria-label="Send">➤</button>
+              <button id="send" class="send-btn" type="button" aria-label="Send">↑</button>
             </div>
           </div>
         </div>
@@ -647,8 +579,8 @@
       <hr class="soft" />
 
       <div class="settings-group">
-        <label class="settings-label" for="contextChild">Current child</label>
-        <input id="contextChild" class="field" type="text" placeholder="Child name or initials" />
+        <label class="settings-label" for="contextChild">Current context</label>
+        <input id="contextChild" class="field" type="text" placeholder="Topic, team, home, or work context" />
       </div>
 
       <div class="settings-group">
@@ -657,8 +589,8 @@
       </div>
 
       <div class="settings-group">
-        <label class="settings-label" for="contextShift">Current shift</label>
-        <input id="contextShift" class="field" type="text" placeholder="Day / night / weekend / handover context" />
+        <label class="settings-label" for="contextShift">Current shift or focus</label>
+        <input id="contextShift" class="field" type="text" placeholder="Day / night / handover / audit / review" />
       </div>
 
       <div class="settings-group">
