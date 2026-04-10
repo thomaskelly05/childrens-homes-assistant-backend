@@ -42,6 +42,20 @@ def _pick_fields(item: Any, allowed: list[str]) -> dict[str, Any]:
     }
 
 
+def _clean_ui_context(context: dict[str, Any] | None) -> dict[str, Any]:
+    context = context or {}
+    cleaned = {
+        "current_view": context.get("current_view"),
+        "young_person_name": context.get("young_person_name"),
+        "placement_status": context.get("placement_status"),
+        "summary_risk_level": context.get("summary_risk_level"),
+        "composer_record_type": context.get("composer_record_type"),
+        "home_name": context.get("home_name"),
+        "shift_context": context.get("shift_context"),
+    }
+    return {k: v for k, v in cleaned.items() if v not in (None, "", [], {})}
+
+
 def _build_compact_global_context(context: dict[str, Any]) -> dict[str, Any]:
     tasks = _trim_list(context.get("tasks"), 8)
     manager_updates = _trim_list(context.get("manager_updates"), 5)
@@ -503,14 +517,41 @@ def _build_young_person_summary(context: dict[str, Any]) -> str:
     ]
 
     current_formulation = identity.get("current_formulation")
-    lines.append(
-        "- Current formulation available: yes" if current_formulation else "- Current formulation available: no"
-    )
+    if current_formulation:
+        lines.append("- Current formulation available: yes")
+    else:
+        lines.append("- Current formulation available: no")
 
     communication_profile = identity.get("communication_profile")
-    lines.append(
-        "- Communication profile available: yes" if communication_profile else "- Communication profile available: no"
-    )
+    if communication_profile:
+        lines.append("- Communication profile available: yes")
+    else:
+        lines.append("- Communication profile available: no")
+
+    return "\n".join(lines)
+
+
+def _build_ui_summary(ui_context: dict[str, Any] | None) -> str:
+    ui_context = ui_context or {}
+    if not ui_context:
+        return "No extra UI context supplied."
+
+    lines: list[str] = ["UI context provided."]
+
+    if ui_context.get("current_view"):
+        lines.append(f"- Current view: {ui_context.get('current_view')}")
+    if ui_context.get("young_person_name"):
+        lines.append(f"- Young person name hint: {ui_context.get('young_person_name')}")
+    if ui_context.get("placement_status"):
+        lines.append(f"- Placement status hint: {ui_context.get('placement_status')}")
+    if ui_context.get("summary_risk_level"):
+        lines.append(f"- Summary risk level hint: {ui_context.get('summary_risk_level')}")
+    if ui_context.get("composer_record_type"):
+        lines.append(f"- Composer record type: {ui_context.get('composer_record_type')}")
+    if ui_context.get("home_name"):
+        lines.append(f"- Home name hint: {ui_context.get('home_name')}")
+    if ui_context.get("shift_context"):
+        lines.append(f"- Shift context: {ui_context.get('shift_context')}")
 
     return "\n".join(lines)
 
@@ -519,6 +560,7 @@ def _build_prompt(
     *,
     message: str,
     context: dict[str, Any],
+    ui_context: dict[str, Any] | None = None,
     history: list[dict[str, Any]] | None = None,
 ) -> str:
     scope = context.get("scope") or {}
@@ -528,6 +570,8 @@ def _build_prompt(
         summary = _build_young_person_summary(context)
     else:
         summary = _build_global_summary(context)
+
+    ui_summary = _build_ui_summary(ui_context)
 
     history_lines: list[str] = []
     for item in history or []:
@@ -550,8 +594,14 @@ If the request relates to a young person, stay child-centred, trauma-informed an
 === CONTEXT SUMMARY ===
 {summary}
 
+=== UI CONTEXT SUMMARY ===
+{ui_summary}
+
 === STRUCTURED CONTEXT ===
-{json.dumps(context, ensure_ascii=False, indent=2, default=_json_safe)}
+{context}
+
+=== UI CONTEXT ===
+{ui_context or {}}
 
 === CONVERSATION HISTORY ===
 {history_text}
@@ -568,18 +618,24 @@ def build_assistant_prompt(
     message: str,
     scope: dict[str, Any] | None = None,
     history: list[dict[str, Any]] | None = None,
+    context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    full_context = build_assistant_context(
+    built_context = build_assistant_context(
         conn,
         user_id=user_id,
         scope=scope,
     )
 
-    compact_context = _build_compact_context(full_context)
+    ui_context = _clean_ui_context(context)
+    compact_context = _build_compact_context(built_context)
+
+    if ui_context:
+        compact_context["ui_context"] = ui_context
 
     prompt = _build_prompt(
         message=message,
-        context=compact_context,
+        context=built_context,
+        ui_context=ui_context,
         history=history,
     )
 
@@ -591,14 +647,19 @@ def build_assistant_prompt(
         )
     )
 
-    full_scope = full_context.get("scope") or {}
-
     return {
         "prompt": prompt,
         "context": json_safe_context,
         "runtime": {
-            "scope_type": full_scope.get("scope_type"),
-            "home_id": full_scope.get("home_id"),
-            "young_person_id": full_scope.get("young_person_id"),
+            "scope_type": (built_context.get("scope") or {}).get("scope_type"),
+            "home_id": (built_context.get("scope") or {}).get("home_id"),
+            "young_person_id": (built_context.get("scope") or {}).get("young_person_id"),
+            "current_view": ui_context.get("current_view"),
+            "young_person_name": ui_context.get("young_person_name"),
+            "placement_status": ui_context.get("placement_status"),
+            "summary_risk_level": ui_context.get("summary_risk_level"),
+            "composer_record_type": ui_context.get("composer_record_type"),
+            "home_name": ui_context.get("home_name"),
+            "shift_context": ui_context.get("shift_context"),
         },
     }
