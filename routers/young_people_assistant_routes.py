@@ -97,9 +97,7 @@ def _normalise_scope(payload: YoungPersonAssistantPayload, current_user: dict[st
 
 def _normalise_context(payload: YoungPersonAssistantPayload, record: dict[str, Any]) -> dict[str, Any]:
     full_name = (
-        " ".join(
-            [x for x in [record.get("first_name"), record.get("last_name")] if x]
-        ).strip()
+        " ".join([x for x in [record.get("first_name"), record.get("last_name")] if x]).strip()
         or record.get("preferred_name")
         or "Young person"
     )
@@ -150,6 +148,7 @@ async def ask_young_person_assistant(
             message=payload.message,
             scope=scope,
             history=[],
+            context=context,
         )
 
     except HTTPException:
@@ -266,6 +265,9 @@ async def ask_young_person_assistant(
                 final_runtime.setdefault("young_person_name", context.get("young_person_name"))
                 final_runtime.setdefault("placement_status", context.get("placement_status"))
                 final_runtime.setdefault("summary_risk_level", context.get("summary_risk_level"))
+                final_runtime.setdefault("composer_record_type", context.get("composer_record_type"))
+                final_runtime.setdefault("home_name", context.get("home_name"))
+                final_runtime.setdefault("shift_context", context.get("shift_context"))
 
             if suggested_actions:
                 existing_actions = final_runtime.get("suggested_actions") or []
