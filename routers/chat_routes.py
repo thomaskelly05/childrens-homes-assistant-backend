@@ -602,7 +602,6 @@ async def chat(
                 user_context=assistant_prompt_bundle.get("context") or context,
                 user_id=user_id,
                 conversation_id=conversation_id,
-                scope=scope,
             )
 
             async for item in stream_with_heartbeat(generator):
@@ -855,7 +854,6 @@ async def edit_message_and_regenerate(
                 user_context=assistant_prompt_bundle.get("context") or context,
                 user_id=user_id,
                 conversation_id=conversation_id,
-                scope=scope,
             )
 
             async for item in stream_with_heartbeat(generator):
