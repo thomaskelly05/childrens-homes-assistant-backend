@@ -97,6 +97,9 @@ const state = {
     home: "",
     view: "",
   },
+
+  themePreference: "system",
+  systemPrefersDark: false,
 };
 
 /* ---------------------------------------------------------
@@ -104,13 +107,16 @@ const state = {
  * --------------------------------------------------------- */
 
 const DEFAULT_LANGUAGE = "en-GB";
+const THEME_PREF_KEY = "indicare_theme_pref";
+const LEGACY_THEME_KEY = "indicare_theme";
+
 const REG_PROMPT =
   " [SYSTEM: Verify response against Ofsted SCCIF and Quality Standards for Children's Homes. Use a calm, professional, safeguarding-aware tone. Keep wording clear, factual, structured, and suitable for care records, management review, and professional communication. Avoid slang, exaggeration, or overly casual wording.]";
 
 const RESP = {
-  quick: "Quick",
+  quick: "Fast",
   balanced: "Balanced",
-  deep: "Deep",
+  deep: "Detailed",
 };
 
 const LANG = {
@@ -120,13 +126,6 @@ const LANG = {
   "ur-PK": "Urdu",
   ar: "Arabic",
 };
-
-const GREET = [
-  (n) => `Good morning, ${n}.`,
-  (n) => `Welcome back, ${n}.`,
-  (n) => `Ready when you are, ${n}.`,
-  (n) => `Good to see you, ${n}.`,
-];
 
 const LEGAL_VERSION = "2026-03-29-v1";
 const LEGAL_ACCEPTANCE_KEY = "indicare_legal_acceptance";
@@ -154,6 +153,75 @@ const selectedMode = () =>
 
 const firstName = () =>
   state.currentUser?.first_name || localStorage.getItem("first_name") || "there";
+
+/* ---------------------------------------------------------
+ * Time / theme helpers
+ * --------------------------------------------------------- */
+
+function currentHour() {
+  try {
+    return new Date().getHours();
+  } catch {
+    return 12;
+  }
+}
+
+function timeOfDayLabel() {
+  const h = currentHour();
+  if (h < 12) return "morning";
+  if (h < 18) return "afternoon";
+  return "evening";
+}
+
+function greetingForUser(name = firstName()) {
+  const tod = timeOfDayLabel();
+  const cleanName = String(name || "there").trim();
+  return `Good ${tod}, ${cleanName}.`;
+}
+
+function supportingWelcomeCopy() {
+  const tod = timeOfDayLabel();
+  if (tod === "morning") {
+    return "Start the day with records, policy support, drafting, safeguarding guidance, and operational tasks in one place.";
+  }
+  if (tod === "afternoon") {
+    return "Pick up records, policy, drafting, safeguarding support, and day-to-day operational work from one clear front door.";
+  }
+  return "Use Assistant to support handover, records, policy, safeguarding guidance, and the rest of the day’s operational work.";
+}
+
+function systemThemeMode() {
+  return state.systemPrefersDark ? "dark" : "light";
+}
+
+function resolvedThemeMode() {
+  if (state.themePreference === "dark") return "dark";
+  if (state.themePreference === "light") return "light";
+  return systemThemeMode();
+}
+
+function themeSummaryLabel() {
+  const pref = state.themePreference;
+  const resolved = resolvedThemeMode();
+
+  if (pref === "system") {
+    return `Theme: System (${resolved === "dark" ? "dark" : "light"})`;
+  }
+
+  return `Theme: ${resolved === "dark" ? "Dark" : "Light"}`;
+}
+
+function themeAwarePillText() {
+  const mode = resolvedThemeMode();
+  return mode === "dark" ? "Optimised for dark mode" : "Optimised for light mode";
+}
+
+function themeAwarePlaceholder() {
+  const mode = resolvedThemeMode();
+  return mode === "dark"
+    ? "Ask Assistant anything about records, policy, safeguarding, guidance, or operational work..."
+    : "Ask Assistant anything about records, policy, safeguarding, guidance, or operational work...";
+}
 
 /* ---------------------------------------------------------
  * CSRF helpers
@@ -228,6 +296,32 @@ function docHide() {
   $("doc").classList.remove("show");
 }
 
+function applyResolvedTheme() {
+  document.body.classList.toggle("theme-dark", resolvedThemeMode() === "dark");
+
+  if (has("theme")) {
+    $("theme").classList.toggle("active", resolvedThemeMode() === "dark");
+  }
+
+  if (has("themeLabel")) {
+    $("themeLabel").textContent = themeSummaryLabel();
+  }
+
+  if (has("themeAwarePill")) {
+    $("themeAwarePill").textContent = themeAwarePillText();
+  }
+
+  if (has("input")) {
+    $("input").placeholder = themeAwarePlaceholder();
+  }
+
+  try {
+    const themeColor = resolvedThemeMode() === "dark" ? "#0f172a" : "#f6f8fb";
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", themeColor);
+  } catch {}
+}
+
 function syncHelpers() {
   if (has("langHelp")) {
     $("langHelp").textContent = `Assistant replies in ${
@@ -240,10 +334,7 @@ function syncHelpers() {
   }
 
   if (has("theme")) {
-    $("theme").classList.toggle(
-      "active",
-      document.body.classList.contains("theme-dark")
-    );
+    $("theme").classList.toggle("active", resolvedThemeMode() === "dark");
   }
 
   if (has("privacy") && has("app")) {
@@ -260,6 +351,16 @@ function syncHelpers() {
   if (has("voiceReplies")) {
     $("voiceReplies").classList.toggle("active", state.speechEnabled);
   }
+
+  if (has("themeLabel")) {
+    $("themeLabel").textContent = themeSummaryLabel();
+  }
+
+  if (has("themeAwarePill")) {
+    $("themeAwarePill").textContent = themeAwarePillText();
+  }
+
+  applyResolvedTheme();
 }
 
 function userInitials() {
@@ -276,13 +377,15 @@ function userInitials() {
 
 function setWelcome() {
   if (has("welcomeTitle")) {
-    $("welcomeTitle").textContent =
-      GREET[Math.floor(Math.random() * GREET.length)](firstName());
+    $("welcomeTitle").textContent = greetingForUser(firstName());
   }
 
   if (has("welcomeText")) {
-    $("welcomeText").textContent =
-      "Use Assistant to help with records, policy, drafting, safeguarding support, and day-to-day operational work.";
+    $("welcomeText").textContent = supportingWelcomeCopy();
+  }
+
+  if (has("themeAwarePill")) {
+    $("themeAwarePill").textContent = themeAwarePillText();
   }
 }
 
@@ -309,6 +412,65 @@ function indiCareCopy(key) {
 function scrollMessagesToBottom() {
   if (!has("messages")) return;
   $("messages").scrollTop = $("messages").scrollHeight;
+}
+
+/* ---------------------------------------------------------
+ * Theme management
+ * --------------------------------------------------------- */
+
+function readStoredThemePreference() {
+  const next = localStorage.getItem(THEME_PREF_KEY);
+  if (next === "light" || next === "dark" || next === "system") return next;
+
+  const legacy = localStorage.getItem(LEGACY_THEME_KEY);
+  if (legacy === "light" || legacy === "dark") return legacy;
+
+  return "system";
+}
+
+function saveThemePreference(pref) {
+  state.themePreference = pref;
+  localStorage.setItem(THEME_PREF_KEY, pref);
+  if (pref === "light" || pref === "dark") {
+    localStorage.setItem(LEGACY_THEME_KEY, pref);
+  } else {
+    localStorage.removeItem(LEGACY_THEME_KEY);
+  }
+  applyResolvedTheme();
+  setWelcome();
+  syncHelpers();
+}
+
+function cycleThemePreference() {
+  const order = ["system", "light", "dark"];
+  const idx = order.indexOf(state.themePreference);
+  const next = order[(idx + 1) % order.length];
+  saveThemePreference(next);
+  banner(themeSummaryLabel());
+}
+
+function initSystemThemeListener() {
+  try {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    state.systemPrefersDark = !!media.matches;
+
+    const handler = (event) => {
+      state.systemPrefersDark = !!event.matches;
+      if (state.themePreference === "system") {
+        applyResolvedTheme();
+        setWelcome();
+        syncHelpers();
+      }
+    };
+
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", handler);
+    } else if (typeof media.addListener === "function") {
+      media.addListener(handler);
+    }
+  } catch {
+    state.systemPrefersDark = false;
+  }
 }
 
 /* ---------------------------------------------------------
@@ -395,6 +557,8 @@ function summariseTitle(text) {
     "write",
     "good",
     "morning",
+    "afternoon",
+    "evening",
     "indicare",
     "assistant",
   ]);
@@ -1325,8 +1489,12 @@ function renderHistory(rows) {
         <button class="mainbtn">
           <div class="ttl">${safe(stripSystem(row?.title || "Conversation"))}</div>
         </button>
-        <button class="mini">⧉</button>
-        <button class="mini danger">🗑</button>
+        <button class="mini" aria-label="Copy conversation title">
+          <svg class="ui-icon"><use href="#i-copy"></use></svg>
+        </button>
+        <button class="mini danger" aria-label="Delete conversation">
+          <svg class="ui-icon"><use href="#i-trash"></use></svg>
+        </button>
       </div>
     `;
 
@@ -1821,6 +1989,7 @@ async function stream(url, body) {
   body.reply_language_label = LANG[selectedLang()] || "English";
   body.response_mode = selectedMode();
   body.context = state.contextState;
+  body.theme_mode = resolvedThemeMode();
 
   const headers = withCsrfHeaders("POST", {
     "Content-Type": "application/json",
@@ -3329,10 +3498,8 @@ function renderManagerDocuments() {
  * --------------------------------------------------------- */
 
 function restorePrefs() {
-  document.body.classList.toggle(
-    "theme-dark",
-    (localStorage.getItem("indicare_theme") || "light") === "dark"
-  );
+  state.themePreference = readStoredThemePreference();
+  applyResolvedTheme();
 
   if (has("lang")) {
     $("lang").value =
@@ -3366,9 +3533,6 @@ function bindLegalControls() {
 
   on("openLegalFromSettings", "click", () => openLegalModal("terms"));
   on("openLegalHeaderBtn", "click", () => openLegalModal("terms"));
-  on("footerTermsBtn", "click", () => openLegalModal("terms"));
-  on("footerPrivacyBtn", "click", () => openLegalModal("privacy"));
-  on("footerIPBtn", "click", () => openLegalModal("ip"));
   on("closeLegalModal", "click", closeLegalModal);
 
   on("legalOverlay", "click", () => {
@@ -3418,14 +3582,7 @@ function bind() {
   on("newChat", "click", resetWelcome);
   on("logout", "click", logoutNow);
 
-  on("theme", "click", () => {
-    document.body.classList.toggle("theme-dark");
-    localStorage.setItem(
-      "indicare_theme",
-      document.body.classList.contains("theme-dark") ? "dark" : "light"
-    );
-    syncHelpers();
-  });
+  on("theme", "click", cycleThemePreference);
 
   on("privacy", "click", () => {
     if (has("app")) $("app").classList.toggle("privacy-active");
@@ -3634,6 +3791,7 @@ function bind() {
  * --------------------------------------------------------- */
 
 async function init() {
+  initSystemThemeListener();
   bind();
   restorePrefs();
   initSpeech();
@@ -3681,6 +3839,8 @@ async function init() {
 
   showAssistantView();
   enforceLegalGate();
+  syncHelpers();
+  setWelcome();
 }
 
 window.quick = quick;
