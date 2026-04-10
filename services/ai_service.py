@@ -294,19 +294,11 @@ async def generate_ai_stream(
     except Exception as exc:
         provider_error_code = "provider_stream_failed"
         provider_error_message = _safe_string(exc) or "AI provider stream failed"
-        logger.exception(
-            "AI provider stream failed for session_id=%s error=%s",
-            session_id,
-            provider_error_message,
-        )
+        logger.exception("AI provider stream failed for session_id=%s", session_id)
 
         yield {
             "type": "token",
-            "content": (
-                "Sorry, the assistant could not generate that response just now. "
-                "Please try again, or ask a shorter question such as "
-                "'summarise recent incidents' or 'draft a short handover'."
-            ),
+            "content": "Sorry, something went wrong while generating the response.",
         }
 
     finally:
