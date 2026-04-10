@@ -21,7 +21,7 @@
           <div class="brand-mark">IC</div>
           <div class="brand-copy">
             <h1>IndiCare OS</h1>
-            <p>Children’s Residential Workspace</p>
+            <p>Young person residential workspace</p>
           </div>
         </div>
 
@@ -31,19 +31,33 @@
         </div>
       </div>
 
-      <div class="person-strip">
-        <div class="person-strip-left">
-          <div id="personAvatar" class="person-avatar">YP</div>
-          <div class="person-copy">
-            <h2 id="personName">No young person selected</h2>
-            <p id="personMeta">Choose a young person to begin</p>
+      <section class="person-hero">
+        <div class="person-hero-main">
+          <div class="person-strip-left">
+            <div id="personAvatar" class="person-avatar">YP</div>
+            <div class="person-copy">
+              <div class="eyebrow">Current workspace</div>
+              <h2 id="personName">No young person selected</h2>
+              <p id="personMeta">Choose a young person to begin</p>
+            </div>
+          </div>
+
+          <div class="person-hero-actions">
+            <button id="changePersonBtn" class="secondary-btn" type="button">Change young person</button>
           </div>
         </div>
 
-        <div class="person-strip-right">
-          <button id="changePersonBtn" class="secondary-btn" type="button">Change young person</button>
+        <div class="person-hero-support">
+          <div class="hero-support-block">
+            <span class="hero-support-label">Purpose</span>
+            <span class="hero-support-value">Recording, reflection, review and evidence in one place</span>
+          </div>
+          <div class="hero-support-block">
+            <span class="hero-support-label">Approach</span>
+            <span class="hero-support-value">Calm, child-centred, therapeutic and easy to follow</span>
+          </div>
         </div>
-      </div>
+      </section>
 
       <nav id="sidebarNav" class="top-nav" aria-label="Primary">
         <button class="nav-btn nav-home active" data-view="home" type="button">Home</button>
@@ -85,11 +99,17 @@
     </header>
 
     <main class="main-shell">
-      <section class="page-header-card">
+      <section class="page-header-card page-header-card--hero">
         <div class="page-header-copy">
           <div class="eyebrow">Young person workspace</div>
           <h2 id="pageTitle">Home</h2>
           <p id="pageSubtitle">What matters now</p>
+        </div>
+
+        <div class="page-header-support">
+          <div class="page-header-support-card">
+            <span>Built for safer care, better recording and stronger oversight</span>
+          </div>
         </div>
       </section>
 
@@ -110,6 +130,7 @@
       <section id="selectorPanel" class="selector-panel">
         <div class="selector-header">
           <div>
+            <div class="eyebrow">Workspace selection</div>
             <h3>Select a young person</h3>
             <p>Open one clear workspace for recording, review, handover and evidence.</p>
           </div>
@@ -130,36 +151,52 @@
       </section>
 
       <section id="workspacePanel" class="workspace-panel hidden">
-        <section id="quickActions" class="quick-actions">
-          <button class="quick-action" type="button" data-action="daily-note">
-            <span class="quick-action-title">Add daily note</span>
-            <span class="quick-action-subtitle">Record the shift clearly and therapeutically</span>
-          </button>
+        <section class="quick-actions-wrap">
+          <div class="section-intro">
+            <div>
+              <div class="eyebrow">Start from here</div>
+              <h3>Common actions</h3>
+            </div>
+            <p>Make the next right task obvious for staff on shift.</p>
+          </div>
 
-          <button class="quick-action" type="button" data-action="incident">
-            <span class="quick-action-title">Log incident</span>
-            <span class="quick-action-subtitle">Capture concern, context, response and follow-up</span>
-          </button>
+          <section id="quickActions" class="quick-actions">
+            <button class="quick-action quick-action--primary" type="button" data-action="daily-note">
+              <span class="quick-action-kicker">Recording</span>
+              <span class="quick-action-title">Add daily note</span>
+              <span class="quick-action-subtitle">Record the shift clearly and therapeutically</span>
+            </button>
 
-          <button class="quick-action" type="button" data-action="risk">
-            <span class="quick-action-title">Update risk</span>
-            <span class="quick-action-subtitle">Review triggers, meaning and staff guidance</span>
-          </button>
+            <button class="quick-action" type="button" data-action="incident">
+              <span class="quick-action-kicker">Safeguarding</span>
+              <span class="quick-action-title">Log incident</span>
+              <span class="quick-action-subtitle">Capture concern, context, response and follow-up</span>
+            </button>
 
-          <button class="quick-action" type="button" data-action="plan">
-            <span class="quick-action-title">Add plan</span>
-            <span class="quick-action-subtitle">Create support guidance around the young person</span>
-          </button>
+            <button class="quick-action" type="button" data-action="risk">
+              <span class="quick-action-kicker">Safety</span>
+              <span class="quick-action-title">Update risk</span>
+              <span class="quick-action-subtitle">Review triggers, meaning and staff guidance</span>
+            </button>
 
-          <button class="quick-action" type="button" data-assistant-quick="handover">
-            <span class="quick-action-title">Draft handover</span>
-            <span class="quick-action-subtitle">Pull together current risks, updates and actions</span>
-          </button>
+            <button class="quick-action" type="button" data-action="plan">
+              <span class="quick-action-kicker">Planning</span>
+              <span class="quick-action-title">Add plan</span>
+              <span class="quick-action-subtitle">Create support guidance around the young person</span>
+            </button>
 
-          <button class="quick-action" type="button" data-assistant-quick="priorities">
-            <span class="quick-action-title">Today’s priorities</span>
-            <span class="quick-action-subtitle">Summarise what matters most right now</span>
-          </button>
+            <button class="quick-action" type="button" data-assistant-quick="handover">
+              <span class="quick-action-kicker">Shift support</span>
+              <span class="quick-action-title">Draft handover</span>
+              <span class="quick-action-subtitle">Pull together current risks, updates and actions</span>
+            </button>
+
+            <button class="quick-action" type="button" data-assistant-quick="priorities">
+              <span class="quick-action-kicker">Focus</span>
+              <span class="quick-action-title">Today’s priorities</span>
+              <span class="quick-action-subtitle">Summarise what matters most right now</span>
+            </button>
+          </section>
         </section>
 
         <div class="workspace-layout">
@@ -175,7 +212,7 @@
           </section>
 
           <aside class="workspace-side">
-            <section class="workspace-side-card">
+            <section class="workspace-side-card workspace-side-card--assistant">
               <div class="workspace-side-head">
                 <div>
                   <h3>Young person assistant</h3>
@@ -250,12 +287,12 @@
               </div>
             </section>
 
-            <section class="workspace-side-card">
+            <section class="workspace-side-card workspace-side-card--technical">
               <h3>Runtime</h3>
               <pre id="assistantRuntime" class="assistant-code-block">No runtime data yet.</pre>
             </section>
 
-            <section class="workspace-side-card">
+            <section class="workspace-side-card workspace-side-card--technical">
               <h3>Explainability</h3>
               <pre id="assistantExplainability" class="assistant-code-block">No explainability data yet.</pre>
             </section>
@@ -418,6 +455,6 @@
   </section>
 
   <script src="/js/api.js"></script>
-<script src="/js/young-people-shell.js"></script>
+  <script src="/js/young-people-shell.js"></script>
 </body>
 </html>
