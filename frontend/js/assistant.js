@@ -178,9 +178,7 @@ function withCsrfHeaders(method, headers = {}) {
 
   if (needsCsrf) {
     const token = getCsrfToken();
-    if (token) {
-      nextHeaders["X-CSRF-Token"] = token;
-    }
+    if (token) nextHeaders["X-CSRF-Token"] = token;
   }
 
   return nextHeaders;
@@ -284,7 +282,7 @@ function setWelcome() {
 
   if (has("welcomeText")) {
     $("welcomeText").textContent =
-      "Use Assistant to work across documents, policy, compliance, drafting, and operational support.";
+      "Use Assistant to help with records, policy, drafting, safeguarding support, and day-to-day operational work.";
   }
 }
 
@@ -3418,7 +3416,6 @@ function bind() {
   on("settingsOverlay", "click", closeSettings);
 
   on("newChat", "click", resetWelcome);
-  on("backWelcome", "click", resetWelcome);
   on("logout", "click", logoutNow);
 
   on("theme", "click", () => {
@@ -3523,6 +3520,7 @@ function bind() {
 
   on("send", "click", sendMessage);
   on("mic", "click", startSpeech);
+
   on("chatUploadBtn", "click", () => {
     if (has("upload")) $("upload").click();
   });
