@@ -1,1940 +1,2322 @@
-/*
-  © 2026 IndiCare. All rights reserved.
-  Proprietary and confidential. Unauthorised copying, reproduction,
-  reverse engineering, redistribution, or commercial exploitation prohibited.
-*/
-
-window.onerror = function (message, source, line, col, error) {
-  console.error("window.onerror", { message, source, line, col, error });
-};
-
-window.onunhandledrejection = function (event) {
-  console.error("unhandledrejection", event.reason);
-};
-
-/* ---------------------------------------------------------
- * DOM helpers
- * --------------------------------------------------------- */
-
-const $ = (id) => document.getElementById(id);
-const has = (id) => !!document.getElementById(id);
-
-function on(id, event, fn) {
-  if (!has(id)) return;
-  $(id).addEventListener(event, fn);
-}
-
-const safe = (s) =>
-  String(s || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-
-function normArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function normObj(value) {
-  return value && typeof value === "object" ? value : {};
-}
-
-/* ---------------------------------------------------------
- * State
- * --------------------------------------------------------- */
-
 const state = {
-  conversationId: null,
-  currentDocumentText: null,
-  currentDocumentName: null,
-  isStreaming: false,
-  queue: [],
-  typing: false,
-  lastPrompt: "",
-  cache: [],
+  youngPersonId: null,
+  youngPerson: null,
+  currentView: "home",
+  selectorItems: [],
+  activeRecordItem: null,
+  activeRecordType: null,
 
-  currentUser: null,
-  adminCreateActive: true,
-  adminUsers: [],
-  homes: [],
-  providers: [],
-  docs: [],
-  billing: null,
-  audit: [],
-  libraryDocs: [],
-  selectedLibraryDoc: null,
-  editingLibraryDocId: null,
-
-  managerUsers: [],
-  managerDocuments: [],
-
-  indicareVoice: null,
-  speechEnabled: false,
-  speechReady: false,
-  availableVoices: [],
-
-  currentIntent: "general",
-  lastAssistantText: "",
-
-  currentStreamMeta: {
+  assistantMessages: [],
+  assistantModalMessages: [],
+  assistantSending: false,
+  assistantMeta: {
     sources: [],
     runtime: {},
     explainability: {},
+    assistant_scope: {},
+    assistant_context: {},
+    suggested_actions: [],
   },
 
-  currentProgressLines: [],
+  composerOpen: false,
+  composerMode: "create",
+  composerRecordType: null,
+  composerRecordId: null,
+  composerEditItem: null,
+};
 
-  contextState: {
-    child: "",
-    home: "",
-    shift: "",
+const els = {
+  app: document.getElementById("app"),
+
+  nav: document.getElementById("sidebarNav"),
+  content: document.getElementById("viewContent"),
+  pageTitle: document.getElementById("pageTitle"),
+  pageSubtitle: document.getElementById("pageSubtitle"),
+  statusBar: document.getElementById("statusBar"),
+  refreshBtn: document.getElementById("refreshBtn"),
+
+  personName: document.getElementById("personName"),
+  personMeta: document.getElementById("personMeta"),
+  personAvatar: document.getElementById("personAvatar"),
+  changePersonBtn: document.getElementById("changePersonBtn"),
+
+  selectorPanel: document.getElementById("selectorPanel"),
+  selectorList: document.getElementById("selectorList"),
+  selectorSearch: document.getElementById("selectorSearch"),
+  selectorRefreshBtn: document.getElementById("selectorRefreshBtn"),
+
+  workspacePanel: document.getElementById("workspacePanel"),
+  quickActions: document.getElementById("quickActions"),
+
+  drawer: document.getElementById("recordDrawer"),
+  drawerBackdrop: document.getElementById("recordDrawerBackdrop"),
+  drawerTitle: document.getElementById("recordDrawerTitle"),
+  drawerSubtitle: document.getElementById("recordDrawerSubtitle"),
+  drawerBody: document.getElementById("recordDrawerBody"),
+  drawerActions: document.getElementById("recordDrawerActions"),
+  closeDrawerBtn: document.getElementById("closeRecordDrawerBtn"),
+  drawerEditBtn: document.getElementById("drawerEditBtn"),
+  drawerSubmitBtn: document.getElementById("drawerSubmitBtn"),
+  drawerApproveBtn: document.getElementById("drawerApproveBtn"),
+  drawerReturnBtn: document.getElementById("drawerReturnBtn"),
+  drawerArchiveBtn: document.getElementById("drawerArchiveBtn"),
+
+  composerPage: document.getElementById("recordComposerPage"),
+  composerTitle: document.getElementById("composerTitle"),
+  composerSubtitle: document.getElementById("composerSubtitle"),
+  composerFields: document.getElementById("recordComposerFields"),
+  composerForm: document.getElementById("recordComposerForm"),
+  composerGuidanceText: document.getElementById("composerGuidanceText"),
+  composerPrompts: document.getElementById("composerPrompts"),
+  composerAiFeedback: document.getElementById("composerAiFeedback"),
+  closeComposerBtn: document.getElementById("closeComposerBtn"),
+  composerSaveDraftBtn: document.getElementById("composerSaveDraftBtn"),
+  composerCheckBtn: document.getElementById("composerCheckBtn"),
+  composerSubmitBtn: document.getElementById("composerSubmitBtn"),
+  composerGrammarBtn: document.getElementById("composerGrammarBtn"),
+  composerClarityBtn: document.getElementById("composerClarityBtn"),
+  composerSafeguardingBtn: document.getElementById("composerSafeguardingBtn"),
+  composerChildVoiceBtn: document.getElementById("composerChildVoiceBtn"),
+
+  assistantLauncher: document.getElementById("assistantLauncher"),
+  assistantExpandBtn: document.getElementById("assistantExpandBtn"),
+  assistantBackdrop: document.getElementById("assistantBackdrop"),
+  assistantModal: document.getElementById("assistantModal"),
+  closeAssistantBtn: document.getElementById("closeAssistantBtn"),
+
+  assistantContext: document.getElementById("assistantContext"),
+  assistantSuggestions: document.getElementById("assistantSuggestions"),
+  assistantMessages: document.getElementById("assistantMessages"),
+  assistantForm: document.getElementById("assistantForm"),
+  assistantInput: document.getElementById("assistantInput"),
+  assistantSendBtn: document.getElementById("assistantSendBtn"),
+  assistantClearBtn: document.getElementById("assistantClearBtn"),
+
+  assistantModalMessages: document.getElementById("assistantModalMessages"),
+  assistantModalForm: document.getElementById("assistantModalForm"),
+  assistantModalInput: document.getElementById("assistantModalInput"),
+  assistantModalSendBtn: document.getElementById("assistantModalSendBtn"),
+
+  scopeBadge: document.getElementById("scopeBadge"),
+  scopeHomeBadge: document.getElementById("scopeHomeBadge"),
+  scopeChildBadge: document.getElementById("scopeChildBadge"),
+  scopeShiftBadge: document.getElementById("scopeShiftBadge"),
+
+  modalScopeHomeBadge: document.getElementById("modalScopeHomeBadge"),
+  modalScopeChildBadge: document.getElementById("modalScopeChildBadge"),
+
+  assistantScopeSummary: document.getElementById("assistantScopeSummary"),
+  assistantActions: document.getElementById("assistantActions"),
+  assistantSources: document.getElementById("assistantSources"),
+  assistantRuntime: document.getElementById("assistantRuntime"),
+  assistantExplainability: document.getElementById("assistantExplainability"),
+
+  assistantModalScopeSummary: document.getElementById("assistantModalScopeSummary"),
+  assistantModalSources: document.getElementById("assistantModalSources"),
+};
+
+const VIEW_CONFIG = {
+  home: {
+    title: "Home",
+    subtitle: "What matters now",
+    loader: loadHome,
   },
-
-  workspaceContext: {
-    youngPersonId: null,
-    youngPersonName: "",
-    home: "",
-    view: "",
+  "daily-notes": {
+    title: "Daily notes",
+    subtitle: "Clear day-to-day recording for the young person and the shift team",
+    loader: () => loadRecordList(`/young-people/${state.youngPersonId}/daily-notes`, "Daily notes"),
   },
-
-  themePreference: "system",
-  systemPrefersDark: false,
+  incidents: {
+    title: "Incidents",
+    subtitle: "Concerns, context, response and follow-up in one clear view",
+    loader: () => loadRecordList(`/young-people/${state.youngPersonId}/incidents`, "Incidents"),
+  },
+  risk: {
+    title: "Risks",
+    subtitle: "Current risks, patterns, meaning and what helps",
+    loader: () => loadRecordList(`/young-people/${state.youngPersonId}/risk`, "Risk assessments"),
+  },
+  plans: {
+    title: "Plans",
+    subtitle: "Support guidance that helps adults respond consistently",
+    loader: () => loadRecordList(`/young-people/${state.youngPersonId}/plans`, "Plans"),
+  },
+  appointments: {
+    title: "Appointments",
+    subtitle: "Upcoming appointments, preparation and follow-up",
+    loader: () => loadRecordList(`/young-people/${state.youngPersonId}/appointments`, "Appointments"),
+  },
+  timeline: {
+    title: "Timeline",
+    subtitle: "A joined-up chronology of what happened over time",
+    loader: loadTimeline,
+  },
+  handover: {
+    title: "Handover",
+    subtitle: "What the next adult needs to know now",
+    loader: loadHandover,
+  },
+  reports: {
+    title: "Reports",
+    subtitle: "Summaries, outputs and ready-to-use reporting",
+    loader: loadReports,
+  },
+  profile: {
+    title: "Profile",
+    subtitle: "Identity, communication, needs and legal context",
+    loader: loadProfile,
+  },
+  health: {
+    title: "Health",
+    subtitle: "Health information, medication and wellbeing",
+    loader: loadHealth,
+  },
+  education: {
+    title: "Education",
+    subtitle: "Education attendance, progress and support",
+    loader: loadEducation,
+  },
+  family: {
+    title: "Family",
+    subtitle: "Relationships, contact and family context",
+    loader: loadFamily,
+  },
+  keywork: {
+    title: "Keywork",
+    subtitle: "Keywork sessions, reflection and progress",
+    loader: () => loadRecordList(`/young-people/${state.youngPersonId}/keywork`, "Keywork"),
+  },
+  evidence: {
+    title: "Evidence",
+    subtitle: "Inspection-ready evidence linked through the record",
+    loader: loadEvidence,
+  },
+  compliance: {
+    title: "Compliance",
+    subtitle: "Checks, due items and record quality",
+    loader: loadCompliance,
+  },
+  manager: {
+    title: "Manager review",
+    subtitle: "Leadership oversight, approvals and items needing attention",
+    loader: loadManager,
+  },
 };
 
-/* ---------------------------------------------------------
- * Constants
- * --------------------------------------------------------- */
-
-const DEFAULT_LANGUAGE = "en-GB";
-const THEME_PREF_KEY = "indicare_theme_pref";
-const LEGACY_THEME_KEY = "indicare_theme";
-
-const REG_PROMPT =
-  " [SYSTEM: Verify response against Ofsted SCCIF and Quality Standards for Children's Homes. Use a calm, professional, safeguarding-aware tone. Keep wording clear, factual, structured, and suitable for care records, management review, and professional communication. Avoid slang, exaggeration, or overly casual wording.]";
-
-const RESP = {
-  quick: "Fast",
-  balanced: "Balanced",
-  deep: "Detailed",
+const RECORD_CONFIG = {
+  daily_note: {
+    label: "Daily note",
+    listUrl: (id) => `/young-people/${id}/daily-notes`,
+    createUrl: (id) => `/young-people/${id}/daily-notes`,
+    detailUrl: (id) => `/young-people/daily-notes/${id}`,
+    updateUrl: (id) => `/young-people/daily-notes/${id}`,
+    updateMethod: "PATCH",
+    submitUrl: (id) => `/young-people/daily-notes/${id}/submit`,
+    approveUrl: (id) => `/young-people/daily-notes/${id}/approve`,
+    returnUrl: (id) => `/young-people/daily-notes/${id}/return`,
+    archiveUrl: (id) => `/young-people/daily-notes/${id}/archive`,
+  },
+  incident: {
+    label: "Incident",
+    listUrl: (id) => `/young-people/${id}/incidents`,
+    createUrl: (id) => `/young-people/${id}/incidents`,
+    detailUrl: (id) => `/young-people/incidents/${id}`,
+    updateUrl: (id) => `/young-people/incidents/${id}`,
+    updateMethod: "PATCH",
+    submitUrl: (id) => `/young-people/incidents/${id}/submit`,
+    approveUrl: (id) => `/young-people/incidents/${id}/approve`,
+    returnUrl: (id) => `/young-people/incidents/${id}/return`,
+    archiveUrl: (id) => `/young-people/incidents/${id}/archive`,
+  },
+  risk: {
+    label: "Risk assessment",
+    listUrl: (id) => `/young-people/${id}/risk`,
+    createUrl: (id) => `/young-people/${id}/risk`,
+    detailUrl: (id) => `/young-people/risk/${id}`,
+    updateUrl: (id) => `/young-people/risk/${id}`,
+    updateMethod: "PUT",
+    submitUrl: (id) => `/young-people/risk/${id}/submit`,
+    approveUrl: (id) => `/young-people/risk/${id}/approve`,
+    returnUrl: (id) => `/young-people/risk/${id}/return`,
+    archiveUrl: (id) => `/young-people/risk/${id}/archive`,
+  },
+  support_plan: {
+    label: "Plan",
+    listUrl: (id) => `/young-people/${id}/plans`,
+    createUrl: (id) => `/young-people/${id}/plans`,
+    detailUrl: (id) => `/young-people/plans/${id}`,
+    updateUrl: (id) => `/young-people/plans/${id}`,
+    updateMethod: "PUT",
+    submitUrl: (id) => `/young-people/plans/${id}/submit`,
+    approveUrl: (id) => `/young-people/plans/${id}/approve`,
+    returnUrl: (id) => `/young-people/plans/${id}/return`,
+    archiveUrl: (id) => `/young-people/plans/${id}/archive`,
+  },
+  appointment: {
+    label: "Appointment",
+    listUrl: (id) => `/young-people/${id}/appointments`,
+    createUrl: (id) => `/young-people/${id}/appointments`,
+    detailUrl: (id) => `/young-people/appointments/${id}`,
+    updateUrl: (id) => `/young-people/appointments/${id}`,
+    updateMethod: "PATCH",
+    approveUrl: (id) => `/young-people/appointments/${id}/complete`,
+    returnUrl: (id) => `/young-people/appointments/${id}/cancel`,
+  },
 };
 
-const LANG = {
-  "en-GB": "English",
-  "pl-PL": "Polish",
-  "ro-RO": "Romanian",
-  "ur-PK": "Urdu",
-  ar: "Arabic",
-};
-
-const LEGAL_VERSION = "2026-03-29-v1";
-const LEGAL_ACCEPTANCE_KEY = "indicare_legal_acceptance";
-const LEGAL_TABS = ["terms", "privacy", "ip", "acceptance"];
-const ASSISTANT_REDIRECT_GUARD_KEY = "indicare_assistant_redirect_guard";
-const ASSISTANT_BOOTSTRAP_KEY = "indicare_assistant_bootstrap";
-const WORKSPACE_CONTEXT_KEY = "indicare_workspace_context";
-
-/* ---------------------------------------------------------
- * Derived helpers
- * --------------------------------------------------------- */
-
-const role = () => String(state.currentUser?.role || "").toLowerCase();
-const isAdmin = () => ["admin", "provider_admin"].includes(role());
-const isManager = () => role() === "manager";
-const isStaff = () => role() === "staff";
-const isRi = () => role() === "ri";
-const canManageLibrary = () => isAdmin() || isManager() || isRi();
-
-const selectedLang = () =>
-  has("lang") ? $("lang").value || DEFAULT_LANGUAGE : DEFAULT_LANGUAGE;
-
-const selectedMode = () =>
-  has("mode") ? $("mode").value || "balanced" : "balanced";
-
-const firstName = () =>
-  state.currentUser?.first_name || localStorage.getItem("first_name") || "there";
-
-/* ---------------------------------------------------------
- * Time / theme helpers
- * --------------------------------------------------------- */
-
-function currentHour() {
-  try {
-    return new Date().getHours();
-  } catch {
-    return 12;
-  }
+function getYoungPersonId() {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id") || params.get("young_person_id");
+  return id ? Number(id) : null;
 }
 
-function timeOfDayLabel() {
-  const h = currentHour();
-  if (h < 12) return "morning";
-  if (h < 18) return "afternoon";
-  return "evening";
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
-function greetingForUser(name = firstName()) {
-  const tod = timeOfDayLabel();
-  const cleanName = String(name || "there").trim();
-  return `Good ${tod}, ${cleanName}.`;
+function formatDate(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString("en-GB", {
+    dateStyle: "medium",
+    timeStyle: String(value).includes("T") ? "short" : undefined,
+  });
 }
 
-function supportingWelcomeCopy() {
-  const tod = timeOfDayLabel();
-  if (tod === "morning") {
-    return "Start the day with records, policy support, drafting, safeguarding guidance, and operational tasks in one place.";
-  }
-  if (tod === "afternoon") {
-    return "Pick up records, policy, drafting, safeguarding support, and day-to-day operational work from one clear front door.";
-  }
-  return "Use Assistant to support handover, records, policy, safeguarding guidance, and the rest of the day’s operational work.";
+function toDateInputValue(date) {
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
-function systemThemeMode() {
-  return state.systemPrefersDark ? "dark" : "light";
+function toDateTimeLocalValue(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hours = String(d.getHours()).padStart(2, "0");
+  const mins = String(d.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${mins}`;
 }
 
-function resolvedThemeMode() {
-  if (state.themePreference === "dark") return "dark";
-  if (state.themePreference === "light") return "light";
-  return systemThemeMode();
+function initialsFromName(name) {
+  if (!name) return "YP";
+  const parts = name.trim().split(/\s+/).slice(0, 2);
+  return parts.map((p) => p[0]?.toUpperCase() || "").join("") || "YP";
 }
 
-function themeSummaryLabel() {
-  const pref = state.themePreference;
-  const resolved = resolvedThemeMode();
-
-  if (pref === "system") {
-    return `Theme: System (${resolved === "dark" ? "dark" : "light"})`;
-  }
-
-  return `Theme: ${resolved === "dark" ? "Dark" : "Light"}`;
+function getPreferredDisplayName(item = {}) {
+  return item.preferred_name || [item.first_name, item.last_name].filter(Boolean).join(" ").trim() || "Young Person";
 }
 
-function themeAwarePillText() {
-  const mode = resolvedThemeMode();
-  return mode === "dark" ? "Optimised for dark mode" : "Optimised for light mode";
+function getRiskTone(value) {
+  const risk = String(value || "").toLowerCase();
+  if (["high", "critical"].includes(risk)) return "Needs close attention";
+  if (["medium", "moderate"].includes(risk)) return "Keep under review";
+  if (["low"].includes(risk)) return "Currently lower concern";
+  return "Risk picture updating";
 }
 
-function themeAwarePlaceholder() {
-  const mode = resolvedThemeMode();
-  return mode === "dark"
-    ? "Ask Assistant anything about records, policy, safeguarding, guidance, or operational work..."
-    : "Ask Assistant anything about records, policy, safeguarding, guidance, or operational work...";
+function showError(message) {
+  if (!els.statusBar) return;
+  els.statusBar.classList.remove("hidden");
+  els.statusBar.textContent = message;
 }
 
-/* ---------------------------------------------------------
- * CSRF helpers
- * --------------------------------------------------------- */
+function showMessage(message) {
+  if (!els.statusBar) return;
+  els.statusBar.classList.remove("hidden");
+  els.statusBar.textContent = message;
+}
+
+function clearStatus() {
+  if (!els.statusBar) return;
+  els.statusBar.classList.add("hidden");
+  els.statusBar.textContent = "";
+}
+
+function setLoading(message = "Loading...") {
+  if (!els.content) return;
+  els.content.innerHTML = `
+    <div class="loading-state">
+      <div>
+        <div class="spinner"></div>
+        <p>${escapeHtml(message)}</p>
+      </div>
+    </div>
+  `;
+}
+
+function setEmpty(message = "No records found.") {
+  if (!els.content) return;
+  els.content.innerHTML = `
+    <div class="empty-state">
+      <p>${escapeHtml(message)}</p>
+    </div>
+  `;
+}
 
 function getCookie(name) {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = document.cookie.match(
-    new RegExp("(^|;\\s*)" + escaped + "=([^;]*)")
-  );
+  const match = document.cookie.match(new RegExp("(^|;\\s*)" + escaped + "=([^;]*)"));
   return match ? decodeURIComponent(match[2]) : "";
 }
 
-function getCsrfToken() {
+function getLocalCsrfToken() {
   return getCookie("__Host-indicare_csrf") || getCookie("indicare_csrf") || "";
 }
 
+function getCsrfToken() {
+  return getLocalCsrfToken();
+}
+
 function withCsrfHeaders(method, headers = {}) {
-  const normalisedMethod = String(method || "GET").toUpperCase();
-  const needsCsrf = ["POST", "PUT", "PATCH", "DELETE"].includes(normalisedMethod);
-  const nextHeaders = { ...headers };
-
-  if (needsCsrf) {
+  const m = String(method || "GET").toUpperCase();
+  const next = { ...headers };
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(m)) {
     const token = getCsrfToken();
-    if (token) nextHeaders["X-CSRF-Token"] = token;
+    if (token) next["X-CSRF-Token"] = token;
+  }
+  return next;
+}
+
+async function apiGet(url) {
+  if (typeof window.apiRequest === "function") {
+    return window.apiRequest(url, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
   }
 
-  return nextHeaders;
-}
+  const response = await fetch(url, {
+    method: "GET",
+    credentials: "include",
+    headers: { Accept: "application/json" },
+  });
 
-/* ---------------------------------------------------------
- * Basic UI helpers
- * --------------------------------------------------------- */
-
-function banner(text, ms = 2400) {
-  const el = $("status");
-  if (!el) return;
-
-  el.textContent = text;
-  el.style.display = "block";
-
-  clearTimeout(banner._timer);
-  banner._timer = setTimeout(() => {
-    el.style.display = "none";
-  }, ms);
-}
-
-function stripSystem(s) {
-  return String(s || "").replace(/\s*\[SYSTEM:[\s\S]*$/i, "").trim();
-}
-
-function setTitle(title = "Assistant") {
-  if (has("title")) $("title").textContent = title;
-}
-
-function resize() {
-  if (!has("input")) return;
-  const input = $("input");
-  input.style.height = "auto";
-  input.style.height = `${Math.min(input.scrollHeight, 180)}px`;
-}
-
-function docShow(name) {
-  if (!has("docText") || !has("doc")) return;
-  $("docText").textContent = name || "";
-  $("doc").classList.add("show");
-}
-
-function docHide() {
-  if (!has("docText") || !has("doc")) return;
-  $("docText").textContent = "";
-  $("doc").classList.remove("show");
-}
-
-function applyResolvedTheme() {
-  document.body.classList.toggle("theme-dark", resolvedThemeMode() === "dark");
-
-  if (has("theme")) {
-    $("theme").classList.toggle("active", resolvedThemeMode() === "dark");
+  if (!response.ok) {
+    let message = `Request failed (${response.status})`;
+    try {
+      const body = await response.json();
+      message = body.detail || body.error || message;
+    } catch (_) {}
+    throw new Error(message);
   }
 
-  if (has("themeLabel")) {
-    $("themeLabel").textContent = themeSummaryLabel();
+  return response.json();
+}
+
+async function apiSend(url, method, body) {
+  if (typeof window.apiRequest === "function") {
+    return window.apiRequest(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: body ? JSON.stringify(body) : null,
+    });
   }
 
-  if (has("themeAwarePill")) {
-    $("themeAwarePill").textContent = themeAwarePillText();
-  }
+  const response = await fetch(url, {
+    method,
+    credentials: "include",
+    headers: withCsrfHeaders(method, {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    }),
+    body: body ? JSON.stringify(body) : null,
+  });
 
-  if (has("input")) {
-    $("input").placeholder = themeAwarePlaceholder();
+  if (!response.ok) {
+    let message = `Request failed (${response.status})`;
+    try {
+      const parsed = await response.json();
+      message = parsed.detail || parsed.error || message;
+    } catch (_) {}
+    throw new Error(message);
   }
 
   try {
-    const themeColor = resolvedThemeMode() === "dark" ? "#0f172a" : "#f6f8fb";
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", themeColor);
-  } catch {}
-}
-
-function syncHelpers() {
-  if (has("langHelp")) {
-    $("langHelp").textContent = `Assistant replies in ${
-      LANG[selectedLang()] || "English"
-    }.`;
-  }
-
-  if (has("modeHelp")) {
-    $("modeHelp").textContent = `Mode: ${RESP[selectedMode()]}`;
-  }
-
-  if (has("theme")) {
-    $("theme").classList.toggle("active", resolvedThemeMode() === "dark");
-  }
-
-  if (has("privacy") && has("app")) {
-    $("privacy").classList.toggle(
-      "active",
-      $("app").classList.contains("privacy-active")
-    );
-  }
-
-  if (has("adminActiveToggle")) {
-    $("adminActiveToggle").classList.toggle("active", state.adminCreateActive);
-  }
-
-  if (has("voiceReplies")) {
-    $("voiceReplies").classList.toggle("active", state.speechEnabled);
-  }
-
-  if (has("themeLabel")) {
-    $("themeLabel").textContent = themeSummaryLabel();
-  }
-
-  if (has("themeAwarePill")) {
-    $("themeAwarePill").textContent = themeAwarePillText();
-  }
-
-  applyResolvedTheme();
-}
-
-function userInitials() {
-  const full =
-    [state.currentUser?.first_name, state.currentUser?.last_name]
-      .filter(Boolean)
-      .join(" ") || firstName();
-
-  const parts = String(full).trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return "Y";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[1][0]).toUpperCase();
-}
-
-function setWelcome() {
-  if (has("welcomeTitle")) {
-    $("welcomeTitle").textContent = greetingForUser(firstName());
-  }
-
-  if (has("welcomeText")) {
-    $("welcomeText").textContent = supportingWelcomeCopy();
-  }
-
-  if (has("themeAwarePill")) {
-    $("themeAwarePill").textContent = themeAwarePillText();
-  }
-}
-
-function indiCareCopy(key) {
-  const map = {
-    libraryLoadFail: "The library could not be loaded just now.",
-    managerLoadFail: "The manager panel could not be loaded just now.",
-    adminLoadFail: "The admin panel could not be loaded just now.",
-    conversationsLoadFail: "Conversations could not be loaded just now.",
-    adminDataLoadFail: "Admin data could not be loaded just now.",
-    uploadFail: "The document could not be uploaded just now.",
-    speechUnsupported: "Speech to text is not available on this device.",
-    speechFailed: "Speech input could not be completed.",
-    documentRemoved: "Document removed.",
-    copied: "Copied.",
-    updated: "Updated successfully.",
-    saved: "Saved successfully.",
-    deleted: "Deleted successfully.",
-    contextSaved: "Context saved.",
-  };
-  return map[key] || "";
-}
-
-function scrollMessagesToBottom() {
-  if (!has("messages")) return;
-  $("messages").scrollTop = $("messages").scrollHeight;
-}
-
-/* ---------------------------------------------------------
- * Theme management
- * --------------------------------------------------------- */
-
-function readStoredThemePreference() {
-  const next = localStorage.getItem(THEME_PREF_KEY);
-  if (next === "light" || next === "dark" || next === "system") return next;
-
-  const legacy = localStorage.getItem(LEGACY_THEME_KEY);
-  if (legacy === "light" || legacy === "dark") return legacy;
-
-  return "system";
-}
-
-function saveThemePreference(pref) {
-  state.themePreference = pref;
-  localStorage.setItem(THEME_PREF_KEY, pref);
-  if (pref === "light" || pref === "dark") {
-    localStorage.setItem(LEGACY_THEME_KEY, pref);
-  } else {
-    localStorage.removeItem(LEGACY_THEME_KEY);
-  }
-  applyResolvedTheme();
-  setWelcome();
-  syncHelpers();
-}
-
-function cycleThemePreference() {
-  const order = ["system", "light", "dark"];
-  const idx = order.indexOf(state.themePreference);
-  const next = order[(idx + 1) % order.length];
-  saveThemePreference(next);
-  banner(themeSummaryLabel());
-}
-
-function initSystemThemeListener() {
-  try {
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    state.systemPrefersDark = !!media.matches;
-
-    const handler = (event) => {
-      state.systemPrefersDark = !!event.matches;
-      if (state.themePreference === "system") {
-        applyResolvedTheme();
-        setWelcome();
-        syncHelpers();
-      }
-    };
-
-    if (typeof media.addEventListener === "function") {
-      media.addEventListener("change", handler);
-    } else if (typeof media.addListener === "function") {
-      media.addListener(handler);
-    }
-  } catch {
-    state.systemPrefersDark = false;
-  }
-}
-
-/* ---------------------------------------------------------
- * Redirect guard
- * --------------------------------------------------------- */
-
-function hasRecentAssistantRedirectGuard() {
-  try {
-    const raw = sessionStorage.getItem(ASSISTANT_REDIRECT_GUARD_KEY);
-    if (!raw) return false;
-    const ts = Number(raw);
-    if (!ts) return false;
-    return Date.now() - ts < 5000;
+    return await response.json();
   } catch (_) {
-    return false;
-  }
-}
-
-function markAssistantRedirectGuard() {
-  try {
-    sessionStorage.setItem(
-      ASSISTANT_REDIRECT_GUARD_KEY,
-      String(Date.now())
-    );
-  } catch (_) {}
-}
-
-function clearAssistantRedirectGuard() {
-  try {
-    sessionStorage.removeItem(ASSISTANT_REDIRECT_GUARD_KEY);
-  } catch (_) {}
-}
-
-/* ---------------------------------------------------------
- * Settings / modal UI
- * --------------------------------------------------------- */
-
-function openSettings() {
-  if (has("settingsOverlay")) $("settingsOverlay").classList.add("show");
-  if (has("settings")) $("settings").classList.add("open");
-}
-
-function closeSettings() {
-  if (has("settingsOverlay")) $("settingsOverlay").classList.remove("show");
-  if (has("settings")) $("settings").classList.remove("open");
-}
-
-/* ---------------------------------------------------------
- * Text formatting
- * --------------------------------------------------------- */
-
-function summariseTitle(text) {
-  const clean = stripSystem(text)
-    .replace(/[^\p{L}\p{N}\s'-]/gu, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  if (!clean) return "New Conversation";
-
-  const stop = new Set([
-    "the",
-    "a",
-    "an",
-    "and",
-    "or",
-    "but",
-    "for",
-    "with",
-    "from",
-    "about",
-    "who",
-    "what",
-    "when",
-    "where",
-    "why",
-    "how",
-    "are",
-    "is",
-    "do",
-    "does",
-    "did",
-    "please",
-    "tell",
-    "write",
-    "good",
-    "morning",
-    "afternoon",
-    "evening",
-    "indicare",
-    "assistant",
-  ]);
-
-  const words = clean.split(" ").filter(Boolean);
-  const pool = words.filter((w) => !stop.has(w.toLowerCase()));
-  const picked = (pool.length ? pool : words).slice(0, 3);
-
-  return (
-    picked.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") ||
-    "New Conversation"
-  );
-}
-
-function beautify(text) {
-  let out = String(text || "").trim();
-
-  out = out
-    .replace(/([a-z]):(?=[A-Z])/g, "$1:\n")
-    .replace(/What matters most here:/gi, "### What matters most here")
-    .replace(/Key points:/gi, "### Key points")
-    .replace(
-      /Suggested staff response \/ next steps:/gi,
-      "### Suggested next steps"
-    )
-    .replace(
-      /What should be recorded \/ handed over \/ reviewed if relevant:/gi,
-      "### Recording and handover"
-    )
-    .replace(/- /g, "\n- ")
-    .replace(/\.\s+(?=[A-Z])/g, ".\n\n")
-    .replace(/\n{3,}/g, "\n\n");
-
-  return out;
-}
-
-function render(text, roleName = "assistant") {
-  let s = safe(roleName === "assistant" ? beautify(text) : text)
-    .replace(/^### (.*)$/gm, "<h3>$1</h3>")
-    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-
-  const lines = s.split("\n");
-  let html = "";
-  let list = false;
-
-  for (const line of lines) {
-    if (/^\s*-\s+/.test(line)) {
-      if (!list) {
-        html += "<ul>";
-        list = true;
-      }
-      html += `<li>${line.replace(/^\s*-\s+/, "")}</li>`;
-    } else {
-      if (list) {
-        html += "</ul>";
-        list = false;
-      }
-      html +=
-        line.trim() === ""
-          ? "<br>"
-          : /^<h3>.*<\/h3>$/.test(line)
-          ? line
-          : `<p>${line}</p>`;
-    }
-  }
-
-  if (list) html += "</ul>";
-  return html;
-}
-
-function cleanSpeechText(text) {
-  return String(text || "")
-    .replace(/###\s*/g, "")
-    .replace(/\*\*/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/* ---------------------------------------------------------
- * Intent / prompt helpers
- * --------------------------------------------------------- */
-
-function detectIntent(text) {
-  const t = String(text || "").toLowerCase();
-  if (t.includes("incident")) return "incident";
-  if (t.includes("risk")) return "risk";
-  if (t.includes("handover")) return "handover";
-  if (t.includes("chronology")) return "chronology";
-  if (t.includes("keywork")) return "keywork";
-  if (t.includes("review")) return "review";
-  if (t.includes("safeguard")) return "safeguarding";
-  if (t.includes("daily note")) return "daily_note";
-  if (t.includes("report")) return "report";
-  if (t.includes("policy")) return "policy";
-  return "general";
-}
-
-function buildStructuredPrompt(intent) {
-  const map = {
-    incident:
-      "Respond as a professional incident record using factual, neutral language. Include headings: Summary, What happened, Staff response, Outcome, Follow-up.",
-    risk:
-      "Generate a structured risk assessment. Include headings: Presenting risks, Triggers, Protective factors, Staff actions, Review actions.",
-    handover:
-      "Write a clear handover summary for the next shift. Include: Key events, Risks, Actions completed, Outstanding actions.",
-    chronology:
-      "Write a factual chronology entry in neutral language, suitable for care records.",
-    keywork:
-      "Write a keywork record with discussion, young person's views, support given, and next steps.",
-    review:
-      "Write a formal review summary aligned with care standards and Ofsted expectations.",
-    safeguarding:
-      "Write a safeguarding-focused response prioritising risk, protection, immediate actions, and recording expectations.",
-    daily_note:
-      "Write a daily note suitable for care records using clear, factual wording.",
-    report:
-      "Write a formal report summary using structured, professional language.",
-    policy:
-      "Summarise the most relevant policy, procedure, or guidance clearly and professionally. Highlight key expectations, actions, and compliance points.",
-    general: "Respond clearly and professionally for care documentation.",
-  };
-
-  return map[intent] || map.general;
-}
-
-function copilotPrompt() {
-  const mode = has("copilot") ? $("copilot").value : "default";
-
-  if (mode === "safeguarding") {
-    return "You are IndiCare Safeguarding Copilot. Prioritise immediate safety, risk, protection, and accurate recording.";
-  }
-  if (mode === "manager") {
-    return "You are IndiCare Manager Copilot. Focus on oversight, accountability, actions, and compliance.";
-  }
-  if (mode === "ofsted") {
-    return "You are IndiCare Compliance Copilot. Write in a way that is defensible, inspection-ready, and aligned to standards.";
-  }
-  if (mode === "documentation") {
-    return "You are IndiCare Documentation Copilot. Produce clear, factual, well-structured records ready to paste.";
-  }
-
-  return "You are IndiCare Assistant. Be calm, professional, structured, and safeguarding-aware.";
-}
-
-function buildLangInstruction() {
-  return selectedLang() === DEFAULT_LANGUAGE
-    ? ""
-    : ` [SYSTEM: Reply in ${LANG[selectedLang()]}. Keep safeguarding, care, and formal documentation wording clear and professional.]`;
-}
-
-function convertPrompt(type) {
-  const prompts = {
-    incident: "Convert the last response into a formal incident report.",
-    risk: "Convert the last response into a full risk assessment.",
-    handover: "Rewrite the last response as a handover summary.",
-    chronology: "Rewrite the last response as a chronology entry.",
-    keywork: "Rewrite the last response as a keywork record.",
-    review: "Rewrite the last response as a manager review summary.",
-  };
-
-  return (
-    prompts[type] ||
-    "Rewrite the last response in a more formal structured format."
-  );
-}
-
-/* ---------------------------------------------------------
- * Context
- * --------------------------------------------------------- */
-
-function loadContextState() {
-  try {
-    state.contextState = JSON.parse(
-      localStorage.getItem("indicare_context_state") || "{}"
-    );
-  } catch {
-    state.contextState = {};
-  }
-
-  state.contextState = {
-    child: state.contextState.child || "",
-    home: state.contextState.home || "",
-    shift: state.contextState.shift || "",
-  };
-
-  if (has("contextChild")) $("contextChild").value = state.contextState.child;
-  if (has("contextHome")) $("contextHome").value = state.contextState.home;
-  if (has("contextShift")) $("contextShift").value = state.contextState.shift;
-}
-
-function renderContextSummary() {
-  return;
-}
-
-function saveContextState() {
-  state.contextState = {
-    child: has("contextChild") ? $("contextChild").value.trim() : "",
-    home: has("contextHome") ? $("contextHome").value.trim() : "",
-    shift: has("contextShift") ? $("contextShift").value.trim() : "",
-  };
-
-  localStorage.setItem(
-    "indicare_context_state",
-    JSON.stringify(state.contextState)
-  );
-
-  renderContextSummary();
-  banner(indiCareCopy("contextSaved"));
-}
-
-function applyAssistantBootstrap() {
-  let payload = null;
-
-  try {
-    payload = JSON.parse(localStorage.getItem(ASSISTANT_BOOTSTRAP_KEY) || "null");
-  } catch {
-    payload = null;
-  }
-
-  if (!payload) return;
-
-  localStorage.removeItem(ASSISTANT_BOOTSTRAP_KEY);
-
-  const nextContext = {
-    child: payload.youngPersonName || state.contextState.child || "",
-    home: state.contextState.home || "",
-    shift: payload.view
-      ? String(payload.view).replaceAll("-", " ")
-      : state.contextState.shift || "",
-  };
-
-  state.contextState = nextContext;
-  localStorage.setItem("indicare_context_state", JSON.stringify(nextContext));
-
-  if (has("contextChild")) $("contextChild").value = nextContext.child;
-  if (has("contextHome")) $("contextHome").value = nextContext.home;
-  if (has("contextShift")) $("contextShift").value = nextContext.shift;
-  renderContextSummary();
-
-  if (payload.prompt && has("input")) {
-    $("input").value = payload.prompt;
-    resize();
-  }
-
-  if (payload.youngPersonName) {
-    banner(`Context loaded for ${payload.youngPersonName}.`, 3200);
-  }
-}
-
-function loadWorkspaceContext() {
-  try {
-    state.workspaceContext = {
-      youngPersonId: null,
-      youngPersonName: "",
-      home: "",
-      view: "",
-      ...(JSON.parse(localStorage.getItem(WORKSPACE_CONTEXT_KEY) || "{}") || {}),
-    };
-  } catch {
-    state.workspaceContext = {
-      youngPersonId: null,
-      youngPersonName: "",
-      home: "",
-      view: "",
-    };
-  }
-}
-
-function saveWorkspaceContext(payload = {}) {
-  state.workspaceContext = {
-    ...state.workspaceContext,
-    ...payload,
-  };
-
-  localStorage.setItem(WORKSPACE_CONTEXT_KEY, JSON.stringify(state.workspaceContext));
-  renderContextSummary();
-}
-
-function buildYoungPeopleUrl() {
-  const params = new URLSearchParams();
-
-  if (state.workspaceContext.youngPersonId) {
-    params.set("id", String(state.workspaceContext.youngPersonId));
-  }
-
-  const query = params.toString();
-  return query ? `/young-people-shell?${query}` : "/young-people-shell";
-}
-
-function buildContextBlock() {
-  const lines = [];
-  if (state.contextState.child) lines.push(`Current focus: ${state.contextState.child}`);
-  if (state.contextState.home) lines.push(`Current home: ${state.contextState.home}`);
-  if (state.contextState.shift) lines.push(`Current context: ${state.contextState.shift}`);
-  return lines.length ? `[CONTEXT]\n${lines.join("\n")}\n\n` : "";
-}
-
-/* ---------------------------------------------------------
- * Copilot / prefs
- * --------------------------------------------------------- */
-
-function loadCopilotPref() {
-  if (!has("copilot")) return;
-  $("copilot").value =
-    localStorage.getItem("indicare_copilot_mode") || "default";
-}
-
-function saveCopilotPref() {
-  if (!has("copilot")) return;
-  localStorage.setItem("indicare_copilot_mode", $("copilot").value);
-}
-
-/* ---------------------------------------------------------
- * Legal gate
- * --------------------------------------------------------- */
-
-function legalStoragePayload() {
-  try {
-    return JSON.parse(localStorage.getItem(LEGAL_ACCEPTANCE_KEY) || "{}");
-  } catch {
     return {};
   }
 }
 
-function legalAcceptanceValid() {
-  const data = legalStoragePayload();
-  return !!(data.accepted && data.version === LEGAL_VERSION);
-}
+function unwrapCreateResponse(recordType, response) {
+  if (!response || typeof response !== "object") return null;
 
-function storeLegalAcceptance() {
-  const payload = {
-    accepted: true,
-    version: LEGAL_VERSION,
-    accepted_at: new Date().toISOString(),
-    user_id: state.currentUser?.id || null,
-    email: state.currentUser?.email || null,
+  const map = {
+    daily_note: response.daily_note,
+    incident: response.incident,
+    risk: response.risk || response.risk_assessment,
+    support_plan: response.support_plan || response.plan,
+    appointment: response.appointment,
   };
-  localStorage.setItem(LEGAL_ACCEPTANCE_KEY, JSON.stringify(payload));
+
+  return map[recordType] || response;
 }
 
-function clearLegalAcceptance() {
-  localStorage.removeItem(LEGAL_ACCEPTANCE_KEY);
+function statusBadgeClass(value) {
+  const v = String(value || "").toLowerCase();
+  if (["approved", "active", "recorded", "completed", "scheduled", "success"].includes(v)) return "success";
+  if (["submitted", "pending", "draft", "warning", "medium", "due_soon", "not_required"].includes(v)) return "warning";
+  if (["returned", "archived", "cancelled", "high", "critical", "overdue", "danger"].includes(v)) return "danger";
+  return "";
 }
 
-async function logLegalAcceptanceToServer() {
-  try {
-    await api("/auth/legal-acceptance", {
-      method: "POST",
-      body: JSON.stringify({
-        version: LEGAL_VERSION,
-        accepted_at: new Date().toISOString(),
-      }),
-    });
-  } catch (e) {
-    console.warn("Legal acceptance log skipped:", e?.message || e);
-  }
+function renderBadges(values = []) {
+  const list = values.filter(Boolean);
+  if (!list.length) return "";
+  return `
+    <div class="badge-row">
+      ${list.map((value) => `<span class="badge ${statusBadgeClass(value)}">${escapeHtml(value)}</span>`).join("")}
+    </div>
+  `;
 }
 
-function setLegalTab(name = "terms") {
-  const tab = LEGAL_TABS.includes(name) ? name : "terms";
+function renderRecordCard(item) {
+  const title =
+    item.title ||
+    item.topic ||
+    item.contact_person ||
+    item.record_type ||
+    item.event_type ||
+    "Record";
 
-  document.querySelectorAll("[data-legal-tab]").forEach((btn) => {
-    const active = btn.dataset.legalTab === tab;
-    btn.classList.toggle("active", active);
-    btn.setAttribute("aria-selected", active ? "true" : "false");
+  const summary =
+    item.summary ||
+    item.narrative ||
+    item.description ||
+    item.concern_summary ||
+    item.outcome ||
+    item.presenting_need ||
+    "Open to view details.";
+
+  const when =
+    item.recorded_at ||
+    item.occurred_at ||
+    item.event_datetime ||
+    item.created_at ||
+    item.note_date ||
+    item.record_date ||
+    item.appointment_date;
+
+  const by =
+    item.recorded_by_name ||
+    item.author_name ||
+    item.created_by_name ||
+    item.worker_name ||
+    item.owner_name ||
+    item.professional_name ||
+    "";
+
+  const badges = [
+    item.workflow_status,
+    item.status,
+    item.approval_status,
+    item.compliance_status,
+    item.severity,
+  ].filter(Boolean);
+
+  return `
+    <article class="record-card">
+      <div class="record-card-header">
+        <div>
+          <h4>${escapeHtml(String(title).replaceAll("_", " "))}</h4>
+          <div class="record-meta">
+            ${escapeHtml(formatDate(when))}
+            ${by ? ` • ${escapeHtml(by)}` : ""}
+          </div>
+        </div>
+      </div>
+
+      <div class="record-body">${escapeHtml(summary)}</div>
+      ${renderBadges(badges)}
+
+      <div class="day-record-actions">
+        <button class="ghost-btn" type="button" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderSimpleSection(title, subtitle, bodyHtml) {
+  return `
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h3>${escapeHtml(title)}</h3>
+          ${subtitle ? `<p class="panel-subtitle">${escapeHtml(subtitle)}</p>` : ""}
+        </div>
+      </div>
+      ${bodyHtml}
+    </section>
+  `;
+}
+
+function renderStat(label, value) {
+  return `
+    <div class="stat-card">
+      <div class="stat-label">${escapeHtml(label)}</div>
+      <div class="stat-value">${escapeHtml(String(value))}</div>
+    </div>
+  `;
+}
+
+function normaliseRecordType(item) {
+  const raw = String(item.record_type || item.event_type || item.category || "").toLowerCase();
+  if (raw === "plan") return "support_plan";
+  if (raw === "risk_assessment") return "risk";
+  if (raw === "keywork_session") return "keywork";
+  if (raw === "daily_notes") return "daily_note";
+  if (raw === "incidents") return "incident";
+  return raw;
+}
+
+function getRecordUrl(item) {
+  const type = normaliseRecordType(item);
+  const id = item.record_id || item.source_id || item.id;
+  if (!id) return null;
+
+  const map = {
+    daily_note: RECORD_CONFIG.daily_note.detailUrl(id),
+    incident: RECORD_CONFIG.incident.detailUrl(id),
+    risk: RECORD_CONFIG.risk.detailUrl(id),
+    support_plan: RECORD_CONFIG.support_plan.detailUrl(id),
+    appointment: RECORD_CONFIG.appointment.detailUrl(id),
+    health: `/young-people/health-records/${id}`,
+    health_record: `/young-people/health-records/${id}`,
+    medication_profile: `/young-people/medication-profiles/${id}`,
+    medication_record: `/young-people/medication-records/${id}`,
+    education: `/young-people/education-records/${id}`,
+    education_record: `/young-people/education-records/${id}`,
+    family: `/young-people/family/records/${id}`,
+    family_contact: `/young-people/family/records/${id}`,
+    keywork: `/young-people/keywork/${id}`,
+    report: `/young-people/reports/${id}`,
+  };
+
+  return map[type] || null;
+}
+
+function updatePageHeader() {
+  const config = VIEW_CONFIG[state.currentView];
+  if (!config || !els.pageTitle || !els.pageSubtitle) return;
+  els.pageTitle.textContent = config.title;
+  els.pageSubtitle.textContent = config.subtitle;
+  document.title = `IndiCare OS • ${config.title}`;
+}
+
+function updateActiveNav() {
+  document.querySelectorAll(".nav-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.view === state.currentView);
   });
+}
 
-  document.querySelectorAll("[data-legal-panel]").forEach((panel) => {
-    panel.classList.toggle("hidden", panel.dataset.legalPanel !== tab);
+function closeAllNavGroups(except = null) {
+  document.querySelectorAll(".nav-group").forEach((group) => {
+    if (group !== except) group.removeAttribute("open");
   });
 }
 
-function legalControlsDisabled(disabled) {
-  [
-    "send",
-    "input",
-    "upload",
-    "mic",
-    "newChat",
-    "navAssistant",
-    "navLibrary",
-    "navManager",
-    "navAdmin",
-    "openSettings",
-    "sideToggle",
-    "mobileMenu",
-  ].forEach((id) => {
-    if (!has(id)) return;
-    $(id).disabled = !!disabled;
-  });
+function showSelectorMode() {
+  els.selectorPanel?.classList.remove("hidden");
+  els.workspacePanel?.classList.add("hidden");
+  els.refreshBtn?.classList.add("hidden");
+
+  if (els.personName) els.personName.textContent = "No young person selected";
+  if (els.personMeta) els.personMeta.textContent = "Choose a young person to begin";
+  if (els.personAvatar) els.personAvatar.textContent = "YP";
+
+  toggleAssistantLauncher();
+  updatePageHeader();
 }
 
-function openLegalModal(tab = "terms", force = false) {
-  if (!has("legalModal") || !has("legalOverlay")) return;
+function showWorkspaceMode() {
+  els.selectorPanel?.classList.add("hidden");
+  els.workspacePanel?.classList.remove("hidden");
+  els.refreshBtn?.classList.remove("hidden");
+  toggleAssistantLauncher();
+}
 
-  setLegalTab(tab);
-  $("legalOverlay").classList.add("show");
-  $("legalModal").classList.add("open");
-  $("legalOverlay").setAttribute("aria-hidden", "false");
+function openDrawer() {
+  els.drawer?.classList.remove("hidden");
+  els.drawerBackdrop?.classList.remove("hidden");
+  els.drawer?.setAttribute("aria-hidden", "false");
+}
 
-  if (force) {
-    $("legalModal").dataset.force = "true";
-    if (has("closeLegalModal")) $("closeLegalModal").style.display = "none";
+function closeDrawer() {
+  els.drawer?.classList.add("hidden");
+  els.drawerBackdrop?.classList.add("hidden");
+  els.drawer?.setAttribute("aria-hidden", "true");
+  state.activeRecordItem = null;
+  state.activeRecordType = null;
+}
+
+function openComposer() {
+  state.composerOpen = true;
+  els.composerPage?.classList.remove("hidden");
+  els.composerPage?.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+}
+
+function closeComposer() {
+  state.composerOpen = false;
+  state.composerMode = "create";
+  state.composerRecordType = null;
+  state.composerRecordId = null;
+  state.composerEditItem = null;
+
+  els.composerPage?.classList.add("hidden");
+  els.composerPage?.setAttribute("aria-hidden", "true");
+  if (els.composerFields) els.composerFields.innerHTML = "";
+  if (els.composerAiFeedback) els.composerAiFeedback.textContent = "No AI review run yet.";
+  document.body.style.overflow = "";
+}
+
+function openAssistant() {
+  updateAssistantContext();
+  els.assistantModal?.classList.remove("hidden");
+  els.assistantBackdrop?.classList.remove("hidden");
+}
+
+function closeAssistant() {
+  els.assistantModal?.classList.add("hidden");
+  els.assistantBackdrop?.classList.add("hidden");
+}
+
+function toggleAssistantLauncher() {
+  if (!els.assistantLauncher) return;
+  if (state.youngPersonId) {
+    els.assistantLauncher.classList.remove("hidden");
   } else {
-    $("legalModal").dataset.force = "false";
-    if (has("closeLegalModal")) $("closeLegalModal").style.display = "";
+    els.assistantLauncher.classList.add("hidden");
   }
 }
 
-function closeLegalModal() {
-  if (!has("legalModal") || !has("legalOverlay")) return;
-  const forced = $("legalModal").dataset.force === "true";
-  if (forced && !legalAcceptanceValid()) return;
-
-  $("legalOverlay").classList.remove("show");
-  $("legalModal").classList.remove("open");
-  $("legalOverlay").setAttribute("aria-hidden", "true");
-}
-
-function allLegalChecksPassed() {
-  return !!(
-    has("acceptTermsCheck") &&
-    has("acceptPrivacyCheck") &&
-    has("acceptIPCheck") &&
-    $("acceptTermsCheck").checked &&
-    $("acceptPrivacyCheck").checked &&
-    $("acceptIPCheck").checked
+function getFullYoungPersonName() {
+  if (!state.youngPerson) return "";
+  return (
+    [state.youngPerson.first_name, state.youngPerson.last_name].filter(Boolean).join(" ").trim() ||
+    state.youngPerson.preferred_name ||
+    "Young Person"
   );
 }
 
-async function acceptLegalTerms() {
-  if (!allLegalChecksPassed()) {
-    setLegalTab("acceptance");
-    return banner("Please tick all acceptance boxes before continuing.");
+function getYoungPersonSummaryLine() {
+  if (!state.youngPerson) return "Choose a young person to begin";
+
+  const placement = state.youngPerson.placement_status || "Placement status not set";
+  const risk = state.youngPerson.summary_risk_level || "Unknown";
+  const riskTone = getRiskTone(risk);
+
+  return `${placement} • Risk: ${risk} • ${riskTone}`;
+}
+
+function updateAssistantScopeDataset() {
+  if (!els.app) return;
+
+  els.app.dataset.assistantScopeType = state.youngPersonId ? "young_person" : "global";
+  els.app.dataset.youngPersonId = state.youngPersonId ? String(state.youngPersonId) : "";
+  els.app.dataset.homeId = state.youngPerson?.home_id != null ? String(state.youngPerson.home_id) : "";
+}
+
+function renderAssistantScopeBadges() {
+  const homeText =
+    state.youngPerson?.home_name ||
+    (state.youngPerson?.home_id != null ? `Home ${state.youngPerson.home_id}` : "");
+
+  const childText = getFullYoungPersonName();
+
+  if (els.scopeBadge) {
+    els.scopeBadge.textContent = state.youngPersonId ? "Young person assistant" : "Assistant";
   }
 
-  storeLegalAcceptance();
-  await logLegalAcceptanceToServer();
-  legalControlsDisabled(false);
-  closeLegalModal();
-  banner("Legal terms accepted.");
-}
-
-async function declineLegalTerms() {
-  clearLegalAcceptance();
-  banner("You must accept the legal terms to use IndiCare OS.");
-  await logoutNow();
-}
-
-function enforceLegalGate() {
-  const accepted = legalAcceptanceValid();
-  legalControlsDisabled(!accepted);
-
-  if (!accepted) {
-    openLegalModal("terms", true);
-  } else {
-    closeLegalModal();
-  }
-}
-
-/* ---------------------------------------------------------
- * Speech
- * --------------------------------------------------------- */
-
-function getSavedVoiceName() {
-  return localStorage.getItem("indicare_selected_voice_name") || "";
-}
-
-function saveVoiceName(name) {
-  localStorage.setItem("indicare_selected_voice_name", name || "");
-}
-
-function populateVoiceSelect() {
-  if (!has("voiceSelect")) return;
-
-  const sel = $("voiceSelect");
-  const current = getSavedVoiceName();
-  sel.innerHTML = `<option value="">Auto select</option>`;
-
-  state.availableVoices.forEach((voice) => {
-    const opt = document.createElement("option");
-    opt.value = voice.name;
-    opt.textContent = `${voice.name} (${voice.lang})`;
-    sel.appendChild(opt);
-  });
-
-  if ([...sel.options].some((o) => o.value === current)) {
-    sel.value = current;
-  } else {
-    sel.value = "";
-  }
-}
-
-function pickIndiCareVoice() {
-  if (!("speechSynthesis" in window)) return null;
-
-  const savedName = getSavedVoiceName();
-  const voices = window.speechSynthesis.getVoices() || [];
-
-  state.availableVoices = voices.slice().sort((a, b) => {
-    const gbA = /en-GB/i.test(a.lang) ? 0 : 1;
-    const gbB = /en-GB/i.test(b.lang) ? 0 : 1;
-    if (gbA !== gbB) return gbA - gbB;
-    return a.name.localeCompare(b.name);
-  });
-
-  populateVoiceSelect();
-
-  if (!voices.length) return null;
-
-  state.indicareVoice =
-    voices.find((v) => savedName && v.name === savedName) ||
-    voices.find(
-      (v) =>
-        /en-GB/i.test(v.lang) &&
-        /female|samantha|serena|karen|libby|hazel|susan|zira/i.test(v.name)
-    ) ||
-    voices.find((v) => /en-GB/i.test(v.lang)) ||
-    voices.find((v) => /en/i.test(v.lang)) ||
-    voices[0] ||
-    null;
-
-  state.speechReady = true;
-  return state.indicareVoice;
-}
-
-function stopSpeaking() {
-  try {
-    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
-  } catch {}
-}
-
-function speakText(text) {
-  if (!state.speechEnabled) return;
-  if (!("speechSynthesis" in window)) return;
-
-  const clean = cleanSpeechText(text);
-  if (!clean) return;
-
-  try {
-    stopSpeaking();
-    const utterance = new SpeechSynthesisUtterance(clean);
-    utterance.voice = state.indicareVoice || pickIndiCareVoice();
-    utterance.lang = utterance.voice?.lang || "en-GB";
-    utterance.rate = 0.98;
-    utterance.pitch = 1.08;
-    utterance.volume = 1;
-    window.speechSynthesis.speak(utterance);
-  } catch (e) {
-    console.error("speakText failed", e);
-  }
-}
-
-function loadVoicePref() {
-  state.speechEnabled =
-    localStorage.getItem("indicare_voice_replies") === "true";
-
-  if (has("voiceReplies")) {
-    $("voiceReplies").classList.toggle("active", state.speechEnabled);
-  }
-}
-
-function setVoicePref(value) {
-  state.speechEnabled = !!value;
-  localStorage.setItem("indicare_voice_replies", String(state.speechEnabled));
-
-  if (has("voiceReplies")) {
-    $("voiceReplies").classList.toggle("active", state.speechEnabled);
-  }
-}
-
-function initSpeech() {
-  if (!("speechSynthesis" in window)) {
-    state.speechReady = false;
-    state.availableVoices = [];
-    populateVoiceSelect();
-
-    if (has("voiceReplies")) {
-      $("voiceReplies").classList.remove("active");
-    }
-    return;
-  }
-
-  pickIndiCareVoice();
-  window.speechSynthesis.onvoiceschanged = () => {
-    pickIndiCareVoice();
-  };
-}
-
-function startSpeech() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) return banner(indiCareCopy("speechUnsupported"));
-
-  const rec = new SR();
-  rec.lang = selectedLang() || "en-GB";
-  rec.interimResults = true;
-  rec.continuous = false;
-
-  if (has("mic")) $("mic").style.color = "var(--accent)";
-
-  rec.onresult = (e) => {
-    let text = "";
-    for (let i = 0; i < e.results.length; i += 1) {
-      text += `${e.results[i][0].transcript} `;
-    }
-    if (has("input")) $("input").value = text.trim();
-    resize();
-  };
-
-  rec.onerror = () => banner(indiCareCopy("speechFailed"));
-  rec.onend = () => {
-    if (has("mic")) $("mic").style.color = "";
-  };
-
-  rec.start();
-}
-
-/* ---------------------------------------------------------
- * API
- * --------------------------------------------------------- */
-
-function redirectFor403(data) {
-  if (data?.code === "mfa_setup_required") {
-    markAssistantRedirectGuard();
-    window.location.replace("/mfa-setup");
-    return true;
-  }
-
-  if (data?.code === "mfa_verification_required") {
-    markAssistantRedirectGuard();
-    window.location.replace("/mfa");
-    return true;
-  }
-
-  return false;
-}
-
-async function api(url, options = {}) {
-  const method = String(options.method || "GET").toUpperCase();
-  const isFormData = options.body instanceof FormData;
-
-  const headers = withCsrfHeaders(method, {
-    ...(options.headers || {}),
-  });
-
-  if (!isFormData && options.body && !headers["Content-Type"]) {
-    headers["Content-Type"] = "application/json";
-  }
-
-  const res = await fetch(url, {
-    ...options,
-    method,
-    credentials: "include",
-    headers,
-  });
-
-  const type = res.headers.get("content-type") || "";
-  let data = null;
-
-  try {
-    if (type.includes("application/json")) {
-      data = await res.json();
+  if (els.scopeHomeBadge) {
+    if (homeText) {
+      els.scopeHomeBadge.textContent = homeText;
+      els.scopeHomeBadge.classList.remove("hidden");
     } else {
-      const text = await res.text();
-      data = text ? { detail: text } : {};
+      els.scopeHomeBadge.textContent = "";
+      els.scopeHomeBadge.classList.add("hidden");
     }
-  } catch {
-    data = {};
   }
 
-  if (res.status === 401) {
-    throw new Error("Not authenticated");
+  if (els.scopeChildBadge) {
+    if (childText) {
+      els.scopeChildBadge.textContent = childText;
+      els.scopeChildBadge.classList.remove("hidden");
+    } else {
+      els.scopeChildBadge.textContent = "";
+      els.scopeChildBadge.classList.add("hidden");
+    }
   }
 
-  if (res.status === 403 && redirectFor403(data)) {
-    return null;
+  if (els.scopeShiftBadge) {
+    els.scopeShiftBadge.textContent = state.currentView ? state.currentView.replaceAll("-", " ") : "";
+    if (state.currentView) {
+      els.scopeShiftBadge.classList.remove("hidden");
+    } else {
+      els.scopeShiftBadge.classList.add("hidden");
+    }
   }
 
-  if (!res.ok) {
-    const message =
-      data?.detail ||
-      data?.error ||
-      `${res.status}: ${res.statusText || "Request failed"}`;
-    throw new Error(message);
+  if (els.modalScopeHomeBadge) {
+    if (homeText) {
+      els.modalScopeHomeBadge.textContent = homeText;
+      els.modalScopeHomeBadge.classList.remove("hidden");
+    } else {
+      els.modalScopeHomeBadge.textContent = "";
+      els.modalScopeHomeBadge.classList.add("hidden");
+    }
   }
 
-  return data || {};
-}
-
-/* ---------------------------------------------------------
- * Auth / session
- * --------------------------------------------------------- */
-
-async function logoutNow() {
-  try {
-    await fetch("/auth/logout", {
-      method: "POST",
-      credentials: "include",
-      headers: withCsrfHeaders("POST"),
-    });
-  } catch {}
-
-  localStorage.removeItem("current_user");
-  localStorage.removeItem("indicare_remember_me");
-  localStorage.removeItem("first_name");
-  sessionStorage.removeItem("current_user");
-  sessionStorage.removeItem("indicare_login_redirect_guard");
-  sessionStorage.removeItem("indicare_assistant_redirect_guard");
-  sessionStorage.removeItem("indicare_recovery_codes");
-
-  window.location.replace("/login");
-}
-
-async function loadMe() {
-  try {
-    if (window.auth && typeof window.auth.validateSession === "function") {
-      const sessionState = await window.auth.validateSession();
-
-      if (!sessionState || !sessionState.authenticated) {
-        if (!hasRecentAssistantRedirectGuard()) {
-          markAssistantRedirectGuard();
-          window.location.replace("/login");
-        }
-        throw new Error("Not authenticated");
-      }
-
-      if (!sessionState.mfa_enabled) {
-        if (!hasRecentAssistantRedirectGuard()) {
-          markAssistantRedirectGuard();
-          window.location.replace("/mfa-setup");
-        }
-        throw new Error("MFA setup required");
-      }
-
-      if (!sessionState.mfa_verified) {
-        if (!hasRecentAssistantRedirectGuard()) {
-          markAssistantRedirectGuard();
-          window.location.replace("/mfa");
-        }
-        throw new Error("MFA verification required");
-      }
+  if (els.modalScopeChildBadge) {
+    if (childText) {
+      els.modalScopeChildBadge.textContent = childText;
+      els.modalScopeChildBadge.classList.remove("hidden");
+    } else {
+      els.modalScopeChildBadge.textContent = "";
+      els.modalScopeChildBadge.classList.add("hidden");
     }
-
-    const data = await api("/auth/me");
-    if (!data?.user) throw new Error("No user");
-
-    state.currentUser = data.user;
-    localStorage.setItem("first_name", state.currentUser.first_name || "");
-    clearAssistantRedirectGuard();
-
-    if (isAdmin() || isManager() || isStaff() || isRi()) {
-      has("navYoungPeople") && $("navYoungPeople").classList.remove("hidden");
-      has("navLibrary") && $("navLibrary").classList.remove("hidden");
-    }
-
-    if (isManager()) {
-      has("navManager") && $("navManager").classList.remove("hidden");
-    }
-
-    if (isAdmin()) {
-      has("navAdmin") && $("navAdmin").classList.remove("hidden");
-    }
-
-    if (canManageLibrary()) {
-      has("managerEditorTab") &&
-        $("managerEditorTab").classList.remove("hidden");
-    }
-
-    if (canManageLibrary() && has("libraryUploadBtn")) {
-      $("libraryUploadBtn").classList.remove("hidden");
-    }
-  } catch (e) {
-    const message = String(e?.message || "");
-
-    if (/subscription required/i.test(message)) {
-      banner("Your account does not currently have an active subscription.");
-      throw e;
-    }
-
-    if (/mfa/i.test(message)) throw e;
-
-    if (/not authenticated/i.test(message)) {
-      if (!hasRecentAssistantRedirectGuard()) {
-        markAssistantRedirectGuard();
-        window.location.replace("/login");
-      }
-      throw e;
-    }
-
-    throw e;
   }
 }
 
-/* ---------------------------------------------------------
- * Panel navigation
- * --------------------------------------------------------- */
+function renderSelectorList(items) {
+  if (!els.selectorList) return;
 
-function closeMobilePanels() {
-  if (window.innerWidth <= 768) {
-    has("sidebar") && $("sidebar").classList.remove("open");
-    has("overlay") && $("overlay").classList.remove("show");
-    closeSettings();
-  }
-}
-
-function hideAllPanels() {
-  ["assistantPanel", "libraryPanel", "managerPanel", "adminPanel"].forEach(
-    (id) => has(id) && $(id).classList.add("hidden")
-  );
-
-  ["navAssistant", "navYoungPeople", "navLibrary", "navManager", "navAdmin"].forEach(
-    (id) => has(id) && $(id).classList.remove("active")
-  );
-}
-
-function showAssistantView() {
-  hideAllPanels();
-  has("assistantPanel") && $("assistantPanel").classList.remove("hidden");
-  has("inputWrap") && $("inputWrap").classList.remove("hidden");
-  has("navAssistant") && $("navAssistant").classList.add("active");
-  setTitle("Assistant");
-  closeMobilePanels();
-}
-
-function showYoungPeopleView() {
-  if (!legalAcceptanceValid()) return openLegalModal("acceptance");
-  window.location.href = buildYoungPeopleUrl();
-}
-
-function showLibraryView() {
-  if (!legalAcceptanceValid()) return openLegalModal("acceptance");
-
-  hideAllPanels();
-  has("libraryPanel") && $("libraryPanel").classList.remove("hidden");
-  has("inputWrap") && $("inputWrap").classList.add("hidden");
-  has("navLibrary") && $("navLibrary").classList.add("active");
-  setTitle("Library");
-  closeMobilePanels();
-
-  loadLibrary().catch((e) => {
-    console.error("showLibraryView failed", e);
-    banner(indiCareCopy("libraryLoadFail"));
-  });
-}
-
-async function showManagerView() {
-  if (!legalAcceptanceValid()) return openLegalModal("acceptance");
-  if (!isManager()) return banner("Manager access required");
-
-  hideAllPanels();
-  has("managerPanel") && $("managerPanel").classList.remove("hidden");
-  has("inputWrap") && $("inputWrap").classList.add("hidden");
-  has("navManager") && $("navManager").classList.add("active");
-  setTitle("Manager");
-  closeMobilePanels();
-
-  try {
-    await loadManager();
-  } catch (e) {
-    console.error("showManagerView failed", e);
-    banner(e.message || indiCareCopy("managerLoadFail"));
-  }
-}
-
-async function showAdminView() {
-  if (!legalAcceptanceValid()) return openLegalModal("acceptance");
-  if (!isAdmin()) return banner("Admin access required");
-
-  hideAllPanels();
-  has("adminPanel") && $("adminPanel").classList.remove("hidden");
-  has("inputWrap") && $("inputWrap").classList.add("hidden");
-  has("navAdmin") && $("navAdmin").classList.add("active");
-  setTitle("Admin");
-  closeMobilePanels();
-
-  try {
-    await loadAdminReferenceData();
-    await loadActiveAdminTab();
-  } catch (e) {
-    console.error("showAdminView failed", e);
-    banner(indiCareCopy("adminLoadFail"));
-  }
-}
-
-function resetWelcome() {
-  state.conversationId = null;
-  state.currentDocumentText = null;
-  state.currentDocumentName = null;
-  state.currentStreamMeta = { sources: [], runtime: {}, explainability: {} };
-  state.currentProgressLines = [];
-  stopSpeaking();
-
-  if (has("messages")) {
-    $("messages").innerHTML = "";
-    $("messages").classList.add("hidden");
-  }
-
-  has("empty") && $("empty").classList.remove("hidden");
-
-  if (has("input")) $("input").value = "";
-  resize();
-  docHide();
-  setTitle("Assistant");
-  setWelcome();
-  filterConversations();
-  closeSettings();
-  showAssistantView();
-}
-
-/* ---------------------------------------------------------
- * Conversations / history
- * --------------------------------------------------------- */
-
-function renderHistory(rows) {
-  if (!has("history")) return;
-
-  const host = $("history");
-  host.innerHTML = "";
-
-  normArray(rows).forEach((row) => {
-    const item = document.createElement("div");
-    item.className = `item ${
-      Number(row?.id) === Number(state.conversationId) ? "active" : ""
-    }`;
-
-    item.innerHTML = `
-      <div class="row">
-        <button class="mainbtn">
-          <div class="ttl">${safe(stripSystem(row?.title || "Conversation"))}</div>
-        </button>
-        <button class="mini" aria-label="Copy conversation title">
-          <svg class="ui-icon"><use href="#i-copy"></use></svg>
-        </button>
-        <button class="mini danger" aria-label="Delete conversation">
-          <svg class="ui-icon"><use href="#i-trash"></use></svg>
-        </button>
+  if (!items.length) {
+    els.selectorList.innerHTML = `
+      <div class="empty-state">
+        <p>No young people found.</p>
       </div>
     `;
+    return;
+  }
 
-    const buttons = item.querySelectorAll("button");
-    const main = buttons[0];
-    const copy = buttons[1];
-    const del = buttons[2];
+  els.selectorList.innerHTML = items.map((item) => {
+    const fullName =
+      [item.first_name, item.last_name].filter(Boolean).join(" ").trim() ||
+      item.preferred_name ||
+      "Young Person";
 
-    if (main) {
-      main.onclick = () => {
-        if (!legalAcceptanceValid()) return openLegalModal("acceptance");
-        showAssistantView();
-        openConversation(row?.id, stripSystem(row?.title || "Conversation"));
-      };
+    const meta = [
+      item.preferred_name ? `Preferred: ${item.preferred_name}` : null,
+      item.placement_status || null,
+      item.summary_risk_level ? `Risk: ${item.summary_risk_level}` : null,
+    ].filter(Boolean).join(" • ");
+
+    return `
+      <article class="selector-card">
+        <div class="selector-card-left">
+          <div class="selector-card-avatar">${escapeHtml(initialsFromName(fullName))}</div>
+          <div>
+            <h4>${escapeHtml(fullName)}</h4>
+            <p>${escapeHtml(meta || "Young person record")}</p>
+          </div>
+        </div>
+        <button class="primary-btn" type="button" data-open-young-person="${item.id}">Open</button>
+      </article>
+    `;
+  }).join("");
+}
+
+function filterSelectorList() {
+  const term = (els.selectorSearch?.value || "").trim().toLowerCase();
+
+  if (!term) {
+    renderSelectorList(state.selectorItems);
+    return;
+  }
+
+  const filtered = state.selectorItems.filter((item) => {
+    const haystack = [
+      item.first_name,
+      item.last_name,
+      item.preferred_name,
+      item.placement_status,
+      item.summary_risk_level,
+    ].filter(Boolean).join(" ").toLowerCase();
+
+    return haystack.includes(term);
+  });
+
+  renderSelectorList(filtered);
+}
+
+async function loadYoungPersonSelector() {
+  clearStatus();
+  showSelectorMode();
+
+  if (els.selectorList) {
+    els.selectorList.innerHTML = `
+      <div class="loading-state">
+        <div>
+          <div class="spinner"></div>
+          <p>Loading young people...</p>
+        </div>
+      </div>
+    `;
+  }
+
+  try {
+    const data = await apiGet("/young-people");
+    state.selectorItems = data.young_people || data.items || [];
+    renderSelectorList(state.selectorItems);
+  } catch (error) {
+    showError(error.message || "Failed to load young people.");
+    if (els.selectorList) {
+      els.selectorList.innerHTML = `
+        <div class="empty-state">
+          <p>Unable to load young people.</p>
+        </div>
+      `;
     }
+  }
+}
 
-    if (copy) {
-      copy.onclick = (e) => {
-        e.stopPropagation();
-        navigator.clipboard.writeText(stripSystem(row?.title || "Conversation"));
-        banner(indiCareCopy("copied"));
-      };
-    }
+async function loadYoungPerson() {
+  const data = await apiGet(`/young-people/${state.youngPersonId}`);
+  const youngPerson = data.young_person || data.bundle?.young_person || data;
+  state.youngPerson = youngPerson;
 
-    if (del) {
-      del.onclick = async (e) => {
-        e.stopPropagation();
-        try {
-          await deleteConversation(row?.id);
-        } catch (err) {
-          banner(err?.message || "Could not delete conversation");
-        }
-      };
-    }
+  const fullName =
+    [youngPerson.first_name, youngPerson.last_name].filter(Boolean).join(" ").trim() ||
+    youngPerson.preferred_name ||
+    "Young Person";
 
-    host.appendChild(item);
+  if (els.personName) els.personName.textContent = fullName;
+  if (els.personMeta) els.personMeta.textContent = getYoungPersonSummaryLine();
+  if (els.personAvatar) els.personAvatar.textContent = initialsFromName(fullName);
+
+  updateAssistantScopeDataset();
+  updateAssistantContext();
+  renderAssistantScopeBadges();
+  renderAssistantInsights();
+  toggleAssistantLauncher();
+  updatePageHeader();
+}
+
+function renderHomeSummaryCards(yp, alerts, urgentItems) {
+  return `
+    <div class="grid grid-4">
+      ${renderStat("Placement status", yp.placement_status || "—")}
+      ${renderStat("Risk level", yp.summary_risk_level || "—")}
+      ${renderStat("Active alerts", alerts.length)}
+      ${renderStat("Needs attention", urgentItems.length)}
+    </div>
+  `;
+}
+
+async function loadHome() {
+  setLoading("Loading home...");
+
+  const [overviewData, timelineData, complianceData] = await Promise.all([
+    apiGet(`/young-people/${state.youngPersonId}/overview`).catch(() => ({})),
+    apiGet(`/young-people/${state.youngPersonId}/timeline?limit=10`).catch(() => ({ timeline: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/compliance`).catch(() => ({ items: [] })),
+  ]);
+
+  const yp = overviewData.young_person || state.youngPerson || {};
+  const alerts = overviewData.alerts || [];
+  const recent = timelineData.timeline || [];
+  const compliance = complianceData.compliance_items || complianceData.items || [];
+
+  const urgentItems = [
+    ...alerts.map((x) => ({ ...x, _kind: "alert", title: x.title || x.label || "Alert" })),
+    ...compliance.filter((x) =>
+      ["overdue", "pending", "submitted", "due_soon"].includes(
+        String(x.status || x.compliance_status || "").toLowerCase()
+      )
+    ),
+  ].slice(0, 6);
+
+  const todayItems = recent.slice(0, 6);
+
+  const managerItems = recent.filter((x) =>
+    ["submitted", "pending", "returned"].includes(
+      String(x.workflow_status || x.status || x.approval_status || "").toLowerCase()
+    )
+  ).slice(0, 6);
+
+  const quickSummary = [
+    yp.placement_status ? `Placement: ${yp.placement_status}` : null,
+    yp.summary_risk_level ? `Risk: ${yp.summary_risk_level}` : null,
+    alerts.length ? `${alerts.length} active alert${alerts.length === 1 ? "" : "s"}` : "No active alerts",
+    compliance.length ? `${compliance.length} compliance item${compliance.length === 1 ? "" : "s"}` : "No compliance items",
+  ].filter(Boolean).join(" • ");
+
+  if (!els.content) return;
+
+  els.content.innerHTML = `
+    ${renderHomeSummaryCards(yp, alerts, urgentItems)}
+
+    ${renderSimpleSection(
+      "Today at a glance",
+      "A simple overview of what matters most right now.",
+      `<div class="record-body">${escapeHtml(quickSummary || "No summary available.")}</div>`
+    )}
+
+    <div class="callout-grid">
+      ${renderSimpleSection(
+        "What happened today",
+        "Recent events, updates and child voice.",
+        todayItems.length
+          ? `<div class="record-list">${todayItems.map(renderRecordCard).join("")}</div>`
+          : `<div class="empty-state"><p>No recent activity recorded.</p></div>`
+      )}
+
+      ${renderSimpleSection(
+        "What needs doing next",
+        "Alerts, due items and follow-up for adults.",
+        urgentItems.length
+          ? `<div class="record-list">${urgentItems.map(renderRecordCard).join("")}</div>`
+          : `<div class="empty-state"><p>Nothing urgent is showing right now.</p></div>`
+      )}
+    </div>
+
+    <div class="callout-grid">
+      ${renderSimpleSection(
+        "What needs manager attention",
+        "Records waiting for review, approval or return comments.",
+        managerItems.length
+          ? `<div class="record-list">${managerItems.map(renderRecordCard).join("")}</div>`
+          : `<div class="empty-state"><p>No manager review items are currently visible.</p></div>`
+      )}
+
+      ${renderSimpleSection(
+        "Helpful next actions",
+        "Simple actions to keep the record current and inspection-ready.",
+        `
+          <div class="record-list">
+            <article class="record-card">
+              <div class="record-card-header"><div><h4>Add a daily note</h4></div></div>
+              <div class="record-body">Record what happened, how the young person presented, what helped, their voice, and what adults need next.</div>
+            </article>
+            <article class="record-card">
+              <div class="record-card-header"><div><h4>Check current risks</h4></div></div>
+              <div class="record-body">Review triggers, protective factors, calm responses, and practical guidance that supports consistent care.</div>
+            </article>
+            <article class="record-card">
+              <div class="record-card-header"><div><h4>Prepare for review</h4></div></div>
+              <div class="record-body">Submit finished records, respond to manager comments, and keep evidence linked through the chronology.</div>
+            </article>
+          </div>
+        `
+      )}
+    </div>
+  `;
+
+  bindDynamicOpenRecordButtons();
+}
+
+async function loadTimeline() {
+  setLoading("Loading timeline...");
+  const data = await apiGet(`/young-people/${state.youngPersonId}/timeline?limit=100`);
+  const items = data.timeline || [];
+
+  if (!els.content) return;
+  els.content.innerHTML = items.length
+    ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
+    : `<div class="empty-state"><p>No timeline items found.</p></div>`;
+
+  bindDynamicOpenRecordButtons();
+}
+
+async function loadHandover() {
+  setLoading("Loading handover...");
+
+  const [timelineData, riskData] = await Promise.all([
+    apiGet(`/young-people/${state.youngPersonId}/timeline?limit=6`).catch(() => ({ timeline: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/risk`).catch(() => ({ items: [] })),
+  ]);
+
+  const recent = timelineData.timeline || [];
+  const risks = riskData.items || [];
+
+  if (!els.content) return;
+  els.content.innerHTML = `
+    <div class="callout-grid">
+      ${renderSimpleSection(
+        "Recent activity",
+        "Latest record activity",
+        recent.length
+          ? `<div class="record-list">${recent.map(renderRecordCard).join("")}</div>`
+          : `<div class="empty-state"><p>No recent activity.</p></div>`
+      )}
+
+      ${renderSimpleSection(
+        "Current risks",
+        "What adults need to understand",
+        risks.length
+          ? `<div class="record-list">${risks.map(renderRecordCard).join("")}</div>`
+          : `<div class="empty-state"><p>No current risks.</p></div>`
+      )}
+    </div>
+  `;
+
+  bindDynamicOpenRecordButtons();
+}
+
+async function loadRecordList(url, label) {
+  setLoading(`Loading ${label.toLowerCase()}...`);
+
+  const data = await apiGet(url);
+  const items = data.items || data.records || data.timeline || [];
+
+  if (!els.content) return;
+  els.content.innerHTML = items.length
+    ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
+    : `<div class="empty-state"><p>No ${escapeHtml(label.toLowerCase())} found.</p></div>`;
+
+  bindDynamicOpenRecordButtons();
+}
+
+async function loadReports() {
+  setLoading("Loading reports...");
+  const data = await apiGet(`/young-people/${state.youngPersonId}/reports`).catch(() => ({ items: [] }));
+  const reports = data.items || [];
+
+  if (!els.content) return;
+  els.content.innerHTML = reports.length
+    ? `<div class="record-list">${
+        reports.map((report) =>
+          renderRecordCard({
+            ...report,
+            record_type: "report",
+            summary: report.report_text || "Report ready.",
+          })
+        ).join("")
+      }</div>`
+    : `<div class="empty-state"><p>No reports found.</p></div>`;
+
+  bindDynamicOpenRecordButtons();
+}
+
+async function loadProfile() {
+  setLoading("Loading profile...");
+  const data = await apiGet(`/young-people/${state.youngPersonId}`);
+  const bundle = data.bundle || {};
+  const yp = bundle.young_person || data.young_person || state.youngPerson || {};
+  const communication = bundle.communication_profile || {};
+  const identity = bundle.identity_profile || {};
+  const education = bundle.education_profile || {};
+  const health = bundle.health_profile || {};
+  const legal = bundle.legal_status || {};
+
+  if (!els.content) return;
+  els.content.innerHTML = `
+    <div class="callout-grid">
+      ${renderSimpleSection(
+        "Core profile",
+        "",
+        `
+          <div class="detail-list">
+            <div class="detail-row"><div class="detail-key">Preferred name</div><div class="detail-value">${escapeHtml(yp.preferred_name || "—")}</div></div>
+            <div class="detail-row"><div class="detail-key">Date of birth</div><div class="detail-value">${escapeHtml(formatDate(yp.date_of_birth))}</div></div>
+            <div class="detail-row"><div class="detail-key">Placement status</div><div class="detail-value">${escapeHtml(yp.placement_status || "—")}</div></div>
+            <div class="detail-row"><div class="detail-key">Risk level</div><div class="detail-value">${escapeHtml(yp.summary_risk_level || "—")}</div></div>
+          </div>
+        `
+      )}
+
+      ${renderSimpleSection(
+        "Communication and identity",
+        "",
+        `
+          <div class="detail-list">
+            <div class="detail-row"><div class="detail-key">Communication style</div><div class="detail-value">${escapeHtml(communication.communication_style || "—")}</div></div>
+            <div class="detail-row"><div class="detail-key">What helps</div><div class="detail-value">${escapeHtml(communication.what_helps || "—")}</div></div>
+            <div class="detail-row"><div class="detail-key">Interests</div><div class="detail-value">${escapeHtml(identity.interests || "—")}</div></div>
+            <div class="detail-row"><div class="detail-key">Strengths</div><div class="detail-value">${escapeHtml(identity.strengths_summary || "—")}</div></div>
+          </div>
+        `
+      )}
+
+      ${renderSimpleSection(
+        "Education, health and legal",
+        "",
+        `
+          <div class="detail-list">
+            <div class="detail-row"><div class="detail-key">School</div><div class="detail-value">${escapeHtml(education.school_name || "—")}</div></div>
+            <div class="detail-row"><div class="detail-key">Education status</div><div class="detail-value">${escapeHtml(education.education_status || "—")}</div></div>
+            <div class="detail-row"><div class="detail-key">GP</div><div class="detail-value">${escapeHtml(health.gp_name || "—")}</div></div>
+            <div class="detail-row"><div class="detail-key">Allergies</div><div class="detail-value">${escapeHtml(health.allergies || "—")}</div></div>
+            <div class="detail-row"><div class="detail-key">Legal status</div><div class="detail-value">${escapeHtml(legal.legal_status || "—")}</div></div>
+          </div>
+        `
+      )}
+    </div>
+  `;
+}
+
+async function loadHealth() {
+  setLoading("Loading health...");
+  const data = await apiGet(`/young-people/${state.youngPersonId}/health`);
+  const profile = data.health_profile || {};
+  const records = data.health_records || [];
+
+  if (!els.content) return;
+  els.content.innerHTML = `
+    ${renderSimpleSection(
+      "Health profile",
+      "",
+      `
+        <div class="detail-list">
+          <div class="detail-row"><div class="detail-key">GP</div><div class="detail-value">${escapeHtml(profile.gp_name || "—")}</div></div>
+          <div class="detail-row"><div class="detail-key">Allergies</div><div class="detail-value">${escapeHtml(profile.allergies || "—")}</div></div>
+          <div class="detail-row"><div class="detail-key">Diagnoses</div><div class="detail-value">${escapeHtml(profile.diagnoses || "—")}</div></div>
+          <div class="detail-row"><div class="detail-key">Mental health</div><div class="detail-value">${escapeHtml(profile.mental_health_summary || "—")}</div></div>
+          <div class="detail-row"><div class="detail-key">Medication summary</div><div class="detail-value">${escapeHtml(profile.medication_summary || "—")}</div></div>
+        </div>
+      `
+    )}
+
+    ${renderSimpleSection(
+      "Health records",
+      "",
+      records.length
+        ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>`
+        : `<div class="empty-state"><p>No health records.</p></div>`
+    )}
+  `;
+
+  bindDynamicOpenRecordButtons();
+}
+
+async function loadEducation() {
+  setLoading("Loading education...");
+  const data = await apiGet(`/young-people/${state.youngPersonId}/education`);
+  const profile = data.education_profile || {};
+  const records = data.education_records || data.items || [];
+
+  if (!els.content) return;
+  els.content.innerHTML = `
+    ${renderSimpleSection(
+      "Education profile",
+      "",
+      `
+        <div class="detail-list">
+          <div class="detail-row"><div class="detail-key">School</div><div class="detail-value">${escapeHtml(profile.school_name || "—")}</div></div>
+          <div class="detail-row"><div class="detail-key">Year group</div><div class="detail-value">${escapeHtml(profile.year_group || "—")}</div></div>
+          <div class="detail-row"><div class="detail-key">Education status</div><div class="detail-value">${escapeHtml(profile.education_status || "—")}</div></div>
+          <div class="detail-row"><div class="detail-key">Support summary</div><div class="detail-value">${escapeHtml(profile.support_summary || "—")}</div></div>
+        </div>
+      `
+    )}
+
+    ${renderSimpleSection(
+      "Education records",
+      "",
+      records.length
+        ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>`
+        : `<div class="empty-state"><p>No education records.</p></div>`
+    )}
+  `;
+
+  bindDynamicOpenRecordButtons();
+}
+
+async function loadFamily() {
+  setLoading("Loading family...");
+  const data = await apiGet(`/young-people/${state.youngPersonId}/family`);
+  const records = data.family_contact_records || data.items || [];
+
+  if (!els.content) return;
+  els.content.innerHTML = renderSimpleSection(
+    "Family contact records",
+    "",
+    records.length
+      ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>`
+      : `<div class="empty-state"><p>No family records.</p></div>`
+  );
+
+  bindDynamicOpenRecordButtons();
+}
+
+async function loadEvidence() {
+  setLoading("Loading evidence...");
+  const data = await apiGet(`/young-people/${state.youngPersonId}/timeline?limit=40`).catch(() => ({ timeline: [] }));
+  const items = data.timeline || [];
+
+  if (!els.content) return;
+  els.content.innerHTML = renderSimpleSection(
+    "Inspection evidence",
+    "Recent linked records",
+    items.length
+      ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
+      : `<div class="empty-state"><p>No evidence found.</p></div>`
+  );
+
+  bindDynamicOpenRecordButtons();
+}
+
+async function loadCompliance() {
+  setLoading("Loading compliance...");
+  const data = await apiGet(`/young-people/${state.youngPersonId}/compliance`).catch(() => ({ items: [] }));
+  const items = data.compliance_items || data.items || [];
+
+  if (!els.content) return;
+  els.content.innerHTML = items.length
+    ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
+    : `<div class="empty-state"><p>No compliance items found.</p></div>`;
+
+  bindDynamicOpenRecordButtons();
+}
+
+async function loadManager() {
+  setLoading("Loading manager overview...");
+
+  const [complianceData, timelineData] = await Promise.all([
+    apiGet(`/young-people/${state.youngPersonId}/compliance`).catch(() => ({ items: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/timeline?limit=12`).catch(() => ({ timeline: [] })),
+  ]);
+
+  const compliance = complianceData.compliance_items || complianceData.items || [];
+  const recent = timelineData.timeline || [];
+
+  if (!els.content) return;
+  els.content.innerHTML = `
+    <div class="callout-grid">
+      ${renderSimpleSection(
+        "Needs manager attention",
+        "",
+        compliance.length
+          ? `<div class="record-list">${compliance.map(renderRecordCard).join("")}</div>`
+          : `<div class="empty-state"><p>No urgent items.</p></div>`
+      )}
+
+      ${renderSimpleSection(
+        "Recent record activity",
+        "",
+        recent.length
+          ? `<div class="record-list">${recent.map(renderRecordCard).join("")}</div>`
+          : `<div class="empty-state"><p>No recent activity.</p></div>`
+      )}
+    </div>
+  `;
+
+  bindDynamicOpenRecordButtons();
+}
+
+async function loadCurrentView() {
+  clearStatus();
+  updatePageHeader();
+  updateActiveNav();
+  updateAssistantContext();
+  renderAssistantScopeBadges();
+
+  const config = VIEW_CONFIG[state.currentView];
+  if (!config) {
+    setEmpty("Unknown view.");
+    return;
+  }
+
+  try {
+    await config.loader();
+  } catch (error) {
+    showError(error.message || "Something went wrong.");
+    setEmpty("Unable to load this view.");
+  }
+}
+
+function bindDynamicOpenRecordButtons() {
+  if (!els.content) return;
+  els.content.querySelectorAll("[data-open-record]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      try {
+        openRecordDetail(JSON.parse(btn.dataset.openRecord));
+      } catch (_) {
+        showError("Could not open record.");
+      }
+    });
   });
 }
 
-function filterConversations() {
-  const q = has("search") ? $("search").value.trim().toLowerCase() : "";
+async function openRecordDetail(item) {
+  const type = normaliseRecordType(item);
+  const url = getRecordUrl(item);
 
-  renderHistory(
-    q
-      ? state.cache.filter((r) =>
-          stripSystem(r?.title || "").toLowerCase().includes(q)
-        )
-      : state.cache
-  );
-}
-
-async function loadConversations() {
-  const data = await api("/chat/conversations");
-  if (!data) return [];
-
-  state.cache = normArray(data?.conversations || data);
-  renderHistory(state.cache);
-  return state.cache;
-}
-
-async function openConversation(id, title) {
-  if (!id) return;
-
-  const data = await api(`/chat/conversations/${id}`);
-  if (!data) return;
-
-  state.conversationId = id;
-  state.currentStreamMeta = { sources: [], runtime: {}, explainability: {} };
-  state.currentProgressLines = [];
-
-  if (has("messages")) {
-    $("messages").innerHTML = "";
-    has("empty") && $("empty").classList.add("hidden");
-    $("messages").classList.remove("hidden");
+  if (!url) {
+    showError("This record cannot be opened yet.");
+    return;
   }
 
-  normArray(data.messages).forEach((m) =>
-    appendMessage(m?.role || "assistant", m?.message || "", {
-      messageId: m?.id,
-    })
-  );
+  state.activeRecordItem = item;
+  state.activeRecordType = type;
 
-  if (data.document) {
-    state.currentDocumentText =
-      data.document.text || data.document.input_text || "";
-    state.currentDocumentName =
-      data.document.filename || data.document.name || "";
-    docShow(state.currentDocumentName);
-  } else {
-    state.currentDocumentText = null;
-    state.currentDocumentName = null;
-    docHide();
-  }
-
-  setTitle(title || "Conversation");
-  filterConversations();
-  closeMobilePanels();
-  scrollMessagesToBottom();
-}
-
-async function renameShort(id, prompt) {
-  if (!id) return;
-
-  const short = summariseTitle(prompt);
-
-  try {
-    await api(`/chat/conversations/${id}/rename`, {
-      method: "POST",
-      body: JSON.stringify({ title: short }),
-    });
-  } catch (e) {
-    console.warn("Rename skipped:", e?.message || e);
-  }
-
-  setTitle(short);
-
-  try {
-    await loadConversations();
-  } catch {}
-}
-
-async function deleteConversation(id) {
-  if (!id || !confirm("Delete this conversation?")) return;
-
-  await api(`/chat/conversations/${id}`, { method: "DELETE" });
-
-  if (Number(state.conversationId) === Number(id)) {
-    resetWelcome();
-  }
-
-  await loadConversations();
-  banner(indiCareCopy("deleted"));
-}
-
-/* ---------------------------------------------------------
- * Sources / meta rendering
- * --------------------------------------------------------- */
-
-function renderSourceCard(source) {
-  const type = safe(source?.type || "source");
-  const label = safe(source?.label || source?.document_title || "Source");
-  const excerpt = safe(source?.excerpt || "");
-  const section = safe(source?.section || "");
-  const page =
-    source?.page_number != null ? safe(String(source.page_number)) : "";
-  const url = source?.url ? String(source.url) : "";
-
-  return `
-    <div class="entity-row" style="padding:10px 12px;margin-top:8px;">
-      <div style="width:100%;">
-        <div class="entity-title" style="font-size:.88rem;">${label}</div>
-        <div class="entity-meta">
-          <span class="tag neutral">${type}</span>
-          ${section ? `<span>${section}</span>` : ""}
-          ${page ? `<span> · p.${page}</span>` : ""}
+  openDrawer();
+  els.drawerActions?.classList.toggle("hidden", !RECORD_CONFIG[type]);
+  if (els.drawerTitle) els.drawerTitle.textContent = item.title || "Record details";
+  if (els.drawerSubtitle) els.drawerSubtitle.textContent = "Loading...";
+  if (els.drawerBody) {
+    els.drawerBody.innerHTML = `
+      <div class="loading-state">
+        <div>
+          <div class="spinner"></div>
+          <p>Loading record details...</p>
         </div>
-        ${
-          excerpt
-            ? `<div class="entity-meta" style="margin-top:8px;line-height:1.55;">${excerpt}</div>`
-            : ""
-        }
-        ${
-          url
-            ? `<div class="entity-meta" style="margin-top:8px;"><a href="${safe(
-                url
-              )}" target="_blank" rel="noopener noreferrer">Open source</a></div>`
-            : ""
-        }
       </div>
-    </div>
-  `;
+    `;
+  }
+
+  if (type === "appointment") {
+    if (els.drawerApproveBtn) els.drawerApproveBtn.textContent = "Complete";
+    if (els.drawerReturnBtn) els.drawerReturnBtn.textContent = "Cancel";
+    els.drawerSubmitBtn?.classList.add("hidden");
+    els.drawerArchiveBtn?.classList.add("hidden");
+  } else {
+    if (els.drawerApproveBtn) els.drawerApproveBtn.textContent = "Approve";
+    if (els.drawerReturnBtn) els.drawerReturnBtn.textContent = "Return";
+    els.drawerSubmitBtn?.classList.remove("hidden");
+    els.drawerArchiveBtn?.classList.remove("hidden");
+  }
+
+  try {
+    const data = await apiGet(url);
+    const detail =
+      data.daily_note ||
+      data.incident ||
+      data.risk ||
+      data.risk_assessment ||
+      data.support_plan ||
+      data.plan ||
+      data.appointment ||
+      data.health_record ||
+      data.medication_profile ||
+      data.medication_record ||
+      data.education_record ||
+      data.family_contact_record ||
+      data.contact ||
+      data.keywork ||
+      data.report ||
+      data;
+
+    const entries = Object.entries(detail || {})
+      .filter(([key, value]) => !["id", "young_person_id", "home_id"].includes(key) && value !== null && value !== "" && value !== undefined)
+      .slice(0, 32);
+
+    if (els.drawerTitle) els.drawerTitle.textContent = item.title || detail.title || "Record details";
+    if (els.drawerSubtitle) {
+      els.drawerSubtitle.textContent = `${String(type).replaceAll("_", " ")} • ${formatDate(
+        item.recorded_at ||
+        item.occurred_at ||
+        item.created_at ||
+        detail.recorded_at ||
+        detail.appointment_date ||
+        detail.incident_datetime ||
+        detail.note_date ||
+        detail.created_at
+      )}`;
+    }
+
+    if (els.drawerBody) {
+      els.drawerBody.innerHTML = `
+        <div class="detail-section">
+          <h4>Summary</h4>
+          <div class="detail-list">
+            <div class="detail-row">
+              <div class="detail-key">Title</div>
+              <div class="detail-value">${escapeHtml(item.title || detail.title || "—")}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-key">Status</div>
+              <div class="detail-value">${escapeHtml(
+                item.workflow_status ||
+                detail.workflow_status ||
+                detail.status ||
+                detail.approval_status ||
+                "—"
+              )}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-key">Summary</div>
+              <div class="detail-value">${escapeHtml(
+                item.summary ||
+                detail.summary ||
+                detail.description ||
+                detail.concern_summary ||
+                detail.presenting_need ||
+                "—"
+              )}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4>Details</h4>
+          <div class="detail-list">
+            ${
+              entries.length
+                ? entries.map(([key, value]) => `
+                  <div class="detail-row">
+                    <div class="detail-key">${escapeHtml(key.replaceAll("_", " "))}</div>
+                    <div class="detail-value">${escapeHtml(typeof value === "object" ? JSON.stringify(value) : String(value))}</div>
+                  </div>
+                `).join("")
+                : `
+                  <div class="detail-row">
+                    <div class="detail-key">Details</div>
+                    <div class="detail-value">No additional details.</div>
+                  </div>
+                `
+            }
+          </div>
+        </div>
+      `;
+    }
+  } catch (error) {
+    if (els.drawerSubtitle) els.drawerSubtitle.textContent = "Could not load";
+    if (els.drawerBody) {
+      els.drawerBody.innerHTML = `
+        <div class="empty-state">
+          <p>${escapeHtml(error.message || "Failed to load record details.")}</p>
+        </div>
+      `;
+    }
+  }
 }
 
-function renderSourcesHtml(sources) {
-  const rows = normArray(sources);
-  if (!rows.length) return "";
+function buildFormField(field) {
+  const label = `<label class="form-label" for="${field.name}">${escapeHtml(field.label)}</label>`;
+
+  if (field.type === "textarea") {
+    return `
+      <div class="composer-field ${field.full ? "full" : ""}">
+        ${label}
+        <textarea id="${field.name}" name="${field.name}" class="textarea-input">${escapeHtml(field.value || "")}</textarea>
+      </div>
+    `;
+  }
+
+  if (field.type === "select") {
+    return `
+      <div class="composer-field ${field.full ? "full" : ""}">
+        ${label}
+        <select id="${field.name}" name="${field.name}" class="select-input">
+          ${(field.options || []).map((opt) => `
+            <option value="${escapeHtml(opt.value)}" ${String(opt.value) === String(field.value || "") ? "selected" : ""}>
+              ${escapeHtml(opt.label)}
+            </option>
+          `).join("")}
+        </select>
+      </div>
+    `;
+  }
+
+  if (field.type === "checkbox") {
+    return `
+      <div class="composer-field ${field.full ? "full" : ""}">
+        <label class="checkbox-row" for="${field.name}">
+          <input id="${field.name}" name="${field.name}" type="checkbox" ${field.value ? "checked" : ""} />
+          <span>${escapeHtml(field.label)}</span>
+        </label>
+      </div>
+    `;
+  }
 
   return `
-    <div class="card" style="margin-top:10px;padding:12px;">
-      <div style="font-weight:600;margin-bottom:6px;">Sources used</div>
-      <div class="entity-meta">This response used the following source material.</div>
-      ${rows.map(renderSourceCard).join("")}
+    <div class="composer-field ${field.full ? "full" : ""}">
+      ${label}
+      <input id="${field.name}" name="${field.name}" type="${field.type || "text"}" class="text-input" value="${escapeHtml(field.value || "")}" />
     </div>
   `;
 }
 
-function attachMetaToWrap(wrap, meta = {}) {
-  if (!wrap) return;
+function getComposerContent(recordType, item = null) {
+  const today = toDateInputValue(new Date());
 
-  const block = wrap.querySelector(".block");
-  if (!block) return;
+  if (recordType === "daily_note") {
+    return {
+      title: item ? "Edit daily note" : "Create daily note",
+      subtitle: "Write clearly, therapeutically and with the young person at the centre.",
+      guidance:
+        "Describe the shift in a calm and child-focused way. Show what happened, how the young person presented, what helped, their voice, and what adults need next.",
+      prompts: [
+        "What was the young person showing through behaviour, mood or communication?",
+        "What helped them feel safer, calmer or more connected?",
+        "What positives or strengths should be captured as well as challenges?",
+        "What do adults need to do next?",
+      ],
+      sections: [
+        {
+          title: "Shift details",
+          subtitle: "Start with the basic context for this record.",
+          fields: [
+            { name: "title", label: "Title", type: "text", value: item?.title || "" },
+            { name: "note_date", label: "Date", type: "date", value: item?.note_date || today },
+            {
+              name: "shift_type",
+              label: "Shift type",
+              type: "select",
+              value: item?.shift_type || "day",
+              options: [
+                { value: "day", label: "Day" },
+                { value: "evening", label: "Evening" },
+                { value: "night", label: "Night" },
+                { value: "waking_night", label: "Waking night" },
+              ],
+            },
+            { name: "mood", label: "Mood", type: "text", value: item?.mood || "" },
+            {
+              name: "significance",
+              label: "Significance",
+              type: "select",
+              value: item?.significance || "",
+              options: [
+                { value: "", label: "Select significance" },
+                { value: "low", label: "Low" },
+                { value: "medium", label: "Medium" },
+                { value: "high", label: "High" },
+              ],
+            },
+          ],
+        },
+        {
+          title: "What happened",
+          subtitle: "Record the shift in a clear and balanced way.",
+          fields: [
+            { name: "presentation", label: "Presentation", type: "textarea", full: true, value: item?.presentation || "" },
+            { name: "activities", label: "Activities", type: "textarea", full: true, value: item?.activities || "" },
+            { name: "behaviour_update", label: "Behaviour update", type: "textarea", full: true, value: item?.behaviour_update || "" },
+            { name: "education_update", label: "Education update", type: "textarea", full: true, value: item?.education_update || "" },
+            { name: "health_update", label: "Health update", type: "textarea", full: true, value: item?.health_update || "" },
+            { name: "family_update", label: "Family update", type: "textarea", full: true, value: item?.family_update || "" },
+          ],
+        },
+        {
+          title: "Young person voice and next steps",
+          subtitle: "Make sure the record includes the young person and what adults need to do next.",
+          fields: [
+            { name: "young_person_voice", label: "Young person voice", type: "textarea", full: true, value: item?.young_person_voice || item?.child_voice || "" },
+            { name: "positives", label: "Positives", type: "textarea", full: true, value: item?.positives || "" },
+            { name: "actions_required", label: "Actions required", type: "textarea", full: true, value: item?.actions_required || "" },
+          ],
+        },
+      ],
+    };
+  }
 
-  const oldMetaBox = wrap.querySelector(".assistant-source-box");
-  if (oldMetaBox) oldMetaBox.remove();
+  if (recordType === "incident") {
+    return {
+      title: item ? "Edit incident" : "Create incident",
+      subtitle: "Describe the concern, context, response and follow-up clearly and safely.",
+      guidance:
+        "Be factual, child-focused and calm. Describe what happened, what adults noticed before, what adults did, what helped, the young person’s view, and what follow-up is needed.",
+      prompts: [
+        "What may the young person have been communicating before or during the incident?",
+        "What were the earliest signs that adults noticed?",
+        "What did adults do that helped or reduced risk?",
+        "What follow-up action, reflection or leadership response is needed?",
+      ],
+      sections: [
+        {
+          title: "Incident details",
+          subtitle: "Start with the key event details.",
+          fields: [
+            {
+              name: "incident_datetime",
+              label: "Incident time",
+              type: "datetime-local",
+              value: item?.incident_datetime ? String(item.incident_datetime).slice(0, 16) : "",
+            },
+            { name: "incident_type", label: "Incident type", type: "text", value: item?.incident_type || "" },
+            {
+              name: "severity",
+              label: "Severity",
+              type: "select",
+              value: item?.severity || "medium",
+              options: [
+                { value: "low", label: "Low" },
+                { value: "medium", label: "Medium" },
+                { value: "high", label: "High" },
+                { value: "critical", label: "Critical" },
+              ],
+            },
+            { name: "location", label: "Location", type: "text", value: item?.location || "" },
+            { name: "presentation", label: "Presentation", type: "textarea", full: true, value: item?.presentation || "" },
+          ],
+        },
+        {
+          title: "Context and event",
+          subtitle: "Describe what happened and what led up to it.",
+          fields: [
+            { name: "antecedent", label: "Antecedent", type: "textarea", full: true, value: item?.antecedent || "" },
+            { name: "description", label: "Description", type: "textarea", full: true, value: item?.description || "" },
+            { name: "trauma_informed_formulation", label: "Trauma-informed formulation", type: "textarea", full: true, value: item?.trauma_informed_formulation || "" },
+          ],
+        },
+        {
+          title: "Response and follow-up",
+          subtitle: "Record what adults did, the young person’s voice and what happens next.",
+          fields: [
+            { name: "staff_response", label: "Staff response", type: "textarea", full: true, value: item?.staff_response || "" },
+            { name: "child_voice", label: "Child voice", type: "textarea", full: true, value: item?.child_voice || "" },
+            { name: "outcome", label: "Outcome", type: "textarea", full: true, value: item?.outcome || "" },
+            { name: "restorative_follow_up", label: "Restorative follow-up", type: "textarea", full: true, value: item?.restorative_follow_up || "" },
+            { name: "follow_up_required", label: "Follow-up required", type: "textarea", full: true, value: item?.follow_up_required || "" },
+          ],
+        },
+        {
+          title: "Additional incident detail",
+          subtitle: "Use these fields where relevant.",
+          fields: [
+            { name: "physical_intervention_used", label: "Physical intervention used", type: "checkbox", value: !!item?.physical_intervention_used },
+            { name: "physical_intervention_type", label: "Intervention type", type: "text", value: item?.physical_intervention_type || "" },
+            { name: "physical_intervention_duration_minutes", label: "Duration (minutes)", type: "number", value: item?.physical_intervention_duration_minutes || "" },
+            { name: "body_map_required", label: "Body map required", type: "checkbox", value: !!item?.body_map_required },
+            { name: "external_notification_required", label: "External notification required", type: "checkbox", value: !!item?.external_notification_required },
+            { name: "external_notification_details", label: "External notification details", type: "textarea", full: true, value: item?.external_notification_details || "" },
+          ],
+        },
+      ],
+    };
+  }
 
-  const html = renderSourcesHtml(meta.sources);
-  if (!html) return;
+  if (recordType === "risk") {
+    return {
+      title: item ? "Edit risk assessment" : "Create risk assessment",
+      subtitle: "Build a living risk picture that helps adults respond consistently and safely.",
+      guidance:
+        "Focus on patterns, meaning, triggers, protective factors and practical guidance for adults. Keep the tone clear, calm and supportive rather than punitive.",
+      prompts: [
+        "What is the underlying concern adults need to understand?",
+        "What are the most consistent triggers or warning signs?",
+        "What helps reduce risk or support regulation?",
+        "What should adults actually do in practice?",
+      ],
+      sections: [
+        {
+          title: "Risk overview",
+          subtitle: "Set out the main risk and its current level.",
+          fields: [
+            { name: "category", label: "Category", type: "text", value: item?.category || "" },
+            { name: "title", label: "Title", type: "text", value: item?.title || "" },
+            {
+              name: "severity",
+              label: "Severity",
+              type: "select",
+              value: item?.severity || "medium",
+              options: [
+                { value: "low", label: "Low" },
+                { value: "medium", label: "Medium" },
+                { value: "high", label: "High" },
+              ],
+            },
+            {
+              name: "likelihood",
+              label: "Likelihood",
+              type: "select",
+              value: item?.likelihood || "medium",
+              options: [
+                { value: "low", label: "Low" },
+                { value: "medium", label: "Medium" },
+                { value: "high", label: "High" },
+              ],
+            },
+            { name: "review_date", label: "Review date", type: "date", value: item?.review_date || today },
+          ],
+        },
+        {
+          title: "Understanding the concern",
+          subtitle: "Help adults understand what sits behind the risk.",
+          fields: [
+            { name: "concern_summary", label: "Concern summary", type: "textarea", full: true, value: item?.concern_summary || "" },
+            { name: "known_triggers", label: "Known triggers", type: "textarea", full: true, value: item?.known_triggers || "" },
+            { name: "early_warning_signs", label: "Early warning signs", type: "textarea", full: true, value: item?.early_warning_signs || "" },
+            { name: "contextual_factors", label: "Contextual factors", type: "textarea", full: true, value: item?.contextual_factors || "" },
+          ],
+        },
+        {
+          title: "What helps and what adults should do",
+          subtitle: "Be specific and practical for staff.",
+          fields: [
+            { name: "current_controls", label: "Current controls", type: "textarea", full: true, value: item?.current_controls || "" },
+            { name: "deescalation_strategies", label: "De-escalation strategies", type: "textarea", full: true, value: item?.deescalation_strategies || "" },
+            { name: "child_views", label: "Child views", type: "textarea", full: true, value: item?.child_views || "" },
+            { name: "response_actions", label: "Response actions", type: "textarea", full: true, value: item?.response_actions || "" },
+          ],
+        },
+      ],
+    };
+  }
 
-  const box = document.createElement("div");
-  box.className = "assistant-source-box";
-  box.innerHTML = html;
-  block.appendChild(box);
+  if (recordType === "appointment") {
+    return {
+      title: item ? "Edit appointment" : "Create appointment",
+      subtitle: "Record the appointment clearly, including preparation and follow-up.",
+      guidance:
+        "Show the purpose of the appointment, who is involved, what preparation is needed, the young person’s view, and what adults need to do before or after it.",
+      prompts: [
+        "What is the purpose of this appointment?",
+        "How does the young person feel about it?",
+        "What preparation or emotional support is needed?",
+        "What follow-up action is needed afterwards?",
+      ],
+      sections: [
+        {
+          title: "Appointment details",
+          subtitle: "Set out the practical information clearly.",
+          fields: [
+            { name: "title", label: "Appointment title", type: "text", value: item?.title || "" },
+            { name: "appointment_type", label: "Appointment type", type: "text", value: item?.appointment_type || "" },
+            { name: "appointment_date", label: "Appointment date and time", type: "datetime-local", value: item?.appointment_date ? toDateTimeLocalValue(item.appointment_date) : "" },
+            { name: "end_datetime", label: "End time", type: "datetime-local", value: item?.end_datetime ? toDateTimeLocalValue(item.end_datetime) : "" },
+            { name: "location", label: "Location", type: "text", value: item?.location || "" },
+            { name: "professional_name", label: "Professional name", type: "text", value: item?.professional_name || "" },
+            { name: "professional_role", label: "Professional role", type: "text", value: item?.professional_role || "" },
+          ],
+        },
+        {
+          title: "Purpose and support",
+          subtitle: "Help adults understand the meaning and support needed.",
+          fields: [
+            { name: "purpose", label: "Purpose", type: "textarea", full: true, value: item?.purpose || "" },
+            { name: "summary", label: "Summary", type: "textarea", full: true, value: item?.summary || "" },
+            { name: "child_voice", label: "Child voice", type: "textarea", full: true, value: item?.child_voice || "" },
+            { name: "preparation_notes", label: "Preparation notes", type: "textarea", full: true, value: item?.preparation_notes || "" },
+          ],
+        },
+        {
+          title: "Follow-up",
+          subtitle: "Record outcomes and next steps.",
+          fields: [
+            { name: "outcome_notes", label: "Outcome notes", type: "textarea", full: true, value: item?.outcome_notes || "" },
+            { name: "follow_up_actions", label: "Follow-up actions", type: "textarea", full: true, value: item?.follow_up_actions || "" },
+            { name: "reminder_minutes_before", label: "Reminder minutes before", type: "number", value: item?.reminder_minutes_before ?? 30 },
+          ],
+        },
+      ],
+    };
+  }
+
+  return {
+    title: item ? "Edit plan" : "Create plan",
+    subtitle: "Create support guidance that helps adults understand and respond well.",
+    guidance:
+      "Write the plan around the young person’s needs, voice and what helps. Keep it practical, kind and useful for adults in day-to-day care.",
+    prompts: [
+      "What need or pattern are adults trying to understand?",
+      "What should adults do consistently?",
+      "What helps this young person feel safer or more connected?",
+      "How is the young person’s voice reflected in this plan?",
+    ],
+    sections: [
+      {
+        title: "Plan details",
+        subtitle: "Set out the core plan information.",
+        fields: [
+          { name: "title", label: "Title", type: "text", value: item?.title || "" },
+          { name: "plan_type", label: "Plan type", type: "text", value: item?.plan_type || "support_plan" },
+          { name: "start_date", label: "Start date", type: "date", value: item?.start_date || today },
+          { name: "review_date", label: "Review date", type: "date", value: item?.review_date || today },
+          { name: "pace_guidance", label: "PACE guidance", type: "textarea", full: true, value: item?.pace_guidance || "" },
+        ],
+      },
+      {
+        title: "Understanding the need",
+        subtitle: "Describe the main need and summary.",
+        fields: [
+          { name: "presenting_need", label: "Presenting need", type: "textarea", full: true, value: item?.presenting_need || "" },
+          { name: "summary", label: "Summary", type: "textarea", full: true, value: item?.summary || "" },
+          { name: "child_voice", label: "Child voice", type: "textarea", full: true, value: item?.child_voice || "" },
+          { name: "formulation", label: "Formulation", type: "textarea", full: true, value: item?.formulation || "" },
+        ],
+      },
+      {
+        title: "Guidance for adults",
+        subtitle: "Be practical and clear.",
+        fields: [
+          { name: "proactive_strategies", label: "Proactive strategies", type: "textarea", full: true, value: item?.proactive_strategies || "" },
+          { name: "triggers", label: "Triggers", type: "textarea", full: true, value: item?.triggers || "" },
+          { name: "protective_factors", label: "Protective factors", type: "textarea", full: true, value: item?.protective_factors || "" },
+          { name: "staff_guidance", label: "Staff guidance", type: "textarea", full: true, value: item?.staff_guidance || "" },
+        ],
+      },
+    ],
+  };
 }
 
-function attachMetaToStreamingMessage(meta = {}) {
-  const wrap = document.getElementById("streaming");
-  if (!wrap) return;
-  attachMetaToWrap(wrap, meta);
+function renderComposerSections(content) {
+  return content.sections.map((section) => `
+    <section class="composer-section">
+      <h3>${escapeHtml(section.title)}</h3>
+      <p>${escapeHtml(section.subtitle || "")}</p>
+      <div class="composer-grid">
+        ${section.fields.map(buildFormField).join("")}
+      </div>
+    </section>
+  `).join("");
 }
 
-function renderProgressLines(lines = []) {
-  const cleaned = normArray(lines)
-    .map((line) => String(line || "").trim())
-    .filter(Boolean)
-    .slice(-3);
+function openComposerFor(recordType, mode = "create", item = null) {
+  state.composerMode = mode;
+  state.composerRecordType = recordType;
+  state.composerRecordId = item?.id || item?.record_id || item?.source_id || null;
+  state.composerEditItem = item || null;
 
-  if (!cleaned.length) return "";
+  const content = getComposerContent(recordType, item);
 
-  return `
-    <div class="stream-progress">
-      ${cleaned
-        .map((line) => `<div class="stream-progress-line">${safe(line)}</div>`)
-        .join("")}
-    </div>
-  `;
+  if (els.composerTitle) els.composerTitle.textContent = content.title;
+  if (els.composerSubtitle) els.composerSubtitle.textContent = content.subtitle;
+  if (els.composerGuidanceText) els.composerGuidanceText.textContent = content.guidance;
+  if (els.composerPrompts) {
+    els.composerPrompts.innerHTML = content.prompts.map((prompt) => `
+      <div class="composer-prompt">${escapeHtml(prompt)}</div>
+    `).join("");
+  }
+  if (els.composerFields) els.composerFields.innerHTML = renderComposerSections(content);
+  if (els.composerAiFeedback) els.composerAiFeedback.textContent = "No AI review run yet.";
+
+  openComposer();
 }
 
-function updateStreamingProgress() {
-  const wrap = document.getElementById("streaming");
-  if (!wrap) return;
+function serialiseValue(key, value) {
+  if (value === "") return null;
 
-  const block = wrap.querySelector(".block");
-  if (!block) return;
+  if (["linked_plan_id", "reminder_minutes_before", "physical_intervention_duration_minutes"].includes(key)) {
+    return Number(value);
+  }
 
-  let box = wrap.querySelector(".stream-progress-box");
-  const html = renderProgressLines(state.currentProgressLines);
+  if (["physical_intervention_used", "body_map_required", "external_notification_required"].includes(key)) {
+    return value === "on";
+  }
 
-  if (!html) {
-    if (box) box.remove();
+  return value;
+}
+
+function serializeComposerForm() {
+  const formData = new FormData(els.composerForm);
+  const obj = {};
+
+  const checkboxNames = [
+    "physical_intervention_used",
+    "body_map_required",
+    "external_notification_required",
+  ];
+
+  for (const name of checkboxNames) {
+    obj[name] = false;
+  }
+
+  for (const [key, value] of formData.entries()) {
+    obj[key] = serialiseValue(key, value);
+  }
+
+  obj.young_person_id = state.youngPersonId;
+  return obj;
+}
+
+async function saveComposer(mode = "draft") {
+  const recordType = state.composerRecordType;
+  const config = RECORD_CONFIG[recordType];
+
+  if (!config) {
+    showError("This record type is not configured.");
     return;
   }
 
-  if (!box) {
-    box = document.createElement("div");
-    box.className = "stream-progress-box";
+  const payload = serializeComposerForm();
 
-    const msg = block.querySelector(".msg");
-    if (msg && msg.nextSibling) {
-      block.insertBefore(box, msg.nextSibling);
-    } else if (msg) {
-      block.appendChild(box);
+  if (mode === "submit" && recordType !== "appointment") {
+    if (!state.composerRecordId) {
+      const createdResponse = await apiSend(config.createUrl(state.youngPersonId), "POST", payload);
+      const created = unwrapCreateResponse(recordType, createdResponse);
+      state.composerRecordId = created?.id || created?.record_id || state.composerRecordId;
     } else {
-      block.prepend(box);
+      await apiSend(config.updateUrl(state.composerRecordId), config.updateMethod || "PATCH", payload);
     }
-  }
 
-  box.innerHTML = html;
-}
-
-function clearStreamingProgress() {
-  state.currentProgressLines = [];
-  const wrap = document.getElementById("streaming");
-  if (!wrap) return;
-
-  const box = wrap.querySelector(".stream-progress-box");
-  if (box) box.remove();
-}
-
-function handleProgressEvent(payload) {
-  let parsed = {};
-  try {
-    parsed = JSON.parse(payload || "{}");
-  } catch {
-    parsed = {};
-  }
-
-  const content = String(parsed?.content || "").trim();
-  if (!content) return;
-
-  state.currentProgressLines.push(content);
-  state.currentProgressLines = state.currentProgressLines.filter(Boolean).slice(-3);
-  updateStreamingProgress();
-}
-
-function handleMetaEvent(payload) {
-  let parsed = {};
-  try {
-    parsed = JSON.parse(payload || "{}");
-  } catch {
-    parsed = {};
-  }
-
-  if (parsed.conversation_id) {
-    state.conversationId = Number(parsed.conversation_id);
-  }
-
-  state.currentStreamMeta = {
-    sources: normArray(parsed.sources),
-    runtime: normObj(parsed.runtime),
-    explainability: normObj(parsed.explainability),
-  };
-
-  attachMetaToStreamingMessage(state.currentStreamMeta);
-}
-
-/* ---------------------------------------------------------
- * Messages / chat rendering
- * --------------------------------------------------------- */
-
-function appendMessage(roleName, text, opts = {}) {
-  if (!has("messages")) return;
-
-  const shown = roleName === "user" ? stripSystem(text) : text;
-
-  if (roleName === "assistant") {
-    state.lastAssistantText = shown;
-  }
-
-  const wrap = document.createElement("div");
-  wrap.className = `wrap ${roleName}`;
-  wrap.innerHTML = `
-    <div class="avatar">${roleName === "assistant" ? "IC" : userInitials()}</div>
-    <div class="block">
-      <div class="msg">${
-        roleName === "assistant" ? render(shown, "assistant") : safe(shown)
-      }</div>
-      ${opts.meta ? `<div class="meta">${safe(opts.meta)}</div>` : ""}
-      <div class="actions"></div>
-    </div>
-  `;
-
-  const actions = wrap.querySelector(".actions");
-
-  const addChip = (label, fn) => {
-    if (!actions) return;
-    const btn = document.createElement("button");
-    btn.className = "chip";
-    btn.textContent = label;
-    btn.onclick = fn;
-    actions.appendChild(btn);
-  };
-
-  addChip("Copy", () =>
-    navigator.clipboard
-      .writeText(shown)
-      .then(() => banner(indiCareCopy("copied")))
-      .catch(() => banner("Could not copy"))
-  );
-
-  if (roleName === "assistant") {
-    addChip("Read aloud", () => speakText(shown));
-    addChip("Stop", stopSpeaking);
-    addChip("→ Incident", () => convert("incident"));
-    addChip("→ Risk", () => convert("risk"));
-    addChip("→ Handover", () => convert("handover"));
-    addChip("→ Chronology", () => convert("chronology"));
-    addChip("Save to record", () => saveRecord(shown));
-    addChip("Continue", () => {
-      if (!has("input")) return;
-      if (!legalAcceptanceValid()) return openLegalModal("acceptance");
-      $("input").value = "Continue and expand this.";
-      resize();
-      sendMessage();
-    });
-  }
-
-  if (roleName === "user" && opts.messageId) {
-    addChip("Edit", () => editMessage(opts.messageId, shown));
-  }
-
-  if (roleName === "assistant" && opts.sources) {
-    attachMetaToWrap(wrap, { sources: opts.sources || [] });
-  }
-
-  $("messages").appendChild(wrap);
-  scrollMessagesToBottom();
-}
-
-function createStreamMsg() {
-  if (!has("messages")) return null;
-
-  const old = $("streaming");
-  if (old) old.remove();
-
-  const wrap = document.createElement("div");
-  wrap.id = "streaming";
-  wrap.className = "wrap assistant";
-  wrap.innerHTML = `
-    <div class="avatar">IC</div>
-    <div class="block">
-      <div class="msg typing" data-raw=""></div>
-      <div class="meta">Reply language: ${
-        LANG[selectedLang()] || "English"
-      } · Mode: ${RESP[selectedMode()]}</div>
-    </div>
-  `;
-
-  $("messages").appendChild(wrap);
-  updateStreamingProgress();
-  scrollMessagesToBottom();
-
-  return wrap;
-}
-
-function startTyping() {
-  if (state.typing) return;
-  state.typing = true;
-
-  const el = document.querySelector("#streaming .msg");
-  if (!el) {
-    state.typing = false;
+    await apiSend(config.submitUrl(state.composerRecordId), "POST", {});
+    showMessage(`${config.label} sent for approval.`);
+    closeComposer();
+    await loadCurrentView();
     return;
   }
 
-  let raw = el.getAttribute("data-raw") || "";
+  if (state.composerMode === "edit" && state.composerRecordId) {
+    await apiSend(config.updateUrl(state.composerRecordId), config.updateMethod || "PATCH", payload);
+    showMessage(`${config.label} updated.`);
+  } else {
+    const createdResponse = await apiSend(config.createUrl(state.youngPersonId), "POST", payload);
+    const created = unwrapCreateResponse(recordType, createdResponse);
+    state.composerRecordId = created?.id || created?.record_id || state.composerRecordId;
+    state.composerMode = "edit";
+    showMessage(`${config.label} saved.`);
+  }
 
-  const tick = setInterval(() => {
-    if (state.queue.length) {
-      raw += state.queue.shift();
-      el.innerHTML = render(raw, "assistant");
-      el.setAttribute("data-raw", raw);
-      scrollMessagesToBottom();
-    } else if (!state.isStreaming) {
-      clearInterval(tick);
-      state.typing = false;
-      el.classList.remove("typing");
-
-      const finalRaw = el.getAttribute("data-raw") || "";
-      state.lastAssistantText = finalRaw;
-      clearStreamingProgress();
-      attachMetaToStreamingMessage(state.currentStreamMeta);
-      speakText(finalRaw);
-      scrollMessagesToBottom();
-    }
-  }, 2);
+  if (mode === "draft") {
+    await loadCurrentView();
+  }
 }
 
-/* ---------------------------------------------------------
- * SSE / streaming
- * --------------------------------------------------------- */
+function buildAiFeedback(type) {
+  const form = serializeComposerForm();
+  const notes = [];
+
+  if (type === "grammar") {
+    notes.push("Spelling and grammar review:");
+    notes.push("• Check sentence length and simplify long sections.");
+    notes.push("• Keep language clear, calm and professional.");
+    notes.push("• Remove repeated phrases and make dates and times precise.");
+  }
+
+  if (type === "clarity") {
+    notes.push("Clarity review:");
+    notes.push("• Make sure the order of events is easy to follow.");
+    notes.push("• Separate facts, interpretation and next steps.");
+    notes.push("• Use plain language that another adult can quickly understand.");
+  }
+
+  if (type === "safeguarding") {
+    notes.push("Safeguarding review:");
+    notes.push("• Consider whether any behaviour, injury, disclosure or pattern needs escalating.");
+    notes.push("• Check whether the record clearly shows risk, response and follow-up.");
+    notes.push("• Make sure the record states who needs to know next.");
+  }
+
+  if (type === "child_voice") {
+    notes.push("Child voice review:");
+    notes.push("• Check whether the young person’s view, feeling or communication is visible.");
+    notes.push("• If not verbal, describe how they communicated through behaviour, mood or presentation.");
+    notes.push("• Show how adults responded to that communication.");
+  }
+
+  if (!form.child_voice && !form.young_person_voice && type !== "grammar") {
+    notes.push("");
+    notes.push("Prompt:");
+    notes.push("• The current draft appears light on child voice.");
+  }
+
+  if (!form.actions_required && !form.response_actions && !form.follow_up_actions && type !== "grammar") {
+    notes.push("• Add clearer next steps for adults where needed.");
+  }
+
+  return notes.join("\n");
+}
+
+function assistantPromptsForView(view) {
+  const map = {
+    home: [
+      "Give me a short handover for this young person.",
+      "What matters most right now?",
+      "What should staff focus on today?",
+    ],
+    incidents: [
+      "Summarise the recent incidents.",
+      "What patterns are visible in incidents?",
+      "What might the young person have been communicating?",
+    ],
+    risk: [
+      "Summarise current risks and what helps.",
+      "What should adults understand better?",
+      "What practical guidance matters most on shift?",
+    ],
+    handover: [
+      "Give me a short handover for this young person.",
+      "What does the next shift most need to know?",
+      "What should staff watch for next?",
+    ],
+    evidence: [
+      "What evidence would support Ofsted right now?",
+      "What child voice is visible and what is missing?",
+      "What are the strongest examples of progress or support?",
+    ],
+    manager: [
+      "What needs manager review right now?",
+      "What is overdue or waiting for approval?",
+      "Where are the main recording gaps?",
+    ],
+  };
+
+  return map[view] || [
+    "Give me a short handover for this young person.",
+    "Summarise current risks and what helps.",
+    "What evidence would support Ofsted right now?",
+  ];
+}
+
+function updateAssistantContext() {
+  const fullName = getFullYoungPersonName();
+
+  if (!state.youngPerson) {
+    if (els.assistantContext) {
+      els.assistantContext.textContent = "No young person selected.";
+    }
+  } else {
+    const text = [
+      `Young person: ${fullName}`,
+      state.youngPerson.placement_status ? `Placement: ${state.youngPerson.placement_status}` : null,
+      state.youngPerson.summary_risk_level ? `Risk: ${state.youngPerson.summary_risk_level}` : null,
+      `View: ${state.currentView.replaceAll("-", " ")}`,
+    ].filter(Boolean).join(" • ");
+
+    if (els.assistantContext) {
+      els.assistantContext.textContent = text;
+    }
+  }
+
+  const prompts = assistantPromptsForView(state.currentView);
+  if (els.assistantSuggestions) {
+    els.assistantSuggestions.innerHTML = prompts.map((prompt) => `
+      <button class="secondary-btn" type="button" data-prompt="${escapeHtml(prompt)}">${escapeHtml(prompt)}</button>
+    `).join("");
+  }
+}
+
+function renderAssistantMessageList(host, messages) {
+  if (!host) return;
+
+  const base = `
+    <article class="assistant-message assistant-message-system">
+      <div class="assistant-message-role">Assistant</div>
+      <div class="assistant-message-body">${
+        state.youngPersonId
+          ? `Ask a question about ${escapeHtml(getFullYoungPersonName() || "this young person")}.`
+          : "Select a young person to start."
+      }</div>
+    </article>
+  `;
+
+  const messagesHtml = messages.map((message) => `
+    <article class="assistant-message ${message.role === "user" ? "assistant-message-user" : ""}">
+      <div class="assistant-message-role">${message.role === "user" ? "You" : "Assistant"}</div>
+      <div class="assistant-message-body">${escapeHtml(message.content)}</div>
+    </article>
+  `).join("");
+
+  host.innerHTML = base + messagesHtml;
+  host.scrollTop = host.scrollHeight;
+}
+
+function renderAssistantMessages() {
+  renderAssistantMessageList(els.assistantMessages, state.assistantMessages);
+  renderAssistantMessageList(els.assistantModalMessages, state.assistantModalMessages);
+}
+
+function pushAssistantMessage(role, content) {
+  const entry = { role, content };
+  state.assistantMessages.push(entry);
+  state.assistantModalMessages.push(entry);
+  renderAssistantMessages();
+}
+
+function addAssistantPlaceholder() {
+  state.assistantMessages.push({ role: "assistant", content: "Thinking...", _streaming: true });
+  state.assistantModalMessages.push({ role: "assistant", content: "Thinking...", _streaming: true });
+  renderAssistantMessages();
+}
+
+function replaceLastAssistantPlaceholder(text) {
+  const lists = [state.assistantMessages, state.assistantModalMessages];
+  lists.forEach((list) => {
+    if (!list.length) return;
+    const last = list[list.length - 1];
+    if (last.role === "assistant" && last._streaming) {
+      last.content = text;
+      last._streaming = false;
+    }
+  });
+  renderAssistantMessages();
+}
+
+function updateLastAssistantStreamingText(text) {
+  const lists = [state.assistantMessages, state.assistantModalMessages];
+  lists.forEach((list) => {
+    if (!list.length) return;
+    const last = list[list.length - 1];
+    if (last.role === "assistant" && last._streaming) {
+      last.content = text;
+    }
+  });
+  renderAssistantMessages();
+}
+
+function setAssistantSending(flag) {
+  state.assistantSending = !!flag;
+  if (els.assistantSendBtn) els.assistantSendBtn.disabled = flag;
+  if (els.assistantModalSendBtn) els.assistantModalSendBtn.disabled = flag;
+}
+
+function prettyJson(value) {
+  try {
+    return JSON.stringify(value || {}, null, 2);
+  } catch {
+    return "{}";
+  }
+}
+
+function renderAssistantSourcesHtml(sources) {
+  if (!Array.isArray(sources) || !sources.length) {
+    return `<p>Sources will appear here after a response.</p>`;
+  }
+
+  return sources.map((source) => {
+    const type = escapeHtml(source?.type || "source");
+    const label = escapeHtml(source?.label || source?.document_title || "Source");
+    const excerpt = escapeHtml(source?.excerpt || "");
+    const section = escapeHtml(source?.section || "");
+    const page = source?.page_number != null ? escapeHtml(String(source.page_number)) : "";
+
+    return `
+      <div class="entity-row">
+        <div>
+          <div class="entity-title">${label}</div>
+          <div class="entity-meta">
+            ${type}
+            ${section ? ` • ${section}` : ""}
+            ${page ? ` • p.${page}` : ""}
+          </div>
+          ${excerpt ? `<div class="entity-meta" style="margin-top:6px;">${excerpt}</div>` : ""}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function inferAssistantSuggestedActions() {
+  const actions = [];
+  const scope = state.assistantMeta.assistant_scope || {};
+  const context = state.assistantMeta.assistant_context || {};
+
+  if (scope.scope_type === "young_person") {
+    actions.push("Summarise current risks");
+    actions.push("Draft handover");
+    actions.push("Pull child voice themes");
+    actions.push("Summarise recent incidents");
+  }
+
+  if (context.recent_records?.incidents?.length) {
+    actions.push("Review incident patterns");
+  }
+
+  if (context.active_work?.tasks?.length) {
+    actions.push("Review outstanding tasks");
+  }
+
+  if (Array.isArray(state.assistantMeta.suggested_actions)) {
+    actions.push(...state.assistantMeta.suggested_actions);
+  }
+
+  return [...new Set(actions)].slice(0, 6);
+}
+
+function renderAssistantInsights() {
+  const scope = state.assistantMeta.assistant_scope || {};
+  const context = state.assistantMeta.assistant_context || {};
+  const sources = state.assistantMeta.sources || [];
+  const runtime = state.assistantMeta.runtime || {};
+  const explainability = state.assistantMeta.explainability || {};
+
+  if (els.assistantScopeSummary) {
+    const rows = [];
+
+    rows.push(`
+      <div class="entity-row">
+        <div>
+          <div class="entity-title">${scope.scope_type === "young_person" ? "Young person scope" : "Assistant scope"}</div>
+          <div class="entity-meta">View: ${escapeHtml(state.currentView.replaceAll("-", " "))}</div>
+        </div>
+      </div>
+    `);
+
+    if (state.youngPerson) {
+      rows.push(`
+        <div class="entity-row">
+          <div>
+            <div class="entity-title">${escapeHtml(getFullYoungPersonName())}</div>
+            <div class="entity-meta">
+              ${escapeHtml(state.youngPerson.placement_status || "—")} • Risk: ${escapeHtml(state.youngPerson.summary_risk_level || "—")}
+            </div>
+          </div>
+        </div>
+      `);
+    }
+
+    if (context.young_person && typeof context.young_person === "object") {
+      rows.push(`
+        <div class="entity-row">
+          <div>
+            <div class="entity-title">Context loaded</div>
+            <div class="entity-meta">Assistant context includes young person profile and recent records.</div>
+          </div>
+        </div>
+      `);
+    }
+
+    els.assistantScopeSummary.innerHTML = rows.join("");
+  }
+
+  const suggestedActions = inferAssistantSuggestedActions();
+  if (els.assistantActions) {
+    els.assistantActions.innerHTML = suggestedActions.length
+      ? suggestedActions.map((item) => `<button class="chip" type="button" data-assistant-chip="${escapeHtml(item)}">${escapeHtml(item)}</button>`).join("")
+      : `<p>No suggested actions yet.</p>`;
+  }
+
+  if (els.assistantSources) {
+    els.assistantSources.innerHTML = renderAssistantSourcesHtml(sources);
+  }
+
+  if (els.assistantRuntime) {
+    els.assistantRuntime.textContent = prettyJson(runtime);
+  }
+
+  if (els.assistantExplainability) {
+    els.assistantExplainability.textContent = prettyJson(explainability);
+  }
+
+  if (els.assistantModalScopeSummary) {
+    els.assistantModalScopeSummary.innerHTML = els.assistantScopeSummary
+      ? els.assistantScopeSummary.innerHTML
+      : `<p>No scoped context loaded.</p>`;
+  }
+
+  if (els.assistantModalSources) {
+    els.assistantModalSources.innerHTML = renderAssistantSourcesHtml(sources);
+  }
+}
+
+function buildAssistantContextPayload() {
+  return {
+    scope: "young_person",
+    young_person_id: state.youngPersonId,
+    current_view: state.currentView,
+    young_person_name: getFullYoungPersonName(),
+    placement_status: state.youngPerson?.placement_status || null,
+    summary_risk_level: state.youngPerson?.summary_risk_level || null,
+    composer_record_type: state.composerRecordType || null,
+    home_name: state.youngPerson?.home_name || null,
+    shift_context: state.currentView || null,
+    record_type: state.activeRecordType || state.composerRecordType || null,
+    record_id:
+      state.activeRecordItem?.record_id ||
+      state.activeRecordItem?.source_id ||
+      state.activeRecordItem?.id ||
+      state.composerRecordId ||
+      null,
+  };
+}
+
+function detectAssistantResponseMode(text) {
+  return /6 month|six month|12 month|twelve month|summary|timeline|chronology|review|report/i.test(
+    String(text || "")
+  )
+    ? "deep"
+    : "balanced";
+}
 
 function parseSseChunk(buffer, onEvent) {
   const parts = buffer.split("\n\n");
@@ -1947,1903 +2329,400 @@ function parseSseChunk(buffer, onEvent) {
     const dataLines = [];
 
     for (const line of lines) {
-      if (line.startsWith(":")) {
-        continue;
-      } else if (line.startsWith("event:")) {
+      if (line.startsWith(":")) continue;
+      if (line.startsWith("event:")) {
         eventName = line.slice(6).trim();
       } else if (line.startsWith("data:")) {
         dataLines.push(line.startsWith("data: ") ? line.slice(6) : line.slice(5));
       }
     }
 
-    const data = dataLines.join("\n");
-    onEvent(eventName, data);
+    onEvent(eventName, dataLines.join("\n"));
   }
 
   return remainder;
 }
 
-async function stream(url, body) {
-  body = normObj(body);
+async function askAssistant(question) {
+  const trimmed = String(question || "").trim();
+  if (!trimmed || !state.youngPersonId || state.assistantSending) return;
 
-  state.currentIntent = body.intent || detectIntent(body.message || "");
-  state.currentStreamMeta = { sources: [], runtime: {}, explainability: {} };
-  state.currentProgressLines = [];
+  pushAssistantMessage("user", trimmed);
+  addAssistantPlaceholder();
+  setAssistantSending(true);
 
-  const promptPrefix =
-    copilotPrompt() +
-    "\n\n" +
-    buildContextBlock() +
-    buildStructuredPrompt(state.currentIntent) +
-    "\n\n";
-
-  body.message =
-    promptPrefix +
-    String(body.message || "") +
-    REG_PROMPT +
-    buildLangInstruction();
-
-  body.intent = state.currentIntent;
-  body.structured = true;
-  body.reply_language = selectedLang();
-  body.reply_language_label = LANG[selectedLang()] || "English";
-  body.response_mode = selectedMode();
-  body.context = state.contextState;
-  body.theme_mode = resolvedThemeMode();
-
-  const headers = withCsrfHeaders("POST", {
-    "Content-Type": "application/json",
-  });
-
-  const res = await fetch(url, {
-    method: "POST",
-    credentials: "include",
-    headers,
-    body: JSON.stringify(body),
-  });
-
-  const contentType = res.headers.get("content-type") || "";
-
-  if (res.status === 401) {
-    markAssistantRedirectGuard();
-    window.location.replace("/login");
-    return;
-  }
-
-  if (res.status === 403) {
-    let data = {};
-    try {
-      if (contentType.includes("application/json")) {
-        data = await res.json();
-      }
-    } catch {}
-    if (redirectFor403(data)) return;
-    throw new Error(data?.detail || "403: Access denied");
-  }
-
-  if (!res.ok) {
-    throw new Error(
-      (await res.text()) || `Chat request failed (${res.status})`
-    );
-  }
-
-  if (!res.body || contentType.includes("application/json")) {
-    let data = {};
-    try {
-      data = await res.json();
-    } catch {}
-
-    const reply = data.reply || data.message || data.output || "Done.";
-    appendMessage("assistant", reply, {
-      sources: normArray(data.sources),
-    });
-    speakText(reply);
-    return;
-  }
-
-  const reader = res.body.getReader();
-  const dec = new TextDecoder();
-  let buffer = "";
-
-  createStreamMsg();
-  state.queue.push(" ");
-  startTyping();
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += dec.decode(value, { stream: true });
-
-    buffer = parseSseChunk(buffer, (eventName, payload) => {
-      if (eventName === "done" || payload === "[DONE]") return;
-
-      if (eventName === "meta") {
-        handleMetaEvent(payload);
-        return;
-      }
-
-      if (eventName === "progress") {
-        handleProgressEvent(payload);
-        return;
-      }
-
-      if (eventName === "message") {
-        if (!payload) return;
-        for (const ch of payload) state.queue.push(ch);
-        startTyping();
-      }
-    });
-  }
-}
-
-/* ---------------------------------------------------------
- * Chat actions
- * --------------------------------------------------------- */
-
-function convert(type) {
-  if (!state.lastAssistantText || !has("input")) return;
-  if (!legalAcceptanceValid()) return openLegalModal("acceptance");
-
-  $("input").value = `${convertPrompt(type)}\n\n${state.lastAssistantText}`;
-  resize();
-  sendMessage();
-}
-
-async function saveRecord(text) {
   try {
-    await api("/records/save", {
+    const response = await fetch("/young-people/assistant", {
       method: "POST",
+      credentials: "include",
+      headers: withCsrfHeaders("POST", {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+      }),
       body: JSON.stringify({
-        content: text,
-        type: detectIntent(text),
-        conversation_id: state.conversationId,
-        context: state.contextState,
+        message: trimmed,
+        response_mode: detectAssistantResponseMode(trimmed),
+        context: buildAssistantContextPayload(),
       }),
     });
-    banner("Saved to record");
-  } catch (e) {
-    banner(e.message || "Save failed");
-  }
-}
 
-async function uploadDoc(file) {
-  const fd = new FormData();
-  fd.append("file", file);
-  if (state.conversationId) fd.append("conversation_id", state.conversationId);
-
-  const data = await api("/chat/upload", { method: "POST", body: fd });
-  if (!data) return;
-
-  state.currentDocumentText = data?.text || data?.document_text || "";
-  state.currentDocumentName = data?.filename || data?.name || file?.name || "";
-  docShow(state.currentDocumentName);
-  banner(`Document attached: ${state.currentDocumentName}`);
-}
-
-async function uploadLibraryDocument(file) {
-  const fd = new FormData();
-  fd.append("file", file);
-
-  const data = await api("/documents/library/upload", {
-    method: "POST",
-    body: fd,
-  });
-
-  banner(data?.message || "Library document uploaded");
-  await loadLibrary();
-}
-
-async function editMessage(messageId, currentText) {
-  if (!messageId) return;
-  if (!legalAcceptanceValid()) return openLegalModal("acceptance");
-
-  const edited = prompt("Edit message", currentText);
-  if (edited === null) return;
-
-  const cleaned = stripSystem(edited).trim();
-  if (!cleaned) return banner("Message cannot be empty");
-
-  state.isStreaming = true;
-  if (has("send")) $("send").disabled = true;
-
-  try {
-    await stream(`/chat/messages/${messageId}/edit`, {
-      message: cleaned,
-      intent: detectIntent(cleaned),
-      structured: true,
-      document_text: state.currentDocumentText,
-      document_name: state.currentDocumentName,
-      response_mode: selectedMode(),
-    });
-
-    if (state.conversationId) {
-      await openConversation(
-        state.conversationId,
-        has("title") ? $("title").textContent : "Conversation"
-      );
+    if (!response.ok) {
+      let message = `Request failed (${response.status})`;
+      try {
+        const body = await response.json();
+        message = body.detail || body.error || message;
+      } catch (_) {}
+      throw new Error(message);
     }
 
-    banner(indiCareCopy("updated"));
-  } catch (e) {
-    banner(e.message || "Edit failed");
-  } finally {
-    state.isStreaming = false;
-    if (has("send")) $("send").disabled = false;
-  }
-}
-
-async function sendMessage() {
-  if (!has("input")) return;
-  if (!legalAcceptanceValid()) return openLegalModal("acceptance");
-
-  const raw = $("input").value.trim();
-  const text = stripSystem(raw);
-
-  if (!text || state.isStreaming) return;
-
-  const prevConversationId = state.conversationId;
-  state.lastPrompt = text;
-  state.currentIntent = detectIntent(text);
-
-  state.isStreaming = true;
-  if (has("send")) $("send").disabled = true;
-
-  if (has("empty")) $("empty").classList.add("hidden");
-  if (has("messages")) $("messages").classList.remove("hidden");
-
-  appendMessage("user", text, {
-    meta: `Mode: ${RESP[selectedMode()]} · Intent: ${state.currentIntent}`,
-  });
-
-  $("input").value = "";
-  resize();
-
-  try {
-    await stream("/chat/", {
-      message: text,
-      intent: state.currentIntent,
-      structured: true,
-      conversation_id: state.conversationId,
-      document_text: state.currentDocumentText,
-      document_name: state.currentDocumentName,
-    });
-  } catch (e) {
-    const streamEl = document.querySelector("#streaming .msg");
-
-    if (streamEl) {
-      streamEl.classList.remove("typing");
-      streamEl.innerHTML = render(
-        `Sorry, there was a problem: ${e.message}`,
-        "assistant"
-      );
-      clearStreamingProgress();
-      attachMetaToStreamingMessage(state.currentStreamMeta);
-    } else {
-      appendMessage("assistant", `Sorry, there was a problem: ${e.message}`);
+    if (!response.body) {
+      throw new Error("No assistant response stream was returned.");
     }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let streamedText = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      buffer = parseSseChunk(buffer, (eventName, payload) => {
+        if (eventName === "done" || payload === "[DONE]") return;
+
+        if (eventName === "meta") {
+          try {
+            const meta = JSON.parse(payload || "{}");
+            state.assistantMeta = {
+              sources: Array.isArray(meta.sources) ? meta.sources : [],
+              runtime: meta.runtime || {},
+              explainability: meta.explainability || {},
+              assistant_scope: meta.assistant_scope || {},
+              assistant_context: meta.assistant_context || {},
+              suggested_actions: Array.isArray(meta.suggested_actions) ? meta.suggested_actions : [],
+            };
+            renderAssistantInsights();
+          } catch (_) {}
+          return;
+        }
+
+        if (eventName === "progress") return;
+
+        if (eventName === "message") {
+          streamedText += payload || "";
+          updateLastAssistantStreamingText(streamedText.trim() || "Thinking...");
+        }
+      });
+    }
+
+    replaceLastAssistantPlaceholder(streamedText.trim() || "No assistant reply returned.");
+  } catch (error) {
+    replaceLastAssistantPlaceholder(error.message || "The assistant could not answer right now.");
   } finally {
-    state.isStreaming = false;
-    if (has("send")) $("send").disabled = false;
-
-    try {
-      await loadConversations();
-
-      if (!prevConversationId && state.conversationId) {
-        await renameShort(state.conversationId, state.lastPrompt);
-      }
-    } catch {}
+    setAssistantSending(false);
   }
 }
 
-function quick(type) {
-  if (!has("input")) return;
-  if (!legalAcceptanceValid()) return openLegalModal("acceptance");
+function openYoungPerson(id) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("id", String(id));
+  window.history.replaceState({}, "", url.toString());
 
-  const prompts = {
-    policy:
-      "Find the relevant policy or guidance for this issue and summarise the main points clearly.",
-    incident:
-      "Draft a factual, professional incident record using a calm and defensible tone.",
-    risk:
-      "Create a structured risk summary with risks, protective factors, actions, and follow-up.",
-    handover:
-      "Write a concise handover with key information, current risks, actions completed, and next steps.",
-  };
+  state.youngPersonId = Number(id);
+  state.currentView = "home";
 
-  $("input").value =
-    prompts[type] || "Help me with this clearly and professionally.";
-  resize();
+  showWorkspaceMode();
+
+  loadYoungPerson()
+    .then(loadCurrentView)
+    .catch((error) => showError(error.message || "Failed to load young person."));
 }
 
-/* ---------------------------------------------------------
- * Shared select / tab helpers
- * --------------------------------------------------------- */
+async function runDrawerWorkflow(action) {
+  const item = state.activeRecordItem;
+  const type = state.activeRecordType;
+  const config = RECORD_CONFIG[type];
 
-function fillSelect(id, rows, placeholder, valueKey = "id", labelFn = (r) => r.name) {
-  if (!has(id)) return;
-
-  const sel = $(id);
-  const current = sel.value;
-  sel.innerHTML = `<option value="">${placeholder}</option>`;
-
-  normArray(rows).forEach((r) => {
-    const opt = document.createElement("option");
-    opt.value = r?.[valueKey] ?? "";
-    opt.textContent = labelFn(r || {}) || "";
-    sel.appendChild(opt);
-  });
-
-  if ([...sel.options].some((o) => String(o.value) === String(current))) {
-    sel.value = current;
-  }
-}
-
-function activeAdminTab() {
-  return localStorage.getItem("indicare_admin_tab") || "users";
-}
-
-function setAdminTab(name) {
-  document
-    .querySelectorAll(".tabbtn[data-tab]")
-    .forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
-
-  document
-    .querySelectorAll(".admin-tab")
-    .forEach((t) => t.classList.add("hidden"));
-
-  if (has(`tab-${name}`)) $(`tab-${name}`).classList.remove("hidden");
-  localStorage.setItem("indicare_admin_tab", name);
-}
-
-function setLibraryTab(name) {
-  document
-    .querySelectorAll(".tabbtn[data-library-tab]")
-    .forEach((b) => b.classList.toggle("active", b.dataset.libraryTab === name));
-
-  if (has("library-list-tab")) {
-    $("library-list-tab").classList.toggle("hidden", name !== "list");
-  }
-
-  if (has("library-editor-tab")) {
-    $("library-editor-tab").classList.toggle("hidden", name !== "editor");
-  }
-
-  if (name === "editor" && !canManageLibrary()) {
-    setLibraryTab("list");
-  }
-}
-
-function setManagerTab(name) {
-  document
-    .querySelectorAll(".tabbtn[data-manager-tab]")
-    .forEach((b) => b.classList.toggle("active", b.dataset.managerTab === name));
-
-  document
-    .querySelectorAll(".manager-tab")
-    .forEach((t) => t.classList.add("hidden"));
-
-  if (has(`manager-${name}-tab`)) {
-    $(`manager-${name}-tab`).classList.remove("hidden");
-  }
-}
-
-/* ---------------------------------------------------------
- * Admin
- * --------------------------------------------------------- */
-
-function updateAdminSummary() {
-  if (has("sumUsers")) $("sumUsers").textContent = String(state.adminUsers.length || 0);
-  if (has("sumHomes")) $("sumHomes").textContent = String(state.homes.length || 0);
-  if (has("sumProviders")) $("sumProviders").textContent = String(state.providers.length || 0);
-  if (has("sumDocs")) $("sumDocs").textContent = String(state.docs.length || 0);
-}
-
-async function loadAdminReferenceData() {
-  const [homesRes, providersRes, usersRes] = await Promise.allSettled([
-    api("/admin/homes"),
-    api("/admin/providers"),
-    api("/admin/users"),
-  ]);
-
-  state.homes = normArray(homesRes.status === "fulfilled" ? homesRes.value?.homes : []);
-  state.providers = normArray(providersRes.status === "fulfilled" ? providersRes.value?.providers : []);
-  state.adminUsers = normArray(usersRes.status === "fulfilled" ? usersRes.value?.users : []);
-
-  fillSelect("adminHomeId", state.homes, "Select home");
-  fillSelect("userHomeFilter", state.homes, "All homes");
-  fillSelect("docHomeFilter", state.homes, "All homes");
-  fillSelect("docHomeId", state.homes, "Select home");
-  fillSelect("homeProviderId", state.providers, "Select provider");
-
-  const managers = state.adminUsers.filter((u) =>
-    ["manager", "admin", "provider_admin", "ri"].includes(
-      String(u?.role || "").toLowerCase()
-    )
-  );
-
-  fillSelect(
-    "homeRegisteredManagerId",
-    managers,
-    "Select manager",
-    "id",
-    (r) =>
-      `${r?.first_name || ""} ${r?.last_name || ""}`.trim() ||
-      r?.email ||
-      ""
-  );
-
-  fillSelect(
-    "docOwnerId",
-    state.adminUsers,
-    "Select owner",
-    "id",
-    (r) =>
-      `${r?.first_name || ""} ${r?.last_name || ""}`.trim() ||
-      r?.email ||
-      ""
-  );
-
-  fillSelect(
-    "libraryOwnerId",
-    state.adminUsers,
-    "Select owner",
-    "id",
-    (r) =>
-      `${r?.first_name || ""} ${r?.last_name || ""}`.trim() ||
-      r?.email ||
-      ""
-  );
-
-  updateAdminSummary();
-}
-
-async function loadActiveAdminTab() {
-  const tab = activeAdminTab();
-  if (tab === "users") await loadAdminUsers();
-  if (tab === "homes") await loadHomes();
-  if (tab === "providers") await loadProviders();
-  if (tab === "documents") await loadDocuments();
-  if (tab === "billing") await loadBilling();
-  if (tab === "audit") await loadAudit();
-}
-
-function clearAdminForm() {
-  ["adminFirstName", "adminLastName", "adminEmail", "adminPassword"].forEach(
-    (id) => has(id) && ($(id).value = "")
-  );
-
-  if (has("adminRole")) $("adminRole").value = "staff";
-  if (has("adminHomeId")) $("adminHomeId").value = "";
-  state.adminCreateActive = true;
-  syncHelpers();
-}
-
-function adminPayloadFromForm() {
-  return {
-    first_name: has("adminFirstName") ? $("adminFirstName").value.trim() : "",
-    last_name: has("adminLastName") ? $("adminLastName").value.trim() : "",
-    email: has("adminEmail") ? $("adminEmail").value.trim() : "",
-    password: has("adminPassword") ? $("adminPassword").value : "",
-    role: has("adminRole") ? $("adminRole").value : "staff",
-    home_id:
-      has("adminHomeId") && $("adminHomeId").value
-        ? Number($("adminHomeId").value)
-        : null,
-    is_active: state.adminCreateActive,
-  };
-}
-
-async function createAdminUser() {
-  const payload = adminPayloadFromForm();
-
-  if (!payload.first_name || !payload.last_name || !payload.email || !payload.password || !payload.role) {
-    return banner("Complete all user fields");
-  }
-
-  await api("/admin/users", { method: "POST", body: JSON.stringify(payload) });
-  clearAdminForm();
-  await loadAdminUsers();
-  await loadAdminReferenceData();
-  banner("User created");
-}
-
-async function loadAdminUsers() {
-  const params = new URLSearchParams();
-
-  if (has("userSearch") && $("userSearch").value.trim()) {
-    params.set("q", $("userSearch").value.trim());
-  }
-  if (has("userRoleFilter") && $("userRoleFilter").value) {
-    params.set("role", $("userRoleFilter").value);
-  }
-  if (has("userHomeFilter") && $("userHomeFilter").value.trim()) {
-    params.set("home_id", $("userHomeFilter").value.trim());
-  }
-  if (has("userArchivedFilter") && $("userArchivedFilter").value) {
-    params.set("archived", $("userArchivedFilter").value);
-  }
-
-  const data = await api("/admin/users" + (params.toString() ? `?${params}` : ""));
-  if (!data) return;
-
-  state.adminUsers = normArray(data?.users);
-  renderAdminUsers();
-  updateAdminSummary();
-}
-
-function renderAdminUsers() {
-  if (!has("adminUsersList")) return;
-
-  const host = $("adminUsersList");
-  host.innerHTML = "";
-
-  if (!state.adminUsers.length) {
-    host.innerHTML = `<div class="entity-row"><div>No users found.</div></div>`;
+  if (!item || !config) {
+    showError("No record selected.");
     return;
   }
 
-  state.adminUsers.forEach((user) => {
-    const row = document.createElement("div");
-    row.className = "entity-row";
+  const id = item.record_id || item.source_id || item.id;
+  if (!id) {
+    showError("This record has no id.");
+    return;
+  }
 
-    row.innerHTML = `
-      <div>
-        <div class="entity-title">${safe(
-          [user?.first_name, user?.last_name].filter(Boolean).join(" ") ||
-            user?.email ||
-            "Unknown user"
-        )}</div>
-        <div class="entity-meta">${safe(user?.email || "")} · ${safe(
-      user?.role || ""
-    )} · home ${safe(String(user?.home_id ?? ""))}</div>
-        <div class="entity-meta">
-          <span class="tag ${user?.is_active ? "ok" : "bad"}">${
-      user?.is_active ? "active" : "inactive"
-    }</span>
-          <span class="tag ${user?.archived ? "bad" : "neutral"}">${
-      user?.archived ? "archived" : "live"
-    }</span>
-        </div>
-      </div>
-      <div class="entity-actions"></div>
-    `;
+  let url = null;
+  let body = null;
 
-    const right = row.querySelector(".entity-actions");
+  if (type === "appointment") {
+    if (action === "approve") url = config.approveUrl?.(id);
+    if (action === "return") url = config.returnUrl?.(id);
+  } else {
+    if (action === "submit") url = config.submitUrl?.(id);
+    if (action === "approve") {
+      url = config.approveUrl?.(id);
+      body = { review_note: "Approved in workspace" };
+    }
+    if (action === "return") {
+      url = config.returnUrl?.(id);
+      body = { review_note: "Returned in workspace" };
+    }
+    if (action === "archive") url = config.archiveUrl?.(id);
+  }
 
-    const add = (label, fn) => {
-      if (!right) return;
-      const btn = document.createElement("button");
-      btn.className = "chip";
-      btn.textContent = label;
-      btn.onclick = fn;
-      right.appendChild(btn);
+  if (!url) {
+    showError(`No ${action} route is configured for this record.`);
+    return;
+  }
+
+  try {
+    await apiSend(url, "POST", body);
+    showMessage(`${config.label} ${action}ed.`);
+    closeDrawer();
+    await loadCurrentView();
+  } catch (error) {
+    showError(error.message || `Could not ${action} record.`);
+  }
+}
+
+function bindEvents() {
+  document.addEventListener("click", (event) => {
+    const navBtn = event.target.closest(".nav-btn");
+    if (navBtn) {
+      if (!state.youngPersonId) {
+        showError("Select a young person first.");
+        return;
+      }
+      state.currentView = navBtn.dataset.view;
+      closeAllNavGroups();
+      updateAssistantContext();
+      renderAssistantScopeBadges();
+      loadCurrentView();
+      return;
+    }
+
+    const openBtn = event.target.closest("[data-open-young-person]");
+    if (openBtn) {
+      openYoungPerson(Number(openBtn.dataset.openYoungPerson));
+      return;
+    }
+
+    const quickAssistantBtn = event.target.closest("[data-assistant-quick]");
+    if (quickAssistantBtn) {
+      const action = quickAssistantBtn.dataset.assistantQuick;
+      const prompts = {
+        handover: "Draft a handover for the next shift for this young person.",
+        priorities: "Summarise current risks and priorities for today.",
+      };
+      askAssistant(prompts[action] || "Summarise what matters most right now.");
+      return;
+    }
+
+    const assistantChip = event.target.closest("[data-assistant-chip]");
+    if (assistantChip) {
+      const text = assistantChip.dataset.assistantChip || "";
+      if (els.assistantInput) els.assistantInput.value = text;
+      if (els.assistantModalInput) els.assistantModalInput.value = text;
+      return;
+    }
+
+    const suggestionBtn = event.target.closest("[data-prompt]");
+    if (suggestionBtn) {
+      askAssistant(suggestionBtn.dataset.prompt || "");
+      return;
+    }
+
+    if (!event.target.closest(".nav-group")) {
+      closeAllNavGroups();
+    }
+  });
+
+  document.querySelectorAll(".nav-group").forEach((group) => {
+    group.addEventListener("toggle", () => {
+      if (group.open) closeAllNavGroups(group);
+    });
+  });
+
+  els.selectorSearch?.addEventListener("input", filterSelectorList);
+  els.selectorRefreshBtn?.addEventListener("click", loadYoungPersonSelector);
+
+  els.refreshBtn?.addEventListener("click", async () => {
+    if (!state.youngPersonId) {
+      await loadYoungPersonSelector();
+      return;
+    }
+
+    try {
+      await loadYoungPerson();
+      await loadCurrentView();
+      showMessage("Workspace refreshed.");
+    } catch (error) {
+      showError(error.message || "Failed to refresh.");
+    }
+  });
+
+  els.changePersonBtn?.addEventListener("click", async () => {
+    state.youngPersonId = null;
+    state.youngPerson = null;
+    state.assistantMessages = [];
+    state.assistantModalMessages = [];
+    state.assistantMeta = {
+      sources: [],
+      runtime: {},
+      explainability: {},
+      assistant_scope: {},
+      assistant_context: {},
+      suggested_actions: [],
     };
 
-    add(user?.is_active ? "Deactivate" : "Activate", async () => {
-      await api(`/admin/users/${user.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ is_active: !user?.is_active }),
-      });
-      await loadAdminUsers();
-      banner("User updated");
-    });
-
-    add(user?.archived ? "Unarchive" : "Archive", async () => {
-      await api(`/admin/users/${user.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ archived: !user?.archived }),
-      });
-      await loadAdminUsers();
-      banner("User updated");
-    });
-
-    add("Role", async () => {
-      const newRole = prompt(
-        `Set role for ${user?.email || "user"}`,
-        user?.role || "staff"
-      );
-      if (newRole === null) return;
-
-      await api(`/admin/users/${user.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ role: newRole }),
-      });
-
-      await loadAdminUsers();
-      banner("Role updated");
-    });
-
-    add("Home", async () => {
-      const choices = state.homes.map((h) => `${h?.id}: ${h?.name}`).join("\n");
-      const homeId = prompt(
-        `Set home id for ${user?.email || "user"}\n\n${choices}`,
-        String(user?.home_id ?? "")
-      );
-      if (homeId === null) return;
-
-      await api(`/admin/users/${user.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          home_id: homeId ? Number(homeId) : null,
-        }),
-      });
-
-      await loadAdminUsers();
-      banner("Home updated");
-    });
-
-    add("Reset password", async () => {
-      const password = prompt(`Set new password for ${user?.email || "user"}`);
-      if (password === null || !password.trim()) {
-        return banner("Password cannot be empty");
-      }
-
-      await api(`/admin/users/${user.id}/reset-password`, {
-        method: "POST",
-        body: JSON.stringify({ password }),
-      });
-
-      banner("Password reset");
-    });
-
-    host.appendChild(row);
-  });
-}
-
-async function createHome() {
-  const payload = {
-    name: has("homeName") ? $("homeName").value.trim() : "",
-    address: has("homeAddress") ? $("homeAddress").value.trim() || null : null,
-    postcode: has("homePostcode") ? $("homePostcode").value.trim() || null : null,
-    region: has("homeRegion") ? $("homeRegion").value.trim() || null : null,
-    local_authority: has("homeLocalAuthority")
-      ? $("homeLocalAuthority").value.trim() || null
-      : null,
-    ofsted_urn: has("homeOfstedUrn") ? $("homeOfstedUrn").value.trim() || null : null,
-    provider_id:
-      has("homeProviderId") && $("homeProviderId").value
-        ? Number($("homeProviderId").value)
-        : null,
-    registered_manager_id:
-      has("homeRegisteredManagerId") && $("homeRegisteredManagerId").value
-        ? Number($("homeRegisteredManagerId").value)
-        : null,
-    geofence_radius_m:
-      has("homeGeofence") && $("homeGeofence").value.trim()
-        ? Number($("homeGeofence").value)
-        : null,
-  };
-
-  if (!payload.name) return banner("Home name is required");
-
-  await api("/admin/homes", { method: "POST", body: JSON.stringify(payload) });
-
-  [
-    "homeName",
-    "homeAddress",
-    "homePostcode",
-    "homeRegion",
-    "homeLocalAuthority",
-    "homeOfstedUrn",
-    "homeGeofence",
-  ].forEach((id) => has(id) && ($(id).value = ""));
-
-  if (has("homeProviderId")) $("homeProviderId").value = "";
-  if (has("homeRegisteredManagerId")) $("homeRegisteredManagerId").value = "";
-
-  await loadHomes();
-  await loadAdminReferenceData();
-  banner("Home created");
-}
-
-async function loadHomes() {
-  const data = await api("/admin/homes");
-  if (!data) return;
-
-  state.homes = normArray(data?.homes);
-  renderHomes();
-  updateAdminSummary();
-}
-
-function renderHomes() {
-  if (!has("homesList")) return;
-
-  const host = $("homesList");
-  host.innerHTML = "";
-
-  if (!state.homes.length) {
-    host.innerHTML = `<div class="entity-row"><div>No homes found.</div></div>`;
-    return;
-  }
-
-  state.homes.forEach((home) => {
-    const row = document.createElement("div");
-    row.className = "entity-row";
-
-    row.innerHTML = `
-      <div>
-        <div class="entity-title">${safe(home?.name || "Unnamed home")}</div>
-        <div class="entity-meta">${safe(home?.postcode || "")} · ${safe(
-      home?.region || ""
-    )} · ${safe(home?.local_authority || "")}</div>
-        <div class="entity-meta">URN: ${safe(home?.ofsted_urn || "—")} · users: ${safe(
-      String(home?.user_count ?? 0)
-    )}</div>
-      </div>
-      <div class="entity-actions"></div>
-    `;
-
-    const right = row.querySelector(".entity-actions");
-
-    [
-      [
-        "Edit",
-        async () => {
-          const name = prompt("Home name", home?.name || "");
-          if (name === null) return;
-
-          await api(`/admin/homes/${home.id}`, {
-            method: "PATCH",
-            body: JSON.stringify({ name }),
-          });
-
-          await loadHomes();
-          banner("Home updated");
-        },
-      ],
-      [
-        home?.archived ? "Unarchive" : "Archive",
-        async () => {
-          await api(`/admin/homes/${home.id}`, {
-            method: "PATCH",
-            body: JSON.stringify({ archived: !home?.archived }),
-          });
-
-          await loadHomes();
-          banner("Home updated");
-        },
-      ],
-    ].forEach(([label, fn]) => {
-      const btn = document.createElement("button");
-      btn.className = "chip";
-      btn.textContent = label;
-      btn.onclick = fn;
-      right && right.appendChild(btn);
-    });
-
-    host.appendChild(row);
-  });
-}
-
-async function createProvider() {
-  const payload = {
-    name: has("providerName") ? $("providerName").value.trim() : "",
-    region: has("providerRegion") ? $("providerRegion").value.trim() || null : null,
-    address: has("providerAddress")
-      ? $("providerAddress").value.trim() || null
-      : null,
-    postcode: has("providerPostcode")
-      ? $("providerPostcode").value.trim() || null
-      : null,
-    local_authority: has("providerLA") ? $("providerLA").value.trim() || null : null,
-    safeguarding_lead_name: has("providerLeadName")
-      ? $("providerLeadName").value.trim() || null
-      : null,
-    safeguarding_lead_email: has("providerLeadEmail")
-      ? $("providerLeadEmail").value.trim() || null
-      : null,
-  };
-
-  if (!payload.name) return banner("Provider name is required");
-
-  await api("/admin/providers", { method: "POST", body: JSON.stringify(payload) });
-
-  [
-    "providerName",
-    "providerRegion",
-    "providerAddress",
-    "providerPostcode",
-    "providerLA",
-    "providerLeadName",
-    "providerLeadEmail",
-  ].forEach((id) => has(id) && ($(id).value = ""));
-
-  await loadProviders();
-  await loadAdminReferenceData();
-  banner("Provider created");
-}
-
-async function loadProviders() {
-  const data = await api("/admin/providers");
-  if (!data) return;
-
-  state.providers = normArray(data?.providers);
-  renderProviders();
-  updateAdminSummary();
-}
-
-function renderProviders() {
-  if (!has("providersList")) return;
-
-  const host = $("providersList");
-  host.innerHTML = "";
-
-  if (!state.providers.length) {
-    host.innerHTML = `<div class="entity-row"><div>No providers found.</div></div>`;
-    return;
-  }
-
-  state.providers.forEach((provider) => {
-    const row = document.createElement("div");
-    row.className = "entity-row";
-
-    row.innerHTML = `
-      <div>
-        <div class="entity-title">${safe(provider?.name || "Unnamed provider")}</div>
-        <div class="entity-meta">${safe(provider?.region || "")} · homes: ${safe(
-      String(provider?.home_count ?? 0)
-    )}</div>
-        <div class="entity-meta">${safe(
-          provider?.safeguarding_lead_name || "No safeguarding lead"
-        )}${provider?.safeguarding_lead_email ? " · " + safe(provider.safeguarding_lead_email) : ""}</div>
-      </div>
-      <div class="entity-actions"></div>
-    `;
-
-    const right = row.querySelector(".entity-actions");
-
-    [
-      [
-        "Edit",
-        async () => {
-          const name = prompt("Provider name", provider?.name || "");
-          if (name === null) return;
-
-          await api(`/admin/providers/${provider.id}`, {
-            method: "PATCH",
-            body: JSON.stringify({ name }),
-          });
-
-          await loadProviders();
-          banner("Provider updated");
-        },
-      ],
-      [
-        provider?.archived ? "Unarchive" : "Archive",
-        async () => {
-          await api(`/admin/providers/${provider.id}`, {
-            method: "PATCH",
-            body: JSON.stringify({ archived: !provider?.archived }),
-          });
-
-          await loadProviders();
-          banner("Provider updated");
-        },
-      ],
-    ].forEach(([label, fn]) => {
-      const btn = document.createElement("button");
-      btn.className = "chip";
-      btn.textContent = label;
-      btn.onclick = fn;
-      right && right.appendChild(btn);
-    });
-
-    host.appendChild(row);
-  });
-}
-
-async function createDocumentRecord() {
-  const payload = {
-    title: has("docTitle") ? $("docTitle").value.trim() || null : null,
-    document_type: has("docType") ? $("docType").value || "policy" : "policy",
-    home_id:
-      has("docHomeId") && $("docHomeId").value
-        ? Number($("docHomeId").value)
-        : null,
-    owner_id:
-      has("docOwnerId") && $("docOwnerId").value
-        ? Number($("docOwnerId").value)
-        : null,
-    issue_date: has("docIssueDate") ? $("docIssueDate").value || null : null,
-    review_date: has("docReviewDate") ? $("docReviewDate").value || null : null,
-    expiry_date: has("docExpiryDate") ? $("docExpiryDate").value || null : null,
-    approval_status: has("docApprovalStatus")
-      ? $("docApprovalStatus").value || "not_required"
-      : "not_required",
-    confidentiality_level: has("docConfLevel")
-      ? $("docConfLevel").value || "standard"
-      : "standard",
-    input_text: has("docInputText") ? $("docInputText").value.trim() || null : null,
-  };
-
-  await api("/admin/documents", { method: "POST", body: JSON.stringify(payload) });
-
-  [
-    "docTitle",
-    "docIssueDate",
-    "docReviewDate",
-    "docExpiryDate",
-    "docInputText",
-  ].forEach((id) => has(id) && ($(id).value = ""));
-
-  if (has("docType")) $("docType").value = "policy";
-  if (has("docHomeId")) $("docHomeId").value = "";
-  if (has("docOwnerId")) $("docOwnerId").value = "";
-  if (has("docApprovalStatus")) $("docApprovalStatus").value = "not_required";
-  if (has("docConfLevel")) $("docConfLevel").value = "standard";
-
-  await loadDocuments();
-  await loadAdminReferenceData();
-  banner("Document created");
-}
-
-async function loadDocuments() {
-  const params = new URLSearchParams();
-
-  if (has("docSearch") && $("docSearch").value.trim()) {
-    params.set("q", $("docSearch").value.trim());
-  }
-  if (has("docHomeFilter") && $("docHomeFilter").value.trim()) {
-    params.set("home_id", $("docHomeFilter").value.trim());
-  }
-  if (has("docTypeFilter") && $("docTypeFilter").value.trim()) {
-    params.set("document_type", $("docTypeFilter").value.trim());
-  }
-  if (has("docApprovalFilter") && $("docApprovalFilter").value.trim()) {
-    params.set("approval_status", $("docApprovalFilter").value.trim());
-  }
-
-  const data = await api("/admin/documents" + (params.toString() ? `?${params}` : ""));
-  if (!data) return;
-
-  state.docs = normArray(data?.documents);
-  renderDocuments();
-  updateAdminSummary();
-}
-
-function renderDocuments() {
-  if (!has("docsList")) return;
-
-  const host = $("docsList");
-  host.innerHTML = "";
-
-  if (!state.docs.length) {
-    host.innerHTML = `<div class="entity-row"><div>No documents found.</div></div>`;
-    return;
-  }
-
-  state.docs.forEach((doc) => {
-    const row = document.createElement("div");
-    row.className = "entity-row";
-
-    row.innerHTML = `
-      <div>
-        <div class="entity-title">${safe(doc?.title || "Untitled document")}</div>
-        <div class="entity-meta">${safe(doc?.document_type || "—")} · ${safe(
-      doc?.home_name || "home " + (doc?.home_id ?? "—")
-    )}</div>
-        <div class="entity-meta">approval: ${safe(
-          doc?.approval_status || "not_required"
-        )} · review: ${safe(doc?.review_date || "—")} · expiry: ${safe(
-      doc?.expiry_date || "—"
-    )}</div>
-      </div>
-      <div class="entity-actions"></div>
-    `;
-
-    const right = row.querySelector(".entity-actions");
-
-    [
-      [
-        "Set approved",
-        async () => {
-          await api(`/admin/documents/${doc.id}`, {
-            method: "PATCH",
-            body: JSON.stringify({ approval_status: "approved" }),
-          });
-          await loadDocuments();
-          banner("Document updated");
-        },
-      ],
-      [
-        "Edit title",
-        async () => {
-          const title = prompt("Document title", doc?.title || "");
-          if (title === null) return;
-
-          await api(`/admin/documents/${doc.id}`, {
-            method: "PATCH",
-            body: JSON.stringify({ title }),
-          });
-
-          await loadDocuments();
-          banner("Document updated");
-        },
-      ],
-    ].forEach(([label, fn]) => {
-      const btn = document.createElement("button");
-      btn.className = "chip";
-      btn.textContent = label;
-      btn.onclick = fn;
-      right && right.appendChild(btn);
-    });
-
-    host.appendChild(row);
-  });
-}
-
-async function loadBilling() {
-  try {
-    state.billing = await api("/admin/billing/overview");
-  } catch {
-    state.billing = null;
-  }
-
-  renderBilling();
-}
-
-function renderBilling() {
-  if (has("billingStats")) $("billingStats").innerHTML = "";
-  if (has("billingList")) $("billingList").innerHTML = "";
-  if (!state.billing) return;
-
-  const totals = normObj(state.billing.totals);
-
-  [
-    ["Total users", totals.total_users ?? 0],
-    ["Active users", totals.active_users ?? 0],
-    ["Archived users", totals.archived_users ?? 0],
-    ["Active subscriptions", totals.active_subscriptions ?? 0],
-    ["Inactive subscriptions", totals.inactive_subscriptions ?? 0],
-  ].forEach(([label, value]) => {
-    if (has("billingStats")) {
-      $("billingStats").insertAdjacentHTML(
-        "beforeend",
-        `<div class="stat"><div class="n">${safe(
-          String(value)
-        )}</div><div class="l">${safe(label)}</div></div>`
-      );
-    }
+    closeDrawer();
+    closeComposer();
+    closeAssistant();
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete("id");
+    url.searchParams.delete("young_person_id");
+    window.history.replaceState({}, "", url.toString());
+
+    updateAssistantScopeDataset();
+    renderAssistantScopeBadges();
+    renderAssistantMessages();
+    renderAssistantInsights();
+    updateAssistantContext();
+
+    await loadYoungPersonSelector();
   });
 
-  const users = normArray(state.billing.users);
-  if (!users.length) {
-    if (has("billingList")) {
-      $("billingList").innerHTML = `<div class="entity-row"><div>No billing rows found.</div></div>`;
-    }
-    return;
-  }
+  els.quickActions?.addEventListener("click", (event) => {
+    const btn = event.target.closest("[data-action]");
+    if (!btn) return;
 
-  users.forEach((user) => {
-    if (has("billingList")) {
-      $("billingList").insertAdjacentHTML(
-        "beforeend",
-        `<div class="entity-row"><div><div class="entity-title">${safe(
-          [user?.first_name, user?.last_name].filter(Boolean).join(" ") ||
-            user?.email ||
-            "Unknown user"
-        )}</div><div class="entity-meta">${safe(user?.email || "")} · ${safe(
-          user?.plan_name || "No plan"
-        )}</div><div class="entity-meta">status: ${safe(
-          user?.subscription_status || "inactive"
-        )} · period end: ${safe(user?.current_period_end || "—")}</div></div></div>`
-      );
-    }
-  });
-}
-
-async function loadAudit() {
-  try {
-    const data = await api("/admin/audit");
-    state.audit = normArray(data?.audit);
-  } catch {
-    state.audit = [];
-  }
-
-  renderAudit();
-}
-
-function renderAudit() {
-  if (!has("auditList")) return;
-
-  const host = $("auditList");
-  host.innerHTML = "";
-
-  if (!state.audit.length) {
-    host.innerHTML = `<div class="entity-row"><div>No audit entries found.</div></div>`;
-    return;
-  }
-
-  state.audit.forEach((entry) => {
-    host.insertAdjacentHTML(
-      "beforeend",
-      `<div class="entity-row"><div><div class="entity-title">${safe(
-        entry?.action || ""
-      )} · ${safe(entry?.target_type || "")} ${safe(
-        String(entry?.target_id ?? "")
-      )}</div><div class="entity-meta">${safe(
-        [entry?.first_name, entry?.last_name].filter(Boolean).join(" ") ||
-          entry?.email ||
-          "Unknown admin"
-      )} · ${safe(entry?.created_at || "")}</div><div class="entity-meta">${safe(
-        JSON.stringify(entry?.details || {})
-      )}</div></div></div>`
-    );
-  });
-}
-
-/* ---------------------------------------------------------
- * Library
- * --------------------------------------------------------- */
-
-async function loadLibrary() {
-  const params = new URLSearchParams();
-
-  if (has("librarySearch") && $("librarySearch").value.trim()) {
-    params.set("q", $("librarySearch").value.trim());
-  }
-  if (has("libraryTypeFilter") && $("libraryTypeFilter").value) {
-    params.set("document_type", $("libraryTypeFilter").value);
-  }
-  if (has("libraryApprovalFilter") && $("libraryApprovalFilter").value) {
-    params.set("approval_status", $("libraryApprovalFilter").value);
-  }
-
-  const data = await api("/documents/library" + (params.toString() ? `?${params}` : ""));
-  if (!data) return;
-
-  state.libraryDocs = normArray(data?.documents);
-  renderLibraryList();
-  renderManagerLibraryList();
-
-  if (state.selectedLibraryDoc?.id) {
-    const fresh = state.libraryDocs.find(
-      (d) => Number(d?.id) === Number(state.selectedLibraryDoc.id)
-    );
-    if (fresh) openLibraryDocument(fresh.id);
-  }
-}
-
-function renderLibraryList() {
-  if (!has("libraryList")) return;
-
-  const host = $("libraryList");
-  host.innerHTML = "";
-
-  if (!state.libraryDocs.length) {
-    host.innerHTML = `<div class="entity-row"><div>No documents available for your home.</div></div>`;
-    return;
-  }
-
-  state.libraryDocs.forEach((doc) => {
-    const row = document.createElement("div");
-    row.className = "entity-row";
-
-    row.innerHTML = `
-      <div>
-        <div class="entity-title">${safe(doc?.title || "Untitled document")}</div>
-        <div class="entity-meta">${safe(doc?.document_type || "—")} · ${safe(
-      doc?.home_name || "Your home"
-    )}</div>
-        <div class="entity-meta">
-          <span class="tag ${
-            doc?.approval_status === "approved"
-              ? "ok"
-              : doc?.approval_status === "pending"
-              ? "warn"
-              : "neutral"
-          }">${safe(doc?.approval_status || "not_required")}</span>
-          <span class="tag neutral">${safe(doc?.confidentiality_level || "standard")}</span>
-        </div>
-      </div>
-      <div class="entity-actions"></div>
-    `;
-
-    const right = row.querySelector(".entity-actions");
-
-    [
-      ["Open", () => openLibraryDocument(doc.id)],
-      ...(canManageLibrary() ? [["Edit", () => populateLibraryEditor(doc)]] : []),
-    ].forEach(([label, fn]) => {
-      const btn = document.createElement("button");
-      btn.className = "chip";
-      btn.textContent = label;
-      btn.onclick = fn;
-      right && right.appendChild(btn);
-    });
-
-    host.appendChild(row);
-  });
-}
-
-function renderManagerLibraryList() {
-  if (!has("managerLibraryList")) return;
-
-  const host = $("managerLibraryList");
-  host.innerHTML = "";
-
-  if (!canManageLibrary()) {
-    host.innerHTML = `<div class="entity-row"><div>Read-only access.</div></div>`;
-    return;
-  }
-
-  if (!state.libraryDocs.length) {
-    host.innerHTML = `<div class="entity-row"><div>No home documents found.</div></div>`;
-    return;
-  }
-
-  state.libraryDocs.forEach((doc) => {
-    host.insertAdjacentHTML(
-      "beforeend",
-      `<div class="entity-row"><div><div class="entity-title">${safe(
-        doc?.title || "Untitled document"
-      )}</div><div class="entity-meta">${safe(
-        doc?.document_type || "—"
-      )} · review ${safe(doc?.review_date || "—")}</div></div><div class="entity-actions"><button class="chip" data-doc-edit="${safe(
-        String(doc?.id ?? "")
-      )}">Edit</button></div></div>`
-    );
+    if (btn.dataset.action === "daily-note") openComposerFor("daily_note", "create");
+    if (btn.dataset.action === "incident") openComposerFor("incident", "create");
+    if (btn.dataset.action === "risk") openComposerFor("risk", "create");
+    if (btn.dataset.action === "plan") openComposerFor("support_plan", "create");
   });
 
-  host.querySelectorAll("[data-doc-edit]").forEach((btn) => {
-    btn.onclick = () =>
-      populateLibraryEditor(
-        state.libraryDocs.find((d) => Number(d?.id) === Number(btn.dataset.docEdit))
-      );
-  });
-}
+  els.closeDrawerBtn?.addEventListener("click", closeDrawer);
+  els.drawerBackdrop?.addEventListener("click", closeDrawer);
 
-async function openLibraryDocument(id) {
-  if (!id || !has("libraryViewer")) return;
-
-  const data = await api(`/documents/library/${id}`);
-  const doc = data?.document;
-  if (!doc) return;
-
-  state.selectedLibraryDoc = doc;
-
-  $("libraryViewer").innerHTML = `
-    <h3>${safe(doc?.title || "Untitled document")}</h3>
-    <p><strong>Type:</strong> ${safe(doc?.document_type || "—")}</p>
-    <p><strong>Approval:</strong> ${safe(
-      doc?.approval_status || "not_required"
-    )} · <strong>Confidentiality:</strong> ${safe(
-    doc?.confidentiality_level || "standard"
-  )}</p>
-    <p><strong>Issue date:</strong> ${safe(
-      doc?.issue_date || "—"
-    )} · <strong>Review date:</strong> ${safe(
-    doc?.review_date || "—"
-  )} · <strong>Expiry date:</strong> ${safe(doc?.expiry_date || "—")}</p>
-    <hr style="border:none;border-top:1px solid var(--line);margin:14px 0;">
-    <div>${render(
-      doc?.input_text || doc?.generated_text || "No content available.",
-      "assistant"
-    )}</div>
-  `;
-}
-
-function resetLibraryEditor() {
-  state.editingLibraryDocId = null;
-
-  if (has("libraryFormTitle")) $("libraryFormTitle").textContent = "Create document";
-
-  [
-    "libraryDocTitle",
-    "libraryIssueDate",
-    "libraryReviewDate",
-    "libraryExpiryDate",
-    "libraryInputText",
-  ].forEach((id) => has(id) && ($(id).value = ""));
-
-  if (has("libraryDocType")) $("libraryDocType").value = "policy";
-  if (has("libraryApprovalStatus")) $("libraryApprovalStatus").value = "not_required";
-  if (has("libraryConfidentiality")) $("libraryConfidentiality").value = "standard";
-  if (has("libraryOwnerId")) $("libraryOwnerId").value = "";
-
-  if (has("deleteLibraryDocBtn")) {
-    $("deleteLibraryDocBtn").classList.add("hidden");
-  }
-}
-
-function populateLibraryEditor(doc) {
-  if (!canManageLibrary() || !doc) return;
-
-  state.editingLibraryDocId = doc.id;
-
-  if (has("libraryFormTitle")) $("libraryFormTitle").textContent = "Edit document";
-  if (has("libraryDocTitle")) $("libraryDocTitle").value = doc?.title || "";
-  if (has("libraryDocType")) $("libraryDocType").value = doc?.document_type || "policy";
-  if (has("libraryIssueDate")) $("libraryIssueDate").value = doc?.issue_date || "";
-  if (has("libraryReviewDate")) $("libraryReviewDate").value = doc?.review_date || "";
-  if (has("libraryExpiryDate")) $("libraryExpiryDate").value = doc?.expiry_date || "";
-  if (has("libraryApprovalStatus")) {
-    $("libraryApprovalStatus").value = doc?.approval_status || "not_required";
-  }
-  if (has("libraryConfidentiality")) {
-    $("libraryConfidentiality").value = doc?.confidentiality_level || "standard";
-  }
-  if (has("libraryOwnerId")) $("libraryOwnerId").value = doc?.owner_id || "";
-  if (has("libraryInputText")) {
-    $("libraryInputText").value = doc?.input_text || doc?.generated_text || "";
-  }
-  if (has("deleteLibraryDocBtn")) {
-    $("deleteLibraryDocBtn").classList.remove("hidden");
-  }
-
-  setLibraryTab("editor");
-}
-
-async function saveLibraryDocument() {
-  if (!canManageLibrary()) {
-    return banner("Manager or admin access required");
-  }
-
-  const payload = {
-    title: has("libraryDocTitle") ? $("libraryDocTitle").value.trim() : "",
-    document_type: has("libraryDocType") ? $("libraryDocType").value : "policy",
-    issue_date: has("libraryIssueDate") ? $("libraryIssueDate").value || null : null,
-    review_date: has("libraryReviewDate") ? $("libraryReviewDate").value || null : null,
-    expiry_date: has("libraryExpiryDate") ? $("libraryExpiryDate").value || null : null,
-    approval_status: has("libraryApprovalStatus")
-      ? $("libraryApprovalStatus").value
-      : "not_required",
-    confidentiality_level: has("libraryConfidentiality")
-      ? $("libraryConfidentiality").value
-      : "standard",
-    owner_id:
-      has("libraryOwnerId") && $("libraryOwnerId").value
-        ? Number($("libraryOwnerId").value)
-        : null,
-    input_text: has("libraryInputText")
-      ? $("libraryInputText").value.trim() || null
-      : null,
-  };
-
-  if (!payload.title) return banner("Title is required");
-
-  if (state.editingLibraryDocId) {
-    await api(`/documents/library/${state.editingLibraryDocId}`, {
-      method: "PATCH",
-      body: JSON.stringify(payload),
-    });
-    banner("Document updated");
-  } else {
-    await api("/documents/library", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-    banner("Document created");
-  }
-
-  resetLibraryEditor();
-  await loadLibrary();
-  setLibraryTab("list");
-}
-
-async function deleteLibraryDocument() {
-  if (!state.editingLibraryDocId || !confirm("Delete this document?")) return;
-
-  await api(`/documents/library/${state.editingLibraryDocId}`, {
-    method: "DELETE",
+  els.drawerEditBtn?.addEventListener("click", () => {
+    if (!state.activeRecordItem || !state.activeRecordType || !RECORD_CONFIG[state.activeRecordType]) return;
+    openComposerFor(state.activeRecordType, "edit", state.activeRecordItem);
   });
 
-  banner("Document deleted");
-  resetLibraryEditor();
+  els.drawerSubmitBtn?.addEventListener("click", () => runDrawerWorkflow("submit"));
+  els.drawerApproveBtn?.addEventListener("click", () => runDrawerWorkflow("approve"));
+  els.drawerReturnBtn?.addEventListener("click", () => runDrawerWorkflow("return"));
+  els.drawerArchiveBtn?.addEventListener("click", () => runDrawerWorkflow("archive"));
 
-  if (has("libraryViewer")) {
-    $("libraryViewer").innerHTML =
-      `<h3>Select a document</h3><p>Open a policy or document from the list to read it here.</p>`;
-  }
+  els.closeComposerBtn?.addEventListener("click", closeComposer);
 
-  await loadLibrary();
-  setLibraryTab("list");
-}
-
-/* ---------------------------------------------------------
- * Manager
- * --------------------------------------------------------- */
-
-function updateManagerSummary() {
-  if (has("mgrStatUsers")) {
-    $("mgrStatUsers").textContent = String(state.managerUsers.length || 0);
-  }
-  if (has("mgrStatDocs")) {
-    $("mgrStatDocs").textContent = String(state.managerDocuments.length || 0);
-  }
-  if (has("mgrStatManagers")) {
-    $("mgrStatManagers").textContent = String(
-      state.managerUsers.filter(
-        (u) => String(u?.role || "").toLowerCase() === "manager"
-      ).length || 0
-    );
-  }
-  if (has("mgrStatStaffOnly")) {
-    $("mgrStatStaffOnly").textContent = String(
-      state.managerUsers.filter(
-        (u) => String(u?.role || "").toLowerCase() === "staff"
-      ).length || 0
-    );
-  }
-}
-
-async function createManagerStaff() {
-  const payload = {
-    first_name: has("mgrFirst") ? $("mgrFirst").value.trim() : "",
-    last_name: has("mgrLast") ? $("mgrLast").value.trim() : "",
-    email: has("mgrEmail") ? $("mgrEmail").value.trim() : "",
-    password: has("mgrPass") ? $("mgrPass").value : "",
-    role: has("mgrRole") ? $("mgrRole").value : "staff",
-  };
-
-  if (!payload.first_name || !payload.last_name || !payload.email || !payload.password) {
-    return banner("Complete all staff fields");
-  }
-
-  await api("/manager/users", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-
-  ["mgrFirst", "mgrLast", "mgrEmail", "mgrPass"].forEach(
-    (id) => has(id) && ($(id).value = "")
-  );
-  if (has("mgrRole")) $("mgrRole").value = "staff";
-
-  await loadManager();
-  banner("Staff created");
-}
-
-async function saveManagerDoc() {
-  const payload = {
-    title: has("mgrDocTitle") ? $("mgrDocTitle").value.trim() : "",
-    input_text: has("mgrDocText") ? $("mgrDocText").value.trim() : "",
-  };
-
-  if (!payload.title) return banner("Title is required");
-
-  await api("/manager/documents", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-
-  if (has("mgrDocTitle")) $("mgrDocTitle").value = "";
-  if (has("mgrDocText")) $("mgrDocText").value = "";
-
-  await loadManager();
-  banner("Document saved");
-}
-
-async function loadManager() {
-  try {
-    const data = await api("/manager/overview");
-    if (!data) return;
-
-    state.managerUsers = normArray(data?.users);
-    state.managerDocuments = normArray(data?.documents);
-
-    renderManagerUsers();
-    renderManagerDocuments();
-    updateManagerSummary();
-  } catch (e) {
-    if (/manager access required/i.test(String(e.message || ""))) {
-      banner("Your account does not have manager access.");
-    } else {
-      banner(e.message || "Could not load manager panel.");
-    }
-    throw e;
-  }
-}
-
-function renderManagerUsers() {
-  if (!has("mgrUsers")) return;
-
-  const host = $("mgrUsers");
-  host.innerHTML = "";
-
-  if (!state.managerUsers.length) {
-    host.innerHTML = `<div class="entity-row"><div>No staff found.</div></div>`;
-    return;
-  }
-
-  state.managerUsers.forEach((user) => {
-    host.insertAdjacentHTML(
-      "beforeend",
-      `<div class="entity-row">
-        <div>
-          <div class="entity-title">${safe(
-            `${user?.first_name || ""} ${user?.last_name || ""}`.trim() ||
-              user?.email ||
-              "Unnamed user"
-          )}</div>
-          <div class="entity-meta">${safe(user?.email || "")}</div>
-          <div class="entity-meta"><span class="tag ${
-            String(user?.role || "").toLowerCase() === "manager"
-              ? "warn"
-              : "neutral"
-          }">${safe(user?.role || "staff")}</span></div>
-        </div>
-      </div>`
-    );
-  });
-}
-
-function renderManagerDocuments() {
-  if (!has("mgrDocs")) return;
-
-  const host = $("mgrDocs");
-  host.innerHTML = "";
-
-  if (!state.managerDocuments.length) {
-    host.innerHTML = `<div class="entity-row"><div>No home documents found.</div></div>`;
-    return;
-  }
-
-  state.managerDocuments.forEach((doc) => {
-    host.insertAdjacentHTML(
-      "beforeend",
-      `<div class="entity-row">
-        <div>
-          <div class="entity-title">${safe(doc?.title || "Untitled document")}</div>
-          <div class="entity-meta">${safe(doc?.document_type || "home_document")}</div>
-        </div>
-      </div>`
-    );
-  });
-}
-
-/* ---------------------------------------------------------
- * Preferences
- * --------------------------------------------------------- */
-
-function restorePrefs() {
-  state.themePreference = readStoredThemePreference();
-  applyResolvedTheme();
-
-  if (has("lang")) {
-    $("lang").value =
-      localStorage.getItem("indicare_reply_language") || DEFAULT_LANGUAGE;
-  }
-
-  if (has("mode")) {
-    $("mode").value =
-      localStorage.getItem("indicare_response_mode") || "balanced";
-  }
-
-  loadVoicePref();
-  loadCopilotPref();
-  loadContextState();
-  loadWorkspaceContext();
-  applyAssistantBootstrap();
-  renderContextSummary();
-  syncHelpers();
-  setLibraryTab("list");
-  setManagerTab("staff");
-}
-
-/* ---------------------------------------------------------
- * Event binding
- * --------------------------------------------------------- */
-
-function bindLegalControls() {
-  document.querySelectorAll("[data-legal-tab]").forEach((btn) => {
-    btn.addEventListener("click", () => setLegalTab(btn.dataset.legalTab));
-  });
-
-  on("openLegalFromSettings", "click", () => openLegalModal("terms"));
-  on("openLegalHeaderBtn", "click", () => openLegalModal("terms"));
-  on("closeLegalModal", "click", closeLegalModal);
-
-  on("legalOverlay", "click", () => {
-    const forced =
-      has("legalModal") && $("legalModal").dataset.force === "true";
-    if (!forced || legalAcceptanceValid()) closeLegalModal();
-  });
-
-  on("acceptLegalBtn", "click", acceptLegalTerms);
-  on("declineLegalBtn", "click", declineLegalTerms);
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      if (has("legalModal") && $("legalModal").classList.contains("open")) {
-        closeLegalModal();
-      }
-    }
-  });
-}
-
-function bind() {
-  on("sideToggle", "click", () => {
-    if (has("sidebar")) $("sidebar").classList.toggle("open");
-    if (window.innerWidth <= 768 && has("overlay")) {
-      $("overlay").classList.toggle(
-        "show",
-        has("sidebar") && $("sidebar").classList.contains("open")
-      );
-    }
-  });
-
-  on("mobileMenu", "click", () => {
-    if (has("sidebar")) $("sidebar").classList.add("open");
-    if (has("overlay")) $("overlay").classList.add("show");
-  });
-
-  on("overlay", "click", () => {
-    if (has("sidebar")) $("sidebar").classList.remove("open");
-    if (has("overlay")) $("overlay").classList.remove("show");
-    closeSettings();
-  });
-
-  on("openSettings", "click", openSettings);
-  on("closeSettings", "click", closeSettings);
-  on("settingsOverlay", "click", closeSettings);
-
-  on("newChat", "click", resetWelcome);
-  on("logout", "click", logoutNow);
-
-  on("theme", "click", cycleThemePreference);
-
-  on("privacy", "click", () => {
-    if (has("app")) $("app").classList.toggle("privacy-active");
-    syncHelpers();
-  });
-
-  on("voiceReplies", "click", () => {
-    setVoicePref(!state.speechEnabled);
-  });
-
-  on("stopVoiceBtn", "click", stopSpeaking);
-
-  on("voiceSelect", "change", () => {
-    const selected = has("voiceSelect") ? $("voiceSelect").value : "";
-    saveVoiceName(selected);
-    state.indicareVoice = null;
-    pickIndiCareVoice();
-  });
-
-  on("copilot", "change", saveCopilotPref);
-  on("saveContextBtn", "click", saveContextState);
-
-  on("lang", "change", () => {
-    localStorage.setItem("indicare_reply_language", selectedLang());
-    syncHelpers();
-  });
-
-  on("mode", "change", () => {
-    localStorage.setItem("indicare_response_mode", selectedMode());
-    syncHelpers();
-  });
-
-  on("navAssistant", "click", showAssistantView);
-  on("navYoungPeople", "click", showYoungPeopleView);
-  on("navLibrary", "click", showLibraryView);
-  on("navManager", "click", showManagerView);
-  on("navAdmin", "click", showAdminView);
-
-  window.addEventListener("message", (event) => {
-    const data = event?.data;
-    if (!data || typeof data !== "object") return;
-
-    if (data.type === "indicare-context") {
-      saveWorkspaceContext({
-        youngPersonId: data.payload?.youngPersonId ?? state.workspaceContext.youngPersonId,
-        youngPersonName: data.payload?.youngPersonName || "",
-        home: data.payload?.home || "",
-        view: data.payload?.view || "",
-      });
-    }
-
-    if (data.type === "indicare-open-assistant") {
-      if (data.payload?.prompt && has("input")) {
-        $("input").value = data.payload.prompt;
-        resize();
-      }
-      showAssistantView();
-    }
-  });
-
-  document.querySelectorAll(".tabbtn[data-tab]").forEach((btn) =>
-    btn.addEventListener("click", async () => {
-      setAdminTab(btn.dataset.tab);
-      await loadActiveAdminTab();
-    })
-  );
-
-  document
-    .querySelectorAll(".tabbtn[data-library-tab]")
-    .forEach((btn) =>
-      btn.addEventListener("click", () => setLibraryTab(btn.dataset.libraryTab))
-    );
-
-  document
-    .querySelectorAll(".tabbtn[data-manager-tab]")
-    .forEach((btn) =>
-      btn.addEventListener("click", () => setManagerTab(btn.dataset.managerTab))
-    );
-
-  on("search", "input", filterConversations);
-
-  if (has("input")) {
-    $("input").addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-      }
-    });
-
-    $("input").addEventListener("input", resize);
-  }
-
-  on("send", "click", sendMessage);
-  on("mic", "click", startSpeech);
-
-  on("chatUploadBtn", "click", () => {
-    if (has("upload")) $("upload").click();
-  });
-
-  if (has("upload")) {
-    $("upload").addEventListener("change", async (e) => {
-      if (!legalAcceptanceValid()) {
-        e.target.value = "";
-        return openLegalModal("acceptance");
-      }
-
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      try {
-        await uploadDoc(file);
-      } catch (err) {
-        banner(err.message || indiCareCopy("uploadFail"));
-      }
-
-      e.target.value = "";
-    });
-  }
-
-  on("libraryUploadBtn", "click", () => {
-    if (has("libraryUpload")) $("libraryUpload").click();
-  });
-
-  if (has("libraryUpload")) {
-    $("libraryUpload").addEventListener("change", async (e) => {
-      if (!legalAcceptanceValid()) {
-        e.target.value = "";
-        return openLegalModal("acceptance");
-      }
-
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      try {
-        await uploadLibraryDocument(file);
-      } catch (err) {
-        banner(err.message || "Library upload failed");
-      }
-
-      e.target.value = "";
-    });
-  }
-
-  on("clearDoc", "click", async () => {
+  els.composerSaveDraftBtn?.addEventListener("click", async () => {
     try {
-      if (state.conversationId) {
-        await api(`/chat/conversations/${state.conversationId}/document`, {
-          method: "DELETE",
-        });
-      }
-    } catch {}
-
-    state.currentDocumentText = null;
-    state.currentDocumentName = null;
-    docHide();
-    banner(indiCareCopy("documentRemoved"));
+      await saveComposer("draft");
+    } catch (error) {
+      showError(error.message || "Could not save draft.");
+    }
   });
 
-  on("adminActiveToggle", "click", () => {
-    state.adminCreateActive = !state.adminCreateActive;
-    syncHelpers();
+  els.composerSubmitBtn?.addEventListener("click", async () => {
+    try {
+      await saveComposer("submit");
+    } catch (error) {
+      showError(error.message || "Could not submit record.");
+    }
   });
 
-  on("createUserBtn", "click", createAdminUser);
-  on("refreshUsersBtn", "click", loadAdminUsers);
-  on("userSearch", "input", loadAdminUsers);
-  on("userRoleFilter", "change", loadAdminUsers);
-  on("userHomeFilter", "change", loadAdminUsers);
-  on("userArchivedFilter", "change", loadAdminUsers);
+  els.composerCheckBtn?.addEventListener("click", () => {
+    if (els.composerAiFeedback) {
+      els.composerAiFeedback.textContent = buildAiFeedback("clarity");
+    }
+    showMessage("Review prompts generated.");
+  });
 
-  on("createHomeBtn", "click", createHome);
-  on("refreshHomesBtn", "click", loadHomes);
+  els.composerGrammarBtn?.addEventListener("click", () => {
+    if (els.composerAiFeedback) els.composerAiFeedback.textContent = buildAiFeedback("grammar");
+  });
 
-  on("createProviderBtn", "click", createProvider);
-  on("refreshProvidersBtn", "click", loadProviders);
+  els.composerClarityBtn?.addEventListener("click", () => {
+    if (els.composerAiFeedback) els.composerAiFeedback.textContent = buildAiFeedback("clarity");
+  });
 
-  on("createDocBtn", "click", createDocumentRecord);
-  on("refreshDocsBtn", "click", loadDocuments);
-  on("docSearch", "input", loadDocuments);
-  on("docHomeFilter", "change", loadDocuments);
-  on("docTypeFilter", "change", loadDocuments);
-  on("docApprovalFilter", "change", loadDocuments);
+  els.composerSafeguardingBtn?.addEventListener("click", () => {
+    if (els.composerAiFeedback) els.composerAiFeedback.textContent = buildAiFeedback("safeguarding");
+  });
 
-  on("refreshBillingBtn", "click", loadBilling);
-  on("refreshAuditBtn", "click", loadAudit);
+  els.composerChildVoiceBtn?.addEventListener("click", () => {
+    if (els.composerAiFeedback) els.composerAiFeedback.textContent = buildAiFeedback("child_voice");
+  });
 
-  on("refreshLibraryBtn", "click", loadLibrary);
-  on("refreshManagerLibraryBtn", "click", loadLibrary);
-  on("librarySearch", "input", loadLibrary);
-  on("libraryTypeFilter", "change", loadLibrary);
-  on("libraryApprovalFilter", "change", loadLibrary);
-  on("saveLibraryDocBtn", "click", saveLibraryDocument);
-  on("resetLibraryDocBtn", "click", resetLibraryEditor);
-  on("deleteLibraryDocBtn", "click", deleteLibraryDocument);
+  els.assistantLauncher?.addEventListener("click", openAssistant);
+  els.assistantExpandBtn?.addEventListener("click", openAssistant);
+  els.closeAssistantBtn?.addEventListener("click", closeAssistant);
+  els.assistantBackdrop?.addEventListener("click", closeAssistant);
 
-  on("createStaff", "click", createManagerStaff);
-  on("saveDoc", "click", saveManagerDoc);
-  on("refreshManagerBtn", "click", loadManager);
-  on("refreshManagerDocsBtn", "click", loadManager);
+  els.assistantClearBtn?.addEventListener("click", () => {
+    state.assistantMessages = [];
+    state.assistantModalMessages = [];
+    renderAssistantMessages();
+  });
 
-  bindLegalControls();
+  els.assistantForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const question = els.assistantInput?.value || "";
+    if (els.assistantInput) els.assistantInput.value = "";
+    await askAssistant(question);
+  });
+
+  els.assistantModalForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const question = els.assistantModalInput?.value || "";
+    if (els.assistantModalInput) els.assistantModalInput.value = "";
+    await askAssistant(question);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeDrawer();
+      closeAssistant();
+      if (state.composerOpen) closeComposer();
+      closeAllNavGroups();
+    }
+  });
 }
-
-/* ---------------------------------------------------------
- * Init
- * --------------------------------------------------------- */
 
 async function init() {
-  initSystemThemeListener();
-  bind();
-  restorePrefs();
-  initSpeech();
-  resize();
+  state.youngPersonId = getYoungPersonId();
 
-  try {
-    await loadMe();
-  } catch (_) {
+  bindEvents();
+  renderAssistantMessages();
+  renderAssistantInsights();
+  updateAssistantScopeDataset();
+  renderAssistantScopeBadges();
+  updateAssistantContext();
+  toggleAssistantLauncher();
+  updatePageHeader();
+
+  if (!state.youngPersonId) {
+    await loadYoungPersonSelector();
     return;
   }
 
-  if (isAdmin()) setAdminTab(activeAdminTab());
-  setWelcome();
-
   try {
-    await loadConversations();
-  } catch (e) {
-    console.error("loadConversations failed", e);
-    banner(indiCareCopy("conversationsLoadFail"));
+    showWorkspaceMode();
+    await loadYoungPerson();
+    await loadCurrentView();
+  } catch (error) {
+    showError(error.message || "Failed to load young person.");
+    await loadYoungPersonSelector();
   }
-
-  if (isAdmin()) {
-    try {
-      await loadAdminReferenceData();
-      await loadActiveAdminTab();
-    } catch (e) {
-      console.error("loadAdminReferenceData failed", e);
-      banner(indiCareCopy("adminDataLoadFail"));
-    }
-  }
-
-  if (isManager()) {
-    try {
-      await loadManager();
-    } catch (e) {
-      console.error("loadManager failed", e);
-    }
-  }
-
-  try {
-    await loadLibrary();
-  } catch (e) {
-    console.error("loadLibrary failed", e);
-  }
-
-  showAssistantView();
-  enforceLegalGate();
-  syncHelpers();
-  setWelcome();
 }
 
-window.quick = quick;
-window.resize = resize;
-
-document.addEventListener("DOMContentLoaded", init);
+init();
