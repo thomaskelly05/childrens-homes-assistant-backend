@@ -2049,7 +2049,11 @@ function renderAssistantMessageList(host, messages) {
   const base = `
     <article class="assistant-message assistant-message-system">
       <div class="assistant-message-role">Assistant</div>
-      <div class="assistant-message-body">Ask a question about this young person.</div>
+      <div class="assistant-message-body">${
+        state.youngPersonId
+          ? `Ask a question about ${escapeHtml(getFullYoungPersonName() || "this young person")}.`
+          : "Select a young person to start."
+      }</div>
     </article>
   `;
 
@@ -2262,6 +2266,14 @@ function buildAssistantContextPayload() {
     summary_risk_level: state.youngPerson?.summary_risk_level || null,
     composer_record_type: state.composerRecordType || null,
     home_name: state.youngPerson?.home_name || null,
+    shift_context: state.currentView || null,
+    record_type: state.activeRecordType || state.composerRecordType || null,
+    record_id:
+      state.activeRecordItem?.record_id ||
+      state.activeRecordItem?.source_id ||
+      state.activeRecordItem?.id ||
+      state.composerRecordId ||
+      null,
   };
 }
 
@@ -2549,6 +2561,7 @@ function bindEvents() {
     renderAssistantScopeBadges();
     renderAssistantMessages();
     renderAssistantInsights();
+    updateAssistantContext();
 
     await loadYoungPersonSelector();
   });
