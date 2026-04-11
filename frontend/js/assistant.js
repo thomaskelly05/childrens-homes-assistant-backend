@@ -133,6 +133,7 @@ const LEGAL_TABS = ["terms", "privacy", "ip", "acceptance"];
 const ASSISTANT_REDIRECT_GUARD_KEY = "indicare_assistant_redirect_guard";
 const ASSISTANT_BOOTSTRAP_KEY = "indicare_assistant_bootstrap";
 const WORKSPACE_CONTEXT_KEY = "indicare_workspace_context";
+const PASSKEY_SKIP_KEY = "indicare_passkey_skip_until";
 
 /* ---------------------------------------------------------
  * Derived helpers
@@ -3819,6 +3820,137 @@ function bind() {
   bindLegalControls();
 }
 
+function shouldSuppressPasskeyModal() {
+  try {
+    const raw = localStorage.getItem(PASSKEY_SKIP_KEY);
+    if (!raw) return false;
+    const ts = Number(raw);
+    if (!ts) return false;
+    return Date.now() < ts;
+  } catch {
+    return false;
+  }
+}
+
+function suppressPasskeyModal(days = 7) {
+  try {
+    const until = Date.now() + days * 24 * 60 * 60 * 1000;
+    localStorage.setItem(PASSKEY_SKIP_KEY, String(until));
+  } catch {}
+}
+
+function openPasskeyModal() {
+  const overlay = document.getElementById("passkeyModalOverlay");
+  const modal = document.getElementById("passkeyModal");
+  if (overlay) overlay.style.display = "block";
+  if (modal) modal.style.display = "block";
+}
+
+function closePasskeyModal() {
+  const overlay = document.getElementById("passkeyModalOverlay");
+  const modal = document.getElementById("passkeyModal");
+  if (overlay) overlay.style.display = "none";
+  if (modal) modal.style.display = "none";
+}
+
+function setPasskeyModalStatus(message, isError = false) {
+  const el = document.getElementById("passkeyModalStatus");
+  if (!el) return;
+  el.textContent = message || "";
+  el.style.color = isError ? "#9f1239" : "#5f7088";
+}
+
+function setPasskeyModalLoading(loading) {
+  const addBtn = document.getElementById("passkeyModalAddBtn");
+  const skipBtn = document.getElementById("passkeyModalSkipBtn");
+
+  if (addBtn) {
+    addBtn.disabled = loading;
+    addBtn.textContent = loading ? "Setting up..." : "Add passkey";
+  }
+
+  if (skipBtn) {
+    skipBtn.disabled = loading;
+  }
+}
+
+async function maybePromptForPasskey() {
+  if (!window.auth || typeof window.auth.getPasskeyPromptStatus !== "function") {
+    return;
+  }
+
+  if (shouldSuppressPasskeyModal()) {
+    return;
+  }
+
+  try {
+    const sessionState = await window.auth.validateSession();
+    if (!sessionState || !sessionState.authenticated) {
+      return;
+    }
+
+    const status = await window.auth.getPasskeyPromptStatus();
+    if (!status || !status.should_prompt_register) {
+      return;
+    }
+
+    openPasskeyModal();
+  } catch (e) {
+    console.error("Passkey modal check failed", e);
+  }
+}
+
+function bindPasskeyModal() {
+  const addBtn = document.getElementById("passkeyModalAddBtn");
+  const skipBtn = document.getElementById("passkeyModalSkipBtn");
+  const overlay = document.getElementById("passkeyModalOverlay");
+
+  if (addBtn) {
+    addBtn.addEventListener("click", async () => {
+      try {
+        setPasskeyModalLoading(true);
+        setPasskeyModalStatus("Starting passkey setup...");
+
+        if (!window.auth || typeof window.auth.registerPasskey !== "function") {
+          throw new Error("Passkey registration is not available.");
+        }
+
+        const result = await window.auth.registerPasskey("");
+
+        if (!result || !result.ok) {
+          throw new Error("Passkey setup failed.");
+        }
+
+        setPasskeyModalStatus("Passkey added successfully.");
+        setTimeout(() => {
+          closePasskeyModal();
+        }, 700);
+      } catch (error) {
+        setPasskeyModalStatus(
+          error?.message || "Could not add passkey.",
+          true
+        );
+      } finally {
+        setPasskeyModalLoading(false);
+      }
+    });
+  }
+
+  if (skipBtn) {
+    skipBtn.addEventListener("click", () => {
+      suppressPasskeyModal(7);
+      closePasskeyModal();
+    });
+  }
+
+  if (overlay) {
+    overlay.addEventListener("click", () => {
+      suppressPasskeyModal(7);
+      closePasskeyModal();
+    });
+  }
+}
+
 /* ---------------------------------------------------------
  * Init
  * --------------------------------------------------------- */
@@ -3826,12 +3958,14 @@ function bind() {
 async function init() {
   initSystemThemeListener();
   bind();
+  bindPasskeyModal();
   restorePrefs();
   initSpeech();
   resize();
 
-  try {
+    try {
     await loadMe();
+    await maybePromptForPasskey();
   } catch (e) {
     console.error("loadMe failed", e);
     return;
