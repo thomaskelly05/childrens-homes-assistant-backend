@@ -1,7 +1,7 @@
 const state = {
   youngPersonId: null,
   youngPerson: null,
-  currentView: "home",
+  currentView: "profile",
   selectorItems: [],
   activeRecordItem: null,
   activeRecordType: null,
@@ -23,21 +23,44 @@ const state = {
   composerRecordType: null,
   composerRecordId: null,
   composerEditItem: null,
+
+  mobileNavOpen: false,
+  currentListItems: [],
+  currentListLabel: "",
+  currentListMode: "records",
+
+  autosaveTimer: null,
+  autosaveDirty: false,
+  autosaveSaving: false,
+  autosaveEnabled: true,
+  autosaveLastSavedAt: null,
 };
+
+const AUTOSAVE_DELAY_MS = 2000;
 
 const els = {
   app: document.getElementById("app"),
 
   nav: document.getElementById("sidebarNav"),
+  mobileNavPanel: document.getElementById("mobileNavPanel"),
+  mobileNavToggle: document.getElementById("mobileNavToggle"),
+  mobileBottomNav: document.getElementById("mobileBottomNav"),
+  mobileQuickAdd: document.getElementById("mobileQuickAdd"),
+
   content: document.getElementById("viewContent"),
   pageTitle: document.getElementById("pageTitle"),
   pageSubtitle: document.getElementById("pageSubtitle"),
   statusBar: document.getElementById("statusBar"),
   refreshBtn: document.getElementById("refreshBtn"),
+  goHomeBtn: document.getElementById("goHomeBtn"),
+  quickProfileBtn: document.getElementById("quickProfileBtn"),
+  quickTimelineBtn: document.getElementById("quickTimelineBtn"),
+  quickAssistantBtn: document.getElementById("quickAssistantBtn"),
 
   personName: document.getElementById("personName"),
   personMeta: document.getElementById("personMeta"),
   personAvatar: document.getElementById("personAvatar"),
+  personSummaryChips: document.getElementById("personSummaryChips"),
   changePersonBtn: document.getElementById("changePersonBtn"),
 
   selectorPanel: document.getElementById("selectorPanel"),
@@ -46,7 +69,7 @@ const els = {
   selectorRefreshBtn: document.getElementById("selectorRefreshBtn"),
 
   workspacePanel: document.getElementById("workspacePanel"),
-  quickActions: document.querySelector(".quick-actions"),
+  quickActions: document.getElementById("quickActions"),
 
   drawer: document.getElementById("recordDrawer"),
   drawerBackdrop: document.getElementById("recordDrawerBackdrop"),
@@ -77,6 +100,8 @@ const els = {
   composerClarityBtn: document.getElementById("composerClarityBtn"),
   composerSafeguardingBtn: document.getElementById("composerSafeguardingBtn"),
   composerChildVoiceBtn: document.getElementById("composerChildVoiceBtn"),
+  autosaveStatus: document.getElementById("autosaveStatus"),
+  autosaveTime: document.getElementById("autosaveTime"),
 
   assistantLauncher: document.getElementById("assistantLauncher"),
   assistantExpandBtn: document.getElementById("assistantExpandBtn"),
@@ -116,19 +141,24 @@ const els = {
 };
 
 const VIEW_CONFIG = {
+  profile: {
+    title: "Profile",
+    subtitle: "The young person first",
+    loader: loadProfile,
+  },
   home: {
-    title: "Home",
+    title: "Overview",
     subtitle: "What matters now",
     loader: loadHome,
   },
   "daily-notes": {
     title: "Daily notes",
-    subtitle: "Shift recording and review",
+    subtitle: "Recent notes in a simple list",
     loader: () => loadRecordList(`/young-people/${state.youngPersonId}/daily-notes`, "Daily notes"),
   },
   incidents: {
     title: "Incidents",
-    subtitle: "Concerns, responses and follow-up",
+    subtitle: "Concerns, responses and patterns",
     loader: () => loadRecordList(`/young-people/${state.youngPersonId}/incidents`, "Incidents"),
   },
   risk: {
@@ -143,7 +173,7 @@ const VIEW_CONFIG = {
   },
   appointments: {
     title: "Appointments",
-    subtitle: "Young person appointments",
+    subtitle: "Upcoming and completed appointments",
     loader: () => loadRecordList(`/young-people/${state.youngPersonId}/appointments`, "Appointments"),
   },
   timeline: {
@@ -160,11 +190,6 @@ const VIEW_CONFIG = {
     title: "Reports",
     subtitle: "Summaries and outputs",
     loader: loadReports,
-  },
-  profile: {
-    title: "Profile",
-    subtitle: "Identity, communication and legal information",
-    loader: loadProfile,
   },
   health: {
     title: "Health",
@@ -183,7 +208,7 @@ const VIEW_CONFIG = {
   },
   keywork: {
     title: "Keywork",
-    subtitle: "Keywork sessions and reflection",
+    subtitle: "Sessions and reflection",
     loader: () => loadRecordList(`/young-people/${state.youngPersonId}/keywork`, "Keywork"),
   },
   evidence: {
@@ -287,6 +312,23 @@ function formatDate(value) {
     dateStyle: "medium",
     timeStyle: String(value).includes("T") ? "short" : undefined,
   });
+}
+
+function formatTimeOnly(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function truncateText(value, limit = 140) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  if (text.length <= limit) return text;
+  return `${text.slice(0, limit).trim()}…`;
 }
 
 function toDateInputValue(date) {
@@ -469,96 +511,9 @@ function renderBadges(values = []) {
   if (!list.length) return "";
   return `
     <div class="badge-row">
-      ${list.map((value) => `<span class="badge ${statusBadgeClass(value)}">${escapeHtml(value)}</span>`).join("")}
-    </div>
-  `;
-}
-
-function renderRecordCard(item) {
-  const title =
-    item.title ||
-    item.topic ||
-    item.contact_person ||
-    item.record_type ||
-    item.event_type ||
-    "Record";
-
-  const summary =
-    item.summary ||
-    item.narrative ||
-    item.description ||
-    item.concern_summary ||
-    item.outcome ||
-    item.presenting_need ||
-    "Open to view details.";
-
-  const when =
-    item.recorded_at ||
-    item.occurred_at ||
-    item.event_datetime ||
-    item.created_at ||
-    item.note_date ||
-    item.record_date ||
-    item.appointment_date;
-
-  const by =
-    item.recorded_by_name ||
-    item.author_name ||
-    item.created_by_name ||
-    item.worker_name ||
-    item.owner_name ||
-    item.professional_name ||
-    "";
-
-  const badges = [
-    item.workflow_status,
-    item.status,
-    item.approval_status,
-    item.compliance_status,
-    item.severity,
-  ].filter(Boolean);
-
-  return `
-    <article class="record-card">
-      <div class="record-card-header">
-        <div>
-          <h4>${escapeHtml(String(title).replaceAll("_", " "))}</h4>
-          <div class="record-meta">
-            ${escapeHtml(formatDate(when))}
-            ${by ? ` • ${escapeHtml(by)}` : ""}
-          </div>
-        </div>
-      </div>
-
-      <div class="record-body">${escapeHtml(summary)}</div>
-      ${renderBadges(badges)}
-
-      <div class="day-record-actions">
-        <button class="ghost-btn" type="button" data-open-record='${escapeHtml(JSON.stringify(item))}'>Open</button>
-      </div>
-    </article>
-  `;
-}
-
-function renderSimpleSection(title, subtitle, bodyHtml) {
-  return `
-    <section class="panel">
-      <div class="panel-header">
-        <div>
-          <h3>${escapeHtml(title)}</h3>
-          ${subtitle ? `<p class="panel-subtitle">${escapeHtml(subtitle)}</p>` : ""}
-        </div>
-      </div>
-      ${bodyHtml}
-    </section>
-  `;
-}
-
-function renderStat(label, value) {
-  return `
-    <div class="stat-card">
-      <div class="stat-label">${escapeHtml(label)}</div>
-      <div class="stat-value">${escapeHtml(String(value))}</div>
+      ${list
+        .map((value) => `<span class="badge ${statusBadgeClass(value)}">${escapeHtml(value)}</span>`)
+        .join("")}
     </div>
   `;
 }
@@ -599,6 +554,55 @@ function getRecordUrl(item) {
   return map[type] || null;
 }
 
+function getRowTitle(item) {
+  return (
+    item.title ||
+    item.topic ||
+    item.contact_person ||
+    item.record_type ||
+    item.event_type ||
+    "Record"
+  );
+}
+
+function getRowSummary(item) {
+  return (
+    item.summary ||
+    item.narrative ||
+    item.description ||
+    item.concern_summary ||
+    item.outcome ||
+    item.presenting_need ||
+    item.young_person_voice ||
+    "Open to view details."
+  );
+}
+
+function getRowWhen(item) {
+  return (
+    item.recorded_at ||
+    item.occurred_at ||
+    item.event_datetime ||
+    item.created_at ||
+    item.note_date ||
+    item.record_date ||
+    item.appointment_date ||
+    item.incident_datetime
+  );
+}
+
+function getRowOwner(item) {
+  return (
+    item.recorded_by_name ||
+    item.author_name ||
+    item.created_by_name ||
+    item.worker_name ||
+    item.owner_name ||
+    item.professional_name ||
+    ""
+  );
+}
+
 function updatePageHeader() {
   const config = VIEW_CONFIG[state.currentView];
   if (!config || !els.pageTitle || !els.pageSubtitle) return;
@@ -607,7 +611,7 @@ function updatePageHeader() {
 }
 
 function updateActiveNav() {
-  document.querySelectorAll(".nav-btn").forEach((btn) => {
+  document.querySelectorAll(".nav-btn, .mobile-nav-btn, .mobile-tab").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.view === state.currentView);
   });
 }
@@ -622,9 +626,12 @@ function showSelectorMode() {
   els.selectorPanel?.classList.remove("hidden");
   els.workspacePanel?.classList.add("hidden");
   els.refreshBtn?.classList.add("hidden");
+
   if (els.personName) els.personName.textContent = "No young person selected";
   if (els.personMeta) els.personMeta.textContent = "Choose a young person to begin";
   if (els.personAvatar) els.personAvatar.textContent = "YP";
+  if (els.personSummaryChips) els.personSummaryChips.innerHTML = "";
+
   toggleAssistantLauncher();
 }
 
@@ -654,20 +661,28 @@ function openComposer() {
   els.composerPage?.classList.remove("hidden");
   els.composerPage?.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
+  updateAutosaveStatus("Autosave on");
+  updateAutosaveTime();
 }
 
 function closeComposer() {
+  flushAutosaveTimer();
   state.composerOpen = false;
   state.composerMode = "create";
   state.composerRecordType = null;
   state.composerRecordId = null;
   state.composerEditItem = null;
+  state.autosaveDirty = false;
+  state.autosaveSaving = false;
+  state.autosaveLastSavedAt = null;
 
   els.composerPage?.classList.add("hidden");
   els.composerPage?.setAttribute("aria-hidden", "true");
   if (els.composerFields) els.composerFields.innerHTML = "";
   if (els.composerAiFeedback) els.composerAiFeedback.textContent = "No AI review run yet.";
   document.body.style.overflow = "";
+  updateAutosaveStatus("Autosave off");
+  updateAutosaveTime("");
 }
 
 function openAssistant() {
@@ -701,7 +716,6 @@ function getFullYoungPersonName() {
 
 function updateAssistantScopeDataset() {
   if (!els.app) return;
-
   els.app.dataset.assistantScopeType = state.youngPersonId ? "young_person" : "global";
   els.app.dataset.youngPersonId = state.youngPersonId ? String(state.youngPersonId) : "";
   els.app.dataset.homeId = state.youngPerson?.home_id != null ? String(state.youngPerson.home_id) : "";
@@ -780,31 +794,35 @@ function renderSelectorList(items) {
     return;
   }
 
-  els.selectorList.innerHTML = items.map((item) => {
-    const fullName =
-      [item.first_name, item.last_name].filter(Boolean).join(" ").trim() ||
-      item.preferred_name ||
-      "Young Person";
+  els.selectorList.innerHTML = items
+    .map((item) => {
+      const fullName =
+        [item.first_name, item.last_name].filter(Boolean).join(" ").trim() ||
+        item.preferred_name ||
+        "Young Person";
 
-    const meta = [
-      item.preferred_name ? `Preferred: ${item.preferred_name}` : null,
-      item.placement_status || null,
-      item.summary_risk_level ? `Risk: ${item.summary_risk_level}` : null,
-    ].filter(Boolean).join(" • ");
+      const meta = [
+        item.preferred_name ? `Preferred: ${item.preferred_name}` : null,
+        item.placement_status || null,
+        item.summary_risk_level ? `Risk: ${item.summary_risk_level}` : null,
+      ]
+        .filter(Boolean)
+        .join(" • ");
 
-    return `
-      <article class="selector-card">
-        <div class="selector-card-left">
-          <div class="selector-card-avatar">${escapeHtml(initialsFromName(fullName))}</div>
-          <div>
-            <h4>${escapeHtml(fullName)}</h4>
-            <p>${escapeHtml(meta || "Young person record")}</p>
+      return `
+        <article class="selector-card">
+          <div class="selector-card-left">
+            <div class="selector-card-avatar">${escapeHtml(initialsFromName(fullName))}</div>
+            <div>
+              <h4>${escapeHtml(fullName)}</h4>
+              <p>${escapeHtml(meta || "Young person record")}</p>
+            </div>
           </div>
-        </div>
-        <button class="primary-btn" type="button" data-open-young-person="${item.id}">Open</button>
-      </article>
-    `;
-  }).join("");
+          <button class="primary-btn" type="button" data-open-young-person="${item.id}">Open</button>
+        </article>
+      `;
+    })
+    .join("");
 }
 
 function filterSelectorList() {
@@ -822,7 +840,10 @@ function filterSelectorList() {
       item.preferred_name,
       item.placement_status,
       item.summary_risk_level,
-    ].filter(Boolean).join(" ").toLowerCase();
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
 
     return haystack.includes(term);
   });
@@ -861,6 +882,20 @@ async function loadYoungPersonSelector() {
   }
 }
 
+function renderPersonSummaryChips() {
+  if (!els.personSummaryChips || !state.youngPerson) return;
+
+  const chips = [
+    state.youngPerson.placement_status || null,
+    state.youngPerson.summary_risk_level ? `Risk ${state.youngPerson.summary_risk_level}` : null,
+    state.youngPerson.home_name || null,
+  ].filter(Boolean);
+
+  els.personSummaryChips.innerHTML = chips
+    .map((chip) => `<span class="scope-chip">${escapeHtml(chip)}</span>`)
+    .join("");
+}
+
 async function loadYoungPerson() {
   const data = await apiGet(`/young-people/${state.youngPersonId}`);
   const youngPerson = data.young_person || data.bundle?.young_person || data;
@@ -875,12 +910,15 @@ async function loadYoungPerson() {
     youngPerson.preferred_name ? `Preferred: ${youngPerson.preferred_name}` : null,
     youngPerson.placement_status || null,
     youngPerson.summary_risk_level ? `Risk: ${youngPerson.summary_risk_level}` : null,
-  ].filter(Boolean).join(" • ");
+  ]
+    .filter(Boolean)
+    .join(" • ");
 
   if (els.personName) els.personName.textContent = fullName;
   if (els.personMeta) els.personMeta.textContent = meta || "Young person record";
   if (els.personAvatar) els.personAvatar.textContent = initialsFromName(fullName);
 
+  renderPersonSummaryChips();
   updateAssistantScopeDataset();
   updateAssistantContext();
   renderAssistantScopeBadges();
@@ -888,12 +926,119 @@ async function loadYoungPerson() {
   toggleAssistantLauncher();
 }
 
+function renderSimpleSection(title, subtitle, bodyHtml) {
+  return `
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h3>${escapeHtml(title)}</h3>
+          ${subtitle ? `<p class="panel-subtitle">${escapeHtml(subtitle)}</p>` : ""}
+        </div>
+      </div>
+      ${bodyHtml}
+    </section>
+  `;
+}
+
+function renderStat(label, value) {
+  return `
+    <div class="stat-card">
+      <div class="stat-label">${escapeHtml(label)}</div>
+      <div class="stat-value">${escapeHtml(String(value))}</div>
+    </div>
+  `;
+}
+
+function renderRecordTable(items, label = "Records", emptyMessage = "No records found.") {
+  const safeItems = Array.isArray(items) ? items : [];
+  state.currentListItems = safeItems;
+  state.currentListLabel = label;
+  state.currentListMode = "records";
+
+  if (!safeItems.length) {
+    return `
+      <div class="empty-state">
+        <p>${escapeHtml(emptyMessage)}</p>
+      </div>
+    `;
+  }
+
+  return `
+    <section class="record-table-shell">
+      <div class="record-table-toolbar">
+        <div>
+          <div class="record-table-title">${escapeHtml(label)}</div>
+          <div class="record-table-subtitle">${safeItems.length} item${safeItems.length === 1 ? "" : "s"}</div>
+        </div>
+      </div>
+      <div class="record-table-scroll">
+        <table class="record-table">
+          <thead>
+            <tr>
+              <th>Record</th>
+              <th>When</th>
+              <th>Status</th>
+              <th>Summary</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${safeItems
+              .map((item) => {
+                const title = getRowTitle(item);
+                const summary = truncateText(getRowSummary(item), 150);
+                const when = getRowWhen(item);
+                const owner = getRowOwner(item);
+                const statuses = [
+                  item.workflow_status,
+                  item.status,
+                  item.approval_status,
+                  item.compliance_status,
+                  item.severity,
+                ].filter(Boolean);
+
+                return `
+                  <tr>
+                    <td class="cell-title">
+                      <div class="record-primary">${escapeHtml(String(title).replaceAll("_", " "))}</div>
+                      <div class="record-secondary">${owner ? escapeHtml(owner) : "—"}</div>
+                    </td>
+                    <td>
+                      <div class="record-primary">${escapeHtml(formatDate(when))}</div>
+                      <div class="record-secondary">${String(when || "").includes("T") ? escapeHtml(formatTimeOnly(when)) : ""}</div>
+                    </td>
+                    <td>${renderBadges(statuses)}</td>
+                    <td>
+                      <div class="record-summary">${escapeHtml(summary)}</div>
+                    </td>
+                    <td>
+                      <div class="table-actions">
+                        <button
+                          class="table-row-btn"
+                          type="button"
+                          data-open-record='${escapeHtml(JSON.stringify(item))}'
+                        >
+                          Open
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              })
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
+
 async function loadHome() {
-  setLoading("Loading home...");
+  setLoading("Loading overview...");
 
   const [overviewData, timelineData, complianceData] = await Promise.all([
     apiGet(`/young-people/${state.youngPersonId}/overview`).catch(() => ({})),
-    apiGet(`/young-people/${state.youngPersonId}/timeline?limit=10`).catch(() => ({ timeline: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/timeline?limit=12`).catch(() => ({ timeline: [] })),
     apiGet(`/young-people/${state.youngPersonId}/compliance`).catch(() => ({ items: [] })),
   ]);
 
@@ -909,83 +1054,93 @@ async function loadHome() {
         String(x.status || x.compliance_status || "").toLowerCase()
       )
     ),
-  ].slice(0, 6);
+  ].slice(0, 8);
 
-  const todayItems = recent.slice(0, 6);
-
-  const managerItems = recent.filter((x) =>
-    ["submitted", "pending", "returned"].includes(
-      String(x.workflow_status || x.status || x.approval_status || "").toLowerCase()
+  const managerItems = recent
+    .filter((x) =>
+      ["submitted", "pending", "returned"].includes(
+        String(x.workflow_status || x.status || x.approval_status || "").toLowerCase()
+      )
     )
-  ).slice(0, 6);
+    .slice(0, 8);
 
   const quickSummary = [
     yp.placement_status ? `Placement: ${yp.placement_status}` : null,
     yp.summary_risk_level ? `Risk: ${yp.summary_risk_level}` : null,
     alerts.length ? `${alerts.length} active alert${alerts.length === 1 ? "" : "s"}` : "No active alerts",
-    compliance.length ? `${compliance.length} compliance item${compliance.length === 1 ? "" : "s"}` : "No compliance items",
-  ].filter(Boolean).join(" • ");
+    compliance.length
+      ? `${compliance.length} compliance item${compliance.length === 1 ? "" : "s"}`
+      : "No compliance items",
+  ]
+    .filter(Boolean)
+    .join(" • ");
 
   if (!els.content) return;
 
   els.content.innerHTML = `
     <div class="grid grid-4">
-      ${renderStat("Placement status", yp.placement_status || "—")}
-      ${renderStat("Risk level", yp.summary_risk_level || "—")}
-      ${renderStat("Active alerts", alerts.length)}
-      ${renderStat("Needs attention", urgentItems.length)}
+      ${renderStat("Placement", yp.placement_status || "—")}
+      ${renderStat("Risk", yp.summary_risk_level || "—")}
+      ${renderStat("Alerts", alerts.length)}
+      ${renderStat("Needs action", urgentItems.length)}
     </div>
 
     ${renderSimpleSection(
-      "Today at a glance",
-      "A simple overview of what matters most right now.",
-      `<div class="record-body">${escapeHtml(quickSummary || "No summary available.")}</div>`
+      "At a glance",
+      "A quick overview for the current shift.",
+      `<div class="record-summary">${escapeHtml(quickSummary || "No summary available.")}</div>`
     )}
 
     <div class="callout-grid">
       ${renderSimpleSection(
-        "What happened today",
-        "Recent events, updates and child voice.",
-        todayItems.length
-          ? `<div class="record-list">${todayItems.map(renderRecordCard).join("")}</div>`
-          : `<div class="empty-state"><p>No recent activity recorded.</p></div>`
+        "Urgent items",
+        "What adults need to pick up next.",
+        renderRecordTable(urgentItems, "Urgent items", "Nothing urgent is showing right now.")
       )}
 
       ${renderSimpleSection(
-        "What needs doing next",
-        "Alerts, due items and follow-up for adults.",
-        urgentItems.length
-          ? `<div class="record-list">${urgentItems.map(renderRecordCard).join("")}</div>`
-          : `<div class="empty-state"><p>Nothing urgent is showing right now.</p></div>`
+        "Recent activity",
+        "The latest visible activity for this young person.",
+        renderRecordTable(recent.slice(0, 8), "Recent activity", "No recent activity recorded.")
       )}
     </div>
 
     <div class="callout-grid">
       ${renderSimpleSection(
-        "What needs manager attention",
-        "Records waiting for review, approval or return comments.",
-        managerItems.length
-          ? `<div class="record-list">${managerItems.map(renderRecordCard).join("")}</div>`
-          : `<div class="empty-state"><p>No manager review items are currently visible.</p></div>`
+        "Manager attention",
+        "Records waiting for review or follow-up.",
+        renderRecordTable(managerItems, "Manager attention", "No manager review items are currently visible.")
       )}
 
       ${renderSimpleSection(
-        "Helpful next actions",
-        "Simple actions to keep the record current and inspection-ready.",
+        "Next best actions",
+        "Start quickly from here.",
         `
-          <div class="record-list">
-            <article class="record-card">
-              <div class="record-card-header"><div><h4>Add a daily note</h4></div></div>
-              <div class="record-body">Record what happened, how the young person presented, what helped, their voice, and what adults need next.</div>
-            </article>
-            <article class="record-card">
-              <div class="record-card-header"><div><h4>Check current risks</h4></div></div>
-              <div class="record-body">Review triggers, protective factors, calm responses, and practical guidance that supports consistent care.</div>
-            </article>
-            <article class="record-card">
-              <div class="record-card-header"><div><h4>Prepare for review</h4></div></div>
-              <div class="record-body">Submit finished records, respond to manager comments, and keep evidence linked through the chronology.</div>
-            </article>
+          <div class="quick-actions quick-actions--compact">
+            <button class="quick-action quick-action--primary" type="button" data-action="daily-note">
+              <span class="quick-action-title">Add daily note</span>
+              <span class="quick-action-subtitle">Record the shift clearly.</span>
+            </button>
+            <button class="quick-action" type="button" data-action="incident">
+              <span class="quick-action-title">Log incident</span>
+              <span class="quick-action-subtitle">Capture concern, context and response.</span>
+            </button>
+            <button class="quick-action" type="button" data-action="risk">
+              <span class="quick-action-title">Update risk</span>
+              <span class="quick-action-subtitle">Refresh current risks and guidance.</span>
+            </button>
+            <button class="quick-action" type="button" data-action="plan">
+              <span class="quick-action-title">Add plan</span>
+              <span class="quick-action-subtitle">Create practical support guidance.</span>
+            </button>
+            <button class="quick-action" type="button" data-assistant-quick="handover">
+              <span class="quick-action-title">Draft handover</span>
+              <span class="quick-action-subtitle">Generate a shift-ready summary.</span>
+            </button>
+            <button class="quick-action" type="button" data-assistant-quick="priorities">
+              <span class="quick-action-title">Today’s priorities</span>
+              <span class="quick-action-subtitle">See what matters most right now.</span>
+            </button>
           </div>
         `
       )}
@@ -1001,10 +1156,7 @@ async function loadTimeline() {
   const items = data.timeline || [];
 
   if (!els.content) return;
-  els.content.innerHTML = items.length
-    ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
-    : `<div class="empty-state"><p>No timeline items found.</p></div>`;
-
+  els.content.innerHTML = renderRecordTable(items, "Timeline", "No timeline items found.");
   bindDynamicOpenRecordButtons();
 }
 
@@ -1012,7 +1164,7 @@ async function loadHandover() {
   setLoading("Loading handover...");
 
   const [timelineData, riskData] = await Promise.all([
-    apiGet(`/young-people/${state.youngPersonId}/timeline?limit=6`).catch(() => ({ timeline: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/timeline?limit=8`).catch(() => ({ timeline: [] })),
     apiGet(`/young-people/${state.youngPersonId}/risk`).catch(() => ({ items: [] })),
   ]);
 
@@ -1025,35 +1177,25 @@ async function loadHandover() {
       ${renderSimpleSection(
         "Recent activity",
         "Latest record activity",
-        recent.length
-          ? `<div class="record-list">${recent.map(renderRecordCard).join("")}</div>`
-          : `<div class="empty-state"><p>No recent activity.</p></div>`
+        renderRecordTable(recent, "Recent activity", "No recent activity.")
       )}
-
       ${renderSimpleSection(
         "Current risks",
         "What adults need to understand",
-        risks.length
-          ? `<div class="record-list">${risks.map(renderRecordCard).join("")}</div>`
-          : `<div class="empty-state"><p>No current risks.</p></div>`
+        renderRecordTable(risks, "Current risks", "No current risks.")
       )}
     </div>
   `;
-
   bindDynamicOpenRecordButtons();
 }
 
 async function loadRecordList(url, label) {
   setLoading(`Loading ${label.toLowerCase()}...`);
-
   const data = await apiGet(url);
   const items = data.items || data.records || data.timeline || [];
 
   if (!els.content) return;
-  els.content.innerHTML = items.length
-    ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
-    : `<div class="empty-state"><p>No ${escapeHtml(label.toLowerCase())} found.</p></div>`;
-
+  els.content.innerHTML = renderRecordTable(items, label, `No ${label.toLowerCase()} found.`);
   bindDynamicOpenRecordButtons();
 }
 
@@ -1062,19 +1204,14 @@ async function loadReports() {
   const data = await apiGet(`/young-people/${state.youngPersonId}/reports`).catch(() => ({ items: [] }));
   const reports = data.items || [];
 
-  if (!els.content) return;
-  els.content.innerHTML = reports.length
-    ? `<div class="record-list">${
-        reports.map((report) =>
-          renderRecordCard({
-            ...report,
-            record_type: "report",
-            summary: report.report_text || "Report ready.",
-          })
-        ).join("")
-      }</div>`
-    : `<div class="empty-state"><p>No reports found.</p></div>`;
+  const normalised = reports.map((report) => ({
+    ...report,
+    record_type: "report",
+    summary: report.report_text || "Report ready.",
+  }));
 
+  if (!els.content) return;
+  els.content.innerHTML = renderRecordTable(normalised, "Reports", "No reports found.");
   bindDynamicOpenRecordButtons();
 }
 
@@ -1088,46 +1225,105 @@ async function loadProfile() {
   const education = bundle.education_profile || {};
   const health = bundle.health_profile || {};
   const legal = bundle.legal_status || {};
+  const formulation = bundle.current_formulation || {};
 
   if (!els.content) return;
   els.content.innerHTML = `
+    <div class="grid grid-3">
+      ${renderStat("Placement", yp.placement_status || "—")}
+      ${renderStat("Risk level", yp.summary_risk_level || "—")}
+      ${renderStat("Preferred name", yp.preferred_name || "—")}
+    </div>
+
     <div class="callout-grid">
       ${renderSimpleSection(
         "Core profile",
-        "",
+        "The most important profile information first.",
         `
           <div class="detail-list">
-            <div class="detail-row"><div class="detail-key">Preferred name</div><div class="detail-value">${escapeHtml(yp.preferred_name || "—")}</div></div>
-            <div class="detail-row"><div class="detail-key">Date of birth</div><div class="detail-value">${escapeHtml(formatDate(yp.date_of_birth))}</div></div>
-            <div class="detail-row"><div class="detail-key">Placement status</div><div class="detail-value">${escapeHtml(yp.placement_status || "—")}</div></div>
-            <div class="detail-row"><div class="detail-key">Risk level</div><div class="detail-value">${escapeHtml(yp.summary_risk_level || "—")}</div></div>
+            <div class="detail-row"><div class="detail-key">Full name</div><div class="detail-value">${escapeHtml(
+              getFullYoungPersonName() || "—"
+            )}</div></div>
+            <div class="detail-row"><div class="detail-key">Preferred name</div><div class="detail-value">${escapeHtml(
+              yp.preferred_name || "—"
+            )}</div></div>
+            <div class="detail-row"><div class="detail-key">Date of birth</div><div class="detail-value">${escapeHtml(
+              formatDate(yp.date_of_birth)
+            )}</div></div>
+            <div class="detail-row"><div class="detail-key">Placement status</div><div class="detail-value">${escapeHtml(
+              yp.placement_status || "—"
+            )}</div></div>
+            <div class="detail-row"><div class="detail-key">Risk level</div><div class="detail-value">${escapeHtml(
+              yp.summary_risk_level || "—"
+            )}</div></div>
           </div>
         `
       )}
 
       ${renderSimpleSection(
         "Communication and identity",
-        "",
+        "What adults need to understand to support well.",
         `
           <div class="detail-list">
-            <div class="detail-row"><div class="detail-key">Communication style</div><div class="detail-value">${escapeHtml(communication.communication_style || "—")}</div></div>
-            <div class="detail-row"><div class="detail-key">What helps</div><div class="detail-value">${escapeHtml(communication.what_helps || "—")}</div></div>
-            <div class="detail-row"><div class="detail-key">Interests</div><div class="detail-value">${escapeHtml(identity.interests || "—")}</div></div>
-            <div class="detail-row"><div class="detail-key">Strengths</div><div class="detail-value">${escapeHtml(identity.strengths_summary || "—")}</div></div>
+            <div class="detail-row"><div class="detail-key">Communication style</div><div class="detail-value">${escapeHtml(
+              communication.communication_style || "—"
+            )}</div></div>
+            <div class="detail-row"><div class="detail-key">What helps</div><div class="detail-value">${escapeHtml(
+              communication.what_helps || "—"
+            )}</div></div>
+            <div class="detail-row"><div class="detail-key">Triggers</div><div class="detail-value">${escapeHtml(
+              communication.triggers || "—"
+            )}</div></div>
+            <div class="detail-row"><div class="detail-key">Interests</div><div class="detail-value">${escapeHtml(
+              identity.interests || "—"
+            )}</div></div>
+            <div class="detail-row"><div class="detail-key">Strengths</div><div class="detail-value">${escapeHtml(
+              identity.strengths_summary || "—"
+            )}</div></div>
+          </div>
+        `
+      )}
+    </div>
+
+    <div class="callout-grid">
+      ${renderSimpleSection(
+        "Health, education and legal",
+        "The wider picture around the young person.",
+        `
+          <div class="detail-list">
+            <div class="detail-row"><div class="detail-key">School</div><div class="detail-value">${escapeHtml(
+              education.school_name || "—"
+            )}</div></div>
+            <div class="detail-row"><div class="detail-key">Education status</div><div class="detail-value">${escapeHtml(
+              education.education_status || "—"
+            )}</div></div>
+            <div class="detail-row"><div class="detail-key">GP</div><div class="detail-value">${escapeHtml(
+              health.gp_name || "—"
+            )}</div></div>
+            <div class="detail-row"><div class="detail-key">Allergies</div><div class="detail-value">${escapeHtml(
+              health.allergies || "—"
+            )}</div></div>
+            <div class="detail-row"><div class="detail-key">Legal status</div><div class="detail-value">${escapeHtml(
+              legal.legal_status || "—"
+            )}</div></div>
+            <div class="detail-row"><div class="detail-key">Local authority</div><div class="detail-value">${escapeHtml(
+              legal.local_authority || "—"
+            )}</div></div>
           </div>
         `
       )}
 
       ${renderSimpleSection(
-        "Education, health and legal",
-        "",
+        "Current formulation",
+        "The current working understanding of need and response.",
         `
           <div class="detail-list">
-            <div class="detail-row"><div class="detail-key">School</div><div class="detail-value">${escapeHtml(education.school_name || "—")}</div></div>
-            <div class="detail-row"><div class="detail-key">Education status</div><div class="detail-value">${escapeHtml(education.education_status || "—")}</div></div>
-            <div class="detail-row"><div class="detail-key">GP</div><div class="detail-value">${escapeHtml(health.gp_name || "—")}</div></div>
-            <div class="detail-row"><div class="detail-key">Allergies</div><div class="detail-value">${escapeHtml(health.allergies || "—")}</div></div>
-            <div class="detail-row"><div class="detail-key">Legal status</div><div class="detail-value">${escapeHtml(legal.legal_status || "—")}</div></div>
+            <div class="detail-row"><div class="detail-key">Summary</div><div class="detail-value">${escapeHtml(
+              formulation.summary || "—"
+            )}</div></div>
+            <div class="detail-row"><div class="detail-key">Hypothesis</div><div class="detail-value">${escapeHtml(
+              formulation.hypothesis || "—"
+            )}</div></div>
           </div>
         `
       )}
@@ -1145,27 +1341,34 @@ async function loadHealth() {
   els.content.innerHTML = `
     ${renderSimpleSection(
       "Health profile",
-      "",
+      "Core health information first.",
       `
         <div class="detail-list">
-          <div class="detail-row"><div class="detail-key">GP</div><div class="detail-value">${escapeHtml(profile.gp_name || "—")}</div></div>
-          <div class="detail-row"><div class="detail-key">Allergies</div><div class="detail-value">${escapeHtml(profile.allergies || "—")}</div></div>
-          <div class="detail-row"><div class="detail-key">Diagnoses</div><div class="detail-value">${escapeHtml(profile.diagnoses || "—")}</div></div>
-          <div class="detail-row"><div class="detail-key">Mental health</div><div class="detail-value">${escapeHtml(profile.mental_health_summary || "—")}</div></div>
-          <div class="detail-row"><div class="detail-key">Medication summary</div><div class="detail-value">${escapeHtml(profile.medication_summary || "—")}</div></div>
+          <div class="detail-row"><div class="detail-key">GP</div><div class="detail-value">${escapeHtml(
+            profile.gp_name || "—"
+          )}</div></div>
+          <div class="detail-row"><div class="detail-key">Allergies</div><div class="detail-value">${escapeHtml(
+            profile.allergies || "—"
+          )}</div></div>
+          <div class="detail-row"><div class="detail-key">Diagnoses</div><div class="detail-value">${escapeHtml(
+            profile.diagnoses || "—"
+          )}</div></div>
+          <div class="detail-row"><div class="detail-key">Mental health</div><div class="detail-value">${escapeHtml(
+            profile.mental_health_summary || "—"
+          )}</div></div>
+          <div class="detail-row"><div class="detail-key">Medication summary</div><div class="detail-value">${escapeHtml(
+            profile.medication_summary || "—"
+          )}</div></div>
         </div>
       `
     )}
 
     ${renderSimpleSection(
       "Health records",
-      "",
-      records.length
-        ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>`
-        : `<div class="empty-state"><p>No health records.</p></div>`
+      "Recent health-related entries",
+      renderRecordTable(records, "Health records", "No health records.")
     )}
   `;
-
   bindDynamicOpenRecordButtons();
 }
 
@@ -1179,26 +1382,31 @@ async function loadEducation() {
   els.content.innerHTML = `
     ${renderSimpleSection(
       "Education profile",
-      "",
+      "School, support and progress.",
       `
         <div class="detail-list">
-          <div class="detail-row"><div class="detail-key">School</div><div class="detail-value">${escapeHtml(profile.school_name || "—")}</div></div>
-          <div class="detail-row"><div class="detail-key">Year group</div><div class="detail-value">${escapeHtml(profile.year_group || "—")}</div></div>
-          <div class="detail-row"><div class="detail-key">Education status</div><div class="detail-value">${escapeHtml(profile.education_status || "—")}</div></div>
-          <div class="detail-row"><div class="detail-key">Support summary</div><div class="detail-value">${escapeHtml(profile.support_summary || "—")}</div></div>
+          <div class="detail-row"><div class="detail-key">School</div><div class="detail-value">${escapeHtml(
+            profile.school_name || "—"
+          )}</div></div>
+          <div class="detail-row"><div class="detail-key">Year group</div><div class="detail-value">${escapeHtml(
+            profile.year_group || "—"
+          )}</div></div>
+          <div class="detail-row"><div class="detail-key">Education status</div><div class="detail-value">${escapeHtml(
+            profile.education_status || "—"
+          )}</div></div>
+          <div class="detail-row"><div class="detail-key">Support summary</div><div class="detail-value">${escapeHtml(
+            profile.support_summary || "—"
+          )}</div></div>
         </div>
       `
     )}
 
     ${renderSimpleSection(
       "Education records",
-      "",
-      records.length
-        ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>`
-        : `<div class="empty-state"><p>No education records.</p></div>`
+      "Recent education-related entries",
+      renderRecordTable(records, "Education records", "No education records.")
     )}
   `;
-
   bindDynamicOpenRecordButtons();
 }
 
@@ -1210,29 +1418,25 @@ async function loadFamily() {
   if (!els.content) return;
   els.content.innerHTML = renderSimpleSection(
     "Family contact records",
-    "",
-    records.length
-      ? `<div class="record-list">${records.map(renderRecordCard).join("")}</div>`
-      : `<div class="empty-state"><p>No family records.</p></div>`
+    "Recent contact, relationship and family entries",
+    renderRecordTable(records, "Family contact records", "No family records.")
   );
-
   bindDynamicOpenRecordButtons();
 }
 
 async function loadEvidence() {
   setLoading("Loading evidence...");
-  const data = await apiGet(`/young-people/${state.youngPersonId}/timeline?limit=40`).catch(() => ({ timeline: [] }));
+  const data = await apiGet(`/young-people/${state.youngPersonId}/timeline?limit=40`).catch(() => ({
+    timeline: [],
+  }));
   const items = data.timeline || [];
 
   if (!els.content) return;
   els.content.innerHTML = renderSimpleSection(
     "Inspection evidence",
-    "Recent linked records",
-    items.length
-      ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
-      : `<div class="empty-state"><p>No evidence found.</p></div>`
+    "Recent linked records and evidence",
+    renderRecordTable(items, "Inspection evidence", "No evidence found.")
   );
-
   bindDynamicOpenRecordButtons();
 }
 
@@ -1242,10 +1446,7 @@ async function loadCompliance() {
   const items = data.compliance_items || data.items || [];
 
   if (!els.content) return;
-  els.content.innerHTML = items.length
-    ? `<div class="record-list">${items.map(renderRecordCard).join("")}</div>`
-    : `<div class="empty-state"><p>No compliance items found.</p></div>`;
-
+  els.content.innerHTML = renderRecordTable(items, "Compliance", "No compliance items found.");
   bindDynamicOpenRecordButtons();
 }
 
@@ -1265,22 +1466,17 @@ async function loadManager() {
     <div class="callout-grid">
       ${renderSimpleSection(
         "Needs manager attention",
-        "",
-        compliance.length
-          ? `<div class="record-list">${compliance.map(renderRecordCard).join("")}</div>`
-          : `<div class="empty-state"><p>No urgent items.</p></div>`
+        "What may need escalation, approval or follow-up",
+        renderRecordTable(compliance, "Manager attention", "No urgent items.")
       )}
 
       ${renderSimpleSection(
         "Recent record activity",
-        "",
-        recent.length
-          ? `<div class="record-list">${recent.map(renderRecordCard).join("")}</div>`
-          : `<div class="empty-state"><p>No recent activity.</p></div>`
+        "The latest visible activity",
+        renderRecordTable(recent, "Recent record activity", "No recent activity.")
       )}
     </div>
   `;
-
   bindDynamicOpenRecordButtons();
 }
 
@@ -1378,20 +1574,26 @@ async function openRecordDetail(item) {
       data;
 
     const entries = Object.entries(detail || {})
-      .filter(([key, value]) => !["id", "young_person_id", "home_id"].includes(key) && value !== null && value !== "" && value !== undefined)
-      .slice(0, 32);
+      .filter(
+        ([key, value]) =>
+          !["id", "young_person_id", "home_id"].includes(key) &&
+          value !== null &&
+          value !== "" &&
+          value !== undefined
+      )
+      .slice(0, 40);
 
     if (els.drawerTitle) els.drawerTitle.textContent = item.title || detail.title || "Record details";
     if (els.drawerSubtitle) {
       els.drawerSubtitle.textContent = `${String(type).replaceAll("_", " ")} • ${formatDate(
         item.recorded_at ||
-        item.occurred_at ||
-        item.created_at ||
-        detail.recorded_at ||
-        detail.appointment_date ||
-        detail.incident_datetime ||
-        detail.note_date ||
-        detail.created_at
+          item.occurred_at ||
+          item.created_at ||
+          detail.recorded_at ||
+          detail.appointment_date ||
+          detail.incident_datetime ||
+          detail.note_date ||
+          detail.created_at
       )}`;
     }
 
@@ -1407,22 +1609,18 @@ async function openRecordDetail(item) {
             <div class="detail-row">
               <div class="detail-key">Status</div>
               <div class="detail-value">${escapeHtml(
-                item.workflow_status ||
-                detail.workflow_status ||
-                detail.status ||
-                detail.approval_status ||
-                "—"
+                item.workflow_status || detail.workflow_status || detail.status || detail.approval_status || "—"
               )}</div>
             </div>
             <div class="detail-row">
               <div class="detail-key">Summary</div>
               <div class="detail-value">${escapeHtml(
                 item.summary ||
-                detail.summary ||
-                detail.description ||
-                detail.concern_summary ||
-                detail.presenting_need ||
-                "—"
+                  detail.summary ||
+                  detail.description ||
+                  detail.concern_summary ||
+                  detail.presenting_need ||
+                  "—"
               )}</div>
             </div>
           </div>
@@ -1433,12 +1631,18 @@ async function openRecordDetail(item) {
           <div class="detail-list">
             ${
               entries.length
-                ? entries.map(([key, value]) => `
+                ? entries
+                    .map(
+                      ([key, value]) => `
                   <div class="detail-row">
                     <div class="detail-key">${escapeHtml(key.replaceAll("_", " "))}</div>
-                    <div class="detail-value">${escapeHtml(typeof value === "object" ? JSON.stringify(value) : String(value))}</div>
+                    <div class="detail-value">${escapeHtml(
+                      typeof value === "object" ? JSON.stringify(value) : String(value)
+                    )}</div>
                   </div>
-                `).join("")
+                `
+                    )
+                    .join("")
                 : `
                   <div class="detail-row">
                     <div class="detail-key">Details</div>
@@ -1479,11 +1683,15 @@ function buildFormField(field) {
       <div class="composer-field ${field.full ? "full" : ""}">
         ${label}
         <select id="${field.name}" name="${field.name}" class="select-input">
-          ${(field.options || []).map((opt) => `
+          ${(field.options || [])
+            .map(
+              (opt) => `
             <option value="${escapeHtml(opt.value)}" ${String(opt.value) === String(field.value || "") ? "selected" : ""}>
               ${escapeHtml(opt.label)}
             </option>
-          `).join("")}
+          `
+            )
+            .join("")}
         </select>
       </div>
     `;
@@ -1503,7 +1711,13 @@ function buildFormField(field) {
   return `
     <div class="composer-field ${field.full ? "full" : ""}">
       ${label}
-      <input id="${field.name}" name="${field.name}" type="${field.type || "text"}" class="text-input" value="${escapeHtml(field.value || "")}" />
+      <input
+        id="${field.name}"
+        name="${field.name}"
+        type="${field.type || "text"}"
+        class="text-input"
+        value="${escapeHtml(field.value || "")}"
+      />
     </div>
   `;
 }
@@ -1823,7 +2037,9 @@ function getComposerContent(recordType, item = null) {
 }
 
 function renderComposerSections(content) {
-  return content.sections.map((section) => `
+  return content.sections
+    .map(
+      (section) => `
     <section class="composer-section">
       <h3>${escapeHtml(section.title)}</h3>
       <p>${escapeHtml(section.subtitle || "")}</p>
@@ -1831,29 +2047,32 @@ function renderComposerSections(content) {
         ${section.fields.map(buildFormField).join("")}
       </div>
     </section>
-  `).join("");
+  `
+    )
+    .join("");
 }
 
-function openComposerFor(recordType, mode = "create", item = null) {
-  state.composerMode = mode;
-  state.composerRecordType = recordType;
-  state.composerRecordId = item?.id || item?.record_id || item?.source_id || null;
-  state.composerEditItem = item || null;
+function getAutosaveStorageKey() {
+  return `indicare_autosave_${state.youngPersonId || "none"}_${state.composerRecordType || "none"}_${state.composerRecordId || "new"}`;
+}
 
-  const content = getComposerContent(recordType, item);
-
-  if (els.composerTitle) els.composerTitle.textContent = content.title;
-  if (els.composerSubtitle) els.composerSubtitle.textContent = content.subtitle;
-  if (els.composerGuidanceText) els.composerGuidanceText.textContent = content.guidance;
-  if (els.composerPrompts) {
-    els.composerPrompts.innerHTML = content.prompts.map((prompt) => `
-      <div class="composer-prompt">${escapeHtml(prompt)}</div>
-    `).join("");
+function updateAutosaveStatus(text) {
+  if (els.autosaveStatus) {
+    els.autosaveStatus.textContent = text || "Autosave off";
   }
-  if (els.composerFields) els.composerFields.innerHTML = renderComposerSections(content);
-  if (els.composerAiFeedback) els.composerAiFeedback.textContent = "No AI review run yet.";
+}
 
-  openComposer();
+function updateAutosaveTime(text = null) {
+  if (!els.autosaveTime) return;
+  if (text !== null) {
+    els.autosaveTime.textContent = text;
+    return;
+  }
+  if (!state.autosaveLastSavedAt) {
+    els.autosaveTime.textContent = "Not saved yet";
+    return;
+  }
+  els.autosaveTime.textContent = `Last saved ${formatDate(state.autosaveLastSavedAt)}`;
 }
 
 function serialiseValue(key, value) {
@@ -1892,6 +2111,105 @@ function serializeComposerForm() {
   return obj;
 }
 
+function restoreComposerDraftFromStorage() {
+  if (!state.composerOpen || !els.composerForm) return;
+
+  const raw = localStorage.getItem(getAutosaveStorageKey());
+  if (!raw) return;
+
+  try {
+    const parsed = JSON.parse(raw);
+    const values = parsed?.values || {};
+    Object.entries(values).forEach(([key, value]) => {
+      const field = els.composerForm.elements.namedItem(key);
+      if (!field) return;
+
+      if (field.type === "checkbox") {
+        field.checked = !!value;
+        return;
+      }
+
+      if (value === null || value === undefined) return;
+      field.value = String(value);
+    });
+
+    updateAutosaveStatus("Restored local draft");
+    if (parsed.saved_at) {
+      state.autosaveLastSavedAt = parsed.saved_at;
+      updateAutosaveTime();
+    }
+  } catch (_) {}
+}
+
+function persistComposerDraftLocally() {
+  if (!state.composerOpen || !els.composerForm) return;
+  try {
+    const payload = {
+      saved_at: new Date().toISOString(),
+      values: serializeComposerForm(),
+    };
+    localStorage.setItem(getAutosaveStorageKey(), JSON.stringify(payload));
+    state.autosaveLastSavedAt = payload.saved_at;
+    updateAutosaveTime();
+  } catch (_) {}
+}
+
+function clearComposerDraftStorage() {
+  try {
+    localStorage.removeItem(getAutosaveStorageKey());
+  } catch (_) {}
+}
+
+function flushAutosaveTimer() {
+  if (state.autosaveTimer) {
+    clearTimeout(state.autosaveTimer);
+    state.autosaveTimer = null;
+  }
+}
+
+function queueAutosave() {
+  if (!state.composerOpen || !state.autosaveEnabled) return;
+  state.autosaveDirty = true;
+  updateAutosaveStatus("Unsaved changes");
+  flushAutosaveTimer();
+  state.autosaveTimer = setTimeout(() => {
+    saveComposer("autosave").catch(() => {});
+  }, AUTOSAVE_DELAY_MS);
+}
+
+function bindComposerAutosave() {
+  if (!els.composerForm) return;
+
+  els.composerForm.querySelectorAll("input, textarea, select").forEach((field) => {
+    field.addEventListener("input", queueAutosave);
+    field.addEventListener("change", queueAutosave);
+  });
+}
+
+function openComposerFor(recordType, mode = "create", item = null) {
+  state.composerMode = mode;
+  state.composerRecordType = recordType;
+  state.composerRecordId = item?.id || item?.record_id || item?.source_id || null;
+  state.composerEditItem = item || null;
+
+  const content = getComposerContent(recordType, item);
+
+  if (els.composerTitle) els.composerTitle.textContent = content.title;
+  if (els.composerSubtitle) els.composerSubtitle.textContent = content.subtitle;
+  if (els.composerGuidanceText) els.composerGuidanceText.textContent = content.guidance;
+  if (els.composerPrompts) {
+    els.composerPrompts.innerHTML = content.prompts
+      .map((prompt) => `<div class="composer-prompt">${escapeHtml(prompt)}</div>`)
+      .join("");
+  }
+  if (els.composerFields) els.composerFields.innerHTML = renderComposerSections(content);
+  if (els.composerAiFeedback) els.composerAiFeedback.textContent = "No AI review run yet.";
+
+  openComposer();
+  restoreComposerDraftFromStorage();
+  bindComposerAutosave();
+}
+
 async function saveComposer(mode = "draft") {
   const recordType = state.composerRecordType;
   const config = RECORD_CONFIG[recordType];
@@ -1903,7 +2221,36 @@ async function saveComposer(mode = "draft") {
 
   const payload = serializeComposerForm();
 
+  if (mode === "autosave") {
+    if (state.autosaveSaving) return;
+    state.autosaveSaving = true;
+    updateAutosaveStatus("Saving draft...");
+    try {
+      persistComposerDraftLocally();
+
+      if (state.composerMode === "edit" && state.composerRecordId) {
+        await apiSend(config.updateUrl(state.composerRecordId), config.updateMethod || "PATCH", payload);
+      } else {
+        const createdResponse = await apiSend(config.createUrl(state.youngPersonId), "POST", payload);
+        const created = unwrapCreateResponse(recordType, createdResponse);
+        state.composerRecordId = created?.id || created?.record_id || state.composerRecordId;
+        state.composerMode = "edit";
+      }
+
+      persistComposerDraftLocally();
+      state.autosaveDirty = false;
+      updateAutosaveStatus("All changes saved");
+    } catch (_) {
+      updateAutosaveStatus("Saved locally");
+    } finally {
+      state.autosaveSaving = false;
+    }
+    return;
+  }
+
   if (mode === "submit" && recordType !== "appointment") {
+    flushAutosaveTimer();
+
     if (!state.composerRecordId) {
       const createdResponse = await apiSend(config.createUrl(state.youngPersonId), "POST", payload);
       const created = unwrapCreateResponse(recordType, createdResponse);
@@ -1913,6 +2260,7 @@ async function saveComposer(mode = "draft") {
     }
 
     await apiSend(config.submitUrl(state.composerRecordId), "POST", {});
+    clearComposerDraftStorage();
     showMessage(`${config.label} sent for approval.`);
     closeComposer();
     await loadCurrentView();
@@ -1930,6 +2278,10 @@ async function saveComposer(mode = "draft") {
     showMessage(`${config.label} saved.`);
   }
 
+  persistComposerDraftLocally();
+  state.autosaveDirty = false;
+  updateAutosaveStatus("All changes saved");
+
   if (mode === "draft") {
     await loadCurrentView();
   }
@@ -1943,7 +2295,7 @@ function buildAiFeedback(type) {
     notes.push("Spelling and grammar review:");
     notes.push("• Check sentence length and simplify long sections.");
     notes.push("• Keep language clear, calm and professional.");
-    notes.push("• Remove repeated phrases and make dates/times precise.");
+    notes.push("• Remove repeated phrases and make dates and times precise.");
   }
 
   if (type === "clarity") {
@@ -1985,6 +2337,10 @@ function assistantPromptsForView(view) {
     home: [
       "Give me a short handover for this young person.",
       "What matters most right now?",
+    ],
+    profile: [
+      "Summarise what adults most need to understand about this young person.",
+      "What should a new member of staff know first?",
     ],
     incidents: [
       "Summarise the recent incidents.",
@@ -2028,7 +2384,9 @@ function updateAssistantContext() {
       state.youngPerson.placement_status ? `Placement: ${state.youngPerson.placement_status}` : null,
       state.youngPerson.summary_risk_level ? `Risk: ${state.youngPerson.summary_risk_level}` : null,
       `View: ${state.currentView.replaceAll("-", " ")}`,
-    ].filter(Boolean).join(" • ");
+    ]
+      .filter(Boolean)
+      .join(" • ");
 
     if (els.assistantContext) {
       els.assistantContext.textContent = text;
@@ -2037,9 +2395,12 @@ function updateAssistantContext() {
 
   const prompts = assistantPromptsForView(state.currentView);
   if (els.assistantSuggestions) {
-    els.assistantSuggestions.innerHTML = prompts.map((prompt) => `
-      <button class="secondary-btn" type="button" data-prompt="${escapeHtml(prompt)}">${escapeHtml(prompt)}</button>
-    `).join("");
+    els.assistantSuggestions.innerHTML = prompts
+      .map(
+        (prompt) =>
+          `<button class="secondary-btn" type="button" data-prompt="${escapeHtml(prompt)}">${escapeHtml(prompt)}</button>`
+      )
+      .join("");
   }
 }
 
@@ -2057,12 +2418,16 @@ function renderAssistantMessageList(host, messages) {
     </article>
   `;
 
-  const messagesHtml = messages.map((message) => `
+  const messagesHtml = messages
+    .map(
+      (message) => `
     <article class="assistant-message ${message.role === "user" ? "assistant-message-user" : ""}">
       <div class="assistant-message-role">${message.role === "user" ? "You" : "Assistant"}</div>
       <div class="assistant-message-body">${escapeHtml(message.content)}</div>
     </article>
-  `).join("");
+  `
+    )
+    .join("");
 
   host.innerHTML = base + messagesHtml;
   host.scrollTop = host.scrollHeight;
@@ -2130,27 +2495,29 @@ function renderAssistantSourcesHtml(sources) {
     return `<p>Sources will appear here after a response.</p>`;
   }
 
-  return sources.map((source) => {
-    const type = escapeHtml(source?.type || "source");
-    const label = escapeHtml(source?.label || source?.document_title || "Source");
-    const excerpt = escapeHtml(source?.excerpt || "");
-    const section = escapeHtml(source?.section || "");
-    const page = source?.page_number != null ? escapeHtml(String(source.page_number)) : "";
+  return sources
+    .map((source) => {
+      const type = escapeHtml(source?.type || "source");
+      const label = escapeHtml(source?.label || source?.document_title || "Source");
+      const excerpt = escapeHtml(source?.excerpt || "");
+      const section = escapeHtml(source?.section || "");
+      const page = source?.page_number != null ? escapeHtml(String(source.page_number)) : "";
 
-    return `
-      <div class="entity-row">
-        <div>
-          <div class="entity-title">${label}</div>
-          <div class="entity-meta">
-            ${type}
-            ${section ? ` • ${section}` : ""}
-            ${page ? ` • p.${page}` : ""}
+      return `
+        <div class="entity-row">
+          <div>
+            <div class="entity-title">${label}</div>
+            <div class="entity-meta">
+              ${type}
+              ${section ? ` • ${section}` : ""}
+              ${page ? ` • p.${page}` : ""}
+            </div>
+            ${excerpt ? `<div class="entity-meta" style="margin-top:6px;">${excerpt}</div>` : ""}
           </div>
-          ${excerpt ? `<div class="entity-meta" style="margin-top:6px;">${excerpt}</div>` : ""}
         </div>
-      </div>
-    `;
-  }).join("");
+      `;
+    })
+    .join("");
 }
 
 function inferAssistantSuggestedActions() {
@@ -2205,7 +2572,9 @@ function renderAssistantInsights() {
           <div>
             <div class="entity-title">${escapeHtml(getFullYoungPersonName())}</div>
             <div class="entity-meta">
-              ${escapeHtml(state.youngPerson.placement_status || "—")} • Risk: ${escapeHtml(state.youngPerson.summary_risk_level || "—")}
+              ${escapeHtml(state.youngPerson.placement_status || "—")} • Risk: ${escapeHtml(
+        state.youngPerson.summary_risk_level || "—"
+      )}
             </div>
           </div>
         </div>
@@ -2229,7 +2598,11 @@ function renderAssistantInsights() {
   const suggestedActions = inferAssistantSuggestedActions();
   if (els.assistantActions) {
     els.assistantActions.innerHTML = suggestedActions.length
-      ? suggestedActions.map((item) => `<button class="chip" type="button" data-assistant-chip="${escapeHtml(item)}">${escapeHtml(item)}</button>`).join("")
+      ? suggestedActions
+          .map(
+            (item) => `<button class="chip" type="button" data-assistant-chip="${escapeHtml(item)}">${escapeHtml(item)}</button>`
+          )
+          .join("")
       : `<p>No suggested actions yet.</p>`;
   }
 
@@ -2399,7 +2772,7 @@ function openYoungPerson(id) {
   window.history.replaceState({}, "", url.toString());
 
   state.youngPersonId = Number(id);
-  state.currentView = "home";
+  state.currentView = "profile";
 
   showWorkspaceMode();
 
@@ -2458,10 +2831,17 @@ async function runDrawerWorkflow(action) {
   }
 }
 
+function goToPlatformHome() {
+  const candidates = ["/", "/index.html", "/dashboard", "/home"];
+  const current = window.location.pathname || "";
+  const next = candidates.find((path) => path !== current) || "/";
+  window.location.href = next;
+}
+
 function bindEvents() {
   document.addEventListener("click", (event) => {
-    const navBtn = event.target.closest(".nav-btn");
-    if (navBtn) {
+    const navBtn = event.target.closest(".nav-btn, .mobile-nav-btn, .mobile-tab");
+    if (navBtn && navBtn.dataset.view) {
       if (!state.youngPersonId) {
         showError("Select a young person first.");
         return;
@@ -2505,6 +2885,15 @@ function bindEvents() {
       return;
     }
 
+    const actionBtn = event.target.closest("[data-action]");
+    if (actionBtn) {
+      if (actionBtn.dataset.action === "daily-note") openComposerFor("daily_note", "create");
+      if (actionBtn.dataset.action === "incident") openComposerFor("incident", "create");
+      if (actionBtn.dataset.action === "risk") openComposerFor("risk", "create");
+      if (actionBtn.dataset.action === "plan") openComposerFor("support_plan", "create");
+      return;
+    }
+
     if (!event.target.closest(".nav-group")) {
       closeAllNavGroups();
     }
@@ -2534,9 +2923,34 @@ function bindEvents() {
     }
   });
 
+  els.goHomeBtn?.addEventListener("click", goToPlatformHome);
+
+  els.quickProfileBtn?.addEventListener("click", async () => {
+    if (!state.youngPersonId) return;
+    state.currentView = "profile";
+    await loadCurrentView();
+  });
+
+  els.quickTimelineBtn?.addEventListener("click", async () => {
+    if (!state.youngPersonId) return;
+    state.currentView = "timeline";
+    await loadCurrentView();
+  });
+
+  els.quickAssistantBtn?.addEventListener("click", () => {
+    if (!state.youngPersonId) return;
+    openAssistant();
+  });
+
+  els.mobileQuickAdd?.addEventListener("click", () => {
+    if (!state.youngPersonId) return;
+    openComposerFor("daily_note", "create");
+  });
+
   els.changePersonBtn?.addEventListener("click", async () => {
     state.youngPersonId = null;
     state.youngPerson = null;
+    state.currentView = "profile";
     state.assistantMessages = [];
     state.assistantModalMessages = [];
     state.assistantMeta = {
@@ -2564,16 +2978,6 @@ function bindEvents() {
     updateAssistantContext();
 
     await loadYoungPersonSelector();
-  });
-
-  els.quickActions?.addEventListener("click", (event) => {
-    const btn = event.target.closest("[data-action]");
-    if (!btn) return;
-
-    if (btn.dataset.action === "daily-note") openComposerFor("daily_note", "create");
-    if (btn.dataset.action === "incident") openComposerFor("incident", "create");
-    if (btn.dataset.action === "risk") openComposerFor("risk", "create");
-    if (btn.dataset.action === "plan") openComposerFor("support_plan", "create");
   });
 
   els.closeDrawerBtn?.addEventListener("click", closeDrawer);
@@ -2653,6 +3057,12 @@ function bindEvents() {
     const question = els.assistantModalInput?.value || "";
     if (els.assistantModalInput) els.assistantModalInput.value = "";
     await askAssistant(question);
+  });
+
+  window.addEventListener("beforeunload", () => {
+    if (state.composerOpen && state.autosaveDirty) {
+      persistComposerDraftLocally();
+    }
   });
 
   document.addEventListener("keydown", (event) => {
