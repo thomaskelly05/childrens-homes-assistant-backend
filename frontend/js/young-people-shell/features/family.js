@@ -34,26 +34,6 @@ function renderContactCards(contacts = []) {
   `;
 }
 
-function buildContactRecordRows(items = []) {
-  return items.map((item) => ({
-    id: item.id,
-    record_type: "family_contact",
-    title: item.contact_person || item.full_name || "Family contact",
-    summary:
-      [
-        item.contact_type,
-        item.location,
-        item.supervision_level,
-      ]
-        .filter(Boolean)
-        .join(" • ") || "Family contact record",
-    contact_datetime: item.contact_datetime || null,
-    status: item.workflow_status || "",
-    child_voice: item.child_voice || "",
-    concerns: item.concerns || "",
-  }));
-}
-
 export async function loadFamily() {
   if (!els.viewContent) return;
 
@@ -83,11 +63,12 @@ export async function loadFamily() {
       recordsData.records ||
       recordsData.family_contact_records ||
       []
-      ).map(mapFamilyContactRecord);
+    ).map(mapFamilyContactRecord);
 
-    const concerns = familyRecords.filter((r) =>
-      Boolean(r.concerns || "").toLowerCase().includes("concern")
-    );
+    const concerns = familyRecords.filter((r) => {
+      const text = String(r.concerns || "").toLowerCase();
+      return Boolean(text);
+    });
 
     els.viewContent.innerHTML = `
       ${renderSection(
