@@ -64,9 +64,11 @@ function normaliseUserPatch(user = {}) {
     mfa_enabled: !!user.mfa_enabled,
     mfa_verified: !!user.mfa_verified,
     mfa_pending: !!user.mfa_pending,
+    has_passkeys: !!user.has_passkeys,
     mfaEnabled: !!user.mfa_enabled,
     mfaVerified: !!user.mfa_verified,
     mfaPending: !!user.mfa_pending,
+    hasPasskeys: !!user.has_passkeys,
   };
 }
 
@@ -134,6 +136,7 @@ async function login(credentialsArg = null) {
           mfa_enabled: !!data.mfa_enabled,
           mfa_verified: !!data.authenticated,
           mfa_pending: !!data.mfa_pending,
+          has_passkeys: !!data.user?.has_passkeys,
         }),
         remember
       );
@@ -322,6 +325,7 @@ async function verifyMfaCode(code) {
     mfa_enabled: true,
     mfa_verified: true,
     mfa_pending: false,
+    has_passkeys: !!data.has_passkeys,
   });
 
   return data;
@@ -342,6 +346,7 @@ async function verifyRecoveryCode(recoveryCode) {
     mfa_enabled: true,
     mfa_verified: true,
     mfa_pending: false,
+    has_passkeys: !!data.has_passkeys,
   });
 
   return data;
@@ -370,6 +375,7 @@ async function completeMfaSetup(code) {
     mfa_enabled: true,
     mfa_verified: true,
     mfa_pending: false,
+    has_passkeys: !!data.has_passkeys,
   });
 
   if (Array.isArray(data.recovery_codes) && data.recovery_codes.length) {
@@ -483,13 +489,21 @@ async function registerPasskey(nickname = "") {
 
   const credentialJson = credential.toJSON();
 
-  return apiFetchJson("/auth/passkeys/register/verify", {
+  const result = await apiFetchJson("/auth/passkeys/register/verify", {
     method: "POST",
     body: JSON.stringify({
       credential: credentialJson,
       nickname,
     }),
   });
+
+  const existing = getStoredUser() || {};
+  updateStoredUser({
+    ...existing,
+    has_passkeys: true,
+  });
+
+  return result;
 }
 
 async function listPasskeys() {
@@ -500,6 +514,10 @@ async function deletePasskey(passkeyId) {
   return apiFetchJson(`/auth/passkeys/${passkeyId}`, {
     method: "DELETE",
   });
+}
+
+async function getPasskeyPromptStatus() {
+  return apiFetchJson("/passkeys/status", { method: "GET" });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -531,4 +549,5 @@ window.auth = {
   registerPasskey,
   listPasskeys,
   deletePasskey,
+  getPasskeyPromptStatus,
 };
