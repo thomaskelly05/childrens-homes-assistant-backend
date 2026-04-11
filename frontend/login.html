@@ -396,31 +396,59 @@
       accent-color: var(--primary);
     }
 
-    .signin-button {
+    .signin-button,
+    .passkey-button {
       width: 100%;
       min-height: 3.35rem;
       border: none;
       border-radius: var(--radius-md);
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-strong) 100%);
       color: #ffffff;
       font-size: 1rem;
       font-weight: 800;
       letter-spacing: 0.01em;
       cursor: pointer;
-      box-shadow: 0 16px 30px rgba(24, 53, 127, 0.22);
       transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
     }
 
-    .signin-button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 20px 34px rgba(24, 53, 127, 0.26);
+    .signin-button {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-strong) 100%);
+      box-shadow: 0 16px 30px rgba(24, 53, 127, 0.22);
     }
 
-    .signin-button:disabled {
+    .passkey-button {
+      background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+      box-shadow: 0 16px 30px rgba(15, 23, 42, 0.18);
+    }
+
+    .signin-button:hover,
+    .passkey-button:hover {
+      transform: translateY(-1px);
+    }
+
+    .signin-button:disabled,
+    .passkey-button:disabled {
       opacity: 0.72;
       cursor: not-allowed;
       transform: none;
       box-shadow: 0 10px 20px rgba(24, 53, 127, 0.16);
+    }
+
+    .or-divider {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--text-soft);
+      font-size: 0.88rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .or-divider::before,
+    .or-divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border-strong);
     }
 
     .status {
@@ -644,7 +672,7 @@
                 name="email"
                 type="email"
                 inputmode="email"
-                autocomplete="username"
+                autocomplete="username webauthn"
                 autocapitalize="none"
                 spellcheck="false"
                 placeholder="name@organisation.co.uk"
@@ -655,6 +683,12 @@
                 Enter the work email address linked to your account
               </span>
             </div>
+
+            <button class="passkey-button" id="passkeyBtn" type="button">
+              Sign in with passkey
+            </button>
+
+            <div class="or-divider">or</div>
 
             <div class="form-group">
               <label class="form-label" for="password">Password</label>
@@ -695,10 +729,6 @@
               Sign in
             </button>
 
-            <button class="signin-button" id="passkeyBtn" type="button">
-  Sign in with passkey
-</button>
-
             <div class="status" id="loginStatus" aria-live="polite" role="status"></div>
             <div class="security-note">
               Access is monitored for security, safeguarding, and governance purposes.
@@ -734,6 +764,7 @@
       const password = document.getElementById("password");
       const togglePassword = document.getElementById("togglePassword");
       const loginBtn = document.getElementById("loginBtn");
+      const passkeyBtn = document.getElementById("passkeyBtn");
       const loginStatus = document.getElementById("loginStatus");
       const rememberMe = document.getElementById("rememberMe");
 
@@ -749,11 +780,17 @@
 
       function setLoading(isLoading) {
         loginBtn.disabled = isLoading;
+        if (passkeyBtn) passkeyBtn.disabled = isLoading;
         email.disabled = isLoading;
         password.disabled = isLoading;
         rememberMe.disabled = isLoading;
         togglePassword.disabled = isLoading;
         loginBtn.textContent = isLoading ? "Signing in..." : "Sign in";
+        if (passkeyBtn) {
+          passkeyBtn.textContent = isLoading
+            ? "Please wait..."
+            : "Sign in with passkey";
+        }
       }
 
       function clearFieldErrors() {
@@ -858,6 +895,49 @@
         togglePassword.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
         togglePassword.setAttribute("aria-pressed", String(isHidden));
       });
+
+      if (passkeyBtn) {
+        passkeyBtn.addEventListener("click", async function () {
+          clearFieldErrors();
+          clearRedirectGuard();
+
+          const emailValue = email.value.trim();
+
+          if (!emailValue) {
+            showFieldError(email, "Please enter your work email address first.");
+            return;
+          }
+
+          setLoading(true);
+          setStatus("Starting passkey sign-in...");
+
+          try {
+            if (!window.auth || typeof window.auth.beginPasskeyLogin !== "function") {
+              throw new Error("Passkey sign-in is not available.");
+            }
+
+            const data = await window.auth.beginPasskeyLogin(emailValue);
+
+            if (!data?.authenticated) {
+              throw new Error("Passkey sign-in did not complete.");
+            }
+
+            setStatus("Sign-in successful. Redirecting...", "is-success");
+            markRedirectGuard();
+            window.location.replace("/assistant");
+          } catch (error) {
+            clearRedirectGuard();
+            const message =
+              error && error.message
+                ? error.message
+                : "Passkey sign-in failed.";
+
+            setStatus(message, "is-error");
+          } finally {
+            setLoading(false);
+          }
+        });
+      }
 
       form.addEventListener("submit", async function (event) {
         event.preventDefault();
