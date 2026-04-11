@@ -3,382 +3,456 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IndiCare OS • Young Person Workspace</title>
+  <title>IndiCare OS • Young People</title>
   <link rel="stylesheet" href="/css/young-people-shell.css" />
 </head>
 <body>
   <div
     id="app"
     class="app-shell"
-    data-assistant-scope-type="young_person"
+    data-assistant-scope-type="global"
     data-young-person-id=""
     data-home-id=""
     data-workspace="young-person-shell"
   >
-    <header class="top-shell">
-      <div class="top-shell-main">
-        <div class="top-shell-left">
-          <a id="backToHomeBtn" class="icon-link" href="/assistant" aria-label="Back to homepage">
-            <span aria-hidden="true">←</span>
-          </a>
-
-          <div class="brand-block">
+    <!-- SELECTOR SCREEN ONLY -->
+    <section id="selectorScreen" class="selector-screen">
+      <div class="selector-screen-inner">
+        <header class="selector-topbar">
+          <div class="selector-brand">
             <div class="brand-mark">IC</div>
             <div class="brand-copy">
-              <h1>IndiCare OS</h1>
-              <p>Young person workspace</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="top-shell-actions">
-          <button id="mobileNavToggle" class="secondary-btn mobile-only" type="button" aria-label="Open navigation">
-            Menu
-          </button>
-          <button id="assistantLauncher" class="secondary-btn hidden" type="button">Assistant</button>
-          <button id="refreshBtn" class="secondary-btn hidden" type="button">Refresh</button>
-        </div>
-      </div>
-
-      <section class="person-hero">
-        <div class="person-hero-main">
-          <div class="person-strip-left">
-            <div id="personAvatar" class="person-avatar">YP</div>
-
-            <div class="person-copy">
-              <div class="eyebrow">Current young person</div>
-              <h2 id="personName">No young person selected</h2>
-              <p id="personMeta">Choose a young person to begin</p>
-
-              <div class="person-summary-chips">
-                <span id="heroPlacementChip" class="scope-chip hidden"></span>
-                <span id="heroRiskChip" class="scope-chip hidden"></span>
-                <span id="heroViewChip" class="scope-chip hidden"></span>
-              </div>
+              <h1>Young People</h1>
+              <p>Select a young person to open their workspace</p>
             </div>
           </div>
 
-          <div class="person-hero-actions">
-            <button id="changePersonBtn" class="secondary-btn" type="button">Change young person</button>
+          <div class="selector-topbar-actions">
+            <button id="selectorRefreshBtn" class="secondary-btn" type="button">Refresh</button>
           </div>
-        </div>
+        </header>
 
-        <div class="person-hero-support">
-          <div class="hero-support-block">
-            <span class="hero-support-label">Default view</span>
-            <span class="hero-support-value">Profile first, then latest activity, risks and actions</span>
-          </div>
-
-          <div class="hero-support-block">
-            <span class="hero-support-label">Designed for shift work</span>
-            <span class="hero-support-value">Fewer taps, faster recording, clearer oversight and better mobile use</span>
-          </div>
-        </div>
-      </section>
-
-      <nav id="sidebarNav" class="top-nav" aria-label="Primary">
-        <button class="nav-btn active" data-view="profile" type="button">Profile</button>
-        <button class="nav-btn" data-view="timeline" type="button">Timeline</button>
-        <button class="nav-btn" data-view="records" type="button">Records</button>
-        <button class="nav-btn" data-view="risks" type="button">Risks</button>
-        <button class="nav-btn" data-view="oversight" type="button">Oversight</button>
-      </nav>
-
-      <nav id="mobileNavPanel" class="mobile-nav-panel hidden" aria-label="Mobile navigation">
-        <button class="mobile-nav-btn active" data-view="profile" type="button">Profile</button>
-        <button class="mobile-nav-btn" data-view="timeline" type="button">Timeline</button>
-        <button class="mobile-nav-btn" data-view="records" type="button">Records</button>
-        <button class="mobile-nav-btn" data-view="risks" type="button">Risks</button>
-        <button class="mobile-nav-btn" data-view="oversight" type="button">Oversight</button>
-      </nav>
-    </header>
-
-    <main class="main-shell">
-      <section class="page-header-card page-header-card--hero">
-        <div class="page-header-copy">
-          <div class="eyebrow">Young person workspace</div>
-          <h2 id="pageTitle">Profile</h2>
-          <p id="pageSubtitle">Who this young person is</p>
-        </div>
-
-        <div class="page-header-actions">
-          <button class="secondary-btn" type="button" data-action="daily-note">Add daily note</button>
-          <button class="secondary-btn" type="button" data-action="incident">Log incident</button>
-          <button class="secondary-btn" type="button" data-action="risk">Update risk</button>
-          <button class="primary-btn" type="button" data-assistant-quick="handover">Draft handover</button>
-        </div>
-      </section>
-
-      <section id="statusBar" class="status-bar hidden" role="status" aria-live="polite"></section>
-
-      <section id="selectorPanel" class="selector-panel">
-        <div class="selector-header">
-          <div>
-            <div class="eyebrow">Young people</div>
-            <h3>Select a young person</h3>
-            <p>Fast, simple access to one clear workspace per young person.</p>
+        <section class="selector-hero">
+          <div class="selector-hero-copy">
+            <div class="eyebrow">IndiCare OS</div>
+            <h2>Choose a young person</h2>
+            <p>
+              Open one calm, child-centred workspace for daily life, wellbeing, education,
+              relationships, chronology, reports and leadership oversight.
+            </p>
           </div>
 
-          <div class="selector-tools">
+          <div class="selector-search-wrap">
+            <label class="search-label" for="selectorSearch">Search</label>
             <input
               id="selectorSearch"
               class="search-input"
               type="text"
-              placeholder="Search by name, preferred name, placement or risk"
+              placeholder="Search by name, preferred name or current needs..."
               autocomplete="off"
             />
-            <button id="selectorRefreshBtn" class="secondary-btn" type="button">Refresh</button>
           </div>
-        </div>
-
-        <div id="selectorList" class="selector-list"></div>
-      </section>
-
-      <section id="workspacePanel" class="workspace-panel hidden">
-        <section class="quick-actions-wrap">
-          <div class="section-intro">
-            <div>
-              <div class="eyebrow">Quick actions</div>
-              <h3>Start from here</h3>
-            </div>
-            <p>Common tasks for staff and managers, without extra noise.</p>
-          </div>
-
-          <section id="quickActions" class="quick-actions quick-actions--compact">
-            <button class="quick-action quick-action--primary" type="button" data-action="daily-note">
-              <span class="quick-action-title">Add daily note</span>
-              <span class="quick-action-subtitle">Record the shift clearly</span>
-            </button>
-
-            <button class="quick-action" type="button" data-action="incident">
-              <span class="quick-action-title">Log incident</span>
-              <span class="quick-action-subtitle">Capture concern and response</span>
-            </button>
-
-            <button class="quick-action" type="button" data-action="risk">
-              <span class="quick-action-title">Update risk</span>
-              <span class="quick-action-subtitle">Review triggers and guidance</span>
-            </button>
-
-            <button class="quick-action" type="button" data-action="plan">
-              <span class="quick-action-title">Add plan</span>
-              <span class="quick-action-subtitle">Create support guidance</span>
-            </button>
-
-            <button class="quick-action" type="button" data-assistant-quick="priorities">
-              <span class="quick-action-title">Today’s priorities</span>
-              <span class="quick-action-subtitle">What matters most now</span>
-            </button>
-
-            <button class="quick-action" type="button" data-assistant-quick="handover">
-              <span class="quick-action-title">Draft handover</span>
-              <span class="quick-action-subtitle">Prepare the next shift</span>
-            </button>
-          </section>
         </section>
 
-        <div class="workspace-layout">
-          <section class="workspace-main">
-            <section id="viewContent">
-              <div class="loading-state">
-                <div>
-                  <div class="spinner"></div>
-                  <p>Loading workspace...</p>
-                </div>
-              </div>
-            </section>
+        <section class="selector-main">
+          <div id="selectorList" class="selector-grid"></div>
+        </section>
+      </div>
+    </section>
+
+    <!-- WORKSPACE SCREEN -->
+    <section id="workspaceScreen" class="workspace-screen hidden">
+      <header class="workspace-topbar">
+        <div class="workspace-topbar-left">
+          <button id="goHomeBtn" class="secondary-btn icon-text-btn" type="button">
+            <span class="icon-text-icon">←</span>
+            <span>Young people</span>
+          </button>
+
+          <button id="mobileNavToggleBtn" class="secondary-btn icon-btn mobile-only" type="button" aria-label="Open menu">
+            ☰
+          </button>
+        </div>
+
+        <div class="workspace-topbar-centre">
+          <div id="personAvatar" class="person-avatar">YP</div>
+          <div class="person-topbar-copy">
+            <h2 id="personName">Young person</h2>
+            <p id="personMeta">Workspace</p>
+          </div>
+        </div>
+
+        <div class="workspace-topbar-right">
+          <button id="assistantLauncher" class="secondary-btn" type="button">Assistant</button>
+          <button id="refreshBtn" class="secondary-btn" type="button">Refresh</button>
+          <button id="changePersonBtn" class="secondary-btn" type="button">Change</button>
+        </div>
+      </header>
+
+      <div id="statusBar" class="status-bar hidden" role="status" aria-live="polite"></div>
+
+      <div class="workspace-shell">
+        <!-- LEFT NAV -->
+        <aside id="sidebarNav" class="workspace-nav">
+          <div class="workspace-nav-inner">
+            <div class="nav-section">
+              <div class="nav-section-title">Overview</div>
+              <button class="nav-btn active" data-view="home" type="button">Home</button>
+              <button class="nav-btn" data-view="profile" type="button">About me</button>
+              <button class="nav-btn" data-view="timeline" type="button">Life story</button>
+            </div>
+
+            <div class="nav-section">
+              <div class="nav-section-title">Daily life</div>
+              <button class="nav-btn" data-view="daily-notes" type="button">Daily life notes</button>
+              <button class="nav-btn" data-view="handover" type="button">Shift handover</button>
+              <button class="nav-btn" data-view="appointments" type="button">Appointments</button>
+              <button class="nav-btn" data-view="keywork" type="button">Keywork</button>
+            </div>
+
+            <div class="nav-section">
+              <div class="nav-section-title">Wellbeing</div>
+              <button class="nav-btn" data-view="incidents" type="button">Important events</button>
+              <button class="nav-btn" data-view="risk" type="button">Safety and support</button>
+              <button class="nav-btn" data-view="health" type="button">Health</button>
+              <button class="nav-btn" data-view="family" type="button">Family and relationships</button>
+              <button class="nav-btn" data-view="education" type="button">Education</button>
+              <button class="nav-btn" data-view="plans" type="button">Plans and guidance</button>
+            </div>
+
+            <div class="nav-section">
+              <div class="nav-section-title">Oversight</div>
+              <button class="nav-btn" data-view="reports" type="button">Reports</button>
+              <button class="nav-btn" data-view="compliance" type="button">Checks and actions</button>
+              <button class="nav-btn" data-view="evidence" type="button">Evidence</button>
+              <button class="nav-btn" data-view="manager" type="button">Manager view</button>
+            </div>
+          </div>
+        </aside>
+
+        <!-- MOBILE NAV DRAWER -->
+        <div id="mobileNavBackdrop" class="mobile-nav-backdrop hidden"></div>
+        <aside id="mobileNavDrawer" class="mobile-nav-drawer hidden" aria-hidden="true">
+          <div class="mobile-nav-header">
+            <div>
+              <h3>Navigate</h3>
+              <p>Move around this young person’s workspace</p>
+            </div>
+            <button id="closeMobileNavBtn" class="secondary-btn icon-btn" type="button" aria-label="Close menu">✕</button>
+          </div>
+
+          <div class="mobile-nav-body">
+            <div class="nav-section">
+              <div class="nav-section-title">Overview</div>
+              <button class="nav-btn active" data-view="home" type="button">Home</button>
+              <button class="nav-btn" data-view="profile" type="button">About me</button>
+              <button class="nav-btn" data-view="timeline" type="button">Life story</button>
+            </div>
+
+            <div class="nav-section">
+              <div class="nav-section-title">Daily life</div>
+              <button class="nav-btn" data-view="daily-notes" type="button">Daily life notes</button>
+              <button class="nav-btn" data-view="handover" type="button">Shift handover</button>
+              <button class="nav-btn" data-view="appointments" type="button">Appointments</button>
+              <button class="nav-btn" data-view="keywork" type="button">Keywork</button>
+            </div>
+
+            <div class="nav-section">
+              <div class="nav-section-title">Wellbeing</div>
+              <button class="nav-btn" data-view="incidents" type="button">Important events</button>
+              <button class="nav-btn" data-view="risk" type="button">Safety and support</button>
+              <button class="nav-btn" data-view="health" type="button">Health</button>
+              <button class="nav-btn" data-view="family" type="button">Family and relationships</button>
+              <button class="nav-btn" data-view="education" type="button">Education</button>
+              <button class="nav-btn" data-view="plans" type="button">Plans and guidance</button>
+            </div>
+
+            <div class="nav-section">
+              <div class="nav-section-title">Oversight</div>
+              <button class="nav-btn" data-view="reports" type="button">Reports</button>
+              <button class="nav-btn" data-view="compliance" type="button">Checks and actions</button>
+              <button class="nav-btn" data-view="evidence" type="button">Evidence</button>
+              <button class="nav-btn" data-view="manager" type="button">Manager view</button>
+            </div>
+          </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="workspace-main">
+          <section class="workspace-hero">
+            <div class="workspace-hero-copy">
+              <div class="eyebrow">Young person workspace</div>
+              <h1 id="pageTitle">Home</h1>
+              <p id="pageSubtitle">A calm overview of what matters today</p>
+            </div>
+
+            <div class="workspace-hero-actions">
+              <button class="quick-action-btn" type="button" data-action="daily-note">Add daily life note</button>
+              <button class="quick-action-btn" type="button" data-action="incident">Add important event</button>
+              <button class="quick-action-btn" type="button" data-action="risk">Update safety support</button>
+              <button class="quick-action-btn" type="button" data-action="plan">Add plan</button>
+            </div>
           </section>
 
-          <aside class="workspace-side">
-            <section class="workspace-side-card workspace-side-card--assistant">
-              <div class="workspace-side-head">
-                <div>
-                  <h3>Assistant</h3>
-                  <p>Scoped to this young person and current view.</p>
+          <section class="mobile-profile-card">
+            <div class="mobile-profile-card-main">
+              <div id="mobilePersonAvatar" class="person-avatar person-avatar-mobile">YP</div>
+              <div>
+                <h3 id="mobilePersonName">Young person</h3>
+                <p id="mobilePersonMeta">Overview</p>
+              </div>
+            </div>
+          </section>
+
+          <section id="viewContent" class="view-content">
+            <div class="loading-state">
+              <div>
+                <div class="spinner"></div>
+                <p>Loading workspace...</p>
+              </div>
+            </div>
+          </section>
+        </main>
+
+        <!-- RIGHT SIDE -->
+        <aside class="workspace-side">
+          <section class="side-card side-card-profile">
+            <div class="side-card-header">
+              <div>
+                <h3>Profile snapshot</h3>
+                <p>The first thing adults should see</p>
+              </div>
+              <button class="secondary-btn" type="button" data-view-jump="profile">Open</button>
+            </div>
+
+            <div class="profile-snapshot">
+              <div class="profile-photo-wrap">
+                <img id="personPhoto" class="profile-photo hidden" alt="Young person profile photo" />
+                <div id="personPhotoFallback" class="profile-photo-fallback">YP</div>
+              </div>
+
+              <div class="profile-snapshot-copy">
+                <div class="profile-name-row">
+                  <strong id="profileSnapshotName">Young person</strong>
                 </div>
-                <button id="assistantExpandBtn" class="secondary-btn" type="button">Expand</button>
+                <p id="profileSnapshotMeta">No young person selected</p>
               </div>
+            </div>
 
-              <div class="assistant-context-row">
-                <span id="scopeBadge" class="scope-badge">Young person assistant</span>
-                <span id="scopeHomeBadge" class="scope-chip hidden"></span>
-                <span id="scopeChildBadge" class="scope-chip hidden"></span>
-                <span id="scopeShiftBadge" class="scope-chip hidden"></span>
+            <div class="profile-snapshot-actions">
+              <button class="secondary-btn" type="button" data-action="edit-profile">Edit profile</button>
+              <button class="secondary-btn" type="button" data-action="change-photo">Change photo</button>
+            </div>
+          </section>
+
+          <section class="side-card">
+            <div class="side-card-header">
+              <div>
+                <h3>Assistant</h3>
+                <p>Child-centred help for drafting, summaries and oversight</p>
               </div>
+              <button id="assistantExpandBtn" class="secondary-btn" type="button">Open</button>
+            </div>
 
-              <div id="assistantContext" class="assistant-context">
-                No young person selected.
+            <div class="assistant-context-row">
+              <span id="scopeBadge" class="scope-badge">Young person assistant</span>
+              <span id="scopeHomeBadge" class="scope-chip hidden"></span>
+              <span id="scopeChildBadge" class="scope-chip hidden"></span>
+              <span id="scopeShiftBadge" class="scope-chip hidden"></span>
+            </div>
+
+            <div id="assistantContext" class="assistant-context">
+              Ask a question about this young person.
+            </div>
+
+            <div id="assistantSuggestions" class="assistant-suggestions"></div>
+
+            <div id="assistantMessages" class="assistant-messages">
+              <article class="assistant-message assistant-message-system">
+                <div class="assistant-message-role">Assistant</div>
+                <div class="assistant-message-body">Select a young person to begin.</div>
+              </article>
+            </div>
+
+            <form id="assistantForm" class="assistant-form">
+              <input
+                id="assistantInput"
+                class="text-input"
+                type="text"
+                placeholder="Ask about this young person..."
+                autocomplete="off"
+              />
+              <button id="assistantSendBtn" class="primary-btn" type="submit">Send</button>
+            </form>
+          </section>
+
+          <section class="side-card">
+            <div class="side-card-header">
+              <div>
+                <h3>Suggested actions</h3>
+                <p>Useful next steps</p>
               </div>
+            </div>
+            <div id="assistantActions" class="assistant-side-block">
+              <p>No suggested actions yet.</p>
+            </div>
+          </section>
 
-              <div id="assistantSuggestions" class="assistant-suggestions"></div>
-
-              <div id="assistantMessages" class="assistant-messages">
-                <article class="assistant-message assistant-message-system">
-                  <div class="assistant-message-role">Assistant</div>
-                  <div class="assistant-message-body">Select a young person to start.</div>
-                </article>
+          <section class="side-card">
+            <div class="side-card-header">
+              <div>
+                <h3>Assistant insights</h3>
+                <p>Scoped context and reasoning support</p>
               </div>
+            </div>
+            <div id="assistantScopeSummary" class="assistant-side-block">
+              <p>No scoped context loaded.</p>
+            </div>
+          </section>
 
-              <form id="assistantForm" class="assistant-form">
-                <input
-                  id="assistantInput"
-                  class="text-input"
-                  type="text"
-                  placeholder="Ask about this young person..."
-                  autocomplete="off"
-                />
-                <button id="assistantSendBtn" class="primary-btn" type="submit">Send</button>
-              </form>
-            </section>
-
-            <section class="workspace-side-card">
-              <h3>Assistant summary</h3>
-              <div id="assistantScopeSummary" class="assistant-side-block">
-                <p>No scoped context loaded.</p>
+          <section class="side-card">
+            <div class="side-card-header">
+              <div>
+                <h3>Sources</h3>
+                <p>What the assistant used</p>
               </div>
-            </section>
+            </div>
+            <div id="assistantSources" class="assistant-side-block">
+              <p>Sources will appear here after a response.</p>
+            </div>
+          </section>
 
-            <section class="workspace-side-card">
-              <h3>Suggested actions</h3>
-              <div id="assistantActions" class="assistant-side-block">
-                <p>No suggested actions yet.</p>
-              </div>
-            </section>
+          <section class="side-card side-card-technical">
+            <h3>Runtime</h3>
+            <pre id="assistantRuntime" class="assistant-code-block">No runtime data yet.</pre>
+          </section>
 
-            <details class="workspace-side-card workspace-side-card--advanced">
-              <summary>Advanced assistant data</summary>
+          <section class="side-card side-card-technical">
+            <h3>Explainability</h3>
+            <pre id="assistantExplainability" class="assistant-code-block">No explainability data yet.</pre>
+          </section>
+        </aside>
+      </div>
 
-              <div class="advanced-section">
-                <h4>Sources</h4>
-                <div id="assistantSources" class="assistant-side-block">
-                  <p>Sources will appear here after a response.</p>
-                </div>
-              </div>
-
-              <div class="advanced-section">
-                <h4>Runtime</h4>
-                <pre id="assistantRuntime" class="assistant-code-block">No runtime data yet.</pre>
-              </div>
-
-              <div class="advanced-section">
-                <h4>Explainability</h4>
-                <pre id="assistantExplainability" class="assistant-code-block">No explainability data yet.</pre>
-              </div>
-            </details>
-          </aside>
-        </div>
-      </section>
-    </main>
-
-    <button id="mobileQuickAddBtn" class="mobile-quick-add hidden" type="button" aria-label="Add record">
-      +
-    </button>
-
-    <nav id="mobileBottomNav" class="mobile-bottom-nav hidden" aria-label="Mobile bottom navigation">
-      <button class="mobile-tab active" data-view="profile" type="button">Profile</button>
-      <button class="mobile-tab" data-view="timeline" type="button">Timeline</button>
-      <button class="mobile-tab" data-view="records" type="button">Records</button>
-      <button class="mobile-tab" data-view="risks" type="button">Risks</button>
-      <button class="mobile-tab" data-view="oversight" type="button">Oversight</button>
-    </nav>
+      <!-- MOBILE QUICK BAR -->
+      <nav class="mobile-bottom-bar">
+        <button class="mobile-tab-btn active" data-view="home" type="button">
+          <span class="mobile-tab-icon">⌂</span>
+          <span class="mobile-tab-label">Home</span>
+        </button>
+        <button class="mobile-tab-btn" data-view="timeline" type="button">
+          <span class="mobile-tab-icon">◎</span>
+          <span class="mobile-tab-label">Story</span>
+        </button>
+        <button class="mobile-tab-btn" data-view="daily-notes" type="button">
+          <span class="mobile-tab-icon">✎</span>
+          <span class="mobile-tab-label">Notes</span>
+        </button>
+        <button class="mobile-tab-btn" data-view="profile" type="button">
+          <span class="mobile-tab-icon">☺</span>
+          <span class="mobile-tab-label">Profile</span>
+        </button>
+        <button id="mobileAssistantBtn" class="mobile-tab-btn" type="button">
+          <span class="mobile-tab-icon">✦</span>
+          <span class="mobile-tab-label">Assistant</span>
+        </button>
+      </nav>
+    </section>
   </div>
 
-  <div id="recordDrawerBackdrop" class="drawer-backdrop hidden"></div>
-
-  <aside id="recordDrawer" class="drawer hidden" aria-hidden="true">
-    <div class="drawer-header">
+  <!-- RECORD DETAIL FULL SCREEN -->
+  <section id="recordDrawer" class="fullscreen-panel hidden" aria-hidden="true">
+    <div class="fullscreen-panel-header">
       <div>
-        <h3 id="recordDrawerTitle">Record details</h3>
+        <div class="eyebrow">Record</div>
+        <h2 id="recordDrawerTitle">Record details</h2>
         <p id="recordDrawerSubtitle">Open a record to view details</p>
       </div>
-      <button id="closeRecordDrawerBtn" class="secondary-btn icon-btn" type="button" aria-label="Close">✕</button>
+      <div class="fullscreen-panel-header-actions">
+        <button id="closeRecordDrawerBtn" class="secondary-btn" type="button">Close</button>
+      </div>
     </div>
 
-    <div id="recordDrawerActions" class="drawer-actions hidden">
+    <div id="recordDrawerActions" class="fullscreen-panel-actions hidden">
       <button id="drawerEditBtn" class="secondary-btn" type="button">Edit</button>
-      <button id="drawerSubmitBtn" class="secondary-btn" type="button">Send for approval</button>
+      <button id="drawerSubmitBtn" class="secondary-btn" type="button">Send for review</button>
       <button id="drawerApproveBtn" class="primary-btn" type="button">Approve</button>
       <button id="drawerReturnBtn" class="secondary-btn" type="button">Return</button>
       <button id="drawerArchiveBtn" class="ghost-btn" type="button">Archive</button>
     </div>
 
-    <div id="recordDrawerBody" class="drawer-body">
+    <div id="recordDrawerBody" class="fullscreen-panel-body">
       <div class="empty-state">
         <p>Select a record to view it here.</p>
       </div>
     </div>
-  </aside>
+  </section>
 
-  <section id="recordComposerPage" class="composer-page hidden" aria-hidden="true">
-    <div class="composer-shell">
-      <header class="composer-header">
-        <div class="composer-header-left">
-          <div class="eyebrow">Record composer</div>
-          <h2 id="composerTitle">Create record</h2>
-          <p id="composerSubtitle">Write clearly, therapeutically and with the young person at the centre.</p>
+  <!-- FULL SCREEN COMPOSER -->
+  <section id="recordComposerPage" class="fullscreen-panel hidden" aria-hidden="true">
+    <div class="fullscreen-panel-header">
+      <div>
+        <div class="eyebrow">Record form</div>
+        <h2 id="composerTitle">Create record</h2>
+        <p id="composerSubtitle">Write clearly, kindly and in a child-centred way.</p>
+      </div>
 
-          <div class="composer-status-row">
-            <span id="composerAutosaveStatus" class="autosave-status">Autosave off</span>
-            <span id="composerAutosaveTime" class="autosave-time">Not saved yet</span>
+      <div class="fullscreen-panel-header-actions">
+        <button id="closeComposerBtn" class="secondary-btn" type="button">Close</button>
+        <button id="composerSaveDraftBtn" class="secondary-btn" type="button">Save</button>
+        <button id="composerCheckBtn" class="secondary-btn" type="button">Review</button>
+        <button id="composerSubmitBtn" class="primary-btn" type="button">Send</button>
+      </div>
+    </div>
+
+    <div class="composer-layout">
+      <main class="composer-main">
+        <form id="recordComposerForm" class="composer-form">
+          <div id="recordComposerFields" class="composer-fields"></div>
+        </form>
+      </main>
+
+      <aside class="composer-side">
+        <section class="composer-side-card">
+          <h3>Writing guidance</h3>
+          <div id="composerGuidanceText" class="composer-side-body">
+            Keep the young person at the centre. Be clear, respectful, therapeutic and practical.
           </div>
-        </div>
-
-        <div class="composer-header-actions">
-          <button id="closeComposerBtn" class="secondary-btn" type="button">Back</button>
-          <button id="composerSaveDraftBtn" class="secondary-btn" type="button">Save draft</button>
-          <button id="composerCheckBtn" class="secondary-btn" type="button">Run check</button>
-          <button id="composerSubmitBtn" class="primary-btn" type="button">Send for approval</button>
-        </div>
-      </header>
-
-      <div class="composer-layout">
-        <section class="composer-main">
-          <form id="recordComposerForm" class="composer-form">
-            <div id="recordComposerFields" class="composer-fields"></div>
-          </form>
         </section>
 
-        <aside class="composer-side">
-          <section class="composer-side-card">
-            <h3>Writing guidance</h3>
-            <div id="composerGuidanceText" class="composer-side-body">
-              Keep the young person at the centre. Be clear, factual, kind and reflective.
-            </div>
-          </section>
+        <section class="composer-side-card">
+          <h3>Helpful prompts</h3>
+          <div id="composerPrompts" class="composer-prompt-list">
+            <div class="composer-prompt">What may the young person have been communicating?</div>
+            <div class="composer-prompt">What helped them feel safer or calmer?</div>
+            <div class="composer-prompt">What do adults need to do next?</div>
+          </div>
+        </section>
 
-          <section class="composer-side-card">
-            <h3>Practice prompts</h3>
-            <div id="composerPrompts" class="composer-prompt-list">
-              <div class="composer-prompt">What may the young person have been communicating?</div>
-              <div class="composer-prompt">What helped or reduced distress?</div>
-              <div class="composer-prompt">What should adults do next?</div>
-            </div>
-          </section>
-
-          <section class="composer-side-card">
-            <h3>AI review</h3>
-            <div class="composer-ai-actions">
-              <button id="composerGrammarBtn" class="secondary-btn" type="button">Spelling and grammar</button>
-              <button id="composerClarityBtn" class="secondary-btn" type="button">Improve clarity</button>
-              <button id="composerSafeguardingBtn" class="secondary-btn" type="button">Safeguarding review</button>
-              <button id="composerChildVoiceBtn" class="secondary-btn" type="button">Check child voice</button>
-            </div>
-            <div id="composerAiFeedback" class="composer-side-body composer-ai-feedback">
-              No AI review run yet.
-            </div>
-          </section>
-        </aside>
-      </div>
+        <section class="composer-side-card">
+          <h3>AI review</h3>
+          <div class="composer-ai-actions">
+            <button id="composerGrammarBtn" class="secondary-btn" type="button">Spelling and grammar</button>
+            <button id="composerClarityBtn" class="secondary-btn" type="button">Improve clarity</button>
+            <button id="composerSafeguardingBtn" class="secondary-btn" type="button">Safeguarding review</button>
+            <button id="composerChildVoiceBtn" class="secondary-btn" type="button">Check child voice</button>
+          </div>
+          <div id="composerAiFeedback" class="composer-side-body composer-ai-feedback">
+            No AI review run yet.
+          </div>
+        </section>
+      </aside>
     </div>
   </section>
 
+  <!-- ASSISTANT MODAL -->
   <div id="assistantBackdrop" class="assistant-backdrop hidden"></div>
 
   <section id="assistantModal" class="assistant-modal hidden" aria-hidden="true">
     <div class="assistant-header">
       <div>
         <h3>Young person assistant</h3>
-        <p>Expanded assistant workspace for handover, chronology, evidence and drafting.</p>
+        <p>Scoped help for summaries, chronology, drafting, review and leadership oversight.</p>
       </div>
       <button id="closeAssistantBtn" class="secondary-btn icon-btn" type="button" aria-label="Close">✕</button>
     </div>
@@ -394,7 +468,7 @@
         <div id="assistantModalMessages" class="assistant-messages">
           <article class="assistant-message assistant-message-system">
             <div class="assistant-message-role">Assistant</div>
-            <div class="assistant-message-body">Use this space for longer, scoped support.</div>
+            <div class="assistant-message-body">Use this space for longer questions and drafting.</div>
           </article>
         </div>
 
@@ -411,14 +485,14 @@
       </div>
 
       <aside class="assistant-modal-side">
-        <section class="workspace-side-card">
+        <section class="side-card">
           <h3>Scope summary</h3>
           <div id="assistantModalScopeSummary" class="assistant-side-block">
             <p>No scoped context loaded.</p>
           </div>
         </section>
 
-        <section class="workspace-side-card">
+        <section class="side-card">
           <h3>Sources</h3>
           <div id="assistantModalSources" class="assistant-side-block">
             <p>Sources will appear here after a response.</p>
