@@ -2,9 +2,13 @@
 <html lang="en-GB">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
   <title>IndiCare OS • Young People Shell</title>
   <link rel="stylesheet" href="/css/young-people-shell.css" />
+  <link rel="icon" href="/assets/logo.svg" />
 </head>
 <body>
   <div
@@ -15,6 +19,7 @@
     data-home-id=""
     data-workspace="young-people-shell"
   >
+    <!-- TOP BAR -->
     <header class="shell-topbar">
       <div class="shell-topbar-left">
         <button id="logoBtn" class="brand-button" type="button" aria-label="Go to young people home">
@@ -27,15 +32,23 @@
       </div>
 
       <div class="shell-topbar-right">
-        <button id="mobileNavBtn" class="secondary-btn mobile-only" type="button" aria-label="Open navigation">
+        <button
+          id="mobileNavBtn"
+          class="secondary-btn mobile-only"
+          type="button"
+          aria-label="Open navigation"
+        >
           Menu
         </button>
+
         <button id="assistantLauncher" class="secondary-btn" type="button">
           Assistant
         </button>
+
         <button id="refreshBtn" class="secondary-btn" type="button">
           Refresh
         </button>
+
         <button id="homeBtn" class="ghost-btn" type="button">
           Young people home
         </button>
@@ -43,7 +56,7 @@
     </header>
 
     <main class="shell-main">
-      <!-- SELECTOR ONLY SCREEN -->
+      <!-- SELECTOR SCREEN -->
       <section id="selectorScreen" class="selector-screen">
         <div class="selector-screen-inner">
           <div class="selector-page-head">
@@ -51,8 +64,8 @@
               <div class="eyebrow">Young people</div>
               <h1>Select a young person</h1>
               <p>
-                Open one calm, child-centred workspace for recording, reflection, handover,
-                chronology, oversight and AI support.
+                Open one calm, child-centred workspace for daily life, reflection,
+                handover, chronology, wellbeing, oversight and AI support.
               </p>
             </div>
 
@@ -83,9 +96,10 @@
 
       <!-- WORKSPACE SCREEN -->
       <section id="workspaceScreen" class="workspace-screen hidden">
+        <!-- DESKTOP SIDEBAR -->
         <aside class="workspace-sidebar desktop-only">
           <div class="workspace-sidebar-profile">
-            <div class="workspace-sidebar-avatar" id="personAvatar">YP</div>
+            <div id="personAvatar" class="workspace-sidebar-avatar">YP</div>
             <div class="workspace-sidebar-profile-copy">
               <h2 id="personName">Young person</h2>
               <p id="personMeta">Workspace</p>
@@ -97,10 +111,12 @@
           </div>
         </aside>
 
+        <!-- MAIN STAGE -->
         <section class="workspace-stage">
           <div class="workspace-stage-top">
+            <!-- MOBILE PERSON BAR -->
             <div class="workspace-stage-mobile-person mobile-only">
-              <div class="workspace-stage-mobile-avatar" id="mobilePersonAvatar">YP</div>
+              <div id="mobilePersonAvatar" class="workspace-stage-mobile-avatar">YP</div>
               <div class="workspace-stage-mobile-copy">
                 <h2 id="mobilePersonName">Young person</h2>
                 <p id="mobilePersonMeta">Workspace</p>
@@ -110,7 +126,8 @@
               </button>
             </div>
 
-            <div class="workspace-hero">
+            <!-- PAGE HERO -->
+            <section class="workspace-hero">
               <div class="workspace-hero-copy">
                 <div class="eyebrow">Young person workspace</div>
                 <h1 id="pageTitle">Overview</h1>
@@ -120,8 +137,9 @@
               <div id="heroQuickActions" class="workspace-hero-actions">
                 <!-- injected by JS -->
               </div>
-            </div>
+            </section>
 
+            <!-- PROFILE SNAPSHOT -->
             <section class="profile-snapshot">
               <div id="profileSnapshotPhotoWrap" class="profile-snapshot-photo-wrap">
                 <div class="profile-photo-fallback">YP</div>
@@ -145,10 +163,12 @@
               </div>
             </section>
 
+            <!-- STATUS -->
             <section id="statusBar" class="status-bar hidden" role="status" aria-live="polite"></section>
           </div>
 
           <div class="workspace-content-wrap">
+            <!-- MAIN CONTENT -->
             <section class="workspace-content">
               <div id="viewContent">
                 <div class="loading-state">
@@ -160,6 +180,7 @@
               </div>
             </section>
 
+            <!-- RIGHT RAIL -->
             <aside class="workspace-right-rail desktop-wide-only">
               <section class="workspace-side-card workspace-side-card--assistant">
                 <div class="workspace-side-head">
@@ -188,7 +209,9 @@
                 <div id="assistantMessages" class="assistant-messages">
                   <article class="assistant-message assistant-message-system">
                     <div class="assistant-message-role">Assistant</div>
-                    <div class="assistant-message-body">Select a young person to start.</div>
+                    <div class="assistant-message-body">
+                      Select a young person to start.
+                    </div>
                   </article>
                 </div>
 
@@ -251,7 +274,12 @@
           <div class="eyebrow">Navigation</div>
           <h3>Young person workspace</h3>
         </div>
-        <button id="closeMobileNavBtn" class="secondary-btn icon-btn" type="button" aria-label="Close navigation">
+        <button
+          id="closeMobileNavBtn"
+          class="secondary-btn icon-btn"
+          type="button"
+          aria-label="Close navigation"
+        >
           ✕
         </button>
       </div>
@@ -292,7 +320,7 @@
       </div>
     </section>
 
-    <!-- COMPOSER FULLSCREEN -->
+    <!-- COMPOSER -->
     <section id="composerPanel" class="composer-panel hidden" aria-hidden="true">
       <div class="composer-shell">
         <header class="composer-header">
@@ -308,10 +336,18 @@
             <div id="composerAutosaveStatus" class="composer-autosave-status">
               Autosave ready
             </div>
-            <button id="closeComposerBtn" class="secondary-btn" type="button">Close</button>
-            <button id="composerSaveDraftBtn" class="secondary-btn" type="button">Save draft</button>
-            <button id="composerCheckBtn" class="secondary-btn" type="button">Run check</button>
-            <button id="composerSubmitBtn" class="primary-btn" type="button">Send for review</button>
+            <button id="closeComposerBtn" class="secondary-btn" type="button">
+              Close
+            </button>
+            <button id="composerSaveDraftBtn" class="secondary-btn" type="button">
+              Save draft
+            </button>
+            <button id="composerCheckBtn" class="secondary-btn" type="button">
+              Run check
+            </button>
+            <button id="composerSubmitBtn" class="primary-btn" type="button">
+              Send for review
+            </button>
           </div>
         </header>
 
@@ -342,10 +378,18 @@
             <section class="composer-side-card">
               <h3>AI review</h3>
               <div class="composer-ai-actions">
-                <button id="composerGrammarBtn" class="secondary-btn" type="button">Writing check</button>
-                <button id="composerClarityBtn" class="secondary-btn" type="button">Improve clarity</button>
-                <button id="composerSafeguardingBtn" class="secondary-btn" type="button">Safeguarding review</button>
-                <button id="composerChildVoiceBtn" class="secondary-btn" type="button">Young person voice</button>
+                <button id="composerGrammarBtn" class="secondary-btn" type="button">
+                  Writing check
+                </button>
+                <button id="composerClarityBtn" class="secondary-btn" type="button">
+                  Improve clarity
+                </button>
+                <button id="composerSafeguardingBtn" class="secondary-btn" type="button">
+                  Safeguarding review
+                </button>
+                <button id="composerChildVoiceBtn" class="secondary-btn" type="button">
+                  Young person voice
+                </button>
               </div>
               <div id="composerAiFeedback" class="composer-side-body composer-ai-feedback">
                 No AI review run yet.
@@ -356,6 +400,40 @@
       </div>
     </section>
 
+    <!-- LEGACY DRAWER IDS KEPT FOR JS COMPATIBILITY -->
+    <div id="recordDrawerBackdrop" class="drawer-backdrop hidden"></div>
+
+    <aside id="recordDrawer" class="drawer hidden" aria-hidden="true">
+      <div class="drawer-header">
+        <div>
+          <h3 id="recordDrawerTitle">Record details</h3>
+          <p id="recordDrawerSubtitle">Open a record to view details</p>
+        </div>
+        <button
+          id="closeRecordDrawerBtn"
+          class="secondary-btn icon-btn"
+          type="button"
+          aria-label="Close"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div id="recordDrawerActions" class="drawer-actions hidden">
+        <button id="drawerEditBtn" class="secondary-btn" type="button">Edit</button>
+        <button id="drawerSubmitBtn" class="secondary-btn" type="button">Send for review</button>
+        <button id="drawerApproveBtn" class="primary-btn" type="button">Approve</button>
+        <button id="drawerReturnBtn" class="secondary-btn" type="button">Return</button>
+        <button id="drawerArchiveBtn" class="ghost-btn" type="button">Archive</button>
+      </div>
+
+      <div id="recordDrawerBody" class="drawer-body">
+        <div class="empty-state">
+          <p>Select a record to view it here.</p>
+        </div>
+      </div>
+    </aside>
+
     <!-- ASSISTANT MODAL -->
     <div id="assistantBackdrop" class="assistant-backdrop hidden"></div>
 
@@ -365,7 +443,12 @@
           <h3>Young person assistant</h3>
           <p>Expanded space for handover, chronology, drafting, review and reflection.</p>
         </div>
-        <button id="closeAssistantBtn" class="secondary-btn icon-btn" type="button" aria-label="Close assistant">
+        <button
+          id="closeAssistantBtn"
+          class="secondary-btn icon-btn"
+          type="button"
+          aria-label="Close assistant"
+        >
           ✕
         </button>
       </div>
@@ -381,7 +464,9 @@
           <div id="assistantModalMessages" class="assistant-messages">
             <article class="assistant-message assistant-message-system">
               <div class="assistant-message-role">Assistant</div>
-              <div class="assistant-message-body">Use this space for longer, more thoughtful support.</div>
+              <div class="assistant-message-body">
+                Use this space for longer, more thoughtful support.
+              </div>
             </article>
           </div>
 
@@ -417,7 +502,9 @@
       </div>
 
       <div class="assistant-footer">
-        <button id="assistantClearBtn" class="secondary-btn" type="button">Clear chat</button>
+        <button id="assistantClearBtn" class="secondary-btn" type="button">
+          Clear chat
+        </button>
       </div>
     </section>
   </div>
