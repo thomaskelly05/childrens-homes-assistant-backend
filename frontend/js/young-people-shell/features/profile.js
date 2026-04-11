@@ -1,47 +1,148 @@
 import { els } from "../dom.js";
 import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
-import { escapeHtml, formatShortDate, getDisplayName, getProfileImage, initialsFromName } from "../core/utils.js";
-import { renderSection } from "../ui/helpers.js";
-import { mapBundle } from "../core/adapters.js";
+import { escapeHtml, formatDate, buildImageOrInitials } from "../core/utils.js";
+import { renderSection, renderSummaryStat } from "../ui/records.js";
+import {
+  mapYoungPerson,
+  mapIdentityProfile,
+  mapCommunicationProfile,
+  mapEducationProfile,
+  mapHealthProfile,
+  mapLegalStatus,
+  mapFormulation,
+  mapYoungPersonContact,
+} from "../core/adapters.js";
 
-function renderKeyValue(label, value) {
+function renderProfileGrid(items = []) {
+  const visible = items.filter((item) => item.value);
+
+  if (!visible.length) {
+    return `
+      <div class="empty-state">
+        <p>No profile information available yet.</p>
+      </div>
+    `;
+  }
+
   return `
-    <div class="kv-row">
-      <div class="kv-key">${escapeHtml(label)}</div>
-      <div class="kv-value">${escapeHtml(value || "—")}</div>
+    <div class="profile-grid">
+      ${visible
+        .map(
+          (item) => `
+            <div class="profile-card">
+              <div class="profile-card-title">${escapeHtml(item.label)}</div>
+              <div class="profile-card-text">${escapeHtml(item.value)}</div>
+              ${item.subtext ? `<div class="profile-card-subtext">${escapeHtml(item.subtext)}</div>` : ""}
+            </div>
+          `
+        )
+        .join("")}
     </div>
   `;
 }
 
-function renderProfileHeader(bundle) {
-  const yp = bundle.young_person || {};
-  const name = getDisplayName(yp);
-  const image = getProfileImage(yp);
+function renderLongTextBlocks(items = []) {
+  const visible = items.filter((item) => item.value);
+
+  if (!visible.length) {
+    return `
+      <div class="empty-state">
+        <p>No information recorded yet.</p>
+      </div>
+    `;
+  }
 
   return `
-    <section class="profile-header">
-      <div class="profile-header-inner">
-        ${
-          image
-            ? `<img class="profile-avatar" src="${escapeHtml(image)}" />`
-            : `<div class="profile-avatar avatar-fallback">${escapeHtml(initialsFromName(name))}</div>`
-        }
+    <div class="profile-stack">
+      ${visible
+        .map(
+          (item) => `
+            <div class="profile-card">
+              <div class="profile-card-title">${escapeHtml(item.label)}</div>
+              <div class="profile-card-text">${escapeHtml(item.value)}</div>
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
 
-        <div>
-          <h2>${escapeHtml(name)}</h2>
-          <p>
-            ${escapeHtml(
-              [
-                yp.preferred_name ? `Preferred: ${yp.preferred_name}` : null,
-                yp.date_of_birth ? `DOB: ${formatShortDate(yp.date_of_birth)}` : null,
-                yp.placement_status,
-              ].filter(Boolean).join(" • ")
-            )}
-          </p>
-        </div>
+function renderContacts(contacts = []) {
+  if (!contacts.length) {
+    return `
+      <div class="empty-state">
+        <p>No key contacts recorded yet.</p>
       </div>
-    </section>
+    `;
+  }
+
+  return `
+    <div class="profile-stack">
+      ${contacts
+        .map(
+          (contact) => `
+            <div class="profile-card">
+              <div class="profile-card-title">${escapeHtml(contact.full_name || "Contact")}</div>
+              <div class="profile-card-text">
+                ${escapeHtml(
+                  [
+                    contact.relationship_to_young_person,
+                    contact.contact_type,
+                    contact.phone,
+                    contact.email,
+                  ]
+                    .filter(Boolean)
+                    .join(" • ")
+                )}
+              </div>
+              <div class="profile-card-subtext">
+                ${escapeHtml(
+                  [
+                    contact.supervision_level,
+                    contact.is_parental_responsibility_holder ? "Parental responsibility" : "",
+                    contact.is_restricted_contact ? "Restricted contact" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" • ")
+                )}
+              </div>
+              ${
+                contact.notes
+                  ? `<div class="profile-card-text">${escapeHtml(contact.notes)}</div>`
+                  : ""
+              }
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderHero(youngPerson = {}) {
+  return `
+    <div class="person-hero">
+      <div class="person-hero-avatar">
+        ${buildImageOrInitials(youngPerson, "avatar avatar-xl", "avatar avatar-xl avatar-fallback")}
+      </div>
+
+      <div class="person-hero-main">
+        <h2>${escapeHtml(youngPerson.full_name || "Young person")}</h2>
+        <p>
+          ${escapeHtml(
+            [
+              youngPerson.preferred_name ? `Preferred: ${youngPerson.preferred_name}` : "",
+              youngPerson.placement_status,
+              youngPerson.summary_risk_level ? `Risk: ${youngPerson.summary_risk_level}` : "",
+            ]
+              .filter(Boolean)
+              .join(" • ")
+          )}
+        </p>
+      </div>
+    </div>
   `;
 }
 
@@ -58,122 +159,211 @@ export async function loadProfile() {
   `;
 
   try {
-    const data = await apiGet(`/young-people/${state.youngPersonId}`);
-    const bundle = mapBundle(data.bundle || data);
+    const [
+      youngPersonData,
+      identityData,
+      communicationData,
+      educationData,
+      healthData,
+      legalData,
+      formulationData,
+      contactsData,
+    ] = await Promise.all([
+      apiGet(`/young-people/${state.youngPersonId}`).catch(() => ({})),
+      apiGet(`/young-people/${state.youngPersonId}/identity-profile`).catch(() => ({})),
+      apiGet(`/young-people/${state.youngPersonId}/communication-profile`).catch(() => ({})),
+      apiGet(`/young-people/${state.youngPersonId}/education-profile`).catch(() => ({})),
+      apiGet(`/young-people/${state.youngPersonId}/health-profile`).catch(() => ({})),
+      apiGet(`/young-people/${state.youngPersonId}/legal-status`).catch(() => ({})),
+      apiGet(`/young-people/${state.youngPersonId}/formulation`).catch(() => ({})),
+      apiGet(`/young-people/${state.youngPersonId}/contacts`).catch(() => ({ items: [] })),
+    ]);
 
-    const yp = bundle.young_person;
-    const identity = bundle.identity_profile;
-    const comms = bundle.communication_profile;
-    const edu = bundle.education_profile;
-    const health = bundle.health_profile;
-    const legal = bundle.legal_status;
-    const formulation = bundle.formulation;
+    const youngPerson = mapYoungPerson(
+      youngPersonData.young_person || youngPersonData.item || youngPersonData
+    );
+
+    const identity = mapIdentityProfile(
+      identityData.identity_profile ||
+        identityData.young_person_identity_profile ||
+        identityData.item ||
+        identityData
+    );
+
+    const communication = mapCommunicationProfile(
+      communicationData.communication_profile ||
+        communicationData.young_person_communication_profile ||
+        communicationData.item ||
+        communicationData
+    );
+
+    const education = mapEducationProfile(
+      educationData.education_profile ||
+        educationData.young_person_education_profile ||
+        educationData.item ||
+        educationData
+    );
+
+    const health = mapHealthProfile(
+      healthData.health_profile ||
+        healthData.young_person_health_profile ||
+        healthData.item ||
+        healthData
+    );
+
+    const legal = mapLegalStatus(
+      legalData.legal_status ||
+        legalData.young_person_legal_status ||
+        legalData.item ||
+        legalData
+    );
+
+    const formulation = mapFormulation(
+      formulationData.formulation ||
+        formulationData.young_person_formulation ||
+        formulationData.item ||
+        formulationData
+    );
+
+    const contacts = (
+      contactsData.items ||
+      contactsData.records ||
+      contactsData.contacts ||
+      contactsData.young_person_contacts ||
+      []
+    ).map(mapYoungPersonContact);
 
     els.viewContent.innerHTML = `
-      ${renderProfileHeader(bundle)}
+      <section class="summary-strip">
+        ${renderSummaryStat("Contacts", contacts.length)}
+        ${renderSummaryStat("Current legal", legal.is_current ? 1 : 0)}
+        ${renderSummaryStat("Education profile", education.school_name ? 1 : 0)}
+        ${renderSummaryStat("Health profile", health.gp_name || health.allergies || health.diagnoses ? 1 : 0)}
+      </section>
 
       ${renderSection(
-        "Basic information",
-        "",
+        "About this young person",
+        "Identity, placement and headline profile information.",
         `
-          <div class="kv-grid">
-            ${renderKeyValue("First name", yp.first_name)}
-            ${renderKeyValue("Last name", yp.last_name)}
-            ${renderKeyValue("Preferred name", yp.preferred_name)}
-            ${renderKeyValue("Date of birth", formatShortDate(yp.date_of_birth))}
-            ${renderKeyValue("Gender", yp.gender)}
-            ${renderKeyValue("Ethnicity", yp.ethnicity)}
-          </div>
+          ${renderHero(youngPerson)}
+          ${renderProfileGrid([
+            { label: "Date of birth", value: youngPerson.date_of_birth ? formatDate(youngPerson.date_of_birth) : "" },
+            { label: "Gender", value: youngPerson.gender },
+            { label: "Ethnicity", value: youngPerson.ethnicity },
+            { label: "Admission date", value: youngPerson.admission_date ? formatDate(youngPerson.admission_date) : "" },
+            { label: "Discharge date", value: youngPerson.discharge_date ? formatDate(youngPerson.discharge_date) : "" },
+            { label: "Home", value: youngPerson.home_name },
+            { label: "NHS number", value: youngPerson.nhs_number },
+            { label: "Local ID", value: youngPerson.local_id_number },
+          ])}
         `
       )}
 
       ${renderSection(
         "Identity and what matters",
-        "",
-        `
-          <div class="kv-grid">
-            ${renderKeyValue("Religion / faith", identity.religion_or_faith)}
-            ${renderKeyValue("Cultural identity", identity.cultural_identity)}
-            ${renderKeyValue("First language", identity.first_language)}
-            ${renderKeyValue("Dietary needs", identity.dietary_needs)}
-            ${renderKeyValue("Interests", identity.interests)}
-            ${renderKeyValue("Strengths", identity.strengths_summary)}
-            ${renderKeyValue("What matters to me", identity.what_matters_to_me)}
-          </div>
-        `
+        "Culture, language, strengths, interests and what matters to this young person.",
+        renderLongTextBlocks([
+          { label: "Religion or faith", value: identity.religion_or_faith },
+          { label: "Cultural identity", value: identity.cultural_identity },
+          { label: "First language", value: identity.first_language },
+          { label: "Dietary needs", value: identity.dietary_needs },
+          { label: "Interests", value: identity.interests },
+          { label: "Strengths summary", value: identity.strengths_summary },
+          { label: "What matters to me", value: identity.what_matters_to_me },
+          { label: "Important dates", value: identity.important_dates },
+        ])
       )}
 
       ${renderSection(
-        "Communication and support needs",
-        "",
-        `
-          <div class="kv-grid">
-            ${renderKeyValue("Communication style", comms.communication_style)}
-            ${renderKeyValue("Sensory profile", comms.sensory_profile)}
-            ${renderKeyValue("Processing needs", comms.processing_needs)}
-            ${renderKeyValue("Signs of distress", comms.signs_of_distress)}
-            ${renderKeyValue("What helps", comms.what_helps)}
-            ${renderKeyValue("What to avoid", comms.what_to_avoid)}
-          </div>
-        `
+        "Communication and regulation",
+        "How this young person communicates, processes and what helps.",
+        renderLongTextBlocks([
+          { label: "Neurodiversity summary", value: communication.neurodiversity_summary },
+          { label: "Communication style", value: communication.communication_style },
+          { label: "Sensory profile", value: communication.sensory_profile },
+          { label: "Processing needs", value: communication.processing_needs },
+          { label: "Signs of distress", value: communication.signs_of_distress },
+          { label: "What helps", value: communication.what_helps },
+          { label: "What to avoid", value: communication.what_to_avoid },
+          { label: "Routines and predictability", value: communication.routines_and_predictability },
+          { label: "Visual support needs", value: communication.visual_support_needs },
+        ])
       )}
 
       ${renderSection(
-        "Education",
-        "",
-        `
-          <div class="kv-grid">
-            ${renderKeyValue("School", edu.school_name)}
-            ${renderKeyValue("Year group", edu.year_group)}
-            ${renderKeyValue("Status", edu.education_status)}
-            ${renderKeyValue("SEN", edu.sen_status)}
-            ${renderKeyValue("EHCP", edu.ehcp_details)}
-            ${renderKeyValue("Support summary", edu.support_summary)}
-          </div>
-        `
+        "Education profile",
+        "School, support and learning context.",
+        renderProfileGrid([
+          { label: "School", value: education.school_name },
+          { label: "Year group", value: education.year_group },
+          { label: "Education status", value: education.education_status },
+          { label: "SEN status", value: education.sen_status },
+          { label: "Designated teacher", value: education.designated_teacher },
+          { label: "Attendance baseline", value: education.attendance_baseline ? String(education.attendance_baseline) : "" },
+          { label: "PEP status", value: education.pep_status },
+          { label: "EHCP details", value: education.ehcp_details },
+          { label: "Support summary", value: education.support_summary },
+        ])
       )}
 
       ${renderSection(
-        "Health",
-        "",
-        `
-          <div class="kv-grid">
-            ${renderKeyValue("GP", health.gp_name)}
-            ${renderKeyValue("Allergies", health.allergies)}
-            ${renderKeyValue("Diagnoses", health.diagnoses)}
-            ${renderKeyValue("Mental health", health.mental_health_summary)}
-            ${renderKeyValue("Medication", health.medication_summary)}
-          </div>
-        `
+        "Health profile",
+        "Core health contacts and needs staff should know.",
+        renderLongTextBlocks([
+          { label: "GP", value: [health.gp_name, health.gp_contact].filter(Boolean).join(" • ") },
+          { label: "Dentist", value: [health.dentist_name, health.dentist_contact].filter(Boolean).join(" • ") },
+          { label: "Optician", value: [health.optician_name, health.optician_contact].filter(Boolean).join(" • ") },
+          { label: "Allergies", value: health.allergies },
+          { label: "Diagnoses", value: health.diagnoses },
+          { label: "Mental health summary", value: health.mental_health_summary },
+          { label: "Medication summary", value: health.medication_summary },
+          { label: "Consent notes", value: health.consent_notes },
+        ])
       )}
 
       ${renderSection(
         "Legal status",
-        "",
-        `
-          <div class="kv-grid">
-            ${renderKeyValue("Legal status", legal.legal_status)}
-            ${renderKeyValue("Order type", legal.order_type)}
-            ${renderKeyValue("Details", legal.order_details)}
-            ${renderKeyValue("Restrictions", legal.restrictions_text)}
-            ${renderKeyValue("Consent", legal.consent_arrangements)}
-          </div>
-        `
+        "Legal context, restrictions and authority.",
+        renderLongTextBlocks([
+          { label: "Legal status", value: legal.legal_status },
+          { label: "Order type", value: legal.order_type },
+          { label: "Order details", value: legal.order_details },
+          { label: "Delegated authority details", value: legal.delegated_authority_details },
+          { label: "Restrictions", value: legal.restrictions_text },
+          { label: "Consent arrangements", value: legal.consent_arrangements },
+          {
+            label: "Effective dates",
+            value: [legal.effective_from ? formatDate(legal.effective_from) : "", legal.effective_to ? formatDate(legal.effective_to) : ""]
+              .filter(Boolean)
+              .join(" to "),
+          },
+        ])
       )}
 
       ${renderSection(
         "Formulation",
-        "How we understand and respond",
-        `
-          <div class="kv-grid">
-            ${renderKeyValue("Presenting needs", formulation.presenting_needs)}
-            ${renderKeyValue("Triggers", formulation.known_triggers)}
-            ${renderKeyValue("Early signs", formulation.early_signs_of_distress)}
-            ${renderKeyValue("Protective factors", formulation.protective_factors)}
-            ${renderKeyValue("What helps", formulation.what_helps)}
-            ${renderKeyValue("What to avoid", formulation.what_adults_should_avoid)}
-          </div>
-        `
+        "Shared understanding of needs, context and what helps.",
+        renderLongTextBlocks([
+          { label: "Presenting needs", value: formulation.presenting_needs },
+          { label: "Developmental context", value: formulation.developmental_context },
+          { label: "Trauma context", value: formulation.trauma_context },
+          { label: "Neurodevelopmental context", value: formulation.neurodevelopmental_context },
+          { label: "Relational context", value: formulation.relational_context },
+          { label: "Meaning of behaviour", value: formulation.meaning_of_behaviour },
+          { label: "Known triggers", value: formulation.known_triggers },
+          { label: "Early signs of distress", value: formulation.early_signs_of_distress },
+          { label: "Protective factors", value: formulation.protective_factors },
+          { label: "What helps", value: formulation.what_helps },
+          { label: "What adults should avoid", value: formulation.what_adults_should_avoid },
+          { label: "Regulation strategies", value: formulation.regulation_strategies },
+          { label: "Child voice summary", value: formulation.child_voice_summary },
+        ])
+      )}
+
+      ${renderSection(
+        "Important contacts",
+        "Family, professionals and approved contacts linked to this young person.",
+        renderContacts(contacts)
       )}
     `;
   } catch (error) {
