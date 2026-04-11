@@ -1,83 +1,61 @@
 import { els } from "../dom.js";
 import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
-import { escapeHtml, getDisplayName, getProfileImage, initialsFromName } from "../core/utils.js";
+import { escapeHtml } from "../core/utils.js";
 
-function renderProfileCard(yp = {}, bundle = {}) {
-  const communication = bundle.communication_profile || {};
-  const identity = bundle.identity_profile || {};
-  const education = bundle.education_profile || {};
-  const health = bundle.health_profile || {};
-  const legal = bundle.legal_status || {};
-
-  const name = getDisplayName(yp);
-  const image = getProfileImage(yp);
-
+function renderSection(title, subtitle, body) {
   return `
-    <section class="profile-hero-card">
-      <div class="profile-hero-top">
-        <div class="profile-hero-avatar-wrap">
-          ${
-            image
-              ? `<img class="profile-hero-avatar" src="${escapeHtml(image)}" alt="${escapeHtml(name)}" />`
-              : `<div class="profile-hero-avatar avatar-fallback">${escapeHtml(initialsFromName(name))}</div>`
-          }
-        </div>
-
-        <div class="profile-hero-copy">
-          <div class="profile-hero-name">${escapeHtml(name)}</div>
-          <div class="profile-hero-meta">
-            ${escapeHtml(
-              [
-                yp.preferred_name ? `Preferred: ${yp.preferred_name}` : null,
-                yp.date_of_birth ? `DOB: ${yp.date_of_birth}` : null,
-                yp.home_name || null,
-              ]
-                .filter(Boolean)
-                .join(" • ") || "Young person profile"
-            )}
-          </div>
+    <section class="content-section">
+      <div class="content-section-head">
+        <div>
+          <h3>${escapeHtml(title)}</h3>
+          ${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ""}
         </div>
       </div>
-
-      <div class="profile-grid">
-        <button class="profile-card editable-card" type="button" data-open-profile-edit="identity">
-          <div class="profile-card-title">About me</div>
-          <div class="profile-card-text">${escapeHtml(identity.interests || "No interests recorded yet.")}</div>
-          <div class="profile-card-subtext">${escapeHtml(identity.strengths_summary || "No strengths summary recorded yet.")}</div>
-        </button>
-
-        <button class="profile-card editable-card" type="button" data-open-profile-edit="communication">
-          <div class="profile-card-title">How to support me well</div>
-          <div class="profile-card-text">${escapeHtml(communication.what_helps || "No support guidance recorded yet.")}</div>
-          <div class="profile-card-subtext">${escapeHtml(communication.communication_style || "No communication profile recorded yet.")}</div>
-        </button>
-
-        <button class="profile-card editable-card" type="button" data-open-profile-edit="education">
-          <div class="profile-card-title">Learning</div>
-          <div class="profile-card-text">${escapeHtml(education.school_name || "No education setting recorded yet.")}</div>
-          <div class="profile-card-subtext">${escapeHtml(education.support_summary || education.education_status || "No learning support summary recorded yet.")}</div>
-        </button>
-
-        <button class="profile-card editable-card" type="button" data-open-profile-edit="health">
-          <div class="profile-card-title">Health and wellbeing</div>
-          <div class="profile-card-text">${escapeHtml(health.mental_health_summary || health.medication_summary || "No health summary recorded yet.")}</div>
-          <div class="profile-card-subtext">${escapeHtml(health.allergies || "No allergies recorded.")}</div>
-        </button>
-
-        <button class="profile-card editable-card" type="button" data-open-profile-edit="network">
-          <div class="profile-card-title">Important adults</div>
-          <div class="profile-card-text">${escapeHtml(legal.social_worker_name || "No named social worker recorded yet.")}</div>
-          <div class="profile-card-subtext">${escapeHtml(legal.local_authority || legal.legal_status || "No network summary recorded yet.")}</div>
-        </button>
-      </div>
+      ${body}
     </section>
   `;
 }
 
+function renderProfileGrid(profile = {}) {
+  return `
+    <div class="profile-grid">
+      <button class="profile-card editable-card" type="button" data-edit="identity">
+        <div class="profile-card-title">Identity</div>
+        <div class="profile-card-text">${escapeHtml(profile.identity || "Not recorded")}</div>
+      </button>
+
+      <button class="profile-card editable-card" type="button" data-edit="communication">
+        <div class="profile-card-title">Communication</div>
+        <div class="profile-card-text">${escapeHtml(profile.communication || "Not recorded")}</div>
+      </button>
+
+      <button class="profile-card editable-card" type="button" data-edit="health">
+        <div class="profile-card-title">Health</div>
+        <div class="profile-card-text">${escapeHtml(profile.health || "Not recorded")}</div>
+      </button>
+
+      <button class="profile-card editable-card" type="button" data-edit="risk">
+        <div class="profile-card-title">Risk / safety</div>
+        <div class="profile-card-text">${escapeHtml(profile.risk_summary || "Not recorded")}</div>
+      </button>
+
+      <button class="profile-card editable-card" type="button" data-edit="strengths">
+        <div class="profile-card-title">Strengths</div>
+        <div class="profile-card-text">${escapeHtml(profile.strengths || "Not recorded")}</div>
+      </button>
+
+      <button class="profile-card editable-card" type="button" data-edit="needs">
+        <div class="profile-card-title">Needs</div>
+        <div class="profile-card-text">${escapeHtml(profile.needs || "Not recorded")}</div>
+      </button>
+    </div>
+  `;
+}
+
 function bindProfileActions() {
-  els.viewContent?.querySelectorAll("[data-open-profile-edit]").forEach((button) => {
-    button.addEventListener("click", async () => {
+  els.viewContent?.querySelectorAll("[data-edit]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
       const mod = await import("../ui/composer.js");
       mod.openComposerFor("support_plan", "create");
     });
@@ -96,10 +74,16 @@ export async function loadProfile() {
     </div>
   `;
 
-  const data = await apiGet(`/young-people/${state.youngPersonId}`);
-  const bundle = data.bundle || {};
-  const yp = bundle.young_person || data.young_person || state.youngPerson || {};
+  const data = await apiGet(`/young-people/${state.youngPersonId}/profile`).catch(() => ({}));
+  const profile = data.profile || data.young_person || {};
 
-  els.viewContent.innerHTML = renderProfileCard(yp, bundle);
+  els.viewContent.innerHTML = `
+    ${renderSection(
+      "Profile",
+      "A clear, child-centred understanding of who this young person is.",
+      renderProfileGrid(profile)
+    )}
+  `;
+
   bindProfileActions();
 }
