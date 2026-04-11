@@ -3,7 +3,15 @@ import { els } from "../dom.js";
 import { apiGet, apiSend } from "../core/api.js";
 import { escapeHtml, formatDate } from "../core/utils.js";
 
-export { renderRowList, renderRecordsTable, renderBadges, statusBadgeClass } from "./helpers.js";
+export {
+  renderRowList,
+  renderRecordsTable,
+  renderBadges,
+  statusBadgeClass,
+  renderSection,
+  renderSummaryStat,
+  renderEmptyState,
+} from "./helpers.js";
 
 const RECORD_CONFIG = {
   daily_note: {
@@ -51,6 +59,7 @@ export function normaliseRecordType(item = {}) {
 export function getRecordUrl(item = {}) {
   const type = normaliseRecordType(item);
   const id = item.record_id || item.source_id || item.id;
+
   if (!id) return null;
 
   const map = {
