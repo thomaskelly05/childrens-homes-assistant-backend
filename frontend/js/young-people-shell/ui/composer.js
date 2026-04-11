@@ -6,6 +6,8 @@ escapeHtml,
 toDateInputValue,
 toDateTimeLocalValue,
 } from "../core/utils.js";
+import * as rulesClient from "../core/rules-client.js";
+import * as suggestionsUi from "./suggestions.js";
 
 const COMPOSER_CONFIG = {
 daily_note: {
@@ -1029,14 +1031,16 @@ state.composerRecordId || "new",
 function serialiseValue(key, value) {
 if (value === "") return null;
 
-if ([
+if (
+[
 "reminder_minutes_before",
 "attendance_baseline",
 "incident_id",
 "linked_risk_assessment_id",
 "linked_plan_id",
 "linked_target_id",
-].includes(key)) {
+].includes(key)
+) {
 return Number(value);
 }
 
@@ -1129,6 +1133,75 @@ field.addEventListener("change", saveDraftToLocal);
 });
 }
 
+function unwrapSavedRecord(recordType, response) {
+if (!response) return null;
+
+const unwrapped = unwrapCreateResponse(recordType, response);
+if (unwrapped && typeof unwrapped === "object") return unwrapped;
+
+if (response.data && typeof response.data === "object") return response.data;
+if (response.record && typeof response.record === "object") return response.record;
+if (response.item && typeof response.item === "object") return response.item;
+
+return response;
+}
+
+function buildSuggestionMetadata(recordType, savedRecord) {
+const recordId =
+savedRecord?.id ||
+savedRecord?.record_id ||
+savedRecord?.source_id ||
+state.composerRecordId ||
+null;
+
+return {
+record_type: recordType,
+id: recordId,
+source_record_type: recordType,
+source_record_id: recordId,
+young_person_id: savedRecord?.young_person_id || state.youngPersonId || null,
+};
+}
+
+async function runSuggestionEngineAfterSave(recordType, savedRecord) {
+if (!recordType || !savedRecord) return [];
+
+const metadata = buildSuggestionMetadata(recordType, savedRecord);
+
+const rawSuggestions = rulesClient.evaluateRecordSuggestions({
+...savedRecord,
+record_type: recordType,
+id: metadata.id,
+source_id: metadata.id,
+});
+
+const suggestions = rulesClient.mergeSuggestionLists(rawSuggestions);
+
+state.currentSuggestions = suggestions;
+state.currentSuggestionSource = metadata;
+state.lastSavedRecord = savedRecord;
+
+if (els.composerAiFeedback) {
+if (suggestions.length) {
+els.composerAiFeedback.textContent = `${suggestions.length} linked suggestion${suggestions.length === 1 ? "" : "s"} ready.`;
+} else {
+els.composerAiFeedback.textContent = "Saved. No AI suggestions triggered.";
+}
+}
+
+if (!suggestions.length) {
+suggestionsUi.hideSuggestionsPanel();
+return suggestions;
+}
+
+suggestionsUi.showSuggestionsPanel(suggestions, {
+source_record_type: metadata.source_record_type,
+source_record_id: metadata.source_record_id,
+});
+
+return suggestions;
+}
+
 export function openComposerFor(recordType, mode = "create", item = null) {
 state.composerMode = mode;
 state.composerRecordType = recordType;
@@ -1207,6 +1280,7 @@ throw new Error(`No composer configuration for ${recordType}`);
 
 const payload = serializeComposerForm();
 let response;
+let savedRecord;
 
 if (state.composerMode === "edit" && state.composerRecordId && config.updateUrl) {
 response = await apiSend(
@@ -1214,6 +1288,13 @@ config.updateUrl(state.composerRecordId),
 config.updateMethod || "PATCH",
 payload
 );
+
+savedRecord = unwrapSavedRecord(recordType, response);
+state.composerRecordId =
+savedRecord?.id ||
+savedRecord?.record_id ||
+savedRecord?.source_id ||
+state.composerRecordId;
 } else {
 response = await apiSend(
 config.createUrl(state.youngPersonId),
@@ -1221,13 +1302,33 @@ config.createUrl(state.youngPersonId),
 payload
 );
 
-const created = unwrapCreateResponse(recordType, response) || response;
-state.composerRecordId = created?.id || state.composerRecordId;
+savedRecord = unwrapSavedRecord(recordType, response);
+state.composerRecordId =
+savedRecord?.id ||
+savedRecord?.record_id ||
+savedRecord?.source_id ||
+state.composerRecordId;
+
 state.composerMode = "edit";
 }
 
 if (mode === "submit" && config.submitUrl && state.composerRecordId) {
 await apiSend(config.submitUrl(state.composerRecordId), "POST", {});
+}
+
+try {
+await runSuggestionEngineAfterSave(recordType, {
+...(savedRecord || {}),
+young_person_id:
+savedRecord?.young_person_id ||
+payload.young_person_id ||
+state.youngPersonId,
+});
+} catch (error) {
+console.error("[composer] suggestion trigger failed", error);
+if (els.composerAiFeedback) {
+els.composerAiFeedback.textContent = "Saved, but AI suggestions could not be loaded.";
+}
 }
 
 clearDraftFromLocal();
@@ -1236,3 +1337,4 @@ closeComposer(true);
 
 return response;
 }
+
