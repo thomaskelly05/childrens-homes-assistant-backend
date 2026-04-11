@@ -1,5 +1,4 @@
-from fastapi import APIRouter, Depends, Request, HTTPException
-from psycopg2.extras import RealDictCursor
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from db.connection import get_db
 from db.passkeys_db import user_has_passkeys
@@ -16,14 +15,12 @@ def _get_user_id_from_session(request: Request) -> int:
 
 @router.get("/status")
 def passkey_status(request: Request, conn=Depends(get_db)):
-    """
-    Called after MFA login to decide if we should show passkey modal
-    """
     user_id = _get_user_id_from_session(request)
 
     has_keys = user_has_passkeys(user_id)
 
     return {
+        "ok": True,
         "has_passkeys": has_keys,
         "should_prompt_register": not has_keys,
     }
@@ -31,9 +28,6 @@ def passkey_status(request: Request, conn=Depends(get_db)):
 
 @router.post("/register/start")
 def start_passkey_registration(request: Request):
-    """
-    Placeholder – you’ll plug WebAuthn here later
-    """
     user_id = _get_user_id_from_session(request)
 
     return {
@@ -45,9 +39,6 @@ def start_passkey_registration(request: Request):
 
 @router.post("/register/finish")
 def finish_passkey_registration(request: Request):
-    """
-    Placeholder – store credential here later
-    """
     user_id = _get_user_id_from_session(request)
 
     return {
