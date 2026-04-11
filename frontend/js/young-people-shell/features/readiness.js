@@ -1,85 +1,130 @@
 import { els } from "../dom.js";
 import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
-import { escapeHtml } from "../core/utils.js";
-import { renderRowList, renderSection, renderSummaryStat } from "../ui/records.js";
+import { escapeHtml, formatDate } from "../core/utils.js";
+import { renderSection, renderRowList, renderSummaryStat } from "../ui/records.js";
 import {
-  mapReadinessPayload,
   mapComplianceItem,
   mapTask,
   mapStatutoryDocument,
 } from "../core/adapters.js";
 
-function buildDocumentRows(items = []) {
-  return items.map((item) => ({
-    ...item,
-    record_type: item.record_type || "statutory_document",
-    title: item.title || item.document_type || "Document",
-    summary:
-      item.description ||
-      item.compliance_category ||
-      item.file_name ||
-      "Statutory document",
-    status: item.status || "",
-    review_date: item.review_date || null,
-    expiry_date: item.expiry_date || null,
-  }));
+function sortSoonestFirst(items = [], keys = []) {
+  return [...items].sort((a, b) => {
+    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
+    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
+    return new Date(aValue).getTime() - new Date(bValue).getTime();
+  });
 }
 
-function buildPendingApprovalRows(items = []) {
+function sortNewestFirst(items = [], keys = []) {
+  return [...items].sort((a, b) => {
+    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
+    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
+    return new Date(bValue).getTime() - new Date(aValue).getTime();
+  });
+}
+
+function buildComplianceRows(items = []) {
   return items.map((item) => ({
-    id: item.id ?? item.source_id ?? null,
-    source_id: item.source_id ?? item.id ?? null,
-    source_table: item.source_table || "",
-    record_type: item.record_type || item.source_table || "approval",
-    title: item.title || item.label || "Awaiting review",
-    summary:
-      item.summary ||
-      item.note ||
-      item.description ||
-      "This record is awaiting review or sign-off.",
-    workflow_status: item.workflow_status || item.status || "submitted",
-    created_at: item.created_at || item.requested_at || null,
-    updated_at: item.updated_at || null,
+    id: item.id,
+    record_type: "compliance_item",
+    title: item.title || "Compliance item",
+    summary: [
+      item.status || "",
+      item.severity || "",
+      item.due_date ? `Due ${formatDate(item.due_date)}` : "",
+    ]
+      .filter(Boolean)
+      .join(" • "),
+    due_date: item.due_date || null,
+    created_at: item.created_at || null,
+    status: item.status || "",
     severity: item.severity || "",
   }));
 }
 
-function groupReadiness(payload) {
-  const compliance = payload.compliance_items || [];
-  const documents = buildDocumentRows(payload.statutory_documents || []);
-  const tasks = (payload.tasks || []).map((item) =>
-    item.record_type ? item : mapTask(item)
-  );
+function buildTaskRows(items = []) {
+  return items.map((item) => ({
+    id: item.id,
+    record_type: "task",
+    title: item.title || item.task || "Task",
+    summary: [
+      item.task_type || "",
+      item.assigned_role || "",
+      item.due_date ? `Due ${formatDate(item.due_date)}` : "",
+    ]
+      .filter(Boolean)
+      .join(" • "),
+    due_date: item.due_date || null,
+    created_at: item.created_at || null,
+    status: item.completed ? "Completed" : "Open",
+  }));
+}
 
-  const overdue = compliance.filter((item) => String(item.status).toLowerCase() === "overdue");
-  const dueSoon = compliance.filter((item) => String(item.status).toLowerCase() === "due_soon");
-  const escalated = compliance.filter(
-    (item) =>
-      String(item.status).toLowerCase() === "escalated" ||
-      Number(item.escalation_level || 0) > 0
-  );
-  const pending = compliance.filter((item) => {
-    const status = String(item.status).toLowerCase();
-    return status === "pending" || status === "submitted";
-  });
+function buildDocumentRows(items = []) {
+  return items.map((item) => ({
+    id: item.id,
+    record_type: "statutory_document",
+    title: item.title || item.document_type || "Document",
+    summary: [
+      item.document_type || "",
+      item.status || "",
+      item.review_date ? `Review ${formatDate(item.review_date)}` : "",
+      item.expiry_date ? `Expiry ${formatDate(item.expiry_date)}` : "",
+    ]
+      .filter(Boolean)
+      .join(" • "),
+    review_date: item.review_date || null,
+    expiry_date: item.expiry_date || null,
+    created_at: item.created_at || null,
+    status: item.status || "",
+  }));
+}
 
-  const documentConcerns = documents.filter((item) => {
+function buildReadinessOverview({ compliance = [], tasks = [], documents = [] }) {
+  const overdue = compliance.filter((item) =>
+    ["overdue", "escalated"].includes(String(item.status || "").toLowerCase())
+  ).length;
+
+  const dueSoon = compliance.filter((item) =>
+    ["due_soon", "due soon"].includes(String(item.status || "").toLowerCase())
+  ).length;
+
+  const openTasks = tasks.filter((item) => !item.completed).length;
+
+  const reviewDueDocs = documents.filter((item) => {
     const status = String(item.status || "").toLowerCase();
-    return ["expired", "due", "overdue", "review_due"].includes(status) || item.expiry_date || item.review_date;
-  });
+    return ["review_due", "expiring", "expired"].includes(status);
+  }).length;
 
-  const openTasks = tasks.filter((item) => !item.completed);
+  return `
+    <div class="profile-grid">
+      <div class="profile-card">
+        <div class="profile-card-title">Overdue</div>
+        <div class="profile-card-text">${escapeHtml(String(overdue))}</div>
+        <div class="profile-card-subtext">Items needing urgent action</div>
+      </div>
 
-  return {
-    overdue,
-    dueSoon,
-    escalated,
-    pending,
-    documents,
-    documentConcerns,
-    openTasks,
-  };
+      <div class="profile-card">
+        <div class="profile-card-title">Due soon</div>
+        <div class="profile-card-text">${escapeHtml(String(dueSoon))}</div>
+        <div class="profile-card-subtext">Items approaching deadline</div>
+      </div>
+
+      <div class="profile-card">
+        <div class="profile-card-title">Open tasks</div>
+        <div class="profile-card-text">${escapeHtml(String(openTasks))}</div>
+        <div class="profile-card-subtext">Follow-up actions still outstanding</div>
+      </div>
+
+      <div class="profile-card">
+        <div class="profile-card-title">Documents needing review</div>
+        <div class="profile-card-text">${escapeHtml(String(reviewDueDocs))}</div>
+        <div class="profile-card-subtext">Documents affecting readiness</div>
+      </div>
+    </div>
+  `;
 }
 
 export async function loadReadiness() {
@@ -95,90 +140,99 @@ export async function loadReadiness() {
   `;
 
   try {
-    const [readinessData, complianceData, tasksData, docsData, approvalsData] = await Promise.all([
-      apiGet(`/young-people/${state.youngPersonId}/readiness`).catch(() => ({})),
+    const [complianceData, tasksData, documentsData] = await Promise.all([
       apiGet(`/young-people/${state.youngPersonId}/compliance`).catch(() => ({ items: [] })),
       apiGet(`/young-people/${state.youngPersonId}/tasks`).catch(() => ({ items: [] })),
       apiGet(`/young-people/${state.youngPersonId}/documents`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/approvals`).catch(() => ({ items: [] })),
     ]);
 
-    const payload = mapReadinessPayload({
-      ...readinessData,
-      compliance_items:
-        readinessData.compliance_items ||
-        readinessData.items ||
-        complianceData.compliance_items ||
+    const complianceItems = sortSoonestFirst(
+      (
         complianceData.items ||
-        [],
-      tasks:
-        readinessData.tasks ||
-        tasksData.tasks ||
-        tasksData.items ||
-        [],
-      statutory_documents:
-        readinessData.statutory_documents ||
-        docsData.statutory_documents ||
-        docsData.items ||
-        [],
-    });
-
-    const approvals = buildPendingApprovalRows(
-      approvalsData.items || approvalsData.approvals || []
+        complianceData.records ||
+        complianceData.compliance_items ||
+        []
+      ).map(mapComplianceItem),
+      ["due_date", "created_at"]
     );
 
-    const {
-      overdue,
-      dueSoon,
-      escalated,
-      pending,
-      documents,
-      documentConcerns,
-      openTasks,
-    } = groupReadiness(payload);
+    const tasks = sortSoonestFirst(
+      (
+        tasksData.items ||
+        tasksData.records ||
+        tasksData.tasks ||
+        []
+      ).map(mapTask),
+      ["due_date", "created_at"]
+    );
+
+    const documents = sortNewestFirst(
+      (
+        documentsData.items ||
+        documentsData.records ||
+        documentsData.documents ||
+        documentsData.statutory_documents ||
+        []
+      ).map(mapStatutoryDocument),
+      ["review_date", "expiry_date", "created_at"]
+    );
+
+    const overdueItems = complianceItems.filter((item) =>
+      ["overdue", "escalated"].includes(String(item.status || "").toLowerCase())
+    );
+
+    const dueSoonItems = complianceItems.filter((item) =>
+      ["due_soon", "due soon"].includes(String(item.status || "").toLowerCase())
+    );
+
+    const openTasks = tasks.filter((item) => !item.completed);
 
     els.viewContent.innerHTML = `
       <section class="summary-strip">
-        ${renderSummaryStat("Overdue", overdue.length || payload.overdue_count || 0)}
-        ${renderSummaryStat("Due soon", dueSoon.length || payload.due_soon_count || 0)}
-        ${renderSummaryStat("Escalated", escalated.length || payload.escalation_count || 0)}
-        ${renderSummaryStat("Pending review", approvals.length || payload.approvals_pending || 0)}
+        ${renderSummaryStat("Compliance items", complianceItems.length)}
+        ${renderSummaryStat("Overdue", overdueItems.length)}
+        ${renderSummaryStat("Open tasks", openTasks.length)}
+        ${renderSummaryStat("Documents", documents.length)}
       </section>
 
       ${renderSection(
-        "Overdue now",
-        "Items that need attention immediately.",
-        renderRowList(overdue, "No overdue items found.")
+        "Readiness overview",
+        "A live view of compliance, actions and document readiness.",
+        buildReadinessOverview({
+          compliance: complianceItems,
+          tasks,
+          documents,
+        })
+      )}
+
+      ${renderSection(
+        "Overdue and escalated items",
+        "Items that need immediate attention.",
+        renderRowList(buildComplianceRows(overdueItems), "No overdue or escalated items found.")
       )}
 
       ${renderSection(
         "Due soon",
-        "Upcoming checks, reviews and actions that need planning.",
-        renderRowList(dueSoon, "No due soon items found.")
+        "Upcoming compliance items that need action soon.",
+        renderRowList(buildComplianceRows(dueSoonItems), "No due soon items found.")
       )}
 
       ${renderSection(
-        "Escalated concerns",
-        "Compliance or review items that have already escalated.",
-        renderRowList(escalated, "No escalated items found.")
+        "Open follow-up tasks",
+        "Tasks linked to care, compliance or review actions.",
+        renderRowList(buildTaskRows(openTasks), "No open tasks found.")
       )}
 
       ${renderSection(
-        "Awaiting review or sign-off",
-        "Records and items waiting for approval or manager action.",
-        renderRowList(approvals.length ? approvals : pending, "Nothing is currently awaiting sign-off.")
+        "Statutory and linked documents",
+        "Documents that may affect review, expiry or inspection readiness.",
+        renderRowList(buildDocumentRows(documents), "No documents found.")
       )}
 
       ${renderSection(
-        "Open tasks",
-        "Actions generated from practice, follow-up and compliance.",
-        renderRowList(openTasks, "No open tasks found.")
-      )}
-
-      ${renderSection(
-        "Document readiness",
-        "Statutory and supporting documents linked to this young person.",
-        renderRowList(documentConcerns.length ? documentConcerns : documents, "No document readiness issues found.")
+        "All compliance items",
+        "Full compliance list in due-date order.",
+        renderRowList(buildComplianceRows(complianceItems), "No compliance items found.")
       )}
     `;
   } catch (error) {
