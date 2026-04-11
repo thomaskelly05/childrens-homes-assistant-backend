@@ -65,8 +65,6 @@ export const VIEW_CONFIG = {
   },
 };
 
-export const DEFAULT_VIEW = "overview";
-
 export const RECORD_CONFIG = {
   daily_note: {
     label: "Daily note",
@@ -158,78 +156,3 @@ export const MOBILE_TABS = [
   { key: "plans", label: "Plans", icon: "🧩" },
   { key: "assistant", label: "AI", icon: "✨" },
 ];
-
-export const ASSISTANT_PROMPTS_BY_VIEW = {
-  overview: [
-    "Give me a short handover for this young person.",
-    "What matters most right now?",
-  ],
-  profile: [
-    "Summarise who this young person is and what helps most.",
-    "Pull out strengths, needs and important themes.",
-  ],
-  daily_notes: [
-    "Summarise the most recent daily notes.",
-    "What themes are showing in day-to-day care?",
-  ],
-  incidents: [
-    "Summarise the recent incidents.",
-    "What patterns are showing in significant events?",
-  ],
-  plans: [
-    "Summarise current support plans.",
-    "What should adults understand and do consistently?",
-  ],
-  health: [
-    "Summarise health and wellbeing updates.",
-    "What follow-up is needed around health?",
-  ],
-  education: [
-    "Summarise education progress and current needs.",
-    "What matters most in learning right now?",
-  ],
-  family: [
-    "Summarise important family and relationship updates.",
-    "What should adults hold in mind around family time?",
-  ],
-  appointments: [
-    "Summarise upcoming appointments and support needed.",
-    "What preparation is needed before the next appointment?",
-  ],
-  keywork: [
-    "Summarise recent keywork themes.",
-    "What is the young person telling us through direct work?",
-  ],
-  timeline: [
-    "Give me a clear chronology summary.",
-    "What are the most important events over time?",
-  ],
-  handover: [
-    "Give me a short handover for this young person.",
-    "What does the next shift most need to know?",
-  ],
-  reports: [
-    "Summarise the main report themes.",
-    "What should a manager notice first?",
-  ],
-  compliance: [
-    "What checks or actions need attention?",
-    "Summarise readiness and due items.",
-  ],
-  calendar: [
-    "Summarise upcoming key dates and appointments.",
-    "What needs preparing for this week?",
-  ],
-  manager: [
-    "What needs manager review right now?",
-    "What is overdue or waiting for sign-off?",
-  },
-};
-
-export function getViewConfig(view) {
-  return VIEW_CONFIG[view] || VIEW_CONFIG[DEFAULT_VIEW];
-}
-
-export function getAssistantPromptsForView(view) {
-  return ASSISTANT_PROMPTS_BY_VIEW[view] || ASSISTANT_PROMPTS_BY_VIEW[DEFAULT_VIEW] || [];
-}
