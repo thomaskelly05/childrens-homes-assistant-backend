@@ -17,6 +17,7 @@ import {
   renderDesktopNav,
   renderMobileNav,
   updateActiveNav,
+  bindGlobalEvents as bindNavEvents,
 } from "./ui/nav.js";
 
 // ========================
@@ -27,6 +28,8 @@ async function init() {
   state.youngPersonId = getYoungPersonIdFromUrl();
 
   bindGlobalEvents();
+  bindNavEvents();
+
   bindRecordDrawerEvents({
     onWorkflowComplete: refreshView,
   });
@@ -52,9 +55,6 @@ function bindGlobalEvents() {
     const target = e.target.closest("button, a");
     if (!target) return;
 
-    // ========================
-    // OPEN RECORD (drawer)
-    // ========================
     if (target.dataset.openRecord) {
       try {
         const item = JSON.parse(target.dataset.openRecord);
@@ -65,9 +65,6 @@ function bindGlobalEvents() {
       return;
     }
 
-    // ========================
-    // ROUTER ACTIONS
-    // ========================
     if (target.dataset.actionRouter) {
       const action = target.dataset.actionRouter;
 
@@ -82,9 +79,6 @@ function bindGlobalEvents() {
       }
     }
 
-    // ========================
-    // SELECT YOUNG PERSON
-    // ========================
     if (target.dataset.youngPersonId) {
       const id = Number(target.dataset.youngPersonId);
       if (!id) return;
@@ -98,9 +92,6 @@ function bindGlobalEvents() {
     }
   });
 
-  // ========================
-  // SEARCH FILTER
-  // ========================
   els.selectorSearchInput?.addEventListener("input", (e) => {
     filterSelectorList(e.target.value);
   });
