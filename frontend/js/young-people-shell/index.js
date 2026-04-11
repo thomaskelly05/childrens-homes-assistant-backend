@@ -13,7 +13,11 @@ import {
   filterSelectorList,
 } from "./ui/selector.js";
 
-import { initNav } from "./ui/nav.js";
+import {
+  renderDesktopNav,
+  renderMobileNav,
+  updateActiveNav,
+} from "./ui/nav.js";
 
 // ========================
 // INIT
@@ -27,7 +31,9 @@ async function init() {
     onWorkflowComplete: refreshView,
   });
 
-  initNav();
+  renderDesktopNav();
+  renderMobileNav();
+  updateActiveNav();
 
   if (state.youngPersonId) {
     await openYoungPerson(state.youngPersonId);
@@ -72,7 +78,6 @@ function bindGlobalEvents() {
 
       if (action.startsWith("edit-")) {
         console.log("Edit action:", action);
-        // hook your edit forms here later
         return;
       }
     }
