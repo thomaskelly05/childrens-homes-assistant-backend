@@ -1,5 +1,5 @@
-import { state } from "../state.js";
 import { els } from "../dom.js";
+import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
 import { renderRowList } from "../ui/records.js";
@@ -18,35 +18,26 @@ function renderSection(title, subtitle, body) {
   `;
 }
 
-function bindDynamicOpenRecordButtons() {
+export async function loadTimeline() {
   if (!els.viewContent) return;
 
-  els.viewContent.querySelectorAll("[data-open-record]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      try {
-        const item = JSON.parse(btn.dataset.openRecord);
-        const mod = await import("../ui/records.js");
-        mod.openRecordDetail(item);
-      } catch {
-        // ignore
-      }
-    });
-  });
-}
+  els.viewContent.innerHTML = `
+    <div class="loading-state">
+      <div>
+        <div class="spinner"></div>
+        <p>Loading timeline...</p>
+      </div>
+    </div>
+  `;
 
-export async function loadTimeline() {
   const data = await apiGet(`/young-people/${state.youngPersonId}/timeline?limit=100`);
   const items = data.timeline || [];
-
-  if (!els.viewContent) return;
 
   els.viewContent.innerHTML = `
     ${renderSection(
       "Timeline",
-      "A clear chronological view of important moments, updates, records and follow-up.",
+      "A clear chronology of what has happened over time.",
       renderRowList(items, "No timeline items found.")
     )}
   `;
-
-  bindDynamicOpenRecordButtons();
 }
