@@ -34,15 +34,18 @@ PUBLIC_EXACT_PATHS = {
 MFA_ALLOWED_PATH_PREFIXES = (
     "/auth/login",
     "/auth/logout",
-    "/auth/check",
-    "/auth/me",
-    "/auth/legal-acceptance",
     "/auth/mfa",
 )
 
 SESSION_USER_ID_KEY = "user_id"
 SESSION_USER_EMAIL_KEY = "user_email"
 SESSION_MFA_VERIFIED_KEY = "mfa_verified"
+
+PREAUTH_USER_ID_KEY = "preauth_user_id"
+PREAUTH_EMAIL_KEY = "preauth_email"
+PREAUTH_STARTED_AT_KEY = "preauth_started_at"
+PREAUTH_REMEMBER_KEY = "preauth_remember"
+PREAUTH_PENDING_KEY = "preauth_pending"
 
 
 def path_is_public(path: str) -> bool:
@@ -105,6 +108,40 @@ def wants_html(request: Request) -> bool:
     return "text/html" in accept
 
 
+def is_preauth_pending(request: Request) -> bool:
+    try:
+        return request.session.get(PREAUTH_PENDING_KEY) is True
+    except Exception:
+        return False
+
+
+def get_preauth_user_id(request: Request) -> int | None:
+    try:
+        value = request.session.get(PREAUTH_USER_ID_KEY)
+        return int(value) if value is not None else None
+    except Exception:
+        return None
+
+
+def get_preauth_email(request: Request) -> str | None:
+    try:
+        value = request.session.get(PREAUTH_EMAIL_KEY)
+        return str(value) if value else None
+    except Exception:
+        return None
+
+
+def clear_preauth_session(request: Request) -> None:
+    try:
+        request.session.pop(PREAUTH_USER_ID_KEY, None)
+        request.session.pop(PREAUTH_EMAIL_KEY, None)
+        request.session.pop(PREAUTH_STARTED_AT_KEY, None)
+        request.session.pop(PREAUTH_REMEMBER_KEY, None)
+        request.session.pop(PREAUTH_PENDING_KEY, None)
+    except Exception:
+        pass
+
+
 async def enforce_mfa_middleware(request: Request, call_next=None):
     path = request.url.path
 
@@ -113,7 +150,6 @@ async def enforce_mfa_middleware(request: Request, call_next=None):
 
     user_id = get_session_user_id(request)
 
-    # Not logged in yet; let auth/login middleware handle that.
     if not user_id:
         return None
 
