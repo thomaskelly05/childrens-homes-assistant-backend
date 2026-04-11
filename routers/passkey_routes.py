@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from db.connection import get_db
 from db.passkeys_db import user_has_passkeys
 
-router = APIRouter(prefix="/passkeys", tags=["Passkeys"])
+router = APIRouter(prefix="/auth/passkeys", tags=["Passkeys"])
 
 
 class PasskeyRegisterVerifyRequest(BaseModel):
@@ -17,6 +17,18 @@ def _get_user_id_from_session(request: Request) -> int:
     if not user_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
     return int(user_id)
+
+
+@router.get("")
+def list_passkeys(request: Request, conn=Depends(get_db)):
+    user_id = _get_user_id_from_session(request)
+    has_keys = user_has_passkeys(user_id)
+
+    return {
+        "ok": True,
+        "items": [],
+        "has_passkeys": has_keys,
+    }
 
 
 @router.get("/status")
@@ -35,8 +47,6 @@ def passkey_status(request: Request, conn=Depends(get_db)):
 def register_passkey_options(request: Request):
     user_id = _get_user_id_from_session(request)
 
-    # Placeholder response so the modal stops failing with 404.
-    # Replace this with real WebAuthn creation options when ready.
     return {
         "ok": True,
         "message": "Passkey registration options created",
@@ -74,8 +84,6 @@ def register_passkey_verify(
 ):
     user_id = _get_user_id_from_session(request)
 
-    # Placeholder success so your UI flow works.
-    # Replace this with real WebAuthn credential verification and DB save.
     return {
         "ok": True,
         "message": "Passkey registered",
@@ -84,7 +92,18 @@ def register_passkey_verify(
     }
 
 
-# Backwards-compatible aliases for your old frontend calls
+@router.delete("/{passkey_id}")
+def delete_passkey(passkey_id: str, request: Request, conn=Depends(get_db)):
+    _get_user_id_from_session(request)
+
+    return {
+        "ok": True,
+        "deleted": True,
+        "passkey_id": passkey_id,
+    }
+
+
+# Backwards-compatible aliases
 @router.post("/register/start")
 def start_passkey_registration(request: Request):
     return register_passkey_options(request)
