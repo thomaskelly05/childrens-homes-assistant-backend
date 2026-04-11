@@ -1,28 +1,29 @@
-// CORE
-import { state, resetAssistantState, resetComposerState, setYoungPersonId, setYoungPerson, setCurrentView } from "./state.js";
+import { state, setYoungPersonId, setYoungPerson, setCurrentView } from "./state.js";
 import { els } from "./dom.js";
-import { apiGet } from "../core/api.js";
 
-// UI
+import { apiGet } from "./core/api.js";
+
+import { renderHeaderYoungPerson } from "./ui/header.js";
+import { renderDesktopNav, renderMobileNav, renderMobileBottomBar } from "./ui/nav.js";
+import { renderSelectorList } from "./ui/selector.js";
 import {
   showError,
   showMessage,
   clearStatus,
   showSelectorScreen,
   showWorkspaceScreen,
-  renderDesktopNav,
-  renderMobileNav,
-  renderMobileBottomBar,
-  renderYoungPersonHeader,
-  renderSelectorList,
+  renderPageHeader,
+  renderHeroActions,
+} from "./app.js";
+import {
   renderAssistantMessages,
   renderAssistantInsights,
   renderAssistantContext,
-  renderPageHeader,
-  renderHeroActions,
-} from "./ui/ui.js";
+} from "./ui/assistant-ui.js";
+import { askAssistant } from "./ui/assistant.js";
+import { openComposerFor } from "./ui/composer.js";
+import { openRecordDetail } from "./ui/records.js";
 
-// FEATURES (views)
 import { loadOverview } from "./features/overview.js";
 import { loadProfile } from "./features/profile.js";
 import { loadTimeline } from "./features/timeline.js";
@@ -32,15 +33,6 @@ import { loadHealth } from "./features/health.js";
 import { loadEducation } from "./features/education.js";
 import { loadFamily } from "./features/family.js";
 import { loadCalendar } from "./features/calendar.js";
-
-// UI FEATURES
-import { askAssistant } from "./ui/assistant.js";
-import { openComposerFor, saveComposer } from "./ui/composer.js";
-import { openRecordDetail } from "./ui/records.js";
-
-// ========================
-// VIEW MAP
-// ========================
 
 const VIEW_LOADERS = {
   overview: loadOverview,
@@ -54,153 +46,248 @@ const VIEW_LOADERS = {
   calendar: loadCalendar,
 };
 
-// ========================
-// URL
-// ========================
-
-function getYoungPersonId() {
+function getYoungPersonIdFromUrl() {
   const params = new URLSearchParams(window.location.search);
-  return Number(params.get("id")) || null;
+  const id = params.get("id") || params.get("young_person_id");
+  return id ? Number(id) : null;
 }
 
-function setUrl(id) {
+function updateUrlWithYoungPerson(id) {
   const url = new URL(window.location.href);
-  if (id) url.searchParams.set("id", id);
-  else url.searchParams.delete("id");
-  window.history.replaceState({}, "", url);
+
+  if (id) {
+    url.searchParams.set("id", String(id));
+  } else {
+    url.searchParams.delete("id");
+    url.searchParams.delete("young_person_id");
+  }
+
+  window.history.replaceState({}, "", url.toString());
 }
 
-// ========================
-// LOADERS
-// ========================
-
-async function loadSelector() {
+async function loadSelectorScreen() {
   showSelectorScreen();
   clearStatus();
 
+  if (els.selectorList) {
+    els.selectorList.innerHTML = `
+      <div class="loading-state">
+        <div>
+          <div class="spinner"></div>
+          <p>Loading young people...</p>
+        </div>
+      </div>
+    `;
+  }
+
   try {
     const data = await apiGet("/young-people");
-    state.selectorItems = data.young_people || [];
+    state.selectorItems = data.young_people || data.items || [];
     renderSelectorList(state.selectorItems);
-  } catch (err) {
-    showError("Failed to load young people");
+  } catch (error) {
+    showError(error.message || "Failed to load young people.");
   }
 }
 
-async function loadYoungPerson() {
+async function loadYoungPersonRecord() {
+  if (!state.youngPersonId) return;
+
   const data = await apiGet(`/young-people/${state.youngPersonId}`);
-  const yp = data.young_person || data;
+  const youngPerson = data.young_person || data.bundle?.young_person || data;
 
-  setYoungPerson(yp);
+  setYoungPerson(youngPerson);
 
-  renderYoungPersonHeader(yp);
-  renderDesktopNav(state.currentView);
-  renderMobileNav(state.currentView);
-  renderMobileBottomBar(state.currentView);
+  renderHeaderYoungPerson(youngPerson);
   renderAssistantContext();
+  renderAssistantInsights();
 }
 
-// ========================
-// VIEW LOADER
-// ========================
-
-async function loadView(view) {
+async function loadCurrentView(viewKey = state.currentView) {
+  const view = viewKey || "overview";
   setCurrentView(view);
 
   renderPageHeader(view);
   renderDesktopNav(view);
+  renderMobileNav(view);
+  renderMobileBottomBar(view);
+  renderHeroActions(view);
+  renderAssistantContext();
 
   const loader = VIEW_LOADERS[view];
 
   if (!loader) {
-    showError("Unknown view");
+    showError(`Unknown view: ${view}`);
     return;
   }
 
   try {
     await loader(state.youngPersonId);
-  } catch (err) {
-    showError("Failed to load view");
+  } catch (error) {
+    showError(error.message || "Failed to load this view.");
   }
 }
 
-// ========================
-// NAVIGATION
-// ========================
+async function openYoungPersonWorkspace(id) {
+  if (!id) return;
 
-async function openWorkspace(id) {
-  setYoungPersonId(id);
-  setUrl(id);
-
+  setYoungPersonId(Number(id));
+  updateUrlWithYoungPerson(id);
   showWorkspaceScreen();
 
-  await loadYoungPerson();
-  await loadView("overview");
+  await loadYoungPersonRecord();
+  await loadCurrentView("overview");
 }
 
-function goHome() {
+async function goBackToYoungPeopleHome() {
   setYoungPersonId(null);
-  setUrl(null);
-  loadSelector();
+  setYoungPerson(null);
+  updateUrlWithYoungPerson(null);
+  await loadSelectorScreen();
 }
 
-// ========================
-// EVENTS
-// ========================
-
-function bindEvents() {
-  document.addEventListener("click", (e) => {
-    const openYP = e.target.closest("[data-open-young-person]");
-    if (openYP) {
-      openWorkspace(Number(openYP.dataset.openYoungPerson));
+function bindGlobalEvents() {
+  document.addEventListener("click", (event) => {
+    const openYoungPersonBtn = event.target.closest("[data-open-young-person]");
+    if (openYoungPersonBtn) {
+      const id = Number(openYoungPersonBtn.dataset.openYoungPerson);
+      openYoungPersonWorkspace(id);
       return;
     }
 
-    const nav = e.target.closest("[data-view]");
-    if (nav) {
-      loadView(nav.dataset.view);
+    const navBtn = event.target.closest("[data-view]");
+    if (navBtn) {
+      const view = navBtn.dataset.view;
+      loadCurrentView(view);
       return;
     }
 
-    const record = e.target.closest("[data-open-record]");
-    if (record) {
-      openRecordDetail(JSON.parse(record.dataset.openRecord));
+    const mobileViewBtn = event.target.closest("[data-mobile-view]");
+    if (mobileViewBtn) {
+      const view = mobileViewBtn.dataset.mobileView;
+      if (view === "assistant") {
+        const prompt = els.assistantInput?.value?.trim() || "";
+        if (prompt) askAssistant(prompt);
+        return;
+      }
+      loadCurrentView(view);
       return;
     }
 
-    const action = e.target.closest("[data-action]");
-    if (action) {
-      if (action.dataset.action === "daily-note") {
-        openComposerFor("daily_note");
+    const recordBtn = event.target.closest("[data-open-record]");
+    if (recordBtn) {
+      try {
+        openRecordDetail(JSON.parse(recordBtn.dataset.openRecord));
+      } catch (_) {
+        showError("Could not open record.");
+      }
+      return;
+    }
+
+    const actionBtn = event.target.closest("[data-action]");
+    if (actionBtn) {
+      const action = actionBtn.dataset.action;
+
+      if (action === "daily-note") {
+        openComposerFor("daily_note", "create");
+        return;
+      }
+
+      if (action === "incident") {
+        openComposerFor("incident", "create");
+        return;
+      }
+
+      if (action === "plan") {
+        openComposerFor("support_plan", "create");
+        return;
       }
     }
 
-    const assistant = e.target.closest("[data-prompt]");
-    if (assistant) {
-      askAssistant(assistant.dataset.prompt);
+    const assistantPromptBtn = event.target.closest("[data-prompt]");
+    if (assistantPromptBtn) {
+      const prompt = assistantPromptBtn.dataset.prompt || "";
+      askAssistant(prompt);
+      return;
+    }
+
+    const homeBtn = event.target.closest("[data-go-home]");
+    if (homeBtn) {
+      goBackToYoungPeopleHome();
     }
   });
 
   els.selectorSearch?.addEventListener("input", () => {
-    renderSelectorList(state.selectorItems);
+    const term = String(els.selectorSearch.value || "").trim().toLowerCase();
+
+    if (!term) {
+      renderSelectorList(state.selectorItems);
+      return;
+    }
+
+    const filtered = state.selectorItems.filter((item) => {
+      const haystack = [
+        item.first_name,
+        item.last_name,
+        item.preferred_name,
+        item.home_name,
+        item.placement_status,
+        item.summary_risk_level,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(term);
+    });
+
+    renderSelectorList(filtered);
+  });
+
+  els.selectorRefreshBtn?.addEventListener("click", loadSelectorScreen);
+  els.refreshBtn?.addEventListener("click", async () => {
+    if (!state.youngPersonId) {
+      await loadSelectorScreen();
+      return;
+    }
+
+    await loadYoungPersonRecord();
+    await loadCurrentView(state.currentView);
+    showMessage("Workspace refreshed.");
+  });
+
+  els.assistantForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const question = els.assistantInput?.value || "";
+    if (els.assistantInput) els.assistantInput.value = "";
+    await askAssistant(question);
+  });
+
+  els.assistantModalForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const question = els.assistantModalInput?.value || "";
+    if (els.assistantModalInput) els.assistantModalInput.value = "";
+    await askAssistant(question);
   });
 }
 
-// ========================
-// INIT
-// ========================
-
 async function init() {
-  bindEvents();
+  bindGlobalEvents();
+  renderAssistantMessages();
+  renderAssistantInsights();
 
-  const id = getYoungPersonId();
+  const id = getYoungPersonIdFromUrl();
 
   if (!id) {
-    await loadSelector();
+    await loadSelectorScreen();
     return;
   }
 
-  await openWorkspace(id);
+  try {
+    await openYoungPersonWorkspace(id);
+  } catch (error) {
+    showError(error.message || "Failed to open workspace.");
+    await loadSelectorScreen();
+  }
 }
 
 init();
