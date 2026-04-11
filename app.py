@@ -174,6 +174,7 @@ LEGAL_ALLOWED_PREFIXES = (
 ROUTERS = [
     "routers.auth_routes",
     "routers.mfa_routes",
+    "routers.passkey_routes",
     "routers.legal_acceptance_routes",
     "routers.account_routes",
     "routers.admin_routes",
