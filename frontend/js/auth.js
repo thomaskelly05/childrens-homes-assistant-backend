@@ -135,7 +135,7 @@ async function login(credentialsArg = null) {
           authenticated: !!data.authenticated,
           mfa_enabled: !!data.mfa_enabled,
           mfa_verified: !!data.authenticated,
-          mfa_pending: !!data.mfa_pending,
+          mfa_pending: !!data.mfa_pending || !!data.mfa_required,
           has_passkeys: !!data.user?.has_passkeys,
         }),
         remember
@@ -143,7 +143,7 @@ async function login(credentialsArg = null) {
     }
 
     if (loginStatus) {
-      if (data.mfa_pending) {
+      if (data.mfa_pending || data.mfa_required) {
         loginStatus.textContent =
           "Password accepted. Continuing to multi-factor verification...";
       } else {
@@ -162,7 +162,7 @@ async function login(credentialsArg = null) {
   } finally {
     if (loginButton) {
       loginButton.disabled = false;
-      loginButton.textContent = "Sign in";
+      loginButton.textContent = "Sign in with password";
     }
   }
 }
@@ -407,9 +407,14 @@ async function beginPasskeyLogin(email) {
     throw new Error("Passkeys are not supported on this device or browser.");
   }
 
+  const cleanedEmail = String(email || "").trim().toLowerCase();
+  if (!cleanedEmail) {
+    throw new Error("Enter your work email address to use passkey sign-in.");
+  }
+
   const data = await apiFetchJson("/auth/passkeys/authenticate/options", {
     method: "POST",
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email: cleanedEmail }),
   });
 
   if (!data?.ok || !data?.options) {
@@ -451,6 +456,7 @@ async function beginPasskeyLogin(email) {
     mfa_verified: true,
     mfa_pending: false,
     ...(verified.user || {}),
+    has_passkeys: true,
   });
 
   return verified;
@@ -497,9 +503,7 @@ async function registerPasskey(nickname = "") {
     }),
   });
 
-  const existing = getStoredUser() || {};
   updateStoredUser({
-    ...existing,
     has_passkeys: true,
   });
 
