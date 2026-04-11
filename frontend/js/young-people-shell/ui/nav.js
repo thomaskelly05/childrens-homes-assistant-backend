@@ -32,6 +32,12 @@ import {
   openRecordDetail,
   runDrawerWorkflow,
 } from "./records.js";
+import {
+  bindActionRouter,
+  getActionForQuickButton,
+} from "./action-router.js";
+
+let actionRouterBound = false;
 
 function showStatus(message, type = "info") {
   if (!els.statusBar) return;
@@ -149,13 +155,38 @@ async function handleViewChange(view) {
 }
 
 function handleQuickAction(action) {
-  if (action === "daily-note") openComposerFor("daily_note", "create");
-  if (action === "incident") openComposerFor("incident", "create");
-  if (action === "risk") openComposerFor("risk", "create");
-  if (action === "plan") openComposerFor("support_plan", "create");
+  const routed = getActionForQuickButton(action);
+
+  if (routed === "new-daily-note") return openComposerFor("daily_note", "create");
+  if (routed === "new-incident") return openComposerFor("incident", "create");
+  if (routed === "new-support-plan") return openComposerFor("support_plan", "create");
+  if (routed === "new-risk-assessment") return openComposerFor("risk", "create");
+  if (routed === "new-health-record") return openComposerFor("health_record", "create");
+  if (routed === "new-education-record") return openComposerFor("education_record", "create");
+  if (routed === "new-family-record") return openComposerFor("family_contact", "create");
+  if (routed === "new-keywork-session") return openComposerFor("keywork", "create");
+  if (routed === "new-appointment") return openComposerFor("appointment", "create");
+  if (routed === "assistant-handover") {
+    return askAssistant("Draft a handover for the next shift for this young person.");
+  }
+  if (routed === "assistant-priorities") {
+    return askAssistant("Summarise what matters most right now.");
+  }
 }
 
 function handleAssistantQuick(action) {
+  const routed = getActionForQuickButton(action);
+
+  if (routed === "assistant-handover") {
+    askAssistant("Draft a handover for the next shift for this young person.");
+    return;
+  }
+
+  if (routed === "assistant-priorities") {
+    askAssistant("Summarise what matters most right now.");
+    return;
+  }
+
   const prompts = {
     handover: "Draft a handover for the next shift for this young person.",
     priorities: "Summarise what matters most right now.",
@@ -165,6 +196,11 @@ function handleAssistantQuick(action) {
 }
 
 export function bindGlobalEvents() {
+  if (!actionRouterBound) {
+    bindActionRouter(document);
+    actionRouterBound = true;
+  }
+
   document.addEventListener("click", async (event) => {
     const navBtn = event.target.closest("[data-view]");
     if (navBtn) {
@@ -231,7 +267,6 @@ export function bindGlobalEvents() {
     const suggestionBtn = event.target.closest("[data-prompt]");
     if (suggestionBtn) {
       askAssistant(suggestionBtn.dataset.prompt || "");
-      return;
     }
   });
 
