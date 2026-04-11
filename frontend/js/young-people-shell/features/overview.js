@@ -1,8 +1,17 @@
 import { els } from "../dom.js";
 import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
-import { escapeHtml, getDisplayName, getProfileImage, initialsFromName } from "../core/utils.js";
+import { escapeHtml, formatShortDate, getDisplayName, getProfileImage, initialsFromName } from "../core/utils.js";
 import { renderRowList, renderSummaryStat } from "../ui/records.js";
+import {
+  mapBundle,
+  mapChronologyEvent,
+  mapComplianceItem,
+  mapDailyNote,
+  mapIncident,
+  mapSupportPlan,
+  mapAppointment,
+} from "../core/adapters.js";
 
 function renderSection(title, subtitle, body) {
   return `
@@ -18,9 +27,10 @@ function renderSection(title, subtitle, body) {
   `;
 }
 
-function renderProfileCard(yp = {}, bundle = {}) {
-  const communication = bundle.communication_profile || {};
+function renderProfileCard(bundle = {}) {
+  const yp = bundle.young_person || {};
   const identity = bundle.identity_profile || {};
+  const communication = bundle.communication_profile || {};
   const education = bundle.education_profile || {};
   const health = bundle.health_profile || {};
   const legal = bundle.legal_status || {};
@@ -45,11 +55,10 @@ function renderProfileCard(yp = {}, bundle = {}) {
             ${escapeHtml(
               [
                 yp.preferred_name ? `Preferred: ${yp.preferred_name}` : null,
-                yp.date_of_birth ? `DOB: ${yp.date_of_birth}` : null,
+                yp.date_of_birth ? `DOB: ${formatShortDate(yp.date_of_birth)}` : null,
                 yp.home_name || null,
-              ]
-                .filter(Boolean)
-                .join(" • ") || "Young person profile"
+                yp.placement_status || null,
+              ].filter(Boolean).join(" • ") || "Young person profile"
             )}
           </div>
         </div>
@@ -58,42 +67,84 @@ function renderProfileCard(yp = {}, bundle = {}) {
       <div class="profile-grid">
         <button class="profile-card editable-card" type="button" data-open-profile-edit="identity">
           <div class="profile-card-title">About me</div>
-          <div class="profile-card-text">${escapeHtml(identity.interests || "No interests recorded yet.")}</div>
+          <div class="profile-card-text">${escapeHtml(identity.what_matters_to_me || identity.interests || "Not recorded yet.")}</div>
           <div class="profile-card-subtext">${escapeHtml(identity.strengths_summary || "No strengths summary recorded yet.")}</div>
         </button>
 
         <button class="profile-card editable-card" type="button" data-open-profile-edit="communication">
           <div class="profile-card-title">How to support me well</div>
-          <div class="profile-card-text">${escapeHtml(communication.what_helps || "No support guidance recorded yet.")}</div>
+          <div class="profile-card-text">${escapeHtml(communication.what_helps || "Not recorded yet.")}</div>
           <div class="profile-card-subtext">${escapeHtml(communication.communication_style || "No communication profile recorded yet.")}</div>
         </button>
 
         <button class="profile-card editable-card" type="button" data-open-profile-edit="education">
           <div class="profile-card-title">Learning</div>
-          <div class="profile-card-text">${escapeHtml(education.school_name || "No education setting recorded yet.")}</div>
-          <div class="profile-card-subtext">${escapeHtml(
-            education.support_summary || education.education_status || "No learning support summary recorded yet."
-          )}</div>
+          <div class="profile-card-text">${escapeHtml(education.school_name || "Not recorded yet.")}</div>
+          <div class="profile-card-subtext">${escapeHtml(education.support_summary || education.education_status || "No learning summary recorded yet.")}</div>
         </button>
 
         <button class="profile-card editable-card" type="button" data-open-profile-edit="health">
           <div class="profile-card-title">Health and wellbeing</div>
-          <div class="profile-card-text">${escapeHtml(
-            health.mental_health_summary || health.medication_summary || "No health summary recorded yet."
-          )}</div>
+          <div class="profile-card-text">${escapeHtml(health.mental_health_summary || health.medication_summary || "Not recorded yet.")}</div>
           <div class="profile-card-subtext">${escapeHtml(health.allergies || "No allergies recorded.")}</div>
         </button>
 
-        <button class="profile-card editable-card" type="button" data-open-profile-edit="network">
-          <div class="profile-card-title">Important adults</div>
-          <div class="profile-card-text">${escapeHtml(legal.social_worker_name || "No named social worker recorded yet.")}</div>
-          <div class="profile-card-subtext">${escapeHtml(
-            legal.local_authority || legal.legal_status || "No network summary recorded yet."
-          )}</div>
+        <button class="profile-card editable-card" type="button" data-open-profile-edit="legal">
+          <div class="profile-card-title">Legal and care context</div>
+          <div class="profile-card-text">${escapeHtml(legal.legal_status || "Not recorded yet.")}</div>
+          <div class="profile-card-subtext">${escapeHtml(legal.order_type || legal.consent_arrangements || "No legal summary recorded yet.")}</div>
         </button>
       </div>
     </section>
   `;
+}
+
+function buildAlertRow(raw = {}) {
+  return {
+    id: raw.id,
+    record_type: "alert",
+    title: raw.title || raw.alert_type || "Alert",
+    summary: raw.description || "Alert",
+    recorded_at: raw.updated_at || raw.created_at || raw.review_date || null,
+    workflow_status: raw.is_active ? "active" : "inactive",
+    severity: raw.severity || "",
+    source_id: raw.id,
+  };
+}
+
+function buildTodayRows({ chronology = [], dailyNotes = [], incidents = [], appointments = [] }) {
+  const rows = [
+    ...chronology.map(mapChronologyEvent),
+    ...dailyNotes.map(mapDailyNote),
+    ...incidents.map(mapIncident),
+    ...appointments.map(mapAppointment),
+  ];
+
+  return rows
+    .sort((a, b) => {
+      const aTime = new Date(
+        a.event_datetime ||
+        a.start_datetime ||
+        a.recorded_at ||
+        a.occurred_at ||
+        a.record_date ||
+        a.session_date ||
+        0
+      ).getTime();
+
+      const bTime = new Date(
+        b.event_datetime ||
+        b.start_datetime ||
+        b.recorded_at ||
+        b.occurred_at ||
+        b.record_date ||
+        b.session_date ||
+        0
+      ).getTime();
+
+      return bTime - aTime;
+    })
+    .slice(0, 8);
 }
 
 function bindOverviewActions() {
@@ -117,35 +168,70 @@ export async function loadOverview() {
     </div>
   `;
 
-  const [overviewData, timelineData, complianceData] = await Promise.all([
-    apiGet(`/young-people/${state.youngPersonId}/overview`).catch(() => ({})),
-    apiGet(`/young-people/${state.youngPersonId}/timeline?limit=8`).catch(() => ({ timeline: [] })),
+  const [
+    youngPersonData,
+    chronologyData,
+    complianceData,
+    alertsData,
+    dailyNotesData,
+    incidentsData,
+    plansData,
+    appointmentsData,
+  ] = await Promise.all([
+    apiGet(`/young-people/${state.youngPersonId}`).catch(() => ({})),
+    apiGet(`/young-people/${state.youngPersonId}/timeline?limit=12`).catch(() => ({ timeline: [] })),
     apiGet(`/young-people/${state.youngPersonId}/compliance`).catch(() => ({ items: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/alerts`).catch(() => ({ items: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/daily-notes`).catch(() => ({ items: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/incidents`).catch(() => ({ items: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/plans`).catch(() => ({ items: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/appointments`).catch(() => ({ items: [] })),
   ]);
 
-  const yp = overviewData.young_person || state.youngPerson || {};
-  const alerts = overviewData.alerts || [];
-  const timeline = timelineData.timeline || [];
-  const compliance = complianceData.compliance_items || complianceData.items || [];
+  const bundle = mapBundle(youngPersonData.bundle || youngPersonData);
+
+  const chronologyRaw = chronologyData.timeline || chronologyData.items || [];
+  const complianceRaw = complianceData.compliance_items || complianceData.items || [];
+  const alertsRaw = alertsData.alerts || alertsData.items || [];
+  const dailyNotesRaw = dailyNotesData.items || dailyNotesData.records || dailyNotesData.daily_notes || [];
+  const incidentsRaw = incidentsData.items || incidentsData.records || incidentsData.incidents || [];
+  const plansRaw = plansData.items || plansData.records || plansData.support_plans || [];
+  const appointmentsRaw =
+    appointmentsData.items ||
+    appointmentsData.records ||
+    appointmentsData.appointments ||
+    appointmentsData.young_person_appointments ||
+    [];
+
+  const compliance = complianceRaw.map(mapComplianceItem);
+  const alerts = alertsRaw.map(buildAlertRow);
+  const plans = plansRaw.map(mapSupportPlan);
+  const appointments = appointmentsRaw.map(mapAppointment);
 
   const immediate = [
-    ...alerts.map((x) => ({ ...x, title: x.title || x.label || "Important update" })),
-    ...compliance.filter((x) =>
-      ["overdue", "pending", "submitted", "due_soon"].includes(
-        String(x.status || x.compliance_status || "").toLowerCase()
-      )
+    ...alerts,
+    ...compliance.filter((item) =>
+      ["overdue", "pending", "submitted", "due_soon"].includes(String(item.status || "").toLowerCase())
     ),
-  ].slice(0, 6);
+    ...plans.filter((item) =>
+      ["draft", "pending", "review_due"].includes(String(item.status || item.workflow_status || "").toLowerCase())
+    ),
+  ].slice(0, 8);
 
-  const todayRows = timeline.slice(0, 6);
+  const todayRows = buildTodayRows({
+    chronology: chronologyRaw,
+    dailyNotes: dailyNotesRaw,
+    incidents: incidentsRaw,
+    appointments: appointmentsRaw,
+  });
 
   els.viewContent.innerHTML = `
-    ${renderProfileCard(yp, overviewData.bundle || {})}
+    ${renderProfileCard(bundle)}
 
     <section class="summary-strip">
       ${renderSummaryStat("Current view", "Overview")}
-      ${renderSummaryStat("Important updates", alerts.length)}
-      ${renderSummaryStat("Recent activity", timeline.length)}
+      ${renderSummaryStat("Alerts", alerts.length)}
+      ${renderSummaryStat("Recent activity", chronologyRaw.length || todayRows.length)}
       ${renderSummaryStat("Checks due", compliance.length)}
     </section>
 
@@ -157,8 +243,20 @@ export async function loadOverview() {
 
     ${renderSection(
       "Needs attention",
-      "Outstanding follow-up and important updates.",
+      "Outstanding follow-up, alerts and due items.",
       renderRowList(immediate, "Nothing urgent is showing right now.")
+    )}
+
+    ${renderSection(
+      "Current support plans",
+      "Plans adults should keep in mind today.",
+      renderRowList(plans.slice(0, 6), "No current support plans found.")
+    )}
+
+    ${renderSection(
+      "Upcoming appointments",
+      "Important dates and appointments coming up.",
+      renderRowList(appointments.slice(0, 6), "No upcoming appointments found.")
     )}
   `;
 
