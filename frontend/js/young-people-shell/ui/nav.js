@@ -2,364 +2,164 @@ import { state } from "../state.js";
 import { els } from "../dom.js";
 import { NAV_SECTIONS } from "../core/config.js";
 import { escapeHtml } from "../core/utils.js";
-import { loadCurrentView } from "../features/workspace.js";
-import {
-  openYoungPerson,
-  goBackToSelector,
-  loadYoungPersonSelector,
-  filterSelectorList,
-} from "./selector.js";
-import {
-  updatePageHeader,
-  renderAssistantScopeBadges,
-  renderMobileTabState,
-} from "./header.js";
-import {
-  updateAssistantContext,
-  askAssistant,
-  renderAssistantMessages,
-  openAssistant,
-  closeAssistant,
-} from "./assistant-ui.js";
-import {
-  openComposerFor,
-  closeComposer,
-  saveComposer,
-  buildAiFeedback,
-} from "./composer.js";
-import {
-  closeDrawer,
-  openRecordDetail,
-  runDrawerWorkflow,
-} from "./records.js";
-import {
-  bindActionRouter,
-  getActionForQuickButton,
-} from "./action-router.js";
 
-let actionRouterBound = false;
+import { openYoungPerson, goBackToSelector, loadYoungPersonSelector, filterSelectorList } from "./selector.js";
+import { bindRecordDrawerEvents, openRecordDetail } from "./records.js";
+import { closeComposer, saveComposer } from "./composer.js";
+import { bindSuggestionEvents } from "./suggestions.js";
+import { bindActionRouter, getActionForQuickButton } from "./action-router.js";
 
-function showStatus(message, type = "info") {
-  if (!els.statusBar) return;
-  els.statusBar.textContent = message || "";
-  els.statusBar.classList.remove("hidden");
-  els.statusBar.dataset.statusType = type;
+import { loadOverview } from "../features/overview.js";
+import { loadProfile } from "../features/profile.js";
+import { loadTimeline } from "../features/timeline.js";
+import { loadHandover } from "../features/handover.js";
+import { loadReports } from "../features/reports.js";
+import { loadHealth } from "../features/health.js";
+import { loadEducation } from "../features/education.js";
+import { loadFamily } from "../features/family.js";
+import { loadCalendar } from "../features/calendar.js";
+import { loadReadiness } from "../features/readiness.js";
+import { loadManager } from "../features/manager.js";
+import { loadCurrentView as loadWorkspace } from "../features/workspace.js";
+
+const SECTION_LOADERS = {
+  workspace: loadWorkspace,
+  overview: loadOverview,
+  profile: loadProfile,
+  timeline: loadTimeline,
+  handover: loadHandover,
+  reports: loadReports,
+  health: loadHealth,
+  education: loadEducation,
+  family: loadFamily,
+  calendar: loadCalendar,
+  readiness: loadReadiness,
+  manager: loadManager,
+};
+
+export function showError(message) {
+  if (els.statusMessage) {
+    els.statusMessage.innerHTML = `<span class="status-error">${escapeHtml(message || "Something went wrong.")}</span>`;
+  }
 }
 
-function showError(message) {
-  showStatus(message || "Something went wrong.", "error");
+export function showMessage(message) {
+  if (els.statusMessage) {
+    els.statusMessage.innerHTML = `<span class="status-ok">${escapeHtml(message || "")}</span>`;
+  }
 }
-
-function showMessage(message) {
-  showStatus(message || "", "info");
-}
-
-export { showError, showMessage };
 
 export function clearStatus() {
-  if (!els.statusBar) return;
-  els.statusBar.textContent = "";
-  els.statusBar.classList.add("hidden");
-  delete els.statusBar.dataset.statusType;
+  if (els.statusMessage) {
+    els.statusMessage.innerHTML = "";
+  }
 }
 
-export function setActiveView(view) {
-  state.currentView = view || "overview";
-  updatePageHeader();
-  updateActiveNav();
-  renderMobileTabState();
-  renderAssistantScopeBadges();
-  updateAssistantContext();
-}
-
-export function renderDesktopNav() {
-  if (!els.desktopNav) return;
-
-  els.desktopNav.innerHTML = `
-    <div class="workspace-nav-inner">
-      ${NAV_SECTIONS.map((section) => `
-        <div class="nav-section">
-          <div class="nav-section-title">${escapeHtml(section.title)}</div>
-          ${section.items.map((item) => `
-            <button
-              class="nav-btn ${state.currentView === item.key ? "active" : ""}"
-              type="button"
-              data-view="${escapeHtml(item.key)}"
-            >
-              ${escapeHtml(item.icon)} ${escapeHtml(item.label)}
-            </button>
-          `).join("")}
-        </div>
-      `).join("")}
-    </div>
-  `;
-}
-
-export function renderMobileNav() {
-  if (!els.mobileNavContent) return;
-
-  els.mobileNavContent.innerHTML = `
-    ${NAV_SECTIONS.map((section) => `
-      <div class="nav-section">
-        <div class="nav-section-title">${escapeHtml(section.title)}</div>
-        ${section.items.map((item) => `
-          <button
-            class="nav-btn ${state.currentView === item.key ? "active" : ""}"
-            type="button"
-            data-view="${escapeHtml(item.key)}"
-          >
-            ${escapeHtml(item.icon)} ${escapeHtml(item.label)}
-          </button>
-        `).join("")}
-      </div>
-    `).join("")}
-  `;
-}
-
-export function openMobileNav() {
-  state.mobileNavOpen = true;
-  els.mobileNavDrawer?.classList.remove("hidden");
-  els.mobileNavBackdrop?.classList.remove("hidden");
-  els.mobileNavDrawer?.setAttribute("aria-hidden", "false");
-}
-
-export function closeMobileNav() {
-  state.mobileNavOpen = false;
-  els.mobileNavDrawer?.classList.add("hidden");
-  els.mobileNavBackdrop?.classList.add("hidden");
-  els.mobileNavDrawer?.setAttribute("aria-hidden", "true");
-}
-
-export function updateActiveNav() {
-  document.querySelectorAll("[data-view]").forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.view === state.currentView);
+function markActiveNav(section) {
+  document.querySelectorAll("[data-nav-section]").forEach((button) => {
+    const isActive = button.dataset.navSection === section;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
   });
 }
 
-async function handleViewChange(view) {
+function getCurrentSection() {
+  return state.currentSection || state.activeSection || "workspace";
+}
+
+export async function loadSection(section) {
   if (!state.youngPersonId) {
     showError("Select a young person first.");
     return;
   }
 
-  setActiveView(view);
-  closeMobileNav();
+  const loader = SECTION_LOADERS[section];
+  if (!loader) {
+    showError(`Unknown section: ${section}`);
+    return;
+  }
+
+  state.currentSection = section;
+  state.activeSection = section;
+  markActiveNav(section);
   clearStatus();
 
   try {
-    await loadCurrentView();
+    await loader();
   } catch (error) {
-    console.error(error);
+    console.error(`[nav] failed loading section "${section}"`, error);
     showError(error?.message || "Failed to load this section.");
   }
 }
 
-function handleQuickAction(action) {
-  const routed = getActionForQuickButton(action);
-
-  if (routed === "new-daily-note") return openComposerFor("daily_note", "create");
-  if (routed === "new-incident") return openComposerFor("incident", "create");
-  if (routed === "new-support-plan") return openComposerFor("support_plan", "create");
-  if (routed === "new-risk-assessment") return openComposerFor("risk", "create");
-  if (routed === "new-health-record") return openComposerFor("health_record", "create");
-  if (routed === "new-education-record") return openComposerFor("education_record", "create");
-  if (routed === "new-family-record") return openComposerFor("family_contact", "create");
-  if (routed === "new-keywork-session") return openComposerFor("keywork", "create");
-  if (routed === "new-appointment") return openComposerFor("appointment", "create");
-  if (routed === "assistant-handover") {
-    return askAssistant("Draft a handover for the next shift for this young person.");
-  }
-  if (routed === "assistant-priorities") {
-    return askAssistant("Summarise what matters most right now.");
-  }
+export async function reloadCurrentSection() {
+  const section = getCurrentSection();
+  await loadSection(section);
 }
 
-function handleAssistantQuick(action) {
-  const routed = getActionForQuickButton(action);
-
-  if (routed === "assistant-handover") {
-    askAssistant("Draft a handover for the next shift for this young person.");
-    return;
-  }
-
-  if (routed === "assistant-priorities") {
-    askAssistant("Summarise what matters most right now.");
-    return;
-  }
-
-  const prompts = {
-    handover: "Draft a handover for the next shift for this young person.",
-    priorities: "Summarise what matters most right now.",
-  };
-
-  askAssistant(prompts[action] || "Summarise what matters most right now.");
+function bindNavButtons() {
+  document.querySelectorAll("[data-nav-section]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const section = button.dataset.navSection;
+      if (!section) return;
+      await loadSection(section);
+    });
+  });
 }
 
-export function bindGlobalEvents() {
-  if (!actionRouterBound) {
-    bindActionRouter(document);
-    actionRouterBound = true;
-  }
+function bindSelectorControls() {
+  els.backToSelectorBtn?.addEventListener("click", async () => {
+    state.youngPersonId = null;
+    state.selectedYoungPerson = null;
 
-  document.addEventListener("click", async (event) => {
-    const navBtn = event.target.closest("[data-view]");
-    if (navBtn) {
-      await handleViewChange(navBtn.dataset.view);
-      return;
-    }
+    if (els.workspaceShell) els.workspaceShell.classList.add("hidden");
+    if (els.selectorScreen) els.selectorScreen.classList.remove("hidden");
 
-    const mobileBtn = event.target.closest("[data-mobile-view]");
-    if (mobileBtn) {
-      const key = mobileBtn.dataset.mobileView;
-
-      if (key === "assistant") {
-        openAssistant();
-        return;
-      }
-
-      await handleViewChange(key);
-      return;
-    }
-
-    const openBtn = event.target.closest("[data-open-young-person]");
-    if (openBtn) {
-      try {
-        await openYoungPerson(Number(openBtn.dataset.openYoungPerson));
-      } catch (error) {
-        console.error(error);
-        showError(error?.message || "Unable to open workspace.");
-      }
-      return;
-    }
-
-    const openRecordBtn = event.target.closest("[data-open-record]");
-    if (openRecordBtn) {
-      try {
-        const item = JSON.parse(openRecordBtn.dataset.openRecord);
-        await openRecordDetail(item);
-      } catch (error) {
-        console.error(error);
-        showError("Could not open record.");
-      }
-      return;
-    }
-
-    const quickBtn = event.target.closest("[data-action]");
-    if (quickBtn) {
-      handleQuickAction(quickBtn.dataset.action);
-      return;
-    }
-
-    const assistantQuickBtn = event.target.closest("[data-assistant-quick]");
-    if (assistantQuickBtn) {
-      handleAssistantQuick(assistantQuickBtn.dataset.assistantQuick);
-      return;
-    }
-
-    const assistantChip = event.target.closest("[data-assistant-chip]");
-    if (assistantChip) {
-      const text = assistantChip.dataset.assistantChip || "";
-      if (els.assistantInput) els.assistantInput.value = text;
-      if (els.assistantModalInput) els.assistantModalInput.value = text;
-      return;
-    }
-
-    const suggestionBtn = event.target.closest("[data-prompt]");
-    if (suggestionBtn) {
-      askAssistant(suggestionBtn.dataset.prompt || "");
-    }
-  });
-
-  els.selectorSearch?.addEventListener("input", filterSelectorList);
-  els.selectorRefreshBtn?.addEventListener("click", loadYoungPersonSelector);
-
-  els.refreshBtn?.addEventListener("click", async () => {
-    if (!state.youngPersonId) {
-      await loadYoungPersonSelector();
-      return;
-    }
+    goBackToSelector?.();
+    clearStatus();
 
     try {
-      await openYoungPerson(Number(state.youngPersonId), { preserveView: true });
-      showMessage("Workspace refreshed.");
+      await loadYoungPersonSelector?.();
     } catch (error) {
-      console.error(error);
-      showError(error?.message || "Failed to refresh workspace.");
+      showError(error?.message || "Failed to load young people.");
     }
   });
 
-  els.homeBtn?.addEventListener("click", goBackToSelector);
-  els.mobileHomeBtn?.addEventListener("click", goBackToSelector);
-  els.logoBtn?.addEventListener("click", goBackToSelector);
-  els.changePersonBtn?.addEventListener("click", goBackToSelector);
-
-  els.mobileNavBtn?.addEventListener("click", openMobileNav);
-  els.closeMobileNavBtn?.addEventListener("click", closeMobileNav);
-  els.mobileNavBackdrop?.addEventListener("click", closeMobileNav);
-
-  els.closeDrawerBtn?.addEventListener("click", closeDrawer);
-  els.drawerBackdrop?.addEventListener("click", closeDrawer);
-
-  els.drawerEditBtn?.addEventListener("click", () => {
-    if (!state.activeRecordItem || !state.activeRecordType) return;
-    openComposerFor(state.activeRecordType, "edit", state.activeRecordItem);
+  els.youngPersonSearchInput?.addEventListener("input", (event) => {
+    filterSelectorList?.(event.target.value || "");
   });
+}
 
-  els.drawerSubmitBtn?.addEventListener("click", async () => {
-    try {
-      await runDrawerWorkflow("submit");
-      closeDrawer();
-      await loadCurrentView();
-      showMessage("Record sent for review.");
-    } catch (error) {
-      console.error(error);
-      showError(error?.message || "Unable to submit record.");
+function bindQuickActionButtons() {
+  document.querySelectorAll("[data-quick-action]").forEach((button) => {
+    const action = getActionForQuickButton(button.dataset.quickAction || "", {
+      section: button.dataset.section || getCurrentSection(),
+    });
+
+    if (action?.label && !button.textContent.trim()) {
+      button.textContent = action.label;
     }
   });
 
-  els.drawerApproveBtn?.addEventListener("click", async () => {
-    try {
-      await runDrawerWorkflow("approve");
-      closeDrawer();
-      await loadCurrentView();
-      showMessage("Record approved.");
-    } catch (error) {
-      console.error(error);
-      showError(error?.message || "Unable to approve record.");
-    }
+  bindActionRouter({
+    onMissingYoungPerson: () => {
+      showError("Select a young person first.");
+    },
+  });
+}
+
+function bindComposerControls() {
+  els.closeComposerBtn?.addEventListener("click", () => {
+    closeComposer(true);
   });
 
-  els.drawerReturnBtn?.addEventListener("click", async () => {
-    try {
-      await runDrawerWorkflow("return");
-      closeDrawer();
-      await loadCurrentView();
-      showMessage("Record returned.");
-    } catch (error) {
-      console.error(error);
-      showError(error?.message || "Unable to return record.");
-    }
-  });
-
-  els.drawerArchiveBtn?.addEventListener("click", async () => {
-    try {
-      await runDrawerWorkflow("archive");
-      closeDrawer();
-      await loadCurrentView();
-      showMessage("Record archived.");
-    } catch (error) {
-      console.error(error);
-      showError(error?.message || "Unable to archive record.");
-    }
-  });
-
-  els.closeComposerBtn?.addEventListener("click", () => closeComposer());
-  els.composerSaveDraftBtn?.addEventListener("click", async () => {
+  els.composerSaveBtn?.addEventListener("click", async () => {
     try {
       await saveComposer("draft");
       showMessage("Draft saved.");
+      await reloadCurrentSection();
     } catch (error) {
-      console.error(error);
+      console.error("[nav] save draft failed", error);
       showError(error?.message || "Could not save draft.");
     }
   });
@@ -368,65 +168,134 @@ export function bindGlobalEvents() {
     try {
       await saveComposer("submit");
       showMessage("Record sent for review.");
+      await reloadCurrentSection();
     } catch (error) {
-      console.error(error);
+      console.error("[nav] submit failed", error);
       showError(error?.message || "Could not submit record.");
     }
   });
+}
 
-  els.composerCheckBtn?.addEventListener("click", () => {
-    if (els.composerAiFeedback) {
-      els.composerAiFeedback.textContent = buildAiFeedback("clarity");
+function bindRefreshControls() {
+  els.refreshWorkspaceBtn?.addEventListener("click", async () => {
+    try {
+      await reloadCurrentSection();
+      showMessage("Workspace refreshed.");
+    } catch (error) {
+      console.error("[nav] refresh failed", error);
+      showError(error?.message || "Failed to refresh workspace.");
     }
   });
+}
 
-  els.composerGrammarBtn?.addEventListener("click", () => {
-    if (els.composerAiFeedback) els.composerAiFeedback.textContent = buildAiFeedback("grammar");
-  });
+function bindOpenRecordEvents() {
+  if (!els.viewContent) return;
 
-  els.composerClarityBtn?.addEventListener("click", () => {
-    if (els.composerAiFeedback) els.composerAiFeedback.textContent = buildAiFeedback("clarity");
-  });
+  els.viewContent.addEventListener("click", async (event) => {
+    const trigger = event.target.closest("[data-record-id], [data-open-record]");
+    if (!trigger) return;
 
-  els.composerSafeguardingBtn?.addEventListener("click", () => {
-    if (els.composerAiFeedback) els.composerAiFeedback.textContent = buildAiFeedback("safeguarding");
-  });
+    const id =
+      trigger.dataset.recordId ||
+      trigger.dataset.id ||
+      null;
 
-  els.composerChildVoiceBtn?.addEventListener("click", () => {
-    if (els.composerAiFeedback) els.composerAiFeedback.textContent = buildAiFeedback("child_voice");
-  });
+    const recordType =
+      trigger.dataset.recordType ||
+      trigger.dataset.type ||
+      "";
 
-  els.assistantLauncher?.addEventListener("click", openAssistant);
-  els.assistantExpandBtn?.addEventListener("click", openAssistant);
-  els.closeAssistantBtn?.addEventListener("click", closeAssistant);
-  els.assistantBackdrop?.addEventListener("click", closeAssistant);
+    if (!id) return;
 
-  els.assistantClearBtn?.addEventListener("click", () => {
-    state.assistantMessages = [];
-    state.assistantModalMessages = [];
-    renderAssistantMessages();
-  });
-
-  els.assistantForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const question = els.assistantInput?.value || "";
-    if (els.assistantInput) els.assistantInput.value = "";
-    await askAssistant(question);
-  });
-
-  els.assistantModalForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const question = els.assistantModalInput?.value || "";
-    if (els.assistantModalInput) els.assistantModalInput.value = "";
-    await askAssistant(question);
-  });
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      closeDrawer();
-      closeAssistant();
-      closeComposer(false);
-      closeMobileNav();
+    try {
+      await openRecordDetail({
+        id: Number.isNaN(Number(id)) ? id : Number(id),
+        source_id: Number.isNaN(Number(id)) ? id : Number(id),
+        record_id: Number.isNaN(Number(id)) ? id : Number(id),
+        record_type: recordType,
+        title: trigger.dataset.title || "",
+      });
+    } catch (error) {
+      console.error("[nav] open record failed", error);
+      showError("Could not open record.");
     }
   });
+}
+
+function bindYoungPersonOpen() {
+  document.addEventListener("click", async (event) => {
+    const trigger = event.target.closest("[data-open-young-person]");
+    if (!trigger) return;
+
+    const id = trigger.dataset.openYoungPerson || trigger.dataset.youngPersonId;
+    if (!id) return;
+
+    try {
+      await openYoungPerson?.(id);
+      if (els.selectorScreen) els.selectorScreen.classList.add("hidden");
+      if (els.workspaceShell) els.workspaceShell.classList.remove("hidden");
+      clearStatus();
+      await loadSection(getCurrentSection());
+    } catch (error) {
+      console.error("[nav] open young person failed", error);
+      showError(error?.message || "Unable to open workspace.");
+    }
+  });
+}
+
+function bindDrawerCallbacks() {
+  bindRecordDrawerEvents({
+    onEdit: async (recordType, item) => {
+      const { openComposerFor } = await import("./composer.js");
+      openComposerFor(recordType, "edit", item);
+    },
+    onWorkflowComplete: async () => {
+      try {
+        await reloadCurrentSection();
+      } catch (error) {
+        console.error("[nav] workflow refresh failed", error);
+        showError(error?.message || "Failed to refresh workspace.");
+      }
+    },
+  });
+}
+
+export function bindNavEvents() {
+  bindNavButtons();
+  bindSelectorControls();
+  bindQuickActionButtons();
+  bindComposerControls();
+  bindRefreshControls();
+  bindOpenRecordEvents();
+  bindYoungPersonOpen();
+  bindDrawerCallbacks();
+  bindSuggestionEvents();
+}
+
+export async function initialiseShellNavigation() {
+  bindNavEvents();
+
+  if (!state.currentSection) {
+    state.currentSection = NAV_SECTIONS?.[0]?.id || "workspace";
+    state.activeSection = state.currentSection;
+  }
+
+  markActiveNav(getCurrentSection());
+
+  if (!state.youngPersonId) {
+    try {
+      await loadYoungPersonSelector?.();
+    } catch (error) {
+      console.error("[nav] selector load failed", error);
+      showError(error?.message || "Unable to load young people.");
+    }
+    return;
+  }
+
+  try {
+    await loadSection(getCurrentSection());
+  } catch (error) {
+    console.error("[nav] initial section load failed", error);
+    showError(error?.message || "Failed to load this section.");
+  }
 }
