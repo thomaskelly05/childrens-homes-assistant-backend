@@ -3,10 +3,19 @@ import { els } from "../dom.js";
 import { NAV_SECTIONS } from "../core/config.js";
 import { escapeHtml } from "../core/utils.js";
 import { loadCurrentView } from "../features/workspace.js";
-import { openYoungPerson, goBackToSelector, loadYoungPersonSelector } from "./selector.js";
 import {
-  updatePageHeader,
+  openYoungPerson,
+  goBackToSelector,
+  loadYoungPersonSelector,
+  filterSelectorList,
+} from "./selector.js";
+import {
+  updateAssistantScopeDataset,
   renderAssistantScopeBadges,
+  updateYoungPersonHeader,
+  renderHeroQuickActions,
+  renderMobileBottomBar,
+  updatePageHeader,
   renderMobileTabState,
 } from "./header.js";
 import {
@@ -21,7 +30,7 @@ import {
   closeComposer,
   saveComposer,
   buildAiFeedback,
-} from "../composer/composer.js";
+} from "./composer.js";
 import {
   closeDrawer,
   openRecordDetail,
@@ -51,7 +60,8 @@ export function renderDesktopNav() {
               type="button"
               data-view="${escapeHtml(item.key)}"
             >
-              ${escapeHtml(item.icon)} ${escapeHtml(item.label)}
+              <span class="nav-btn-icon">${escapeHtml(item.icon)}</span>
+              <span class="nav-btn-label">${escapeHtml(item.label)}</span>
             </button>
           `).join("")}
         </div>
@@ -73,7 +83,8 @@ export function renderMobileNav() {
             type="button"
             data-view="${escapeHtml(item.key)}"
           >
-            ${escapeHtml(item.icon)} ${escapeHtml(item.label)}
+            <span class="nav-btn-icon">${escapeHtml(item.icon)}</span>
+            <span class="nav-btn-label">${escapeHtml(item.label)}</span>
           </button>
         `).join("")}
       </div>
@@ -100,9 +111,7 @@ export function updateActiveNav() {
 }
 
 async function handleViewChange(view) {
-  if (!state.youngPersonId) {
-    return;
-  }
+  if (!state.youngPersonId) return;
 
   setActiveView(view);
   closeMobileNav();
@@ -110,10 +119,25 @@ async function handleViewChange(view) {
 }
 
 function handleQuickAction(action) {
-  if (action === "daily-note") openComposerFor("daily_note", "create");
-  if (action === "incident") openComposerFor("incident", "create");
-  if (action === "risk") openComposerFor("risk", "create");
-  if (action === "plan") openComposerFor("support_plan", "create");
+  if (action === "daily-note") {
+    openComposerFor("daily_note", "create");
+    return;
+  }
+
+  if (action === "incident") {
+    openComposerFor("incident", "create");
+    return;
+  }
+
+  if (action === "plan") {
+    openComposerFor("support_plan", "create");
+    return;
+  }
+
+  if (action === "profile") {
+    setActiveView("profile");
+    loadCurrentView();
+  }
 }
 
 function handleAssistantQuick(action) {
@@ -148,7 +172,7 @@ export function bindGlobalEvents() {
 
     const openBtn = event.target.closest("[data-open-young-person]");
     if (openBtn) {
-      openYoungPerson(Number(openBtn.dataset.openYoungPerson));
+      await openYoungPerson(Number(openBtn.dataset.openYoungPerson));
       return;
     }
 
@@ -157,8 +181,8 @@ export function bindGlobalEvents() {
       try {
         const item = JSON.parse(openRecordBtn.dataset.openRecord);
         await openRecordDetail(item);
-      } catch {
-        // ignore
+      } catch (error) {
+        console.error(error);
       }
       return;
     }
@@ -186,14 +210,10 @@ export function bindGlobalEvents() {
     const suggestionBtn = event.target.closest("[data-prompt]");
     if (suggestionBtn) {
       askAssistant(suggestionBtn.dataset.prompt || "");
-      return;
     }
   });
 
-  els.selectorSearch?.addEventListener("input", () => {
-    import("./selector.js").then(({ filterSelectorList }) => filterSelectorList());
-  });
-
+  els.selectorSearch?.addEventListener("input", filterSelectorList);
   els.selectorRefreshBtn?.addEventListener("click", loadYoungPersonSelector);
 
   els.refreshBtn?.addEventListener("click", async () => {
@@ -204,8 +224,8 @@ export function bindGlobalEvents() {
 
     try {
       await openYoungPerson(Number(state.youngPersonId), { preserveView: true });
-    } catch {
-      // ignore
+    } catch (error) {
+      console.error(error);
     }
   });
 
@@ -232,8 +252,12 @@ export function bindGlobalEvents() {
   els.drawerArchiveBtn?.addEventListener("click", () => runDrawerWorkflow("archive"));
 
   els.closeComposerBtn?.addEventListener("click", () => closeComposer());
-  els.composerSaveDraftBtn?.addEventListener("click", async () => saveComposer("draft"));
-  els.composerSubmitBtn?.addEventListener("click", async () => saveComposer("submit"));
+  els.composerSaveDraftBtn?.addEventListener("click", async () => {
+    await saveComposer("draft");
+  });
+  els.composerSubmitBtn?.addEventListener("click", async () => {
+    await saveComposer("submit");
+  });
 
   els.composerCheckBtn?.addEventListener("click", () => {
     if (els.composerAiFeedback) {
@@ -242,19 +266,27 @@ export function bindGlobalEvents() {
   });
 
   els.composerGrammarBtn?.addEventListener("click", () => {
-    if (els.composerAiFeedback) els.composerAiFeedback.textContent = buildAiFeedback("grammar");
+    if (els.composerAiFeedback) {
+      els.composerAiFeedback.textContent = buildAiFeedback("grammar");
+    }
   });
 
   els.composerClarityBtn?.addEventListener("click", () => {
-    if (els.composerAiFeedback) els.composerAiFeedback.textContent = buildAiFeedback("clarity");
+    if (els.composerAiFeedback) {
+      els.composerAiFeedback.textContent = buildAiFeedback("clarity");
+    }
   });
 
   els.composerSafeguardingBtn?.addEventListener("click", () => {
-    if (els.composerAiFeedback) els.composerAiFeedback.textContent = buildAiFeedback("safeguarding");
+    if (els.composerAiFeedback) {
+      els.composerAiFeedback.textContent = buildAiFeedback("safeguarding");
+    }
   });
 
   els.composerChildVoiceBtn?.addEventListener("click", () => {
-    if (els.composerAiFeedback) els.composerAiFeedback.textContent = buildAiFeedback("child_voice");
+    if (els.composerAiFeedback) {
+      els.composerAiFeedback.textContent = buildAiFeedback("child_voice");
+    }
   });
 
   els.assistantLauncher?.addEventListener("click", openAssistant);
