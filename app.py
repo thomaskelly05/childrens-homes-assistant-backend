@@ -148,6 +148,8 @@ PUBLIC_PREFIXES = (
     "/auth/check",
     "/auth/mfa",
     "/auth/auth-policy",
+    "/auth/passkeys/authenticate/options",
+    "/auth/passkeys/authenticate/verify",
     "/css",
     "/js",
     "/assets",
@@ -169,6 +171,8 @@ LEGAL_ALLOWED_PREFIXES = (
     "/auth/check",
     "/auth/me",
     "/auth/legal-acceptance",
+    "/auth/mfa",
+    "/auth/passkeys",
 )
 
 ROUTERS = [
@@ -391,7 +395,10 @@ def include_router(app: FastAPI, module_path: str) -> None:
         module = importlib.import_module(module_path)
     except Exception as exc:
         logger.exception("Failed to import router module: %s", module_path)
-        raise RuntimeError(f"Failed to import router module: {module_path}") from exc
+        raise RuntimeError(
+            f"Failed to import router module: {module_path} | "
+            f"{exc.__class__.__name__}: {str(exc)}"
+        ) from exc
 
     main_router = getattr(module, "router", None)
     compat_router = getattr(module, "compat_router", None)
