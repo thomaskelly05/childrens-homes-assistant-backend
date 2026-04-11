@@ -1,5 +1,4 @@
 import os
-import re
 import secrets
 import time
 from dataclasses import dataclass
@@ -562,6 +561,13 @@ def login(
     if mfa_enabled:
         _clear_auth_cookies(response)
         _start_preauth_session(request, user, remember=remember)
+        _log_auth(
+            request=request,
+            user_id=user["id"],
+            email=user["email"],
+            event_type="mfa_challenge_started",
+            detail="Password accepted; MFA pending",
+        )
         return {
             "ok": True,
             "message": "Password accepted. MFA verification required.",
