@@ -2,185 +2,364 @@ import { els } from "../dom.js";
 import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
-import { renderRowList } from "../ui/records.js";
+import { renderRowList, renderSection, renderSummaryStat } from "../ui/records.js";
 import {
-  mapChronologyEvent,
-  mapDailyNote,
-  mapIncident,
-  mapHealthRecord,
-  mapEducationRecord,
-  mapFamilyContactRecord,
-  mapKeyworkSession,
-  mapAppointment,
-  mapSupportPlan,
-  mapRiskAssessment,
+mapChronologyEvent,
+mapIncident,
+mapDailyNote,
+mapHealthRecord,
+mapEducationRecord,
+mapFamilyContactRecord,
+mapAppointment,
+mapMissingEpisode,
+mapSafeguardingRecord,
 } from "../core/adapters.js";
 
-function renderSection(title, subtitle, body) {
-  return `
-    <section class="content-section">
-      <div class="content-section-head">
-        <div>
-          <h3>${escapeHtml(title)}</h3>
-          ${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ""}
-        </div>
-      </div>
-      ${body}
-    </section>
-  `;
+function sortNewestFirst(items = [], keys = []) {
+return [...items].sort((a, b) => {
+const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
+const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
+return new Date(bValue).getTime() - new Date(aValue).getTime();
+});
 }
 
-function sortTimelineRows(rows = []) {
-  return [...rows].sort((a, b) => {
-    const aTime = new Date(
-      a.event_datetime ||
-      a.start_datetime ||
-      a.contact_datetime ||
-      a.session_date ||
-      a.record_date ||
-      a.review_date ||
-      a.occurred_at ||
-      a.recorded_at ||
-      a.created_at ||
-      0
-    ).getTime();
-
-    const bTime = new Date(
-      b.event_datetime ||
-      b.start_datetime ||
-      b.contact_datetime ||
-      b.session_date ||
-      b.record_date ||
-      b.review_date ||
-      b.occurred_at ||
-      b.recorded_at ||
-      b.created_at ||
-      0
-    ).getTime();
-
-    return bTime - aTime;
-  });
+function getTimelineDate(item = {}) {
+return (
+item.event_datetime ||
+item.occurred_at ||
+item.contact_datetime ||
+item.start_datetime ||
+item.record_date ||
+item.session_date ||
+item.recorded_at ||
+item.created_at ||
+null
+);
 }
 
-function dedupeTimelineRows(rows = []) {
-  const seen = new Set();
-
-  return rows.filter((row) => {
-    const key = [
-      row.record_type || "record",
-      row.source_table || "",
-      row.source_id || row.id || "",
-      row.event_datetime || row.start_datetime || row.recorded_at || row.occurred_at || row.record_date || "",
-      row.title || "",
-    ].join("::");
-
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+function toTimelineRow(item = {}, overrides = {}) {
+return {
+id: item.id ?? item.source_id ?? null,
+source_id: item.source_id ?? item.id ?? null,
+source_table: item.source_table || overrides.source_table || "",
+record_type: item.record_type || overrides.record_type || "timeline_item",
+title: item.title || overrides.title || "Timeline item",
+summary: item.summary || overrides.summary || "",
+created_at: item.created_at || null,
+updated_at: item.updated_at || null,
+event_datetime: getTimelineDate(item),
+significance: item.significance || overrides.significance || "",
+severity: item.severity || overrides.severity || "",
+workflow_status: item.workflow_status || item.status || "",
+status: item.status || "",
+raw: item.raw || item,
+};
 }
 
-function enrichChronologyRows(rows = []) {
-  return rows.map((row) => ({
-    ...row,
-    title:
-      row.title ||
-      row.category ||
-      row.record_type ||
-      "Timeline event",
-    summary:
-      row.summary ||
-      row.outcome ||
-      row.concern_summary ||
-      row.description ||
-      "Open to view more detail.",
-  }));
+function buildFallbackTimeline({
+incidents = [],
+dailyNotes = [],
+healthRecords = [],
+educationRecords = [],
+familyRecords = [],
+appointments = [],
+missingEpisodes = [],
+safeguardingRecords = [],
+}) {
+return sortNewestFirst(
+[
+...incidents.map((item) =>
+toTimelineRow(item, {
+source_table: "incidents",
+record_type: "incident",
+})
+),
+...dailyNotes.map((item) =>
+toTimelineRow(item, {
+source_table: "daily_notes",
+record_type: "daily_note",
+})
+),
+...healthRecords.map((item) =>
+toTimelineRow(item, {
+source_table: "health_records",
+record_type: "health_record",
+})
+),
+...educationRecords.map((item) =>
+toTimelineRow(item, {
+source_table: "education_records",
+record_type: "education_record",
+})
+),
+...familyRecords.map((item) =>
+toTimelineRow(item, {
+source_table: "family_contact_records",
+record_type: "family_contact",
+})
+),
+...appointments.map((item) =>
+toTimelineRow(item, {
+source_table: "appointments",
+record_type: "appointment",
+})
+),
+...missingEpisodes.map((item) =>
+toTimelineRow(item, {
+source_table: "missing_episodes",
+record_type: "missing_episode",
+})
+),
+...safeguardingRecords.map((item) =>
+toTimelineRow(item, {
+source_table: "safeguarding_records",
+record_type: "safeguarding_record",
+})
+),
+],
+["event_datetime", "created_at"]
+);
+}
+
+function buildPatternCards(chronology = []) {
+const highRisk = chronology.filter((item) =>
+["high", "critical"].includes(String(item.severity || "").toLowerCase())
+);
+
+const safeguarding = chronology.filter((item) => item.safeguarding_flag);
+const childVoice = chronology.filter((item) => item.child_voice_present);
+const autoGenerated = chronology.filter((item) => item.auto_generated);
+
+return `
+<div class="profile-grid">
+<div class="profile-card">
+<div class="profile-card-title">High-risk events</div>
+<div class="profile-card-text">${escapeHtml(String(highRisk.length))}</div>
+<div class="profile-card-subtext">Chronology items marked high or critical</div>
+</div>
+
+<div class="profile-card">
+<div class="profile-card-title">Safeguarding-linked</div>
+<div class="profile-card-text">${escapeHtml(String(safeguarding.length))}</div>
+<div class="profile-card-subtext">Events carrying safeguarding flags</div>
+</div>
+
+<div class="profile-card">
+<div class="profile-card-title">Child voice present</div>
+<div class="profile-card-text">${escapeHtml(String(childVoice.length))}</div>
+<div class="profile-card-subtext">Chronology items with voice captured</div>
+</div>
+
+<div class="profile-card">
+<div class="profile-card-title">Auto-generated</div>
+<div class="profile-card-text">${escapeHtml(String(autoGenerated.length))}</div>
+<div class="profile-card-subtext">Events projected from linked records</div>
+</div>
+</div>
+`;
+}
+
+function buildRecentImportantRows(chronology = []) {
+return chronology.filter((item) => {
+const severity = String(item.severity || "").toLowerCase();
+const significance = String(item.significance || "").toLowerCase();
+
+return (
+["high", "critical"].includes(severity) ||
+["high", "critical"].includes(significance) ||
+item.safeguarding_flag
+);
+});
+}
+
+function buildCategoryBuckets(chronology = []) {
+const incidents = chronology.filter((item) =>
+["incident", "incidents"].includes(String(item.record_type || item.primary_record_type || "").toLowerCase())
+);
+
+const health = chronology.filter((item) =>
+String(item.record_type || item.primary_record_type || "").toLowerCase().includes("health")
+);
+
+const education = chronology.filter((item) =>
+String(item.record_type || item.primary_record_type || "").toLowerCase().includes("education")
+);
+
+const family = chronology.filter((item) =>
+String(item.record_type || item.primary_record_type || "").toLowerCase().includes("family")
+);
+
+return { incidents, health, education, family };
 }
 
 export async function loadTimeline() {
-  if (!els.viewContent) return;
+if (!els.viewContent) return;
 
-  els.viewContent.innerHTML = `
-    <div class="loading-state">
-      <div>
-        <div class="spinner"></div>
-        <p>Loading timeline...</p>
-      </div>
-    </div>
-  `;
+els.viewContent.innerHTML = `
+<div class="loading-state">
+<div>
+<div class="spinner"></div>
+<p>Loading timeline...</p>
+</div>
+</div>
+`;
 
-  try {
-    const [
-      chronologyData,
-      dailyNotesData,
-      incidentsData,
-      healthData,
-      educationData,
-      familyData,
-      keyworkData,
-      appointmentsData,
-      plansData,
-      risksData,
-    ] = await Promise.all([
-      apiGet(`/young-people/${state.youngPersonId}/timeline?limit=100`).catch(() => ({ timeline: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/daily-notes`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/incidents`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/health`).catch(() => ({ health_records: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/education`).catch(() => ({ education_records: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/family`).catch(() => ({ family_contact_records: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/keywork`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/appointments`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/plans`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/risks`).catch(() => ({ items: [] })),
-    ]);
+try {
+const [
+timelineData,
+incidentsData,
+dailyNotesData,
+healthData,
+educationData,
+familyData,
+appointmentsData,
+missingData,
+safeguardingData,
+] = await Promise.all([
+apiGet(`/young-people/${state.youngPersonId}/timeline`).catch(() => ({ items: [] })),
+apiGet(`/young-people/${state.youngPersonId}/incidents`).catch(() => ({ items: [] })),
+apiGet(`/young-people/${state.youngPersonId}/daily-notes`).catch(() => ({ items: [] })),
+apiGet(`/young-people/${state.youngPersonId}/health-records`).catch(() => ({ items: [] })),
+apiGet(`/young-people/${state.youngPersonId}/education-records`).catch(() => ({ items: [] })),
+apiGet(`/young-people/${state.youngPersonId}/family-contact-records`).catch(() => ({ items: [] })),
+apiGet(`/young-people/${state.youngPersonId}/appointments`).catch(() => ({ items: [] })),
+apiGet(`/young-people/${state.youngPersonId}/missing-episodes`).catch(() => ({ items: [] })),
+apiGet(`/young-people/${state.youngPersonId}/safeguarding-records`).catch(() => ({ items: [] })),
+]);
 
-    const chronologyRows = enrichChronologyRows(
-      (chronologyData.timeline || chronologyData.items || []).map(mapChronologyEvent)
-    );
+const chronology = sortNewestFirst(
+(
+timelineData.timeline ||
+timelineData.items ||
+timelineData.records ||
+timelineData.chronology_events ||
+[]
+).map(mapChronologyEvent),
+["event_datetime", "created_at"]
+);
 
-    const dailyRows = (dailyNotesData.items || dailyNotesData.records || dailyNotesData.daily_notes || []).map(mapDailyNote);
-    const incidentRows = (incidentsData.items || incidentsData.records || incidentsData.incidents || []).map(mapIncident);
-    const healthRows = (healthData.health_records || healthData.items || []).map(mapHealthRecord);
-    const educationRows = (educationData.education_records || educationData.items || []).map(mapEducationRecord);
-    const familyRows = (familyData.family_contact_records || familyData.items || []).map(mapFamilyContactRecord);
-    const keyworkRows = (keyworkData.items || keyworkData.records || keyworkData.keywork_sessions || []).map(mapKeyworkSession);
-    const appointmentRows = (
-      appointmentsData.items ||
-      appointmentsData.records ||
-      appointmentsData.appointments ||
-      appointmentsData.young_person_appointments ||
-      []
-    ).map(mapAppointment);
-    const planRows = (plansData.items || plansData.records || plansData.support_plans || []).map(mapSupportPlan);
-    const riskRows = (risksData.items || risksData.records || risksData.risk_assessments || []).map(mapRiskAssessment);
+const incidents = sortNewestFirst(
+(incidentsData.items || incidentsData.records || incidentsData.incidents || []).map(mapIncident),
+["occurred_at", "created_at"]
+);
 
-    const allRows = dedupeTimelineRows(
-      sortTimelineRows([
-        ...chronologyRows,
-        ...dailyRows,
-        ...incidentRows,
-        ...healthRows,
-        ...educationRows,
-        ...familyRows,
-        ...keyworkRows,
-        ...appointmentRows,
-        ...planRows,
-        ...riskRows,
-      ])
-    );
+const dailyNotes = sortNewestFirst(
+(dailyNotesData.items || dailyNotesData.records || dailyNotesData.daily_notes || []).map(mapDailyNote),
+["record_date", "created_at"]
+);
 
-    els.viewContent.innerHTML = `
-      ${renderSection(
-        "Timeline",
-        "A single chronology across daily life, important events, health, learning, family time, appointments and planning.",
-        renderRowList(allRows, "No timeline items found.")
-      )}
-    `;
-  } catch (error) {
-    els.viewContent.innerHTML = `
-      <div class="empty-state">
-        <p>${escapeHtml(error.message || "Failed to load timeline.")}</p>
-      </div>
-    `;
-  }
+const healthRecords = sortNewestFirst(
+(healthData.items || healthData.records || healthData.health_records || []).map(mapHealthRecord),
+["event_datetime", "created_at"]
+);
+
+const educationRecords = sortNewestFirst(
+(educationData.items || educationData.records || educationData.education_records || []).map(mapEducationRecord),
+["record_date", "created_at"]
+);
+
+const familyRecords = sortNewestFirst(
+(familyData.items || familyData.records || familyData.family_contact_records || []).map(mapFamilyContactRecord),
+["contact_datetime", "created_at"]
+);
+
+const appointments = sortNewestFirst(
+(
+appointmentsData.items ||
+appointmentsData.records ||
+appointmentsData.appointments ||
+appointmentsData.young_person_appointments ||
+[]
+).map(mapAppointment),
+["start_datetime", "created_at"]
+);
+
+const missingEpisodes = sortNewestFirst(
+(missingData.items || missingData.records || missingData.missing_episodes || []).map(mapMissingEpisode),
+["start_datetime", "created_at"]
+);
+
+const safeguardingRecords = sortNewestFirst(
+(safeguardingData.items || safeguardingData.records || safeguardingData.safeguarding_records || []).map(
+mapSafeguardingRecord
+),
+["concern_datetime", "created_at"]
+);
+
+const fallbackTimeline = buildFallbackTimeline({
+incidents,
+dailyNotes,
+healthRecords,
+educationRecords,
+familyRecords,
+appointments,
+missingEpisodes,
+safeguardingRecords,
+});
+
+const timelineRows = chronology.length ? chronology : fallbackTimeline;
+const importantRows = buildRecentImportantRows(timelineRows).slice(0, 10);
+const buckets = buildCategoryBuckets(timelineRows);
+
+els.viewContent.innerHTML = `
+<section class="summary-strip">
+${renderSummaryStat("Chronology items", timelineRows.length)}
+${renderSummaryStat("Incidents", incidents.length)}
+${renderSummaryStat("Health", healthRecords.length)}
+${renderSummaryStat("Education", educationRecords.length)}
+</section>
+
+${renderSection(
+"Timeline overview",
+chronology.length
+? "Chronology events generated and linked across the young person’s story."
+: "Chronology events are not available, so this view is showing a fallback timeline from linked records.",
+buildPatternCards(timelineRows)
+)}
+
+${renderSection(
+"Important recent events",
+"High-significance, safeguarding-linked or high-severity events to notice first.",
+renderRowList(importantRows, "No recent high-priority events found.")
+)}
+
+${renderSection(
+"Full chronology",
+chronology.length
+? "Recorded chronology events in newest-first order."
+: "Fallback view built from incidents, daily notes, health, education, family, appointments and safeguarding records.",
+renderRowList(timelineRows, "No timeline items found.")
+)}
+
+${renderSection(
+"Recent incidents in timeline",
+"Incident-related chronology and linked events.",
+renderRowList(buckets.incidents.slice(0, 8), "No incident-related timeline items found.")
+)}
+
+${renderSection(
+"Recent health-related events",
+"Appointments, health records and related chronology items.",
+renderRowList(buckets.health.slice(0, 8), "No health-related timeline items found.")
+)}
+
+${renderSection(
+"Recent education-related events",
+"Attendance, engagement, school issues and progress in the timeline.",
+renderRowList(buckets.education.slice(0, 8), "No education-related timeline items found.")
+)}
+
+${renderSection(
+"Recent family-related events",
+"Family contact and relationship-related items in the timeline.",
+renderRowList(buckets.family.slice(0, 8), "No family-related timeline items found.")
+)}
+`;
+} catch (error) {
+els.viewContent.innerHTML = `
+<div class="empty-state">
+<p>${escapeHtml(error.message || "Failed to load timeline.")}</p>
+</div>
+`;
+}
 }
