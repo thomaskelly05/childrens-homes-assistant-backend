@@ -1,5 +1,5 @@
-import { state } from "../state.js";
 import { els } from "../dom.js";
+import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
 import { renderRowList } from "../ui/records.js";
@@ -18,43 +18,32 @@ function renderSection(title, subtitle, body) {
   `;
 }
 
-function bindDynamicOpenRecordButtons() {
+export async function loadReports() {
   if (!els.viewContent) return;
 
-  els.viewContent.querySelectorAll("[data-open-record]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      try {
-        const item = JSON.parse(btn.dataset.openRecord);
-        const mod = await import("../ui/records.js");
-        mod.openRecordDetail(item);
-      } catch {
-        // ignore
-      }
-    });
-  });
-}
+  els.viewContent.innerHTML = `
+    <div class="loading-state">
+      <div>
+        <div class="spinner"></div>
+        <p>Loading reports...</p>
+      </div>
+    </div>
+  `;
 
-export async function loadReports() {
   const data = await apiGet(`/young-people/${state.youngPersonId}/reports`).catch(() => ({ items: [] }));
-  const reports = data.items || data.records || [];
+  const reports = data.items || [];
 
   const mapped = reports.map((report) => ({
     ...report,
-    record_type: report.record_type || "report",
-    title: report.title || report.report_title || "Report",
-    summary: report.report_text || report.summary || "Report available.",
-    created_at: report.created_at || report.generated_at || report.updated_at || null,
+    record_type: "report",
+    summary: report.report_text || report.summary || "Report ready.",
   }));
-
-  if (!els.viewContent) return;
 
   els.viewContent.innerHTML = `
     ${renderSection(
       "Reports",
-      "Drafts, summaries and generated outputs linked to this young person.",
+      "Drafts, summaries and generated outputs.",
       renderRowList(mapped, "No reports found.")
     )}
   `;
-
-  bindDynamicOpenRecordButtons();
 }
