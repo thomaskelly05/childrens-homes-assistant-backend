@@ -11,11 +11,16 @@ from typing import Any
 
 import pyotp
 import qrcode
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 from psycopg2.extras import RealDictCursor
 
 from auth.mfa_guard import (
+    PREAUTH_EMAIL_KEY,
+    PREAUTH_PENDING_KEY,
+    PREAUTH_REMEMBER_KEY,
+    PREAUTH_STARTED_AT_KEY,
+    PREAUTH_USER_ID_KEY,
     SESSION_MFA_VERIFIED_KEY,
     SESSION_USER_EMAIL_KEY,
     SESSION_USER_ID_KEY,
@@ -42,6 +47,7 @@ router = APIRouter(prefix="/auth/mfa", tags=["MFA"])
 RECOVERY_CODE_COUNT = int(os.getenv("MFA_RECOVERY_CODE_COUNT", "8"))
 RECOVERY_CODE_LENGTH = int(os.getenv("MFA_RECOVERY_CODE_LENGTH", "10"))
 MFA_WINDOW = int(os.getenv("MFA_TOTP_WINDOW", "1"))
+PREAUTH_MAX_AGE_SECONDS = int(os.getenv("AUTH_PREAUTH_MAX_AGE_SECONDS", "600"))
 
 
 class VerifyMFARequest(BaseModel):
@@ -64,7 +70,7 @@ class RecoveryCodeLoginRequest(BaseModel):
 class SessionUser:
     user_id: int
     email: str
-    token: str
+    token: str | None = None
 
 
 def _safe_string(value: Any) -> str:
@@ -118,7 +124,7 @@ def _extract_session_token(request: Request) -> str | None:
     return _safe_string(token) or None
 
 
-def _get_session_user(request: Request) -> SessionUser:
+def _get_fully_authenticated_session_user(request: Request) -> SessionUser:
     token = _extract_session_token(request)
     if not token:
         raise HTTPException(
@@ -143,27 +149,54 @@ def _get_session_user(request: Request) -> SessionUser:
         )
 
     session_user_id = request.session.get(SESSION_USER_ID_KEY)
-    if session_user_id is not None:
-        try:
-            if int(session_user_id) != user_id:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Session mismatch",
-                )
-        except (TypeError, ValueError):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid session state",
-            )
+    mfa_verified = request.session.get(SESSION_MFA_VERIFIED_KEY) is True
+
+    if session_user_id != user_id or not mfa_verified:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not fully authenticated",
+        )
 
     email = _safe_string(request.session.get(SESSION_USER_EMAIL_KEY))
-    request.session[SESSION_USER_ID_KEY] = user_id
-    request.session.setdefault(SESSION_USER_EMAIL_KEY, email)
 
     return SessionUser(
         user_id=user_id,
         email=email,
         token=token,
+    )
+
+
+def _get_pending_mfa_user(request: Request) -> SessionUser:
+    pending = request.session.get(PREAUTH_PENDING_KEY) is True
+    user_id = request.session.get(PREAUTH_USER_ID_KEY)
+    email = _safe_string(request.session.get(PREAUTH_EMAIL_KEY))
+    started_at = request.session.get(PREAUTH_STARTED_AT_KEY)
+
+    if not pending or not user_id or not started_at:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No MFA challenge is pending",
+        )
+
+    try:
+        user_id = int(user_id)
+        started_at = int(started_at)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid MFA session",
+        )
+
+    if time.time() - started_at > PREAUTH_MAX_AGE_SECONDS:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="MFA challenge expired. Please sign in again.",
+        )
+
+    return SessionUser(
+        user_id=user_id,
+        email=email,
+        token=None,
     )
 
 
@@ -246,6 +279,19 @@ def _set_csrf_cookie(response: Response, csrf_token: str, remember: bool = False
     )
 
 
+def _clear_auth_cookies(response: Response) -> None:
+    response.delete_cookie(key=auth_settings.session_cookie_name, path="/")
+    response.delete_cookie(key=auth_settings.csrf_cookie_name, path="/")
+
+
+def _clear_preauth_session(request: Request) -> None:
+    request.session.pop(PREAUTH_USER_ID_KEY, None)
+    request.session.pop(PREAUTH_EMAIL_KEY, None)
+    request.session.pop(PREAUTH_STARTED_AT_KEY, None)
+    request.session.pop(PREAUTH_REMEMBER_KEY, None)
+    request.session.pop(PREAUTH_PENDING_KEY, None)
+
+
 def _rotate_post_mfa_session(
     *,
     request: Request,
@@ -253,15 +299,17 @@ def _rotate_post_mfa_session(
     user_id: int,
     email: str,
 ) -> None:
-    remember = bool(request.session.get("remember"))
+    remember = bool(request.session.get(PREAUTH_REMEMBER_KEY) or request.session.get("remember"))
     new_token = create_session_token(user_id)
     new_csrf = secrets.token_urlsafe(32)
 
+    request.session.clear()
     request.session[SESSION_USER_ID_KEY] = int(user_id)
     request.session[SESSION_USER_EMAIL_KEY] = email
     request.session[SESSION_MFA_VERIFIED_KEY] = True
     request.session["csrf_token"] = new_csrf
     request.session["remember"] = remember
+    request.session["login_at"] = int(time.time())
     request.session["mfa_verified_at"] = int(time.time())
 
     _set_session_cookie(response, new_token, remember=remember)
@@ -292,7 +340,21 @@ def _build_qr_code_data_url(value: str) -> str:
 
 @router.get("/status")
 def mfa_status(request: Request, conn=Depends(get_db)):
-    session_user = _get_session_user(request)
+    if request.session.get(PREAUTH_PENDING_KEY) is True:
+        session_user = _get_pending_mfa_user(request)
+        user = _assert_active_user(_get_user_row(conn, session_user.user_id))
+        mfa_row = get_user_mfa(session_user.user_id)
+        return {
+            "ok": True,
+            "user_id": user["id"],
+            "email": user["email"],
+            "mfa_enabled": bool(mfa_row and mfa_row.get("is_enabled")),
+            "mfa_verified": False,
+            "mfa_pending": True,
+            "recovery_code_count": count_unused_recovery_codes(user["id"]) if mfa_row and mfa_row.get("is_enabled") else 0,
+        }
+
+    session_user = _get_fully_authenticated_session_user(request)
     user = _assert_active_user(_get_user_row(conn, session_user.user_id))
     mfa_row = get_user_mfa(session_user.user_id)
 
@@ -302,85 +364,69 @@ def mfa_status(request: Request, conn=Depends(get_db)):
         "email": user["email"],
         "mfa_enabled": bool(mfa_row and mfa_row.get("is_enabled")),
         "mfa_verified": request.session.get(SESSION_MFA_VERIFIED_KEY) is True,
+        "mfa_pending": False,
         "recovery_code_count": count_unused_recovery_codes(user["id"]),
     }
 
 
 @router.get("/setup")
 def get_mfa_setup(request: Request, conn=Depends(get_db)):
+    session_user = _get_fully_authenticated_session_user(request)
+    user = _assert_active_user(_get_user_row(conn, session_user.user_id))
+
+    mfa_row = get_user_mfa(session_user.user_id)
+    if mfa_row and mfa_row.get("is_enabled"):
+        return {
+            "ok": True,
+            "already_enabled": True,
+            "mfa_enabled": True,
+            "recovery_code_count": count_unused_recovery_codes(user["id"]),
+        }
+
+    secret = pyotp.random_base32()
+    issuer = os.getenv("MFA_ISSUER_NAME", "IndiCare")
+    account_name = (
+        user.get("email")
+        or session_user.email
+        or f"user-{user['id']}@indicare.local"
+    )
+
+    provisioning_uri = pyotp.TOTP(secret).provisioning_uri(
+        name=account_name,
+        issuer_name=issuer,
+    )
+
+    qr_code_data_url = None
     try:
-        session_user = _get_session_user(request)
-        user = _assert_active_user(_get_user_row(conn, session_user.user_id))
-
-        mfa_row = get_user_mfa(session_user.user_id)
-        if mfa_row and mfa_row.get("is_enabled"):
-            return {
-                "ok": True,
-                "already_enabled": True,
-                "mfa_enabled": True,
-                "recovery_code_count": count_unused_recovery_codes(user["id"]),
-            }
-
-        secret = pyotp.random_base32()
-        issuer = os.getenv("MFA_ISSUER_NAME", "IndiCare")
-        account_name = (
-            user.get("email")
-            or session_user.email
-            or f"user-{user['id']}@indicare.local"
-        )
-
-        provisioning_uri = pyotp.TOTP(secret).provisioning_uri(
-            name=account_name,
-            issuer_name=issuer,
-        )
-
-        qr_code_data_url = None
-        try:
-            qr_code_data_url = _build_qr_code_data_url(provisioning_uri)
-        except Exception as exc:
-            _log_auth(
-                request=request,
-                user_id=user["id"],
-                email=user["email"],
-                event_type="mfa_setup_qr_warning",
-                detail=repr(exc),
-            )
-
-        request.session["pending_mfa_secret"] = secret
-
+        qr_code_data_url = _build_qr_code_data_url(provisioning_uri)
+    except Exception as exc:
         _log_auth(
             request=request,
             user_id=user["id"],
             email=user["email"],
-            event_type="mfa_setup_started",
-            detail="MFA setup initiated",
-        )
-
-        return {
-            "ok": True,
-            "already_enabled": False,
-            "secret": secret,
-            "provisioning_uri": provisioning_uri,
-            "issuer": issuer,
-            "account_name": account_name,
-            "qr_code_data_url": qr_code_data_url,
-        }
-
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.exception("Fatal MFA setup error")
-        _log_auth(
-            request=request,
-            user_id=None,
-            email=None,
-            event_type="mfa_setup_error",
+            event_type="mfa_setup_qr_warning",
             detail=repr(exc),
         )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"MFA setup failed: {exc.__class__.__name__}: {str(exc)}",
-        )
+
+    request.session["pending_mfa_secret"] = secret
+
+    _log_auth(
+        request=request,
+        user_id=user["id"],
+        email=user["email"],
+        event_type="mfa_setup_started",
+        detail="MFA setup initiated",
+    )
+
+    return {
+        "ok": True,
+        "already_enabled": False,
+        "secret": secret,
+        "provisioning_uri": provisioning_uri,
+        "issuer": issuer,
+        "account_name": account_name,
+        "qr_code_data_url": qr_code_data_url,
+    }
 
 
 @router.post("/setup")
@@ -390,7 +436,7 @@ def complete_mfa_setup(
     response: Response,
     conn=Depends(get_db),
 ):
-    session_user = _get_session_user(request)
+    session_user = _get_fully_authenticated_session_user(request)
     user = _assert_active_user(_get_user_row(conn, session_user.user_id))
 
     secret = _safe_string(request.session.get("pending_mfa_secret"))
@@ -459,7 +505,7 @@ def verify_mfa(
     response: Response,
     conn=Depends(get_db),
 ):
-    session_user = _get_session_user(request)
+    session_user = _get_pending_mfa_user(request)
     user = _assert_active_user(_get_user_row(conn, session_user.user_id))
 
     mfa_row = get_user_mfa(user["id"])
@@ -486,8 +532,12 @@ def verify_mfa(
         )
 
     update_last_verified(user["id"])
-    request.session[SESSION_MFA_VERIFIED_KEY] = True
-    request.session["mfa_verified_at"] = int(time.time())
+    _rotate_post_mfa_session(
+        request=request,
+        response=response,
+        user_id=user["id"],
+        email=user["email"],
+    )
 
     _log_auth(
         request=request,
@@ -500,7 +550,9 @@ def verify_mfa(
     return {
         "ok": True,
         "message": "MFA verified",
+        "authenticated": True,
         "mfa_verified": True,
+        "mfa_pending": False,
     }
 
 
@@ -511,7 +563,7 @@ def verify_recovery_code(
     response: Response,
     conn=Depends(get_db),
 ):
-    session_user = _get_session_user(request)
+    session_user = _get_pending_mfa_user(request)
     user = _assert_active_user(_get_user_row(conn, session_user.user_id))
 
     mfa_row = get_user_mfa(user["id"])
@@ -556,6 +608,7 @@ def verify_recovery_code(
     return {
         "ok": True,
         "message": "Recovery code accepted",
+        "authenticated": True,
         "mfa_verified": True,
         "remaining_recovery_codes": count_unused_recovery_codes(user["id"]),
     }
@@ -567,7 +620,7 @@ def disable_mfa_route(
     request: Request,
     conn=Depends(get_db),
 ):
-    session_user = _get_session_user(request)
+    session_user = _get_fully_authenticated_session_user(request)
     user = _assert_active_user(_get_user_row(conn, session_user.user_id))
 
     mfa_row = get_user_mfa(user["id"])
@@ -617,7 +670,7 @@ def regenerate_recovery_codes(
     request: Request,
     conn=Depends(get_db),
 ):
-    session_user = _get_session_user(request)
+    session_user = _get_fully_authenticated_session_user(request)
     user = _assert_active_user(_get_user_row(conn, session_user.user_id))
 
     mfa_row = get_user_mfa(user["id"])
