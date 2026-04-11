@@ -1,117 +1,146 @@
+function byId(id) {
+  return document.getElementById(id);
+}
+
 export const els = {
-  app: document.getElementById("app"),
+  app: byId("app"),
 
-  selectorScreen: document.getElementById("selectorScreen"),
-  selectorSearch: document.getElementById("selectorSearch"),
-  selectorRefreshBtn: document.getElementById("selectorRefreshBtn"),
-  selectorList: document.getElementById("selectorList"),
+  // selector
+  selectorScreen: byId("selectorScreen"),
+  selectorSearch: byId("selectorSearch"),
+  selectorRefreshBtn: byId("selectorRefreshBtn"),
+  selectorList: byId("selectorList"),
 
-  workspaceScreen: document.getElementById("workspaceScreen"),
-  homeBtn: document.getElementById("homeBtn"),
-  mobileHomeBtn: document.getElementById("mobileHomeBtn"),
-  logoBtn: document.getElementById("logoBtn"),
-  refreshBtn: document.getElementById("refreshBtn"),
+  // workspace shell
+  workspaceScreen: byId("workspaceScreen"),
+  homeBtn: byId("homeBtn"),
+  mobileHomeBtn: byId("mobileHomeBtn"),
+  logoBtn: byId("logoBtn"),
+  refreshBtn: byId("refreshBtn"),
 
-  personAvatar: document.getElementById("personAvatar"),
-  personName: document.getElementById("personName"),
-  personMeta: document.getElementById("personMeta"),
+  // header / hero
+  personAvatar: byId("personAvatar"),
+  personName: byId("personName"),
+  personMeta: byId("personMeta"),
 
-  mobilePersonAvatar: document.getElementById("mobilePersonAvatar"),
-  mobilePersonName: document.getElementById("mobilePersonName"),
-  mobilePersonMeta: document.getElementById("mobilePersonMeta"),
+  mobilePersonAvatar: byId("mobilePersonAvatar"),
+  mobilePersonName: byId("mobilePersonName"),
+  mobilePersonMeta: byId("mobilePersonMeta"),
 
-  profileSnapshotPhotoWrap: document.getElementById("profileSnapshotPhotoWrap"),
-  profileSnapshotName: document.getElementById("profileSnapshotName"),
-  profileSnapshotMeta: document.getElementById("profileSnapshotMeta"),
-  profileOpenBtn: document.getElementById("profileOpenBtn"),
-  profilePhotoUploadBtn: document.getElementById("profilePhotoUploadBtn"),
+  profileSnapshotPhotoWrap: byId("profileSnapshotPhotoWrap"),
+  profileSnapshotName: byId("profileSnapshotName"),
+  profileSnapshotMeta: byId("profileSnapshotMeta"),
+  profileOpenBtn: byId("profileOpenBtn"),
+  profilePhotoUploadBtn: byId("profilePhotoUploadBtn"),
 
-  pageTitle: document.getElementById("pageTitle"),
-  pageSubtitle: document.getElementById("pageSubtitle"),
-  heroQuickActions: document.getElementById("heroQuickActions"),
-  statusBar: document.getElementById("statusBar"),
+  // page header
+  pageTitle: byId("pageTitle"),
+  pageSubtitle: byId("pageSubtitle"),
+  heroQuickActions: byId("heroQuickActions"),
+  statusBar: byId("statusBar"),
 
-  desktopNav: document.getElementById("desktopNav"),
-  mobileNavDrawer: document.getElementById("mobileNavDrawer"),
-  mobileNavBackdrop: document.getElementById("mobileNavBackdrop"),
-  mobileNavBtn: document.getElementById("mobileNavBtn"),
-  closeMobileNavBtn: document.getElementById("closeMobileNavBtn"),
-  mobileNavContent: document.getElementById("mobileNavContent"),
+  // navigation
+  desktopNav: byId("desktopNav"),
+  mobileNavDrawer: byId("mobileNavDrawer"),
+  mobileNavBackdrop: byId("mobileNavBackdrop"),
+  mobileNavBtn: byId("mobileNavBtn"),
+  closeMobileNavBtn: byId("closeMobileNavBtn"),
+  mobileNavContent: byId("mobileNavContent"),
+  mobileBottomBar: byId("mobileBottomBar"),
 
-  viewContent: document.getElementById("viewContent"),
-  mobileBottomBar: document.getElementById("mobileBottomBar"),
+  // main content
+  viewContent: byId("viewContent"),
 
-  assistantContext: document.getElementById("assistantContext"),
-  assistantSuggestions: document.getElementById("assistantSuggestions"),
-  assistantMessages: document.getElementById("assistantMessages"),
-  assistantForm: document.getElementById("assistantForm"),
-  assistantInput: document.getElementById("assistantInput"),
-  assistantSendBtn: document.getElementById("assistantSendBtn"),
-  assistantLauncher: document.getElementById("assistantLauncher"),
-  assistantExpandBtn: document.getElementById("assistantExpandBtn"),
+  // assistant inline
+  assistantContext: byId("assistantContext"),
+  assistantSuggestions: byId("assistantSuggestions"),
+  assistantMessages: byId("assistantMessages"),
+  assistantForm: byId("assistantForm"),
+  assistantInput: byId("assistantInput"),
+  assistantSendBtn: byId("assistantSendBtn"),
+  assistantLauncher: byId("assistantLauncher"),
+  assistantExpandBtn: byId("assistantExpandBtn"),
 
-  assistantModal: document.getElementById("assistantModal"),
-  assistantBackdrop: document.getElementById("assistantBackdrop"),
-  closeAssistantBtn: document.getElementById("closeAssistantBtn"),
-  assistantModalMessages: document.getElementById("assistantModalMessages"),
-  assistantModalForm: document.getElementById("assistantModalForm"),
-  assistantModalInput: document.getElementById("assistantModalInput"),
-  assistantModalSendBtn: document.getElementById("assistantModalSendBtn"),
-  assistantClearBtn: document.getElementById("assistantClearBtn"),
+  // assistant modal
+  assistantModal: byId("assistantModal"),
+  assistantBackdrop: byId("assistantBackdrop"),
+  closeAssistantBtn: byId("closeAssistantBtn"),
+  assistantModalMessages: byId("assistantModalMessages"),
+  assistantModalForm: byId("assistantModalForm"),
+  assistantModalInput: byId("assistantModalInput"),
+  assistantModalSendBtn: byId("assistantModalSendBtn"),
+  assistantClearBtn: byId("assistantClearBtn"),
 
-  scopeBadge: document.getElementById("scopeBadge"),
-  scopeHomeBadge: document.getElementById("scopeHomeBadge"),
-  scopeChildBadge: document.getElementById("scopeChildBadge"),
-  scopeShiftBadge: document.getElementById("scopeShiftBadge"),
+  // assistant scope chips
+  scopeBadge: byId("scopeBadge"),
+  scopeHomeBadge: byId("scopeHomeBadge"),
+  scopeChildBadge: byId("scopeChildBadge"),
+  scopeShiftBadge: byId("scopeShiftBadge"),
+  modalScopeHomeBadge: byId("modalScopeHomeBadge"),
+  modalScopeChildBadge: byId("modalScopeChildBadge"),
 
-  modalScopeHomeBadge: document.getElementById("modalScopeHomeBadge"),
-  modalScopeChildBadge: document.getElementById("modalScopeChildBadge"),
+  // assistant insight panels
+  assistantScopeSummary: byId("assistantScopeSummary"),
+  assistantActions: byId("assistantActions"),
+  assistantSources: byId("assistantSources"),
+  assistantRuntime: byId("assistantRuntime"),
+  assistantExplainability: byId("assistantExplainability"),
+  assistantModalScopeSummary: byId("assistantModalScopeSummary"),
+  assistantModalSources: byId("assistantModalSources"),
 
-  assistantScopeSummary: document.getElementById("assistantScopeSummary"),
-  assistantActions: document.getElementById("assistantActions"),
-  assistantSources: document.getElementById("assistantSources"),
-  assistantRuntime: document.getElementById("assistantRuntime"),
-  assistantExplainability: document.getElementById("assistantExplainability"),
-  assistantModalScopeSummary: document.getElementById("assistantModalScopeSummary"),
-  assistantModalSources: document.getElementById("assistantModalSources"),
+  // fullscreen panel
+  fullscreenPanel: byId("fullscreenPanel"),
+  fullscreenPanelTitle: byId("fullscreenPanelTitle"),
+  fullscreenPanelSubtitle: byId("fullscreenPanelSubtitle"),
+  fullscreenPanelActions: byId("fullscreenPanelActions"),
+  fullscreenPanelBody: byId("fullscreenPanelBody"),
+  closeFullscreenPanelBtn: byId("closeFullscreenPanelBtn"),
 
-  fullscreenPanel: document.getElementById("fullscreenPanel"),
-  fullscreenPanelTitle: document.getElementById("fullscreenPanelTitle"),
-  fullscreenPanelSubtitle: document.getElementById("fullscreenPanelSubtitle"),
-  fullscreenPanelActions: document.getElementById("fullscreenPanelActions"),
-  fullscreenPanelBody: document.getElementById("fullscreenPanelBody"),
-  closeFullscreenPanelBtn: document.getElementById("closeFullscreenPanelBtn"),
+  // composer
+  composerPanel: byId("composerPanel"),
+  composerTitle: byId("composerTitle"),
+  composerSubtitle: byId("composerSubtitle"),
+  composerFields: byId("recordComposerFields"),
+  composerForm: byId("recordComposerForm"),
+  composerGuidanceText: byId("composerGuidanceText"),
+  composerPrompts: byId("composerPrompts"),
+  composerAiFeedback: byId("composerAiFeedback"),
+  composerAutosaveStatus: byId("composerAutosaveStatus"),
+  closeComposerBtn: byId("closeComposerBtn"),
+  composerSaveDraftBtn: byId("composerSaveDraftBtn"),
+  composerCheckBtn: byId("composerCheckBtn"),
+  composerSubmitBtn: byId("composerSubmitBtn"),
+  composerGrammarBtn: byId("composerGrammarBtn"),
+  composerClarityBtn: byId("composerClarityBtn"),
+  composerSafeguardingBtn: byId("composerSafeguardingBtn"),
+  composerChildVoiceBtn: byId("composerChildVoiceBtn"),
 
-  composerPanel: document.getElementById("composerPanel"),
-  composerTitle: document.getElementById("composerTitle"),
-  composerSubtitle: document.getElementById("composerSubtitle"),
-  composerFields: document.getElementById("recordComposerFields"),
-  composerForm: document.getElementById("recordComposerForm"),
-  composerGuidanceText: document.getElementById("composerGuidanceText"),
-  composerPrompts: document.getElementById("composerPrompts"),
-  composerAiFeedback: document.getElementById("composerAiFeedback"),
-  composerAutosaveStatus: document.getElementById("composerAutosaveStatus"),
-  closeComposerBtn: document.getElementById("closeComposerBtn"),
-  composerSaveDraftBtn: document.getElementById("composerSaveDraftBtn"),
-  composerCheckBtn: document.getElementById("composerCheckBtn"),
-  composerSubmitBtn: document.getElementById("composerSubmitBtn"),
-  composerGrammarBtn: document.getElementById("composerGrammarBtn"),
-  composerClarityBtn: document.getElementById("composerClarityBtn"),
-  composerSafeguardingBtn: document.getElementById("composerSafeguardingBtn"),
-  composerChildVoiceBtn: document.getElementById("composerChildVoiceBtn"),
+  // record drawer
+  drawer: byId("recordDrawer"),
+  drawerBackdrop: byId("recordDrawerBackdrop"),
+  drawerTitle: byId("recordDrawerTitle"),
+  drawerSubtitle: byId("recordDrawerSubtitle"),
+  drawerBody: byId("recordDrawerBody"),
+  drawerActions: byId("recordDrawerActions"),
+  closeDrawerBtn: byId("closeRecordDrawerBtn"),
+  drawerEditBtn: byId("drawerEditBtn"),
+  drawerSubmitBtn: byId("drawerSubmitBtn"),
+  drawerApproveBtn: byId("drawerApproveBtn"),
+  drawerReturnBtn: byId("drawerReturnBtn"),
+  drawerArchiveBtn: byId("drawerArchiveBtn"),
 
-  drawer: document.getElementById("recordDrawer"),
-  drawerBackdrop: document.getElementById("recordDrawerBackdrop"),
-  drawerTitle: document.getElementById("recordDrawerTitle"),
-  drawerSubtitle: document.getElementById("recordDrawerSubtitle"),
-  drawerBody: document.getElementById("recordDrawerBody"),
-  drawerActions: document.getElementById("recordDrawerActions"),
-  closeDrawerBtn: document.getElementById("closeRecordDrawerBtn"),
-  drawerEditBtn: document.getElementById("drawerEditBtn"),
-  drawerSubmitBtn: document.getElementById("drawerSubmitBtn"),
-  drawerApproveBtn: document.getElementById("drawerApproveBtn"),
-  drawerReturnBtn: document.getElementById("drawerReturnBtn"),
-  drawerArchiveBtn: document.getElementById("drawerArchiveBtn"),
-
-  changePersonBtn: document.getElementById("changePersonBtn"),
+  // misc actions
+  changePersonBtn: byId("changePersonBtn"),
 };
+
+export function requireEls(keys = []) {
+  const missing = keys.filter((key) => !els[key]);
+  if (missing.length) {
+    console.warn("[young-people-shell] Missing DOM elements:", missing);
+  }
+  return missing.length === 0;
+}
+
+export function getMissingEls(keys = []) {
+  return keys.filter((key) => !els[key]);
+}
