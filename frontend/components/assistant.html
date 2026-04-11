@@ -803,6 +803,135 @@
     </div>
   </div>
 
+  <div
+  id="passkeyModalOverlay"
+  style="
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,.45);
+    z-index:9998;
+  "
+></div>
+
+<div
+  id="passkeyModal"
+  style="
+    display:none;
+    position:fixed;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    width:min(92vw,520px);
+    background:#ffffff;
+    border-radius:20px;
+    box-shadow:0 20px 60px rgba(15,23,42,.22);
+    padding:24px;
+    z-index:9999;
+    border:1px solid #d8e1ec;
+  "
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="passkeyModalTitle"
+  aria-describedby="passkeyModalDesc"
+>
+  <div
+    style="
+      font-size:.82rem;
+      font-weight:800;
+      color:#2348a5;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      margin-bottom:10px;
+    "
+  >
+    Secure sign-in
+  </div>
+
+  <h2
+    id="passkeyModalTitle"
+    style="
+      margin:0 0 10px;
+      font-size:1.7rem;
+      line-height:1.1;
+      color:#18263b;
+    "
+  >
+    Add a passkey
+  </h2>
+
+  <p
+    id="passkeyModalDesc"
+    style="
+      margin:0 0 12px;
+      color:#5f7088;
+      line-height:1.65;
+    "
+  >
+    Your account is working normally. Add a passkey now to make future sign-ins
+    faster and more secure.
+  </p>
+
+  <p
+    style="
+      margin:0 0 18px;
+      color:#5f7088;
+      line-height:1.65;
+    "
+  >
+    You can still keep using your password and authenticator app as fallback.
+  </p>
+
+  <div style="display:grid;gap:10px;">
+    <button
+      id="passkeyModalAddBtn"
+      type="button"
+      style="
+        min-height:50px;
+        border:none;
+        border-radius:14px;
+        background:linear-gradient(135deg,#2348a5,#18357f);
+        color:#ffffff;
+        font:inherit;
+        font-weight:800;
+        cursor:pointer;
+      "
+    >
+      Add passkey
+    </button>
+
+    <button
+      id="passkeyModalSkipBtn"
+      type="button"
+      style="
+        min-height:50px;
+        border:1px solid #d8e1ec;
+        border-radius:14px;
+        background:#ffffff;
+        color:#18263b;
+        font:inherit;
+        font-weight:700;
+        cursor:pointer;
+      "
+    >
+      Skip for now
+    </button>
+  </div>
+
+  <div
+    id="passkeyModalStatus"
+    style="
+      min-height:22px;
+      margin-top:14px;
+      font-size:.94rem;
+      line-height:1.5;
+      color:#5f7088;
+    "
+    aria-live="polite"
+    role="status"
+  ></div>
+</div>
+
   <script src="/js/assistant.js"></script>
 </body>
 </html>
