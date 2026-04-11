@@ -1,4 +1,5 @@
 import os
+import re
 import secrets
 import time
 from dataclasses import dataclass
@@ -10,11 +11,6 @@ from pydantic import BaseModel, EmailStr, field_validator
 from psycopg2.extras import RealDictCursor
 
 from auth.mfa_guard import (
-    PREAUTH_EMAIL_KEY,
-    PREAUTH_PENDING_KEY,
-    PREAUTH_REMEMBER_KEY,
-    PREAUTH_STARTED_AT_KEY,
-    PREAUTH_USER_ID_KEY,
     SESSION_MFA_VERIFIED_KEY,
     SESSION_USER_EMAIL_KEY,
     SESSION_USER_ID_KEY,
@@ -23,6 +19,7 @@ from auth.tokens import create_session_token, decode_session_token
 from db.billing_db import get_user_billing_by_user_id
 from db.connection import get_db
 from db.mfa_db import get_user_mfa, log_auth_event
+from db.passkeys_db import user_has_passkeys
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -36,7 +33,6 @@ THROTTLE_WINDOW_SECONDS = int(os.getenv("AUTH_THROTTLE_WINDOW_SECONDS", "900"))
 MAX_FAILED_ATTEMPTS_PER_IP = int(os.getenv("AUTH_MAX_FAILED_ATTEMPTS_PER_IP", "20"))
 MAX_FAILED_ATTEMPTS_PER_EMAIL = int(os.getenv("AUTH_MAX_FAILED_ATTEMPTS_PER_EMAIL", "8"))
 LOCKOUT_SECONDS = int(os.getenv("AUTH_LOCKOUT_SECONDS", "900"))
-PREAUTH_MAX_AGE_SECONDS = int(os.getenv("AUTH_PREAUTH_MAX_AGE_SECONDS", "600"))
 
 DUMMY_BCRYPT_HASH = b"$2b$12$yAc2mW0pYv4B4xXj3H3oJ.5XQmsx3M3uVJfY0jQnR8iW0VtT1hN3K"
 
@@ -143,6 +139,18 @@ def _dummy_bcrypt_check(password: str) -> None:
         bcrypt.checkpw(password.encode("utf-8"), DUMMY_BCRYPT_HASH)
     except Exception:
         pass
+
+
+def _check_password_policy(password: str) -> str | None:
+    if len(password) < 12:
+        return "Password must be at least 12 characters long."
+    if not re.search(r"[A-Z]", password):
+        return "Password must include at least one uppercase letter."
+    if not re.search(r"[a-z]", password):
+        return "Password must include at least one lowercase letter."
+    if not re.search(r"\d", password):
+        return "Password must include at least one number."
+    return None
 
 
 def _client_ip(request: Request) -> str | None:
@@ -364,6 +372,7 @@ def _full_user_payload(
     *,
     mfa_enabled: bool,
     mfa_verified: bool,
+    has_passkeys: bool,
 ) -> dict[str, Any]:
     return {
         "id": user["id"],
@@ -384,6 +393,7 @@ def _full_user_payload(
         "current_period_end": billing.get("current_period_end") if billing else None,
         "mfa_enabled": mfa_enabled,
         "mfa_verified": mfa_verified,
+        "has_passkeys": has_passkeys,
     }
 
 
@@ -395,24 +405,6 @@ def _validate_active_user(user: dict[str, Any] | None) -> dict[str, Any]:
     if user.get("is_active") is False:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive")
     return user
-
-
-def _clear_preauth_session(request: Request) -> None:
-    request.session.pop(PREAUTH_USER_ID_KEY, None)
-    request.session.pop(PREAUTH_EMAIL_KEY, None)
-    request.session.pop(PREAUTH_STARTED_AT_KEY, None)
-    request.session.pop(PREAUTH_REMEMBER_KEY, None)
-    request.session.pop(PREAUTH_PENDING_KEY, None)
-
-
-def _start_preauth_session(request: Request, user: dict[str, Any], remember: bool) -> None:
-    _safe_session_reset(request)
-    request.session[PREAUTH_USER_ID_KEY] = int(user["id"])
-    request.session[PREAUTH_EMAIL_KEY] = user["email"]
-    request.session[PREAUTH_STARTED_AT_KEY] = int(_now())
-    request.session[PREAUTH_REMEMBER_KEY] = bool(remember)
-    request.session[PREAUTH_PENDING_KEY] = True
-    request.session[SESSION_MFA_VERIFIED_KEY] = False
 
 
 def _get_session_user_from_request(
@@ -436,14 +428,6 @@ def _get_session_user_from_request(
     except (TypeError, ValueError):
         if raise_on_missing:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
-        return None, None
-
-    session_user_id = request.session.get(SESSION_USER_ID_KEY)
-    mfa_verified = request.session.get(SESSION_MFA_VERIFIED_KEY) is True
-
-    if session_user_id != user_id or not mfa_verified:
-        if raise_on_missing:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not fully authenticated")
         return None, None
 
     user = _get_user_by_id(conn, user_id)
@@ -530,6 +514,29 @@ def login(
 
     _clear_failures(_client_ip(request), email)
 
+    token = create_session_token(user["id"])
+    csrf_token = secrets.token_urlsafe(32)
+
+    _set_session_cookie(response, token, remember=remember)
+    _set_csrf_cookie(response, csrf_token, remember=remember)
+
+    try:
+        _safe_session_reset(request)
+        request.session[SESSION_USER_ID_KEY] = int(user["id"])
+        request.session[SESSION_USER_EMAIL_KEY] = user["email"]
+        request.session[SESSION_MFA_VERIFIED_KEY] = False
+        request.session["csrf_token"] = csrf_token
+        request.session["remember"] = remember
+        request.session["login_at"] = int(_now())
+        request.session["preauth_pending"] = True
+        request.session["pending_mfa_user_id"] = int(user["id"])
+        request.session["pending_mfa_email"] = user["email"]
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Session could not be created",
+        )
+
     mfa_row = _get_mfa_safe(int(user["id"]))
     mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
     billing = _get_billing_safe(conn, user["id"])
@@ -543,78 +550,14 @@ def login(
         detail="Primary credential check passed",
     )
 
-    if force_mfa and not mfa_enabled:
-        _safe_session_reset(request)
-        _clear_auth_cookies(response)
-        _log_auth(
-            request=request,
-            user_id=user["id"],
-            email=user["email"],
-            event_type="login_blocked",
-            detail="MFA required but not configured",
-        )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="MFA is required for this account but is not configured.",
-        )
-
-    if mfa_enabled:
-        _clear_auth_cookies(response)
-        _start_preauth_session(request, user, remember=remember)
-        _log_auth(
-            request=request,
-            user_id=user["id"],
-            email=user["email"],
-            event_type="mfa_challenge_started",
-            detail="Password accepted; MFA pending",
-        )
-        return {
-            "ok": True,
-            "message": "Password accepted. MFA verification required.",
-            "authenticated": False,
-            "mfa_required": True,
-            "mfa_enabled": True,
-            "mfa_mandatory": force_mfa,
-            "mfa_pending": True,
-            "user": _session_user_payload(user, billing),
-        }
-
-    token = create_session_token(user["id"])
-    csrf_token = secrets.token_urlsafe(32)
-
-    _set_session_cookie(response, token, remember=remember)
-    _set_csrf_cookie(response, csrf_token, remember=remember)
-
-    try:
-        _safe_session_reset(request)
-        request.session[SESSION_USER_ID_KEY] = int(user["id"])
-        request.session[SESSION_USER_EMAIL_KEY] = user["email"]
-        request.session[SESSION_MFA_VERIFIED_KEY] = True
-        request.session["csrf_token"] = csrf_token
-        request.session["remember"] = remember
-        request.session["login_at"] = int(_now())
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Session could not be created",
-        )
-
-    _log_auth(
-        request=request,
-        user_id=user["id"],
-        email=user["email"],
-        event_type="login_success",
-        detail="Login completed without MFA",
-    )
-
     return {
         "ok": True,
-        "message": "Login successful.",
-        "authenticated": True,
-        "mfa_required": False,
-        "mfa_enabled": False,
+        "authenticated": False,
+        "message": "Password accepted. MFA required.",
+        "mfa_required": True,
+        "mfa_enabled": mfa_enabled,
         "mfa_mandatory": force_mfa,
-        "mfa_pending": False,
+        "mfa_pending": True,
         "user": _session_user_payload(user, billing),
     }
 
@@ -632,19 +575,28 @@ def check_auth(
     authorization: str | None = Header(default=None),
     conn=Depends(get_db),
 ):
-    if request.session.get(PREAUTH_PENDING_KEY) is True:
-        started_at = request.session.get(PREAUTH_STARTED_AT_KEY)
-        expires_in = None
+    if request.session.get("preauth_pending") is True:
+        pending_user_id = request.session.get("pending_mfa_user_id")
         try:
-            if started_at:
-                expires_in = max(0, PREAUTH_MAX_AGE_SECONDS - int(_now() - int(started_at)))
+            pending_user_id = int(pending_user_id) if pending_user_id is not None else None
+        except (TypeError, ValueError):
+            pending_user_id = None
+
+        expires_in_seconds = None
+        try:
+            login_at = int(request.session.get("login_at") or 0)
+            if login_at > 0:
+                expires_in_seconds = max(0, settings.cookie_max_age_short - int(_now() - login_at))
         except Exception:
-            expires_in = 0
+            expires_in_seconds = None
 
         return {
             "authenticated": False,
             "mfa_pending": True,
-            "expires_in_seconds": expires_in,
+            "mfa_enabled": True,
+            "mfa_verified": False,
+            "user_id": pending_user_id,
+            "expires_in_seconds": expires_in_seconds,
         }
 
     user, user_id = _get_session_user_from_request(
@@ -655,14 +607,15 @@ def check_auth(
     )
 
     if not user or user_id is None:
-        return {"authenticated": False}
+        return {"authenticated": False, "mfa_pending": False}
 
     if user.get("archived") is True or user.get("is_active") is False:
-        return {"authenticated": False}
+        return {"authenticated": False, "mfa_pending": False}
 
     billing = _get_billing_safe(conn, user_id)
     mfa_row = _get_mfa_safe(user_id)
     mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
+    mfa_verified = request.session.get(SESSION_MFA_VERIFIED_KEY) is True
 
     return {
         "authenticated": True,
@@ -675,7 +628,7 @@ def check_auth(
         "subscription_status": billing.get("subscription_status") if billing else "inactive",
         "plan_name": billing.get("plan_name") if billing else None,
         "mfa_enabled": mfa_enabled,
-        "mfa_verified": True,
+        "mfa_verified": mfa_verified,
         "mfa_mandatory": _mfa_required_for_role(user.get("role")),
         "mfa_pending": False,
     }
@@ -702,6 +655,8 @@ def get_me(
     billing = _get_billing_safe(conn, user_id)
     mfa_row = _get_mfa_safe(user_id)
     mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
+    mfa_verified = request.session.get(SESSION_MFA_VERIFIED_KEY) is True
+    has_passkeys = user_has_passkeys(user_id)
 
     return {
         "ok": True,
@@ -709,7 +664,8 @@ def get_me(
             user,
             billing,
             mfa_enabled=mfa_enabled,
-            mfa_verified=True,
+            mfa_verified=mfa_verified,
+            has_passkeys=has_passkeys,
         ),
         "mfa_mandatory": _mfa_required_for_role(user.get("role")),
     }
@@ -722,5 +678,4 @@ def auth_policy():
         "mfa_required_for_sensitive_roles": settings.force_mfa_for_sensitive_roles,
         "cookie_samesite": settings.cookie_samesite,
         "cookie_secure": settings.cookie_secure,
-        "preauth_max_age_seconds": PREAUTH_MAX_AGE_SECONDS,
     }
