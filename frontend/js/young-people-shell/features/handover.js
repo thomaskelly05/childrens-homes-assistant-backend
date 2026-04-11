@@ -2,16 +2,33 @@ import { els } from "../dom.js";
 import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
-import { renderRowList, renderSection, renderSummaryStat } from "../ui/records.js";
+import { renderSection, renderRowList, renderSummaryStat } from "../ui/records.js";
 import {
   mapDailyNote,
   mapIncident,
   mapSupportPlan,
   mapAppointment,
   mapChronologyEvent,
+  mapHandoverRecord,
 } from "../core/adapters.js";
 
-function buildHandoverSummary({
+function sortNewestFirst(items = [], keys = []) {
+  return [...items].sort((a, b) => {
+    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
+    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
+    return new Date(bValue).getTime() - new Date(aValue).getTime();
+  });
+}
+
+function sortSoonestFirst(items = [], keys = []) {
+  return [...items].sort((a, b) => {
+    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
+    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
+    return new Date(aValue).getTime() - new Date(bValue).getTime();
+  });
+}
+
+function buildSnapshot({
   dailyNotes = [],
   incidents = [],
   appointments = [],
@@ -32,7 +49,7 @@ function buildHandoverSummary({
           latestNote?.summary || latestNote?.presentation || "No recent daily note."
         )}</div>
         <div class="profile-card-subtext">${escapeHtml(
-          latestNote?.workflow_status || latestNote?.record_date || ""
+          latestNote?.record_date || latestNote?.workflow_status || ""
         )}</div>
       </div>
 
@@ -79,12 +96,22 @@ function buildHandoverSummary({
   `;
 }
 
-function sortNewestFirst(items = [], keys = []) {
-  return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
-    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
-    return new Date(bValue).getTime() - new Date(aValue).getTime();
-  });
+function buildPriorityRows({
+  incidents = [],
+  appointments = [],
+  chronology = [],
+}) {
+  const recentHighIncidents = incidents.filter((item) =>
+    ["high", "critical"].includes(String(item.severity || "").toLowerCase())
+  );
+
+  const urgentAppointments = appointments.filter((item) =>
+    !["cancelled", "completed"].includes(String(item.status || "").toLowerCase())
+  );
+
+  const safeguardingChronology = chronology.filter((item) => item.safeguarding_flag);
+
+  return [...recentHighIncidents, ...urgentAppointments, ...safeguardingChronology].slice(0, 10);
 }
 
 export async function loadHandover() {
@@ -105,28 +132,28 @@ export async function loadHandover() {
       incidentsData,
       appointmentsData,
       plansData,
-      chronologyData,
+      timelineData,
       handoverRecordsData,
     ] = await Promise.all([
       apiGet(`/young-people/${state.youngPersonId}/daily-notes`).catch(() => ({ items: [] })),
       apiGet(`/young-people/${state.youngPersonId}/incidents`).catch(() => ({ items: [] })),
       apiGet(`/young-people/${state.youngPersonId}/appointments`).catch(() => ({ items: [] })),
       apiGet(`/young-people/${state.youngPersonId}/plans`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/timeline?limit=12`).catch(() => ({ timeline: [] })),
+      apiGet(`/young-people/${state.youngPersonId}/timeline`).catch(() => ({ items: [] })),
       apiGet(`/young-people/${state.youngPersonId}/handover-records`).catch(() => ({ items: [] })),
     ]);
 
     const dailyNotes = sortNewestFirst(
       (dailyNotesData.items || dailyNotesData.records || dailyNotesData.daily_notes || []).map(mapDailyNote),
-      ["record_date", "recorded_at", "created_at"]
+      ["record_date", "created_at"]
     );
 
     const incidents = sortNewestFirst(
       (incidentsData.items || incidentsData.records || incidentsData.incidents || []).map(mapIncident),
-      ["occurred_at", "recorded_at", "created_at"]
+      ["occurred_at", "created_at"]
     );
 
-    const appointments = sortNewestFirst(
+    const appointments = sortSoonestFirst(
       (
         appointmentsData.items ||
         appointmentsData.records ||
@@ -137,51 +164,50 @@ export async function loadHandover() {
       ["start_datetime", "created_at"]
     );
 
-    const plans = sortNewestFirst(
+    const plans = sortSoonestFirst(
       (plansData.items || plansData.records || plansData.support_plans || []).map(mapSupportPlan),
       ["review_date", "updated_at", "created_at"]
     );
 
     const chronology = sortNewestFirst(
-      (chronologyData.timeline || chronologyData.items || []).map(mapChronologyEvent),
+      (
+        timelineData.timeline ||
+        timelineData.items ||
+        timelineData.records ||
+        timelineData.chronology_events ||
+        []
+      ).map(mapChronologyEvent),
       ["event_datetime", "created_at"]
     );
 
     const handoverRecords = sortNewestFirst(
-      (handoverRecordsData.items || handoverRecordsData.records || handoverRecordsData.handover_records || []).map(
-        (item) => ({
-          id: item.id,
-          record_type: "handover_record",
-          title: item.title || "Handover",
-          summary: item.summary_text || "Handover record",
-          handover_date: item.handover_date || null,
-          created_at: item.created_at || null,
-          updated_at: item.updated_at || null,
-          status: item.status || "",
-          shift_type: item.shift_type || "",
-        })
-      ),
+      (
+        handoverRecordsData.items ||
+        handoverRecordsData.records ||
+        handoverRecordsData.handover_records ||
+        []
+      ).map(mapHandoverRecord),
       ["handover_date", "created_at"]
     );
 
-    const recentPriorityItems = [
-      ...incidents.slice(0, 3),
-      ...appointments.slice(0, 3),
-      ...chronology.slice(0, 4),
-    ].slice(0, 8);
+    const priorityRows = buildPriorityRows({
+      incidents,
+      appointments,
+      chronology,
+    });
 
     els.viewContent.innerHTML = `
       <section class="summary-strip">
         ${renderSummaryStat("Daily notes", dailyNotes.length)}
         ${renderSummaryStat("Incidents", incidents.length)}
         ${renderSummaryStat("Appointments", appointments.length)}
-        ${renderSummaryStat("Plans", plans.length)}
+        ${renderSummaryStat("Handovers", handoverRecords.length)}
       </section>
 
       ${renderSection(
         "Shift snapshot",
         "The quickest way to understand what the next adult needs to know.",
-        buildHandoverSummary({
+        buildSnapshot({
           dailyNotes,
           incidents,
           appointments,
@@ -192,25 +218,31 @@ export async function loadHandover() {
 
       ${renderSection(
         "Priority items",
-        "Recent incidents, appointments and chronology that may affect the next shift.",
-        renderRowList(recentPriorityItems, "No priority items found.")
+        "High-risk incidents, upcoming appointments and safeguarding-linked chronology.",
+        renderRowList(priorityRows, "No priority items found.")
       )}
 
       ${renderSection(
         "Recent daily notes",
-        "Day-to-day context from the most recent notes.",
+        "The most recent daily notes for care continuity.",
         renderRowList(dailyNotes.slice(0, 6), "No recent daily notes found.")
       )}
 
       ${renderSection(
         "Current support plans",
-        "Plans and guidance that adults should keep in mind.",
+        "Plans and guidance that adults should keep in mind during handover.",
         renderRowList(plans.slice(0, 6), "No current support plans found.")
       )}
 
       ${renderSection(
-        "Recent handover records",
-        "Previous handover summaries and shift continuity notes.",
+        "Recent chronology",
+        "Recent chronology items that affect continuity and current understanding.",
+        renderRowList(chronology.slice(0, 8), "No chronology found.")
+      )}
+
+      ${renderSection(
+        "Previous handover records",
+        "Earlier handover summaries and continuity notes.",
         renderRowList(handoverRecords.slice(0, 6), "No handover records found.")
       )}
     `;
