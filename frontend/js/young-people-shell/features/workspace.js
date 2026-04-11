@@ -14,58 +14,62 @@ import { loadHealth } from "./health.js";
 import { loadEducation } from "./education.js";
 import { loadFamily } from "./family.js";
 import { loadCalendar } from "./calendar.js";
+import { loadReadiness } from "./readiness.js";
+import { loadManager } from "./manager.js";
 
 const VIEW_LOADERS = {
-  overview: loadOverview,
-  profile: loadProfile,
-  timeline: loadTimeline,
-  handover: loadHandover,
-  reports: loadReports,
-  health: loadHealth,
-  education: loadEducation,
-  family: loadFamily,
-  calendar: loadCalendar,
+overview: loadOverview,
+profile: loadProfile,
+timeline: loadTimeline,
+handover: loadHandover,
+reports: loadReports,
+health: loadHealth,
+education: loadEducation,
+family: loadFamily,
+calendar: loadCalendar,
+compliance: loadReadiness,
+manager: loadManager,
 };
 
 function renderUnknownView() {
-  if (!els.viewContent) return;
+if (!els.viewContent) return;
 
-  els.viewContent.innerHTML = `
-    <div class="empty-state">
-      <p>That section is not available yet.</p>
-    </div>
-  `;
+els.viewContent.innerHTML = `
+<div class="empty-state">
+<p>That section is not available yet.</p>
+</div>
+`;
 }
 
 function renderViewError(message) {
-  if (!els.viewContent) return;
+if (!els.viewContent) return;
 
-  els.viewContent.innerHTML = `
-    <div class="empty-state">
-      <p>${message}</p>
-    </div>
-  `;
+els.viewContent.innerHTML = `
+<div class="empty-state">
+<p>${message}</p>
+</div>
+`;
 }
 
 export async function loadCurrentView() {
-  updatePageHeader();
-  updateActiveNav();
-  updateAssistantContext();
-  renderAssistantScopeBadges();
+updatePageHeader();
+updateActiveNav();
+updateAssistantContext();
+renderAssistantScopeBadges();
 
-  const currentView = state.currentView || "overview";
-  const config = VIEW_CONFIG[currentView];
-  const loader = VIEW_LOADERS[currentView];
+const currentView = state.currentView || "overview";
+const config = VIEW_CONFIG[currentView];
+const loader = VIEW_LOADERS[currentView];
 
-  if (!config || !loader) {
-    renderUnknownView();
-    return;
-  }
+if (!config || !loader) {
+renderUnknownView();
+return;
+}
 
-  try {
-    await loader();
-  } catch (error) {
-    console.error(`Failed to load view: ${currentView}`, error);
-    renderViewError(error?.message || "Unable to load this section.");
-  }
+try {
+await loader();
+} catch (error) {
+console.error(`Failed to load view: ${currentView}`, error);
+renderViewError(error?.message || "Unable to load this section.");
+}
 }
