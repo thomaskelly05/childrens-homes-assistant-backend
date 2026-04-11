@@ -2,41 +2,36 @@ import { els } from "../dom.js";
 import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
-import { renderRowList, renderSection } from "../ui/records.js";
-import { mapBundle, mapEducationRecord } from "../core/adapters.js";
+import { renderSection, renderRowList, renderSummaryStat } from "../ui/records.js";
+import {
+  mapEducationRecord,
+  mapEducationProfile,
+  mapAchievementRecord,
+} from "../core/adapters.js";
 
-function renderEducationProfileCards(profile = {}) {
-  return `
-    <div class="profile-grid">
-      <button class="profile-card editable-card" type="button" data-action-router="edit-profile-education">
-        <div class="profile-card-title">School / provision</div>
-        <div class="profile-card-text">${escapeHtml(profile.school_name || "Not recorded")}</div>
-        <div class="profile-card-subtext">${escapeHtml(profile.education_status || "No status recorded")}</div>
-      </button>
+function sortNewestFirst(items = [], keys = []) {
+  return [...items].sort((a, b) => {
+    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
+    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
+    return new Date(bValue).getTime() - new Date(aValue).getTime();
+  });
+}
 
-      <button class="profile-card editable-card" type="button" data-action-router="edit-profile-education">
-        <div class="profile-card-title">Learning support</div>
-        <div class="profile-card-text">${escapeHtml(profile.support_summary || "Not recorded")}</div>
-        <div class="profile-card-subtext">${escapeHtml(profile.sen_status || "No SEN summary recorded")}</div>
-      </button>
-
-      <button class="profile-card editable-card" type="button" data-action-router="edit-profile-education">
-        <div class="profile-card-title">EHCP / PEP</div>
-        <div class="profile-card-text">${escapeHtml(profile.ehcp_details || "No EHCP details recorded")}</div>
-        <div class="profile-card-subtext">${escapeHtml(profile.pep_status || "No PEP status recorded")}</div>
-      </button>
-
-      <button class="profile-card editable-card" type="button" data-action-router="edit-profile-education">
-        <div class="profile-card-title">Attendance baseline</div>
-        <div class="profile-card-text">${escapeHtml(
-          profile.attendance_baseline != null && profile.attendance_baseline !== ""
-            ? String(profile.attendance_baseline)
-            : "Not recorded"
-        )}</div>
-        <div class="profile-card-subtext">${escapeHtml(profile.designated_teacher || "No designated teacher recorded")}</div>
-      </button>
-    </div>
-  `;
+function buildEducationRows(items = []) {
+  return items.map((item) => ({
+    id: item.id,
+    record_type: "education_record",
+    title: item.provision_name || item.title || "Education record",
+    summary:
+      item.learning_engagement ||
+      item.behaviour_summary ||
+      item.issue_raised ||
+      "Education update",
+    record_date: item.record_date || null,
+    created_at: item.created_at || null,
+    status: item.workflow_status || "",
+    significance: item.significance || "",
+  }));
 }
 
 function buildAchievementRows(items = []) {
@@ -45,16 +40,72 @@ function buildAchievementRows(items = []) {
     record_type: "achievement_record",
     title: item.title || item.achievement_type || "Achievement",
     summary:
-      [
-        item.description || null,
-        item.child_voice || null,
-        item.significance || null,
-      ].filter(Boolean).join(" • ") || "Achievement record",
-    record_date: item.achievement_date || item.created_at || null,
-    status: item.archived ? "archived" : "current",
-    source: item.source || "",
-    significance: item.significance || "",
+      item.description ||
+      item.child_voice ||
+      item.significance ||
+      "Achievement",
+    achievement_date: item.achievement_date || null,
+    created_at: item.created_at || null,
+    status: item.archived ? "Archived" : "Active",
   }));
+}
+
+function renderEducationProfile(profile = {}) {
+  const items = [
+    { label: "School", value: profile.school_name },
+    { label: "Year group", value: profile.year_group },
+    { label: "Education status", value: profile.education_status },
+    { label: "SEN status", value: profile.sen_status },
+    { label: "Designated teacher", value: profile.designated_teacher },
+    {
+      label: "Attendance baseline",
+      value:
+        profile.attendance_baseline !== null &&
+        profile.attendance_baseline !== undefined &&
+        profile.attendance_baseline !== ""
+          ? String(profile.attendance_baseline)
+          : "",
+    },
+    { label: "PEP status", value: profile.pep_status },
+    { label: "EHCP details", value: profile.ehcp_details },
+    { label: "Support summary", value: profile.support_summary },
+  ].filter((item) => item.value);
+
+  if (!items.length) {
+    return `
+      <div class="empty-state">
+        <p>No education profile recorded yet.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="profile-grid">
+      ${items
+        .map(
+          (item) => `
+            <div class="profile-card">
+              <div class="profile-card-title">${escapeHtml(item.label)}</div>
+              <div class="profile-card-text">${escapeHtml(item.value)}</div>
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function buildHeadlineStats(records = []) {
+  const attendanceConcerns = records.filter((item) => {
+    const value = String(item.attendance_status || "").toLowerCase();
+    return ["absent", "late", "refused", "not_attending"].includes(value);
+  }).length;
+
+  const followUps = records.filter((item) => item.follow_up_required).length;
+
+  const issuesRaised = records.filter((item) => item.issue_raised).length;
+
+  return { attendanceConcerns, followUps, issuesRaised };
 }
 
 export async function loadEducation() {
@@ -64,72 +115,95 @@ export async function loadEducation() {
     <div class="loading-state">
       <div>
         <div class="spinner"></div>
-        <p>Loading education and learning...</p>
+        <p>Loading education data...</p>
       </div>
     </div>
   `;
 
   try {
-    const [
-      youngPersonData,
-      educationData,
-      achievementsData,
-    ] = await Promise.all([
-      apiGet(`/young-people/${state.youngPersonId}`).catch(() => ({})),
-      apiGet(`/young-people/${state.youngPersonId}/education`).catch(() => ({})),
+    const [educationData, profileData, achievementsData] = await Promise.all([
+      apiGet(`/young-people/${state.youngPersonId}/education-records`).catch(() => ({ items: [] })),
+      apiGet(`/young-people/${state.youngPersonId}/education-profile`).catch(() => ({})),
       apiGet(`/young-people/${state.youngPersonId}/achievements`).catch(() => ({ items: [] })),
     ]);
 
-    const bundle = mapBundle(youngPersonData.bundle || youngPersonData);
-    const educationProfile = bundle.education_profile || {};
+    const educationRecords = sortNewestFirst(
+      (
+        educationData.items ||
+        educationData.records ||
+        educationData.education_records ||
+        []
+      ).map(mapEducationRecord),
+      ["record_date", "created_at"]
+    );
 
-    const educationRecords = (
-      educationData.education_records ||
-      educationData.items ||
-      educationData.records ||
-      []
-    ).map(mapEducationRecord);
+    const educationProfile = mapEducationProfile(
+      profileData.education_profile ||
+        profileData.young_person_education_profile ||
+        profileData.item ||
+        profileData
+    );
 
-    const achievementRows = buildAchievementRows(
-      achievementsData.items ||
+    const achievements = sortNewestFirst(
+      (
+        achievementsData.items ||
         achievementsData.records ||
         achievementsData.achievement_records ||
         []
+      ).map(mapAchievementRecord),
+      ["achievement_date", "created_at"]
     );
 
-    const attendanceConcerns = educationRecords.filter((item) =>
-      ["absent", "late", "refused"].includes(String(item.attendance_status || "").toLowerCase())
-    );
+    const stats = buildHeadlineStats(educationRecords);
 
     els.viewContent.innerHTML = `
+      <section class="summary-strip">
+        ${renderSummaryStat("Education records", educationRecords.length)}
+        ${renderSummaryStat("Attendance concerns", stats.attendanceConcerns)}
+        ${renderSummaryStat("Follow-up required", stats.followUps)}
+        ${renderSummaryStat("Achievements", achievements.length)}
+      </section>
+
       ${renderSection(
         "Education profile",
-        "Core school, learning and support information.",
-        renderEducationProfileCards(educationProfile)
+        "School, learning context and education support needs.",
+        renderEducationProfile(educationProfile)
       )}
 
       ${renderSection(
         "Education records",
-        "Attendance, behaviour, engagement, issues raised and action taken.",
-        renderRowList(educationRecords, "No education records found.")
-      )}
-
-      ${renderSection(
-        "Attendance concerns",
-        "Recent attendance issues that may need follow-up.",
-        renderRowList(attendanceConcerns, "No attendance concerns found.")
+        "Attendance, engagement, issues and actions taken.",
+        renderRowList(buildEducationRows(educationRecords), "No education records found.")
       )}
 
       ${renderSection(
         "Achievements",
-        "Positive progress, successes and strengths in learning.",
-        renderRowList(achievementRows, "No achievement records found.")
+        "Progress, success and strengths linked to education and wider development.",
+        renderRowList(buildAchievementRows(achievements), "No achievements found.")
+      )}
+
+      ${renderSection(
+        "Records needing attention",
+        "Education records with follow-up, attendance issues or concerns raised.",
+        renderRowList(
+          buildEducationRows(
+            educationRecords.filter(
+              (item) =>
+                item.follow_up_required ||
+                item.issue_raised ||
+                ["absent", "late", "refused", "not_attending"].includes(
+                  String(item.attendance_status || "").toLowerCase()
+                )
+            )
+          ),
+          "No education concerns needing attention."
+        )
       )}
     `;
   } catch (error) {
     els.viewContent.innerHTML = `
       <div class="empty-state">
-        <p>${escapeHtml(error.message || "Failed to load education and learning.")}</p>
+        <p>${escapeHtml(error.message || "Failed to load education data.")}</p>
       </div>
     `;
   }
