@@ -22,6 +22,41 @@ export function withCsrfHeaders(method, headers = {}) {
   return next;
 }
 
+const API_ROUTE_ALIASES = [
+  [/\/young-people\/(\d+)\/alerts$/, "/young-people/$1/incidents"],
+  [/\/young-people\/(\d+)\/health-records$/, "/young-people/$1/health"],
+  [/\/young-people\/(\d+)\/education-records$/, "/young-people/$1/education"],
+  [/\/young-people\/(\d+)\/family-contact-records$/, "/young-people/$1/family"],
+  [/\/young-people\/(\d+)\/safeguarding-records$/, "/young-people/$1/incidents"],
+  [/\/young-people\/(\d+)\/missing-episodes$/, "/young-people/$1/incidents"],
+  [/\/young-people\/(\d+)\/handover-records$/, "/young-people/$1/timeline?limit=12"],
+  [/\/young-people\/(\d+)\/medication-profiles$/, "/young-people/$1/health"],
+  [/\/young-people\/(\d+)\/medication-records$/, "/young-people/$1/health"],
+  [/\/young-people\/(\d+)\/achievements$/, "/young-people/$1/education"],
+  [/\/young-people\/(\d+)\/young-person-appointments$/, "/young-people/$1/appointments"],
+  [/\/young-people\/(\d+)\/inspection-packs$/, "/young-people/$1/reports"],
+  [/\/young-people\/(\d+)\/monthly-reviews$/, "/young-people/$1/reports"],
+  [/\/young-people\/(\d+)\/readiness$/, "/young-people/$1/compliance"],
+  [/\/young-people\/(\d+)\/tasks$/, "/young-people/$1/compliance"],
+  [/\/young-people\/(\d+)\/approvals$/, "/young-people/$1/compliance"],
+  [/\/young-people\/(\d+)\/documents$/, "/young-people/$1/compliance"],
+  [/\/young-people\/(\d+)\/manager-review$/, "/young-people/$1/compliance"],
+  [/\/young-people\/(\d+)\/manager-actions$/, "/young-people/$1/compliance"],
+  [/\/young-people\/(\d+)\/risks$/, "/young-people/$1/plans"],
+];
+
+export function resolveApiUrl(url) {
+  if (!url || typeof url !== "string") return url;
+
+  for (const [pattern, replacement] of API_ROUTE_ALIASES) {
+    if (pattern.test(url)) {
+      return url.replace(pattern, replacement);
+    }
+  }
+
+  return url;
+}
+
 async function parseErrorResponse(response) {
   let message = `Request failed (${response.status})`;
 
@@ -59,14 +94,16 @@ async function parseJsonSafe(response) {
 }
 
 export async function apiGet(url) {
+  const resolvedUrl = resolveApiUrl(url);
+
   if (typeof window.apiRequest === "function") {
-    return window.apiRequest(url, {
+    return window.apiRequest(resolvedUrl, {
       method: "GET",
       headers: { Accept: "application/json" },
     });
   }
 
-  const response = await fetch(url, {
+  const response = await fetch(resolvedUrl, {
     method: "GET",
     credentials: "include",
     headers: { Accept: "application/json" },
