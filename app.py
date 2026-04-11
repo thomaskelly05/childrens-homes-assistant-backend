@@ -22,6 +22,7 @@ from auth.mfa_guard import (
     SESSION_USER_ID_KEY,
     is_mfa_verified_in_session,
     path_allowed_during_mfa,
+    user_has_enabled_mfa,
 )
 from auth.routes import settings as auth_settings
 from auth.tokens import decode_session_token
@@ -35,7 +36,7 @@ from db.legal_acceptance_db import (
     has_user_accepted_version,
     init_legal_acceptance_table,
 )
-from db.mfa_db import init_mfa_tables, user_has_enabled_mfa
+from db.mfa_db import init_mfa_tables
 from security.middleware import CSRFMiddleware, SecurityHeadersMiddleware
 
 
