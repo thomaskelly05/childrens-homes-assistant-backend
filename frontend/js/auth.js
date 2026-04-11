@@ -517,7 +517,7 @@ async function deletePasskey(passkeyId) {
 }
 
 async function getPasskeyPromptStatus() {
-  return apiFetchJson("/passkeys/status", { method: "GET" });
+  return apiFetchJson("/auth/passkeys/status", { method: "GET" });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
