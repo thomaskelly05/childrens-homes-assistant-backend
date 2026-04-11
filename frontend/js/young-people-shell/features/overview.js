@@ -1,264 +1,386 @@
 import { els } from "../dom.js";
 import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
-import { escapeHtml, formatShortDate, getDisplayName, getProfileImage, initialsFromName } from "../core/utils.js";
-import { renderRowList, renderSummaryStat } from "../ui/records.js";
+import { escapeHtml } from "../core/utils.js";
+import { renderRowList, renderSection, renderSummaryStat } from "../ui/records.js";
 import {
-  mapBundle,
-  mapChronologyEvent,
-  mapComplianceItem,
-  mapDailyNote,
-  mapIncident,
-  mapSupportPlan,
-  mapAppointment,
+mapDailyNote,
+mapIncident,
+mapSupportPlan,
+mapAppointment,
+mapChronologyEvent,
+mapComplianceItem,
+mapTask,
 } from "../core/adapters.js";
 
-function renderSection(title, subtitle, body) {
-  return `
-    <section class="content-section">
-      <div class="content-section-head">
-        <div>
-          <h3>${escapeHtml(title)}</h3>
-          ${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ""}
-        </div>
-      </div>
-      ${body}
-    </section>
-  `;
+function sortNewestFirst(items = [], keys = []) {
+return [...items].sort((a, b) => {
+const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
+const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
+return new Date(bValue).getTime() - new Date(aValue).getTime();
+});
 }
 
-function renderProfileCard(bundle = {}) {
-  const yp = bundle.young_person || {};
-  const identity = bundle.identity_profile || {};
-  const communication = bundle.communication_profile || {};
-  const education = bundle.education_profile || {};
-  const health = bundle.health_profile || {};
-  const legal = bundle.legal_status || {};
-
-  const name = getDisplayName(yp);
-  const image = getProfileImage(yp);
-
-  return `
-    <section class="profile-hero-card">
-      <div class="profile-hero-top">
-        <div class="profile-hero-avatar-wrap">
-          ${
-            image
-              ? `<img class="profile-hero-avatar" src="${escapeHtml(image)}" alt="${escapeHtml(name)}" />`
-              : `<div class="profile-hero-avatar avatar-fallback">${escapeHtml(initialsFromName(name))}</div>`
-          }
-        </div>
-
-        <div class="profile-hero-copy">
-          <div class="profile-hero-name">${escapeHtml(name)}</div>
-          <div class="profile-hero-meta">
-            ${escapeHtml(
-              [
-                yp.preferred_name ? `Preferred: ${yp.preferred_name}` : null,
-                yp.date_of_birth ? `DOB: ${formatShortDate(yp.date_of_birth)}` : null,
-                yp.home_name || null,
-                yp.placement_status || null,
-              ].filter(Boolean).join(" • ") || "Young person profile"
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div class="profile-grid">
-        <button class="profile-card editable-card" type="button" data-open-profile-edit="identity">
-          <div class="profile-card-title">About me</div>
-          <div class="profile-card-text">${escapeHtml(identity.what_matters_to_me || identity.interests || "Not recorded yet.")}</div>
-          <div class="profile-card-subtext">${escapeHtml(identity.strengths_summary || "No strengths summary recorded yet.")}</div>
-        </button>
-
-        <button class="profile-card editable-card" type="button" data-open-profile-edit="communication">
-          <div class="profile-card-title">How to support me well</div>
-          <div class="profile-card-text">${escapeHtml(communication.what_helps || "Not recorded yet.")}</div>
-          <div class="profile-card-subtext">${escapeHtml(communication.communication_style || "No communication profile recorded yet.")}</div>
-        </button>
-
-        <button class="profile-card editable-card" type="button" data-open-profile-edit="education">
-          <div class="profile-card-title">Learning</div>
-          <div class="profile-card-text">${escapeHtml(education.school_name || "Not recorded yet.")}</div>
-          <div class="profile-card-subtext">${escapeHtml(education.support_summary || education.education_status || "No learning summary recorded yet.")}</div>
-        </button>
-
-        <button class="profile-card editable-card" type="button" data-open-profile-edit="health">
-          <div class="profile-card-title">Health and wellbeing</div>
-          <div class="profile-card-text">${escapeHtml(health.mental_health_summary || health.medication_summary || "Not recorded yet.")}</div>
-          <div class="profile-card-subtext">${escapeHtml(health.allergies || "No allergies recorded.")}</div>
-        </button>
-
-        <button class="profile-card editable-card" type="button" data-open-profile-edit="legal">
-          <div class="profile-card-title">Legal and care context</div>
-          <div class="profile-card-text">${escapeHtml(legal.legal_status || "Not recorded yet.")}</div>
-          <div class="profile-card-subtext">${escapeHtml(legal.order_type || legal.consent_arrangements || "No legal summary recorded yet.")}</div>
-        </button>
-      </div>
-    </section>
-  `;
+function sortSoonestFirst(items = [], keys = []) {
+return [...items].sort((a, b) => {
+const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
+const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
+return new Date(aValue).getTime() - new Date(bValue).getTime();
+});
 }
 
-function buildAlertRow(raw = {}) {
-  return {
-    id: raw.id,
-    record_type: "alert",
-    title: raw.title || raw.alert_type || "Alert",
-    summary: raw.description || "Alert",
-    recorded_at: raw.updated_at || raw.created_at || raw.review_date || null,
-    workflow_status: raw.is_active ? "active" : "inactive",
-    severity: raw.severity || "",
-    source_id: raw.id,
-  };
+function isToday(value) {
+if (!value) return false;
+const date = new Date(value);
+if (Number.isNaN(date.getTime())) return false;
+
+const now = new Date();
+return (
+date.getFullYear() === now.getFullYear() &&
+date.getMonth() === now.getMonth() &&
+date.getDate() === now.getDate()
+);
 }
 
-function buildTodayRows({ chronology = [], dailyNotes = [], incidents = [], appointments = [] }) {
-  const rows = [
-    ...chronology.map(mapChronologyEvent),
-    ...dailyNotes.map(mapDailyNote),
-    ...incidents.map(mapIncident),
-    ...appointments.map(mapAppointment),
-  ];
-
-  return rows
-    .sort((a, b) => {
-      const aTime = new Date(
-        a.event_datetime ||
-        a.start_datetime ||
-        a.recorded_at ||
-        a.occurred_at ||
-        a.record_date ||
-        a.session_date ||
-        0
-      ).getTime();
-
-      const bTime = new Date(
-        b.event_datetime ||
-        b.start_datetime ||
-        b.recorded_at ||
-        b.occurred_at ||
-        b.record_date ||
-        b.session_date ||
-        0
-      ).getTime();
-
-      return bTime - aTime;
-    })
-    .slice(0, 8);
+function isFuture(value) {
+if (!value) return false;
+const date = new Date(value);
+if (Number.isNaN(date.getTime())) return false;
+return date.getTime() >= Date.now();
 }
 
-function bindOverviewActions() {
-  els.viewContent?.querySelectorAll("[data-open-profile-edit]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const mod = await import("../ui/composer.js");
-      mod.openComposerFor("support_plan", "create");
-    });
-  });
+function buildPriorityRows({
+incidents = [],
+compliance = [],
+tasks = [],
+chronology = [],
+}) {
+const incidentRows = incidents
+.filter((item) =>
+["high", "critical"].includes(String(item.severity || "").toLowerCase())
+)
+.slice(0, 3);
+
+const complianceRows = compliance
+.filter((item) =>
+["overdue", "escalated"].includes(String(item.status || "").toLowerCase())
+)
+.slice(0, 3);
+
+const taskRows = tasks.filter((item) => !item.completed).slice(0, 2);
+
+const chronologyRows = chronology
+.filter((item) => item.safeguarding_flag)
+.slice(0, 2);
+
+return [...incidentRows, ...complianceRows, ...taskRows, ...chronologyRows].slice(0, 10);
+}
+
+function buildTodayRows({
+appointments = [],
+dailyNotes = [],
+chronology = [],
+}) {
+const todayAppointments = appointments.filter((item) => isToday(item.start_datetime));
+const todayNotes = dailyNotes.filter((item) => isToday(item.record_date || item.created_at));
+const todayChronology = chronology.filter((item) => isToday(item.event_datetime || item.created_at));
+
+return [...todayAppointments, ...todayNotes, ...todayChronology].slice(0, 10);
+}
+
+function buildUpcomingRows({
+appointments = [],
+plans = [],
+compliance = [],
+}) {
+const upcomingAppointments = appointments
+.filter(
+(item) =>
+isFuture(item.start_datetime) &&
+!["cancelled", "completed"].includes(String(item.status || "").toLowerCase())
+)
+.slice(0, 4);
+
+const reviewPlans = plans
+.filter((item) => item.review_date)
+.slice(0, 3);
+
+const dueSoonCompliance = compliance
+.filter((item) => String(item.status || "").toLowerCase() === "due_soon")
+.slice(0, 3);
+
+return [...upcomingAppointments, ...reviewPlans, ...dueSoonCompliance].slice(0, 10);
+}
+
+function buildOverviewCards({
+incidents = [],
+appointments = [],
+plans = [],
+compliance = [],
+}) {
+const urgentCount = incidents.filter((item) =>
+["high", "critical"].includes(String(item.severity || "").toLowerCase())
+).length;
+
+const openAppointments = appointments.filter(
+(item) => !["cancelled", "completed"].includes(String(item.status || "").toLowerCase())
+).length;
+
+const activePlans = plans.filter((item) =>
+["active", "review_due"].includes(String(item.status || "").toLowerCase())
+).length;
+
+const overdueCount = compliance.filter((item) =>
+["overdue", "escalated"].includes(String(item.status || "").toLowerCase())
+).length;
+
+return `
+<div class="profile-grid">
+<div class="profile-card">
+<div class="profile-card-title">Urgent incidents</div>
+<div class="profile-card-text">${escapeHtml(String(urgentCount))}</div>
+<div class="profile-card-subtext">High or critical incidents needing attention</div>
+</div>
+
+<div class="profile-card">
+<div class="profile-card-title">Open appointments</div>
+<div class="profile-card-text">${escapeHtml(String(openAppointments))}</div>
+<div class="profile-card-subtext">Upcoming or active appointments</div>
+</div>
+
+<div class="profile-card">
+<div class="profile-card-title">Active plans</div>
+<div class="profile-card-text">${escapeHtml(String(activePlans))}</div>
+<div class="profile-card-subtext">Support plans currently in use</div>
+</div>
+
+<div class="profile-card">
+<div class="profile-card-title">Overdue readiness</div>
+<div class="profile-card-text">${escapeHtml(String(overdueCount))}</div>
+<div class="profile-card-subtext">Compliance items needing action now</div>
+</div>
+</div>
+`;
+}
+function buildLatestContext({
+dailyNotes = [],
+incidents = [],
+plans = [],
+appointments = [],
+}) {
+const latestNote = dailyNotes[0] || null;
+const latestIncident = incidents[0] || null;
+const latestPlan = plans[0] || null;
+const nextAppointment = appointments[0] || null;
+
+return `
+<div class="profile-grid">
+<div class="profile-card">
+<div class="profile-card-title">Latest daily note</div>
+<div class="profile-card-text">${escapeHtml(
+latestNote?.summary || latestNote?.presentation || "No recent daily note."
+)}</div>
+<div class="profile-card-subtext">${escapeHtml(
+latestNote?.record_date || latestNote?.workflow_status || ""
+)}</div>
+</div>
+
+<div class="profile-card">
+<div class="profile-card-title">Latest incident</div>
+<div class="profile-card-text">${escapeHtml(
+latestIncident?.summary || latestIncident?.title || "No recent incident."
+)}</div>
+<div class="profile-card-subtext">${escapeHtml(
+latestIncident?.severity || latestIncident?.workflow_status || ""
+)}</div>
+</div>
+
+<div class="profile-card">
+<div class="profile-card-title">Current plan</div>
+<div class="profile-card-text">${escapeHtml(
+latestPlan?.title || latestPlan?.summary || "No active support plan."
+)}</div>
+<div class="profile-card-subtext">${escapeHtml(
+latestPlan?.review_date || latestPlan?.status || ""
+)}</div>
+</div>
+
+<div class="profile-card">
+<div class="profile-card-title">Next appointment</div>
+<div class="profile-card-text">${escapeHtml(
+nextAppointment?.title || nextAppointment?.appointment_type || "No upcoming appointment."
+)}</div>
+<div class="profile-card-subtext">${escapeHtml(
+nextAppointment?.start_datetime || nextAppointment?.status || ""
+)}</div>
+</div>
+</div>
+`;
 }
 
 export async function loadOverview() {
-  if (!els.viewContent) return;
+if (!els.viewContent) return;
 
-  els.viewContent.innerHTML = `
-    <div class="loading-state">
-      <div>
-        <div class="spinner"></div>
-        <p>Loading overview...</p>
-      </div>
-    </div>
-  `;
+els.viewContent.innerHTML = `
+<div class="loading-state">
+<div>
+<div class="spinner"></div>
+<p>Loading overview...</p>
+</div>
+</div>
+`;
 
-  const [
-    youngPersonData,
-    chronologyData,
-    complianceData,
-    alertsData,
-    dailyNotesData,
-    incidentsData,
-    plansData,
-    appointmentsData,
-  ] = await Promise.all([
-    apiGet(`/young-people/${state.youngPersonId}`).catch(() => ({})),
-    apiGet(`/young-people/${state.youngPersonId}/timeline?limit=12`).catch(() => ({ timeline: [] })),
-    apiGet(`/young-people/${state.youngPersonId}/compliance`).catch(() => ({ items: [] })),
-    apiGet(`/young-people/${state.youngPersonId}/alerts`).catch(() => ({ items: [] })),
-    apiGet(`/young-people/${state.youngPersonId}/daily-notes`).catch(() => ({ items: [] })),
-    apiGet(`/young-people/${state.youngPersonId}/incidents`).catch(() => ({ items: [] })),
-    apiGet(`/young-people/${state.youngPersonId}/plans`).catch(() => ({ items: [] })),
-    apiGet(`/young-people/${state.youngPersonId}/appointments`).catch(() => ({ items: [] })),
-  ]);
+try {
+const [
+dailyNotesData,
+incidentsData,
+plansData,
+appointmentsData,
+timelineData,
+complianceData,
+tasksData,
+] = await Promise.all([
+apiGet(`/young-people/${state.youngPersonId}/daily-notes`).catch(() => ({ items: [] })),
+apiGet(`/young-people/${state.youngPersonId}/incidents`).catch(() => ({ items: [] })),
+apiGet(`/young-people/${state.youngPersonId}/plans`).catch(() => ({ items: [] })),
+apiGet(`/young-people/${state.youngPersonId}/appointments`).catch(() => ({ items: [] })),
+apiGet(`/young-people/${state.youngPersonId}/timeline`).catch(() => ({ items: [] })),
+apiGet(`/young-people/${state.youngPersonId}/compliance`).catch(() => ({ items: [] })),
+apiGet(`/young-people/${state.youngPersonId}/tasks`).catch(() => ({ items: [] })),
+]);
 
-  const bundle = mapBundle(youngPersonData.bundle || youngPersonData);
+const dailyNotes = sortNewestFirst(
+(dailyNotesData.items || dailyNotesData.records || dailyNotesData.daily_notes || []).map(mapDailyNote),
+["record_date", "created_at"]
+);
 
-  const chronologyRaw = chronologyData.timeline || chronologyData.items || [];
-  const complianceRaw = complianceData.compliance_items || complianceData.items || [];
-  const alertsRaw = alertsData.alerts || alertsData.items || [];
-  const dailyNotesRaw = dailyNotesData.items || dailyNotesData.records || dailyNotesData.daily_notes || [];
-  const incidentsRaw = incidentsData.items || incidentsData.records || incidentsData.incidents || [];
-  const plansRaw = plansData.items || plansData.records || plansData.support_plans || [];
-  const appointmentsRaw =
-    appointmentsData.items ||
-    appointmentsData.records ||
-    appointmentsData.appointments ||
-    appointmentsData.young_person_appointments ||
-    [];
+const incidents = sortNewestFirst(
+(incidentsData.items || incidentsData.records || incidentsData.incidents || []).map(mapIncident),
+["occurred_at", "created_at"]
+);
 
-  const compliance = complianceRaw.map(mapComplianceItem);
-  const alerts = alertsRaw.map(buildAlertRow);
-  const plans = plansRaw.map(mapSupportPlan);
-  const appointments = appointmentsRaw.map(mapAppointment);
+const plans = sortSoonestFirst(
+(plansData.items || plansData.records || plansData.support_plans || []).map(mapSupportPlan),
+["review_date", "updated_at", "created_at"]
+);
 
-  const immediate = [
-    ...alerts,
-    ...compliance.filter((item) =>
-      ["overdue", "pending", "submitted", "due_soon"].includes(String(item.status || "").toLowerCase())
-    ),
-    ...plans.filter((item) =>
-      ["draft", "pending", "review_due"].includes(String(item.status || item.workflow_status || "").toLowerCase())
-    ),
-  ].slice(0, 8);
+const appointments = sortSoonestFirst(
+(
+appointmentsData.items ||
+appointmentsData.records ||
+appointmentsData.appointments ||
+appointmentsData.young_person_appointments ||
+[]
+).map(mapAppointment),
+["start_datetime", "created_at"]
+);
 
-  const todayRows = buildTodayRows({
-    chronology: chronologyRaw,
-    dailyNotes: dailyNotesRaw,
-    incidents: incidentsRaw,
-    appointments: appointmentsRaw,
-  });
+const chronology = sortNewestFirst(
+(
+timelineData.timeline ||
+timelineData.items ||
+timelineData.records ||
+timelineData.chronology_events ||
+[]
+).map(mapChronologyEvent),
+["event_datetime", "created_at"]
+);
 
-  els.viewContent.innerHTML = `
-    ${renderProfileCard(bundle)}
+const compliance = sortSoonestFirst(
+(complianceData.items || complianceData.records || complianceData.compliance_items || []).map(
+mapComplianceItem
+),
+["due_date", "created_at"]
+);
 
-    <section class="summary-strip">
-      ${renderSummaryStat("Current view", "Overview")}
-      ${renderSummaryStat("Alerts", alerts.length)}
-      ${renderSummaryStat("Recent activity", chronologyRaw.length || todayRows.length)}
-      ${renderSummaryStat("Checks due", compliance.length)}
-    </section>
+const tasks = sortSoonestFirst(
+(tasksData.items || tasksData.records || tasksData.tasks || []).map(mapTask),
+["due_date", "created_at"]
+);
+const priorityRows = buildPriorityRows({
+incidents,
+compliance,
+tasks,
+chronology,
+});
 
-    ${renderSection(
-      "Today",
-      "What adults need to notice first.",
-      renderRowList(todayRows, "No recent activity recorded yet.")
-    )}
+const todayRows = buildTodayRows({
+appointments,
+dailyNotes,
+chronology,
+});
 
-    ${renderSection(
-      "Needs attention",
-      "Outstanding follow-up, alerts and due items.",
-      renderRowList(immediate, "Nothing urgent is showing right now.")
-    )}
+const upcomingRows = buildUpcomingRows({
+appointments,
+plans,
+compliance,
+});
 
-    ${renderSection(
-      "Current support plans",
-      "Plans adults should keep in mind today.",
-      renderRowList(plans.slice(0, 6), "No current support plans found.")
-    )}
+els.viewContent.innerHTML = `
+<section class="summary-strip">
+${renderSummaryStat("Urgent", priorityRows.length)}
+${renderSummaryStat("Today", todayRows.length)}
+${renderSummaryStat("Upcoming", upcomingRows.length)}
+${renderSummaryStat("Open tasks", tasks.filter((item) => !item.completed).length)}
+</section>
 
-    ${renderSection(
-      "Upcoming appointments",
-      "Important dates and appointments coming up.",
-      renderRowList(appointments.slice(0, 6), "No upcoming appointments found.")
-    )}
-  `;
+${renderSection(
+"What matters now",
+"The quickest way to see immediate priorities, live risk and operational needs.",
+buildOverviewCards({
+incidents,
+appointments,
+plans,
+compliance,
+})
+)}
 
-  bindOverviewActions();
+${renderSection(
+"Latest context",
+"The most recent note, incident, plan and appointment context for today.",
+buildLatestContext({
+dailyNotes,
+incidents,
+plans,
+appointments,
+})
+)}
+
+${renderSection(
+"Priority items",
+"High-priority incidents, escalated readiness items, tasks and safeguarding-linked chronology.",
+renderRowList(priorityRows, "Nothing urgent is showing right now.")
+)}
+
+${renderSection(
+"Today",
+"Appointments, notes and chronology items happening today.",
+renderRowList(todayRows, "No recent activity recorded yet.")
+)}
+
+${renderSection(
+"Coming up",
+"Upcoming appointments, plan reviews and due soon readiness items.",
+renderRowList(upcomingRows, "Nothing upcoming is showing right now.")
+)}
+
+${renderSection(
+"Recent chronology",
+"Recent linked chronology events across the young person’s story.",
+renderRowList(chronology.slice(0, 8), "No chronology events found.")
+)}
+
+${renderSection(
+"Open tasks",
+"Tasks and follow-up actions linked to care, risk and readiness.",
+renderRowList(tasks.filter((item) => !item.completed).slice(0, 8), "No open tasks found.")
+)}
+`;
+} catch (error) {
+els.viewContent.innerHTML = `
+<div class="empty-state">
+<p>${escapeHtml(error.message || "Failed to load overview.")}</p>
+</div>
+`;
+}
 }
