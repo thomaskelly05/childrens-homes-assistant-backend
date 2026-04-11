@@ -1277,7 +1277,23 @@ async function loadMe() {
     if (window.auth && typeof window.auth.validateSession === "function") {
       const sessionState = await window.auth.validateSession();
 
-      if (!sessionState || !sessionState.authenticated) {
+      if (!sessionState) {
+        if (!hasRecentAssistantRedirectGuard()) {
+          markAssistantRedirectGuard();
+          window.location.replace("/login");
+        }
+        throw new Error("Not authenticated");
+      }
+
+      if (sessionState.mfa_pending) {
+        if (!hasRecentAssistantRedirectGuard()) {
+          markAssistantRedirectGuard();
+          window.location.replace("/mfa");
+        }
+        throw new Error("MFA verification required");
+      }
+
+      if (!sessionState.authenticated) {
         if (!hasRecentAssistantRedirectGuard()) {
           markAssistantRedirectGuard();
           window.location.replace("/login");
@@ -1306,6 +1322,27 @@ async function loadMe() {
     if (!data?.user) throw new Error("No user");
 
     state.currentUser = data.user;
+
+    if (window.auth && typeof window.auth.updateStoredUser === "function") {
+      window.auth.updateStoredUser({
+        authenticated: true,
+        user_id: data.user.id,
+        id: data.user.id,
+        email: data.user.email,
+        role: data.user.role,
+        home_id: data.user.home_id,
+        first_name: data.user.first_name,
+        last_name: data.user.last_name,
+        is_active: !!data.user.is_active,
+        subscription_active: !!data.user.subscription_active,
+        subscription_status: data.user.subscription_status || "inactive",
+        plan_name: data.user.plan_name || null,
+        mfa_enabled: !!data.user.mfa_enabled,
+        mfa_verified: !!data.user.mfa_verified,
+        mfa_pending: false,
+      });
+    }
+
     localStorage.setItem("first_name", state.currentUser.first_name || "");
     clearAssistantRedirectGuard();
 
@@ -1931,10 +1968,6 @@ function startTyping() {
     }
   }, 2);
 }
-
-/* ---------------------------------------------------------
- * SSE / streaming
- * --------------------------------------------------------- */
 
 function parseSseChunk(buffer, onEvent) {
   const parts = buffer.split("\n\n");
@@ -3799,7 +3832,8 @@ async function init() {
 
   try {
     await loadMe();
-  } catch (_) {
+  } catch (e) {
+    console.error("loadMe failed", e);
     return;
   }
 
