@@ -4,20 +4,58 @@ function getCookie(name) {
   return match ? decodeURIComponent(match[2]) : "";
 }
 
-function getCsrfToken() {
+export function getCsrfToken() {
   return getCookie("__Host-indicare_csrf") || getCookie("indicare_csrf") || "";
 }
 
-function withCsrfHeaders(method, headers = {}) {
+export function withCsrfHeaders(method, headers = {}) {
   const next = { ...headers };
   const upper = String(method || "GET").toUpperCase();
 
   if (["POST", "PUT", "PATCH", "DELETE"].includes(upper)) {
     const token = getCsrfToken();
-    if (token) next["X-CSRF-Token"] = token;
+    if (token) {
+      next["X-CSRF-Token"] = token;
+    }
   }
 
   return next;
+}
+
+async function parseErrorResponse(response) {
+  let message = `Request failed (${response.status})`;
+
+  try {
+    const contentType = response.headers.get("content-type") || "";
+
+    if (contentType.includes("application/json")) {
+      const body = await response.json();
+      message = body.detail || body.error || body.message || message;
+    } else {
+      const text = await response.text();
+      if (text && text.trim()) {
+        message = text.trim();
+      }
+    }
+  } catch {
+    // keep default message
+  }
+
+  return message;
+}
+
+async function parseJsonSafe(response) {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (!contentType.includes("application/json")) {
+    return {};
+  }
+
+  try {
+    return await response.json();
+  } catch {
+    return {};
+  }
 }
 
 export async function apiGet(url) {
@@ -35,18 +73,13 @@ export async function apiGet(url) {
   });
 
   if (!response.ok) {
-    let message = `Request failed (${response.status})`;
-    try {
-      const body = await response.json();
-      message = body.detail || body.error || message;
-    } catch {}
-    throw new Error(message);
+    throw new Error(await parseErrorResponse(response));
   }
 
-  return response.json();
+  return parseJsonSafe(response);
 }
 
-export async function apiSend(url, method, body) {
+export async function apiSend(url, method = "POST", body = null) {
   if (typeof window.apiRequest === "function") {
     return window.apiRequest(url, {
       method,
@@ -69,19 +102,10 @@ export async function apiSend(url, method, body) {
   });
 
   if (!response.ok) {
-    let message = `Request failed (${response.status})`;
-    try {
-      const parsed = await response.json();
-      message = parsed.detail || parsed.error || message;
-    } catch {}
-    throw new Error(message);
+    throw new Error(await parseErrorResponse(response));
   }
 
-  try {
-    return await response.json();
-  } catch {
-    return {};
-  }
+  return parseJsonSafe(response);
 }
 
 export function unwrapCreateResponse(recordType, response) {
