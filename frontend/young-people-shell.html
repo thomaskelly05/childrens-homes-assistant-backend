@@ -30,7 +30,7 @@
         <button id="mobileNavBtn" class="secondary-btn mobile-only" type="button" aria-label="Open navigation">
           Menu
         </button>
-        <button id="assistantLauncher" class="secondary-btn" type="button">
+        <button id="assistantLauncher" class="secondary-btn" type="button" aria-label="Open assistant">
           Assistant
         </button>
         <button id="refreshBtn" class="secondary-btn" type="button">
@@ -90,7 +90,7 @@
             </div>
           </div>
 
-          <div id="desktopNav" class="workspace-nav"></div>
+          <nav id="desktopNav" class="workspace-nav" aria-label="Workspace navigation"></nav>
         </aside>
 
         <section class="workspace-stage">
@@ -130,7 +130,7 @@
             </div>
 
             <section class="profile-snapshot">
-              <div id="profileSnapshotPhotoWrap" class="profile-snapshot-photo-wrap">
+              <div id="profileSnapshotPhotoWrap" class="profile-snapshot-photo-wrap" aria-label="Young person photo">
                 <div class="profile-photo-fallback">YP</div>
               </div>
 
@@ -204,7 +204,13 @@
 
                 <div id="assistantSuggestions" class="assistant-suggestions"></div>
 
-                <div id="assistantMessages" class="assistant-messages">
+                <div
+                  id="assistantMessages"
+                  class="assistant-messages"
+                  role="log"
+                  aria-live="polite"
+                  aria-relevant="additions text"
+                >
                   <article class="assistant-message assistant-message-system">
                     <div class="assistant-message-role">Assistant</div>
                     <div class="assistant-message-body">Select a young person to start.</div>
@@ -372,7 +378,7 @@
 
     <div id="assistantBackdrop" class="assistant-backdrop hidden"></div>
 
-    <section id="assistantModal" class="assistant-modal hidden" aria-hidden="true">
+    <section id="assistantModal" class="assistant-modal hidden" aria-hidden="true" aria-label="Young person assistant">
       <div class="assistant-header">
         <div>
           <h3>Young person assistant</h3>
@@ -391,7 +397,13 @@
             <span id="modalScopeChildBadge" class="scope-chip hidden"></span>
           </div>
 
-          <div id="assistantModalMessages" class="assistant-messages">
+          <div
+            id="assistantModalMessages"
+            class="assistant-messages"
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions text"
+          >
             <article class="assistant-message assistant-message-system">
               <div class="assistant-message-role">Assistant</div>
               <div class="assistant-message-body">Use this space for longer, more thoughtful support.</div>
