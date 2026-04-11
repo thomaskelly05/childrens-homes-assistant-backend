@@ -16,15 +16,22 @@ import {
   renderMobileBottomBar,
 } from "./header.js";
 import { renderDesktopNav, renderMobileNav, setActiveView, closeMobileNav } from "./nav.js";
-import { updateAssistantContext, renderAssistantInsights, renderAssistantMessages, closeAssistant } from "./assistant-ui.js";
+import {
+  updateAssistantContext,
+  renderAssistantInsights,
+  renderAssistantMessages,
+  closeAssistant,
+} from "./assistant-ui.js";
 import { loadCurrentView } from "../features/workspace.js";
-import { closeComposer } from "../composer/composer.js";
+import { closeComposer } from "./composer.js";
 import { closeDrawer } from "./records.js";
+import { showError, clearStatus } from "./ui.js";
 
 export function showSelectorOnlyMode() {
   els.selectorScreen?.classList.remove("hidden");
   els.workspaceScreen?.classList.add("hidden");
   els.refreshBtn?.classList.add("hidden");
+  clearStatus();
 }
 
 export function showWorkspaceMode() {
@@ -47,40 +54,47 @@ export function renderSelectorList(items = []) {
 
   els.selectorList.innerHTML = `
     <div class="selector-grid">
-      ${items.map((item) => {
-        const fullName = getDisplayName(item);
-        const image = getProfileImage(item);
+      ${items
+        .map((item) => {
+          const fullName = getDisplayName(item);
+          const image = getProfileImage(item);
 
-        const meta = [
-          item.preferred_name ? `Prefers ${item.preferred_name}` : null,
-          item.date_of_birth ? `DOB ${formatShortDate(item.date_of_birth)}` : null,
-          item.home_name || null,
-        ].filter(Boolean);
+          const meta = [
+            item.preferred_name ? `Prefers ${item.preferred_name}` : null,
+            item.date_of_birth ? `DOB ${formatShortDate(item.date_of_birth)}` : null,
+            item.home_name || null,
+          ].filter(Boolean);
 
-        return `
-          <button class="selector-card selector-card--photo" type="button" data-open-young-person="${item.id}">
-            <div class="selector-card-media">
-              ${
-                image
-                  ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(fullName)}" class="selector-card-photo" />`
-                  : `<div class="selector-card-photo-fallback">${escapeHtml(initialsFromName(fullName))}</div>`
-              }
-            </div>
-
-            <div class="selector-card-body">
-              <h3>${escapeHtml(fullName)}</h3>
-              <div class="selector-card-meta">
-                ${meta.map((m) => `<span class="selector-pill">${escapeHtml(m)}</span>`).join("")}
+          return `
+            <button
+              class="selector-card selector-card--photo"
+              type="button"
+              data-open-young-person="${item.id}"
+              aria-label="Open workspace for ${escapeHtml(fullName)}"
+            >
+              <div class="selector-card-media">
+                ${
+                  image
+                    ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(fullName)}" class="selector-card-photo" />`
+                    : `<div class="selector-card-photo-fallback">${escapeHtml(initialsFromName(fullName))}</div>`
+                }
               </div>
-              <p>Open workspace</p>
-            </div>
 
-            <div class="selector-card-actions">
-              <button class="primary-btn" type="button">Open</button>
-            </div>
-          </button>
-        `;
-      }).join("")}
+              <div class="selector-card-body">
+                <h3>${escapeHtml(fullName)}</h3>
+                <div class="selector-card-meta">
+                  ${meta.map((m) => `<span class="selector-pill">${escapeHtml(m)}</span>`).join("")}
+                </div>
+                <p>Open workspace</p>
+              </div>
+
+              <div class="selector-card-actions">
+                <span class="primary-btn selector-open-label">Open</span>
+              </div>
+            </button>
+          `;
+        })
+        .join("")}
     </div>
   `;
 }
@@ -130,6 +144,8 @@ export async function loadYoungPersonSelector() {
     state.selectorItems = data.young_people || data.items || [];
     renderSelectorList(state.selectorItems);
   } catch (error) {
+    showError(error.message || "Unable to load young people.");
+
     if (els.selectorList) {
       els.selectorList.innerHTML = `
         <div class="empty-state">
