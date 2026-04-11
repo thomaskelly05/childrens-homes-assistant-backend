@@ -13,7 +13,15 @@ def get_user_by_email(email: str) -> dict[str, Any] | None:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
-                SELECT id, email, first_name, last_name, role, is_active, archived
+                SELECT
+                    id,
+                    email,
+                    first_name,
+                    last_name,
+                    role,
+                    home_id,
+                    is_active,
+                    archived
                 FROM users
                 WHERE lower(email) = lower(%s)
                 LIMIT 1
@@ -32,7 +40,15 @@ def get_user_by_id(user_id: int) -> dict[str, Any] | None:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
-                SELECT id, email, first_name, last_name, role, is_active, archived
+                SELECT
+                    id,
+                    email,
+                    first_name,
+                    last_name,
+                    role,
+                    home_id,
+                    is_active,
+                    archived
                 FROM users
                 WHERE id = %s
                 LIMIT 1
@@ -70,7 +86,25 @@ def list_user_passkeys(user_id: int) -> list[dict[str, Any]]:
                 """,
                 (user_id,),
             )
-            return [dict(r) for r in cur.fetchall()]
+            return [dict(row) for row in cur.fetchall()]
+    finally:
+        release_db_connection(conn)
+
+
+def user_has_passkeys(user_id: int) -> bool:
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT 1
+                FROM user_passkeys
+                WHERE user_id = %s
+                LIMIT 1
+                """,
+                (user_id,),
+            )
+            return cur.fetchone() is not None
     finally:
         release_db_connection(conn)
 
@@ -179,7 +213,8 @@ def delete_passkey(passkey_id: int, user_id: int) -> None:
             cur.execute(
                 """
                 DELETE FROM user_passkeys
-                WHERE id = %s AND user_id = %s
+                WHERE id = %s
+                  AND user_id = %s
                 """,
                 (passkey_id, user_id),
             )
@@ -235,7 +270,15 @@ def get_active_webauthn_challenge(
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
-                SELECT id, user_id, email, challenge, challenge_type, expires_at, used_at, created_at
+                SELECT
+                    id,
+                    user_id,
+                    email,
+                    challenge,
+                    challenge_type,
+                    expires_at,
+                    used_at,
+                    created_at
                 FROM webauthn_challenges
                 WHERE challenge = %s
                   AND challenge_type = %s
