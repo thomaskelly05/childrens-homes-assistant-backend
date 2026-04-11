@@ -57,6 +57,7 @@ function clearRecoveryCodes() {
 function normaliseUserPatch(user = {}) {
   return {
     ...user,
+    authenticated: !!user.authenticated,
     subscription_active: !!user.subscription_active,
     subscription_status: user.subscription_status || "inactive",
     plan_name: user.plan_name || null,
@@ -129,6 +130,7 @@ async function login(credentialsArg = null) {
       setStoredUser(
         normaliseUserPatch({
           ...data.user,
+          authenticated: !!data.authenticated,
           mfa_enabled: !!data.mfa_enabled,
           mfa_verified: !!data.authenticated,
           mfa_pending: !!data.mfa_pending,
@@ -223,6 +225,7 @@ async function validateSession() {
 
     const merged = normaliseUserPatch({
       ...existing,
+      authenticated: true,
       id: data.user_id,
       user_id: data.user_id,
       email: data.email,
@@ -315,6 +318,7 @@ async function verifyMfaCode(code) {
   }
 
   updateStoredUser({
+    authenticated: true,
     mfa_enabled: true,
     mfa_verified: true,
     mfa_pending: false,
@@ -334,6 +338,7 @@ async function verifyRecoveryCode(recoveryCode) {
   }
 
   updateStoredUser({
+    authenticated: true,
     mfa_enabled: true,
     mfa_verified: true,
     mfa_pending: false,
@@ -361,6 +366,7 @@ async function completeMfaSetup(code) {
   }
 
   updateStoredUser({
+    authenticated: true,
     mfa_enabled: true,
     mfa_verified: true,
     mfa_pending: false,
