@@ -1,49 +1,116 @@
-import { state, resetAssistantState, resetComposerState } from "./state.js";
-import { getYoungPersonIdFromUrl } from "./core/utils.js";
-import { VIEW_CONFIG } from "./core/config.js";
+import { state } from "./state.js";
+import { els } from "./dom.js";
+
+import { getYoungPersonIdFromUrl, setYoungPersonIdInUrl } from "./core/utils.js";
+
+import { loadCurrentView } from "./features/workspace.js";
+import { bindRecordDrawerEvents, openRecordDetail } from "./ui/records.js";
+
 import {
   loadYoungPersonSelector,
-  openYoungPersonFromState,
+  openYoungPerson,
   goBackToSelector,
+  filterSelectorList,
 } from "./ui/selector.js";
-import { bindGlobalEvents, showError, showMessage, clearStatus } from "./ui/nav.js";
-import { renderAssistantMessages, renderAssistantInsights, updateAssistantContext } from "./ui/assistant-ui.js";
-import { updateAssistantScopeDataset, renderAssistantScopeBadges } from "./ui/header.js";
-import { loadCurrentView } from "./features/workspace.js";
+
+import { initNav } from "./ui/nav.js";
+
+// ========================
+// INIT
+// ========================
 
 async function init() {
   state.youngPersonId = getYoungPersonIdFromUrl();
 
   bindGlobalEvents();
-  renderAssistantMessages();
-  renderAssistantInsights();
-  updateAssistantScopeDataset();
-  renderAssistantScopeBadges();
-  updateAssistantContext();
+  bindRecordDrawerEvents({
+    onWorkflowComplete: refreshView,
+  });
 
-  if (!state.youngPersonId) {
-    clearStatus();
-    await loadYoungPersonSelector();
-    return;
-  }
+  initNav();
 
-  try {
-    await openYoungPersonFromState();
-
-    if (!VIEW_CONFIG[state.currentView]) {
-      state.currentView = "overview";
-    }
-
-    clearStatus();
+  if (state.youngPersonId) {
+    await openYoungPerson(state.youngPersonId);
     await loadCurrentView();
-    showMessage("Workspace loaded.");
-  } catch (error) {
-    console.error(error);
-    resetAssistantState();
-    resetComposerState();
-    showError(error?.message || "Failed to load young person workspace.");
-    await goBackToSelector();
+  } else {
+    await loadYoungPersonSelector();
   }
 }
+
+// ========================
+// GLOBAL EVENT DELEGATION
+// ========================
+
+function bindGlobalEvents() {
+  document.addEventListener("click", async (e) => {
+    const target = e.target.closest("button, a");
+    if (!target) return;
+
+    // ========================
+    // OPEN RECORD (drawer)
+    // ========================
+    if (target.dataset.openRecord) {
+      try {
+        const item = JSON.parse(target.dataset.openRecord);
+        await openRecordDetail(item);
+      } catch (err) {
+        console.error("Invalid record payload", err);
+      }
+      return;
+    }
+
+    // ========================
+    // ROUTER ACTIONS
+    // ========================
+    if (target.dataset.actionRouter) {
+      const action = target.dataset.actionRouter;
+
+      if (action === "back-to-selector") {
+        goBackToSelector();
+        return;
+      }
+
+      if (action.startsWith("edit-")) {
+        console.log("Edit action:", action);
+        // hook your edit forms here later
+        return;
+      }
+    }
+
+    // ========================
+    // SELECT YOUNG PERSON
+    // ========================
+    if (target.dataset.youngPersonId) {
+      const id = Number(target.dataset.youngPersonId);
+      if (!id) return;
+
+      setYoungPersonIdInUrl(id);
+      state.youngPersonId = id;
+
+      await openYoungPerson(id);
+      await loadCurrentView();
+      return;
+    }
+  });
+
+  // ========================
+  // SEARCH FILTER
+  // ========================
+  els.selectorSearchInput?.addEventListener("input", (e) => {
+    filterSelectorList(e.target.value);
+  });
+}
+
+// ========================
+// REFRESH
+// ========================
+
+async function refreshView() {
+  await loadCurrentView();
+}
+
+// ========================
+// START
+// ========================
 
 init();
