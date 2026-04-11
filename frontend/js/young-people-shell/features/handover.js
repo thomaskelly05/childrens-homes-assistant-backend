@@ -18,26 +18,45 @@ function renderSection(title, subtitle, body) {
   `;
 }
 
-export async function loadTimeline() {
+export async function loadHandover() {
   if (!els.viewContent) return;
 
   els.viewContent.innerHTML = `
     <div class="loading-state">
       <div>
         <div class="spinner"></div>
-        <p>Loading timeline...</p>
+        <p>Loading handover...</p>
       </div>
     </div>
   `;
 
-  const data = await apiGet(`/young-people/${state.youngPersonId}/timeline?limit=100`);
-  const items = data.timeline || [];
+  const [timelineData, plansData, appointmentsData] = await Promise.all([
+    apiGet(`/young-people/${state.youngPersonId}/timeline?limit=10`).catch(() => ({ timeline: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/plans`).catch(() => ({ items: [] })),
+    apiGet(`/young-people/${state.youngPersonId}/appointments`).catch(() => ({ items: [] })),
+  ]);
+
+  const recent = timelineData.timeline || [];
+  const plans = plansData.items || plansData.records || [];
+  const appointments = appointmentsData.items || appointmentsData.records || [];
 
   els.viewContent.innerHTML = `
     ${renderSection(
-      "Timeline",
-      "A clear chronology of what has happened over time.",
-      renderRowList(items, "No timeline items found.")
+      "Recent activity",
+      "Useful context for the next shift.",
+      renderRowList(recent, "No recent activity found.")
+    )}
+
+    ${renderSection(
+      "Current support guidance",
+      "Plans and guidance adults should keep in mind.",
+      renderRowList(plans.slice(0, 8), "No current support guidance found.")
+    )}
+
+    ${renderSection(
+      "Upcoming appointments",
+      "Things coming up that the next shift should know.",
+      renderRowList(appointments.slice(0, 8), "No upcoming appointments found.")
     )}
   `;
 }
