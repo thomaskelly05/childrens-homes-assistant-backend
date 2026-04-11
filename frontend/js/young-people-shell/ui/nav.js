@@ -3,7 +3,12 @@ import { els } from "../dom.js";
 import { NAV_SECTIONS } from "../core/config.js";
 import { escapeHtml } from "../core/utils.js";
 import { loadCurrentView } from "../features/workspace.js";
-import { openYoungPerson, goBackToSelector, loadYoungPersonSelector, filterSelectorList } from "./selector.js";
+import {
+  openYoungPerson,
+  goBackToSelector,
+  loadYoungPersonSelector,
+  filterSelectorList,
+} from "./selector.js";
 import {
   updatePageHeader,
   renderAssistantScopeBadges,
@@ -42,6 +47,8 @@ function showError(message) {
 function showMessage(message) {
   showStatus(message || "", "info");
 }
+
+export { showError, showMessage };
 
 export function clearStatus() {
   if (!els.statusBar) return;
