@@ -27,6 +27,7 @@ slowapi
 sentry-sdk
 email-validator
 pyotp
+webauthn
 qrcode[pil]
 Pillow
 pytest
