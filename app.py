@@ -37,6 +37,7 @@ from db.legal_acceptance_db import (
     init_legal_acceptance_table,
 )
 from db.mfa_db import init_mfa_tables
+from db.passkeys_db import init_passkeys_table
 from security.middleware import CSRFMiddleware, SecurityHeadersMiddleware
 
 
@@ -249,6 +250,7 @@ async def lifespan(_: FastAPI):
     init_db_pool()
     init_legal_acceptance_table()
     init_mfa_tables()
+    init_passkeys_table()
     logger.info("IndiCare API started")
     try:
         yield
@@ -629,7 +631,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.session_secret,
-        same_site=auth_settings.cookie_samesite,
+        same_site="lax",
         https_only=auth_settings.cookie_secure,
         session_cookie="indicare_server_session",
         max_age=auth_settings.cookie_max_age_short,
