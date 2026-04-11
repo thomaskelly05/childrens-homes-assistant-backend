@@ -2,55 +2,56 @@ import { els } from "../dom.js";
 import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
-import { renderRowList } from "../ui/records.js";
+import { renderRowList, renderSection } from "../ui/records.js";
+import { mapFamilyContact } from "../core/adapters.js";
 
-function renderSection(title, subtitle, body) {
-  return `
-    <section class="content-section">
-      <div class="content-section-head">
-        <div>
-          <h3>${escapeHtml(title)}</h3>
-          ${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ""}
-        </div>
-      </div>
-      ${body}
-    </section>
-  `;
-}
+function renderContactCards(contacts = []) {
+  if (!contacts.length) {
+    return `<div class="empty-state"><p>No contacts recorded.</p></div>`;
+  }
 
-function renderFamilyCards(profile = {}) {
   return `
     <div class="profile-grid">
-      <button class="profile-card editable-card" type="button" data-open-family-edit="important-people">
-        <div class="profile-card-title">Important people</div>
-        <div class="profile-card-text">${escapeHtml(profile.important_people || "Not recorded")}</div>
-      </button>
-
-      <button class="profile-card editable-card" type="button" data-open-family-edit="contact-arrangements">
-        <div class="profile-card-title">Contact arrangements</div>
-        <div class="profile-card-text">${escapeHtml(profile.contact_arrangements || "Not recorded")}</div>
-      </button>
-
-      <button class="profile-card editable-card" type="button" data-open-family-edit="relationship-summary">
-        <div class="profile-card-title">Relationship summary</div>
-        <div class="profile-card-text">${escapeHtml(profile.relationship_summary || "Not recorded")}</div>
-      </button>
-
-      <button class="profile-card editable-card" type="button" data-open-family-edit="support-needed">
-        <div class="profile-card-title">Support around family time</div>
-        <div class="profile-card-text">${escapeHtml(profile.support_needed || "Not recorded")}</div>
-      </button>
+      ${contacts
+        .map(
+          (c) => `
+        <div class="profile-card">
+          <div class="profile-card-title">${escapeHtml(c.full_name || "Contact")}</div>
+          <div class="profile-card-text">${escapeHtml(
+            c.relationship_to_young_person ||
+              c.relationship_to_child ||
+              c.contact_type ||
+              "Relationship not recorded"
+          )}</div>
+          <div class="profile-card-subtext">
+            ${escapeHtml(c.phone || c.phone_number || "")}
+          </div>
+        </div>
+      `
+        )
+        .join("")}
     </div>
   `;
 }
 
-function bindFamilyActions() {
-  els.viewContent?.querySelectorAll("[data-open-family-edit]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const mod = await import("../ui/composer.js");
-      mod.openComposerFor("support_plan", "create");
-    });
-  });
+function buildContactRecordRows(items = []) {
+  return items.map((item) => ({
+    id: item.id,
+    record_type: "family_contact",
+    title: item.contact_person || item.full_name || "Family contact",
+    summary:
+      [
+        item.contact_type,
+        item.location,
+        item.supervision_level,
+      ]
+        .filter(Boolean)
+        .join(" • ") || "Family contact record",
+    contact_datetime: item.contact_datetime || null,
+    status: item.workflow_status || "",
+    child_voice: item.child_voice || "",
+    concerns: item.concerns || "",
+  }));
 }
 
 export async function loadFamily() {
@@ -65,23 +66,53 @@ export async function loadFamily() {
     </div>
   `;
 
-  const data = await apiGet(`/young-people/${state.youngPersonId}/family`).catch(() => ({}));
-  const profile = data.family_profile || {};
-  const records = data.family_contact_records || data.items || [];
+  try {
+    const [contactsData, recordsData] = await Promise.all([
+      apiGet(`/young-people/${state.youngPersonId}/contacts`).catch(() => ({ items: [] })),
+      apiGet(`/young-people/${state.youngPersonId}/family`).catch(() => ({ items: [] })),
+    ]);
 
-  els.viewContent.innerHTML = `
-    ${renderSection(
-      "Family and relationships",
-      profile.relationship_summary || "Important people, contact and family context.",
-      renderFamilyCards(profile)
-    )}
+    const contacts =
+      contactsData.items ||
+      contactsData.records ||
+      contactsData.young_person_contacts ||
+      [];
 
-    ${renderSection(
-      "Family records",
-      "Family time, contact updates and relationship entries.",
-      renderRowList(records, "No family or relationship records found.")
-    )}
-  `;
+    const familyRecords = (
+      recordsData.items ||
+      recordsData.records ||
+      recordsData.family_contact_records ||
+      []
+    ).map(mapFamilyContact);
 
-  bindFamilyActions();
+    const concerns = familyRecords.filter((r) =>
+      Boolean(r.concerns || "").toLowerCase().includes("concern")
+    );
+
+    els.viewContent.innerHTML = `
+      ${renderSection(
+        "Key contacts",
+        "Important people in the young person’s life.",
+        renderContactCards(contacts)
+      )}
+
+      ${renderSection(
+        "Family contact records",
+        "Contact sessions, presentation, and follow-up.",
+        renderRowList(familyRecords, "No family contact records found.")
+      )}
+
+      ${renderSection(
+        "Concerns and risks",
+        "Contacts where concerns or issues were identified.",
+        renderRowList(concerns, "No concerns recorded.")
+      )}
+    `;
+  } catch (error) {
+    els.viewContent.innerHTML = `
+      <div class="empty-state">
+        <p>${escapeHtml(error.message || "Failed to load family and relationships.")}</p>
+      </div>
+    `;
+  }
 }
