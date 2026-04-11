@@ -8,7 +8,6 @@
   <link rel="stylesheet" href="/css/assistant.css" />
 </head>
 <body>
-  <!-- Icon sprite -->
   <svg xmlns="http://www.w3.org/2000/svg" style="display:none;">
     <symbol id="i-menu" viewBox="0 0 24 24">
       <path d="M4 6h16M4 12h16M4 18h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
@@ -95,37 +94,27 @@
           <div class="sidebar-label">Workspace</div>
           <nav class="sidebar-nav">
             <button id="navAssistant" class="nav-item active" type="button">
-              <span class="nav-icon">
-                <svg class="ui-icon"><use href="#i-sparkles"></use></svg>
-              </span>
+              <span class="nav-icon"><svg class="ui-icon"><use href="#i-sparkles"></use></svg></span>
               <span>Assistant</span>
             </button>
 
             <button id="navYoungPeople" class="nav-item" type="button">
-              <span class="nav-icon">
-                <svg class="ui-icon"><use href="#i-users"></use></svg>
-              </span>
+              <span class="nav-icon"><svg class="ui-icon"><use href="#i-users"></use></svg></span>
               <span>Young people</span>
             </button>
 
             <button id="navLibrary" class="nav-item hidden" type="button">
-              <span class="nav-icon">
-                <svg class="ui-icon"><use href="#i-library"></use></svg>
-              </span>
+              <span class="nav-icon"><svg class="ui-icon"><use href="#i-library"></use></svg></span>
               <span>Library</span>
             </button>
 
             <button id="navManager" class="nav-item hidden" type="button">
-              <span class="nav-icon">
-                <svg class="ui-icon"><use href="#i-briefcase"></use></svg>
-              </span>
+              <span class="nav-icon"><svg class="ui-icon"><use href="#i-briefcase"></use></svg></span>
               <span>Manager</span>
             </button>
 
             <button id="navAdmin" class="nav-item hidden" type="button">
-              <span class="nav-icon">
-                <svg class="ui-icon"><use href="#i-settings"></use></svg>
-              </span>
+              <span class="nav-icon"><svg class="ui-icon"><use href="#i-settings"></use></svg></span>
               <span>Admin</span>
             </button>
           </nav>
@@ -152,12 +141,12 @@
         </div>
 
         <div class="topbar-right">
-          <button id="openLegalHeaderBtn" class="ghost-btn topbar-btn" type="button">
+          <button id="openLegalHeaderBtn" class="ghost-btn topbar-btn" type="button" aria-label="Legal">
             <svg class="ui-icon"><use href="#i-legal"></use></svg>
             <span>Legal</span>
           </button>
 
-          <button id="openSettings" class="ghost-btn topbar-btn" type="button">
+          <button id="openSettings" class="ghost-btn topbar-btn" type="button" aria-label="Settings">
             <svg class="ui-icon"><use href="#i-settings"></use></svg>
             <span>Settings</span>
           </button>
@@ -171,20 +160,18 @@
           <div id="empty" class="assistant-empty">
             <div class="assistant-empty-inner">
               <div class="assistant-kicker">IndiCare Assistant</div>
-
               <h1 id="welcomeTitle" class="assistant-title">Welcome back.</h1>
-
               <p id="welcomeText" class="assistant-subtitle">
                 Use Assistant to help with records, policy, drafting, safeguarding support, and day-to-day operational work.
               </p>
 
               <div class="assistant-trust-row">
                 <div id="themeAwarePill" class="assistant-trust-pill">Ready for your workspace</div>
-                <div class="assistant-trust-pill">Document-aware responses</div>
-                <div class="assistant-trust-pill">Built for everyday practice</div>
+                <div class="assistant-trust-pill desktop-only">Document-aware responses</div>
+                <div class="assistant-trust-pill desktop-only">Built for everyday practice</div>
               </div>
 
-              <div class="assistant-starter-grid">
+              <div class="assistant-starter-grid desktop-starters">
                 <button class="assistant-starter" type="button" onclick="quick('policy')">
                   <span class="assistant-starter-title">Search policy</span>
                   <span class="assistant-starter-text">Find and summarise the most relevant guidance or home document.</span>
@@ -222,9 +209,7 @@
 
             <div class="toolbar">
               <input id="libraryUpload" type="file" accept=".pdf,.doc,.docx,.txt" hidden />
-              <button id="libraryUploadBtn" class="primary-btn hidden" type="button">
-                Upload document
-              </button>
+              <button id="libraryUploadBtn" class="primary-btn hidden" type="button">Upload document</button>
               <button id="refreshLibraryBtn" class="ghost-btn" type="button">Refresh</button>
             </div>
           </div>
@@ -621,33 +606,11 @@
             </button>
           </div>
 
-          <div class="composer-card modern-composer">
+          <div class="composer-card modern-composer mobile-chatgpt-composer">
             <textarea id="input" placeholder="Ask Assistant anything about records, policy, safeguarding, guidance, or operational work..."></textarea>
 
-            <div class="composer-footer">
-              <div class="composer-tools">
-                <select id="copilot" class="field field-sm compact-field">
-                  <option value="default">Assistant</option>
-                  <option value="documentation">Documentation</option>
-                  <option value="safeguarding">Safeguarding</option>
-                  <option value="manager">Manager</option>
-                  <option value="ofsted">Compliance</option>
-                </select>
-
-                <select id="lang" class="field field-sm compact-field">
-                  <option value="en-GB">English</option>
-                  <option value="pl-PL">Polish</option>
-                  <option value="ro-RO">Romanian</option>
-                  <option value="ur-PK">Urdu</option>
-                  <option value="ar">Arabic</option>
-                </select>
-
-                <select id="mode" class="field field-sm compact-field">
-                  <option value="quick">Fast</option>
-                  <option value="balanced" selected>Balanced</option>
-                  <option value="deep">Detailed</option>
-                </select>
-
+            <div class="composer-footer mobile-composer-footer">
+              <div class="composer-tools mobile-primary-tools">
                 <input id="upload" type="file" accept=".txt,.doc,.docx,.pdf" hidden />
 
                 <button id="chatUploadBtn" class="icon-btn" type="button" aria-label="Attach document">
@@ -658,7 +621,7 @@
                   <svg class="ui-icon"><use href="#i-mic"></use></svg>
                 </button>
 
-                <button id="voiceReplies" class="icon-btn" type="button" aria-label="Toggle voice replies">
+                <button id="voiceReplies" class="icon-btn desktop-only" type="button" aria-label="Toggle voice replies">
                   <svg class="ui-icon"><use href="#i-volume"></use></svg>
                 </button>
               </div>
@@ -687,6 +650,38 @@
 
     <div class="settings-body">
       <div class="settings-group">
+        <label class="settings-label" for="copilot">Assistant mode</label>
+        <select id="copilot" class="field">
+          <option value="default">Assistant</option>
+          <option value="documentation">Documentation</option>
+          <option value="safeguarding">Safeguarding</option>
+          <option value="manager">Manager</option>
+          <option value="ofsted">Compliance</option>
+        </select>
+        <div class="settings-help">Choose how Assistant should approach responses.</div>
+      </div>
+
+      <div class="settings-group">
+        <label class="settings-label" for="lang">Reply language</label>
+        <select id="lang" class="field">
+          <option value="en-GB">English</option>
+          <option value="pl-PL">Polish</option>
+          <option value="ro-RO">Romanian</option>
+          <option value="ur-PK">Urdu</option>
+          <option value="ar">Arabic</option>
+        </select>
+      </div>
+
+      <div class="settings-group">
+        <label class="settings-label" for="mode">Response depth</label>
+        <select id="mode" class="field">
+          <option value="quick">Fast</option>
+          <option value="balanced" selected>Balanced</option>
+          <option value="deep">Detailed</option>
+        </select>
+      </div>
+
+      <div class="settings-group">
         <label class="settings-label" for="voiceSelect">Voice</label>
         <select id="voiceSelect" class="field"></select>
         <div class="settings-help">Choose a preferred voice for spoken replies.</div>
@@ -706,6 +701,7 @@
           </button>
 
           <button id="privacy" class="toggle-btn" type="button">Privacy blur</button>
+          <button id="voiceReplies" class="toggle-btn mobile-only" type="button">Voice replies</button>
           <button id="stopVoiceBtn" class="toggle-btn" type="button">Stop voice</button>
           <button id="openLegalFromSettings" class="toggle-btn" type="button">Open legal terms</button>
         </div>
@@ -803,137 +799,6 @@
     </div>
   </div>
 
-  <div
-  id="passkeyModalOverlay"
-  style="
-    display:none;
-    position:fixed;
-    inset:0;
-    background:rgba(15,23,42,.45);
-    z-index:9998;
-  "
-></div>
-
-<div
-  id="passkeyModal"
-  style="
-    display:none;
-    position:fixed;
-    left:50%;
-    top:50%;
-    transform:translate(-50%,-50%);
-    width:min(92vw,520px);
-    background:#ffffff;
-    border-radius:20px;
-    box-shadow:0 20px 60px rgba(15,23,42,.22);
-    padding:24px;
-    z-index:9999;
-    border:1px solid #d8e1ec;
-  "
-  role="dialog"
-  aria-modal="true"
-  aria-labelledby="passkeyModalTitle"
-  aria-describedby="passkeyModalDesc"
->
-  <div
-    style="
-      font-size:.82rem;
-      font-weight:800;
-      color:#2348a5;
-      text-transform:uppercase;
-      letter-spacing:.08em;
-      margin-bottom:10px;
-    "
-  >
-    Secure sign-in
-  </div>
-
-  <h2
-    id="passkeyModalTitle"
-    style="
-      margin:0 0 10px;
-      font-size:1.7rem;
-      line-height:1.1;
-      color:#18263b;
-    "
-  >
-    Add a passkey
-  </h2>
-
-  <p
-    id="passkeyModalDesc"
-    style="
-      margin:0 0 12px;
-      color:#5f7088;
-      line-height:1.65;
-    "
-  >
-    Your account is working normally. Add a passkey now to make future sign-ins
-    faster and more secure.
-  </p>
-
-  <p
-    style="
-      margin:0 0 18px;
-      color:#5f7088;
-      line-height:1.65;
-    "
-  >
-    You can still keep using your password and authenticator app as fallback.
-  </p>
-
-  <div style="display:grid;gap:10px;">
-    <button
-      id="passkeyModalAddBtn"
-      type="button"
-      style="
-        min-height:50px;
-        border:none;
-        border-radius:14px;
-        background:linear-gradient(135deg,#2348a5,#18357f);
-        color:#ffffff;
-        font:inherit;
-        font-weight:800;
-        cursor:pointer;
-      "
-    >
-      Add passkey
-    </button>
-
-    <button
-      id="passkeyModalSkipBtn"
-      type="button"
-      style="
-        min-height:50px;
-        border:1px solid #d8e1ec;
-        border-radius:14px;
-        background:#ffffff;
-        color:#18263b;
-        font:inherit;
-        font-weight:700;
-        cursor:pointer;
-      "
-    >
-      Skip for now
-    </button>
-  </div>
-
-  <div
-    id="passkeyModalStatus"
-    style="
-      min-height:22px;
-      margin-top:14px;
-      font-size:.94rem;
-      line-height:1.5;
-      color:#5f7088;
-    "
-    aria-live="polite"
-    role="status"
-  ></div>
-</div>
-
-  <script src="/js/api.js"></script>
-<script src="/js/auth.js"></script>
-<script src="/js/assistant.js"></script>
-  </body>
+  <script src="/js/assistant.js"></script>
+</body>
 </html>
