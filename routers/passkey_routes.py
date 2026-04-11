@@ -5,7 +5,7 @@ import secrets
 import time
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr
 from webauthn import (
     generate_authentication_options,
@@ -13,13 +13,13 @@ from webauthn import (
     verify_authentication_response,
     verify_registration_response,
 )
-from webauthn.helpers import options_to_json
-from webauthn.helpers.base64url_to_bytes import base64url_to_bytes
-from webauthn.helpers.cose import COSEAlgorithmIdentifier
-from webauthn.helpers.parsers import (
+from webauthn.helpers import (
+    base64url_to_bytes,
+    options_to_json,
     parse_authentication_credential_json,
     parse_registration_credential_json,
 )
+from webauthn.helpers.cose import COSEAlgorithmIdentifier
 from webauthn.helpers.structs import (
     AuthenticatorSelectionCriteria,
     PublicKeyCredentialDescriptor,
@@ -34,6 +34,8 @@ from auth.mfa_guard import (
 )
 from auth.tokens import create_session_token
 from db.billing_db import get_user_billing_by_user_id
+from db.connection import get_db
+from db.mfa_db import log_auth_event
 from db.passkeys_db import (
     consume_webauthn_challenge,
     create_passkey,
@@ -46,8 +48,6 @@ from db.passkeys_db import (
     list_user_passkeys,
     update_passkey_counter,
 )
-from db.mfa_db import log_auth_event
-from db.connection import get_db
 
 router = APIRouter(prefix="/auth/passkeys", tags=["Passkeys"])
 
