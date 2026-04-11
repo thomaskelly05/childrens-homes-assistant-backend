@@ -1,184 +1,239 @@
 import { els } from "../dom.js";
+import { state } from "../state.js";
 import { escapeHtml } from "../core/utils.js";
-import { RECORD_TYPES } from "../core/contracts.js";
-import { openComposerFor } from "./composer.js";
+import { runSuggestionAction } from "./action-router.js";
 
-function getTargetLabel(type) {
-const map = {
-[RECORD_TYPES.health_record]: "Health record",
-[RECORD_TYPES.education_record]: "Education record",
-[RECORD_TYPES.family_contact_record]: "Family contact record",
-[RECORD_TYPES.risk_assessment]: "Risk assessment",
-[RECORD_TYPES.safeguarding_record]: "Safeguarding record",
-[RECORD_TYPES.task]: "Task",
-[RECORD_TYPES.support_plan]: "Support plan",
-[RECORD_TYPES.manager_action]: "Manager action",
-[RECORD_TYPES.appointment]: "Appointment",
-};
-
-return map[type] || "Linked record";
+function normaliseSuggestion(suggestion = {}) {
+  return {
+    id:
+      suggestion.id ||
+      `${suggestion.record_type || suggestion.action_type || "suggestion"}-${Math.random()
+        .toString(36)
+        .slice(2, 9)}`,
+    title:
+      suggestion.title ||
+      suggestion.label ||
+      suggestion.name ||
+      "Suggested follow-up",
+    description:
+      suggestion.description ||
+      suggestion.summary ||
+      suggestion.reason ||
+      "",
+    record_type:
+      suggestion.record_type ||
+      suggestion.action_type ||
+      suggestion.create_record_type ||
+      suggestion.target_record_type ||
+      "",
+    priority:
+      suggestion.priority ||
+      suggestion.severity ||
+      "",
+    source_record_type:
+      suggestion.source_record_type ||
+      suggestion.metadata?.source_record_type ||
+      "",
+    source_record_id:
+      suggestion.source_record_id ||
+      suggestion.metadata?.source_record_id ||
+      null,
+    prefill:
+      suggestion.prefill ||
+      suggestion.draft ||
+      suggestion.payload ||
+      {},
+    raw: suggestion,
+  };
 }
 
-function getComposerTypeForSuggestion(targetType) {
-const map = {
-[RECORD_TYPES.health_record]: "health_record",
-[RECORD_TYPES.education_record]: "education_record",
-[RECORD_TYPES.family_contact_record]: "family_contact",
-[RECORD_TYPES.risk_assessment]: "risk",
-[RECORD_TYPES.safeguarding_record]: "safeguarding_record",
-[RECORD_TYPES.task]: "task",
-[RECORD_TYPES.support_plan]: "support_plan",
-[RECORD_TYPES.appointment]: "appointment",
-};
+function renderSuggestionCard(suggestion = {}) {
+  const item = normaliseSuggestion(suggestion);
 
-return map[targetType] || null;
+  return `
+    <div class="suggestion-card" data-suggestion-id="${escapeHtml(item.id)}">
+      <div class="suggestion-card-head">
+        <div>
+          <div class="suggestion-card-title">${escapeHtml(item.title)}</div>
+          ${
+            item.priority
+              ? `<div class="suggestion-card-priority">${escapeHtml(item.priority)}</div>`
+              : ""
+          }
+        </div>
+      </div>
+
+      ${
+        item.description
+          ? `<div class="suggestion-card-body">${escapeHtml(item.description)}</div>`
+          : ""
+      }
+
+      <div class="suggestion-card-actions">
+        <button
+          type="button"
+          class="btn btn-primary"
+          data-suggestion-run="${escapeHtml(item.id)}"
+        >
+          Create
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          data-suggestion-dismiss="${escapeHtml(item.id)}"
+        >
+          Dismiss
+        </button>
+      </div>
+    </div>
+  `;
 }
 
-function confidenceClass(value) {
-const text = String(value || "").toLowerCase();
-
-if (text === "high") return "success";
-if (text === "medium") return "warning";
-if (text === "low") return "";
-return "";
+function getPanelElement() {
+  return (
+    els.suggestionsPanel ||
+    document.getElementById("suggestionsPanel") ||
+    document.querySelector("[data-suggestions-panel]")
+  );
 }
 
-function renderSuggestionCard(item) {
-const targetLabel = getTargetLabel(item.target_record_type);
-
-return `
-<article class="suggestion-card" data-suggestion-id="${escapeHtml(item.id)}">
-<div class="suggestion-card-top">
-<div>
-<h4>${escapeHtml(item.title || "Suggestion")}</h4>
-<p>${escapeHtml(item.reason || "")}</p>
-</div>
-
-<div class="suggestion-meta">
-<span class="badge ${confidenceClass(item.confidence)}">
-${escapeHtml(item.confidence || "medium")}
-</span>
-<span class="badge">${escapeHtml(targetLabel)}</span>
-</div>
-</div>
-
-<div class="suggestion-actions">
-<button
-class="primary-btn"
-type="button"
-data-suggestion-action="accept"
-data-suggestion-id="${escapeHtml(item.id)}"
->
-Create draft
-</button>
-
-<button
-class="secondary-btn"
-type="button"
-data-suggestion-action="dismiss"
-data-suggestion-id="${escapeHtml(item.id)}"
->
-Dismiss
-</button>
-</div>
-</article>
-`;
+function getBodyElement() {
+  return (
+    els.suggestionsPanelBody ||
+    document.getElementById("suggestionsPanelBody") ||
+    document.querySelector("[data-suggestions-body]")
+  );
 }
 
-function ensureSuggestionsHost() {
-let host = document.getElementById("recordSuggestionsPanel");
-if (host) return host;
-
-const target = els.viewContent || els.workspaceScreen || document.body;
-if (!target) return null;
-
-const wrapper = document.createElement("section");
-wrapper.id = "recordSuggestionsPanel";
-wrapper.className = "workspace-side-card suggestion-panel";
-wrapper.innerHTML = `
-<div class="workspace-side-head">
-<div>
-<h3>Suggested follow-up</h3>
-<p>Linked records and actions the system thinks may help next.</p>
-</div>
-<button
-class="ghost-btn"
-type="button"
-id="closeSuggestionsPanelBtn"
->
-Close
-</button>
-</div>
-<div id="recordSuggestionsBody" class="assistant-side-block"></div>
-`;
-
-target.prepend(wrapper);
-
-wrapper.querySelector("#closeSuggestionsPanelBtn")?.addEventListener("click", () => {
-hideSuggestionsPanel();
-});
-
-return wrapper;
+function getTitleElement() {
+  return (
+    els.suggestionsPanelTitle ||
+    document.getElementById("suggestionsPanelTitle") ||
+    document.querySelector("[data-suggestions-title]")
+  );
 }
 
-function getSuggestionsBody() {
-const panel = ensureSuggestionsHost();
-if (!panel) return null;
-return panel.querySelector("#recordSuggestionsBody");
+function getSubtitleElement() {
+  return (
+    els.suggestionsPanelSubtitle ||
+    document.getElementById("suggestionsPanelSubtitle") ||
+    document.querySelector("[data-suggestions-subtitle]")
+  );
+}
+
+function updatePanelMeta(meta = {}, count = 0) {
+  const titleEl = getTitleElement();
+  const subtitleEl = getSubtitleElement();
+
+  if (titleEl) {
+    titleEl.textContent = count
+      ? `Suggested follow-up${count === 1 ? "" : "s"}`
+      : "Suggestions";
+  }
+
+  if (subtitleEl) {
+    const parts = [];
+
+    if (meta.source_record_type) {
+      parts.push(String(meta.source_record_type).replaceAll("_", " "));
+    }
+
+    if (meta.source_record_id) {
+      parts.push(`Source #${meta.source_record_id}`);
+    }
+
+    subtitleEl.textContent = parts.join(" • ");
+  }
+}
+
+function bindSuggestionCardEvents() {
+  const body = getBodyElement();
+  if (!body) return;
+
+  body.querySelectorAll("[data-suggestion-run]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.suggestionRun;
+      const suggestion = (state.currentSuggestions || []).find(
+        (item) => normaliseSuggestion(item).id === id
+      );
+      if (!suggestion) return;
+      runSuggestionAction(suggestion);
+    });
+  });
+
+  body.querySelectorAll("[data-suggestion-dismiss]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.suggestionDismiss;
+      state.currentSuggestions = (state.currentSuggestions || []).filter(
+        (item) => normaliseSuggestion(item).id !== id
+      );
+
+      if (!state.currentSuggestions.length) {
+        hideSuggestionsPanel();
+        return;
+      }
+
+      showSuggestionsPanel(
+        state.currentSuggestions,
+        state.currentSuggestionSource || {}
+      );
+    });
+  });
+}
+
+export function showSuggestionsPanel(suggestions = [], meta = {}) {
+  const panel = getPanelElement();
+  const body = getBodyElement();
+
+  state.currentSuggestions = (suggestions || []).map(normaliseSuggestion);
+  state.currentSuggestionSource = meta || {};
+
+  if (!panel || !body) return;
+
+  updatePanelMeta(meta, state.currentSuggestions.length);
+
+  if (!state.currentSuggestions.length) {
+    body.innerHTML = `
+      <div class="empty-state">
+        <p>No suggestions right now.</p>
+      </div>
+    `;
+    panel.classList.remove("hidden");
+    panel.setAttribute("aria-hidden", "false");
+    return;
+  }
+
+  body.innerHTML = state.currentSuggestions.map(renderSuggestionCard).join("");
+
+  panel.classList.remove("hidden");
+  panel.setAttribute("aria-hidden", "false");
+
+  bindSuggestionCardEvents();
 }
 
 export function hideSuggestionsPanel() {
-const panel = document.getElementById("recordSuggestionsPanel");
-if (panel) {
-panel.remove();
-}
-}
+  const panel = getPanelElement();
+  const body = getBodyElement();
 
-export function showSuggestionsPanel(suggestions = [], context = {}) {
-if (!Array.isArray(suggestions) || !suggestions.length) {
-hideSuggestionsPanel();
-return;
-}
+  if (body) {
+    body.innerHTML = "";
+  }
 
-const panel = ensureSuggestionsHost();
-const body = getSuggestionsBody();
-if (!panel || !body) return;
-
-panel.dataset.sourceRecordType = context.source_record_type || "";
-panel.dataset.sourceRecordId = String(context.source_record_id || "");
-
-body.innerHTML = suggestions.map(renderSuggestionCard).join("");
-
-bindSuggestionEvents(suggestions);
+  if (panel) {
+    panel.classList.add("hidden");
+    panel.setAttribute("aria-hidden", "true");
+  }
 }
 
-export function bindSuggestionEvents(suggestions = []) {
-const body = getSuggestionsBody();
-if (!body) return;
+export function bindSuggestionEvents() {
+  const panel = getPanelElement();
+  if (!panel) return;
 
-body.querySelectorAll("[data-suggestion-action='accept']").forEach((button) => {
-button.addEventListener("click", () => {
-const id = button.dataset.suggestionId;
-const suggestion = suggestions.find((item) => item.id === id);
-if (!suggestion) return;
+  const closeBtn =
+    els.closeSuggestionsPanelBtn ||
+    document.getElementById("closeSuggestionsPanelBtn") ||
+    panel.querySelector("[data-close-suggestions]");
 
-const composerType = getComposerTypeForSuggestion(suggestion.target_record_type);
-if (!composerType) return;
-
-openComposerFor(composerType, "create", suggestion.prefill || {});
-});
-});
-
-body.querySelectorAll("[data-suggestion-action='dismiss']").forEach((button) => {
-button.addEventListener("click", () => {
-const id = button.dataset.suggestionId;
-const card = body.querySelector(`[data-suggestion-id="${CSS.escape(id)}"]`);
-if (card) card.remove();
-
-const remaining = body.querySelectorAll(".suggestion-card");
-if (!remaining.length) {
-hideSuggestionsPanel();
-}
-});
-});
+  closeBtn?.addEventListener("click", hideSuggestionsPanel);
 }
