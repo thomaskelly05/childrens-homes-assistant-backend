@@ -7,6 +7,7 @@ import {
   initialsFromName,
   escapeHtml,
   formatShortDate,
+  setYoungPersonIdInUrl,
 } from "../core/utils.js";
 import {
   updateAssistantScopeDataset,
@@ -15,23 +16,16 @@ import {
   renderHeroQuickActions,
   renderMobileBottomBar,
 } from "./header.js";
-import { renderDesktopNav, renderMobileNav, setActiveView, closeMobileNav } from "./nav.js";
-import {
-  updateAssistantContext,
-  renderAssistantInsights,
-  renderAssistantMessages,
-  closeAssistant,
-} from "./assistant-ui.js";
+import { renderDesktopNav, renderMobileNav, setActiveView, closeMobileNav, showError, clearStatus } from "./nav.js";
+import { updateAssistantContext, renderAssistantInsights, renderAssistantMessages, closeAssistant } from "./assistant-ui.js";
 import { loadCurrentView } from "../features/workspace.js";
 import { closeComposer } from "./composer.js";
 import { closeDrawer } from "./records.js";
-import { showError, clearStatus } from "./ui.js";
 
 export function showSelectorOnlyMode() {
   els.selectorScreen?.classList.remove("hidden");
   els.workspaceScreen?.classList.add("hidden");
   els.refreshBtn?.classList.add("hidden");
-  clearStatus();
 }
 
 export function showWorkspaceMode() {
@@ -54,47 +48,40 @@ export function renderSelectorList(items = []) {
 
   els.selectorList.innerHTML = `
     <div class="selector-grid">
-      ${items
-        .map((item) => {
-          const fullName = getDisplayName(item);
-          const image = getProfileImage(item);
+      ${items.map((item) => {
+        const fullName = getDisplayName(item);
+        const image = getProfileImage(item);
 
-          const meta = [
-            item.preferred_name ? `Prefers ${item.preferred_name}` : null,
-            item.date_of_birth ? `DOB ${formatShortDate(item.date_of_birth)}` : null,
-            item.home_name || null,
-          ].filter(Boolean);
+        const meta = [
+          item.preferred_name ? `Prefers ${item.preferred_name}` : null,
+          item.date_of_birth ? `DOB ${formatShortDate(item.date_of_birth)}` : null,
+          item.home_name || null,
+        ].filter(Boolean);
 
-          return `
-            <button
-              class="selector-card selector-card--photo"
-              type="button"
-              data-open-young-person="${item.id}"
-              aria-label="Open workspace for ${escapeHtml(fullName)}"
-            >
-              <div class="selector-card-media">
-                ${
-                  image
-                    ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(fullName)}" class="selector-card-photo" />`
-                    : `<div class="selector-card-photo-fallback">${escapeHtml(initialsFromName(fullName))}</div>`
-                }
+        return `
+          <button class="selector-card selector-card--photo" type="button" data-open-young-person="${item.id}">
+            <div class="selector-card-media">
+              ${
+                image
+                  ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(fullName)}" class="selector-card-photo" />`
+                  : `<div class="selector-card-photo-fallback">${escapeHtml(initialsFromName(fullName))}</div>`
+              }
+            </div>
+
+            <div class="selector-card-body">
+              <h3>${escapeHtml(fullName)}</h3>
+              <div class="selector-card-meta">
+                ${meta.map((m) => `<span class="selector-pill">${escapeHtml(m)}</span>`).join("")}
               </div>
+              <p>Open workspace</p>
+            </div>
 
-              <div class="selector-card-body">
-                <h3>${escapeHtml(fullName)}</h3>
-                <div class="selector-card-meta">
-                  ${meta.map((m) => `<span class="selector-pill">${escapeHtml(m)}</span>`).join("")}
-                </div>
-                <p>Open workspace</p>
-              </div>
-
-              <div class="selector-card-actions">
-                <span class="primary-btn selector-open-label">Open</span>
-              </div>
-            </button>
-          `;
-        })
-        .join("")}
+            <div class="selector-card-actions">
+              <span class="primary-btn">Open</span>
+            </div>
+          </button>
+        `;
+      }).join("")}
     </div>
   `;
 }
@@ -126,6 +113,7 @@ export function filterSelectorList() {
 }
 
 export async function loadYoungPersonSelector() {
+  clearStatus();
   showSelectorOnlyMode();
 
   if (els.selectorList) {
@@ -174,11 +162,8 @@ export async function loadYoungPerson() {
 export async function openYoungPerson(id, options = {}) {
   const preserveView = !!options.preserveView;
 
-  const url = new URL(window.location.href);
-  url.searchParams.set("id", String(id));
-  window.history.replaceState({}, "", url.toString());
-
   state.youngPersonId = Number(id);
+  setYoungPersonIdInUrl(id);
 
   if (!preserveView) {
     setActiveView("overview");
@@ -210,10 +195,7 @@ export async function goBackToSelector() {
   closeAssistant();
   closeMobileNav();
 
-  const url = new URL(window.location.href);
-  url.searchParams.delete("id");
-  url.searchParams.delete("young_person_id");
-  window.history.replaceState({}, "", url.toString());
+  setYoungPersonIdInUrl(null);
 
   updateAssistantScopeDataset();
   updateAssistantContext();
