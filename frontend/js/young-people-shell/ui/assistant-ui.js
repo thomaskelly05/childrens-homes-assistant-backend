@@ -1,7 +1,18 @@
 import { state } from "../state.js";
 import { els } from "../dom.js";
-import { escapeHtml } from "../core/utils.js";
+import { escapeHtml, dedupeStrings } from "../core/utils.js";
 import { apiStreamAssistant } from "../core/api.js";
+
+function getYoungPersonName() {
+  return (
+    [state.youngPerson?.first_name, state.youngPerson?.last_name]
+      .filter(Boolean)
+      .join(" ")
+      .trim() ||
+    state.youngPerson?.preferred_name ||
+    "Young person"
+  );
+}
 
 export function assistantPromptsForView(view) {
   const map = {
@@ -25,6 +36,26 @@ export function assistantPromptsForView(view) {
       "What needs manager review right now?",
       "What is overdue or waiting for sign-off?",
     ],
+    health: [
+      "Summarise current health and wellbeing needs.",
+      "What appointments or follow-up matter most right now?",
+    ],
+    education: [
+      "Summarise current education themes.",
+      "What should adults hold in mind about learning right now?",
+    ],
+    family: [
+      "Summarise important family and relationship updates.",
+      "What should adults know about contact and relationships?",
+    ],
+    timeline: [
+      "Summarise the recent chronology.",
+      "What themes stand out across the timeline?",
+    ],
+    reports: [
+      "What would make a strong report summary right now?",
+      "Summarise the main themes for this young person.",
+    ],
   };
 
   return map[view] || [
@@ -38,10 +69,7 @@ export function getAssistantContextPayload() {
     scope: "young_person",
     young_person_id: state.youngPersonId,
     current_view: state.currentView,
-    young_person_name:
-      [state.youngPerson?.first_name, state.youngPerson?.last_name].filter(Boolean).join(" ").trim() ||
-      state.youngPerson?.preferred_name ||
-      "Young person",
+    young_person_name: getYoungPersonName(),
     placement_status: state.youngPerson?.placement_status || null,
     summary_risk_level: state.youngPerson?.summary_risk_level || null,
     composer_record_type: state.composerRecordType || null,
@@ -58,20 +86,15 @@ export function getAssistantContextPayload() {
 }
 
 export function updateAssistantContext() {
-  const fullName =
-    [state.youngPerson?.first_name, state.youngPerson?.last_name].filter(Boolean).join(" ").trim() ||
-    state.youngPerson?.preferred_name ||
-    "";
-
   if (!state.youngPerson) {
     if (els.assistantContext) {
       els.assistantContext.textContent = "No young person selected.";
     }
   } else {
     const text = [
-      `Young person: ${fullName}`,
+      `Young person: ${getYoungPersonName()}`,
       state.youngPerson.home_name || null,
-      `View: ${String(state.currentView).replaceAll("_", " ")}`,
+      `View: ${String(state.currentView || "overview").replaceAll("_", " ")}`,
     ]
       .filter(Boolean)
       .join(" • ");
@@ -100,27 +123,18 @@ export function renderAssistantMessageList(host, messages) {
       <div class="assistant-message-role">Assistant</div>
       <div class="assistant-message-body">${
         state.youngPersonId
-          ? `Ask a question about ${
-              escapeHtml(
-                [state.youngPerson?.first_name, state.youngPerson?.last_name]
-                  .filter(Boolean)
-                  .join(" ")
-                  .trim() ||
-                  state.youngPerson?.preferred_name ||
-                  "this young person"
-              )
-            }.`
+          ? `Ask a question about ${escapeHtml(getYoungPersonName())}.`
           : "Select a young person to start."
       }</div>
     </article>
   `;
 
-  const messagesHtml = messages
+  const messagesHtml = (messages || [])
     .map(
       (message) => `
         <article class="assistant-message ${message.role === "user" ? "assistant-message-user" : ""}">
           <div class="assistant-message-role">${message.role === "user" ? "You" : "Assistant"}</div>
-          <div class="assistant-message-body">${escapeHtml(message.content)}</div>
+          <div class="assistant-message-body">${escapeHtml(message.content || "")}</div>
         </article>
       `
     )
@@ -136,26 +150,38 @@ export function renderAssistantMessages() {
 }
 
 export function pushAssistantMessage(role, content) {
-  const entry = { role, content };
+  const entry = {
+    role,
+    content: String(content || ""),
+  };
+
   state.assistantMessages.push(entry);
-  state.assistantModalMessages.push(entry);
+  state.assistantModalMessages.push({ ...entry });
   renderAssistantMessages();
 }
 
 export function addAssistantPlaceholder() {
-  state.assistantMessages.push({ role: "assistant", content: "Thinking…", _streaming: true });
-  state.assistantModalMessages.push({ role: "assistant", content: "Thinking…", _streaming: true });
+  const entry = {
+    role: "assistant",
+    content: "Thinking…",
+    _streaming: true,
+  };
+
+  state.assistantMessages.push({ ...entry });
+  state.assistantModalMessages.push({ ...entry });
   renderAssistantMessages();
 }
 
 export function replaceLastAssistantPlaceholder(text) {
+  const finalText = String(text || "").trim() || "No assistant reply returned.";
   const lists = [state.assistantMessages, state.assistantModalMessages];
 
   lists.forEach((list) => {
     if (!list.length) return;
     const last = list[list.length - 1];
+
     if (last.role === "assistant" && last._streaming) {
-      last.content = text;
+      last.content = finalText;
       last._streaming = false;
     }
   });
@@ -164,13 +190,15 @@ export function replaceLastAssistantPlaceholder(text) {
 }
 
 export function updateLastAssistantStreamingText(text) {
+  const nextText = String(text || "").trim() || "Thinking…";
   const lists = [state.assistantMessages, state.assistantModalMessages];
 
   lists.forEach((list) => {
     if (!list.length) return;
     const last = list[list.length - 1];
+
     if (last.role === "assistant" && last._streaming) {
-      last.content = text;
+      last.content = nextText;
     }
   });
 
@@ -179,8 +207,11 @@ export function updateLastAssistantStreamingText(text) {
 
 export function setAssistantSending(flag) {
   state.assistantSending = !!flag;
-  if (els.assistantSendBtn) els.assistantSendBtn.disabled = flag;
-  if (els.assistantModalSendBtn) els.assistantModalSendBtn.disabled = flag;
+
+  if (els.assistantSendBtn) els.assistantSendBtn.disabled = state.assistantSending;
+  if (els.assistantModalSendBtn) els.assistantModalSendBtn.disabled = state.assistantSending;
+  if (els.assistantInput) els.assistantInput.disabled = state.assistantSending;
+  if (els.assistantModalInput) els.assistantModalInput.disabled = state.assistantSending;
 }
 
 export function prettyJson(value) {
@@ -227,20 +258,27 @@ export function inferAssistantSuggestedActions() {
   const context = state.assistantMeta.assistant_context || {};
 
   if (scope.scope_type === "young_person") {
-    actions.push("Draft handover");
-    actions.push("Pull young person voice themes");
-    actions.push("Summarise recent incidents");
-    actions.push("Summarise current support guidance");
+    actions.push(
+      "Draft handover",
+      "Pull young person voice themes",
+      "Summarise recent incidents",
+      "Summarise current support guidance"
+    );
   }
 
-  if (context.recent_records?.incidents?.length) actions.push("Review incident patterns");
-  if (context.active_work?.tasks?.length) actions.push("Review outstanding tasks");
+  if (context.recent_records?.incidents?.length) {
+    actions.push("Review incident patterns");
+  }
+
+  if (context.active_work?.tasks?.length) {
+    actions.push("Review outstanding tasks");
+  }
 
   if (Array.isArray(state.assistantMeta.suggested_actions)) {
     actions.push(...state.assistantMeta.suggested_actions);
   }
 
-  return [...new Set(actions)].slice(0, 6);
+  return dedupeStrings(actions).slice(0, 6);
 }
 
 export function renderAssistantInsights() {
@@ -257,7 +295,7 @@ export function renderAssistantInsights() {
       <div class="entity-row">
         <div>
           <div class="entity-title">${scope.scope_type === "young_person" ? "Young person scope" : "Assistant scope"}</div>
-          <div class="entity-meta">View: ${escapeHtml(String(state.currentView).replaceAll("_", " "))}</div>
+          <div class="entity-meta">View: ${escapeHtml(String(state.currentView || "overview").replaceAll("_", " "))}</div>
         </div>
       </div>
     `);
@@ -266,11 +304,7 @@ export function renderAssistantInsights() {
       rows.push(`
         <div class="entity-row">
           <div>
-            <div class="entity-title">${escapeHtml(
-              [state.youngPerson?.first_name, state.youngPerson?.last_name].filter(Boolean).join(" ").trim() ||
-                state.youngPerson?.preferred_name ||
-                "Young person"
-            )}</div>
+            <div class="entity-title">${escapeHtml(getYoungPersonName())}</div>
             <div class="entity-meta">${escapeHtml(state.youngPerson.home_name || "Workspace loaded")}</div>
           </div>
         </div>
@@ -303,9 +337,17 @@ export function renderAssistantInsights() {
       : `<p>No suggested actions yet.</p>`;
   }
 
-  if (els.assistantSources) els.assistantSources.innerHTML = renderAssistantSourcesHtml(sources);
-  if (els.assistantRuntime) els.assistantRuntime.textContent = prettyJson(runtime);
-  if (els.assistantExplainability) els.assistantExplainability.textContent = prettyJson(explainability);
+  if (els.assistantSources) {
+    els.assistantSources.innerHTML = renderAssistantSourcesHtml(sources);
+  }
+
+  if (els.assistantRuntime) {
+    els.assistantRuntime.textContent = prettyJson(runtime);
+  }
+
+  if (els.assistantExplainability) {
+    els.assistantExplainability.textContent = prettyJson(explainability);
+  }
 
   if (els.assistantModalScopeSummary) {
     els.assistantModalScopeSummary.innerHTML = els.assistantScopeSummary
@@ -322,15 +364,19 @@ export function openAssistant() {
   updateAssistantContext();
   els.assistantModal?.classList.remove("hidden");
   els.assistantBackdrop?.classList.remove("hidden");
+  els.assistantModal?.setAttribute("aria-hidden", "false");
 }
 
 export function closeAssistant() {
   els.assistantModal?.classList.add("hidden");
   els.assistantBackdrop?.classList.add("hidden");
+  els.assistantModal?.setAttribute("aria-hidden", "true");
 }
 
 function detectAssistantResponseMode(text) {
-  return /6 month|six month|12 month|twelve month|summary|timeline|chronology|review|report/i.test(String(text || ""))
+  return /6 month|six month|12 month|twelve month|summary|timeline|chronology|review|report/i.test(
+    String(text || "")
+  )
     ? "deep"
     : "balanced";
 }
@@ -343,6 +389,8 @@ export async function askAssistant(question) {
   addAssistantPlaceholder();
   setAssistantSending(true);
 
+  let streamedText = "";
+
   try {
     await apiStreamAssistant(
       {
@@ -353,20 +401,22 @@ export async function askAssistant(question) {
       {
         onMeta(meta) {
           state.assistantMeta = {
-            sources: Array.isArray(meta.sources) ? meta.sources : [],
-            runtime: meta.runtime || {},
-            explainability: meta.explainability || {},
-            assistant_scope: meta.assistant_scope || {},
-            assistant_context: meta.assistant_context || {},
-            suggested_actions: Array.isArray(meta.suggested_actions) ? meta.suggested_actions : [],
+            sources: Array.isArray(meta?.sources) ? meta.sources : [],
+            runtime: meta?.runtime || {},
+            explainability: meta?.explainability || {},
+            assistant_scope: meta?.assistant_scope || {},
+            assistant_context: meta?.assistant_context || {},
+            suggested_actions: Array.isArray(meta?.suggested_actions) ? meta.suggested_actions : [],
           };
           renderAssistantInsights();
         },
         onMessage(text) {
-          updateLastAssistantStreamingText(text.trim() || "Thinking…");
+          streamedText = String(text || "");
+          updateLastAssistantStreamingText(streamedText);
         },
         onDone(text) {
-          replaceLastAssistantPlaceholder(text.trim() || "No assistant reply returned.");
+          const finalText = String(text || streamedText || "").trim();
+          replaceLastAssistantPlaceholder(finalText || "No assistant reply returned.");
         },
       }
     );
