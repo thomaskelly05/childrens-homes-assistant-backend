@@ -1,3 +1,8 @@
+import base64
+import json
+import os
+import secrets
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
@@ -7,9 +12,17 @@ from db.passkeys_db import user_has_passkeys
 router = APIRouter(prefix="/auth/passkeys", tags=["Passkeys"])
 
 
+RP_ID = os.getenv("PASSKEY_RP_ID", "app.indicare.co.uk")
+RP_NAME = os.getenv("PASSKEY_RP_NAME", "IndiCare")
+
+
 class PasskeyRegisterVerifyRequest(BaseModel):
     credential: dict | None = None
     nickname: str | None = ""
+
+
+def _b64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
 
 
 def _get_user_id_from_session(request: Request) -> int:
@@ -46,33 +59,43 @@ def passkey_status(request: Request, conn=Depends(get_db)):
 @router.post("/register/options")
 def register_passkey_options(request: Request):
     user_id = _get_user_id_from_session(request)
+    user_email = str(
+        request.session.get("user_email") or f"user-{user_id}@indicare.local"
+    ).strip()
+
+    challenge = secrets.token_bytes(32)
+    user_handle = f"indicare-user-{user_id}".encode("utf-8")
+
+    request.session["passkey_register_challenge"] = _b64url(challenge)
+
+    options = {
+        "challenge": _b64url(challenge),
+        "rp": {
+            "name": RP_NAME,
+            "id": RP_ID,
+        },
+        "user": {
+            "id": _b64url(user_handle),
+            "name": user_email,
+            "displayName": user_email,
+        },
+        "pubKeyCredParams": [
+            {"type": "public-key", "alg": -7},
+            {"type": "public-key", "alg": -257},
+        ],
+        "timeout": 60000,
+        "attestation": "none",
+        "authenticatorSelection": {
+            "residentKey": "preferred",
+            "userVerification": "preferred",
+        },
+    }
 
     return {
         "ok": True,
         "message": "Passkey registration options created",
         "user_id": user_id,
-        "options": {
-            "challenge": "temporary-demo-challenge",
-            "rp": {
-                "name": "IndiCare",
-                "id": "app.indicare.co.uk",
-            },
-            "user": {
-                "id": str(user_id),
-                "name": str(request.session.get("user_email") or f"user-{user_id}@indicare.local"),
-                "displayName": str(request.session.get("user_email") or f"User {user_id}"),
-            },
-            "pubKeyCredParams": [
-                {"type": "public-key", "alg": -7},
-                {"type": "public-key", "alg": -257},
-            ],
-            "timeout": 60000,
-            "attestation": "none",
-            "authenticatorSelection": {
-                "residentKey": "preferred",
-                "userVerification": "preferred",
-            },
-        },
+        "options": options,
     }
 
 
@@ -83,6 +106,21 @@ def register_passkey_verify(
     conn=Depends(get_db),
 ):
     user_id = _get_user_id_from_session(request)
+
+    expected_challenge = request.session.get("passkey_register_challenge")
+    if not expected_challenge:
+        raise HTTPException(status_code=400, detail="No passkey registration is pending")
+
+    credential = payload.credential or {}
+    response = credential.get("response") or {}
+    client_data_json = response.get("clientDataJSON")
+
+    if not client_data_json:
+        raise HTTPException(status_code=400, detail="Missing credential response")
+
+    # Placeholder success for now.
+    # Real WebAuthn verification and DB save comes next.
+    request.session.pop("passkey_register_challenge", None)
 
     return {
         "ok": True,
@@ -103,7 +141,6 @@ def delete_passkey(passkey_id: str, request: Request, conn=Depends(get_db)):
     }
 
 
-# Backwards-compatible aliases
 @router.post("/register/start")
 def start_passkey_registration(request: Request):
     return register_passkey_options(request)
