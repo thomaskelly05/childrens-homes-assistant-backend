@@ -396,6 +396,112 @@ async function regenerateRecoveryCodes(code) {
   return data;
 }
 
+async function beginPasskeyLogin(email) {
+  if (!window.PublicKeyCredential) {
+    throw new Error("Passkeys are not supported on this device or browser.");
+  }
+
+  const data = await apiFetchJson("/auth/passkeys/authenticate/options", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+
+  if (!data?.ok || !data?.options) {
+    throw new Error("Could not start passkey sign-in");
+  }
+
+  const jsonOptions =
+    typeof data.options === "string" ? JSON.parse(data.options) : data.options;
+
+  if (
+    typeof PublicKeyCredential.parseRequestOptionsFromJSON !== "function"
+  ) {
+    throw new Error("This browser does not support JSON passkey options.");
+  }
+
+  const publicKey =
+    PublicKeyCredential.parseRequestOptionsFromJSON(jsonOptions);
+
+  const credential = await navigator.credentials.get({ publicKey });
+
+  if (!credential || typeof credential.toJSON !== "function") {
+    throw new Error("Passkey sign-in was cancelled.");
+  }
+
+  const credentialJson = credential.toJSON();
+
+  const verified = await apiFetchJson("/auth/passkeys/authenticate/verify", {
+    method: "POST",
+    body: JSON.stringify({ credential: credentialJson }),
+  });
+
+  if (!verified?.ok) {
+    throw new Error("Passkey sign-in failed");
+  }
+
+  updateStoredUser({
+    authenticated: true,
+    mfa_enabled: true,
+    mfa_verified: true,
+    mfa_pending: false,
+    ...(verified.user || {}),
+  });
+
+  return verified;
+}
+
+async function registerPasskey(nickname = "") {
+  if (!window.PublicKeyCredential) {
+    throw new Error("Passkeys are not supported on this device or browser.");
+  }
+
+  const data = await apiFetchJson("/auth/passkeys/register/options", {
+    method: "POST",
+  });
+
+  if (!data?.ok || !data?.options) {
+    throw new Error("Could not start passkey registration");
+  }
+
+  const jsonOptions =
+    typeof data.options === "string" ? JSON.parse(data.options) : data.options;
+
+  if (
+    typeof PublicKeyCredential.parseCreationOptionsFromJSON !== "function"
+  ) {
+    throw new Error("This browser does not support JSON passkey options.");
+  }
+
+  const publicKey =
+    PublicKeyCredential.parseCreationOptionsFromJSON(jsonOptions);
+
+  const credential = await navigator.credentials.create({ publicKey });
+
+  if (!credential || typeof credential.toJSON !== "function") {
+    throw new Error("Passkey registration was cancelled.");
+  }
+
+  const credentialJson = credential.toJSON();
+
+  return apiFetchJson("/auth/passkeys/register/verify", {
+    method: "POST",
+    body: JSON.stringify({
+      credential: credentialJson,
+      nickname,
+    }),
+  });
+}
+
+async function listPasskeys() {
+  return apiFetchJson("/auth/passkeys", { method: "GET" });
+}
+
+async function deletePasskey(passkeyId) {
+  return apiFetchJson(`/auth/passkeys/${passkeyId}`, {
+    method: "DELETE",
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const logoutButton = document.getElementById("logoutBtn");
   if (logoutButton) {
@@ -421,4 +527,8 @@ window.auth = {
   saveRecoveryCodes,
   clearRecoveryCodes,
   shouldRememberUser,
+  beginPasskeyLogin,
+  registerPasskey,
+  listPasskeys,
+  deletePasskey,
 };
