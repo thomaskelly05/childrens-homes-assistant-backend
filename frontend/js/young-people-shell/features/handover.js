@@ -54,7 +54,7 @@ function buildInspectionPackRows(items = []) {
   }));
 }
 
-export async function loadReports() {
+export async function loadHandover() {
   if (!els.viewContent) return;
 
   els.viewContent.innerHTML = `
