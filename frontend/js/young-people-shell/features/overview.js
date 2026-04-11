@@ -1,7 +1,7 @@
 import { els } from "../dom.js";
 import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
-import { escapeHtml } from "../core/utils.js";
+import { escapeHtml, getDisplayName, getProfileImage, initialsFromName } from "../core/utils.js";
 import { renderRowList, renderSummaryStat } from "../ui/records.js";
 
 function renderSection(title, subtitle, body) {
@@ -25,18 +25,8 @@ function renderProfileCard(yp = {}, bundle = {}) {
   const health = bundle.health_profile || {};
   const legal = bundle.legal_status || {};
 
-  const name =
-    [yp.first_name, yp.last_name].filter(Boolean).join(" ").trim() ||
-    yp.preferred_name ||
-    "Young person";
-
-  const image =
-    yp.profile_photo_url ||
-    yp.profile_image_url ||
-    yp.photo_url ||
-    yp.image_url ||
-    yp.avatar_url ||
-    "";
+  const name = getDisplayName(yp);
+  const image = getProfileImage(yp);
 
   return `
     <section class="profile-hero-card">
@@ -45,14 +35,7 @@ function renderProfileCard(yp = {}, bundle = {}) {
           ${
             image
               ? `<img class="profile-hero-avatar" src="${escapeHtml(image)}" alt="${escapeHtml(name)}" />`
-              : `<div class="profile-hero-avatar avatar-fallback">${escapeHtml(
-                  name
-                    .split(" ")
-                    .slice(0, 2)
-                    .map((part) => part[0] || "")
-                    .join("")
-                    .toUpperCase() || "YP"
-                )}</div>`
+              : `<div class="profile-hero-avatar avatar-fallback">${escapeHtml(initialsFromName(name))}</div>`
           }
         </div>
 
@@ -88,19 +71,25 @@ function renderProfileCard(yp = {}, bundle = {}) {
         <button class="profile-card editable-card" type="button" data-open-profile-edit="education">
           <div class="profile-card-title">Learning</div>
           <div class="profile-card-text">${escapeHtml(education.school_name || "No education setting recorded yet.")}</div>
-          <div class="profile-card-subtext">${escapeHtml(education.support_summary || education.education_status || "No learning support summary recorded yet.")}</div>
+          <div class="profile-card-subtext">${escapeHtml(
+            education.support_summary || education.education_status || "No learning support summary recorded yet."
+          )}</div>
         </button>
 
         <button class="profile-card editable-card" type="button" data-open-profile-edit="health">
           <div class="profile-card-title">Health and wellbeing</div>
-          <div class="profile-card-text">${escapeHtml(health.mental_health_summary || health.medication_summary || "No health summary recorded yet.")}</div>
+          <div class="profile-card-text">${escapeHtml(
+            health.mental_health_summary || health.medication_summary || "No health summary recorded yet."
+          )}</div>
           <div class="profile-card-subtext">${escapeHtml(health.allergies || "No allergies recorded.")}</div>
         </button>
 
         <button class="profile-card editable-card" type="button" data-open-profile-edit="network">
           <div class="profile-card-title">Important adults</div>
           <div class="profile-card-text">${escapeHtml(legal.social_worker_name || "No named social worker recorded yet.")}</div>
-          <div class="profile-card-subtext">${escapeHtml(legal.local_authority || legal.legal_status || "No network summary recorded yet.")}</div>
+          <div class="profile-card-subtext">${escapeHtml(
+            legal.local_authority || legal.legal_status || "No network summary recorded yet."
+          )}</div>
         </button>
       </div>
     </section>
