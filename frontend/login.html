@@ -799,7 +799,20 @@
         try {
           const state = await window.auth.validateSession();
 
-          if (!state || !state.authenticated) {
+          if (!state) {
+            clearRedirectGuard();
+            return;
+          }
+
+          if (state.mfa_pending) {
+            setStatus("Security check pending. Redirecting...", "is-success");
+            setLoading(true);
+            markRedirectGuard();
+            window.location.replace("/mfa");
+            return;
+          }
+
+          if (!state.authenticated) {
             clearRedirectGuard();
             return;
           }
@@ -874,21 +887,21 @@
             remember: rememberMe.checked
           });
 
-          if (data?.mfa_required) {
+          if (data?.mfa_pending) {
             setStatus("Password accepted. Redirecting to security check...", "is-success");
             markRedirectGuard();
-
-            if (data.mfa_enabled) {
-              window.location.replace("/mfa");
-            } else {
-              window.location.replace("/mfa-setup");
-            }
+            window.location.replace("/mfa");
             return;
           }
 
-          setStatus("Sign-in successful. Redirecting...", "is-success");
-          markRedirectGuard();
-          window.location.replace("/assistant");
+          if (data?.authenticated) {
+            setStatus("Sign-in successful. Redirecting...", "is-success");
+            markRedirectGuard();
+            window.location.replace("/assistant");
+            return;
+          }
+
+          throw new Error("We could not complete sign-in.");
         } catch (error) {
           clearRedirectGuard();
           const message =
