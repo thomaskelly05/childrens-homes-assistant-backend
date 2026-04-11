@@ -14,6 +14,14 @@ function getYoungPersonName() {
   );
 }
 
+function formatAssistantMessage(text = "") {
+  const escaped = escapeHtml(String(text || ""));
+
+  return escaped
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\n/g, "<br>");
+}
+
 export function assistantPromptsForView(view) {
   const map = {
     overview: [
@@ -134,7 +142,11 @@ export function renderAssistantMessageList(host, messages) {
       (message) => `
         <article class="assistant-message ${message.role === "user" ? "assistant-message-user" : ""}">
           <div class="assistant-message-role">${message.role === "user" ? "You" : "Assistant"}</div>
-          <div class="assistant-message-body">${escapeHtml(message.content || "")}</div>
+          <div class="assistant-message-body">${
+            message.role === "assistant"
+              ? formatAssistantMessage(message.content || "")
+              : escapeHtml(message.content || "")
+          }</div>
         </article>
       `
     )
