@@ -22,7 +22,7 @@ export function renderAssistantScopeBadges() {
     state.youngPerson?.home_name ||
     (state.youngPerson?.home_id != null ? `Home ${state.youngPerson.home_id}` : "");
 
-  const childText = getDisplayName(state.youngPerson || {});
+  const childText = state.youngPerson ? getDisplayName(state.youngPerson) : "";
   const viewText = VIEW_CONFIG[state.currentView]?.title || state.currentView;
 
   if (els.scopeBadge) {
@@ -131,14 +131,16 @@ export function updateYoungPersonHeader() {
     }
   }
 
-  if (els.profileSnapshotName) els.profileSnapshotName.textContent = name;
+  if (els.profileSnapshotName) {
+    els.profileSnapshotName.textContent = name;
+  }
 
   if (els.profileSnapshotMeta) {
     els.profileSnapshotMeta.textContent =
       [
         yp.preferred_name ? `Prefers ${yp.preferred_name}` : null,
         yp.home_name || null,
-        yp.summary_risk_level ? `Support level: ${yp.summary_risk_level}` : null,
+        yp.summary_risk_level ? `Current support level: ${yp.summary_risk_level}` : null,
       ]
         .filter(Boolean)
         .join(" • ") || "Young person profile";
