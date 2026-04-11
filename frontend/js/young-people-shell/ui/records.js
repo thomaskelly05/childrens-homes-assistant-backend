@@ -3,6 +3,8 @@ import { els } from "../dom.js";
 import { apiGet, apiSend } from "../core/api.js";
 import { escapeHtml, formatDate } from "../core/utils.js";
 
+export { renderRowList, renderRecordsTable, renderBadges, statusBadgeClass } from "./helpers.js";
+
 const RECORD_CONFIG = {
   daily_note: {
     label: "Daily note",
@@ -36,7 +38,7 @@ const RECORD_CONFIG = {
   },
 };
 
-function normaliseRecordType(item = {}) {
+export function normaliseRecordType(item = {}) {
   const raw = String(item.record_type || item.event_type || item.category || "").toLowerCase();
 
   if (raw === "plan") return "support_plan";
@@ -46,7 +48,7 @@ function normaliseRecordType(item = {}) {
   return raw;
 }
 
-function getRecordUrl(item = {}) {
+export function getRecordUrl(item = {}) {
   const type = normaliseRecordType(item);
   const id = item.record_id || item.source_id || item.id;
   if (!id) return null;
@@ -130,7 +132,7 @@ function renderDetailRows(detail = {}) {
         <div class="drawer-row">
           <div class="drawer-key">${escapeHtml(key.replaceAll("_", " "))}</div>
           <div class="drawer-value">${escapeHtml(
-            typeof value === "object" ? JSON.stringify(value) : String(value)
+            typeof value === "object" ? JSON.stringify(value, null, 2) : String(value)
           )}</div>
         </div>
       `
@@ -139,15 +141,16 @@ function renderDetailRows(detail = {}) {
 }
 
 export function openDrawer() {
-  els.recordDrawer?.classList.remove("hidden");
-  els.recordDrawerBackdrop?.classList.remove("hidden");
-  els.recordDrawer?.setAttribute("aria-hidden", "false");
+  els.drawer?.classList.remove("hidden");
+  els.drawerBackdrop?.classList.remove("hidden");
+  els.drawer?.setAttribute("aria-hidden", "false");
 }
 
 export function closeDrawer() {
-  els.recordDrawer?.classList.add("hidden");
-  els.recordDrawerBackdrop?.classList.add("hidden");
-  els.recordDrawer?.setAttribute("aria-hidden", "true");
+  els.drawer?.classList.add("hidden");
+  els.drawerBackdrop?.classList.add("hidden");
+  els.drawer?.setAttribute("aria-hidden", "true");
+
   state.activeRecordItem = null;
   state.activeRecordType = null;
 }
@@ -156,7 +159,7 @@ function setDrawerButtons(type) {
   const config = RECORD_CONFIG[type];
   const hasWorkflow = !!config;
 
-  els.recordDrawerActions?.classList.toggle("hidden", !hasWorkflow);
+  els.drawerActions?.classList.toggle("hidden", !hasWorkflow);
 
   if (!hasWorkflow) return;
 
@@ -178,6 +181,7 @@ export async function openRecordDetail(item) {
   const url = getRecordUrl(item);
 
   if (!url) {
+    console.warn("No record URL found for item:", item);
     return;
   }
 
@@ -187,14 +191,16 @@ export async function openRecordDetail(item) {
   openDrawer();
   setDrawerButtons(type);
 
-  if (els.recordDrawerTitle) {
-    els.recordDrawerTitle.textContent = item.title || "Details";
+  if (els.drawerTitle) {
+    els.drawerTitle.textContent = item.title || "Details";
   }
-  if (els.recordDrawerSubtitle) {
-    els.recordDrawerSubtitle.textContent = "Loading…";
+
+  if (els.drawerSubtitle) {
+    els.drawerSubtitle.textContent = "Loading…";
   }
-  if (els.recordDrawerBody) {
-    els.recordDrawerBody.innerHTML = `
+
+  if (els.drawerBody) {
+    els.drawerBody.innerHTML = `
       <div class="loading-state">
         <div>
           <div class="spinner"></div>
@@ -208,25 +214,28 @@ export async function openRecordDetail(item) {
     const data = await apiGet(url);
     const detail = detailObjectFromResponse(data);
 
-    if (els.recordDrawerTitle) {
-      els.recordDrawerTitle.textContent = item.title || detail.title || "Details";
+    if (els.drawerTitle) {
+      els.drawerTitle.textContent = item.title || detail.title || "Details";
     }
-    if (els.recordDrawerSubtitle) {
-      els.recordDrawerSubtitle.textContent = buildSubtitle(type, item, detail);
+
+    if (els.drawerSubtitle) {
+      els.drawerSubtitle.textContent = buildSubtitle(type, item, detail);
     }
-    if (els.recordDrawerBody) {
-      els.recordDrawerBody.innerHTML = `
+
+    if (els.drawerBody) {
+      els.drawerBody.innerHTML = `
         <div class="drawer-section">
           ${renderDetailRows(detail)}
         </div>
       `;
     }
   } catch (error) {
-    if (els.recordDrawerSubtitle) {
-      els.recordDrawerSubtitle.textContent = "Unable to load";
+    if (els.drawerSubtitle) {
+      els.drawerSubtitle.textContent = "Unable to load";
     }
-    if (els.recordDrawerBody) {
-      els.recordDrawerBody.innerHTML = `
+
+    if (els.drawerBody) {
+      els.drawerBody.innerHTML = `
         <div class="empty-state">
           <p>${escapeHtml(error.message || "Failed to load record details.")}</p>
         </div>
@@ -253,15 +262,20 @@ export async function runDrawerWorkflow(action) {
     if (action === "return") url = config.returnUrl?.(id);
   } else {
     if (action === "submit") url = config.submitUrl?.(id);
+
     if (action === "approve") {
       url = config.approveUrl?.(id);
       body = { review_note: "Approved in workspace" };
     }
+
     if (action === "return") {
       url = config.returnUrl?.(id);
       body = { review_note: "Returned in workspace" };
     }
-    if (action === "archive") url = config.archiveUrl?.(id);
+
+    if (action === "archive") {
+      url = config.archiveUrl?.(id);
+    }
   }
 
   if (!url) return;
@@ -270,8 +284,8 @@ export async function runDrawerWorkflow(action) {
 }
 
 export function bindRecordDrawerEvents({ onEdit, onWorkflowComplete } = {}) {
-  els.closeRecordDrawerBtn?.addEventListener("click", closeDrawer);
-  els.recordDrawerBackdrop?.addEventListener("click", closeDrawer);
+  els.closeDrawerBtn?.addEventListener("click", closeDrawer);
+  els.drawerBackdrop?.addEventListener("click", closeDrawer);
 
   els.drawerEditBtn?.addEventListener("click", () => {
     if (!state.activeRecordItem || !state.activeRecordType) return;
