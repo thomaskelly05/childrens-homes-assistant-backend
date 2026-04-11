@@ -19,11 +19,9 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from auth.legal_acceptance import CURRENT_LEGAL_VERSION
 from auth.mfa_guard import (
-    SESSION_USER_EMAIL_KEY,
     SESSION_USER_ID_KEY,
     is_mfa_verified_in_session,
     path_allowed_during_mfa,
-    user_has_enabled_mfa,
 )
 from auth.routes import settings as auth_settings
 from auth.tokens import decode_session_token
@@ -37,7 +35,7 @@ from db.legal_acceptance_db import (
     has_user_accepted_version,
     init_legal_acceptance_table,
 )
-from db.mfa_db import init_mfa_tables
+from db.mfa_db import init_mfa_tables, user_has_enabled_mfa
 from security.middleware import CSRFMiddleware, SecurityHeadersMiddleware
 
 
@@ -170,7 +168,6 @@ LEGAL_ALLOWED_PREFIXES = (
     "/auth/check",
     "/auth/me",
     "/auth/legal-acceptance",
-    "/auth/mfa",
 )
 
 ROUTERS = [
@@ -274,7 +271,7 @@ def get_request_session_token(request: Request) -> str | None:
     return token or None
 
 
-def get_authenticated_user_id_from_request(request: Request) -> int | None:
+def get_fully_authenticated_user_id_from_request(request: Request) -> int | None:
     token = get_request_session_token(request)
     payload = decode_session_token(token) if token else None
 
@@ -283,9 +280,24 @@ def get_authenticated_user_id_from_request(request: Request) -> int | None:
 
     raw_user_id = payload.get("sub")
     try:
-        return int(raw_user_id) if raw_user_id is not None else None
+        token_user_id = int(raw_user_id) if raw_user_id is not None else None
     except (TypeError, ValueError):
         return None
+
+    try:
+        session_user_id = request.session.get(SESSION_USER_ID_KEY)
+        if session_user_id is not None:
+            session_user_id = int(session_user_id)
+    except Exception:
+        return None
+
+    if not token_user_id or session_user_id != token_user_id:
+        return None
+
+    if not is_mfa_verified_in_session(request):
+        return None
+
+    return token_user_id
 
 
 class SecurityEnforcementMiddleware(BaseHTTPMiddleware):
@@ -295,11 +307,29 @@ class SecurityEnforcementMiddleware(BaseHTTPMiddleware):
         if path_is_public(path):
             return await call_next(request)
 
-        user_id = get_authenticated_user_id_from_request(request)
+        user_id = get_fully_authenticated_user_id_from_request(request)
 
         if not user_id:
+            mfa_pending = request.session.get("preauth_pending") is True
+
+            if mfa_pending and path_allowed_during_mfa(path):
+                return await call_next(request)
+
             if wants_html(request):
+                if mfa_pending:
+                    return RedirectResponse(url="/mfa", status_code=302)
                 return RedirectResponse(url="/login", status_code=302)
+
+            if mfa_pending:
+                return JSONResponse(
+                    status_code=401,
+                    content={
+                        "ok": False,
+                        "detail": "MFA verification is required.",
+                        "code": "mfa_verification_required",
+                    },
+                )
+
             return JSONResponse(
                 status_code=401,
                 content={
@@ -308,9 +338,6 @@ class SecurityEnforcementMiddleware(BaseHTTPMiddleware):
                     "code": "authentication_required",
                 },
             )
-
-        request.session[SESSION_USER_ID_KEY] = int(user_id)
-        request.session.setdefault(SESSION_USER_EMAIL_KEY, "")
 
         if not has_user_accepted_version(user_id, CURRENT_LEGAL_VERSION):
             if path_allowed_during_legal_acceptance(path):
@@ -434,7 +461,11 @@ def register_redirect_route(
 def register_frontend_routes(app: FastAPI) -> None:
     @app.get("/")
     def serve_index(request: Request):
-        user_id = get_authenticated_user_id_from_request(request)
+        mfa_pending = request.session.get("preauth_pending") is True
+        user_id = get_fully_authenticated_user_id_from_request(request)
+
+        if mfa_pending:
+            return RedirectResponse(url="/mfa", status_code=302)
 
         if not user_id:
             return RedirectResponse(url="/login", status_code=302)
