@@ -7,14 +7,36 @@ export function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+// ========================
+// URL
+// ========================
+
 export function getYoungPersonIdFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id") || params.get("young_person_id");
   return id ? Number(id) : null;
 }
 
+export function setYoungPersonIdInUrl(id) {
+  const url = new URL(window.location.href);
+
+  if (id) {
+    url.searchParams.set("id", String(id));
+  } else {
+    url.searchParams.delete("id");
+    url.searchParams.delete("young_person_id");
+  }
+
+  window.history.replaceState({}, "", url.toString());
+}
+
+// ========================
+// DATE FORMATTING
+// ========================
+
 export function formatDate(value) {
   if (!value) return "—";
+
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
 
@@ -26,6 +48,7 @@ export function formatDate(value) {
 
 export function formatShortDate(value) {
   if (!value) return "—";
+
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
 
@@ -38,14 +61,18 @@ export function formatShortDate(value) {
 
 export function toDateInputValue(date) {
   const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return "";
+
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
+
   return `${year}-${month}-${day}`;
 }
 
 export function toDateTimeLocalValue(value) {
   if (!value) return "";
+
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "";
 
@@ -58,8 +85,13 @@ export function toDateTimeLocalValue(value) {
   return `${year}-${month}-${day}T${hours}:${mins}`;
 }
 
+// ========================
+// DISPLAY HELPERS
+// ========================
+
 export function initialsFromName(name) {
   if (!name) return "YP";
+
   const parts = name.trim().split(/\s+/).slice(0, 2);
   return parts.map((p) => p[0]?.toUpperCase() || "").join("") || "YP";
 }
@@ -84,7 +116,11 @@ export function getProfileImage(item = {}) {
   );
 }
 
-export function buildImageOrInitials(item = {}, imageClass = "avatar", fallbackClass = "avatar avatar-fallback") {
+export function buildImageOrInitials(
+  item = {},
+  imageClass = "avatar",
+  fallbackClass = "avatar avatar-fallback"
+) {
   const image = getProfileImage(item);
   const name = getDisplayName(item);
 
@@ -95,6 +131,10 @@ export function buildImageOrInitials(item = {}, imageClass = "avatar", fallbackC
   return `<div class="${escapeHtml(fallbackClass)}">${escapeHtml(initialsFromName(name))}</div>`;
 }
 
+// ========================
+// DATA HELPERS
+// ========================
+
 export function safeJsonParse(value, fallback = null) {
   try {
     return JSON.parse(value);
@@ -104,5 +144,12 @@ export function safeJsonParse(value, fallback = null) {
 }
 
 export function dedupeStrings(values = []) {
-  return [...new Set(values.filter(Boolean).map((x) => String(x).trim()).filter(Boolean))];
+  return [
+    ...new Set(
+      values
+        .filter(Boolean)
+        .map((x) => String(x).trim())
+        .filter(Boolean)
+    ),
+  ];
 }
