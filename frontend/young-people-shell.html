@@ -17,15 +17,24 @@
   >
     <header class="top-shell">
       <div class="top-shell-main">
-        <div class="brand-block">
-          <div class="brand-mark">IC</div>
-          <div class="brand-copy">
-            <h1>IndiCare OS</h1>
-            <p>Young person residential workspace</p>
+        <div class="top-shell-left">
+          <a id="backToHomeBtn" class="icon-link" href="/assistant" aria-label="Back to homepage">
+            <span aria-hidden="true">←</span>
+          </a>
+
+          <div class="brand-block">
+            <div class="brand-mark">IC</div>
+            <div class="brand-copy">
+              <h1>IndiCare OS</h1>
+              <p>Young person workspace</p>
+            </div>
           </div>
         </div>
 
         <div class="top-shell-actions">
+          <button id="mobileNavToggle" class="secondary-btn mobile-only" type="button" aria-label="Open navigation">
+            Menu
+          </button>
           <button id="assistantLauncher" class="secondary-btn hidden" type="button">Assistant</button>
           <button id="refreshBtn" class="secondary-btn hidden" type="button">Refresh</button>
         </div>
@@ -35,10 +44,17 @@
         <div class="person-hero-main">
           <div class="person-strip-left">
             <div id="personAvatar" class="person-avatar">YP</div>
+
             <div class="person-copy">
-              <div class="eyebrow">Current workspace</div>
+              <div class="eyebrow">Current young person</div>
               <h2 id="personName">No young person selected</h2>
               <p id="personMeta">Choose a young person to begin</p>
+
+              <div class="person-summary-chips">
+                <span id="heroPlacementChip" class="scope-chip hidden"></span>
+                <span id="heroRiskChip" class="scope-chip hidden"></span>
+                <span id="heroViewChip" class="scope-chip hidden"></span>
+              </div>
             </div>
           </div>
 
@@ -49,52 +65,31 @@
 
         <div class="person-hero-support">
           <div class="hero-support-block">
-            <span class="hero-support-label">Purpose</span>
-            <span class="hero-support-value">Recording, reflection, review and evidence in one place</span>
+            <span class="hero-support-label">Default view</span>
+            <span class="hero-support-value">Profile first, then latest activity, risks and actions</span>
           </div>
+
           <div class="hero-support-block">
-            <span class="hero-support-label">Approach</span>
-            <span class="hero-support-value">Calm, child-centred, therapeutic and easy to follow</span>
+            <span class="hero-support-label">Designed for shift work</span>
+            <span class="hero-support-value">Fewer taps, faster recording, clearer oversight and better mobile use</span>
           </div>
         </div>
       </section>
 
       <nav id="sidebarNav" class="top-nav" aria-label="Primary">
-        <button class="nav-btn nav-home active" data-view="home" type="button">Home</button>
+        <button class="nav-btn active" data-view="profile" type="button">Profile</button>
+        <button class="nav-btn" data-view="timeline" type="button">Timeline</button>
+        <button class="nav-btn" data-view="records" type="button">Records</button>
+        <button class="nav-btn" data-view="risks" type="button">Risks</button>
+        <button class="nav-btn" data-view="oversight" type="button">Oversight</button>
+      </nav>
 
-        <details class="nav-group">
-          <summary>Recording</summary>
-          <div class="nav-menu">
-            <button class="nav-btn" data-view="daily-notes" type="button">Daily notes</button>
-            <button class="nav-btn" data-view="incidents" type="button">Incidents</button>
-            <button class="nav-btn" data-view="risk" type="button">Risks</button>
-            <button class="nav-btn" data-view="plans" type="button">Plans</button>
-            <button class="nav-btn" data-view="appointments" type="button">Appointments</button>
-            <button class="nav-btn" data-view="keywork" type="button">Keywork</button>
-          </div>
-        </details>
-
-        <details class="nav-group">
-          <summary>Young person</summary>
-          <div class="nav-menu">
-            <button class="nav-btn" data-view="profile" type="button">Profile</button>
-            <button class="nav-btn" data-view="health" type="button">Health</button>
-            <button class="nav-btn" data-view="education" type="button">Education</button>
-            <button class="nav-btn" data-view="family" type="button">Family</button>
-          </div>
-        </details>
-
-        <details class="nav-group">
-          <summary>Oversight</summary>
-          <div class="nav-menu">
-            <button class="nav-btn" data-view="timeline" type="button">Timeline</button>
-            <button class="nav-btn" data-view="handover" type="button">Handover</button>
-            <button class="nav-btn" data-view="evidence" type="button">Evidence</button>
-            <button class="nav-btn" data-view="compliance" type="button">Compliance</button>
-            <button class="nav-btn" data-view="manager" type="button">Manager review</button>
-            <button class="nav-btn" data-view="reports" type="button">Reports</button>
-          </div>
-        </details>
+      <nav id="mobileNavPanel" class="mobile-nav-panel hidden" aria-label="Mobile navigation">
+        <button class="mobile-nav-btn active" data-view="profile" type="button">Profile</button>
+        <button class="mobile-nav-btn" data-view="timeline" type="button">Timeline</button>
+        <button class="mobile-nav-btn" data-view="records" type="button">Records</button>
+        <button class="mobile-nav-btn" data-view="risks" type="button">Risks</button>
+        <button class="mobile-nav-btn" data-view="oversight" type="button">Oversight</button>
       </nav>
     </header>
 
@@ -102,26 +97,15 @@
       <section class="page-header-card page-header-card--hero">
         <div class="page-header-copy">
           <div class="eyebrow">Young person workspace</div>
-          <h2 id="pageTitle">Home</h2>
-          <p id="pageSubtitle">What matters now</p>
+          <h2 id="pageTitle">Profile</h2>
+          <p id="pageSubtitle">Who this young person is</p>
         </div>
 
-        <div class="page-header-support">
-          <div class="page-header-support-card">
-            <span>Built for safer care, better recording and stronger oversight</span>
-          </div>
-        </div>
-      </section>
-
-      <section class="workflow-strip">
-        <div class="workflow-strip-title">Recording workflow</div>
-        <div class="workflow-steps">
-          <div class="workflow-step workflow-step-active">Create record</div>
-          <div class="workflow-step">Check wording</div>
-          <div class="workflow-step">AI guidance</div>
-          <div class="workflow-step">Send for approval</div>
-          <div class="workflow-step">Manager review</div>
-          <div class="workflow-step">Signed off</div>
+        <div class="page-header-actions">
+          <button class="secondary-btn" type="button" data-action="daily-note">Add daily note</button>
+          <button class="secondary-btn" type="button" data-action="incident">Log incident</button>
+          <button class="secondary-btn" type="button" data-action="risk">Update risk</button>
+          <button class="primary-btn" type="button" data-assistant-quick="handover">Draft handover</button>
         </div>
       </section>
 
@@ -130,9 +114,9 @@
       <section id="selectorPanel" class="selector-panel">
         <div class="selector-header">
           <div>
-            <div class="eyebrow">Workspace selection</div>
+            <div class="eyebrow">Young people</div>
             <h3>Select a young person</h3>
-            <p>Open one clear workspace for recording, review, handover and evidence.</p>
+            <p>Fast, simple access to one clear workspace per young person.</p>
           </div>
 
           <div class="selector-tools">
@@ -140,7 +124,7 @@
               id="selectorSearch"
               class="search-input"
               type="text"
-              placeholder="Search by name, preferred name, placement status or risk..."
+              placeholder="Search by name, preferred name, placement or risk"
               autocomplete="off"
             />
             <button id="selectorRefreshBtn" class="secondary-btn" type="button">Refresh</button>
@@ -154,47 +138,41 @@
         <section class="quick-actions-wrap">
           <div class="section-intro">
             <div>
-              <div class="eyebrow">Start from here</div>
-              <h3>Common actions</h3>
+              <div class="eyebrow">Quick actions</div>
+              <h3>Start from here</h3>
             </div>
-            <p>Make the next right task obvious for staff on shift.</p>
+            <p>Common tasks for staff and managers, without extra noise.</p>
           </div>
 
-          <section id="quickActions" class="quick-actions">
+          <section id="quickActions" class="quick-actions quick-actions--compact">
             <button class="quick-action quick-action--primary" type="button" data-action="daily-note">
-              <span class="quick-action-kicker">Recording</span>
               <span class="quick-action-title">Add daily note</span>
-              <span class="quick-action-subtitle">Record the shift clearly and therapeutically</span>
+              <span class="quick-action-subtitle">Record the shift clearly</span>
             </button>
 
             <button class="quick-action" type="button" data-action="incident">
-              <span class="quick-action-kicker">Safeguarding</span>
               <span class="quick-action-title">Log incident</span>
-              <span class="quick-action-subtitle">Capture concern, context, response and follow-up</span>
+              <span class="quick-action-subtitle">Capture concern and response</span>
             </button>
 
             <button class="quick-action" type="button" data-action="risk">
-              <span class="quick-action-kicker">Safety</span>
               <span class="quick-action-title">Update risk</span>
-              <span class="quick-action-subtitle">Review triggers, meaning and staff guidance</span>
+              <span class="quick-action-subtitle">Review triggers and guidance</span>
             </button>
 
             <button class="quick-action" type="button" data-action="plan">
-              <span class="quick-action-kicker">Planning</span>
               <span class="quick-action-title">Add plan</span>
-              <span class="quick-action-subtitle">Create support guidance around the young person</span>
-            </button>
-
-            <button class="quick-action" type="button" data-assistant-quick="handover">
-              <span class="quick-action-kicker">Shift support</span>
-              <span class="quick-action-title">Draft handover</span>
-              <span class="quick-action-subtitle">Pull together current risks, updates and actions</span>
+              <span class="quick-action-subtitle">Create support guidance</span>
             </button>
 
             <button class="quick-action" type="button" data-assistant-quick="priorities">
-              <span class="quick-action-kicker">Focus</span>
               <span class="quick-action-title">Today’s priorities</span>
-              <span class="quick-action-subtitle">Summarise what matters most right now</span>
+              <span class="quick-action-subtitle">What matters most now</span>
+            </button>
+
+            <button class="quick-action" type="button" data-assistant-quick="handover">
+              <span class="quick-action-title">Draft handover</span>
+              <span class="quick-action-subtitle">Prepare the next shift</span>
             </button>
           </section>
         </section>
@@ -215,8 +193,8 @@
             <section class="workspace-side-card workspace-side-card--assistant">
               <div class="workspace-side-head">
                 <div>
-                  <h3>Young person assistant</h3>
-                  <p>Same assistant, scoped to this young person.</p>
+                  <h3>Assistant</h3>
+                  <p>Scoped to this young person and current view.</p>
                 </div>
                 <button id="assistantExpandBtn" class="secondary-btn" type="button">Expand</button>
               </div>
@@ -232,25 +210,12 @@
                 No young person selected.
               </div>
 
-              <div id="assistantSuggestions" class="assistant-suggestions">
-                <button class="chip" type="button" data-prompt="Summarise current risks and priorities for today.">
-                  Today’s priorities
-                </button>
-                <button class="chip" type="button" data-prompt="Draft a handover for the next shift for this young person.">
-                  Draft handover
-                </button>
-                <button class="chip" type="button" data-prompt="Pull out child voice themes from recent records.">
-                  Child voice themes
-                </button>
-                <button class="chip" type="button" data-prompt="Summarise recent incidents and key patterns.">
-                  Incident patterns
-                </button>
-              </div>
+              <div id="assistantSuggestions" class="assistant-suggestions"></div>
 
               <div id="assistantMessages" class="assistant-messages">
                 <article class="assistant-message assistant-message-system">
                   <div class="assistant-message-role">Assistant</div>
-                  <div class="assistant-message-body">Ask a question about this young person.</div>
+                  <div class="assistant-message-body">Select a young person to start.</div>
                 </article>
               </div>
 
@@ -259,7 +224,7 @@
                   id="assistantInput"
                   class="text-input"
                   type="text"
-                  placeholder="Ask a question about this young person..."
+                  placeholder="Ask about this young person..."
                   autocomplete="off"
                 />
                 <button id="assistantSendBtn" class="primary-btn" type="submit">Send</button>
@@ -267,7 +232,7 @@
             </section>
 
             <section class="workspace-side-card">
-              <h3>Assistant insights</h3>
+              <h3>Assistant summary</h3>
               <div id="assistantScopeSummary" class="assistant-side-block">
                 <p>No scoped context loaded.</p>
               </div>
@@ -280,26 +245,42 @@
               </div>
             </section>
 
-            <section class="workspace-side-card">
-              <h3>Sources</h3>
-              <div id="assistantSources" class="assistant-side-block">
-                <p>Sources will appear here after a response.</p>
+            <details class="workspace-side-card workspace-side-card--advanced">
+              <summary>Advanced assistant data</summary>
+
+              <div class="advanced-section">
+                <h4>Sources</h4>
+                <div id="assistantSources" class="assistant-side-block">
+                  <p>Sources will appear here after a response.</p>
+                </div>
               </div>
-            </section>
 
-            <section class="workspace-side-card workspace-side-card--technical">
-              <h3>Runtime</h3>
-              <pre id="assistantRuntime" class="assistant-code-block">No runtime data yet.</pre>
-            </section>
+              <div class="advanced-section">
+                <h4>Runtime</h4>
+                <pre id="assistantRuntime" class="assistant-code-block">No runtime data yet.</pre>
+              </div>
 
-            <section class="workspace-side-card workspace-side-card--technical">
-              <h3>Explainability</h3>
-              <pre id="assistantExplainability" class="assistant-code-block">No explainability data yet.</pre>
-            </section>
+              <div class="advanced-section">
+                <h4>Explainability</h4>
+                <pre id="assistantExplainability" class="assistant-code-block">No explainability data yet.</pre>
+              </div>
+            </details>
           </aside>
         </div>
       </section>
     </main>
+
+    <button id="mobileQuickAddBtn" class="mobile-quick-add hidden" type="button" aria-label="Add record">
+      +
+    </button>
+
+    <nav id="mobileBottomNav" class="mobile-bottom-nav hidden" aria-label="Mobile bottom navigation">
+      <button class="mobile-tab active" data-view="profile" type="button">Profile</button>
+      <button class="mobile-tab" data-view="timeline" type="button">Timeline</button>
+      <button class="mobile-tab" data-view="records" type="button">Records</button>
+      <button class="mobile-tab" data-view="risks" type="button">Risks</button>
+      <button class="mobile-tab" data-view="oversight" type="button">Oversight</button>
+    </nav>
   </div>
 
   <div id="recordDrawerBackdrop" class="drawer-backdrop hidden"></div>
@@ -335,6 +316,11 @@
           <div class="eyebrow">Record composer</div>
           <h2 id="composerTitle">Create record</h2>
           <p id="composerSubtitle">Write clearly, therapeutically and with the young person at the centre.</p>
+
+          <div class="composer-status-row">
+            <span id="composerAutosaveStatus" class="autosave-status">Autosave off</span>
+            <span id="composerAutosaveTime" class="autosave-time">Not saved yet</span>
+          </div>
         </div>
 
         <div class="composer-header-actions">
@@ -344,14 +330,6 @@
           <button id="composerSubmitBtn" class="primary-btn" type="button">Send for approval</button>
         </div>
       </header>
-
-      <section class="composer-progress">
-        <div class="composer-progress-step active">Write</div>
-        <div class="composer-progress-step">Check</div>
-        <div class="composer-progress-step">Guidance</div>
-        <div class="composer-progress-step">Review</div>
-        <div class="composer-progress-step">Approval</div>
-      </section>
 
       <div class="composer-layout">
         <section class="composer-main">
@@ -400,7 +378,7 @@
     <div class="assistant-header">
       <div>
         <h3>Young person assistant</h3>
-        <p>Expanded assistant workspace for handover, evidence, chronology and drafting.</p>
+        <p>Expanded assistant workspace for handover, chronology, evidence and drafting.</p>
       </div>
       <button id="closeAssistantBtn" class="secondary-btn icon-btn" type="button" aria-label="Close">✕</button>
     </div>
@@ -416,7 +394,7 @@
         <div id="assistantModalMessages" class="assistant-messages">
           <article class="assistant-message assistant-message-system">
             <div class="assistant-message-role">Assistant</div>
-            <div class="assistant-message-body">Use this expanded space for longer scoped work.</div>
+            <div class="assistant-message-body">Use this space for longer, scoped support.</div>
           </article>
         </div>
 
