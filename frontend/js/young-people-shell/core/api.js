@@ -133,3 +133,131 @@ export function buildSseContextFetch(url, payload) {
     body: JSON.stringify(payload),
   });
 }
+
+function parseSseBlock(block) {
+  const lines = block.split("\n");
+  let eventName = "message";
+  const dataLines = [];
+
+  for (const line of lines) {
+    if (!line || line.startsWith(":")) continue;
+
+    if (line.startsWith("event:")) {
+      eventName = line.slice(6).trim();
+      continue;
+    }
+
+    if (line.startsWith("data:")) {
+      dataLines.push(line.startsWith("data: ") ? line.slice(6) : line.slice(5));
+    }
+  }
+
+  return {
+    eventName,
+    payload: dataLines.join("\n"),
+  };
+}
+
+function consumeSseBuffer(buffer, onEvent) {
+  const parts = buffer.split("\n\n");
+  const completeBlocks = parts.slice(0, -1);
+  const remainder = parts[parts.length - 1] || "";
+
+  for (const block of completeBlocks) {
+    if (!block.trim()) continue;
+    const parsed = parseSseBlock(block);
+    onEvent(parsed.eventName, parsed.payload);
+  }
+
+  return remainder;
+}
+
+export async function apiStreamAssistant(payload, handlers = {}) {
+  const response = await buildSseContextFetch("/young-people/assistant", payload);
+
+  if (!response.ok) {
+    throw new Error(await parseErrorResponse(response));
+  }
+
+  if (!response.body) {
+    throw new Error("No assistant response stream was returned.");
+  }
+
+  const {
+    onMeta = () => {},
+    onMessage = () => {},
+    onProgress = () => {},
+    onDone = () => {},
+  } = handlers;
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let streamedText = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+
+    if (done) {
+      break;
+    }
+
+    buffer += decoder.decode(value, { stream: true });
+
+    buffer = consumeSseBuffer(buffer, (eventName, payloadValue) => {
+      if (payloadValue === "[DONE]" || eventName === "done") {
+        onDone(streamedText);
+        return;
+      }
+
+      if (eventName === "meta") {
+        try {
+          onMeta(JSON.parse(payloadValue || "{}"));
+        } catch {
+          onMeta({});
+        }
+        return;
+      }
+
+      if (eventName === "progress") {
+        onProgress(payloadValue || "");
+        return;
+      }
+
+      if (eventName === "message") {
+        streamedText += payloadValue || "";
+        onMessage(streamedText);
+      }
+    });
+  }
+
+  if (buffer.trim()) {
+    buffer = consumeSseBuffer(`${buffer}\n\n`, (eventName, payloadValue) => {
+      if (payloadValue === "[DONE]" || eventName === "done") {
+        onDone(streamedText);
+        return;
+      }
+
+      if (eventName === "meta") {
+        try {
+          onMeta(JSON.parse(payloadValue || "{}"));
+        } catch {
+          onMeta({});
+        }
+        return;
+      }
+
+      if (eventName === "progress") {
+        onProgress(payloadValue || "");
+        return;
+      }
+
+      if (eventName === "message") {
+        streamedText += payloadValue || "";
+        onMessage(streamedText);
+      }
+    });
+  }
+
+  onDone(streamedText);
+}
