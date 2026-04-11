@@ -3,19 +3,10 @@ import { els } from "../dom.js";
 import { NAV_SECTIONS } from "../core/config.js";
 import { escapeHtml } from "../core/utils.js";
 import { loadCurrentView } from "../features/workspace.js";
+import { openYoungPerson, goBackToSelector, loadYoungPersonSelector, filterSelectorList } from "./selector.js";
 import {
-  openYoungPerson,
-  goBackToSelector,
-  loadYoungPersonSelector,
-  filterSelectorList,
-} from "./selector.js";
-import {
-  updateAssistantScopeDataset,
-  renderAssistantScopeBadges,
-  updateYoungPersonHeader,
-  renderHeroQuickActions,
-  renderMobileBottomBar,
   updatePageHeader,
+  renderAssistantScopeBadges,
   renderMobileTabState,
 } from "./header.js";
 import {
@@ -36,6 +27,28 @@ import {
   openRecordDetail,
   runDrawerWorkflow,
 } from "./records.js";
+
+function showStatus(message, type = "info") {
+  if (!els.statusBar) return;
+  els.statusBar.textContent = message || "";
+  els.statusBar.classList.remove("hidden");
+  els.statusBar.dataset.statusType = type;
+}
+
+function showError(message) {
+  showStatus(message || "Something went wrong.", "error");
+}
+
+function showMessage(message) {
+  showStatus(message || "", "info");
+}
+
+export function clearStatus() {
+  if (!els.statusBar) return;
+  els.statusBar.textContent = "";
+  els.statusBar.classList.add("hidden");
+  delete els.statusBar.dataset.statusType;
+}
 
 export function setActiveView(view) {
   state.currentView = view || "overview";
@@ -60,8 +73,7 @@ export function renderDesktopNav() {
               type="button"
               data-view="${escapeHtml(item.key)}"
             >
-              <span class="nav-btn-icon">${escapeHtml(item.icon)}</span>
-              <span class="nav-btn-label">${escapeHtml(item.label)}</span>
+              ${escapeHtml(item.icon)} ${escapeHtml(item.label)}
             </button>
           `).join("")}
         </div>
@@ -83,8 +95,7 @@ export function renderMobileNav() {
             type="button"
             data-view="${escapeHtml(item.key)}"
           >
-            <span class="nav-btn-icon">${escapeHtml(item.icon)}</span>
-            <span class="nav-btn-label">${escapeHtml(item.label)}</span>
+            ${escapeHtml(item.icon)} ${escapeHtml(item.label)}
           </button>
         `).join("")}
       </div>
@@ -96,12 +107,14 @@ export function openMobileNav() {
   state.mobileNavOpen = true;
   els.mobileNavDrawer?.classList.remove("hidden");
   els.mobileNavBackdrop?.classList.remove("hidden");
+  els.mobileNavDrawer?.setAttribute("aria-hidden", "false");
 }
 
 export function closeMobileNav() {
   state.mobileNavOpen = false;
   els.mobileNavDrawer?.classList.add("hidden");
   els.mobileNavBackdrop?.classList.add("hidden");
+  els.mobileNavDrawer?.setAttribute("aria-hidden", "true");
 }
 
 export function updateActiveNav() {
@@ -111,33 +124,28 @@ export function updateActiveNav() {
 }
 
 async function handleViewChange(view) {
-  if (!state.youngPersonId) return;
+  if (!state.youngPersonId) {
+    showError("Select a young person first.");
+    return;
+  }
 
   setActiveView(view);
   closeMobileNav();
-  await loadCurrentView();
+  clearStatus();
+
+  try {
+    await loadCurrentView();
+  } catch (error) {
+    console.error(error);
+    showError(error?.message || "Failed to load this section.");
+  }
 }
 
 function handleQuickAction(action) {
-  if (action === "daily-note") {
-    openComposerFor("daily_note", "create");
-    return;
-  }
-
-  if (action === "incident") {
-    openComposerFor("incident", "create");
-    return;
-  }
-
-  if (action === "plan") {
-    openComposerFor("support_plan", "create");
-    return;
-  }
-
-  if (action === "profile") {
-    setActiveView("profile");
-    loadCurrentView();
-  }
+  if (action === "daily-note") openComposerFor("daily_note", "create");
+  if (action === "incident") openComposerFor("incident", "create");
+  if (action === "risk") openComposerFor("risk", "create");
+  if (action === "plan") openComposerFor("support_plan", "create");
 }
 
 function handleAssistantQuick(action) {
@@ -172,7 +180,12 @@ export function bindGlobalEvents() {
 
     const openBtn = event.target.closest("[data-open-young-person]");
     if (openBtn) {
-      await openYoungPerson(Number(openBtn.dataset.openYoungPerson));
+      try {
+        await openYoungPerson(Number(openBtn.dataset.openYoungPerson));
+      } catch (error) {
+        console.error(error);
+        showError(error?.message || "Unable to open workspace.");
+      }
       return;
     }
 
@@ -183,6 +196,7 @@ export function bindGlobalEvents() {
         await openRecordDetail(item);
       } catch (error) {
         console.error(error);
+        showError("Could not open record.");
       }
       return;
     }
@@ -210,6 +224,7 @@ export function bindGlobalEvents() {
     const suggestionBtn = event.target.closest("[data-prompt]");
     if (suggestionBtn) {
       askAssistant(suggestionBtn.dataset.prompt || "");
+      return;
     }
   });
 
@@ -224,8 +239,10 @@ export function bindGlobalEvents() {
 
     try {
       await openYoungPerson(Number(state.youngPersonId), { preserveView: true });
+      showMessage("Workspace refreshed.");
     } catch (error) {
       console.error(error);
+      showError(error?.message || "Failed to refresh workspace.");
     }
   });
 
@@ -246,17 +263,73 @@ export function bindGlobalEvents() {
     openComposerFor(state.activeRecordType, "edit", state.activeRecordItem);
   });
 
-  els.drawerSubmitBtn?.addEventListener("click", () => runDrawerWorkflow("submit"));
-  els.drawerApproveBtn?.addEventListener("click", () => runDrawerWorkflow("approve"));
-  els.drawerReturnBtn?.addEventListener("click", () => runDrawerWorkflow("return"));
-  els.drawerArchiveBtn?.addEventListener("click", () => runDrawerWorkflow("archive"));
+  els.drawerSubmitBtn?.addEventListener("click", async () => {
+    try {
+      await runDrawerWorkflow("submit");
+      closeDrawer();
+      await loadCurrentView();
+      showMessage("Record sent for review.");
+    } catch (error) {
+      console.error(error);
+      showError(error?.message || "Unable to submit record.");
+    }
+  });
+
+  els.drawerApproveBtn?.addEventListener("click", async () => {
+    try {
+      await runDrawerWorkflow("approve");
+      closeDrawer();
+      await loadCurrentView();
+      showMessage("Record approved.");
+    } catch (error) {
+      console.error(error);
+      showError(error?.message || "Unable to approve record.");
+    }
+  });
+
+  els.drawerReturnBtn?.addEventListener("click", async () => {
+    try {
+      await runDrawerWorkflow("return");
+      closeDrawer();
+      await loadCurrentView();
+      showMessage("Record returned.");
+    } catch (error) {
+      console.error(error);
+      showError(error?.message || "Unable to return record.");
+    }
+  });
+
+  els.drawerArchiveBtn?.addEventListener("click", async () => {
+    try {
+      await runDrawerWorkflow("archive");
+      closeDrawer();
+      await loadCurrentView();
+      showMessage("Record archived.");
+    } catch (error) {
+      console.error(error);
+      showError(error?.message || "Unable to archive record.");
+    }
+  });
 
   els.closeComposerBtn?.addEventListener("click", () => closeComposer());
   els.composerSaveDraftBtn?.addEventListener("click", async () => {
-    await saveComposer("draft");
+    try {
+      await saveComposer("draft");
+      showMessage("Draft saved.");
+    } catch (error) {
+      console.error(error);
+      showError(error?.message || "Could not save draft.");
+    }
   });
+
   els.composerSubmitBtn?.addEventListener("click", async () => {
-    await saveComposer("submit");
+    try {
+      await saveComposer("submit");
+      showMessage("Record sent for review.");
+    } catch (error) {
+      console.error(error);
+      showError(error?.message || "Could not submit record.");
+    }
   });
 
   els.composerCheckBtn?.addEventListener("click", () => {
@@ -266,27 +339,19 @@ export function bindGlobalEvents() {
   });
 
   els.composerGrammarBtn?.addEventListener("click", () => {
-    if (els.composerAiFeedback) {
-      els.composerAiFeedback.textContent = buildAiFeedback("grammar");
-    }
+    if (els.composerAiFeedback) els.composerAiFeedback.textContent = buildAiFeedback("grammar");
   });
 
   els.composerClarityBtn?.addEventListener("click", () => {
-    if (els.composerAiFeedback) {
-      els.composerAiFeedback.textContent = buildAiFeedback("clarity");
-    }
+    if (els.composerAiFeedback) els.composerAiFeedback.textContent = buildAiFeedback("clarity");
   });
 
   els.composerSafeguardingBtn?.addEventListener("click", () => {
-    if (els.composerAiFeedback) {
-      els.composerAiFeedback.textContent = buildAiFeedback("safeguarding");
-    }
+    if (els.composerAiFeedback) els.composerAiFeedback.textContent = buildAiFeedback("safeguarding");
   });
 
   els.composerChildVoiceBtn?.addEventListener("click", () => {
-    if (els.composerAiFeedback) {
-      els.composerAiFeedback.textContent = buildAiFeedback("child_voice");
-    }
+    if (els.composerAiFeedback) els.composerAiFeedback.textContent = buildAiFeedback("child_voice");
   });
 
   els.assistantLauncher?.addEventListener("click", openAssistant);
