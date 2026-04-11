@@ -3,7 +3,7 @@ import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
 import { renderRowList, renderSection } from "../ui/records.js";
-import { mapFamilyContact } from "../core/adapters.js";
+import { mapFamilyContactRecord } from "../core/adapters.js";
 
 function renderContactCards(contacts = []) {
   if (!contacts.length) {
@@ -83,7 +83,7 @@ export async function loadFamily() {
       recordsData.records ||
       recordsData.family_contact_records ||
       []
-    ).map(mapFamilyContact);
+      ).map(mapFamilyContactRecord);
 
     const concerns = familyRecords.filter((r) =>
       Boolean(r.concerns || "").toLowerCase().includes("concern")
