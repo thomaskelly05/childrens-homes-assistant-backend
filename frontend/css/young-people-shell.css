@@ -130,6 +130,7 @@ button {
 .brand-copy strong {
   font-size: 15px;
   line-height: 1.1;
+  font-weight: 800;
 }
 
 .brand-copy small {
@@ -173,6 +174,7 @@ button {
   max-width: 740px;
   color: var(--text-soft);
   font-size: 16px;
+  line-height: 1.55;
 }
 
 .selector-tools {
@@ -188,7 +190,7 @@ button {
 
 .selector-grid {
   display: grid;
-  grid-template-columns: repeat( auto-fill, minmax(240px, 1fr) );
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 18px;
 }
 
@@ -227,6 +229,7 @@ button {
   color: var(--primary-strong);
   font-size: 34px;
   font-weight: 800;
+  user-select: none;
 }
 
 .selector-card-body h3 {
@@ -239,6 +242,7 @@ button {
   margin: 10px 0 0;
   color: var(--text-soft);
   font-size: 14px;
+  line-height: 1.5;
 }
 
 .selector-card-meta {
@@ -386,6 +390,7 @@ button {
 .profile-snapshot-copy h3 {
   margin: 0 0 4px;
   font-size: 18px;
+  font-weight: 700;
 }
 
 .workspace-sidebar-profile-copy p,
@@ -394,6 +399,7 @@ button {
   margin: 0;
   color: var(--text-soft);
   font-size: 13px;
+  line-height: 1.5;
 }
 
 .workspace-sidebar-avatar,
@@ -410,6 +416,7 @@ button {
   background: linear-gradient(135deg, #dbeafe, #eff6ff);
   color: var(--primary-strong);
   overflow: hidden;
+  user-select: none;
 }
 
 .workspace-sidebar-avatar img,
@@ -446,6 +453,7 @@ button {
 .workspace-hero-copy p {
   margin: 0;
   color: var(--text-soft);
+  line-height: 1.55;
 }
 
 .workspace-hero-actions {
@@ -493,6 +501,7 @@ button {
   background: #fff;
   color: var(--text);
   box-shadow: var(--shadow-sm);
+  line-height: 1.5;
 }
 
 .status-bar[data-status-type="error"] {
@@ -520,12 +529,14 @@ button {
 .composer-side-card h3 {
   margin: 0 0 4px;
   font-size: 18px;
+  font-weight: 700;
 }
 
 .content-section-head p,
 .workspace-side-card p {
   margin: 0;
   color: var(--text-soft);
+  line-height: 1.55;
 }
 
 .summary-strip {
@@ -547,7 +558,7 @@ button {
   font-size: 12px;
   color: var(--text-faint);
   margin-bottom: 6px;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -587,6 +598,7 @@ button {
   height: 84px;
   border-radius: 24px;
   font-size: 26px;
+  user-select: none;
 }
 
 .profile-hero-name {
@@ -598,11 +610,12 @@ button {
 .profile-hero-meta {
   margin-top: 8px;
   color: var(--text-soft);
+  line-height: 1.55;
 }
 
 .profile-grid {
   display: grid;
-  grid-template-columns: repeat( auto-fit, minmax(220px, 1fr) );
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 14px;
 }
 
@@ -634,14 +647,14 @@ button {
 .profile-card-text {
   font-size: 16px;
   font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.4;
 }
 
 .profile-card-subtext {
   margin-top: 8px;
   color: var(--text-soft);
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.55;
 }
 
 /* records */
@@ -678,16 +691,19 @@ button {
 }
 
 .record-row-title,
-.mobile-record-row-title {
+.mobile-record-row-title,
+.row-title {
   font-size: 16px;
   font-weight: 700;
   margin-bottom: 6px;
+  color: var(--text);
 }
 
 .record-row-subtitle,
-.mobile-record-row-summary {
+.mobile-record-row-summary,
+.row-subtitle {
   color: var(--text-soft);
-  line-height: 1.45;
+  line-height: 1.55;
   font-size: 14px;
 }
 
@@ -695,6 +711,7 @@ button {
 .mobile-record-row-meta {
   color: var(--text-faint);
   font-size: 13px;
+  line-height: 1.5;
 }
 
 .row-pill-wrap,
@@ -761,17 +778,7 @@ button {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   background: #f8fafc;
-}
-
-.row-title {
-  font-weight: 700;
-  margin-bottom: 4px;
-}
-
-.row-subtitle {
-  color: var(--text-soft);
-  font-size: 14px;
-  line-height: 1.45;
+  font-weight: 800;
 }
 
 .row-actions {
@@ -829,7 +836,7 @@ button {
 .assistant-context {
   color: var(--text-soft);
   font-size: 14px;
-  line-height: 1.45;
+  line-height: 1.55;
   margin-bottom: 12px;
 }
 
@@ -841,15 +848,16 @@ button {
 }
 
 .assistant-messages {
-  max-height: 320px;
+  max-height: 360px;
   overflow: auto;
   display: grid;
   gap: 10px;
   margin-bottom: 14px;
+  padding-right: 4px;
 }
 
 .assistant-message {
-  padding: 12px 14px;
+  padding: 14px 16px;
   border-radius: 16px;
   background: var(--panel-muted);
   border: 1px solid var(--border);
@@ -866,12 +874,25 @@ button {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-faint);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .assistant-message-body {
-  white-space: pre-wrap;
-  line-height: 1.5;
+  white-space: normal;
+  line-height: 1.65;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.assistant-message-body strong {
+  font-weight: 800;
+  color: var(--text);
+}
+
+.assistant-message-body br + br {
+  display: block;
+  content: "";
+  margin-top: 8px;
 }
 
 .assistant-form {
@@ -893,14 +914,15 @@ button {
 }
 
 .entity-title {
-  font-weight: 700;
+  font-weight: 800;
   margin-bottom: 4px;
+  color: var(--text);
 }
 
 .entity-meta {
   color: var(--text-soft);
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1.55;
 }
 
 .assistant-code-block {
@@ -912,6 +934,12 @@ button {
   font-size: 12px;
   line-height: 1.45;
   overflow: auto;
+}
+
+.assistant-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  background: #fff;
 }
 
 /* form controls */
@@ -943,11 +971,17 @@ button {
   resize: vertical;
 }
 
-.form-label {
+.form-label,
+.detail-label,
+.record-label,
+.key-value-label,
+.profile-label,
+.field-label {
   display: block;
   margin-bottom: 8px;
   font-size: 13px;
   font-weight: 700;
+  color: var(--text);
 }
 
 .checkbox-row {
@@ -1104,7 +1138,7 @@ button {
 .composer-side-body,
 .composer-ai-feedback {
   color: var(--text-soft);
-  line-height: 1.5;
+  line-height: 1.55;
   white-space: pre-wrap;
 }
 
@@ -1120,6 +1154,7 @@ button {
   background: var(--panel-muted);
   border: 1px solid var(--border);
   color: var(--text-soft);
+  line-height: 1.5;
 }
 
 .composer-fields {
@@ -1136,11 +1171,13 @@ button {
 
 .composer-section h3 {
   margin: 0 0 6px;
+  font-weight: 700;
 }
 
 .composer-section p {
   margin: 0 0 16px;
   color: var(--text-soft);
+  line-height: 1.55;
 }
 
 .composer-grid {
@@ -1209,6 +1246,7 @@ button {
 .record-drawer-head h3,
 #recordDrawerTitle {
   margin: 0 0 6px;
+  font-weight: 700;
 }
 
 .record-drawer-body,
@@ -1239,8 +1277,9 @@ button {
 }
 
 .drawer-value {
-  line-height: 1.5;
+  line-height: 1.6;
   white-space: pre-wrap;
+  color: var(--text);
 }
 
 .record-drawer-actions,
@@ -1338,6 +1377,7 @@ button {
   text-align: center;
   color: var(--text-soft);
   padding: 24px;
+  line-height: 1.55;
 }
 
 .spinner {
