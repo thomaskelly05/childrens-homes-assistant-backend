@@ -1,5 +1,5 @@
-import { state } from "../state.js";
 import { els } from "../dom.js";
+import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
 import { renderRowList } from "../ui/records.js";
@@ -18,54 +18,26 @@ function renderSection(title, subtitle, body) {
   `;
 }
 
-function bindDynamicOpenRecordButtons() {
-  if (!els.viewContent) return;
-
-  els.viewContent.querySelectorAll("[data-open-record]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      try {
-        const item = JSON.parse(btn.dataset.openRecord);
-        const mod = await import("../ui/records.js");
-        mod.openRecordDetail(item);
-      } catch {
-        // ignore
-      }
-    });
-  });
-}
-
-export async function loadHandover() {
-  const [timelineData, plansData, appointmentsData] = await Promise.all([
-    apiGet(`/young-people/${state.youngPersonId}/timeline?limit=10`).catch(() => ({ timeline: [] })),
-    apiGet(`/young-people/${state.youngPersonId}/plans`).catch(() => ({ items: [] })),
-    apiGet(`/young-people/${state.youngPersonId}/appointments`).catch(() => ({ items: [] })),
-  ]);
-
-  const recent = timelineData.timeline || [];
-  const plans = plansData.items || plansData.records || [];
-  const appointments = appointmentsData.items || appointmentsData.records || [];
-
+export async function loadTimeline() {
   if (!els.viewContent) return;
 
   els.viewContent.innerHTML = `
-    ${renderSection(
-      "Recent activity",
-      "What the next adult needs to know from the latest recorded activity.",
-      renderRowList(recent, "No recent activity found.")
-    )}
-
-    ${renderSection(
-      "Current support guidance",
-      "Plans and current guidance that should shape how adults respond.",
-      renderRowList(plans.slice(0, 8), "No current support guidance found.")
-    )}
-
-    ${renderSection(
-      "Upcoming appointments",
-      "Important upcoming appointments and follow-up that may affect the shift.",
-      renderRowList(appointments.slice(0, 8), "No upcoming appointments found.")
-    )}
+    <div class="loading-state">
+      <div>
+        <div class="spinner"></div>
+        <p>Loading timeline...</p>
+      </div>
+    </div>
   `;
 
-  bindDynamicOpenRecordButtons();
+  const data = await apiGet(`/young-people/${state.youngPersonId}/timeline?limit=100`);
+  const items = data.timeline || [];
+
+  els.viewContent.innerHTML = `
+    ${renderSection(
+      "Timeline",
+      "A clear chronology of what has happened over time.",
+      renderRowList(items, "No timeline items found.")
+    )}
+  `;
 }
