@@ -92,7 +92,7 @@ export function toDateTimeLocalValue(value) {
 export function initialsFromName(name) {
   if (!name) return "YP";
 
-  const parts = name.trim().split(/\s+/).slice(0, 2);
+  const parts = String(name).trim().split(/\s+/).slice(0, 2);
   return parts.map((p) => p[0]?.toUpperCase() || "").join("") || "YP";
 }
 
@@ -105,15 +105,50 @@ export function getDisplayName(item = {}) {
   );
 }
 
+export function normaliseImagePath(raw) {
+  if (!raw) return "";
+
+  const value = String(raw).trim();
+  if (!value) return "";
+
+  if (
+    value.startsWith("http://") ||
+    value.startsWith("https://") ||
+    value.startsWith("data:") ||
+    value.startsWith("blob:")
+  ) {
+    return value;
+  }
+
+  if (value.startsWith("/")) {
+    return value;
+  }
+
+  if (value.startsWith("uploads/")) {
+    return `/${value}`;
+  }
+
+  if (value.startsWith("media/")) {
+    return `/${value}`;
+  }
+
+  if (/\.(png|jpg|jpeg|gif|webp|svg)$/i.test(value)) {
+    return `/uploads/young-people/${value}`;
+  }
+
+  return value;
+}
+
 export function getProfileImage(item = {}) {
-  return (
+  const raw =
     item.profile_photo_url ||
     item.profile_image_url ||
     item.photo_url ||
     item.image_url ||
     item.avatar_url ||
-    ""
-  );
+    "";
+
+  return normaliseImagePath(raw);
 }
 
 export function buildImageOrInitials(
@@ -123,12 +158,23 @@ export function buildImageOrInitials(
 ) {
   const image = getProfileImage(item);
   const name = getDisplayName(item);
+  const initials = initialsFromName(name);
 
   if (image) {
-    return `<img class="${escapeHtml(imageClass)}" src="${escapeHtml(image)}" alt="${escapeHtml(name)}" />`;
+    return `
+      <img
+        class="${escapeHtml(imageClass)}"
+        src="${escapeHtml(image)}"
+        alt="${escapeHtml(name)}"
+        loading="lazy"
+        onerror="this.onerror=null;this.replaceWith(Object.assign(document.createElement('div'),{className:'${escapeHtml(
+          fallbackClass
+        )}',textContent:'${escapeHtml(initials)}'}));"
+      />
+    `;
   }
 
-  return `<div class="${escapeHtml(fallbackClass)}">${escapeHtml(initialsFromName(name))}</div>`;
+  return `<div class="${escapeHtml(fallbackClass)}">${escapeHtml(initials)}</div>`;
 }
 
 export function renderAvatar(
