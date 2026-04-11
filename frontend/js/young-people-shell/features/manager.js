@@ -2,98 +2,97 @@ import { els } from "../dom.js";
 import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
-import { renderRowList, renderSection, renderSummaryStat } from "../ui/records.js";
+import { renderSection, renderRowList, renderSummaryStat } from "../ui/records.js";
 import {
-  mapManagerReviewPayload,
   mapIncident,
   mapRiskAssessment,
   mapComplianceItem,
   mapManagerAction,
   mapTask,
+  mapDailyNote,
+  mapKeyworkSession,
 } from "../core/adapters.js";
 
-function buildSubmittedRecordRows(items = []) {
+function sortNewestFirst(items = [], keys = []) {
+  return [...items].sort((a, b) => {
+    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
+    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
+    return new Date(bValue).getTime() - new Date(aValue).getTime();
+  });
+}
+
+function sortSoonestFirst(items = [], keys = []) {
+  return [...items].sort((a, b) => {
+    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
+    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
+    return new Date(aValue).getTime() - new Date(bValue).getTime();
+  });
+}
+
+function buildManagerActionRows(items = []) {
   return items.map((item) => ({
-    id: item.id ?? item.source_id ?? null,
-    source_id: item.source_id ?? item.id ?? null,
-    source_table: item.source_table || "",
-    record_type: item.record_type || item.source_table || "record",
-    title: item.title || item.label || "Submitted record",
-    summary:
-      item.summary ||
-      item.note ||
-      item.description ||
-      "This record is awaiting manager review.",
-    workflow_status: item.workflow_status || item.status || "submitted",
-    created_at: item.created_at || item.requested_at || null,
-    updated_at: item.updated_at || null,
-    severity: item.severity || "",
-    significance: item.significance || "",
-  }));
-}
-
-function buildPatternAlertRows(items = []) {
-  return items.map((item, index) => ({
-    id: item.id ?? `pattern-${index}`,
-    source_id: item.source_id ?? item.id ?? `pattern-${index}`,
-    source_table: item.source_table || "pattern_alert",
-    record_type: "pattern_alert",
-    title: item.title || item.label || "Pattern alert",
-    summary:
-      item.summary ||
-      item.description ||
-      item.reason ||
-      "A pattern may be emerging across recent records.",
-    workflow_status: item.status || "active",
-    severity: item.severity || "medium",
+    id: item.id,
+    record_type: "manager_action",
+    title: item.title || item.action_type || "Manager action",
+    summary: item.note || "Manager action",
+    action_at: item.action_at || item.created_at || null,
     created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
+    status: item.action_type || "",
   }));
 }
 
-function groupManagerPayload(payload) {
-  const submittedRecords = buildSubmittedRecordRows(payload.submitted_records || []);
-  const managerActions = payload.manager_actions || [];
-  const compliance = payload.compliance_items || [];
-  const incidents = payload.incidents || [];
-  const risks = payload.risks || [];
-  const tasks = payload.tasks || [];
-  const patternAlerts = buildPatternAlertRows(payload.pattern_alerts || []);
+function buildReviewRecordRows(items = []) {
+  return items.map((item) => ({
+    id: item.id,
+    source_id: item.id,
+    record_type: item.record_type || "record",
+    title: item.title || "Record",
+    summary:
+      item.summary ||
+      item.description ||
+      item.presentation ||
+      item.reflective_analysis ||
+      item.concern_summary ||
+      "Record awaiting review",
+    created_at: item.created_at || null,
+    status: item.workflow_status || item.status || item.approval_status || "",
+    severity: item.severity || "",
+  }));
+}
 
-  const urgentItems = [
-    ...incidents.filter((item) => ["high", "critical"].includes(String(item.severity || "").toLowerCase())),
-    ...risks.filter((item) => ["high", "critical"].includes(String(item.severity || "").toLowerCase())),
-    ...compliance.filter((item) => ["overdue", "escalated"].includes(String(item.status || "").toLowerCase())),
-    ...patternAlerts.filter((item) => ["high", "critical"].includes(String(item.severity || "").toLowerCase())),
-  ].slice(0, 10);
+function buildOverviewCards({
+  submittedRecords = [],
+  highRiskIncidents = [],
+  complianceIssues = [],
+  openTasks = [],
+}) {
+  return `
+    <div class="profile-grid">
+      <div class="profile-card">
+        <div class="profile-card-title">Awaiting review</div>
+        <div class="profile-card-text">${escapeHtml(String(submittedRecords.length))}</div>
+        <div class="profile-card-subtext">Records that appear to need manager attention</div>
+      </div>
 
-  const awaitingReview = submittedRecords.filter((item) =>
-    ["submitted", "pending"].includes(String(item.workflow_status || "").toLowerCase())
-  );
+      <div class="profile-card">
+        <div class="profile-card-title">High-risk incidents</div>
+        <div class="profile-card-text">${escapeHtml(String(highRiskIncidents.length))}</div>
+        <div class="profile-card-subtext">Incidents marked high or critical</div>
+      </div>
 
-  const returnedOrStuck = submittedRecords.filter((item) =>
-    ["returned", "draft"].includes(String(item.workflow_status || "").toLowerCase())
-  );
+      <div class="profile-card">
+        <div class="profile-card-title">Compliance issues</div>
+        <div class="profile-card-text">${escapeHtml(String(complianceIssues.length))}</div>
+        <div class="profile-card-subtext">Overdue or escalated readiness items</div>
+      </div>
 
-  const managerTasks = tasks.filter((item) => !item.completed);
-  const overdueCompliance = compliance.filter((item) =>
-    ["overdue", "escalated"].includes(String(item.status || "").toLowerCase())
-  );
-
-  return {
-    submittedRecords,
-    managerActions,
-    compliance,
-    incidents,
-    risks,
-    tasks,
-    patternAlerts,
-    urgentItems,
-    awaitingReview,
-    returnedOrStuck,
-    managerTasks,
-    overdueCompliance,
-  };
+      <div class="profile-card">
+        <div class="profile-card-title">Open tasks</div>
+        <div class="profile-card-text">${escapeHtml(String(openTasks.length))}</div>
+        <div class="profile-card-subtext">Tasks still needing follow-up</div>
+      </div>
+    </div>
+  `;
 }
 
 export async function loadManager() {
@@ -109,102 +108,143 @@ export async function loadManager() {
   `;
 
   try {
-    const [managerData, incidentsData, risksData, complianceData, tasksData, actionsData] = await Promise.all([
-      apiGet(`/young-people/${state.youngPersonId}/manager-review`).catch(() => ({})),
+    const [
+      incidentsData,
+      risksData,
+      complianceData,
+      tasksData,
+      managerActionsData,
+      dailyNotesData,
+      keyworkData,
+    ] = await Promise.all([
       apiGet(`/young-people/${state.youngPersonId}/incidents`).catch(() => ({ items: [] })),
       apiGet(`/young-people/${state.youngPersonId}/risks`).catch(() => ({ items: [] })),
       apiGet(`/young-people/${state.youngPersonId}/compliance`).catch(() => ({ items: [] })),
       apiGet(`/young-people/${state.youngPersonId}/tasks`).catch(() => ({ items: [] })),
       apiGet(`/young-people/${state.youngPersonId}/manager-actions`).catch(() => ({ items: [] })),
+      apiGet(`/young-people/${state.youngPersonId}/daily-notes`).catch(() => ({ items: [] })),
+      apiGet(`/young-people/${state.youngPersonId}/keywork`).catch(() => ({ items: [] })),
     ]);
 
-    const payload = mapManagerReviewPayload({
-      ...managerData,
-      incidents:
-        managerData.incidents ||
-        incidentsData.incidents ||
-        incidentsData.items ||
-        [],
-      risk_assessments:
-        managerData.risk_assessments ||
-        managerData.risks ||
-        risksData.risk_assessments ||
-        risksData.items ||
-        [],
-      compliance_items:
-        managerData.compliance_items ||
-        complianceData.compliance_items ||
-        complianceData.items ||
-        [],
-      tasks:
-        managerData.tasks ||
-        tasksData.tasks ||
-        tasksData.items ||
-        [],
-      manager_actions:
-        managerData.manager_actions ||
-        actionsData.manager_actions ||
-        actionsData.items ||
-        [],
-    });
+    const incidents = sortNewestFirst(
+      (incidentsData.items || incidentsData.records || incidentsData.incidents || []).map(mapIncident),
+      ["occurred_at", "created_at"]
+    );
 
-    const grouped = groupManagerPayload({
-      ...payload,
-      incidents: (payload.incidents || []).map((item) => item.record_type ? item : mapIncident(item)),
-      risks: (payload.risks || []).map((item) => item.record_type ? item : mapRiskAssessment(item)),
-      compliance_items: (payload.compliance_items || []).map((item) => item.record_type ? item : mapComplianceItem(item)),
-      manager_actions: (payload.manager_actions || []).map((item) => item.record_type ? item : mapManagerAction(item)),
-      tasks: (payload.tasks || []).map((item) => item.record_type ? item : mapTask(item)),
-    });
+    const risks = sortNewestFirst(
+      (risksData.items || risksData.records || risksData.risk_assessments || risksData.risks || []).map(
+        mapRiskAssessment
+      ),
+      ["review_date", "updated_at", "created_at"]
+    );
+
+    const complianceItems = sortSoonestFirst(
+      (complianceData.items || complianceData.records || complianceData.compliance_items || []).map(
+        mapComplianceItem
+      ),
+      ["due_date", "created_at"]
+    );
+
+    const tasks = sortSoonestFirst(
+      (tasksData.items || tasksData.records || tasksData.tasks || []).map(mapTask),
+      ["due_date", "created_at"]
+    );
+
+    const managerActions = sortNewestFirst(
+      (managerActionsData.items || managerActionsData.records || managerActionsData.manager_actions || []).map(
+        mapManagerAction
+      ),
+      ["action_at", "created_at"]
+    );
+
+    const dailyNotes = sortNewestFirst(
+      (dailyNotesData.items || dailyNotesData.records || dailyNotesData.daily_notes || []).map(mapDailyNote),
+      ["record_date", "created_at"]
+    );
+
+    const keyworkSessions = sortNewestFirst(
+      (keyworkData.items || keyworkData.records || keyworkData.keywork_sessions || []).map(mapKeyworkSession),
+      ["session_date", "created_at"]
+    );
+
+    const submittedRecords = [
+      ...dailyNotes.filter((item) =>
+        ["submitted", "pending_review", "review"].includes(String(item.workflow_status || "").toLowerCase())
+      ),
+      ...incidents.filter((item) =>
+        ["submitted", "pending_review", "review"].includes(String(item.workflow_status || "").toLowerCase())
+      ),
+      ...keyworkSessions.filter((item) =>
+        ["submitted", "pending_review", "review"].includes(String(item.workflow_status || "").toLowerCase())
+      ),
+      ...risks.filter((item) =>
+        ["submitted", "pending_review", "review"].includes(String(item.workflow_status || "").toLowerCase())
+      ),
+    ].slice(0, 12);
+
+    const highRiskIncidents = incidents.filter((item) =>
+      ["high", "critical"].includes(String(item.severity || "").toLowerCase())
+    );
+
+    const complianceIssues = complianceItems.filter((item) =>
+      ["overdue", "escalated"].includes(String(item.status || "").toLowerCase())
+    );
+
+    const openTasks = tasks.filter((item) => !item.completed);
 
     els.viewContent.innerHTML = `
       <section class="summary-strip">
-        ${renderSummaryStat("Urgent", grouped.urgentItems.length)}
-        ${renderSummaryStat("Awaiting review", grouped.awaitingReview.length)}
-        ${renderSummaryStat("Open manager tasks", grouped.managerTasks.length)}
-        ${renderSummaryStat("Pattern alerts", grouped.patternAlerts.length)}
+        ${renderSummaryStat("Awaiting review", submittedRecords.length)}
+        ${renderSummaryStat("High-risk incidents", highRiskIncidents.length)}
+        ${renderSummaryStat("Compliance issues", complianceIssues.length)}
+        ${renderSummaryStat("Manager actions", managerActions.length)}
       </section>
 
       ${renderSection(
-        "Urgent today",
-        "High-risk records, escalations and issues needing immediate oversight.",
-        renderRowList(grouped.urgentItems, "No urgent items found.")
+        "Manager overview",
+        "The quickest view of records, risk and operational items needing oversight.",
+        buildOverviewCards({
+          submittedRecords,
+          highRiskIncidents,
+          complianceIssues,
+          openTasks,
+        })
       )}
 
       ${renderSection(
-        "Awaiting manager review",
-        "Submitted records and items waiting for sign-off or review.",
-        renderRowList(grouped.awaitingReview, "Nothing is currently awaiting manager review.")
+        "Records awaiting review",
+        "Submitted or review-stage records that may need manager action.",
+        renderRowList(buildReviewRecordRows(submittedRecords), "No submitted records awaiting review.")
       )}
 
       ${renderSection(
-        "Returned or still in draft",
-        "Records that may need coaching, correction or follow-up.",
-        renderRowList(grouped.returnedOrStuck, "No returned or stuck records found.")
+        "High-risk incidents",
+        "Incidents marked high or critical that should influence oversight and review.",
+        renderRowList(buildReviewRecordRows(highRiskIncidents), "No high-risk incidents found.")
       )}
 
       ${renderSection(
-        "Pattern alerts",
-        "Repeated themes or emerging concerns across recent records.",
-        renderRowList(grouped.patternAlerts, "No pattern alerts found.")
+        "Risk assessments",
+        "Current or recent risks and review dates.",
+        renderRowList(buildReviewRecordRows(risks), "No risk assessments found.")
+      )}
+
+      ${renderSection(
+        "Compliance issues",
+        "Overdue or escalated readiness items needing management attention.",
+        renderRowList(buildReviewRecordRows(complianceIssues), "No compliance issues found.")
+      )}
+
+      ${renderSection(
+        "Open follow-up tasks",
+        "Tasks that may require delegation, escalation or review.",
+        renderRowList(buildReviewRecordRows(openTasks), "No open tasks found.")
       )}
 
       ${renderSection(
         "Manager actions",
-        "Oversight actions already taken or logged.",
-        renderRowList(grouped.managerActions, "No manager actions found.")
-      )}
-
-      ${renderSection(
-        "Open tasks",
-        "Tasks that still need oversight, completion or allocation.",
-        renderRowList(grouped.managerTasks, "No open manager tasks found.")
-      )}
-
-      ${renderSection(
-        "Overdue compliance",
-        "Readiness issues that may need leadership attention.",
-        renderRowList(grouped.overdueCompliance, "No overdue compliance items found.")
+        "Recorded management actions linked to this young person.",
+        renderRowList(buildManagerActionRows(managerActions), "No manager actions found.")
       )}
     `;
   } catch (error) {
