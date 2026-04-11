@@ -1,112 +1,68 @@
 import { state } from "./state.js";
 import { els } from "./dom.js";
-
-import { getYoungPersonIdFromUrl, setYoungPersonIdInUrl } from "./core/utils.js";
-
-import { loadCurrentView } from "./features/workspace.js";
-import { bindRecordDrawerEvents, openRecordDetail } from "./ui/records.js";
-
 import {
-  loadYoungPersonSelector,
-  openYoungPerson,
-  goBackToSelector,
-  filterSelectorList,
-} from "./ui/selector.js";
+  getYoungPersonIdFromUrl,
+  setYoungPersonIdInUrl,
+} from "./core/utils.js";
+import { initialiseShellNavigation, showError } from "./ui/nav.js";
+import { loadYoungPersonSelector, openYoungPerson } from "./ui/selector.js";
 
-import {
-  renderDesktopNav,
-  renderMobileNav,
-  updateActiveNav,
-  bindGlobalEvents as bindNavEvents,
-} from "./ui/nav.js";
+function showWorkspace() {
+  els.selectorScreen?.classList.add("hidden");
+  els.workspaceShell?.classList.remove("hidden");
+}
 
-// ========================
-// INIT
-// ========================
+function showSelector() {
+  els.workspaceShell?.classList.add("hidden");
+  els.selectorScreen?.classList.remove("hidden");
+}
 
-async function init() {
-  state.youngPersonId = getYoungPersonIdFromUrl();
+async function restoreSelectedYoungPerson() {
+  const idFromUrl = getYoungPersonIdFromUrl();
 
-  bindGlobalEvents();
-  bindNavEvents();
+  if (!idFromUrl) {
+    state.youngPersonId = null;
+    state.selectedYoungPerson = null;
+    showSelector();
+    return false;
+  }
 
-  bindRecordDrawerEvents({
-    onWorkflowComplete: refreshView,
-  });
+  state.youngPersonId = idFromUrl;
+  setYoungPersonIdInUrl(idFromUrl);
+  showWorkspace();
 
-  renderDesktopNav();
-  renderMobileNav();
-  updateActiveNav();
-
-  if (state.youngPersonId) {
-    await openYoungPerson(state.youngPersonId);
-    await loadCurrentView();
-  } else {
-    await loadYoungPersonSelector();
+  try {
+    await openYoungPerson(idFromUrl, { skipInitialSectionLoad: true });
+    return true;
+  } catch (error) {
+    console.error("[index] failed to restore young person", error);
+    state.youngPersonId = null;
+    state.selectedYoungPerson = null;
+    setYoungPersonIdInUrl(null);
+    showSelector();
+    showError(error?.message || "Failed to open selected young person.");
+    return false;
   }
 }
 
-// ========================
-// GLOBAL EVENT DELEGATION
-// ========================
+async function bootstrap() {
+  try {
+    const restored = await restoreSelectedYoungPerson();
 
-function bindGlobalEvents() {
-  document.addEventListener("click", async (e) => {
-    const target = e.target.closest("button, a");
-    if (!target) return;
-
-    if (target.dataset.openRecord) {
+    if (!restored) {
       try {
-        const item = JSON.parse(target.dataset.openRecord);
-        await openRecordDetail(item);
-      } catch (err) {
-        console.error("Invalid record payload", err);
-      }
-      return;
-    }
-
-    if (target.dataset.actionRouter) {
-      const action = target.dataset.actionRouter;
-
-      if (action === "back-to-selector") {
-        goBackToSelector();
-        return;
-      }
-
-      if (action.startsWith("edit-")) {
-        console.log("Edit action:", action);
-        return;
+        await loadYoungPersonSelector();
+      } catch (error) {
+        console.error("[index] selector load failed", error);
+        showError(error?.message || "Failed to load young people.");
       }
     }
 
-    if (target.dataset.youngPersonId) {
-      const id = Number(target.dataset.youngPersonId);
-      if (!id) return;
-
-      setYoungPersonIdInUrl(id);
-      state.youngPersonId = id;
-
-      await openYoungPerson(id);
-      await loadCurrentView();
-      return;
-    }
-  });
-
-  els.selectorSearchInput?.addEventListener("input", (e) => {
-    filterSelectorList(e.target.value);
-  });
+    await initialiseShellNavigation();
+  } catch (error) {
+    console.error("[index] bootstrap failed", error);
+    showError(error?.message || "Failed to start workspace.");
+  }
 }
 
-// ========================
-// REFRESH
-// ========================
-
-async function refreshView() {
-  await loadCurrentView();
-}
-
-// ========================
-// START
-// ========================
-
-init();
+document.addEventListener("DOMContentLoaded", bootstrap);
