@@ -17,7 +17,8 @@ def init_passkeys_table() -> None:
                     id SERIAL PRIMARY KEY,
                     user_id INTEGER NOT NULL,
                     credential_id TEXT NOT NULL UNIQUE,
-                    credential_public_key TEXT NOT NULL,
+                    public_key TEXT,
+                    credential_public_key TEXT,
                     sign_count BIGINT NOT NULL DEFAULT 0,
                     transports TEXT,
                     aaguid TEXT,
@@ -25,6 +26,78 @@ def init_passkeys_table() -> None:
                     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     last_used_at TIMESTAMPTZ
                 )
+                """
+            )
+
+            cur.execute(
+                """
+                ALTER TABLE user_passkeys
+                ADD COLUMN IF NOT EXISTS public_key TEXT
+                """
+            )
+
+            cur.execute(
+                """
+                ALTER TABLE user_passkeys
+                ADD COLUMN IF NOT EXISTS credential_public_key TEXT
+                """
+            )
+
+            cur.execute(
+                """
+                ALTER TABLE user_passkeys
+                ADD COLUMN IF NOT EXISTS sign_count BIGINT NOT NULL DEFAULT 0
+                """
+            )
+
+            cur.execute(
+                """
+                ALTER TABLE user_passkeys
+                ADD COLUMN IF NOT EXISTS transports TEXT
+                """
+            )
+
+            cur.execute(
+                """
+                ALTER TABLE user_passkeys
+                ADD COLUMN IF NOT EXISTS aaguid TEXT
+                """
+            )
+
+            cur.execute(
+                """
+                ALTER TABLE user_passkeys
+                ADD COLUMN IF NOT EXISTS nickname TEXT
+                """
+            )
+
+            cur.execute(
+                """
+                ALTER TABLE user_passkeys
+                ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                """
+            )
+
+            cur.execute(
+                """
+                ALTER TABLE user_passkeys
+                ADD COLUMN IF NOT EXISTS last_used_at TIMESTAMPTZ
+                """
+            )
+
+            cur.execute(
+                """
+                UPDATE user_passkeys
+                SET credential_public_key = public_key
+                WHERE credential_public_key IS NULL
+                  AND public_key IS NOT NULL
+                """
+            )
+
+            cur.execute(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_user_passkeys_credential_id_unique
+                ON user_passkeys (credential_id)
                 """
             )
 
@@ -103,6 +176,7 @@ def get_passkey_by_credential_id(credential_id: str) -> dict[str, Any] | None:
                     id,
                     user_id,
                     credential_id,
+                    public_key,
                     credential_public_key,
                     sign_count,
                     transports,
@@ -140,6 +214,7 @@ def create_user_passkey(
                 INSERT INTO user_passkeys (
                     user_id,
                     credential_id,
+                    public_key,
                     credential_public_key,
                     sign_count,
                     transports,
@@ -147,11 +222,12 @@ def create_user_passkey(
                     nickname,
                     created_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
                 """,
                 (
                     user_id,
                     credential_id,
+                    credential_public_key,
                     credential_public_key,
                     int(sign_count),
                     transports,
