@@ -247,29 +247,6 @@
         code.setAttribute("aria-invalid", hasError ? "true" : "false");
       }
 
-      function setStoredVerifiedState() {
-        const existing = (window.auth && typeof window.auth.getStoredUser === "function")
-          ? (window.auth.getStoredUser() || {})
-          : {};
-
-        const remember = !!localStorage.getItem("current_user");
-        const merged = {
-          ...existing,
-          mfa_enabled: true,
-          mfa_verified: true,
-          mfaEnabled: true,
-          mfaVerified: true
-        };
-
-        if (remember) {
-          localStorage.setItem("current_user", JSON.stringify(merged));
-          sessionStorage.removeItem("current_user");
-        } else {
-          sessionStorage.setItem("current_user", JSON.stringify(merged));
-          localStorage.removeItem("current_user");
-        }
-      }
-
       async function boot() {
         try {
           if (!window.auth || typeof window.auth.validateSession !== "function") {
@@ -279,20 +256,26 @@
 
           const state = await window.auth.validateSession();
 
-          if (!state || !state.authenticated) {
+          if (!state) {
             window.location.replace("/login");
             return;
           }
 
-          if (!state.mfa_enabled) {
+          if (state.mfa_pending) {
+            return;
+          }
+
+          if (state.authenticated && state.mfa_verified) {
+            window.location.replace("/assistant");
+            return;
+          }
+
+          if (state.authenticated && !state.mfa_enabled) {
             window.location.replace("/mfa-setup");
             return;
           }
 
-          if (state.mfa_verified) {
-            window.location.replace("/assistant");
-            return;
-          }
+          window.location.replace("/login");
         } catch (_) {
           window.location.replace("/login");
         }
@@ -315,16 +298,12 @@
         setStatus("Checking your code...");
 
         try {
-          const data = await window.apiRequest("/auth/mfa/verify", {
-            method: "POST",
-            body: JSON.stringify({ code: value })
-          });
+          const data = await window.auth.verifyMfaCode(value);
 
           if (!data || !data.ok) {
             throw new Error("Verification failed.");
           }
 
-          setStoredVerifiedState();
           await window.auth.validateSession();
 
           setStatus("Verification successful. Redirecting...", "success");
