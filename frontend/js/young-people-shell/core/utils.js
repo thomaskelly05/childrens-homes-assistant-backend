@@ -131,6 +131,14 @@ export function buildImageOrInitials(
   return `<div class="${escapeHtml(fallbackClass)}">${escapeHtml(initialsFromName(name))}</div>`;
 }
 
+export function renderAvatar(
+  item = {},
+  imageClass = "avatar",
+  fallbackClass = "avatar avatar-fallback"
+) {
+  return buildImageOrInitials(item, imageClass, fallbackClass);
+}
+
 // ========================
 // DATA HELPERS
 // ========================
