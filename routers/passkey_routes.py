@@ -5,8 +5,9 @@ import secrets
 import time
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel
+from psycopg2.extras import RealDictCursor
 
 from auth.mfa_guard import (
     SESSION_MFA_VERIFIED_KEY,
@@ -79,6 +80,10 @@ def _safe_string(value: Any) -> str:
     return str(value).strip()
 
 
+def _normalise_email(value: str | None) -> str:
+    return _safe_string(value).lower()
+
+
 def _set_session_cookie(response: Response, token: str, remember: bool = False) -> None:
     max_age = (
         auth_settings.cookie_max_age_long
@@ -130,7 +135,7 @@ def _get_user_email_from_session(request: Request, user_id: int) -> str:
 
 
 def _get_user_by_email(conn: Any, email: str) -> dict[str, Any] | None:
-    with conn.cursor() as cur:
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
             SELECT
@@ -146,21 +151,17 @@ def _get_user_by_email(conn: Any, email: str) -> dict[str, Any] | None:
                 subscription_status,
                 plan_name
             FROM users
-            WHERE lower(email) = lower(%s)
+            WHERE lower(email) = %s
             LIMIT 1
             """,
             (email,),
         )
         row = cur.fetchone()
-        if not row:
-            return None
-
-        columns = [desc[0] for desc in cur.description]
-        return dict(zip(columns, row))
+        return dict(row) if row else None
 
 
 def _get_user_by_id(conn: Any, user_id: int) -> dict[str, Any] | None:
-    with conn.cursor() as cur:
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
             SELECT
@@ -182,11 +183,7 @@ def _get_user_by_id(conn: Any, user_id: int) -> dict[str, Any] | None:
             (user_id,),
         )
         row = cur.fetchone()
-        if not row:
-            return None
-
-        columns = [desc[0] for desc in cur.description]
-        return dict(zip(columns, row))
+        return dict(row) if row else None
 
 
 def _validate_login_user(user: dict[str, Any] | None) -> dict[str, Any]:
@@ -235,7 +232,7 @@ def register_passkey_options(request: Request):
     request.session["passkey_register_challenge"] = challenge_b64
     request.session["passkey_register_user_id"] = user_id
 
-    options = {
+    options: dict[str, Any] = {
         "challenge": challenge_b64,
         "rp": {
             "name": RP_NAME,
@@ -258,7 +255,11 @@ def register_passkey_options(request: Request):
         },
     }
 
-    existing = list_user_passkeys(user_id)
+    try:
+        existing = list_user_passkeys(user_id)
+    except Exception:
+        existing = []
+
     exclude_credentials: list[dict[str, str]] = []
     for item in existing:
         credential_id = _safe_string(item.get("credential_id"))
@@ -269,6 +270,7 @@ def register_passkey_options(request: Request):
                     "id": credential_id,
                 }
             )
+
     if exclude_credentials:
         options["excludeCredentials"] = exclude_credentials
 
@@ -344,7 +346,7 @@ def register_passkey_verify(
         message = str(exc).lower()
         if "unique" in message or "duplicate" in message:
             raise HTTPException(status_code=409, detail="This passkey is already registered")
-        raise
+        raise HTTPException(status_code=500, detail=f"Could not save passkey: {str(exc)}")
 
     request.session.pop("passkey_register_challenge", None)
     request.session.pop("passkey_register_user_id", None)
@@ -360,46 +362,52 @@ def register_passkey_verify(
 def authenticate_passkey_options(
     payload: PasskeyAuthenticateOptionsRequest,
     request: Request,
-    authorization: str | None = Header(default=None),
     conn=Depends(get_db),
 ):
-    email = _safe_string(payload.email).lower()
-    allow_credentials: list[dict[str, str]] = []
+    email = _normalise_email(payload.email)
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required for passkey sign-in")
 
-    if email:
-        user = _get_user_by_email(conn, email)
-        if not user:
-            raise HTTPException(status_code=404, detail="No passkeys registered for this account")
+    user = _get_user_by_email(conn, email)
+    if not user:
+        raise HTTPException(status_code=404, detail="No passkeys registered for this account")
 
-        user = _validate_login_user(user)
+    user = _validate_login_user(user)
+
+    try:
         passkeys = list_user_passkeys(int(user["id"]))
-        if not passkeys:
-            raise HTTPException(status_code=404, detail="No passkeys registered for this account")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Could not read passkeys: {str(exc)}")
 
-        for item in passkeys:
-            credential_id = _safe_string(item.get("credential_id"))
-            if credential_id:
-                allow_credentials.append(
-                    {
-                        "type": "public-key",
-                        "id": credential_id,
-                    }
-                )
-        request.session["passkey_auth_user_hint"] = int(user["id"])
+    if not passkeys:
+        raise HTTPException(status_code=404, detail="No passkeys registered for this account")
+
+    allow_credentials: list[dict[str, str]] = []
+    for item in passkeys:
+        credential_id = _safe_string(item.get("credential_id"))
+        if credential_id:
+            allow_credentials.append(
+                {
+                    "type": "public-key",
+                    "id": credential_id,
+                }
+            )
+
+    if not allow_credentials:
+        raise HTTPException(status_code=404, detail="No usable passkeys registered for this account")
 
     challenge_b64 = _b64url_encode(secrets.token_bytes(32))
     request.session["passkey_auth_challenge"] = challenge_b64
     request.session["passkey_auth_started_at"] = int(time.time())
+    request.session["passkey_auth_user_hint"] = int(user["id"])
 
     options: dict[str, Any] = {
         "challenge": challenge_b64,
         "rpId": RP_ID,
         "timeout": 60000,
         "userVerification": "preferred",
+        "allowCredentials": allow_credentials,
     }
-
-    if allow_credentials:
-        options["allowCredentials"] = allow_credentials
 
     return {
         "ok": True,
@@ -458,9 +466,9 @@ def authenticate_passkey_verify(
     user = _get_user_by_id(conn, int(stored_passkey["user_id"]))
     user = _validate_login_user(user)
 
-    remember = False
     token = create_session_token(int(user["id"]))
     csrf_token = secrets.token_urlsafe(32)
+    remember = False
 
     try:
         request.session.clear()
@@ -482,7 +490,10 @@ def authenticate_passkey_verify(
     _set_csrf_cookie(response, csrf_token, remember=remember)
 
     current_sign_count = int(stored_passkey.get("sign_count") or 0)
-    update_passkey_sign_count(credential_id, current_sign_count + 1)
+    try:
+        update_passkey_sign_count(credential_id, current_sign_count + 1)
+    except Exception:
+        pass
 
     return {
         "ok": True,
