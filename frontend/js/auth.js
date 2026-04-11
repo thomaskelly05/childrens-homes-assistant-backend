@@ -62,8 +62,10 @@ function normaliseUserPatch(user = {}) {
     plan_name: user.plan_name || null,
     mfa_enabled: !!user.mfa_enabled,
     mfa_verified: !!user.mfa_verified,
+    mfa_pending: !!user.mfa_pending,
     mfaEnabled: !!user.mfa_enabled,
     mfaVerified: !!user.mfa_verified,
+    mfaPending: !!user.mfa_pending,
   };
 }
 
@@ -128,24 +130,22 @@ async function login(credentialsArg = null) {
         normaliseUserPatch({
           ...data.user,
           mfa_enabled: !!data.mfa_enabled,
-          mfa_verified: false,
+          mfa_verified: !!data.authenticated,
+          mfa_pending: !!data.mfa_pending,
         }),
         remember
       );
     }
 
     if (loginStatus) {
-      loginStatus.textContent = data.mfa_required
-        ? "Password accepted. Continuing to multi-factor verification..."
-        : "Sign-in successful. Redirecting...";
+      if (data.mfa_pending) {
+        loginStatus.textContent =
+          "Password accepted. Continuing to multi-factor verification...";
+      } else {
+        loginStatus.textContent = "Sign-in successful. Redirecting...";
+      }
     }
 
-    if (data.mfa_required) {
-      window.location.href = data.mfa_enabled ? "/mfa" : "/mfa-setup";
-      return data;
-    }
-
-    window.location.href = "/assistant";
     return data;
   } catch (error) {
     clearStoredUser();
@@ -180,14 +180,41 @@ async function validateSession() {
     const data = await apiFetchJson("/auth/check", { method: "GET" });
 
     if (!data || data.authenticated !== true) {
+      const existing = getStoredUser() || {};
+      const remember = shouldRememberUser();
+
+      if (data?.mfa_pending) {
+        const merged = normaliseUserPatch({
+          ...existing,
+          authenticated: false,
+          mfa_enabled: true,
+          mfa_verified: false,
+          mfa_pending: true,
+        });
+        setStoredUser(merged, remember);
+        return {
+          authenticated: false,
+          subscription_active: false,
+          mfa_enabled: true,
+          mfa_verified: false,
+          mfa_pending: true,
+          mfaEnabled: true,
+          mfaVerified: false,
+          mfaPending: true,
+          expires_in_seconds: data.expires_in_seconds ?? null,
+        };
+      }
+
       clearStoredUser();
       return {
         authenticated: false,
         subscription_active: false,
         mfa_enabled: false,
         mfa_verified: false,
+        mfa_pending: false,
         mfaEnabled: false,
         mfaVerified: false,
+        mfaPending: false,
       };
     }
 
@@ -207,6 +234,7 @@ async function validateSession() {
       plan_name: data.plan_name || null,
       mfa_enabled: !!data.mfa_enabled,
       mfa_verified: !!data.mfa_verified,
+      mfa_pending: false,
     });
 
     setStoredUser(merged, remember);
@@ -223,8 +251,10 @@ async function validateSession() {
       plan_name: data.plan_name || null,
       mfa_enabled: !!data.mfa_enabled,
       mfa_verified: !!data.mfa_verified,
+      mfa_pending: false,
       mfaEnabled: !!data.mfa_enabled,
       mfaVerified: !!data.mfa_verified,
+      mfaPending: false,
     };
   } catch (_) {
     clearStoredUser();
@@ -233,14 +263,21 @@ async function validateSession() {
       subscription_active: false,
       mfa_enabled: false,
       mfa_verified: false,
+      mfa_pending: false,
       mfaEnabled: false,
       mfaVerified: false,
+      mfaPending: false,
     };
   }
 }
 
 async function requireAuth() {
   const state = await validateSession();
+
+  if (state.mfa_pending) {
+    window.location.replace("/mfa");
+    return false;
+  }
 
   if (!state.authenticated) {
     window.location.replace("/login");
@@ -280,6 +317,7 @@ async function verifyMfaCode(code) {
   updateStoredUser({
     mfa_enabled: true,
     mfa_verified: true,
+    mfa_pending: false,
   });
 
   return data;
@@ -298,6 +336,7 @@ async function verifyRecoveryCode(recoveryCode) {
   updateStoredUser({
     mfa_enabled: true,
     mfa_verified: true,
+    mfa_pending: false,
   });
 
   return data;
@@ -324,6 +363,7 @@ async function completeMfaSetup(code) {
   updateStoredUser({
     mfa_enabled: true,
     mfa_verified: true,
+    mfa_pending: false,
   });
 
   if (Array.isArray(data.recovery_codes) && data.recovery_codes.length) {
