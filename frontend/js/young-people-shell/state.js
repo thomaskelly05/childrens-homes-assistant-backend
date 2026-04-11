@@ -32,6 +32,36 @@ export const state = {
   mobileNavOpen: false,
 };
 
+export function setYoungPersonId(value) {
+  state.youngPersonId = value != null ? Number(value) : null;
+}
+
+export function setYoungPerson(value) {
+  state.youngPerson = value || null;
+}
+
+export function setCurrentView(value) {
+  state.currentView = value || "overview";
+}
+
+export function setActiveRecord(item = null, type = null) {
+  state.activeRecordItem = item || null;
+  state.activeRecordType = type || null;
+}
+
+export function clearActiveRecord() {
+  state.activeRecordItem = null;
+  state.activeRecordType = null;
+}
+
+export function setSelectorItems(items = []) {
+  state.selectorItems = Array.isArray(items) ? items : [];
+}
+
+export function setMobileNavOpen(value) {
+  state.mobileNavOpen = !!value;
+}
+
 export function resetAssistantState() {
   state.assistantMessages = [];
   state.assistantModalMessages = [];
