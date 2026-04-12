@@ -19,6 +19,7 @@ class YoungPersonAssistantContext(BaseModel):
     scope: str | None = "young_person"
     young_person_id: int
     current_view: str | None = None
+    current_section: str | None = None
     young_person_name: str | None = None
     placement_status: str | None = None
     summary_risk_level: str | None = None
@@ -37,7 +38,7 @@ class YoungPersonAssistantPayload(BaseModel):
 
 def _safe_int(value: Any) -> int | None:
     try:
-        if value is None:
+        if value is None or value == "":
             return None
         return int(value)
     except Exception:
@@ -50,6 +51,10 @@ def _user_home_id(current_user: dict[str, Any]) -> int | None:
 
 def _user_role(current_user: dict[str, Any]) -> str:
     return str(current_user.get("role") or "").strip().lower()
+
+
+def _user_id(current_user: dict[str, Any]) -> int | None:
+    return _safe_int(current_user.get("user_id") or current_user.get("id"))
 
 
 def _assert_home_access(current_user: dict[str, Any], record_home_id: int | None) -> None:
@@ -102,18 +107,23 @@ def _normalise_context(payload: YoungPersonAssistantPayload, record: dict[str, A
         or "Young person"
     )
 
+    current_view = payload.context.current_view or payload.context.current_section
+
     return {
-        "current_view": payload.context.current_view,
+        "current_view": current_view,
+        "current_section": payload.context.current_section or current_view,
         "young_person_name": payload.context.young_person_name or full_name,
         "placement_status": payload.context.placement_status or record.get("placement_status"),
         "summary_risk_level": payload.context.summary_risk_level or record.get("summary_risk_level"),
         "composer_record_type": payload.context.composer_record_type,
-        "home_name": payload.context.home_name,
-        "shift_context": payload.context.shift_context,
+        "home_name": payload.context.home_name or record.get("home_name"),
+        "shift_context": payload.context.shift_context or current_view,
+        "record_type": payload.context.record_type,
+        "record_id": payload.context.record_id,
     }
 
 
-def _sse(data: str) -> str:
+def _sse_message(data: str) -> str:
     safe = (data or "").replace("\r\n", "\n").replace("\r", "\n")
     return "".join(f"data: {line}\n" for line in safe.split("\n")) + "\n"
 
@@ -141,10 +151,14 @@ async def ask_young_person_assistant(
         scope = _normalise_scope(payload, current_user)
         context = _normalise_context(payload, record)
         response_mode = _normalise_response_mode(payload.response_mode)
+        user_id = _user_id(current_user)
+
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="User could not be identified")
 
         assistant_prompt_bundle = build_assistant_prompt(
             conn,
-            user_id=int(current_user["user_id"]),
+            user_id=user_id,
             message=payload.message,
             scope=scope,
             history=[],
@@ -177,14 +191,14 @@ async def ask_young_person_assistant(
                 document_name=None,
                 response_mode=response_mode,
                 user_context=assistant_prompt_bundle.get("context") or {},
-                user_id=current_user["user_id"],
+                user_id=user_id,
                 conversation_id=f"young-person-{payload.context.young_person_id}",
             )
 
             async for item in generator:
                 if isinstance(item, str):
                     ai_text += item
-                    yield _sse(item)
+                    yield _sse_message(item)
                     continue
 
                 if not isinstance(item, dict):
@@ -202,22 +216,19 @@ async def ask_young_person_assistant(
                     token = str(item.get("content") or "")
                     if token:
                         ai_text += token
-                        yield _sse(token)
+                        yield _sse_message(token)
                     continue
 
-                if item_type == "sources":
-                    if isinstance(item.get("sources"), list):
-                        sources = item.get("sources") or []
+                if item_type == "sources" and isinstance(item.get("sources"), list):
+                    sources = item.get("sources") or []
                     continue
 
-                if item_type == "runtime":
-                    if isinstance(item.get("runtime"), dict):
-                        runtime = item.get("runtime") or {}
+                if item_type == "runtime" and isinstance(item.get("runtime"), dict):
+                    runtime = item.get("runtime") or {}
                     continue
 
-                if item_type == "explainability":
-                    if isinstance(item.get("explainability"), dict):
-                        explainability = item.get("explainability") or {}
+                if item_type == "explainability" and isinstance(item.get("explainability"), dict):
+                    explainability = item.get("explainability") or {}
                     continue
 
                 if item_type == "meta":
@@ -251,23 +262,27 @@ async def ask_young_person_assistant(
                 "'summarise recent incidents' or 'draft a short handover'."
             )
             ai_text += fallback
-            yield _sse(fallback)
+            yield _sse_message(fallback)
 
         finally:
             final_runtime = dict(runtime)
             prompt_runtime = assistant_prompt_bundle.get("runtime") or {}
+
             for key, value in prompt_runtime.items():
                 if value not in (None, "", []):
                     final_runtime.setdefault(key, value)
 
             if context:
                 final_runtime.setdefault("current_view", context.get("current_view"))
+                final_runtime.setdefault("current_section", context.get("current_section"))
                 final_runtime.setdefault("young_person_name", context.get("young_person_name"))
                 final_runtime.setdefault("placement_status", context.get("placement_status"))
                 final_runtime.setdefault("summary_risk_level", context.get("summary_risk_level"))
                 final_runtime.setdefault("composer_record_type", context.get("composer_record_type"))
                 final_runtime.setdefault("home_name", context.get("home_name"))
                 final_runtime.setdefault("shift_context", context.get("shift_context"))
+                final_runtime.setdefault("record_type", context.get("record_type"))
+                final_runtime.setdefault("record_id", context.get("record_id"))
 
             if suggested_actions:
                 existing_actions = final_runtime.get("suggested_actions") or []
