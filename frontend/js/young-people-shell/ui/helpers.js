@@ -3,31 +3,23 @@ import { escapeHtml, formatDate } from "../core/utils.js";
 export function statusBadgeClass(status) {
   const value = String(status || "").trim().toLowerCase();
 
-  if (
-    ["approved", "active", "completed", "ok"].includes(value)
-  ) {
-    return "badge badge-success";
+  if (["approved", "active", "completed", "ok"].includes(value)) {
+    return "row-pill muted";
   }
 
-  if (
-    ["submitted", "pending_review", "review", "due_soon"].includes(value)
-  ) {
-    return "badge badge-warning";
+  if (["submitted", "pending_review", "review", "due_soon"].includes(value)) {
+    return "row-pill muted";
   }
 
-  if (
-    ["returned", "overdue", "escalated", "critical", "high"].includes(value)
-  ) {
-    return "badge badge-danger";
+  if (["returned", "overdue", "escalated", "critical", "high"].includes(value)) {
+    return "row-pill warning";
   }
 
-  if (
-    ["draft", "inactive", "cancelled", "archived"].includes(value)
-  ) {
-    return "badge badge-muted";
+  if (["draft", "inactive", "cancelled", "archived"].includes(value)) {
+    return "row-pill muted";
   }
 
-  return "badge badge-default";
+  return "row-pill muted";
 }
 
 export function renderBadges(values = []) {
@@ -49,16 +41,6 @@ export function renderBadges(values = []) {
   `;
 }
 
-export function renderSummaryStat(label, value, hint = "") {
-  return `
-    <div class="summary-stat">
-      <div class="summary-stat-value">${escapeHtml(String(value ?? "0"))}</div>
-      <div class="summary-stat-label">${escapeHtml(label || "")}</div>
-      ${hint ? `<div class="summary-stat-hint">${escapeHtml(hint)}</div>` : ""}
-    </div>
-  `;
-}
-
 export function renderEmptyState(message = "No information available.") {
   return `
     <div class="empty-state">
@@ -67,17 +49,28 @@ export function renderEmptyState(message = "No information available.") {
   `;
 }
 
-export function renderSection(title, subtitle = "", body = "") {
+export function renderSection(title, subtitle = "", body = "", options = {}) {
+  const sectionClass = options.sectionClass || "overview-section-card";
+  const titleTag = options.titleTag || "h3";
+
   return `
-    <section class="content-section">
-      <div class="content-section-head">
-        <h2>${escapeHtml(title || "")}</h2>
+    <section class="${escapeHtml(sectionClass)}">
+      <div class="overview-section-head">
+        <${titleTag}>${escapeHtml(title || "")}</${titleTag}>
         ${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ""}
       </div>
-      <div class="content-section-body">
-        ${body || renderEmptyState()}
-      </div>
+      ${body || renderEmptyState()}
     </section>
+  `;
+}
+
+export function renderSummaryStat(label, value, hint = "") {
+  return `
+    <article class="overview-stat-card">
+      <span class="overview-stat-label">${escapeHtml(label || "")}</span>
+      <strong class="overview-stat-value">${escapeHtml(String(value ?? "0"))}</strong>
+      ${hint ? `<span class="overview-stat-note">${escapeHtml(hint)}</span>` : `<span class="overview-stat-note"></span>`}
+    </article>
   `;
 }
 
@@ -117,6 +110,22 @@ function buildMetaParts(item = {}) {
   return parts.filter(Boolean);
 }
 
+function getBestTitle(item = {}) {
+  return item.title || item.label || item.name || item.appointment_type || "Record";
+}
+
+function getBestSummary(item = {}) {
+  return (
+    item.summary ||
+    item.description ||
+    item.presentation ||
+    item.outcome ||
+    item.note ||
+    item.details ||
+    ""
+  );
+}
+
 export function renderRowList(items = [], emptyMessage = "No records found.") {
   if (!items.length) {
     return renderEmptyState(emptyMessage);
@@ -127,16 +136,11 @@ export function renderRowList(items = [], emptyMessage = "No records found.") {
       ${items
         .map((item) => {
           const recordId = item.record_id || item.source_id || item.id || "";
-          const recordType = item.record_type || "";
-          const title = item.title || "Record";
-          const summary =
-            item.summary ||
-            item.description ||
-            item.presentation ||
-            item.outcome ||
-            item.note ||
-            "";
+          const recordType = item.record_type || item.type || "";
+          const title = getBestTitle(item);
+          const summary = getBestSummary(item);
           const metaParts = buildMetaParts(item);
+
           const badgeValues = [
             item.workflow_status,
             item.status,
@@ -146,13 +150,14 @@ export function renderRowList(items = [], emptyMessage = "No records found.") {
           ].filter(Boolean);
 
           return `
-            <button
-              type="button"
+            <article
               class="record-row"
               data-open-record="true"
               data-record-id="${escapeHtml(String(recordId))}"
               data-record-type="${escapeHtml(String(recordType))}"
               data-title="${escapeHtml(String(title))}"
+              role="button"
+              tabindex="0"
             >
               <div class="record-row-main">
                 <div class="record-row-title">${escapeHtml(title)}</div>
@@ -170,7 +175,7 @@ export function renderRowList(items = [], emptyMessage = "No records found.") {
               <div class="record-row-side">
                 ${renderBadges(badgeValues)}
               </div>
-            </button>
+            </article>
           `;
         })
         .join("")}
@@ -184,55 +189,55 @@ export function renderRecordsTable(items = [], emptyMessage = "No records found.
   }
 
   return `
-    <div class="table-wrap">
-      <table class="records-table">
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Type</th>
-            <th>Date</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${items
-            .map((item) => {
-              const recordId = item.record_id || item.source_id || item.id || "";
-              const recordType = item.record_type || "";
-              const title = item.title || "Record";
-              const dateValue = pickBestDate(item);
-              const status =
-                item.workflow_status ||
-                item.status ||
-                item.approval_status ||
-                "";
+    <div class="record-list">
+      ${items
+        .map((item) => {
+          const recordId = item.record_id || item.source_id || item.id || "";
+          const recordType = item.record_type || "";
+          const title = getBestTitle(item);
+          const dateValue = pickBestDate(item);
+          const status =
+            item.workflow_status ||
+            item.status ||
+            item.approval_status ||
+            "";
 
-              return `
-                <tr
-                  class="records-table-row"
-                  data-open-record="true"
-                  data-record-id="${escapeHtml(String(recordId))}"
-                  data-record-type="${escapeHtml(String(recordType))}"
-                  data-title="${escapeHtml(String(title))}"
-                >
-                  <td>${escapeHtml(title)}</td>
-                  <td>${escapeHtml(String(recordType).replaceAll("_", " "))}</td>
-                  <td>${escapeHtml(dateValue ? formatDate(dateValue) : "—")}</td>
-                  <td>
-                    ${
-                      status
-                        ? `<span class="${escapeHtml(statusBadgeClass(status))}">${escapeHtml(
-                            String(status).replaceAll("_", " ")
-                          )}</span>`
-                        : "—"
-                    }
-                  </td>
-                </tr>
-              `;
-            })
-            .join("")}
-        </tbody>
-      </table>
+          const summaryParts = [
+            recordType ? String(recordType).replaceAll("_", " ") : "",
+            dateValue ? formatDate(dateValue) : "",
+          ].filter(Boolean);
+
+          return `
+            <article
+              class="record-row"
+              data-open-record="true"
+              data-record-id="${escapeHtml(String(recordId))}"
+              data-record-type="${escapeHtml(String(recordType))}"
+              data-title="${escapeHtml(String(title))}"
+              role="button"
+              tabindex="0"
+            >
+              <div class="record-row-main">
+                <div class="record-row-title">${escapeHtml(title)}</div>
+                ${
+                  summaryParts.length
+                    ? `<div class="record-row-summary">${escapeHtml(summaryParts.join(" • "))}</div>`
+                    : ""
+                }
+              </div>
+              <div class="record-row-side">
+                ${
+                  status
+                    ? `<span class="${escapeHtml(statusBadgeClass(status))}">${escapeHtml(
+                        String(status).replaceAll("_", " ")
+                      )}</span>`
+                    : `<span class="row-pill muted">Recorded</span>`
+                }
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
     </div>
   `;
 }
