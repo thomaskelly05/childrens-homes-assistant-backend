@@ -4,57 +4,10 @@ import {
   buildImageOrInitials,
   getDisplayName,
 } from "../core/utils.js";
-
-const SECTION_META = {
-  workspace: {
-    title: "Workspace",
-    subtitle: "Live operational view across care, risk, appointments and follow-up.",
-  },
-  overview: {
-    title: "Overview",
-    subtitle: "What matters today.",
-  },
-  profile: {
-    title: "Profile",
-    subtitle: "Identity, needs, context and what matters.",
-  },
-  timeline: {
-    title: "Timeline",
-    subtitle: "Chronology, linked records and significant events.",
-  },
-  handover: {
-    title: "Handover",
-    subtitle: "Shift continuity, priorities and key context.",
-  },
-  health: {
-    title: "Health",
-    subtitle: "Health events, medication and appointments.",
-  },
-  education: {
-    title: "Education",
-    subtitle: "Attendance, engagement, progress and support.",
-  },
-  family: {
-    title: "Family",
-    subtitle: "Contacts, family time, concerns and follow-up.",
-  },
-  calendar: {
-    title: "Calendar",
-    subtitle: "Appointments grouped by date.",
-  },
-  readiness: {
-    title: "Readiness",
-    subtitle: "Compliance, documents, tasks and inspection readiness.",
-  },
-  manager: {
-    title: "Manager review",
-    subtitle: "Oversight, review-needed items and management actions.",
-  },
-  reports: {
-    title: "Reports",
-    subtitle: "Monthly reviews, AI reports, handovers and evidence.",
-  },
-};
+import {
+  SECTION_TITLES,
+  SECTION_SUBTITLES,
+} from "../core/config.js";
 
 function qs(id) {
   return document.getElementById(id);
@@ -125,10 +78,13 @@ export function updateYoungPersonChrome(person = {}) {
 }
 
 export function updateSectionChrome(section = "workspace") {
-  const meta = SECTION_META[section] || SECTION_META.workspace;
+  const title = SECTION_TITLES?.[section] || "Today’s workspace";
+  const subtitle =
+    SECTION_SUBTITLES?.[section] ||
+    "A calm space to record, reflect and respond to what matters today.";
 
-  setText("pageTitle", meta.title, "Workspace");
-  setText("pageSubtitle", meta.subtitle, "What matters today");
+  setText("pageTitle", title, "Today’s workspace");
+  setText("pageSubtitle", subtitle, "What matters today");
 
   document.querySelectorAll("[data-nav-section]").forEach((button) => {
     const isActive = button.dataset.navSection === section;
@@ -178,22 +134,17 @@ export function bindShellChrome() {
   qs("mobileHomeBtn")?.addEventListener("click", goHomeToSelector);
   qs("changePersonBtn")?.addEventListener("click", goHomeToSelector);
   qs("logoBtn")?.addEventListener("click", goHomeToSelector);
+  qs("homeBtn")?.addEventListener("click", goHomeToSelector);
 
   qs("profileOpenBtn")?.addEventListener("click", async () => {
     const { loadSection } = await import("./nav.js");
     await loadSection("profile");
   });
 
-  document.querySelectorAll(".mobile-tab-btn[data-nav-section]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      await openSectionFromButton(button);
-    });
-  });
-
-  document.querySelectorAll("#mobileNavContent [data-nav-section]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      await openSectionFromButton(button);
-    });
+  document.addEventListener("click", async (event) => {
+    const navButton = event.target.closest(".mobile-tab-btn[data-nav-section], #mobileNavContent [data-nav-section]");
+    if (!navButton) return;
+    await openSectionFromButton(navButton);
   });
 }
 
