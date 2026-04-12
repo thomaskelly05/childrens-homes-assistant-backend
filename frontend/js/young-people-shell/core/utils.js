@@ -22,6 +22,7 @@ export function setYoungPersonIdInUrl(id) {
 
   if (id) {
     url.searchParams.set("id", String(id));
+    url.searchParams.delete("young_person_id");
   } else {
     url.searchParams.delete("id");
     url.searchParams.delete("young_person_id");
@@ -92,63 +93,55 @@ export function toDateTimeLocalValue(value) {
 export function initialsFromName(name) {
   if (!name) return "YP";
 
-  const parts = String(name).trim().split(/\s+/).slice(0, 2);
+  const parts = String(name)
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2);
+
   return parts.map((p) => p[0]?.toUpperCase() || "").join("") || "YP";
 }
 
 export function getDisplayName(item = {}) {
   return (
-    [item.first_name, item.last_name].filter(Boolean).join(" ").trim() ||
     item.preferred_name ||
+    [item.first_name, item.last_name].filter(Boolean).join(" ").trim() ||
+    item.full_name ||
     item.name ||
     "Young person"
   );
 }
 
-export function normaliseImagePath(raw) {
-  if (!raw) return "";
-
-  const value = String(raw).trim();
+export function normaliseImagePath(value) {
   if (!value) return "";
 
+  const text = String(value).trim();
+  if (!text) return "";
+
   if (
-    value.startsWith("http://") ||
-    value.startsWith("https://") ||
-    value.startsWith("data:") ||
-    value.startsWith("blob:")
+    text.startsWith("http://") ||
+    text.startsWith("https://") ||
+    text.startsWith("data:") ||
+    text.startsWith("blob:")
   ) {
-    return value;
+    return text;
   }
 
-  if (value.startsWith("/")) {
-    return value;
+  if (text.startsWith("/")) {
+    return text;
   }
 
-  if (value.startsWith("uploads/")) {
-    return `/${value}`;
-  }
-
-  if (value.startsWith("media/")) {
-    return `/${value}`;
-  }
-
-  if (/\.(png|jpg|jpeg|gif|webp|svg)$/i.test(value)) {
-    return `/uploads/young-people/${value}`;
-  }
-
-  return value;
+  return `/${text.replace(/^\.?\//, "")}`;
 }
 
 export function getProfileImage(item = {}) {
-  const raw =
+  return normaliseImagePath(
     item.profile_photo_url ||
-    item.profile_image_url ||
-    item.photo_url ||
-    item.image_url ||
-    item.avatar_url ||
-    "";
-
-  return normaliseImagePath(raw);
+      item.profile_image_url ||
+      item.photo_url ||
+      item.image_url ||
+      item.avatar_url ||
+      ""
+  );
 }
 
 export function buildImageOrInitials(
@@ -158,7 +151,6 @@ export function buildImageOrInitials(
 ) {
   const image = getProfileImage(item);
   const name = getDisplayName(item);
-  const initials = initialsFromName(name);
 
   if (image) {
     return `
@@ -167,14 +159,13 @@ export function buildImageOrInitials(
         src="${escapeHtml(image)}"
         alt="${escapeHtml(name)}"
         loading="lazy"
-        onerror="this.onerror=null;this.replaceWith(Object.assign(document.createElement('div'),{className:'${escapeHtml(
-          fallbackClass
-        )}',textContent:'${escapeHtml(initials)}'}));"
+        onerror="this.style.display='none'; this.nextElementSibling && this.nextElementSibling.classList.remove('hidden');"
       />
+      <div class="${escapeHtml(`${fallbackClass} hidden`)}">${escapeHtml(initialsFromName(name))}</div>
     `;
   }
 
-  return `<div class="${escapeHtml(fallbackClass)}">${escapeHtml(initials)}</div>`;
+  return `<div class="${escapeHtml(fallbackClass)}">${escapeHtml(initialsFromName(name))}</div>`;
 }
 
 export function renderAvatar(
@@ -190,6 +181,9 @@ export function renderAvatar(
 // ========================
 
 export function safeJsonParse(value, fallback = null) {
+  if (value === null || value === undefined || value === "") return fallback;
+  if (typeof value === "object") return value;
+
   try {
     return JSON.parse(value);
   } catch {
