@@ -8,12 +8,14 @@
     name="description"
     content="IndiCare OS young people workspace for clear, child-centred recording, reflection, planning and support."
   />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="theme-color" content="#f3f6fb" />
   <link rel="stylesheet" href="/css/young-people-shell.css" />
 </head>
 <body>
   <div
     id="app"
-    class="app-shell"
+    class="app-shell theme-system"
     data-assistant-scope-type="young_person"
     data-young-person-id=""
     data-home-id=""
@@ -125,6 +127,51 @@
                 <p>Loading young people…</p>
               </div>
             </div>
+
+            <!-- Example populated state -->
+            <div class="selector-grid hidden" aria-hidden="true">
+              <button class="selector-card selector-card--photo" type="button">
+                <div class="selector-card-media">
+                  <div class="selector-card-photo-fallback" aria-hidden="true">J</div>
+                </div>
+
+                <div class="selector-card-body">
+                  <h3>Jamie</h3>
+                  <p>Preferred: Jamie • Maple House</p>
+
+                  <div class="selector-card-meta">
+                    <span class="selector-pill">Active</span>
+                    <span class="selector-pill">1 urgent</span>
+                    <span class="selector-pill">Education today</span>
+                  </div>
+                </div>
+
+                <div class="selector-card-actions">
+                  <span class="secondary-btn">Open workspace</span>
+                </div>
+              </button>
+
+              <button class="selector-card selector-card--photo" type="button">
+                <div class="selector-card-media">
+                  <div class="selector-card-photo-fallback" aria-hidden="true">A</div>
+                </div>
+
+                <div class="selector-card-body">
+                  <h3>Alex</h3>
+                  <p>Preferred: Alex • Cedar House</p>
+
+                  <div class="selector-card-meta">
+                    <span class="selector-pill">Active</span>
+                    <span class="selector-pill">Review due</span>
+                    <span class="selector-pill">2 actions</span>
+                  </div>
+                </div>
+
+                <div class="selector-card-actions">
+                  <span class="secondary-btn">Open workspace</span>
+                </div>
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -154,6 +201,7 @@
                 <div class="workspace-sidebar-meta-row">
                   <span class="meta-chip">Active</span>
                   <span class="meta-chip meta-chip--soft">Medium support</span>
+                  <span class="meta-chip meta-chip--warning">Review due</span>
                 </div>
               </div>
 
@@ -333,8 +381,9 @@
 
                   <div class="workspace-header-meta">
                     <span class="meta-chip">Active</span>
-                    <span class="meta-chip meta-chip--soft">1 urgent</span>
+                    <span class="meta-chip meta-chip--danger">1 urgent</span>
                     <span class="meta-chip meta-chip--soft">1 upcoming</span>
+                    <span class="meta-chip meta-chip--warning">Review due</span>
                   </div>
 
                   <div class="workspace-person-actions">
@@ -359,6 +408,28 @@
                     <button id="changePersonBtn" class="ghost-btn" type="button">
                       Change young person
                     </button>
+                  </div>
+
+                  <div class="workspace-summary-strip" aria-label="Current summary">
+                    <div class="workspace-summary-item">
+                      <span class="workspace-summary-label">Today</span>
+                      <strong class="workspace-summary-value">1 urgent item</strong>
+                    </div>
+
+                    <div class="workspace-summary-item">
+                      <span class="workspace-summary-label">Next event</span>
+                      <strong class="workspace-summary-value">CAMHS • 10:30 tomorrow</strong>
+                    </div>
+
+                    <div class="workspace-summary-item">
+                      <span class="workspace-summary-label">Last record</span>
+                      <strong class="workspace-summary-value">18:14 today</strong>
+                    </div>
+
+                    <div class="workspace-summary-item">
+                      <span class="workspace-summary-label">Open actions</span>
+                      <strong class="workspace-summary-value">2 awaiting follow-up</strong>
+                    </div>
                   </div>
                 </div>
               </section>
@@ -479,7 +550,7 @@
                     <div class="overview-grid">
                       <section class="overview-main">
                         <div class="overview-stats-grid">
-                          <article class="overview-stat-card">
+                          <article class="overview-stat-card overview-stat-card--danger">
                             <span class="overview-stat-label">Urgent</span>
                             <strong class="overview-stat-value">1</strong>
                             <span class="overview-stat-note">Items needing prompt attention</span>
@@ -491,13 +562,13 @@
                             <span class="overview-stat-note">Recently added records</span>
                           </article>
 
-                          <article class="overview-stat-card">
+                          <article class="overview-stat-card overview-stat-card--success">
                             <span class="overview-stat-label">Today</span>
                             <strong class="overview-stat-value">0</strong>
                             <span class="overview-stat-note">Records or updates today</span>
                           </article>
 
-                          <article class="overview-stat-card">
+                          <article class="overview-stat-card overview-stat-card--warning">
                             <span class="overview-stat-label">Upcoming</span>
                             <strong class="overview-stat-value">1</strong>
                             <span class="overview-stat-note">Planned appointments or actions</span>
@@ -511,29 +582,54 @@
                           </div>
 
                           <div class="record-list">
-                            <article class="record-row">
+                            <article class="record-row record-row--incident">
                               <div class="record-row-main">
                                 <div class="record-row-title">Important event added</div>
                                 <div class="record-row-summary">
                                   Jamie became distressed when the plan for the evening changed unexpectedly.
                                 </div>
-                                <div class="record-row-meta">Today • 18:14 • Important event</div>
+                                <div class="record-row-meta">
+                                  <span>Today</span>
+                                  <span>18:14</span>
+                                  <span>Important event</span>
+                                </div>
                               </div>
                               <div class="record-row-side">
                                 <span class="row-pill warning">Needs review</span>
                               </div>
                             </article>
 
-                            <article class="record-row">
+                            <article class="record-row record-row--daily">
                               <div class="record-row-main">
                                 <div class="record-row-title">Daily note updated</div>
                                 <div class="record-row-summary">
                                   Clearer engagement in the afternoon when routines were predictable and adults stayed consistent.
                                 </div>
-                                <div class="record-row-meta">Today • 15:40 • Daily note</div>
+                                <div class="record-row-meta">
+                                  <span>Today</span>
+                                  <span>15:40</span>
+                                  <span>Daily note</span>
+                                </div>
                               </div>
                               <div class="record-row-side">
                                 <span class="row-pill muted">Recorded</span>
+                              </div>
+                            </article>
+
+                            <article class="record-row record-row--health">
+                              <div class="record-row-main">
+                                <div class="record-row-title">Health appointment booked</div>
+                                <div class="record-row-summary">
+                                  CAMHS review confirmed for tomorrow morning with transport arrangements pending.
+                                </div>
+                                <div class="record-row-meta">
+                                  <span>Yesterday</span>
+                                  <span>11:05</span>
+                                  <span>Health</span>
+                                </div>
+                              </div>
+                              <div class="record-row-side">
+                                <span class="row-pill success">Booked</span>
                               </div>
                             </article>
                           </div>
@@ -572,7 +668,35 @@
                             <div class="support-pattern-item">Advance notice helped with transitions.</div>
                           </div>
                         </section>
+
+                        <section class="overview-side-card">
+                          <div class="overview-section-head">
+                            <h3>Quick follow-up</h3>
+                            <p>Helpful next actions for this workspace.</p>
+                          </div>
+
+                          <div class="priority-list">
+                            <article class="priority-item">
+                              <strong>Open profile and review communication needs</strong>
+                              <p>Check whether the current support wording still reflects what helps most in moments of change.</p>
+                            </article>
+                          </div>
+                        </section>
                       </aside>
+                    </div>
+                  </section>
+
+                  <!-- Example richer empty state -->
+                  <section class="overview-panel hidden" aria-hidden="true">
+                    <div class="empty-state">
+                      <div class="empty-state-inner">
+                        <div class="empty-state-icon" aria-hidden="true">○</div>
+                        <h3>No recent family records</h3>
+                        <p>Add a family contact record to capture presentation, themes and follow-up.</p>
+                        <div class="empty-state-actions">
+                          <button class="primary-btn" type="button">Add family contact</button>
+                        </div>
+                      </div>
                     </div>
                   </section>
                 </div>
@@ -657,7 +781,11 @@
 
         <div id="fullscreenPanelBody" class="fullscreen-panel-body">
           <div class="empty-state">
-            <p>Select something to open it here.</p>
+            <div class="empty-state-inner">
+              <div class="empty-state-icon" aria-hidden="true">○</div>
+              <h3>Nothing open yet</h3>
+              <p>Select something from the workspace to open it here.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -766,7 +894,11 @@
 
         <div id="suggestionsPanelBody" class="fullscreen-panel-body">
           <div class="empty-state">
-            <p>No suggestions yet.</p>
+            <div class="empty-state-inner">
+              <div class="empty-state-icon" aria-hidden="true">○</div>
+              <h3>No suggestions yet</h3>
+              <p>Suggestions will appear here when linked follow-up is available.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -870,7 +1002,11 @@
 
         <div id="recordDrawerBody" class="record-drawer-body">
           <div class="empty-state">
-            <p>Select a record to view it here.</p>
+            <div class="empty-state-inner">
+              <div class="empty-state-icon" aria-hidden="true">○</div>
+              <h3>Select a record</h3>
+              <p>Choose a record from the workspace to view its detail here.</p>
+            </div>
           </div>
         </div>
       </div>
