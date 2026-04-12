@@ -8,6 +8,7 @@ import {
   getDisplayName,
   formatDate,
 } from "../core/utils.js";
+import { refreshShellChrome } from "./shell-ui.js";
 
 function getSelectorList() {
   return els.youngPeopleList || document.getElementById("youngPeopleList");
@@ -19,6 +20,7 @@ function getSelectorEmpty() {
 
 function renderYoungPersonCard(item = {}) {
   const displayName = getDisplayName(item);
+
   const subtitle = [
     item.preferred_name ? `Preferred: ${item.preferred_name}` : "",
     item.placement_status || "",
@@ -151,6 +153,8 @@ export function goBackToSelector() {
 
   els.workspaceShell?.classList.add("hidden");
   els.selectorScreen?.classList.remove("hidden");
+
+  refreshShellChrome();
 }
 
 export async function openYoungPerson(id, options = {}) {
@@ -183,6 +187,8 @@ export async function openYoungPerson(id, options = {}) {
 
   els.selectorScreen?.classList.add("hidden");
   els.workspaceShell?.classList.remove("hidden");
+
+  refreshShellChrome();
 
   if (!options.skipInitialSectionLoad) {
     const { loadSection } = await import("./nav.js");
