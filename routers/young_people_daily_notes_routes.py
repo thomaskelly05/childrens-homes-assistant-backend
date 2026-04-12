@@ -22,6 +22,10 @@ def _safe_int(value: Any) -> int | None:
         return None
 
 
+def _current_user_id(current_user: dict[str, Any]) -> int | None:
+    return _safe_int(current_user.get("user_id") or current_user.get("id"))
+
+
 def _user_home_id(current_user: dict[str, Any]) -> int | None:
     return _safe_int(current_user.get("home_id"))
 
@@ -215,7 +219,7 @@ def create_daily_note(
         conn,
         young_person_id=young_person_id,
         payload=data,
-        author_id=_safe_int(current_user.get("user_id")),
+        author_id=_current_user_id(current_user),
         linking_service=YoungPeopleLinkingService,
     )
 
@@ -249,7 +253,7 @@ def submit_daily_note(
     return YoungPersonDailyNotesService.submit_daily_note(
         conn,
         daily_note_id=daily_note_id,
-        actor_user_id=_safe_int(current_user.get("user_id")),
+        actor_user_id=_current_user_id(current_user),
         linking_service=YoungPeopleLinkingService,
     )
 
@@ -264,7 +268,7 @@ def approve_daily_note(
     _assert_can_review(current_user)
     _load_and_check_daily_note(conn, daily_note_id, current_user)
 
-    approved_by = payload.approved_by or _safe_int(current_user.get("user_id"))
+    approved_by = payload.approved_by or _current_user_id(current_user)
 
     return YoungPersonDailyNotesService.approve_daily_note(
         conn,
@@ -288,7 +292,7 @@ def return_daily_note(
     return YoungPersonDailyNotesService.return_daily_note(
         conn,
         daily_note_id=daily_note_id,
-        actor_user_id=_safe_int(current_user.get("user_id")),
+        actor_user_id=_current_user_id(current_user),
         review_note=payload.review_note,
         linking_service=YoungPeopleLinkingService,
     )
@@ -306,6 +310,6 @@ def archive_daily_note(
     return YoungPersonDailyNotesService.archive_daily_note(
         conn,
         daily_note_id=daily_note_id,
-        actor_user_id=_safe_int(current_user.get("user_id")),
+        actor_user_id=_current_user_id(current_user),
         linking_service=YoungPeopleLinkingService,
     )
