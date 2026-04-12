@@ -68,7 +68,11 @@
     </header>
 
     <main class="shell-main" id="mainContent">
-      <section id="selectorScreen" class="selector-screen" aria-labelledby="selectorHeading">
+      <section
+        id="selectorScreen"
+        class="selector-screen hidden"
+        aria-labelledby="selectorHeading"
+      >
         <div class="selector-screen-inner">
           <div class="selector-page-head">
             <div>
@@ -120,16 +124,16 @@
 
       <section
         id="workspaceScreen"
-        class="workspace-screen hidden"
+        class="workspace-screen"
         aria-labelledby="pageTitle"
       >
         <section id="workspaceShell" class="workspace-screen-inner">
           <aside class="workspace-sidebar desktop-only" aria-label="Workspace navigation">
             <div class="workspace-sidebar-profile">
-              <div class="workspace-sidebar-avatar" id="personAvatar" aria-hidden="true">YP</div>
+              <div class="workspace-sidebar-avatar" id="personAvatar" aria-hidden="true">J</div>
               <div class="workspace-sidebar-profile-copy">
-                <h2 id="personName">Young person</h2>
-                <p id="personMeta">Workspace overview</p>
+                <h2 id="personName">Jamie</h2>
+                <p id="personMeta">Preferred: Jamie • active • Risk: medium</p>
               </div>
             </div>
 
@@ -145,16 +149,76 @@
               id="desktopNav"
               class="workspace-nav"
               aria-label="Workspace sections"
-            ></nav>
+            >
+              <div class="nav-section">
+                <div class="nav-section-title">Today</div>
+                <div class="nav-section-items">
+                  <button class="nav-btn active" type="button" data-view="workspace">
+                    <span class="nav-btn-label">Today’s workspace</span>
+                  </button>
+                  <button class="nav-btn" type="button" data-view="matters-now">
+                    <span class="nav-btn-label">What matters today</span>
+                  </button>
+                  <button class="nav-btn" type="button" data-view="chronology">
+                    <span class="nav-btn-label">Chronology and events</span>
+                  </button>
+                  <button class="nav-btn" type="button" data-view="handover">
+                    <span class="nav-btn-label">Handover</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="nav-section">
+                <div class="nav-section-title">Identity and daily life</div>
+                <div class="nav-section-items">
+                  <button class="nav-btn" type="button" data-view="about">
+                    <span class="nav-btn-label">About this young person</span>
+                  </button>
+                  <button class="nav-btn" type="button" data-view="family">
+                    <span class="nav-btn-label">Family and relationships</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="nav-section">
+                <div class="nav-section-title">Health, learning and wellbeing</div>
+                <div class="nav-section-items">
+                  <button class="nav-btn" type="button" data-view="health">
+                    <span class="nav-btn-label">Health and wellbeing</span>
+                  </button>
+                  <button class="nav-btn" type="button" data-view="education">
+                    <span class="nav-btn-label">Learning and education</span>
+                  </button>
+                  <button class="nav-btn" type="button" data-view="appointments">
+                    <span class="nav-btn-label">Appointments and key dates</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="nav-section">
+                <div class="nav-section-title">Safety, planning and action</div>
+                <div class="nav-section-items">
+                  <button class="nav-btn" type="button" data-view="actions">
+                    <span class="nav-btn-label">Actions and readiness</span>
+                  </button>
+                  <button class="nav-btn" type="button" data-view="leadership">
+                    <span class="nav-btn-label">Leadership and review</span>
+                  </button>
+                  <button class="nav-btn" type="button" data-view="packs">
+                    <span class="nav-btn-label">Reports and review packs</span>
+                  </button>
+                </div>
+              </div>
+            </nav>
           </aside>
 
           <section class="workspace-stage">
             <div class="workspace-stage-top">
               <div class="workspace-stage-mobile-person mobile-only">
-                <div class="workspace-stage-mobile-avatar" id="mobilePersonAvatar" aria-hidden="true">YP</div>
+                <div class="workspace-stage-mobile-avatar" id="mobilePersonAvatar" aria-hidden="true">J</div>
                 <div class="workspace-stage-mobile-copy">
-                  <h2 id="mobilePersonName">Young person</h2>
-                  <p id="mobilePersonMeta">Workspace overview</p>
+                  <h2 id="mobilePersonName">Jamie</h2>
+                  <p id="mobilePersonMeta">Preferred: Jamie • active • Risk: medium</p>
                 </div>
                 <button id="mobileHomeBtn" class="ghost-btn" type="button">
                   Home
@@ -185,12 +249,12 @@
                       class="profile-snapshot-photo-wrap"
                       aria-label="Young person photo"
                     >
-                      <div class="profile-photo-fallback" aria-hidden="true">YP</div>
+                      <div class="profile-photo-fallback" aria-hidden="true">J</div>
                     </div>
 
                     <div class="workspace-person-copy">
-                      <h3 id="profileSnapshotName">Young person</h3>
-                      <p id="profileSnapshotMeta">Profile summary</p>
+                      <h3 id="profileSnapshotName">Jamie</h3>
+                      <p id="profileSnapshotMeta">Preferred: Jamie • active • Risk: medium</p>
                     </div>
                   </div>
 
@@ -336,13 +400,13 @@
                     <div class="overview-stats-grid">
                       <article class="overview-stat-card">
                         <span class="overview-stat-label">Urgent</span>
-                        <strong class="overview-stat-value">0</strong>
+                        <strong class="overview-stat-value">1</strong>
                         <span class="overview-stat-note">Items needing prompt attention</span>
                       </article>
 
                       <article class="overview-stat-card">
                         <span class="overview-stat-label">Recent</span>
-                        <strong class="overview-stat-value">0</strong>
+                        <strong class="overview-stat-value">6</strong>
                         <span class="overview-stat-note">Recently added records</span>
                       </article>
 
@@ -354,18 +418,51 @@
 
                       <article class="overview-stat-card">
                         <span class="overview-stat-label">Upcoming</span>
-                        <strong class="overview-stat-value">0</strong>
+                        <strong class="overview-stat-value">1</strong>
                         <span class="overview-stat-note">Planned appointments or actions</span>
                       </article>
                     </div>
 
-                    <div class="overview-placeholder">
-                      <div class="loading-state">
+                    <div class="record-list">
+                      <article class="record-row">
                         <div>
-                          <div class="spinner" aria-hidden="true"></div>
-                          <p>Loading workspace…</p>
+                          <div class="record-row-title">Urgent incidents</div>
+                          <div class="record-row-summary">High or critical incidents needing review.</div>
                         </div>
-                      </div>
+                        <div class="record-row-meta">1 open</div>
+                      </article>
+
+                      <article class="record-row">
+                        <div>
+                          <div class="record-row-title">Open appointments</div>
+                          <div class="record-row-summary">Upcoming appointments and visits.</div>
+                        </div>
+                        <div class="record-row-meta">0 open</div>
+                      </article>
+
+                      <article class="record-row">
+                        <div>
+                          <div class="record-row-title">Active plans</div>
+                          <div class="record-row-summary">Support plans currently in place.</div>
+                        </div>
+                        <div class="record-row-meta">1 active</div>
+                      </article>
+
+                      <article class="record-row">
+                        <div>
+                          <div class="record-row-title">Compliance issues</div>
+                          <div class="record-row-summary">Overdue or escalated items needing attention.</div>
+                        </div>
+                        <div class="record-row-meta">0 open</div>
+                      </article>
+
+                      <article class="record-row">
+                        <div>
+                          <div class="record-row-title">Open tasks</div>
+                          <div class="record-row-summary">Follow-up actions still outstanding.</div>
+                        </div>
+                        <div class="record-row-meta">0 open</div>
+                      </article>
                     </div>
                   </section>
                 </div>
@@ -399,7 +496,25 @@
         </button>
       </div>
 
-      <div id="mobileNavContent" class="mobile-nav-content"></div>
+      <div id="mobileNavContent" class="mobile-nav-content">
+        <div class="nav-section">
+          <div class="nav-section-title">Today</div>
+          <div class="nav-section-items">
+            <button class="nav-btn active" type="button" data-view="workspace">
+              <span class="nav-btn-label">Today’s workspace</span>
+            </button>
+            <button class="nav-btn" type="button" data-view="matters-now">
+              <span class="nav-btn-label">What matters today</span>
+            </button>
+            <button class="nav-btn" type="button" data-view="chronology">
+              <span class="nav-btn-label">Chronology and events</span>
+            </button>
+            <button class="nav-btn" type="button" data-view="handover">
+              <span class="nav-btn-label">Handover</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </aside>
 
     <nav
