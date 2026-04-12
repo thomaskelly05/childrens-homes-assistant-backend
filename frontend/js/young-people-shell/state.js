@@ -5,9 +5,10 @@ export const state = {
   youngPeople: [],
   youngPeopleFilter: "",
 
-  // Current shell section
+  // Current shell section / view
   currentSection: "workspace",
   activeSection: "workspace",
+  currentView: "workspace",
 
   // General UI state
   loading: false,
@@ -32,6 +33,10 @@ export const state = {
   composerMeta: {},
   autosaveTimer: null,
 
+  // Active record / drawer context
+  activeRecordType: null,
+  activeRecordItem: null,
+
   // Runtime / context state
   homeId: null,
   currentUser: null,
@@ -45,4 +50,13 @@ export const state = {
   assistantSources: [],
   assistantRuntime: null,
   assistantExplainability: null,
+  assistantSending: false,
+  assistantMeta: {
+    sources: [],
+    runtime: {},
+    explainability: {},
+    assistant_scope: {},
+    assistant_context: {},
+    suggested_actions: [],
+  },
 };
