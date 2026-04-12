@@ -60,3 +60,6 @@ export const state = {
     suggested_actions: [],
   },
 };
+  // Request optimisation state
+  resourceCache: {},
+  requestCooldowns: {},
