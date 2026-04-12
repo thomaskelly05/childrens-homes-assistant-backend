@@ -106,12 +106,15 @@ class YoungPersonUpdatePayload(BaseModel):
 class CommunicationProfilePayload(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
+    neurodiversity_summary: str | None = None
     communication_style: str | None = None
     sensory_profile: str | None = None
     processing_needs: str | None = None
     signs_of_distress: str | None = None
     what_helps: str | None = None
     what_to_avoid: str | None = None
+    routines_and_predictability: str | None = None
+    visual_support_needs: str | None = None
 
 
 class IdentityProfilePayload(BaseModel):
@@ -124,6 +127,37 @@ class IdentityProfilePayload(BaseModel):
     interests: str | None = None
     strengths_summary: str | None = None
     what_matters_to_me: str | None = None
+    important_dates: str | None = None
+
+
+class EducationProfilePayload(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    school_name: str | None = None
+    year_group: str | None = None
+    education_status: str | None = None
+    sen_status: str | None = None
+    ehcp_details: str | None = None
+    designated_teacher: str | None = None
+    attendance_baseline: float | None = None
+    pep_status: str | None = None
+    support_summary: str | None = None
+
+
+class HealthProfilePayload(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    gp_name: str | None = None
+    gp_contact: str | None = None
+    dentist_name: str | None = None
+    dentist_contact: str | None = None
+    optician_name: str | None = None
+    optician_contact: str | None = None
+    allergies: str | None = None
+    diagnoses: str | None = None
+    mental_health_summary: str | None = None
+    medication_summary: str | None = None
+    consent_notes: str | None = None
 
 
 class LegalStatusPayload(BaseModel):
@@ -131,11 +165,33 @@ class LegalStatusPayload(BaseModel):
 
     legal_status: str | None = None
     order_type: str | None = None
+    order_details: str | None = None
     restrictions_text: str | None = None
     delegated_authority_details: str | None = None
     consent_arrangements: str | None = None
     effective_from: str | None = None
     effective_to: str | None = None
+    is_current: bool | None = True
+    created_by: int | None = None
+
+
+class FormulationPayload(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    presenting_needs: str | None = None
+    developmental_context: str | None = None
+    trauma_context: str | None = None
+    neurodevelopmental_context: str | None = None
+    relational_context: str | None = None
+    meaning_of_behaviour: str | None = None
+    known_triggers: str | None = None
+    early_signs_of_distress: str | None = None
+    protective_factors: str | None = None
+    what_helps: str | None = None
+    what_adults_should_avoid: str | None = None
+    regulation_strategies: str | None = None
+    child_voice_summary: str | None = None
+    review_date: str | None = None
     is_current: bool | None = True
     created_by: int | None = None
 
@@ -448,6 +504,24 @@ def create_young_person_alert(
         raise HTTPException(status_code=500, detail=f"Failed to create alert: {str(e)}")
 
 
+@router.get("/{young_person_id}/communication-profile")
+def get_communication_profile_route(
+    young_person_id: int,
+    current_user=Depends(get_current_user),
+):
+    try:
+        _load_and_check_young_person(young_person_id, current_user)
+        row = YoungPersonService.get_section(young_person_id, "communication_profile")
+        return {
+            "ok": True,
+            "communication_profile": row or {},
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load communication profile: {str(e)}")
+
+
 @router.put("/{young_person_id}/communication-profile")
 def upsert_communication_profile_route(
     young_person_id: int,
@@ -473,6 +547,24 @@ def upsert_communication_profile_route(
         raise HTTPException(status_code=500, detail=f"Failed to save communication profile: {str(e)}")
 
 
+@router.get("/{young_person_id}/identity-profile")
+def get_identity_profile_route(
+    young_person_id: int,
+    current_user=Depends(get_current_user),
+):
+    try:
+        _load_and_check_young_person(young_person_id, current_user)
+        row = YoungPersonService.get_section(young_person_id, "identity_profile")
+        return {
+            "ok": True,
+            "identity_profile": row or {},
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load identity profile: {str(e)}")
+
+
 @router.put("/{young_person_id}/identity-profile")
 def upsert_identity_profile_route(
     young_person_id: int,
@@ -496,6 +588,110 @@ def upsert_identity_profile_route(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save identity profile: {str(e)}")
+
+
+@router.get("/{young_person_id}/education-profile")
+def get_education_profile_route(
+    young_person_id: int,
+    current_user=Depends(get_current_user),
+):
+    try:
+        _load_and_check_young_person(young_person_id, current_user)
+        row = YoungPersonService.get_section(young_person_id, "education_profile")
+        return {
+            "ok": True,
+            "education_profile": row or {},
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load education profile: {str(e)}")
+
+
+@router.put("/{young_person_id}/education-profile")
+def upsert_education_profile_route(
+    young_person_id: int,
+    payload: EducationProfilePayload,
+    current_user=Depends(get_current_user),
+):
+    _assert_can_edit(current_user)
+    _load_and_check_young_person(young_person_id, current_user)
+
+    try:
+        row = YoungPersonService.upsert_section(
+            young_person_id=young_person_id,
+            section="education_profile",
+            data=payload.model_dump(exclude_none=True),
+        )
+        return {
+            "ok": True,
+            "education_profile": row,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save education profile: {str(e)}")
+
+
+@router.get("/{young_person_id}/health-profile")
+def get_health_profile_route(
+    young_person_id: int,
+    current_user=Depends(get_current_user),
+):
+    try:
+        _load_and_check_young_person(young_person_id, current_user)
+        row = YoungPersonService.get_section(young_person_id, "health_profile")
+        return {
+            "ok": True,
+            "health_profile": row or {},
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load health profile: {str(e)}")
+
+
+@router.put("/{young_person_id}/health-profile")
+def upsert_health_profile_route(
+    young_person_id: int,
+    payload: HealthProfilePayload,
+    current_user=Depends(get_current_user),
+):
+    _assert_can_edit(current_user)
+    _load_and_check_young_person(young_person_id, current_user)
+
+    try:
+        row = YoungPersonService.upsert_section(
+            young_person_id=young_person_id,
+            section="health_profile",
+            data=payload.model_dump(exclude_none=True),
+        )
+        return {
+            "ok": True,
+            "health_profile": row,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save health profile: {str(e)}")
+
+
+@router.get("/{young_person_id}/legal-status")
+def get_legal_status_route(
+    young_person_id: int,
+    current_user=Depends(get_current_user),
+):
+    try:
+        _load_and_check_young_person(young_person_id, current_user)
+        row = YoungPersonService.get_section(young_person_id, "legal_status")
+        return {
+            "ok": True,
+            "legal_status": row or {},
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load legal status: {str(e)}")
 
 
 @router.put("/{young_person_id}/legal-status")
@@ -526,3 +722,51 @@ def upsert_legal_status_route(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save legal status: {str(e)}")
+
+
+@router.get("/{young_person_id}/formulations")
+def get_formulation_route(
+    young_person_id: int,
+    current_user=Depends(get_current_user),
+):
+    try:
+        _load_and_check_young_person(young_person_id, current_user)
+        row = YoungPersonService.get_section(young_person_id, "formulation")
+        return {
+            "ok": True,
+            "formulation": row or {},
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load formulation: {str(e)}")
+
+
+@router.put("/{young_person_id}/formulations")
+def upsert_formulation_route(
+    young_person_id: int,
+    payload: FormulationPayload,
+    current_user=Depends(get_current_user),
+):
+    _assert_can_edit(current_user)
+    _load_and_check_young_person(young_person_id, current_user)
+
+    try:
+        actor_user_id = _safe_int(current_user.get("user_id"))
+        data = payload.model_dump(exclude_none=True)
+        if not data.get("created_by"):
+            data["created_by"] = actor_user_id
+
+        row = YoungPersonService.upsert_section(
+            young_person_id=young_person_id,
+            section="formulation",
+            data=data,
+        )
+        return {
+            "ok": True,
+            "formulation": row,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save formulation: {str(e)}")
