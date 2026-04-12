@@ -111,37 +111,12 @@ export function getDisplayName(item = {}) {
   );
 }
 
-export function normaliseImagePath(value) {
-  if (!value) return "";
-
-  const text = String(value).trim();
-  if (!text) return "";
-
-  if (
-    text.startsWith("http://") ||
-    text.startsWith("https://") ||
-    text.startsWith("data:") ||
-    text.startsWith("blob:")
-  ) {
-    return text;
-  }
-
-  if (text.startsWith("/")) {
-    return text;
-  }
-
-  return `/${text.replace(/^\.?\//, "")}`;
+export function normaliseImagePath() {
+  return "";
 }
 
-export function getProfileImage(item = {}) {
-  return normaliseImagePath(
-    item.profile_photo_url ||
-      item.profile_image_url ||
-      item.photo_url ||
-      item.image_url ||
-      item.avatar_url ||
-      ""
-  );
+export function getProfileImage() {
+  return "";
 }
 
 export function buildImageOrInitials(
@@ -149,22 +124,7 @@ export function buildImageOrInitials(
   imageClass = "avatar",
   fallbackClass = "avatar avatar-fallback"
 ) {
-  const image = getProfileImage(item);
   const name = getDisplayName(item);
-
-  if (image) {
-    return `
-      <img
-        class="${escapeHtml(imageClass)}"
-        src="${escapeHtml(image)}"
-        alt="${escapeHtml(name)}"
-        loading="lazy"
-        onerror="this.style.display='none'; this.nextElementSibling && this.nextElementSibling.classList.remove('hidden');"
-      />
-      <div class="${escapeHtml(`${fallbackClass} hidden`)}">${escapeHtml(initialsFromName(name))}</div>
-    `;
-  }
-
   return `<div class="${escapeHtml(fallbackClass)}">${escapeHtml(initialsFromName(name))}</div>`;
 }
 
