@@ -222,6 +222,7 @@ export async function loadSection(section) {
 
   state.currentSection = section;
   state.activeSection = section;
+  state.currentView = section;
 
   markActiveNav(section);
   updateSectionChrome(section);
