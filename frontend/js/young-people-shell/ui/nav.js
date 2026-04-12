@@ -72,78 +72,57 @@ function getCurrentSection() {
   return state.currentSection || state.activeSection || state.currentView || "workspace";
 }
 
-function buildDesktopNavHtml() {
-  return `
-    <div class="workspace-nav-inner">
-      ${NAV_GROUPS_CONFIG.map((group) => {
-        const itemsHtml = (group.items || [])
-          .map((item) => {
-            const isActive = item.id === getCurrentSection();
-            return `
-              <button
-                class="nav-btn ${isActive ? "active" : ""}"
-                type="button"
-                data-nav-section="${escapeHtml(item.id)}"
-                aria-pressed="${isActive ? "true" : "false"}"
-                title="${escapeHtml(item.description || item.label || item.id)}"
-              >
-                <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(getNavIcon(item.icon))}</span>
-                <span class="nav-btn-copy">
-                  <span class="nav-btn-label">${escapeHtml(item.label || item.id)}</span>
-                </span>
-              </button>
-            `;
-          })
-          .join("");
+function renderNavItem(item, { compact = false } = {}) {
+  const isActive = item.id === getCurrentSection();
+  const description = item.description || item.label || item.id;
+  const label = item.label || item.id;
+  const meta = compact ? "" : `<span class="nav-btn-meta">${escapeHtml(description)}</span>`;
 
-        return `
-          <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
-            <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
-            <div class="nav-section-items">
-              ${itemsHtml}
-            </div>
-          </section>
-        `;
-      }).join("")}
-    </div>
+  return `
+    <button
+      class="nav-btn ${isActive ? "active" : ""}"
+      type="button"
+      data-nav-section="${escapeHtml(item.id)}"
+      aria-pressed="${isActive ? "true" : "false"}"
+      title="${escapeHtml(description)}"
+    >
+      <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(getNavIcon(item.icon))}</span>
+      <span class="nav-btn-copy">
+        <span class="nav-btn-label">${escapeHtml(label)}</span>
+        ${meta}
+      </span>
+    </button>
   `;
 }
 
-function buildMobileDrawerNavHtml() {
-  return `
-    <div class="workspace-nav-inner">
-      ${NAV_GROUPS_CONFIG.map((group) => {
-        const itemsHtml = (group.items || [])
-          .map((item) => {
-            const isActive = item.id === getCurrentSection();
-            return `
-              <button
-                class="nav-btn ${isActive ? "active" : ""}"
-                type="button"
-                data-nav-section="${escapeHtml(item.id)}"
-                aria-pressed="${isActive ? "true" : "false"}"
-                title="${escapeHtml(item.description || item.label || item.id)}"
-              >
-                <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(getNavIcon(item.icon))}</span>
-                <span class="nav-btn-copy">
-                  <span class="nav-btn-label">${escapeHtml(item.label || item.id)}</span>
-                </span>
-              </button>
-            `;
-          })
-          .join("");
+function buildDesktopNavHtml() {
+  return NAV_GROUPS_CONFIG.map((group) => {
+    const itemsHtml = (group.items || []).map((item) => renderNavItem(item)).join("");
 
-        return `
-          <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
-            <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
-            <div class="nav-section-items">
-              ${itemsHtml}
-            </div>
-          </section>
-        `;
-      }).join("")}
-    </div>
-  `;
+    return `
+      <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
+        <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
+        <div class="nav-section-items">
+          ${itemsHtml}
+        </div>
+      </section>
+    `;
+  }).join("");
+}
+
+function buildMobileDrawerNavHtml() {
+  return NAV_GROUPS_CONFIG.map((group) => {
+    const itemsHtml = (group.items || []).map((item) => renderNavItem(item)).join("");
+
+    return `
+      <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
+        <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
+        <div class="nav-section-items">
+          ${itemsHtml}
+        </div>
+      </section>
+    `;
+  }).join("");
 }
 
 function buildMobileBottomBarHtml() {
@@ -157,14 +136,16 @@ function buildMobileBottomBarHtml() {
 
     return `
       <button
-        class="mobile-tab-btn ${isActive ? "active" : ""}"
+        class="nav-btn ${isActive ? "active" : ""}"
         type="button"
         data-nav-section="${escapeHtml(item.id)}"
         aria-pressed="${isActive ? "true" : "false"}"
         title="${escapeHtml(item.label || item.id)}"
       >
-        <span class="mobile-tab-icon" aria-hidden="true">${escapeHtml(getNavIcon(item.icon))}</span>
-        <span class="mobile-tab-label">${escapeHtml(item.short_label || item.label || item.id)}</span>
+        <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(getNavIcon(item.icon))}</span>
+        <span class="nav-btn-copy">
+          <span class="nav-btn-label">${escapeHtml(item.short_label || item.label || item.id)}</span>
+        </span>
       </button>
     `;
   }).join("");
@@ -185,10 +166,12 @@ function renderNavigation() {
 }
 
 export function showError(message) {
+  const text = escapeHtml(message || "Something went wrong.");
+
   if (els.statusMessage) {
-    els.statusMessage.innerHTML = `<span class="status-error">${escapeHtml(
-      message || "Something went wrong."
-    )}</span>`;
+    els.statusMessage.textContent = "";
+    els.statusMessage.innerHTML = text;
+    els.statusMessage.classList.remove("hidden");
   }
 
   if (els.statusBar) {
@@ -197,10 +180,12 @@ export function showError(message) {
 }
 
 export function showMessage(message) {
+  const text = escapeHtml(message || "");
+
   if (els.statusMessage) {
-    els.statusMessage.innerHTML = `<span class="status-ok">${escapeHtml(
-      message || ""
-    )}</span>`;
+    els.statusMessage.textContent = "";
+    els.statusMessage.innerHTML = text;
+    els.statusMessage.classList.remove("hidden");
   }
 
   if (els.statusBar) {
@@ -211,6 +196,7 @@ export function showMessage(message) {
 export function clearStatus() {
   if (els.statusMessage) {
     els.statusMessage.innerHTML = "";
+    els.statusMessage.classList.add("hidden");
   }
 
   if (els.statusBar) {
@@ -299,9 +285,13 @@ function bindSelectorControls() {
   els.changePersonBtn?.addEventListener("click", goToSelector);
   els.logoBtn?.addEventListener("click", goToSelector);
 
-  els.youngPersonSearchInput?.addEventListener("input", (event) => {
-    filterSelectorList?.(event.target.value || "");
-  });
+  [els.youngPersonSearchInput, els.selectorSearch]
+    .filter(Boolean)
+    .forEach((input) => {
+      input.addEventListener("input", (event) => {
+        filterSelectorList?.(event.target.value || "");
+      });
+    });
 
   els.selectorRefreshBtn?.addEventListener("click", async () => {
     try {
@@ -360,6 +350,16 @@ function bindComposerControls() {
 }
 
 function bindRefreshControls() {
+  els.refreshBtn?.addEventListener("click", async () => {
+    try {
+      await reloadCurrentSection();
+      showMessage("Workspace refreshed.");
+    } catch (error) {
+      console.error("[nav] refresh failed", error);
+      showError(error?.message || "Failed to refresh workspace.");
+    }
+  });
+
   els.refreshWorkspaceBtn?.addEventListener("click", async () => {
     try {
       await reloadCurrentSection();
@@ -401,6 +401,16 @@ function bindOpenRecordEvents() {
       console.error("[nav] open record failed", error);
       showError("Could not open record.");
     }
+  });
+
+  els.viewContent.addEventListener("keydown", async (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+
+    const trigger = event.target.closest("[data-record-id], [data-open-record]");
+    if (!trigger) return;
+
+    event.preventDefault();
+    trigger.click();
   });
 }
 
