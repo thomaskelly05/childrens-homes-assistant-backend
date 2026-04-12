@@ -404,24 +404,6 @@ function renderProfileHtml({
   `;
 }
 
-function firstObject(...values) {
-  for (const value of values) {
-    if (value && typeof value === "object" && !Array.isArray(value)) {
-      return value;
-    }
-  }
-  return {};
-}
-
-function firstArray(...values) {
-  for (const value of values) {
-    if (Array.isArray(value)) {
-      return value;
-    }
-  }
-  return [];
-}
-
 export async function loadProfile() {
   if (!els.viewContent) return;
 
