@@ -1,30 +1,14 @@
 import { state } from "../state.js";
 import { els } from "../dom.js";
 import { escapeHtml } from "../core/utils.js";
+import { withCsrfHeaders } from "../core/api.js";
 
-function getCurrentPerson() {
+function getCurrentYoungPerson() {
   return state.selectedYoungPerson || state.youngPerson || null;
 }
 
-function getCurrentSectionName() {
+function getCurrentViewName() {
   return state.currentSection || state.currentView || "workspace";
-}
-
-function buildCsrfHeaders(extraHeaders = {}) {
-  const headers = {
-    ...extraHeaders,
-  };
-
-  const csrfToken =
-    document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") ||
-    window.__CSRF_TOKEN__ ||
-    "";
-
-  if (csrfToken) {
-    headers["X-CSRF-Token"] = csrfToken;
-  }
-
-  return headers;
 }
 
 export function openAssistant() {
@@ -46,19 +30,20 @@ export function closeAssistant() {
 }
 
 export function getFullYoungPersonName() {
-  const person = getCurrentPerson();
+  const person = getCurrentYoungPerson();
   if (!person) return "";
 
-  const fullName =
-    [person.first_name, person.last_name].filter(Boolean).join(" ").trim();
-
-  return fullName || person.preferred_name || "Young person";
+  return (
+    [person.first_name, person.last_name].filter(Boolean).join(" ").trim() ||
+    person.preferred_name ||
+    "Young person"
+  );
 }
 
 export function updateAssistantScopeDataset() {
   if (!els.app) return;
 
-  const person = getCurrentPerson();
+  const person = getCurrentYoungPerson();
 
   els.app.dataset.assistantScopeType = state.youngPersonId ? "young_person" : "global";
   els.app.dataset.youngPersonId = state.youngPersonId ? String(state.youngPersonId) : "";
@@ -66,16 +51,14 @@ export function updateAssistantScopeDataset() {
 }
 
 export function renderAssistantScopeBadges() {
-  const person = getCurrentPerson();
+  const person = getCurrentYoungPerson();
 
   const homeText =
     person?.home_name ||
     (person?.home_id != null ? `Home ${person.home_id}` : "");
 
   const childText = getFullYoungPersonName();
-  const sectionName = getCurrentSectionName()
-    .replaceAll("_", " ")
-    .replaceAll("-", " ");
+  const currentView = getCurrentViewName();
 
   if (els.scopeBadge) {
     els.scopeBadge.textContent = state.youngPersonId ? "Young person assistant" : "Assistant";
@@ -102,11 +85,13 @@ export function renderAssistantScopeBadges() {
   }
 
   if (els.scopeShiftBadge) {
-    if (sectionName) {
-      els.scopeShiftBadge.textContent = sectionName;
+    els.scopeShiftBadge.textContent = currentView
+      ? currentView.replaceAll("_", " ").replaceAll("-", " ")
+      : "";
+
+    if (currentView) {
       els.scopeShiftBadge.classList.remove("hidden");
     } else {
-      els.scopeShiftBadge.textContent = "";
       els.scopeShiftBadge.classList.add("hidden");
     }
   }
@@ -179,7 +164,7 @@ function assistantPromptsForView(view) {
       "What themes should leadership notice?",
     ],
     reports: [
-      "Summarise this young person for a report.",
+      "Give me a 6 month summary for this young person.",
       "What are the strongest themes across the record?",
     ],
   };
@@ -192,9 +177,9 @@ function assistantPromptsForView(view) {
 }
 
 export function updateAssistantContext() {
-  const person = getCurrentPerson();
+  const person = getCurrentYoungPerson();
   const fullName = getFullYoungPersonName();
-  const currentSection = getCurrentSectionName();
+  const currentView = getCurrentViewName();
 
   updateAssistantScopeDataset();
   renderAssistantScopeBadges();
@@ -207,7 +192,7 @@ export function updateAssistantContext() {
     const text = [
       `Young person: ${fullName}`,
       person.home_name || null,
-      `View: ${currentSection.replaceAll("_", " ").replaceAll("-", " ")}`,
+      `View: ${currentView.replaceAll("_", " ").replaceAll("-", " ")}`,
     ]
       .filter(Boolean)
       .join(" • ");
@@ -217,7 +202,7 @@ export function updateAssistantContext() {
     }
   }
 
-  const prompts = assistantPromptsForView(currentSection);
+  const prompts = assistantPromptsForView(currentView);
 
   if (els.assistantSuggestions) {
     els.assistantSuggestions.innerHTML = prompts
@@ -243,7 +228,7 @@ function renderAssistantMessageList(host, messages) {
     </article>
   `;
 
-  const body = messages
+  const body = (messages || [])
     .map(
       (message) => `
         <article class="assistant-message ${message.role === "user" ? "assistant-message-user" : ""}">
@@ -259,17 +244,11 @@ function renderAssistantMessageList(host, messages) {
 }
 
 export function renderAssistantMessages() {
-  if (!Array.isArray(state.assistantMessages)) state.assistantMessages = [];
-  if (!Array.isArray(state.assistantModalMessages)) state.assistantModalMessages = [];
-
-  renderAssistantMessageList(els.assistantMessages, state.assistantMessages);
-  renderAssistantMessageList(els.assistantModalMessages, state.assistantModalMessages);
+  renderAssistantMessageList(els.assistantMessages, state.assistantMessages || []);
+  renderAssistantMessageList(els.assistantModalMessages, state.assistantModalMessages || []);
 }
 
 function pushAssistantMessage(role, content) {
-  if (!Array.isArray(state.assistantMessages)) state.assistantMessages = [];
-  if (!Array.isArray(state.assistantModalMessages)) state.assistantModalMessages = [];
-
   const entry = { role, content };
   state.assistantMessages.push(entry);
   state.assistantModalMessages.push(entry);
@@ -277,9 +256,6 @@ function pushAssistantMessage(role, content) {
 }
 
 function addAssistantPlaceholder() {
-  if (!Array.isArray(state.assistantMessages)) state.assistantMessages = [];
-  if (!Array.isArray(state.assistantModalMessages)) state.assistantModalMessages = [];
-
   state.assistantMessages.push({ role: "assistant", content: "Thinking…", _streaming: true });
   state.assistantModalMessages.push({ role: "assistant", content: "Thinking…", _streaming: true });
   renderAssistantMessages();
@@ -289,7 +265,7 @@ function replaceLastAssistantPlaceholder(text) {
   const lists = [state.assistantMessages, state.assistantModalMessages];
 
   lists.forEach((list) => {
-    if (!Array.isArray(list) || !list.length) return;
+    if (!list.length) return;
     const last = list[list.length - 1];
     if (last.role === "assistant" && last._streaming) {
       last.content = text;
@@ -304,7 +280,7 @@ function updateLastAssistantStreamingText(text) {
   const lists = [state.assistantMessages, state.assistantModalMessages];
 
   lists.forEach((list) => {
-    if (!Array.isArray(list) || !list.length) return;
+    if (!list.length) return;
     const last = list[list.length - 1];
     if (last.role === "assistant" && last._streaming) {
       last.content = text;
@@ -391,7 +367,7 @@ export function renderAssistantInsights() {
   const sources = state.assistantMeta?.sources || [];
   const runtime = state.assistantMeta?.runtime || {};
   const explainability = state.assistantMeta?.explainability || {};
-  const person = getCurrentPerson();
+  const person = getCurrentYoungPerson();
 
   if (els.assistantScopeSummary) {
     const rows = [];
@@ -400,7 +376,7 @@ export function renderAssistantInsights() {
       <div class="entity-row">
         <div>
           <div class="entity-title">${scope.scope_type === "young_person" ? "Young person scope" : "Assistant scope"}</div>
-          <div class="entity-meta">View: ${escapeHtml(getCurrentSectionName().replaceAll("_", " ").replaceAll("-", " "))}</div>
+          <div class="entity-meta">View: ${escapeHtml(getCurrentViewName().replaceAll("_", " ").replaceAll("-", " "))}</div>
         </div>
       </div>
     `);
@@ -467,26 +443,25 @@ export function renderAssistantInsights() {
 }
 
 function buildAssistantContextPayload() {
-  const person = getCurrentPerson();
-  const activeRecord = state.activeRecordItem || {};
-  const section = getCurrentSectionName();
+  const person = getCurrentYoungPerson();
+  const currentView = getCurrentViewName();
 
   return {
-    scope: state.youngPersonId ? "young_person" : "global",
-    young_person_id: state.youngPersonId || null,
-    current_view: section,
-    current_section: section,
+    scope: "young_person",
+    young_person_id: state.youngPersonId,
+    current_view: currentView,
+    current_section: currentView,
     young_person_name: getFullYoungPersonName(),
     placement_status: person?.placement_status || null,
     summary_risk_level: person?.summary_risk_level || null,
     composer_record_type: state.composerRecordType || null,
     home_name: person?.home_name || null,
-    shift_context: section,
+    shift_context: currentView || null,
     record_type: state.activeRecordType || state.composerRecordType || null,
     record_id:
-      activeRecord.record_id ||
-      activeRecord.source_id ||
-      activeRecord.id ||
+      state.activeRecordItem?.record_id ||
+      state.activeRecordItem?.source_id ||
+      state.activeRecordItem?.id ||
       state.composerRecordId ||
       null,
   };
@@ -528,12 +503,7 @@ function parseSseChunk(buffer, onEvent) {
 
 export async function askAssistant(question) {
   const trimmed = String(question || "").trim();
-  if (!trimmed || state.assistantSending) return;
-
-  if (!state.youngPersonId) {
-    replaceLastAssistantPlaceholder?.("Select a young person first.");
-    return;
-  }
+  if (!trimmed || !state.youngPersonId || state.assistantSending) return;
 
   pushAssistantMessage("user", trimmed);
   addAssistantPlaceholder();
@@ -543,7 +513,7 @@ export async function askAssistant(question) {
     const response = await fetch("/young-people/assistant", {
       method: "POST",
       credentials: "include",
-      headers: buildCsrfHeaders({
+      headers: withCsrfHeaders("POST", {
         "Content-Type": "application/json",
         Accept: "text/event-stream",
       }),
@@ -556,14 +526,12 @@ export async function askAssistant(question) {
 
     if (!response.ok) {
       let message = `Request failed (${response.status})`;
-
       try {
         const body = await response.json();
         message = body.detail || body.error || body.message || message;
       } catch {
         // ignore
       }
-
       throw new Error(message);
     }
 
@@ -603,9 +571,7 @@ export async function askAssistant(question) {
           return;
         }
 
-        if (eventName === "progress") {
-          return;
-        }
+        if (eventName === "progress") return;
 
         if (eventName === "message") {
           streamedText += payload || "";
@@ -626,6 +592,11 @@ export function clearAssistantMessages() {
   state.assistantMessages = [];
   state.assistantModalMessages = [];
   renderAssistantMessages();
+}
+
+async function handlePromptClick(prompt) {
+  if (!prompt) return;
+  await askAssistant(prompt);
 }
 
 export function bindAssistantEvents() {
@@ -655,13 +626,13 @@ export function bindAssistantEvents() {
   document.addEventListener("click", async (event) => {
     const promptButton = event.target.closest("[data-prompt]");
     if (promptButton) {
-      await askAssistant(promptButton.dataset.prompt || "");
+      await handlePromptClick(promptButton.dataset.prompt || "");
       return;
     }
 
     const chipButton = event.target.closest("[data-assistant-chip]");
     if (chipButton) {
-      await askAssistant(chipButton.dataset.assistantChip || "");
+      await handlePromptClick(chipButton.dataset.assistantChip || "");
     }
   });
 }
