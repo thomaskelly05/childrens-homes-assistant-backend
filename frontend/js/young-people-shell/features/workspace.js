@@ -2,7 +2,6 @@ import { els } from "../dom.js";
 import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
-import { renderSection, renderRowList, renderSummaryStat } from "../ui/records.js";
 import {
   mapDailyNote,
   mapIncident,
@@ -50,6 +49,22 @@ function isFuture(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return false;
   return date.getTime() >= Date.now();
+}
+
+function toText(value, fallback = "") {
+  return escapeHtml(String(value ?? fallback ?? ""));
+}
+
+function formatDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function buildPriorityRows({
@@ -118,7 +133,16 @@ function buildUpcomingRows({
   return [...appointmentRows, ...reviewPlans, ...dueTasks].slice(0, 12);
 }
 
-function buildWorkspaceOverview({
+function buildSummaryCounts({ priorityRows = [], recentRows = [], todayRows = [], upcomingRows = [] }) {
+  return {
+    urgent: priorityRows.length,
+    recent: recentRows.length,
+    today: todayRows.length,
+    upcoming: upcomingRows.length,
+  };
+}
+
+function buildWorkspaceCounts({
   incidents = [],
   appointments = [],
   plans = [],
@@ -143,94 +167,302 @@ function buildWorkspaceOverview({
 
   const openTasks = tasks.filter((item) => !item.completed).length;
 
+  return {
+    urgentIncidents,
+    openAppointments,
+    activePlans,
+    complianceIssues,
+    openTasks,
+  };
+}
+
+function getRowTitle(item = {}) {
+  return (
+    item.title ||
+    item.summary ||
+    item.appointment_type ||
+    item.record_type_label ||
+    item.event_type ||
+    "Record"
+  );
+}
+
+function getRowSummary(item = {}) {
+  return (
+    item.summary ||
+    item.presentation ||
+    item.description ||
+    item.notes ||
+    item.outcome ||
+    "No summary available."
+  );
+}
+
+function getRowMeta(item = {}) {
+  return (
+    item.record_date ||
+    item.start_datetime ||
+    item.event_datetime ||
+    item.occurred_at ||
+    item.contact_datetime ||
+    item.created_at ||
+    item.updated_at ||
+    ""
+  );
+}
+
+function getRowPill(item = {}) {
+  const severity = String(item.severity || "").toLowerCase();
+  const status = String(item.status || item.workflow_status || "").toLowerCase();
+
+  if (["critical", "high", "overdue", "escalated"].includes(severity) || ["overdue", "escalated"].includes(status)) {
+    return { label: "Needs review", tone: "warning" };
+  }
+
+  if (["draft", "pending", "review_due"].includes(status)) {
+    return { label: "In progress", tone: "muted" };
+  }
+
+  return { label: "Recorded", tone: "muted" };
+}
+
+function renderRecordRows(items = [], emptyMessage = "Nothing to show right now.") {
+  if (!items.length) {
+    return `
+      <div class="empty-state">
+        <p>${toText(emptyMessage)}</p>
+      </div>
+    `;
+  }
+
   return `
-    <div class="profile-grid">
-      <div class="profile-card">
-        <div class="profile-card-title">Urgent incidents</div>
-        <div class="profile-card-text">${escapeHtml(String(urgentIncidents))}</div>
-        <div class="profile-card-subtext">High or critical incidents</div>
-      </div>
+    <div class="record-list">
+      ${items.map((item) => {
+        const pill = getRowPill(item);
+        const id = item.id ?? item.record_id ?? item.source_id ?? "";
+        const type = item.record_type || item.type || "";
 
-      <div class="profile-card">
-        <div class="profile-card-title">Open appointments</div>
-        <div class="profile-card-text">${escapeHtml(String(openAppointments))}</div>
-        <div class="profile-card-subtext">Upcoming appointments and visits</div>
-      </div>
-
-      <div class="profile-card">
-        <div class="profile-card-title">Active plans</div>
-        <div class="profile-card-text">${escapeHtml(String(activePlans))}</div>
-        <div class="profile-card-subtext">Support plans in force</div>
-      </div>
-
-      <div class="profile-card">
-        <div class="profile-card-title">Compliance issues</div>
-        <div class="profile-card-text">${escapeHtml(String(complianceIssues))}</div>
-        <div class="profile-card-subtext">Overdue or escalated items</div>
-      </div>
-
-      <div class="profile-card">
-        <div class="profile-card-title">Open tasks</div>
-        <div class="profile-card-text">${escapeHtml(String(openTasks))}</div>
-        <div class="profile-card-subtext">Follow-up actions still open</div>
-      </div>
+        return `
+          <article
+            class="record-row"
+            data-record-id="${toText(id)}"
+            data-record-type="${toText(type)}"
+            data-open-record="true"
+            data-title="${toText(getRowTitle(item))}"
+            role="button"
+            tabindex="0"
+          >
+            <div class="record-row-main">
+              <div class="record-row-title">${toText(getRowTitle(item))}</div>
+              <div class="record-row-summary">${toText(getRowSummary(item))}</div>
+              <div class="record-row-meta">${toText(formatDate(getRowMeta(item)) || type || "")}</div>
+            </div>
+            <div class="record-row-side">
+              <span class="row-pill ${toText(pill.tone)}">${toText(pill.label)}</span>
+            </div>
+          </article>
+        `;
+      }).join("")}
     </div>
   `;
 }
 
-function buildLatestContext({
-  dailyNotes = [],
-  incidents = [],
-  plans = [],
-  appointments = [],
-}) {
-  const latestNote = dailyNotes[0] || null;
-  const latestIncident = incidents[0] || null;
-  const currentPlan = plans[0] || null;
-  const nextAppointment = appointments[0] || null;
+function renderPriorityList(items = [], emptyMessage = "No priority items are showing right now.") {
+  if (!items.length) {
+    return `
+      <div class="empty-state">
+        <p>${toText(emptyMessage)}</p>
+      </div>
+    `;
+  }
 
   return `
-    <div class="profile-grid">
-      <div class="profile-card">
-        <div class="profile-card-title">Latest daily note</div>
-        <div class="profile-card-text">${escapeHtml(
-          latestNote?.summary || latestNote?.presentation || "No recent daily note."
-        )}</div>
-        <div class="profile-card-subtext">${escapeHtml(
-          latestNote?.record_date || latestNote?.workflow_status || ""
-        )}</div>
-      </div>
-
-      <div class="profile-card">
-        <div class="profile-card-title">Latest incident</div>
-        <div class="profile-card-text">${escapeHtml(
-          latestIncident?.summary || latestIncident?.title || "No recent incident."
-        )}</div>
-        <div class="profile-card-subtext">${escapeHtml(
-          latestIncident?.severity || latestIncident?.workflow_status || ""
-        )}</div>
-      </div>
-
-      <div class="profile-card">
-        <div class="profile-card-title">Current plan</div>
-        <div class="profile-card-text">${escapeHtml(
-          currentPlan?.title || currentPlan?.summary || "No active support plan."
-        )}</div>
-        <div class="profile-card-subtext">${escapeHtml(
-          currentPlan?.review_date || currentPlan?.status || ""
-        )}</div>
-      </div>
-
-      <div class="profile-card">
-        <div class="profile-card-title">Next appointment</div>
-        <div class="profile-card-text">${escapeHtml(
-          nextAppointment?.title || nextAppointment?.appointment_type || "No upcoming appointment."
-        )}</div>
-        <div class="profile-card-subtext">${escapeHtml(
-          nextAppointment?.start_datetime || nextAppointment?.status || ""
-        )}</div>
-      </div>
+    <div class="priority-list">
+      ${items.slice(0, 4).map((item) => `
+        <article class="priority-item">
+          <strong>${toText(getRowTitle(item))}</strong>
+          <p>${toText(getRowSummary(item))}</p>
+        </article>
+      `).join("")}
     </div>
+  `;
+}
+
+function renderSupportPatterns({ dailyNotes = [], incidents = [], plans = [] }) {
+  const patterns = [];
+
+  const latestNote = dailyNotes[0];
+  const latestIncident = incidents[0];
+  const activePlan = plans.find((item) =>
+    ["active", "review_due"].includes(String(item.status || "").toLowerCase())
+  );
+
+  if (latestNote?.presentation) {
+    patterns.push(latestNote.presentation);
+  }
+
+  if (latestIncident?.deescalation || latestIncident?.what_helped) {
+    patterns.push(latestIncident.deescalation || latestIncident.what_helped);
+  }
+
+  if (activePlan?.summary || activePlan?.guidance) {
+    patterns.push(activePlan.summary || activePlan.guidance);
+  }
+
+  const cleanPatterns = patterns.filter(Boolean).slice(0, 3);
+
+  if (!cleanPatterns.length) {
+    return `
+      <div class="empty-state">
+        <p>No recent support patterns are showing yet.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="support-pattern-list">
+      ${cleanPatterns.map((item) => `
+        <div class="support-pattern-item">${toText(item)}</div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderOverviewHtml({
+  priorityRows = [],
+  recentRows = [],
+  counts,
+  workspaceCounts,
+  supportPatternsHtml,
+}) {
+  return `
+    <section class="overview-panel">
+      <div class="overview-panel-head">
+        <div>
+          <div class="eyebrow">Overview</div>
+          <h2>Workspace overview</h2>
+          <p>A live view across care, records, appointments and follow-up.</p>
+        </div>
+      </div>
+
+      <div class="overview-grid">
+        <section class="overview-main">
+          <div class="overview-stats-grid">
+            <article class="overview-stat-card">
+              <span class="overview-stat-label">Urgent</span>
+              <strong class="overview-stat-value">${toText(counts.urgent)}</strong>
+              <span class="overview-stat-note">Items needing prompt attention</span>
+            </article>
+
+            <article class="overview-stat-card">
+              <span class="overview-stat-label">Recent</span>
+              <strong class="overview-stat-value">${toText(counts.recent)}</strong>
+              <span class="overview-stat-note">Recently added records</span>
+            </article>
+
+            <article class="overview-stat-card">
+              <span class="overview-stat-label">Today</span>
+              <strong class="overview-stat-value">${toText(counts.today)}</strong>
+              <span class="overview-stat-note">Records or updates today</span>
+            </article>
+
+            <article class="overview-stat-card">
+              <span class="overview-stat-label">Upcoming</span>
+              <strong class="overview-stat-value">${toText(counts.upcoming)}</strong>
+              <span class="overview-stat-note">Planned appointments or actions</span>
+            </article>
+          </div>
+
+          <div class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Recent activity</h3>
+              <p>What has changed most recently.</p>
+            </div>
+
+            ${renderRecordRows(recentRows, "No recent activity found.")}
+          </div>
+
+          <div class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Operational picture</h3>
+              <p>A quick live view of current pressures and open items.</p>
+            </div>
+
+            <div class="record-list">
+              <article class="record-row">
+                <div class="record-row-main">
+                  <div class="record-row-title">Urgent incidents</div>
+                  <div class="record-row-summary">High or critical incidents needing review.</div>
+                </div>
+                <div class="record-row-side">
+                  <span class="row-pill ${workspaceCounts.urgentIncidents > 0 ? "warning" : "muted"}">${toText(workspaceCounts.urgentIncidents)}</span>
+                </div>
+              </article>
+
+              <article class="record-row">
+                <div class="record-row-main">
+                  <div class="record-row-title">Open appointments</div>
+                  <div class="record-row-summary">Upcoming appointments and visits.</div>
+                </div>
+                <div class="record-row-side">
+                  <span class="row-pill muted">${toText(workspaceCounts.openAppointments)}</span>
+                </div>
+              </article>
+
+              <article class="record-row">
+                <div class="record-row-main">
+                  <div class="record-row-title">Active plans</div>
+                  <div class="record-row-summary">Support plans currently in place.</div>
+                </div>
+                <div class="record-row-side">
+                  <span class="row-pill muted">${toText(workspaceCounts.activePlans)}</span>
+                </div>
+              </article>
+
+              <article class="record-row">
+                <div class="record-row-main">
+                  <div class="record-row-title">Compliance issues</div>
+                  <div class="record-row-summary">Overdue or escalated items needing attention.</div>
+                </div>
+                <div class="record-row-side">
+                  <span class="row-pill ${workspaceCounts.complianceIssues > 0 ? "warning" : "muted"}">${toText(workspaceCounts.complianceIssues)}</span>
+                </div>
+              </article>
+
+              <article class="record-row">
+                <div class="record-row-main">
+                  <div class="record-row-title">Open tasks</div>
+                  <div class="record-row-summary">Follow-up actions still outstanding.</div>
+                </div>
+                <div class="record-row-side">
+                  <span class="row-pill muted">${toText(workspaceCounts.openTasks)}</span>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <aside class="overview-side">
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>What needs attention</h3>
+              <p>Items to notice and act on next.</p>
+            </div>
+
+            ${renderPriorityList(priorityRows)}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>What helped recently</h3>
+              <p>Useful patterns to carry forward.</p>
+            </div>
+
+            ${supportPatternsHtml}
+          </section>
+        </aside>
+      </div>
+    </section>
   `;
 }
 
@@ -385,61 +617,34 @@ export async function loadCurrentView() {
       tasks,
     });
 
-    els.viewContent.innerHTML = `
-      <section class="summary-strip">
-        ${renderSummaryStat("Urgent", priorityRows.length)}
-        ${renderSummaryStat("Recent", recentRows.length)}
-        ${renderSummaryStat("Today", todayRows.length)}
-        ${renderSummaryStat("Upcoming", upcomingRows.length)}
-      </section>
+    const counts = buildSummaryCounts({
+      priorityRows,
+      recentRows,
+      todayRows,
+      upcomingRows,
+    });
 
-      ${renderSection(
-        "Workspace overview",
-        "A live operational view across care, risk, appointments, compliance and follow-up.",
-        buildWorkspaceOverview({
-          incidents,
-          appointments,
-          plans,
-          compliance,
-          tasks,
-        })
-      )}
+    const workspaceCounts = buildWorkspaceCounts({
+      incidents,
+      appointments,
+      plans,
+      compliance,
+      tasks,
+    });
 
-      ${renderSection(
-        "Latest context",
-        "The quickest way to understand what is happening around this young person right now.",
-        buildLatestContext({
-          dailyNotes,
-          incidents,
-          plans,
-          appointments,
-        })
-      )}
+    const supportPatternsHtml = renderSupportPatterns({
+      dailyNotes,
+      incidents,
+      plans,
+    });
 
-      ${renderSection(
-        "Priority items",
-        "Urgent incidents, readiness issues, open tasks and safeguarding-linked chronology.",
-        renderRowList(priorityRows, "No urgent items found.")
-      )}
-
-      ${renderSection(
-        "Recent activity",
-        "Recent notes, incidents, health, education and family records.",
-        renderRowList(recentRows, "No recent activity found.")
-      )}
-
-      ${renderSection(
-        "Today",
-        "What is happening today across appointments, notes and chronology.",
-        renderRowList(todayRows, "Nothing recorded for today.")
-      )}
-
-      ${renderSection(
-        "Coming up",
-        "Upcoming appointments, plan reviews and follow-up tasks.",
-        renderRowList(upcomingRows, "Nothing upcoming is showing right now.")
-      )}
-    `;
+    els.viewContent.innerHTML = renderOverviewHtml({
+      priorityRows,
+      recentRows,
+      counts,
+      workspaceCounts,
+      supportPatternsHtml,
+    });
   } catch (error) {
     els.viewContent.innerHTML = `
       <div class="empty-state">
