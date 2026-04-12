@@ -14,6 +14,21 @@ function getSelectorList() {
   return els.selectorList || document.getElementById("selectorList");
 }
 
+function renderEmptyState({
+  title = "Nothing to show",
+  message = "There is nothing to display right now.",
+} = {}) {
+  return `
+    <div class="empty-state">
+      <div class="empty-state-inner">
+        <div class="empty-state-icon" aria-hidden="true">○</div>
+        <h3>${escapeHtml(title)}</h3>
+        <p>${escapeHtml(message)}</p>
+      </div>
+    </div>
+  `;
+}
+
 function renderPhoto(item = {}) {
   const firstInitial = String(item.first_name || "Y").charAt(0).toUpperCase();
   const lastInitial = String(item.last_name || "P").charAt(0).toUpperCase();
@@ -46,6 +61,7 @@ function renderYoungPersonCard(item = {}) {
   const subtitle = [
     item.date_of_birth ? `DOB ${formatDate(item.date_of_birth)}` : "",
     item.admission_date ? `Admitted ${formatDate(item.admission_date)}` : "",
+    item.home_name || "",
   ]
     .filter(Boolean)
     .join(" • ");
@@ -56,6 +72,7 @@ function renderYoungPersonCard(item = {}) {
       class="selector-card selector-card--photo"
       data-open-young-person="${escapeHtml(String(item.id || ""))}"
       data-young-person-id="${escapeHtml(String(item.id || ""))}"
+      aria-label="Open workspace for ${escapeHtml(displayName)}"
     >
       <div class="selector-card-media">
         ${renderPhoto(item)}
@@ -63,6 +80,8 @@ function renderYoungPersonCard(item = {}) {
 
       <div class="selector-card-body">
         <h3>${escapeHtml(displayName)}</h3>
+
+        ${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ""}
 
         ${
           metaPills.length
@@ -73,12 +92,10 @@ function renderYoungPersonCard(item = {}) {
               </div>`
             : ""
         }
-
-        ${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ""}
       </div>
 
       <div class="selector-card-actions">
-        <span class="secondary-btn">Open</span>
+        <span class="secondary-btn">Open workspace</span>
       </div>
     </button>
   `;
@@ -89,11 +106,10 @@ function renderSelectorList(items = []) {
   if (!list) return;
 
   if (!items.length) {
-    list.innerHTML = `
-      <div class="empty-state">
-        <p>No young people found.</p>
-      </div>
-    `;
+    list.innerHTML = renderEmptyState({
+      title: "No young people found",
+      message: "Try a different search or refresh the list.",
+    });
     return;
   }
 
@@ -151,7 +167,7 @@ export async function loadYoungPersonSelector() {
     list.innerHTML = `
       <div class="loading-state">
         <div>
-          <div class="spinner"></div>
+          <div class="spinner" aria-hidden="true"></div>
           <p>Loading young people…</p>
         </div>
       </div>
