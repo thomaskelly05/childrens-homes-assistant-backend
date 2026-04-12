@@ -1,440 +1,484 @@
-import { state } from "../state.js";
 import { els } from "../dom.js";
-import { escapeHtml, dedupeStrings } from "../core/utils.js";
-import { apiStreamAssistant } from "../core/api.js";
+import { state } from "../state.js";
+import { escapeHtml, getDisplayName } from "../core/utils.js";
+import { getActionForQuickButton } from "./action-router.js";
 
-function getYoungPersonName() {
-  return (
-    [state.youngPerson?.first_name, state.youngPerson?.last_name]
-      .filter(Boolean)
-      .join(" ")
-      .trim() ||
-    state.youngPerson?.preferred_name ||
-    "Young person"
-  );
+function qs(id) {
+  return document.getElementById(id);
 }
 
-function formatAssistantMessage(text = "") {
-  const escaped = escapeHtml(String(text || ""));
-
-  return escaped
-    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\n/g, "<br>");
-}
-
-export function assistantPromptsForView(view) {
-  const map = {
-    overview: [
-      "Give me a short handover for this young person.",
-      "What matters most right now?",
-    ],
-    incidents: [
-      "Summarise the recent incidents.",
-      "What patterns are showing in significant events?",
-    ],
-    plans: [
-      "Summarise current support plans.",
-      "What should adults hold in mind?",
-    ],
-    handover: [
-      "Give me a short handover for this young person.",
-      "What does the next shift most need to know?",
-    ],
-    manager: [
-      "What needs manager review right now?",
-      "What is overdue or waiting for sign-off?",
-    ],
-    health: [
-      "Summarise current health and wellbeing needs.",
-      "What appointments or follow-up matter most right now?",
-    ],
-    education: [
-      "Summarise current education themes.",
-      "What should adults hold in mind about learning right now?",
-    ],
-    family: [
-      "Summarise important family and relationship updates.",
-      "What should adults know about contact and relationships?",
-    ],
-    timeline: [
-      "Summarise the recent chronology.",
-      "What themes stand out across the timeline?",
-    ],
-    reports: [
-      "What would make a strong report summary right now?",
-      "Summarise the main themes for this young person.",
-    ],
-  };
-
-  return map[view] || [
-    "Give me a short handover for this young person.",
-    "What matters most right now?",
-  ];
-}
-
-export function getAssistantContextPayload() {
-  return {
-    scope: "young_person",
-    young_person_id: state.youngPersonId,
-    current_view: state.currentView,
-    young_person_name: getYoungPersonName(),
-    placement_status: state.youngPerson?.placement_status || null,
-    summary_risk_level: state.youngPerson?.summary_risk_level || null,
-    composer_record_type: state.composerRecordType || null,
-    home_name: state.youngPerson?.home_name || null,
-    shift_context: state.currentView || null,
-    record_type: state.activeRecordType || state.composerRecordType || null,
-    record_id:
-      state.activeRecordItem?.record_id ||
-      state.activeRecordItem?.source_id ||
-      state.activeRecordItem?.id ||
-      state.composerRecordId ||
-      null,
-  };
-}
-
-export function updateAssistantContext() {
-  if (!state.youngPerson) {
-    if (els.assistantContext) {
-      els.assistantContext.textContent = "No young person selected.";
-    }
-  } else {
-    const text = [
-      `Young person: ${getYoungPersonName()}`,
-      state.youngPerson.home_name || null,
-      `View: ${String(state.currentView || "overview").replaceAll("_", " ")}`,
-    ]
-      .filter(Boolean)
-      .join(" • ");
-
-    if (els.assistantContext) {
-      els.assistantContext.textContent = text;
-    }
+function getAssistantState() {
+  if (!state.assistantUi) {
+    state.assistantUi = {
+      messages: [
+        {
+          id: "welcome",
+          role: "assistant",
+          text: "Select a young person to start.",
+          created_at: new Date().toISOString(),
+        },
+      ],
+      sources: [],
+      runtime: null,
+      explainability: null,
+      scopeSummary: null,
+      suggestions: [],
+    };
   }
 
-  const prompts = assistantPromptsForView(state.currentView);
-  if (els.assistantSuggestions) {
-    els.assistantSuggestions.innerHTML = prompts
-      .map(
-        (prompt) =>
-          `<button class="secondary-btn" type="button" data-prompt="${escapeHtml(prompt)}">${escapeHtml(prompt)}</button>`
-      )
-      .join("");
-  }
+  return state.assistantUi;
 }
 
-export function renderAssistantMessageList(host, messages) {
-  if (!host) return;
+function formatRole(role = "") {
+  if (role === "user") return "You";
+  if (role === "assistant") return "Assistant";
+  return "System";
+}
 
-  const base = `
-    <article class="assistant-message assistant-message-system">
-      <div class="assistant-message-role">Assistant</div>
-      <div class="assistant-message-body">${
-        state.youngPersonId
-          ? `Ask a question about ${escapeHtml(getYoungPersonName())}.`
-          : "Select a young person to start."
-      }</div>
+function buildPersonLabel() {
+  const person = state.selectedYoungPerson || {};
+  return getDisplayName(person);
+}
+
+function buildSectionLabel() {
+  return state.currentSection || state.activeSection || "workspace";
+}
+
+function normaliseText(value) {
+  return String(value || "").trim();
+}
+
+function pushMessage(role, text) {
+  const assistantState = getAssistantState();
+
+  assistantState.messages.push({
+    id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    role,
+    text,
+    created_at: new Date().toISOString(),
+  });
+}
+
+function renderMessage(message = {}) {
+  const role = message.role || "assistant";
+  const roleClass = role === "user" ? "assistant-message-user" : "assistant-message-system";
+
+  return `
+    <article class="assistant-message ${escapeHtml(roleClass)}">
+      <div class="assistant-message-role">${escapeHtml(formatRole(role))}</div>
+      <div class="assistant-message-body">${escapeHtml(message.text || "")}</div>
     </article>
   `;
+}
 
-  const messagesHtml = (messages || [])
+function renderMessages() {
+  const assistantState = getAssistantState();
+  const html = assistantState.messages.map(renderMessage).join("");
+
+  if (qs("assistantMessages")) {
+    qs("assistantMessages").innerHTML = html;
+  }
+
+  if (qs("assistantModalMessages")) {
+    qs("assistantModalMessages").innerHTML = html;
+  }
+
+  qs("assistantMessages")?.scrollTo({
+    top: qs("assistantMessages").scrollHeight,
+    behavior: "smooth",
+  });
+
+  qs("assistantModalMessages")?.scrollTo({
+    top: qs("assistantModalMessages").scrollHeight,
+    behavior: "smooth",
+  });
+}
+
+function renderScopeBadges() {
+  const person = state.selectedYoungPerson || {};
+  const homeName = person.home_name || "";
+  const childName = getDisplayName(person);
+  const section = buildSectionLabel();
+
+  const homeBadge = qs("scopeHomeBadge");
+  const childBadge = qs("scopeChildBadge");
+  const shiftBadge = qs("scopeShiftBadge");
+  const modalHomeBadge = qs("modalScopeHomeBadge");
+  const modalChildBadge = qs("modalScopeChildBadge");
+
+  if (homeBadge) {
+    homeBadge.textContent = homeName || "";
+    homeBadge.classList.toggle("hidden", !homeName);
+  }
+
+  if (childBadge) {
+    childBadge.textContent = childName || "";
+    childBadge.classList.toggle("hidden", !childName || childName === "Young person");
+  }
+
+  if (shiftBadge) {
+    shiftBadge.textContent = section.replaceAll("_", " ");
+    shiftBadge.classList.toggle("hidden", !section);
+  }
+
+  if (modalHomeBadge) {
+    modalHomeBadge.textContent = homeName || "";
+    modalHomeBadge.classList.toggle("hidden", !homeName);
+  }
+
+  if (modalChildBadge) {
+    modalChildBadge.textContent = childName || "";
+    modalChildBadge.classList.toggle("hidden", !childName || childName === "Young person");
+  }
+}
+
+function renderContextText() {
+  const person = state.selectedYoungPerson || {};
+  const childName = getDisplayName(person);
+  const section = buildSectionLabel();
+
+  const contextText = state.youngPersonId
+    ? `Scoped to ${childName} • current section: ${section.replaceAll("_", " ")}`
+    : "No young person selected.";
+
+  if (qs("assistantContext")) {
+    qs("assistantContext").textContent = contextText;
+  }
+}
+
+function buildLayerCards() {
+  const person = state.selectedYoungPerson || {};
+  const section = buildSectionLabel();
+  const assistantState = getAssistantState();
+
+  const cards = [
+    {
+      title: "Layer 1 • Rules and actions",
+      text: `Current operational section: ${section.replaceAll("_", " ")}. Quick actions and fixed workflows sit here.`,
+    },
+    {
+      title: "Layer 2 • Patterns and signals",
+      text: assistantState.scopeSummary?.patterns || "Pattern view will appear here when linked records and signals are available.",
+    },
+    {
+      title: "Layer 3 • Reasoning and explainability",
+      text: assistantState.explainability?.summary || "Explainability will show why a suggestion or summary was generated.",
+    },
+    {
+      title: "Layer 4 • Generative drafting",
+      text: assistantState.runtime?.draft_mode || `Drafting support is ready for ${getDisplayName(person)}.`,
+    },
+    {
+      title: "Layer 5 • Agentic next steps",
+      text: assistantState.scopeSummary?.next_steps || "Suggested next actions will appear here after analysis or record review.",
+    },
+  ];
+
+  return `
+    <div class="profile-stack">
+      ${cards
+        .map(
+          (card) => `
+            <div class="profile-card">
+              <div class="profile-card-title">${escapeHtml(card.title)}</div>
+              <div class="profile-card-text">${escapeHtml(card.text)}</div>
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderScopeSummary() {
+  const html = buildLayerCards();
+
+  if (qs("assistantScopeSummary")) {
+    qs("assistantScopeSummary").innerHTML = html;
+  }
+
+  if (qs("assistantModalScopeSummary")) {
+    qs("assistantModalScopeSummary").innerHTML = html;
+  }
+}
+
+function renderSources() {
+  const assistantState = getAssistantState();
+  const sources = assistantState.sources || [];
+
+  const html = sources.length
+    ? sources
+        .map(
+          (source) => `
+            <div class="entity-row">
+              <div class="entity-title">${escapeHtml(source.title || "Source")}</div>
+              <div class="entity-meta">${escapeHtml(source.description || "")}</div>
+            </div>
+          `
+        )
+        .join("")
+    : "<p>Sources will appear here after a response.</p>";
+
+  if (qs("assistantSources")) {
+    qs("assistantSources").innerHTML = html;
+  }
+
+  if (qs("assistantModalSources")) {
+    qs("assistantModalSources").innerHTML = html;
+  }
+}
+
+function renderRuntime() {
+  const assistantState = getAssistantState();
+
+  const runtime = assistantState.runtime || {
+    mode: "scoped-young-person-assistant",
+    current_section: buildSectionLabel(),
+    selected_young_person_id: state.youngPersonId || null,
+    messages: assistantState.messages.length,
+  };
+
+  if (qs("assistantRuntime")) {
+    qs("assistantRuntime").textContent = JSON.stringify(runtime, null, 2);
+  }
+}
+
+function renderExplainability() {
+  const assistantState = getAssistantState();
+
+  const explainability = assistantState.explainability || {
+    summary:
+      "The assistant is currently using scoped workspace context, selected section, and visible young person state.",
+    reasoning_layers: [
+      "rules",
+      "context",
+      "prompt shaping",
+      "draft generation",
+      "suggested actions",
+    ],
+  };
+
+  if (qs("assistantExplainability")) {
+    qs("assistantExplainability").textContent = JSON.stringify(explainability, null, 2);
+  }
+}
+
+function renderSuggestedActions() {
+  const section = buildSectionLabel();
+
+  const actions = [
+    getActionForQuickButton("daily_note", { section }),
+    getActionForQuickButton("incident", { section }),
+    getActionForQuickButton("task", { section }),
+    getActionForQuickButton("appointment", { section }),
+  ].filter(Boolean);
+
+  const html = actions
     .map(
-      (message) => `
-        <article class="assistant-message ${message.role === "user" ? "assistant-message-user" : ""}">
-          <div class="assistant-message-role">${message.role === "user" ? "You" : "Assistant"}</div>
-          <div class="assistant-message-body">${
-            message.role === "assistant"
-              ? formatAssistantMessage(message.content || "")
-              : escapeHtml(message.content || "")
-          }</div>
-        </article>
+      (action) => `
+        <button
+          class="chip"
+          type="button"
+          data-quick-action="${escapeHtml(action.id)}"
+        >
+          ${escapeHtml(action.label)}
+        </button>
       `
     )
     .join("");
 
-  host.innerHTML = base + messagesHtml;
-  host.scrollTop = host.scrollHeight;
+  if (qs("assistantSuggestions")) {
+    qs("assistantSuggestions").innerHTML = html;
+  }
 }
 
-export function renderAssistantMessages() {
-  renderAssistantMessageList(els.assistantMessages, state.assistantMessages);
-  renderAssistantMessageList(els.assistantModalMessages, state.assistantModalMessages);
+function renderAllAssistantUi() {
+  renderScopeBadges();
+  renderContextText();
+  renderMessages();
+  renderScopeSummary();
+  renderSources();
+  renderRuntime();
+  renderExplainability();
+  renderSuggestedActions();
 }
 
-export function pushAssistantMessage(role, content) {
-  const entry = {
-    role,
-    content: String(content || ""),
+function openAssistantModal() {
+  qs("assistantBackdrop")?.classList.remove("hidden");
+  qs("assistantModal")?.classList.remove("hidden");
+  qs("assistantModal")?.setAttribute("aria-hidden", "false");
+}
+
+function closeAssistantModal() {
+  qs("assistantBackdrop")?.classList.add("hidden");
+  qs("assistantModal")?.classList.add("hidden");
+  qs("assistantModal")?.setAttribute("aria-hidden", "true");
+}
+
+function clearAssistantChat() {
+  const assistantState = getAssistantState();
+
+  assistantState.messages = [
+    {
+      id: "welcome-reset",
+      role: "assistant",
+      text: state.youngPersonId
+        ? `Assistant reset for ${buildPersonLabel()}.`
+        : "Select a young person to start.",
+      created_at: new Date().toISOString(),
+    },
+  ];
+
+  renderAllAssistantUi();
+}
+
+function buildPlaceholderAssistantResponse(userText) {
+  const person = buildPersonLabel();
+  const section = buildSectionLabel();
+
+  const lower = userText.toLowerCase();
+
+  if (lower.includes("handover")) {
+    return `Draft handover view for ${person}: recent priorities, current section ${section}, and linked follow-up should be reviewed together.`;
+  }
+
+  if (lower.includes("risk")) {
+    return `Risk-focused summary for ${person}: review recent incidents, chronology, current plans, and compliance signals for emerging concerns.`;
+  }
+
+  if (lower.includes("what matters") || lower.includes("priority")) {
+    return `What matters now for ${person}: check urgent incidents, overdue readiness items, open tasks, appointments, and current support guidance.`;
+  }
+
+  if (lower.includes("chronology")) {
+    return `Chronology summary for ${person}: use recent events, safeguarding-linked records, and significant changes in presentation to build the narrative.`;
+  }
+
+  return `Assistant response for ${person}: I am scoped to the ${section} section and ready to support drafting, summarising, and identifying next actions.`;
+}
+
+function updateAssistantAnalysis(userText) {
+  const assistantState = getAssistantState();
+
+  assistantState.scopeSummary = {
+    patterns:
+      `Current analysis is centred on ${buildPersonLabel()} in ${buildSectionLabel().replaceAll("_", " ")}.`,
+    next_steps:
+      "Use quick actions to create linked records, then review the suggestions panel for follow-up actions.",
   };
 
-  state.assistantMessages.push(entry);
-  state.assistantModalMessages.push({ ...entry });
-  renderAssistantMessages();
-}
+  assistantState.sources = [
+    {
+      title: "Selected young person context",
+      description: `Current selected young person ID: ${state.youngPersonId || "none"}`,
+    },
+    {
+      title: "Current workspace section",
+      description: buildSectionLabel(),
+    },
+  ];
 
-export function addAssistantPlaceholder() {
-  const entry = {
-    role: "assistant",
-    content: "Thinking…",
-    _streaming: true,
+  assistantState.runtime = {
+    mode: "scoped-young-person-assistant",
+    current_section: buildSectionLabel(),
+    selected_young_person_id: state.youngPersonId || null,
+    messages: assistantState.messages.length,
+    last_prompt: userText,
+    draft_mode: "Layered assistant UI active",
   };
 
-  state.assistantMessages.push({ ...entry });
-  state.assistantModalMessages.push({ ...entry });
-  renderAssistantMessages();
+  assistantState.explainability = {
+    summary:
+      "Response generated from current selected young person, active workspace section, and assistant UI state.",
+    reasoning_layers: [
+      "section scope",
+      "selected person context",
+      "UI prompt intent",
+      "draft response shaping",
+      "suggested operational follow-up",
+    ],
+  };
 }
 
-export function replaceLastAssistantPlaceholder(text) {
-  const finalText = String(text || "").trim() || "No assistant reply returned.";
-  const lists = [state.assistantMessages, state.assistantModalMessages];
+function handleAssistantSubmit(text) {
+  const clean = normaliseText(text);
+  if (!clean) return;
 
-  lists.forEach((list) => {
-    if (!list.length) return;
-    const last = list[list.length - 1];
+  pushMessage("user", clean);
 
-    if (last.role === "assistant" && last._streaming) {
-      last.content = finalText;
-      last._streaming = false;
-    }
+  const reply = buildPlaceholderAssistantResponse(clean);
+  pushMessage("assistant", reply);
+
+  updateAssistantAnalysis(clean);
+  renderAllAssistantUi();
+}
+
+function bindAssistantForms() {
+  qs("assistantForm")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const input = qs("assistantInput");
+    const value = input?.value || "";
+    handleAssistantSubmit(value);
+    if (input) input.value = "";
   });
 
-  renderAssistantMessages();
-}
-
-export function updateLastAssistantStreamingText(text) {
-  const nextText = String(text || "").trim() || "Thinking…";
-  const lists = [state.assistantMessages, state.assistantModalMessages];
-
-  lists.forEach((list) => {
-    if (!list.length) return;
-    const last = list[list.length - 1];
-
-    if (last.role === "assistant" && last._streaming) {
-      last.content = nextText;
-    }
+  qs("assistantModalForm")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const input = qs("assistantModalInput");
+    const value = input?.value || "";
+    handleAssistantSubmit(value);
+    if (input) input.value = "";
   });
-
-  renderAssistantMessages();
 }
 
-export function setAssistantSending(flag) {
-  state.assistantSending = !!flag;
-
-  if (els.assistantSendBtn) els.assistantSendBtn.disabled = state.assistantSending;
-  if (els.assistantModalSendBtn) els.assistantModalSendBtn.disabled = state.assistantSending;
-  if (els.assistantInput) els.assistantInput.disabled = state.assistantSending;
-  if (els.assistantModalInput) els.assistantModalInput.disabled = state.assistantSending;
+function bindAssistantButtons() {
+  qs("assistantLauncher")?.addEventListener("click", openAssistantModal);
+  qs("assistantExpandBtn")?.addEventListener("click", openAssistantModal);
+  qs("closeAssistantBtn")?.addEventListener("click", closeAssistantModal);
+  qs("assistantBackdrop")?.addEventListener("click", closeAssistantModal);
+  qs("assistantClearBtn")?.addEventListener("click", clearAssistantChat);
 }
 
-export function prettyJson(value) {
-  try {
-    return JSON.stringify(value || {}, null, 2);
-  } catch {
-    return "{}";
-  }
+export function bindAssistantUi() {
+  bindAssistantForms();
+  bindAssistantButtons();
+  renderAllAssistantUi();
 }
 
-export function renderAssistantSourcesHtml(sources) {
-  if (!Array.isArray(sources) || !sources.length) {
-    return `<p>Sources will appear here after a response.</p>`;
-  }
-
-  return sources
-    .map((source) => {
-      const type = escapeHtml(source?.type || "source");
-      const label = escapeHtml(source?.label || source?.document_title || "Source");
-      const excerpt = escapeHtml(source?.excerpt || "");
-      const section = escapeHtml(source?.section || "");
-      const page = source?.page_number != null ? escapeHtml(String(source.page_number)) : "";
-
-      return `
-        <div class="entity-row">
-          <div>
-            <div class="entity-title">${label}</div>
-            <div class="entity-meta">
-              ${type}
-              ${section ? ` • ${section}` : ""}
-              ${page ? ` • p.${page}` : ""}
-            </div>
-            ${excerpt ? `<div class="entity-meta" style="margin-top:6px;">${excerpt}</div>` : ""}
-          </div>
-        </div>
-      `;
-    })
-    .join("");
+export function refreshAssistantUi() {
+  renderAllAssistantUi();
 }
 
-export function inferAssistantSuggestedActions() {
-  const actions = [];
-  const scope = state.assistantMeta.assistant_scope || {};
-  const context = state.assistantMeta.assistant_context || {};
-
-  if (scope.scope_type === "young_person") {
-    actions.push(
-      "Draft handover",
-      "Pull young person voice themes",
-      "Summarise recent incidents",
-      "Summarise current support guidance"
-    );
-  }
-
-  if (context.recent_records?.incidents?.length) {
-    actions.push("Review incident patterns");
-  }
-
-  if (context.active_work?.tasks?.length) {
-    actions.push("Review outstanding tasks");
-  }
-
-  if (Array.isArray(state.assistantMeta.suggested_actions)) {
-    actions.push(...state.assistantMeta.suggested_actions);
-  }
-
-  return dedupeStrings(actions).slice(0, 6);
+export function appendAssistantSystemMessage(text) {
+  pushMessage("assistant", text);
+  renderAllAssistantUi();
 }
 
-export function renderAssistantInsights() {
-  const scope = state.assistantMeta.assistant_scope || {};
-  const context = state.assistantMeta.assistant_context || {};
-  const sources = state.assistantMeta.sources || [];
-  const runtime = state.assistantMeta.runtime || {};
-  const explainability = state.assistantMeta.explainability || {};
-
-  if (els.assistantScopeSummary) {
-    const rows = [];
-
-    rows.push(`
-      <div class="entity-row">
-        <div>
-          <div class="entity-title">${scope.scope_type === "young_person" ? "Young person scope" : "Assistant scope"}</div>
-          <div class="entity-meta">View: ${escapeHtml(String(state.currentView || "overview").replaceAll("_", " "))}</div>
-        </div>
-      </div>
-    `);
-
-    if (state.youngPerson) {
-      rows.push(`
-        <div class="entity-row">
-          <div>
-            <div class="entity-title">${escapeHtml(getYoungPersonName())}</div>
-            <div class="entity-meta">${escapeHtml(state.youngPerson.home_name || "Workspace loaded")}</div>
-          </div>
-        </div>
-      `);
-    }
-
-    if (context.young_person && typeof context.young_person === "object") {
-      rows.push(`
-        <div class="entity-row">
-          <div>
-            <div class="entity-title">Context loaded</div>
-            <div class="entity-meta">Assistant context includes profile and recent records.</div>
-          </div>
-        </div>
-      `);
-    }
-
-    els.assistantScopeSummary.innerHTML = rows.join("");
-  }
-
-  const suggestedActions = inferAssistantSuggestedActions();
-  if (els.assistantActions) {
-    els.assistantActions.innerHTML = suggestedActions.length
-      ? suggestedActions
-          .map(
-            (item) =>
-              `<button class="chip" type="button" data-assistant-chip="${escapeHtml(item)}">${escapeHtml(item)}</button>`
-          )
-          .join("")
-      : `<p>No suggested actions yet.</p>`;
-  }
-
-  if (els.assistantSources) {
-    els.assistantSources.innerHTML = renderAssistantSourcesHtml(sources);
-  }
-
-  if (els.assistantRuntime) {
-    els.assistantRuntime.textContent = prettyJson(runtime);
-  }
-
-  if (els.assistantExplainability) {
-    els.assistantExplainability.textContent = prettyJson(explainability);
-  }
-
-  if (els.assistantModalScopeSummary) {
-    els.assistantModalScopeSummary.innerHTML = els.assistantScopeSummary
-      ? els.assistantScopeSummary.innerHTML
-      : `<p>No scoped context loaded.</p>`;
-  }
-
-  if (els.assistantModalSources) {
-    els.assistantModalSources.innerHTML = renderAssistantSourcesHtml(sources);
-  }
+export function appendAssistantUserMessage(text) {
+  pushMessage("user", text);
+  renderAllAssistantUi();
 }
 
-export function openAssistant() {
-  updateAssistantContext();
-  els.assistantModal?.classList.remove("hidden");
-  els.assistantBackdrop?.classList.remove("hidden");
-  els.assistantModal?.setAttribute("aria-hidden", "false");
+export function setAssistantSources(sources = []) {
+  const assistantState = getAssistantState();
+  assistantState.sources = Array.isArray(sources) ? sources : [];
+  renderAllAssistantUi();
 }
 
-export function closeAssistant() {
-  els.assistantModal?.classList.add("hidden");
-  els.assistantBackdrop?.classList.add("hidden");
-  els.assistantModal?.setAttribute("aria-hidden", "true");
+export function setAssistantRuntime(runtime = null) {
+  const assistantState = getAssistantState();
+  assistantState.runtime = runtime;
+  renderAllAssistantUi();
 }
 
-function detectAssistantResponseMode(text) {
-  return /6 month|six month|12 month|twelve month|summary|timeline|chronology|review|report/i.test(
-    String(text || "")
-  )
-    ? "deep"
-    : "balanced";
+export function setAssistantExplainability(explainability = null) {
+  const assistantState = getAssistantState();
+  assistantState.explainability = explainability;
+  renderAllAssistantUi();
 }
 
-export async function askAssistant(question) {
-  const trimmed = String(question || "").trim();
-  if (!trimmed || !state.youngPersonId || state.assistantSending) return;
-
-  pushAssistantMessage("user", trimmed);
-  addAssistantPlaceholder();
-  setAssistantSending(true);
-
-  let streamedText = "";
-
-  try {
-    await apiStreamAssistant(
-      {
-        message: trimmed,
-        response_mode: detectAssistantResponseMode(trimmed),
-        context: getAssistantContextPayload(),
-      },
-      {
-        onMeta(meta) {
-          state.assistantMeta = {
-            sources: Array.isArray(meta?.sources) ? meta.sources : [],
-            runtime: meta?.runtime || {},
-            explainability: meta?.explainability || {},
-            assistant_scope: meta?.assistant_scope || {},
-            assistant_context: meta?.assistant_context || {},
-            suggested_actions: Array.isArray(meta?.suggested_actions) ? meta.suggested_actions : [],
-          };
-          renderAssistantInsights();
-        },
-        onMessage(text) {
-          streamedText = String(text || "");
-          updateLastAssistantStreamingText(streamedText);
-        },
-        onDone(text) {
-          const finalText = String(text || streamedText || "").trim();
-          replaceLastAssistantPlaceholder(finalText || "No assistant reply returned.");
-        },
-      }
-    );
-  } catch (error) {
-    replaceLastAssistantPlaceholder(error.message || "The assistant could not answer right now.");
-  } finally {
-    setAssistantSending(false);
-  }
+export function setAssistantScopeSummary(scopeSummary = null) {
+  const assistantState = getAssistantState();
+  assistantState.scopeSummary = scopeSummary;
+  renderAllAssistantUi();
 }
