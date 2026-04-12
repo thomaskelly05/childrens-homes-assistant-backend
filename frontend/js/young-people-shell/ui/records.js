@@ -257,6 +257,18 @@ function prettifyKey(key) {
     .replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
+function renderRichEmptyState(title, message) {
+  return `
+    <div class="empty-state">
+      <div class="empty-state-inner">
+        <div class="empty-state-icon" aria-hidden="true">○</div>
+        <h3>${escapeHtml(title)}</h3>
+        <p>${escapeHtml(message)}</p>
+      </div>
+    </div>
+  `;
+}
+
 function renderObjectValue(value) {
   if (value === null || value === undefined || value === "") return "—";
 
@@ -270,7 +282,7 @@ function renderObjectValue(value) {
   }
 
   if (typeof value === "object") {
-    return `<pre class="assistant-code-block">${escapeHtml(JSON.stringify(value, null, 2))}</pre>`;
+    return `<pre class="drawer-code-block">${escapeHtml(JSON.stringify(value, null, 2))}</pre>`;
   }
 
   return escapeHtml(String(value));
@@ -287,23 +299,37 @@ function renderDetailRows(detail = {}) {
 
   if (!rows.length) {
     return `
-      <div class="drawer-row">
-        <div class="drawer-key">Details</div>
-        <div class="drawer-value">No additional details.</div>
+      <div class="drawer-detail-list">
+        <div class="drawer-detail-row">
+          <div class="drawer-detail-key">Details</div>
+          <div class="drawer-detail-value">No additional details.</div>
+        </div>
       </div>
     `;
   }
 
-  return rows
-    .map(
-      ([key, value]) => `
-        <div class="drawer-row">
-          <div class="drawer-key">${escapeHtml(prettifyKey(key))}</div>
-          <div class="drawer-value">${renderObjectValue(value)}</div>
-        </div>
-      `
-    )
-    .join("");
+  return `
+    <div class="drawer-detail-list">
+      ${rows
+        .map(
+          ([key, value]) => `
+            <div class="drawer-detail-row">
+              <div class="drawer-detail-key">${escapeHtml(prettifyKey(key))}</div>
+              <div class="drawer-detail-value">${renderObjectValue(value)}</div>
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderDrawerSection(detail = {}) {
+  return `
+    <section class="drawer-content-card">
+      ${renderDetailRows(detail)}
+    </section>
+  `;
 }
 
 export function openDrawer() {
@@ -385,7 +411,7 @@ export async function openRecordDetail(item) {
     els.drawerBody.innerHTML = `
       <div class="loading-state">
         <div>
-          <div class="spinner"></div>
+          <div class="spinner" aria-hidden="true"></div>
           <p>Loading details…</p>
         </div>
       </div>
@@ -411,11 +437,7 @@ export async function openRecordDetail(item) {
     }
 
     if (els.drawerBody) {
-      els.drawerBody.innerHTML = `
-        <div class="drawer-section">
-          ${renderDetailRows(detail)}
-        </div>
-      `;
+      els.drawerBody.innerHTML = renderDrawerSection(detail);
     }
 
     const suggestionRecord = buildSuggestionContext(type, detail, item);
@@ -437,11 +459,10 @@ export async function openRecordDetail(item) {
     }
 
     if (els.drawerBody) {
-      els.drawerBody.innerHTML = `
-        <div class="empty-state">
-          <p>${escapeHtml(error.message || "Failed to load record details.")}</p>
-        </div>
-      `;
+      els.drawerBody.innerHTML = renderRichEmptyState(
+        "Record unavailable",
+        error.message || "Failed to load record details."
+      );
     }
 
     hideSuggestionsPanel();
