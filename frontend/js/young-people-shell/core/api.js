@@ -58,17 +58,50 @@ export function resolveApiUrl(url, method = "GET") {
   return url;
 }
 
+function getCsrfToken() {
+  const metaToken = document
+    .querySelector('meta[name="csrf-token"]')
+    ?.getAttribute("content");
+
+  if (metaToken) return metaToken;
+
+  const cookieMatch = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+  if (cookieMatch?.[1]) {
+    try {
+      return decodeURIComponent(cookieMatch[1]);
+    } catch {
+      return cookieMatch[1];
+    }
+  }
+
+  return "";
+}
+
+export function withCsrfHeaders(method = "GET", headers = {}) {
+  const upper = String(method || "GET").toUpperCase();
+  const nextHeaders = { ...(headers || {}) };
+
+  if (!["GET", "HEAD", "OPTIONS"].includes(upper)) {
+    const csrfToken = getCsrfToken();
+    if (csrfToken && !nextHeaders["X-CSRF-Token"]) {
+      nextHeaders["X-CSRF-Token"] = csrfToken;
+    }
+  }
+
+  return nextHeaders;
+}
+
 export async function apiRequest(url, options = {}) {
   const method = String(options.method || "GET").toUpperCase();
   const resolvedUrl = resolveApiUrl(url, method);
 
   const config = {
     credentials: "same-origin",
-    headers: {
+    headers: withCsrfHeaders(method, {
       Accept: "application/json",
       ...(options.body ? { "Content-Type": "application/json" } : {}),
       ...(options.headers || {}),
-    },
+    }),
     ...options,
     method,
   };
@@ -161,10 +194,10 @@ export function buildSseContextFetch(url, payload) {
   return fetch(url, {
     method: "POST",
     credentials: "same-origin",
-    headers: {
+    headers: withCsrfHeaders("POST", {
       Accept: "text/event-stream",
       "Content-Type": "application/json",
-    },
+    }),
     body: JSON.stringify(payload || {}),
   });
 }
