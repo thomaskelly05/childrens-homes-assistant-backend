@@ -236,7 +236,6 @@ class YoungPersonDailyNotesService:
                 recorded_by_name=note.get("author_name"),
             )
         except Exception:
-            # Keep the source record write successful even if OS sync fails.
             pass
 
     @staticmethod
@@ -298,6 +297,31 @@ class YoungPersonDailyNotesService:
             payload.get("workflow_status")
         )
 
+        db_payload = {
+            "home_id": home_id,
+            "note_date": note_date,
+            "shift_type": payload.get("shift_type"),
+            "mood": payload.get("mood"),
+            "presentation": payload.get("presentation"),
+            "activities": payload.get("activities"),
+            "education_update": payload.get("education_update"),
+            "health_update": payload.get("health_update"),
+            "family_update": payload.get("family_update"),
+            "behaviour_update": payload.get("behaviour_update"),
+            "young_person_voice": young_person_voice,
+            "positives": payload.get("positives"),
+            "actions_required": payload.get("actions_required"),
+            "significance": payload.get("significance"),
+            "workflow_status": workflow_status,
+            "manager_review_comment": payload.get("manager_review_comment"),
+            "approved_by": payload.get("approved_by"),
+            "approved_at": payload.get("approved_at"),
+            "returned_at": payload.get("returned_at"),
+            "submitted_at": payload.get("submitted_at"),
+            "last_edited_at": payload.get("last_edited_at") or now,
+            "author_id": payload.get("author_id") or author_id,
+        }
+
         with conn.cursor() as cur:
             cur.execute(
                 """
@@ -337,28 +361,28 @@ class YoungPersonDailyNotesService:
                 """,
                 (
                     young_person_id,
-                    home_id,
-                    note_date,
-                    payload.get("shift_type"),
-                    payload.get("mood"),
-                    payload.get("presentation"),
-                    payload.get("activities"),
-                    payload.get("education_update"),
-                    payload.get("health_update"),
-                    payload.get("family_update"),
-                    payload.get("behaviour_update"),
-                    young_person_voice,
-                    payload.get("positives"),
-                    payload.get("actions_required"),
-                    payload.get("significance"),
-                    workflow_status,
-                    payload.get("manager_review_comment"),
-                    payload.get("approved_by"),
-                    payload.get("approved_at"),
-                    payload.get("returned_at"),
-                    payload.get("submitted_at"),
-                    payload.get("last_edited_at") or now,
-                    payload.get("author_id") or author_id,
+                    db_payload["home_id"],
+                    db_payload["note_date"],
+                    db_payload["shift_type"],
+                    db_payload["mood"],
+                    db_payload["presentation"],
+                    db_payload["activities"],
+                    db_payload["education_update"],
+                    db_payload["health_update"],
+                    db_payload["family_update"],
+                    db_payload["behaviour_update"],
+                    db_payload["young_person_voice"],
+                    db_payload["positives"],
+                    db_payload["actions_required"],
+                    db_payload["significance"],
+                    db_payload["workflow_status"],
+                    db_payload["manager_review_comment"],
+                    db_payload["approved_by"],
+                    db_payload["approved_at"],
+                    db_payload["returned_at"],
+                    db_payload["submitted_at"],
+                    db_payload["last_edited_at"],
+                    db_payload["author_id"],
                     now,
                     now,
                 ),
@@ -401,8 +425,8 @@ class YoungPersonDailyNotesService:
                 subcategory=payload.get("shift_type") or "daily_note",
                 significance=payload.get("significance") or "medium",
                 due_date=note_date,
-                owner_id=payload.get("author_id") or author_id,
-                created_by=payload.get("author_id") or author_id,
+                owner_id=db_payload["author_id"],
+                created_by=db_payload["author_id"],
                 workflow={
                     "link_chronology": bool(payload.get("link_to_chronology", True)),
                     "create_task": bool(payload.get("create_follow_up_task", False))
