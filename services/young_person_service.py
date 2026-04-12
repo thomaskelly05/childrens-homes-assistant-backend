@@ -11,6 +11,7 @@ from services.young_people_service import (
     update_young_person as legacy_update_young_person,
     upsert_communication_profile,
     upsert_education_profile,
+    upsert_formulation,
     upsert_health_profile,
     upsert_identity_profile,
     upsert_legal_status,
@@ -228,6 +229,18 @@ class YoungPersonService:
                 cur.execute(
                     """
                     SELECT *
+                    FROM young_person_formulations
+                    WHERE young_person_id = %s
+                    ORDER BY id DESC
+                    LIMIT 1
+                    """,
+                    (young_person_id,),
+                )
+                formulation = cur.fetchone()
+
+                cur.execute(
+                    """
+                    SELECT *
                     FROM young_person_contacts
                     WHERE young_person_id = %s
                     ORDER BY id DESC
@@ -254,6 +267,7 @@ class YoungPersonService:
                 "health_profile": dict(health_profile) if health_profile else None,
                 "identity_profile": dict(identity_profile) if identity_profile else None,
                 "legal_status": dict(legal_status) if legal_status else None,
+                "formulation": dict(formulation) if formulation else None,
                 "contacts": [dict(x) for x in contacts],
                 "alerts": [dict(x) for x in alerts],
             }
@@ -374,6 +388,7 @@ class YoungPersonService:
             "health_profile": "young_person_health_profile",
             "identity_profile": "young_person_identity_profile",
             "legal_status": "young_person_legal_status",
+            "formulation": "young_person_formulations",
         }
 
         table = table_map.get(section)
@@ -418,6 +433,13 @@ class YoungPersonService:
                 row = upsert_identity_profile(conn, young_person_id=young_person_id, payload=data)
             elif section == "legal_status":
                 row = upsert_legal_status(
+                    conn,
+                    young_person_id=young_person_id,
+                    created_by=data.get("created_by"),
+                    payload=data,
+                )
+            elif section == "formulation":
+                row = upsert_formulation(
                     conn,
                     young_person_id=young_person_id,
                     created_by=data.get("created_by"),
