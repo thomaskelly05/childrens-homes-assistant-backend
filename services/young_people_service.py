@@ -856,6 +856,126 @@ def upsert_legal_status(
     return row or {}
 
 
+def upsert_formulation(
+    conn,
+    *,
+    young_person_id: int,
+    created_by: int | None = None,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    review_date = payload.get("review_date")
+    is_current = _normalise_bool(payload.get("is_current"), True)
+
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        if is_current:
+            cur.execute(
+                """
+                UPDATE young_person_formulations
+                SET
+                    is_current = FALSE,
+                    updated_at = NOW()
+                WHERE young_person_id = %s
+                  AND COALESCE(is_current, FALSE) = TRUE
+                """,
+                (young_person_id,),
+            )
+
+        cur.execute(
+            """
+            SELECT id
+            FROM young_person_formulations
+            WHERE young_person_id = %s
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (young_person_id,),
+        )
+        existing = _fetchone_dict(cur)
+
+        values = (
+            _safe_string(payload.get("presenting_needs")),
+            _safe_string(payload.get("developmental_context")),
+            _safe_string(payload.get("trauma_context")),
+            _safe_string(payload.get("neurodevelopmental_context")),
+            _safe_string(payload.get("relational_context")),
+            _safe_string(payload.get("meaning_of_behaviour")),
+            _safe_string(payload.get("known_triggers")),
+            _safe_string(payload.get("early_signs_of_distress")),
+            _safe_string(payload.get("protective_factors")),
+            _safe_string(payload.get("what_helps")),
+            _safe_string(payload.get("what_adults_should_avoid")),
+            _safe_string(payload.get("regulation_strategies")),
+            _safe_string(payload.get("child_voice_summary")),
+            review_date,
+            is_current,
+        )
+
+        if existing:
+            cur.execute(
+                """
+                UPDATE young_person_formulations
+                SET
+                    presenting_needs = %s,
+                    developmental_context = %s,
+                    trauma_context = %s,
+                    neurodevelopmental_context = %s,
+                    relational_context = %s,
+                    meaning_of_behaviour = %s,
+                    known_triggers = %s,
+                    early_signs_of_distress = %s,
+                    protective_factors = %s,
+                    what_helps = %s,
+                    what_adults_should_avoid = %s,
+                    regulation_strategies = %s,
+                    child_voice_summary = %s,
+                    review_date = %s,
+                    is_current = %s,
+                    updated_at = NOW()
+                WHERE id = %s
+                RETURNING *
+                """,
+                (*values, existing["id"]),
+            )
+        else:
+            cur.execute(
+                """
+                INSERT INTO young_person_formulations (
+                    young_person_id,
+                    presenting_needs,
+                    developmental_context,
+                    trauma_context,
+                    neurodevelopmental_context,
+                    relational_context,
+                    meaning_of_behaviour,
+                    known_triggers,
+                    early_signs_of_distress,
+                    protective_factors,
+                    what_helps,
+                    what_adults_should_avoid,
+                    regulation_strategies,
+                    child_voice_summary,
+                    review_date,
+                    is_current,
+                    created_by
+                )
+                VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                )
+                RETURNING *
+                """,
+                (
+                    young_person_id,
+                    *values,
+                    created_by,
+                ),
+            )
+
+        row = _fetchone_dict(cur)
+
+    conn.commit()
+    return row or {}
+
+
 def add_contact(
     conn,
     *,
