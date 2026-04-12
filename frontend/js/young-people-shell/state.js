@@ -28,4 +28,14 @@ export const state = {
 
   // Optional legacy compatibility
   suggestions: [],
+
+  // Assistant UI
+  assistantUi: {
+    messages: [],
+    sources: [],
+    runtime: null,
+    explainability: null,
+    scopeSummary: null,
+    suggestions: [],
+  },
 };
