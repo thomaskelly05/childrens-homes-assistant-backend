@@ -2,8 +2,11 @@ import { els } from "../dom.js";
 import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
-import { renderSection, renderSummaryStat, renderRowList } from "../ui/records.js";
 import { mapAppointment } from "../core/adapters.js";
+
+function toText(value, fallback = "") {
+  return escapeHtml(String(value ?? fallback ?? ""));
+}
 
 function sortByStart(items = []) {
   return [...items].sort((a, b) => {
@@ -41,6 +44,20 @@ function formatDayHeading(value) {
     day: "2-digit",
     month: "long",
     year: "numeric",
+  });
+}
+
+function formatDateTime(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  return date.toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -115,25 +132,186 @@ function groupByDay(items = []) {
     }));
 }
 
+function renderEmptyState(message = "No appointments found.") {
+  return `
+    <div class="empty-state">
+      <p>${toText(message)}</p>
+    </div>
+  `;
+}
+
+function getRowPill(item = {}) {
+  const status = String(item.status || "").toLowerCase();
+
+  if (["cancelled", "missed", "dna", "overdue"].includes(status)) {
+    return { label: status.replaceAll("_", " "), tone: "warning" };
+  }
+
+  if (["completed"].includes(status)) {
+    return { label: "completed", tone: "muted" };
+  }
+
+  if (["booked", "scheduled", "confirmed"].includes(status)) {
+    return { label: status.replaceAll("_", " "), tone: "muted" };
+  }
+
+  return { label: status ? status.replaceAll("_", " ") : "appointment", tone: "muted" };
+}
+
+function renderRecordRows(items = [], emptyMessage = "No appointments found.") {
+  if (!items.length) {
+    return renderEmptyState(emptyMessage);
+  }
+
+  return `
+    <div class="record-list">
+      ${items
+        .map((item) => {
+          const row = buildCalendarRow(item);
+          const pill = getRowPill(row);
+
+          return `
+            <article
+              class="record-row"
+              data-open-record="true"
+              data-record-id="${toText(row.id ?? row.source_id ?? "")}"
+              data-record-type="${toText(row.record_type || "appointment")}"
+              data-title="${toText(row.title)}"
+              role="button"
+              tabindex="0"
+            >
+              <div class="record-row-main">
+                <div class="record-row-title">${toText(row.title)}</div>
+                <div class="record-row-summary">${toText(row.summary || "Appointment")}</div>
+                <div class="record-row-meta">${toText(formatDateTime(row.start_datetime || row.appointment_date || row.created_at))}</div>
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill ${toText(pill.tone)}">${toText(pill.label)}</span>
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
 function renderCalendarGroups(groups = []) {
   if (!groups.length) {
-    return `
-      <div class="empty-state">
-        <p>No appointments found.</p>
-      </div>
-    `;
+    return renderEmptyState("No appointments found.");
   }
 
   return groups
     .map(
       (group) => `
-        <section class="calendar-day-group">
-          <div class="calendar-day-heading">${escapeHtml(group.label)}</div>
-          ${renderRowList(group.records.map(buildCalendarRow), "No items")}
+        <section class="overview-side-card">
+          <div class="overview-section-head">
+            <h3>${toText(group.label)}</h3>
+            <p>Appointments planned for this day.</p>
+          </div>
+          ${renderRecordRows(group.records, "No items")}
         </section>
       `
     )
     .join("");
+}
+
+function renderCalendarHtml({
+  uniqueAppointments = [],
+  todayItems = [],
+  upcomingItems = [],
+  completedItems = [],
+  cancelledItems = [],
+  groupedUpcoming = [],
+}) {
+  return `
+    <section class="overview-panel">
+      <div class="overview-panel-head">
+        <div>
+          <div class="eyebrow">Appointments</div>
+          <h2>Appointments and key dates</h2>
+          <p>Today’s appointments, upcoming plans and appointment history.</p>
+        </div>
+      </div>
+
+      <div class="overview-grid">
+        <section class="overview-main">
+          <div class="overview-stats-grid">
+            <article class="overview-stat-card">
+              <span class="overview-stat-label">All appointments</span>
+              <strong class="overview-stat-value">${toText(uniqueAppointments.length)}</strong>
+              <span class="overview-stat-note">All recorded appointments</span>
+            </article>
+
+            <article class="overview-stat-card">
+              <span class="overview-stat-label">Today</span>
+              <strong class="overview-stat-value">${toText(todayItems.length)}</strong>
+              <span class="overview-stat-note">Appointments happening today</span>
+            </article>
+
+            <article class="overview-stat-card">
+              <span class="overview-stat-label">Upcoming</span>
+              <strong class="overview-stat-value">${toText(upcomingItems.length)}</strong>
+              <span class="overview-stat-note">Future appointments scheduled</span>
+            </article>
+
+            <article class="overview-stat-card">
+              <span class="overview-stat-label">Completed</span>
+              <strong class="overview-stat-value">${toText(completedItems.length)}</strong>
+              <span class="overview-stat-note">Completed appointments</span>
+            </article>
+          </div>
+
+          <section class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Today</h3>
+              <p>Appointments happening today.</p>
+            </div>
+
+            ${renderRecordRows(todayItems, "No appointments today.")}
+          </section>
+
+          <section class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>All appointments</h3>
+              <p>Full appointment list in date order.</p>
+            </div>
+
+            ${renderRecordRows(uniqueAppointments, "No appointments found.")}
+          </section>
+        </section>
+
+        <aside class="overview-side">
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Upcoming by date</h3>
+              <p>Future appointments grouped by day.</p>
+            </div>
+
+            ${renderCalendarGroups(groupedUpcoming)}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Completed appointments</h3>
+              <p>Appointments marked as completed.</p>
+            </div>
+
+            ${renderRecordRows(completedItems, "No completed appointments found.")}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Cancelled appointments</h3>
+              <p>Appointments that were cancelled.</p>
+            </div>
+
+            ${renderRecordRows(cancelledItems, "No cancelled appointments found.")}
+          </section>
+        </aside>
+      </div>
+    </section>
+  `;
 }
 
 export async function loadCalendar() {
@@ -191,44 +369,14 @@ export async function loadCalendar() {
 
     const groupedUpcoming = groupByDay(upcomingItems);
 
-    els.viewContent.innerHTML = `
-      <section class="summary-strip">
-        ${renderSummaryStat("All appointments", uniqueAppointments.length)}
-        ${renderSummaryStat("Today", todayItems.length)}
-        ${renderSummaryStat("Upcoming", upcomingItems.length)}
-        ${renderSummaryStat("Completed", completedItems.length)}
-      </section>
-
-      ${renderSection(
-        "Today",
-        "Appointments happening today.",
-        renderRowList(todayItems.map(buildCalendarRow), "No appointments today.")
-      )}
-
-      ${renderSection(
-        "Upcoming by date",
-        "Future appointments grouped by day.",
-        renderCalendarGroups(groupedUpcoming)
-      )}
-
-      ${renderSection(
-        "Completed appointments",
-        "Appointments marked as completed.",
-        renderRowList(completedItems.map(buildCalendarRow), "No completed appointments found.")
-      )}
-
-      ${renderSection(
-        "Cancelled appointments",
-        "Appointments that were cancelled.",
-        renderRowList(cancelledItems.map(buildCalendarRow), "No cancelled appointments found.")
-      )}
-
-      ${renderSection(
-        "All appointments",
-        "Full appointment list in date order.",
-        renderRowList(uniqueAppointments.map(buildCalendarRow), "No appointments found.")
-      )}
-    `;
+    els.viewContent.innerHTML = renderCalendarHtml({
+      uniqueAppointments,
+      todayItems,
+      upcomingItems,
+      completedItems,
+      cancelledItems,
+      groupedUpcoming,
+    });
   } catch (error) {
     els.viewContent.innerHTML = `
       <div class="empty-state">
