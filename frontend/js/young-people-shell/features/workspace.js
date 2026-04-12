@@ -211,11 +211,22 @@ function getRowMeta(item = {}) {
   );
 }
 
+function getRowTypeLabel(item = {}) {
+  return (
+    item.record_type_label ||
+    item.record_type ||
+    item.type ||
+    item.event_type ||
+    item.appointment_type ||
+    "Record"
+  );
+}
+
 function getRowPill(item = {}) {
   const severity = String(item.severity || "").toLowerCase();
   const status = String(item.status || item.workflow_status || "").toLowerCase();
 
-  if (["critical", "high", "overdue", "escalated"].includes(severity) || ["overdue", "escalated"].includes(status)) {
+  if (["critical", "high"].includes(severity) || ["overdue", "escalated"].includes(status)) {
     return { label: "Needs review", tone: "warning" };
   }
 
@@ -223,16 +234,47 @@ function getRowPill(item = {}) {
     return { label: "In progress", tone: "muted" };
   }
 
+  if (["completed", "booked", "confirmed"].includes(status)) {
+    return { label: "Recorded", tone: "success" };
+  }
+
   return { label: "Recorded", tone: "muted" };
+}
+
+function getRecordRowVariant(item = {}) {
+  const type = String(item.record_type || item.type || "").toLowerCase();
+  const eventType = String(item.event_type || "").toLowerCase();
+
+  if (type.includes("incident") || eventType.includes("incident")) return "record-row--incident";
+  if (type.includes("health") || type.includes("appointment")) return "record-row--health";
+  if (type.includes("family")) return "record-row--family";
+  if (type.includes("risk") || item.safeguarding_flag) return "record-row--risk";
+  return "record-row--daily";
+}
+
+function renderEmptyState({
+  title = "Nothing to show",
+  message = "There is nothing to display right now.",
+  actionHtml = "",
+} = {}) {
+  return `
+    <div class="empty-state">
+      <div class="empty-state-inner">
+        <div class="empty-state-icon" aria-hidden="true">○</div>
+        <h3>${toText(title)}</h3>
+        <p>${toText(message)}</p>
+        ${actionHtml ? `<div class="empty-state-actions">${actionHtml}</div>` : ""}
+      </div>
+    </div>
+  `;
 }
 
 function renderRecordRows(items = [], emptyMessage = "Nothing to show right now.") {
   if (!items.length) {
-    return `
-      <div class="empty-state">
-        <p>${toText(emptyMessage)}</p>
-      </div>
-    `;
+    return renderEmptyState({
+      title: "No records to show",
+      message: emptyMessage,
+    });
   }
 
   return `
@@ -241,10 +283,13 @@ function renderRecordRows(items = [], emptyMessage = "Nothing to show right now.
         const pill = getRowPill(item);
         const id = item.id ?? item.record_id ?? item.source_id ?? "";
         const type = item.record_type || item.type || "";
+        const variantClass = getRecordRowVariant(item);
+        const formattedDate = formatDate(getRowMeta(item));
+        const typeLabel = getRowTypeLabel(item);
 
         return `
           <article
-            class="record-row"
+            class="record-row ${toText(variantClass)}"
             data-record-id="${toText(id)}"
             data-record-type="${toText(type)}"
             data-open-record="true"
@@ -255,7 +300,10 @@ function renderRecordRows(items = [], emptyMessage = "Nothing to show right now.
             <div class="record-row-main">
               <div class="record-row-title">${toText(getRowTitle(item))}</div>
               <div class="record-row-summary">${toText(getRowSummary(item))}</div>
-              <div class="record-row-meta">${toText(formatDate(getRowMeta(item)) || type || "")}</div>
+              <div class="record-row-meta">
+                ${formattedDate ? `<span>${toText(formattedDate)}</span>` : ""}
+                ${typeLabel ? `<span>${toText(typeLabel)}</span>` : ""}
+              </div>
             </div>
             <div class="record-row-side">
               <span class="row-pill ${toText(pill.tone)}">${toText(pill.label)}</span>
@@ -269,11 +317,10 @@ function renderRecordRows(items = [], emptyMessage = "Nothing to show right now.
 
 function renderPriorityList(items = [], emptyMessage = "No priority items are showing right now.") {
   if (!items.length) {
-    return `
-      <div class="empty-state">
-        <p>${toText(emptyMessage)}</p>
-      </div>
-    `;
+    return renderEmptyState({
+      title: "Nothing urgent right now",
+      message: emptyMessage,
+    });
   }
 
   return `
@@ -312,11 +359,10 @@ function renderSupportPatterns({ dailyNotes = [], incidents = [], plans = [] }) 
   const cleanPatterns = patterns.filter(Boolean).slice(0, 3);
 
   if (!cleanPatterns.length) {
-    return `
-      <div class="empty-state">
-        <p>No recent support patterns are showing yet.</p>
-      </div>
-    `;
+    return renderEmptyState({
+      title: "No support patterns yet",
+      message: "No recent support patterns are showing yet.",
+    });
   }
 
   return `
@@ -335,6 +381,10 @@ function renderOverviewHtml({
   workspaceCounts,
   supportPatternsHtml,
 }) {
+  const urgentStatClass = counts.urgent > 0 ? "overview-stat-card overview-stat-card--danger" : "overview-stat-card";
+  const todayStatClass = counts.today > 0 ? "overview-stat-card overview-stat-card--success" : "overview-stat-card";
+  const upcomingStatClass = counts.upcoming > 0 ? "overview-stat-card overview-stat-card--warning" : "overview-stat-card";
+
   return `
     <section class="overview-panel">
       <div class="overview-panel-head">
@@ -348,7 +398,7 @@ function renderOverviewHtml({
       <div class="overview-grid">
         <section class="overview-main">
           <div class="overview-stats-grid">
-            <article class="overview-stat-card">
+            <article class="${urgentStatClass}">
               <span class="overview-stat-label">Urgent</span>
               <strong class="overview-stat-value">${toText(counts.urgent)}</strong>
               <span class="overview-stat-note">Items needing prompt attention</span>
@@ -360,13 +410,13 @@ function renderOverviewHtml({
               <span class="overview-stat-note">Recently added records</span>
             </article>
 
-            <article class="overview-stat-card">
+            <article class="${todayStatClass}">
               <span class="overview-stat-label">Today</span>
               <strong class="overview-stat-value">${toText(counts.today)}</strong>
               <span class="overview-stat-note">Records or updates today</span>
             </article>
 
-            <article class="overview-stat-card">
+            <article class="${upcomingStatClass}">
               <span class="overview-stat-label">Upcoming</span>
               <strong class="overview-stat-value">${toText(counts.upcoming)}</strong>
               <span class="overview-stat-note">Planned appointments or actions</span>
@@ -389,7 +439,7 @@ function renderOverviewHtml({
             </div>
 
             <div class="record-list">
-              <article class="record-row">
+              <article class="record-row record-row--incident">
                 <div class="record-row-main">
                   <div class="record-row-title">Urgent incidents</div>
                   <div class="record-row-summary">High or critical incidents needing review.</div>
@@ -399,7 +449,7 @@ function renderOverviewHtml({
                 </div>
               </article>
 
-              <article class="record-row">
+              <article class="record-row record-row--health">
                 <div class="record-row-main">
                   <div class="record-row-title">Open appointments</div>
                   <div class="record-row-summary">Upcoming appointments and visits.</div>
@@ -419,7 +469,7 @@ function renderOverviewHtml({
                 </div>
               </article>
 
-              <article class="record-row">
+              <article class="record-row record-row--risk">
                 <div class="record-row-main">
                   <div class="record-row-title">Compliance issues</div>
                   <div class="record-row-summary">Overdue or escalated items needing attention.</div>
@@ -646,10 +696,9 @@ export async function loadCurrentView() {
       supportPatternsHtml,
     });
   } catch (error) {
-    els.viewContent.innerHTML = `
-      <div class="empty-state">
-        <p>${escapeHtml(error.message || "Failed to load workspace.")}</p>
-      </div>
-    `;
+    els.viewContent.innerHTML = renderEmptyState({
+      title: "Workspace unavailable",
+      message: error.message || "Failed to load workspace.",
+    });
   }
 }
