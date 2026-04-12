@@ -2,6 +2,7 @@
   --bg: #f4f7fb;
   --panel: #ffffff;
   --panel-muted: #f8fafc;
+  --panel-soft: #fbfdff;
   --border: #d9e2ec;
   --border-strong: #c2cfdb;
   --text: #152536;
@@ -24,7 +25,7 @@
   --radius-lg: 22px;
   --radius-xl: 28px;
   --topbar-h: 72px;
-  --sidebar-w: 288px;
+  --sidebar-w: 296px;
   --rightbar-w: 360px;
   --mobile-bottom-h: 76px;
   --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -76,8 +77,6 @@ button {
     radial-gradient(circle at top right, rgba(16, 185, 129, 0.06), transparent 18%),
     var(--bg);
 }
-
-/* top bar */
 
 .shell-topbar {
   position: sticky;
@@ -143,8 +142,6 @@ button {
 .shell-main {
   min-height: calc(100vh - var(--topbar-h));
 }
-
-/* selector */
 
 .selector-screen {
   padding: 28px;
@@ -307,9 +304,11 @@ button {
   font-weight: 600;
 }
 
-/* workspace layout */
-
 .workspace-screen {
+  min-height: calc(100vh - var(--topbar-h));
+}
+
+.workspace-screen-inner {
   display: grid;
   grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
   min-height: calc(100vh - var(--topbar-h));
@@ -321,9 +320,19 @@ button {
   height: calc(100vh - var(--topbar-h));
   overflow: auto;
   border-right: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(14px);
   padding: 18px;
+}
+
+.workspace-back-btn {
+  width: 100%;
+  justify-content: center;
+  margin: 0 0 18px;
+  min-height: 42px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: #fff;
 }
 
 .workspace-stage {
@@ -355,6 +364,7 @@ button {
   gap: 16px;
 }
 
+.workspace-nav,
 .workspace-nav-inner,
 .mobile-nav-content {
   display: grid;
@@ -381,7 +391,7 @@ button {
   align-items: center;
   gap: 10px;
   text-align: left;
-  min-height: 46px;
+  min-height: 48px;
   padding: 12px 14px;
   border-radius: 14px;
   color: var(--text);
@@ -562,7 +572,6 @@ button {
   color: var(--success);
   font-weight: 700;
 }
-/* content */
 
 .content-section {
   padding: 20px;
@@ -740,8 +749,6 @@ button {
   line-height: 1.55;
 }
 
-/* records */
-
 .record-list,
 .record-rows,
 .mobile-record-list {
@@ -899,7 +906,6 @@ button {
 .row-actions {
   white-space: nowrap;
 }
-/* assistant / side panels */
 
 .workspace-side-card {
   padding: 16px;
@@ -1056,8 +1062,6 @@ button {
   background: #fff;
 }
 
-/* form controls */
-
 .text-input,
 .search-input,
 .select-input,
@@ -1108,8 +1112,6 @@ button {
   border: 1px solid var(--border);
   background: #fff;
 }
-
-/* buttons */
 
 .btn,
 .primary-btn,
@@ -1171,8 +1173,6 @@ button {
   letter-spacing: 0.08em;
   color: var(--primary-strong);
 }
-
-/* composer */
 
 .composer-panel,
 .fullscreen-panel,
@@ -1242,7 +1242,7 @@ button {
   min-height: 0;
   overflow: auto;
   border-left: 1px solid var(--border);
-  background: #fbfdff;
+  background: var(--panel-soft);
   padding: 20px;
   display: grid;
   gap: 16px;
@@ -1323,8 +1323,6 @@ button {
   font-weight: 700;
 }
 
-/* suggestions */
-
 .suggestion-card {
   padding: 14px;
   border-radius: 16px;
@@ -1365,7 +1363,6 @@ button {
   gap: 10px;
   flex-wrap: wrap;
 }
-/* drawer */
 
 .record-drawer,
 .record-drawer-backdrop {
@@ -1452,8 +1449,6 @@ button {
   flex-wrap: wrap;
 }
 
-/* mobile nav */
-
 .mobile-nav-backdrop {
   position: fixed;
   inset: 0;
@@ -1530,8 +1525,6 @@ button {
   font-weight: 700;
 }
 
-/* states */
-
 .loading-state,
 .empty-state {
   min-height: 180px;
@@ -1559,8 +1552,6 @@ button {
   }
 }
 
-/* utility */
-
 .mobile-only {
   display: none;
 }
@@ -1572,8 +1563,6 @@ button {
 .desktop-wide-only {
   display: block;
 }
-
-/* responsive */
 
 @media (max-width: 1200px) {
   .workspace-content-wrap {
@@ -1590,7 +1579,7 @@ button {
 }
 
 @media (max-width: 980px) {
-  .workspace-screen {
+  .workspace-screen-inner {
     grid-template-columns: 1fr;
   }
 
