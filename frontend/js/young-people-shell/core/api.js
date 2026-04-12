@@ -1,3 +1,5 @@
+const API_BASE = window.location.origin;
+
 async function readJsonSafely(response) {
   const text = await response.text();
 
@@ -58,30 +60,25 @@ export function resolveApiUrl(url, method = "GET") {
   return url;
 }
 
-function getCsrfToken() {
-  const metaToken = document
-    .querySelector('meta[name="csrf-token"]')
-    ?.getAttribute("content");
+function getCookie(name) {
+  const escaped = String(name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = document.cookie.match(
+    new RegExp("(^|;\\s*)" + escaped + "=([^;]*)")
+  );
+  return match ? decodeURIComponent(match[2]) : "";
+}
 
-  if (metaToken) return metaToken;
-
-  const cookieMatch = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
-  if (cookieMatch?.[1]) {
-    try {
-      return decodeURIComponent(cookieMatch[1]);
-    } catch {
-      return cookieMatch[1];
-    }
-  }
-
-  return "";
+export function getCsrfToken() {
+  return getCookie("__Host-indicare_csrf") || getCookie("indicare_csrf") || "";
 }
 
 export function withCsrfHeaders(method = "GET", headers = {}) {
   const upper = String(method || "GET").toUpperCase();
-  const nextHeaders = { ...(headers || {}) };
+  const nextHeaders = {
+    ...(headers || {}),
+  };
 
-  if (!["GET", "HEAD", "OPTIONS"].includes(upper)) {
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(upper)) {
     const csrfToken = getCsrfToken();
     if (csrfToken && !nextHeaders["X-CSRF-Token"]) {
       nextHeaders["X-CSRF-Token"] = csrfToken;
@@ -94,30 +91,43 @@ export function withCsrfHeaders(method = "GET", headers = {}) {
 export async function apiRequest(url, options = {}) {
   const method = String(options.method || "GET").toUpperCase();
   const resolvedUrl = resolveApiUrl(url, method);
+  const isFormData = options.body instanceof FormData;
+
+  const headers = withCsrfHeaders(method, {
+    Accept: "application/json",
+    ...(options.headers || {}),
+  });
+
+  if (!isFormData && options.body && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
 
   const config = {
-    credentials: "same-origin",
-    headers: withCsrfHeaders(method, {
-      Accept: "application/json",
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...(options.headers || {}),
-    }),
+    credentials: "include",
     ...options,
     method,
+    headers,
   };
 
-  if (config.body && typeof config.body !== "string") {
+  if (config.body && typeof config.body !== "string" && !(config.body instanceof FormData)) {
     config.body = JSON.stringify(config.body);
   }
 
-  const response = await fetch(resolvedUrl, config);
+  let response;
+
+  try {
+    response = await fetch(`${API_BASE}${resolvedUrl}`, config);
+  } catch {
+    throw new Error("Network error");
+  }
+
   const data = await readJsonSafely(response);
 
   if (!response.ok) {
     const error = new Error(buildErrorMessage(response, data));
     error.status = response.status;
     error.data = data;
-    error.url = resolvedUrl;
+    error.url = `${API_BASE}${resolvedUrl}`;
     error.originalUrl = url;
     throw error;
   }
@@ -191,9 +201,9 @@ export function unwrapCreateResponse(recordType, response) {
 }
 
 export function buildSseContextFetch(url, payload) {
-  return fetch(url, {
+  return fetch(`${API_BASE}${url}`, {
     method: "POST",
-    credentials: "same-origin",
+    credentials: "include",
     headers: withCsrfHeaders("POST", {
       Accept: "text/event-stream",
       "Content-Type": "application/json",
