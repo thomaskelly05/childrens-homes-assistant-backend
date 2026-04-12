@@ -1,38 +1,25 @@
 import { state } from "../state.js";
 import { els } from "../dom.js";
 import { escapeHtml } from "../core/utils.js";
-import { withCsrfHeaders } from "../core/api.js";
-
-function getCurrentYoungPerson() {
-  return state.selectedYoungPerson || state.youngPerson || null;
-}
-
-function getCurrentViewName() {
-  return state.currentSection || state.currentView || "workspace";
-}
+import { apiStreamAssistant } from "../core/api.js";
 
 export function openAssistant() {
   updateAssistantContext();
-  renderAssistantMessages();
-  renderAssistantInsights();
-
-  state.assistantOpen = true;
   els.assistantModal?.classList.remove("hidden");
   els.assistantBackdrop?.classList.remove("hidden");
   els.assistantModal?.setAttribute("aria-hidden", "false");
+  state.assistantOpen = true;
 }
 
 export function closeAssistant() {
-  state.assistantOpen = false;
   els.assistantModal?.classList.add("hidden");
   els.assistantBackdrop?.classList.add("hidden");
   els.assistantModal?.setAttribute("aria-hidden", "true");
+  state.assistantOpen = false;
 }
 
 export function getFullYoungPersonName() {
-  const person = getCurrentYoungPerson();
-  if (!person) return "";
-
+  const person = state.selectedYoungPerson || state.youngPerson || {};
   return (
     [person.first_name, person.last_name].filter(Boolean).join(" ").trim() ||
     person.preferred_name ||
@@ -43,25 +30,25 @@ export function getFullYoungPersonName() {
 export function updateAssistantScopeDataset() {
   if (!els.app) return;
 
-  const person = getCurrentYoungPerson();
+  const person = state.selectedYoungPerson || state.youngPerson || {};
 
   els.app.dataset.assistantScopeType = state.youngPersonId ? "young_person" : "global";
   els.app.dataset.youngPersonId = state.youngPersonId ? String(state.youngPersonId) : "";
-  els.app.dataset.homeId = person?.home_id != null ? String(person.home_id) : "";
+  els.app.dataset.homeId = person.home_id != null ? String(person.home_id) : "";
 }
 
 export function renderAssistantScopeBadges() {
-  const person = getCurrentYoungPerson();
-
+  const person = state.selectedYoungPerson || state.youngPerson || {};
   const homeText =
-    person?.home_name ||
-    (person?.home_id != null ? `Home ${person.home_id}` : "");
+    person.home_name ||
+    (person.home_id != null ? `Home ${person.home_id}` : "");
 
   const childText = getFullYoungPersonName();
-  const currentView = getCurrentViewName();
 
   if (els.scopeBadge) {
-    els.scopeBadge.textContent = state.youngPersonId ? "Young person assistant" : "Assistant";
+    els.scopeBadge.textContent = state.youngPersonId
+      ? "Young person assistant"
+      : "Assistant";
   }
 
   if (els.scopeHomeBadge) {
@@ -85,11 +72,13 @@ export function renderAssistantScopeBadges() {
   }
 
   if (els.scopeShiftBadge) {
-    els.scopeShiftBadge.textContent = currentView
-      ? currentView.replaceAll("_", " ").replaceAll("-", " ")
-      : "";
+    const label = (state.currentSection || state.activeSection || "workspace")
+      .replaceAll("_", " ")
+      .replaceAll("-", " ");
 
-    if (currentView) {
+    els.scopeShiftBadge.textContent = label;
+
+    if (label) {
       els.scopeShiftBadge.classList.remove("hidden");
     } else {
       els.scopeShiftBadge.classList.add("hidden");
@@ -120,16 +109,17 @@ export function renderAssistantScopeBadges() {
 function assistantPromptsForView(view) {
   const map = {
     workspace: [
-      "Give me a short handover for this young person.",
+      "Give me a 6 month summary for this young person.",
       "What matters most right now?",
+      "Draft a short handover for the next shift.",
     ],
     overview: [
       "Give me a short handover for this young person.",
       "What matters most right now?",
     ],
     profile: [
-      "Summarise this young person’s key needs and strengths.",
-      "What should adults hold in mind when supporting this young person?",
+      "Summarise this young person's needs and what helps.",
+      "What should adults hold in mind day to day?",
     ],
     timeline: [
       "Create a short chronology summary.",
@@ -140,8 +130,8 @@ function assistantPromptsForView(view) {
       "What does the next shift most need to know?",
     ],
     health: [
+      "When was the last dentist appointment?",
       "Summarise current health and wellbeing needs.",
-      "What appointments or follow-up matter most?",
     ],
     education: [
       "Summarise education themes and needs.",
@@ -152,8 +142,8 @@ function assistantPromptsForView(view) {
       "What should adults hold in mind around contact?",
     ],
     calendar: [
-      "Summarise upcoming appointments and key dates.",
-      "What preparation or follow-up matters most?",
+      "What is the next appointment?",
+      "When was the last appointment?",
     ],
     readiness: [
       "What is overdue or due soon?",
@@ -170,21 +160,21 @@ function assistantPromptsForView(view) {
   };
 
   return map[view] || [
-    "Give me a short handover for this young person.",
-    "Summarise current support themes.",
+    "Give me a 6 month summary for this young person.",
     "What matters most right now?",
+    "When was the last appointment?",
   ];
 }
 
 export function updateAssistantContext() {
-  const person = getCurrentYoungPerson();
   const fullName = getFullYoungPersonName();
-  const currentView = getCurrentViewName();
+  const currentView = (state.currentSection || state.activeSection || "workspace")
+    .replaceAll("_", " ")
+    .replaceAll("-", " ");
 
-  updateAssistantScopeDataset();
-  renderAssistantScopeBadges();
+  const person = state.selectedYoungPerson || state.youngPerson || {};
 
-  if (!person) {
+  if (!state.youngPersonId) {
     if (els.assistantContext) {
       els.assistantContext.textContent = "No young person selected.";
     }
@@ -192,7 +182,7 @@ export function updateAssistantContext() {
     const text = [
       `Young person: ${fullName}`,
       person.home_name || null,
-      `View: ${currentView.replaceAll("_", " ").replaceAll("-", " ")}`,
+      `View: ${currentView}`,
     ]
       .filter(Boolean)
       .join(" • ");
@@ -202,8 +192,7 @@ export function updateAssistantContext() {
     }
   }
 
-  const prompts = assistantPromptsForView(currentView);
-
+  const prompts = assistantPromptsForView(state.currentSection || state.activeSection || "workspace");
   if (els.assistantSuggestions) {
     els.assistantSuggestions.innerHTML = prompts
       .map(
@@ -214,29 +203,103 @@ export function updateAssistantContext() {
   }
 }
 
+function renderAssistantRichText(text = "") {
+  const escaped = escapeHtml(String(text || ""));
+
+  const withRules = escaped
+    .replace(/^---$/gm, '<hr class="assistant-divider" />')
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/^### (.*)$/gm, "<h4>$1</h4>")
+    .replace(/^## (.*)$/gm, "<h4>$1</h4>")
+    .replace(/^# (.*)$/gm, "<h4>$1</h4>");
+
+  const lines = withRules.split("\n");
+  let html = "";
+  let inList = false;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trimEnd();
+
+    if (!line.trim()) {
+      if (inList) {
+        html += "</ul>";
+        inList = false;
+      }
+      html += "<p></p>";
+      continue;
+    }
+
+    if (/^[-*]\s+/.test(line)) {
+      if (!inList) {
+        html += "<ul>";
+        inList = true;
+      }
+      html += `<li>${line.replace(/^[-*]\s+/, "")}</li>`;
+      continue;
+    }
+
+    if (/^\d+\.\s+/.test(line)) {
+      if (inList) {
+        html += "</ul>";
+        inList = false;
+      }
+      html += `<p><strong>${line.replace(/^(\d+\.)\s+/, "$1 ")}</strong></p>`;
+      continue;
+    }
+
+    if (inList) {
+      html += "</ul>";
+      inList = false;
+    }
+
+    if (line.startsWith("<h4>") || line.startsWith("<hr")) {
+      html += line;
+    } else {
+      html += `<p>${line}</p>`;
+    }
+  }
+
+  if (inList) {
+    html += "</ul>";
+  }
+
+  return html || "<p></p>";
+}
+
 function renderAssistantMessageList(host, messages) {
   if (!host) return;
 
   const intro = `
     <article class="assistant-message assistant-message-system">
       <div class="assistant-message-role">Assistant</div>
-      <div class="assistant-message-body">${
-        state.youngPersonId
-          ? `Ask a question about ${escapeHtml(getFullYoungPersonName() || "this young person")}.`
-          : "Select a young person to start."
-      }</div>
+      <div class="assistant-message-body">
+        ${
+          state.youngPersonId
+            ? `<p>Ask a question about ${escapeHtml(getFullYoungPersonName() || "this young person")}.</p>`
+            : `<p>Select a young person to start.</p>`
+        }
+      </div>
     </article>
   `;
 
-  const body = (messages || [])
-    .map(
-      (message) => `
-        <article class="assistant-message ${message.role === "user" ? "assistant-message-user" : ""}">
-          <div class="assistant-message-role">${message.role === "user" ? "You" : "Assistant"}</div>
-          <div class="assistant-message-body">${escapeHtml(message.content || "")}</div>
+  const body = messages
+    .map((message) => {
+      const role = message.role === "user" ? "You" : "Assistant";
+      const cls = message.role === "user" ? "assistant-message-user" : "";
+
+      return `
+        <article class="assistant-message ${cls}">
+          <div class="assistant-message-role">${escapeHtml(role)}</div>
+          <div class="assistant-message-body">
+            ${
+              message.role === "assistant"
+                ? renderAssistantRichText(message.content || "")
+                : `<p>${escapeHtml(message.content || "")}</p>`
+            }
+          </div>
         </article>
-      `
-    )
+      `;
+    })
     .join("");
 
   host.innerHTML = intro + body;
@@ -250,19 +313,34 @@ export function renderAssistantMessages() {
 
 function pushAssistantMessage(role, content) {
   const entry = { role, content };
+  state.assistantMessages = state.assistantMessages || [];
+  state.assistantModalMessages = state.assistantModalMessages || [];
   state.assistantMessages.push(entry);
-  state.assistantModalMessages.push(entry);
+  state.assistantModalMessages.push({ ...entry });
   renderAssistantMessages();
 }
 
 function addAssistantPlaceholder() {
-  state.assistantMessages.push({ role: "assistant", content: "Thinking…", _streaming: true });
-  state.assistantModalMessages.push({ role: "assistant", content: "Thinking…", _streaming: true });
+  state.assistantMessages = state.assistantMessages || [];
+  state.assistantModalMessages = state.assistantModalMessages || [];
+
+  state.assistantMessages.push({
+    role: "assistant",
+    content: "Thinking…",
+    _streaming: true,
+  });
+
+  state.assistantModalMessages.push({
+    role: "assistant",
+    content: "Thinking…",
+    _streaming: true,
+  });
+
   renderAssistantMessages();
 }
 
 function replaceLastAssistantPlaceholder(text) {
-  const lists = [state.assistantMessages, state.assistantModalMessages];
+  const lists = [state.assistantMessages || [], state.assistantModalMessages || []];
 
   lists.forEach((list) => {
     if (!list.length) return;
@@ -277,7 +355,7 @@ function replaceLastAssistantPlaceholder(text) {
 }
 
 function updateLastAssistantStreamingText(text) {
-  const lists = [state.assistantMessages, state.assistantModalMessages];
+  const lists = [state.assistantMessages || [], state.assistantModalMessages || []];
 
   lists.forEach((list) => {
     if (!list.length) return;
@@ -335,9 +413,10 @@ function renderAssistantSourcesHtml(sources) {
 }
 
 function inferAssistantSuggestedActions() {
+  const meta = state.assistantMeta || {};
+  const scope = meta.assistant_scope || {};
+  const context = meta.assistant_context || {};
   const actions = [];
-  const scope = state.assistantMeta?.assistant_scope || {};
-  const context = state.assistantMeta?.assistant_context || {};
 
   if (scope.scope_type === "young_person") {
     actions.push("Draft handover");
@@ -354,34 +433,39 @@ function inferAssistantSuggestedActions() {
     actions.push("Review outstanding tasks");
   }
 
-  if (Array.isArray(state.assistantMeta?.suggested_actions)) {
-    actions.push(...state.assistantMeta.suggested_actions);
+  if (Array.isArray(meta.suggested_actions)) {
+    actions.push(...meta.suggested_actions);
   }
 
   return [...new Set(actions)].slice(0, 6);
 }
 
 export function renderAssistantInsights() {
-  const scope = state.assistantMeta?.assistant_scope || {};
-  const context = state.assistantMeta?.assistant_context || {};
-  const sources = state.assistantMeta?.sources || [];
-  const runtime = state.assistantMeta?.runtime || {};
-  const explainability = state.assistantMeta?.explainability || {};
-  const person = getCurrentYoungPerson();
+  const meta = state.assistantMeta || {};
+  const scope = meta.assistant_scope || {};
+  const context = meta.assistant_context || {};
+  const sources = meta.sources || [];
+  const runtime = meta.runtime || {};
+  const explainability = meta.explainability || {};
 
   if (els.assistantScopeSummary) {
+    const currentView = (state.currentSection || state.activeSection || "workspace")
+      .replaceAll("_", " ")
+      .replaceAll("-", " ");
+
     const rows = [];
 
     rows.push(`
       <div class="entity-row">
         <div>
           <div class="entity-title">${scope.scope_type === "young_person" ? "Young person scope" : "Assistant scope"}</div>
-          <div class="entity-meta">View: ${escapeHtml(getCurrentViewName().replaceAll("_", " ").replaceAll("-", " "))}</div>
+          <div class="entity-meta">View: ${escapeHtml(currentView)}</div>
         </div>
       </div>
     `);
 
-    if (person) {
+    if (state.selectedYoungPerson || state.youngPersonId) {
+      const person = state.selectedYoungPerson || state.youngPerson || {};
       rows.push(`
         <div class="entity-row">
           <div>
@@ -443,20 +527,18 @@ export function renderAssistantInsights() {
 }
 
 function buildAssistantContextPayload() {
-  const person = getCurrentYoungPerson();
-  const currentView = getCurrentViewName();
+  const person = state.selectedYoungPerson || state.youngPerson || {};
 
   return {
     scope: "young_person",
     young_person_id: state.youngPersonId,
-    current_view: currentView,
-    current_section: currentView,
+    current_view: state.currentSection || state.activeSection || "workspace",
     young_person_name: getFullYoungPersonName(),
-    placement_status: person?.placement_status || null,
-    summary_risk_level: person?.summary_risk_level || null,
+    placement_status: person.placement_status || null,
+    summary_risk_level: person.summary_risk_level || null,
     composer_record_type: state.composerRecordType || null,
-    home_name: person?.home_name || null,
-    shift_context: currentView || null,
+    home_name: person.home_name || null,
+    shift_context: state.currentSection || state.activeSection || "workspace",
     record_type: state.activeRecordType || state.composerRecordType || null,
     record_id:
       state.activeRecordItem?.record_id ||
@@ -475,32 +557,6 @@ function detectAssistantResponseMode(text) {
     : "balanced";
 }
 
-function parseSseChunk(buffer, onEvent) {
-  const parts = buffer.split("\n\n");
-  const complete = parts.slice(0, -1);
-  const remainder = parts[parts.length - 1] || "";
-
-  for (const block of complete) {
-    const lines = block.split("\n");
-    let eventName = "message";
-    const dataLines = [];
-
-    for (const line of lines) {
-      if (!line || line.startsWith(":")) continue;
-
-      if (line.startsWith("event:")) {
-        eventName = line.slice(6).trim();
-      } else if (line.startsWith("data:")) {
-        dataLines.push(line.startsWith("data: ") ? line.slice(6) : line.slice(5));
-      }
-    }
-
-    onEvent(eventName, dataLines.join("\n"));
-  }
-
-  return remainder;
-}
-
 export async function askAssistant(question) {
   const trimmed = String(question || "").trim();
   if (!trimmed || !state.youngPersonId || state.assistantSending) return;
@@ -510,79 +566,41 @@ export async function askAssistant(question) {
   setAssistantSending(true);
 
   try {
-    const response = await fetch("/young-people/assistant", {
-      method: "POST",
-      credentials: "include",
-      headers: withCsrfHeaders("POST", {
-        "Content-Type": "application/json",
-        Accept: "text/event-stream",
-      }),
-      body: JSON.stringify({
+    await apiStreamAssistant(
+      {
         message: trimmed,
         response_mode: detectAssistantResponseMode(trimmed),
         context: buildAssistantContextPayload(),
-      }),
-    });
-
-    if (!response.ok) {
-      let message = `Request failed (${response.status})`;
-      try {
-        const body = await response.json();
-        message = body.detail || body.error || body.message || message;
-      } catch {
-        // ignore
+      },
+      {
+        onMeta: (meta) => {
+          state.assistantMeta = {
+            sources: Array.isArray(meta.sources) ? meta.sources : [],
+            runtime: meta.runtime || {},
+            explainability: meta.explainability || {},
+            assistant_scope: meta.assistant_scope || {},
+            assistant_context: meta.assistant_context || {},
+            suggested_actions: Array.isArray(meta.suggested_actions)
+              ? meta.suggested_actions
+              : [],
+          };
+          renderAssistantInsights();
+        },
+        onProgress: () => {},
+        onMessage: (streamedText) => {
+          updateLastAssistantStreamingText(streamedText || "Thinking…");
+        },
+        onDone: (streamedText) => {
+          replaceLastAssistantPlaceholder(
+            String(streamedText || "").trim() || "No assistant reply returned."
+          );
+        },
       }
-      throw new Error(message);
-    }
-
-    if (!response.body) {
-      throw new Error("No assistant response stream was returned.");
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    let streamedText = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-
-      buffer = parseSseChunk(buffer, (eventName, payload) => {
-        if (eventName === "done" || payload === "[DONE]") return;
-
-        if (eventName === "meta") {
-          try {
-            const meta = JSON.parse(payload || "{}");
-            state.assistantMeta = {
-              sources: Array.isArray(meta.sources) ? meta.sources : [],
-              runtime: meta.runtime || {},
-              explainability: meta.explainability || {},
-              assistant_scope: meta.assistant_scope || {},
-              assistant_context: meta.assistant_context || {},
-              suggested_actions: Array.isArray(meta.suggested_actions) ? meta.suggested_actions : [],
-            };
-            renderAssistantInsights();
-          } catch {
-            // ignore malformed meta
-          }
-          return;
-        }
-
-        if (eventName === "progress") return;
-
-        if (eventName === "message") {
-          streamedText += payload || "";
-          updateLastAssistantStreamingText(streamedText.trim() || "Thinking…");
-        }
-      });
-    }
-
-    replaceLastAssistantPlaceholder(streamedText.trim() || "No assistant reply returned.");
+    );
   } catch (error) {
-    replaceLastAssistantPlaceholder(error?.message || "The assistant could not answer right now.");
+    replaceLastAssistantPlaceholder(
+      error?.message || "The assistant could not answer right now."
+    );
   } finally {
     setAssistantSending(false);
   }
@@ -594,9 +612,19 @@ export function clearAssistantMessages() {
   renderAssistantMessages();
 }
 
-async function handlePromptClick(prompt) {
-  if (!prompt) return;
-  await askAssistant(prompt);
+function bindPromptButtons() {
+  document.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-prompt], [data-assistant-chip]");
+    if (!button) return;
+
+    const prompt =
+      button.dataset.prompt ||
+      button.dataset.assistantChip ||
+      "";
+
+    if (!prompt) return;
+    await askAssistant(prompt);
+  });
 }
 
 export function bindAssistantEvents() {
@@ -623,16 +651,5 @@ export function bindAssistantEvents() {
     await askAssistant(question);
   });
 
-  document.addEventListener("click", async (event) => {
-    const promptButton = event.target.closest("[data-prompt]");
-    if (promptButton) {
-      await handlePromptClick(promptButton.dataset.prompt || "");
-      return;
-    }
-
-    const chipButton = event.target.closest("[data-assistant-chip]");
-    if (chipButton) {
-      await handlePromptClick(chipButton.dataset.assistantChip || "");
-    }
-  });
+  bindPromptButtons();
 }
