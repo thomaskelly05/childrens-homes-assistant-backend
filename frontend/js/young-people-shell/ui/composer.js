@@ -112,42 +112,54 @@ const COMPOSER_CONFIG = {
     label: "Identity profile",
     createUrl: (id) => `/young-people/${id}/identity-profile`,
     updateUrl: (id) => `/young-people/${id}/identity-profile`,
+    createMethod: "PUT",
     updateMethod: "PUT",
+    singleton: true,
   },
 
   profile_communication: {
     label: "Communication profile",
     createUrl: (id) => `/young-people/${id}/communication-profile`,
     updateUrl: (id) => `/young-people/${id}/communication-profile`,
+    createMethod: "PUT",
     updateMethod: "PUT",
+    singleton: true,
   },
 
   profile_education: {
     label: "Education profile",
     createUrl: (id) => `/young-people/${id}/education-profile`,
     updateUrl: (id) => `/young-people/${id}/education-profile`,
+    createMethod: "PUT",
     updateMethod: "PUT",
+    singleton: true,
   },
 
   profile_health: {
     label: "Health profile",
     createUrl: (id) => `/young-people/${id}/health-profile`,
     updateUrl: (id) => `/young-people/${id}/health-profile`,
+    createMethod: "PUT",
     updateMethod: "PUT",
+    singleton: true,
   },
 
   profile_legal: {
     label: "Legal status",
     createUrl: (id) => `/young-people/${id}/legal-status`,
     updateUrl: (id) => `/young-people/${id}/legal-status`,
+    createMethod: "PUT",
     updateMethod: "PUT",
+    singleton: true,
   },
 
   profile_formulation: {
     label: "Formulation",
-    createUrl: (id) => `/young-people/${id}/formulation`,
-    updateUrl: (id) => `/young-people/${id}/formulation`,
+    createUrl: (id) => `/young-people/${id}/formulations`,
+    updateUrl: (id) => `/young-people/${id}/formulations`,
+    createMethod: "PUT",
     updateMethod: "PUT",
+    singleton: true,
   },
 };
 
@@ -188,6 +200,10 @@ function getNowLocal() {
   return toDateTimeLocalValue(new Date());
 }
 
+function isSingletonComposerRecord(recordType) {
+  return !!COMPOSER_CONFIG[recordType]?.singleton;
+}
+
 export function openComposer() {
   state.composerOpen = true;
   els.composerPanel?.classList.remove("hidden");
@@ -215,6 +231,7 @@ export function closeComposer(reset = true) {
 
   showComposerStatus("Autosave ready");
 }
+
 function buildField(field) {
   const label = field.label
     ? `<label class="form-label" for="${escapeHtml(field.name)}">${escapeHtml(field.label)}</label>`
@@ -1056,8 +1073,6 @@ function getStorageKey() {
 }
 
 function serialiseValue(key, value) {
-  if (value === "") return null;
-
   if (
     [
       "reminder_minutes_before",
@@ -1068,7 +1083,7 @@ function serialiseValue(key, value) {
       "linked_target_id",
     ].includes(key)
   ) {
-    return Number(value);
+    return value === "" ? null : Number(value);
   }
 
   return value;
@@ -1092,30 +1107,20 @@ function serializeComposerForm() {
 
   payload.young_person_id = state.youngPersonId;
 
-  const meta = getComposerMeta();
-
-  if (meta.source_record_type) payload.source_record_type = meta.source_record_type;
-  if (meta.source_record_id !== null && meta.source_record_id !== undefined) {
-    payload.source_record_id = meta.source_record_id;
-  }
-  if (meta.suggestion_id) payload.suggestion_id = meta.suggestion_id;
-  if (meta.suggestion_priority) payload.suggestion_priority = meta.suggestion_priority;
-  if (meta.suggestion_reason) payload.suggestion_reason = meta.suggestion_reason;
-  if (meta.suggestion_record_type) payload.suggestion_record_type = meta.suggestion_record_type;
-
   return payload;
+}
+
+function buildDraftState() {
+  return {
+    saved_at: new Date().toISOString(),
+    values: serializeComposerForm(),
+    meta: getComposerMeta(),
+  };
 }
 
 function saveDraftToLocal() {
   try {
-    localStorage.setItem(
-      getStorageKey(),
-      JSON.stringify({
-        saved_at: new Date().toISOString(),
-        values: serializeComposerForm(),
-        meta: getComposerMeta(),
-      })
-    );
+    localStorage.setItem(getStorageKey(), JSON.stringify(buildDraftState()));
 
     showComposerStatus(
       `Autosaved ${new Date().toLocaleTimeString("en-GB", {
@@ -1180,6 +1185,7 @@ function bindComposerAutosave() {
     field.addEventListener("change", saveDraftToLocal);
   });
 }
+
 function unwrapSavedRecord(recordType, response) {
   if (!response) return null;
 
@@ -1333,6 +1339,7 @@ export function buildAiFeedback(type = "clarity") {
 
   return notes.join("\n");
 }
+
 export async function saveComposer(mode = "draft") {
   const recordType = state.composerRecordType;
   const config = COMPOSER_CONFIG[recordType];
@@ -1345,7 +1352,30 @@ export async function saveComposer(mode = "draft") {
   let response;
   let savedRecord;
 
-  if (state.composerMode === "edit" && state.composerRecordId && config.updateUrl) {
+  const isSingleton = isSingletonComposerRecord(recordType);
+  const hasStandardUpdateTarget =
+    state.composerMode === "edit" &&
+    state.composerRecordId &&
+    config.updateUrl &&
+    !isSingleton;
+
+  if (isSingleton) {
+    response = await apiSend(
+      config.updateUrl(state.youngPersonId),
+      config.updateMethod || config.createMethod || "PUT",
+      payload
+    );
+
+    savedRecord = unwrapSavedRecord(recordType, response);
+    state.composerRecordId =
+      savedRecord?.id ||
+      savedRecord?.record_id ||
+      savedRecord?.source_id ||
+      state.composerRecordId ||
+      state.youngPersonId;
+
+    state.composerMode = "edit";
+  } else if (hasStandardUpdateTarget) {
     response = await apiSend(
       config.updateUrl(state.composerRecordId),
       config.updateMethod || "PATCH",
@@ -1361,7 +1391,7 @@ export async function saveComposer(mode = "draft") {
   } else {
     response = await apiSend(
       config.createUrl(state.youngPersonId),
-      "POST",
+      config.createMethod || "POST",
       payload
     );
 
