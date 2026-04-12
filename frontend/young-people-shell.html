@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IndiCare • </title>
+  <title>IndiCare OS • Young people shell</title>
   <link rel="stylesheet" href="/css/young-people-shell.css" />
 </head>
 <body>
@@ -29,9 +29,6 @@
       <div class="shell-topbar-right">
         <button id="mobileNavBtn" class="secondary-btn mobile-only" type="button" aria-label="Open navigation">
           Menu
-        </button>
-        <button id="assistantLauncher" class="secondary-btn" type="button" aria-label="Open assistant">
-          Assistant
         </button>
         <button id="refreshBtn" class="secondary-btn" type="button">
           Refresh
@@ -123,28 +120,19 @@
                 </button>
               </div>
 
-              <div class="workspace-hero">
+              <section class="workspace-hero">
                 <div class="workspace-hero-copy">
                   <div class="eyebrow">Young person workspace</div>
-                  <h1 id="pageTitle">Overview</h1>
-                  <p id="pageSubtitle">What matters today</p>
+                  <h1 id="pageTitle">Today’s workspace</h1>
+                  <p id="pageSubtitle">A calm space to record, reflect and respond to what matters today.</p>
                 </div>
 
-                <div id="heroQuickActions" class="workspace-hero-actions">
-                  <button class="quick-action-btn" type="button" data-action-router="new-daily-note">
-                    Add daily note
-                  </button>
-                  <button class="quick-action-btn" type="button" data-action-router="new-incident">
-                    Add important event
-                  </button>
-                  <button class="quick-action-btn" type="button" data-action-router="new-support-plan">
-                    Add support plan
-                  </button>
-                  <button class="quick-action-btn" type="button" data-action-router="assistant-handover">
-                    Draft handover
+                <div class="workspace-hero-actions">
+                  <button id="heroAssistantBtn" class="secondary-btn" type="button">
+                    Open assistant
                   </button>
                 </div>
-              </div>
+              </section>
 
               <section class="profile-snapshot">
                 <div id="profileSnapshotPhotoWrap" class="profile-snapshot-photo-wrap" aria-label="Young person photo">
@@ -181,12 +169,102 @@
                 </div>
               </section>
 
+              <section class="quick-create-bar" aria-label="Quick create actions">
+                <div class="quick-create-bar-head">
+                  <div>
+                    <div class="eyebrow">Quick create</div>
+                    <h2>Add a record quickly</h2>
+                  </div>
+                  <p>Fast access to the most common records adults need during the day.</p>
+                </div>
+
+                <div id="heroQuickActions" class="quick-create-grid">
+                  <button class="quick-create-card" type="button" data-action-router="new-daily-note">
+                    <span class="quick-create-icon">✎</span>
+                    <span class="quick-create-copy">
+                      <strong>Add daily note</strong>
+                      <small>Capture presentation, activities and what mattered.</small>
+                    </span>
+                  </button>
+
+                  <button class="quick-create-card" type="button" data-action-router="new-incident">
+                    <span class="quick-create-icon">!</span>
+                    <span class="quick-create-copy">
+                      <strong>Add important event</strong>
+                      <small>Record a significant event clearly and safely.</small>
+                    </span>
+                  </button>
+
+                  <button class="quick-create-card" type="button" data-action-router="new-support-plan">
+                    <span class="quick-create-icon">✓</span>
+                    <span class="quick-create-copy">
+                      <strong>Add support plan</strong>
+                      <small>Create practical guidance for adults.</small>
+                    </span>
+                  </button>
+
+                  <button class="quick-create-card" type="button" data-action-router="new-health-record">
+                    <span class="quick-create-icon">♥</span>
+                    <span class="quick-create-copy">
+                      <strong>Add health record</strong>
+                      <small>Appointments, outcomes and follow-up.</small>
+                    </span>
+                  </button>
+
+                  <button class="quick-create-card" type="button" data-action-router="new-education-record">
+                    <span class="quick-create-icon">▣</span>
+                    <span class="quick-create-copy">
+                      <strong>Add education record</strong>
+                      <small>Learning, attendance and progress.</small>
+                    </span>
+                  </button>
+
+                  <button class="quick-create-card" type="button" data-action-router="new-family-contact">
+                    <span class="quick-create-icon">◎</span>
+                    <span class="quick-create-copy">
+                      <strong>Add family contact</strong>
+                      <small>Capture contact, presentation and next steps.</small>
+                    </span>
+                  </button>
+                </div>
+              </section>
+
               <section id="statusBar" class="status-bar hidden" role="status" aria-live="polite"></section>
               <section id="statusMessage" class="status-bar hidden" role="status" aria-live="polite"></section>
             </div>
 
-            <div class="workspace-content-wrap">
+            <div class="workspace-content-wrap workspace-content-wrap--single">
               <section class="workspace-content">
+                <section class="records-toolbar content-section">
+                  <div class="records-toolbar-left">
+                    <div>
+                      <div class="eyebrow">Records</div>
+                      <h2>Find recent and older records</h2>
+                    </div>
+                    <p>Move quickly between recent work, older records and key events.</p>
+                  </div>
+
+                  <div class="records-toolbar-right">
+                    <input
+                      id="recordSearchInput"
+                      class="search-input"
+                      type="text"
+                      placeholder="Search records, events, plans or appointments..."
+                      autocomplete="off"
+                    />
+                    <select id="recordTypeFilter" class="select-input">
+                      <option value="">All record types</option>
+                      <option value="daily_note">Daily notes</option>
+                      <option value="incident">Important events</option>
+                      <option value="support_plan">Support plans</option>
+                      <option value="health_record">Health</option>
+                      <option value="education_record">Education</option>
+                      <option value="family_contact">Family</option>
+                      <option value="appointment">Appointments</option>
+                    </select>
+                  </div>
+                </section>
+
                 <div id="viewContent">
                   <div class="loading-state">
                     <div>
@@ -196,93 +274,6 @@
                   </div>
                 </div>
               </section>
-
-              <aside class="workspace-right-rail desktop-wide-only">
-                <section class="workspace-side-card workspace-side-card--assistant">
-                  <div class="workspace-side-head">
-                    <div>
-                      <h3>Young person assistant</h3>
-                      <p>Scoped to this young person and the page you are viewing.</p>
-                    </div>
-                    <button id="assistantExpandBtn" class="secondary-btn" type="button">
-                      Expand
-                    </button>
-                  </div>
-
-                  <div class="assistant-context-row">
-                    <span id="scopeBadge" class="scope-badge">Young person assistant</span>
-                    <span id="scopeHomeBadge" class="scope-chip hidden"></span>
-                    <span id="scopeChildBadge" class="scope-chip hidden"></span>
-                    <span id="scopeShiftBadge" class="scope-chip hidden"></span>
-                  </div>
-
-                  <div id="assistantContext" class="assistant-context">
-                    No young person selected.
-                  </div>
-
-                  <div id="assistantSuggestions" class="assistant-suggestions"></div>
-
-                  <div
-                    id="assistantMessages"
-                    class="assistant-messages"
-                    role="log"
-                    aria-live="polite"
-                    aria-relevant="additions text"
-                  >
-                    <article class="assistant-message assistant-message-system">
-                      <div class="assistant-message-role">Assistant</div>
-                      <div class="assistant-message-body">Select a young person to start.</div>
-                    </article>
-                  </div>
-
-                  <form id="assistantForm" class="assistant-form">
-                    <input
-                      id="assistantInput"
-                      class="text-input"
-                      type="text"
-                      placeholder="Ask about this young person..."
-                      autocomplete="off"
-                    />
-                    <button id="assistantSendBtn" class="primary-btn" type="submit">
-                      Send
-                    </button>
-                  </form>
-                </section>
-
-                <section class="workspace-side-card">
-                  <h3>Scope summary</h3>
-                  <div id="assistantScopeSummary" class="assistant-side-block">
-                    <p>No scoped context loaded.</p>
-                  </div>
-                </section>
-
-                <section class="workspace-side-card">
-                  <h3>Suggested actions</h3>
-                  <div id="assistantActions" class="assistant-side-block">
-                    <button class="chip" type="button" data-action-router="assistant-handover">Draft handover</button>
-                    <button class="chip" type="button" data-action-router="assistant-priorities">What matters now?</button>
-                    <button class="chip" type="button" data-action-router="assistant-chronology">Summarise chronology</button>
-                    <button class="chip" type="button" data-action-router="assistant-plans">Summarise plans</button>
-                  </div>
-                </section>
-
-                <section class="workspace-side-card">
-                  <h3>Sources</h3>
-                  <div id="assistantSources" class="assistant-side-block">
-                    <p>Sources will appear here after a response.</p>
-                  </div>
-                </section>
-
-                <section class="workspace-side-card workspace-side-card--technical">
-                  <h3>Runtime</h3>
-                  <pre id="assistantRuntime" class="assistant-code-block">No runtime data yet.</pre>
-                </section>
-
-                <section class="workspace-side-card workspace-side-card--technical">
-                  <h3>Explainability</h3>
-                  <pre id="assistantExplainability" class="assistant-code-block">No explainability data yet.</pre>
-                </section>
-              </aside>
             </div>
           </section>
         </section>
@@ -428,14 +419,14 @@
       <div class="assistant-header">
         <div>
           <h3>Young person assistant</h3>
-          <p>Expanded space for handover, chronology, drafting, review and reflection.</p>
+          <p>Ask questions, draft summaries, review patterns and support next steps.</p>
         </div>
         <button id="closeAssistantBtn" class="secondary-btn icon-btn" type="button" aria-label="Close assistant">
           ✕
         </button>
       </div>
 
-      <div class="assistant-modal-layout">
+      <div class="assistant-modal-layout assistant-modal-layout--single">
         <div class="assistant-modal-main">
           <div class="assistant-context-row">
             <span class="scope-badge">Young person assistant</span>
@@ -443,52 +434,87 @@
             <span id="modalScopeChildBadge" class="scope-chip hidden"></span>
           </div>
 
+          <div id="assistantContext" class="assistant-context">
+            No young person selected.
+          </div>
+
+          <div id="assistantSuggestions" class="assistant-suggestions"></div>
+
           <div
-            id="assistantModalMessages"
-            class="assistant-messages"
+            id="assistantMessages"
+            class="assistant-messages assistant-messages--modal"
             role="log"
             aria-live="polite"
             aria-relevant="additions text"
           >
             <article class="assistant-message assistant-message-system">
               <div class="assistant-message-role">Assistant</div>
-              <div class="assistant-message-body">Use this space for longer, more thoughtful support.</div>
+              <div class="assistant-message-body">Select a young person to start.</div>
             </article>
           </div>
 
-          <form id="assistantModalForm" class="assistant-form">
+          <form id="assistantForm" class="assistant-form assistant-form--sticky">
             <input
-              id="assistantModalInput"
+              id="assistantInput"
               class="text-input"
               type="text"
-              placeholder="Ask a question about this young person..."
+              placeholder="Ask about this young person..."
               autocomplete="off"
             />
-            <button id="assistantModalSendBtn" class="primary-btn" type="submit">
+            <button id="assistantSendBtn" class="primary-btn" type="submit">
               Send
             </button>
           </form>
+
+          <div class="assistant-secondary-panels">
+            <section class="workspace-side-card">
+              <h3>Scope summary</h3>
+              <div id="assistantScopeSummary" class="assistant-side-block">
+                <p>No scoped context loaded.</p>
+              </div>
+            </section>
+
+            <section class="workspace-side-card">
+              <h3>Suggested actions</h3>
+              <div id="assistantActions" class="assistant-side-block">
+                <button class="chip" type="button" data-action-router="assistant-handover">Draft handover</button>
+                <button class="chip" type="button" data-action-router="assistant-priorities">What matters now?</button>
+                <button class="chip" type="button" data-action-router="assistant-chronology">Summarise chronology</button>
+                <button class="chip" type="button" data-action-router="assistant-plans">Summarise plans</button>
+              </div>
+            </section>
+
+            <section class="workspace-side-card">
+              <h3>Sources</h3>
+              <div id="assistantSources" class="assistant-side-block">
+                <p>Sources will appear here after a response.</p>
+              </div>
+            </section>
+
+            <section class="workspace-side-card workspace-side-card--technical">
+              <h3>Runtime</h3>
+              <pre id="assistantRuntime" class="assistant-code-block">No runtime data yet.</pre>
+            </section>
+
+            <section class="workspace-side-card workspace-side-card--technical">
+              <h3>Explainability</h3>
+              <pre id="assistantExplainability" class="assistant-code-block">No explainability data yet.</pre>
+            </section>
+          </div>
         </div>
-
-        <aside class="assistant-modal-side">
-          <section class="workspace-side-card">
-            <h3>Scope summary</h3>
-            <div id="assistantModalScopeSummary" class="assistant-side-block">
-              <p>No scoped context loaded.</p>
-            </div>
-          </section>
-
-          <section class="workspace-side-card">
-            <h3>Sources</h3>
-            <div id="assistantModalSources" class="assistant-side-block">
-              <p>Sources will appear here after a response.</p>
-            </div>
-          </section>
-        </aside>
       </div>
 
       <div class="assistant-footer">
         <button id="assistantClearBtn" class="secondary-btn" type="button">Clear chat</button>
+      </div>
+
+      <div class="hidden">
+        <div id="assistantModalMessages"></div>
+        <form id="assistantModalForm"></form>
+        <input id="assistantModalInput" />
+        <button id="assistantModalSendBtn" type="button"></button>
+        <div id="assistantModalScopeSummary"></div>
+        <div id="assistantModalSources"></div>
       </div>
     </section>
 
@@ -520,6 +546,17 @@
         </div>
       </div>
     </section>
+
+    <button
+      id="assistantLauncher"
+      class="assistant-fab"
+      type="button"
+      aria-label="Open young person assistant"
+      title="Open assistant"
+    >
+      <span class="assistant-fab-icon">✦</span>
+      <span class="assistant-fab-label">Assistant</span>
+    </button>
   </div>
 
   <script type="module" src="/js/young-people-shell/index.js"></script>
