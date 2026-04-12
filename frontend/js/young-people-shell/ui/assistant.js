@@ -1,44 +1,81 @@
 import { state } from "../state.js";
 import { els } from "../dom.js";
 import { escapeHtml } from "../core/utils.js";
-import { withCsrfHeaders } from "../core/api.js";
+
+function getCurrentPerson() {
+  return state.selectedYoungPerson || state.youngPerson || null;
+}
+
+function getCurrentSectionName() {
+  return state.currentSection || state.currentView || "workspace";
+}
+
+function buildCsrfHeaders(extraHeaders = {}) {
+  const headers = {
+    ...extraHeaders,
+  };
+
+  const csrfToken =
+    document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") ||
+    window.__CSRF_TOKEN__ ||
+    "";
+
+  if (csrfToken) {
+    headers["X-CSRF-Token"] = csrfToken;
+  }
+
+  return headers;
+}
 
 export function openAssistant() {
   updateAssistantContext();
+  renderAssistantMessages();
+  renderAssistantInsights();
+
+  state.assistantOpen = true;
   els.assistantModal?.classList.remove("hidden");
   els.assistantBackdrop?.classList.remove("hidden");
   els.assistantModal?.setAttribute("aria-hidden", "false");
 }
 
 export function closeAssistant() {
+  state.assistantOpen = false;
   els.assistantModal?.classList.add("hidden");
   els.assistantBackdrop?.classList.add("hidden");
   els.assistantModal?.setAttribute("aria-hidden", "true");
 }
 
 export function getFullYoungPersonName() {
-  if (!state.youngPerson) return "";
-  return (
-    [state.youngPerson.first_name, state.youngPerson.last_name].filter(Boolean).join(" ").trim() ||
-    state.youngPerson.preferred_name ||
-    "Young person"
-  );
+  const person = getCurrentPerson();
+  if (!person) return "";
+
+  const fullName =
+    [person.first_name, person.last_name].filter(Boolean).join(" ").trim();
+
+  return fullName || person.preferred_name || "Young person";
 }
 
 export function updateAssistantScopeDataset() {
   if (!els.app) return;
 
+  const person = getCurrentPerson();
+
   els.app.dataset.assistantScopeType = state.youngPersonId ? "young_person" : "global";
   els.app.dataset.youngPersonId = state.youngPersonId ? String(state.youngPersonId) : "";
-  els.app.dataset.homeId = state.youngPerson?.home_id != null ? String(state.youngPerson.home_id) : "";
+  els.app.dataset.homeId = person?.home_id != null ? String(person.home_id) : "";
 }
 
 export function renderAssistantScopeBadges() {
+  const person = getCurrentPerson();
+
   const homeText =
-    state.youngPerson?.home_name ||
-    (state.youngPerson?.home_id != null ? `Home ${state.youngPerson.home_id}` : "");
+    person?.home_name ||
+    (person?.home_id != null ? `Home ${person.home_id}` : "");
 
   const childText = getFullYoungPersonName();
+  const sectionName = getCurrentSectionName()
+    .replaceAll("_", " ")
+    .replaceAll("-", " ");
 
   if (els.scopeBadge) {
     els.scopeBadge.textContent = state.youngPersonId ? "Young person assistant" : "Assistant";
@@ -65,13 +102,11 @@ export function renderAssistantScopeBadges() {
   }
 
   if (els.scopeShiftBadge) {
-    els.scopeShiftBadge.textContent = state.currentView
-      ? state.currentView.replaceAll("_", " ").replaceAll("-", " ")
-      : "";
-
-    if (state.currentView) {
+    if (sectionName) {
+      els.scopeShiftBadge.textContent = sectionName;
       els.scopeShiftBadge.classList.remove("hidden");
     } else {
+      els.scopeShiftBadge.textContent = "";
       els.scopeShiftBadge.classList.add("hidden");
     }
   }
@@ -99,21 +134,25 @@ export function renderAssistantScopeBadges() {
 
 function assistantPromptsForView(view) {
   const map = {
+    workspace: [
+      "Give me a short handover for this young person.",
+      "What matters most right now?",
+    ],
     overview: [
       "Give me a short handover for this young person.",
       "What matters most right now?",
     ],
-    daily_notes: [
-      "Summarise today so far.",
-      "What themes are showing in recent daily notes?",
+    profile: [
+      "Summarise this young person’s key needs and strengths.",
+      "What should adults hold in mind when supporting this young person?",
     ],
-    incidents: [
-      "Summarise the recent significant events.",
-      "What patterns are showing in these events?",
+    timeline: [
+      "Create a short chronology summary.",
+      "What are the key turning points recently?",
     ],
-    plans: [
-      "Summarise the current support plans.",
-      "What should adults stay consistent with?",
+    handover: [
+      "Give me a short handover for this young person.",
+      "What does the next shift most need to know?",
     ],
     health: [
       "Summarise current health and wellbeing needs.",
@@ -127,25 +166,21 @@ function assistantPromptsForView(view) {
       "Summarise key relationship and family themes.",
       "What should adults hold in mind around contact?",
     ],
-    timeline: [
-      "Create a short chronology summary.",
-      "What are the key turning points recently?",
+    calendar: [
+      "Summarise upcoming appointments and key dates.",
+      "What preparation or follow-up matters most?",
     ],
-    handover: [
-      "Give me a short handover for this young person.",
-      "What does the next shift most need to know?",
-    ],
-    reports: [
-      "Summarise this young person for a report.",
-      "What are the strongest themes across the record?",
-    ],
-    compliance: [
+    readiness: [
       "What is overdue or due soon?",
       "What should be completed next?",
     ],
     manager: [
       "What needs manager review right now?",
       "What themes should leadership notice?",
+    ],
+    reports: [
+      "Summarise this young person for a report.",
+      "What are the strongest themes across the record?",
     ],
   };
 
@@ -157,17 +192,22 @@ function assistantPromptsForView(view) {
 }
 
 export function updateAssistantContext() {
+  const person = getCurrentPerson();
   const fullName = getFullYoungPersonName();
+  const currentSection = getCurrentSectionName();
 
-  if (!state.youngPerson) {
+  updateAssistantScopeDataset();
+  renderAssistantScopeBadges();
+
+  if (!person) {
     if (els.assistantContext) {
       els.assistantContext.textContent = "No young person selected.";
     }
   } else {
     const text = [
       `Young person: ${fullName}`,
-      state.youngPerson.home_name || null,
-      `View: ${state.currentView.replaceAll("_", " ").replaceAll("-", " ")}`,
+      person.home_name || null,
+      `View: ${currentSection.replaceAll("_", " ").replaceAll("-", " ")}`,
     ]
       .filter(Boolean)
       .join(" • ");
@@ -177,7 +217,8 @@ export function updateAssistantContext() {
     }
   }
 
-  const prompts = assistantPromptsForView(state.currentView);
+  const prompts = assistantPromptsForView(currentSection);
+
   if (els.assistantSuggestions) {
     els.assistantSuggestions.innerHTML = prompts
       .map(
@@ -207,7 +248,7 @@ function renderAssistantMessageList(host, messages) {
       (message) => `
         <article class="assistant-message ${message.role === "user" ? "assistant-message-user" : ""}">
           <div class="assistant-message-role">${message.role === "user" ? "You" : "Assistant"}</div>
-          <div class="assistant-message-body">${escapeHtml(message.content)}</div>
+          <div class="assistant-message-body">${escapeHtml(message.content || "")}</div>
         </article>
       `
     )
@@ -218,11 +259,17 @@ function renderAssistantMessageList(host, messages) {
 }
 
 export function renderAssistantMessages() {
+  if (!Array.isArray(state.assistantMessages)) state.assistantMessages = [];
+  if (!Array.isArray(state.assistantModalMessages)) state.assistantModalMessages = [];
+
   renderAssistantMessageList(els.assistantMessages, state.assistantMessages);
   renderAssistantMessageList(els.assistantModalMessages, state.assistantModalMessages);
 }
 
 function pushAssistantMessage(role, content) {
+  if (!Array.isArray(state.assistantMessages)) state.assistantMessages = [];
+  if (!Array.isArray(state.assistantModalMessages)) state.assistantModalMessages = [];
+
   const entry = { role, content };
   state.assistantMessages.push(entry);
   state.assistantModalMessages.push(entry);
@@ -230,6 +277,9 @@ function pushAssistantMessage(role, content) {
 }
 
 function addAssistantPlaceholder() {
+  if (!Array.isArray(state.assistantMessages)) state.assistantMessages = [];
+  if (!Array.isArray(state.assistantModalMessages)) state.assistantModalMessages = [];
+
   state.assistantMessages.push({ role: "assistant", content: "Thinking…", _streaming: true });
   state.assistantModalMessages.push({ role: "assistant", content: "Thinking…", _streaming: true });
   renderAssistantMessages();
@@ -239,7 +289,7 @@ function replaceLastAssistantPlaceholder(text) {
   const lists = [state.assistantMessages, state.assistantModalMessages];
 
   lists.forEach((list) => {
-    if (!list.length) return;
+    if (!Array.isArray(list) || !list.length) return;
     const last = list[list.length - 1];
     if (last.role === "assistant" && last._streaming) {
       last.content = text;
@@ -254,7 +304,7 @@ function updateLastAssistantStreamingText(text) {
   const lists = [state.assistantMessages, state.assistantModalMessages];
 
   lists.forEach((list) => {
-    if (!list.length) return;
+    if (!Array.isArray(list) || !list.length) return;
     const last = list[list.length - 1];
     if (last.role === "assistant" && last._streaming) {
       last.content = text;
@@ -266,8 +316,8 @@ function updateLastAssistantStreamingText(text) {
 
 function setAssistantSending(flag) {
   state.assistantSending = !!flag;
-  if (els.assistantSendBtn) els.assistantSendBtn.disabled = flag;
-  if (els.assistantModalSendBtn) els.assistantModalSendBtn.disabled = flag;
+  if (els.assistantSendBtn) els.assistantSendBtn.disabled = !!flag;
+  if (els.assistantModalSendBtn) els.assistantModalSendBtn.disabled = !!flag;
 }
 
 function prettyJson(value) {
@@ -310,8 +360,8 @@ function renderAssistantSourcesHtml(sources) {
 
 function inferAssistantSuggestedActions() {
   const actions = [];
-  const scope = state.assistantMeta.assistant_scope || {};
-  const context = state.assistantMeta.assistant_context || {};
+  const scope = state.assistantMeta?.assistant_scope || {};
+  const context = state.assistantMeta?.assistant_context || {};
 
   if (scope.scope_type === "young_person") {
     actions.push("Draft handover");
@@ -328,7 +378,7 @@ function inferAssistantSuggestedActions() {
     actions.push("Review outstanding tasks");
   }
 
-  if (Array.isArray(state.assistantMeta.suggested_actions)) {
+  if (Array.isArray(state.assistantMeta?.suggested_actions)) {
     actions.push(...state.assistantMeta.suggested_actions);
   }
 
@@ -336,11 +386,12 @@ function inferAssistantSuggestedActions() {
 }
 
 export function renderAssistantInsights() {
-  const scope = state.assistantMeta.assistant_scope || {};
-  const context = state.assistantMeta.assistant_context || {};
-  const sources = state.assistantMeta.sources || [];
-  const runtime = state.assistantMeta.runtime || {};
-  const explainability = state.assistantMeta.explainability || {};
+  const scope = state.assistantMeta?.assistant_scope || {};
+  const context = state.assistantMeta?.assistant_context || {};
+  const sources = state.assistantMeta?.sources || [];
+  const runtime = state.assistantMeta?.runtime || {};
+  const explainability = state.assistantMeta?.explainability || {};
+  const person = getCurrentPerson();
 
   if (els.assistantScopeSummary) {
     const rows = [];
@@ -349,17 +400,17 @@ export function renderAssistantInsights() {
       <div class="entity-row">
         <div>
           <div class="entity-title">${scope.scope_type === "young_person" ? "Young person scope" : "Assistant scope"}</div>
-          <div class="entity-meta">View: ${escapeHtml(state.currentView.replaceAll("_", " ").replaceAll("-", " "))}</div>
+          <div class="entity-meta">View: ${escapeHtml(getCurrentSectionName().replaceAll("_", " ").replaceAll("-", " "))}</div>
         </div>
       </div>
     `);
 
-    if (state.youngPerson) {
+    if (person) {
       rows.push(`
         <div class="entity-row">
           <div>
             <div class="entity-title">${escapeHtml(getFullYoungPersonName())}</div>
-            <div class="entity-meta">${escapeHtml(state.youngPerson.home_name || "Workspace loaded")}</div>
+            <div class="entity-meta">${escapeHtml(person.home_name || "Workspace loaded")}</div>
           </div>
         </div>
       `);
@@ -380,6 +431,7 @@ export function renderAssistantInsights() {
   }
 
   const suggestedActions = inferAssistantSuggestedActions();
+
   if (els.assistantActions) {
     els.assistantActions.innerHTML = suggestedActions.length
       ? suggestedActions
@@ -415,21 +467,26 @@ export function renderAssistantInsights() {
 }
 
 function buildAssistantContextPayload() {
+  const person = getCurrentPerson();
+  const activeRecord = state.activeRecordItem || {};
+  const section = getCurrentSectionName();
+
   return {
-    scope: "young_person",
-    young_person_id: state.youngPersonId,
-    current_view: state.currentView,
+    scope: state.youngPersonId ? "young_person" : "global",
+    young_person_id: state.youngPersonId || null,
+    current_view: section,
+    current_section: section,
     young_person_name: getFullYoungPersonName(),
-    placement_status: state.youngPerson?.placement_status || null,
-    summary_risk_level: state.youngPerson?.summary_risk_level || null,
+    placement_status: person?.placement_status || null,
+    summary_risk_level: person?.summary_risk_level || null,
     composer_record_type: state.composerRecordType || null,
-    home_name: state.youngPerson?.home_name || null,
-    shift_context: state.currentView || null,
+    home_name: person?.home_name || null,
+    shift_context: section,
     record_type: state.activeRecordType || state.composerRecordType || null,
     record_id:
-      state.activeRecordItem?.record_id ||
-      state.activeRecordItem?.source_id ||
-      state.activeRecordItem?.id ||
+      activeRecord.record_id ||
+      activeRecord.source_id ||
+      activeRecord.id ||
       state.composerRecordId ||
       null,
   };
@@ -454,7 +511,8 @@ function parseSseChunk(buffer, onEvent) {
     const dataLines = [];
 
     for (const line of lines) {
-      if (line.startsWith(":")) continue;
+      if (!line || line.startsWith(":")) continue;
+
       if (line.startsWith("event:")) {
         eventName = line.slice(6).trim();
       } else if (line.startsWith("data:")) {
@@ -470,7 +528,12 @@ function parseSseChunk(buffer, onEvent) {
 
 export async function askAssistant(question) {
   const trimmed = String(question || "").trim();
-  if (!trimmed || !state.youngPersonId || state.assistantSending) return;
+  if (!trimmed || state.assistantSending) return;
+
+  if (!state.youngPersonId) {
+    replaceLastAssistantPlaceholder?.("Select a young person first.");
+    return;
+  }
 
   pushAssistantMessage("user", trimmed);
   addAssistantPlaceholder();
@@ -480,7 +543,7 @@ export async function askAssistant(question) {
     const response = await fetch("/young-people/assistant", {
       method: "POST",
       credentials: "include",
-      headers: withCsrfHeaders("POST", {
+      headers: buildCsrfHeaders({
         "Content-Type": "application/json",
         Accept: "text/event-stream",
       }),
@@ -493,10 +556,14 @@ export async function askAssistant(question) {
 
     if (!response.ok) {
       let message = `Request failed (${response.status})`;
+
       try {
         const body = await response.json();
-        message = body.detail || body.error || message;
-      } catch {}
+        message = body.detail || body.error || body.message || message;
+      } catch {
+        // ignore
+      }
+
       throw new Error(message);
     }
 
@@ -530,11 +597,15 @@ export async function askAssistant(question) {
               suggested_actions: Array.isArray(meta.suggested_actions) ? meta.suggested_actions : [],
             };
             renderAssistantInsights();
-          } catch {}
+          } catch {
+            // ignore malformed meta
+          }
           return;
         }
 
-        if (eventName === "progress") return;
+        if (eventName === "progress") {
+          return;
+        }
 
         if (eventName === "message") {
           streamedText += payload || "";
@@ -545,7 +616,7 @@ export async function askAssistant(question) {
 
     replaceLastAssistantPlaceholder(streamedText.trim() || "No assistant reply returned.");
   } catch (error) {
-    replaceLastAssistantPlaceholder(error.message || "The assistant could not answer right now.");
+    replaceLastAssistantPlaceholder(error?.message || "The assistant could not answer right now.");
   } finally {
     setAssistantSending(false);
   }
@@ -579,5 +650,18 @@ export function bindAssistantEvents() {
     const question = els.assistantModalInput?.value || "";
     if (els.assistantModalInput) els.assistantModalInput.value = "";
     await askAssistant(question);
+  });
+
+  document.addEventListener("click", async (event) => {
+    const promptButton = event.target.closest("[data-prompt]");
+    if (promptButton) {
+      await askAssistant(promptButton.dataset.prompt || "");
+      return;
+    }
+
+    const chipButton = event.target.closest("[data-assistant-chip]");
+    if (chipButton) {
+      await askAssistant(chipButton.dataset.assistantChip || "");
+    }
   });
 }
