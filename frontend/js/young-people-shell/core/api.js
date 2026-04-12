@@ -1,12 +1,5 @@
 const API_BASE = window.location.origin;
 
-const GET_CACHE_TTL_MS = 60 * 1000;
-const FAILED_GET_COOLDOWN_MS = 15 * 1000;
-
-const getCache = new Map();
-const inflightGetRequests = new Map();
-const failedGetCooldowns = new Map();
-
 async function readJsonSafely(response) {
   const text = await response.text();
 
@@ -28,25 +21,14 @@ function buildErrorMessage(response, data) {
 
 const API_ROUTE_ALIASES = [
   [/\/young-people\/(\d+)\/alerts$/, "/young-people/$1/incidents"],
-  [/\/young-people\/(\d+)\/health-records$/, "/young-people/$1/health"],
-  [/\/young-people\/(\d+)\/education-records$/, "/young-people/$1/education"],
-  [/\/young-people\/(\d+)\/family-contact-records$/, "/young-people/$1/family"],
+  [/\/young-people\/(\d+)\/young-person-appointments$/, "/young-people/$1/appointments"],
+
+  // Keep only if no dedicated handover endpoint exists yet
+  [/\/young-people\/(\d+)\/handover-records$/, "/young-people/$1/timeline?limit=12"],
+
+  // Temporary fallbacks only if backend does not yet expose dedicated routes
   [/\/young-people\/(\d+)\/safeguarding-records$/, "/young-people/$1/incidents"],
   [/\/young-people\/(\d+)\/missing-episodes$/, "/young-people/$1/incidents"],
-  [/\/young-people\/(\d+)\/handover-records$/, "/young-people/$1/timeline?limit=12"],
-  [/\/young-people\/(\d+)\/medication-profiles$/, "/young-people/$1/health"],
-  [/\/young-people\/(\d+)\/medication-records$/, "/young-people/$1/health"],
-  [/\/young-people\/(\d+)\/achievements$/, "/young-people/$1/education"],
-  [/\/young-people\/(\d+)\/young-person-appointments$/, "/young-people/$1/appointments"],
-  [/\/young-people\/(\d+)\/inspection-packs$/, "/young-people/$1/reports"],
-  [/\/young-people\/(\d+)\/monthly-reviews$/, "/young-people/$1/reports"],
-  [/\/young-people\/(\d+)\/readiness$/, "/young-people/$1/compliance"],
-  [/\/young-people\/(\d+)\/tasks$/, "/young-people/$1/compliance"],
-  [/\/young-people\/(\d+)\/approvals$/, "/young-people/$1/compliance"],
-  [/\/young-people\/(\d+)\/documents$/, "/young-people/$1/compliance"],
-  [/\/young-people\/(\d+)\/manager-review$/, "/young-people/$1/compliance"],
-  [/\/young-people\/(\d+)\/manager-actions$/, "/young-people/$1/compliance"],
-  [/\/young-people\/(\d+)\/risks$/, "/young-people/$1/plans"],
 ];
 
 function shouldResolveAlias(method = "GET") {
@@ -95,101 +77,7 @@ export function withCsrfHeaders(method = "GET", headers = {}) {
   return nextHeaders;
 }
 
-function buildAbsoluteUrl(resolvedUrl) {
-  return `${API_BASE}${resolvedUrl}`;
-}
-
-function buildGetCacheKey(url, method = "GET") {
-  const resolvedUrl = resolveApiUrl(url, method);
-  return `${String(method || "GET").toUpperCase()} ${resolvedUrl}`;
-}
-
-function cloneData(data) {
-  if (data === null || data === undefined) return data;
-  try {
-    return structuredClone(data);
-  } catch {
-    return JSON.parse(JSON.stringify(data));
-  }
-}
-
-export function clearApiCache(url = null) {
-  if (!url) {
-    getCache.clear();
-    failedGetCooldowns.clear();
-    return;
-  }
-
-  const key = buildGetCacheKey(url, "GET");
-  getCache.delete(key);
-  failedGetCooldowns.delete(key);
-}
-
-export function clearYoungPersonApiCache(youngPersonId) {
-  if (!youngPersonId) return;
-
-  const marker = `/young-people/${youngPersonId}/`;
-
-  for (const key of [...getCache.keys()]) {
-    if (key.includes(marker)) getCache.delete(key);
-  }
-
-  for (const key of [...failedGetCooldowns.keys()]) {
-    if (key.includes(marker)) failedGetCooldowns.delete(key);
-  }
-}
-
-function getCachedGet(url) {
-  const key = buildGetCacheKey(url, "GET");
-  const cached = getCache.get(key);
-
-  if (!cached) return null;
-  if (Date.now() > cached.expiresAt) {
-    getCache.delete(key);
-    return null;
-  }
-
-  return cloneData(cached.data);
-}
-
-function setCachedGet(url, data, ttlMs = GET_CACHE_TTL_MS) {
-  const key = buildGetCacheKey(url, "GET");
-  getCache.set(key, {
-    data: cloneData(data),
-    expiresAt: Date.now() + ttlMs,
-  });
-}
-
-function getFailedCooldownError(url) {
-  const key = buildGetCacheKey(url, "GET");
-  const cooldown = failedGetCooldowns.get(key);
-
-  if (!cooldown) return null;
-  if (Date.now() > cooldown.expiresAt) {
-    failedGetCooldowns.delete(key);
-    return null;
-  }
-
-  const error = new Error(cooldown.message || "Request temporarily paused after repeated failure.");
-  error.status = cooldown.status || 500;
-  error.url = cooldown.url || "";
-  error.originalUrl = cooldown.originalUrl || url;
-  error.cooldown = true;
-  return error;
-}
-
-function setFailedCooldown(url, error, ttlMs = FAILED_GET_COOLDOWN_MS) {
-  const key = buildGetCacheKey(url, "GET");
-  failedGetCooldowns.set(key, {
-    message: error?.message || "Request temporarily paused after repeated failure.",
-    status: error?.status || 500,
-    url: error?.url || "",
-    originalUrl: error?.originalUrl || url,
-    expiresAt: Date.now() + ttlMs,
-  });
-}
-
-async function performRequest(url, options = {}) {
+export async function apiRequest(url, options = {}) {
   const method = String(options.method || "GET").toUpperCase();
   const resolvedUrl = resolveApiUrl(url, method);
   const isFormData = options.body instanceof FormData;
@@ -217,13 +105,9 @@ async function performRequest(url, options = {}) {
   let response;
 
   try {
-    response = await fetch(buildAbsoluteUrl(resolvedUrl), config);
+    response = await fetch(`${API_BASE}${resolvedUrl}`, config);
   } catch {
-    const error = new Error("Network error");
-    error.status = 0;
-    error.url = buildAbsoluteUrl(resolvedUrl);
-    error.originalUrl = url;
-    throw error;
+    throw new Error("Network error");
   }
 
   const data = await readJsonSafely(response);
@@ -232,7 +116,7 @@ async function performRequest(url, options = {}) {
     const error = new Error(buildErrorMessage(response, data));
     error.status = response.status;
     error.data = data;
-    error.url = buildAbsoluteUrl(resolvedUrl);
+    error.url = `${API_BASE}${resolvedUrl}`;
     error.originalUrl = url;
     throw error;
   }
@@ -240,66 +124,16 @@ async function performRequest(url, options = {}) {
   return data;
 }
 
-export async function apiRequest(url, options = {}) {
-  const method = String(options.method || "GET").toUpperCase();
-  const useCache = method === "GET" && options.cache !== false;
-  const cacheTtlMs =
-    typeof options.cacheTtlMs === "number" ? options.cacheTtlMs : GET_CACHE_TTL_MS;
-
-  if (useCache) {
-    const cooldownError = getFailedCooldownError(url);
-    if (cooldownError) throw cooldownError;
-
-    const cached = getCachedGet(url);
-    if (cached !== null) return cached;
-
-    const inflightKey = buildGetCacheKey(url, method);
-    if (inflightGetRequests.has(inflightKey)) {
-      return cloneData(await inflightGetRequests.get(inflightKey));
-    }
-
-    const promise = (async () => {
-      try {
-        const data = await performRequest(url, options);
-        setCachedGet(url, data, cacheTtlMs);
-        failedGetCooldowns.delete(inflightKey);
-        return data;
-      } catch (error) {
-        if (error?.status >= 500 || error?.status === 0) {
-          setFailedCooldown(url, error);
-        }
-        throw error;
-      } finally {
-        inflightGetRequests.delete(inflightKey);
-      }
-    })();
-
-    inflightGetRequests.set(inflightKey, promise);
-    return cloneData(await promise);
-  }
-
-  const data = await performRequest(url, options);
-
-  if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
-    getCache.clear();
-    failedGetCooldowns.clear();
-  }
-
-  return data;
-}
-
-export async function apiGet(url, options = {}) {
+export async function apiGet(url) {
   return apiRequest(url, {
     method: "GET",
-    ...options,
   });
 }
 
-export async function apiSend(url, method = "POST", body = null, options = {}) {
+export async function apiSend(url, method = "POST", body = null) {
   return apiRequest(url, {
     method,
     body,
-    ...options,
   });
 }
 
