@@ -8,6 +8,7 @@ import { initialiseShellNavigation, showError } from "./ui/nav.js";
 import { loadYoungPersonSelector, openYoungPerson } from "./ui/selector.js";
 import { bindShellChrome, refreshShellChrome } from "./ui/shell-ui.js";
 import { bindAssistantUi, refreshAssistantUi } from "./ui/assistant-ui.js";
+import { bindAssistantEvents, updateAssistantContext, renderAssistantInsights, renderAssistantMessages } from "./ui/assistant.js";
 
 function showWorkspace() {
   els.selectorScreen?.classList.add("hidden");
@@ -19,6 +20,14 @@ function showSelector() {
   els.selectorScreen?.classList.remove("hidden");
 }
 
+function refreshAllChrome() {
+  refreshShellChrome();
+  refreshAssistantUi();
+  updateAssistantContext();
+  renderAssistantMessages();
+  renderAssistantInsights();
+}
+
 async function restoreSelectedYoungPerson() {
   const idFromUrl = getYoungPersonIdFromUrl();
 
@@ -26,8 +35,7 @@ async function restoreSelectedYoungPerson() {
     state.youngPersonId = null;
     state.selectedYoungPerson = null;
     showSelector();
-    refreshShellChrome();
-    refreshAssistantUi();
+    refreshAllChrome();
     return false;
   }
 
@@ -37,8 +45,7 @@ async function restoreSelectedYoungPerson() {
 
   try {
     await openYoungPerson(idFromUrl, { skipInitialSectionLoad: true });
-    refreshShellChrome();
-    refreshAssistantUi();
+    refreshAllChrome();
     return true;
   } catch (error) {
     console.error("[index] failed to restore young person", error);
@@ -46,8 +53,7 @@ async function restoreSelectedYoungPerson() {
     state.selectedYoungPerson = null;
     setYoungPersonIdInUrl(null);
     showSelector();
-    refreshShellChrome();
-    refreshAssistantUi();
+    refreshAllChrome();
     showError(error?.message || "Failed to open selected young person.");
     return false;
   }
@@ -57,8 +63,9 @@ async function bootstrap() {
   try {
     bindShellChrome();
     bindAssistantUi();
-    refreshShellChrome();
-    refreshAssistantUi();
+    bindAssistantEvents();
+
+    refreshAllChrome();
 
     const restored = await restoreSelectedYoungPerson();
 
@@ -72,6 +79,7 @@ async function bootstrap() {
     }
 
     await initialiseShellNavigation();
+    refreshAllChrome();
   } catch (error) {
     console.error("[index] bootstrap failed", error);
     showError(error?.message || "Failed to start workspace.");
