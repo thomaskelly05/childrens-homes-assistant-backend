@@ -241,7 +241,8 @@ textarea {
 .ghost-btn,
 .quick-create-card,
 .chip,
-.nav-btn {
+.nav-btn,
+.selector-card {
   transition:
     transform 0.16s ease,
     box-shadow 0.16s ease,
@@ -404,6 +405,125 @@ textarea:focus-visible {
 
 .selector-list {
   min-height: 240px;
+}
+
+.selector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 18px;
+  align-items: stretch;
+}
+
+.selector-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  padding: 16px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff, #fbfdff);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  min-height: 100%;
+}
+
+.selector-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+  background: #fff;
+}
+
+.selector-card:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring), var(--shadow-md);
+}
+
+.selector-card--photo {
+  gap: 14px;
+}
+
+.selector-card-media {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.selector-card-photo,
+.selector-card-photo-fallback {
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
+  object-fit: cover;
+  box-shadow: var(--shadow-xs);
+}
+
+.selector-card-photo-fallback {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #dbeafe, #eff6ff);
+  color: var(--primary-strong);
+  font-size: 22px;
+  font-weight: 800;
+  user-select: none;
+}
+
+.selector-card-body {
+  display: grid;
+  gap: 10px;
+}
+
+.selector-card-body h3 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 800;
+  color: var(--text);
+  text-align: center;
+}
+
+.selector-card-body p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-soft);
+  text-align: center;
+}
+
+.selector-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.selector-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--panel-muted);
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.selector-card-actions {
+  margin-top: auto;
+  display: flex;
+  justify-content: center;
+  padding-top: 4px;
+}
+
+.selector-card-actions .secondary-btn {
+  pointer-events: none;
+  min-height: 34px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 12px;
 }
 
 /* Workspace shell */
@@ -1640,6 +1760,21 @@ textarea:focus-visible {
   .selector-page-head {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .selector-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .selector-card {
+    padding: 14px;
+  }
+
+  .selector-card-photo,
+  .selector-card-photo-fallback {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
   }
 
   .workspace-stage {
