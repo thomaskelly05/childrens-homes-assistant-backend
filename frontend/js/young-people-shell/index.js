@@ -11,11 +11,11 @@ import { bindAssistantUi, refreshAssistantUi } from "./ui/assistant-ui.js";
 
 function showWorkspace() {
   els.selectorScreen?.classList.add("hidden");
-  els.workspaceShell?.classList.remove("hidden");
+  els.workspaceScreen?.classList.remove("hidden");
 }
 
 function showSelector() {
-  els.workspaceShell?.classList.add("hidden");
+  els.workspaceScreen?.classList.add("hidden");
   els.selectorScreen?.classList.remove("hidden");
 }
 
@@ -78,4 +78,8 @@ async function bootstrap() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", bootstrap);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bootstrap);
+} else {
+  bootstrap();
+}
