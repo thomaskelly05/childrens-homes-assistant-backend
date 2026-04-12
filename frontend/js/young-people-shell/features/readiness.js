@@ -2,12 +2,15 @@ import { els } from "../dom.js";
 import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml, formatDate } from "../core/utils.js";
-import { renderSection, renderRowList, renderSummaryStat } from "../ui/records.js";
 import {
   mapComplianceItem,
   mapTask,
   mapStatutoryDocument,
 } from "../core/adapters.js";
+
+function toText(value, fallback = "") {
+  return escapeHtml(String(value ?? fallback ?? ""));
+}
 
 function sortSoonestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
@@ -23,6 +26,14 @@ function sortNewestFirst(items = [], keys = []) {
     const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
     return new Date(bValue).getTime() - new Date(aValue).getTime();
   });
+}
+
+function renderEmptyState(message = "No information available.") {
+  return `
+    <div class="empty-state">
+      <p>${toText(message)}</p>
+    </div>
+  `;
 }
 
 function buildComplianceRows(items = []) {
@@ -58,7 +69,7 @@ function buildTaskRows(items = []) {
       .join(" • "),
     due_date: item.due_date || null,
     created_at: item.created_at || null,
-    status: item.completed ? "Completed" : "Open",
+    status: item.completed ? "completed" : "open",
   }));
 }
 
@@ -98,32 +109,227 @@ function buildReadinessOverview({ compliance = [], tasks = [], documents = [] })
     return ["review_due", "expiring", "expired"].includes(status);
   }).length;
 
+  return {
+    overdue,
+    dueSoon,
+    openTasks,
+    reviewDueDocs,
+  };
+}
+
+function getRowDate(item = {}) {
+  return item.due_date || item.review_date || item.expiry_date || item.created_at || "";
+}
+
+function getRowPill(item = {}) {
+  const status = String(item.status || "").toLowerCase();
+  const severity = String(item.severity || "").toLowerCase();
+
+  if (
+    ["overdue", "escalated", "expired"].includes(status) ||
+    ["high", "critical"].includes(severity)
+  ) {
+    return { label: "Needs review", tone: "warning" };
+  }
+
+  if (["due_soon", "due soon", "review_due", "expiring"].includes(status)) {
+    return { label: status.replaceAll("_", " "), tone: "warning" };
+  }
+
+  if (["completed", "active", "open"].includes(status)) {
+    return { label: status.replaceAll("_", " "), tone: "muted" };
+  }
+
+  return { label: status ? status.replaceAll("_", " ") : "Recorded", tone: "muted" };
+}
+
+function renderRecordRows(items = [], emptyMessage = "No records found.") {
+  if (!items.length) {
+    return renderEmptyState(emptyMessage);
+  }
+
   return `
-    <div class="profile-grid">
-      <div class="profile-card">
-        <div class="profile-card-title">Overdue</div>
-        <div class="profile-card-text">${escapeHtml(String(overdue))}</div>
-        <div class="profile-card-subtext">Items needing urgent action</div>
-      </div>
+    <div class="record-list">
+      ${items
+        .map((item) => {
+          const pill = getRowPill(item);
 
-      <div class="profile-card">
-        <div class="profile-card-title">Due soon</div>
-        <div class="profile-card-text">${escapeHtml(String(dueSoon))}</div>
-        <div class="profile-card-subtext">Items approaching deadline</div>
-      </div>
-
-      <div class="profile-card">
-        <div class="profile-card-title">Open tasks</div>
-        <div class="profile-card-text">${escapeHtml(String(openTasks))}</div>
-        <div class="profile-card-subtext">Follow-up actions still outstanding</div>
-      </div>
-
-      <div class="profile-card">
-        <div class="profile-card-title">Documents needing review</div>
-        <div class="profile-card-text">${escapeHtml(String(reviewDueDocs))}</div>
-        <div class="profile-card-subtext">Documents affecting readiness</div>
-      </div>
+          return `
+            <article
+              class="record-row"
+              data-open-record="true"
+              data-record-id="${toText(item.id)}"
+              data-record-type="${toText(item.record_type)}"
+              data-title="${toText(item.title)}"
+              role="button"
+              tabindex="0"
+            >
+              <div class="record-row-main">
+                <div class="record-row-title">${toText(item.title)}</div>
+                ${item.summary ? `<div class="record-row-summary">${toText(item.summary)}</div>` : ""}
+                ${getRowDate(item) ? `<div class="record-row-meta">${toText(formatDate(getRowDate(item)))}</div>` : ""}
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill ${toText(pill.tone)}">${toText(pill.label)}</span>
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
     </div>
+  `;
+}
+
+function renderReadinessHtml({
+  complianceItems = [],
+  overdueItems = [],
+  dueSoonItems = [],
+  tasks = [],
+  openTasks = [],
+  documents = [],
+}) {
+  const overview = buildReadinessOverview({
+    compliance: complianceItems,
+    tasks,
+    documents,
+  });
+
+  return `
+    <section class="overview-panel">
+      <div class="overview-panel-head">
+        <div>
+          <div class="eyebrow">Readiness</div>
+          <h2>Actions and readiness</h2>
+          <p>A live view of compliance, follow-up actions and document readiness.</p>
+        </div>
+      </div>
+
+      <div class="overview-grid">
+        <section class="overview-main">
+          <div class="overview-stats-grid">
+            <article class="overview-stat-card">
+              <span class="overview-stat-label">Compliance items</span>
+              <strong class="overview-stat-value">${toText(complianceItems.length)}</strong>
+              <span class="overview-stat-note">All recorded compliance items</span>
+            </article>
+
+            <article class="overview-stat-card">
+              <span class="overview-stat-label">Overdue</span>
+              <strong class="overview-stat-value">${toText(overdueItems.length)}</strong>
+              <span class="overview-stat-note">Items needing urgent action</span>
+            </article>
+
+            <article class="overview-stat-card">
+              <span class="overview-stat-label">Open tasks</span>
+              <strong class="overview-stat-value">${toText(openTasks.length)}</strong>
+              <span class="overview-stat-note">Follow-up actions outstanding</span>
+            </article>
+
+            <article class="overview-stat-card">
+              <span class="overview-stat-label">Documents</span>
+              <strong class="overview-stat-value">${toText(documents.length)}</strong>
+              <span class="overview-stat-note">Linked readiness documents</span>
+            </article>
+          </div>
+
+          <section class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Readiness overview</h3>
+              <p>The quickest view of actions, deadlines and document readiness.</p>
+            </div>
+
+            <div class="record-list">
+              <article class="record-row">
+                <div class="record-row-main">
+                  <div class="record-row-title">Overdue</div>
+                  <div class="record-row-summary">Items needing urgent action now.</div>
+                </div>
+                <div class="record-row-side">
+                  <span class="row-pill ${overview.overdue > 0 ? "warning" : "muted"}">${toText(overview.overdue)}</span>
+                </div>
+              </article>
+
+              <article class="record-row">
+                <div class="record-row-main">
+                  <div class="record-row-title">Due soon</div>
+                  <div class="record-row-summary">Items approaching deadline.</div>
+                </div>
+                <div class="record-row-side">
+                  <span class="row-pill ${overview.dueSoon > 0 ? "warning" : "muted"}">${toText(overview.dueSoon)}</span>
+                </div>
+              </article>
+
+              <article class="record-row">
+                <div class="record-row-main">
+                  <div class="record-row-title">Open tasks</div>
+                  <div class="record-row-summary">Follow-up actions still outstanding.</div>
+                </div>
+                <div class="record-row-side">
+                  <span class="row-pill ${overview.openTasks > 0 ? "warning" : "muted"}">${toText(overview.openTasks)}</span>
+                </div>
+              </article>
+
+              <article class="record-row">
+                <div class="record-row-main">
+                  <div class="record-row-title">Documents needing review</div>
+                  <div class="record-row-summary">Documents affecting readiness and review.</div>
+                </div>
+                <div class="record-row-side">
+                  <span class="row-pill ${overview.reviewDueDocs > 0 ? "warning" : "muted"}">${toText(overview.reviewDueDocs)}</span>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Overdue and escalated items</h3>
+              <p>Items that need immediate attention.</p>
+            </div>
+
+            ${renderRecordRows(buildComplianceRows(overdueItems), "No overdue or escalated items found.")}
+          </section>
+
+          <section class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Due soon</h3>
+              <p>Upcoming compliance items that need action soon.</p>
+            </div>
+
+            ${renderRecordRows(buildComplianceRows(dueSoonItems), "No due soon items found.")}
+          </section>
+        </section>
+
+        <aside class="overview-side">
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Open follow-up tasks</h3>
+              <p>Tasks linked to care, compliance or review actions.</p>
+            </div>
+
+            ${renderRecordRows(buildTaskRows(openTasks), "No open tasks found.")}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Statutory and linked documents</h3>
+              <p>Documents that may affect review, expiry or inspection readiness.</p>
+            </div>
+
+            ${renderRecordRows(buildDocumentRows(documents), "No documents found.")}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>All compliance items</h3>
+              <p>Full compliance list in due-date order.</p>
+            </div>
+
+            ${renderRecordRows(buildComplianceRows(complianceItems), "No compliance items found.")}
+          </section>
+        </aside>
+      </div>
+    </section>
   `;
 }
 
@@ -187,54 +393,14 @@ export async function loadReadiness() {
 
     const openTasks = tasks.filter((item) => !item.completed);
 
-    els.viewContent.innerHTML = `
-      <section class="summary-strip">
-        ${renderSummaryStat("Compliance items", complianceItems.length)}
-        ${renderSummaryStat("Overdue", overdueItems.length)}
-        ${renderSummaryStat("Open tasks", openTasks.length)}
-        ${renderSummaryStat("Documents", documents.length)}
-      </section>
-
-      ${renderSection(
-        "Readiness overview",
-        "A live view of compliance, actions and document readiness.",
-        buildReadinessOverview({
-          compliance: complianceItems,
-          tasks,
-          documents,
-        })
-      )}
-
-      ${renderSection(
-        "Overdue and escalated items",
-        "Items that need immediate attention.",
-        renderRowList(buildComplianceRows(overdueItems), "No overdue or escalated items found.")
-      )}
-
-      ${renderSection(
-        "Due soon",
-        "Upcoming compliance items that need action soon.",
-        renderRowList(buildComplianceRows(dueSoonItems), "No due soon items found.")
-      )}
-
-      ${renderSection(
-        "Open follow-up tasks",
-        "Tasks linked to care, compliance or review actions.",
-        renderRowList(buildTaskRows(openTasks), "No open tasks found.")
-      )}
-
-      ${renderSection(
-        "Statutory and linked documents",
-        "Documents that may affect review, expiry or inspection readiness.",
-        renderRowList(buildDocumentRows(documents), "No documents found.")
-      )}
-
-      ${renderSection(
-        "All compliance items",
-        "Full compliance list in due-date order.",
-        renderRowList(buildComplianceRows(complianceItems), "No compliance items found.")
-      )}
-    `;
+    els.viewContent.innerHTML = renderReadinessHtml({
+      complianceItems,
+      overdueItems,
+      dueSoonItems,
+      tasks,
+      openTasks,
+      documents,
+    });
   } catch (error) {
     els.viewContent.innerHTML = `
       <div class="empty-state">
