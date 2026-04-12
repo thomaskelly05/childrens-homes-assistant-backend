@@ -1,630 +1,960 @@
-import {
-AI_SUGGESTION_TYPES,
-RECORD_TYPES,
-SEVERITY,
-SIGNIFICANCE,
-} from "./contracts.js";
+import { normaliseSeverity } from "./contracts.js";
 
 function cleanText(value) {
-return String(value || "").trim();
+  return String(value || "").trim();
 }
 
-function lowerText(value) {
-return cleanText(value).toLowerCase();
+function lower(value) {
+  return cleanText(value).toLowerCase();
 }
 
-function joinTexts(values = []) {
-return values.filter(Boolean).join(" ").trim();
+function includesAny(text, terms = []) {
+  const source = lower(text);
+  return terms.some((term) => source.includes(lower(term)));
 }
 
-function containsAny(text, needles = []) {
-const haystack = lowerText(text);
-return needles.some((needle) => haystack.includes(lowerText(needle)));
+function safeArray(value) {
+  return Array.isArray(value) ? value : [];
 }
 
-function makeSuggestion({
-type,
-title,
-reason,
-confidence = "medium",
-source_record_type,
-source_record_id,
-target_record_type,
-prefill = {},
-auto_link = false,
-priority = "normal",
+function buildSuggestion({
+  title,
+  description,
+  record_type,
+  priority = "medium",
+  source_record_type = "",
+  source_record_id = null,
+  prefill = {},
+  metadata = {},
 }) {
-return {
-id: `${type}:${source_record_type || "record"}:${source_record_id || "new"}:${title}`,
-type,
-title,
-reason,
-confidence,
-source_record_type: source_record_type || "",
-source_record_id: source_record_id || null,
-target_record_type: target_record_type || "",
-prefill,
-auto_link,
-priority,
-};
+  return {
+    id: `suggestion-${record_type}-${source_record_id || "new"}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`,
+    title,
+    description,
+    record_type,
+    priority,
+    source_record_type,
+    source_record_id,
+    prefill,
+    metadata,
+  };
 }
 
-function makeTaskSuggestion(source, title, reason, prefill = {}) {
-return makeSuggestion({
-type: AI_SUGGESTION_TYPES.create_task,
-title,
-reason,
-confidence: "high",
-source_record_type: source.record_type,
-source_record_id: source.id,
-target_record_type: RECORD_TYPES.task,
-prefill,
-priority: "high",
-});
+function getSourceMeta(record = {}, context = {}) {
+  return {
+    source_record_type:
+      context?.metadata?.source_record_type ||
+      context?.recordType ||
+      record.record_type ||
+      "",
+    source_record_id:
+      context?.metadata?.source_record_id ||
+      record.id ||
+      record.source_id ||
+      null,
+    young_person_id:
+      context?.metadata?.young_person_id ||
+      record.young_person_id ||
+      null,
+  };
 }
 
-function buildRiskPrefillFromIncident(record) {
-return {
-category: record.incident_type || "behaviour",
-title: `${record.incident_type || "Incident"} risk review`,
-concern_summary: record.description || record.summary || "",
-known_triggers: record.antecedent || "",
-early_warning_signs: "",
-contextual_factors: record.presentation || "",
-current_controls: "",
-deescalation_strategies: "",
-response_actions: record.actions_taken || record.staff_response || "",
-child_views: record.child_voice || "",
-severity: record.severity || SEVERITY.medium,
-likelihood: "medium",
-review_date: "",
-status: "draft",
-};
+function buildLinkedTitle(prefix, record = {}) {
+  const base =
+    cleanText(record.title) ||
+    cleanText(record.incident_type) ||
+    cleanText(record.contact_person) ||
+    cleanText(record.record_type) ||
+    "record";
+  return `${prefix}: ${base}`;
 }
 
-function buildRiskPrefillFromMissing(record) {
-return {
-category: "missing_episode",
-title: "Missing episode risk review",
-concern_summary: record.summary || "Recent missing episode recorded.",
-known_triggers: record.trigger_factors || "",
-early_warning_signs: "",
-contextual_factors: record.push_pull_factors || "",
-current_controls: "",
-deescalation_strategies: "",
-response_actions: record.actions_taken || "",
-child_views: record.child_voice || "",
-severity: record.severity || SEVERITY.high,
-likelihood: "medium",
-review_date: "",
-status: "draft",
-};
+/* -----------------------------
+   Rule groups
+----------------------------- */
+
+function rulesForDailyNote(record = {}, context = {}) {
+  const suggestions = [];
+  const meta = getSourceMeta(record, context);
+
+  const healthText = [
+    record.health_update,
+    record.presentation,
+    record.actions_required,
+    record.summary,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const familyText = [
+    record.family_update,
+    record.young_person_voice,
+    record.actions_required,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const behaviourText = [
+    record.behaviour_update,
+    record.presentation,
+    record.actions_required,
+    record.young_person_voice,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const educationText = [
+    record.education_update,
+    record.activities,
+    record.actions_required,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (
+    includesAny(healthText, [
+      "gp",
+      "doctor",
+      "camhs",
+      "dentist",
+      "optician",
+      "hospital",
+      "clinic",
+      "appointment",
+      "medication",
+      "allergy",
+      "pain",
+      "injury",
+      "ill",
+      "unwell",
+    ])
+  ) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create linked health record",
+        description:
+          "Health-related information was mentioned in this daily note. Create a structured health record to keep the health timeline complete.",
+        record_type: "health_record",
+        priority: "high",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          title: "Health update from daily note",
+          summary: cleanText(record.health_update || record.presentation),
+          child_voice: cleanText(record.young_person_voice),
+          significance: cleanText(record.significance),
+          follow_up_required: includesAny(healthText, [
+            "follow up",
+            "review",
+            "monitor",
+            "appointment",
+          ]),
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  if (
+    includesAny(healthText, [
+      "appointment",
+      "gp",
+      "doctor",
+      "camhs",
+      "dentist",
+      "optician",
+      "clinic",
+      "review",
+      "meeting",
+    ])
+  ) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create linked appointment",
+        description:
+          "This daily note appears to mention a health or professional appointment. Add it to the calendar so it is visible in planning and handover.",
+        record_type: "appointment",
+        priority: "medium",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          title: "Appointment from daily note",
+          summary: cleanText(record.health_update || record.actions_required),
+          child_voice: cleanText(record.young_person_voice),
+          status: "planned",
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  if (
+    includesAny(familyText, [
+      "mum",
+      "mom",
+      "mother",
+      "dad",
+      "father",
+      "family",
+      "contact",
+      "phone call",
+      "video call",
+      "visit",
+      "grandma",
+      "grandad",
+      "sibling",
+    ])
+  ) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create linked family contact record",
+        description:
+          "Family-related information was mentioned in this daily note. Create a family contact record so presentation and follow-up are visible.",
+        record_type: "family_contact",
+        priority: "medium",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          contact_type: "Family contact",
+          child_voice: cleanText(record.young_person_voice),
+          concerns: cleanText(record.family_update),
+          significance: cleanText(record.significance),
+          follow_up_required: includesAny(familyText, [
+            "follow up",
+            "upset",
+            "distressed",
+            "concern",
+          ]),
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  if (
+    includesAny(educationText, [
+      "school",
+      "college",
+      "lesson",
+      "class",
+      "attendance",
+      "teacher",
+      "education",
+      "provision",
+      "refused school",
+      "not attend",
+    ])
+  ) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create linked education record",
+        description:
+          "Education-related information was identified. Create a structured education record so attendance, engagement and concerns are tracked properly.",
+        record_type: "education_record",
+        priority: "medium",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          behaviour_summary: cleanText(record.behaviour_update),
+          learning_engagement: cleanText(record.education_update),
+          child_voice: cleanText(record.young_person_voice),
+          significance: cleanText(record.significance),
+          follow_up_required: includesAny(educationText, [
+            "concern",
+            "follow up",
+            "not attend",
+            "refused",
+          ]),
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  if (
+    includesAny(behaviourText, [
+      "risk",
+      "unsafe",
+      "assault",
+      "aggression",
+      "self-harm",
+      "abscond",
+      "missing",
+      "police",
+      "weapon",
+      "suicide",
+      "harm",
+      "violent",
+      "restraint",
+    ])
+  ) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create risk assessment",
+        description:
+          "The language in this daily note suggests significant risk. Create or update a structured risk assessment.",
+        record_type: "risk",
+        priority: "high",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          title: "Risk identified from daily note",
+          concern_summary: cleanText(record.behaviour_update || record.presentation),
+          child_views: cleanText(record.young_person_voice),
+          severity: "high",
+          status: "active",
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  if (
+    includesAny(behaviourText, [
+      "incident",
+      "assault",
+      "aggression",
+      "damage",
+      "fight",
+      "police",
+      "restraint",
+      "missing",
+      "abscond",
+    ])
+  ) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create incident record",
+        description:
+          "This daily note appears to describe an incident. Create a full incident record for chronology, management review and reporting.",
+        record_type: "incident",
+        priority: "high",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          description: cleanText(
+            [record.presentation, record.behaviour_update, record.actions_required]
+              .filter(Boolean)
+              .join("\n\n")
+          ),
+          child_voice: cleanText(record.young_person_voice),
+          severity: cleanText(record.significance) || "medium",
+          follow_up_required: true,
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  if (
+    includesAny(
+      [record.actions_required, record.summary, record.presentation].filter(Boolean).join(" "),
+      ["need to", "must", "follow up", "arrange", "contact", "book", "review"]
+    )
+  ) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create follow-up task",
+        description:
+          "This daily note includes actions required. Create a task so the next step is tracked and visible.",
+        record_type: "task",
+        priority: "medium",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          title: "Follow-up from daily note",
+          task: cleanText(record.actions_required || record.summary),
+          task_type: "follow_up",
+          completed: false,
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  return suggestions;
 }
 
-function buildHealthPrefillFromRecord(record) {
-return {
-record_type: "follow_up",
-title: record.title || "Health follow-up",
-event_datetime: "",
-summary: record.health_update || record.summary || "",
-professional_name: "",
-outcome: "",
-follow_up_required: true,
-next_action_date: "",
-child_voice: record.child_voice || record.young_person_voice || "",
-significance: record.significance || SIGNIFICANCE.medium,
-linked_appointment_id: record.linked_appointment_id || null,
-};
+function rulesForIncident(record = {}, context = {}) {
+  const suggestions = [];
+  const meta = getSourceMeta(record, context);
+  const text = [
+    record.description,
+    record.antecedent,
+    record.outcome,
+    record.actions_taken,
+    record.trauma_informed_formulation,
+    record.child_voice,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const severity = normaliseSeverity(record.severity);
+
+  if (
+    severity === "high" ||
+    severity === "critical" ||
+    record.safeguarding_flag ||
+    includesAny(text, ["self-harm", "suicide", "sexual", "injury", "police", "unsafe", "missing"])
+  ) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create or update risk assessment",
+        description:
+          "This incident indicates significant risk. Create or review a structured risk assessment linked to the incident.",
+        record_type: "risk",
+        priority: "high",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          title: buildLinkedTitle("Risk from incident", record),
+          concern_summary: cleanText(record.description || record.outcome),
+          known_triggers: cleanText(record.antecedent),
+          response_actions: cleanText(record.actions_taken),
+          child_views: cleanText(record.child_voice),
+          severity: severity || "high",
+          status: "active",
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  if (
+    record.safeguarding_flag ||
+    includesAny(text, [
+      "disclosure",
+      "sexual",
+      "physical",
+      "neglect",
+      "exploitation",
+      "injury",
+      "assault",
+      "harm",
+    ])
+  ) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create safeguarding record",
+        description:
+          "This incident may need a safeguarding record so concern details, referrals and outcomes are tracked separately.",
+        record_type: "safeguarding_record",
+        priority: "high",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          incident_id: meta.source_record_id,
+          concern_details: cleanText(record.description || record.outcome),
+          immediate_action_taken: cleanText(record.actions_taken || record.staff_response),
+          outcome: cleanText(record.outcome),
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  if (includesAny(text, ["missing", "abscond", "away from placement", "not returned"])) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create missing episode record",
+        description:
+          "This incident suggests a missing / absent from placement episode. Record it in the missing episode workflow.",
+        record_type: "missing_episode",
+        priority: "high",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          outcome: cleanText(record.outcome),
+          actions_taken: cleanText(record.actions_taken || record.staff_response),
+          child_voice: cleanText(record.child_voice),
+          review_required: true,
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  if (
+    includesAny(text, [
+      "gp",
+      "doctor",
+      "hospital",
+      "a&e",
+      "camhs",
+      "nurse",
+      "injury",
+      "medication",
+    ])
+  ) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create health record",
+        description:
+          "This incident mentions health consequences or professional involvement. Create a linked health record.",
+        record_type: "health_record",
+        priority: "medium",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          title: buildLinkedTitle("Health follow-up from incident", record),
+          summary: cleanText(record.description || record.outcome),
+          outcome: cleanText(record.outcome),
+          child_voice: cleanText(record.child_voice),
+          follow_up_required: true,
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  suggestions.push(
+    buildSuggestion({
+      title: "Create follow-up task",
+      description:
+        "Incidents usually generate actions. Add a follow-up task so accountability is clear.",
+      record_type: "task",
+      priority: severity === "high" || severity === "critical" ? "high" : "medium",
+      source_record_type: meta.source_record_type,
+      source_record_id: meta.source_record_id,
+      prefill: {
+        title: "Follow-up from incident",
+        task: cleanText(record.actions_taken || record.outcome || record.description),
+        task_type: "incident_follow_up",
+        completed: false,
+      },
+      metadata: meta,
+    })
+  );
+
+  return suggestions;
 }
 
-function buildEducationPrefillFromRecord(record) {
-return {
-record_date: "",
-attendance_status: "",
-provision_name: "",
-behaviour_summary: record.behaviour_update || record.summary || "",
-learning_engagement: record.education_update || record.summary || "",
-issue_raised: "",
-action_taken: "",
-professional_involved: "",
-achievement_note: "",
-child_voice: record.child_voice || record.young_person_voice || "",
-follow_up_required: true,
-significance: record.significance || SIGNIFICANCE.medium,
-};
+function rulesForHealthRecord(record = {}, context = {}) {
+  const suggestions = [];
+  const meta = getSourceMeta(record, context);
+  const text = [record.summary, record.outcome, record.title].filter(Boolean).join(" ");
+
+  if (
+    includesAny(text, [
+      "appointment",
+      "review",
+      "clinic",
+      "gp",
+      "doctor",
+      "camhs",
+      "dentist",
+      "optician",
+    ])
+  ) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create linked appointment",
+        description:
+          "This health record appears to involve a professional appointment. Add it to the calendar for continuity and planning.",
+        record_type: "appointment",
+        priority: "medium",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          title: cleanText(record.title) || "Health appointment",
+          summary: cleanText(record.summary),
+          professional_name: cleanText(record.professional_name),
+          status: "planned",
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  if (record.follow_up_required || includesAny(text, ["follow up", "monitor", "review", "check"])) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create health follow-up task",
+        description:
+          "This health record indicates follow-up is needed. Create a task so it is tracked and visible.",
+        record_type: "task",
+        priority: "medium",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          title: "Health follow-up",
+          task: cleanText(record.outcome || record.summary),
+          task_type: "health_follow_up",
+          due_date: record.next_action_date || "",
+          completed: false,
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  return suggestions;
 }
 
-function buildFamilyPrefillFromRecord(record) {
-return {
-contact_datetime: "",
-contact_type: "update",
-contact_person: "",
-supervision_level: "",
-location: "",
-pre_contact_presentation: "",
-post_contact_presentation: record.family_update || record.summary || "",
-child_voice: record.child_voice || record.young_person_voice || "",
-concerns: "",
-follow_up_required: true,
-significance: record.significance || SIGNIFICANCE.medium,
-};
+function rulesForFamilyContact(record = {}, context = {}) {
+  const suggestions = [];
+  const meta = getSourceMeta(record, context);
+  const text = [
+    record.pre_contact_presentation,
+    record.post_contact_presentation,
+    record.concerns,
+    record.child_voice,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (
+    record.follow_up_required ||
+    includesAny(text, ["upset", "distressed", "unsafe", "concern", "trigger", "risk"])
+  ) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create family contact follow-up task",
+        description:
+          "This family contact record suggests follow-up is needed. Create a task so actions are not lost.",
+        record_type: "task",
+        priority: "medium",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          title: "Family contact follow-up",
+          task: cleanText(record.concerns || record.post_contact_presentation),
+          task_type: "family_follow_up",
+          completed: false,
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  if (includesAny(text, ["risk", "unsafe", "harm", "threat", "fear"])) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create or review risk assessment",
+        description:
+          "This family contact record suggests a potential risk pattern. Create or review a linked risk assessment.",
+        record_type: "risk",
+        priority: "high",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          title: "Risk from family contact",
+          concern_summary: cleanText(record.concerns || record.post_contact_presentation),
+          child_views: cleanText(record.child_voice),
+          status: "active",
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  return suggestions;
 }
 
-function buildSafeguardingPrefill(record) {
-return {
-safeguarding_category: "concern",
-concern_datetime: record.occurred_at || record.start_datetime || "",
-disclosure_details: "",
-concern_details: record.description || record.summary || "",
-immediate_action_taken: record.actions_taken || record.staff_response || "",
-referral_made: false,
-referral_details: "",
-outcome: record.outcome || "",
-};
+function rulesForEducationRecord(record = {}, context = {}) {
+  const suggestions = [];
+  const meta = getSourceMeta(record, context);
+  const text = [
+    record.issue_raised,
+    record.action_taken,
+    record.behaviour_summary,
+    record.learning_engagement,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (
+    record.follow_up_required ||
+    includesAny(text, ["attendance", "refused", "excluded", "concern", "meeting", "review"])
+  ) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create education follow-up task",
+        description:
+          "This education record suggests follow-up is needed with school or provision.",
+        record_type: "task",
+        priority: "medium",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          title: "Education follow-up",
+          task: cleanText(record.issue_raised || record.action_taken || record.learning_engagement),
+          task_type: "education_follow_up",
+          completed: false,
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  if (cleanText(record.achievement_note)) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create achievement record",
+        description:
+          "This education record includes progress or success. Capture it as a structured achievement.",
+        record_type: "achievement_record",
+        priority: "low",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          title: "Achievement from education",
+          description: cleanText(record.achievement_note),
+          child_voice: cleanText(record.child_voice),
+          achievement_type: "education",
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  return suggestions;
 }
 
-function suggestFromDailyNote(record) {
-const suggestions = [];
-const combined = joinTexts([
-record.health_update,
-record.education_update,
-record.family_update,
-record.behaviour_update,
-record.actions_required,
-record.presentation,
-record.summary,
-]);
+function rulesForMissingEpisode(record = {}, context = {}) {
+  const suggestions = [];
+  const meta = getSourceMeta(record, context);
 
-if (cleanText(record.health_update)) {
-suggestions.push(
-makeSuggestion({
-type: AI_SUGGESTION_TYPES.create_health_record,
-title: "Create linked health record",
-reason: "This daily note includes a health update that may need its own structured health record.",
-confidence: "high",
-source_record_type: record.record_type,
-source_record_id: record.id,
-target_record_type: RECORD_TYPES.health_record,
-prefill: buildHealthPrefillFromRecord(record),
-priority: "normal",
-})
-);
+  suggestions.push(
+    buildSuggestion({
+      title: "Create or review risk assessment",
+      description:
+        "A missing episode should usually trigger a linked risk review.",
+      record_type: "risk",
+      priority: "high",
+      source_record_type: meta.source_record_type,
+      source_record_id: meta.source_record_id,
+      prefill: {
+        title: "Risk review after missing episode",
+        concern_summary: cleanText(record.outcome || record.trigger_factors),
+        child_views: cleanText(record.child_voice),
+        status: "active",
+      },
+      metadata: meta,
+    })
+  );
+
+  suggestions.push(
+    buildSuggestion({
+      title: "Create follow-up task",
+      description:
+        "A missing episode usually requires debrief, review or professional follow-up.",
+      record_type: "task",
+      priority: "high",
+      source_record_type: meta.source_record_type,
+      source_record_id: meta.source_record_id,
+      prefill: {
+        title: "Missing episode follow-up",
+        task: cleanText(record.actions_taken || record.outcome),
+        task_type: "missing_episode_follow_up",
+        completed: false,
+      },
+      metadata: meta,
+    })
+  );
+
+  return suggestions;
 }
 
-if (cleanText(record.education_update)) {
-suggestions.push(
-makeSuggestion({
-type: AI_SUGGESTION_TYPES.create_education_record,
-title: "Create linked education record",
-reason: "This daily note includes an education update that may need a structured education record.",
-confidence: "high",
-source_record_type: record.record_type,
-source_record_id: record.id,
-target_record_type: RECORD_TYPES.education_record,
-prefill: buildEducationPrefillFromRecord(record),
-priority: "normal",
-})
-);
+function rulesForAppointment(record = {}, context = {}) {
+  const suggestions = [];
+  const meta = getSourceMeta(record, context);
+  const text = [
+    record.summary,
+    record.purpose,
+    record.outcome_notes,
+    record.follow_up_actions,
+    record.notes,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (
+    includesAny(text, [
+      "gp",
+      "doctor",
+      "camhs",
+      "dentist",
+      "optician",
+      "medication",
+      "health",
+      "clinic",
+      "hospital",
+    ])
+  ) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create linked health record",
+        description:
+          "This appointment appears to be health-related. Create a health record so outcome and follow-up are visible in the health timeline.",
+        record_type: "health_record",
+        priority: "medium",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          title: cleanText(record.title) || "Health appointment outcome",
+          summary: cleanText(record.summary || record.purpose),
+          outcome: cleanText(record.outcome_notes || record.follow_up_actions),
+          child_voice: cleanText(record.child_voice),
+          professional_name: cleanText(record.professional_name),
+          follow_up_required: !!cleanText(record.follow_up_actions),
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  if (cleanText(record.follow_up_actions) || includesAny(text, ["follow up", "review", "book", "arrange"])) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create follow-up task",
+        description:
+          "This appointment includes follow-up work. Create a task so it is tracked and assigned.",
+        record_type: "task",
+        priority: "medium",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          title: "Appointment follow-up",
+          task: cleanText(record.follow_up_actions || record.outcome_notes || record.notes),
+          task_type: "appointment_follow_up",
+          completed: false,
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  return suggestions;
 }
 
-if (cleanText(record.family_update)) {
-suggestions.push(
-makeSuggestion({
-type: AI_SUGGESTION_TYPES.create_family_contact_record,
-title: "Create linked family contact record",
-reason: "This daily note includes family or contact information that may need a dedicated family contact record.",
-confidence: "high",
-source_record_type: record.record_type,
-source_record_id: record.id,
-target_record_type: RECORD_TYPES.family_contact_record,
-prefill: buildFamilyPrefillFromRecord(record),
-priority: "normal",
-})
-);
+function rulesForRisk(record = {}, context = {}) {
+  const suggestions = [];
+  const meta = getSourceMeta(record, context);
+
+  if (record.review_date) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create risk review task",
+        description:
+          "This risk assessment has an active review date. Create a task to make sure the review is completed on time.",
+        record_type: "task",
+        priority: "medium",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          title: "Risk review due",
+          task: cleanText(record.title || record.concern_summary || "Review risk assessment"),
+          task_type: "risk_review",
+          due_date: record.review_date,
+          completed: false,
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  return suggestions;
 }
 
-if (
-containsAny(combined, [
-"self-harm",
-"suicidal",
-"abscond",
-"missing",
-"police",
-"assault",
-"injury",
-"weapon",
-"safeguarding",
-"sexual",
-"exploitation",
-])
-) {
-suggestions.push(
-makeSuggestion({
-type: AI_SUGGESTION_TYPES.manager_review,
-title: "Escalate for manager review",
-reason: "This daily note contains language that may indicate elevated risk or safeguarding concern.",
-confidence: "medium",
-source_record_type: record.record_type,
-source_record_id: record.id,
-target_record_type: RECORD_TYPES.manager_action,
-prefill: {
-action_type: "manager_review",
-note: `Review daily note for potential risk/safeguarding follow-up: ${record.title || "Daily note"}`,
-},
-priority: "high",
-})
-);
+function rulesForSafeguarding(record = {}, context = {}) {
+  const suggestions = [];
+  const meta = getSourceMeta(record, context);
+
+  suggestions.push(
+    buildSuggestion({
+      title: "Create safeguarding follow-up task",
+      description:
+        "Safeguarding concerns usually require explicit follow-up and oversight.",
+      record_type: "task",
+      priority: "high",
+      source_record_type: meta.source_record_type,
+      source_record_id: meta.source_record_id,
+      prefill: {
+        title: "Safeguarding follow-up",
+        task: cleanText(record.outcome || record.immediate_action_taken || record.concern_details),
+        task_type: "safeguarding_follow_up",
+        completed: false,
+      },
+      metadata: meta,
+    })
+  );
+
+  return suggestions;
 }
 
-if (
-containsAny(combined, [
-"gp",
-"camhs",
-"hospital",
-"medication",
-"doctor",
-"dentist",
-"optician",
-])
-) {
-suggestions.push(
-makeTaskSuggestion(
-record,
-"Review health-related follow-up",
-"The daily note suggests a health-related issue or appointment may need follow-up.",
-{
-title: "Health follow-up",
-task: "Review health-related details captured in daily note and confirm whether a health record or appointment outcome is needed.",
-task_type: "follow_up",
-due_date: "",
-source_table: "daily_notes",
-source_id: record.id,
-}
-)
-);
-}
+/* -----------------------------
+   Public API
+----------------------------- */
 
-return suggestions;
-}
+export function evaluateRecordSuggestions(record = {}, context = {}) {
+  const type = String(
+    context?.recordType ||
+      record.record_type ||
+      record.source_record_type ||
+      ""
+  )
+    .trim()
+    .toLowerCase();
 
-function suggestFromIncident(record) {
-const suggestions = [];
+  if (!type) return [];
 
-if (
-["high", "critical"].includes(lowerText(record.severity)) ||
-record.safeguarding_flag ||
-record.police_involved ||
-record.requires_notification ||
-record.requires_reg40
-) {
-suggestions.push(
-makeSuggestion({
-type: AI_SUGGESTION_TYPES.create_risk_assessment,
-title: "Create draft risk assessment",
-reason: "This incident suggests a level of risk that may require a structured risk assessment or risk review.",
-confidence: "high",
-source_record_type: record.record_type,
-source_record_id: record.id,
-target_record_type: RECORD_TYPES.risk_assessment,
-prefill: buildRiskPrefillFromIncident(record),
-priority: "high",
-})
-);
-}
+  if (type === "daily_note") return rulesForDailyNote(record, context);
+  if (type === "incident") return rulesForIncident(record, context);
+  if (type === "health_record") return rulesForHealthRecord(record, context);
+  if (type === "family_contact") return rulesForFamilyContact(record, context);
+  if (type === "education_record") return rulesForEducationRecord(record, context);
+  if (type === "missing_episode") return rulesForMissingEpisode(record, context);
+  if (type === "appointment") return rulesForAppointment(record, context);
+  if (type === "risk") return rulesForRisk(record, context);
+  if (type === "safeguarding_record") return rulesForSafeguarding(record, context);
 
-if (record.safeguarding_flag) {
-suggestions.push(
-makeSuggestion({
-type: AI_SUGGESTION_TYPES.create_safeguarding_record,
-title: "Create safeguarding record",
-reason: "This incident is flagged as safeguarding-related and may require a linked safeguarding record.",
-confidence: "high",
-source_record_type: record.record_type,
-source_record_id: record.id,
-target_record_type: RECORD_TYPES.safeguarding_record,
-prefill: buildSafeguardingPrefill(record),
-priority: "high",
-})
-);
-}
-
-if (record.follow_up_required) {
-suggestions.push(
-makeTaskSuggestion(
-record,
-"Create incident follow-up task",
-"This incident has follow-up required and may need an explicit task.",
-{
-title: `Follow-up: ${record.title || "Incident"}`,
-task: record.actions_taken || record.restorative_follow_up || "Complete incident follow-up.",
-task_type: "incident_follow_up",
-due_date: "",
-source_table: "incidents",
-source_id: record.id,
-}
-)
-);
-}
-
-return suggestions;
-}
-
-function suggestFromHealthRecord(record) {
-const suggestions = [];
-
-if (record.follow_up_required) {
-suggestions.push(
-makeTaskSuggestion(
-record,
-"Create health follow-up task",
-"This health record shows follow-up is required.",
-{
-title: `Health follow-up: ${record.title || "Health record"}`,
-task: record.outcome || record.summary || "Complete health follow-up.",
-task_type: "health_follow_up",
-due_date: record.next_action_date || "",
-source_table: "health_records",
-source_id: record.id,
-}
-)
-);
-}
-
-if (record.linked_appointment_id) {
-suggestions.push(
-makeSuggestion({
-type: AI_SUGGESTION_TYPES.link_to_appointment,
-title: "Link to appointment",
-reason: "This health record already references an appointment and should be linked across the system.",
-confidence: "high",
-source_record_type: record.record_type,
-source_record_id: record.id,
-target_record_type: RECORD_TYPES.appointment,
-prefill: {
-linked_appointment_id: record.linked_appointment_id,
-},
-auto_link: true,
-priority: "normal",
-})
-);
-}
-
-return suggestions;
-}
-
-function suggestFromEducationRecord(record) {
-const suggestions = [];
-
-if (
-containsAny(joinTexts([record.attendance_status, record.issue_raised, record.summary]), [
-"absent",
-"refused",
-"excluded",
-"suspension",
-])
-) {
-suggestions.push(
-makeTaskSuggestion(
-record,
-"Review education concern",
-"This education record suggests an attendance or engagement concern that may need follow-up.",
-{
-title: `Education follow-up: ${record.title || "Education record"}`,
-task: record.issue_raised || record.summary || "Review education concern and agree next steps.",
-task_type: "education_follow_up",
-due_date: "",
-source_table: "education_records",
-source_id: record.id,
-}
-)
-);
-}
-
-return suggestions;
-}
-
-function suggestFromFamilyContact(record) {
-const suggestions = [];
-
-if (record.follow_up_required || cleanText(record.concerns)) {
-suggestions.push(
-makeTaskSuggestion(
-record,
-"Review family contact follow-up",
-"This family contact record includes concerns or follow-up needs.",
-{
-title: `Family follow-up: ${record.title || "Family contact"}`,
-task: record.concerns || record.summary || "Review family contact follow-up.",
-task_type: "family_follow_up",
-due_date: "",
-source_table: "family_contact_records",
-source_id: record.id,
-}
-)
-);
-}
-
-if (
-containsAny(joinTexts([record.concerns, record.post_contact_presentation, record.summary]), [
-"distressed",
-"dysregulated",
-"upset",
-"angry",
-"unsafe",
-"fear",
-"worried",
-])
-) {
-suggestions.push(
-makeSuggestion({
-type: AI_SUGGESTION_TYPES.update_support_plan,
-title: "Review support plan after family contact",
-reason: "This family contact record may indicate that support guidance should be reviewed.",
-confidence: "medium",
-source_record_type: record.record_type,
-source_record_id: record.id,
-target_record_type: RECORD_TYPES.support_plan,
-prefill: {
-summary: "Review current support guidance in light of recent family contact impact.",
-},
-priority: "normal",
-})
-);
-}
-
-return suggestions;
-}
-
-function suggestFromMissingEpisode(record) {
-const suggestions = [
-makeSuggestion({
-type: AI_SUGGESTION_TYPES.create_risk_assessment,
-title: "Create missing episode risk review",
-reason: "A missing episode should usually prompt a risk review or updated assessment.",
-confidence: "high",
-source_record_type: record.record_type,
-source_record_id: record.id,
-target_record_type: RECORD_TYPES.risk_assessment,
-prefill: buildRiskPrefillFromMissing(record),
-priority: "high",
-}),
-];
-
-if (!record.return_interview_completed) {
-suggestions.push(
-makeTaskSuggestion(
-record,
-"Arrange return interview follow-up",
-"This missing episode does not show a completed return interview.",
-{
-title: "Return interview follow-up",
-task: "Confirm and record return interview arrangements and outcome.",
-task_type: "missing_episode_follow_up",
-due_date: record.return_interview_date || "",
-source_table: "missing_episodes",
-source_id: record.id,
-}
-)
-);
-}
-
-return suggestions;
-}
-
-function suggestFromAppointment(record) {
-const suggestions = [];
-
-if (
-lowerText(record.status) === "completed" &&
-!cleanText(record.outcome_notes)
-) {
-suggestions.push(
-makeSuggestion({
-type: AI_SUGGESTION_TYPES.create_health_record,
-title: "Record appointment outcome",
-reason: "This appointment is completed but no structured outcome is recorded.",
-confidence: "high",
-source_record_type: record.record_type,
-source_record_id: record.id,
-target_record_type: RECORD_TYPES.health_record,
-prefill: {
-record_type: "appointment_outcome",
-title: record.title || "Appointment outcome",
-event_datetime: record.start_datetime || "",
-summary: record.summary || record.purpose || "",
-professional_name: record.professional_name || "",
-outcome: "",
-follow_up_required: false,
-linked_appointment_id: record.id,
-},
-priority: "normal",
-})
-);
-}
-
-return suggestions;
-}
-
-export function evaluateRecordSuggestions(record = {}) {
-const type = record.record_type;
-if (!type) return [];
-
-if (type === RECORD_TYPES.daily_note) return suggestFromDailyNote(record);
-if (type === RECORD_TYPES.incident) return suggestFromIncident(record);
-if (type === RECORD_TYPES.health_record) return suggestFromHealthRecord(record);
-if (type === RECORD_TYPES.education_record) return suggestFromEducationRecord(record);
-if (type === RECORD_TYPES.family_contact_record) return suggestFromFamilyContact(record);
-if (type === RECORD_TYPES.missing_episode) return suggestFromMissingEpisode(record);
-if (type === RECORD_TYPES.appointment) return suggestFromAppointment(record);
-
-return [];
+  return [];
 }
 
 export function mergeSuggestionLists(...lists) {
-const seen = new Set();
-const merged = [];
+  const combined = lists.flatMap((list) => safeArray(list));
 
-lists.flat().forEach((item) => {
-if (!item?.id) return;
-if (seen.has(item.id)) return;
-seen.add(item.id);
-merged.push(item);
-});
+  const seen = new Set();
+  const deduped = [];
 
-return merged.sort((a, b) => {
-const rank = { high: 3, medium: 2, low: 1, normal: 1 };
-return (rank[b.priority] || 0) - (rank[a.priority] || 0);
-});
+  for (const item of combined) {
+    const key = [
+      item.record_type,
+      item.title,
+      item.source_record_type,
+      item.source_record_id,
+    ].join("::");
+
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(item);
+  }
+
+  return deduped;
 }
 
-export function evaluateCrossRecordPatterns(records = {}) {
-const suggestions = [];
-const incidents = records.incidents || [];
-const missingEpisodes = records.missing_episodes || [];
-
-if (incidents.length >= 3) {
-const highCount = incidents.filter((x) =>
-["high", "critical"].includes(lowerText(x.severity))
-).length;
-
-if (highCount >= 2) {
-suggestions.push(
-makeSuggestion({
-type: AI_SUGGESTION_TYPES.update_risk_assessment,
-title: "Review risk assessment for repeated incidents",
-reason: "Recent incident patterns suggest current risk planning may need review.",
-confidence: "medium",
-source_record_type: RECORD_TYPES.incident,
-source_record_id: incidents[0]?.id || null,
-target_record_type: RECORD_TYPES.risk_assessment,
-prefill: {
-title: "Risk review prompted by repeated incidents",
-concern_summary: "Multiple recent high-severity incidents detected.",
-},
-priority: "high",
-})
-);
-}
+export async function evaluateSuggestions({ recordType, record, metadata } = {}) {
+  return evaluateRecordSuggestions(record || {}, {
+    recordType,
+    metadata,
+  });
 }
 
-if (missingEpisodes.length >= 1) {
-suggestions.push(
-makeSuggestion({
-type: AI_SUGGESTION_TYPES.manager_review,
-title: "Manager review for missing episode pattern",
-reason: "A missing episode is present and should be considered in wider oversight and planning.",
-confidence: "high",
-source_record_type: RECORD_TYPES.missing_episode,
-source_record_id: missingEpisodes[0]?.id || null,
-target_record_type: RECORD_TYPES.manager_action,
-prefill: {
-action_type: "manager_review",
-note: "Review missing episode pattern and linked risk planning.",
-},
-priority: "high",
-})
-);
+export async function runRules({ recordType, record, metadata } = {}) {
+  return evaluateSuggestions({ recordType, record, metadata });
 }
 
-return suggestions;
+export async function getSuggestionsForRecord(record = {}, context = {}) {
+  return evaluateRecordSuggestions(record, context);
+}
+
+export default async function rulesClient(input = {}) {
+  if (input?.record || input?.recordType) {
+    return evaluateSuggestions(input);
+  }
+
+  return [];
 }
