@@ -1,144 +1,232 @@
-export const NAV_SECTIONS = [
+const NAV_GROUPS = [
   {
-    id: "workspace",
-    label: "Workspace",
-    icon: "home",
+    id: "today",
+    title: "Today",
+    items: [
+      {
+        id: "workspace",
+        label: "Today’s workspace",
+        short_label: "Workspace",
+        icon: "home",
+        description: "The main place to record, reflect and act on what matters today.",
+      },
+      {
+        id: "overview",
+        label: "What matters today",
+        short_label: "Overview",
+        icon: "layout-dashboard",
+        description: "A clear picture of priorities, progress, risks and strengths.",
+      },
+      {
+        id: "timeline",
+        label: "Chronology and events",
+        short_label: "Timeline",
+        icon: "list-ordered",
+        description: "A clear view of what has happened over time.",
+      },
+      {
+        id: "handover",
+        label: "Handover",
+        short_label: "Handover",
+        icon: "repeat",
+        description: "Support smooth, thoughtful communication between adults.",
+      },
+    ],
   },
   {
-    id: "overview",
-    label: "Overview",
-    icon: "layout-dashboard",
+    id: "relationships_and_identity",
+    title: "Identity, relationships and daily life",
+    items: [
+      {
+        id: "profile",
+        label: "About this young person",
+        short_label: "Profile",
+        icon: "user",
+        description: "Identity, communication, needs, strengths and what matters to them.",
+      },
+      {
+        id: "family",
+        label: "Family and relationships",
+        short_label: "Family",
+        icon: "users",
+        description: "Family contact, important relationships and how contact is experienced.",
+      },
+    ],
   },
   {
-    id: "profile",
-    label: "Profile",
-    icon: "user",
+    id: "development_and_wellbeing",
+    title: "Health, learning and wellbeing",
+    items: [
+      {
+        id: "health",
+        label: "Health and wellbeing",
+        short_label: "Health",
+        icon: "heart-pulse",
+        description: "Health needs, professionals, appointments, outcomes and follow-up.",
+      },
+      {
+        id: "education",
+        label: "Learning and education",
+        short_label: "Education",
+        icon: "graduation-cap",
+        description: "Learning, attendance, strengths, support and educational progress.",
+      },
+      {
+        id: "calendar",
+        label: "Appointments and key dates",
+        short_label: "Appointments",
+        icon: "calendar",
+        description: "Appointments, meetings and other important dates.",
+      },
+    ],
   },
   {
-    id: "timeline",
-    label: "Timeline",
-    icon: "list-ordered",
-  },
-  {
-    id: "handover",
-    label: "Handover",
-    icon: "repeat",
-  },
-  {
-    id: "health",
-    label: "Health",
-    icon: "heart-pulse",
-  },
-  {
-    id: "education",
-    label: "Education",
-    icon: "graduation-cap",
-  },
-  {
-    id: "family",
-    label: "Family",
-    icon: "users",
-  },
-  {
-    id: "calendar",
-    label: "Calendar",
-    icon: "calendar",
-  },
-  {
-    id: "readiness",
-    label: "Readiness",
-    icon: "shield-check",
-  },
-  {
-    id: "manager",
-    label: "Manager review",
-    icon: "clipboard-check",
-  },
-  {
-    id: "reports",
-    label: "Reports",
-    icon: "file-text",
+    id: "safety_and_planning",
+    title: "Safety, planning and action",
+    items: [
+      {
+        id: "readiness",
+        label: "Actions and readiness",
+        short_label: "Readiness",
+        icon: "shield-check",
+        description: "Tasks, follow-up, oversight and what needs doing next.",
+      },
+      {
+        id: "manager",
+        label: "Leadership and review",
+        short_label: "Manager view",
+        icon: "clipboard-check",
+        description: "Review workflows, oversight, quality and decision-making.",
+      },
+      {
+        id: "reports",
+        label: "Reports and review packs",
+        short_label: "Reports",
+        icon: "file-text",
+        description: "Reports, summaries and structured review outputs.",
+      },
+    ],
   },
 ];
+
+export const NAV_GROUPS_CONFIG = NAV_GROUPS;
+
+/**
+ * Flat compatibility export for existing code that expects NAV_SECTIONS to be a simple array.
+ * Keep this export so current nav/event logic continues to work.
+ */
+export const NAV_SECTIONS = NAV_GROUPS.flatMap((group) =>
+  group.items.map((item) => ({
+    ...item,
+    group_id: group.id,
+    group_title: group.title,
+  }))
+);
 
 export const QUICK_ACTIONS = [
   {
     id: "daily_note",
-    label: "Daily note",
+    label: "Add daily note",
+    short_label: "Daily note",
     record_type: "daily_note",
     section_hint: "workspace",
+    description: "Capture the day clearly, warmly and with the young person at the centre.",
   },
   {
     id: "incident",
-    label: "Important event",
+    label: "Add important event",
+    short_label: "Important event",
     record_type: "incident",
     section_hint: "timeline",
+    description: "Record a significant event clearly, safely and factually.",
   },
   {
     id: "support_plan",
-    label: "Support plan",
+    label: "Add support plan",
+    short_label: "Support plan",
     record_type: "support_plan",
     section_hint: "workspace",
+    description: "Create practical guidance to help adults respond consistently.",
   },
   {
     id: "risk",
-    label: "Risk assessment",
+    label: "Add risk assessment",
+    short_label: "Risk assessment",
     record_type: "risk",
     section_hint: "manager",
+    description: "Record risks, early signs, protective factors and response guidance.",
   },
   {
     id: "health_record",
-    label: "Health record",
+    label: "Add health record",
+    short_label: "Health record",
     record_type: "health_record",
     section_hint: "health",
+    description: "Record health events, professionals, outcomes and follow-up.",
   },
   {
     id: "education_record",
-    label: "Education record",
+    label: "Add education record",
+    short_label: "Education record",
     record_type: "education_record",
     section_hint: "education",
+    description: "Record learning, attendance, support, concerns and strengths.",
   },
   {
     id: "family_contact",
-    label: "Family contact",
+    label: "Add family contact",
+    short_label: "Family contact",
     record_type: "family_contact",
     section_hint: "family",
+    description: "Record contact, presentation, concerns and next steps.",
   },
   {
     id: "keywork",
-    label: "Keywork",
+    label: "Add keywork session",
+    short_label: "Keywork",
     record_type: "keywork",
     section_hint: "workspace",
+    description: "Record direct work, reflection and actions agreed.",
   },
   {
     id: "appointment",
-    label: "Appointment",
+    label: "Add appointment",
+    short_label: "Appointment",
     record_type: "appointment",
     section_hint: "calendar",
+    description: "Add an appointment, purpose, preparation and follow-up.",
   },
   {
     id: "achievement_record",
-    label: "Achievement",
+    label: "Add achievement",
+    short_label: "Achievement",
     record_type: "achievement_record",
     section_hint: "education",
+    description: "Capture progress, strengths, success and what it meant.",
   },
   {
     id: "safeguarding_record",
-    label: "Safeguarding",
+    label: "Add safeguarding record",
+    short_label: "Safeguarding",
     record_type: "safeguarding_record",
     section_hint: "manager",
+    description: "Record safeguarding concerns, immediate action and referrals.",
   },
   {
     id: "missing_episode",
-    label: "Missing episode",
+    label: "Add missing episode",
+    short_label: "Missing episode",
     record_type: "missing_episode",
     section_hint: "timeline",
+    description: "Record a missing episode, response, return and follow-up.",
   },
   {
     id: "task",
-    label: "Task",
+    label: "Add task",
+    short_label: "Task",
     record_type: "task",
     section_hint: "readiness",
+    description: "Create a clear action with ownership and next steps.",
   },
 ];
 
@@ -160,32 +248,77 @@ export const SECTION_DEFAULT_ACTION = {
 export const PROFILE_ACTIONS = [
   {
     id: "profile_identity",
-    label: "Identity profile",
+    label: "Identity and what matters",
+    short_label: "Identity",
     record_type: "profile_identity",
+    description: "Culture, language, strengths, interests and what matters most.",
   },
   {
     id: "profile_communication",
-    label: "Communication profile",
+    label: "Communication and regulation",
+    short_label: "Communication",
     record_type: "profile_communication",
+    description: "How this young person communicates, processes and what helps.",
   },
   {
     id: "profile_education",
     label: "Education profile",
+    short_label: "Education",
     record_type: "profile_education",
+    description: "School, support, learning access and educational context.",
   },
   {
     id: "profile_health",
     label: "Health profile",
+    short_label: "Health",
     record_type: "profile_health",
+    description: "Health contacts, diagnoses, allergies, medication and wellbeing.",
   },
   {
     id: "profile_legal",
     label: "Legal status",
+    short_label: "Legal",
     record_type: "profile_legal",
+    description: "Legal context, authority, restrictions and consent arrangements.",
   },
   {
     id: "profile_formulation",
     label: "Formulation",
+    short_label: "Formulation",
     record_type: "profile_formulation",
+    description: "Shared understanding of needs, behaviour, patterns and what helps.",
   },
 ];
+
+/**
+ * Optional helper maps for nicer page chrome if you want to use them in shell-ui.js.
+ */
+export const SECTION_TITLES = {
+  workspace: "Today’s workspace",
+  overview: "What matters today",
+  profile: "About this young person",
+  timeline: "Chronology and events",
+  handover: "Handover",
+  health: "Health and wellbeing",
+  education: "Learning and education",
+  family: "Family and relationships",
+  calendar: "Appointments and key dates",
+  readiness: "Actions and readiness",
+  manager: "Leadership and review",
+  reports: "Reports and review packs",
+};
+
+export const SECTION_SUBTITLES = {
+  workspace: "A calm space to record, reflect and respond to what matters today.",
+  overview: "A clear picture of priorities, wellbeing, risk, strengths and next steps.",
+  profile: "Identity, communication, needs, strengths and what adults should hold in mind.",
+  timeline: "A shared view of significant events, patterns and progress over time.",
+  handover: "Support smooth, thoughtful communication between adults around the young person.",
+  health: "Health needs, professionals, outcomes and follow-up that adults need to know.",
+  education: "Learning, attendance, support, strengths and educational experience.",
+  family: "Family contact, important relationships and how these are experienced.",
+  calendar: "Appointments, meetings and important dates that shape the young person’s week.",
+  readiness: "Actions, tasks, compliance and practical follow-up that need attention.",
+  manager: "Oversight, quality, decision-making and review.",
+  reports: "Structured summaries, reports and review outputs for the young person.",
+};
