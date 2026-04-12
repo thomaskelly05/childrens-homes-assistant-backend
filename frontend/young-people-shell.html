@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IndiCare OS • Young People Shell</title>
+  <title>IndiCare • </title>
   <link rel="stylesheet" href="/css/young-people-shell.css" />
 </head>
 <body>
@@ -36,6 +36,9 @@
         <button id="refreshBtn" class="secondary-btn" type="button">
           Refresh
         </button>
+        <button id="refreshWorkspaceBtn" class="secondary-btn hidden" type="button" aria-hidden="true" tabindex="-1">
+          Refresh workspace
+        </button>
         <button id="homeBtn" class="ghost-btn" type="button">
           Young people home
         </button>
@@ -63,6 +66,15 @@
                 placeholder="Search by name, preferred name or home..."
                 autocomplete="off"
               />
+              <input
+                id="youngPersonSearchInput"
+                class="search-input hidden"
+                type="text"
+                placeholder="Search by name, preferred name or home..."
+                autocomplete="off"
+                aria-hidden="true"
+                tabindex="-1"
+              />
               <button id="selectorRefreshBtn" class="secondary-btn" type="button">
                 Refresh
               </button>
@@ -81,191 +93,198 @@
       </section>
 
       <section id="workspaceScreen" class="workspace-screen hidden">
-        <aside class="workspace-sidebar desktop-only">
-          <div class="workspace-sidebar-profile">
-            <div class="workspace-sidebar-avatar" id="personAvatar">YP</div>
-            <div class="workspace-sidebar-profile-copy">
-              <h2 id="personName">Young person</h2>
-              <p id="personMeta">Workspace</p>
-            </div>
-          </div>
-
-          <nav id="desktopNav" class="workspace-nav" aria-label="Workspace navigation"></nav>
-        </aside>
-
-        <section class="workspace-stage">
-          <div class="workspace-stage-top">
-            <div class="workspace-stage-mobile-person mobile-only">
-              <div class="workspace-stage-mobile-avatar" id="mobilePersonAvatar">YP</div>
-              <div class="workspace-stage-mobile-copy">
-                <h2 id="mobilePersonName">Young person</h2>
-                <p id="mobilePersonMeta">Workspace</p>
-              </div>
-              <button id="mobileHomeBtn" class="ghost-btn" type="button">
-                Home
-              </button>
-            </div>
-
-            <div class="workspace-hero">
-              <div class="workspace-hero-copy">
-                <div class="eyebrow">Young person workspace</div>
-                <h1 id="pageTitle">Overview</h1>
-                <p id="pageSubtitle">What matters today</p>
-              </div>
-
-              <div id="heroQuickActions" class="workspace-hero-actions">
-                <button class="quick-action-btn" type="button" data-action-router="new-daily-note">
-                  Add daily note
-                </button>
-                <button class="quick-action-btn" type="button" data-action-router="new-incident">
-                  Add important event
-                </button>
-                <button class="quick-action-btn" type="button" data-action-router="new-support-plan">
-                  Add support plan
-                </button>
-                <button class="quick-action-btn" type="button" data-action-router="assistant-handover">
-                  Draft handover
-                </button>
+        <section id="workspaceShell" class="workspace-screen-inner">
+          <aside class="workspace-sidebar desktop-only">
+            <div class="workspace-sidebar-profile">
+              <div class="workspace-sidebar-avatar" id="personAvatar">YP</div>
+              <div class="workspace-sidebar-profile-copy">
+                <h2 id="personName">Young person</h2>
+                <p id="personMeta">Workspace</p>
               </div>
             </div>
 
-            <section class="profile-snapshot">
-              <div id="profileSnapshotPhotoWrap" class="profile-snapshot-photo-wrap" aria-label="Young person photo">
-                <div class="profile-photo-fallback">YP</div>
-              </div>
+            <button id="backToSelectorBtn" class="ghost-btn workspace-back-btn" type="button">
+              Change young person
+            </button>
 
-              <div class="profile-snapshot-copy">
-                <h3 id="profileSnapshotName">Young person</h3>
-                <p id="profileSnapshotMeta">Profile snapshot</p>
-              </div>
+            <nav id="desktopNav" class="workspace-nav" aria-label="Workspace navigation"></nav>
+          </aside>
 
-              <div class="profile-snapshot-actions">
-                <button
-                  id="profileOpenBtn"
-                  class="secondary-btn"
-                  type="button"
-                  data-view="profile"
-                >
-                  Open profile
-                </button>
-
-                <button
-                  id="profilePhotoUploadBtn"
-                  class="ghost-btn"
-                  type="button"
-                  data-action-router="edit-profile-identity"
-                >
-                  Update profile
-                </button>
-
-                <button id="changePersonBtn" class="ghost-btn" type="button">
-                  Change young person
-                </button>
-              </div>
-            </section>
-
-            <section id="statusBar" class="status-bar hidden" role="status" aria-live="polite"></section>
-          </div>
-
-          <div class="workspace-content-wrap">
-            <section class="workspace-content">
-              <div id="viewContent">
-                <div class="loading-state">
-                  <div>
-                    <div class="spinner"></div>
-                    <p>Loading workspace…</p>
-                  </div>
+          <section class="workspace-stage">
+            <div class="workspace-stage-top">
+              <div class="workspace-stage-mobile-person mobile-only">
+                <div class="workspace-stage-mobile-avatar" id="mobilePersonAvatar">YP</div>
+                <div class="workspace-stage-mobile-copy">
+                  <h2 id="mobilePersonName">Young person</h2>
+                  <p id="mobilePersonMeta">Workspace</p>
                 </div>
+                <button id="mobileHomeBtn" class="ghost-btn" type="button">
+                  Home
+                </button>
               </div>
-            </section>
 
-            <aside class="workspace-right-rail desktop-wide-only">
-              <section class="workspace-side-card workspace-side-card--assistant">
-                <div class="workspace-side-head">
-                  <div>
-                    <h3>Young person assistant</h3>
-                    <p>Scoped to this young person and the page you are viewing.</p>
-                  </div>
-                  <button id="assistantExpandBtn" class="secondary-btn" type="button">
-                    Expand
+              <div class="workspace-hero">
+                <div class="workspace-hero-copy">
+                  <div class="eyebrow">Young person workspace</div>
+                  <h1 id="pageTitle">Overview</h1>
+                  <p id="pageSubtitle">What matters today</p>
+                </div>
+
+                <div id="heroQuickActions" class="workspace-hero-actions">
+                  <button class="quick-action-btn" type="button" data-action-router="new-daily-note">
+                    Add daily note
+                  </button>
+                  <button class="quick-action-btn" type="button" data-action-router="new-incident">
+                    Add important event
+                  </button>
+                  <button class="quick-action-btn" type="button" data-action-router="new-support-plan">
+                    Add support plan
+                  </button>
+                  <button class="quick-action-btn" type="button" data-action-router="assistant-handover">
+                    Draft handover
                   </button>
                 </div>
+              </div>
 
-                <div class="assistant-context-row">
-                  <span id="scopeBadge" class="scope-badge">Young person assistant</span>
-                  <span id="scopeHomeBadge" class="scope-chip hidden"></span>
-                  <span id="scopeChildBadge" class="scope-chip hidden"></span>
-                  <span id="scopeShiftBadge" class="scope-chip hidden"></span>
+              <section class="profile-snapshot">
+                <div id="profileSnapshotPhotoWrap" class="profile-snapshot-photo-wrap" aria-label="Young person photo">
+                  <div class="profile-photo-fallback">YP</div>
                 </div>
 
-                <div id="assistantContext" class="assistant-context">
-                  No young person selected.
+                <div class="profile-snapshot-copy">
+                  <h3 id="profileSnapshotName">Young person</h3>
+                  <p id="profileSnapshotMeta">Profile snapshot</p>
                 </div>
 
-                <div id="assistantSuggestions" class="assistant-suggestions"></div>
-
-                <div
-                  id="assistantMessages"
-                  class="assistant-messages"
-                  role="log"
-                  aria-live="polite"
-                  aria-relevant="additions text"
-                >
-                  <article class="assistant-message assistant-message-system">
-                    <div class="assistant-message-role">Assistant</div>
-                    <div class="assistant-message-body">Select a young person to start.</div>
-                  </article>
-                </div>
-
-                <form id="assistantForm" class="assistant-form">
-                  <input
-                    id="assistantInput"
-                    class="text-input"
-                    type="text"
-                    placeholder="Ask about this young person..."
-                    autocomplete="off"
-                  />
-                  <button id="assistantSendBtn" class="primary-btn" type="submit">
-                    Send
+                <div class="profile-snapshot-actions">
+                  <button
+                    id="profileOpenBtn"
+                    class="secondary-btn"
+                    type="button"
+                    data-view="profile"
+                  >
+                    Open profile
                   </button>
-                </form>
-              </section>
 
-              <section class="workspace-side-card">
-                <h3>Scope summary</h3>
-                <div id="assistantScopeSummary" class="assistant-side-block">
-                  <p>No scoped context loaded.</p>
+                  <button
+                    id="profilePhotoUploadBtn"
+                    class="ghost-btn"
+                    type="button"
+                    data-action-router="edit-profile-identity"
+                  >
+                    Update profile
+                  </button>
+
+                  <button id="changePersonBtn" class="ghost-btn" type="button">
+                    Change young person
+                  </button>
                 </div>
               </section>
 
-              <section class="workspace-side-card">
-                <h3>Suggested actions</h3>
-                <div id="assistantActions" class="assistant-side-block">
-                  <button class="chip" type="button" data-action-router="assistant-handover">Draft handover</button>
-                  <button class="chip" type="button" data-action-router="assistant-priorities">What matters now?</button>
-                  <button class="chip" type="button" data-action-router="assistant-chronology">Summarise chronology</button>
-                  <button class="chip" type="button" data-action-router="assistant-plans">Summarise plans</button>
+              <section id="statusBar" class="status-bar hidden" role="status" aria-live="polite"></section>
+              <section id="statusMessage" class="status-bar hidden" role="status" aria-live="polite"></section>
+            </div>
+
+            <div class="workspace-content-wrap">
+              <section class="workspace-content">
+                <div id="viewContent">
+                  <div class="loading-state">
+                    <div>
+                      <div class="spinner"></div>
+                      <p>Loading workspace…</p>
+                    </div>
+                  </div>
                 </div>
               </section>
 
-              <section class="workspace-side-card">
-                <h3>Sources</h3>
-                <div id="assistantSources" class="assistant-side-block">
-                  <p>Sources will appear here after a response.</p>
-                </div>
-              </section>
+              <aside class="workspace-right-rail desktop-wide-only">
+                <section class="workspace-side-card workspace-side-card--assistant">
+                  <div class="workspace-side-head">
+                    <div>
+                      <h3>Young person assistant</h3>
+                      <p>Scoped to this young person and the page you are viewing.</p>
+                    </div>
+                    <button id="assistantExpandBtn" class="secondary-btn" type="button">
+                      Expand
+                    </button>
+                  </div>
 
-              <section class="workspace-side-card workspace-side-card--technical">
-                <h3>Runtime</h3>
-                <pre id="assistantRuntime" class="assistant-code-block">No runtime data yet.</pre>
-              </section>
+                  <div class="assistant-context-row">
+                    <span id="scopeBadge" class="scope-badge">Young person assistant</span>
+                    <span id="scopeHomeBadge" class="scope-chip hidden"></span>
+                    <span id="scopeChildBadge" class="scope-chip hidden"></span>
+                    <span id="scopeShiftBadge" class="scope-chip hidden"></span>
+                  </div>
 
-              <section class="workspace-side-card workspace-side-card--technical">
-                <h3>Explainability</h3>
-                <pre id="assistantExplainability" class="assistant-code-block">No explainability data yet.</pre>
-              </section>
-            </aside>
-          </div>
+                  <div id="assistantContext" class="assistant-context">
+                    No young person selected.
+                  </div>
+
+                  <div id="assistantSuggestions" class="assistant-suggestions"></div>
+
+                  <div
+                    id="assistantMessages"
+                    class="assistant-messages"
+                    role="log"
+                    aria-live="polite"
+                    aria-relevant="additions text"
+                  >
+                    <article class="assistant-message assistant-message-system">
+                      <div class="assistant-message-role">Assistant</div>
+                      <div class="assistant-message-body">Select a young person to start.</div>
+                    </article>
+                  </div>
+
+                  <form id="assistantForm" class="assistant-form">
+                    <input
+                      id="assistantInput"
+                      class="text-input"
+                      type="text"
+                      placeholder="Ask about this young person..."
+                      autocomplete="off"
+                    />
+                    <button id="assistantSendBtn" class="primary-btn" type="submit">
+                      Send
+                    </button>
+                  </form>
+                </section>
+
+                <section class="workspace-side-card">
+                  <h3>Scope summary</h3>
+                  <div id="assistantScopeSummary" class="assistant-side-block">
+                    <p>No scoped context loaded.</p>
+                  </div>
+                </section>
+
+                <section class="workspace-side-card">
+                  <h3>Suggested actions</h3>
+                  <div id="assistantActions" class="assistant-side-block">
+                    <button class="chip" type="button" data-action-router="assistant-handover">Draft handover</button>
+                    <button class="chip" type="button" data-action-router="assistant-priorities">What matters now?</button>
+                    <button class="chip" type="button" data-action-router="assistant-chronology">Summarise chronology</button>
+                    <button class="chip" type="button" data-action-router="assistant-plans">Summarise plans</button>
+                  </div>
+                </section>
+
+                <section class="workspace-side-card">
+                  <h3>Sources</h3>
+                  <div id="assistantSources" class="assistant-side-block">
+                    <p>Sources will appear here after a response.</p>
+                  </div>
+                </section>
+
+                <section class="workspace-side-card workspace-side-card--technical">
+                  <h3>Runtime</h3>
+                  <pre id="assistantRuntime" class="assistant-code-block">No runtime data yet.</pre>
+                </section>
+
+                <section class="workspace-side-card workspace-side-card--technical">
+                  <h3>Explainability</h3>
+                  <pre id="assistantExplainability" class="assistant-code-block">No explainability data yet.</pre>
+                </section>
+              </aside>
+            </div>
+          </section>
         </section>
       </section>
     </main>
@@ -330,6 +349,7 @@
             </div>
             <button id="closeComposerBtn" class="secondary-btn" type="button">Close</button>
             <button id="composerSaveDraftBtn" class="secondary-btn" type="button">Save draft</button>
+            <button id="composerSaveBtn" class="secondary-btn hidden" type="button" aria-hidden="true" tabindex="-1">Save</button>
             <button id="composerCheckBtn" class="secondary-btn" type="button">Run check</button>
             <button id="composerSubmitBtn" class="primary-btn" type="button">Send for review</button>
           </div>
@@ -338,7 +358,9 @@
         <div class="composer-layout">
           <section class="composer-main">
             <form id="recordComposerForm" class="composer-form">
+              <form id="composerForm" class="composer-form-compat hidden" aria-hidden="true"></form>
               <div id="recordComposerFields" class="composer-fields"></div>
+              <div id="composerFields" class="composer-fields hidden" aria-hidden="true"></div>
             </form>
           </section>
 
