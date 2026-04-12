@@ -1,6 +1,6 @@
 import { state } from "../state.js";
 import { els } from "../dom.js";
-import { NAV_GROUPS_CONFIG, NAV_SECTIONS } from "../core/config.js";
+import { NAV_SECTIONS } from "../core/config.js";
 import { escapeHtml } from "../core/utils.js";
 
 import {
@@ -47,152 +47,37 @@ const SECTION_LOADERS = {
   manager: loadManager,
 };
 
-const MOBILE_TABS = ["workspace", "overview", "timeline", "profile", "readiness"];
-
-function iconGlyph(iconName = "") {
-  const map = {
-    home: "⌂",
-    "layout-dashboard": "◫",
-    user: "◉",
-    "list-ordered": "≣",
-    repeat: "↺",
-    "heart-pulse": "♥",
-    "graduation-cap": "▲",
-    users: "◎",
-    calendar: "◷",
-    "shield-check": "✓",
-    "clipboard-check": "▣",
-    "file-text": "▤",
-  };
-
-  return map[iconName] || "•";
-}
-
-function getSectionMeta(sectionId) {
-  return NAV_SECTIONS.find((item) => item.id === sectionId) || null;
-}
-
-function renderDesktopNav() {
-  if (!els.desktopNav) return;
-
-  els.desktopNav.innerHTML = `
-    <div class="workspace-nav-inner">
-      ${NAV_GROUPS_CONFIG.map(
-        (group) => `
-          <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
-            <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
-            <div class="nav-section-items">
-              ${(group.items || [])
-                .map(
-                  (item) => `
-                    <button
-                      type="button"
-                      class="nav-btn"
-                      data-nav-section="${escapeHtml(item.id)}"
-                      aria-pressed="false"
-                      title="${escapeHtml(item.description || item.label || "")}"
-                    >
-                      <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(iconGlyph(item.icon))}</span>
-                      <span class="nav-btn-copy">
-                        <span class="nav-btn-label">${escapeHtml(item.short_label || item.label || item.id)}</span>
-                      </span>
-                    </button>
-                  `
-                )
-                .join("")}
-            </div>
-          </section>
-        `
-      ).join("")}
-    </div>
-  `;
-}
-
-function renderMobileNav() {
-  if (!els.mobileNavContent) return;
-
-  els.mobileNavContent.innerHTML = `
-    <div class="workspace-nav-inner">
-      ${NAV_GROUPS_CONFIG.map(
-        (group) => `
-          <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
-            <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
-            <div class="nav-section-items">
-              ${(group.items || [])
-                .map(
-                  (item) => `
-                    <button
-                      type="button"
-                      class="nav-btn"
-                      data-nav-section="${escapeHtml(item.id)}"
-                      aria-pressed="false"
-                    >
-                      <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(iconGlyph(item.icon))}</span>
-                      <span class="nav-btn-copy">
-                        <span class="nav-btn-label">${escapeHtml(item.short_label || item.label || item.id)}</span>
-                      </span>
-                    </button>
-                  `
-                )
-                .join("")}
-            </div>
-          </section>
-        `
-      ).join("")}
-    </div>
-  `;
-}
-
-function renderMobileBottomBar() {
-  if (!els.mobileBottomBar) return;
-
-  const tabs = MOBILE_TABS.map((id) => getSectionMeta(id)).filter(Boolean);
-
-  els.mobileBottomBar.innerHTML = tabs
-    .map(
-      (item) => `
-        <button
-          type="button"
-          class="mobile-tab-btn"
-          data-nav-section="${escapeHtml(item.id)}"
-          aria-pressed="false"
-        >
-          <span class="mobile-tab-icon" aria-hidden="true">${escapeHtml(iconGlyph(item.icon))}</span>
-          <span class="mobile-tab-label">${escapeHtml(item.short_label || item.label || item.id)}</span>
-        </button>
-      `
-    )
-    .join("");
-}
-
-function renderNavigation() {
-  renderDesktopNav();
-  renderMobileNav();
-  renderMobileBottomBar();
-}
-
 export function showError(message) {
   if (els.statusMessage) {
-    els.statusMessage.classList.remove("hidden");
     els.statusMessage.innerHTML = `<span class="status-error">${escapeHtml(
       message || "Something went wrong."
     )}</span>`;
+  }
+
+  if (els.statusBar) {
+    els.statusBar.classList.remove("hidden");
   }
 }
 
 export function showMessage(message) {
   if (els.statusMessage) {
-    els.statusMessage.classList.remove("hidden");
     els.statusMessage.innerHTML = `<span class="status-ok">${escapeHtml(
       message || ""
     )}</span>`;
+  }
+
+  if (els.statusBar) {
+    els.statusBar.classList.remove("hidden");
   }
 }
 
 export function clearStatus() {
   if (els.statusMessage) {
     els.statusMessage.innerHTML = "";
-    els.statusMessage.classList.add("hidden");
+  }
+
+  if (els.statusBar) {
+    els.statusBar.classList.add("hidden");
   }
 }
 
@@ -205,7 +90,7 @@ function markActiveNav(section) {
 }
 
 function getCurrentSection() {
-  return state.currentSection || state.activeSection || "workspace";
+  return state.currentSection || state.activeSection || state.currentView || "workspace";
 }
 
 export async function loadSection(section) {
@@ -231,6 +116,7 @@ export async function loadSection(section) {
 
   try {
     await loader();
+    closeMobileNav?.();
   } catch (error) {
     console.error(`[nav] failed loading section "${section}"`, error);
     showError(error?.message || "Failed to load this section.");
@@ -248,7 +134,6 @@ function bindNavButtons() {
       const section = button.dataset.navSection;
       if (!section) return;
       await loadSection(section);
-      closeMobileNav();
     });
   });
 }
@@ -257,8 +142,11 @@ function bindSelectorControls() {
   els.backToSelectorBtn?.addEventListener("click", async () => {
     state.youngPersonId = null;
     state.selectedYoungPerson = null;
+    state.currentView = state.currentSection || "workspace";
+    state.activeRecordType = null;
+    state.activeRecordItem = null;
 
-    if (els.workspaceScreen) els.workspaceScreen.classList.add("hidden");
+    if (els.workspaceShell) els.workspaceShell.classList.add("hidden");
     if (els.selectorScreen) els.selectorScreen.classList.remove("hidden");
 
     goBackToSelector?.();
@@ -276,8 +164,13 @@ function bindSelectorControls() {
     filterSelectorList?.(event.target.value || "");
   });
 
-  els.selectorSearch?.addEventListener("input", (event) => {
-    filterSelectorList?.(event.target.value || "");
+  els.selectorRefreshBtn?.addEventListener("click", async () => {
+    try {
+      await loadYoungPersonSelector?.();
+      clearStatus();
+    } catch (error) {
+      showError(error?.message || "Failed to refresh young people.");
+    }
   });
 }
 
@@ -315,17 +208,6 @@ function bindComposerControls() {
     }
   });
 
-  els.composerSaveDraftBtn?.addEventListener("click", async () => {
-    try {
-      await saveComposer("draft");
-      showMessage("Draft saved.");
-      await reloadCurrentSection();
-    } catch (error) {
-      console.error("[nav] save draft failed", error);
-      showError(error?.message || "Could not save draft.");
-    }
-  });
-
   els.composerSubmitBtn?.addEventListener("click", async () => {
     try {
       await saveComposer("submit");
@@ -339,16 +221,6 @@ function bindComposerControls() {
 }
 
 function bindRefreshControls() {
-  els.refreshBtn?.addEventListener("click", async () => {
-    try {
-      await reloadCurrentSection();
-      showMessage("Workspace refreshed.");
-    } catch (error) {
-      console.error("[nav] refresh failed", error);
-      showError(error?.message || "Failed to refresh workspace.");
-    }
-  });
-
   els.refreshWorkspaceBtn?.addEventListener("click", async () => {
     try {
       await reloadCurrentSection();
@@ -373,13 +245,19 @@ function bindOpenRecordEvents() {
     if (!id) return;
 
     try {
-      await openRecordDetail({
-        id: Number.isNaN(Number(id)) ? id : Number(id),
-        source_id: Number.isNaN(Number(id)) ? id : Number(id),
-        record_id: Number.isNaN(Number(id)) ? id : Number(id),
+      const numericId = Number(id);
+      const safeId = Number.isNaN(numericId) ? id : numericId;
+
+      state.activeRecordType = recordType || null;
+      state.activeRecordItem = {
+        id: safeId,
+        source_id: safeId,
+        record_id: safeId,
         record_type: recordType,
         title: trigger.dataset.title || "",
-      });
+      };
+
+      await openRecordDetail(state.activeRecordItem);
     } catch (error) {
       console.error("[nav] open record failed", error);
       showError("Could not open record.");
@@ -399,7 +277,7 @@ function bindYoungPersonOpen() {
       await openYoungPerson?.(id);
 
       if (els.selectorScreen) els.selectorScreen.classList.add("hidden");
-      if (els.workspaceScreen) els.workspaceScreen.classList.remove("hidden");
+      if (els.workspaceShell) els.workspaceShell.classList.remove("hidden");
 
       updateYoungPersonChrome(state.selectedYoungPerson || {});
       updateSectionChrome(getCurrentSection());
@@ -431,7 +309,6 @@ function bindDrawerCallbacks() {
 }
 
 export function bindNavEvents() {
-  renderNavigation();
   bindNavButtons();
   bindSelectorControls();
   bindQuickActionButtons();
@@ -448,8 +325,13 @@ export async function initialiseShellNavigation() {
 
   if (!state.currentSection) {
     state.currentSection = NAV_SECTIONS?.[0]?.id || "workspace";
+  }
+
+  if (!state.activeSection) {
     state.activeSection = state.currentSection;
   }
+
+  state.currentView = state.currentSection;
 
   markActiveNav(getCurrentSection());
   updateSectionChrome(getCurrentSection());
@@ -458,6 +340,8 @@ export async function initialiseShellNavigation() {
   if (!state.youngPersonId) {
     try {
       await loadYoungPersonSelector?.();
+      if (els.workspaceShell) els.workspaceShell.classList.add("hidden");
+      if (els.selectorScreen) els.selectorScreen.classList.remove("hidden");
     } catch (error) {
       console.error("[nav] selector load failed", error);
       showError(error?.message || "Unable to load young people.");
@@ -466,6 +350,8 @@ export async function initialiseShellNavigation() {
   }
 
   try {
+    if (els.selectorScreen) els.selectorScreen.classList.add("hidden");
+    if (els.workspaceShell) els.workspaceShell.classList.remove("hidden");
     await loadSection(getCurrentSection());
   } catch (error) {
     console.error("[nav] initial section load failed", error);
