@@ -141,7 +141,6 @@ function renderContextText() {
 function buildScopeSummaryCards() {
   const meta = getAssistantMeta();
   const assistantContext = meta.assistant_context || {};
-  const assistantScope = meta.assistant_scope || {};
   const runtime = meta.runtime || {};
   const person = getCurrentPerson();
 
@@ -329,64 +328,40 @@ function inferSuggestedActions() {
 function renderSuggestedActions() {
   const actions = inferSuggestedActions();
 
-  if (qs("assistantSuggestions")) {
-    qs("assistantSuggestions").innerHTML = actions.length
-      ? actions
-          .map((action) => {
-            if (action.type === "quick_action") {
-              return `
-                <button
-                  class="chip"
-                  type="button"
-                  data-quick-action="${escapeHtml(action.id)}"
-                >
-                  ${escapeHtml(action.label)}
-                </button>
-              `;
-            }
-
+  const html = actions.length
+    ? actions
+        .map((action) => {
+          if (action.type === "quick_action") {
             return `
               <button
                 class="chip"
                 type="button"
-                data-assistant-chip="${escapeHtml(action.label)}"
+                data-quick-action="${escapeHtml(action.id)}"
               >
                 ${escapeHtml(action.label)}
               </button>
             `;
-          })
-          .join("")
-      : `<p>No suggested actions yet.</p>`;
+          }
+
+          return `
+            <button
+              class="chip"
+              type="button"
+              data-assistant-chip="${escapeHtml(action.label)}"
+            >
+              ${escapeHtml(action.label)}
+            </button>
+          `;
+        })
+        .join("")
+    : `<p>No suggested actions yet.</p>`;
+
+  if (qs("assistantSuggestions")) {
+    qs("assistantSuggestions").innerHTML = html;
   }
 
   if (qs("assistantActions")) {
-    qs("assistantActions").innerHTML = actions.length
-      ? actions
-          .map((action) => {
-            if (action.type === "quick_action") {
-              return `
-                <button
-                  class="chip"
-                  type="button"
-                  data-quick-action="${escapeHtml(action.id)}"
-                >
-                  ${escapeHtml(action.label)}
-                </button>
-              `;
-            }
-
-            return `
-              <button
-                class="chip"
-                type="button"
-                data-assistant-chip="${escapeHtml(action.label)}"
-              >
-                ${escapeHtml(action.label)}
-              </button>
-            `;
-          })
-          .join("")
-      : `<p>No suggested actions yet.</p>`;
+    qs("assistantActions").innerHTML = html;
   }
 }
 
@@ -401,36 +376,7 @@ function renderAllAssistantUi() {
   renderSuggestedActions();
 }
 
-function openAssistantModal() {
-  state.assistantOpen = true;
-  qs("assistantBackdrop")?.classList.remove("hidden");
-  qs("assistantModal")?.classList.remove("hidden");
-  qs("assistantModal")?.setAttribute("aria-hidden", "false");
-}
-
-function closeAssistantModal() {
-  state.assistantOpen = false;
-  qs("assistantBackdrop")?.classList.add("hidden");
-  qs("assistantModal")?.classList.add("hidden");
-  qs("assistantModal")?.setAttribute("aria-hidden", "true");
-}
-
-function clearAssistantChat() {
-  state.assistantMessages = [];
-  state.assistantModalMessages = [];
-  renderAllAssistantUi();
-}
-
-function bindAssistantButtons() {
-  qs("assistantLauncher")?.addEventListener("click", openAssistantModal);
-  qs("assistantExpandBtn")?.addEventListener("click", openAssistantModal);
-  qs("closeAssistantBtn")?.addEventListener("click", closeAssistantModal);
-  qs("assistantBackdrop")?.addEventListener("click", closeAssistantModal);
-  qs("assistantClearBtn")?.addEventListener("click", clearAssistantChat);
-}
-
 export function bindAssistantUi() {
-  bindAssistantButtons();
   renderAllAssistantUi();
 }
 
