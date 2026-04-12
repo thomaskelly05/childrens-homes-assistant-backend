@@ -59,7 +59,8 @@ export const state = {
     assistant_context: {},
     suggested_actions: [],
   },
-};
+
   // Request optimisation state
   resourceCache: {},
   requestCooldowns: {},
+};
