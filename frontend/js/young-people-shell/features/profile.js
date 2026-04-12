@@ -69,6 +69,33 @@ function renderLongTextBlocks(items = []) {
   `;
 }
 
+function normaliseContact(contact = {}) {
+  const mapped = mapYoungPersonContact(contact) || {};
+
+  return {
+    ...mapped,
+    full_name: mapped.full_name || contact.full_name || "",
+    relationship_to_young_person:
+      mapped.relationship_to_young_person ||
+      contact.relationship_to_young_person ||
+      contact.relationship_to_child ||
+      "",
+    contact_type: mapped.contact_type || contact.contact_type || "",
+    phone: mapped.phone || contact.phone || contact.phone_number || "",
+    email: mapped.email || contact.email || "",
+    supervision_level: mapped.supervision_level || contact.supervision_level || "",
+    is_parental_responsibility_holder:
+      typeof mapped.is_parental_responsibility_holder === "boolean"
+        ? mapped.is_parental_responsibility_holder
+        : !!contact.is_parental_responsibility_holder,
+    is_restricted_contact:
+      typeof mapped.is_restricted_contact === "boolean"
+        ? mapped.is_restricted_contact
+        : !!contact.is_restricted_contact,
+    notes: mapped.notes || contact.notes || contact.contact_notes || "",
+  };
+}
+
 function renderContacts(contacts = []) {
   if (!contacts.length) {
     return `
@@ -146,6 +173,24 @@ function renderHero(youngPerson = {}) {
   `;
 }
 
+function firstObject(...values) {
+  for (const value of values) {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      return value;
+    }
+  }
+  return {};
+}
+
+function firstArray(...values) {
+  for (const value of values) {
+    if (Array.isArray(value)) {
+      return value;
+    }
+  }
+  return [];
+}
+
 export async function loadProfile() {
   if (!els.viewContent) return;
 
@@ -159,6 +204,8 @@ export async function loadProfile() {
   `;
 
   try {
+    const youngPersonId = state.youngPersonId;
+
     const [
       youngPersonData,
       identityData,
@@ -169,76 +216,103 @@ export async function loadProfile() {
       formulationData,
       contactsData,
     ] = await Promise.all([
-      apiGet(`/young-people/${state.youngPersonId}`).catch(() => ({})),
-      apiGet(`/young-people/${state.youngPersonId}/identity-profile`).catch(() => ({})),
-      apiGet(`/young-people/${state.youngPersonId}/communication-profile`).catch(() => ({})),
-      apiGet(`/young-people/${state.youngPersonId}/education-profile`).catch(() => ({})),
-      apiGet(`/young-people/${state.youngPersonId}/health-profile`).catch(() => ({})),
-      apiGet(`/young-people/${state.youngPersonId}/legal-status`).catch(() => ({})),
-      apiGet(`/young-people/${state.youngPersonId}/formulation`).catch(() => ({})),
-      apiGet(`/young-people/${state.youngPersonId}/contacts`).catch(() => ({ items: [] })),
+      apiGet(`/young-people/${youngPersonId}`).catch(() => ({})),
+      apiGet(`/young-people/${youngPersonId}/identity-profile`).catch(() => ({})),
+      apiGet(`/young-people/${youngPersonId}/communication-profile`).catch(() => ({})),
+      apiGet(`/young-people/${youngPersonId}/education-profile`).catch(() => ({})),
+      apiGet(`/young-people/${youngPersonId}/health-profile`).catch(() => ({})),
+      apiGet(`/young-people/${youngPersonId}/legal-status`).catch(() => ({})),
+      apiGet(`/young-people/${youngPersonId}/formulations`).catch(() => ({})),
+      apiGet(`/young-people/${youngPersonId}/contacts`).catch(() => ({ items: [] })),
     ]);
 
     const youngPerson = mapYoungPerson(
-      youngPersonData.young_person || youngPersonData.item || youngPersonData
+      firstObject(
+        youngPersonData.young_person,
+        youngPersonData.item,
+        youngPersonData.data,
+        youngPersonData
+      )
     );
 
     const identity = mapIdentityProfile(
-      identityData.identity_profile ||
-        identityData.young_person_identity_profile ||
-        identityData.item ||
+      firstObject(
+        identityData.identity_profile,
+        identityData.young_person_identity_profile,
+        identityData.item,
+        identityData.data,
         identityData
+      )
     );
 
     const communication = mapCommunicationProfile(
-      communicationData.communication_profile ||
-        communicationData.young_person_communication_profile ||
-        communicationData.item ||
+      firstObject(
+        communicationData.communication_profile,
+        communicationData.young_person_communication_profile,
+        communicationData.item,
+        communicationData.data,
         communicationData
+      )
     );
 
     const education = mapEducationProfile(
-      educationData.education_profile ||
-        educationData.young_person_education_profile ||
-        educationData.item ||
+      firstObject(
+        educationData.education_profile,
+        educationData.young_person_education_profile,
+        educationData.item,
+        educationData.data,
         educationData
+      )
     );
 
     const health = mapHealthProfile(
-      healthData.health_profile ||
-        healthData.young_person_health_profile ||
-        healthData.item ||
+      firstObject(
+        healthData.health_profile,
+        healthData.young_person_health_profile,
+        healthData.item,
+        healthData.data,
         healthData
+      )
     );
 
     const legal = mapLegalStatus(
-      legalData.legal_status ||
-        legalData.young_person_legal_status ||
-        legalData.item ||
+      firstObject(
+        legalData.legal_status,
+        legalData.young_person_legal_status,
+        legalData.item,
+        legalData.data,
         legalData
+      )
     );
 
     const formulation = mapFormulation(
-      formulationData.formulation ||
-        formulationData.young_person_formulation ||
-        formulationData.item ||
+      firstObject(
+        formulationData.formulation,
+        formulationData.young_person_formulation,
+        formulationData.young_person_formulations,
+        formulationData.item,
+        formulationData.data,
         formulationData
+      )
     );
 
-    const contacts = (
-      contactsData.items ||
-      contactsData.records ||
-      contactsData.contacts ||
-      contactsData.young_person_contacts ||
-      []
-    ).map(mapYoungPersonContact);
+    const contacts = firstArray(
+      contactsData.items,
+      contactsData.records,
+      contactsData.contacts,
+      contactsData.young_person_contacts,
+      contactsData.data
+    ).map(normaliseContact);
 
     els.viewContent.innerHTML = `
       <section class="summary-strip">
         ${renderSummaryStat("Contacts", contacts.length)}
         ${renderSummaryStat("Current legal", legal.is_current ? 1 : 0)}
         ${renderSummaryStat("Education profile", education.school_name ? 1 : 0)}
-        ${renderSummaryStat("Health profile", health.gp_name || health.allergies || health.diagnoses ? 1 : 0)}
+        ${renderSummaryStat(
+          "Health profile",
+          health.gp_name || health.allergies || health.diagnoses ? 1 : 0
+        )}
       </section>
 
       ${renderSection(
@@ -333,7 +407,10 @@ export async function loadProfile() {
           { label: "Consent arrangements", value: legal.consent_arrangements },
           {
             label: "Effective dates",
-            value: [legal.effective_from ? formatDate(legal.effective_from) : "", legal.effective_to ? formatDate(legal.effective_to) : ""]
+            value: [
+              legal.effective_from ? formatDate(legal.effective_from) : "",
+              legal.effective_to ? formatDate(legal.effective_to) : "",
+            ]
               .filter(Boolean)
               .join(" to "),
           },
