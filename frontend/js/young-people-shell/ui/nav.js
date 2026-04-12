@@ -3,11 +3,17 @@ import { els } from "../dom.js";
 import { NAV_SECTIONS } from "../core/config.js";
 import { escapeHtml } from "../core/utils.js";
 
-import { openYoungPerson, goBackToSelector, loadYoungPersonSelector, filterSelectorList } from "./selector.js";
+import {
+  openYoungPerson,
+  goBackToSelector,
+  loadYoungPersonSelector,
+  filterSelectorList,
+} from "./selector.js";
 import { bindRecordDrawerEvents, openRecordDetail } from "./records.js";
 import { closeComposer, saveComposer } from "./composer.js";
 import { bindSuggestionEvents } from "./suggestions.js";
 import { bindActionRouter, getActionForQuickButton } from "./action-router.js";
+import { updateSectionChrome, updateYoungPersonChrome } from "./shell-ui.js";
 
 import { loadOverview } from "../features/overview.js";
 import { loadProfile } from "../features/profile.js";
@@ -39,13 +45,17 @@ const SECTION_LOADERS = {
 
 export function showError(message) {
   if (els.statusMessage) {
-    els.statusMessage.innerHTML = `<span class="status-error">${escapeHtml(message || "Something went wrong.")}</span>`;
+    els.statusMessage.innerHTML = `<span class="status-error">${escapeHtml(
+      message || "Something went wrong."
+    )}</span>`;
   }
 }
 
 export function showMessage(message) {
   if (els.statusMessage) {
-    els.statusMessage.innerHTML = `<span class="status-ok">${escapeHtml(message || "")}</span>`;
+    els.statusMessage.innerHTML = `<span class="status-ok">${escapeHtml(
+      message || ""
+    )}</span>`;
   }
 }
 
@@ -81,7 +91,10 @@ export async function loadSection(section) {
 
   state.currentSection = section;
   state.activeSection = section;
+
   markActiveNav(section);
+  updateSectionChrome(section);
+  updateYoungPersonChrome(state.selectedYoungPerson || {});
   clearStatus();
 
   try {
@@ -116,6 +129,7 @@ function bindSelectorControls() {
     if (els.selectorScreen) els.selectorScreen.classList.remove("hidden");
 
     goBackToSelector?.();
+    updateYoungPersonChrome({});
     clearStatus();
 
     try {
@@ -195,15 +209,8 @@ function bindOpenRecordEvents() {
     const trigger = event.target.closest("[data-record-id], [data-open-record]");
     if (!trigger) return;
 
-    const id =
-      trigger.dataset.recordId ||
-      trigger.dataset.id ||
-      null;
-
-    const recordType =
-      trigger.dataset.recordType ||
-      trigger.dataset.type ||
-      "";
+    const id = trigger.dataset.recordId || trigger.dataset.id || null;
+    const recordType = trigger.dataset.recordType || trigger.dataset.type || "";
 
     if (!id) return;
 
@@ -234,7 +241,11 @@ function bindYoungPersonOpen() {
       await openYoungPerson?.(id);
       if (els.selectorScreen) els.selectorScreen.classList.add("hidden");
       if (els.workspaceShell) els.workspaceShell.classList.remove("hidden");
+
+      updateYoungPersonChrome(state.selectedYoungPerson || {});
+      updateSectionChrome(getCurrentSection());
       clearStatus();
+
       await loadSection(getCurrentSection());
     } catch (error) {
       console.error("[nav] open young person failed", error);
@@ -281,6 +292,8 @@ export async function initialiseShellNavigation() {
   }
 
   markActiveNav(getCurrentSection());
+  updateSectionChrome(getCurrentSection());
+  updateYoungPersonChrome(state.selectedYoungPerson || {});
 
   if (!state.youngPersonId) {
     try {
