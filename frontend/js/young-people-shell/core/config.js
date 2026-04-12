@@ -1,241 +1,191 @@
-export const VIEW_CONFIG = {
-overview: {
-title: "Overview",
-subtitle: "What matters today",
-},
-profile: {
-title: "About me",
-subtitle: "Who this young person is, what matters to them, and what helps",
-},
-daily_notes: {
-title: "Daily notes",
-subtitle: "Day-to-day lived experience, care, connection and progress",
-},
-incidents: {
-title: "Important events",
-subtitle: "Significant moments, responses, repair and learning",
-},
-plans: {
-title: "Support plans",
-subtitle: "What helps, what to notice, and how adults can respond well",
-},
-health: {
-title: "Health and wellbeing",
-subtitle: "Health needs, appointments, medication and wellbeing information",
-},
-education: {
-title: "Education and learning",
-subtitle: "School, attendance, progress and learning support",
-},
-family: {
-title: "Family and relationships",
-subtitle: "Important relationships, contact and family life",
-},
-appointments: {
-title: "Appointments",
-subtitle: "Upcoming appointments, support needed and follow-up",
-},
-keywork: {
-title: "Keywork",
-subtitle: "Direct work, reflection, goals and voice",
-},
-timeline: {
-title: "Timeline",
-subtitle: "A clear chronology of what has happened over time",
-},
-handover: {
-title: "Handover",
-subtitle: "What the next adult needs to know",
-},
-reports: {
-title: "Reports",
-subtitle: "Drafts, summaries and outputs",
-},
-compliance: {
-title: "Readiness",
-subtitle: "Checks, due items and what needs action",
-},
-calendar: {
-title: "Calendar",
-subtitle: "Important dates, appointments and key events",
-},
-manager: {
-title: "Manager overview",
-subtitle: "Oversight, sign-off, themes and actions",
-},
-};
-
-export const RECORD_CONFIG = {
-daily_note: {
-label: "Daily note",
-createUrl: (id) => `/young-people/${id}/daily-notes`,
-detailUrl: (id) => `/young-people/daily-notes/${id}`,
-updateUrl: (id) => `/young-people/daily-notes/${id}`,
-updateMethod: "PATCH",
-submitUrl: (id) => `/young-people/daily-notes/${id}/submit`,
-approveUrl: (id) => `/young-people/daily-notes/${id}/approve`,
-returnUrl: (id) => `/young-people/daily-notes/${id}/return`,
-archiveUrl: (id) => `/young-people/daily-notes/${id}/archive`,
-},
-
-incident: {
-label: "Important event",
-createUrl: (id) => `/young-people/${id}/incidents`,
-detailUrl: (id) => `/young-people/incidents/${id}`,
-updateUrl: (id) => `/young-people/incidents/${id}`,
-updateMethod: "PATCH",
-submitUrl: (id) => `/young-people/incidents/${id}/submit`,
-approveUrl: (id) => `/young-people/incidents/${id}/approve`,
-returnUrl: (id) => `/young-people/incidents/${id}/return`,
-archiveUrl: (id) => `/young-people/incidents/${id}/archive`,
-},
-
-support_plan: {
-label: "Support plan",
-createUrl: (id) => `/young-people/${id}/plans`,
-detailUrl: (id) => `/young-people/plans/${id}`,
-updateUrl: (id) => `/young-people/plans/${id}`,
-updateMethod: "PUT",
-submitUrl: (id) => `/young-people/plans/${id}/submit`,
-approveUrl: (id) => `/young-people/plans/${id}/approve`,
-returnUrl: (id) => `/young-people/plans/${id}/return`,
-archiveUrl: (id) => `/young-people/plans/${id}/archive`,
-},
-
-risk: {
-label: "Risk assessment",
-createUrl: (id) => `/young-people/${id}/risks`,
-detailUrl: (id) => `/young-people/risks/${id}`,
-updateUrl: (id) => `/young-people/risks/${id}`,
-updateMethod: "PUT",
-submitUrl: (id) => `/young-people/risks/${id}/submit`,
-approveUrl: (id) => `/young-people/risks/${id}/approve`,
-returnUrl: (id) => `/young-people/risks/${id}/return`,
-archiveUrl: (id) => `/young-people/risks/${id}/archive`,
-},
-
-appointment: {
-label: "Appointment",
-createUrl: (id) => `/young-people/${id}/appointments`,
-detailUrl: (id) => `/young-people/appointments/${id}`,
-updateUrl: (id) => `/young-people/appointments/${id}`,
-updateMethod: "PATCH",
-approveUrl: (id) => `/young-people/appointments/${id}/complete`,
-returnUrl: (id) => `/young-people/appointments/${id}/cancel`,
-},
-
-health_record: {
-label: "Health record",
-createUrl: (id) => `/young-people/${id}/health-records`,
-detailUrl: (id) => `/young-people/health-records/${id}`,
-updateUrl: (id) => `/young-people/health-records/${id}`,
-updateMethod: "PATCH",
-},
-
-education_record: {
-label: "Education record",
-createUrl: (id) => `/young-people/${id}/education-records`,
-detailUrl: (id) => `/young-people/education-records/${id}`,
-updateUrl: (id) => `/young-people/education-records/${id}`,
-updateMethod: "PATCH",
-},
-
-family_contact: {
-label: "Family contact",
-createUrl: (id) => `/young-people/${id}/family-contact-records`,
-detailUrl: (id) => `/young-people/family-contact-records/${id}`,
-updateUrl: (id) => `/young-people/family-contact-records/${id}`,
-updateMethod: "PATCH",
-},
-
-keywork: {
-label: "Keywork session",
-createUrl: (id) => `/young-people/${id}/keywork`,
-detailUrl: (id) => `/young-people/keywork/${id}`,
-updateUrl: (id) => `/young-people/keywork/${id}`,
-updateMethod: "PATCH",
-submitUrl: (id) => `/young-people/keywork/${id}/submit`,
-approveUrl: (id) => `/young-people/keywork/${id}/approve`,
-returnUrl: (id) => `/young-people/keywork/${id}/return`,
-archiveUrl: (id) => `/young-people/keywork/${id}/archive`,
-},
-
-achievement_record: {
-label: "Achievement",
-createUrl: (id) => `/young-people/${id}/achievements`,
-detailUrl: (id) => `/young-people/achievements/${id}`,
-updateUrl: (id) => `/young-people/achievements/${id}`,
-updateMethod: "PATCH",
-},
-
-safeguarding_record: {
-label: "Safeguarding record",
-createUrl: (id) => `/young-people/${id}/safeguarding-records`,
-detailUrl: (id) => `/young-people/safeguarding-records/${id}`,
-updateUrl: (id) => `/young-people/safeguarding-records/${id}`,
-updateMethod: "PATCH",
-submitUrl: (id) => `/young-people/safeguarding-records/${id}/submit`,
-approveUrl: (id) => `/young-people/safeguarding-records/${id}/approve`,
-returnUrl: (id) => `/young-people/safeguarding-records/${id}/return`,
-archiveUrl: (id) => `/young-people/safeguarding-records/${id}/archive`,
-},
-
-missing_episode: {
-label: "Missing episode",
-createUrl: (id) => `/young-people/${id}/missing-episodes`,
-detailUrl: (id) => `/young-people/missing-episodes/${id}`,
-updateUrl: (id) => `/young-people/missing-episodes/${id}`,
-updateMethod: "PATCH",
-submitUrl: (id) => `/young-people/missing-episodes/${id}/submit`,
-approveUrl: (id) => `/young-people/missing-episodes/${id}/approve`,
-returnUrl: (id) => `/young-people/missing-episodes/${id}/return`,
-archiveUrl: (id) => `/young-people/missing-episodes/${id}/archive`,
-},
-};
-
 export const NAV_SECTIONS = [
-{
-title: "Main",
-items: [
-{ key: "overview", label: "Overview", icon: "🏠" },
-{ key: "profile", label: "About me", icon: "🙂" },
-{ key: "timeline", label: "Timeline", icon: "🕒" },
-{ key: "handover", label: "Handover", icon: "🔄" },
-],
-},
-{
-title: "Day to day",
-items: [
-{ key: "daily_notes", label: "Daily notes", icon: "📝" },
-{ key: "incidents", label: "Important events", icon: "⚠️" },
-{ key: "plans", label: "Support plans", icon: "🧩" },
-{ key: "appointments", label: "Appointments", icon: "📅" },
-{ key: "keywork", label: "Keywork", icon: "💬" },
-],
-},
-{
-title: "Wellbeing",
-items: [
-{ key: "health", label: "Health", icon: "💚" },
-{ key: "education", label: "Education", icon: "📘" },
-{ key: "family", label: "Family", icon: "👨‍👩‍👧" },
-{ key: "calendar", label: "Calendar", icon: "🗓️" },
-],
-},
-{
-title: "Leadership",
-items: [
-{ key: "reports", label: "Reports", icon: "📄" },
-{ key: "compliance", label: "Readiness", icon: "✅" },
-{ key: "manager", label: "Manager view", icon: "🧠" },
-],
-},
+  {
+    id: "workspace",
+    label: "Workspace",
+    icon: "home",
+  },
+  {
+    id: "overview",
+    label: "Overview",
+    icon: "layout-dashboard",
+  },
+  {
+    id: "profile",
+    label: "Profile",
+    icon: "user",
+  },
+  {
+    id: "timeline",
+    label: "Timeline",
+    icon: "list-ordered",
+  },
+  {
+    id: "handover",
+    label: "Handover",
+    icon: "repeat",
+  },
+  {
+    id: "health",
+    label: "Health",
+    icon: "heart-pulse",
+  },
+  {
+    id: "education",
+    label: "Education",
+    icon: "graduation-cap",
+  },
+  {
+    id: "family",
+    label: "Family",
+    icon: "users",
+  },
+  {
+    id: "calendar",
+    label: "Calendar",
+    icon: "calendar",
+  },
+  {
+    id: "readiness",
+    label: "Readiness",
+    icon: "shield-check",
+  },
+  {
+    id: "manager",
+    label: "Manager review",
+    icon: "clipboard-check",
+  },
+  {
+    id: "reports",
+    label: "Reports",
+    icon: "file-text",
+  },
 ];
 
-export const MOBILE_TABS = [
-{ key: "overview", label: "Home", icon: "🏠" },
-{ key: "timeline", label: "Timeline", icon: "🕒" },
-{ key: "daily_notes", label: "Notes", icon: "📝" },
-{ key: "plans", label: "Plans", icon: "🧩" },
-{ key: "assistant", label: "AI", icon: "✨" },
+export const QUICK_ACTIONS = [
+  {
+    id: "daily_note",
+    label: "Daily note",
+    record_type: "daily_note",
+    section_hint: "workspace",
+  },
+  {
+    id: "incident",
+    label: "Important event",
+    record_type: "incident",
+    section_hint: "timeline",
+  },
+  {
+    id: "support_plan",
+    label: "Support plan",
+    record_type: "support_plan",
+    section_hint: "workspace",
+  },
+  {
+    id: "risk",
+    label: "Risk assessment",
+    record_type: "risk",
+    section_hint: "manager",
+  },
+  {
+    id: "health_record",
+    label: "Health record",
+    record_type: "health_record",
+    section_hint: "health",
+  },
+  {
+    id: "education_record",
+    label: "Education record",
+    record_type: "education_record",
+    section_hint: "education",
+  },
+  {
+    id: "family_contact",
+    label: "Family contact",
+    record_type: "family_contact",
+    section_hint: "family",
+  },
+  {
+    id: "keywork",
+    label: "Keywork",
+    record_type: "keywork",
+    section_hint: "workspace",
+  },
+  {
+    id: "appointment",
+    label: "Appointment",
+    record_type: "appointment",
+    section_hint: "calendar",
+  },
+  {
+    id: "achievement_record",
+    label: "Achievement",
+    record_type: "achievement_record",
+    section_hint: "education",
+  },
+  {
+    id: "safeguarding_record",
+    label: "Safeguarding",
+    record_type: "safeguarding_record",
+    section_hint: "manager",
+  },
+  {
+    id: "missing_episode",
+    label: "Missing episode",
+    record_type: "missing_episode",
+    section_hint: "timeline",
+  },
+  {
+    id: "task",
+    label: "Task",
+    record_type: "task",
+    section_hint: "readiness",
+  },
+];
+
+export const SECTION_DEFAULT_ACTION = {
+  workspace: "daily_note",
+  overview: "daily_note",
+  profile: "profile_identity",
+  timeline: "incident",
+  handover: "daily_note",
+  health: "health_record",
+  education: "education_record",
+  family: "family_contact",
+  calendar: "appointment",
+  readiness: "task",
+  manager: "task",
+  reports: "task",
+};
+
+export const PROFILE_ACTIONS = [
+  {
+    id: "profile_identity",
+    label: "Identity profile",
+    record_type: "profile_identity",
+  },
+  {
+    id: "profile_communication",
+    label: "Communication profile",
+    record_type: "profile_communication",
+  },
+  {
+    id: "profile_education",
+    label: "Education profile",
+    record_type: "profile_education",
+  },
+  {
+    id: "profile_health",
+    label: "Health profile",
+    record_type: "profile_health",
+  },
+  {
+    id: "profile_legal",
+    label: "Legal status",
+    record_type: "profile_legal",
+  },
+  {
+    id: "profile_formulation",
+    label: "Formulation",
+    record_type: "profile_formulation",
+  },
 ];
