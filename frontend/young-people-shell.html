@@ -161,58 +161,62 @@
                 </button>
               </div>
 
-              <section class="workspace-hero" aria-labelledby="pageTitle" aria-describedby="pageSubtitle">
-                <div class="workspace-hero-copy">
-                  <div class="eyebrow">Young person workspace</div>
-                  <h1 id="pageTitle">Today’s workspace</h1>
-                  <p id="pageSubtitle">
-                    A calm space to record clearly, reflect thoughtfully and respond to what matters today.
-                  </p>
+              <section class="workspace-intro-card" aria-labelledby="pageTitle">
+                <div class="workspace-intro-main">
+                  <div class="workspace-intro-copy">
+                    <div class="eyebrow">Young person workspace</div>
+                    <h1 id="pageTitle">Today’s workspace</h1>
+                    <p id="pageSubtitle">
+                      A calm space to record clearly, reflect thoughtfully and respond to what matters today.
+                    </p>
+                  </div>
+
+                  <div class="workspace-intro-actions">
+                    <button id="heroAssistantBtn" class="secondary-btn" type="button">
+                      Ask assistant
+                    </button>
+                  </div>
                 </div>
 
-                <div class="workspace-hero-actions">
-                  <button id="heroAssistantBtn" class="secondary-btn" type="button">
-                    Ask assistant
-                  </button>
-                </div>
-              </section>
+                <div class="workspace-person-strip">
+                  <div class="workspace-person-summary">
+                    <div
+                      id="profileSnapshotPhotoWrap"
+                      class="profile-snapshot-photo-wrap"
+                      aria-label="Young person photo"
+                    >
+                      <div class="profile-photo-fallback" aria-hidden="true">YP</div>
+                    </div>
 
-              <section class="profile-snapshot" aria-labelledby="profileSnapshotName">
-                <div
-                  id="profileSnapshotPhotoWrap"
-                  class="profile-snapshot-photo-wrap"
-                  aria-label="Young person photo"
-                >
-                  <div class="profile-photo-fallback" aria-hidden="true">YP</div>
-                </div>
+                    <div class="workspace-person-copy">
+                      <h3 id="profileSnapshotName">Young person</h3>
+                      <p id="profileSnapshotMeta">Profile summary</p>
+                    </div>
+                  </div>
 
-                <div class="profile-snapshot-copy">
-                  <h3 id="profileSnapshotName">Young person</h3>
-                  <p id="profileSnapshotMeta">Profile summary</p>
-                </div>
+                  <div class="workspace-person-actions">
+                    <button
+                      id="profileOpenBtn"
+                      class="secondary-btn"
+                      type="button"
+                      data-view="profile"
+                    >
+                      Open profile
+                    </button>
 
-                <div class="profile-snapshot-actions">
-                  <button
-                    id="profileOpenBtn"
-                    class="secondary-btn"
-                    type="button"
-                    data-view="profile"
-                  >
-                    Open profile
-                  </button>
+                    <button
+                      id="profilePhotoUploadBtn"
+                      class="ghost-btn"
+                      type="button"
+                      data-action-router="edit-profile-identity"
+                    >
+                      Update profile
+                    </button>
 
-                  <button
-                    id="profilePhotoUploadBtn"
-                    class="ghost-btn"
-                    type="button"
-                    data-action-router="edit-profile-identity"
-                  >
-                    Update profile
-                  </button>
-
-                  <button id="changePersonBtn" class="ghost-btn" type="button">
-                    Change young person
-                  </button>
+                    <button id="changePersonBtn" class="ghost-btn" type="button">
+                      Change young person
+                    </button>
+                  </div>
                 </div>
               </section>
 
@@ -319,13 +323,51 @@
                   </div>
                 </section>
 
-                <div id="viewContent" aria-live="polite">
-                  <div class="loading-state">
-                    <div>
-                      <div class="spinner" aria-hidden="true"></div>
-                      <p>Loading workspace…</p>
+                <div id="viewContent" class="workspace-view-content" aria-live="polite">
+                  <section class="overview-panel">
+                    <div class="overview-panel-head">
+                      <div>
+                        <div class="eyebrow">Overview</div>
+                        <h2>Workspace overview</h2>
+                        <p>A live view across care, records, appointments and follow-up.</p>
+                      </div>
                     </div>
-                  </div>
+
+                    <div class="overview-stats-grid">
+                      <article class="overview-stat-card">
+                        <span class="overview-stat-label">Urgent</span>
+                        <strong class="overview-stat-value">0</strong>
+                        <span class="overview-stat-note">Items needing prompt attention</span>
+                      </article>
+
+                      <article class="overview-stat-card">
+                        <span class="overview-stat-label">Recent</span>
+                        <strong class="overview-stat-value">0</strong>
+                        <span class="overview-stat-note">Recently added records</span>
+                      </article>
+
+                      <article class="overview-stat-card">
+                        <span class="overview-stat-label">Today</span>
+                        <strong class="overview-stat-value">0</strong>
+                        <span class="overview-stat-note">Records or updates today</span>
+                      </article>
+
+                      <article class="overview-stat-card">
+                        <span class="overview-stat-label">Upcoming</span>
+                        <strong class="overview-stat-value">0</strong>
+                        <span class="overview-stat-note">Planned appointments or actions</span>
+                      </article>
+                    </div>
+
+                    <div class="overview-placeholder">
+                      <div class="loading-state">
+                        <div>
+                          <div class="spinner" aria-hidden="true"></div>
+                          <p>Loading workspace…</p>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
                 </div>
               </section>
             </div>
@@ -515,10 +557,8 @@
     >
       <div class="assistant-header">
         <div>
-          <h3>Young person assistant</h3>
-          <p>
-            Ask questions, draft summaries, review patterns and support thoughtful next steps.
-          </p>
+          <h3>Assistant</h3>
+          <p>Ask questions, draft wording and get help with records and next steps.</p>
         </div>
         <button
           id="closeAssistantBtn"
@@ -532,18 +572,6 @@
 
       <div class="assistant-modal-layout assistant-modal-layout--single">
         <div class="assistant-modal-main">
-          <div class="assistant-context-row">
-            <span class="scope-badge">Young person assistant</span>
-            <span id="modalScopeHomeBadge" class="scope-chip hidden"></span>
-            <span id="modalScopeChildBadge" class="scope-chip hidden"></span>
-          </div>
-
-          <div id="assistantContext" class="assistant-context">
-            No young person selected.
-          </div>
-
-          <div id="assistantSuggestions" class="assistant-suggestions"></div>
-
           <div
             id="assistantMessages"
             class="assistant-messages assistant-messages--modal"
@@ -560,7 +588,7 @@
           </div>
 
           <form id="assistantForm" class="assistant-form assistant-form--sticky">
-            <label class="sr-only" for="assistantInput">Ask about this young person</label>
+            <label class="sr-only" for="assistantInput">Ask the assistant</label>
             <input
               id="assistantInput"
               class="text-input"
@@ -572,42 +600,6 @@
               Send
             </button>
           </form>
-
-          <div class="assistant-secondary-panels">
-            <section class="workspace-side-card">
-              <h3>Scope summary</h3>
-              <div id="assistantScopeSummary" class="assistant-side-block">
-                <p>No scoped context loaded.</p>
-              </div>
-            </section>
-
-            <section class="workspace-side-card">
-              <h3>Suggested actions</h3>
-              <div id="assistantActions" class="assistant-side-block">
-                <button class="chip" type="button" data-action-router="assistant-handover">Draft handover</button>
-                <button class="chip" type="button" data-action-router="assistant-priorities">What matters now?</button>
-                <button class="chip" type="button" data-action-router="assistant-chronology">Summarise chronology</button>
-                <button class="chip" type="button" data-action-router="assistant-plans">Summarise plans</button>
-              </div>
-            </section>
-
-            <section class="workspace-side-card">
-              <h3>Sources</h3>
-              <div id="assistantSources" class="assistant-side-block">
-                <p>Sources will appear here after a response.</p>
-              </div>
-            </section>
-
-            <section class="workspace-side-card workspace-side-card--technical">
-              <h3>Runtime</h3>
-              <pre id="assistantRuntime" class="assistant-code-block">No runtime data yet.</pre>
-            </section>
-
-            <section class="workspace-side-card workspace-side-card--technical">
-              <h3>Explainability</h3>
-              <pre id="assistantExplainability" class="assistant-code-block">No explainability data yet.</pre>
-            </section>
-          </div>
         </div>
       </div>
 
@@ -620,8 +612,6 @@
         <form id="assistantModalForm"></form>
         <input id="assistantModalInput" />
         <button id="assistantModalSendBtn" type="button"></button>
-        <div id="assistantModalScopeSummary"></div>
-        <div id="assistantModalSources"></div>
       </div>
     </section>
 
@@ -663,7 +653,7 @@
       id="assistantLauncher"
       class="assistant-fab"
       type="button"
-      aria-label="Open young person assistant"
+      aria-label="Open assistant"
       title="Open assistant"
     >
       <span class="assistant-fab-icon" aria-hidden="true">✦</span>
