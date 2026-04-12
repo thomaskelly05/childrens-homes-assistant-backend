@@ -1,8 +1,7 @@
 import { state } from "../state.js";
-import { els } from "../dom.js";
+import { refreshAssistantUi } from "./assistant-ui.js";
 import {
   buildImageOrInitials,
-  escapeHtml,
   getDisplayName,
 } from "../core/utils.js";
 
@@ -201,4 +200,5 @@ export function bindShellChrome() {
 export function refreshShellChrome() {
   updateYoungPersonChrome(state.selectedYoungPerson || {});
   updateSectionChrome(state.currentSection || state.activeSection || "workspace");
+  refreshAssistantUi();
 }
