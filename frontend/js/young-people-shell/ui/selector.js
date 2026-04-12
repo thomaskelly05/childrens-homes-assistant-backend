@@ -4,32 +4,46 @@ import { apiGet } from "../core/api.js";
 import {
   escapeHtml,
   setYoungPersonIdInUrl,
-  buildImageOrInitials,
   getDisplayName,
   formatDate,
 } from "../core/utils.js";
 import { refreshShellChrome } from "./shell-ui.js";
+import { refreshAssistantUi } from "./assistant-ui.js";
 
 function getSelectorList() {
-  return els.youngPeopleList || document.getElementById("youngPeopleList");
+  return els.selectorList || document.getElementById("selectorList");
 }
 
-function getSelectorEmpty() {
-  return els.youngPeopleEmpty || document.getElementById("youngPeopleEmpty");
+function renderPhoto(item = {}) {
+  const firstInitial = String(item.first_name || "Y").charAt(0).toUpperCase();
+  const lastInitial = String(item.last_name || "P").charAt(0).toUpperCase();
+  const initials = `${firstInitial}${lastInitial}`;
+  const name = getDisplayName(item);
+
+  if (item.photo_url) {
+    return `
+      <img
+        class="selector-card-photo"
+        src="${escapeHtml(item.photo_url)}"
+        alt="${escapeHtml(name)}"
+        onerror="this.outerHTML='<div class=&quot;selector-card-photo-fallback&quot;>${escapeHtml(initials)}</div>'"
+      />
+    `;
+  }
+
+  return `<div class="selector-card-photo-fallback">${escapeHtml(initials)}</div>`;
 }
 
 function renderYoungPersonCard(item = {}) {
   const displayName = getDisplayName(item);
 
-  const subtitle = [
-    item.preferred_name ? `Preferred: ${item.preferred_name}` : "",
+  const metaPills = [
+    item.preferred_name ? `Prefers ${item.preferred_name}` : "",
     item.placement_status || "",
     item.summary_risk_level ? `Risk: ${item.summary_risk_level}` : "",
-  ]
-    .filter(Boolean)
-    .join(" • ");
+  ].filter(Boolean);
 
-  const meta = [
+  const subtitle = [
     item.date_of_birth ? `DOB ${formatDate(item.date_of_birth)}` : "",
     item.admission_date ? `Admitted ${formatDate(item.admission_date)}` : "",
   ]
@@ -39,18 +53,32 @@ function renderYoungPersonCard(item = {}) {
   return `
     <button
       type="button"
-      class="young-person-card"
+      class="selector-card selector-card--photo"
       data-open-young-person="${escapeHtml(String(item.id || ""))}"
       data-young-person-id="${escapeHtml(String(item.id || ""))}"
     >
-      <div class="young-person-card-avatar">
-        ${buildImageOrInitials(item, "avatar avatar-lg", "avatar avatar-lg avatar-fallback")}
+      <div class="selector-card-media">
+        ${renderPhoto(item)}
       </div>
 
-      <div class="young-person-card-content">
-        <div class="young-person-card-title">${escapeHtml(displayName)}</div>
-        ${subtitle ? `<div class="young-person-card-subtitle">${escapeHtml(subtitle)}</div>` : ""}
-        ${meta ? `<div class="young-person-card-meta">${escapeHtml(meta)}</div>` : ""}
+      <div class="selector-card-body">
+        <h3>${escapeHtml(displayName)}</h3>
+
+        ${
+          metaPills.length
+            ? `<div class="selector-card-meta">
+                ${metaPills
+                  .map((pill) => `<span class="selector-pill">${escapeHtml(pill)}</span>`)
+                  .join("")}
+              </div>`
+            : ""
+        }
+
+        ${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ""}
+      </div>
+
+      <div class="selector-card-actions">
+        <span class="secondary-btn">Open</span>
       </div>
     </button>
   `;
@@ -58,32 +86,29 @@ function renderYoungPersonCard(item = {}) {
 
 function renderSelectorList(items = []) {
   const list = getSelectorList();
-  const empty = getSelectorEmpty();
-
   if (!list) return;
 
   if (!items.length) {
-    list.innerHTML = "";
-    if (empty) {
-      empty.classList.remove("hidden");
-      empty.innerHTML = `<p>No young people found.</p>`;
-    }
+    list.innerHTML = `
+      <div class="empty-state">
+        <p>No young people found.</p>
+      </div>
+    `;
     return;
   }
 
-  if (empty) {
-    empty.classList.add("hidden");
-    empty.innerHTML = "";
-  }
-
-  list.innerHTML = items.map(renderYoungPersonCard).join("");
+  list.innerHTML = `
+    <div class="selector-grid">
+      ${items.map(renderYoungPersonCard).join("")}
+    </div>
+  `;
 }
 
 function normaliseYoungPeopleResponse(data = {}) {
   return (
+    data.young_people ||
     data.items ||
     data.records ||
-    data.young_people ||
     data.youngPeople ||
     []
   );
@@ -100,12 +125,13 @@ function matchesSearch(item = {}, term = "") {
     item.summary_risk_level,
     item.local_id_number,
     item.nhs_number,
+    item.home_name,
   ]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
 
-  return haystack.includes(term.toLowerCase());
+  return haystack.includes(String(term).toLowerCase());
 }
 
 export function filterSelectorList(term = "") {
@@ -120,29 +146,22 @@ export function filterSelectorList(term = "") {
 
 export async function loadYoungPersonSelector() {
   const list = getSelectorList();
-  const empty = getSelectorEmpty();
 
   if (list) {
     list.innerHTML = `
       <div class="loading-state">
         <div>
           <div class="spinner"></div>
-          <p>Loading young people...</p>
+          <p>Loading young people…</p>
         </div>
       </div>
     `;
-  }
-
-  if (empty) {
-    empty.classList.add("hidden");
-    empty.innerHTML = "";
   }
 
   const data = await apiGet("/young-people");
   const items = normaliseYoungPeopleResponse(data);
 
   state.youngPeople = items;
-
   filterSelectorList(state.youngPeopleFilter || "");
 }
 
@@ -151,10 +170,11 @@ export function goBackToSelector() {
   state.selectedYoungPerson = null;
   setYoungPersonIdInUrl(null);
 
-  els.workspaceShell?.classList.add("hidden");
+  els.workspaceScreen?.classList.add("hidden");
   els.selectorScreen?.classList.remove("hidden");
 
   refreshShellChrome();
+  refreshAssistantUi();
 }
 
 export async function openYoungPerson(id, options = {}) {
@@ -186,13 +206,19 @@ export async function openYoungPerson(id, options = {}) {
   }
 
   els.selectorScreen?.classList.add("hidden");
-  els.workspaceShell?.classList.remove("hidden");
+  els.workspaceScreen?.classList.remove("hidden");
 
   refreshShellChrome();
+  refreshAssistantUi();
 
   if (!options.skipInitialSectionLoad) {
-    const { loadSection } = await import("./nav.js");
-    await loadSection(state.currentSection || state.activeSection || "workspace");
+    const navModule = await import("./nav.js");
+
+    if (typeof navModule.loadSection === "function") {
+      await navModule.loadSection(state.currentSection || state.activeSection || "workspace");
+    } else if (typeof navModule.handleViewChange === "function") {
+      await navModule.handleViewChange(state.currentView || "overview");
+    }
   }
 
   return state.selectedYoungPerson;
