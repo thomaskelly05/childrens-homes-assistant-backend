@@ -1,6 +1,6 @@
 import { state } from "../state.js";
 import { els } from "../dom.js";
-import { NAV_SECTIONS } from "../core/config.js";
+import { NAV_GROUPS_CONFIG, NAV_SECTIONS } from "../core/config.js";
 import { escapeHtml } from "../core/utils.js";
 
 import {
@@ -13,7 +13,11 @@ import { bindRecordDrawerEvents, openRecordDetail } from "./records.js";
 import { closeComposer, saveComposer } from "./composer.js";
 import { bindSuggestionEvents } from "./suggestions.js";
 import { bindActionRouter, getActionForQuickButton } from "./action-router.js";
-import { updateSectionChrome, updateYoungPersonChrome } from "./shell-ui.js";
+import {
+  updateSectionChrome,
+  updateYoungPersonChrome,
+  closeMobileNav,
+} from "./shell-ui.js";
 
 import { loadOverview } from "../features/overview.js";
 import { loadProfile } from "../features/profile.js";
@@ -43,8 +47,133 @@ const SECTION_LOADERS = {
   manager: loadManager,
 };
 
+const MOBILE_TABS = ["workspace", "overview", "timeline", "profile", "readiness"];
+
+function iconGlyph(iconName = "") {
+  const map = {
+    home: "⌂",
+    "layout-dashboard": "◫",
+    user: "◉",
+    "list-ordered": "≣",
+    repeat: "↺",
+    "heart-pulse": "♥",
+    "graduation-cap": "▲",
+    users: "◎",
+    calendar: "◷",
+    "shield-check": "✓",
+    "clipboard-check": "▣",
+    "file-text": "▤",
+  };
+
+  return map[iconName] || "•";
+}
+
+function getSectionMeta(sectionId) {
+  return NAV_SECTIONS.find((item) => item.id === sectionId) || null;
+}
+
+function renderDesktopNav() {
+  if (!els.desktopNav) return;
+
+  els.desktopNav.innerHTML = `
+    <div class="workspace-nav-inner">
+      ${NAV_GROUPS_CONFIG.map(
+        (group) => `
+          <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
+            <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
+            <div class="nav-section-items">
+              ${(group.items || [])
+                .map(
+                  (item) => `
+                    <button
+                      type="button"
+                      class="nav-btn"
+                      data-nav-section="${escapeHtml(item.id)}"
+                      aria-pressed="false"
+                      title="${escapeHtml(item.description || item.label || "")}"
+                    >
+                      <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(iconGlyph(item.icon))}</span>
+                      <span class="nav-btn-copy">
+                        <span class="nav-btn-label">${escapeHtml(item.short_label || item.label || item.id)}</span>
+                      </span>
+                    </button>
+                  `
+                )
+                .join("")}
+            </div>
+          </section>
+        `
+      ).join("")}
+    </div>
+  `;
+}
+
+function renderMobileNav() {
+  if (!els.mobileNavContent) return;
+
+  els.mobileNavContent.innerHTML = `
+    <div class="workspace-nav-inner">
+      ${NAV_GROUPS_CONFIG.map(
+        (group) => `
+          <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
+            <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
+            <div class="nav-section-items">
+              ${(group.items || [])
+                .map(
+                  (item) => `
+                    <button
+                      type="button"
+                      class="nav-btn"
+                      data-nav-section="${escapeHtml(item.id)}"
+                      aria-pressed="false"
+                    >
+                      <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(iconGlyph(item.icon))}</span>
+                      <span class="nav-btn-copy">
+                        <span class="nav-btn-label">${escapeHtml(item.short_label || item.label || item.id)}</span>
+                      </span>
+                    </button>
+                  `
+                )
+                .join("")}
+            </div>
+          </section>
+        `
+      ).join("")}
+    </div>
+  `;
+}
+
+function renderMobileBottomBar() {
+  if (!els.mobileBottomBar) return;
+
+  const tabs = MOBILE_TABS.map((id) => getSectionMeta(id)).filter(Boolean);
+
+  els.mobileBottomBar.innerHTML = tabs
+    .map(
+      (item) => `
+        <button
+          type="button"
+          class="mobile-tab-btn"
+          data-nav-section="${escapeHtml(item.id)}"
+          aria-pressed="false"
+        >
+          <span class="mobile-tab-icon" aria-hidden="true">${escapeHtml(iconGlyph(item.icon))}</span>
+          <span class="mobile-tab-label">${escapeHtml(item.short_label || item.label || item.id)}</span>
+        </button>
+      `
+    )
+    .join("");
+}
+
+function renderNavigation() {
+  renderDesktopNav();
+  renderMobileNav();
+  renderMobileBottomBar();
+}
+
 export function showError(message) {
   if (els.statusMessage) {
+    els.statusMessage.classList.remove("hidden");
     els.statusMessage.innerHTML = `<span class="status-error">${escapeHtml(
       message || "Something went wrong."
     )}</span>`;
@@ -53,6 +182,7 @@ export function showError(message) {
 
 export function showMessage(message) {
   if (els.statusMessage) {
+    els.statusMessage.classList.remove("hidden");
     els.statusMessage.innerHTML = `<span class="status-ok">${escapeHtml(
       message || ""
     )}</span>`;
@@ -62,6 +192,7 @@ export function showMessage(message) {
 export function clearStatus() {
   if (els.statusMessage) {
     els.statusMessage.innerHTML = "";
+    els.statusMessage.classList.add("hidden");
   }
 }
 
@@ -116,6 +247,7 @@ function bindNavButtons() {
       const section = button.dataset.navSection;
       if (!section) return;
       await loadSection(section);
+      closeMobileNav();
     });
   });
 }
@@ -125,7 +257,7 @@ function bindSelectorControls() {
     state.youngPersonId = null;
     state.selectedYoungPerson = null;
 
-    if (els.workspaceShell) els.workspaceShell.classList.add("hidden");
+    if (els.workspaceScreen) els.workspaceScreen.classList.add("hidden");
     if (els.selectorScreen) els.selectorScreen.classList.remove("hidden");
 
     goBackToSelector?.();
@@ -140,6 +272,10 @@ function bindSelectorControls() {
   });
 
   els.youngPersonSearchInput?.addEventListener("input", (event) => {
+    filterSelectorList?.(event.target.value || "");
+  });
+
+  els.selectorSearch?.addEventListener("input", (event) => {
     filterSelectorList?.(event.target.value || "");
   });
 }
@@ -178,6 +314,17 @@ function bindComposerControls() {
     }
   });
 
+  els.composerSaveDraftBtn?.addEventListener("click", async () => {
+    try {
+      await saveComposer("draft");
+      showMessage("Draft saved.");
+      await reloadCurrentSection();
+    } catch (error) {
+      console.error("[nav] save draft failed", error);
+      showError(error?.message || "Could not save draft.");
+    }
+  });
+
   els.composerSubmitBtn?.addEventListener("click", async () => {
     try {
       await saveComposer("submit");
@@ -191,6 +338,16 @@ function bindComposerControls() {
 }
 
 function bindRefreshControls() {
+  els.refreshBtn?.addEventListener("click", async () => {
+    try {
+      await reloadCurrentSection();
+      showMessage("Workspace refreshed.");
+    } catch (error) {
+      console.error("[nav] refresh failed", error);
+      showError(error?.message || "Failed to refresh workspace.");
+    }
+  });
+
   els.refreshWorkspaceBtn?.addEventListener("click", async () => {
     try {
       await reloadCurrentSection();
@@ -239,8 +396,9 @@ function bindYoungPersonOpen() {
 
     try {
       await openYoungPerson?.(id);
+
       if (els.selectorScreen) els.selectorScreen.classList.add("hidden");
-      if (els.workspaceShell) els.workspaceShell.classList.remove("hidden");
+      if (els.workspaceScreen) els.workspaceScreen.classList.remove("hidden");
 
       updateYoungPersonChrome(state.selectedYoungPerson || {});
       updateSectionChrome(getCurrentSection());
@@ -272,6 +430,7 @@ function bindDrawerCallbacks() {
 }
 
 export function bindNavEvents() {
+  renderNavigation();
   bindNavButtons();
   bindSelectorControls();
   bindQuickActionButtons();
