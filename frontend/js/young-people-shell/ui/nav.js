@@ -1,6 +1,6 @@
 import { state } from "../state.js";
 import { els } from "../dom.js";
-import { NAV_SECTIONS } from "../core/config.js";
+import { NAV_SECTIONS, NAV_GROUPS_CONFIG } from "../core/config.js";
 import { escapeHtml } from "../core/utils.js";
 
 import {
@@ -47,6 +47,143 @@ const SECTION_LOADERS = {
   manager: loadManager,
 };
 
+const MOBILE_BOTTOM_SECTIONS = ["workspace", "timeline", "profile", "readiness", "manager"];
+
+const ICON_MAP = {
+  home: "⌂",
+  "layout-dashboard": "◫",
+  user: "◉",
+  "list-ordered": "≣",
+  repeat: "↻",
+  "heart-pulse": "♥",
+  "graduation-cap": "⌁",
+  users: "◌",
+  calendar: "◷",
+  "shield-check": "✓",
+  "clipboard-check": "☑",
+  "file-text": "▤",
+};
+
+function getNavIcon(icon) {
+  return ICON_MAP[icon] || "•";
+}
+
+function getCurrentSection() {
+  return state.currentSection || state.activeSection || state.currentView || "workspace";
+}
+
+function buildDesktopNavHtml() {
+  return `
+    <div class="workspace-nav-inner">
+      ${NAV_GROUPS_CONFIG.map((group) => {
+        const itemsHtml = (group.items || [])
+          .map((item) => {
+            const isActive = item.id === getCurrentSection();
+            return `
+              <button
+                class="nav-btn ${isActive ? "active" : ""}"
+                type="button"
+                data-nav-section="${escapeHtml(item.id)}"
+                aria-pressed="${isActive ? "true" : "false"}"
+                title="${escapeHtml(item.description || item.label || item.id)}"
+              >
+                <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(getNavIcon(item.icon))}</span>
+                <span class="nav-btn-copy">
+                  <span class="nav-btn-label">${escapeHtml(item.label || item.id)}</span>
+                </span>
+              </button>
+            `;
+          })
+          .join("");
+
+        return `
+          <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
+            <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
+            <div class="nav-section-items">
+              ${itemsHtml}
+            </div>
+          </section>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function buildMobileDrawerNavHtml() {
+  return `
+    <div class="workspace-nav-inner">
+      ${NAV_GROUPS_CONFIG.map((group) => {
+        const itemsHtml = (group.items || [])
+          .map((item) => {
+            const isActive = item.id === getCurrentSection();
+            return `
+              <button
+                class="nav-btn ${isActive ? "active" : ""}"
+                type="button"
+                data-nav-section="${escapeHtml(item.id)}"
+                aria-pressed="${isActive ? "true" : "false"}"
+                title="${escapeHtml(item.description || item.label || item.id)}"
+              >
+                <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(getNavIcon(item.icon))}</span>
+                <span class="nav-btn-copy">
+                  <span class="nav-btn-label">${escapeHtml(item.label || item.id)}</span>
+                </span>
+              </button>
+            `;
+          })
+          .join("");
+
+        return `
+          <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
+            <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
+            <div class="nav-section-items">
+              ${itemsHtml}
+            </div>
+          </section>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function buildMobileBottomBarHtml() {
+  const byId = new Map(NAV_SECTIONS.map((item) => [item.id, item]));
+
+  return MOBILE_BOTTOM_SECTIONS.map((sectionId) => {
+    const item = byId.get(sectionId);
+    if (!item) return "";
+
+    const isActive = item.id === getCurrentSection();
+
+    return `
+      <button
+        class="mobile-tab-btn ${isActive ? "active" : ""}"
+        type="button"
+        data-nav-section="${escapeHtml(item.id)}"
+        aria-pressed="${isActive ? "true" : "false"}"
+        title="${escapeHtml(item.label || item.id)}"
+      >
+        <span class="mobile-tab-icon" aria-hidden="true">${escapeHtml(getNavIcon(item.icon))}</span>
+        <span class="mobile-tab-label">${escapeHtml(item.short_label || item.label || item.id)}</span>
+      </button>
+    `;
+  }).join("");
+}
+
+function renderNavigation() {
+  if (els.desktopNav) {
+    els.desktopNav.innerHTML = buildDesktopNavHtml();
+  }
+
+  if (els.mobileNavContent) {
+    els.mobileNavContent.innerHTML = buildMobileDrawerNavHtml();
+  }
+
+  if (els.mobileBottomBar) {
+    els.mobileBottomBar.innerHTML = buildMobileBottomBarHtml();
+  }
+}
+
 export function showError(message) {
   if (els.statusMessage) {
     els.statusMessage.innerHTML = `<span class="status-error">${escapeHtml(
@@ -87,10 +224,6 @@ function markActiveNav(section) {
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-pressed", isActive ? "true" : "false");
   });
-}
-
-function getCurrentSection() {
-  return state.currentSection || state.activeSection || state.currentView || "workspace";
 }
 
 export async function loadSection(section) {
@@ -139,14 +272,14 @@ function bindNavButtons() {
 }
 
 function bindSelectorControls() {
-  els.backToSelectorBtn?.addEventListener("click", async () => {
+  const goToSelector = async () => {
     state.youngPersonId = null;
     state.selectedYoungPerson = null;
     state.currentView = state.currentSection || "workspace";
     state.activeRecordType = null;
     state.activeRecordItem = null;
 
-    if (els.workspaceShell) els.workspaceShell.classList.add("hidden");
+    if (els.workspaceScreen) els.workspaceScreen.classList.add("hidden");
     if (els.selectorScreen) els.selectorScreen.classList.remove("hidden");
 
     goBackToSelector?.();
@@ -158,7 +291,13 @@ function bindSelectorControls() {
     } catch (error) {
       showError(error?.message || "Failed to load young people.");
     }
-  });
+  };
+
+  els.backToSelectorBtn?.addEventListener("click", goToSelector);
+  els.homeBtn?.addEventListener("click", goToSelector);
+  els.mobileHomeBtn?.addEventListener("click", goToSelector);
+  els.changePersonBtn?.addEventListener("click", goToSelector);
+  els.logoBtn?.addEventListener("click", goToSelector);
 
   els.youngPersonSearchInput?.addEventListener("input", (event) => {
     filterSelectorList?.(event.target.value || "");
@@ -277,11 +416,14 @@ function bindYoungPersonOpen() {
       await openYoungPerson?.(id);
 
       if (els.selectorScreen) els.selectorScreen.classList.add("hidden");
-      if (els.workspaceShell) els.workspaceShell.classList.remove("hidden");
+      if (els.workspaceScreen) els.workspaceScreen.classList.remove("hidden");
 
       updateYoungPersonChrome(state.selectedYoungPerson || {});
       updateSectionChrome(getCurrentSection());
       clearStatus();
+
+      renderNavigation();
+      bindNavButtons();
 
       await loadSection(getCurrentSection());
     } catch (error) {
@@ -309,7 +451,6 @@ function bindDrawerCallbacks() {
 }
 
 export function bindNavEvents() {
-  bindNavButtons();
   bindSelectorControls();
   bindQuickActionButtons();
   bindComposerControls();
@@ -321,8 +462,6 @@ export function bindNavEvents() {
 }
 
 export async function initialiseShellNavigation() {
-  bindNavEvents();
-
   if (!state.currentSection) {
     state.currentSection = NAV_SECTIONS?.[0]?.id || "workspace";
   }
@@ -333,6 +472,10 @@ export async function initialiseShellNavigation() {
 
   state.currentView = state.currentSection;
 
+  renderNavigation();
+  bindNavButtons();
+  bindNavEvents();
+
   markActiveNav(getCurrentSection());
   updateSectionChrome(getCurrentSection());
   updateYoungPersonChrome(state.selectedYoungPerson || {});
@@ -340,7 +483,7 @@ export async function initialiseShellNavigation() {
   if (!state.youngPersonId) {
     try {
       await loadYoungPersonSelector?.();
-      if (els.workspaceShell) els.workspaceShell.classList.add("hidden");
+      if (els.workspaceScreen) els.workspaceScreen.classList.add("hidden");
       if (els.selectorScreen) els.selectorScreen.classList.remove("hidden");
     } catch (error) {
       console.error("[nav] selector load failed", error);
@@ -351,7 +494,7 @@ export async function initialiseShellNavigation() {
 
   try {
     if (els.selectorScreen) els.selectorScreen.classList.add("hidden");
-    if (els.workspaceShell) els.workspaceShell.classList.remove("hidden");
+    if (els.workspaceScreen) els.workspaceScreen.classList.remove("hidden");
     await loadSection(getCurrentSection());
   } catch (error) {
     console.error("[nav] initial section load failed", error);
