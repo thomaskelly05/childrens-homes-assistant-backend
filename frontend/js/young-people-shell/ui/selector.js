@@ -6,6 +6,7 @@ import {
   setYoungPersonIdInUrl,
   getDisplayName,
   formatDate,
+  initialsFromName,
 } from "../core/utils.js";
 import { refreshShellChrome } from "./shell-ui.js";
 import { refreshAssistantUi } from "./assistant-ui.js";
@@ -30,22 +31,8 @@ function renderEmptyState({
 }
 
 function renderPhoto(item = {}) {
-  const firstInitial = String(item.first_name || "Y").charAt(0).toUpperCase();
-  const lastInitial = String(item.last_name || "P").charAt(0).toUpperCase();
-  const initials = `${firstInitial}${lastInitial}`;
   const name = getDisplayName(item);
-
-  if (item.photo_url) {
-    return `
-      <img
-        class="selector-card-photo"
-        src="${escapeHtml(item.photo_url)}"
-        alt="${escapeHtml(name)}"
-        onerror="this.outerHTML='<div class=&quot;selector-card-photo-fallback&quot;>${escapeHtml(initials)}</div>'"
-      />
-    `;
-  }
-
+  const initials = initialsFromName(name);
   return `<div class="selector-card-photo-fallback">${escapeHtml(initials)}</div>`;
 }
 
@@ -231,7 +218,9 @@ export async function openYoungPerson(id, options = {}) {
     const navModule = await import("./nav.js");
 
     if (typeof navModule.loadSection === "function") {
-      await navModule.loadSection(state.currentSection || state.activeSection || "workspace");
+      await navModule.loadSection(
+        state.currentSection || state.activeSection || "workspace"
+      );
     } else if (typeof navModule.handleViewChange === "function") {
       await navModule.handleViewChange(state.currentView || "overview");
     }
