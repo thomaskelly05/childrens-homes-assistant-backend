@@ -2,28 +2,28 @@ export const els = {
   // Shell / layout
   app: document.getElementById("app"),
   workspaceScreen: document.getElementById("workspaceScreen"),
-  workspaceShell: document.getElementById("workspaceScreen"),
+  workspaceShell: document.getElementById("workspaceShell"),
   selectorScreen: document.getElementById("selectorScreen"),
   viewContent: document.getElementById("viewContent"),
   statusBar: document.getElementById("statusBar"),
-  statusMessage: document.getElementById("statusBar"),
+  statusMessage: document.getElementById("statusMessage"),
 
   // Top bar / shell controls
   logoBtn: document.getElementById("logoBtn"),
   mobileNavBtn: document.getElementById("mobileNavBtn"),
   assistantLauncher: document.getElementById("assistantLauncher"),
   refreshBtn: document.getElementById("refreshBtn"),
-  refreshWorkspaceBtn: document.getElementById("refreshBtn"),
+  refreshWorkspaceBtn: document.getElementById("refreshWorkspaceBtn"),
   homeBtn: document.getElementById("homeBtn"),
 
   // Selector
   selectorList: document.getElementById("selectorList"),
   youngPeopleList: document.getElementById("selectorList"),
   selectorSearch: document.getElementById("selectorSearch"),
-  youngPersonSearchInput: document.getElementById("selectorSearch"),
+  youngPersonSearchInput: document.getElementById("youngPersonSearchInput"),
   selectorRefreshBtn: document.getElementById("selectorRefreshBtn"),
   youngPeopleEmpty: null,
-  backToSelectorBtn: document.getElementById("homeBtn"),
+  backToSelectorBtn: document.getElementById("backToSelectorBtn"),
 
   // Workspace person summary
   personAvatar: document.getElementById("personAvatar"),
@@ -108,7 +108,7 @@ export const els = {
   composerAiFeedback: document.getElementById("composerAiFeedback"),
   composerAutosaveStatus: document.getElementById("composerAutosaveStatus"),
   closeComposerBtn: document.getElementById("closeComposerBtn"),
-  composerSaveBtn: document.getElementById("composerSaveDraftBtn"),
+  composerSaveBtn: document.getElementById("composerSaveBtn"),
   composerSaveDraftBtn: document.getElementById("composerSaveDraftBtn"),
   composerCheckBtn: document.getElementById("composerCheckBtn"),
   composerSubmitBtn: document.getElementById("composerSubmitBtn"),
