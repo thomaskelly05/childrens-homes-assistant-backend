@@ -29,6 +29,5 @@ email-validator
 pyotp
 webauthn
 qrcode[pil]
-multer sharp
 Pillow
 pytest
