@@ -2,7 +2,6 @@ import { els } from "../dom.js";
 import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
-import { renderSection, renderRowList, renderSummaryStat } from "../ui/records.js";
 import {
   mapEducationRecord,
   mapEducationProfile,
@@ -15,6 +14,30 @@ function sortNewestFirst(items = [], keys = []) {
     const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
     return new Date(bValue).getTime() - new Date(aValue).getTime();
   });
+}
+
+function toText(value, fallback = "") {
+  return escapeHtml(String(value ?? fallback ?? ""));
+}
+
+function formatDateValue(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function renderEmptyState(message = "No information available.") {
+  return `
+    <div class="empty-state">
+      <p>${toText(message)}</p>
+    </div>
+  `;
 }
 
 function buildEducationRows(items = []) {
@@ -31,6 +54,9 @@ function buildEducationRows(items = []) {
     created_at: item.created_at || null,
     status: item.workflow_status || "",
     significance: item.significance || "",
+    follow_up_required: !!item.follow_up_required,
+    issue_raised: item.issue_raised || "",
+    attendance_status: item.attendance_status || "",
   }));
 }
 
@@ -46,7 +72,7 @@ function buildAchievementRows(items = []) {
       "Achievement",
     achievement_date: item.achievement_date || null,
     created_at: item.created_at || null,
-    status: item.archived ? "Archived" : "Active",
+    status: item.archived ? "archived" : "active",
   }));
 }
 
@@ -72,22 +98,23 @@ function renderEducationProfile(profile = {}) {
   ].filter((item) => item.value);
 
   if (!items.length) {
-    return `
-      <div class="empty-state">
-        <p>No education profile recorded yet.</p>
-      </div>
-    `;
+    return renderEmptyState("No education profile recorded yet.");
   }
 
   return `
-    <div class="profile-grid">
+    <div class="record-list">
       ${items
         .map(
           (item) => `
-            <div class="profile-card">
-              <div class="profile-card-title">${escapeHtml(item.label)}</div>
-              <div class="profile-card-text">${escapeHtml(item.value)}</div>
-            </div>
+            <article class="record-row">
+              <div class="record-row-main">
+                <div class="record-row-title">${toText(item.label)}</div>
+                <div class="record-row-summary">${toText(item.value)}</div>
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill muted">Profile</span>
+              </div>
+            </article>
           `
         )
         .join("")}
@@ -102,10 +129,171 @@ function buildHeadlineStats(records = []) {
   }).length;
 
   const followUps = records.filter((item) => item.follow_up_required).length;
-
   const issuesRaised = records.filter((item) => item.issue_raised).length;
 
   return { attendanceConcerns, followUps, issuesRaised };
+}
+
+function getRowMeta(item = {}) {
+  return item.record_date || item.achievement_date || item.created_at || "";
+}
+
+function getRowPill(item = {}) {
+  const status = String(item.status || "").toLowerCase();
+  const significance = String(item.significance || "").toLowerCase();
+  const attendanceStatus = String(item.attendance_status || "").toLowerCase();
+
+  if (
+    ["high", "critical"].includes(significance) ||
+    ["absent", "late", "refused", "not_attending"].includes(attendanceStatus) ||
+    item.follow_up_required
+  ) {
+    return { label: "Needs review", tone: "warning" };
+  }
+
+  if (status) {
+    return { label: status.replaceAll("_", " "), tone: "muted" };
+  }
+
+  return { label: "Recorded", tone: "muted" };
+}
+
+function renderRecordRows(items = [], emptyMessage = "No records found.") {
+  if (!items.length) {
+    return renderEmptyState(emptyMessage);
+  }
+
+  return `
+    <div class="record-list">
+      ${items
+        .map((item) => {
+          const pill = getRowPill(item);
+
+          return `
+            <article
+              class="record-row"
+              data-open-record="true"
+              data-record-id="${toText(item.id)}"
+              data-record-type="${toText(item.record_type)}"
+              data-title="${toText(item.title)}"
+              role="button"
+              tabindex="0"
+            >
+              <div class="record-row-main">
+                <div class="record-row-title">${toText(item.title)}</div>
+                ${item.summary ? `<div class="record-row-summary">${toText(item.summary)}</div>` : ""}
+                ${getRowMeta(item) ? `<div class="record-row-meta">${toText(formatDateValue(getRowMeta(item)))}</div>` : ""}
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill ${toText(pill.tone)}">${toText(pill.label)}</span>
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderEducationHtml({
+  educationRecords = [],
+  educationProfile = {},
+  achievements = [],
+  stats,
+}) {
+  const educationRows = buildEducationRows(educationRecords);
+  const achievementRows = buildAchievementRows(achievements);
+
+  const concernRows = buildEducationRows(
+    educationRecords.filter(
+      (item) =>
+        item.follow_up_required ||
+        item.issue_raised ||
+        ["absent", "late", "refused", "not_attending"].includes(
+          String(item.attendance_status || "").toLowerCase()
+        )
+    )
+  );
+
+  return `
+    <section class="overview-panel">
+      <div class="overview-panel-head">
+        <div>
+          <div class="eyebrow">Education</div>
+          <h2>Learning and education</h2>
+          <p>School profile, learning records, achievements and education concerns needing attention.</p>
+        </div>
+      </div>
+
+      <div class="overview-grid">
+        <section class="overview-main">
+          <div class="overview-stats-grid">
+            <article class="overview-stat-card">
+              <span class="overview-stat-label">Education records</span>
+              <strong class="overview-stat-value">${toText(educationRecords.length)}</strong>
+              <span class="overview-stat-note">Recorded education updates</span>
+            </article>
+
+            <article class="overview-stat-card">
+              <span class="overview-stat-label">Attendance concerns</span>
+              <strong class="overview-stat-value">${toText(stats.attendanceConcerns)}</strong>
+              <span class="overview-stat-note">Absence, lateness or non-attendance</span>
+            </article>
+
+            <article class="overview-stat-card">
+              <span class="overview-stat-label">Follow-up required</span>
+              <strong class="overview-stat-value">${toText(stats.followUps)}</strong>
+              <span class="overview-stat-note">Records needing action</span>
+            </article>
+
+            <article class="overview-stat-card">
+              <span class="overview-stat-label">Achievements</span>
+              <strong class="overview-stat-value">${toText(achievements.length)}</strong>
+              <span class="overview-stat-note">Strengths and progress recorded</span>
+            </article>
+          </div>
+
+          <section class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Education profile</h3>
+              <p>School, learning context and education support needs.</p>
+            </div>
+
+            ${renderEducationProfile(educationProfile)}
+          </section>
+
+          <section class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Education records</h3>
+              <p>Attendance, engagement, issues and actions taken.</p>
+            </div>
+
+            ${renderRecordRows(educationRows, "No education records found.")}
+          </section>
+        </section>
+
+        <aside class="overview-side">
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Achievements</h3>
+              <p>Progress, success and strengths linked to education and wider development.</p>
+            </div>
+
+            ${renderRecordRows(achievementRows, "No achievements found.")}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Records needing attention</h3>
+              <p>Education records with follow-up, attendance issues or concerns raised.</p>
+            </div>
+
+            ${renderRecordRows(concernRows, "No education concerns needing attention.")}
+          </section>
+        </aside>
+      </div>
+    </section>
+  `;
 }
 
 export async function loadEducation() {
@@ -156,50 +344,12 @@ export async function loadEducation() {
 
     const stats = buildHeadlineStats(educationRecords);
 
-    els.viewContent.innerHTML = `
-      <section class="summary-strip">
-        ${renderSummaryStat("Education records", educationRecords.length)}
-        ${renderSummaryStat("Attendance concerns", stats.attendanceConcerns)}
-        ${renderSummaryStat("Follow-up required", stats.followUps)}
-        ${renderSummaryStat("Achievements", achievements.length)}
-      </section>
-
-      ${renderSection(
-        "Education profile",
-        "School, learning context and education support needs.",
-        renderEducationProfile(educationProfile)
-      )}
-
-      ${renderSection(
-        "Education records",
-        "Attendance, engagement, issues and actions taken.",
-        renderRowList(buildEducationRows(educationRecords), "No education records found.")
-      )}
-
-      ${renderSection(
-        "Achievements",
-        "Progress, success and strengths linked to education and wider development.",
-        renderRowList(buildAchievementRows(achievements), "No achievements found.")
-      )}
-
-      ${renderSection(
-        "Records needing attention",
-        "Education records with follow-up, attendance issues or concerns raised.",
-        renderRowList(
-          buildEducationRows(
-            educationRecords.filter(
-              (item) =>
-                item.follow_up_required ||
-                item.issue_raised ||
-                ["absent", "late", "refused", "not_attending"].includes(
-                  String(item.attendance_status || "").toLowerCase()
-                )
-            )
-          ),
-          "No education concerns needing attention."
-        )
-      )}
-    `;
+    els.viewContent.innerHTML = renderEducationHtml({
+      educationRecords,
+      educationProfile,
+      achievements,
+      stats,
+    });
   } catch (error) {
     els.viewContent.innerHTML = `
       <div class="empty-state">
