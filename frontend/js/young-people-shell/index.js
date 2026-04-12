@@ -7,6 +7,7 @@ import {
 import { initialiseShellNavigation, showError } from "./ui/nav.js";
 import { loadYoungPersonSelector, openYoungPerson } from "./ui/selector.js";
 import { bindShellChrome, refreshShellChrome } from "./ui/shell-ui.js";
+import { bindAssistantUi, refreshAssistantUi } from "./ui/assistant-ui.js";
 
 function showWorkspace() {
   els.selectorScreen?.classList.add("hidden");
@@ -26,6 +27,7 @@ async function restoreSelectedYoungPerson() {
     state.selectedYoungPerson = null;
     showSelector();
     refreshShellChrome();
+    refreshAssistantUi();
     return false;
   }
 
@@ -36,6 +38,7 @@ async function restoreSelectedYoungPerson() {
   try {
     await openYoungPerson(idFromUrl, { skipInitialSectionLoad: true });
     refreshShellChrome();
+    refreshAssistantUi();
     return true;
   } catch (error) {
     console.error("[index] failed to restore young person", error);
@@ -44,6 +47,7 @@ async function restoreSelectedYoungPerson() {
     setYoungPersonIdInUrl(null);
     showSelector();
     refreshShellChrome();
+    refreshAssistantUi();
     showError(error?.message || "Failed to open selected young person.");
     return false;
   }
@@ -52,7 +56,9 @@ async function restoreSelectedYoungPerson() {
 async function bootstrap() {
   try {
     bindShellChrome();
+    bindAssistantUi();
     refreshShellChrome();
+    refreshAssistantUi();
 
     const restored = await restoreSelectedYoungPerson();
 
@@ -65,9 +71,7 @@ async function bootstrap() {
       }
     }
 
-    refreshShellChrome();
     await initialiseShellNavigation();
-    refreshShellChrome();
   } catch (error) {
     console.error("[index] bootstrap failed", error);
     showError(error?.message || "Failed to start workspace.");
