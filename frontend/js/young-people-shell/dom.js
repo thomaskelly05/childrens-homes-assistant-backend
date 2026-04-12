@@ -2,21 +2,28 @@ export const els = {
   // Shell / layout
   app: document.getElementById("app"),
   workspaceScreen: document.getElementById("workspaceScreen"),
+  workspaceShell: document.getElementById("workspaceScreen"),
   selectorScreen: document.getElementById("selectorScreen"),
   viewContent: document.getElementById("viewContent"),
   statusBar: document.getElementById("statusBar"),
+  statusMessage: document.getElementById("statusBar"),
 
   // Top bar / shell controls
   logoBtn: document.getElementById("logoBtn"),
   mobileNavBtn: document.getElementById("mobileNavBtn"),
   assistantLauncher: document.getElementById("assistantLauncher"),
   refreshBtn: document.getElementById("refreshBtn"),
+  refreshWorkspaceBtn: document.getElementById("refreshBtn"),
   homeBtn: document.getElementById("homeBtn"),
 
   // Selector
   selectorList: document.getElementById("selectorList"),
+  youngPeopleList: document.getElementById("selectorList"),
   selectorSearch: document.getElementById("selectorSearch"),
+  youngPersonSearchInput: document.getElementById("selectorSearch"),
   selectorRefreshBtn: document.getElementById("selectorRefreshBtn"),
+  youngPeopleEmpty: null,
+  backToSelectorBtn: document.getElementById("homeBtn"),
 
   // Workspace person summary
   personAvatar: document.getElementById("personAvatar"),
@@ -94,11 +101,14 @@ export const els = {
   composerSubtitle: document.getElementById("composerSubtitle"),
   composerGuidanceText: document.getElementById("composerGuidanceText"),
   composerPrompts: document.getElementById("composerPrompts"),
+  composerForm: document.getElementById("recordComposerForm"),
   recordComposerForm: document.getElementById("recordComposerForm"),
+  composerFields: document.getElementById("recordComposerFields"),
   recordComposerFields: document.getElementById("recordComposerFields"),
   composerAiFeedback: document.getElementById("composerAiFeedback"),
   composerAutosaveStatus: document.getElementById("composerAutosaveStatus"),
   closeComposerBtn: document.getElementById("closeComposerBtn"),
+  composerSaveBtn: document.getElementById("composerSaveDraftBtn"),
   composerSaveDraftBtn: document.getElementById("composerSaveDraftBtn"),
   composerCheckBtn: document.getElementById("composerCheckBtn"),
   composerSubmitBtn: document.getElementById("composerSubmitBtn"),
@@ -120,4 +130,11 @@ export const els = {
   drawerApproveBtn: document.getElementById("drawerApproveBtn"),
   drawerReturnBtn: document.getElementById("drawerReturnBtn"),
   drawerArchiveBtn: document.getElementById("drawerArchiveBtn"),
+
+  // Suggestions
+  suggestionsPanel: document.getElementById("suggestionsPanel"),
+  suggestionsPanelTitle: document.getElementById("suggestionsPanelTitle"),
+  suggestionsPanelSubtitle: document.getElementById("suggestionsPanelSubtitle"),
+  suggestionsPanelBody: document.getElementById("suggestionsPanelBody"),
+  closeSuggestionsPanelBtn: document.getElementById("closeSuggestionsPanelBtn"),
 };
