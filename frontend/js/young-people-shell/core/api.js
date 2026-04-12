@@ -40,8 +40,14 @@ const API_ROUTE_ALIASES = [
   [/\/young-people\/(\d+)\/risks$/, "/young-people/$1/plans"],
 ];
 
-export function resolveApiUrl(url) {
+function shouldResolveAlias(method = "GET") {
+  const upper = String(method || "GET").toUpperCase();
+  return upper === "GET" || upper === "HEAD";
+}
+
+export function resolveApiUrl(url, method = "GET") {
   if (!url || typeof url !== "string") return url;
+  if (!shouldResolveAlias(method)) return url;
 
   for (const [pattern, replacement] of API_ROUTE_ALIASES) {
     if (pattern.test(url)) {
@@ -53,7 +59,8 @@ export function resolveApiUrl(url) {
 }
 
 export async function apiRequest(url, options = {}) {
-  const resolvedUrl = resolveApiUrl(url);
+  const method = String(options.method || "GET").toUpperCase();
+  const resolvedUrl = resolveApiUrl(url, method);
 
   const config = {
     credentials: "same-origin",
@@ -63,6 +70,7 @@ export async function apiRequest(url, options = {}) {
       ...(options.headers || {}),
     },
     ...options,
+    method,
   };
 
   if (config.body && typeof config.body !== "string") {
@@ -76,6 +84,8 @@ export async function apiRequest(url, options = {}) {
     const error = new Error(buildErrorMessage(response, data));
     error.status = response.status;
     error.data = data;
+    error.url = resolvedUrl;
+    error.originalUrl = url;
     throw error;
   }
 
@@ -130,7 +140,11 @@ export function unwrapCreateResponse(recordType, response) {
     profile_education: ["education_profile", "young_person_education_profile"],
     profile_health: ["health_profile", "young_person_health_profile"],
     profile_legal: ["legal_status", "young_person_legal_status"],
-    profile_formulation: ["formulation", "young_person_formulation"],
+    profile_formulation: [
+      "formulation",
+      "young_person_formulation",
+      "young_person_formulations",
+    ],
   };
 
   const keys = commonByType[recordType] || [];
