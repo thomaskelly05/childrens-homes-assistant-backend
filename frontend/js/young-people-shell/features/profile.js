@@ -17,10 +17,32 @@ function toText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
 }
 
+function firstObject(...values) {
+  for (const value of values) {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      return value;
+    }
+  }
+  return {};
+}
+
+function firstArray(...values) {
+  for (const value of values) {
+    if (Array.isArray(value)) {
+      return value;
+    }
+  }
+  return [];
+}
+
 function renderEmptyState(message = "No information recorded yet.") {
   return `
     <div class="empty-state">
-      <p>${toText(message)}</p>
+      <div class="empty-state-inner">
+        <div class="empty-state-icon" aria-hidden="true">◉</div>
+        <h3>No profile data yet</h3>
+        <p>${toText(message)}</p>
+      </div>
     </div>
   `;
 }
@@ -168,24 +190,6 @@ function renderHero(youngPerson = {}) {
       </div>
     </section>
   `;
-}
-
-function firstObject(...values) {
-  for (const value of values) {
-    if (value && typeof value === "object" && !Array.isArray(value)) {
-      return value;
-    }
-  }
-  return {};
-}
-
-function firstArray(...values) {
-  for (const value of values) {
-    if (Array.isArray(value)) {
-      return value;
-    }
-  }
-  return [];
 }
 
 function buildTopCounts({ contacts = [], legal = {}, education = {}, health = {} }) {
