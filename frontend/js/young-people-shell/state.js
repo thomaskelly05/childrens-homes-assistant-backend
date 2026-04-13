@@ -10,6 +10,10 @@ export const state = {
   activeSection: "workspace",
   currentView: "workspace",
 
+  // Role / scope layer
+  userRole: "staff", // "staff" | "manager" | "ri"
+  currentScope: "child", // "child" | "home" | "quality"
+
   // General UI state
   loading: false,
   error: null,
