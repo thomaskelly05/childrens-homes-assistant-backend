@@ -37,25 +37,18 @@ function showSelector() {
   els.selectorScreen?.classList.remove("hidden");
 }
 
-function hydrateUserContext() {
-  const roleFromDom =
-    els.app?.dataset?.userRole ||
-    state.currentUser?.role ||
-    state.currentUser?.user_role ||
-    "staff";
+function normaliseRole(role) {
+  const value = String(role || "").trim().toLowerCase();
 
-  const homeIdFromDom =
-    els.app?.dataset?.homeId ||
-    state.currentUser?.home_id ||
-    state.currentUser?.homeId ||
-    null;
-
-  state.userRole = String(roleFromDom).toLowerCase();
-  state.homeId = homeIdFromDom || state.homeId || null;
+  if (value === "administrator") return "admin";
+  if (value === "admin") return "admin";
+  if (value === "ri") return "ri";
+  if (value === "manager") return "manager";
+  return "staff";
 }
 
 function getCurrentRole() {
-  return String(state.userRole || "staff").toLowerCase();
+  return normaliseRole(state.userRole || "staff");
 }
 
 function getAllowedScopesForRole() {
@@ -187,47 +180,35 @@ function bindScopeEvents() {
   });
 }
 
+function applyRoleFromDom() {
+  const roleFromDom =
+    els.app?.dataset?.userRole ||
+    document.body?.dataset?.userRole ||
+    "staff";
+
+  state.userRole = normaliseRole(roleFromDom);
+}
+
 async function restoreSelectedYoungPerson() {
   const idFromUrl = getYoungPersonIdFromUrl();
 
   if (!idFromUrl) {
     state.youngPersonId = null;
     state.selectedYoungPerson = null;
-
-    if (state.currentScope === "child") {
-      showSelector();
-    } else {
-      showWorkspace();
-    }
-
-    refreshAllChrome();
     return false;
   }
 
   state.youngPersonId = idFromUrl;
   setYoungPersonIdInUrl(idFromUrl);
 
-  if (state.currentScope === "child") {
-    showWorkspace();
-  }
-
   try {
     await openYoungPerson(idFromUrl, { skipInitialSectionLoad: true });
-    refreshAllChrome();
     return true;
   } catch (error) {
     console.error("[index] failed to restore young person", error);
     state.youngPersonId = null;
     state.selectedYoungPerson = null;
     setYoungPersonIdInUrl(null);
-
-    if (state.currentScope === "child") {
-      showSelector();
-    } else {
-      showWorkspace();
-    }
-
-    refreshAllChrome();
     showError(error?.message || "Failed to open selected young person.");
     return false;
   }
@@ -235,7 +216,6 @@ async function restoreSelectedYoungPerson() {
 
 async function bootstrapSelectorIfNeeded(restored) {
   if (restored) return;
-  if (state.currentScope !== "child") return;
 
   try {
     await loadYoungPersonSelector();
@@ -245,12 +225,27 @@ async function bootstrapSelectorIfNeeded(restored) {
   }
 }
 
+function resolveInitialScreen(restoredYoungPerson) {
+  const scope = state.currentScope || "child";
+
+  if (scope === "child") {
+    if (restoredYoungPerson && state.youngPersonId) {
+      showWorkspace();
+    } else {
+      showSelector();
+    }
+    return;
+  }
+
+  showWorkspace();
+}
+
 async function bootstrap() {
   if (bootstrapped) return;
   bootstrapped = true;
 
   try {
-    hydrateUserContext();
+    applyRoleFromDom();
     ensureValidScopeForRole();
 
     bindShellChrome();
@@ -258,10 +253,22 @@ async function bootstrap() {
     bindAssistantEvents();
     bindScopeEvents();
 
+    const restoredYoungPerson = await restoreSelectedYoungPerson();
+    await bootstrapSelectorIfNeeded(restoredYoungPerson);
+
+    resolveInitialScreen(restoredYoungPerson);
+
     refreshAllChrome();
 
-    const restored = await restoreSelectedYoungPerson();
-    await bootstrapSelectorIfNeeded(restored);
+    if (state.currentScope !== "child") {
+      state.currentSection = getDefaultSectionForScope(state.currentScope);
+      state.activeSection = state.currentSection;
+      state.currentView = state.currentSection;
+    } else if (!state.currentSection) {
+      state.currentSection = "workspace";
+      state.activeSection = "workspace";
+      state.currentView = "workspace";
+    }
 
     await initialiseShellNavigation();
     refreshAllChrome();
