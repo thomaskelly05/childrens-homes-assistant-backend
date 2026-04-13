@@ -1,5 +1,9 @@
 const API_BASE = window.location.origin;
 
+const GET_CACHE_MS = 30000;
+const inflightGetRequests = new Map();
+const getResponseCache = new Map();
+
 async function readJsonSafely(response) {
   const text = await response.text();
 
@@ -21,14 +25,44 @@ function buildErrorMessage(response, data) {
 
 const API_ROUTE_ALIASES = [
   [/\/young-people\/(\d+)\/alerts$/, "/young-people/$1/incidents"],
+
+  // Appointments
   [/\/young-people\/(\d+)\/young-person-appointments$/, "/young-people/$1/appointments"],
 
-  // Keep only if no dedicated handover endpoint exists yet
+  // Handover fallback
   [/\/young-people\/(\d+)\/handover-records$/, "/young-people/$1/timeline?limit=12"],
 
-  // Temporary fallbacks only if backend does not yet expose dedicated routes
+  // Health
+  [/\/young-people\/(\d+)\/health-records$/, "/young-people/$1/health"],
+  [/\/young-people\/(\d+)\/medication-profiles$/, "/young-people/$1/health"],
+  [/\/young-people\/(\d+)\/medication-records$/, "/young-people/$1/health"],
+
+  // Education
+  [/\/young-people\/(\d+)\/education-records$/, "/young-people/$1/education"],
+  [/\/young-people\/(\d+)\/achievements$/, "/young-people/$1/education"],
+
+  // Family
+  [/\/young-people\/(\d+)\/family-contact-records$/, "/young-people/$1/family"],
+
+  // Timeline-related fallbacks
   [/\/young-people\/(\d+)\/safeguarding-records$/, "/young-people/$1/incidents"],
   [/\/young-people\/(\d+)\/missing-episodes$/, "/young-people/$1/incidents"],
+
+  // Readiness / action fallbacks
+  [/\/young-people\/(\d+)\/tasks$/, "/young-people/$1/compliance"],
+  [/\/young-people\/(\d+)\/documents$/, "/young-people/$1/compliance"],
+  [/\/young-people\/(\d+)\/approvals$/, "/young-people/$1/compliance"],
+
+  // Manager / review fallbacks
+  [/\/young-people\/(\d+)\/manager-review$/, "/young-people/$1/compliance"],
+  [/\/young-people\/(\d+)\/manager-actions$/, "/young-people/$1/compliance"],
+
+  // Planning / risk
+  [/\/young-people\/(\d+)\/risks$/, "/young-people/$1/plans"],
+
+  // Reports
+  [/\/young-people\/(\d+)\/inspection-packs$/, "/young-people/$1/reports"],
+  [/\/young-people\/(\d+)\/monthly-reviews$/, "/young-people/$1/reports"],
 ];
 
 function shouldResolveAlias(method = "GET") {
@@ -77,10 +111,57 @@ export function withCsrfHeaders(method = "GET", headers = {}) {
   return nextHeaders;
 }
 
+function makeCacheKey(method, resolvedUrl) {
+  return `${String(method || "GET").toUpperCase()}::${resolvedUrl}`;
+}
+
+function getCachedResponse(cacheKey) {
+  const cached = getResponseCache.get(cacheKey);
+  if (!cached) return null;
+
+  const expired = Date.now() - cached.timestamp > GET_CACHE_MS;
+  if (expired) {
+    getResponseCache.delete(cacheKey);
+    return null;
+  }
+
+  return cached.data;
+}
+
+function setCachedResponse(cacheKey, data) {
+  getResponseCache.set(cacheKey, {
+    timestamp: Date.now(),
+    data,
+  });
+}
+
+export function clearApiCache(url = null) {
+  if (!url) {
+    getResponseCache.clear();
+    inflightGetRequests.clear();
+    return;
+  }
+
+  const resolvedUrl = resolveApiUrl(url, "GET");
+  const cacheKey = makeCacheKey("GET", resolvedUrl);
+  getResponseCache.delete(cacheKey);
+  inflightGetRequests.delete(cacheKey);
+}
+
 export async function apiRequest(url, options = {}) {
   const method = String(options.method || "GET").toUpperCase();
   const resolvedUrl = resolveApiUrl(url, method);
   const isFormData = options.body instanceof FormData;
+  const useCache = method === "GET" && !options.skipCache;
+  const cacheKey = makeCacheKey(method, resolvedUrl);
+
+  if (useCache) {
+    const cached = getCachedResponse(cacheKey);
+    if (cached) return cached;
+
+    const inflight = inflightGetRequests.get(cacheKey);
+    if (inflight) return inflight;
+  }
 
   const headers = withCsrfHeaders(method, {
     Accept: "application/json",
@@ -98,43 +179,73 @@ export async function apiRequest(url, options = {}) {
     headers,
   };
 
-  if (config.body && typeof config.body !== "string" && !(config.body instanceof FormData)) {
+  if (
+    config.body &&
+    typeof config.body !== "string" &&
+    !(config.body instanceof FormData)
+  ) {
     config.body = JSON.stringify(config.body);
   }
 
-  let response;
+  const requestPromise = (async () => {
+    let response;
+
+    try {
+      response = await fetch(`${API_BASE}${resolvedUrl}`, config);
+    } catch {
+      throw new Error("Network error");
+    }
+
+    const data = await readJsonSafely(response);
+
+    if (!response.ok) {
+      const error = new Error(buildErrorMessage(response, data));
+      error.status = response.status;
+      error.data = data;
+      error.url = `${API_BASE}${resolvedUrl}`;
+      error.originalUrl = url;
+      throw error;
+    }
+
+    if (useCache) {
+      setCachedResponse(cacheKey, data);
+    }
+
+    return data;
+  })();
+
+  if (useCache) {
+    inflightGetRequests.set(cacheKey, requestPromise);
+  }
 
   try {
-    response = await fetch(`${API_BASE}${resolvedUrl}`, config);
-  } catch {
-    throw new Error("Network error");
+    return await requestPromise;
+  } finally {
+    if (useCache) {
+      inflightGetRequests.delete(cacheKey);
+    }
   }
-
-  const data = await readJsonSafely(response);
-
-  if (!response.ok) {
-    const error = new Error(buildErrorMessage(response, data));
-    error.status = response.status;
-    error.data = data;
-    error.url = `${API_BASE}${resolvedUrl}`;
-    error.originalUrl = url;
-    throw error;
-  }
-
-  return data;
 }
 
-export async function apiGet(url) {
+export async function apiGet(url, options = {}) {
   return apiRequest(url, {
     method: "GET",
+    ...options,
   });
 }
 
 export async function apiSend(url, method = "POST", body = null) {
-  return apiRequest(url, {
+  const response = await apiRequest(url, {
     method,
     body,
+    skipCache: true,
   });
+
+  // Any write may invalidate one or more reads, so clear cached GETs.
+  getResponseCache.clear();
+  inflightGetRequests.clear();
+
+  return response;
 }
 
 export function unwrapCreateResponse(recordType, response) {
@@ -298,7 +409,7 @@ export async function apiStreamAssistant(payload, handlers = {}) {
   }
 
   if (buffer.trim()) {
-    buffer = consumeSseBuffer(`${buffer}\n\n`, (eventName, payloadValue) => {
+    consumeSseBuffer(`${buffer}\n\n`, (eventName, payloadValue) => {
       if (payloadValue === "[DONE]" || eventName === "done") {
         onDone(streamedText);
         return;
