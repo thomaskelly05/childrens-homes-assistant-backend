@@ -2,6 +2,7 @@ import { els } from "../dom.js";
 import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml, formatDate } from "../core/utils.js";
+import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 import {
   mapFamilyContactRecord,
   mapYoungPersonContact,
@@ -36,6 +37,7 @@ function buildFamilyRecordRows(items = []) {
       item.post_contact_presentation ||
       item.concerns ||
       item.child_voice ||
+      item.pre_contact_presentation ||
       "Family contact record",
     contact_datetime: item.contact_datetime || null,
     created_at: item.created_at || null,
@@ -43,6 +45,11 @@ function buildFamilyRecordRows(items = []) {
     significance: item.significance || "",
     follow_up_required: !!item.follow_up_required,
     concerns: item.concerns || "",
+    location: item.location || "",
+    supervision_level: item.supervision_level || "",
+    pre_contact_presentation: item.pre_contact_presentation || "",
+    post_contact_presentation: item.post_contact_presentation || "",
+    child_voice: item.child_voice || "",
   }));
 }
 
@@ -70,6 +77,9 @@ function buildContactRows(items = []) {
     is_approved_contact: !!item.is_approved_contact,
     is_restricted_contact: !!item.is_restricted_contact,
     notes: item.notes || "",
+    relationship_to_young_person: item.relationship_to_young_person || "",
+    contact_type: item.contact_type || "",
+    full_name: item.full_name || "",
   }));
 }
 
@@ -128,8 +138,42 @@ function buildHeadlineStats(records = [], contacts = []) {
   const concerns = records.filter((item) => item.concerns).length;
   const approved = contacts.filter((item) => item.is_approved_contact).length;
   const restricted = contacts.filter((item) => item.is_restricted_contact).length;
+  const parentalResponsibility = contacts.filter(
+    (item) => item.is_parental_responsibility_holder
+  ).length;
 
-  return { followUps, concerns, approved, restricted };
+  return { followUps, concerns, approved, restricted, parentalResponsibility };
+}
+
+function buildAttentionRows(records = []) {
+  return records.filter(
+    (item) =>
+      item.follow_up_required ||
+      item.concerns ||
+      ["high", "critical"].includes(String(item.significance || "").toLowerCase())
+  );
+}
+
+function buildPositiveRows(records = []) {
+  return records.filter(
+    (item) => item.child_voice || item.post_contact_presentation
+  );
+}
+
+function buildRecentThemes(records = []) {
+  const latest = records.slice(0, 4);
+
+  if (!latest.length) return [];
+
+  return latest.map((item) => ({
+    title: item.title || "Family contact",
+    summary:
+      item.post_contact_presentation ||
+      item.child_voice ||
+      item.pre_contact_presentation ||
+      item.concerns ||
+      "Recent family contact theme.",
+  }));
 }
 
 function getRowDate(item = {}) {
@@ -196,15 +240,36 @@ function renderRecordRows(items = [], emptyMessage = "No records found.") {
   `;
 }
 
+function renderThemeCards(items = []) {
+  if (!items.length) {
+    return renderEmptyState("No recent family themes are showing yet.");
+  }
+
+  return `
+    <div class="priority-list">
+      ${items
+        .map(
+          (item) => `
+            <article class="priority-item">
+              <strong>${toText(item.title)}</strong>
+              <p>${toText(item.summary)}</p>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 function renderFamilyHtml({ familyRecords = [], contacts = [], stats }) {
   const familyRows = buildFamilyRecordRows(familyRecords);
-  const permissionRows = buildContactRows(
-    contacts.filter((item) => item.is_approved_contact || item.is_restricted_contact)
+  const contactRows = buildContactRows(contacts);
+  const permissionRows = contactRows.filter(
+    (item) => item.is_approved_contact || item.is_restricted_contact
   );
-
-  const attentionRows = buildFamilyRecordRows(
-    familyRecords.filter((item) => item.follow_up_required || item.concerns)
-  );
+  const attentionRows = buildAttentionRows(familyRows);
+  const positiveRows = buildPositiveRows(familyRows);
+  const recentThemes = buildRecentThemes(familyRows);
 
   return `
     <section class="overview-panel">
@@ -212,7 +277,7 @@ function renderFamilyHtml({ familyRecords = [], contacts = [], stats }) {
         <div>
           <div class="eyebrow">Family</div>
           <h2>Family and important relationships</h2>
-          <p>Key contacts, recorded family contact, concerns and follow-up.</p>
+          <p>Key contacts, family contact records, restrictions, concerns and follow-up.</p>
         </div>
       </div>
 
@@ -232,6 +297,12 @@ function renderFamilyHtml({ familyRecords = [], contacts = [], stats }) {
             </article>
 
             <article class="overview-stat-card">
+              <span class="overview-stat-label">Concerns logged</span>
+              <strong class="overview-stat-value">${toText(stats.concerns)}</strong>
+              <span class="overview-stat-note">Contacts where concerns were recorded</span>
+            </article>
+
+            <article class="overview-stat-card">
               <span class="overview-stat-label">Approved contacts</span>
               <strong class="overview-stat-value">${toText(stats.approved)}</strong>
               <span class="overview-stat-note">Contacts marked approved</span>
@@ -242,21 +313,27 @@ function renderFamilyHtml({ familyRecords = [], contacts = [], stats }) {
               <strong class="overview-stat-value">${toText(stats.restricted)}</strong>
               <span class="overview-stat-note">Contacts with restrictions</span>
             </article>
+
+            <article class="overview-stat-card">
+              <span class="overview-stat-label">Parental responsibility</span>
+              <strong class="overview-stat-value">${toText(stats.parentalResponsibility)}</strong>
+              <span class="overview-stat-note">Contacts holding parental responsibility</span>
+            </article>
           </div>
 
           <section class="overview-section-card">
             <div class="overview-section-head">
               <h3>Important contacts</h3>
-              <p>Family members, professionals and approved or restricted contacts.</p>
+              <p>Family members and other key people linked to the young person.</p>
             </div>
 
-            ${renderContactsRows(contacts)}
+            ${renderContactsRows(contactRows)}
           </section>
 
           <section class="overview-section-card">
             <div class="overview-section-head">
               <h3>Family contact records</h3>
-              <p>Recorded contact, presentation, concerns and follow-up.</p>
+              <p>Recorded contact, presentation, concerns, child voice and follow-up.</p>
             </div>
 
             ${renderRecordRows(familyRows, "No family contact records found.")}
@@ -266,8 +343,8 @@ function renderFamilyHtml({ familyRecords = [], contacts = [], stats }) {
         <aside class="overview-side">
           <section class="overview-side-card">
             <div class="overview-section-head">
-              <h3>Records needing attention</h3>
-              <p>Family contact records where concerns or follow-up have been recorded.</p>
+              <h3>Needs attention</h3>
+              <p>Family contact records where concerns, high significance or follow-up are present.</p>
             </div>
 
             ${renderRecordRows(attentionRows, "No family contact concerns needing attention.")}
@@ -276,10 +353,28 @@ function renderFamilyHtml({ familyRecords = [], contacts = [], stats }) {
           <section class="overview-side-card">
             <div class="overview-section-head">
               <h3>Approved and restricted contacts</h3>
-              <p>Quick view of contact permissions and restrictions.</p>
+              <p>Quick view of permissions and restrictions.</p>
             </div>
 
             ${renderRecordRows(permissionRows, "No approved or restricted contact flags found.")}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Positive or reflective themes</h3>
+              <p>Recent child voice, post-contact presentation and useful family patterns.</p>
+            </div>
+
+            ${renderRecordRows(positiveRows, "No positive or reflective themes recorded yet.")}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Recent family themes</h3>
+              <p>The latest patterns adults may want to keep in mind.</p>
+            </div>
+
+            ${renderThemeCards(recentThemes)}
           </section>
         </aside>
       </div>
@@ -333,11 +428,36 @@ export async function loadFamily() {
       contacts,
       stats,
     });
+
+    const latestRecord = familyRecords[0];
+    const nextConcern = familyRecords.find(
+      (item) => item.follow_up_required || item.concerns
+    );
+
+    updateWorkspaceSummaryStrip({
+      today: `${familyRecords.length} family contact record${familyRecords.length === 1 ? "" : "s"} • ${contacts.length} contacts`,
+      nextEvent: nextConcern
+        ? `${nextConcern.contact_person || nextConcern.contact_type || "Family contact"} needs follow-up`
+        : "No immediate family concern",
+      lastRecord: latestRecord
+        ? `Latest family contact ${formatDate(
+            latestRecord.contact_datetime || latestRecord.created_at
+          )}`
+        : "No recent family contact",
+      openActions: `${stats.followUps} follow-up item${stats.followUps === 1 ? "" : "s"} • ${stats.restricted} restricted`,
+    });
   } catch (error) {
     els.viewContent.innerHTML = `
       <div class="empty-state">
         <p>${escapeHtml(error.message || "Failed to load family data.")}</p>
       </div>
     `;
+
+    updateWorkspaceSummaryStrip({
+      today: "Family unavailable",
+      nextEvent: "Unable to load family view",
+      lastRecord: "No family data loaded",
+      openActions: "Check API responses",
+    });
   }
 }
