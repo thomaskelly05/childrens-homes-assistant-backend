@@ -10,7 +10,61 @@ import {
   mapTask,
   mapDailyNote,
   mapKeyworkSession,
+  mapCommunicationRecord,
+  mapStatutoryDocument,
 } from "../core/adapters.js";
+import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
+
+function getCurrentScope() {
+  return state.currentScope || "child";
+}
+
+function getHomeId() {
+  return (
+    state.homeId ||
+    state.currentUser?.home_id ||
+    state.currentUser?.homeId ||
+    state.selectedYoungPerson?.home_id ||
+    null
+  );
+}
+
+function getScopeEntityId() {
+  if (getCurrentScope() === "child") {
+    return state.youngPersonId || null;
+  }
+
+  return getHomeId();
+}
+
+function getScopeTitle() {
+  const scope = getCurrentScope();
+
+  if (scope === "home") {
+    return (
+      state.currentUser?.home_name ||
+      state.currentUser?.homeName ||
+      (getHomeId() ? `Home ${getHomeId()}` : "Home")
+    );
+  }
+
+  if (scope === "quality") {
+    return (
+      state.currentUser?.home_name ||
+      state.currentUser?.homeName ||
+      (getHomeId() ? `Home ${getHomeId()}` : "Quality and RI")
+    );
+  }
+
+  const person = state.selectedYoungPerson || state.youngPerson || {};
+  return (
+    person.full_name ||
+    person.name ||
+    [person.first_name, person.last_name].filter(Boolean).join(" ").trim() ||
+    person.preferred_name ||
+    "Young person"
+  );
+}
 
 function sortNewestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
@@ -92,14 +146,16 @@ function buildReviewRecordRows(items = []) {
       item.presentation ||
       item.reflective_analysis ||
       item.concern_summary ||
+      item.note ||
       "Record awaiting review",
     created_at: item.created_at || null,
     status: item.workflow_status || item.status || item.approval_status || "",
     severity: item.severity || "",
     review_date: item.review_date || null,
     due_date: item.due_date || null,
-    occurred_at: item.occurred_at || null,
+    occurred_at: item.occurred_at || item.incident_datetime || null,
     session_date: item.session_date || null,
+    contact_datetime: item.contact_datetime || null,
   }));
 }
 
@@ -108,12 +164,14 @@ function buildOverviewCards({
   highRiskIncidents = [],
   complianceIssues = [],
   openTasks = [],
+  managerActions = [],
 }) {
   return {
     awaitingReview: submittedRecords.length,
     highRiskIncidents: highRiskIncidents.length,
     complianceIssues: complianceIssues.length,
     openTasks: openTasks.length,
+    managerActions: managerActions.length,
   };
 }
 
@@ -123,6 +181,7 @@ function getRowDate(item = {}) {
     item.review_date ||
     item.due_date ||
     item.occurred_at ||
+    item.contact_datetime ||
     item.session_date ||
     item.record_date ||
     item.created_at ||
@@ -136,7 +195,7 @@ function getRowPill(item = {}) {
 
   if (
     ["high", "critical"].includes(severity) ||
-    ["overdue", "escalated", "returned"].includes(status)
+    ["overdue", "escalated", "returned", "review_due"].includes(status)
   ) {
     return { label: "Needs review", tone: "warning" };
   }
@@ -145,7 +204,7 @@ function getRowPill(item = {}) {
     return { label: "Awaiting review", tone: "warning" };
   }
 
-  if (["approved", "active", "completed", "open"].includes(status)) {
+  if (["approved", "active", "completed", "open", "recorded"].includes(status)) {
     return { label: status.replaceAll("_", " "), tone: "muted" };
   }
 
@@ -176,7 +235,11 @@ function renderRecordRows(items = [], emptyMessage = "No records found.") {
               <div class="record-row-main">
                 <div class="record-row-title">${toText(item.title || "Record")}</div>
                 ${item.summary ? `<div class="record-row-summary">${toText(item.summary)}</div>` : ""}
-                ${getRowDate(item) ? `<div class="record-row-meta">${toText(formatDateTimeValue(getRowDate(item)))}</div>` : ""}
+                ${
+                  getRowDate(item)
+                    ? `<div class="record-row-meta">${toText(formatDateTimeValue(getRowDate(item)))}</div>`
+                    : ""
+                }
               </div>
               <div class="record-row-side">
                 <span class="row-pill ${toText(pill.tone)}">${toText(pill.label)}</span>
@@ -196,12 +259,16 @@ function renderManagerHtml({
   complianceIssues = [],
   openTasks = [],
   managerActions = [],
+  communications = [],
+  documents = [],
 }) {
+  const scope = getCurrentScope();
   const overview = buildOverviewCards({
     submittedRecords,
     highRiskIncidents,
     complianceIssues,
     openTasks,
+    managerActions,
   });
 
   const submittedRows = buildReviewRecordRows(submittedRecords);
@@ -210,14 +277,30 @@ function renderManagerHtml({
   const complianceRows = buildReviewRecordRows(complianceIssues);
   const taskRows = buildReviewRecordRows(openTasks);
   const actionRows = buildManagerActionRows(managerActions);
+  const communicationRows = buildReviewRecordRows(communications);
+  const documentRows = buildReviewRecordRows(documents);
+
+  const title =
+    scope === "child"
+      ? "Leadership and review"
+      : scope === "home"
+      ? "Home leadership and oversight"
+      : "Quality and RI oversight";
+
+  const subtitle =
+    scope === "child"
+      ? "The quickest view of records, risk and operational items needing oversight."
+      : scope === "home"
+      ? "A service-wide view of records, risks, compliance and action needing leadership attention."
+      : "A quality and RI view of risk, compliance, patterns and oversight activity.";
 
   return `
     <section class="overview-panel">
       <div class="overview-panel-head">
         <div>
           <div class="eyebrow">Oversight</div>
-          <h2>Leadership and review</h2>
-          <p>The quickest view of records, risk and operational items needing oversight.</p>
+          <h2>${toText(title)} • ${toText(getScopeTitle())}</h2>
+          <p>${toText(subtitle)}</p>
         </div>
       </div>
 
@@ -246,6 +329,12 @@ function renderManagerHtml({
               <span class="overview-stat-label">Open tasks</span>
               <strong class="overview-stat-value">${toText(overview.openTasks)}</strong>
               <span class="overview-stat-note">Tasks still needing follow-up</span>
+            </article>
+
+            <article class="overview-stat-card">
+              <span class="overview-stat-label">Manager actions</span>
+              <strong class="overview-stat-value">${toText(overview.managerActions)}</strong>
+              <span class="overview-stat-note">Recorded leadership actions</span>
             </article>
           </div>
 
@@ -299,19 +388,118 @@ function renderManagerHtml({
           <section class="overview-side-card">
             <div class="overview-section-head">
               <h3>Manager actions</h3>
-              <p>Recorded management actions linked to this young person.</p>
+              <p>Recorded management actions linked to this scope.</p>
             </div>
 
             ${renderRecordRows(actionRows, "No manager actions found.")}
           </section>
+
+          ${
+            scope !== "child"
+              ? `
+                <section class="overview-side-card">
+                  <div class="overview-section-head">
+                    <h3>Recent communication</h3>
+                    <p>Partner-agency or operational communication that may need leadership awareness.</p>
+                  </div>
+
+                  ${renderRecordRows(communicationRows, "No recent communication found.")}
+                </section>
+
+                <section class="overview-side-card">
+                  <div class="overview-section-head">
+                    <h3>Documents for oversight</h3>
+                    <p>Recent or review-sensitive documents that may affect compliance or leadership decisions.</p>
+                  </div>
+
+                  ${renderRecordRows(documentRows, "No oversight documents found.")}
+                </section>
+              `
+              : ""
+          }
         </aside>
       </div>
     </section>
   `;
 }
 
+function getManagerEndpoints() {
+  const scope = getCurrentScope();
+  const id = getScopeEntityId();
+
+  if (!id) return null;
+
+  if (scope === "home") {
+    return {
+      incidents: `/homes/${id}/incidents`,
+      risks: `/homes/${id}/risks`,
+      compliance: `/homes/${id}/compliance`,
+      tasks: `/homes/${id}/tasks`,
+      managerActions: `/homes/${id}/manager-actions`,
+      dailyNotes: `/homes/${id}/daily-notes`,
+      keywork: `/homes/${id}/keywork`,
+      communications: `/homes/${id}/communications`,
+      documents: `/homes/${id}/documents`,
+    };
+  }
+
+  if (scope === "quality") {
+    return {
+      incidents: `/homes/${id}/incidents`,
+      risks: `/homes/${id}/risks`,
+      compliance: `/homes/${id}/compliance`,
+      tasks: `/homes/${id}/tasks`,
+      managerActions: `/homes/${id}/manager-actions`,
+      dailyNotes: `/homes/${id}/daily-notes`,
+      keywork: `/homes/${id}/keywork`,
+      communications: `/homes/${id}/communications`,
+      documents: `/homes/${id}/documents`,
+    };
+  }
+
+  return {
+    incidents: `/young-people/${id}/incidents`,
+    risks: `/young-people/${id}/risks`,
+    compliance: `/young-people/${id}/compliance`,
+    tasks: `/young-people/${id}/tasks`,
+    managerActions: `/young-people/${id}/manager-actions`,
+    dailyNotes: `/young-people/${id}/daily-notes`,
+    keywork: `/young-people/${id}/keywork`,
+    communications: `/young-people/${id}/communications`,
+    documents: `/young-people/${id}/documents`,
+  };
+}
+
+function renderNoContext() {
+  if (!els.viewContent) return;
+
+  const message =
+    getCurrentScope() === "child"
+      ? "Select a young person before opening leadership and review."
+      : "A home context is needed before leadership and review can load.";
+
+  els.viewContent.innerHTML = `
+    <div class="empty-state">
+      <p>${toText(message)}</p>
+    </div>
+  `;
+
+  updateWorkspaceSummaryStrip({
+    today: "No oversight context",
+    nextEvent: "No review due",
+    lastRecord: "No oversight data",
+    openActions: "No actions loaded",
+  });
+}
+
 export async function loadManager() {
   if (!els.viewContent) return;
+
+  const endpoints = getManagerEndpoints();
+  if (!endpoints) {
+    renderNoContext();
+    return;
+  }
 
   els.viewContent.innerHTML = `
     <div class="loading-state">
@@ -331,19 +519,23 @@ export async function loadManager() {
       managerActionsData,
       dailyNotesData,
       keyworkData,
+      communicationsData,
+      documentsData,
     ] = await Promise.all([
-      apiGet(`/young-people/${state.youngPersonId}/incidents`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/risks`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/compliance`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/tasks`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/manager-actions`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/daily-notes`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/keywork`).catch(() => ({ items: [] })),
+      apiGet(endpoints.incidents).catch(() => ({ items: [] })),
+      apiGet(endpoints.risks).catch(() => ({ items: [] })),
+      apiGet(endpoints.compliance).catch(() => ({ items: [] })),
+      apiGet(endpoints.tasks).catch(() => ({ items: [] })),
+      apiGet(endpoints.managerActions).catch(() => ({ items: [] })),
+      apiGet(endpoints.dailyNotes).catch(() => ({ items: [] })),
+      apiGet(endpoints.keywork).catch(() => ({ items: [] })),
+      apiGet(endpoints.communications).catch(() => ({ items: [] })),
+      apiGet(endpoints.documents).catch(() => ({ items: [] })),
     ]);
 
     const incidents = sortNewestFirst(
       (incidentsData.items || incidentsData.records || incidentsData.incidents || []).map(mapIncident),
-      ["occurred_at", "created_at"]
+      ["occurred_at", "incident_datetime", "created_at"]
     );
 
     const risks = sortNewestFirst(
@@ -382,6 +574,27 @@ export async function loadManager() {
       ["session_date", "created_at"]
     );
 
+    const communications = sortNewestFirst(
+      (
+        communicationsData.items ||
+        communicationsData.records ||
+        communicationsData.communications ||
+        []
+      ).map((item) => (typeof mapCommunicationRecord === "function" ? mapCommunicationRecord(item) : item)),
+      ["contact_datetime", "created_at", "updated_at"]
+    ).slice(0, 8);
+
+    const documents = sortNewestFirst(
+      (
+        documentsData.items ||
+        documentsData.records ||
+        documentsData.documents ||
+        documentsData.statutory_documents ||
+        []
+      ).map((item) => (typeof mapStatutoryDocument === "function" ? mapStatutoryDocument(item) : item)),
+      ["review_date", "expiry_date", "created_at", "updated_at"]
+    ).slice(0, 8);
+
     const submittedRecords = [
       ...dailyNotes.filter((item) =>
         ["submitted", "pending_review", "review"].includes(String(item.workflow_status || "").toLowerCase())
@@ -395,14 +608,16 @@ export async function loadManager() {
       ...risks.filter((item) =>
         ["submitted", "pending_review", "review"].includes(String(item.workflow_status || "").toLowerCase())
       ),
-    ].slice(0, 12);
+    ]
+      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+      .slice(0, 12);
 
     const highRiskIncidents = incidents.filter((item) =>
       ["high", "critical"].includes(String(item.severity || "").toLowerCase())
     );
 
     const complianceIssues = complianceItems.filter((item) =>
-      ["overdue", "escalated"].includes(String(item.status || "").toLowerCase())
+      ["overdue", "escalated", "review_due", "missing"].includes(String(item.status || "").toLowerCase())
     );
 
     const openTasks = tasks.filter((item) => !item.completed);
@@ -414,6 +629,31 @@ export async function loadManager() {
       complianceIssues,
       openTasks,
       managerActions,
+      communications,
+      documents,
+    });
+
+    const nextReview =
+      submittedRecords[0] ||
+      complianceIssues[0] ||
+      risks[0] ||
+      highRiskIncidents[0] ||
+      null;
+
+    updateWorkspaceSummaryStrip({
+      today: `${submittedRecords.length} awaiting review • ${openTasks.length} open actions`,
+      nextEvent: nextReview
+        ? `Next review ${formatDateValue(
+            nextReview.review_date ||
+              nextReview.due_date ||
+              nextReview.created_at ||
+              nextReview.occurred_at
+          )}`
+        : "No immediate review due",
+      lastRecord: managerActions[0]
+        ? `${managerActions[0].title || managerActions[0].action_type || "Manager action"}`
+        : "No recent manager action",
+      openActions: `${complianceIssues.length} compliance issue${complianceIssues.length === 1 ? "" : "s"} • ${highRiskIncidents.length} high-risk incident${highRiskIncidents.length === 1 ? "" : "s"}`,
     });
   } catch (error) {
     els.viewContent.innerHTML = `
@@ -421,5 +661,12 @@ export async function loadManager() {
         <p>${escapeHtml(error.message || "Failed to load manager review.")}</p>
       </div>
     `;
+
+    updateWorkspaceSummaryStrip({
+      today: "Oversight unavailable",
+      nextEvent: "Unable to load",
+      lastRecord: "No oversight data",
+      openActions: "Check API routes",
+    });
   }
 }
