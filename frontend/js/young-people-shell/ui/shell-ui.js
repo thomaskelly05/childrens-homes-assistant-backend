@@ -1,22 +1,3 @@
-Yes — this is the other file that needs fixing.
-
-Your current shell-ui.js still uses:
-
-ROLE_SCOPE_ACCESS?.[role] || ["child"]
-
-So if state.userRole is "admin", it falls back to ["child"], which is why you appear stuck on the young person area even though you should see everything.
-
-Below is the full upgraded shell-ui.js with:
-	•	support for admin
-	•	safer role normalisation
-	•	better scope labels
-	•	correct visibility for selector-only controls
-	•	cleaner handling of child vs home vs quality chrome
-
-⸻
-
-ui/shell-ui.js
-
 import { state } from "../state.js";
 import { els } from "../dom.js";
 import { refreshAssistantUi } from "./assistant-ui.js";
