@@ -9,7 +9,61 @@ import {
   mapAppointment,
   mapChronologyEvent,
   mapHandoverRecord,
+  mapTask,
+  mapComplianceItem,
 } from "../core/adapters.js";
+import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
+
+function getCurrentScope() {
+  return state.currentScope || "child";
+}
+
+function getHomeId() {
+  return (
+    state.homeId ||
+    state.currentUser?.home_id ||
+    state.currentUser?.homeId ||
+    state.selectedYoungPerson?.home_id ||
+    null
+  );
+}
+
+function getScopeEntityId() {
+  if (getCurrentScope() === "child") {
+    return state.youngPersonId || null;
+  }
+
+  return getHomeId();
+}
+
+function getScopeTitle() {
+  const scope = getCurrentScope();
+
+  if (scope === "home") {
+    return (
+      state.currentUser?.home_name ||
+      state.currentUser?.homeName ||
+      (getHomeId() ? `Home ${getHomeId()}` : "Home")
+    );
+  }
+
+  if (scope === "quality") {
+    return (
+      state.currentUser?.home_name ||
+      state.currentUser?.homeName ||
+      (getHomeId() ? `Home ${getHomeId()}` : "Quality and RI")
+    );
+  }
+
+  const person = state.selectedYoungPerson || state.youngPerson || {};
+  return (
+    person.full_name ||
+    person.name ||
+    [person.first_name, person.last_name].filter(Boolean).join(" ").trim() ||
+    person.preferred_name ||
+    "Young person"
+  );
+}
 
 function sortNewestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
@@ -73,6 +127,7 @@ function getRowDate(item = {}) {
     item.review_date ||
     item.event_datetime ||
     item.handover_date ||
+    item.due_date ||
     item.created_at ||
     ""
   );
@@ -86,7 +141,7 @@ function getRowPill(item = {}) {
   if (
     ["high", "critical"].includes(severity) ||
     ["high", "critical"].includes(significance) ||
-    ["escalated", "overdue"].includes(status) ||
+    ["escalated", "overdue", "returned"].includes(status) ||
     item.safeguarding_flag
   ) {
     return { label: "Needs review", tone: "warning" };
@@ -109,6 +164,7 @@ function normaliseRows(items = [], recordTypeFallback = "record") {
       item.appointment_type ||
       item.shift_type ||
       item.provision_name ||
+      item.task ||
       "Record",
     summary:
       item.summary ||
@@ -116,6 +172,7 @@ function normaliseRows(items = [], recordTypeFallback = "record") {
       item.outcome ||
       item.description ||
       item.note ||
+      item.task ||
       "Recorded item",
   }));
 }
@@ -163,12 +220,16 @@ function buildSnapshot({
   appointments = [],
   plans = [],
   chronology = [],
+  tasks = [],
+  complianceItems = [],
 }) {
   const latestNote = dailyNotes[0] || null;
   const latestIncident = incidents[0] || null;
   const nextAppointment = appointments[0] || null;
   const currentPlan = plans[0] || null;
   const latestChronology = chronology[0] || null;
+  const nextTask = tasks[0] || null;
+  const nextCompliance = complianceItems[0] || null;
 
   return [
     {
@@ -183,7 +244,10 @@ function buildSnapshot({
     },
     {
       label: "Next appointment",
-      value: nextAppointment?.title || nextAppointment?.appointment_type || "No upcoming appointment.",
+      value:
+        nextAppointment?.title ||
+        nextAppointment?.appointment_type ||
+        "No upcoming appointment.",
       subtext: nextAppointment?.start_datetime || nextAppointment?.status || "",
     },
     {
@@ -195,6 +259,19 @@ function buildSnapshot({
       label: "Latest chronology",
       value: latestChronology?.summary || latestChronology?.title || "No recent chronology.",
       subtext: latestChronology?.event_datetime || latestChronology?.category || "",
+    },
+    {
+      label: "Next action",
+      value:
+        nextTask?.title ||
+        nextTask?.task ||
+        nextCompliance?.title ||
+        "No urgent follow-up recorded.",
+      subtext:
+        nextTask?.due_date ||
+        nextCompliance?.due_date ||
+        nextCompliance?.status ||
+        "",
     },
   ];
 }
@@ -232,6 +309,8 @@ function buildPriorityRows({
   incidents = [],
   appointments = [],
   chronology = [],
+  tasks = [],
+  complianceItems = [],
 }) {
   const recentHighIncidents = incidents.filter((item) =>
     ["high", "critical"].includes(String(item.severity || "").toLowerCase())
@@ -243,7 +322,19 @@ function buildPriorityRows({
 
   const safeguardingChronology = chronology.filter((item) => item.safeguarding_flag);
 
-  return [...recentHighIncidents, ...urgentAppointments, ...safeguardingChronology].slice(0, 10);
+  const urgentTasks = tasks.filter((item) => !item.completed).slice(0, 6);
+
+  const urgentCompliance = complianceItems.filter((item) =>
+    ["overdue", "escalated", "due_soon"].includes(String(item.status || "").toLowerCase())
+  );
+
+  return [
+    ...recentHighIncidents,
+    ...urgentAppointments,
+    ...safeguardingChronology,
+    ...urgentTasks,
+    ...urgentCompliance,
+  ].slice(0, 12);
 }
 
 function renderHandoverHtml({
@@ -253,13 +344,19 @@ function renderHandoverHtml({
   plans = [],
   chronology = [],
   handoverRecords = [],
+  tasks = [],
+  complianceItems = [],
 }) {
+  const scope = getCurrentScope();
+
   const snapshot = buildSnapshot({
     dailyNotes,
     incidents,
     appointments,
     plans,
     chronology,
+    tasks,
+    complianceItems,
   });
 
   const priorityRows = normaliseRows(
@@ -267,6 +364,8 @@ function renderHandoverHtml({
       incidents,
       appointments,
       chronology,
+      tasks,
+      complianceItems,
     }),
     "priority_item"
   );
@@ -275,14 +374,30 @@ function renderHandoverHtml({
   const planRows = normaliseRows(plans.slice(0, 6), "support_plan");
   const chronologyRows = normaliseRows(chronology.slice(0, 8), "chronology_event");
   const handoverRows = normaliseRows(handoverRecords.slice(0, 6), "handover_record");
+  const taskRows = normaliseRows(tasks.slice(0, 8), "task");
+  const complianceRows = normaliseRows(complianceItems.slice(0, 8), "compliance_item");
+
+  const heading =
+    scope === "child"
+      ? "Shift handover"
+      : scope === "home"
+      ? "Operational handover"
+      : "Quality and RI handover";
+
+  const description =
+    scope === "child"
+      ? "The quickest view of what the next adult needs to know for safe, consistent care."
+      : scope === "home"
+      ? "The quickest view of what the next senior, manager or on-call adult needs to know."
+      : "The quickest view of what leadership, RI or audit oversight needs to know next.";
 
   return `
     <section class="overview-panel">
       <div class="overview-panel-head">
         <div>
           <div class="eyebrow">Handover</div>
-          <h2>Shift handover</h2>
-          <p>The quickest view of what the next adult needs to know for safe, consistent care.</p>
+          <h2>${toText(heading)} • ${toText(getScopeTitle())}</h2>
+          <p>${toText(description)}</p>
         </div>
       </div>
 
@@ -292,7 +407,7 @@ function renderHandoverHtml({
             <article class="overview-stat-card">
               <span class="overview-stat-label">Daily notes</span>
               <strong class="overview-stat-value">${toText(dailyNotes.length)}</strong>
-              <span class="overview-stat-note">Recent care continuity notes</span>
+              <span class="overview-stat-note">Recent continuity notes</span>
             </article>
 
             <article class="overview-stat-card">
@@ -326,7 +441,7 @@ function renderHandoverHtml({
           <section class="overview-section-card">
             <div class="overview-section-head">
               <h3>Priority items</h3>
-              <p>High-risk incidents, upcoming appointments and safeguarding-linked chronology.</p>
+              <p>High-risk incidents, upcoming appointments, safeguarding-linked chronology and urgent follow-up.</p>
             </div>
 
             ${renderRecordRows(priorityRows, "No priority items found.")}
@@ -335,17 +450,29 @@ function renderHandoverHtml({
           <section class="overview-section-card">
             <div class="overview-section-head">
               <h3>Recent daily notes</h3>
-              <p>The most recent daily notes for care continuity.</p>
+              <p>The most recent notes supporting continuity.</p>
             </div>
 
             ${renderRecordRows(dailyNoteRows, "No recent daily notes found.")}
+          </section>
+
+          <section class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Open actions and deadlines</h3>
+              <p>Tasks and compliance items that should shape the next handover.</p>
+            </div>
+
+            ${renderRecordRows(
+              [...taskRows, ...complianceRows].slice(0, 10),
+              "No open actions or readiness items found."
+            )}
           </section>
         </section>
 
         <aside class="overview-side">
           <section class="overview-side-card">
             <div class="overview-section-head">
-              <h3>Current support plans</h3>
+              <h3>Current plans and guidance</h3>
               <p>Plans and guidance adults should keep in mind during handover.</p>
             </div>
 
@@ -375,8 +502,80 @@ function renderHandoverHtml({
   `;
 }
 
+function getHandoverEndpoints() {
+  const scope = getCurrentScope();
+  const id = getScopeEntityId();
+
+  if (!id) return null;
+
+  if (scope === "home") {
+    return {
+      dailyNotes: `/homes/${id}/daily-notes`,
+      incidents: `/homes/${id}/incidents`,
+      appointments: `/homes/${id}/appointments`,
+      plans: `/homes/${id}/plans`,
+      timeline: `/homes/${id}/timeline`,
+      handovers: `/homes/${id}/handover-records`,
+      tasks: `/homes/${id}/tasks`,
+      compliance: `/homes/${id}/compliance`,
+    };
+  }
+
+  if (scope === "quality") {
+    return {
+      dailyNotes: `/homes/${id}/daily-notes`,
+      incidents: `/homes/${id}/incidents`,
+      appointments: `/homes/${id}/appointments`,
+      plans: `/homes/${id}/plans`,
+      timeline: `/homes/${id}/timeline`,
+      handovers: `/homes/${id}/handover-records`,
+      tasks: `/homes/${id}/tasks`,
+      compliance: `/homes/${id}/compliance`,
+    };
+  }
+
+  return {
+    dailyNotes: `/young-people/${id}/daily-notes`,
+    incidents: `/young-people/${id}/incidents`,
+    appointments: `/young-people/${id}/appointments`,
+    plans: `/young-people/${id}/plans`,
+    timeline: `/young-people/${id}/timeline`,
+    handovers: `/young-people/${id}/handover-records`,
+    tasks: `/young-people/${id}/tasks`,
+    compliance: `/young-people/${id}/compliance`,
+  };
+}
+
+function renderNoContext() {
+  if (!els.viewContent) return;
+
+  const message =
+    getCurrentScope() === "child"
+      ? "Select a young person before opening handover."
+      : "A home context is needed before handover can load.";
+
+  els.viewContent.innerHTML = `
+    <div class="empty-state">
+      <p>${toText(message)}</p>
+    </div>
+  `;
+
+  updateWorkspaceSummaryStrip({
+    today: "No handover context",
+    nextEvent: "No event loaded",
+    lastRecord: "No handover data",
+    openActions: "No actions loaded",
+  });
+}
+
 export async function loadHandover() {
   if (!els.viewContent) return;
+
+  const endpoints = getHandoverEndpoints();
+  if (!endpoints) {
+    renderNoContext();
+    return;
+  }
 
   els.viewContent.innerHTML = `
     <div class="loading-state">
@@ -395,13 +594,17 @@ export async function loadHandover() {
       plansData,
       timelineData,
       handoverRecordsData,
+      tasksData,
+      complianceData,
     ] = await Promise.all([
-      apiGet(`/young-people/${state.youngPersonId}/daily-notes`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/incidents`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/appointments`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/plans`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/timeline`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/handover-records`).catch(() => ({ items: [] })),
+      apiGet(endpoints.dailyNotes).catch(() => ({ items: [] })),
+      apiGet(endpoints.incidents).catch(() => ({ items: [] })),
+      apiGet(endpoints.appointments).catch(() => ({ items: [] })),
+      apiGet(endpoints.plans).catch(() => ({ items: [] })),
+      apiGet(endpoints.timeline).catch(() => ({ items: [] })),
+      apiGet(endpoints.handovers).catch(() => ({ items: [] })),
+      apiGet(endpoints.tasks).catch(() => ({ items: [] })),
+      apiGet(endpoints.compliance).catch(() => ({ items: [] })),
     ]);
 
     const dailyNotes = sortNewestFirst(
@@ -451,6 +654,20 @@ export async function loadHandover() {
       ["handover_date", "created_at"]
     );
 
+    const tasks = sortSoonestFirst(
+      (tasksData.items || tasksData.records || tasksData.tasks || []).map(mapTask),
+      ["due_date", "created_at"]
+    ).filter((item) => !item.completed);
+
+    const complianceItems = sortSoonestFirst(
+      (complianceData.items || complianceData.records || complianceData.compliance_items || []).map(
+        mapComplianceItem
+      ),
+      ["due_date", "created_at"]
+    ).filter((item) =>
+      ["overdue", "due_soon", "escalated"].includes(String(item.status || "").toLowerCase())
+    );
+
     els.viewContent.innerHTML = renderHandoverHtml({
       dailyNotes,
       incidents,
@@ -458,6 +675,30 @@ export async function loadHandover() {
       plans,
       chronology,
       handoverRecords,
+      tasks,
+      complianceItems,
+    });
+
+    const nextPriority =
+      buildPriorityRows({
+        incidents,
+        appointments,
+        chronology,
+        tasks,
+        complianceItems,
+      })[0] || null;
+
+    const latestHandover = handoverRecords[0] || null;
+
+    updateWorkspaceSummaryStrip({
+      today: `${dailyNotes.length} notes • ${incidents.length} incidents`,
+      nextEvent: nextPriority
+        ? `${nextPriority.title || nextPriority.appointment_type || "Priority item"}`
+        : "No urgent handover item",
+      lastRecord: latestHandover?.handover_date
+        ? `Last handover ${formatDateTimeValue(latestHandover.handover_date)}`
+        : "No handover record loaded",
+      openActions: `${tasks.length + complianceItems.length} open handover actions`,
     });
   } catch (error) {
     els.viewContent.innerHTML = `
@@ -465,5 +706,12 @@ export async function loadHandover() {
         <p>${escapeHtml(error.message || "Failed to load handover.")}</p>
       </div>
     `;
+
+    updateWorkspaceSummaryStrip({
+      today: "Handover unavailable",
+      nextEvent: "Unable to load",
+      lastRecord: "No handover data",
+      openActions: "Check API routes",
+    });
   }
 }
