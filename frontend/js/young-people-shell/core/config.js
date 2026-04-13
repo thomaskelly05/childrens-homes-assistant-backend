@@ -3,7 +3,6 @@ export const ROLE_SCOPE_ACCESS = {
   manager: ["child", "home"],
   ri: ["child", "home", "quality"],
   admin: ["child", "home", "quality"],
-  administrator: ["child", "home", "quality"],
 };
 
 export const SCOPE_DEFAULT_SECTION = {
