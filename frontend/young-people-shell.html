@@ -6,7 +6,7 @@
   <title>IndiCare OS • Young People Workspace</title>
   <meta
     name="description"
-    content="IndiCare OS young people workspace for clear, child-centred recording, reflection, planning and support."
+    content="IndiCare OS young people workspace for clear, child-centred recording, reflection, planning, oversight and support."
   />
   <meta name="color-scheme" content="light dark" />
   <meta name="theme-color" content="#f3f6fb" />
@@ -49,9 +49,10 @@
       <div class="shell-topbar-right">
         <div
           id="scopeSwitch"
-          class="scope-switch desktop-only"
+          class="scope-switch desktop-only hidden"
           role="tablist"
           aria-label="Workspace scope"
+          aria-hidden="true"
         >
           <button
             id="scopeChildBtn"
@@ -216,14 +217,24 @@
                 Change young person
               </button>
 
-              <nav id="desktopNav" class="workspace-nav" aria-label="Workspace sections"></nav>
+              <nav
+                id="desktopNav"
+                class="workspace-nav"
+                aria-label="Workspace sections"
+              ></nav>
             </div>
           </aside>
 
           <section class="workspace-stage">
             <div class="workspace-stage-top">
               <div class="workspace-stage-mobile-person mobile-only">
-                <div class="workspace-stage-mobile-avatar" id="mobilePersonAvatar" aria-hidden="true">YP</div>
+                <div
+                  class="workspace-stage-mobile-avatar"
+                  id="mobilePersonAvatar"
+                  aria-hidden="true"
+                >
+                  YP
+                </div>
                 <div class="workspace-stage-mobile-copy">
                   <h2 id="mobilePersonName">Young person</h2>
                   <p id="mobilePersonMeta">Workspace</p>
@@ -255,7 +266,7 @@
                     <div
                       id="profileSnapshotPhotoWrap"
                       class="profile-snapshot-photo-wrap"
-                      aria-label="Young person initials"
+                      aria-label="Workspace avatar"
                     >
                       <div class="profile-photo-fallback" aria-hidden="true">YP</div>
                     </div>
@@ -269,7 +280,6 @@
                   <div class="workspace-header-meta">
                     <span class="meta-chip">Live</span>
                     <span class="meta-chip meta-chip--soft">Workspace</span>
-                    <span class="meta-chip meta-chip--soft">AI enabled</span>
                   </div>
 
                   <div class="workspace-person-actions">
@@ -379,6 +389,22 @@
                       <small>Contact, themes, presentation and next steps.</small>
                     </span>
                   </button>
+
+                  <button class="quick-create-card" type="button" data-action-router="new-task">
+                    <span class="quick-create-icon" aria-hidden="true">☑</span>
+                    <span class="quick-create-copy">
+                      <strong>Add task</strong>
+                      <small>Create a clear action with ownership and a due date.</small>
+                    </span>
+                  </button>
+
+                  <button class="quick-create-card" type="button" data-action-router="upload-document">
+                    <span class="quick-create-icon" aria-hidden="true">▤</span>
+                    <span class="quick-create-copy">
+                      <strong>Upload document</strong>
+                      <small>Add statutory and supporting documents to the record.</small>
+                    </span>
+                  </button>
                 </div>
               </section>
 
@@ -419,127 +445,21 @@
                       <option value="education_record">Education</option>
                       <option value="family_contact">Family</option>
                       <option value="appointment">Appointments</option>
+                      <option value="task">Tasks</option>
+                      <option value="document">Documents</option>
+                      <option value="communication">Communication</option>
+                      <option value="therapy">Therapy</option>
                     </select>
                   </div>
                 </section>
 
                 <div id="viewContent" class="workspace-view-content" aria-live="polite">
                   <section class="overview-panel">
-                    <div class="overview-panel-head">
+                    <div class="loading-state">
                       <div>
-                        <div class="eyebrow">Preview</div>
-                        <h2>Workspace preview</h2>
-                        <p>These placeholder cards let the child, home and quality areas feel real while the data views are being wired up.</p>
+                        <div class="spinner" aria-hidden="true"></div>
+                        <p>Loading workspace…</p>
                       </div>
-                    </div>
-
-                    <div class="scope-preview-grid">
-                      <article class="scope-preview-card">
-                        <div class="scope-preview-card-head">
-                          <span class="scope-preview-icon" aria-hidden="true">◉</span>
-                          <div>
-                            <h3>Young person view</h3>
-                            <p>Daily practice, chronology, health, education, family and planning.</p>
-                          </div>
-                        </div>
-                        <div class="scope-preview-tags">
-                          <span class="selector-pill">Daily notes</span>
-                          <span class="selector-pill">Chronology</span>
-                          <span class="selector-pill">Support plans</span>
-                        </div>
-                      </article>
-
-                      <article class="scope-preview-card">
-                        <div class="scope-preview-card-head">
-                          <span class="scope-preview-icon" aria-hidden="true">▥</span>
-                          <div>
-                            <h3>Home dashboard</h3>
-                            <p>Whole-home oversight for managers across staffing, actions, comms and statutory readiness.</p>
-                          </div>
-                        </div>
-                        <div class="scope-preview-tags">
-                          <span class="selector-pill">Team</span>
-                          <span class="selector-pill">Supervision</span>
-                          <span class="selector-pill">Documents</span>
-                        </div>
-                      </article>
-
-                      <article class="scope-preview-card">
-                        <div class="scope-preview-card-head">
-                          <span class="scope-preview-icon" aria-hidden="true">▦</span>
-                          <div>
-                            <h3>Quality and RI</h3>
-                            <p>Audit, compliance, themes, trends and regulator-facing service visibility.</p>
-                          </div>
-                        </div>
-                        <div class="scope-preview-tags">
-                          <span class="selector-pill">Audits</span>
-                          <span class="selector-pill">Reports</span>
-                          <span class="selector-pill">QA</span>
-                        </div>
-                      </article>
-                    </div>
-
-                    <div class="placeholder-dashboard-grid">
-                      <section class="overview-section-card">
-                        <div class="overview-section-head">
-                          <h3>Documents and uploads</h3>
-                          <p>Statutory documents, passports, plans and review-sensitive records.</p>
-                        </div>
-
-                        <div class="record-list">
-                          <article class="record-row">
-                            <div class="record-row-main">
-                              <div class="record-row-title">Placement plan</div>
-                              <div class="record-row-summary">Placeholder card for the child document centre.</div>
-                              <div class="record-row-meta">Review due • Placeholder</div>
-                            </div>
-                            <div class="record-row-side">
-                              <span class="row-pill warning">Due soon</span>
-                            </div>
-                          </article>
-                        </div>
-                      </section>
-
-                      <section class="overview-section-card">
-                        <div class="overview-section-head">
-                          <h3>Professional communication</h3>
-                          <p>Liaison with social workers, families, therapists and partner agencies.</p>
-                        </div>
-
-                        <div class="record-list">
-                          <article class="record-row">
-                            <div class="record-row-main">
-                              <div class="record-row-title">Social worker update</div>
-                              <div class="record-row-summary">Placeholder communication timeline item.</div>
-                              <div class="record-row-meta">Phone call • Placeholder</div>
-                            </div>
-                            <div class="record-row-side">
-                              <span class="row-pill muted">Logged</span>
-                            </div>
-                          </article>
-                        </div>
-                      </section>
-
-                      <section class="overview-section-card">
-                        <div class="overview-section-head">
-                          <h3>Therapeutic services</h3>
-                          <p>Therapeutic recommendations, emotional wellbeing support and outcomes.</p>
-                        </div>
-
-                        <div class="record-list">
-                          <article class="record-row">
-                            <div class="record-row-main">
-                              <div class="record-row-title">Therapy recommendation</div>
-                              <div class="record-row-summary">Placeholder therapeutic services panel.</div>
-                              <div class="record-row-meta">Next review pending</div>
-                            </div>
-                            <div class="record-row-side">
-                              <span class="row-pill success">Active</span>
-                            </div>
-                          </article>
-                        </div>
-                      </section>
                     </div>
                   </section>
                 </div>
