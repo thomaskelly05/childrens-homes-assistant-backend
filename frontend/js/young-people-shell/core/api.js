@@ -30,34 +30,45 @@ function buildErrorMessage(response, data) {
 const API_ROUTE_ALIASES = [
   [/\/young-people\/(\d+)\/alerts$/, "/young-people/$1/incidents"],
 
+  // Appointments
   [/\/young-people\/(\d+)\/young-person-appointments$/, "/young-people/$1/appointments"],
 
+  // Handover fallback
   [/\/young-people\/(\d+)\/handover-records$/, "/young-people/$1/timeline?limit=12"],
 
+  // Health
   [/\/young-people\/(\d+)\/health-records$/, "/young-people/$1/health"],
   [/\/young-people\/(\d+)\/medication-profiles$/, "/young-people/$1/health"],
   [/\/young-people\/(\d+)\/medication-records$/, "/young-people/$1/health"],
 
+  // Education
   [/\/young-people\/(\d+)\/education-records$/, "/young-people/$1/education"],
   [/\/young-people\/(\d+)\/achievements$/, "/young-people/$1/education"],
 
+  // Family
   [/\/young-people\/(\d+)\/family-contact-records$/, "/young-people/$1/family"],
 
+  // Timeline-related fallbacks
   [/\/young-people\/(\d+)\/safeguarding-records$/, "/young-people/$1/incidents"],
   [/\/young-people\/(\d+)\/missing-episodes$/, "/young-people/$1/incidents"],
 
+  // Readiness / action fallbacks
   [/\/young-people\/(\d+)\/tasks$/, "/young-people/$1/tasks"],
   [/\/young-people\/(\d+)\/documents$/, "/young-people/$1/compliance"],
   [/\/young-people\/(\d+)\/approvals$/, "/young-people/$1/compliance"],
 
+  // Manager / review fallbacks
   [/\/young-people\/(\d+)\/manager-review$/, "/young-people/$1/compliance"],
   [/\/young-people\/(\d+)\/manager-actions$/, "/young-people/$1/compliance"],
 
+  // Planning / risk
   [/\/young-people\/(\d+)\/risks$/, "/young-people/$1/plans"],
 
+  // Reports
   [/\/young-people\/(\d+)\/inspection-packs$/, "/young-people/$1/reports"],
   [/\/young-people\/(\d+)\/monthly-reviews$/, "/young-people/$1/reports"],
 
+  // Wider shell aliases
   [/\/homes\/(\d+)\/young-people$/, "/homes/$1/dashboard"],
   [/\/homes\/(\d+)\/communications$/, "/homes/$1/communications"],
   [/\/homes\/(\d+)\/documents$/, "/homes/$1/documents"],
@@ -186,21 +197,39 @@ function invalidateCacheByPrefixes(prefixes = []) {
   }
 }
 
-/* =========================
-   DEMO DATA HELPERS
-   ========================= */
-
-function demoHome(homeId = 1) {
-  return {
-    id: homeId,
-    name: "IndiCare House",
-    home_name: "IndiCare House",
-    registration_status: "Active",
-    local_authority: "Birmingham",
-  };
+function iso(daysOffset = 0, hour = 9, minute = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + daysOffset);
+  d.setHours(hour, minute, 0, 0);
+  return d.toISOString();
 }
 
-function demoYoungPeople(homeId = 1) {
+function dateOnly(daysOffset = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + daysOffset);
+  return d.toISOString().slice(0, 10);
+}
+
+function pick(list, index) {
+  return list[index % list.length];
+}
+
+function makeAdults(homeId = 1) {
+  return [
+    { id: 1, full_name: "Sarah Jones", role: "Registered Manager", status: "On shift", home_id: homeId },
+    { id: 2, full_name: "Tom Patel", role: "Deputy Manager", status: "On shift", home_id: homeId },
+    { id: 3, full_name: "Leah Brown", role: "Senior Residential Worker", status: "On shift", home_id: homeId },
+    { id: 4, full_name: "Amir Hussain", role: "Residential Worker", status: "Off shift", home_id: homeId },
+    { id: 5, full_name: "Chloe Davies", role: "Residential Worker", status: "On shift", home_id: homeId },
+    { id: 6, full_name: "Michael Osei", role: "Waking Night", status: "Annual leave", home_id: homeId },
+    { id: 7, full_name: "Priya Shah", role: "Therapist", status: "Visiting professional", home_id: homeId },
+    { id: 8, full_name: "Danielle Green", role: "Education Lead", status: "Working remotely", home_id: homeId },
+    { id: 9, full_name: "Helen Morris", role: "Administrator", status: "On shift", home_id: homeId },
+    { id: 10, full_name: "Chris Walker", role: "Bank Staff", status: "Available", home_id: homeId },
+  ];
+}
+
+function makeYoungPeople(homeId = 1) {
   return [
     {
       id: 101,
@@ -209,11 +238,12 @@ function demoYoungPeople(homeId = 1) {
       last_name: "Smith",
       preferred_name: "Jay",
       full_name: "Jay Smith",
+      date_of_birth: "2010-08-14",
+      gender: "Male",
       placement_status: "active",
       summary_risk_level: "medium",
       home_name: "IndiCare House",
-      date_of_birth: "2010-08-14",
-      gender: "Male",
+      primary_keyworker_id: 3,
     },
     {
       id: 102,
@@ -222,11 +252,12 @@ function demoYoungPeople(homeId = 1) {
       last_name: "Khan",
       preferred_name: "Amira",
       full_name: "Amira Khan",
+      date_of_birth: "2009-11-02",
+      gender: "Female",
       placement_status: "active",
       summary_risk_level: "high",
       home_name: "IndiCare House",
-      date_of_birth: "2009-11-02",
-      gender: "Female",
+      primary_keyworker_id: 5,
     },
     {
       id: 103,
@@ -235,456 +266,370 @@ function demoYoungPeople(homeId = 1) {
       last_name: "Brown",
       preferred_name: "Luca",
       full_name: "Luca Brown",
+      date_of_birth: "2011-03-21",
+      gender: "Male",
       placement_status: "active",
       summary_risk_level: "low",
       home_name: "IndiCare House",
-      date_of_birth: "2011-03-21",
-      gender: "Male",
+      primary_keyworker_id: 4,
+    },
+    {
+      id: 104,
+      home_id: homeId,
+      first_name: "Maya",
+      last_name: "Johnson",
+      preferred_name: "Maya",
+      full_name: "Maya Johnson",
+      date_of_birth: "2010-01-30",
+      gender: "Female",
+      placement_status: "active",
+      summary_risk_level: "medium",
+      home_name: "IndiCare House",
+      primary_keyworker_id: 3,
     },
   ];
 }
 
-function demoTimelineItems(youngPersonId) {
-  return [
-    {
-      id: 1,
-      title: "Behaviour incident",
-      summary: "Verbal escalation after school, settled with staff support.",
-      category: "incident",
-      event_datetime: "2026-04-11T16:15:00Z",
-      significance: "medium",
-      record_type: "chronology_event",
-    },
-    {
-      id: 2,
-      title: "Health appointment attended",
-      summary: "Routine GP medication review completed.",
-      category: "health",
-      event_datetime: "2026-04-09T10:00:00Z",
-      significance: "low",
-      record_type: "chronology_event",
-    },
-    {
-      id: 3,
-      title: "Family contact",
-      summary: "Positive phone contact with mum.",
-      category: "family",
-      event_datetime: "2026-04-07T18:30:00Z",
-      significance: "low",
-      record_type: "chronology_event",
-    },
-  ].map((x) => ({ ...x, young_person_id: youngPersonId }));
-}
-
-function demoIncidents(youngPersonId) {
-  return [
-    {
-      id: 201,
-      young_person_id: youngPersonId,
-      incident_type: "Behaviour incident",
-      title: "Behaviour incident",
-      description: "Verbal escalation after returning from school.",
-      summary: "Verbal escalation after returning from school.",
-      severity: "medium",
-      significance: "medium",
-      incident_datetime: "2026-04-11T16:15:00Z",
-      status: "reviewed",
-      workflow_status: "reviewed",
-      actions_taken: "Offered space, low arousal approach used, later repair completed.",
-      child_voice: "Said school had been stressful.",
-      source_table: "incidents",
-      record_type: "incident",
-    },
-    {
-      id: 202,
-      young_person_id: youngPersonId,
-      incident_type: "Missing from placement",
-      title: "Missing from placement",
-      description: "Absent from home for 25 minutes after community activity.",
-      summary: "Absent from home for 25 minutes after community activity.",
-      severity: "high",
-      significance: "high",
-      incident_datetime: "2026-04-06T18:40:00Z",
-      status: "pending_review",
-      workflow_status: "pending_review",
-      actions_taken: "Search completed, young person returned safely.",
-      child_voice: "Did not want to come back straight away.",
-      source_table: "incidents",
-      record_type: "incident",
-    },
+function makeDocuments(homeId = 1) {
+  const areas = [
+    "Placement",
+    "Risk",
+    "Health",
+    "Education",
+    "Family",
+    "Behaviour Support",
+    "Safeguarding",
+    "Missing From Care",
+    "Governance",
+    "Compliance",
   ];
+
+  return areas.map((area, i) => ({
+    id: 1000 + i + 1,
+    home_id: homeId,
+    title: `${area} Document ${i + 1}`,
+    document_type: area,
+    summary: `${area} document available for review and inspection evidence.`,
+    status: i % 4 === 0 ? "review_due" : i % 5 === 0 ? "expired" : "active",
+    review_date: dateOnly(i - 3),
+    record_type: "statutory_document",
+    source_table: "statutory_documents",
+  }));
 }
 
-function demoTasks(youngPersonId) {
-  return [
-    {
-      id: 301,
-      young_person_id: youngPersonId,
-      title: "Book GP appointment",
-      task: "Book GP appointment",
-      status: "open",
-      due_date: "2026-04-15",
-      completed: false,
-      record_type: "task",
-      source_table: "tasks",
-    },
-    {
-      id: 302,
-      young_person_id: youngPersonId,
-      title: "Update school transport form",
-      task: "Update school transport form",
-      status: "open",
-      due_date: "2026-04-19",
-      completed: false,
-      record_type: "task",
-      source_table: "tasks",
-    },
+function makeTeam(homeId = 1) {
+  return makeAdults(homeId).map((a) => ({
+    id: a.id,
+    home_id: a.home_id,
+    staff_member: a.full_name,
+    role: a.role,
+    status: a.status,
+    record_type: "team",
+    source_table: "team",
+  }));
+}
+
+function makeSupervisions(homeId = 1) {
+  return makeAdults(homeId).map((a, i) => ({
+    id: 2000 + i + 1,
+    home_id: homeId,
+    staff_member: a.full_name,
+    role: a.role,
+    status: i % 3 === 0 ? "overdue" : i % 3 === 1 ? "due_soon" : "active",
+    due_date: dateOnly(i - 4),
+    record_type: "supervision",
+    source_table: "supervisions",
+  }));
+}
+
+function makeCommunications(homeId = 1) {
+  const subjects = [
+    "IRO update",
+    "Social worker email",
+    "School safeguarding query",
+    "Virtual school call",
+    "CAMHS feedback",
+    "Family update",
+    "LADO information request",
+    "Health appointment confirmation",
+    "PEP planning email",
+    "Placement review invite",
   ];
+
+  return subjects.map((title, i) => ({
+    id: 3000 + i + 1,
+    home_id: homeId,
+    title,
+    summary: `${title} logged with follow-up noted.`,
+    status: i % 2 === 0 ? "Sent" : "Received",
+    contact_datetime: iso(-i, 10, 15),
+    communication_type: i % 2 === 0 ? "email" : "phone",
+    record_type: "communication",
+    source_table: "communications",
+  }));
 }
 
-function demoHealth(youngPersonId) {
-  return [
-    {
-      id: 401,
-      young_person_id: youngPersonId,
-      title: "GP medication review",
-      record_type: "health_record",
-      source_table: "health_records",
-      summary: "Medication reviewed with no changes.",
-      event_datetime: "2026-04-09T10:00:00Z",
-      professional_name: "Dr Ahmed",
-      outcome: "Continue current medication.",
-      significance: "low",
-      workflow_status: "approved",
-      next_action_date: "2026-06-01",
-    },
-    {
-      id: 402,
-      young_person_id: youngPersonId,
-      title: "Dental check",
-      record_type: "health_record",
-      source_table: "health_records",
-      summary: "Routine dental check completed.",
-      event_datetime: "2026-03-21T14:00:00Z",
-      professional_name: "Smile Dental",
-      outcome: "Next review in 6 months.",
-      significance: "low",
-      workflow_status: "approved",
-    },
+function makeTherapy(homeId = 1) {
+  const titles = [
+    "Therapeutic session",
+    "Clinical consultation",
+    "Reflective practice note",
+    "Sensory guidance update",
+    "Attachment-informed support note",
+    "Emotional regulation planning",
+    "Transition support review",
+    "Behaviour formulation review",
+    "Wellbeing check-in",
+    "Multi-disciplinary consultation",
   ];
+
+  return titles.map((title, i) => ({
+    id: 4000 + i + 1,
+    home_id: homeId,
+    title,
+    summary: `${title} completed with practical recommendations for staff.`,
+    status: "Completed",
+    created_at: iso(-(i + 1), 11, 0),
+    record_type: "therapy",
+    source_table: "therapy",
+  }));
 }
 
-function demoEducation(youngPersonId) {
-  return [
-    {
-      id: 501,
-      young_person_id: youngPersonId,
-      title: "Education record",
-      record_type: "education_record",
-      source_table: "education_records",
-      provision_name: "Riverside Academy",
-      attendance_status: "Attended",
-      learning_engagement: "Engaged in the morning, reduced concentration in afternoon.",
-      behaviour_summary: "Needed 1:1 support after lunch.",
-      issue_raised: "",
-      record_date: "2026-04-10",
-      significance: "medium",
-      workflow_status: "approved",
-    },
-    {
-      id: 502,
-      young_person_id: youngPersonId,
-      title: "Education record",
-      record_type: "education_record",
-      source_table: "education_records",
-      provision_name: "Riverside Academy",
-      attendance_status: "Partial attendance",
-      learning_engagement: "Joined maths and tutor session.",
-      behaviour_summary: "Anxious on arrival.",
-      issue_raised: "Travel anxiety",
-      record_date: "2026-04-08",
-      significance: "medium",
-      workflow_status: "approved",
-    },
+function makeCompliance(homeId = 1) {
+  const titles = [
+    "Regulation 44 visit due",
+    "Fire drill record",
+    "Statement of purpose review",
+    "Training matrix update",
+    "Medication audit",
+    "Staff file check",
+    "Incident review sign-off",
+    "Location risk review",
+    "Supervision tracker review",
+    "Safer recruitment audit",
   ];
+
+  return titles.map((title, i) => ({
+    id: 5000 + i + 1,
+    home_id: homeId,
+    title,
+    status: i % 4 === 0 ? "overdue" : i % 4 === 1 ? "due_soon" : "active",
+    due_date: dateOnly(i - 5),
+    severity: i % 4 === 0 ? "high" : "medium",
+    record_type: "compliance_item",
+    source_table: "compliance_items",
+  }));
 }
 
-function demoFamily(youngPersonId) {
-  return [
-    {
-      id: 601,
-      young_person_id: youngPersonId,
-      record_type: "family_contact_record",
-      source_table: "family_contact_records",
-      contact_type: "Phone call",
-      contact_person: "Mum",
-      contact_datetime: "2026-04-07T18:30:00Z",
-      post_contact_presentation: "Settled and positive afterwards.",
-      concerns: "",
-      child_voice: "Said it was nice to speak.",
-      significance: "low",
-      workflow_status: "approved",
-    },
-    {
-      id: 602,
-      young_person_id: youngPersonId,
-      record_type: "family_contact_record",
-      source_table: "family_contact_records",
-      contact_type: "Community visit",
-      contact_person: "Grandmother",
-      contact_datetime: "2026-03-30T13:00:00Z",
-      post_contact_presentation: "Tearful returning home.",
-      concerns: "Needed extra support after return.",
-      child_voice: "Wanted longer contact.",
-      significance: "medium",
-      workflow_status: "approved",
-    },
+function makeReports(homeId = 1) {
+  return Array.from({ length: 10 }, (_, i) => ({
+    id: 6000 + i + 1,
+    home_id: homeId,
+    title: `Monthly home summary ${i + 1}`,
+    summary: "Summary of quality, incidents, staffing, and compliance themes.",
+    status: "completed",
+    review_month: `2025-${String((i % 12) + 1).padStart(2, "0")}`,
+    record_type: "monthly_review",
+    source_table: "monthly_reviews",
+  }));
+}
+
+function makeIncidents(youngPersonId) {
+  const types = [
+    "Behaviour incident",
+    "Missing from placement",
+    "Verbal aggression",
+    "Property damage",
+    "Self-harm concern",
+    "Boundary testing",
+    "Community incident",
+    "School incident",
+    "Safeguarding concern",
+    "Restorative follow-up",
   ];
+
+  return types.map((type, i) => ({
+    id: 7000 + youngPersonId + i,
+    young_person_id: youngPersonId,
+    incident_type: type,
+    title: type,
+    description: `${type} recorded with follow-up support provided.`,
+    summary: `${type} recorded with follow-up support provided.`,
+    severity: i % 4 === 0 ? "high" : i % 3 === 0 ? "medium" : "low",
+    significance: i % 4 === 0 ? "high" : i % 3 === 0 ? "medium" : "low",
+    incident_datetime: iso(-(i + 1), 16, 15),
+    status: i % 2 === 0 ? "reviewed" : "pending_review",
+    workflow_status: i % 2 === 0 ? "reviewed" : "pending_review",
+    actions_taken: "Low arousal approach used, reflection completed, follow-up logged.",
+    child_voice: "Young person shared mixed feelings after the event.",
+    source_table: "incidents",
+    record_type: "incident",
+  }));
 }
 
-function demoAppointments(youngPersonId) {
-  return [
-    {
-      id: 701,
-      young_person_id: youngPersonId,
-      record_type: "appointment",
-      source_table: "appointments",
-      title: "GP medication review",
-      appointment_type: "Health",
-      start_datetime: "2026-04-22T09:30:00Z",
-      location: "Central Medical Practice",
-      professional_name: "Dr Ahmed",
-      status: "booked",
-      summary: "Routine medication review.",
-      follow_up_actions: "",
-    },
-    {
-      id: 702,
-      young_person_id: youngPersonId,
-      record_type: "appointment",
-      source_table: "appointments",
-      title: "PEP meeting",
-      appointment_type: "Education",
-      start_datetime: "2026-04-25T13:00:00Z",
-      location: "School",
-      professional_name: "Virtual School Team",
-      status: "booked",
-      summary: "Termly education planning meeting.",
-      follow_up_actions: "Prepare attendance summary.",
-    },
+function makeTasks(youngPersonId) {
+  const titles = [
+    "Book GP appointment",
+    "Update school transport form",
+    "Prepare PEP summary",
+    "Check medication stock",
+    "Follow up family contact plan",
+    "Review behaviour support plan",
+    "Update chronology summary",
+    "Book dental review",
+    "Confirm therapy slot",
+    "Upload review paperwork",
   ];
+
+  return titles.map((title, i) => ({
+    id: 8000 + youngPersonId + i,
+    young_person_id: youngPersonId,
+    title,
+    task: title,
+    status: i % 3 === 0 ? "open" : "active",
+    due_date: dateOnly(i - 2),
+    completed: false,
+    record_type: "task",
+    source_table: "tasks",
+  }));
 }
 
-function demoReports(youngPersonId) {
-  return [
-    {
-      id: 801,
-      young_person_id: youngPersonId,
-      record_type: "monthly_review",
-      source_table: "monthly_reviews",
-      review_title: "March monthly review",
-      review_month: "2026-03",
-      status: "approved",
-      summary_of_month: "Month showed stable routines with some school-related anxiety.",
-      progress_summary: "Improved morning routines and reduced conflict in evenings.",
-      child_voice_summary: "Young person said school remains the biggest stressor.",
-    },
+function makeHealth(youngPersonId) {
+  const titles = [
+    "GP medication review",
+    "Dental check",
+    "Optician review",
+    "CAMHS appointment",
+    "Health plan update",
+    "Weight and wellbeing check",
+    "Sleep review",
+    "Medication administration review",
+    "Immunisation follow-up",
+    "Health practitioner phone advice",
   ];
+
+  return titles.map((title, i) => ({
+    id: 9000 + youngPersonId + i,
+    young_person_id: youngPersonId,
+    title,
+    record_type: "health_record",
+    source_table: "health_records",
+    summary: `${title} completed with clear outcome and next steps.`,
+    event_datetime: iso(-(i + 2), 10, 0),
+    professional_name: pick(["Dr Ahmed", "Nurse Kelly", "CAMHS Team", "Smile Dental"], i),
+    outcome: "Plan reviewed and follow-up recorded.",
+    significance: i % 4 === 0 ? "medium" : "low",
+    workflow_status: "approved",
+    next_action_date: dateOnly(i + 7),
+  }));
 }
 
-function demoCompliance(homeId = 1) {
-  return [
-    {
-      id: 901,
-      home_id: homeId,
-      title: "Regulation 44 visit due",
-      status: "overdue",
-      due_date: "2026-04-08",
-      severity: "high",
-      record_type: "compliance_item",
-      source_table: "compliance_items",
-    },
-    {
-      id: 902,
-      home_id: homeId,
-      title: "Fire drill record",
-      status: "due_soon",
-      due_date: "2026-04-16",
-      severity: "medium",
-      record_type: "compliance_item",
-      source_table: "compliance_items",
-    },
-    {
-      id: 903,
-      home_id: homeId,
-      title: "Staff training matrix review",
-      status: "active",
-      due_date: "2026-04-28",
-      severity: "low",
-      record_type: "compliance_item",
-      source_table: "compliance_items",
-    },
+function makeEducation(youngPersonId) {
+  return Array.from({ length: 10 }, (_, i) => ({
+    id: 10000 + youngPersonId + i,
+    young_person_id: youngPersonId,
+    title: "Education record",
+    record_type: "education_record",
+    source_table: "education_records",
+    provision_name: "Riverside Academy",
+    attendance_status: i % 4 === 0 ? "Partial attendance" : "Attended",
+    learning_engagement: "Engaged with support and responded to structure.",
+    behaviour_summary: i % 3 === 0 ? "Needed emotional reassurance after lunch." : "Managed the day well.",
+    issue_raised: i % 4 === 0 ? "Travel anxiety" : "",
+    record_date: dateOnly(-(i + 1)),
+    significance: i % 4 === 0 ? "medium" : "low",
+    workflow_status: "approved",
+  }));
+}
+
+function makeFamily(youngPersonId) {
+  const contacts = ["Mum", "Dad", "Grandmother", "Older sister"];
+  return Array.from({ length: 10 }, (_, i) => ({
+    id: 11000 + youngPersonId + i,
+    young_person_id: youngPersonId,
+    record_type: "family_contact_record",
+    source_table: "family_contact_records",
+    contact_type: i % 2 === 0 ? "Phone call" : "Community visit",
+    contact_person: pick(contacts, i),
+    contact_datetime: iso(-(i + 1), 18, 30),
+    post_contact_presentation: i % 3 === 0 ? "Needed extra reassurance afterwards." : "Settled and positive afterwards.",
+    concerns: i % 4 === 0 ? "Wanted longer contact." : "",
+    child_voice: "Shared mixed feelings about contact.",
+    significance: i % 4 === 0 ? "medium" : "low",
+    workflow_status: "approved",
+  }));
+}
+
+function makeAppointments(youngPersonId) {
+  const titles = [
+    "GP medication review",
+    "PEP meeting",
+    "CAMHS review",
+    "Dental appointment",
+    "School planning meeting",
+    "LAC review",
+    "Optician check",
+    "Therapy session",
+    "Education review",
+    "Social worker visit",
   ];
+
+  return titles.map((title, i) => ({
+    id: 12000 + youngPersonId + i,
+    young_person_id: youngPersonId,
+    record_type: "appointment",
+    source_table: "appointments",
+    title,
+    appointment_type: i % 2 === 0 ? "Health" : "Professional meeting",
+    start_datetime: iso(i + 1, 9 + (i % 4), 30),
+    location: i % 2 === 0 ? "Community clinic" : "Home / School",
+    professional_name: pick(["Dr Ahmed", "Virtual School Team", "CAMHS Team", "Social Worker"], i),
+    status: "booked",
+    summary: `${title} arranged with preparation noted.`,
+    follow_up_actions: i % 3 === 0 ? "Prepare brief summary beforehand." : "",
+  }));
 }
 
-function demoDocuments(homeId = 1) {
-  return [
-    {
-      id: 1001,
-      home_id: homeId,
-      title: "Statement of Purpose",
-      document_type: "Governance",
-      summary: "Latest signed version available.",
-      status: "active",
-      review_date: "2026-06-01",
-      record_type: "statutory_document",
-      source_table: "statutory_documents",
-    },
-    {
-      id: 1002,
-      home_id: homeId,
-      title: "Location Risk Assessment",
-      document_type: "Risk",
-      summary: "Review required following recent incident trend.",
-      status: "review_due",
-      review_date: "2026-04-20",
-      record_type: "statutory_document",
-      source_table: "statutory_documents",
-    },
-    {
-      id: 1003,
-      home_id: homeId,
-      title: "Fire Safety Certificate",
-      document_type: "Safety",
-      summary: "Current certification on file.",
-      status: "valid",
-      review_date: "2026-09-15",
-      record_type: "statutory_document",
-      source_table: "statutory_documents",
-    },
-    {
-      id: 1004,
-      home_id: homeId,
-      title: "Missing from Care Protocol",
-      document_type: "Procedure",
-      summary: "Requires annual refresh.",
-      status: "expired",
-      review_date: "2026-03-15",
-      record_type: "statutory_document",
-      source_table: "statutory_documents",
-    },
-  ];
+function makeReportsForYoungPerson(youngPersonId) {
+  return Array.from({ length: 10 }, (_, i) => ({
+    id: 13000 + youngPersonId + i,
+    young_person_id: youngPersonId,
+    record_type: "monthly_review",
+    source_table: "monthly_reviews",
+    review_title: `Monthly review ${i + 1}`,
+    review_month: `2025-${String((i % 12) + 1).padStart(2, "0")}`,
+    status: "approved",
+    summary_of_month: "Month showed progress in routines and relationship repair.",
+    progress_summary: "Improved engagement with boundaries and support.",
+    child_voice_summary: "Young person identified school and uncertainty as key stressors.",
+  }));
 }
 
-function demoTeam(homeId = 1) {
-  return [
-    {
-      id: 1101,
-      home_id: homeId,
-      staff_member: "Sarah Jones",
-      role: "Registered Manager",
-      status: "On shift",
-    },
-    {
-      id: 1102,
-      home_id: homeId,
-      staff_member: "Tom Patel",
-      role: "Senior Residential Worker",
-      status: "On shift",
-    },
-    {
-      id: 1103,
-      home_id: homeId,
-      staff_member: "Leah Brown",
-      role: "Residential Worker",
-      status: "Off shift",
-    },
-    {
-      id: 1104,
-      home_id: homeId,
-      staff_member: "Amir Hussain",
-      role: "Waking Night",
-      status: "Annual leave",
-    },
-  ];
+function makeTimeline(youngPersonId) {
+  return Array.from({ length: 10 }, (_, i) => ({
+    id: 14000 + youngPersonId + i,
+    title: pick(
+      [
+        "Behaviour incident",
+        "Health appointment attended",
+        "Family contact",
+        "School update",
+        "Therapy reflection",
+        "Achievement noted",
+      ],
+      i
+    ),
+    summary: "Timeline event recorded with clear significance and context.",
+    category: pick(["incident", "health", "family", "education", "therapy"], i),
+    event_datetime: iso(-(i + 1), 14, 0),
+    significance: i % 4 === 0 ? "medium" : "low",
+    record_type: "chronology_event",
+    source_table: "chronology_events",
+    young_person_id: youngPersonId,
+  }));
 }
 
-function demoTherapy(homeId = 1) {
-  return [
-    {
-      id: 1201,
-      home_id: homeId,
-      title: "Therapeutic session",
-      summary: "Young person engaged well and reflected on recent conflict.",
-      status: "Completed",
-      created_at: "2026-04-10T10:30:00Z",
-      record_type: "therapy",
-      source_table: "therapy",
-    },
-    {
-      id: 1202,
-      home_id: homeId,
-      title: "Clinical consultation",
-      summary: "Staff advised to reduce verbal demand during escalation.",
-      status: "Completed",
-      created_at: "2026-04-04T14:00:00Z",
-      record_type: "therapy",
-      source_table: "therapy",
-    },
-  ];
-}
-
-function demoCommunications(homeId = 1) {
-  return [
-    {
-      id: 1301,
-      home_id: homeId,
-      title: "IRO update",
-      summary: "Review meeting confirmed for next Tuesday.",
-      status: "Sent",
-      contact_datetime: "2026-04-11T09:00:00Z",
-      record_type: "communication",
-      source_table: "communications",
-    },
-    {
-      id: 1302,
-      home_id: homeId,
-      title: "Social worker email",
-      summary: "Requested updated incident chronology.",
-      status: "Received",
-      contact_datetime: "2026-04-09T15:20:00Z",
-      record_type: "communication",
-      source_table: "communications",
-    },
-  ];
-}
-
-function demoSupervisions(homeId = 1) {
-  return [
-    {
-      id: 1401,
-      home_id: homeId,
-      staff_member: "Tom Patel",
-      role: "Senior Residential Worker",
-      status: "due_soon",
-      due_date: "2026-04-18",
-      record_type: "supervision",
-      source_table: "supervisions",
-    },
-    {
-      id: 1402,
-      home_id: homeId,
-      staff_member: "Leah Brown",
-      role: "Residential Worker",
-      status: "overdue",
-      due_date: "2026-04-10",
-      record_type: "supervision",
-      source_table: "supervisions",
-    },
-  ];
-}
-
-function demoAssistantReply(payload = {}) {
+function getDemoAssistantReply(payload = {}) {
   const scope =
     payload?.context?.scope ||
     payload?.context?.current_scope ||
@@ -702,17 +647,17 @@ function demoAssistantReply(payload = {}) {
 
   const homeName =
     payload?.context?.home_name ||
-    "the home";
+    "IndiCare House";
 
   if (scope === "home") {
-    return `Summary for ${homeName}: staffing is broadly stable, there are a small number of overdue compliance items, and leadership attention should focus on supervision timeliness, document review dates, and preparing for upcoming multi-agency meetings.`;
+    return `Summary for ${homeName}: the home appears broadly stable, staffing is sufficient for current needs, and management attention should focus on document review dates, overdue compliance items, and supervision timeliness.`;
   }
 
   if (scope === "quality") {
-    return `Quality summary for ${homeName}: the main themes are document review timeliness, consistency of management oversight, and maintaining clear evidence of follow-up actions. Inspection readiness would improve by tightening compliance tracking and supervision completion.`;
+    return `Quality summary for ${homeName}: evidence is strongest in routine recording and relationship-based care. Improvement priorities are tighter compliance follow-up, clearer management oversight trails, and more consistent review-date discipline across documents and supervision.`;
   }
 
-  return `Summary for ${name}: current themes suggest school-related anxiety, generally responsive relationships with staff, and a need for continued attention to predictable routines, follow-up actions, and emotionally regulated transitions, especially around education and family contact. Section in view: ${section}.`;
+  return `Summary for ${name}: the main current themes are anxiety around education, stronger outcomes when routines are predictable, generally responsive relationships with staff, and a need for continued follow-up around family contact, appointments, and emotionally regulated transitions. Section in view: ${section}.`;
 }
 
 function getDemoResponse(url, method = "GET") {
@@ -725,18 +670,24 @@ function getDemoResponse(url, method = "GET") {
   if (match) {
     const homeId = Number(match[1]);
     return {
-      home: demoHome(homeId),
+      home: {
+        id: homeId,
+        name: "IndiCare House",
+        home_name: "IndiCare House",
+        registration_status: "Active",
+        local_authority: "Birmingham",
+      },
+      young_people: makeYoungPeople(homeId),
       items: [],
-      young_people: demoYoungPeople(homeId),
       summary: {
-        occupancy: 3,
-        incidents_last_7_days: 2,
-        overdue_items: 4,
+        occupancy: 4,
+        incidents_last_7_days: 6,
+        overdue_items: 5,
         staffing_pressure: "medium",
       },
       alerts: [
-        { id: 1, title: "Two compliance items overdue", severity: "high" },
-        { id: 2, title: "One supervision due this week", severity: "medium" },
+        { id: 1, title: "Three compliance items overdue", severity: "high" },
+        { id: 2, title: "Two supervisions due this week", severity: "medium" },
       ],
     };
   }
@@ -744,74 +695,43 @@ function getDemoResponse(url, method = "GET") {
   match = url.match(/^\/homes\/(\d+)\/team(?:\?.*)?$/);
   if (match) {
     const homeId = Number(match[1]);
-    return {
-      items: demoTeam(homeId),
-      team: demoTeam(homeId),
-    };
+    const items = makeTeam(homeId);
+    return { items, team: items };
   }
 
   match = url.match(/^\/homes\/(\d+)\/documents(?:\?.*)?$/);
   if (match) {
     const homeId = Number(match[1]);
-    return {
-      items: demoDocuments(homeId),
-      documents: demoDocuments(homeId),
-      statutory_documents: demoDocuments(homeId),
-    };
+    const items = makeDocuments(homeId);
+    return { items, documents: items, statutory_documents: items };
   }
 
   match = url.match(/^\/homes\/(\d+)\/therapy(?:\?.*)?$/);
   if (match) {
     const homeId = Number(match[1]);
-    return {
-      items: demoTherapy(homeId),
-      therapy: demoTherapy(homeId),
-      therapy_records: demoTherapy(homeId),
-    };
+    const items = makeTherapy(homeId);
+    return { items, therapy: items, therapy_records: items };
   }
 
   match = url.match(/^\/homes\/(\d+)\/communications(?:\?.*)?$/);
   if (match) {
     const homeId = Number(match[1]);
-    return {
-      items: demoCommunications(homeId),
-      communications: demoCommunications(homeId),
-    };
+    const items = makeCommunications(homeId);
+    return { items, communications: items };
   }
 
   match = url.match(/^\/homes\/(\d+)\/supervisions(?:\?.*)?$/);
   if (match) {
     const homeId = Number(match[1]);
-    return {
-      items: demoSupervisions(homeId),
-      supervisions: demoSupervisions(homeId),
-    };
+    const items = makeSupervisions(homeId);
+    return { items, supervisions: items };
   }
 
   match = url.match(/^\/homes\/(\d+)\/reports(?:\?.*)?$/);
   if (match) {
-    return {
-      items: [
-        {
-          id: 1501,
-          title: "Monthly home summary",
-          summary: "Stable month overall with two notable incidents.",
-          status: "completed",
-          review_month: "2026-03",
-          record_type: "monthly_review",
-        },
-      ],
-      reports: [
-        {
-          id: 1501,
-          title: "Monthly home summary",
-          summary: "Stable month overall with two notable incidents.",
-          status: "completed",
-          review_month: "2026-03",
-          record_type: "monthly_review",
-        },
-      ],
-    };
+    const homeId = Number(match[1]);
+    const items = makeReports(homeId);
+    return { items, reports: items, monthly_reviews: items };
   }
 
   match = url.match(/^\/homes\/(\d+)\/quality(?:\?.*)?$/);
@@ -819,153 +739,109 @@ function getDemoResponse(url, method = "GET") {
     return {
       summary: {
         rating: "Good",
-        concerns: 2,
-        strengths: 5,
+        concerns: 3,
+        strengths: 6,
       },
-      items: [
-        {
-          id: 1601,
-          title: "Audit action",
-          summary: "Medication signatures complete in 95% of records.",
-          status: "monitor",
-        },
-      ],
+      items: makeCompliance(1).slice(0, 5),
     };
   }
 
   match = url.match(/^\/homes\/(\d+)\/compliance(?:\?.*)?$/);
   if (match) {
     const homeId = Number(match[1]);
-    return {
-      items: demoCompliance(homeId),
-      compliance_items: demoCompliance(homeId),
-    };
+    const items = makeCompliance(homeId);
+    return { items, compliance_items: items };
   }
 
   match = url.match(/^\/young-people\/(\d+)\/incidents(?:\?.*)?$/);
   if (match) {
     const youngPersonId = Number(match[1]);
-    return {
-      items: demoIncidents(youngPersonId),
-      incidents: demoIncidents(youngPersonId),
-    };
+    const items = makeIncidents(youngPersonId);
+    return { items, incidents: items };
   }
 
   match = url.match(/^\/young-people\/(\d+)\/tasks(?:\?.*)?$/);
   if (match) {
     const youngPersonId = Number(match[1]);
-    return {
-      items: demoTasks(youngPersonId),
-      tasks: demoTasks(youngPersonId),
-    };
+    const items = makeTasks(youngPersonId);
+    return { items, tasks: items };
   }
 
   match = url.match(/^\/young-people\/(\d+)\/health(?:\?.*)?$/);
   if (match) {
     const youngPersonId = Number(match[1]);
-    return {
-      items: demoHealth(youngPersonId),
-      health_records: demoHealth(youngPersonId),
-    };
+    const items = makeHealth(youngPersonId);
+    return { items, health_records: items };
   }
 
   match = url.match(/^\/young-people\/(\d+)\/education(?:\?.*)?$/);
   if (match) {
     const youngPersonId = Number(match[1]);
-    return {
-      items: demoEducation(youngPersonId),
-      education_records: demoEducation(youngPersonId),
-    };
+    const items = makeEducation(youngPersonId);
+    return { items, education_records: items };
   }
 
   match = url.match(/^\/young-people\/(\d+)\/family(?:\?.*)?$/);
   if (match) {
     const youngPersonId = Number(match[1]);
-    return {
-      items: demoFamily(youngPersonId),
-      family_contact_records: demoFamily(youngPersonId),
-    };
+    const items = makeFamily(youngPersonId);
+    return { items, family_contact_records: items };
   }
 
   match = url.match(/^\/young-people\/(\d+)\/appointments(?:\?.*)?$/);
   if (match) {
     const youngPersonId = Number(match[1]);
-    return {
-      items: demoAppointments(youngPersonId),
-      appointments: demoAppointments(youngPersonId),
-    };
+    const items = makeAppointments(youngPersonId);
+    return { items, appointments: items };
   }
 
   match = url.match(/^\/young-people\/(\d+)\/reports(?:\?.*)?$/);
   if (match) {
     const youngPersonId = Number(match[1]);
-    return {
-      items: demoReports(youngPersonId),
-      reports: demoReports(youngPersonId),
-      monthly_reviews: demoReports(youngPersonId),
-    };
+    const items = makeReportsForYoungPerson(youngPersonId);
+    return { items, reports: items, monthly_reviews: items };
   }
 
   match = url.match(/^\/young-people\/(\d+)\/timeline(?:\?.*)?$/);
   if (match) {
     const youngPersonId = Number(match[1]);
-    return {
-      items: demoTimelineItems(youngPersonId),
-      chronology_events: demoTimelineItems(youngPersonId),
-      timeline: demoTimelineItems(youngPersonId),
-    };
+    const items = makeTimeline(youngPersonId);
+    return { items, chronology_events: items, timeline: items };
   }
 
   match = url.match(/^\/young-people\/(\d+)\/compliance(?:\?.*)?$/);
   if (match) {
     const youngPersonId = Number(match[1]);
-    return {
-      items: demoTasks(youngPersonId),
-      compliance_items: demoTasks(youngPersonId),
-    };
+    const items = makeTasks(youngPersonId);
+    return { items, compliance_items: items };
   }
 
   match = url.match(/^\/young-people\/(\d+)\/plans(?:\?.*)?$/);
   if (match) {
     const youngPersonId = Number(match[1]);
-    return {
-      items: [
-        {
-          id: 1701,
-          young_person_id: youngPersonId,
-          title: "Risk assessment",
-          summary: "Current triggers include school transition and uncertainty.",
-          category: "Emotional wellbeing",
-          review_date: "2026-04-26",
-          status: "active",
-          record_type: "risk_assessment",
-        },
-      ],
-      risks: [
-        {
-          id: 1701,
-          young_person_id: youngPersonId,
-          title: "Risk assessment",
-          summary: "Current triggers include school transition and uncertainty.",
-          category: "Emotional wellbeing",
-          review_date: "2026-04-26",
-          status: "active",
-          record_type: "risk_assessment",
-        },
-      ],
-      risk_assessments: [
-        {
-          id: 1701,
-          young_person_id: youngPersonId,
-          title: "Risk assessment",
-          summary: "Current triggers include school transition and uncertainty.",
-          category: "Emotional wellbeing",
-          review_date: "2026-04-26",
-          status: "active",
-          record_type: "risk_assessment",
-        },
-      ],
-    };
+    const items = [
+      {
+        id: 15001 + youngPersonId,
+        young_person_id: youngPersonId,
+        title: "Risk assessment",
+        summary: "Current triggers include school transition and uncertainty.",
+        category: "Emotional wellbeing",
+        review_date: dateOnly(10),
+        status: "active",
+        record_type: "risk_assessment",
+      },
+      {
+        id: 15002 + youngPersonId,
+        young_person_id: youngPersonId,
+        title: "Support plan",
+        summary: "Best responses include reassurance, predictability, and low demand language.",
+        category: "Support",
+        review_date: dateOnly(14),
+        status: "active",
+        record_type: "support_plan",
+      },
+    ];
+    return { items, risks: items, risk_assessments: items };
   }
 
   return null;
@@ -1248,7 +1124,7 @@ export async function apiStreamAssistant(payload, handlers = {}) {
     });
 
     onProgress("Analysing records...");
-    const finalText = demoAssistantReply(payload);
+    const finalText = getDemoAssistantReply(payload);
     onMessage(finalText);
     onDone(finalText);
     return;
