@@ -25,6 +25,7 @@ import {
 } from "./core/config.js";
 
 let scopeEventsBound = false;
+let bootstrapped = false;
 
 function showWorkspace() {
   els.selectorScreen?.classList.add("hidden");
@@ -91,7 +92,7 @@ function syncScopeButtons() {
   });
 
   if (els.scopeSwitch) {
-    const showSwitch = allowedScopes.length > 1;
+    const showSwitch = getAllowedScopesForRole().length > 1;
     els.scopeSwitch.classList.toggle("hidden", !showSwitch);
     els.scopeSwitch.setAttribute("aria-hidden", showSwitch ? "false" : "true");
   }
@@ -212,6 +213,9 @@ async function bootstrapSelectorIfNeeded(restored) {
 }
 
 async function bootstrap() {
+  if (bootstrapped) return;
+  bootstrapped = true;
+
   try {
     ensureValidScopeForRole();
 
