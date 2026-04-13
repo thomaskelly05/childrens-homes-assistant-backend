@@ -122,12 +122,15 @@ function getCurrentSection() {
     state.currentSection ||
     state.activeSection ||
     state.currentView ||
-    "workspace"
+    getDefaultSectionForScope()
   );
 }
 
-function getAllowedSectionIdsForScope() {
-  const scope = getCurrentScope();
+function isChildScope() {
+  return getCurrentScope() === "child";
+}
+
+function getAllowedSectionIdsForScope(scope = getCurrentScope()) {
   return new Set(
     SCOPE_SECTIONS?.[scope] || SCOPE_SECTIONS?.child || ["workspace"]
   );
@@ -137,8 +140,8 @@ function getDefaultSectionForScope(scope = getCurrentScope()) {
   return SCOPE_DEFAULT_SECTION?.[scope] || "workspace";
 }
 
-function isSectionAllowed(sectionId) {
-  return getAllowedSectionIdsForScope().has(sectionId);
+function isSectionAllowed(sectionId, scope = getCurrentScope()) {
+  return getAllowedSectionIdsForScope(scope).has(sectionId);
 }
 
 function ensureValidCurrentSection() {
@@ -338,12 +341,22 @@ function markActiveNav(section) {
   });
 }
 
+function updateSectionState(section) {
+  state.currentSection = section;
+  state.activeSection = section;
+  state.currentView = section;
+}
+
+function requireChildContext() {
+  return Boolean(state.youngPersonId);
+}
+
 export async function loadSection(section) {
   const safeSection = isSectionAllowed(section)
     ? section
     : getDefaultSectionForScope();
 
-  if (!state.youngPersonId && getCurrentScope() === "child") {
+  if (isChildScope() && !requireChildContext()) {
     showError("Select a young person first.");
     showSelectorScreen();
     resetWorkspaceSummaryStrip();
@@ -358,9 +371,7 @@ export async function loadSection(section) {
     return;
   }
 
-  state.currentSection = safeSection;
-  state.activeSection = safeSection;
-  state.currentView = safeSection;
+  updateSectionState(safeSection);
 
   showWorkspaceScreen();
   markActiveNav(safeSection);
@@ -406,9 +417,7 @@ function bindSelectorControls() {
     state.youngPersonId = null;
     state.selectedYoungPerson = null;
     state.currentScope = "child";
-    state.currentSection = getDefaultSectionForScope("child");
-    state.activeSection = state.currentSection;
-    state.currentView = state.currentSection;
+    updateSectionState(getDefaultSectionForScope("child"));
     state.activeRecordType = null;
     state.activeRecordItem = null;
 
@@ -568,14 +577,12 @@ function bindYoungPersonOpen() {
     if (!id) return;
 
     try {
+      state.currentScope = "child";
       await openYoungPerson(id);
 
       showWorkspaceScreen();
 
-      state.currentScope = "child";
-      state.currentSection = getDefaultSectionForScope("child");
-      state.activeSection = state.currentSection;
-      state.currentView = state.currentSection;
+      updateSectionState(getDefaultSectionForScope("child"));
 
       updateYoungPersonChrome(state.selectedYoungPerson || {});
       updateSectionChrome(getCurrentSection());
@@ -669,7 +676,7 @@ export async function initialiseShellNavigation() {
   updateSectionChrome(getCurrentSection());
   updateYoungPersonChrome(state.selectedYoungPerson || {});
 
-  if (getCurrentScope() === "child" && !state.youngPersonId) {
+  if (isChildScope() && !requireChildContext()) {
     try {
       await loadYoungPersonSelector();
       showSelectorScreen();
