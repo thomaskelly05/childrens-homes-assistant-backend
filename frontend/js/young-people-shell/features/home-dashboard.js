@@ -4,14 +4,21 @@ import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
 
 function getHomeId() {
-  return state.homeId || state.currentUser?.home_id || state.currentUser?.homeId || null;
+  return (
+    state.homeId ||
+    state.currentUser?.home_id ||
+    state.currentUser?.homeId ||
+    null
+  );
 }
 
 function toArray(value, fallbacks = []) {
   if (Array.isArray(value)) return value;
+
   for (const fallback of fallbacks) {
     if (Array.isArray(fallback)) return fallback;
   }
+
   return [];
 }
 
@@ -20,8 +27,26 @@ function toNumber(value, fallback = 0) {
   return Number.isFinite(num) ? num : fallback;
 }
 
+function safeText(value, fallback = "") {
+  return escapeHtml(String(value ?? fallback ?? ""));
+}
+
+function formatDate(value) {
+  if (!value) return "No date";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 function formatDateTime(value) {
   if (!value) return "No date";
+
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
 
@@ -34,38 +59,48 @@ function formatDateTime(value) {
   });
 }
 
-function formatDate(value) {
-  if (!value) return "No date";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-
-  return date.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function safeText(value, fallback = "") {
-  return escapeHtml(String(value ?? fallback ?? ""));
-}
-
 function getStatusTone(status = "") {
   const normalised = String(status || "").toLowerCase();
 
-  if (["overdue", "high", "critical", "escalated", "missing"].includes(normalised)) {
+  if (
+    ["overdue", "high", "critical", "escalated", "missing"].includes(normalised)
+  ) {
     return "danger";
   }
 
-  if (["due_soon", "warning", "medium", "review_due"].includes(normalised)) {
+  if (
+    ["due_soon", "warning", "medium", "review_due", "attention"].includes(
+      normalised
+    )
+  ) {
     return "warning";
   }
 
-  if (["completed", "good", "active", "booked", "compliant"].includes(normalised)) {
+  if (
+    ["completed", "good", "active", "booked", "compliant", "ok"].includes(
+      normalised
+    )
+  ) {
     return "success";
   }
 
   return "muted";
+}
+
+function sortNewestFirst(items = [], keys = []) {
+  return [...items].sort((a, b) => {
+    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
+    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
+    return new Date(bValue).getTime() - new Date(aValue).getTime();
+  });
+}
+
+function sortSoonestFirst(items = [], keys = []) {
+  return [...items].sort((a, b) => {
+    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
+    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
+    return new Date(aValue).getTime() - new Date(bValue).getTime();
+  });
 }
 
 function normaliseHomeSummary(data = {}) {
@@ -96,22 +131,6 @@ function normaliseTherapyItems(data = {}) {
   return toArray(data.items, [data.therapy, data.records]);
 }
 
-function sortNewestFirst(items = [], keys = []) {
-  return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
-    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
-    return new Date(bValue).getTime() - new Date(aValue).getTime();
-  });
-}
-
-function sortSoonestFirst(items = [], keys = []) {
-  return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
-    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
-    return new Date(aValue).getTime() - new Date(bValue).getTime();
-  });
-}
-
 function buildTopStats({
   summary = {},
   openTasks = [],
@@ -122,7 +141,12 @@ function buildTopStats({
   return [
     {
       label: "Children in home",
-      value: toNumber(summary.children_count ?? summary.young_people_count ?? summary.resident_count, 0),
+      value: toNumber(
+        summary.children_count ??
+          summary.young_people_count ??
+          summary.resident_count,
+        0
+      ),
       note: "Current live children",
       tone: "muted",
     },
@@ -151,6 +175,68 @@ function buildTopStats({
       tone: "muted",
     },
   ];
+}
+
+function buildOperationalCounts({ summary = {}, team = [], tasks = [], documents = [] }) {
+  const openVacancies = toNumber(
+    summary.open_vacancies ?? summary.vacancies_count,
+    0
+  );
+
+  const absentStaff = team.filter((item) =>
+    ["off", "sick", "absence", "absent"].includes(
+      String(item.status || "").toLowerCase()
+    )
+  ).length;
+
+  const openActions = tasks.filter((item) => !item.completed).length;
+
+  const docReviewsDue = documents.filter((item) => {
+    const status = String(item.status || "").toLowerCase();
+    return ["review_due", "due_soon", "overdue"].includes(status);
+  }).length;
+
+  return {
+    openVacancies,
+    absentStaff,
+    openActions,
+    docReviewsDue,
+  };
+}
+
+function buildPriorityItems({
+  overdueTasks = [],
+  dueSupervisions = [],
+  expiringDocuments = [],
+}) {
+  const items = [];
+
+  overdueTasks.slice(0, 3).forEach((task) => {
+    items.push({
+      title: task.title || task.task || "Overdue task",
+      summary: task.summary || task.notes || `Due ${formatDate(task.due_date)}`,
+    });
+  });
+
+  dueSupervisions.slice(0, 2).forEach((item) => {
+    items.push({
+      title: item.staff_member || item.title || "Supervision due",
+      summary: item.next_due_date
+        ? `Supervision due ${formatDate(item.next_due_date)}`
+        : "Supervision needs booking or completion.",
+    });
+  });
+
+  expiringDocuments.slice(0, 2).forEach((doc) => {
+    items.push({
+      title: doc.title || doc.document_type || "Document review due",
+      summary: doc.review_date
+        ? `Review due ${formatDate(doc.review_date)}`
+        : "Document review is approaching.",
+    });
+  });
+
+  return items.slice(0, 6);
 }
 
 function renderStatCards(cards = []) {
@@ -222,7 +308,10 @@ function renderRows(items = [], options = {}) {
             item?.organisation ||
             "No summary available.";
 
-          const meta = metaBuilder ? metaBuilder(item) : item?.updated_at || item?.created_at || "";
+          const meta = metaBuilder
+            ? metaBuilder(item)
+            : item?.updated_at || item?.created_at || "";
+
           const status = item?.[statusKey] || "";
           const tone = getStatusTone(status);
           const rowId = item?.id || item?.record_id || item?.source_id || "";
@@ -243,7 +332,9 @@ function renderRows(items = [], options = {}) {
                 <div class="record-row-meta">${safeText(meta)}</div>
               </div>
               <div class="record-row-side">
-                <span class="row-pill ${safeText(tone)}">${safeText(status || "Recorded")}</span>
+                <span class="row-pill ${safeText(tone)}">${safeText(
+            status || "Recorded"
+          )}</span>
               </div>
             </article>
           `;
@@ -276,51 +367,6 @@ function renderPriorityList(items = []) {
         .join("")}
     </div>
   `;
-}
-
-function buildPriorityItems({ overdueTasks = [], dueSupervisions = [], expiringDocuments = [] }) {
-  const items = [];
-
-  overdueTasks.slice(0, 3).forEach((task) => {
-    items.push({
-      title: task.title || task.task || "Overdue task",
-      summary: task.summary || task.notes || `Due ${formatDate(task.due_date)}`,
-    });
-  });
-
-  dueSupervisions.slice(0, 2).forEach((item) => {
-    items.push({
-      title: item.staff_member || item.title || "Supervision due",
-      summary: item.next_due_date
-        ? `Supervision due ${formatDate(item.next_due_date)}`
-        : "Supervision needs booking or completion.",
-    });
-  });
-
-  expiringDocuments.slice(0, 2).forEach((doc) => {
-    items.push({
-      title: doc.title || doc.document_type || "Document review due",
-      summary: doc.review_date
-        ? `Review due ${formatDate(doc.review_date)}`
-        : "Document review is approaching.",
-    });
-  });
-
-  return items.slice(0, 6);
-}
-
-function buildOperationalCounts({ summary = {}, team = [], tasks = [], documents = [] }) {
-  const openVacancies = toNumber(summary.open_vacancies ?? summary.vacancies_count, 0);
-  const absentStaff = team.filter((item) =>
-    ["off", "sick", "absence"].includes(String(item.status || "").toLowerCase())
-  ).length;
-  const openActions = tasks.filter((item) => !item.completed).length;
-  const docReviewsDue = documents.filter((item) => {
-    const status = String(item.status || "").toLowerCase();
-    return ["review_due", "due_soon", "overdue"].includes(status);
-  }).length;
-
-  return { openVacancies, absentStaff, openActions, docReviewsDue };
 }
 
 function renderHomeDashboardHtml({
@@ -362,9 +408,9 @@ function renderHomeDashboardHtml({
                   <div class="record-row-summary">Known vacancies across the home.</div>
                 </div>
                 <div class="record-row-side">
-                  <span class="row-pill ${operationalCounts.openVacancies > 0 ? "warning" : "muted"}">${safeText(
-    operationalCounts.openVacancies
-  )}</span>
+                  <span class="row-pill ${
+                    operationalCounts.openVacancies > 0 ? "warning" : "muted"
+                  }">${safeText(operationalCounts.openVacancies)}</span>
                 </div>
               </article>
 
@@ -374,9 +420,9 @@ function renderHomeDashboardHtml({
                   <div class="record-row-summary">Staff currently off, sick or unavailable.</div>
                 </div>
                 <div class="record-row-side">
-                  <span class="row-pill ${operationalCounts.absentStaff > 0 ? "warning" : "muted"}">${safeText(
-    operationalCounts.absentStaff
-  )}</span>
+                  <span class="row-pill ${
+                    operationalCounts.absentStaff > 0 ? "warning" : "muted"
+                  }">${safeText(operationalCounts.absentStaff)}</span>
                 </div>
               </article>
 
@@ -386,9 +432,9 @@ function renderHomeDashboardHtml({
                   <div class="record-row-summary">Outstanding management and operational tasks.</div>
                 </div>
                 <div class="record-row-side">
-                  <span class="row-pill ${operationalCounts.openActions > 0 ? "warning" : "muted"}">${safeText(
-    operationalCounts.openActions
-  )}</span>
+                  <span class="row-pill ${
+                    operationalCounts.openActions > 0 ? "warning" : "muted"
+                  }">${safeText(operationalCounts.openActions)}</span>
                 </div>
               </article>
 
@@ -398,9 +444,9 @@ function renderHomeDashboardHtml({
                   <div class="record-row-summary">Policies, statutory documents or records needing review.</div>
                 </div>
                 <div class="record-row-side">
-                  <span class="row-pill ${operationalCounts.docReviewsDue > 0 ? "warning" : "muted"}">${safeText(
-    operationalCounts.docReviewsDue
-  )}</span>
+                  <span class="row-pill ${
+                    operationalCounts.docReviewsDue > 0 ? "warning" : "muted"
+                  }">${safeText(operationalCounts.docReviewsDue)}</span>
                 </div>
               </article>
             </div>
@@ -535,7 +581,11 @@ function renderHomeDashboardHtml({
               summaryKey: "summary",
               recordType: "team",
               metaBuilder: (item) =>
-                [item.role || "", item.status || "", formatDate(item.record_date || item.created_at)]
+                [
+                  item.role || "",
+                  item.status || "",
+                  formatDate(item.record_date || item.created_at),
+                ]
                   .filter(Boolean)
                   .join(" • "),
             })}
@@ -546,25 +596,24 @@ function renderHomeDashboardHtml({
   `;
 }
 
-export async function loadHomeDashboard() {
+function renderNoHomeContext() {
   if (!els.viewContent) return;
 
-  const homeId = getHomeId();
-
-  if (!homeId) {
-    els.viewContent.innerHTML = `
-      <section class="overview-panel">
-        <div class="empty-state">
-          <div class="empty-state-inner">
-            <div class="empty-state-icon" aria-hidden="true">▥</div>
-            <h3>No home context available</h3>
-            <p>A home ID is needed before the home dashboard can load.</p>
-          </div>
+  els.viewContent.innerHTML = `
+    <section class="overview-panel">
+      <div class="empty-state">
+        <div class="empty-state-inner">
+          <div class="empty-state-icon" aria-hidden="true">▥</div>
+          <h3>No home context available</h3>
+          <p>A home ID is needed before the home dashboard can load.</p>
         </div>
-      </section>
-    `;
-    return;
-  }
+      </div>
+    </section>
+  `;
+}
+
+function renderLoadingState() {
+  if (!els.viewContent) return;
 
   els.viewContent.innerHTML = `
     <section class="overview-panel">
@@ -576,6 +625,35 @@ export async function loadHomeDashboard() {
       </div>
     </section>
   `;
+}
+
+function renderErrorState(message) {
+  if (!els.viewContent) return;
+
+  els.viewContent.innerHTML = `
+    <section class="overview-panel">
+      <div class="empty-state">
+        <div class="empty-state-inner">
+          <div class="empty-state-icon" aria-hidden="true">!</div>
+          <h3>Failed to load home dashboard</h3>
+          <p>${safeText(message || "The home dashboard could not be loaded.")}</p>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+export async function loadHomeDashboard() {
+  if (!els.viewContent) return;
+
+  const homeId = getHomeId();
+
+  if (!homeId) {
+    renderNoHomeContext();
+    return;
+  }
+
+  renderLoadingState();
 
   try {
     const [
@@ -611,6 +689,7 @@ export async function loadHomeDashboard() {
     ]);
 
     const openTasks = taskItems.filter((item) => !item.completed);
+
     const overdueTasks = openTasks.filter((item) =>
       ["overdue", "escalated"].includes(String(item.status || "").toLowerCase())
     );
@@ -627,8 +706,11 @@ export async function loadHomeDashboard() {
     ]);
 
     const recentDocuments = documentItems.slice(0, 6);
+
     const expiringDocuments = documentItems.filter((item) =>
-      ["review_due", "due_soon", "overdue"].includes(String(item.status || "").toLowerCase())
+      ["review_due", "due_soon", "overdue"].includes(
+        String(item.status || "").toLowerCase()
+      )
     );
 
     const supervisionItems = sortSoonestFirst(
@@ -637,7 +719,9 @@ export async function loadHomeDashboard() {
     );
 
     const dueSupervisions = supervisionItems.filter((item) =>
-      ["due", "due_soon", "overdue"].includes(String(item.status || "").toLowerCase())
+      ["due", "due_soon", "overdue"].includes(
+        String(item.status || "").toLowerCase()
+      )
     );
 
     const therapyItems = sortNewestFirst(normaliseTherapyItems(therapyData), [
@@ -686,16 +770,6 @@ export async function loadHomeDashboard() {
       teamItems,
     });
   } catch (error) {
-    els.viewContent.innerHTML = `
-      <section class="overview-panel">
-        <div class="empty-state">
-          <div class="empty-state-inner">
-            <div class="empty-state-icon" aria-hidden="true">!</div>
-            <h3>Failed to load home dashboard</h3>
-            <p>${safeText(error?.message || "The home dashboard could not be loaded.")}</p>
-          </div>
-        </div>
-      </section>
-    `;
+    renderErrorState(error?.message || "The home dashboard could not be loaded.");
   }
 }
