@@ -117,12 +117,19 @@ function getCurrentScope() {
 }
 
 function getCurrentSection() {
-  return state.currentSection || state.activeSection || state.currentView || "workspace";
+  return (
+    state.currentSection ||
+    state.activeSection ||
+    state.currentView ||
+    "workspace"
+  );
 }
 
 function getAllowedSectionIdsForScope() {
   const scope = getCurrentScope();
-  return new Set(SCOPE_SECTIONS?.[scope] || SCOPE_SECTIONS?.child || ["workspace"]);
+  return new Set(
+    SCOPE_SECTIONS?.[scope] || SCOPE_SECTIONS?.child || ["workspace"]
+  );
 }
 
 function getDefaultSectionForScope(scope = getCurrentScope()) {
@@ -184,7 +191,9 @@ function renderNavItem(item, { compact = false } = {}) {
       aria-pressed="${isActive ? "true" : "false"}"
       title="${escapeHtml(description)}"
     >
-      <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(getNavIcon(item.icon))}</span>
+      <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(
+        getNavIcon(item.icon)
+      )}</span>
       <span class="nav-btn-copy">
         <span class="nav-btn-label">${escapeHtml(label)}</span>
         ${meta}
@@ -241,9 +250,13 @@ function buildMobileBottomBarHtml() {
           aria-pressed="${isActive ? "true" : "false"}"
           title="${escapeHtml(item.label || item.id)}"
         >
-          <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(getNavIcon(item.icon))}</span>
+          <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(
+            getNavIcon(item.icon)
+          )}</span>
           <span class="nav-btn-copy">
-            <span class="nav-btn-label">${escapeHtml(item.short_label || item.label || item.id)}</span>
+            <span class="nav-btn-label">${escapeHtml(
+              item.short_label || item.label || item.id
+            )}</span>
           </span>
         </button>
       `;
@@ -325,6 +338,7 @@ export async function loadSection(section) {
   }
 
   const loader = SECTION_LOADERS[safeSection];
+
   if (!loader) {
     showError(`Unknown section: ${safeSection}`);
     return;
