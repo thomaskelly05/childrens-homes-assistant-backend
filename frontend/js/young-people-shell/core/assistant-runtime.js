@@ -21,6 +21,11 @@ function unique(values = []) {
   return [...new Set(arrayify(values).filter(Boolean))];
 }
 
+function parseDateValue(value) {
+  const time = Date.parse(value || "");
+  return Number.isNaN(time) ? 0 : time;
+}
+
 function getScopeLabel(scope) {
   if (scope === "home") return "home";
   if (scope === "quality") return "quality";
@@ -129,6 +134,52 @@ function sectionGuidance(section, scope) {
   return map[section] || `Support with ${scope} workspace tasks.`;
 }
 
+function roleGuidance(role = "") {
+  const value = String(role || "").toLowerCase();
+
+  if (value === "staff") {
+    return "Prioritise practical, immediate, child-centred support and shift-level clarity.";
+  }
+
+  if (value === "manager") {
+    return "Prioritise oversight, escalation, management review, quality of recording, and follow-up actions.";
+  }
+
+  if (value === "ri") {
+    return "Prioritise service patterns, compliance themes, audit language, quality assurance and inspection readiness.";
+  }
+
+  if (value === "admin") {
+    return "Prioritise system-wide visibility, governance, reporting, compliance and operational clarity.";
+  }
+
+  return "Prioritise clarity, practical usefulness, and evidence-based support.";
+}
+
+function scopePromptGuidance(context) {
+  if (context.scope === "child") {
+    return [
+      "Be child-centred, trauma-informed and practical.",
+      "Separate facts, interpretation and next actions where possible.",
+      "Do not invent missing context.",
+    ].join(" ");
+  }
+
+  if (context.scope === "home") {
+    return [
+      "Be operationally focused and management-useful.",
+      "Highlight staffing, actions, compliance pressures and service risks.",
+      "Prefer concise service-level summaries and next steps.",
+    ].join(" ");
+  }
+
+  return [
+    "Be quality-focused and inspection-ready.",
+    "Highlight patterns, assurance gaps, governance issues and evidence strengths or weaknesses.",
+    "Use language appropriate for RI, leadership and audit review.",
+  ].join(" ");
+}
+
 function buildSystemPrompt(context) {
   return [
     `You are the IndiCare OS assistant.`,
@@ -136,12 +187,15 @@ function buildSystemPrompt(context) {
     `Current section: ${context.section}.`,
     `User role: ${context.role}.`,
     `Purpose: ${sectionGuidance(context.section, context.scope)}`,
+    `Role guidance: ${roleGuidance(context.role)}`,
+    `Scope guidance: ${scopePromptGuidance(context)}`,
     context.scope === "child"
       ? `Selected young person: ${context.person.name}. Preferred name: ${context.person.preferred_name || "not set"}. Home: ${context.person.home_name || "not set"}. Risk: ${context.person.risk || "not set"}. Placement status: ${context.person.placement_status || "not set"}.`
       : `Current home: ${context.home.home_name}.`,
     `Keep responses clear, calm, practical, child-centred where relevant, and operationally useful.`,
     `Prefer structured support: summary, what matters, suggested wording, and next actions.`,
     `Do not overclaim. If evidence is weak or missing, say so clearly.`,
+    `Where useful, highlight missing evidence, overdue review points, open risks, and recommended follow-up.`,
   ].join(" ");
 }
 
@@ -207,7 +261,16 @@ function filterEvidenceByScope(evidence = [], context = buildAssistantContext())
     });
   }
 
-  return evidence;
+  const homeId = context.home?.home_id;
+  if (!homeId) return evidence;
+
+  return evidence.filter((item) => {
+    const raw = item.raw || {};
+    const itemHomeId = raw.home_id ?? raw.service_id ?? null;
+
+    if (itemHomeId === null || itemHomeId === undefined) return true;
+    return String(itemHomeId) === String(homeId);
+  });
 }
 
 function filterEvidenceBySection(evidence = [], section = "workspace") {
@@ -216,6 +279,7 @@ function filterEvidenceBySection(evidence = [], section = "workspace") {
   const sectionGroups = {
     workspace: ["workspace", "overview", "handover"],
     overview: ["overview", "workspace", "timeline", "manager"],
+    profile: ["profile", "overview"],
     timeline: ["timeline", "manager"],
     handover: ["handover", "workspace", "timeline"],
     health: ["health", "calendar"],
@@ -239,19 +303,6 @@ function filterEvidenceBySection(evidence = [], section = "workspace") {
   return evidence.filter((item) => allowed.has(item.section));
 }
 
-function sortEvidence(evidence = []) {
-  return [...evidence].sort((a, b) => {
-    const aScore = scoreEvidence(a);
-    const bScore = scoreEvidence(b);
-
-    if (bScore !== aScore) return bScore - aScore;
-
-    const aTime = Date.parse(a.date || 0) || 0;
-    const bTime = Date.parse(b.date || 0) || 0;
-    return bTime - aTime;
-  });
-}
-
 function scoreEvidence(item = {}) {
   let score = 0;
 
@@ -271,12 +322,28 @@ function scoreEvidence(item = {}) {
   return score;
 }
 
+function sortEvidence(evidence = []) {
+  return [...evidence].sort((a, b) => {
+    const aScore = scoreEvidence(a);
+    const bScore = scoreEvidence(b);
+
+    if (bScore !== aScore) return bScore - aScore;
+
+    const aTime = parseDateValue(a.date);
+    const bTime = parseDateValue(b.date);
+    return bTime - aTime;
+  });
+}
+
 function summariseEvidence(evidence = []) {
   const counts = {};
   const tags = {};
   let openTasks = 0;
   let safeguarding = 0;
   let overdue = 0;
+  let incidents = 0;
+  let documents = 0;
+  let compliance = 0;
 
   for (const item of evidence) {
     counts[item.record_type || "record"] = (counts[item.record_type || "record"] || 0) + 1;
@@ -287,6 +354,18 @@ function summariseEvidence(evidence = []) {
 
     if ((item.record_type || "") === "task" && item.tags?.includes("open_task")) {
       openTasks += 1;
+    }
+
+    if ((item.record_type || "") === "incident") {
+      incidents += 1;
+    }
+
+    if ((item.record_type || "") === "document" || (item.record_type || "") === "statutory_document") {
+      documents += 1;
+    }
+
+    if ((item.record_type || "") === "compliance_item") {
+      compliance += 1;
     }
 
     if (item.tags?.includes("safeguarding")) {
@@ -305,6 +384,9 @@ function summariseEvidence(evidence = []) {
     open_tasks: openTasks,
     safeguarding_items: safeguarding,
     overdue_items: overdue,
+    incident_items: incidents,
+    document_items: documents,
+    compliance_items: compliance,
   };
 }
 
@@ -319,8 +401,8 @@ function makeSource(item = {}) {
   };
 }
 
-function buildEvidenceSummaryLines(evidence = []) {
-  const top = sortEvidence(evidence).slice(0, 5);
+function buildEvidenceSummaryLines(evidence = [], limit = 5) {
+  const top = sortEvidence(evidence).slice(0, limit);
 
   if (!top.length) {
     return ["No supporting records are currently loaded for this view."];
@@ -337,9 +419,77 @@ function buildEvidenceSummaryLines(evidence = []) {
   });
 }
 
+function getTopConcerns(evidence = []) {
+  const concerns = [];
+  const sorted = sortEvidence(evidence).slice(0, 10);
+
+  if (sorted.some((item) => item.tags?.includes("safeguarding"))) {
+    concerns.push("Safeguarding-linked evidence needs attention.");
+  }
+
+  if (sorted.some((item) => item.tags?.includes("status:overdue"))) {
+    concerns.push("There are overdue items in the current evidence set.");
+  }
+
+  if (sorted.some((item) => item.tags?.includes("severity:critical"))) {
+    concerns.push("Critical severity evidence is present.");
+  }
+
+  if (sorted.some((item) => item.tags?.includes("severity:high"))) {
+    concerns.push("High severity evidence is present.");
+  }
+
+  if (sorted.some((item) => item.tags?.includes("open_task"))) {
+    concerns.push("There are open tasks requiring follow-up.");
+  }
+
+  return unique(concerns).slice(0, 5);
+}
+
+function inferSuggestedActions(context, evidence = []) {
+  const actions = [];
+  const summary = summariseEvidence(evidence);
+
+  if (context.scope === "child") {
+    actions.push({ type: "summarise_section", label: "Summarise current section" });
+    actions.push({ type: "draft_handover", label: "Draft handover" });
+
+    if (summary.open_tasks > 0) {
+      actions.push({ type: "create_task", label: "Create action list" });
+    }
+
+    if (summary.safeguarding_items > 0 || summary.incident_items > 0) {
+      actions.push({ type: "review_record", label: "Review incidents and risks" });
+    }
+  }
+
+  if (context.scope === "home") {
+    actions.push({ type: "summarise_section", label: "Summarise home view" });
+    actions.push({ type: "create_task", label: "Create action list" });
+    actions.push({ type: "draft_note", label: "Draft management update" });
+
+    if (summary.overdue_items > 0) {
+      actions.push({ type: "review_record", label: "Review overdue items" });
+    }
+  }
+
+  if (context.scope === "quality") {
+    actions.push({ type: "summarise_section", label: "Summarise quality themes" });
+    actions.push({ type: "create_task", label: "Create action list" });
+    actions.push({ type: "draft_note", label: "Draft RI summary" });
+
+    if (summary.overdue_items > 0 || summary.compliance_items > 0) {
+      actions.push({ type: "review_record", label: "Review compliance gaps" });
+    }
+  }
+
+  return actions.slice(0, 6);
+}
+
 function buildFallbackReply(message, context, evidence = []) {
   const text = String(message || "").toLowerCase();
   const evidenceSummary = summariseEvidence(evidence);
+  const topConcerns = getTopConcerns(evidence);
 
   if (text.includes("morning brief")) {
     return {
@@ -352,7 +502,8 @@ function buildFallbackReply(message, context, evidence = []) {
         `• Safeguarding-linked items: ${evidenceSummary.safeguarding_items}`,
         "",
         "What matters this morning:",
-        ...buildEvidenceSummaryLines(evidence).slice(0, 3),
+        ...buildEvidenceSummaryLines(evidence, 3),
+        ...(topConcerns.length ? ["", "Key concerns:", ...topConcerns.map((item) => `• ${item}`)] : []),
         "",
         "Next actions:",
         "• Check urgent follow-up items first",
@@ -381,7 +532,7 @@ function buildFallbackReply(message, context, evidence = []) {
         `"${context.scope === "child" ? context.person.name : "The home"} presented as settled for most of the shift. The main point to note is ... Staff should prioritise ... on the next shift."`,
         "",
         "Recent evidence to consider:",
-        ...buildEvidenceSummaryLines(evidence).slice(0, 3),
+        ...buildEvidenceSummaryLines(evidence, 3),
       ].join("\n"),
       suggested_actions: [
         { type: "draft_handover", label: "Draft handover" },
@@ -424,6 +575,7 @@ function buildFallbackReply(message, context, evidence = []) {
         "",
         `Current loaded evidence: ${evidenceSummary.total} item(s)`,
         `Overdue items visible: ${evidenceSummary.overdue_items}`,
+        `Compliance items visible: ${evidenceSummary.compliance_items}`,
         "",
         "Best next step: show Red / Amber / Green status by area, then list the top overdue items.",
       ].join("\n"),
@@ -445,7 +597,7 @@ function buildFallbackReply(message, context, evidence = []) {
         "• Immediate next actions",
         "",
         `Loaded evidence count: ${evidenceSummary.total}`,
-        ...buildEvidenceSummaryLines(evidence).slice(0, 4),
+        ...buildEvidenceSummaryLines(evidence, 4),
       ].join("\n"),
       suggested_actions: [
         { type: "summarise_section", label: "Summarise current section" },
@@ -520,11 +672,15 @@ function buildAssistantContextMeta(context, evidence = []) {
     home: context.home,
     active_record_type: context.active_record_type || null,
     active_record_item: context.active_record_item || null,
+    composer_record_type: context.composer_record_type || null,
+    composer_record_id: context.composer_record_id || null,
     evidence_summary: summary,
+    key_concerns: getTopConcerns(evidence),
     recent_records: {
       incidents: evidence.filter((item) => item.record_type === "incident").slice(0, 5),
       tasks: evidence.filter((item) => item.record_type === "task").slice(0, 5),
       compliance: evidence.filter((item) => item.record_type === "compliance_item").slice(0, 5),
+      documents: evidence.filter((item) => item.record_type === "document" || item.record_type === "statutory_document").slice(0, 5),
     },
     active_work: {
       tasks: evidence.filter((item) => item.tags?.includes("open_task")).slice(0, 10),
@@ -561,6 +717,7 @@ export function buildMorningBriefContext(options = {}) {
     section: context.section,
     summary,
     evidence: runtime.evidence.slice(0, 10),
+    key_concerns: getTopConcerns(runtime.evidence),
   };
 }
 
@@ -573,6 +730,7 @@ export function buildManagerBriefContext(options = {}) {
     section: runtime.context.section,
     summary: runtime.summary,
     evidence: runtime.evidence.slice(0, 12),
+    key_concerns: getTopConcerns(runtime.evidence),
   };
 }
 
@@ -585,6 +743,7 @@ export function buildQualityBriefContext(options = {}) {
     section: runtime.context.section,
     summary: runtime.summary,
     evidence: runtime.evidence.slice(0, 12),
+    key_concerns: getTopConcerns(runtime.evidence),
   };
 }
 
@@ -617,18 +776,20 @@ export async function runAssistantMessage(message, options = {}) {
           answer: data.answer || "No answer returned.",
           suggested_actions: Array.isArray(data.suggested_actions)
             ? data.suggested_actions
-            : [],
+            : inferSuggestedActions(context, evidence),
           sources: Array.isArray(data.sources)
             ? data.sources
             : evidence.slice(0, 6).map(makeSource),
           runtime: {
             mode: "api",
+            evidence_count: evidence.length,
             ...data.runtime,
           },
           explainability: {
             scope: context.scope,
             section: context.section,
             evidence_count: evidence.length,
+            key_concerns: getTopConcerns(evidence),
             ...data.explainability,
           },
           assistant_scope: data.assistant_scope || buildAssistantScopeMeta(context),
@@ -645,16 +806,21 @@ export async function runAssistantMessage(message, options = {}) {
 
   return createAssistantResponse({
     answer: fallback.answer,
-    suggested_actions: fallback.suggested_actions || [],
+    suggested_actions:
+      fallback.suggested_actions?.length
+        ? fallback.suggested_actions
+        : inferSuggestedActions(context, evidence),
     sources: evidence.slice(0, 6).map(makeSource),
     runtime: {
       mode: "fallback",
+      evidence_count: evidence.length,
     },
     explainability: {
       scope: context.scope,
       section: context.section,
       evidence_count: evidence.length,
       fallback_used: true,
+      key_concerns: getTopConcerns(evidence),
     },
     assistant_scope: buildAssistantScopeMeta(context),
     assistant_context: buildAssistantContextMeta(context, evidence),
