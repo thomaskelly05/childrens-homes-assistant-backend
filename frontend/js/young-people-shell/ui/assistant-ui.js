@@ -6,12 +6,16 @@ function qs(id) {
   return document.getElementById(id);
 }
 
-function getCurrentPerson() {
-  return state.selectedYoungPerson || state.youngPerson || null;
+function getCurrentScope() {
+  return state.currentScope || "child";
 }
 
 function getCurrentSection() {
   return state.currentSection || state.activeSection || state.currentView || "workspace";
+}
+
+function getCurrentPerson() {
+  return state.selectedYoungPerson || state.youngPerson || null;
 }
 
 function getAssistantMeta() {
@@ -35,13 +39,10 @@ function formatRole(role = "") {
   return "System";
 }
 
-function buildPersonLabel() {
-  const person = getCurrentPerson();
-  return getDisplayName(person || {}) || "Young person";
-}
-
 function normaliseSectionLabel(section = "") {
-  return String(section || "workspace").replaceAll("_", " ").replaceAll("-", " ");
+  return String(section || "workspace")
+    .replaceAll("_", " ")
+    .replaceAll("-", " ");
 }
 
 function prettyJson(value) {
@@ -52,14 +53,119 @@ function prettyJson(value) {
   }
 }
 
+function getFullYoungPersonName() {
+  const person = getCurrentPerson() || {};
+  return (
+    [person.first_name, person.last_name].filter(Boolean).join(" ").trim() ||
+    person.full_name ||
+    person.name ||
+    person.preferred_name ||
+    getDisplayName(person) ||
+    "Young person"
+  );
+}
+
+function getHomeLabel() {
+  const person = getCurrentPerson() || {};
+  return (
+    state.currentUser?.home_name ||
+    state.currentUser?.homeName ||
+    person.home_name ||
+    (state.homeId ? `Home ${state.homeId}` : "") ||
+    ""
+  );
+}
+
+function getScopeTitle() {
+  const scope = getCurrentScope();
+
+  if (scope === "home") return "Home assistant";
+  if (scope === "quality") return "Quality assistant";
+  return "Young person assistant";
+}
+
+function getScopePrimaryLabel() {
+  const scope = getCurrentScope();
+
+  if (scope === "home") {
+    return getHomeLabel() || "Home overview";
+  }
+
+  if (scope === "quality") {
+    return getHomeLabel() ? `${getHomeLabel()} quality` : "Quality overview";
+  }
+
+  return getFullYoungPersonName();
+}
+
+function getScopeIntroText() {
+  const scope = getCurrentScope();
+
+  if (scope === "home") {
+    return "Ask a question about this home, staffing, compliance or operations.";
+  }
+
+  if (scope === "quality") {
+    return "Ask a question about quality, audits, compliance or RI oversight.";
+  }
+
+  if (state.youngPersonId) {
+    return `Ask a question about ${getFullYoungPersonName()}.`;
+  }
+
+  return "Select a young person to start.";
+}
+
+function getContextLine() {
+  const section = normaliseSectionLabel(getCurrentSection());
+  const scope = getCurrentScope();
+
+  if (scope === "home") {
+    return `Scoped to ${getHomeLabel() || "home oversight"} • current section: ${section}`;
+  }
+
+  if (scope === "quality") {
+    return `Scoped to ${getHomeLabel() || "quality oversight"} • current section: ${section}`;
+  }
+
+  if (state.youngPersonId) {
+    return `Scoped to ${getFullYoungPersonName()} • current section: ${section}`;
+  }
+
+  return "No young person selected.";
+}
+
+function buildAssistantScopeBadges() {
+  const scope = getCurrentScope();
+  const homeLabel = getHomeLabel();
+  const childLabel = getFullYoungPersonName();
+  const sectionLabel = normaliseSectionLabel(getCurrentSection());
+
+  return {
+    mainScope: getScopeTitle(),
+    homeBadge:
+      scope === "home" || scope === "quality"
+        ? homeLabel || "Home context"
+        : homeLabel || "",
+    childBadge:
+      scope === "child" && state.youngPersonId
+        ? childLabel
+        : "",
+    sectionBadge: sectionLabel,
+  };
+}
+
 function renderMessage(message = {}) {
   const role = message.role || "assistant";
-  const roleClass = role === "user" ? "assistant-message-user" : "assistant-message-system";
+  const roleClass =
+    role === "user" ? "assistant-message-user" : "assistant-message-system";
 
   return `
     <article class="assistant-message ${escapeHtml(roleClass)}">
       <div class="assistant-message-role">${escapeHtml(formatRole(role))}</div>
-      <div class="assistant-message-body">${escapeHtml(message.content || message.text || "")}</div>
+      <div class="assistant-message-body">${escapeHtml(
+        message.content || message.text || ""
+      )}</div>
     </article>
   `;
 }
@@ -70,11 +176,7 @@ function renderMessageList(host, messages = []) {
   const intro = `
     <article class="assistant-message assistant-message-system">
       <div class="assistant-message-role">Assistant</div>
-      <div class="assistant-message-body">${
-        state.youngPersonId
-          ? `Ask a question about ${escapeHtml(buildPersonLabel())}.`
-          : "Select a young person to start."
-      }</div>
+      <div class="assistant-message-body">${escapeHtml(getScopeIntroText())}</div>
     </article>
   `;
 
@@ -88,91 +190,108 @@ function renderMessages() {
 }
 
 function renderScopeBadges() {
-  const person = getCurrentPerson() || {};
-  const homeName =
-    person.home_name || (person.home_id != null ? `Home ${person.home_id}` : "");
-  const childName = buildPersonLabel();
-  const section = getCurrentSection();
+  const badges = buildAssistantScopeBadges();
 
-  const homeBadge = qs("scopeHomeBadge");
-  const childBadge = qs("scopeChildBadge");
-  const shiftBadge = qs("scopeShiftBadge");
-  const modalHomeBadge = qs("modalScopeHomeBadge");
-  const modalChildBadge = qs("modalScopeChildBadge");
+  const scopeBadge = qs("scopeBadge");
+  const scopeHomeBadge = qs("scopeHomeBadge");
+  const scopeChildBadge = qs("scopeChildBadge");
+  const scopeShiftBadge = qs("scopeShiftBadge");
 
-  if (homeBadge) {
-    homeBadge.textContent = homeName || "";
-    homeBadge.classList.toggle("hidden", !homeName);
+  const modalScopeHomeBadge = qs("modalScopeHomeBadge");
+  const modalScopeChildBadge = qs("modalScopeChildBadge");
+
+  if (scopeBadge) {
+    scopeBadge.textContent = badges.mainScope;
+    scopeBadge.classList.remove("hidden");
   }
 
-  if (childBadge) {
-    childBadge.textContent = childName || "";
-    childBadge.classList.toggle("hidden", !state.youngPersonId || !childName);
+  if (scopeHomeBadge) {
+    scopeHomeBadge.textContent = badges.homeBadge;
+    scopeHomeBadge.classList.toggle("hidden", !badges.homeBadge);
   }
 
-  if (shiftBadge) {
-    shiftBadge.textContent = normaliseSectionLabel(section);
-    shiftBadge.classList.toggle("hidden", !section);
+  if (scopeChildBadge) {
+    scopeChildBadge.textContent = badges.childBadge;
+    scopeChildBadge.classList.toggle("hidden", !badges.childBadge);
   }
 
-  if (modalHomeBadge) {
-    modalHomeBadge.textContent = homeName || "";
-    modalHomeBadge.classList.toggle("hidden", !homeName);
+  if (scopeShiftBadge) {
+    scopeShiftBadge.textContent = badges.sectionBadge;
+    scopeShiftBadge.classList.toggle("hidden", !badges.sectionBadge);
   }
 
-  if (modalChildBadge) {
-    modalChildBadge.textContent = childName || "";
-    modalChildBadge.classList.toggle("hidden", !state.youngPersonId || !childName);
+  if (modalScopeHomeBadge) {
+    modalScopeHomeBadge.textContent = badges.homeBadge;
+    modalScopeHomeBadge.classList.toggle("hidden", !badges.homeBadge);
+  }
+
+  if (modalScopeChildBadge) {
+    modalScopeChildBadge.textContent = badges.childBadge;
+    modalScopeChildBadge.classList.toggle("hidden", !badges.childBadge);
   }
 }
 
 function renderContextText() {
-  const section = getCurrentSection();
+  const contextEl = qs("assistantContext");
+  if (!contextEl) return;
 
-  const contextText = state.youngPersonId
-    ? `Scoped to ${buildPersonLabel()} • current section: ${normaliseSectionLabel(section)}`
-    : "No young person selected.";
-
-  if (qs("assistantContext")) {
-    qs("assistantContext").textContent = contextText;
-  }
+  contextEl.textContent = getContextLine();
 }
 
 function buildScopeSummaryCards() {
   const meta = getAssistantMeta();
   const assistantContext = meta.assistant_context || {};
   const runtime = meta.runtime || {};
-  const person = getCurrentPerson();
+  const explainability = meta.explainability || {};
+  const scope = getCurrentScope();
 
   const cards = [
     {
       title: "Scope",
-      text: state.youngPersonId
-        ? `Young person: ${buildPersonLabel()} • section: ${normaliseSectionLabel(getCurrentSection())}`
-        : "No young person selected.",
+      text:
+        scope === "home"
+          ? `Home scope • ${getHomeLabel() || "Home overview"} • section: ${normaliseSectionLabel(
+              getCurrentSection()
+            )}`
+          : scope === "quality"
+          ? `Quality scope • ${getHomeLabel() || "Quality overview"} • section: ${normaliseSectionLabel(
+              getCurrentSection()
+            )}`
+          : state.youngPersonId
+          ? `Young person scope • ${getFullYoungPersonName()} • section: ${normaliseSectionLabel(
+              getCurrentSection()
+            )}`
+          : "No young person selected.",
     },
     {
       title: "Assistant context",
       text:
         assistantContext.summary ||
         assistantContext.overview ||
+        assistantContext.scope_summary ||
         (assistantContext.young_person
           ? "Young person context is loaded for this assistant session."
+          : assistantContext.home
+          ? "Home context is loaded for this assistant session."
           : "Context will appear here after the assistant analyses records."),
     },
     {
       title: "Reasoning",
       text:
-        meta.explainability?.summary ||
+        explainability.summary ||
         "Explainability will appear here after the assistant returns a scoped answer.",
     },
     {
       title: "Runtime",
       text:
-        runtime.draft_mode ||
         runtime.mode ||
-        (person
-          ? `Assistant is ready for ${buildPersonLabel()}.`
+        runtime.draft_mode ||
+        (scope === "home"
+          ? "Assistant is ready for home oversight."
+          : scope === "quality"
+          ? "Assistant is ready for quality oversight."
+          : state.youngPersonId
+          ? `Assistant is ready for ${getFullYoungPersonName()}.`
           : "Assistant runtime will appear here."),
     },
     {
@@ -204,12 +323,15 @@ function buildScopeSummaryCards() {
 function renderScopeSummary() {
   const html = buildScopeSummaryCards();
 
-  if (qs("assistantScopeSummary")) {
-    qs("assistantScopeSummary").innerHTML = html;
+  const main = qs("assistantScopeSummary");
+  const modal = qs("assistantModalScopeSummary");
+
+  if (main) {
+    main.innerHTML = html;
   }
 
-  if (qs("assistantModalScopeSummary")) {
-    qs("assistantModalScopeSummary").innerHTML = html;
+  if (modal) {
+    modal.innerHTML = html;
   }
 }
 
@@ -237,7 +359,11 @@ function renderSourcesHtml(sources = []) {
           <div class="entity-meta">
             ${type}${section ? ` • ${section}` : ""}${page ? ` • p.${page}` : ""}
           </div>
-          ${description ? `<div class="entity-meta" style="margin-top:6px;">${description}</div>` : ""}
+          ${
+            description
+              ? `<div class="entity-meta" style="margin-top:6px;">${description}</div>`
+              : ""
+          }
         </div>
       `;
     })
@@ -248,26 +374,37 @@ function renderSources() {
   const meta = getAssistantMeta();
   const html = renderSourcesHtml(meta.sources || []);
 
-  if (qs("assistantSources")) {
-    qs("assistantSources").innerHTML = html;
+  const main = qs("assistantSources");
+  const modal = qs("assistantModalSources");
+
+  if (main) {
+    main.innerHTML = html;
   }
 
-  if (qs("assistantModalSources")) {
-    qs("assistantModalSources").innerHTML = html;
+  if (modal) {
+    modal.innerHTML = html;
   }
 }
 
 function renderRuntime() {
   const meta = getAssistantMeta();
   const runtime = meta.runtime || {
-    mode: "scoped-young-person-assistant",
+    mode:
+      getCurrentScope() === "home"
+        ? "scoped-home-assistant"
+        : getCurrentScope() === "quality"
+        ? "scoped-quality-assistant"
+        : "scoped-young-person-assistant",
     current_section: getCurrentSection(),
+    current_scope: getCurrentScope(),
     selected_young_person_id: state.youngPersonId || null,
+    home_id: state.homeId || null,
     messages: (state.assistantMessages || []).length,
   };
 
-  if (qs("assistantRuntime")) {
-    qs("assistantRuntime").textContent = prettyJson(runtime);
+  const runtimeEl = qs("assistantRuntime");
+  if (runtimeEl) {
+    runtimeEl.textContent = prettyJson(runtime);
   }
 }
 
@@ -278,24 +415,86 @@ function renderExplainability() {
       "The assistant will show scoped reasoning and evidence after a response is generated.",
   };
 
-  if (qs("assistantExplainability")) {
-    qs("assistantExplainability").textContent = prettyJson(explainability);
+  const explainabilityEl = qs("assistantExplainability");
+  if (explainabilityEl) {
+    explainabilityEl.textContent = prettyJson(explainability);
   }
 }
 
-function inferSuggestedActions() {
-  const meta = getAssistantMeta();
+function buildScopeQuickActions() {
+  const scope = getCurrentScope();
   const section = getCurrentSection();
-  const actions = [];
 
-  const quickActions = [
+  if (scope === "home") {
+    return [
+      getActionForQuickButton("task", { section }),
+      {
+        id: "home_summary",
+        label: "Summarise home priorities",
+        type: "assistant_chip",
+      },
+      {
+        id: "home_compliance",
+        label: "Show home compliance risks",
+        type: "assistant_chip",
+      },
+      {
+        id: "staffing_pressures",
+        label: "Review staffing pressures",
+        type: "assistant_chip",
+      },
+    ];
+  }
+
+  if (scope === "quality") {
+    return [
+      {
+        id: "quality_summary",
+        label: "Summarise quality themes",
+        type: "assistant_chip",
+      },
+      {
+        id: "compliance_risks",
+        label: "Highlight compliance risks",
+        type: "assistant_chip",
+      },
+      {
+        id: "audit_readiness",
+        label: "Review audit readiness",
+        type: "assistant_chip",
+      },
+      {
+        id: "ri_focus",
+        label: "What should RI focus on?",
+        type: "assistant_chip",
+      },
+    ];
+  }
+
+  return [
     getActionForQuickButton("daily_note", { section }),
     getActionForQuickButton("incident", { section }),
     getActionForQuickButton("task", { section }),
     getActionForQuickButton("appointment", { section }),
-  ].filter(Boolean);
+  ];
+}
 
-  quickActions.forEach((action) => {
+function inferSuggestedActions() {
+  const meta = getAssistantMeta();
+  const actions = [];
+
+  buildScopeQuickActions().forEach((action) => {
+    if (!action) return;
+
+    if (action.type === "assistant_chip") {
+      actions.push({
+        type: "assistant_chip",
+        id: action.id,
+        label: action.label,
+      });
+      return;
+    }
+
     if (action?.id && action?.label) {
       actions.push({
         type: "quick_action",
@@ -317,6 +516,7 @@ function inferSuggestedActions() {
   });
 
   const seen = new Set();
+
   return actions.filter((item) => {
     const key = `${item.type}:${String(item.id).toLowerCase()}`;
     if (seen.has(key)) return false;
@@ -356,12 +556,15 @@ function renderSuggestedActions() {
         .join("")
     : `<p>No suggested actions yet.</p>`;
 
-  if (qs("assistantSuggestions")) {
-    qs("assistantSuggestions").innerHTML = html;
+  const suggestionsEl = qs("assistantSuggestions");
+  const actionsEl = qs("assistantActions");
+
+  if (suggestionsEl) {
+    suggestionsEl.innerHTML = html;
   }
 
-  if (qs("assistantActions")) {
-    qs("assistantActions").innerHTML = html;
+  if (actionsEl) {
+    actionsEl.innerHTML = html;
   }
 }
 
@@ -396,7 +599,7 @@ export function appendAssistantSystemMessage(text) {
   };
 
   state.assistantMessages.push(entry);
-  state.assistantModalMessages.push(entry);
+  state.assistantModalMessages.push({ ...entry });
   renderAllAssistantUi();
 }
 
@@ -412,7 +615,7 @@ export function appendAssistantUserMessage(text) {
   };
 
   state.assistantMessages.push(entry);
-  state.assistantModalMessages.push(entry);
+  state.assistantModalMessages.push({ ...entry });
   renderAllAssistantUi();
 }
 
