@@ -63,6 +63,17 @@ const API_ROUTE_ALIASES = [
   // Reports
   [/\/young-people\/(\d+)\/inspection-packs$/, "/young-people/$1/reports"],
   [/\/young-people\/(\d+)\/monthly-reviews$/, "/young-people/$1/reports"],
+
+  // Wider shell aliases
+  [/\/homes\/(\d+)\/young-people$/, "/homes/$1/dashboard"],
+  [/\/homes\/(\d+)\/communications$/, "/homes/$1/communications"],
+  [/\/homes\/(\d+)\/documents$/, "/homes/$1/documents"],
+  [/\/homes\/(\d+)\/therapy$/, "/homes/$1/therapy"],
+  [/\/homes\/(\d+)\/team$/, "/homes/$1/team"],
+  [/\/homes\/(\d+)\/supervisions$/, "/homes/$1/supervisions"],
+  [/\/homes\/(\d+)\/reports$/, "/homes/$1/reports"],
+  [/\/homes\/(\d+)\/quality-dashboard$/, "/homes/$1/quality"],
+  [/\/homes\/(\d+)\/compliance-dashboard$/, "/homes/$1/compliance"],
 ];
 
 function shouldResolveAlias(method = "GET") {
@@ -135,6 +146,13 @@ function setCachedResponse(cacheKey, data) {
   });
 }
 
+function shouldCacheRequest(method = "GET", options = {}) {
+  const upper = String(method || "GET").toUpperCase();
+  if (upper !== "GET") return false;
+  if (options.skipCache) return false;
+  return true;
+}
+
 export function clearApiCache(url = null) {
   if (!url) {
     getResponseCache.clear();
@@ -148,11 +166,38 @@ export function clearApiCache(url = null) {
   inflightGetRequests.delete(cacheKey);
 }
 
+function invalidateCacheByPrefixes(prefixes = []) {
+  if (!Array.isArray(prefixes) || !prefixes.length) {
+    clearApiCache();
+    return;
+  }
+
+  const safePrefixes = prefixes.filter(Boolean);
+  if (!safePrefixes.length) {
+    clearApiCache();
+    return;
+  }
+
+  for (const key of [...getResponseCache.keys()]) {
+    const [, urlPart = ""] = key.split("::");
+    if (safePrefixes.some((prefix) => urlPart.startsWith(prefix))) {
+      getResponseCache.delete(key);
+    }
+  }
+
+  for (const key of [...inflightGetRequests.keys()]) {
+    const [, urlPart = ""] = key.split("::");
+    if (safePrefixes.some((prefix) => urlPart.startsWith(prefix))) {
+      inflightGetRequests.delete(key);
+    }
+  }
+}
+
 export async function apiRequest(url, options = {}) {
   const method = String(options.method || "GET").toUpperCase();
   const resolvedUrl = resolveApiUrl(url, method);
   const isFormData = options.body instanceof FormData;
-  const useCache = method === "GET" && !options.skipCache;
+  const useCache = shouldCacheRequest(method, options);
   const cacheKey = makeCacheKey(method, resolvedUrl);
 
   if (useCache) {
@@ -234,16 +279,19 @@ export async function apiGet(url, options = {}) {
   });
 }
 
-export async function apiSend(url, method = "POST", body = null) {
+export async function apiSend(url, method = "POST", body = null, options = {}) {
   const response = await apiRequest(url, {
     method,
     body,
     skipCache: true,
+    ...options,
   });
 
-  // Any write may invalidate one or more reads, so clear cached GETs.
-  getResponseCache.clear();
-  inflightGetRequests.clear();
+  if (Array.isArray(options.invalidatePrefixes) && options.invalidatePrefixes.length) {
+    invalidateCacheByPrefixes(options.invalidatePrefixes);
+  } else {
+    clearApiCache();
+  }
 
   return response;
 }
@@ -251,12 +299,7 @@ export async function apiSend(url, method = "POST", body = null) {
 export function unwrapCreateResponse(recordType, response) {
   if (!response || typeof response !== "object") return response;
 
-  const directKeys = [
-    recordType,
-    "item",
-    "record",
-    "data",
-  ];
+  const directKeys = ["item", "record", "data", recordType];
 
   for (const key of directKeys) {
     if (response[key] && typeof response[key] === "object") {
@@ -279,7 +322,10 @@ export function unwrapCreateResponse(recordType, response) {
     missing_episode: ["missing_episode"],
     task: ["task"],
     profile_identity: ["identity_profile", "young_person_identity_profile"],
-    profile_communication: ["communication_profile", "young_person_communication_profile"],
+    profile_communication: [
+      "communication_profile",
+      "young_person_communication_profile",
+    ],
     profile_education: ["education_profile", "young_person_education_profile"],
     profile_health: ["health_profile", "young_person_health_profile"],
     profile_legal: ["legal_status", "young_person_legal_status"],
@@ -288,6 +334,13 @@ export function unwrapCreateResponse(recordType, response) {
       "young_person_formulation",
       "young_person_formulations",
     ],
+    communication: ["communication"],
+    document: ["document"],
+    therapy: ["therapy"],
+    team: ["team"],
+    supervision: ["supervision"],
+    compliance: ["compliance", "compliance_item"],
+    audit: ["audit"],
   };
 
   const keys = commonByType[recordType] || [];
@@ -351,7 +404,15 @@ function consumeSseBuffer(buffer, onEvent) {
 }
 
 export async function apiStreamAssistant(payload, handlers = {}) {
-  const response = await buildSseContextFetch("/young-people/assistant", payload);
+  const scope = payload?.context?.scope || payload?.context?.current_scope || "child";
+  const endpoint =
+    scope === "home"
+      ? "/home/assistant"
+      : scope === "quality"
+      ? "/quality/assistant"
+      : "/young-people/assistant";
+
+  const response = await buildSseContextFetch(endpoint, payload);
 
   if (!response.ok) {
     const data = await readJsonSafely(response);
@@ -373,6 +434,13 @@ export async function apiStreamAssistant(payload, handlers = {}) {
   const decoder = new TextDecoder();
   let buffer = "";
   let streamedText = "";
+  let doneEmitted = false;
+
+  const finish = () => {
+    if (doneEmitted) return;
+    doneEmitted = true;
+    onDone(streamedText);
+  };
 
   while (true) {
     const { done, value } = await reader.read();
@@ -383,7 +451,7 @@ export async function apiStreamAssistant(payload, handlers = {}) {
 
     buffer = consumeSseBuffer(buffer, (eventName, payloadValue) => {
       if (payloadValue === "[DONE]" || eventName === "done") {
-        onDone(streamedText);
+        finish();
         return;
       }
 
@@ -411,7 +479,7 @@ export async function apiStreamAssistant(payload, handlers = {}) {
   if (buffer.trim()) {
     consumeSseBuffer(`${buffer}\n\n`, (eventName, payloadValue) => {
       if (payloadValue === "[DONE]" || eventName === "done") {
-        onDone(streamedText);
+        finish();
         return;
       }
 
@@ -436,5 +504,5 @@ export async function apiStreamAssistant(payload, handlers = {}) {
     });
   }
 
-  onDone(streamedText);
+  finish();
 }
