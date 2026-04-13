@@ -2,6 +2,7 @@ import { els } from "../dom.js";
 import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
+import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 import {
   mapDailyNote,
   mapIncident,
@@ -33,6 +34,7 @@ function sortSoonestFirst(items = [], keys = []) {
 
 function isToday(value) {
   if (!value) return false;
+
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return false;
 
@@ -46,8 +48,10 @@ function isToday(value) {
 
 function isFuture(value) {
   if (!value) return false;
+
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return false;
+
   return date.getTime() >= Date.now();
 }
 
@@ -57,14 +61,214 @@ function toText(value, fallback = "") {
 
 function formatDate(value) {
   if (!value) return "";
+
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
+
   return date.toLocaleString("en-GB", {
     day: "numeric",
     month: "short",
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function formatSummaryDate(value) {
+  if (!value) return "No date";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  return date.toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function renderEmptyState({
+  title = "Nothing to show",
+  message = "There is nothing to display right now.",
+  actionHtml = "",
+} = {}) {
+  return `
+    <div class="empty-state">
+      <div class="empty-state-inner">
+        <div class="empty-state-icon" aria-hidden="true">○</div>
+        <h3>${toText(title)}</h3>
+        <p>${toText(message)}</p>
+        ${actionHtml ? `<div class="empty-state-actions">${actionHtml}</div>` : ""}
+      </div>
+    </div>
+  `;
+}
+
+function getRowTitle(item = {}) {
+  return (
+    item.title ||
+    item.summary ||
+    item.appointment_type ||
+    item.record_type_label ||
+    item.event_type ||
+    "Record"
+  );
+}
+
+function getRowSummary(item = {}) {
+  return (
+    item.summary ||
+    item.presentation ||
+    item.description ||
+    item.notes ||
+    item.outcome ||
+    item.actions_required ||
+    "No summary available."
+  );
+}
+
+function getRowMeta(item = {}) {
+  return (
+    item.record_date ||
+    item.start_datetime ||
+    item.event_datetime ||
+    item.occurred_at ||
+    item.contact_datetime ||
+    item.created_at ||
+    item.updated_at ||
+    ""
+  );
+}
+
+function getRowTypeLabel(item = {}) {
+  return (
+    item.record_type_label ||
+    item.record_type ||
+    item.type ||
+    item.event_type ||
+    item.appointment_type ||
+    "Record"
+  );
+}
+
+function getRowPill(item = {}) {
+  const severity = String(item.severity || "").toLowerCase();
+  const status = String(item.status || item.workflow_status || "").toLowerCase();
+
+  if (
+    ["critical", "high"].includes(severity) ||
+    ["overdue", "escalated"].includes(status) ||
+    item.safeguarding_flag
+  ) {
+    return { label: "Needs review", tone: "warning" };
+  }
+
+  if (["draft", "pending", "review_due", "due_soon"].includes(status)) {
+    return { label: "In progress", tone: "muted" };
+  }
+
+  if (["completed", "booked", "confirmed", "approved", "active"].includes(status)) {
+    return { label: "Recorded", tone: "success" };
+  }
+
+  return { label: "Recorded", tone: "muted" };
+}
+
+function getRecordRowVariant(item = {}) {
+  const type = String(item.record_type || item.type || "").toLowerCase();
+  const eventType = String(item.event_type || "").toLowerCase();
+
+  if (type.includes("incident") || eventType.includes("incident")) {
+    return "record-row--incident";
+  }
+
+  if (type.includes("health") || type.includes("appointment")) {
+    return "record-row--health";
+  }
+
+  if (type.includes("family")) {
+    return "record-row--family";
+  }
+
+  if (type.includes("risk") || item.safeguarding_flag) {
+    return "record-row--risk";
+  }
+
+  return "record-row--daily";
+}
+
+function renderRecordRows(items = [], emptyMessage = "Nothing to show right now.") {
+  if (!items.length) {
+    return renderEmptyState({
+      title: "No records to show",
+      message: emptyMessage,
+    });
+  }
+
+  return `
+    <div class="record-list">
+      ${items
+        .map((item) => {
+          const pill = getRowPill(item);
+          const id = item.id ?? item.record_id ?? item.source_id ?? "";
+          const type = item.record_type || item.type || "";
+          const variantClass = getRecordRowVariant(item);
+          const formattedDate = formatDate(getRowMeta(item));
+          const typeLabel = getRowTypeLabel(item);
+
+          return `
+            <article
+              class="record-row ${toText(variantClass)}"
+              data-record-id="${toText(id)}"
+              data-record-type="${toText(type)}"
+              data-open-record="true"
+              data-title="${toText(getRowTitle(item))}"
+              role="button"
+              tabindex="0"
+            >
+              <div class="record-row-main">
+                <div class="record-row-title">${toText(getRowTitle(item))}</div>
+                <div class="record-row-summary">${toText(getRowSummary(item))}</div>
+                <div class="record-row-meta">
+                  ${formattedDate ? `<span>${toText(formattedDate)}</span>` : ""}
+                  ${typeLabel ? `<span>${toText(typeLabel)}</span>` : ""}
+                </div>
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill ${toText(pill.tone)}">${toText(pill.label)}</span>
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderPriorityList(items = [], emptyMessage = "No priority items are showing right now.") {
+  if (!items.length) {
+    return renderEmptyState({
+      title: "Nothing urgent right now",
+      message: emptyMessage,
+    });
+  }
+
+  return `
+    <div class="priority-list">
+      ${items
+        .slice(0, 4)
+        .map(
+          (item) => `
+            <article class="priority-item">
+              <strong>${toText(getRowTitle(item))}</strong>
+              <p>${toText(getRowSummary(item))}</p>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
 }
 
 function buildPriorityRows({
@@ -110,8 +314,12 @@ function buildTodayRows({
   dailyNotes = [],
 }) {
   const appointmentRows = appointments.filter((item) => isToday(item.start_datetime));
-  const chronologyRows = chronology.filter((item) => isToday(item.event_datetime || item.created_at));
-  const dailyNoteRows = dailyNotes.filter((item) => isToday(item.record_date || item.created_at));
+  const chronologyRows = chronology.filter((item) =>
+    isToday(item.event_datetime || item.created_at)
+  );
+  const dailyNoteRows = dailyNotes.filter((item) =>
+    isToday(item.record_date || item.created_at)
+  );
 
   return [...appointmentRows, ...chronologyRows, ...dailyNoteRows].slice(0, 12);
 }
@@ -133,7 +341,12 @@ function buildUpcomingRows({
   return [...appointmentRows, ...reviewPlans, ...dueTasks].slice(0, 12);
 }
 
-function buildSummaryCounts({ priorityRows = [], recentRows = [], todayRows = [], upcomingRows = [] }) {
+function buildSummaryCounts({
+  priorityRows = [],
+  recentRows = [],
+  todayRows = [],
+  upcomingRows = [],
+}) {
   return {
     urgent: priorityRows.length,
     recent: recentRows.length,
@@ -158,7 +371,9 @@ function buildWorkspaceCounts({
   ).length;
 
   const activePlans = plans.filter((item) =>
-    ["active", "review_due"].includes(String(item.status || "").toLowerCase())
+    ["active", "review_due", "submitted", "approved"].includes(
+      String(item.status || item.workflow_status || "").toLowerCase()
+    )
   ).length;
 
   const complianceIssues = compliance.filter((item) =>
@@ -176,184 +391,43 @@ function buildWorkspaceCounts({
   };
 }
 
-function getRowTitle(item = {}) {
-  return (
-    item.title ||
-    item.summary ||
-    item.appointment_type ||
-    item.record_type_label ||
-    item.event_type ||
-    "Record"
-  );
-}
-
-function getRowSummary(item = {}) {
-  return (
-    item.summary ||
-    item.presentation ||
-    item.description ||
-    item.notes ||
-    item.outcome ||
-    "No summary available."
-  );
-}
-
-function getRowMeta(item = {}) {
-  return (
-    item.record_date ||
-    item.start_datetime ||
-    item.event_datetime ||
-    item.occurred_at ||
-    item.contact_datetime ||
-    item.created_at ||
-    item.updated_at ||
-    ""
-  );
-}
-
-function getRowTypeLabel(item = {}) {
-  return (
-    item.record_type_label ||
-    item.record_type ||
-    item.type ||
-    item.event_type ||
-    item.appointment_type ||
-    "Record"
-  );
-}
-
-function getRowPill(item = {}) {
-  const severity = String(item.severity || "").toLowerCase();
-  const status = String(item.status || item.workflow_status || "").toLowerCase();
-
-  if (["critical", "high"].includes(severity) || ["overdue", "escalated"].includes(status)) {
-    return { label: "Needs review", tone: "warning" };
-  }
-
-  if (["draft", "pending", "review_due"].includes(status)) {
-    return { label: "In progress", tone: "muted" };
-  }
-
-  if (["completed", "booked", "confirmed"].includes(status)) {
-    return { label: "Recorded", tone: "success" };
-  }
-
-  return { label: "Recorded", tone: "muted" };
-}
-
-function getRecordRowVariant(item = {}) {
-  const type = String(item.record_type || item.type || "").toLowerCase();
-  const eventType = String(item.event_type || "").toLowerCase();
-
-  if (type.includes("incident") || eventType.includes("incident")) return "record-row--incident";
-  if (type.includes("health") || type.includes("appointment")) return "record-row--health";
-  if (type.includes("family")) return "record-row--family";
-  if (type.includes("risk") || item.safeguarding_flag) return "record-row--risk";
-  return "record-row--daily";
-}
-
-function renderEmptyState({
-  title = "Nothing to show",
-  message = "There is nothing to display right now.",
-  actionHtml = "",
-} = {}) {
-  return `
-    <div class="empty-state">
-      <div class="empty-state-inner">
-        <div class="empty-state-icon" aria-hidden="true">○</div>
-        <h3>${toText(title)}</h3>
-        <p>${toText(message)}</p>
-        ${actionHtml ? `<div class="empty-state-actions">${actionHtml}</div>` : ""}
-      </div>
-    </div>
-  `;
-}
-
-function renderRecordRows(items = [], emptyMessage = "Nothing to show right now.") {
-  if (!items.length) {
-    return renderEmptyState({
-      title: "No records to show",
-      message: emptyMessage,
-    });
-  }
-
-  return `
-    <div class="record-list">
-      ${items.map((item) => {
-        const pill = getRowPill(item);
-        const id = item.id ?? item.record_id ?? item.source_id ?? "";
-        const type = item.record_type || item.type || "";
-        const variantClass = getRecordRowVariant(item);
-        const formattedDate = formatDate(getRowMeta(item));
-        const typeLabel = getRowTypeLabel(item);
-
-        return `
-          <article
-            class="record-row ${toText(variantClass)}"
-            data-record-id="${toText(id)}"
-            data-record-type="${toText(type)}"
-            data-open-record="true"
-            data-title="${toText(getRowTitle(item))}"
-            role="button"
-            tabindex="0"
-          >
-            <div class="record-row-main">
-              <div class="record-row-title">${toText(getRowTitle(item))}</div>
-              <div class="record-row-summary">${toText(getRowSummary(item))}</div>
-              <div class="record-row-meta">
-                ${formattedDate ? `<span>${toText(formattedDate)}</span>` : ""}
-                ${typeLabel ? `<span>${toText(typeLabel)}</span>` : ""}
-              </div>
-            </div>
-            <div class="record-row-side">
-              <span class="row-pill ${toText(pill.tone)}">${toText(pill.label)}</span>
-            </div>
-          </article>
-        `;
-      }).join("")}
-    </div>
-  `;
-}
-
-function renderPriorityList(items = [], emptyMessage = "No priority items are showing right now.") {
-  if (!items.length) {
-    return renderEmptyState({
-      title: "Nothing urgent right now",
-      message: emptyMessage,
-    });
-  }
-
-  return `
-    <div class="priority-list">
-      ${items.slice(0, 4).map((item) => `
-        <article class="priority-item">
-          <strong>${toText(getRowTitle(item))}</strong>
-          <p>${toText(getRowSummary(item))}</p>
-        </article>
-      `).join("")}
-    </div>
-  `;
-}
-
 function renderSupportPatterns({ dailyNotes = [], incidents = [], plans = [] }) {
   const patterns = [];
 
   const latestNote = dailyNotes[0];
   const latestIncident = incidents[0];
   const activePlan = plans.find((item) =>
-    ["active", "review_due"].includes(String(item.status || "").toLowerCase())
+    ["active", "review_due", "submitted", "approved"].includes(
+      String(item.status || item.workflow_status || "").toLowerCase()
+    )
   );
 
   if (latestNote?.presentation) {
     patterns.push(latestNote.presentation);
   }
 
-  if (latestIncident?.deescalation || latestIncident?.what_helped) {
-    patterns.push(latestIncident.deescalation || latestIncident.what_helped);
+  if (
+    latestIncident?.staff_response ||
+    latestIncident?.restorative_follow_up ||
+    latestIncident?.trauma_informed_formulation
+  ) {
+    patterns.push(
+      latestIncident.staff_response ||
+        latestIncident.restorative_follow_up ||
+        latestIncident.trauma_informed_formulation
+    );
   }
 
-  if (activePlan?.summary || activePlan?.guidance) {
-    patterns.push(activePlan.summary || activePlan.guidance);
+  if (
+    activePlan?.proactive_strategies ||
+    activePlan?.summary ||
+    activePlan?.presenting_need
+  ) {
+    patterns.push(
+      activePlan.proactive_strategies ||
+        activePlan.summary ||
+        activePlan.presenting_need
+    );
   }
 
   const cleanPatterns = patterns.filter(Boolean).slice(0, 3);
@@ -367,30 +441,47 @@ function renderSupportPatterns({ dailyNotes = [], incidents = [], plans = [] }) 
 
   return `
     <div class="support-pattern-list">
-      ${cleanPatterns.map((item) => `
-        <div class="support-pattern-item">${toText(item)}</div>
-      `).join("")}
+      ${cleanPatterns
+        .map(
+          (item) => `
+            <div class="support-pattern-item">${toText(item)}</div>
+          `
+        )
+        .join("")}
     </div>
   `;
 }
 
-function renderOverviewHtml({
+function renderWorkspaceHtml({
   priorityRows = [],
   recentRows = [],
+  todayRows = [],
+  upcomingRows = [],
   counts,
   workspaceCounts,
   supportPatternsHtml,
 }) {
-  const urgentStatClass = counts.urgent > 0 ? "overview-stat-card overview-stat-card--danger" : "overview-stat-card";
-  const todayStatClass = counts.today > 0 ? "overview-stat-card overview-stat-card--success" : "overview-stat-card";
-  const upcomingStatClass = counts.upcoming > 0 ? "overview-stat-card overview-stat-card--warning" : "overview-stat-card";
+  const urgentStatClass =
+    counts.urgent > 0
+      ? "overview-stat-card overview-stat-card--danger"
+      : "overview-stat-card";
+
+  const todayStatClass =
+    counts.today > 0
+      ? "overview-stat-card overview-stat-card--success"
+      : "overview-stat-card";
+
+  const upcomingStatClass =
+    counts.upcoming > 0
+      ? "overview-stat-card overview-stat-card--warning"
+      : "overview-stat-card";
 
   return `
     <section class="overview-panel">
       <div class="overview-panel-head">
         <div>
-          <div class="eyebrow">Overview</div>
-          <h2>Workspace overview</h2>
+          <div class="eyebrow">Workspace</div>
+          <h2>Today’s workspace</h2>
           <p>A live view across care, records, appointments and follow-up.</p>
         </div>
       </div>
@@ -430,6 +521,24 @@ function renderOverviewHtml({
             </div>
 
             ${renderRecordRows(recentRows, "No recent activity found.")}
+          </div>
+
+          <div class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Today</h3>
+              <p>Items recorded or happening today.</p>
+            </div>
+
+            ${renderRecordRows(todayRows, "No items recorded for today yet.")}
+          </div>
+
+          <div class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Upcoming</h3>
+              <p>Appointments, plan reviews and tasks coming up next.</p>
+            </div>
+
+            ${renderRecordRows(upcomingRows, "No upcoming items found.")}
           </div>
 
           <div class="overview-section-card">
@@ -688,17 +797,50 @@ export async function loadCurrentView() {
       plans,
     });
 
-    els.viewContent.innerHTML = renderOverviewHtml({
+    els.viewContent.innerHTML = renderWorkspaceHtml({
       priorityRows,
       recentRows,
+      todayRows,
+      upcomingRows,
       counts,
       workspaceCounts,
       supportPatternsHtml,
     });
+
+    const nextAppointment = appointments.find(
+      (item) =>
+        isFuture(item.start_datetime) &&
+        !["cancelled", "completed"].includes(String(item.status || "").toLowerCase())
+    );
+
+    const latestRecord =
+      recentRows[0]?.record_date ||
+      recentRows[0]?.created_at ||
+      recentRows[0]?.occurred_at ||
+      recentRows[0]?.event_datetime ||
+      null;
+
+    updateWorkspaceSummaryStrip({
+      today: `${counts.urgent} urgent • ${counts.today} today`,
+      nextEvent: nextAppointment?.start_datetime
+        ? `${nextAppointment.title || nextAppointment.appointment_type || "Appointment"} • ${formatSummaryDate(nextAppointment.start_datetime)}`
+        : "No upcoming appointments",
+      lastRecord: latestRecord
+        ? `Latest record ${formatSummaryDate(latestRecord)}`
+        : "No recent records",
+      openActions: `${workspaceCounts.openTasks} open tasks • ${workspaceCounts.complianceIssues} compliance issues`,
+    });
   } catch (error) {
     els.viewContent.innerHTML = renderEmptyState({
       title: "Workspace unavailable",
-      message: error.message || "Failed to load workspace.",
+      message: error?.message || "Failed to load workspace.",
+    });
+
+    updateWorkspaceSummaryStrip({
+      today: "Workspace unavailable",
+      nextEvent: "Unable to load appointments",
+      lastRecord: "No record data loaded",
+      openActions: "Check API responses",
     });
   }
 }
