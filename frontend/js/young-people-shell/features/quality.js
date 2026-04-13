@@ -63,7 +63,7 @@ function getStatusTone(status = "") {
   const normalised = String(status || "").toLowerCase();
 
   if (
-    ["overdue", "high", "critical", "escalated", "failed", "danger"].includes(
+    ["overdue", "high", "critical", "escalated", "missing", "non_compliant", "failed"].includes(
       normalised
     )
   ) {
@@ -71,7 +71,7 @@ function getStatusTone(status = "") {
   }
 
   if (
-    ["due_soon", "warning", "medium", "review_due", "attention"].includes(
+    ["due_soon", "warning", "medium", "review_due", "attention", "at_risk"].includes(
       normalised
     )
   ) {
@@ -105,7 +105,7 @@ function sortSoonestFirst(items = [], keys = []) {
   });
 }
 
-function normaliseSummary(data = {}) {
+function normaliseQualitySummary(data = {}) {
   return data.summary || data.quality_summary || data.dashboard || data || {};
 }
 
@@ -113,181 +113,98 @@ function normaliseAuditItems(data = {}) {
   return toArray(data.items, [data.audits, data.records]);
 }
 
-function normaliseComplianceItems(data = {}) {
-  return toArray(data.items, [data.compliance, data.records]);
-}
-
-function normaliseManagerReviewItems(data = {}) {
-  return toArray(data.items, [data.reviews, data.manager_reviews, data.records]);
-}
-
-function normaliseDocumentItems(data = {}) {
-  return toArray(data.items, [data.documents, data.records]);
-}
-
-function normaliseCommunicationItems(data = {}) {
-  return toArray(data.items, [data.communications, data.records]);
-}
-
-function normaliseTherapyItems(data = {}) {
-  return toArray(data.items, [data.therapy, data.records]);
-}
-
 function normaliseIncidentItems(data = {}) {
   return toArray(data.items, [data.incidents, data.records]);
 }
 
-function buildTopStats({
-  summary = {},
-  overdueCompliance = [],
-  failedAudits = [],
-  overdueReviews = [],
-  urgentIncidents = [],
-  expiringDocuments = [],
-}) {
-  return [
-    {
-      label: "Compliance score",
-      value: `${toNumber(summary.compliance_percent ?? summary.compliance_rate, 0)}%`,
-      note: "Current service compliance",
-      tone:
-        toNumber(summary.compliance_percent ?? summary.compliance_rate, 0) >= 90
-          ? "success"
-          : toNumber(summary.compliance_percent ?? summary.compliance_rate, 0) >= 75
-          ? "warning"
-          : "danger",
-    },
-    {
-      label: "Overdue compliance",
-      value: overdueCompliance.length,
-      note: "Actions or checks needing attention",
-      tone: overdueCompliance.length ? "danger" : "success",
-    },
-    {
-      label: "Audit concerns",
-      value: failedAudits.length,
-      note: "Audits not passed or requiring action",
-      tone: failedAudits.length ? "warning" : "success",
-    },
-    {
-      label: "Manager reviews due",
-      value: overdueReviews.length,
-      note: "Review oversight requiring completion",
-      tone: overdueReviews.length ? "warning" : "muted",
-    },
-    {
-      label: "Urgent incidents",
-      value: urgentIncidents.length,
-      note: "High or critical issues",
-      tone: urgentIncidents.length ? "danger" : "muted",
-    },
-  ];
+function normaliseSafeguardingItems(data = {}) {
+  return toArray(data.items, [data.safeguarding, data.records]);
 }
 
-function buildProgressCards({
+function normaliseTaskItems(data = {}) {
+  return toArray(data.items, [data.tasks, data.records]);
+}
+
+function normaliseComplianceItems(data = {}) {
+  return toArray(data.items, [data.compliance, data.records]);
+}
+
+function normaliseReportItems(data = {}) {
+  return toArray(data.items, [data.reports, data.records]);
+}
+
+function buildTopStats({
   summary = {},
-  complianceItems = [],
   audits = [],
-  reviews = [],
-  documents = [],
+  incidents = [],
+  safeguarding = [],
+  openActions = [],
+  compliancePressure = [],
 }) {
-  const compliancePercent = toNumber(
-    summary.compliance_percent ?? summary.compliance_rate,
-    0
-  );
-
-  const passedAudits = audits.filter((item) =>
-    ["passed", "complete", "good"].includes(String(item.status || "").toLowerCase())
+  const overdueAudits = audits.filter((item) =>
+    ["overdue", "due_soon", "review_due"].includes(String(item.status || "").toLowerCase())
   ).length;
-  const auditPercent = audits.length
-    ? Math.round((passedAudits / audits.length) * 100)
-    : 0;
 
-  const completedReviews = reviews.filter((item) =>
-    ["completed", "done", "reviewed"].includes(
-      String(item.status || "").toLowerCase()
-    )
-  ).length;
-  const reviewPercent = reviews.length
-    ? Math.round((completedReviews / reviews.length) * 100)
-    : 0;
+  const recentIncidents = incidents.filter((item) => {
+    const when = item.incident_datetime || item.created_at || item.updated_at;
+    if (!when) return false;
+    const date = new Date(when);
+    if (Number.isNaN(date.getTime())) return false;
+    return Date.now() - date.getTime() <= 1000 * 60 * 60 * 24 * 30;
+  }).length;
 
-  const compliantDocs = documents.filter((item) =>
-    ["current", "reviewed", "compliant"].includes(
-      String(item.status || "").toLowerCase()
-    )
+  const safeguardingOpen = safeguarding.filter((item) =>
+    !["closed", "completed", "resolved"].includes(String(item.status || "").toLowerCase())
   ).length;
-  const documentPercent = documents.length
-    ? Math.round((compliantDocs / documents.length) * 100)
-    : 0;
-
-  const resolvedCompliance = complianceItems.filter((item) =>
-    ["complete", "completed", "reviewed", "compliant"].includes(
-      String(item.status || "").toLowerCase()
-    )
-  ).length;
-  const complianceItemsPercent = complianceItems.length
-    ? Math.round((resolvedCompliance / complianceItems.length) * 100)
-    : 0;
 
   return [
     {
-      label: "Overall compliance",
-      value: `${compliancePercent}%`,
-      percent: compliancePercent,
+      label: "Audit score",
+      value: toNumber(summary.audit_score ?? summary.quality_score, 0),
+      note: "Current quality score",
       tone:
-        compliancePercent >= 90
+        toNumber(summary.audit_score ?? summary.quality_score, 0) >= 85
           ? "success"
-          : compliancePercent >= 75
+          : toNumber(summary.audit_score ?? summary.quality_score, 0) >= 70
           ? "warning"
           : "danger",
     },
     {
-      label: "Audit pass rate",
-      value: `${auditPercent}%`,
-      percent: auditPercent,
-      tone:
-        auditPercent >= 90 ? "success" : auditPercent >= 70 ? "warning" : "danger",
+      label: "Audits due",
+      value: overdueAudits,
+      note: "Reviews due or overdue",
+      tone: overdueAudits ? "warning" : "success",
     },
     {
-      label: "Review completion",
-      value: `${reviewPercent}%`,
-      percent: reviewPercent,
-      tone:
-        reviewPercent >= 90
-          ? "success"
-          : reviewPercent >= 70
-          ? "warning"
-          : "danger",
+      label: "Recent incidents",
+      value: recentIncidents,
+      note: "Last 30 days",
+      tone: recentIncidents > 10 ? "warning" : "muted",
     },
     {
-      label: "Document readiness",
-      value: `${documentPercent}%`,
-      percent: documentPercent,
-      tone:
-        documentPercent >= 90
-          ? "success"
-          : documentPercent >= 75
-          ? "warning"
-          : "danger",
+      label: "Open safeguarding",
+      value: safeguardingOpen,
+      note: "Concerns needing oversight",
+      tone: safeguardingOpen ? "danger" : "success",
     },
     {
-      label: "Action closure",
-      value: `${complianceItemsPercent}%`,
-      percent: complianceItemsPercent,
-      tone:
-        complianceItemsPercent >= 90
-          ? "success"
-          : complianceItemsPercent >= 75
-          ? "warning"
-          : "danger",
+      label: "Compliance pressure",
+      value: compliancePressure.length,
+      note: "Items needing assurance",
+      tone: compliancePressure.length ? "warning" : "success",
+    },
+    {
+      label: "Open actions",
+      value: openActions.length,
+      note: "Quality follow-up actions",
+      tone: openActions.length ? "warning" : "success",
     },
   ];
 }
 
 function renderStatCards(cards = []) {
   return `
-    <div class="overview-stats-grid overview-stats-grid--five">
+    <div class="overview-stats-grid overview-stats-grid--six">
       ${cards
         .map(
           (card) => `
@@ -303,31 +220,6 @@ function renderStatCards(cards = []) {
               <span class="overview-stat-label">${safeText(card.label)}</span>
               <strong class="overview-stat-value">${safeText(card.value)}</strong>
               <span class="overview-stat-note">${safeText(card.note)}</span>
-            </article>
-          `
-        )
-        .join("")}
-    </div>
-  `;
-}
-
-function renderProgressCards(cards = []) {
-  return `
-    <div class="analytics-progress-grid">
-      ${cards
-        .map(
-          (card) => `
-            <article class="analytics-progress-card">
-              <div class="analytics-progress-head">
-                <span class="analytics-progress-label">${safeText(card.label)}</span>
-                <strong class="analytics-progress-value">${safeText(card.value)}</strong>
-              </div>
-              <div class="analytics-progress-track">
-                <span
-                  class="analytics-progress-bar analytics-progress-bar--${safeText(card.tone || "muted")}"
-                  style="width: ${safeText(card.percent || 0)}%;"
-                ></span>
-              </div>
             </article>
           `
         )
@@ -365,17 +257,18 @@ function renderRows(items = [], options = {}) {
           const title =
             item?.[titleKey] ||
             item?.name ||
+            item?.audit_name ||
             item?.staff_member ||
-            item?.document_type ||
-            item?.audit_type ||
-            item?.service_name ||
+            item?.category ||
+            item?.type ||
             "Record";
 
           const summary =
             item?.[summaryKey] ||
             item?.notes ||
             item?.description ||
-            item?.detail ||
+            item?.finding ||
+            item?.outcome ||
             "No summary available.";
 
           const meta = metaBuilder
@@ -402,9 +295,7 @@ function renderRows(items = [], options = {}) {
                 <div class="record-row-meta">${safeText(meta)}</div>
               </div>
               <div class="record-row-side">
-                <span class="row-pill ${safeText(tone)}">${safeText(
-            status || "Recorded"
-          )}</span>
+                <span class="row-pill ${safeText(tone)}">${safeText(status || "Recorded")}</span>
               </div>
             </article>
           `;
@@ -414,11 +305,15 @@ function renderRows(items = [], options = {}) {
   `;
 }
 
-function renderPriorityList(items = []) {
+function renderInsightCards(items = []) {
   if (!items.length) {
     return `
       <div class="empty-state">
-        <p>No urgent quality issues are showing right now.</p>
+        <div class="empty-state-inner">
+          <div class="empty-state-icon" aria-hidden="true">○</div>
+          <h3>No insights yet</h3>
+          <p>Quality insights will appear here as audits, incidents and compliance data builds up.</p>
+        </div>
       </div>
     `;
   }
@@ -439,185 +334,111 @@ function renderPriorityList(items = []) {
   `;
 }
 
-function renderMiniChart(title, items = [], key = "value") {
-  const max = Math.max(...items.map((item) => toNumber(item?.[key], 0)), 1);
-
-  return `
-    <section class="overview-side-card">
-      <div class="overview-section-head">
-        <h3>${safeText(title)}</h3>
-        <p>Quick visual comparison.</p>
-      </div>
-
-      <div class="mini-chart">
-        ${items
-          .map((item) => {
-            const value = toNumber(item?.[key], 0);
-            const width = Math.max(8, Math.round((value / max) * 100));
-            return `
-              <div class="mini-chart-row">
-                <span class="mini-chart-label">${safeText(item.label)}</span>
-                <div class="mini-chart-bar-wrap">
-                  <span class="mini-chart-bar" style="width: ${safeText(width)}%;"></span>
-                </div>
-                <strong class="mini-chart-value">${safeText(value)}</strong>
-              </div>
-            `;
-          })
-          .join("")}
-      </div>
-    </section>
-  `;
-}
-
-function buildPriorityItems({
-  overdueCompliance = [],
-  failedAudits = [],
-  overdueReviews = [],
-  expiringDocuments = [],
-  urgentIncidents = [],
-}) {
+function buildInsightItems({ audits = [], incidents = [], safeguarding = [], compliance = [] }) {
   const items = [];
 
-  overdueCompliance.slice(0, 2).forEach((item) => {
-    items.push({
-      title: item.title || item.check_name || "Overdue compliance item",
-      summary:
-        item.summary ||
-        item.notes ||
-        (item.due_date ? `Due ${formatDate(item.due_date)}` : "Needs attention."),
-    });
-  });
+  const overdueAuditCount = audits.filter((item) =>
+    ["overdue", "due_soon", "review_due"].includes(String(item.status || "").toLowerCase())
+  ).length;
 
-  failedAudits.slice(0, 2).forEach((item) => {
+  if (overdueAuditCount) {
     items.push({
-      title: item.title || item.audit_type || "Audit concern",
-      summary:
-        item.summary ||
-        item.notes ||
-        "Audit needs follow-up or action.",
+      title: "Audit pressure",
+      summary: `${overdueAuditCount} audit item${overdueAuditCount === 1 ? "" : "s"} due or overdue.`,
     });
-  });
+  }
 
-  overdueReviews.slice(0, 1).forEach((item) => {
-    items.push({
-      title: item.title || item.staff_member || "Manager review overdue",
-      summary:
-        item.review_date
-          ? `Review due ${formatDate(item.review_date)}`
-          : "Manager review needs completion.",
-    });
-  });
+  const restrictivePractice = incidents.filter((item) =>
+    /restraint|physical intervention|hold/i.test(
+      String(item.incident_type || item.title || item.description || "")
+    )
+  ).length;
 
-  expiringDocuments.slice(0, 1).forEach((item) => {
+  if (restrictivePractice) {
     items.push({
-      title: item.title || item.document_type || "Document review due",
-      summary:
-        item.review_date
-          ? `Review due ${formatDate(item.review_date)}`
-          : "Document review is due.",
+      title: "Restrictive practice pattern",
+      summary: `${restrictivePractice} recent incident${restrictivePractice === 1 ? "" : "s"} mention restraint or physical intervention.`,
     });
-  });
+  }
 
-  urgentIncidents.slice(0, 1).forEach((item) => {
+  const openSafeguarding = safeguarding.filter((item) =>
+    !["closed", "completed", "resolved"].includes(String(item.status || "").toLowerCase())
+  ).length;
+
+  if (openSafeguarding) {
     items.push({
-      title: item.title || item.incident_type || "Urgent incident",
-      summary:
-        item.summary ||
-        item.description ||
-        "Critical or high concern requiring oversight.",
+      title: "Safeguarding oversight",
+      summary: `${openSafeguarding} safeguarding concern${openSafeguarding === 1 ? "" : "s"} remain open.`,
     });
-  });
+  }
+
+  const nonCompliant = compliance.filter((item) =>
+    ["overdue", "non_compliant", "due_soon", "missing"].includes(String(item.status || "").toLowerCase())
+  ).length;
+
+  if (nonCompliant) {
+    items.push({
+      title: "Compliance risk",
+      summary: `${nonCompliant} compliance item${nonCompliant === 1 ? "" : "s"} need action or assurance.`,
+    });
+  }
+
+  if (!items.length) {
+    items.push({
+      title: "No critical themes showing",
+      summary: "The dashboard is not currently surfacing major audit, incident or compliance pressure.",
+    });
+  }
 
   return items.slice(0, 6);
 }
 
-function buildMiniMetrics({
-  overdueCompliance = [],
-  failedAudits = [],
-  overdueReviews = [],
-  expiringDocuments = [],
-  urgentIncidents = [],
-}) {
-  return [
-    { label: "Compliance", value: overdueCompliance.length },
-    { label: "Audits", value: failedAudits.length },
-    { label: "Reviews", value: overdueReviews.length },
-    { label: "Documents", value: expiringDocuments.length },
-    { label: "Incidents", value: urgentIncidents.length },
-  ];
-}
-
 function renderQualityDashboardHtml({
-  serviceName = "Quality dashboard",
+  title = "Quality and RI dashboard",
   topStats = [],
-  progressCards = [],
-  priorityItems = [],
-  complianceItems = [],
+  insightItems = [],
   auditItems = [],
-  reviewItems = [],
-  documentItems = [],
-  communicationItems = [],
-  therapyItems = [],
-  miniMetrics = [],
+  incidentItems = [],
+  safeguardingItems = [],
+  complianceItems = [],
+  reportItems = [],
+  openActions = [],
 }) {
   return `
-    <section class="overview-panel manager-dashboard manager-dashboard--quality">
+    <section class="overview-panel">
       <div class="overview-panel-head">
         <div>
           <div class="eyebrow">Quality and RI</div>
-          <h2>${safeText(serviceName)}</h2>
-          <p>A regulator-facing and quality assurance view across compliance, audits, reviews, records and service standards.</p>
+          <h2>${safeText(title)}</h2>
+          <p>A live view across audits, incidents, safeguarding, compliance, reports and service quality themes.</p>
         </div>
       </div>
 
       ${renderStatCards(topStats)}
 
-      <div class="overview-section-card">
-        <div class="overview-section-head">
-          <h3>Quality performance snapshot</h3>
-          <p>A visual view of audit pass rate, compliance, reviews and document readiness.</p>
-        </div>
-        ${renderProgressCards(progressCards)}
-      </div>
-
       <div class="overview-grid">
         <section class="overview-main">
           <div class="overview-section-card">
             <div class="overview-section-head">
-              <h3>Compliance actions</h3>
-              <p>Open, due and overdue compliance actions requiring quality oversight.</p>
+              <h3>Quality insights</h3>
+              <p>The biggest themes rising from audits, incidents and compliance activity.</p>
             </div>
-
-            ${renderRows(complianceItems, {
-              emptyMessage: "No compliance items found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "quality_compliance",
-              metaBuilder: (item) =>
-                [
-                  item.category || "",
-                  item.due_date ? `Due ${formatDate(item.due_date)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
+            ${renderInsightCards(insightItems)}
           </div>
 
           <div class="overview-section-card">
             <div class="overview-section-head">
-              <h3>Audits and findings</h3>
-              <p>Recent audits, findings and review outcomes.</p>
+              <h3>Audits and checks</h3>
+              <p>Recent and upcoming audit activity across the service.</p>
             </div>
-
             ${renderRows(auditItems, {
               emptyMessage: "No audit records found.",
-              titleKey: "title",
-              summaryKey: "summary",
+              titleKey: "audit_name",
+              summaryKey: "finding",
               recordType: "audit",
               metaBuilder: (item) =>
                 [
-                  item.audit_type || "",
+                  item.auditor || "",
                   item.audit_date ? formatDate(item.audit_date) : "",
                 ]
                   .filter(Boolean)
@@ -627,19 +448,38 @@ function renderQualityDashboardHtml({
 
           <div class="overview-section-card">
             <div class="overview-section-head">
-              <h3>Manager reviews</h3>
-              <p>Oversight, review and sign-off activity.</p>
+              <h3>Open actions</h3>
+              <p>Actions raised through quality, compliance and oversight activity.</p>
             </div>
-
-            ${renderRows(reviewItems, {
-              emptyMessage: "No manager review records found.",
+            ${renderRows(openActions, {
+              emptyMessage: "No open quality actions found.",
               titleKey: "title",
-              summaryKey: "summary",
-              recordType: "manager_review",
+              summaryKey: "task",
+              recordType: "task",
               metaBuilder: (item) =>
                 [
-                  item.staff_member || "",
-                  item.review_date ? formatDate(item.review_date) : "",
+                  item.assigned_role || "",
+                  item.due_date ? `Due ${formatDate(item.due_date)}` : "",
+                ]
+                  .filter(Boolean)
+                  .join(" • "),
+            })}
+          </div>
+
+          <div class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Reports and review outputs</h3>
+              <p>Recent management and quality outputs.</p>
+            </div>
+            ${renderRows(reportItems, {
+              emptyMessage: "No reports found.",
+              titleKey: "title",
+              summaryKey: "summary",
+              recordType: "report",
+              metaBuilder: (item) =>
+                [
+                  item.report_type || "",
+                  item.created_at ? formatDateTime(item.created_at) : "",
                 ]
                   .filter(Boolean)
                   .join(" • "),
@@ -650,29 +490,17 @@ function renderQualityDashboardHtml({
         <aside class="overview-side">
           <section class="overview-side-card">
             <div class="overview-section-head">
-              <h3>Needs attention</h3>
-              <p>Top quality, compliance and RI issues needing focus.</p>
+              <h3>Compliance pressure</h3>
+              <p>Items at risk, due soon or overdue.</p>
             </div>
-
-            ${renderPriorityList(priorityItems)}
-          </section>
-
-          ${renderMiniChart("Quality pressure points", miniMetrics, "value")}
-
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Documents and evidence</h3>
-              <p>Recent documents and evidence items linked to readiness.</p>
-            </div>
-
-            ${renderRows(documentItems, {
-              emptyMessage: "No document items found.",
+            ${renderRows(complianceItems, {
+              emptyMessage: "No compliance pressure items found.",
               titleKey: "title",
               summaryKey: "summary",
-              recordType: "document",
+              recordType: "compliance",
               metaBuilder: (item) =>
                 [
-                  item.document_type || "",
+                  item.area || "",
                   item.review_date ? `Review ${formatDate(item.review_date)}` : "",
                 ]
                   .filter(Boolean)
@@ -682,20 +510,18 @@ function renderQualityDashboardHtml({
 
           <section class="overview-side-card">
             <div class="overview-section-head">
-              <h3>Communication trail</h3>
-              <p>Recent professional liaison relevant to quality and oversight.</p>
+              <h3>Safeguarding oversight</h3>
+              <p>Current concerns and oversight activity.</p>
             </div>
-
-            ${renderRows(communicationItems, {
-              emptyMessage: "No communication items found.",
-              titleKey: "contact_person",
-              summaryKey: "summary",
-              recordType: "communication",
+            ${renderRows(safeguardingItems, {
+              emptyMessage: "No safeguarding records found.",
+              titleKey: "safeguarding_category",
+              summaryKey: "concern_details",
+              recordType: "safeguarding",
               metaBuilder: (item) =>
                 [
-                  item.organisation || "",
-                  item.contact_type || "",
-                  formatDateTime(item.contact_datetime || item.created_at),
+                  item.concern_datetime ? formatDateTime(item.concern_datetime) : "",
+                  item.referral_made ? "Referral made" : "",
                 ]
                   .filter(Boolean)
                   .join(" • "),
@@ -704,19 +530,18 @@ function renderQualityDashboardHtml({
 
           <section class="overview-side-card">
             <div class="overview-section-head">
-              <h3>Therapeutic oversight</h3>
-              <p>Therapeutic input and recommendations relevant to service quality.</p>
+              <h3>Incident themes</h3>
+              <p>Recent incidents that need quality attention.</p>
             </div>
-
-            ${renderRows(therapyItems, {
-              emptyMessage: "No therapeutic oversight records found.",
-              titleKey: "service_name",
-              summaryKey: "summary",
-              recordType: "therapy",
+            ${renderRows(incidentItems, {
+              emptyMessage: "No recent incidents found.",
+              titleKey: "incident_type",
+              summaryKey: "description",
+              recordType: "incident",
               metaBuilder: (item) =>
                 [
-                  item.professional_name || "",
-                  item.session_date ? formatDate(item.session_date) : "",
+                  item.location || "",
+                  item.incident_datetime ? formatDateTime(item.incident_datetime) : "",
                 ]
                   .filter(Boolean)
                   .join(" • "),
@@ -728,7 +553,7 @@ function renderQualityDashboardHtml({
   `;
 }
 
-function renderNoContext() {
+function renderNoHomeContext() {
   if (!els.viewContent) return;
 
   els.viewContent.innerHTML = `
@@ -736,15 +561,15 @@ function renderNoContext() {
       <div class="empty-state">
         <div class="empty-state-inner">
           <div class="empty-state-icon" aria-hidden="true">▦</div>
-          <h3>No quality context available</h3>
-          <p>A home or service context is needed before the quality dashboard can load.</p>
+          <h3>No home context available</h3>
+          <p>A home ID is needed before the quality dashboard can load.</p>
         </div>
       </div>
     </section>
   `;
 }
 
-function renderLoading() {
+function renderLoadingState() {
   if (!els.viewContent) return;
 
   els.viewContent.innerHTML = `
@@ -759,7 +584,7 @@ function renderLoading() {
   `;
 }
 
-function renderError(message) {
+function renderErrorState(message) {
   if (!els.viewContent) return;
 
   els.viewContent.innerHTML = `
@@ -779,154 +604,107 @@ export async function loadQualityDashboard() {
   if (!els.viewContent) return;
 
   const homeId = getHomeId();
+
   if (!homeId) {
-    renderNoContext();
+    renderNoHomeContext();
     return;
   }
 
-  renderLoading();
+  renderLoadingState();
 
   try {
     const [
       summaryData,
-      auditsData,
+      auditData,
+      incidentData,
+      safeguardingData,
+      taskData,
       complianceData,
-      reviewsData,
-      documentsData,
-      communicationsData,
-      therapyData,
-      incidentsData,
+      reportData,
     ] = await Promise.all([
-      apiGet(`/homes/${homeId}/quality-dashboard`).catch(() => ({})),
+      apiGet(`/homes/${homeId}/quality`).catch(() => ({})),
       apiGet(`/homes/${homeId}/audits`).catch(() => ({ items: [] })),
-      apiGet(`/homes/${homeId}/compliance`).catch(() => ({ items: [] })),
-      apiGet(`/homes/${homeId}/manager-reviews`).catch(() => ({ items: [] })),
-      apiGet(`/homes/${homeId}/documents`).catch(() => ({ items: [] })),
-      apiGet(`/homes/${homeId}/communications`).catch(() => ({ items: [] })),
-      apiGet(`/homes/${homeId}/therapy`).catch(() => ({ items: [] })),
       apiGet(`/homes/${homeId}/incidents`).catch(() => ({ items: [] })),
+      apiGet(`/homes/${homeId}/safeguarding`).catch(() => ({ items: [] })),
+      apiGet(`/homes/${homeId}/tasks`).catch(() => ({ items: [] })),
+      apiGet(`/homes/${homeId}/compliance`).catch(() => ({ items: [] })),
+      apiGet(`/homes/${homeId}/reports`).catch(() => ({ items: [] })),
     ]);
 
-    const summary = normaliseSummary(summaryData);
+    const summary = normaliseQualitySummary(summaryData);
 
-    const auditItems = sortNewestFirst(normaliseAuditItems(auditsData), [
+    const auditItems = sortSoonestFirst(normaliseAuditItems(auditData), [
       "audit_date",
+      "review_date",
       "updated_at",
       "created_at",
     ]).slice(0, 8);
 
-    const complianceItems = sortSoonestFirst(
-      normaliseComplianceItems(complianceData),
-      ["due_date", "updated_at", "created_at"]
-    ).slice(0, 8);
-
-    const reviewItems = sortSoonestFirst(
-      normaliseManagerReviewItems(reviewsData),
-      ["review_date", "updated_at", "created_at"]
-    ).slice(0, 8);
-
-    const documentItems = sortSoonestFirst(
-      normaliseDocumentItems(documentsData),
-      ["review_date", "updated_at", "created_at"]
-    ).slice(0, 6);
-
-    const communicationItems = sortNewestFirst(
-      normaliseCommunicationItems(communicationsData),
-      ["contact_datetime", "updated_at", "created_at"]
-    ).slice(0, 6);
-
-    const therapyItems = sortNewestFirst(normaliseTherapyItems(therapyData), [
-      "session_date",
+    const incidentItems = sortNewestFirst(normaliseIncidentItems(incidentData), [
+      "incident_datetime",
       "updated_at",
       "created_at",
+    ]).slice(0, 8);
+
+    const safeguardingItems = sortNewestFirst(
+      normaliseSafeguardingItems(safeguardingData),
+      ["concern_datetime", "updated_at", "created_at"]
+    ).slice(0, 6);
+
+    const taskItems = sortSoonestFirst(normaliseTaskItems(taskData), [
+      "due_date",
+      "updated_at",
+      "created_at",
+    ]);
+
+    const openActions = taskItems.filter((item) => !item.completed).slice(0, 8);
+
+    const complianceItems = sortSoonestFirst(
+      normaliseComplianceItems(complianceData),
+      ["review_date", "due_date", "updated_at", "created_at"]
+    ).filter((item) =>
+      ["overdue", "due_soon", "review_due", "missing", "non_compliant"].includes(
+        String(item.status || "").toLowerCase()
+      )
+    ).slice(0, 8);
+
+    const reportItems = sortNewestFirst(normaliseReportItems(reportData), [
+      "created_at",
+      "updated_at",
     ]).slice(0, 6);
-
-    const incidentItems = sortNewestFirst(
-      normaliseIncidentItems(incidentsData),
-      ["occurred_at", "updated_at", "created_at"]
-    );
-
-    const overdueCompliance = complianceItems.filter((item) =>
-      ["overdue", "escalated"].includes(String(item.status || "").toLowerCase())
-    );
-
-    const failedAudits = auditItems.filter((item) =>
-      ["failed", "action_required", "warning", "concern"].includes(
-        String(item.status || "").toLowerCase()
-      )
-    );
-
-    const overdueReviews = reviewItems.filter((item) =>
-      ["overdue", "due_soon", "review_due"].includes(
-        String(item.status || "").toLowerCase()
-      )
-    );
-
-    const expiringDocuments = documentItems.filter((item) =>
-      ["review_due", "due_soon", "overdue"].includes(
-        String(item.status || "").toLowerCase()
-      )
-    );
-
-    const urgentIncidents = incidentItems.filter((item) =>
-      ["high", "critical"].includes(String(item.severity || "").toLowerCase())
-    );
 
     const topStats = buildTopStats({
       summary,
-      overdueCompliance,
-      failedAudits,
-      overdueReviews,
-      urgentIncidents,
-      expiringDocuments,
-    });
-
-    const progressCards = buildProgressCards({
-      summary,
-      complianceItems,
       audits: auditItems,
-      reviews: reviewItems,
-      documents: documentItems,
+      incidents: incidentItems,
+      safeguarding: safeguardingItems,
+      openActions,
+      compliancePressure: complianceItems,
     });
 
-    const priorityItems = buildPriorityItems({
-      overdueCompliance,
-      failedAudits,
-      overdueReviews,
-      expiringDocuments,
-      urgentIncidents,
+    const insightItems = buildInsightItems({
+      audits: auditItems,
+      incidents: incidentItems,
+      safeguarding: safeguardingItems,
+      compliance: complianceItems,
     });
-
-    const miniMetrics = buildMiniMetrics({
-      overdueCompliance,
-      failedAudits,
-      overdueReviews,
-      expiringDocuments,
-      urgentIncidents,
-    });
-
-    const serviceName =
-      summary.home_name ||
-      state.currentUser?.home_name ||
-      state.currentUser?.homeName ||
-      "Quality dashboard";
 
     els.viewContent.innerHTML = renderQualityDashboardHtml({
-      serviceName,
+      title:
+        summary.title ||
+        summary.home_name ||
+        state.currentUser?.home_name ||
+        "Quality and RI dashboard",
       topStats,
-      progressCards,
-      priorityItems,
-      complianceItems,
+      insightItems,
       auditItems,
-      reviewItems,
-      documentItems,
-      communicationItems,
-      therapyItems,
-      miniMetrics,
+      incidentItems,
+      safeguardingItems,
+      complianceItems,
+      reportItems,
+      openActions,
     });
   } catch (error) {
-    renderError(error?.message || "The quality dashboard could not be loaded.");
+    renderErrorState(error?.message || "The quality dashboard could not be loaded.");
   }
 }
-
-export { loadQualityDashboard as loadQuality };
