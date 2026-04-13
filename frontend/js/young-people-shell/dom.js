@@ -16,6 +16,12 @@ export const els = {
   refreshWorkspaceBtn: document.getElementById("refreshWorkspaceBtn"),
   homeBtn: document.getElementById("homeBtn"),
 
+  // Scope switch
+  scopeSwitch: document.getElementById("scopeSwitch"),
+  scopeChildBtn: document.getElementById("scopeChildBtn"),
+  scopeHomeBtn: document.getElementById("scopeHomeBtn"),
+  scopeQualityBtn: document.getElementById("scopeQualityBtn"),
+
   // Selector
   selectorList: document.getElementById("selectorList"),
   selectorSearch: document.getElementById("selectorSearch"),
