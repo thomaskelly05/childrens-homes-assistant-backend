@@ -20,6 +20,7 @@ function buildErrorMessage(response, data) {
   if (data?.message) return data.message;
   if (data?.error) return data.error;
   if (data?.detail) return data.detail;
+  if (typeof data?.raw === "string" && data.raw.trim()) return data.raw.trim();
   return `Request failed (${response.status})`;
 }
 
@@ -209,7 +210,7 @@ export async function apiRequest(url, options = {}) {
   }
 
   const headers = withCsrfHeaders(method, {
-    Accept: "application/json",
+    Accept: options.accept || "application/json",
     ...(options.headers || {}),
   });
 
@@ -223,6 +224,10 @@ export async function apiRequest(url, options = {}) {
     method,
     headers,
   };
+
+  delete config.accept;
+  delete config.invalidatePrefixes;
+  delete config.skipCache;
 
   if (
     config.body &&
@@ -360,6 +365,7 @@ export function buildSseContextFetch(url, payload) {
     headers: withCsrfHeaders("POST", {
       Accept: "text/event-stream",
       "Content-Type": "application/json",
+      "Cache-Control": "no-cache",
     }),
     body: JSON.stringify(payload || {}),
   });
@@ -403,15 +409,20 @@ function consumeSseBuffer(buffer, onEvent) {
   return remainder;
 }
 
-export async function apiStreamAssistant(payload, handlers = {}) {
-  const scope = payload?.context?.scope || payload?.context?.current_scope || "child";
-  const endpoint =
-    scope === "home"
-      ? "/home/assistant"
-      : scope === "quality"
-      ? "/quality/assistant"
-      : "/young-people/assistant";
+function resolveAssistantEndpoint(payload = {}) {
+  const scope =
+    payload?.context?.scope ||
+    payload?.context?.current_scope ||
+    payload?.context?.scope_type ||
+    "child";
 
+  if (scope === "home") return "/home/assistant";
+  if (scope === "quality") return "/quality/assistant";
+  return "/young-people/assistant";
+}
+
+export async function apiStreamAssistant(payload, handlers = {}) {
+  const endpoint = resolveAssistantEndpoint(payload);
   const response = await buildSseContextFetch(endpoint, payload);
 
   if (!response.ok) {
@@ -442,67 +453,74 @@ export async function apiStreamAssistant(payload, handlers = {}) {
     onDone(streamedText);
   };
 
-  while (true) {
-    const { done, value } = await reader.read();
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
 
-    if (done) break;
+      if (done) break;
 
-    buffer += decoder.decode(value, { stream: true });
+      buffer += decoder.decode(value, { stream: true });
 
-    buffer = consumeSseBuffer(buffer, (eventName, payloadValue) => {
-      if (payloadValue === "[DONE]" || eventName === "done") {
-        finish();
-        return;
-      }
-
-      if (eventName === "meta") {
-        try {
-          onMeta(JSON.parse(payloadValue || "{}"));
-        } catch {
-          onMeta({});
+      buffer = consumeSseBuffer(buffer, (eventName, payloadValue) => {
+        if (payloadValue === "[DONE]" || eventName === "done") {
+          finish();
+          return;
         }
-        return;
-      }
 
-      if (eventName === "progress") {
-        onProgress(payloadValue || "");
-        return;
-      }
-
-      if (eventName === "message") {
-        streamedText += payloadValue || "";
-        onMessage(streamedText);
-      }
-    });
-  }
-
-  if (buffer.trim()) {
-    consumeSseBuffer(`${buffer}\n\n`, (eventName, payloadValue) => {
-      if (payloadValue === "[DONE]" || eventName === "done") {
-        finish();
-        return;
-      }
-
-      if (eventName === "meta") {
-        try {
-          onMeta(JSON.parse(payloadValue || "{}"));
-        } catch {
-          onMeta({});
+        if (eventName === "meta") {
+          try {
+            onMeta(JSON.parse(payloadValue || "{}"));
+          } catch {
+            onMeta({});
+          }
+          return;
         }
-        return;
-      }
 
-      if (eventName === "progress") {
-        onProgress(payloadValue || "");
-        return;
-      }
+        if (eventName === "progress") {
+          onProgress(payloadValue || "");
+          return;
+        }
 
-      if (eventName === "message") {
-        streamedText += payloadValue || "";
-        onMessage(streamedText);
-      }
-    });
+        if (eventName === "message") {
+          streamedText += payloadValue || "";
+          onMessage(streamedText);
+        }
+      });
+    }
+
+    if (buffer.trim()) {
+      consumeSseBuffer(`${buffer}\n\n`, (eventName, payloadValue) => {
+        if (payloadValue === "[DONE]" || eventName === "done") {
+          finish();
+          return;
+        }
+
+        if (eventName === "meta") {
+          try {
+            onMeta(JSON.parse(payloadValue || "{}"));
+          } catch {
+            onMeta({});
+          }
+          return;
+        }
+
+        if (eventName === "progress") {
+          onProgress(payloadValue || "");
+          return;
+        }
+
+        if (eventName === "message") {
+          streamedText += payloadValue || "";
+          onMessage(streamedText);
+        }
+      });
+    }
+  } finally {
+    finish();
+    try {
+      reader.releaseLock();
+    } catch {
+      // ignore
+    }
   }
-
-  finish();
 }
