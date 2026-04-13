@@ -3,6 +3,10 @@ import { state } from "../state.js";
 import { escapeHtml } from "../core/utils.js";
 import { runSuggestionAction } from "./action-router.js";
 
+function cleanText(value) {
+  return String(value || "").trim();
+}
+
 function getPanelElement() {
   return (
     els.suggestionsPanel ||
@@ -37,8 +41,8 @@ function getSubtitleElement() {
 
 function makeSuggestionId(suggestion = {}, index = 0) {
   const parts = [
-    suggestion.record_type ||
-      suggestion.action_type ||
+    suggestion.action_type ||
+      suggestion.record_type ||
       suggestion.create_record_type ||
       suggestion.target_record_type ||
       "suggestion",
@@ -54,10 +58,35 @@ function makeSuggestionId(suggestion = {}, index = 0) {
   return `suggestion-${parts.join("-")}`;
 }
 
+function resolveActionType(value = "") {
+  const type = String(value || "").trim().toLowerCase().replaceAll("-", "_");
+
+  const aliases = {
+    create: "create_record",
+    create_record: "create_record",
+    create_task: "create_task",
+    review: "review_record",
+    review_record: "review_record",
+    improve: "improve_record",
+    improve_record: "improve_record",
+    escalate: "escalate",
+    open: "open_section",
+    open_section: "open_section",
+  };
+
+  return aliases[type] || "create_record";
+}
+
+function resolveRecordTypeLabel(value = "") {
+  return String(value || "")
+    .replaceAll("_", " ")
+    .trim();
+}
+
 function normaliseSuggestion(suggestion = {}, index = 0) {
+  const actionType = resolveActionType(suggestion.action_type);
   const recordType =
     suggestion.record_type ||
-    suggestion.action_type ||
     suggestion.create_record_type ||
     suggestion.target_record_type ||
     "";
@@ -84,7 +113,14 @@ function normaliseSuggestion(suggestion = {}, index = 0) {
       suggestion.summary ||
       suggestion.reason ||
       "",
+    action_type: actionType,
     record_type: recordType,
+    target_record_type: suggestion.target_record_type || recordType || "",
+    target_section:
+      suggestion.target_section ||
+      suggestion.section ||
+      suggestion.prefill?.section ||
+      "",
     priority: String(suggestion.priority || suggestion.severity || "medium").toLowerCase(),
     source_record_type: sourceRecordType,
     source_record_id: sourceRecordId,
@@ -104,14 +140,16 @@ function normaliseSuggestion(suggestion = {}, index = 0) {
 
 function priorityRank(priority = "") {
   const value = String(priority || "").toLowerCase();
-  if (value === "high" || value === "critical") return 0;
-  if (value === "medium" || value === "warning") return 1;
-  return 2;
+  if (value === "critical") return 0;
+  if (value === "high") return 1;
+  if (value === "medium" || value === "warning") return 2;
+  return 3;
 }
 
 function priorityLabel(priority = "") {
   const value = String(priority || "").toLowerCase();
-  if (value === "high" || value === "critical") return "High priority";
+  if (value === "critical") return "Critical priority";
+  if (value === "high") return "High priority";
   if (value === "medium" || value === "warning") return "Medium priority";
   if (value === "low") return "Low priority";
   return "Suggested";
@@ -119,13 +157,45 @@ function priorityLabel(priority = "") {
 
 function priorityBadgeClass(priority = "") {
   const value = String(priority || "").toLowerCase();
-  if (value === "high" || value === "critical") return "badge badge-danger";
+  if (value === "critical" || value === "high") return "badge badge-danger";
   if (value === "medium" || value === "warning") return "badge badge-warning";
   return "badge badge-default";
 }
 
+function actionLabel(actionType = "", recordType = "") {
+  const action = resolveActionType(actionType);
+
+  if (action === "create_task") return "Create task";
+  if (action === "review_record") return "Review";
+  if (action === "improve_record") return "Improve";
+  if (action === "escalate") return "Escalate";
+  if (action === "open_section") return "Open section";
+  if (action === "create_record") {
+    if (recordType) {
+      return `Create ${resolveRecordTypeLabel(recordType)}`;
+    }
+    return "Create";
+  }
+
+  return "Open";
+}
+
+function actionHint(item = {}) {
+  const action = resolveActionType(item.action_type);
+
+  if (action === "open_section" && item.target_section) {
+    return `Opens: ${resolveRecordTypeLabel(item.target_section)}`;
+  }
+
+  if (item.record_type) {
+    return `Target: ${resolveRecordTypeLabel(item.record_type)}`;
+  }
+
+  return "";
+}
+
 function sourceText(item = {}) {
-  const sourceType = String(item.source_record_type || "").replaceAll("_", " ");
+  const sourceType = resolveRecordTypeLabel(item.source_record_type || "");
   const sourceId = item.source_record_id;
 
   if (sourceType && sourceId) return `From ${sourceType} #${sourceId}`;
@@ -135,20 +205,31 @@ function sourceText(item = {}) {
 
 function groupSuggestions(items = []) {
   const groups = {
+    critical: [],
     high: [],
     medium: [],
     low: [],
   };
 
   items.forEach((item) => {
-    const key =
-      priorityRank(item.priority) === 0
-        ? "high"
-        : priorityRank(item.priority) === 1
-        ? "medium"
-        : "low";
+    const value = String(item.priority || "").toLowerCase();
 
-    groups[key].push(item);
+    if (value === "critical") {
+      groups.critical.push(item);
+      return;
+    }
+
+    if (value === "high") {
+      groups.high.push(item);
+      return;
+    }
+
+    if (value === "medium" || value === "warning") {
+      groups.medium.push(item);
+      return;
+    }
+
+    groups.low.push(item);
   });
 
   return groups;
@@ -156,6 +237,8 @@ function groupSuggestions(items = []) {
 
 function renderSuggestionCard(item = {}) {
   const source = sourceText(item);
+  const hint = actionHint(item);
+  const buttonText = actionLabel(item.action_type, item.record_type);
 
   return `
     <div class="suggestion-card" data-suggestion-id="${escapeHtml(item.id)}">
@@ -183,10 +266,8 @@ function renderSuggestionCard(item = {}) {
       }
 
       ${
-        item.record_type
-          ? `<div class="entity-meta">Creates: ${escapeHtml(
-              String(item.record_type).replaceAll("_", " ")
-            )}</div>`
+        hint
+          ? `<div class="entity-meta">${escapeHtml(hint)}</div>`
           : ""
       }
 
@@ -196,7 +277,7 @@ function renderSuggestionCard(item = {}) {
           class="btn btn-primary"
           data-suggestion-run="${escapeHtml(item.id)}"
         >
-          Create
+          ${escapeHtml(buttonText)}
         </button>
 
         <button
@@ -243,11 +324,15 @@ function updatePanelMeta(meta = {}, count = 0) {
     const parts = [];
 
     if (meta.source_record_type) {
-      parts.push(String(meta.source_record_type).replaceAll("_", " "));
+      parts.push(resolveRecordTypeLabel(meta.source_record_type));
     }
 
     if (meta.source_record_id) {
       parts.push(`Source #${meta.source_record_id}`);
+    }
+
+    if (count) {
+      parts.push(`${count} active`);
     }
 
     subtitleEl.textContent = parts.join(" • ");
@@ -301,6 +386,28 @@ function dismissSuggestionById(id) {
   rerenderCurrentPanel();
 }
 
+function acceptNextSuggestion() {
+  const queue = [...(state.currentSuggestions || [])];
+  if (!queue.length) return;
+
+  const first = queue[0];
+  const worked = runSuggestionAction(first);
+
+  if (worked) {
+    state.currentSuggestions = queue.slice(1);
+    if (!state.currentSuggestions.length) {
+      hideSuggestionsPanel();
+      return;
+    }
+    rerenderCurrentPanel();
+  }
+}
+
+function dismissAllSuggestions() {
+  state.currentSuggestions = [];
+  hideSuggestionsPanel();
+}
+
 function bindSuggestionCardEvents() {
   const body = getBodyElement();
   if (!body) return;
@@ -328,29 +435,11 @@ function bindSuggestionCardEvents() {
   });
 
   body.querySelectorAll("[data-suggestion-accept-all]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const queue = [...(state.currentSuggestions || [])];
-      if (!queue.length) return;
-
-      const first = queue[0];
-      const worked = runSuggestionAction(first);
-
-      if (worked) {
-        state.currentSuggestions = queue.slice(1);
-        if (!state.currentSuggestions.length) {
-          hideSuggestionsPanel();
-          return;
-        }
-        rerenderCurrentPanel();
-      }
-    });
+    button.addEventListener("click", acceptNextSuggestion);
   });
 
   body.querySelectorAll("[data-suggestion-dismiss-all]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.currentSuggestions = [];
-      hideSuggestionsPanel();
-    });
+    button.addEventListener("click", dismissAllSuggestions);
   });
 }
 
@@ -382,7 +471,7 @@ export function showSuggestionsPanel(suggestions = [], meta = {}) {
         class="btn btn-primary"
         data-suggestion-accept-all="true"
       >
-        Create next suggested record
+        Run next suggestion
       </button>
 
       <button
@@ -394,6 +483,7 @@ export function showSuggestionsPanel(suggestions = [], meta = {}) {
       </button>
     </div>
 
+    ${renderSuggestionGroup("Critical priority", groups.critical)}
     ${renderSuggestionGroup("High priority", groups.high)}
     ${renderSuggestionGroup("Medium priority", groups.medium)}
     ${renderSuggestionGroup("Low priority", groups.low)}
