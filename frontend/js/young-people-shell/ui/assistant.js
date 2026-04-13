@@ -66,6 +66,27 @@ function hasYoungPersonContext() {
   return Boolean(state.youngPersonId && getSelectedYoungPerson());
 }
 
+function ensureAssistantState() {
+  if (!Array.isArray(state.assistantMessages)) {
+    state.assistantMessages = [];
+  }
+
+  if (!Array.isArray(state.assistantModalMessages)) {
+    state.assistantModalMessages = [];
+  }
+
+  if (!state.assistantMeta || typeof state.assistantMeta !== "object") {
+    state.assistantMeta = {
+      sources: [],
+      runtime: {},
+      explainability: {},
+      assistant_scope: {},
+      assistant_context: {},
+      suggested_actions: [],
+    };
+  }
+}
+
 export function openAssistant() {
   updateAssistantContext();
   renderAssistantInsights();
@@ -86,7 +107,7 @@ export function closeAssistant() {
   state.assistantOpen = false;
 }
 
-export function updateAssistantScopeDataset() {
+function updateAssistantScopeDataset() {
   if (!els.app) return;
 
   const person = getSelectedYoungPerson() || {};
@@ -105,7 +126,7 @@ export function updateAssistantScopeDataset() {
       : "";
 }
 
-export function renderAssistantScopeBadges() {
+function renderAssistantScopeBadges() {
   const scope = getCurrentScope();
   const homeText = getHomeName();
   const childText = hasYoungPersonContext() ? getFullYoungPersonName() : "";
@@ -531,19 +552,16 @@ function renderAssistantMessageList(host, messages) {
 }
 
 export function renderAssistantMessages() {
-  renderAssistantMessageList(els.assistantMessages, state.assistantMessages || []);
-  renderAssistantMessageList(
-    els.assistantModalMessages,
-    state.assistantModalMessages || []
-  );
+  ensureAssistantState();
+
+  renderAssistantMessageList(els.assistantMessages, state.assistantMessages);
+  renderAssistantMessageList(els.assistantModalMessages, state.assistantModalMessages);
 }
 
 function pushAssistantMessage(role, content) {
+  ensureAssistantState();
+
   const entry = { role, content };
-
-  state.assistantMessages = state.assistantMessages || [];
-  state.assistantModalMessages = state.assistantModalMessages || [];
-
   state.assistantMessages.push(entry);
   state.assistantModalMessages.push({ ...entry });
 
@@ -551,8 +569,7 @@ function pushAssistantMessage(role, content) {
 }
 
 function addAssistantPlaceholder() {
-  state.assistantMessages = state.assistantMessages || [];
-  state.assistantModalMessages = state.assistantModalMessages || [];
+  ensureAssistantState();
 
   state.assistantMessages.push({
     role: "assistant",
@@ -910,6 +927,8 @@ export async function askAssistant(question) {
     );
   } finally {
     setAssistantSending(false);
+    renderAssistantInsights();
+    renderAssistantMessages();
   }
 }
 
