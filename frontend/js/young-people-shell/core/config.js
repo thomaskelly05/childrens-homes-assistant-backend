@@ -30,6 +30,7 @@ export const SCOPE_SECTIONS = {
   ],
   home: [
     "home-dashboard",
+    "compliance",
     "manager",
     "readiness",
     "reports",
@@ -42,6 +43,7 @@ export const SCOPE_SECTIONS = {
   ],
   quality: [
     "quality",
+    "compliance",
     "reports",
     "manager",
     "readiness",
@@ -73,6 +75,7 @@ export const SECTION_TITLES = {
   "home-dashboard": "Home dashboard",
   team: "Team and staffing",
   supervision: "Supervision and development",
+  compliance: "Compliance and statutory assurance",
   quality: "Quality and RI dashboard",
 };
 
@@ -88,13 +91,15 @@ export const SECTION_SUBTITLES = {
   calendar: "Appointments, meetings and important dates that shape the young person’s week.",
   readiness: "Actions, tasks, compliance and practical follow-up that need attention.",
   manager: "Oversight, quality, decision-making and review.",
-  reports: "Structured summaries, reports and review outputs for the young person.",
+  reports: "Structured summaries, reports and review outputs for the young person or service.",
   documents: "Upload, organise and review statutory and supporting documents.",
   communication: "Track professional liaison, family communication and important contact trails.",
   therapy: "Therapeutic support, recommendations, outcomes and emotional wellbeing input.",
   "home-dashboard": "A whole-home operational and quality view for managers.",
   team: "Team capacity, staffing, deployment and workforce context.",
   supervision: "Supervision, development, training and workforce support.",
+  compliance:
+    "A live compliance view across workforce, children’s files, statutory paperwork and Ofsted readiness.",
   quality: "Quality assurance, audits, trends, RI oversight and service performance.",
 };
 
@@ -163,7 +168,7 @@ const NAV_GROUPS = [
         label: "Documents and uploads",
         short_label: "Documents",
         icon: "folder",
-        description: "Statutory documents, uploads and important child records.",
+        description: "Statutory documents, uploads and important child or service records.",
       },
     ],
   },
@@ -238,6 +243,14 @@ const NAV_GROUPS = [
         short_label: "Home",
         icon: "building-2",
         description: "A whole-home dashboard for managers with live operational visibility.",
+      },
+      {
+        id: "compliance",
+        label: "Compliance",
+        short_label: "Compliance",
+        icon: "badge-check",
+        description:
+          "Compliance across supervisions, training, statutory paperwork, Statement of Purpose, Annex A and Ofsted readiness.",
       },
       {
         id: "team",
@@ -414,6 +427,7 @@ export const SECTION_DEFAULT_ACTION = {
   communication: "professional_message",
   therapy: "task",
   "home-dashboard": "task",
+  compliance: "task",
   team: "task",
   supervision: "task",
   quality: "task",
