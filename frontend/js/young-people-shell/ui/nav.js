@@ -47,8 +47,6 @@ const SECTION_LOADERS = {
   manager: loadManager,
 };
 
-const MOBILE_BOTTOM_SECTIONS = ["workspace", "timeline", "profile", "readiness", "manager"];
-
 const ICON_MAP = {
   home: "⌂",
   "layout-dashboard": "◫",
@@ -70,6 +68,66 @@ function getNavIcon(icon) {
 
 function getCurrentSection() {
   return state.currentSection || state.activeSection || state.currentView || "workspace";
+}
+
+function getAllowedSectionsForScope() {
+  const scope = state.currentScope || "child";
+
+  if (scope === "home") {
+    return new Set(["manager", "reports", "readiness", "calendar"]);
+  }
+
+  if (scope === "quality") {
+    return new Set(["reports", "manager", "readiness", "calendar"]);
+  }
+
+  return new Set([
+    "workspace",
+    "overview",
+    "profile",
+    "timeline",
+    "handover",
+    "health",
+    "education",
+    "family",
+    "calendar",
+    "readiness",
+    "reports",
+    "manager",
+  ]);
+}
+
+function getScopedNavGroups() {
+  const allowed = getAllowedSectionsForScope();
+
+  return (NAV_GROUPS_CONFIG || [])
+    .map((group) => {
+      const items = (group.items || []).filter((item) => allowed.has(item.id));
+      return {
+        ...group,
+        items,
+      };
+    })
+    .filter((group) => group.items.length);
+}
+
+function getScopedNavSections() {
+  const allowed = getAllowedSectionsForScope();
+  return (NAV_SECTIONS || []).filter((item) => allowed.has(item.id));
+}
+
+function getMobileBottomSections() {
+  const scope = state.currentScope || "child";
+
+  if (scope === "home") {
+    return ["manager", "readiness", "reports", "calendar"];
+  }
+
+  if (scope === "quality") {
+    return ["reports", "manager", "readiness", "calendar"];
+  }
+
+  return ["workspace", "timeline", "profile", "readiness", "manager"];
 }
 
 function renderNavItem(item, { compact = false } = {}) {
@@ -96,59 +154,66 @@ function renderNavItem(item, { compact = false } = {}) {
 }
 
 function buildDesktopNavHtml() {
-  return NAV_GROUPS_CONFIG.map((group) => {
-    const itemsHtml = (group.items || []).map((item) => renderNavItem(item)).join("");
+  return getScopedNavGroups()
+    .map((group) => {
+      const itemsHtml = (group.items || []).map((item) => renderNavItem(item)).join("");
 
-    return `
-      <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
-        <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
-        <div class="nav-section-items">
-          ${itemsHtml}
-        </div>
-      </section>
-    `;
-  }).join("");
+      return `
+        <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
+          <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
+          <div class="nav-section-items">
+            ${itemsHtml}
+          </div>
+        </section>
+      `;
+    })
+    .join("");
 }
 
 function buildMobileDrawerNavHtml() {
-  return NAV_GROUPS_CONFIG.map((group) => {
-    const itemsHtml = (group.items || []).map((item) => renderNavItem(item)).join("");
+  return getScopedNavGroups()
+    .map((group) => {
+      const itemsHtml = (group.items || []).map((item) => renderNavItem(item)).join("");
 
-    return `
-      <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
-        <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
-        <div class="nav-section-items">
-          ${itemsHtml}
-        </div>
-      </section>
-    `;
-  }).join("");
+      return `
+        <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
+          <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
+          <div class="nav-section-items">
+            ${itemsHtml}
+          </div>
+        </section>
+      `;
+    })
+    .join("");
 }
 
 function buildMobileBottomBarHtml() {
-  const byId = new Map(NAV_SECTIONS.map((item) => [item.id, item]));
+  const byId = new Map(getScopedNavSections().map((item) => [item.id, item]));
+  const bottomSections = getMobileBottomSections();
 
-  return MOBILE_BOTTOM_SECTIONS.map((sectionId) => {
-    const item = byId.get(sectionId);
-    if (!item) return "";
+  return bottomSections
+    .map((sectionId) => {
+      const item = byId.get(sectionId);
+      if (!item) return "";
 
-    const isActive = item.id === getCurrentSection();
+      const isActive = item.id === getCurrentSection();
 
-    return `
-      <button
-        class="nav-btn ${isActive ? "active" : ""}"
-        type="button"
-        data-nav-section="${escapeHtml(item.id)}"
-        aria-pressed="${isActive ? "true" : "false"}"
-        title="${escapeHtml(item.label || item.id)}"
-      >
-        <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(getNavIcon(item.icon))}</span>
-        <span class="nav-btn-copy">
-          <span class="nav-btn-label">${escapeHtml(item.short_label || item.label || item.id)}</span>
-        </span>
-      </button>
-    `;
-  }).join("");
+      return `
+        <button
+          class="nav-btn ${isActive ? "active" : ""}"
+          type="button"
+          data-nav-section="${escapeHtml(item.id)}"
+          aria-pressed="${isActive ? "true" : "false"}"
+          title="${escapeHtml(item.label || item.id)}"
+        >
+          <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(getNavIcon(item.icon))}</span>
+          <span class="nav-btn-copy">
+            <span class="nav-btn-label">${escapeHtml(item.short_label || item.label || item.id)}</span>
+          </span>
+        </button>
+      `;
+    })
+    .join("");
 }
 
 function renderNavigation() {
@@ -213,7 +278,7 @@ function markActiveNav(section) {
 }
 
 export async function loadSection(section) {
-  if (!state.youngPersonId) {
+  if (!state.youngPersonId && state.currentScope === "child") {
     showError("Select a young person first.");
     return;
   }
@@ -261,7 +326,10 @@ function bindSelectorControls() {
   const goToSelector = async () => {
     state.youngPersonId = null;
     state.selectedYoungPerson = null;
-    state.currentView = state.currentSection || "workspace";
+    state.currentScope = "child";
+    state.currentSection = "workspace";
+    state.activeSection = "workspace";
+    state.currentView = "workspace";
     state.activeRecordType = null;
     state.activeRecordItem = null;
 
@@ -274,6 +342,8 @@ function bindSelectorControls() {
 
     try {
       await loadYoungPersonSelector?.();
+      renderNavigation();
+      bindNavButtons();
     } catch (error) {
       showError(error?.message || "Failed to load young people.");
     }
@@ -428,6 +498,7 @@ function bindYoungPersonOpen() {
       if (els.selectorScreen) els.selectorScreen.classList.add("hidden");
       if (els.workspaceScreen) els.workspaceScreen.classList.remove("hidden");
 
+      state.currentScope = "child";
       updateYoungPersonChrome(state.selectedYoungPerson || {});
       updateSectionChrome(getCurrentSection());
       clearStatus();
@@ -473,7 +544,7 @@ export function bindNavEvents() {
 
 export async function initialiseShellNavigation() {
   if (!state.currentSection) {
-    state.currentSection = NAV_SECTIONS?.[0]?.id || "workspace";
+    state.currentSection = "workspace";
   }
 
   if (!state.activeSection) {
