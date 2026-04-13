@@ -2,6 +2,7 @@ import { state } from "../state.js";
 import { els } from "../dom.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
+import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 
 function getHomeId() {
   return (
@@ -567,6 +568,13 @@ function renderNoHomeContext() {
       </div>
     </section>
   `;
+
+  updateWorkspaceSummaryStrip({
+    today: "No quality context",
+    nextEvent: "No audit event loaded",
+    lastRecord: "No quality data",
+    openActions: "No actions loaded",
+  });
 }
 
 function renderLoadingState() {
@@ -582,6 +590,13 @@ function renderLoadingState() {
       </div>
     </section>
   `;
+
+  updateWorkspaceSummaryStrip({
+    today: "Loading quality view",
+    nextEvent: "Checking next audit",
+    lastRecord: "Loading latest quality record",
+    openActions: "Loading actions",
+  });
 }
 
 function renderErrorState(message) {
@@ -598,6 +613,13 @@ function renderErrorState(message) {
       </div>
     </section>
   `;
+
+  updateWorkspaceSummaryStrip({
+    today: "Quality dashboard unavailable",
+    nextEvent: "No event loaded",
+    lastRecord: "No record loaded",
+    openActions: "No actions loaded",
+  });
 }
 
 export async function loadQualityDashboard() {
@@ -662,11 +684,13 @@ export async function loadQualityDashboard() {
     const complianceItems = sortSoonestFirst(
       normaliseComplianceItems(complianceData),
       ["review_date", "due_date", "updated_at", "created_at"]
-    ).filter((item) =>
-      ["overdue", "due_soon", "review_due", "missing", "non_compliant"].includes(
-        String(item.status || "").toLowerCase()
+    )
+      .filter((item) =>
+        ["overdue", "due_soon", "review_due", "missing", "non_compliant"].includes(
+          String(item.status || "").toLowerCase()
+        )
       )
-    ).slice(0, 8);
+      .slice(0, 8);
 
     const reportItems = sortNewestFirst(normaliseReportItems(reportData), [
       "created_at",
@@ -703,6 +727,22 @@ export async function loadQualityDashboard() {
       complianceItems,
       reportItems,
       openActions,
+    });
+
+    const nextAudit = auditItems.find((item) => item.audit_date || item.review_date);
+    const latestReport = reportItems[0];
+    const auditScore = toNumber(summary.audit_score ?? summary.quality_score, 0);
+
+    updateWorkspaceSummaryStrip({
+      today: `Audit score ${auditScore} • ${openActions.length} open actions`,
+      nextEvent: nextAudit
+        ? `Next audit ${formatDate(nextAudit.audit_date || nextAudit.review_date)}`
+        : "No audit scheduled",
+      lastRecord:
+        latestReport?.created_at
+          ? `Latest report ${formatDateTime(latestReport.created_at)}`
+          : "No recent report loaded",
+      openActions: `${openActions.length} open • ${complianceItems.length} compliance pressure`,
     });
   } catch (error) {
     renderErrorState(error?.message || "The quality dashboard could not be loaded.");
