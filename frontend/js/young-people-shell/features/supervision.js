@@ -239,8 +239,8 @@ function renderRecordRows(items = [], emptyMessage = "No supervision records fou
               </div>
               <div class="record-row-side">
                 <span class="row-pill ${safeText(tone)}">${safeText(
-            item.status || "recorded"
-          )}</span>
+                  item.status || "recorded"
+                )}</span>
               </div>
             </article>
           `;
@@ -308,19 +308,25 @@ function renderSupervisionPage({
               <span class="overview-stat-note">Supervision records logged</span>
             </article>
 
-            <article class="overview-stat-card">
+            <article class="overview-stat-card ${
+              stats.overdue > 0 ? "overview-stat-card--danger" : ""
+            }">
               <span class="overview-stat-label">Overdue</span>
               <strong class="overview-stat-value">${safeText(stats.overdue)}</strong>
               <span class="overview-stat-note">Supervisions needing urgent attention</span>
             </article>
 
-            <article class="overview-stat-card">
+            <article class="overview-stat-card ${
+              stats.dueSoon > 0 ? "overview-stat-card--warning" : ""
+            }">
               <span class="overview-stat-label">Due soon</span>
               <strong class="overview-stat-value">${safeText(stats.dueSoon)}</strong>
               <span class="overview-stat-note">Upcoming supervision pressure</span>
             </article>
 
-            <article class="overview-stat-card">
+            <article class="overview-stat-card ${
+              stats.completed > 0 ? "overview-stat-card--success" : ""
+            }">
               <span class="overview-stat-label">Completed</span>
               <strong class="overview-stat-value">${safeText(stats.completed)}</strong>
               <span class="overview-stat-note">Up-to-date supervision records</span>
