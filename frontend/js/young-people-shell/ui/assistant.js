@@ -3,11 +3,78 @@ import { els } from "../dom.js";
 import { escapeHtml } from "../core/utils.js";
 import { apiStreamAssistant } from "../core/api.js";
 
+let assistantEventsBound = false;
+let assistantPromptDelegatesBound = false;
+
+function getCurrentScope() {
+  return state.currentScope || "child";
+}
+
+function getCurrentSection() {
+  return state.currentSection || state.activeSection || state.currentView || "workspace";
+}
+
+function getSelectedYoungPerson() {
+  return state.selectedYoungPerson || state.youngPerson || null;
+}
+
+function getFullYoungPersonName() {
+  const person = getSelectedYoungPerson() || {};
+
+  return (
+    [person.first_name, person.last_name].filter(Boolean).join(" ").trim() ||
+    person.preferred_name ||
+    person.full_name ||
+    person.name ||
+    "Young person"
+  );
+}
+
+function getHomeName() {
+  const person = getSelectedYoungPerson() || {};
+  return (
+    person.home_name ||
+    state.currentUser?.home_name ||
+    state.currentUser?.homeName ||
+    (state.homeId ? `Home ${state.homeId}` : "Home")
+  );
+}
+
+function getScopeLabel() {
+  const scope = getCurrentScope();
+
+  if (scope === "home") return "Home assistant";
+  if (scope === "quality") return "Quality assistant";
+  return "Young person assistant";
+}
+
+function getSectionLabel() {
+  return String(getCurrentSection() || "workspace")
+    .replaceAll("_", " ")
+    .replaceAll("-", " ");
+}
+
+function getAssistantScopeType() {
+  const scope = getCurrentScope();
+
+  if (scope === "home") return "home";
+  if (scope === "quality") return "quality";
+  return state.youngPersonId ? "young_person" : "global";
+}
+
+function hasYoungPersonContext() {
+  return Boolean(state.youngPersonId && getSelectedYoungPerson());
+}
+
 export function openAssistant() {
   updateAssistantContext();
+  renderAssistantInsights();
+  renderAssistantMessages();
+
   els.assistantModal?.classList.remove("hidden");
   els.assistantBackdrop?.classList.remove("hidden");
   els.assistantModal?.setAttribute("aria-hidden", "false");
+
   state.assistantOpen = true;
 }
 
@@ -15,44 +82,41 @@ export function closeAssistant() {
   els.assistantModal?.classList.add("hidden");
   els.assistantBackdrop?.classList.add("hidden");
   els.assistantModal?.setAttribute("aria-hidden", "true");
-  state.assistantOpen = false;
-}
 
-export function getFullYoungPersonName() {
-  const person = state.selectedYoungPerson || state.youngPerson || {};
-  return (
-    [person.first_name, person.last_name].filter(Boolean).join(" ").trim() ||
-    person.preferred_name ||
-    "Young person"
-  );
+  state.assistantOpen = false;
 }
 
 export function updateAssistantScopeDataset() {
   if (!els.app) return;
 
-  const person = state.selectedYoungPerson || state.youngPerson || {};
+  const person = getSelectedYoungPerson() || {};
+  const scopeType = getAssistantScopeType();
 
-  els.app.dataset.assistantScopeType = state.youngPersonId ? "young_person" : "global";
-  els.app.dataset.youngPersonId = state.youngPersonId ? String(state.youngPersonId) : "";
-  els.app.dataset.homeId = person.home_id != null ? String(person.home_id) : "";
+  els.app.dataset.assistantScopeType = scopeType;
+  els.app.dataset.youngPersonId =
+    getCurrentScope() === "child" && state.youngPersonId
+      ? String(state.youngPersonId)
+      : "";
+  els.app.dataset.homeId =
+    state.homeId != null
+      ? String(state.homeId)
+      : person.home_id != null
+      ? String(person.home_id)
+      : "";
 }
 
 export function renderAssistantScopeBadges() {
-  const person = state.selectedYoungPerson || state.youngPerson || {};
-  const homeText =
-    person.home_name ||
-    (person.home_id != null ? `Home ${person.home_id}` : "");
-
-  const childText = getFullYoungPersonName();
+  const scope = getCurrentScope();
+  const homeText = getHomeName();
+  const childText = hasYoungPersonContext() ? getFullYoungPersonName() : "";
+  const sectionText = getSectionLabel();
 
   if (els.scopeBadge) {
-    els.scopeBadge.textContent = state.youngPersonId
-      ? "Young person assistant"
-      : "Assistant";
+    els.scopeBadge.textContent = getScopeLabel();
   }
 
   if (els.scopeHomeBadge) {
-    if (homeText) {
+    if (scope === "home" || scope === "quality" || homeText) {
       els.scopeHomeBadge.textContent = homeText;
       els.scopeHomeBadge.classList.remove("hidden");
     } else {
@@ -62,7 +126,7 @@ export function renderAssistantScopeBadges() {
   }
 
   if (els.scopeChildBadge) {
-    if (childText) {
+    if (scope === "child" && childText) {
       els.scopeChildBadge.textContent = childText;
       els.scopeChildBadge.classList.remove("hidden");
     } else {
@@ -72,21 +136,17 @@ export function renderAssistantScopeBadges() {
   }
 
   if (els.scopeShiftBadge) {
-    const label = (state.currentSection || state.activeSection || "workspace")
-      .replaceAll("_", " ")
-      .replaceAll("-", " ");
-
-    els.scopeShiftBadge.textContent = label;
-
-    if (label) {
+    if (sectionText) {
+      els.scopeShiftBadge.textContent = sectionText;
       els.scopeShiftBadge.classList.remove("hidden");
     } else {
+      els.scopeShiftBadge.textContent = "";
       els.scopeShiftBadge.classList.add("hidden");
     }
   }
 
   if (els.modalScopeHomeBadge) {
-    if (homeText) {
+    if (scope === "home" || scope === "quality" || homeText) {
       els.modalScopeHomeBadge.textContent = homeText;
       els.modalScopeHomeBadge.classList.remove("hidden");
     } else {
@@ -96,7 +156,7 @@ export function renderAssistantScopeBadges() {
   }
 
   if (els.modalScopeChildBadge) {
-    if (childText) {
+    if (scope === "child" && childText) {
       els.modalScopeChildBadge.textContent = childText;
       els.modalScopeChildBadge.classList.remove("hidden");
     } else {
@@ -106,93 +166,251 @@ export function renderAssistantScopeBadges() {
   }
 }
 
-function assistantPromptsForView(view) {
-  const map = {
+function assistantPromptsForView(view, scope = getCurrentScope()) {
+  const childMap = {
     workspace: [
       "Give me a 6 month summary for this young person.",
       "What matters most right now?",
       "Draft a short handover for the next shift.",
     ],
     overview: [
-      "Give me a short handover for this young person.",
       "What matters most right now?",
+      "Summarise the key themes today.",
+      "What should staff prioritise next?",
     ],
     profile: [
-      "Summarise this young person's needs and what helps.",
+      "Summarise this young person’s needs and what helps.",
       "What should adults hold in mind day to day?",
+      "What are the most important communication needs?",
     ],
     timeline: [
       "Create a short chronology summary.",
       "What are the key turning points recently?",
+      "What patterns can you see across incidents and presentation?",
     ],
     handover: [
       "Give me a short handover for this young person.",
       "What does the next shift most need to know?",
+      "What follow-up should the next shift complete?",
     ],
     health: [
-      "When was the last dentist appointment?",
       "Summarise current health and wellbeing needs.",
+      "What follow-up is needed from recent health records?",
+      "What are the main health themes recently?",
     ],
     education: [
       "Summarise education themes and needs.",
       "What helps this young person engage with learning?",
+      "What are the current school concerns and strengths?",
     ],
     family: [
       "Summarise key relationship and family themes.",
       "What should adults hold in mind around contact?",
+      "What patterns can you see around family contact?",
     ],
     calendar: [
       "What is the next appointment?",
-      "When was the last appointment?",
+      "What appointments need preparing for?",
+      "What follow-up is due from recent appointments?",
     ],
     readiness: [
       "What is overdue or due soon?",
       "What should be completed next?",
+      "Summarise the open actions for this young person.",
     ],
     manager: [
       "What needs manager review right now?",
       "What themes should leadership notice?",
+      "What risks or compliance issues need oversight?",
     ],
     reports: [
       "Give me a 6 month summary for this young person.",
       "What are the strongest themes across the record?",
+      "Draft a professional summary for a review meeting.",
+    ],
+    documents: [
+      "What important documents are missing or due review?",
+      "Summarise the key child documents.",
+      "What document follow-up is needed?",
+    ],
+    communication: [
+      "Summarise recent communication with professionals and family.",
+      "What communication themes are emerging?",
+      "Draft a professional update from recent records.",
+    ],
+    therapy: [
+      "Summarise therapeutic themes and recommendations.",
+      "What should staff hold in mind from therapeutic input?",
+      "What follow-up actions come from therapy records?",
     ],
   };
 
+  const homeMap = {
+    "home-dashboard": [
+      "Summarise the home’s operational picture.",
+      "What needs management attention right now?",
+      "What are the biggest risks across the home today?",
+    ],
+    compliance: [
+      "What compliance issues need urgent action?",
+      "Summarise gaps across workforce and statutory paperwork.",
+      "What would Ofsted notice first right now?",
+    ],
+    manager: [
+      "What needs leadership review right now?",
+      "Summarise the main management pressures across the home.",
+      "What actions should the manager prioritise this week?",
+    ],
+    readiness: [
+      "What is overdue or due soon across the home?",
+      "What actions should be completed first?",
+      "Summarise the service readiness risks.",
+    ],
+    reports: [
+      "Summarise the service for reporting purposes.",
+      "What are the strongest themes across the home?",
+      "Draft a home-level review summary.",
+    ],
+    calendar: [
+      "What are the next key home dates and meetings?",
+      "What requires preparation this week?",
+      "Summarise upcoming deadlines and appointments.",
+    ],
+    team: [
+      "Summarise staffing issues across the home.",
+      "What workforce risks are emerging?",
+      "What should leadership notice about team capacity?",
+    ],
+    supervision: [
+      "Which supervisions are overdue or due soon?",
+      "Summarise workforce oversight gaps.",
+      "What supervision actions should be prioritised?",
+    ],
+    communication: [
+      "Summarise recent professional communication across the home.",
+      "What communication follow-up is outstanding?",
+      "Draft a service-level professional update.",
+    ],
+    documents: [
+      "What service documents are due review or missing?",
+      "Summarise document compliance gaps.",
+      "What statutory paperwork needs attention?",
+    ],
+    therapy: [
+      "Summarise therapeutic service activity across the home.",
+      "What recommendations need operational follow-up?",
+      "What therapeutic themes are emerging?",
+    ],
+  };
+
+  const qualityMap = {
+    quality: [
+      "Summarise current quality themes across the service.",
+      "What would an RI or auditor notice first?",
+      "What quality concerns are emerging?",
+    ],
+    compliance: [
+      "What compliance gaps create the biggest Ofsted risk?",
+      "Summarise workforce and paperwork compliance issues.",
+      "What needs urgent correction before inspection?",
+    ],
+    reports: [
+      "Draft a quality summary for leadership.",
+      "What themes should be highlighted in reporting?",
+      "Summarise audit and compliance themes.",
+    ],
+    manager: [
+      "What leadership themes need escalation?",
+      "What service-level patterns should management notice?",
+      "Where is oversight weakest right now?",
+    ],
+    calendar: [
+      "What quality deadlines and review dates are coming up?",
+      "What compliance milestones are due soon?",
+      "What needs preparing this month?",
+    ],
+    team: [
+      "Summarise staffing and workforce quality concerns.",
+      "What training or supervision gaps are emerging?",
+      "What workforce risks affect compliance?",
+    ],
+    supervision: [
+      "What supervision compliance risks are present?",
+      "Where are staff oversight gaps strongest?",
+      "Summarise overdue supervisions and appraisals.",
+    ],
+    communication: [
+      "Summarise communication themes relevant to audit and quality.",
+      "What partner-agency communication needs follow-up?",
+      "Draft a professional quality update.",
+    ],
+    documents: [
+      "What statutory paperwork gaps need urgent action?",
+      "Summarise document quality and review issues.",
+      "Which documents create the biggest inspection risk?",
+    ],
+    therapy: [
+      "Summarise therapeutic provision quality themes.",
+      "What therapeutic follow-up is slipping?",
+      "Are there patterns in wellbeing or service delivery?",
+    ],
+  };
+
+  const map =
+    scope === "home"
+      ? homeMap
+      : scope === "quality"
+      ? qualityMap
+      : childMap;
+
   return map[view] || [
-    "Give me a 6 month summary for this young person.",
-    "What matters most right now?",
-    "When was the last appointment?",
+    scope === "child"
+      ? "What matters most right now for this young person?"
+      : "What matters most right now across this area?",
+    "What needs attention next?",
+    "Give me a concise summary.",
   ];
 }
 
 export function updateAssistantContext() {
-  const fullName = getFullYoungPersonName();
-  const currentView = (state.currentSection || state.activeSection || "workspace")
-    .replaceAll("_", " ")
-    .replaceAll("-", " ");
+  const scope = getCurrentScope();
+  const currentView = getSectionLabel();
+  const person = getSelectedYoungPerson() || {};
+  const homeName = getHomeName();
 
-  const person = state.selectedYoungPerson || state.youngPerson || {};
+  updateAssistantScopeDataset();
+  renderAssistantScopeBadges();
 
-  if (!state.youngPersonId) {
-    if (els.assistantContext) {
-      els.assistantContext.textContent = "No young person selected.";
-    }
-  } else {
-    const text = [
-      `Young person: ${fullName}`,
-      person.home_name || null,
-      `View: ${currentView}`,
-    ]
-      .filter(Boolean)
-      .join(" • ");
-
-    if (els.assistantContext) {
-      els.assistantContext.textContent = text;
+  if (els.assistantContext) {
+    if (scope === "child") {
+      if (!state.youngPersonId) {
+        els.assistantContext.textContent = "No young person selected.";
+      } else {
+        els.assistantContext.textContent = [
+          `Young person: ${getFullYoungPersonName()}`,
+          person.home_name || homeName,
+          `View: ${currentView}`,
+        ]
+          .filter(Boolean)
+          .join(" • ");
+      }
+    } else if (scope === "home") {
+      els.assistantContext.textContent = [
+        `Home: ${homeName}`,
+        "Scope: home oversight",
+        `View: ${currentView}`,
+      ].join(" • ");
+    } else {
+      els.assistantContext.textContent = [
+        `Home: ${homeName}`,
+        "Scope: quality and RI",
+        `View: ${currentView}`,
+      ].join(" • ");
     }
   }
 
-  const prompts = assistantPromptsForView(state.currentSection || state.activeSection || "workspace");
+  const prompts = assistantPromptsForView(getCurrentSection(), scope);
+
   if (els.assistantSuggestions) {
     els.assistantSuggestions.innerHTML = prompts
       .map(
@@ -269,20 +487,26 @@ function renderAssistantRichText(text = "") {
 function renderAssistantMessageList(host, messages) {
   if (!host) return;
 
+  const scope = getCurrentScope();
+
   const intro = `
     <article class="assistant-message assistant-message-system">
       <div class="assistant-message-role">Assistant</div>
       <div class="assistant-message-body">
         ${
-          state.youngPersonId
-            ? `<p>Ask a question about ${escapeHtml(getFullYoungPersonName() || "this young person")}.</p>`
-            : `<p>Select a young person to start.</p>`
+          scope === "child"
+            ? state.youngPersonId
+              ? `<p>Ask a question about ${escapeHtml(getFullYoungPersonName())}.</p>`
+              : `<p>Select a young person to start.</p>`
+            : scope === "home"
+            ? `<p>Ask a question about home operations, compliance or leadership oversight.</p>`
+            : `<p>Ask a question about quality, compliance, audit readiness or RI themes.</p>`
         }
       </div>
     </article>
   `;
 
-  const body = messages
+  const body = (messages || [])
     .map((message) => {
       const role = message.role === "user" ? "You" : "Assistant";
       const cls = message.role === "user" ? "assistant-message-user" : "";
@@ -308,15 +532,21 @@ function renderAssistantMessageList(host, messages) {
 
 export function renderAssistantMessages() {
   renderAssistantMessageList(els.assistantMessages, state.assistantMessages || []);
-  renderAssistantMessageList(els.assistantModalMessages, state.assistantModalMessages || []);
+  renderAssistantMessageList(
+    els.assistantModalMessages,
+    state.assistantModalMessages || []
+  );
 }
 
 function pushAssistantMessage(role, content) {
   const entry = { role, content };
+
   state.assistantMessages = state.assistantMessages || [];
   state.assistantModalMessages = state.assistantModalMessages || [];
+
   state.assistantMessages.push(entry);
   state.assistantModalMessages.push({ ...entry });
+
   renderAssistantMessages();
 }
 
@@ -344,6 +574,7 @@ function replaceLastAssistantPlaceholder(text) {
 
   lists.forEach((list) => {
     if (!list.length) return;
+
     const last = list[list.length - 1];
     if (last.role === "assistant" && last._streaming) {
       last.content = text;
@@ -359,6 +590,7 @@ function updateLastAssistantStreamingText(text) {
 
   lists.forEach((list) => {
     if (!list.length) return;
+
     const last = list[list.length - 1];
     if (last.role === "assistant" && last._streaming) {
       last.content = text;
@@ -370,8 +602,14 @@ function updateLastAssistantStreamingText(text) {
 
 function setAssistantSending(flag) {
   state.assistantSending = !!flag;
-  if (els.assistantSendBtn) els.assistantSendBtn.disabled = !!flag;
-  if (els.assistantModalSendBtn) els.assistantModalSendBtn.disabled = !!flag;
+
+  if (els.assistantSendBtn) {
+    els.assistantSendBtn.disabled = !!flag;
+  }
+
+  if (els.assistantModalSendBtn) {
+    els.assistantModalSendBtn.disabled = !!flag;
+  }
 }
 
 function prettyJson(value) {
@@ -390,10 +628,15 @@ function renderAssistantSourcesHtml(sources) {
   return sources
     .map((source) => {
       const type = escapeHtml(source?.type || "source");
-      const label = escapeHtml(source?.label || source?.document_title || "Source");
+      const label = escapeHtml(
+        source?.label || source?.document_title || source?.title || "Source"
+      );
       const excerpt = escapeHtml(source?.excerpt || "");
       const section = escapeHtml(source?.section || "");
-      const page = source?.page_number != null ? escapeHtml(String(source.page_number)) : "";
+      const page =
+        source?.page_number != null
+          ? escapeHtml(String(source.page_number))
+          : "";
 
       return `
         <div class="entity-row">
@@ -404,7 +647,11 @@ function renderAssistantSourcesHtml(sources) {
               ${section ? ` • ${section}` : ""}
               ${page ? ` • p.${page}` : ""}
             </div>
-            ${excerpt ? `<div class="entity-meta" style="margin-top:6px;">${excerpt}</div>` : ""}
+            ${
+              excerpt
+                ? `<div class="entity-meta" style="margin-top:6px;">${excerpt}</div>`
+                : ""
+            }
           </div>
         </div>
       `;
@@ -417,12 +664,27 @@ function inferAssistantSuggestedActions() {
   const scope = meta.assistant_scope || {};
   const context = meta.assistant_context || {};
   const actions = [];
+  const currentScope = getCurrentScope();
 
-  if (scope.scope_type === "young_person") {
+  if (currentScope === "child" || scope.scope_type === "young_person") {
     actions.push("Draft handover");
-    actions.push("Pull young person voice themes");
     actions.push("Summarise recent incidents");
     actions.push("Summarise current support guidance");
+    actions.push("Review outstanding tasks");
+  }
+
+  if (currentScope === "home") {
+    actions.push("Summarise home risks");
+    actions.push("Review open actions");
+    actions.push("Check compliance gaps");
+    actions.push("Draft leadership summary");
+  }
+
+  if (currentScope === "quality") {
+    actions.push("Summarise quality themes");
+    actions.push("Check Ofsted risks");
+    actions.push("Review compliance gaps");
+    actions.push("Draft RI summary");
   }
 
   if (context.recent_records?.incidents?.length) {
@@ -437,7 +699,7 @@ function inferAssistantSuggestedActions() {
     actions.push(...meta.suggested_actions);
   }
 
-  return [...new Set(actions)].slice(0, 6);
+  return [...new Set(actions)].slice(0, 8);
 }
 
 export function renderAssistantInsights() {
@@ -449,39 +711,62 @@ export function renderAssistantInsights() {
   const explainability = meta.explainability || {};
 
   if (els.assistantScopeSummary) {
-    const currentView = (state.currentSection || state.activeSection || "workspace")
-      .replaceAll("_", " ")
-      .replaceAll("-", " ");
-
     const rows = [];
+    const currentView = getSectionLabel();
 
     rows.push(`
       <div class="entity-row">
         <div>
-          <div class="entity-title">${scope.scope_type === "young_person" ? "Young person scope" : "Assistant scope"}</div>
+          <div class="entity-title">${escapeHtml(getScopeLabel())}</div>
           <div class="entity-meta">View: ${escapeHtml(currentView)}</div>
         </div>
       </div>
     `);
 
-    if (state.selectedYoungPerson || state.youngPersonId) {
-      const person = state.selectedYoungPerson || state.youngPerson || {};
+    if (getCurrentScope() === "child" && state.youngPersonId) {
+      const person = getSelectedYoungPerson() || {};
       rows.push(`
         <div class="entity-row">
           <div>
             <div class="entity-title">${escapeHtml(getFullYoungPersonName())}</div>
-            <div class="entity-meta">${escapeHtml(person.home_name || "Workspace loaded")}</div>
+            <div class="entity-meta">${escapeHtml(person.home_name || getHomeName())}</div>
           </div>
         </div>
       `);
     }
 
-    if (context.young_person && typeof context.young_person === "object") {
+    if (getCurrentScope() !== "child") {
+      rows.push(`
+        <div class="entity-row">
+          <div>
+            <div class="entity-title">${escapeHtml(getHomeName())}</div>
+            <div class="entity-meta">${
+              getCurrentScope() === "home"
+                ? "Home-wide oversight context"
+                : "Quality and compliance context"
+            }</div>
+          </div>
+        </div>
+      `);
+    }
+
+    if (context && typeof context === "object" && Object.keys(context).length) {
       rows.push(`
         <div class="entity-row">
           <div>
             <div class="entity-title">Context loaded</div>
-            <div class="entity-meta">Assistant context includes profile and recent records.</div>
+            <div class="entity-meta">Assistant context and evidence sources are available.</div>
+          </div>
+        </div>
+      `);
+    }
+
+    if (scope.scope_type) {
+      rows.push(`
+        <div class="entity-row">
+          <div>
+            <div class="entity-title">Resolved scope</div>
+            <div class="entity-meta">${escapeHtml(String(scope.scope_type))}</div>
           </div>
         </div>
       `);
@@ -527,18 +812,27 @@ export function renderAssistantInsights() {
 }
 
 function buildAssistantContextPayload() {
-  const person = state.selectedYoungPerson || state.youngPerson || {};
+  const person = getSelectedYoungPerson() || {};
+  const scope = getCurrentScope();
+  const section = getCurrentSection();
 
   return {
-    scope: "young_person",
-    young_person_id: state.youngPersonId,
-    current_view: state.currentSection || state.activeSection || "workspace",
-    young_person_name: getFullYoungPersonName(),
+    scope,
+    scope_type: getAssistantScopeType(),
+    current_view: section,
+    shift_context: section,
+    young_person_id: scope === "child" ? state.youngPersonId || null : null,
+    young_person_name: scope === "child" ? getFullYoungPersonName() : null,
+    home_id:
+      state.homeId ||
+      person.home_id ||
+      state.currentUser?.home_id ||
+      state.currentUser?.homeId ||
+      null,
+    home_name: getHomeName(),
     placement_status: person.placement_status || null,
     summary_risk_level: person.summary_risk_level || null,
     composer_record_type: state.composerRecordType || null,
-    home_name: person.home_name || null,
-    shift_context: state.currentSection || state.activeSection || "workspace",
     record_type: state.activeRecordType || state.composerRecordType || null,
     record_id:
       state.activeRecordItem?.record_id ||
@@ -546,11 +840,14 @@ function buildAssistantContextPayload() {
       state.activeRecordItem?.id ||
       state.composerRecordId ||
       null,
+    current_scope: scope,
+    current_section: section,
+    user_role: state.userRole || "staff",
   };
 }
 
 function detectAssistantResponseMode(text) {
-  return /6 month|six month|12 month|twelve month|summary|timeline|chronology|review|report/i.test(
+  return /6 month|six month|12 month|twelve month|summary|timeline|chronology|review|report|audit|compliance|ofsted|ri/i.test(
     String(text || "")
   )
     ? "deep"
@@ -559,7 +856,16 @@ function detectAssistantResponseMode(text) {
 
 export async function askAssistant(question) {
   const trimmed = String(question || "").trim();
-  if (!trimmed || !state.youngPersonId || state.assistantSending) return;
+
+  if (!trimmed || state.assistantSending) return;
+
+  if (getCurrentScope() === "child" && !state.youngPersonId) {
+    pushAssistantMessage(
+      "assistant",
+      "Please select a young person first so I can answer in the right context."
+    );
+    return;
+  }
 
   pushAssistantMessage("user", trimmed);
   addAssistantPlaceholder();
@@ -575,15 +881,16 @@ export async function askAssistant(question) {
       {
         onMeta: (meta) => {
           state.assistantMeta = {
-            sources: Array.isArray(meta.sources) ? meta.sources : [],
-            runtime: meta.runtime || {},
-            explainability: meta.explainability || {},
-            assistant_scope: meta.assistant_scope || {},
-            assistant_context: meta.assistant_context || {},
-            suggested_actions: Array.isArray(meta.suggested_actions)
+            sources: Array.isArray(meta?.sources) ? meta.sources : [],
+            runtime: meta?.runtime || {},
+            explainability: meta?.explainability || {},
+            assistant_scope: meta?.assistant_scope || {},
+            assistant_context: meta?.assistant_context || {},
+            suggested_actions: Array.isArray(meta?.suggested_actions)
               ? meta.suggested_actions
               : [],
           };
+
           renderAssistantInsights();
         },
         onProgress: () => {},
@@ -613,22 +920,26 @@ export function clearAssistantMessages() {
 }
 
 function bindPromptButtons() {
+  if (assistantPromptDelegatesBound) return;
+  assistantPromptDelegatesBound = true;
+
   document.addEventListener("click", async (event) => {
     const button = event.target.closest("[data-prompt], [data-assistant-chip]");
     if (!button) return;
 
-    const prompt =
-      button.dataset.prompt ||
-      button.dataset.assistantChip ||
-      "";
-
+    const prompt = button.dataset.prompt || button.dataset.assistantChip || "";
     if (!prompt) return;
+
     await askAssistant(prompt);
   });
 }
 
 export function bindAssistantEvents() {
+  if (assistantEventsBound) return;
+  assistantEventsBound = true;
+
   els.assistantLauncher?.addEventListener("click", openAssistant);
+  els.heroAssistantBtn?.addEventListener("click", openAssistant);
   els.assistantExpandBtn?.addEventListener("click", openAssistant);
   els.closeAssistantBtn?.addEventListener("click", closeAssistant);
   els.assistantBackdrop?.addEventListener("click", closeAssistant);
@@ -640,14 +951,18 @@ export function bindAssistantEvents() {
   els.assistantForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const question = els.assistantInput?.value || "";
-    if (els.assistantInput) els.assistantInput.value = "";
+    if (els.assistantInput) {
+      els.assistantInput.value = "";
+    }
     await askAssistant(question);
   });
 
   els.assistantModalForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const question = els.assistantModalInput?.value || "";
-    if (els.assistantModalInput) els.assistantModalInput.value = "";
+    if (els.assistantModalInput) {
+      els.assistantModalInput.value = "";
+    }
     await askAssistant(question);
   });
 
