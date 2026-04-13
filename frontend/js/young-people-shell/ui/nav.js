@@ -39,6 +39,7 @@ import { loadCurrentView as loadWorkspace } from "../features/workspace.js";
 
 import { loadHomeDashboard } from "../features/home-dashboard.js";
 import { loadQualityDashboard } from "../features/quality.js";
+import { loadCompliance } from "../features/compliance.js";
 import { loadDocuments } from "../features/documents.js";
 import { loadCommunication } from "../features/communication.js";
 import { loadTherapy } from "../features/therapy.js";
@@ -58,12 +59,12 @@ const SECTION_LOADERS = {
   calendar: loadCalendar,
   readiness: loadReadiness,
   manager: loadManager,
-
   documents: loadDocuments,
   communication: loadCommunication,
   therapy: loadTherapy,
   team: loadTeam,
   supervision: loadSupervision,
+  compliance: loadCompliance,
   "home-dashboard": loadHomeDashboard,
   quality: loadQualityDashboard,
 };
@@ -92,18 +93,20 @@ const ICON_MAP = {
 
 const MOBILE_BOTTOM_BY_SCOPE = {
   child: ["workspace", "timeline", "profile", "readiness", "manager"],
-  home: ["home-dashboard", "manager", "readiness", "reports", "calendar"],
-  quality: ["quality", "reports", "manager", "readiness", "calendar"],
+  home: ["home-dashboard", "compliance", "readiness", "reports", "calendar"],
+  quality: ["quality", "compliance", "reports", "manager", "calendar"],
 };
 
-let navEventsBound = false;
-let selectorEventsBound = false;
-let composerEventsBound = false;
-let refreshEventsBound = false;
+let navButtonsBound = false;
+let selectorControlsBound = false;
+let composerControlsBound = false;
+let refreshControlsBound = false;
 let recordEventsBound = false;
-let youngPersonEventsBound = false;
-let drawerEventsBound = false;
-let suggestionEventsBound = false;
+let youngPersonOpenBound = false;
+let drawerCallbacksBound = false;
+let shellEventsBound = false;
+let actionRouterBound = false;
+let suggestionsBound = false;
 
 function getNavIcon(icon) {
   return ICON_MAP[icon] || "•";
@@ -350,8 +353,8 @@ export async function reloadCurrentSection() {
 }
 
 function bindNavButtons() {
-  if (navEventsBound) return;
-  navEventsBound = true;
+  if (navButtonsBound) return;
+  navButtonsBound = true;
 
   document.addEventListener("click", async (event) => {
     const button = event.target.closest("[data-nav-section]");
@@ -365,8 +368,8 @@ function bindNavButtons() {
 }
 
 function bindSelectorControls() {
-  if (selectorEventsBound) return;
-  selectorEventsBound = true;
+  if (selectorControlsBound) return;
+  selectorControlsBound = true;
 
   const goToSelector = async () => {
     state.youngPersonId = null;
@@ -419,8 +422,8 @@ function bindSelectorControls() {
 }
 
 function bindComposerControls() {
-  if (composerEventsBound) return;
-  composerEventsBound = true;
+  if (composerControlsBound) return;
+  composerControlsBound = true;
 
   els.closeComposerBtn?.addEventListener("click", () => {
     closeComposer(true);
@@ -450,8 +453,8 @@ function bindComposerControls() {
 }
 
 function bindRefreshControls() {
-  if (refreshEventsBound) return;
-  refreshEventsBound = true;
+  if (refreshControlsBound) return;
+  refreshControlsBound = true;
 
   const refresh = async () => {
     try {
@@ -512,8 +515,8 @@ function bindOpenRecordEvents() {
 }
 
 function bindYoungPersonOpen() {
-  if (youngPersonEventsBound) return;
-  youngPersonEventsBound = true;
+  if (youngPersonOpenBound) return;
+  youngPersonOpenBound = true;
 
   document.addEventListener("click", async (event) => {
     const trigger = event.target.closest("[data-open-young-person]");
@@ -549,8 +552,8 @@ function bindYoungPersonOpen() {
 }
 
 function bindDrawerCallbacks() {
-  if (drawerEventsBound) return;
-  drawerEventsBound = true;
+  if (drawerCallbacksBound) return;
+  drawerCallbacksBound = true;
 
   bindRecordDrawerEvents({
     onEdit: async (recordType, item) => {
@@ -569,6 +572,9 @@ function bindDrawerCallbacks() {
 }
 
 function bindQuickActionRouter() {
+  if (actionRouterBound) return;
+  actionRouterBound = true;
+
   bindActionRouter({
     onMissingYoungPerson: () => {
       showError("Select a young person first.");
@@ -577,9 +583,8 @@ function bindQuickActionRouter() {
 }
 
 export function bindNavEvents() {
-  if (suggestionEventsBound) {
-    return;
-  }
+  if (shellEventsBound) return;
+  shellEventsBound = true;
 
   bindSelectorControls();
   bindComposerControls();
@@ -588,9 +593,11 @@ export function bindNavEvents() {
   bindYoungPersonOpen();
   bindDrawerCallbacks();
   bindQuickActionRouter();
-  bindSuggestionEvents();
 
-  suggestionEventsBound = true;
+  if (!suggestionsBound) {
+    bindSuggestionEvents();
+    suggestionsBound = true;
+  }
 }
 
 export function rerenderNavigationForScope() {
