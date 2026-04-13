@@ -1,6 +1,11 @@
 import { state } from "../state.js";
 import { els } from "../dom.js";
-import { NAV_SECTIONS, NAV_GROUPS_CONFIG } from "../core/config.js";
+import {
+  NAV_SECTIONS,
+  NAV_GROUPS_CONFIG,
+  SCOPE_SECTIONS,
+  SCOPE_DEFAULT_SECTION,
+} from "../core/config.js";
 import { escapeHtml } from "../core/utils.js";
 
 import {
@@ -60,45 +65,62 @@ const ICON_MAP = {
   "shield-check": "✓",
   "clipboard-check": "☑",
   "file-text": "▤",
+  folder: "▣",
+  "messages-square": "✉",
+  sparkles: "✦",
+  "badge-check": "⬢",
+  "users-round": "◍",
+  "building-2": "▥",
+  "bar-chart-3": "▦",
+};
+
+const MOBILE_BOTTOM_BY_SCOPE = {
+  child: ["workspace", "timeline", "profile", "readiness", "manager"],
+  home: ["home-dashboard", "manager", "readiness", "reports", "calendar"],
+  quality: ["quality", "reports", "manager", "readiness", "calendar"],
 };
 
 function getNavIcon(icon) {
   return ICON_MAP[icon] || "•";
 }
 
+function getCurrentScope() {
+  return state.currentScope || "child";
+}
+
 function getCurrentSection() {
   return state.currentSection || state.activeSection || state.currentView || "workspace";
 }
 
-function getAllowedSectionsForScope() {
-  const scope = state.currentScope || "child";
+function getAllowedSectionIdsForScope() {
+  const scope = getCurrentScope();
+  return new Set(SCOPE_SECTIONS?.[scope] || SCOPE_SECTIONS?.child || ["workspace"]);
+}
 
-  if (scope === "home") {
-    return new Set(["manager", "reports", "readiness", "calendar"]);
+function getDefaultSectionForScope(scope = getCurrentScope()) {
+  return SCOPE_DEFAULT_SECTION?.[scope] || "workspace";
+}
+
+function isSectionAllowed(sectionId) {
+  return getAllowedSectionIdsForScope().has(sectionId);
+}
+
+function ensureValidCurrentSection() {
+  const current = getCurrentSection();
+
+  if (isSectionAllowed(current)) {
+    return current;
   }
 
-  if (scope === "quality") {
-    return new Set(["reports", "manager", "readiness", "calendar"]);
-  }
-
-  return new Set([
-    "workspace",
-    "overview",
-    "profile",
-    "timeline",
-    "handover",
-    "health",
-    "education",
-    "family",
-    "calendar",
-    "readiness",
-    "reports",
-    "manager",
-  ]);
+  const fallback = getDefaultSectionForScope();
+  state.currentSection = fallback;
+  state.activeSection = fallback;
+  state.currentView = fallback;
+  return fallback;
 }
 
 function getScopedNavGroups() {
-  const allowed = getAllowedSectionsForScope();
+  const allowed = getAllowedSectionIdsForScope();
 
   return (NAV_GROUPS_CONFIG || [])
     .map((group) => {
@@ -108,26 +130,17 @@ function getScopedNavGroups() {
         items,
       };
     })
-    .filter((group) => group.items.length);
+    .filter((group) => group.items.length > 0);
 }
 
 function getScopedNavSections() {
-  const allowed = getAllowedSectionsForScope();
+  const allowed = getAllowedSectionIdsForScope();
   return (NAV_SECTIONS || []).filter((item) => allowed.has(item.id));
 }
 
 function getMobileBottomSections() {
-  const scope = state.currentScope || "child";
-
-  if (scope === "home") {
-    return ["manager", "readiness", "reports", "calendar"];
-  }
-
-  if (scope === "quality") {
-    return ["reports", "manager", "readiness", "calendar"];
-  }
-
-  return ["workspace", "timeline", "profile", "readiness", "manager"];
+  const scope = getCurrentScope();
+  return MOBILE_BOTTOM_BY_SCOPE[scope] || MOBILE_BOTTOM_BY_SCOPE.child;
 }
 
 function renderNavItem(item, { compact = false } = {}) {
@@ -217,6 +230,8 @@ function buildMobileBottomBarHtml() {
 }
 
 function renderNavigation() {
+  ensureValidCurrentSection();
+
   if (els.desktopNav) {
     els.desktopNav.innerHTML = buildDesktopNavHtml();
   }
@@ -278,23 +293,25 @@ function markActiveNav(section) {
 }
 
 export async function loadSection(section) {
-  if (!state.youngPersonId && state.currentScope === "child") {
+  const safeSection = isSectionAllowed(section) ? section : getDefaultSectionForScope();
+
+  if (!state.youngPersonId && getCurrentScope() === "child") {
     showError("Select a young person first.");
     return;
   }
 
-  const loader = SECTION_LOADERS[section];
+  const loader = SECTION_LOADERS[safeSection];
   if (!loader) {
-    showError(`Unknown section: ${section}`);
+    showError(`Unknown section: ${safeSection}`);
     return;
   }
 
-  state.currentSection = section;
-  state.activeSection = section;
-  state.currentView = section;
+  state.currentSection = safeSection;
+  state.activeSection = safeSection;
+  state.currentView = safeSection;
 
-  markActiveNav(section);
-  updateSectionChrome(section);
+  markActiveNav(safeSection);
+  updateSectionChrome(safeSection);
   updateYoungPersonChrome(state.selectedYoungPerson || {});
   clearStatus();
 
@@ -302,13 +319,13 @@ export async function loadSection(section) {
     await loader();
     closeMobileNav?.();
   } catch (error) {
-    console.error(`[nav] failed loading section "${section}"`, error);
+    console.error(`[nav] failed loading section "${safeSection}"`, error);
     showError(error?.message || "Failed to load this section.");
   }
 }
 
 export async function reloadCurrentSection() {
-  const section = getCurrentSection();
+  const section = ensureValidCurrentSection();
   await loadSection(section);
 }
 
@@ -327,9 +344,9 @@ function bindSelectorControls() {
     state.youngPersonId = null;
     state.selectedYoungPerson = null;
     state.currentScope = "child";
-    state.currentSection = "workspace";
-    state.activeSection = "workspace";
-    state.currentView = "workspace";
+    state.currentSection = getDefaultSectionForScope("child");
+    state.activeSection = state.currentSection;
+    state.currentView = state.currentSection;
     state.activeRecordType = null;
     state.activeRecordItem = null;
 
@@ -499,6 +516,10 @@ function bindYoungPersonOpen() {
       if (els.workspaceScreen) els.workspaceScreen.classList.remove("hidden");
 
       state.currentScope = "child";
+      state.currentSection = getDefaultSectionForScope("child");
+      state.activeSection = state.currentSection;
+      state.currentView = state.currentSection;
+
       updateYoungPersonChrome(state.selectedYoungPerson || {});
       updateSectionChrome(getCurrentSection());
       clearStatus();
@@ -542,9 +563,17 @@ export function bindNavEvents() {
   bindSuggestionEvents();
 }
 
+export function rerenderNavigationForScope() {
+  ensureValidCurrentSection();
+  renderNavigation();
+  bindNavButtons();
+  markActiveNav(getCurrentSection());
+  updateSectionChrome(getCurrentSection());
+}
+
 export async function initialiseShellNavigation() {
   if (!state.currentSection) {
-    state.currentSection = "workspace";
+    state.currentSection = getDefaultSectionForScope();
   }
 
   if (!state.activeSection) {
@@ -552,6 +581,7 @@ export async function initialiseShellNavigation() {
   }
 
   state.currentView = state.currentSection;
+  ensureValidCurrentSection();
 
   renderNavigation();
   bindNavButtons();
