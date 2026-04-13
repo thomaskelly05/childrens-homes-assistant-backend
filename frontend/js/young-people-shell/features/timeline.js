@@ -12,7 +12,62 @@ import {
   mapAppointment,
   mapMissingEpisode,
   mapSafeguardingRecord,
+  mapCommunicationRecord,
+  mapTask,
+  mapComplianceItem,
 } from "../core/adapters.js";
+import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
+
+function getCurrentScope() {
+  return state.currentScope || "child";
+}
+
+function getHomeId() {
+  return (
+    state.homeId ||
+    state.currentUser?.home_id ||
+    state.currentUser?.homeId ||
+    state.selectedYoungPerson?.home_id ||
+    null
+  );
+}
+
+function getScopeEntityId() {
+  if (getCurrentScope() === "child") {
+    return state.youngPersonId || null;
+  }
+
+  return getHomeId();
+}
+
+function getScopeTitle() {
+  const scope = getCurrentScope();
+
+  if (scope === "home") {
+    return (
+      state.currentUser?.home_name ||
+      state.currentUser?.homeName ||
+      (getHomeId() ? `Home ${getHomeId()}` : "Home")
+    );
+  }
+
+  if (scope === "quality") {
+    return (
+      state.currentUser?.home_name ||
+      state.currentUser?.homeName ||
+      (getHomeId() ? `Home ${getHomeId()}` : "Quality and RI")
+    );
+  }
+
+  const person = state.selectedYoungPerson || state.youngPerson || {};
+  return (
+    person.full_name ||
+    person.name ||
+    [person.first_name, person.last_name].filter(Boolean).join(" ").trim() ||
+    person.preferred_name ||
+    "Young person"
+  );
+}
 
 function sortNewestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
@@ -26,12 +81,14 @@ function getTimelineDate(item = {}) {
   return (
     item.event_datetime ||
     item.occurred_at ||
+    item.incident_datetime ||
     item.contact_datetime ||
     item.start_datetime ||
     item.record_date ||
     item.session_date ||
     item.recorded_at ||
     item.concern_datetime ||
+    item.due_date ||
     item.created_at ||
     null
   );
@@ -85,6 +142,9 @@ function buildFallbackTimeline({
   appointments = [],
   missingEpisodes = [],
   safeguardingRecords = [],
+  communications = [],
+  tasks = [],
+  complianceItems = [],
 }) {
   return sortNewestFirst(
     [
@@ -136,6 +196,24 @@ function buildFallbackTimeline({
           record_type: "safeguarding_record",
         })
       ),
+      ...communications.map((item) =>
+        toTimelineRow(item, {
+          source_table: "communications",
+          record_type: "communication",
+        })
+      ),
+      ...tasks.map((item) =>
+        toTimelineRow(item, {
+          source_table: "tasks",
+          record_type: "task",
+        })
+      ),
+      ...complianceItems.map((item) =>
+        toTimelineRow(item, {
+          source_table: "compliance_items",
+          record_type: "compliance_item",
+        })
+      ),
     ],
     ["event_datetime", "created_at"]
   );
@@ -162,10 +240,12 @@ function buildRecentImportantRows(chronology = []) {
   return chronology.filter((item) => {
     const severity = String(item.severity || "").toLowerCase();
     const significance = String(item.significance || "").toLowerCase();
+    const status = String(item.status || item.workflow_status || "").toLowerCase();
 
     return (
       ["high", "critical"].includes(severity) ||
       ["high", "critical"].includes(significance) ||
+      ["overdue", "escalated"].includes(status) ||
       item.safeguarding_flag
     );
   });
@@ -173,7 +253,7 @@ function buildRecentImportantRows(chronology = []) {
 
 function buildCategoryBuckets(chronology = []) {
   const incidents = chronology.filter((item) =>
-    ["incident", "incidents"].includes(
+    ["incident", "incidents", "missing_episode", "safeguarding_record"].includes(
       String(item.record_type || item.primary_record_type || "").toLowerCase()
     )
   );
@@ -222,6 +302,7 @@ function getRowSummary(item = {}) {
     item.summary ||
     item.description ||
     item.presentation ||
+    item.note ||
     "No additional summary recorded."
   );
 }
@@ -234,6 +315,7 @@ function getRowMeta(item = {}) {
     item.start_datetime ||
     item.record_date ||
     item.concern_datetime ||
+    item.due_date ||
     item.created_at ||
     ""
   );
@@ -266,32 +348,34 @@ function renderRecordRows(items = [], emptyMessage = "No timeline items found.")
 
   return `
     <div class="record-list">
-      ${items.map((item) => {
-        const pill = getRowPill(item);
-        const id = item.id ?? item.record_id ?? item.source_id ?? "";
-        const type = item.record_type || item.type || "";
+      ${items
+        .map((item) => {
+          const pill = getRowPill(item);
+          const id = item.id ?? item.record_id ?? item.source_id ?? "";
+          const type = item.record_type || item.type || "";
 
-        return `
-          <article
-            class="record-row"
-            data-open-record="true"
-            data-record-id="${toText(id)}"
-            data-record-type="${toText(type)}"
-            data-title="${toText(getRowTitle(item))}"
-            role="button"
-            tabindex="0"
-          >
-            <div class="record-row-main">
-              <div class="record-row-title">${toText(getRowTitle(item))}</div>
-              <div class="record-row-summary">${toText(getRowSummary(item))}</div>
-              <div class="record-row-meta">${toText(formatTimelineDate(getRowMeta(item)))}</div>
-            </div>
-            <div class="record-row-side">
-              <span class="row-pill ${toText(pill.tone)}">${toText(pill.label)}</span>
-            </div>
-          </article>
-        `;
-      }).join("")}
+          return `
+            <article
+              class="record-row"
+              data-open-record="true"
+              data-record-id="${toText(id)}"
+              data-record-type="${toText(type)}"
+              data-title="${toText(getRowTitle(item))}"
+              role="button"
+              tabindex="0"
+            >
+              <div class="record-row-main">
+                <div class="record-row-title">${toText(getRowTitle(item))}</div>
+                <div class="record-row-summary">${toText(getRowSummary(item))}</div>
+                <div class="record-row-meta">${toText(formatTimelineDate(getRowMeta(item)))}</div>
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill ${toText(pill.tone)}">${toText(pill.label)}</span>
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
     </div>
   `;
 }
@@ -307,12 +391,17 @@ function renderPriorityList(items = [], emptyMessage = "No recent high-priority 
 
   return `
     <div class="priority-list">
-      ${items.slice(0, 4).map((item) => `
-        <article class="priority-item">
-          <strong>${toText(getRowTitle(item))}</strong>
-          <p>${toText(getRowSummary(item))}</p>
-        </article>
-      `).join("")}
+      ${items
+        .slice(0, 4)
+        .map(
+          (item) => `
+            <article class="priority-item">
+              <strong>${toText(getRowTitle(item))}</strong>
+              <p>${toText(getRowSummary(item))}</p>
+            </article>
+          `
+        )
+        .join("")}
     </div>
   `;
 }
@@ -325,17 +414,26 @@ function renderTimelineHtml({
   patternCounts,
   topCounts,
 }) {
+  const scope = getCurrentScope();
+  const title =
+    scope === "child"
+      ? "Timeline overview"
+      : scope === "home"
+      ? "Home timeline overview"
+      : "Quality timeline overview";
+
+  const subtitle =
+    chronology.length
+      ? "Chronology events generated and linked across the current scope."
+      : "Chronology events are not available, so this view is showing a fallback timeline from linked records.";
+
   return `
     <section class="overview-panel">
       <div class="overview-panel-head">
         <div>
           <div class="eyebrow">Timeline</div>
-          <h2>Timeline overview</h2>
-          <p>${
-            chronology.length
-              ? "Chronology events generated and linked across the young person’s story."
-              : "Chronology events are not available, so this view is showing a fallback timeline from linked records."
-          }</p>
+          <h2>${toText(title)} • ${toText(getScopeTitle())}</h2>
+          <p>${toText(subtitle)}</p>
         </div>
       </div>
 
@@ -422,7 +520,7 @@ function renderTimelineHtml({
               <p>${
                 chronology.length
                   ? "Recorded chronology events in newest-first order."
-                  : "Fallback view built from incidents, daily notes, health, education, family, appointments and safeguarding records."
+                  : "Fallback view built from incidents, notes, health, education, family, appointments, safeguarding, communication and readiness items."
               }</p>
             </div>
 
@@ -481,8 +579,92 @@ function renderTimelineHtml({
   `;
 }
 
+function getTimelineEndpoints() {
+  const scope = getCurrentScope();
+  const id = getScopeEntityId();
+
+  if (!id) return null;
+
+  if (scope === "home") {
+    return {
+      timeline: `/homes/${id}/timeline`,
+      incidents: `/homes/${id}/incidents`,
+      dailyNotes: `/homes/${id}/daily-notes`,
+      health: `/homes/${id}/health-records`,
+      education: `/homes/${id}/education-records`,
+      family: `/homes/${id}/family-contact-records`,
+      appointments: `/homes/${id}/appointments`,
+      missing: `/homes/${id}/missing-episodes`,
+      safeguarding: `/homes/${id}/safeguarding-records`,
+      communications: `/homes/${id}/communications`,
+      tasks: `/homes/${id}/tasks`,
+      compliance: `/homes/${id}/compliance`,
+    };
+  }
+
+  if (scope === "quality") {
+    return {
+      timeline: `/homes/${id}/timeline`,
+      incidents: `/homes/${id}/incidents`,
+      dailyNotes: `/homes/${id}/daily-notes`,
+      health: `/homes/${id}/health-records`,
+      education: `/homes/${id}/education-records`,
+      family: `/homes/${id}/family-contact-records`,
+      appointments: `/homes/${id}/appointments`,
+      missing: `/homes/${id}/missing-episodes`,
+      safeguarding: `/homes/${id}/safeguarding-records`,
+      communications: `/homes/${id}/communications`,
+      tasks: `/homes/${id}/tasks`,
+      compliance: `/homes/${id}/compliance`,
+    };
+  }
+
+  return {
+    timeline: `/young-people/${id}/timeline`,
+    incidents: `/young-people/${id}/incidents`,
+    dailyNotes: `/young-people/${id}/daily-notes`,
+    health: `/young-people/${id}/health-records`,
+    education: `/young-people/${id}/education-records`,
+    family: `/young-people/${id}/family-contact-records`,
+    appointments: `/young-people/${id}/appointments`,
+    missing: `/young-people/${id}/missing-episodes`,
+    safeguarding: `/young-people/${id}/safeguarding-records`,
+    communications: `/young-people/${id}/communications`,
+    tasks: `/young-people/${id}/tasks`,
+    compliance: `/young-people/${id}/compliance`,
+  };
+}
+
+function renderNoContext() {
+  if (!els.viewContent) return;
+
+  const message =
+    getCurrentScope() === "child"
+      ? "Select a young person before opening timeline."
+      : "A home context is needed before timeline can load.";
+
+  els.viewContent.innerHTML = `
+    <div class="empty-state">
+      <p>${toText(message)}</p>
+    </div>
+  `;
+
+  updateWorkspaceSummaryStrip({
+    today: "No timeline context",
+    nextEvent: "No event loaded",
+    lastRecord: "No timeline data",
+    openActions: "No actions loaded",
+  });
+}
+
 export async function loadTimeline() {
   if (!els.viewContent) return;
+
+  const endpoints = getTimelineEndpoints();
+  if (!endpoints) {
+    renderNoContext();
+    return;
+  }
 
   els.viewContent.innerHTML = `
     <div class="loading-state">
@@ -504,16 +686,22 @@ export async function loadTimeline() {
       appointmentsData,
       missingData,
       safeguardingData,
+      communicationsData,
+      tasksData,
+      complianceData,
     ] = await Promise.all([
-      apiGet(`/young-people/${state.youngPersonId}/timeline`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/incidents`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/daily-notes`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/health-records`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/education-records`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/family-contact-records`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/appointments`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/missing-episodes`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/safeguarding-records`).catch(() => ({ items: [] })),
+      apiGet(endpoints.timeline).catch(() => ({ items: [] })),
+      apiGet(endpoints.incidents).catch(() => ({ items: [] })),
+      apiGet(endpoints.dailyNotes).catch(() => ({ items: [] })),
+      apiGet(endpoints.health).catch(() => ({ items: [] })),
+      apiGet(endpoints.education).catch(() => ({ items: [] })),
+      apiGet(endpoints.family).catch(() => ({ items: [] })),
+      apiGet(endpoints.appointments).catch(() => ({ items: [] })),
+      apiGet(endpoints.missing).catch(() => ({ items: [] })),
+      apiGet(endpoints.safeguarding).catch(() => ({ items: [] })),
+      apiGet(endpoints.communications).catch(() => ({ items: [] })),
+      apiGet(endpoints.tasks).catch(() => ({ items: [] })),
+      apiGet(endpoints.compliance).catch(() => ({ items: [] })),
     ]);
 
     const chronology = sortNewestFirst(
@@ -529,7 +717,7 @@ export async function loadTimeline() {
 
     const incidents = sortNewestFirst(
       (incidentsData.items || incidentsData.records || incidentsData.incidents || []).map(mapIncident),
-      ["occurred_at", "created_at"]
+      ["occurred_at", "incident_datetime", "created_at"]
     );
 
     const dailyNotes = sortNewestFirst(
@@ -575,6 +763,26 @@ export async function loadTimeline() {
       ["concern_datetime", "created_at"]
     );
 
+    const communications = sortNewestFirst(
+      (
+        communicationsData.items ||
+        communicationsData.records ||
+        communicationsData.communications ||
+        []
+      ).map((item) => (typeof mapCommunicationRecord === "function" ? mapCommunicationRecord(item) : item)),
+      ["contact_datetime", "created_at", "updated_at"]
+    );
+
+    const tasks = sortNewestFirst(
+      (tasksData.items || tasksData.records || tasksData.tasks || []).map(mapTask),
+      ["due_date", "created_at"]
+    );
+
+    const complianceItems = sortNewestFirst(
+      (complianceData.items || complianceData.records || complianceData.compliance_items || []).map(mapComplianceItem),
+      ["due_date", "created_at"]
+    );
+
     const fallbackTimeline = buildFallbackTimeline({
       incidents,
       dailyNotes,
@@ -584,6 +792,9 @@ export async function loadTimeline() {
       appointments,
       missingEpisodes,
       safeguardingRecords,
+      communications,
+      tasks,
+      complianceItems,
     });
 
     const timelineRows = chronology.length ? chronology : fallbackTimeline;
@@ -606,11 +817,32 @@ export async function loadTimeline() {
       patternCounts,
       topCounts,
     });
+
+    const latest = timelineRows[0] || null;
+    const nextAttention = importantRows[0] || null;
+
+    updateWorkspaceSummaryStrip({
+      today: `${timelineRows.length} timeline item${timelineRows.length === 1 ? "" : "s"}`,
+      nextEvent: nextAttention
+        ? `${nextAttention.title || "Priority event"}`
+        : "No urgent timeline event",
+      lastRecord: latest?.event_datetime
+        ? `Latest ${formatTimelineDate(latest.event_datetime)}`
+        : "No recent timeline record",
+      openActions: `${importantRows.length} important event${importantRows.length === 1 ? "" : "s"}`,
+    });
   } catch (error) {
     els.viewContent.innerHTML = `
       <div class="empty-state">
         <p>${escapeHtml(error.message || "Failed to load timeline.")}</p>
       </div>
     `;
+
+    updateWorkspaceSummaryStrip({
+      today: "Timeline unavailable",
+      nextEvent: "Unable to load",
+      lastRecord: "No timeline data",
+      openActions: "Check API routes",
+    });
   }
 }
