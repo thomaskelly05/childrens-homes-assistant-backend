@@ -37,6 +37,58 @@ import { loadReadiness } from "../features/readiness.js";
 import { loadManager } from "../features/manager.js";
 import { loadCurrentView as loadWorkspace } from "../features/workspace.js";
 
+/**
+ * Temporary placeholder loaders until dedicated files are created.
+ * Replace these with real imports once the new manager / RI views are built.
+ */
+async function loadHomeDashboard() {
+  if (!els.viewContent) return;
+
+  els.viewContent.innerHTML = `
+    <section class="overview-panel">
+      <div class="overview-panel-head">
+        <div>
+          <div class="eyebrow">Home dashboard</div>
+          <h2>Home-wide oversight</h2>
+          <p>A management view across the home, staffing, risks, actions, compliance and reporting.</p>
+        </div>
+      </div>
+
+      <div class="empty-state">
+        <div class="empty-state-inner">
+          <div class="empty-state-icon" aria-hidden="true">▥</div>
+          <h3>Home dashboard coming next</h3>
+          <p>This scope is wired and ready. The dedicated dashboard content can be added next.</p>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+async function loadQualityDashboard() {
+  if (!els.viewContent) return;
+
+  els.viewContent.innerHTML = `
+    <section class="overview-panel">
+      <div class="overview-panel-head">
+        <div>
+          <div class="eyebrow">Quality and RI</div>
+          <h2>Quality dashboard</h2>
+          <p>A regulator and quality view across compliance, audits, themes, reports and service oversight.</p>
+        </div>
+      </div>
+
+      <div class="empty-state">
+        <div class="empty-state-inner">
+          <div class="empty-state-icon" aria-hidden="true">▦</div>
+          <h3>Quality dashboard coming next</h3>
+          <p>This scope is wired and ready. The dedicated RI and quality view can be added next.</p>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
 const SECTION_LOADERS = {
   workspace: loadWorkspace,
   overview: loadOverview,
@@ -50,6 +102,10 @@ const SECTION_LOADERS = {
   calendar: loadCalendar,
   readiness: loadReadiness,
   manager: loadManager,
+
+  // scoped manager / RI placeholders
+  "home-dashboard": loadHomeDashboard,
+  quality: loadQualityDashboard,
 };
 
 const ICON_MAP = {
@@ -329,14 +385,20 @@ export async function reloadCurrentSection() {
   await loadSection(section);
 }
 
-function bindNavButtons() {
-  document.querySelectorAll("[data-nav-section]").forEach((button) => {
+function bindNavButtonsIn(container) {
+  container?.querySelectorAll("[data-nav-section]").forEach((button) => {
     button.addEventListener("click", async () => {
       const section = button.dataset.navSection;
       if (!section) return;
       await loadSection(section);
     });
   });
+}
+
+function bindNavButtons() {
+  bindNavButtonsIn(els.desktopNav);
+  bindNavButtonsIn(els.mobileNavContent);
+  bindNavButtonsIn(els.mobileBottomBar);
 }
 
 function bindSelectorControls() {
