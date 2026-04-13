@@ -37,26 +37,35 @@ function showSelector() {
   els.selectorScreen?.classList.remove("hidden");
 }
 
-function normaliseRole(role) {
-  const value = String(role || "").trim().toLowerCase();
-
-  if (value === "administrator") return "admin";
-  if (value === "admin") return "admin";
-  if (value === "ri") return "ri";
-  if (value === "manager") return "manager";
-  return "staff";
-}
-
 function getCurrentRole() {
-  return normaliseRole(state.userRole || "staff");
+  const rawRole = String(state.userRole || "staff").toLowerCase().trim();
+  if (rawRole === "administrator") return "admin";
+  return rawRole;
 }
 
 function getAllowedScopesForRole() {
-  return ROLE_SCOPE_ACCESS?.[getCurrentRole()] || ["child"];
+  const role = getCurrentRole();
+
+  if (ROLE_SCOPE_ACCESS?.[role]) {
+    return ROLE_SCOPE_ACCESS[role];
+  }
+
+  if (role === "admin") {
+    return ["child", "home", "quality"];
+  }
+
+  return ["child"];
 }
 
 function canAccessScope(scope) {
   return getAllowedScopesForRole().includes(scope);
+}
+
+function getDefaultScopeForRole() {
+  const allowed = getAllowedScopesForRole();
+
+  if (allowed.includes("home")) return "home";
+  return allowed[0] || "child";
 }
 
 function getDefaultSectionForScope(scope = state.currentScope || "child") {
@@ -68,7 +77,7 @@ function ensureValidScopeForRole() {
   const currentScope = state.currentScope || "child";
 
   if (!allowedScopes.includes(currentScope)) {
-    state.currentScope = allowedScopes[0] || "child";
+    state.currentScope = getDefaultScopeForRole();
   }
 }
 
@@ -180,15 +189,6 @@ function bindScopeEvents() {
   });
 }
 
-function applyRoleFromDom() {
-  const roleFromDom =
-    els.app?.dataset?.userRole ||
-    document.body?.dataset?.userRole ||
-    "staff";
-
-  state.userRole = normaliseRole(roleFromDom);
-}
-
 async function restoreSelectedYoungPerson() {
   const idFromUrl = getYoungPersonIdFromUrl();
 
@@ -214,8 +214,11 @@ async function restoreSelectedYoungPerson() {
   }
 }
 
-async function bootstrapSelectorIfNeeded(restored) {
-  if (restored) return;
+async function bootstrapSelectorIfNeeded(restoredYoungPerson) {
+  const scope = state.currentScope || "child";
+
+  if (scope !== "child") return;
+  if (restoredYoungPerson) return;
 
   try {
     await loadYoungPersonSelector();
@@ -225,51 +228,41 @@ async function bootstrapSelectorIfNeeded(restored) {
   }
 }
 
-function resolveInitialScreen(restoredYoungPerson) {
-  const scope = state.currentScope || "child";
-
-  if (scope === "child") {
-    if (restoredYoungPerson && state.youngPersonId) {
-      showWorkspace();
-    } else {
-      showSelector();
-    }
-    return;
-  }
-
-  showWorkspace();
-}
-
 async function bootstrap() {
   if (bootstrapped) return;
   bootstrapped = true;
 
   try {
-    applyRoleFromDom();
     ensureValidScopeForRole();
+
+    if (!state.currentScope) {
+      state.currentScope = getDefaultScopeForRole();
+    }
+
+    state.currentSection = getDefaultSectionForScope(state.currentScope);
+    state.activeSection = state.currentSection;
+    state.currentView = state.currentSection;
 
     bindShellChrome();
     bindAssistantUi();
     bindAssistantEvents();
     bindScopeEvents();
 
-    const restoredYoungPerson = await restoreSelectedYoungPerson();
-    await bootstrapSelectorIfNeeded(restoredYoungPerson);
-
-    resolveInitialScreen(restoredYoungPerson);
-
     refreshAllChrome();
 
-    if (state.currentScope !== "child") {
-      state.currentSection = getDefaultSectionForScope(state.currentScope);
-      state.activeSection = state.currentSection;
-      state.currentView = state.currentSection;
-    } else if (!state.currentSection) {
-      state.currentSection = "workspace";
-      state.activeSection = "workspace";
-      state.currentView = "workspace";
+    const restoredYoungPerson = await restoreSelectedYoungPerson();
+
+    if (state.currentScope === "child") {
+      if (restoredYoungPerson) {
+        showWorkspace();
+      } else {
+        showSelector();
+      }
+    } else {
+      showWorkspace();
     }
 
+    await bootstrapSelectorIfNeeded(restoredYoungPerson);
     await initialiseShellNavigation();
     refreshAllChrome();
   } catch (error) {
