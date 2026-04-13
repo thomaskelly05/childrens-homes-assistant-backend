@@ -63,7 +63,9 @@ function getStatusTone(status = "") {
   const normalised = String(status || "").toLowerCase();
 
   if (
-    ["overdue", "high", "critical", "escalated", "missing"].includes(normalised)
+    ["overdue", "high", "critical", "escalated", "missing", "danger"].includes(
+      normalised
+    )
   ) {
     return "danger";
   }
@@ -131,6 +133,10 @@ function normaliseTherapyItems(data = {}) {
   return toArray(data.items, [data.therapy, data.records]);
 }
 
+function normaliseIncidentItems(data = {}) {
+  return toArray(data.items, [data.incidents, data.records]);
+}
+
 function buildTopStats({
   summary = {},
   openTasks = [],
@@ -177,7 +183,13 @@ function buildTopStats({
   ];
 }
 
-function buildOperationalCounts({ summary = {}, team = [], tasks = [], documents = [] }) {
+function buildOperationalCounts({
+  summary = {},
+  team = [],
+  tasks = [],
+  documents = [],
+  incidents = [],
+}) {
   const openVacancies = toNumber(
     summary.open_vacancies ?? summary.vacancies_count,
     0
@@ -196,11 +208,16 @@ function buildOperationalCounts({ summary = {}, team = [], tasks = [], documents
     return ["review_due", "due_soon", "overdue"].includes(status);
   }).length;
 
+  const urgentIncidents = incidents.filter((item) =>
+    ["high", "critical"].includes(String(item.severity || "").toLowerCase())
+  ).length;
+
   return {
     openVacancies,
     absentStaff,
     openActions,
     docReviewsDue,
+    urgentIncidents,
   };
 }
 
@@ -208,17 +225,30 @@ function buildPriorityItems({
   overdueTasks = [],
   dueSupervisions = [],
   expiringDocuments = [],
+  urgentIncidents = [],
 }) {
   const items = [];
 
-  overdueTasks.slice(0, 3).forEach((task) => {
+  urgentIncidents.slice(0, 2).forEach((incident) => {
+    items.push({
+      title: incident.title || incident.incident_type || "Urgent incident",
+      summary:
+        incident.summary ||
+        incident.description ||
+        (incident.occurred_at
+          ? `Occurred ${formatDateTime(incident.occurred_at)}`
+          : "Requires immediate review."),
+    });
+  });
+
+  overdueTasks.slice(0, 2).forEach((task) => {
     items.push({
       title: task.title || task.task || "Overdue task",
       summary: task.summary || task.notes || `Due ${formatDate(task.due_date)}`,
     });
   });
 
-  dueSupervisions.slice(0, 2).forEach((item) => {
+  dueSupervisions.slice(0, 1).forEach((item) => {
     items.push({
       title: item.staff_member || item.title || "Supervision due",
       summary: item.next_due_date
@@ -227,7 +257,7 @@ function buildPriorityItems({
     });
   });
 
-  expiringDocuments.slice(0, 2).forEach((doc) => {
+  expiringDocuments.slice(0, 1).forEach((doc) => {
     items.push({
       title: doc.title || doc.document_type || "Document review due",
       summary: doc.review_date
@@ -237,6 +267,95 @@ function buildPriorityItems({
   });
 
   return items.slice(0, 6);
+}
+
+function buildHomeKpis({
+  summary = {},
+  tasks = [],
+  documents = [],
+  supervisions = [],
+  therapy = [],
+}) {
+  const compliancePercent = toNumber(
+    summary.compliance_percent ?? summary.compliance_rate,
+    0
+  );
+
+  const completedTasks = tasks.filter((item) => item.completed).length;
+  const totalTasks = tasks.length || 0;
+  const completionPercent =
+    totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  const reviewedDocs = documents.filter((item) =>
+    ["current", "reviewed", "compliant"].includes(
+      String(item.status || "").toLowerCase()
+    )
+  ).length;
+  const docsPercent =
+    documents.length > 0
+      ? Math.round((reviewedDocs / documents.length) * 100)
+      : 0;
+
+  const completedSupervisions = supervisions.filter((item) =>
+    ["completed", "done"].includes(String(item.status || "").toLowerCase())
+  ).length;
+  const supervisionPercent =
+    supervisions.length > 0
+      ? Math.round((completedSupervisions / supervisions.length) * 100)
+      : 0;
+
+  const activeTherapy = therapy.filter((item) =>
+    ["active", "booked", "open"].includes(String(item.status || "").toLowerCase())
+  ).length;
+
+  return [
+    {
+      label: "Home compliance",
+      value: `${compliancePercent}%`,
+      percent: compliancePercent,
+      tone:
+        compliancePercent >= 90
+          ? "success"
+          : compliancePercent >= 75
+          ? "warning"
+          : "danger",
+    },
+    {
+      label: "Task completion",
+      value: `${completionPercent}%`,
+      percent: completionPercent,
+      tone:
+        completionPercent >= 85
+          ? "success"
+          : completionPercent >= 65
+          ? "warning"
+          : "danger",
+    },
+    {
+      label: "Document readiness",
+      value: `${docsPercent}%`,
+      percent: docsPercent,
+      tone:
+        docsPercent >= 90 ? "success" : docsPercent >= 70 ? "warning" : "danger",
+    },
+    {
+      label: "Supervision completion",
+      value: `${supervisionPercent}%`,
+      percent: supervisionPercent,
+      tone:
+        supervisionPercent >= 90
+          ? "success"
+          : supervisionPercent >= 70
+          ? "warning"
+          : "danger",
+    },
+    {
+      label: "Active therapy input",
+      value: activeTherapy,
+      percent: Math.min(activeTherapy * 20, 100),
+      tone: activeTherapy > 0 ? "muted" : "warning",
+    },
+  ];
 }
 
 function renderStatCards(cards = []) {
@@ -369,6 +488,78 @@ function renderPriorityList(items = []) {
   `;
 }
 
+function renderProgressCards(cards = []) {
+  return `
+    <div class="analytics-progress-grid">
+      ${cards
+        .map(
+          (card) => `
+            <article class="analytics-progress-card">
+              <div class="analytics-progress-head">
+                <span class="analytics-progress-label">${safeText(card.label)}</span>
+                <strong class="analytics-progress-value">${safeText(card.value)}</strong>
+              </div>
+              <div class="analytics-progress-track">
+                <span
+                  class="analytics-progress-bar analytics-progress-bar--${safeText(card.tone || "muted")}"
+                  style="width: ${safeText(card.percent || 0)}%;"
+                ></span>
+              </div>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderMiniChart(title, items = [], key = "value") {
+  const max = Math.max(...items.map((item) => toNumber(item?.[key], 0)), 1);
+
+  return `
+    <section class="overview-side-card">
+      <div class="overview-section-head">
+        <h3>${safeText(title)}</h3>
+        <p>Quick visual comparison.</p>
+      </div>
+
+      <div class="mini-chart">
+        ${items
+          .map((item) => {
+            const value = toNumber(item?.[key], 0);
+            const width = Math.max(8, Math.round((value / max) * 100));
+            return `
+              <div class="mini-chart-row">
+                <span class="mini-chart-label">${safeText(item.label)}</span>
+                <div class="mini-chart-bar-wrap">
+                  <span class="mini-chart-bar" style="width: ${safeText(width)}%;"></span>
+                </div>
+                <strong class="mini-chart-value">${safeText(value)}</strong>
+              </div>
+            `;
+          })
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
+function buildMiniMetrics({
+  openTasks = [],
+  dueSupervisions = [],
+  recentDocuments = [],
+  therapyItems = [],
+  recentCommunications = [],
+}) {
+  return [
+    { label: "Tasks", value: openTasks.length },
+    { label: "Supervisions", value: dueSupervisions.length },
+    { label: "Documents", value: recentDocuments.length },
+    { label: "Therapy", value: therapyItems.length },
+    { label: "Comms", value: recentCommunications.length },
+  ];
+}
+
 function renderHomeDashboardHtml({
   homeName = "Home",
   topStats = [],
@@ -380,25 +571,35 @@ function renderHomeDashboardHtml({
   recentDocuments = [],
   therapyItems = [],
   teamItems = [],
+  progressCards = [],
+  miniMetrics = [],
 }) {
   return `
-    <section class="overview-panel">
+    <section class="overview-panel manager-dashboard manager-dashboard--home">
       <div class="overview-panel-head">
         <div>
           <div class="eyebrow">Home dashboard</div>
           <h2>${safeText(homeName)}</h2>
-          <p>A live home-wide management view across operations, staffing, communication, documents and oversight.</p>
+          <p>A live home-wide management view across operations, staffing, communication, documents, therapy and oversight.</p>
         </div>
       </div>
 
       ${renderStatCards(topStats)}
+
+      <div class="overview-section-card">
+        <div class="overview-section-head">
+          <h3>Performance snapshot</h3>
+          <p>A quick visual read across completion, compliance and readiness.</p>
+        </div>
+        ${renderProgressCards(progressCards)}
+      </div>
 
       <div class="overview-grid">
         <section class="overview-main">
           <div class="overview-section-card">
             <div class="overview-section-head">
               <h3>Operational picture</h3>
-              <p>The quickest view of workforce, actions, vacancies and document review pressure.</p>
+              <p>The quickest view of workforce, incidents, actions, vacancies and document review pressure.</p>
             </div>
 
             <div class="record-list">
@@ -423,6 +624,18 @@ function renderHomeDashboardHtml({
                   <span class="row-pill ${
                     operationalCounts.absentStaff > 0 ? "warning" : "muted"
                   }">${safeText(operationalCounts.absentStaff)}</span>
+                </div>
+              </article>
+
+              <article class="record-row">
+                <div class="record-row-main">
+                  <div class="record-row-title">Urgent incidents</div>
+                  <div class="record-row-summary">High or critical events needing leadership review.</div>
+                </div>
+                <div class="record-row-side">
+                  <span class="row-pill ${
+                    operationalCounts.urgentIncidents > 0 ? "danger" : "muted"
+                  }">${safeText(operationalCounts.urgentIncidents)}</span>
                 </div>
               </article>
 
@@ -494,6 +707,28 @@ function renderHomeDashboardHtml({
                   .join(" • "),
             })}
           </div>
+
+          <div class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Team overview</h3>
+              <p>Latest team and staffing context across the home.</p>
+            </div>
+
+            ${renderRows(teamItems, {
+              emptyMessage: "No team updates found.",
+              titleKey: "staff_member",
+              summaryKey: "summary",
+              recordType: "team",
+              metaBuilder: (item) =>
+                [
+                  item.role || "",
+                  item.status || "",
+                  formatDate(item.record_date || item.created_at),
+                ]
+                  .filter(Boolean)
+                  .join(" • "),
+            })}
+          </div>
         </section>
 
         <aside class="overview-side">
@@ -505,6 +740,8 @@ function renderHomeDashboardHtml({
 
             ${renderPriorityList(priorityItems)}
           </section>
+
+          ${renderMiniChart("Management activity", miniMetrics, "value")}
 
           <section class="overview-side-card">
             <div class="overview-section-head">
@@ -563,28 +800,6 @@ function renderHomeDashboardHtml({
                 [
                   item.professional_name || "",
                   item.session_date ? formatDate(item.session_date) : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </section>
-
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Team overview</h3>
-              <p>Latest team and staffing context.</p>
-            </div>
-
-            ${renderRows(teamItems, {
-              emptyMessage: "No team updates found.",
-              titleKey: "staff_member",
-              summaryKey: "summary",
-              recordType: "team",
-              metaBuilder: (item) =>
-                [
-                  item.role || "",
-                  item.status || "",
-                  formatDate(item.record_date || item.created_at),
                 ]
                   .filter(Boolean)
                   .join(" • "),
@@ -664,6 +879,7 @@ export async function loadHomeDashboard() {
       documentData,
       supervisionData,
       therapyData,
+      incidentData,
     ] = await Promise.all([
       apiGet(`/homes/${homeId}/dashboard`).catch(() => ({})),
       apiGet(`/homes/${homeId}/team`).catch(() => ({ items: [] })),
@@ -672,6 +888,7 @@ export async function loadHomeDashboard() {
       apiGet(`/homes/${homeId}/documents`).catch(() => ({ items: [] })),
       apiGet(`/homes/${homeId}/supervisions`).catch(() => ({ items: [] })),
       apiGet(`/homes/${homeId}/therapy`).catch(() => ({ items: [] })),
+      apiGet(`/homes/${homeId}/incidents`).catch(() => ({ items: [] })),
     ]);
 
     const summary = normaliseHomeSummary(summaryData);
@@ -730,6 +947,16 @@ export async function loadHomeDashboard() {
       "created_at",
     ]).slice(0, 6);
 
+    const incidents = sortNewestFirst(normaliseIncidentItems(incidentData), [
+      "occurred_at",
+      "updated_at",
+      "created_at",
+    ]);
+
+    const urgentIncidents = incidents.filter((item) =>
+      ["high", "critical"].includes(String(item.severity || "").toLowerCase())
+    );
+
     const topStats = buildTopStats({
       summary,
       openTasks,
@@ -743,12 +970,30 @@ export async function loadHomeDashboard() {
       team: teamItems,
       tasks: taskItems,
       documents: documentItems,
+      incidents,
     });
 
     const priorityItems = buildPriorityItems({
       overdueTasks,
       dueSupervisions,
       expiringDocuments,
+      urgentIncidents,
+    });
+
+    const progressCards = buildHomeKpis({
+      summary,
+      tasks: taskItems,
+      documents: documentItems,
+      supervisions: supervisionItems,
+      therapy: therapyItems,
+    });
+
+    const miniMetrics = buildMiniMetrics({
+      openTasks,
+      dueSupervisions,
+      recentDocuments,
+      therapyItems,
+      recentCommunications: communicationItems,
     });
 
     const homeName =
@@ -768,6 +1013,8 @@ export async function loadHomeDashboard() {
       recentDocuments,
       therapyItems,
       teamItems,
+      progressCards,
+      miniMetrics,
     });
   } catch (error) {
     renderErrorState(error?.message || "The home dashboard could not be loaded.");
