@@ -52,15 +52,13 @@ export const els = {
   pageSubtitle: document.getElementById("pageSubtitle"),
   heroAssistantBtn: document.getElementById("heroAssistantBtn"),
   heroQuickActions: document.getElementById("heroQuickActions"),
+  quickCreateBar: document.getElementById("quickCreateBar"),
 
   // Workspace summary strip
   summaryToday: document.getElementById("summaryToday"),
   summaryNextEvent: document.getElementById("summaryNextEvent"),
   summaryLastRecord: document.getElementById("summaryLastRecord"),
   summaryOpenActions: document.getElementById("summaryOpenActions"),
-
-  // Quick create / scope-sensitive areas
-  quickCreateBar: document.getElementById("quickCreateBar"),
 
   // Profile snapshot
   profileSnapshotPhotoWrap: document.getElementById("profileSnapshotPhotoWrap"),
@@ -70,15 +68,40 @@ export const els = {
   profilePhotoUploadBtn: document.getElementById("profilePhotoUploadBtn"),
   changePersonBtn: document.getElementById("changePersonBtn"),
 
-  // Assistant
+  // Assistant shell
   assistantBackdrop: document.getElementById("assistantBackdrop"),
   assistantModal: document.getElementById("assistantModal"),
+  assistantLauncherInline: document.getElementById("assistantLauncherInline"),
+  assistantExpandBtn: document.getElementById("assistantExpandBtn"),
   closeAssistantBtn: document.getElementById("closeAssistantBtn"),
+
+  // Assistant primary chat
   assistantMessages: document.getElementById("assistantMessages"),
   assistantForm: document.getElementById("assistantForm"),
   assistantInput: document.getElementById("assistantInput"),
   assistantSendBtn: document.getElementById("assistantSendBtn"),
   assistantClearBtn: document.getElementById("assistantClearBtn"),
+
+  // Assistant context / chips / insights
+  assistantContext: document.getElementById("assistantContext"),
+  assistantSuggestions: document.getElementById("assistantSuggestions"),
+  assistantScopeSummary: document.getElementById("assistantScopeSummary"),
+  assistantActions: document.getElementById("assistantActions"),
+  assistantSources: document.getElementById("assistantSources"),
+  assistantRuntime: document.getElementById("assistantRuntime"),
+  assistantExplainability: document.getElementById("assistantExplainability"),
+
+  // Assistant badges
+  scopeBadge: document.getElementById("scopeBadge"),
+  scopeHomeBadge: document.getElementById("scopeHomeBadge"),
+  scopeChildBadge: document.getElementById("scopeChildBadge"),
+  scopeShiftBadge: document.getElementById("scopeShiftBadge"),
+
+  // Modal assistant mirrors / secondary panels
+  assistantModalScopeSummary: document.getElementById("assistantModalScopeSummary"),
+  assistantModalSources: document.getElementById("assistantModalSources"),
+  modalScopeHomeBadge: document.getElementById("modalScopeHomeBadge"),
+  modalScopeChildBadge: document.getElementById("modalScopeChildBadge"),
 
   // Hidden compatibility assistant nodes
   assistantModalMessages: document.getElementById("assistantModalMessages"),
@@ -114,7 +137,7 @@ export const els = {
   composerSafeguardingBtn: document.getElementById("composerSafeguardingBtn"),
   composerChildVoiceBtn: document.getElementById("composerChildVoiceBtn"),
 
-  // Backward-compatible aliases
+  // Backward-compatible composer aliases
   composerForm: document.getElementById("recordComposerForm"),
   composerFields: document.getElementById("recordComposerFields"),
 
