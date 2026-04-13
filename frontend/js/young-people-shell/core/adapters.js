@@ -740,6 +740,41 @@ export function mapYoungPersonContact(raw = {}) {
   };
 }
 
+export function mapCommunicationRecord(raw = {}) {
+  return {
+    ...mapYoungPersonContact(raw),
+    record_type: "communication",
+    title:
+      cleanText(raw.title) ||
+      cleanText(raw.subject) ||
+      cleanText(raw.contact_type) ||
+      "Communication",
+    summary:
+      pickFirst(
+        cleanText(raw.summary),
+        cleanText(raw.notes),
+        cleanText(raw.contact_notes),
+        cleanText(raw.description),
+        cleanText(raw.outcome),
+        cleanText(raw.message),
+        "Communication record"
+      ),
+    source_table: raw.source_table || "communications",
+    status: cleanText(raw.status),
+    communication_type: cleanText(raw.communication_type || raw.contact_type),
+    direction: cleanText(raw.direction),
+    method: cleanText(raw.method),
+    contact_datetime:
+      raw.contact_datetime ||
+      raw.communication_datetime ||
+      raw.sent_at ||
+      raw.created_at ||
+      null,
+    outcome: cleanText(raw.outcome),
+    raw,
+  };
+}
+
 export function mapDailyNote(raw = {}) {
   return buildBaseRecord(raw, {
     record_type: RECORD_TYPES.daily_note,
