@@ -2,6 +2,7 @@ import { els } from "../dom.js";
 import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
+import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 import {
   mapHealthRecord,
   mapMedicationProfile,
@@ -11,6 +12,22 @@ import {
 
 function toText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
+}
+
+function sortNewestFirst(items = [], keys = []) {
+  return [...items].sort((a, b) => {
+    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
+    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
+    return new Date(bValue).getTime() - new Date(aValue).getTime();
+  });
+}
+
+function sortSoonestFirst(items = [], keys = []) {
+  return [...items].sort((a, b) => {
+    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
+    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
+    return new Date(aValue).getTime() - new Date(bValue).getTime();
+  });
 }
 
 function formatDateTime(value) {
@@ -26,16 +43,40 @@ function formatDateTime(value) {
   });
 }
 
+function formatDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function isFuture(value) {
+  if (!value) return false;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  return date.getTime() >= Date.now();
+}
+
 function buildHealthRows(items = []) {
   return items.map((item) => ({
     id: item.id,
     record_type: "health_record",
     title: item.title || item.record_type || "Health record",
-    summary: item.summary || item.outcome || "Health update",
+    summary:
+      item.summary ||
+      item.outcome ||
+      item.professional_name ||
+      "Health update",
     event_datetime: item.event_datetime,
     created_at: item.created_at,
     status: item.workflow_status || "",
     significance: item.significance || "",
+    professional_name: item.professional_name || "",
+    next_action_date: item.next_action_date || null,
   }));
 }
 
@@ -44,10 +85,19 @@ function buildMedicationProfileRows(items = []) {
     id: item.id,
     record_type: "medication_profile",
     title: item.medication_name || "Medication",
-    summary: [item.dose || item.dosage || "", item.frequency || ""].filter(Boolean).join(" • "),
+    summary: [
+      item.dosage || item.dose || "",
+      item.frequency || "",
+      item.route || "",
+      item.reason || "",
+    ]
+      .filter(Boolean)
+      .join(" • "),
     start_date: item.start_date,
     end_date: item.end_date,
     status: item.is_active ? "active" : "inactive",
+    notes: item.notes || "",
+    reason: item.reason || "",
   }));
 }
 
@@ -56,10 +106,19 @@ function buildMedicationRecordRows(items = []) {
     id: item.id,
     record_type: "medication_record",
     title: item.medication_name || "Medication",
-    summary: [item.dose || "", item.status || ""].filter(Boolean).join(" • "),
+    summary: [
+      item.dose || "",
+      item.route || "",
+      item.status || "",
+      item.refusal_reason || item.omission_reason || "",
+    ]
+      .filter(Boolean)
+      .join(" • "),
     scheduled_time: item.scheduled_time,
     administered_time: item.administered_time,
     status: item.status || "",
+    error_flag: !!item.error_flag,
+    error_details: item.error_details || "",
   }));
 }
 
@@ -68,10 +127,18 @@ function buildAppointmentRows(items = []) {
     id: item.id,
     record_type: "appointment",
     title: item.title || item.appointment_type || "Appointment",
-    summary: [item.location || "", item.professional_name || ""].filter(Boolean).join(" • "),
+    summary: [
+      item.location || "",
+      item.professional_name || "",
+      item.professional_role || "",
+      item.status || "",
+    ]
+      .filter(Boolean)
+      .join(" • "),
     start_datetime: item.start_datetime || item.appointment_date,
     end_datetime: item.end_datetime,
     status: item.status || "",
+    outcome_notes: item.outcome_notes || "",
   }));
 }
 
@@ -91,15 +158,26 @@ function getRowPill(item = {}) {
   const status = String(item.status || "").toLowerCase();
   const significance = String(item.significance || "").toLowerCase();
 
-  if (["overdue", "missed", "refused", "escalated"].includes(status) || ["high", "critical"].includes(significance)) {
+  if (
+    ["overdue", "missed", "refused", "escalated", "error"].includes(status) ||
+    ["high", "critical"].includes(significance) ||
+    item.error_flag
+  ) {
     return { label: "Needs review", tone: "warning" };
   }
 
-  if (["active", "completed", "administered"].includes(status)) {
+  if (["active", "completed", "administered", "booked", "confirmed"].includes(status)) {
+    return { label: status.replaceAll("_", " "), tone: "success" };
+  }
+
+  if (["inactive", "cancelled"].includes(status)) {
     return { label: status.replaceAll("_", " "), tone: "muted" };
   }
 
-  return { label: status ? status.replaceAll("_", " ") : "Recorded", tone: "muted" };
+  return {
+    label: status ? status.replaceAll("_", " ") : "Recorded",
+    tone: "muted",
+  };
 }
 
 function renderEmptyState(message = "No information available.") {
@@ -147,18 +225,74 @@ function renderRecordRows(items = [], emptyMessage = "No records found.") {
   `;
 }
 
+function renderHealthSummaryCards({
+  healthRecords = [],
+  medicationProfiles = [],
+  medicationRecords = [],
+  appointments = [],
+}) {
+  const activeMeds = medicationProfiles.filter((m) => m.is_active).length;
+  const futureAppointments = appointments.filter((a) =>
+    isFuture(a.start_datetime || a.appointment_date)
+  ).length;
+  const medicationIssues = medicationRecords.filter((m) => {
+    const status = String(m.status || "").toLowerCase();
+    return m.error_flag || ["refused", "missed", "omitted", "error"].includes(status);
+  }).length;
+
+  return `
+    <div class="overview-stats-grid">
+      <article class="overview-stat-card">
+        <span class="overview-stat-label">Health records</span>
+        <strong class="overview-stat-value">${toText(healthRecords.length)}</strong>
+        <span class="overview-stat-note">Recorded health updates</span>
+      </article>
+
+      <article class="overview-stat-card">
+        <span class="overview-stat-label">Active meds</span>
+        <strong class="overview-stat-value">${toText(activeMeds)}</strong>
+        <span class="overview-stat-note">Current medication profiles</span>
+      </article>
+
+      <article class="overview-stat-card">
+        <span class="overview-stat-label">Medication issues</span>
+        <strong class="overview-stat-value">${toText(medicationIssues)}</strong>
+        <span class="overview-stat-note">Refusals, omissions or errors</span>
+      </article>
+
+      <article class="overview-stat-card">
+        <span class="overview-stat-label">Upcoming appointments</span>
+        <strong class="overview-stat-value">${toText(futureAppointments)}</strong>
+        <span class="overview-stat-note">Future health-related appointments</span>
+      </article>
+    </div>
+  `;
+}
+
 function renderHealthHtml({
   healthRecords = [],
   medicationProfiles = [],
   medicationRecords = [],
   appointments = [],
 }) {
-  const activeMeds = medicationProfiles.filter((m) => m.is_active);
+  const activeMedicationProfiles = medicationProfiles.filter((m) => m.is_active);
+  const upcomingAppointments = appointments.filter((a) =>
+    isFuture(a.start_datetime || a.appointment_date)
+  );
+  const recentAppointments = appointments.filter(
+    (a) => !isFuture(a.start_datetime || a.appointment_date)
+  );
+  const medicationConcerns = medicationRecords.filter((m) => {
+    const status = String(m.status || "").toLowerCase();
+    return m.error_flag || ["refused", "missed", "omitted", "error"].includes(status);
+  });
 
-  const appointmentRows = buildAppointmentRows(appointments);
+  const appointmentRows = buildAppointmentRows(upcomingAppointments);
+  const recentAppointmentRows = buildAppointmentRows(recentAppointments);
   const healthRows = buildHealthRows(healthRecords);
-  const medicationProfileRows = buildMedicationProfileRows(medicationProfiles);
+  const medicationProfileRows = buildMedicationProfileRows(activeMedicationProfiles);
   const medicationRecordRows = buildMedicationRecordRows(medicationRecords);
+  const medicationConcernRows = buildMedicationRecordRows(medicationConcerns);
 
   return `
     <section class="overview-panel">
@@ -172,39 +306,20 @@ function renderHealthHtml({
 
       <div class="overview-grid">
         <section class="overview-main">
-          <div class="overview-stats-grid">
-            <article class="overview-stat-card">
-              <span class="overview-stat-label">Health records</span>
-              <strong class="overview-stat-value">${toText(healthRecords.length)}</strong>
-              <span class="overview-stat-note">Recorded health updates</span>
-            </article>
-
-            <article class="overview-stat-card">
-              <span class="overview-stat-label">Active meds</span>
-              <strong class="overview-stat-value">${toText(activeMeds.length)}</strong>
-              <span class="overview-stat-note">Current medication profiles</span>
-            </article>
-
-            <article class="overview-stat-card">
-              <span class="overview-stat-label">Medication logs</span>
-              <strong class="overview-stat-value">${toText(medicationRecords.length)}</strong>
-              <span class="overview-stat-note">Administration records</span>
-            </article>
-
-            <article class="overview-stat-card">
-              <span class="overview-stat-label">Appointments</span>
-              <strong class="overview-stat-value">${toText(appointments.length)}</strong>
-              <span class="overview-stat-note">Health-related appointments</span>
-            </article>
-          </div>
+          ${renderHealthSummaryCards({
+            healthRecords,
+            medicationProfiles,
+            medicationRecords,
+            appointments,
+          })}
 
           <section class="overview-section-card">
             <div class="overview-section-head">
-              <h3>Upcoming and recent appointments</h3>
-              <p>Health-related appointments and professional involvement.</p>
+              <h3>Upcoming appointments</h3>
+              <p>Health-related appointments and professional involvement coming up next.</p>
             </div>
 
-            ${renderRecordRows(appointmentRows, "No appointments found.")}
+            ${renderRecordRows(appointmentRows, "No upcoming appointments found.")}
           </section>
 
           <section class="overview-section-card">
@@ -215,22 +330,40 @@ function renderHealthHtml({
 
             ${renderRecordRows(healthRows, "No health records found.")}
           </section>
+
+          <section class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Recent appointments</h3>
+              <p>Recently completed, cancelled or past appointments.</p>
+            </div>
+
+            ${renderRecordRows(recentAppointmentRows, "No recent appointments found.")}
+          </section>
         </section>
 
         <aside class="overview-side">
           <section class="overview-side-card">
             <div class="overview-section-head">
-              <h3>Medication profiles</h3>
-              <p>Prescribed medications and guidance.</p>
+              <h3>Active medication profiles</h3>
+              <p>Prescribed medications and current guidance.</p>
             </div>
 
-            ${renderRecordRows(medicationProfileRows, "No medication profiles found.")}
+            ${renderRecordRows(medicationProfileRows, "No active medication profiles found.")}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Medication concerns</h3>
+              <p>Refusals, omissions, errors or other medication records needing attention.</p>
+            </div>
+
+            ${renderRecordRows(medicationConcernRows, "No medication concerns found.")}
           </section>
 
           <section class="overview-side-card">
             <div class="overview-section-head">
               <h3>Medication administration</h3>
-              <p>Medication logs and administration records.</p>
+              <p>Recent medication logs and administration records.</p>
             </div>
 
             ${renderRecordRows(medicationRecordRows, "No medication records found.")}
@@ -266,33 +399,45 @@ export async function loadHealth() {
       apiGet(`/young-people/${state.youngPersonId}/appointments`).catch(() => ({ items: [] })),
     ]);
 
-    const healthRecords = (
-      healthData.items ||
-      healthData.records ||
-      healthData.health_records ||
-      []
-    ).map(mapHealthRecord);
+    const healthRecords = sortNewestFirst(
+      (
+        healthData.items ||
+        healthData.records ||
+        healthData.health_records ||
+        []
+      ).map(mapHealthRecord),
+      ["event_datetime", "created_at"]
+    );
 
-    const medicationProfiles = (
-      medicationProfilesData.items ||
-      medicationProfilesData.records ||
-      medicationProfilesData.medication_profiles ||
-      []
-    ).map(mapMedicationProfile);
+    const medicationProfiles = sortNewestFirst(
+      (
+        medicationProfilesData.items ||
+        medicationProfilesData.records ||
+        medicationProfilesData.medication_profiles ||
+        []
+      ).map(mapMedicationProfile),
+      ["start_date", "created_at"]
+    );
 
-    const medicationRecords = (
-      medicationRecordsData.items ||
-      medicationRecordsData.records ||
-      medicationRecordsData.medication_records ||
-      []
-    ).map(mapMedicationRecord);
+    const medicationRecords = sortNewestFirst(
+      (
+        medicationRecordsData.items ||
+        medicationRecordsData.records ||
+        medicationRecordsData.medication_records ||
+        []
+      ).map(mapMedicationRecord),
+      ["administered_time", "scheduled_time", "created_at"]
+    );
 
-    const appointments = (
-      appointmentsData.items ||
-      appointmentsData.records ||
-      appointmentsData.appointments ||
-      []
-    ).map(mapAppointment);
+    const appointments = sortSoonestFirst(
+      (
+        appointmentsData.items ||
+        appointmentsData.records ||
+        appointmentsData.appointments ||
+        []
+      ).map(mapAppointment),
+      ["start_datetime", "appointment_date", "created_at"]
+    );
 
     els.viewContent.innerHTML = renderHealthHtml({
       healthRecords,
@@ -300,11 +445,43 @@ export async function loadHealth() {
       medicationRecords,
       appointments,
     });
+
+    const nextAppointment = appointments.find((item) =>
+      isFuture(item.start_datetime || item.appointment_date)
+    );
+    const latestHealthRecord = healthRecords[0];
+    const activeMeds = medicationProfiles.filter((m) => m.is_active).length;
+    const medConcerns = medicationRecords.filter((m) => {
+      const status = String(m.status || "").toLowerCase();
+      return m.error_flag || ["refused", "missed", "omitted", "error"].includes(status);
+    }).length;
+
+    updateWorkspaceSummaryStrip({
+      today: `${healthRecords.length} health records • ${activeMeds} active meds`,
+      nextEvent: nextAppointment
+        ? `${nextAppointment.title || nextAppointment.appointment_type || "Appointment"} • ${formatDateTime(
+            nextAppointment.start_datetime || nextAppointment.appointment_date
+          )}`
+        : "No upcoming health appointment",
+      lastRecord: latestHealthRecord
+        ? `Latest health update ${formatDateTime(
+            latestHealthRecord.event_datetime || latestHealthRecord.created_at
+          )}`
+        : "No recent health record",
+      openActions: `${medConcerns} medication concern${medConcerns === 1 ? "" : "s"}`,
+    });
   } catch (error) {
     els.viewContent.innerHTML = `
       <div class="empty-state">
         <p>${escapeHtml(error.message || "Failed to load health data.")}</p>
       </div>
     `;
+
+    updateWorkspaceSummaryStrip({
+      today: "Health unavailable",
+      nextEvent: "Unable to load appointments",
+      lastRecord: "No health data loaded",
+      openActions: "Check API responses",
+    });
   }
 }
