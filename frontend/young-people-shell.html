@@ -45,6 +45,46 @@
       </div>
 
       <div class="shell-topbar-right">
+        <div
+          id="scopeSwitch"
+          class="scope-switch desktop-only"
+          role="tablist"
+          aria-label="Workspace scope"
+        >
+          <button
+            id="scopeChildBtn"
+            class="scope-switch-btn active"
+            type="button"
+            data-scope="child"
+            role="tab"
+            aria-selected="true"
+          >
+            Young person
+          </button>
+
+          <button
+            id="scopeHomeBtn"
+            class="scope-switch-btn"
+            type="button"
+            data-scope="home"
+            role="tab"
+            aria-selected="false"
+          >
+            Home
+          </button>
+
+          <button
+            id="scopeQualityBtn"
+            class="scope-switch-btn"
+            type="button"
+            data-scope="quality"
+            role="tab"
+            aria-selected="false"
+          >
+            Quality
+          </button>
+        </div>
+
         <button
           id="mobileNavBtn"
           class="secondary-btn mobile-only"
@@ -128,7 +168,6 @@
               </div>
             </div>
 
-            <!-- Example populated state -->
             <div class="selector-grid hidden" aria-hidden="true">
               <button class="selector-card selector-card--photo" type="button">
                 <div class="selector-card-media">
@@ -686,7 +725,6 @@
                     </div>
                   </section>
 
-                  <!-- Example richer empty state -->
                   <section class="overview-panel hidden" aria-hidden="true">
                     <div class="empty-state">
                       <div class="empty-state-inner">
