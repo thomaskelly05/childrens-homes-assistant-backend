@@ -58,6 +58,10 @@ function toJsonArray(value, fallback = []) {
   }
 }
 
+function unique(values = []) {
+  return [...new Set(arrayify(values).filter(Boolean))];
+}
+
 function buildBaseRecord(raw = {}, overrides = {}) {
   return {
     id: raw.id ?? null,
@@ -78,6 +82,123 @@ function buildBaseRecord(raw = {}, overrides = {}) {
     child_voice: raw.child_voice || raw.young_person_voice || raw.child_views || "",
     raw,
     ...overrides,
+  };
+}
+
+export function inferSectionFromRecordType(recordType = "") {
+  const map = {
+    [RECORD_TYPES.daily_note]: "workspace",
+    [RECORD_TYPES.incident]: "timeline",
+    [RECORD_TYPES.support_plan]: "workspace",
+    [RECORD_TYPES.risk_assessment]: "manager",
+    [RECORD_TYPES.health_record]: "health",
+    [RECORD_TYPES.education_record]: "education",
+    [RECORD_TYPES.family_contact_record]: "family",
+    [RECORD_TYPES.keywork_session]: "workspace",
+    [RECORD_TYPES.appointment]: "calendar",
+    [RECORD_TYPES.achievement_record]: "education",
+    [RECORD_TYPES.safeguarding_record]: "manager",
+    [RECORD_TYPES.missing_episode]: "timeline",
+    [RECORD_TYPES.chronology_event]: "timeline",
+    [RECORD_TYPES.compliance_item]: "compliance",
+    [RECORD_TYPES.ai_generated_report]: "reports",
+    [RECORD_TYPES.monthly_review]: "reports",
+    [RECORD_TYPES.handover_record]: "handover",
+    [RECORD_TYPES.manager_action]: "manager",
+    [RECORD_TYPES.task]: "readiness",
+    [RECORD_TYPES.medication_profile]: "health",
+    [RECORD_TYPES.medication_record]: "health",
+    inspection_pack_job: "reports",
+    review_meeting: "reports",
+    statutory_document: "documents",
+  };
+
+  return map[recordType] || "workspace";
+}
+
+export function buildAssistantTags(record = {}) {
+  const tags = [];
+
+  if (record.record_type) tags.push(record.record_type);
+  if (record.source_table) tags.push(`table:${record.source_table}`);
+
+  if (record.severity) tags.push(`severity:${record.severity}`);
+  if (record.significance) tags.push(`significance:${record.significance}`);
+  if (record.workflow_status) tags.push(`workflow:${record.workflow_status}`);
+  if (record.status) tags.push(`status:${record.status}`);
+  if (record.approval_status) tags.push(`approval:${record.approval_status}`);
+
+  if (record.safeguarding_flag) tags.push("safeguarding");
+  if (record.follow_up_required) tags.push("follow_up_required");
+  if (record.review_required) tags.push("review_required");
+  if (record.referral_made) tags.push("referral_made");
+  if (record.completed === false) tags.push("open_task");
+  if (record.completed === true) tags.push("completed");
+  if (record.archived) tags.push("archived");
+  if (record.auto_generated) tags.push("auto_generated");
+  if (record.police_involved) tags.push("police_involved");
+  if (record.ofsted_notified) tags.push("ofsted_notified");
+  if (record.requires_reg40) tags.push("reg40");
+  if (record.compliance_generated) tags.push("compliance_generated");
+  if (record.return_interview_completed) tags.push("return_interview_completed");
+
+  const recordSection = inferSectionFromRecordType(record.record_type);
+  if (recordSection) tags.push(`section:${recordSection}`);
+
+  return unique(tags);
+}
+
+function inferRecordDate(record = {}) {
+  return (
+    record.occurred_at ||
+    record.event_datetime ||
+    record.recorded_at ||
+    record.record_date ||
+    record.contact_datetime ||
+    record.session_date ||
+    record.handover_date ||
+    record.achievement_date ||
+    record.concern_datetime ||
+    record.start_datetime ||
+    record.start_date ||
+    record.meeting_date ||
+    record.review_month ||
+    record.due_date ||
+    record.scheduled_time ||
+    record.appointment_date ||
+    record.created_at ||
+    record.updated_at ||
+    null
+  );
+}
+
+export function toAssistantEvidence(record = {}) {
+  const safeRecord = record && typeof record === "object" ? record : {};
+
+  return {
+    id: safeRecord.source_id ?? safeRecord.id ?? null,
+    source_id: safeRecord.source_id ?? safeRecord.id ?? null,
+    source_table: safeRecord.source_table || "",
+    record_type: safeRecord.record_type || "",
+    title: safeRecord.title || "Record",
+    summary: safeRecord.summary || "",
+    section: inferSectionFromRecordType(safeRecord.record_type),
+    status:
+      safeRecord.workflow_status ||
+      safeRecord.status ||
+      safeRecord.approval_status ||
+      "",
+    severity: safeRecord.severity || safeRecord.significance || "",
+    date: inferRecordDate(safeRecord),
+    child_voice:
+      safeRecord.child_voice ||
+      safeRecord.young_person_voice ||
+      safeRecord.child_views ||
+      "",
+    tags: buildAssistantTags(safeRecord),
+    linked_plan_id: safeRecord.linked_plan_id ?? null,
+    linked_appointment_id: safeRecord.linked_appointment_id ?? null,
+    raw: safeRecord.raw || safeRecord,
   };
 }
 
@@ -247,6 +368,7 @@ export function mapYoungPersonContact(raw = {}) {
     updated_at: raw.updated_at || null,
   };
 }
+
 export function mapDailyNote(raw = {}) {
   return buildBaseRecord(raw, {
     record_type: RECORD_TYPES.daily_note,
@@ -517,6 +639,7 @@ export function mapAppointment(raw = {}) {
     cancelled_at: raw.cancelled_at || null,
   });
 }
+
 export function mapAchievementRecord(raw = {}) {
   return buildBaseRecord(raw, {
     record_type: RECORD_TYPES.achievement_record,
@@ -911,4 +1034,124 @@ export function mapManagerReviewPayload(raw = {}) {
     tasks: mapList(raw.tasks || [], mapTask),
     pattern_alerts: arrayify(raw.pattern_alerts || []),
   };
+}
+
+export function mapRecordByType(recordType, raw = {}) {
+  switch (recordType) {
+    case RECORD_TYPES.daily_note:
+      return mapDailyNote(raw);
+    case RECORD_TYPES.incident:
+      return mapIncident(raw);
+    case RECORD_TYPES.support_plan:
+      return mapSupportPlan(raw);
+    case RECORD_TYPES.risk_assessment:
+      return mapRiskAssessment(raw);
+    case RECORD_TYPES.health_record:
+      return mapHealthRecord(raw);
+    case RECORD_TYPES.education_record:
+      return mapEducationRecord(raw);
+    case RECORD_TYPES.family_contact_record:
+      return mapFamilyContactRecord(raw);
+    case RECORD_TYPES.keywork_session:
+      return mapKeyworkSession(raw);
+    case RECORD_TYPES.appointment:
+      return mapAppointment(raw);
+    case RECORD_TYPES.achievement_record:
+      return mapAchievementRecord(raw);
+    case RECORD_TYPES.safeguarding_record:
+      return mapSafeguardingRecord(raw);
+    case RECORD_TYPES.missing_episode:
+      return mapMissingEpisode(raw);
+    case RECORD_TYPES.chronology_event:
+      return mapChronologyEvent(raw);
+    case RECORD_TYPES.compliance_item:
+      return mapComplianceItem(raw);
+    case RECORD_TYPES.ai_generated_report:
+      return mapAiReport(raw);
+    case RECORD_TYPES.monthly_review:
+      return mapMonthlyReview(raw);
+    case RECORD_TYPES.handover_record:
+      return mapHandoverRecord(raw);
+    case RECORD_TYPES.manager_action:
+      return mapManagerAction(raw);
+    case RECORD_TYPES.task:
+      return mapTask(raw);
+    case RECORD_TYPES.medication_profile:
+      return mapMedicationProfile(raw);
+    case RECORD_TYPES.medication_record:
+      return mapMedicationRecord(raw);
+    case "inspection_pack_job":
+      return mapInspectionPackJob(raw);
+    case "review_meeting":
+      return mapReviewMeeting(raw);
+    case "statutory_document":
+      return mapStatutoryDocument(raw);
+    default:
+      return buildBaseRecord(raw, {
+        record_type: recordType || raw.record_type || "record",
+        title: cleanText(raw.title) || "Record",
+        summary: cleanText(raw.summary) || "",
+      });
+  }
+}
+
+export function mapRecordsToEvidence(items = [], mapper = (x) => x) {
+  return mapList(items, mapper).map(toAssistantEvidence);
+}
+
+export function mapReadinessEvidence(raw = {}) {
+  const payload = mapReadinessPayload(raw);
+
+  return [
+    ...payload.compliance_items.map(toAssistantEvidence),
+    ...payload.statutory_documents.map(toAssistantEvidence),
+    ...payload.tasks.map(toAssistantEvidence),
+  ];
+}
+
+export function mapManagerReviewEvidence(raw = {}) {
+  const payload = mapManagerReviewPayload(raw);
+
+  return [
+    ...payload.manager_actions.map(toAssistantEvidence),
+    ...payload.compliance_items.map(toAssistantEvidence),
+    ...payload.incidents.map(toAssistantEvidence),
+    ...payload.risks.map(toAssistantEvidence),
+    ...payload.tasks.map(toAssistantEvidence),
+  ];
+}
+
+export function buildAssistantEvidenceSet(payload = {}) {
+  const evidence = [];
+
+  const addMapped = (items, mapper) => {
+    evidence.push(...mapList(items || [], mapper).map(toAssistantEvidence));
+  };
+
+  addMapped(payload.daily_notes, mapDailyNote);
+  addMapped(payload.incidents, mapIncident);
+  addMapped(payload.support_plans, mapSupportPlan);
+  addMapped(payload.risk_assessments || payload.risks, mapRiskAssessment);
+  addMapped(payload.health_records, mapHealthRecord);
+  addMapped(payload.education_records, mapEducationRecord);
+  addMapped(payload.family_contact_records, mapFamilyContactRecord);
+  addMapped(payload.keywork_sessions, mapKeyworkSession);
+  addMapped(payload.appointments, mapAppointment);
+  addMapped(payload.achievement_records, mapAchievementRecord);
+  addMapped(payload.safeguarding_records, mapSafeguardingRecord);
+  addMapped(payload.missing_episodes, mapMissingEpisode);
+  addMapped(payload.chronology_events || payload.timeline, mapChronologyEvent);
+  addMapped(payload.compliance_items, mapComplianceItem);
+  addMapped(payload.ai_generated_reports, mapAiReport);
+  addMapped(payload.monthly_reviews, mapMonthlyReview);
+  addMapped(payload.handover_records, mapHandoverRecord);
+  addMapped(payload.manager_actions, mapManagerAction);
+  addMapped(payload.tasks, mapTask);
+  addMapped(payload.medication_profiles, mapMedicationProfile);
+  addMapped(payload.medication_records, mapMedicationRecord);
+  addMapped(payload.review_meetings, mapReviewMeeting);
+  addMapped(payload.statutory_documents, mapStatutoryDocument);
+  addMapped(payload.inspection_pack_jobs, mapInspectionPackJob);
+
+  return evidence;
 }
