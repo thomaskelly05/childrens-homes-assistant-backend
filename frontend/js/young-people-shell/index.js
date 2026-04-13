@@ -4,7 +4,12 @@ import {
   getYoungPersonIdFromUrl,
   setYoungPersonIdInUrl,
 } from "./core/utils.js";
-import { initialiseShellNavigation, showError, loadSection } from "./ui/nav.js";
+import {
+  initialiseShellNavigation,
+  showError,
+  loadSection,
+  rerenderNavigationForScope,
+} from "./ui/nav.js";
 import { loadYoungPersonSelector, openYoungPerson } from "./ui/selector.js";
 import { bindShellChrome, refreshShellChrome } from "./ui/shell-ui.js";
 import { bindAssistantUi, refreshAssistantUi } from "./ui/assistant-ui.js";
@@ -14,6 +19,10 @@ import {
   renderAssistantInsights,
   renderAssistantMessages,
 } from "./ui/assistant.js";
+import {
+  ROLE_SCOPE_ACCESS,
+  SCOPE_DEFAULT_SECTION,
+} from "./core/config.js";
 
 function showWorkspace() {
   els.selectorScreen?.classList.add("hidden");
@@ -23,6 +32,22 @@ function showWorkspace() {
 function showSelector() {
   els.workspaceScreen?.classList.add("hidden");
   els.selectorScreen?.classList.remove("hidden");
+}
+
+function getCurrentRole() {
+  return String(state.userRole || "staff").toLowerCase();
+}
+
+function getAllowedScopesForRole() {
+  return ROLE_SCOPE_ACCESS?.[getCurrentRole()] || ["child"];
+}
+
+function canAccessScope(scope) {
+  return getAllowedScopesForRole().includes(scope);
+}
+
+function getDefaultSectionForScope(scope) {
+  return SCOPE_DEFAULT_SECTION?.[scope] || "workspace";
 }
 
 function syncScopeButtons() {
@@ -44,13 +69,24 @@ function syncScopeButtons() {
 }
 
 function updateScopeVisibility() {
-  const role = String(state.userRole || "staff").toLowerCase();
+  const allowedScopes = getAllowedScopesForRole();
+
+  if (els.scopeChildBtn) {
+    const canSee = allowedScopes.includes("child");
+    els.scopeChildBtn.classList.toggle("hidden", !canSee);
+    els.scopeChildBtn.setAttribute("aria-hidden", canSee ? "false" : "true");
+    if (!canSee) {
+      els.scopeChildBtn.setAttribute("tabindex", "-1");
+    } else {
+      els.scopeChildBtn.removeAttribute("tabindex");
+    }
+  }
 
   if (els.scopeHomeBtn) {
-    const canSeeHome = role === "manager" || role === "ri";
-    els.scopeHomeBtn.classList.toggle("hidden", !canSeeHome);
-    els.scopeHomeBtn.setAttribute("aria-hidden", canSeeHome ? "false" : "true");
-    if (!canSeeHome) {
+    const canSee = allowedScopes.includes("home");
+    els.scopeHomeBtn.classList.toggle("hidden", !canSee);
+    els.scopeHomeBtn.setAttribute("aria-hidden", canSee ? "false" : "true");
+    if (!canSee) {
       els.scopeHomeBtn.setAttribute("tabindex", "-1");
     } else {
       els.scopeHomeBtn.removeAttribute("tabindex");
@@ -58,10 +94,10 @@ function updateScopeVisibility() {
   }
 
   if (els.scopeQualityBtn) {
-    const canSeeQuality = role === "ri";
-    els.scopeQualityBtn.classList.toggle("hidden", !canSeeQuality);
-    els.scopeQualityBtn.setAttribute("aria-hidden", canSeeQuality ? "false" : "true");
-    if (!canSeeQuality) {
+    const canSee = allowedScopes.includes("quality");
+    els.scopeQualityBtn.classList.toggle("hidden", !canSee);
+    els.scopeQualityBtn.setAttribute("aria-hidden", canSee ? "false" : "true");
+    if (!canSee) {
       els.scopeQualityBtn.setAttribute("tabindex", "-1");
     } else {
       els.scopeQualityBtn.removeAttribute("tabindex");
@@ -69,7 +105,17 @@ function updateScopeVisibility() {
   }
 }
 
+function ensureValidScopeForRole() {
+  const allowedScopes = getAllowedScopesForRole();
+  const currentScope = state.currentScope || "child";
+
+  if (!allowedScopes.includes(currentScope)) {
+    state.currentScope = allowedScopes[0] || "child";
+  }
+}
+
 function refreshAllChrome() {
+  ensureValidScopeForRole();
   refreshShellChrome();
   refreshAssistantUi();
   updateAssistantContext();
@@ -77,21 +123,6 @@ function refreshAllChrome() {
   renderAssistantInsights();
   updateScopeVisibility();
   syncScopeButtons();
-}
-
-function canAccessScope(scope) {
-  const role = String(state.userRole || "staff").toLowerCase();
-
-  if (scope === "child") return true;
-  if (scope === "home") return role === "manager" || role === "ri";
-  if (scope === "quality") return role === "ri";
-  return false;
-}
-
-function getDefaultSectionForScope(scope) {
-  if (scope === "home") return "manager";
-  if (scope === "quality") return "reports";
-  return "workspace";
 }
 
 async function setScope(scope) {
@@ -107,10 +138,21 @@ async function setScope(scope) {
   state.currentView = nextSection;
 
   refreshAllChrome();
+  rerenderNavigationForScope();
 
-  if (state.youngPersonId) {
-    await loadSection(nextSection);
+  if (scope === "child") {
+    if (state.youngPersonId) {
+      showWorkspace();
+      await loadSection(nextSection);
+    } else {
+      showSelector();
+      await loadYoungPersonSelector();
+    }
+    return;
   }
+
+  showWorkspace();
+  await loadSection(nextSection);
 }
 
 function bindScopeEvents() {
@@ -175,6 +217,8 @@ async function restoreSelectedYoungPerson() {
 
 async function bootstrap() {
   try {
+    ensureValidScopeForRole();
+
     bindShellChrome();
     bindAssistantUi();
     bindAssistantEvents();
