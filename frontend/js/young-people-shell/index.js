@@ -38,46 +38,36 @@ function showSelector() {
 }
 
 function normaliseRole(role) {
-  const raw = String(role || "").trim().toLowerCase();
+  const rawRole = String(role || "staff").toLowerCase().trim();
 
-  if (!raw) return "staff";
-  if (raw === "administrator") return "admin";
-  if (raw === "super_admin") return "admin";
-  if (raw === "superadmin") return "admin";
+  if (rawRole === "administrator") return "admin";
+  if (rawRole === "super_admin") return "admin";
+  if (rawRole === "superadmin") return "admin";
 
-  return raw;
+  return rawRole;
 }
 
-function getRoleFromRuntime() {
-  const datasetRole = els.app?.dataset?.userRole;
-  if (datasetRole) return normaliseRole(datasetRole);
-
-  const stateRole =
-    state.currentUser?.role ||
-    state.currentUser?.user_role ||
-    state.currentUser?.userRole;
-  if (stateRole) return normaliseRole(stateRole);
-
-  const windowRole =
-    window.currentUser?.role ||
-    window.currentUser?.user_role ||
-    window.currentUser?.userRole ||
-    window.user?.role ||
-    window.user?.user_role ||
-    window.user?.userRole;
-  if (windowRole) return normaliseRole(windowRole);
-
-  return "staff";
+function readSessionUser() {
+  try {
+    const raw = sessionStorage.getItem("current_user");
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
 
 function hydrateRuntimeContextFromDom() {
   if (!els.app) return;
 
+  const datasetRole = normaliseRole(els.app.dataset.userRole || "");
   const datasetScope = String(els.app.dataset.scope || "").trim().toLowerCase();
   const datasetHomeId = els.app.dataset.homeId || "";
   const datasetYoungPersonId = els.app.dataset.youngPersonId || "";
 
-  state.userRole = getRoleFromRuntime();
+  if (datasetRole) {
+    state.userRole = datasetRole;
+  }
 
   if (datasetHomeId) {
     state.homeId = datasetHomeId;
@@ -90,6 +80,39 @@ function hydrateRuntimeContextFromDom() {
   if (datasetScope) {
     state.currentScope = datasetScope;
   }
+}
+
+function hydrateRuntimeContextFromSession() {
+  const currentUser = readSessionUser();
+  if (!currentUser) return;
+
+  state.currentUser = currentUser;
+
+  const sessionRole = normaliseRole(currentUser.role);
+  if (sessionRole) {
+    state.userRole = sessionRole;
+  }
+
+  if (currentUser.home_id || currentUser.homeId) {
+    state.homeId = currentUser.home_id || currentUser.homeId;
+  }
+
+  if (currentUser.user_id || currentUser.id) {
+    state.userId = currentUser.user_id || currentUser.id;
+  }
+
+  if (currentUser.staff_id) {
+    state.staffId = currentUser.staff_id;
+  }
+}
+
+function syncDomDatasetFromState() {
+  if (!els.app) return;
+
+  els.app.dataset.userRole = normaliseRole(state.userRole || "staff");
+  els.app.dataset.scope = state.currentScope || "child";
+  els.app.dataset.homeId = state.homeId ? String(state.homeId) : "";
+  els.app.dataset.youngPersonId = state.youngPersonId ? String(state.youngPersonId) : "";
 }
 
 function getCurrentRole() {
@@ -136,8 +159,10 @@ function ensureValidScopeForRole() {
 }
 
 function ensureInitialSectionForScope() {
+  const expectedDefault = getDefaultSectionForScope(state.currentScope);
+
   if (!state.currentSection) {
-    state.currentSection = getDefaultSectionForScope(state.currentScope);
+    state.currentSection = expectedDefault;
   }
 
   if (!state.activeSection) {
@@ -179,7 +204,7 @@ function syncScopeButtons() {
   });
 
   if (els.scopeSwitch) {
-    const showSwitch = allowedScopes.length > 1;
+    const showSwitch = getAllowedScopesForRole().length > 1;
     els.scopeSwitch.classList.toggle("hidden", !showSwitch);
     els.scopeSwitch.setAttribute("aria-hidden", showSwitch ? "false" : "true");
   }
@@ -187,6 +212,7 @@ function syncScopeButtons() {
 
 function refreshAllChrome() {
   ensureValidScopeForRole();
+  syncDomDatasetFromState();
   refreshShellChrome();
   refreshAssistantUi();
   updateAssistantContext();
@@ -207,6 +233,7 @@ async function setScope(scope) {
   state.activeSection = nextSection;
   state.currentView = nextSection;
 
+  syncDomDatasetFromState();
   refreshAllChrome();
   rerenderNavigationForScope();
 
@@ -263,20 +290,24 @@ async function restoreSelectedYoungPerson() {
   if (!idFromUrl) {
     state.youngPersonId = null;
     state.selectedYoungPerson = null;
+    syncDomDatasetFromState();
     return false;
   }
 
   state.youngPersonId = idFromUrl;
   setYoungPersonIdInUrl(idFromUrl);
+  syncDomDatasetFromState();
 
   try {
     await openYoungPerson(idFromUrl, { skipInitialSectionLoad: true });
+    syncDomDatasetFromState();
     return true;
   } catch (error) {
     console.error("[index] failed to restore young person", error);
     state.youngPersonId = null;
     state.selectedYoungPerson = null;
     setYoungPersonIdInUrl(null);
+    syncDomDatasetFromState();
     showError(error?.message || "Failed to open selected young person.");
     return false;
   }
@@ -317,15 +348,28 @@ async function bootstrap() {
 
   try {
     hydrateRuntimeContextFromDom();
+    hydrateRuntimeContextFromSession();
     ensureValidScopeForRole();
 
-    if (!state.currentScope || !canAccessScope(state.currentScope)) {
-      state.currentScope = getDefaultScopeForRole();
+    if (!state.currentScope || state.currentScope === "child") {
+      const currentRole = getCurrentRole();
+      if (currentRole === "admin" || currentRole === "manager" || currentRole === "ri") {
+        state.currentScope = getDefaultScopeForRole();
+      }
     }
 
     state.currentSection = getDefaultSectionForScope(state.currentScope);
     state.activeSection = state.currentSection;
     state.currentView = state.currentSection;
+
+    syncDomDatasetFromState();
+
+    console.log("[young-people-shell] boot", {
+      role: state.userRole,
+      scope: state.currentScope,
+      section: state.currentSection,
+      allowedScopes: getAllowedScopesForRole(),
+    });
 
     bindShellChrome();
     bindAssistantUi();
@@ -336,30 +380,19 @@ async function bootstrap() {
 
     const restoredYoungPerson = await restoreSelectedYoungPerson();
 
-    if (!restoredYoungPerson && state.currentScope === "child" && !state.youngPersonId) {
-      state.currentSection = getDefaultSectionForScope("child");
-      state.activeSection = state.currentSection;
-      state.currentView = state.currentSection;
+    if (state.currentScope === "child") {
+      if (restoredYoungPerson) {
+        showWorkspace();
+      } else {
+        showSelector();
+      }
+    } else {
+      showWorkspace();
     }
-
-    if (state.currentScope !== "child") {
-      state.currentSection = getDefaultSectionForScope(state.currentScope);
-      state.activeSection = state.currentSection;
-      state.currentView = state.currentSection;
-    }
-
-    syncVisibleScreen();
 
     await bootstrapSelectorIfNeeded(restoredYoungPerson);
     await initialiseShellNavigation();
     refreshAllChrome();
-
-    console.log("[young-people-shell] boot", {
-      role: state.userRole,
-      scope: state.currentScope,
-      section: state.currentSection,
-      allowedScopes: getAllowedScopesForRole(),
-    });
   } catch (error) {
     console.error("[index] bootstrap failed", error);
     showError(error?.message || "Failed to start workspace.");
