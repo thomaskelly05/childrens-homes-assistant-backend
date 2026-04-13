@@ -19,6 +19,7 @@ import {
   renderAssistantInsights,
   renderAssistantMessages,
 } from "./ui/assistant.js";
+import { refreshWorkspaceSummary } from "./ui/workspace-summary-controller.js";
 import {
   ROLE_SCOPE_ACCESS,
   SCOPE_DEFAULT_SECTION,
@@ -219,6 +220,7 @@ function refreshAllChrome() {
   renderAssistantMessages();
   renderAssistantInsights();
   syncScopeButtons();
+  refreshWorkspaceSummary();
 }
 
 async function setScope(scope) {
@@ -244,12 +246,14 @@ async function setScope(scope) {
     } else {
       showSelector();
       await loadYoungPersonSelector();
+      refreshWorkspaceSummary();
     }
     return;
   }
 
   showWorkspace();
   await loadSection(nextSection);
+  refreshWorkspaceSummary();
 }
 
 function bindScopeEvents() {
@@ -301,6 +305,7 @@ async function restoreSelectedYoungPerson() {
   try {
     await openYoungPerson(idFromUrl, { skipInitialSectionLoad: true });
     syncDomDatasetFromState();
+    refreshWorkspaceSummary();
     return true;
   } catch (error) {
     console.error("[index] failed to restore young person", error);
@@ -308,6 +313,7 @@ async function restoreSelectedYoungPerson() {
     state.selectedYoungPerson = null;
     setYoungPersonIdInUrl(null);
     syncDomDatasetFromState();
+    refreshWorkspaceSummary();
     showError(error?.message || "Failed to open selected young person.");
     return false;
   }
@@ -321,6 +327,7 @@ async function bootstrapSelectorIfNeeded(restoredYoungPerson) {
 
   try {
     await loadYoungPersonSelector();
+    refreshWorkspaceSummary();
   } catch (error) {
     console.error("[index] selector load failed", error);
     showError(error?.message || "Failed to load young people.");
@@ -393,6 +400,7 @@ async function bootstrap() {
     await bootstrapSelectorIfNeeded(restoredYoungPerson);
     await initialiseShellNavigation();
     refreshAllChrome();
+    refreshWorkspaceSummary();
   } catch (error) {
     console.error("[index] bootstrap failed", error);
     showError(error?.message || "Failed to start workspace.");
