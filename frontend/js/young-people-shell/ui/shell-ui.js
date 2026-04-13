@@ -8,6 +8,9 @@ import {
   ROLE_SCOPE_ACCESS,
 } from "../core/config.js";
 
+let shellChromeBound = false;
+let chromeNavDelegatesBound = false;
+
 function qs(id) {
   return document.getElementById(id);
 }
@@ -91,12 +94,6 @@ function canAccessScope(scope) {
   return allowed.includes(scope);
 }
 
-function getScopeLabel(scope) {
-  if (scope === "home") return "Home";
-  if (scope === "quality") return "Quality";
-  return "Young person";
-}
-
 function getWorkspaceContextValue() {
   const scope = getCurrentScope();
 
@@ -127,10 +124,30 @@ function getScopeSubtitle() {
   return "A calm operational view for recording, reflection, continuity and thoughtful next steps.";
 }
 
-function updateWorkspaceContextPill() {
-  const valueEl =
-    document.querySelector(".workspace-context-pill-value") || null;
+function getScopeIdentity() {
+  const scope = getCurrentScope();
 
+  if (scope === "home") {
+    return {
+      title: "Home overview",
+      meta: "Managers dashboard across the home",
+      seed: { first_name: "H" },
+    };
+  }
+
+  if (scope === "quality") {
+    return {
+      title: "Quality overview",
+      meta: "RI and quality assurance dashboard",
+      seed: { first_name: "Q" },
+    };
+  }
+
+  return null;
+}
+
+function updateWorkspaceContextPill() {
+  const valueEl = document.querySelector(".workspace-context-pill-value");
   if (valueEl) {
     valueEl.textContent = getWorkspaceContextValue();
   }
@@ -145,34 +162,24 @@ function updateSnapshotPhoto(person = {}) {
 
 function updateSidebarAvatar(person = {}) {
   setHtml("personAvatar", buildInitialsAvatar(person, "avatar avatar-fallback"));
-  setHtml(
-    "mobilePersonAvatar",
-    buildInitialsAvatar(person, "avatar avatar-fallback")
-  );
+  setHtml("mobilePersonAvatar", buildInitialsAvatar(person, "avatar avatar-fallback"));
 }
 
 function updateYoungPersonText(person = {}) {
-  const scope = getCurrentScope();
+  const scopeIdentity = getScopeIdentity();
 
-  if (scope !== "child") {
-    const title =
-      scope === "home" ? "Home overview" : "Quality overview";
-    const meta =
-      scope === "home"
-        ? "Managers dashboard across the home"
-        : "RI and quality assurance dashboard";
+  if (scopeIdentity) {
+    setText("personName", scopeIdentity.title, "Workspace");
+    setText("personMeta", scopeIdentity.meta, "Workspace");
 
-    setText("personName", title, "Workspace");
-    setText("personMeta", meta, "Workspace");
+    setText("mobilePersonName", scopeIdentity.title, "Workspace");
+    setText("mobilePersonMeta", scopeIdentity.meta, "Workspace");
 
-    setText("mobilePersonName", title, "Workspace");
-    setText("mobilePersonMeta", meta, "Workspace");
+    setText("profileSnapshotName", scopeIdentity.title, "Workspace");
+    setText("profileSnapshotMeta", scopeIdentity.meta, "Dashboard snapshot");
 
-    setText("profileSnapshotName", title, "Workspace");
-    setText("profileSnapshotMeta", meta, "Dashboard snapshot");
-
-    updateSnapshotPhoto({ first_name: scope === "home" ? "H" : "Q" });
-    updateSidebarAvatar({ first_name: scope === "home" ? "H" : "Q" });
+    updateSnapshotPhoto(scopeIdentity.seed);
+    updateSidebarAvatar(scopeIdentity.seed);
     return;
   }
 
@@ -221,9 +228,10 @@ function updateScopeButtons() {
   });
 
   if (els.scopeSwitch) {
-    const canSeeAnyExtra =
-      canAccessScope("home") || canAccessScope("quality");
-    showEl(els.scopeSwitch, canSeeAnyExtra || canAccessScope("child"), "inline-flex");
+    const visibleScopes = ["child", "home", "quality"].filter((value) =>
+      canAccessScope(value)
+    );
+    showEl(els.scopeSwitch, visibleScopes.length > 1, "inline-flex");
   }
 }
 
@@ -261,14 +269,6 @@ function updateHeaderChrome(section = "workspace") {
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-pressed", isActive ? "true" : "false");
   });
-
-  document
-    .querySelectorAll(".mobile-tab-btn[data-nav-section]")
-    .forEach((button) => {
-      const isActive = button.dataset.navSection === section;
-      button.classList.toggle("active", isActive);
-      button.setAttribute("aria-pressed", isActive ? "true" : "false");
-    });
 }
 
 function updateTopLevelLabels() {
@@ -346,6 +346,9 @@ async function openSectionFromButton(button) {
 }
 
 function bindChromeNavDelegates() {
+  if (chromeNavDelegatesBound) return;
+  chromeNavDelegatesBound = true;
+
   document.addEventListener("click", async (event) => {
     const navButton = event.target.closest(
       ".mobile-tab-btn[data-nav-section], #mobileNavContent [data-nav-section]"
@@ -356,6 +359,9 @@ function bindChromeNavDelegates() {
 }
 
 export function bindShellChrome() {
+  if (shellChromeBound) return;
+  shellChromeBound = true;
+
   qs("mobileNavBtn")?.addEventListener("click", openMobileNav);
   qs("closeMobileNavBtn")?.addEventListener("click", closeMobileNav);
   qs("mobileNavBackdrop")?.addEventListener("click", closeMobileNav);
