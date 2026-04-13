@@ -30,7 +30,7 @@ export const state = {
 
   // Composer state
   composerOpen: false,
-  composerMode: "create",
+  composerMode: "create", // "create" | "edit"
   composerRecordType: null,
   composerRecordId: null,
   composerEditItem: null,
@@ -65,6 +65,84 @@ export const state = {
   },
 
   // Request optimisation state
-  resourceCache: {},
-  requestCooldowns: {},
+  resourceCache: Object.create(null),
+  requestCooldowns: Object.create(null),
 };
+
+export function resetAssistantState() {
+  state.assistantMessages = [];
+  state.assistantModalMessages = [];
+  state.assistantContext = null;
+  state.assistantSources = [];
+  state.assistantRuntime = null;
+  state.assistantExplainability = null;
+  state.assistantSending = false;
+  state.assistantMeta = {
+    sources: [],
+    runtime: {},
+    explainability: {},
+    assistant_scope: {},
+    assistant_context: {},
+    suggested_actions: [],
+  };
+}
+
+export function resetComposerState() {
+  state.composerOpen = false;
+  state.composerMode = "create";
+  state.composerRecordType = null;
+  state.composerRecordId = null;
+  state.composerEditItem = null;
+  state.composerMeta = {};
+
+  if (state.autosaveTimer) {
+    clearTimeout(state.autosaveTimer);
+  }
+  state.autosaveTimer = null;
+}
+
+export function resetActiveRecordState() {
+  state.activeRecordType = null;
+  state.activeRecordItem = null;
+  state.recordDrawerOpen = false;
+}
+
+export function resetWorkspaceState() {
+  state.youngPersonId = null;
+  state.selectedYoungPerson = null;
+  state.currentSection = "workspace";
+  state.activeSection = "workspace";
+  state.currentView = "workspace";
+  state.currentScope = "child";
+  state.loading = false;
+  state.error = null;
+  state.fullscreenPanelOpen = false;
+  state.mobileNavOpen = false;
+  state.currentSuggestions = [];
+  state.currentSuggestionSource = null;
+  state.lastSavedRecord = null;
+  state.suggestions = [];
+
+  resetActiveRecordState();
+  resetComposerState();
+}
+
+export function clearRequestOptimisationState() {
+  state.resourceCache = Object.create(null);
+  state.requestCooldowns = Object.create(null);
+}
+
+export function setCurrentSection(section) {
+  const safeSection = section || "workspace";
+  state.currentSection = safeSection;
+  state.activeSection = safeSection;
+  state.currentView = safeSection;
+}
+
+export function setCurrentScope(scope) {
+  state.currentScope = scope || "child";
+}
+
+export function setUserRole(role) {
+  state.userRole = role || "staff";
+}
