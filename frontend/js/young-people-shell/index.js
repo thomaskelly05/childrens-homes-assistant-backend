@@ -37,6 +37,23 @@ function showSelector() {
   els.selectorScreen?.classList.remove("hidden");
 }
 
+function hydrateUserContext() {
+  const roleFromDom =
+    els.app?.dataset?.userRole ||
+    state.currentUser?.role ||
+    state.currentUser?.user_role ||
+    "staff";
+
+  const homeIdFromDom =
+    els.app?.dataset?.homeId ||
+    state.currentUser?.home_id ||
+    state.currentUser?.homeId ||
+    null;
+
+  state.userRole = String(roleFromDom).toLowerCase();
+  state.homeId = homeIdFromDom || state.homeId || null;
+}
+
 function getCurrentRole() {
   return String(state.userRole || "staff").toLowerCase();
 }
@@ -92,7 +109,7 @@ function syncScopeButtons() {
   });
 
   if (els.scopeSwitch) {
-    const showSwitch = getAllowedScopesForRole().length > 1;
+    const showSwitch = allowedScopes.length > 1;
     els.scopeSwitch.classList.toggle("hidden", !showSwitch);
     els.scopeSwitch.setAttribute("aria-hidden", showSwitch ? "false" : "true");
   }
@@ -176,14 +193,23 @@ async function restoreSelectedYoungPerson() {
   if (!idFromUrl) {
     state.youngPersonId = null;
     state.selectedYoungPerson = null;
-    showSelector();
+
+    if (state.currentScope === "child") {
+      showSelector();
+    } else {
+      showWorkspace();
+    }
+
     refreshAllChrome();
     return false;
   }
 
   state.youngPersonId = idFromUrl;
   setYoungPersonIdInUrl(idFromUrl);
-  showWorkspace();
+
+  if (state.currentScope === "child") {
+    showWorkspace();
+  }
 
   try {
     await openYoungPerson(idFromUrl, { skipInitialSectionLoad: true });
@@ -194,7 +220,13 @@ async function restoreSelectedYoungPerson() {
     state.youngPersonId = null;
     state.selectedYoungPerson = null;
     setYoungPersonIdInUrl(null);
-    showSelector();
+
+    if (state.currentScope === "child") {
+      showSelector();
+    } else {
+      showWorkspace();
+    }
+
     refreshAllChrome();
     showError(error?.message || "Failed to open selected young person.");
     return false;
@@ -203,6 +235,7 @@ async function restoreSelectedYoungPerson() {
 
 async function bootstrapSelectorIfNeeded(restored) {
   if (restored) return;
+  if (state.currentScope !== "child") return;
 
   try {
     await loadYoungPersonSelector();
@@ -217,6 +250,7 @@ async function bootstrap() {
   bootstrapped = true;
 
   try {
+    hydrateUserContext();
     ensureValidScopeForRole();
 
     bindShellChrome();
