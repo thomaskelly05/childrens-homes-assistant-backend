@@ -47,9 +47,20 @@ export const els = {
   mobileBottomBar: document.getElementById("mobileBottomBar"),
 
   // Header / hero
+  workspaceEyebrow: document.getElementById("workspaceEyebrow"),
   pageTitle: document.getElementById("pageTitle"),
   pageSubtitle: document.getElementById("pageSubtitle"),
+  heroAssistantBtn: document.getElementById("heroAssistantBtn"),
   heroQuickActions: document.getElementById("heroQuickActions"),
+
+  // Workspace summary strip
+  summaryToday: document.getElementById("summaryToday"),
+  summaryNextEvent: document.getElementById("summaryNextEvent"),
+  summaryLastRecord: document.getElementById("summaryLastRecord"),
+  summaryOpenActions: document.getElementById("summaryOpenActions"),
+
+  // Quick create / scope-sensitive areas
+  quickCreateBar: document.getElementById("quickCreateBar"),
 
   // Profile snapshot
   profileSnapshotPhotoWrap: document.getElementById("profileSnapshotPhotoWrap"),
@@ -89,9 +100,7 @@ export const els = {
   composerSubtitle: document.getElementById("composerSubtitle"),
   composerGuidanceText: document.getElementById("composerGuidanceText"),
   composerPrompts: document.getElementById("composerPrompts"),
-  composerForm: document.getElementById("recordComposerForm"),
   recordComposerForm: document.getElementById("recordComposerForm"),
-  composerFields: document.getElementById("recordComposerFields"),
   recordComposerFields: document.getElementById("recordComposerFields"),
   composerAiFeedback: document.getElementById("composerAiFeedback"),
   composerAutosaveStatus: document.getElementById("composerAutosaveStatus"),
@@ -104,6 +113,10 @@ export const els = {
   composerClarityBtn: document.getElementById("composerClarityBtn"),
   composerSafeguardingBtn: document.getElementById("composerSafeguardingBtn"),
   composerChildVoiceBtn: document.getElementById("composerChildVoiceBtn"),
+
+  // Backward-compatible aliases
+  composerForm: document.getElementById("recordComposerForm"),
+  composerFields: document.getElementById("recordComposerFields"),
 
   // Record drawer
   drawer: document.getElementById("recordDrawer"),
