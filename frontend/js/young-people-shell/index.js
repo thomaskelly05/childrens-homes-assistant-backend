@@ -37,9 +37,38 @@ function showSelector() {
   els.selectorScreen?.classList.remove("hidden");
 }
 
+function hydrateRuntimeContextFromDom() {
+  if (!els.app) return;
+
+  const datasetRole = String(els.app.dataset.userRole || "").trim().toLowerCase();
+  const datasetScope = String(els.app.dataset.scope || "").trim().toLowerCase();
+  const datasetHomeId = els.app.dataset.homeId || "";
+  const datasetYoungPersonId = els.app.dataset.youngPersonId || "";
+
+  if (datasetRole) {
+    state.userRole = datasetRole;
+  }
+
+  if (datasetHomeId) {
+    state.homeId = datasetHomeId;
+  }
+
+  if (datasetYoungPersonId && !state.youngPersonId) {
+    state.youngPersonId = datasetYoungPersonId;
+  }
+
+  if (datasetScope) {
+    state.currentScope = datasetScope;
+  }
+}
+
 function getCurrentRole() {
   const rawRole = String(state.userRole || "staff").toLowerCase().trim();
+
   if (rawRole === "administrator") return "admin";
+  if (rawRole === "super_admin") return "admin";
+  if (rawRole === "superadmin") return "admin";
+
   return rawRole;
 }
 
@@ -65,6 +94,7 @@ function getDefaultScopeForRole() {
   const allowed = getAllowedScopesForRole();
 
   if (allowed.includes("home")) return "home";
+  if (allowed.includes("quality")) return "quality";
   return allowed[0] || "child";
 }
 
@@ -78,6 +108,20 @@ function ensureValidScopeForRole() {
 
   if (!allowedScopes.includes(currentScope)) {
     state.currentScope = getDefaultScopeForRole();
+  }
+}
+
+function ensureInitialSectionForScope() {
+  if (!state.currentSection) {
+    state.currentSection = getDefaultSectionForScope(state.currentScope);
+  }
+
+  if (!state.activeSection) {
+    state.activeSection = state.currentSection;
+  }
+
+  if (!state.currentView) {
+    state.currentView = state.currentSection;
   }
 }
 
@@ -228,20 +272,34 @@ async function bootstrapSelectorIfNeeded(restoredYoungPerson) {
   }
 }
 
+function syncVisibleScreen() {
+  const scope = state.currentScope || "child";
+
+  if (scope === "child") {
+    if (state.youngPersonId) {
+      showWorkspace();
+    } else {
+      showSelector();
+    }
+    return;
+  }
+
+  showWorkspace();
+}
+
 async function bootstrap() {
   if (bootstrapped) return;
   bootstrapped = true;
 
   try {
+    hydrateRuntimeContextFromDom();
     ensureValidScopeForRole();
 
     if (!state.currentScope) {
       state.currentScope = getDefaultScopeForRole();
     }
 
-    state.currentSection = getDefaultSectionForScope(state.currentScope);
-    state.activeSection = state.currentSection;
-    state.currentView = state.currentSection;
+    ensureInitialSectionForScope();
 
     bindShellChrome();
     bindAssistantUi();
@@ -252,15 +310,19 @@ async function bootstrap() {
 
     const restoredYoungPerson = await restoreSelectedYoungPerson();
 
-    if (state.currentScope === "child") {
-      if (restoredYoungPerson) {
-        showWorkspace();
-      } else {
-        showSelector();
-      }
-    } else {
-      showWorkspace();
+    if (!restoredYoungPerson && state.currentScope === "child" && !state.youngPersonId) {
+      state.currentSection = getDefaultSectionForScope("child");
+      state.activeSection = state.currentSection;
+      state.currentView = state.currentSection;
     }
+
+    if (state.currentScope !== "child") {
+      state.currentSection = getDefaultSectionForScope(state.currentScope);
+      state.activeSection = state.currentSection;
+      state.currentView = state.currentSection;
+    }
+
+    syncVisibleScreen();
 
     await bootstrapSelectorIfNeeded(restoredYoungPerson);
     await initialiseShellNavigation();
