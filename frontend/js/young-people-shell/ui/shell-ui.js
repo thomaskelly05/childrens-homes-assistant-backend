@@ -43,6 +43,8 @@ function showEl(el, show = true, display = "") {
 
   if (display) {
     el.style.display = show ? display : "";
+  } else if (!show) {
+    el.style.removeProperty("display");
   }
 }
 
@@ -54,6 +56,9 @@ function getCurrentRole() {
   const rawRole = String(state.userRole || "staff").toLowerCase().trim();
 
   if (rawRole === "administrator") return "admin";
+  if (rawRole === "super_admin") return "admin";
+  if (rawRole === "superadmin") return "admin";
+
   return rawRole;
 }
 
@@ -116,7 +121,9 @@ function getScopeIdentity() {
   if (scope === "home") {
     return {
       title: "Home overview",
-      meta: "Managers dashboard across the home",
+      meta: state.homeId
+        ? `Managers dashboard for home ${state.homeId}`
+        : "Managers dashboard across the home",
       seed: { first_name: "H" },
     };
   }
@@ -162,10 +169,24 @@ function getScopeSubtitle() {
   return "A calm operational view for recording, reflection, continuity and thoughtful next steps.";
 }
 
+function getWorkspaceEyebrowText() {
+  const scope = getCurrentScope();
+
+  if (scope === "home") return "Home workspace";
+  if (scope === "quality") return "Quality workspace";
+  return "Young person workspace";
+}
+
 function updateWorkspaceContextPill() {
   const valueEl = document.querySelector(".workspace-context-pill-value");
   if (valueEl) {
     valueEl.textContent = getWorkspaceContextValue();
+  }
+}
+
+function updateWorkspaceEyebrow() {
+  if (els.workspaceEyebrow) {
+    els.workspaceEyebrow.textContent = getWorkspaceEyebrowText();
   }
 }
 
@@ -257,10 +278,11 @@ function updateScopeSensitiveActions() {
   showEl(els.changePersonBtn, isChildScope, "inline-flex");
   showEl(els.backToSelectorBtn, isChildScope, "inline-flex");
 
-  const selectorButtons = [
-    els.homeBtn,
-    els.mobileHomeBtn,
-  ];
+  if (els.quickCreateBar) {
+    showEl(els.quickCreateBar, true, "block");
+  }
+
+  const selectorButtons = [els.homeBtn, els.mobileHomeBtn];
 
   selectorButtons.forEach((button) => {
     if (!button) return;
@@ -271,6 +293,31 @@ function updateScopeSensitiveActions() {
   if (profileCard) {
     showEl(profileCard, true, "block");
   }
+}
+
+function updateSummaryStripForScope() {
+  const scope = getCurrentScope();
+
+  if (scope === "home") {
+    setText("summaryToday", "Live home view");
+    setText("summaryNextEvent", "Next service event loading");
+    setText("summaryLastRecord", "Recent home record loading");
+    setText("summaryOpenActions", "Open home actions loading");
+    return;
+  }
+
+  if (scope === "quality") {
+    setText("summaryToday", "Quality snapshot");
+    setText("summaryNextEvent", "Next audit or review loading");
+    setText("summaryLastRecord", "Recent assurance record loading");
+    setText("summaryOpenActions", "Open compliance actions loading");
+    return;
+  }
+
+  setText("summaryToday", "No summary yet");
+  setText("summaryNextEvent", "No event loaded");
+  setText("summaryLastRecord", "No record loaded");
+  setText("summaryOpenActions", "No actions loaded");
 }
 
 function updateHeaderChrome(section = "workspace") {
@@ -325,8 +372,10 @@ export function updateYoungPersonChrome(person = {}) {
   updateYoungPersonText(person);
   updateTopLevelLabels();
   updateWorkspaceContextPill();
+  updateWorkspaceEyebrow();
   updateScopeButtons();
   updateScopeSensitiveActions();
+  updateSummaryStripForScope();
   updateAppDataset();
 }
 
@@ -342,6 +391,8 @@ export function openMobileNav() {
   if (els.mobileNavBtn) {
     els.mobileNavBtn.setAttribute("aria-expanded", "true");
   }
+
+  state.mobileNavOpen = true;
 }
 
 export function closeMobileNav() {
@@ -352,6 +403,8 @@ export function closeMobileNav() {
   if (els.mobileNavBtn) {
     els.mobileNavBtn.setAttribute("aria-expanded", "false");
   }
+
+  state.mobileNavOpen = false;
 }
 
 async function goHomeToSelector() {
@@ -407,6 +460,11 @@ export function bindShellChrome() {
   qs("profileOpenBtn")?.addEventListener("click", async () => {
     const { loadSection } = await import("./nav.js");
     await loadSection("profile");
+  });
+
+  qs("heroAssistantBtn")?.addEventListener("click", async () => {
+    const { openAssistant } = await import("./assistant.js");
+    openAssistant();
   });
 
   bindChromeNavDelegates();
