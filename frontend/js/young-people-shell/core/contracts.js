@@ -42,6 +42,33 @@ export const COMPLIANCE_STATUS = {
   completed: "completed",
 };
 
+export const ASSISTANT_SCOPE = {
+  child: "child",
+  home: "home",
+  quality: "quality",
+  young_person: "young_person",
+  global: "global",
+};
+
+export const ASSISTANT_RESPONSE_MODE = {
+  concise: "concise",
+  balanced: "balanced",
+  deep: "deep",
+};
+
+export const ASSISTANT_ACTION_TYPE = {
+  summarise_section: "summarise_section",
+  draft_handover: "draft_handover",
+  draft_note: "draft_note",
+  draft_summary: "draft_summary",
+  create_task: "create_task",
+  open_record: "open_record",
+  open_section: "open_section",
+  review_incidents: "review_incidents",
+  review_compliance: "review_compliance",
+  review_documents: "review_documents",
+};
+
 const WORKFLOW_ALIASES = {
   draft: WORKFLOW_STATUS.draft,
   open: WORKFLOW_STATUS.active,
@@ -88,32 +115,120 @@ const SIGNIFICANCE_ALIASES = {
   significant: "high",
 };
 
-export function normaliseWorkflowStatus(value) {
-  const key = String(value || "")
+const ASSISTANT_SCOPE_ALIASES = {
+  child: ASSISTANT_SCOPE.child,
+  young_person: ASSISTANT_SCOPE.young_person,
+  youngperson: ASSISTANT_SCOPE.young_person,
+  home: ASSISTANT_SCOPE.home,
+  quality: ASSISTANT_SCOPE.quality,
+  global: ASSISTANT_SCOPE.global,
+};
+
+const ASSISTANT_RESPONSE_MODE_ALIASES = {
+  concise: ASSISTANT_RESPONSE_MODE.concise,
+  short: ASSISTANT_RESPONSE_MODE.concise,
+  balanced: ASSISTANT_RESPONSE_MODE.balanced,
+  standard: ASSISTANT_RESPONSE_MODE.balanced,
+  deep: ASSISTANT_RESPONSE_MODE.deep,
+  detailed: ASSISTANT_RESPONSE_MODE.deep,
+};
+
+function normaliseToken(value) {
+  return String(value || "")
     .trim()
     .toLowerCase()
     .replaceAll(" ", "_")
     .replaceAll("-", "_");
+}
 
+export function normaliseWorkflowStatus(value) {
+  const key = normaliseToken(value);
   return WORKFLOW_ALIASES[key] || key || "";
 }
 
 export function normaliseSeverity(value) {
-  const key = String(value || "")
-    .trim()
-    .toLowerCase()
-    .replaceAll(" ", "_")
-    .replaceAll("-", "_");
-
+  const key = normaliseToken(value);
   return SEVERITY_ALIASES[key] || key || "";
 }
 
 export function normaliseSignificance(value) {
-  const key = String(value || "")
-    .trim()
-    .toLowerCase()
-    .replaceAll(" ", "_")
-    .replaceAll("-", "_");
-
+  const key = normaliseToken(value);
   return SIGNIFICANCE_ALIASES[key] || key || "";
+}
+
+export function normaliseAssistantScope(value) {
+  const key = normaliseToken(value);
+  return ASSISTANT_SCOPE_ALIASES[key] || key || ASSISTANT_SCOPE.global;
+}
+
+export function normaliseAssistantResponseMode(value) {
+  const key = normaliseToken(value);
+  return ASSISTANT_RESPONSE_MODE_ALIASES[key] || key || ASSISTANT_RESPONSE_MODE.balanced;
+}
+
+export function createAssistantSource(source = {}) {
+  return {
+    type: source.type || "source",
+    label: source.label || source.title || source.document_title || "Source",
+    excerpt: source.excerpt || "",
+    section: source.section || "",
+    page_number:
+      source.page_number != null && source.page_number !== ""
+        ? source.page_number
+        : null,
+    record_type: source.record_type || null,
+    record_id: source.record_id || source.source_id || source.id || null,
+    url: source.url || null,
+  };
+}
+
+export function createAssistantAction(action = {}) {
+  return {
+    type: action.type || ASSISTANT_ACTION_TYPE.summarise_section,
+    label: action.label || "Suggested action",
+    section: action.section || null,
+    record_type: action.record_type || null,
+    record_id: action.record_id || null,
+    payload: action.payload || null,
+  };
+}
+
+export function createAssistantRuntime(runtime = {}) {
+  return {
+    mode: runtime.mode || "standard",
+    provider: runtime.provider || null,
+    model: runtime.model || null,
+    latency_ms: runtime.latency_ms ?? null,
+    cached: Boolean(runtime.cached),
+  };
+}
+
+export function createAssistantExplainability(explainability = {}) {
+  return {
+    scope: explainability.scope || null,
+    section: explainability.section || null,
+    reasoning_summary: explainability.reasoning_summary || "",
+    evidence_summary: explainability.evidence_summary || "",
+    safety_notes: Array.isArray(explainability.safety_notes)
+      ? explainability.safety_notes
+      : [],
+  };
+}
+
+export function createAssistantResponse(response = {}) {
+  return {
+    answer: response.answer || "",
+    summary: response.summary || "",
+    sources: Array.isArray(response.sources)
+      ? response.sources.map(createAssistantSource)
+      : [],
+    suggested_actions: Array.isArray(response.suggested_actions)
+      ? response.suggested_actions.map(createAssistantAction)
+      : [],
+    runtime: createAssistantRuntime(response.runtime || {}),
+    explainability: createAssistantExplainability(response.explainability || {}),
+    warnings: Array.isArray(response.warnings) ? response.warnings : [],
+    assistant_scope: response.assistant_scope || {},
+    assistant_context: response.assistant_context || {},
+  };
 }
