@@ -62,6 +62,54 @@ function unique(values = []) {
   return [...new Set(arrayify(values).filter(Boolean))];
 }
 
+function compact(values = []) {
+  return arrayify(values).map(cleanText).filter(Boolean);
+}
+
+function parseDateValue(value) {
+  const time = Date.parse(value || "");
+  return Number.isNaN(time) ? 0 : time;
+}
+
+function daysFromNow(value) {
+  const time = parseDateValue(value);
+  if (!time) return null;
+
+  const now = Date.now();
+  const diff = time - now;
+  return Math.round(diff / (1000 * 60 * 60 * 24));
+}
+
+function isOverdue(value) {
+  const days = daysFromNow(value);
+  return days !== null && days < 0;
+}
+
+function isDueSoon(value, thresholdDays = 7) {
+  const days = daysFromNow(value);
+  return days !== null && days >= 0 && days <= thresholdDays;
+}
+
+function inferUrgencyLevel(record = {}) {
+  const severity = cleanText(record.severity).toLowerCase();
+  const significance = cleanText(record.significance).toLowerCase();
+  const workflow = cleanText(record.workflow_status).toLowerCase();
+  const status = cleanText(record.status).toLowerCase();
+
+  if (severity === "critical") return "critical";
+  if (severity === "high") return "high";
+  if (significance === "critical") return "critical";
+  if (significance === "high") return "high";
+  if (record.safeguarding_flag) return "high";
+  if (record.follow_up_required && isOverdue(record.due_date || record.review_date || record.next_action_date)) {
+    return "high";
+  }
+  if (status === "overdue") return "high";
+  if (workflow === "pending_review") return "medium";
+  if (record.follow_up_required) return "medium";
+  return "low";
+}
+
 function buildBaseRecord(raw = {}, overrides = {}) {
   return {
     id: raw.id ?? null,
@@ -85,7 +133,7 @@ function buildBaseRecord(raw = {}, overrides = {}) {
   };
 }
 
-export function inferSectionFromRecordType(recordType = "") {
+export function inferSectionFromRecordType(recordType = "", raw = {}) {
   const map = {
     [RECORD_TYPES.daily_note]: "workspace",
     [RECORD_TYPES.incident]: "timeline",
@@ -111,9 +159,260 @@ export function inferSectionFromRecordType(recordType = "") {
     inspection_pack_job: "reports",
     review_meeting: "reports",
     statutory_document: "documents",
+    document: "documents",
+    communication: "communication",
+    therapy: "therapy",
+    team: "team",
+    supervision: "supervision",
   };
 
-  return map[recordType] || "workspace";
+  if (map[recordType]) return map[recordType];
+
+  const sourceTable = cleanText(raw.source_table || "").toLowerCase();
+
+  if (sourceTable.includes("document")) return "documents";
+  if (sourceTable.includes("communication")) return "communication";
+  if (sourceTable.includes("therapy")) return "therapy";
+  if (sourceTable.includes("team")) return "team";
+  if (sourceTable.includes("supervision")) return "supervision";
+  if (sourceTable.includes("compliance")) return "compliance";
+
+  return "workspace";
+}
+
+function buildAssistantSummary(record = {}) {
+  const recordType = record.record_type || "";
+
+  const map = {
+    [RECORD_TYPES.daily_note]: () =>
+      pickFirst(
+        cleanText(record.presentation),
+        cleanText(record.activities),
+        cleanText(record.actions_required),
+        cleanText(record.summary),
+        "Daily note recorded."
+      ),
+
+    [RECORD_TYPES.incident]: () =>
+      pickFirst(
+        cleanText(record.description),
+        cleanText(record.outcome),
+        cleanText(record.actions_taken),
+        "Important event recorded."
+      ),
+
+    [RECORD_TYPES.support_plan]: () =>
+      pickFirst(
+        cleanText(record.presenting_need),
+        cleanText(record.proactive_strategies),
+        cleanText(record.summary),
+        "Support plan available."
+      ),
+
+    [RECORD_TYPES.risk_assessment]: () =>
+      pickFirst(
+        cleanText(record.concern_summary),
+        cleanText(record.current_controls),
+        cleanText(record.response_actions),
+        "Risk assessment available."
+      ),
+
+    [RECORD_TYPES.health_record]: () =>
+      pickFirst(
+        cleanText(record.summary),
+        cleanText(record.outcome),
+        "Health record available."
+      ),
+
+    [RECORD_TYPES.education_record]: () =>
+      pickFirst(
+        cleanText(record.learning_engagement),
+        cleanText(record.issue_raised),
+        cleanText(record.behaviour_summary),
+        "Education record available."
+      ),
+
+    [RECORD_TYPES.family_contact_record]: () =>
+      pickFirst(
+        cleanText(record.post_contact_presentation),
+        cleanText(record.concerns),
+        cleanText(record.child_voice),
+        "Family contact recorded."
+      ),
+
+    [RECORD_TYPES.keywork_session]: () =>
+      pickFirst(
+        cleanText(record.summary),
+        cleanText(record.reflective_analysis),
+        cleanText(record.actions_agreed),
+        "Keywork session recorded."
+      ),
+
+    [RECORD_TYPES.appointment]: () =>
+      pickFirst(
+        cleanText(record.summary),
+        cleanText(record.purpose),
+        cleanText(record.follow_up_actions),
+        "Appointment recorded."
+      ),
+
+    [RECORD_TYPES.achievement_record]: () =>
+      pickFirst(
+        cleanText(record.description),
+        cleanText(record.child_voice),
+        "Achievement recorded."
+      ),
+
+    [RECORD_TYPES.safeguarding_record]: () =>
+      pickFirst(
+        cleanText(record.concern_details),
+        cleanText(record.immediate_action_taken),
+        cleanText(record.outcome),
+        "Safeguarding concern recorded."
+      ),
+
+    [RECORD_TYPES.missing_episode]: () =>
+      pickFirst(
+        cleanText(record.outcome),
+        cleanText(record.actions_taken),
+        cleanText(record.trigger_factors),
+        "Missing episode recorded."
+      ),
+
+    [RECORD_TYPES.chronology_event]: () =>
+      pickFirst(
+        cleanText(record.summary),
+        cleanText(record.title),
+        "Chronology event recorded."
+      ),
+
+    [RECORD_TYPES.compliance_item]: () =>
+      `Due ${cleanText(record.due_date || "date not set")}`,
+
+    [RECORD_TYPES.ai_generated_report]: () =>
+      pickFirst(
+        cleanText(record.report_text),
+        cleanText(record.summary),
+        "AI report available."
+      ),
+
+    [RECORD_TYPES.monthly_review]: () =>
+      pickFirst(
+        cleanText(record.summary_of_month),
+        cleanText(record.progress_summary),
+        cleanText(record.child_voice_summary),
+        "Monthly review available."
+      ),
+
+    [RECORD_TYPES.handover_record]: () =>
+      pickFirst(
+        cleanText(record.summary_text),
+        cleanText(record.summary),
+        "Handover recorded."
+      ),
+
+    [RECORD_TYPES.manager_action]: () =>
+      pickFirst(
+        cleanText(record.note),
+        cleanText(record.summary),
+        "Manager action recorded."
+      ),
+
+    [RECORD_TYPES.task]: () =>
+      pickFirst(
+        cleanText(record.task),
+        cleanText(record.summary),
+        "Task recorded."
+      ),
+
+    [RECORD_TYPES.medication_profile]: () =>
+      pickFirst(
+        [
+          cleanText(record.medication_name),
+          cleanText(record.dosage || record.dose),
+          cleanText(record.frequency),
+        ]
+          .filter(Boolean)
+          .join(" • "),
+        "Medication profile available."
+      ),
+
+    [RECORD_TYPES.medication_record]: () =>
+      pickFirst(
+        [
+          cleanText(record.medication_name),
+          cleanText(record.dose),
+          cleanText(record.status),
+        ]
+          .filter(Boolean)
+          .join(" • "),
+        "Medication administration recorded."
+      ),
+
+    inspection_pack_job: () =>
+      pickFirst(cleanText(record.summary), "Inspection pack activity recorded."),
+
+    review_meeting: () =>
+      pickFirst(
+        cleanText(record.decisions),
+        cleanText(record.actions),
+        "Review meeting recorded."
+      ),
+
+    statutory_document: () =>
+      pickFirst(
+        cleanText(record.description),
+        cleanText(record.summary),
+        "Statutory document available."
+      ),
+  };
+
+  if (map[recordType]) return map[recordType]();
+  return cleanText(record.summary) || cleanText(record.title) || "Record available.";
+}
+
+function buildContextualSignals(record = {}) {
+  const signals = [];
+
+  const text = compact([
+    record.title,
+    record.summary,
+    record.description,
+    record.concern_details,
+    record.outcome,
+    record.actions_taken,
+    record.actions_required,
+    record.follow_up_actions,
+    record.review_comment,
+    record.manager_review_comment,
+    record.note,
+  ]).join(" ").toLowerCase();
+
+  if (/ofsted|inspection|annex a|statement of purpose|reg 40|reg40/.test(text)) {
+    signals.push("inspection_relevant");
+  }
+
+  if (/handover|next shift|shift|presentation/.test(text)) {
+    signals.push("handover_relevant");
+  }
+
+  if (/follow up|follow-up|review|monitor|book|arrange|contact/.test(text)) {
+    signals.push("actionable");
+  }
+
+  if (/school|attendance|teacher|pep|ehcp|education/.test(text)) {
+    signals.push("education_relevant");
+  }
+
+  if (/gp|doctor|camhs|dentist|optician|medication|health|hospital/.test(text)) {
+    signals.push("health_relevant");
+  }
+
+  if (/family|mum|mother|dad|father|contact|visit|call/.test(text)) {
+    signals.push("family_relevant");
+  }
+
+  return signals;
 }
 
 export function buildAssistantTags(record = {}) {
@@ -142,8 +441,19 @@ export function buildAssistantTags(record = {}) {
   if (record.compliance_generated) tags.push("compliance_generated");
   if (record.return_interview_completed) tags.push("return_interview_completed");
 
-  const recordSection = inferSectionFromRecordType(record.record_type);
+  const recordSection = inferSectionFromRecordType(record.record_type, record.raw || record);
   if (recordSection) tags.push(`section:${recordSection}`);
+
+  const dueDate = record.due_date || record.review_date || record.next_action_date || record.expiry_date;
+  if (dueDate) {
+    if (isOverdue(dueDate)) tags.push("status:overdue");
+    if (isDueSoon(dueDate)) tags.push("status:due_soon");
+  }
+
+  const urgency = inferUrgencyLevel(record);
+  if (urgency) tags.push(`urgency:${urgency}`);
+
+  tags.push(...buildContextualSignals(record));
 
   return unique(tags);
 }
@@ -166,6 +476,8 @@ function inferRecordDate(record = {}) {
     record.due_date ||
     record.scheduled_time ||
     record.appointment_date ||
+    record.action_at ||
+    record.review_date ||
     record.created_at ||
     record.updated_at ||
     null
@@ -174,6 +486,10 @@ function inferRecordDate(record = {}) {
 
 export function toAssistantEvidence(record = {}) {
   const safeRecord = record && typeof record === "object" ? record : {};
+  const raw = safeRecord.raw || safeRecord;
+  const section = inferSectionFromRecordType(safeRecord.record_type, raw);
+  const summary = buildAssistantSummary(safeRecord);
+  const tags = buildAssistantTags(safeRecord);
 
   return {
     id: safeRecord.source_id ?? safeRecord.id ?? null,
@@ -181,24 +497,31 @@ export function toAssistantEvidence(record = {}) {
     source_table: safeRecord.source_table || "",
     record_type: safeRecord.record_type || "",
     title: safeRecord.title || "Record",
-    summary: safeRecord.summary || "",
-    section: inferSectionFromRecordType(safeRecord.record_type),
+    summary,
+    section,
     status:
       safeRecord.workflow_status ||
       safeRecord.status ||
       safeRecord.approval_status ||
       "",
     severity: safeRecord.severity || safeRecord.significance || "",
+    urgency: inferUrgencyLevel(safeRecord),
     date: inferRecordDate(safeRecord),
+    due_date:
+      safeRecord.due_date ||
+      safeRecord.review_date ||
+      safeRecord.next_action_date ||
+      safeRecord.expiry_date ||
+      null,
     child_voice:
       safeRecord.child_voice ||
       safeRecord.young_person_voice ||
       safeRecord.child_views ||
       "",
-    tags: buildAssistantTags(safeRecord),
     linked_plan_id: safeRecord.linked_plan_id ?? null,
     linked_appointment_id: safeRecord.linked_appointment_id ?? null,
-    raw: safeRecord.raw || safeRecord,
+    tags,
+    raw,
   };
 }
 
@@ -236,6 +559,7 @@ export function mapIdentityProfile(raw = {}) {
   return {
     id: raw.id ?? null,
     young_person_id: raw.young_person_id ?? null,
+    record_type: "profile_identity",
     religion_or_faith: cleanText(raw.religion_or_faith),
     cultural_identity: cleanText(raw.cultural_identity),
     first_language: cleanText(raw.first_language),
@@ -246,6 +570,13 @@ export function mapIdentityProfile(raw = {}) {
     important_dates: cleanText(raw.important_dates),
     created_at: raw.created_at || null,
     updated_at: raw.updated_at || null,
+    title: "Identity profile",
+    summary: pickFirst(
+      cleanText(raw.what_matters_to_me),
+      cleanText(raw.strengths_summary),
+      cleanText(raw.interests),
+      "Identity profile available."
+    ),
   };
 }
 
@@ -253,6 +584,7 @@ export function mapCommunicationProfile(raw = {}) {
   return {
     id: raw.id ?? null,
     young_person_id: raw.young_person_id ?? null,
+    record_type: "profile_communication",
     neurodiversity_summary: cleanText(raw.neurodiversity_summary),
     communication_style: cleanText(raw.communication_style),
     sensory_profile: cleanText(raw.sensory_profile),
@@ -264,6 +596,13 @@ export function mapCommunicationProfile(raw = {}) {
     visual_support_needs: cleanText(raw.visual_support_needs),
     created_at: raw.created_at || null,
     updated_at: raw.updated_at || null,
+    title: "Communication profile",
+    summary: pickFirst(
+      cleanText(raw.communication_style),
+      cleanText(raw.what_helps),
+      cleanText(raw.processing_needs),
+      "Communication profile available."
+    ),
   };
 }
 
@@ -271,6 +610,7 @@ export function mapEducationProfile(raw = {}) {
   return {
     id: raw.id ?? null,
     young_person_id: raw.young_person_id ?? null,
+    record_type: "profile_education",
     school_name: cleanText(raw.school_name),
     year_group: cleanText(raw.year_group),
     education_status: cleanText(raw.education_status),
@@ -282,6 +622,13 @@ export function mapEducationProfile(raw = {}) {
     support_summary: cleanText(raw.support_summary),
     created_at: raw.created_at || null,
     updated_at: raw.updated_at || null,
+    title: "Education profile",
+    summary: pickFirst(
+      cleanText(raw.support_summary),
+      cleanText(raw.education_status),
+      cleanText(raw.school_name),
+      "Education profile available."
+    ),
   };
 }
 
@@ -289,6 +636,7 @@ export function mapHealthProfile(raw = {}) {
   return {
     id: raw.id ?? null,
     young_person_id: raw.young_person_id ?? null,
+    record_type: "profile_health",
     gp_name: cleanText(raw.gp_name),
     gp_contact: cleanText(raw.gp_contact),
     dentist_name: cleanText(raw.dentist_name),
@@ -302,6 +650,13 @@ export function mapHealthProfile(raw = {}) {
     consent_notes: cleanText(raw.consent_notes),
     created_at: raw.created_at || null,
     updated_at: raw.updated_at || null,
+    title: "Health profile",
+    summary: pickFirst(
+      cleanText(raw.mental_health_summary),
+      cleanText(raw.medication_summary),
+      cleanText(raw.diagnoses),
+      "Health profile available."
+    ),
   };
 }
 
@@ -309,6 +664,7 @@ export function mapLegalStatus(raw = {}) {
   return {
     id: raw.id ?? null,
     young_person_id: raw.young_person_id ?? null,
+    record_type: "profile_legal",
     legal_status: cleanText(raw.legal_status),
     order_type: cleanText(raw.order_type),
     order_details: cleanText(raw.order_details),
@@ -320,6 +676,13 @@ export function mapLegalStatus(raw = {}) {
     is_current: toBool(raw.is_current),
     created_at: raw.created_at || null,
     updated_at: raw.updated_at || null,
+    title: "Legal status",
+    summary: pickFirst(
+      cleanText(raw.legal_status),
+      cleanText(raw.order_type),
+      cleanText(raw.order_details),
+      "Legal status available."
+    ),
   };
 }
 
@@ -327,6 +690,7 @@ export function mapFormulation(raw = {}) {
   return {
     id: raw.id ?? null,
     young_person_id: raw.young_person_id ?? null,
+    record_type: "profile_formulation",
     presenting_needs: cleanText(raw.presenting_needs),
     developmental_context: cleanText(raw.developmental_context),
     trauma_context: cleanText(raw.trauma_context),
@@ -344,6 +708,13 @@ export function mapFormulation(raw = {}) {
     is_current: toBool(raw.is_current),
     created_at: raw.created_at || null,
     updated_at: raw.updated_at || null,
+    title: "Formulation",
+    summary: pickFirst(
+      cleanText(raw.presenting_needs),
+      cleanText(raw.meaning_of_behaviour),
+      cleanText(raw.what_helps),
+      "Formulation available."
+    ),
   };
 }
 
@@ -400,6 +771,7 @@ export function mapDailyNote(raw = {}) {
     submitted_at: raw.submitted_at || null,
     approved_at: raw.approved_at || null,
     returned_at: raw.returned_at || null,
+    follow_up_required: !!cleanText(raw.actions_required),
   });
 }
 
@@ -502,6 +874,7 @@ export function mapRiskAssessment(raw = {}) {
     likelihood: cleanText(raw.likelihood),
     review_comment: cleanText(raw.review_comment),
     archived: toBool(raw.archived),
+    review_required: !!raw.review_date,
   });
 }
 
@@ -601,6 +974,7 @@ export function mapKeyworkSession(raw = {}) {
     next_session_date: raw.next_session_date || null,
     archived: toBool(raw.archived),
     manager_review_comment: cleanText(raw.manager_review_comment),
+    follow_up_required: !!cleanText(raw.actions_agreed),
   });
 }
 
@@ -637,6 +1011,7 @@ export function mapAppointment(raw = {}) {
     reminder_minutes_before: raw.reminder_minutes_before ?? null,
     completed_at: raw.completed_at || null,
     cancelled_at: raw.cancelled_at || null,
+    follow_up_required: !!cleanText(raw.follow_up_actions),
   });
 }
 
@@ -682,6 +1057,8 @@ export function mapSafeguardingRecord(raw = {}) {
     manager_review_status: cleanText(raw.manager_review_status),
     closed_at: raw.closed_at || null,
     incident_id: raw.incident_id ?? null,
+    safeguarding_flag: true,
+    follow_up_required: !raw.closed_at,
   });
 }
 
@@ -711,6 +1088,7 @@ export function mapMissingEpisode(raw = {}) {
     child_voice: cleanText(raw.child_voice),
     return_interview_date: raw.return_interview_date || null,
     linked_risk_assessment_id: raw.linked_risk_assessment_id ?? null,
+    follow_up_required: !toBool(raw.return_interview_completed) || toBool(raw.review_required),
   });
 }
 
@@ -765,6 +1143,8 @@ export function mapComplianceItem(raw = {}) {
     metadata_json: toJsonObject(raw.metadata_json),
     manager_notified_at: raw.manager_notified_at || null,
     last_notification_at: raw.last_notification_at || null,
+    follow_up_required: normalisedStatus !== COMPLIANCE_STATUS.completed,
+    review_required: normalisedStatus === COMPLIANCE_STATUS.overdue || normalisedStatus === COMPLIANCE_STATUS.escalated,
   });
 }
 
@@ -778,6 +1158,7 @@ export function mapAiReport(raw = {}) {
     review_month: raw.review_month || null,
     status: cleanText(raw.status),
     generated_by: raw.generated_by ?? null,
+    auto_generated: true,
   });
 }
 
@@ -842,6 +1223,7 @@ export function mapInspectionPackJob(raw = {}) {
     generated_file_path: cleanText(raw.generated_file_path),
     summary_json: toJsonObject(raw.summary_json),
     completed_at: raw.completed_at || null,
+    auto_generated: true,
   });
 }
 
@@ -875,6 +1257,7 @@ export function mapTask(raw = {}) {
     task_type: cleanText(raw.task_type),
     compliance_generated: toBool(raw.compliance_generated),
     status: raw.completed ? WORKFLOW_STATUS.completed : WORKFLOW_STATUS.active,
+    follow_up_required: !toBool(raw.completed),
   });
 }
 
@@ -929,6 +1312,7 @@ export function mapMedicationRecord(raw = {}) {
     error_details: cleanText(raw.error_details),
     manager_review_status: cleanText(raw.manager_review_status),
     administered_by: raw.administered_by ?? null,
+    follow_up_required: toBool(raw.error_flag),
   });
 }
 
@@ -952,6 +1336,7 @@ export function mapReviewMeeting(raw = {}) {
     decisions: cleanText(raw.decisions),
     actions: cleanText(raw.actions),
     next_review_date: raw.next_review_date || null,
+    follow_up_required: !!cleanText(raw.actions),
   });
 }
 
@@ -974,6 +1359,7 @@ export function mapStatutoryDocument(raw = {}) {
     reviewed_by: raw.reviewed_by ?? null,
     reviewed_at: raw.reviewed_at || null,
     archived: toBool(raw.archived),
+    review_required: !!raw.review_date || !!raw.expiry_date,
   });
 }
 
@@ -1152,6 +1538,48 @@ export function buildAssistantEvidenceSet(payload = {}) {
   addMapped(payload.review_meetings, mapReviewMeeting);
   addMapped(payload.statutory_documents, mapStatutoryDocument);
   addMapped(payload.inspection_pack_jobs, mapInspectionPackJob);
+
+  if (payload.identity_profile || payload.young_person_identity_profile) {
+    evidence.push(toAssistantEvidence(mapIdentityProfile(
+      payload.identity_profile || payload.young_person_identity_profile
+    )));
+  }
+
+  if (payload.communication_profile || payload.young_person_communication_profile) {
+    evidence.push(toAssistantEvidence(mapCommunicationProfile(
+      payload.communication_profile || payload.young_person_communication_profile
+    )));
+  }
+
+  if (payload.education_profile || payload.young_person_education_profile) {
+    evidence.push(toAssistantEvidence(mapEducationProfile(
+      payload.education_profile || payload.young_person_education_profile
+    )));
+  }
+
+  if (payload.health_profile || payload.young_person_health_profile) {
+    evidence.push(toAssistantEvidence(mapHealthProfile(
+      payload.health_profile || payload.young_person_health_profile
+    )));
+  }
+
+  if (payload.legal_status || payload.young_person_legal_status) {
+    evidence.push(toAssistantEvidence(mapLegalStatus(
+      payload.legal_status || payload.young_person_legal_status
+    )));
+  }
+
+  if (
+    payload.formulation ||
+    payload.young_person_formulation ||
+    payload.young_person_formulations
+  ) {
+    evidence.push(toAssistantEvidence(mapFormulation(
+      payload.formulation ||
+        payload.young_person_formulation ||
+        payload.young_person_formulations
+    )));
+  }
 
   return evidence;
 }
