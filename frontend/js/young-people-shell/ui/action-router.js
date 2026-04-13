@@ -6,8 +6,16 @@ import {
   SCOPE_SECTIONS,
 } from "../core/config.js";
 
+function cleanText(value) {
+  return String(value || "").trim();
+}
+
 function getCurrentScope() {
   return state.currentScope || "child";
+}
+
+function getCurrentSection() {
+  return state.currentSection || state.activeSection || state.currentView || "workspace";
 }
 
 function ensureScopeContext() {
@@ -58,6 +66,7 @@ function resolveRecordType(value = "") {
     upload: "document",
     upload_document: "document",
     documents: "document",
+    statutory_document: "document",
 
     message: "communication",
     professional_message: "communication",
@@ -69,9 +78,13 @@ function resolveRecordType(value = "") {
 
     supervision_record: "supervision",
     supervision_notes: "supervision",
+    supervisions: "supervision",
 
     team_note: "team",
     staffing_note: "team",
+
+    manager_action: "manager_action",
+    manager_actions: "manager_action",
 
     profile_identity: "profile_identity",
     profile_communication: "profile_communication",
@@ -82,6 +95,25 @@ function resolveRecordType(value = "") {
   };
 
   return aliases[type] || type;
+}
+
+function resolveActionType(value = "") {
+  const type = String(value || "").trim().toLowerCase().replaceAll("-", "_");
+
+  const aliases = {
+    create: "create_record",
+    create_record: "create_record",
+    create_task: "create_task",
+    review: "review_record",
+    review_record: "review_record",
+    improve: "improve_record",
+    improve_record: "improve_record",
+    escalate: "escalate",
+    open: "open_section",
+    open_section: "open_section",
+  };
+
+  return aliases[type] || "create_record";
 }
 
 function normaliseActionKey(value = "") {
@@ -109,6 +141,7 @@ function normaliseActionKey(value = "") {
     new_therapy: "therapy",
     new_team: "team",
     new_supervision: "supervision",
+    new_manager_action: "manager_action",
 
     edit_profile_identity: "profile_identity",
     edit_profile_communication: "profile_communication",
@@ -147,6 +180,7 @@ function isActionAllowedInScope(actionId, scope = getCurrentScope()) {
     safeguarding_record: true,
     missing_episode: false,
     task: true,
+    manager_action: true,
     document: allowedSections.includes("documents"),
     communication: allowedSections.includes("communication"),
     therapy: allowedSections.includes("therapy"),
@@ -161,6 +195,38 @@ function isActionAllowedInScope(actionId, scope = getCurrentScope()) {
   };
 
   return scopeSpecificMap[actionId] ?? true;
+}
+
+function inferSectionForRecordType(recordType = "") {
+  const map = {
+    daily_note: "workspace",
+    incident: "timeline",
+    support_plan: "workspace",
+    risk: "manager",
+    health_record: "health",
+    education_record: "education",
+    family_contact: "family",
+    keywork: "workspace",
+    appointment: "calendar",
+    achievement_record: "education",
+    safeguarding_record: "manager",
+    missing_episode: "timeline",
+    task: "readiness",
+    manager_action: "manager",
+    document: "documents",
+    communication: "communication",
+    therapy: "therapy",
+    team: "team",
+    supervision: "supervision",
+    profile_identity: "profile",
+    profile_communication: "profile",
+    profile_education: "profile",
+    profile_health: "profile",
+    profile_legal: "profile",
+    profile_formulation: "profile",
+  };
+
+  return map[recordType] || "";
 }
 
 function buildDraftFromSuggestion(suggestion = {}, resolvedType = "") {
@@ -214,6 +280,7 @@ function buildDraftFromSuggestion(suggestion = {}, resolvedType = "") {
       suggestion.summary ||
       "",
     suggestion_record_type: resolvedType,
+    suggestion_action_type: resolveActionType(suggestion.action_type),
     suggestion_metadata: metadata,
   };
 
@@ -242,6 +309,16 @@ function safeOpen(recordType, mode = "create", item = null) {
       : item;
 
   openComposerFor(resolvedType, mode, payload);
+  return true;
+}
+
+function setCurrentSection(section = "") {
+  const next = cleanText(section);
+  if (!next) return false;
+
+  state.currentSection = next;
+  state.activeSection = next;
+  state.currentView = next;
   return true;
 }
 
@@ -322,6 +399,18 @@ function buildQuickActionMap() {
     };
   }
 
+  if (!actions.manager_action) {
+    actions.manager_action = {
+      id: "manager_action",
+      label: "Add manager action",
+      short_label: "Manager action",
+      record_type: "manager_action",
+      section_hint: "manager",
+      description: "Record management oversight and follow-up.",
+      run: () => safeOpen("manager_action"),
+    };
+  }
+
   return actions;
 }
 
@@ -355,32 +444,187 @@ export function getActionForQuickButton(key, context = {}) {
 
   const section =
     context.section ||
-    state.currentSection ||
-    state.activeSection ||
-    "workspace";
+    getCurrentSection();
 
   const fallbackKey = getFallbackActionKey(section, scope);
   return ACTIONS[fallbackKey];
 }
 
-export function runSuggestionAction(suggestion = {}) {
+function runCreateSuggestion(suggestion = {}) {
   const scope = getCurrentScope();
-
   const type = resolveRecordType(
-    suggestion.action_type ||
-      suggestion.record_type ||
+    suggestion.record_type ||
       suggestion.create_record_type ||
       suggestion.target_record_type
   );
 
   if (!type) return false;
-  if (!ACTIONS[type] && !isActionAllowedInScope(type, scope)) return false;
   if (!ensureScopeContext()) return false;
   if (!isActionAllowedInScope(type, scope)) return false;
 
   const draft = buildDraftFromSuggestion(suggestion, type);
   openComposerFor(type, "create", draft);
   return true;
+}
+
+function runTaskSuggestion(suggestion = {}) {
+  const scope = getCurrentScope();
+  const type = "task";
+
+  if (!ensureScopeContext()) return false;
+  if (!isActionAllowedInScope(type, scope)) return false;
+
+  const draft = buildDraftFromSuggestion(
+    {
+      ...suggestion,
+      record_type: "task",
+    },
+    "task"
+  );
+
+  openComposerFor(type, "create", draft);
+  return true;
+}
+
+function runReviewSuggestion(suggestion = {}) {
+  const scope = getCurrentScope();
+  const targetType = resolveRecordType(
+    suggestion.record_type ||
+      suggestion.target_record_type ||
+      suggestion.source_record_type
+  );
+
+  if (!targetType) return false;
+  if (!ensureScopeContext()) return false;
+  if (!isActionAllowedInScope(targetType, scope)) return false;
+
+  const draft = buildDraftFromSuggestion(
+    {
+      ...suggestion,
+      prefill: {
+        ...(suggestion.prefill || {}),
+        title:
+          suggestion.prefill?.title ||
+          suggestion.title ||
+          `Review: ${cleanText(suggestion.source_record_type || targetType)}`,
+      },
+    },
+    targetType
+  );
+
+  openComposerFor(targetType, "create", draft);
+  return true;
+}
+
+function runImproveSuggestion(suggestion = {}) {
+  const scope = getCurrentScope();
+  const targetType = resolveRecordType(
+    suggestion.record_type ||
+      suggestion.source_record_type ||
+      suggestion.target_record_type
+  );
+
+  if (!targetType) return false;
+  if (!ensureScopeContext()) return false;
+  if (!isActionAllowedInScope(targetType, scope)) return false;
+
+  const draft = buildDraftFromSuggestion(
+    {
+      ...suggestion,
+      prefill: {
+        ...(suggestion.prefill || {}),
+        improvement_prompt:
+          suggestion.description ||
+          suggestion.reason ||
+          "Improve clarity, completeness, and professional quality.",
+      },
+    },
+    targetType
+  );
+
+  openComposerFor(targetType, "create", draft);
+  return true;
+}
+
+function runEscalationSuggestion(suggestion = {}) {
+  const scope = getCurrentScope();
+
+  if (!ensureScopeContext()) return false;
+  if (!isActionAllowedInScope("manager_action", scope)) return false;
+
+  const draft = buildDraftFromSuggestion(
+    {
+      ...suggestion,
+      record_type: "manager_action",
+      prefill: {
+        action_type:
+          suggestion.prefill?.action_type ||
+          "escalation",
+        note:
+          suggestion.prefill?.note ||
+          suggestion.description ||
+          suggestion.reason ||
+          suggestion.title ||
+          "Escalation required",
+        ...(suggestion.prefill || {}),
+      },
+    },
+    "manager_action"
+  );
+
+  openComposerFor("manager_action", "create", draft);
+  return true;
+}
+
+function runOpenSectionSuggestion(suggestion = {}) {
+  const explicitSection = cleanText(
+    suggestion.section ||
+      suggestion.target_section ||
+      suggestion.prefill?.section
+  );
+
+  const recordSection = inferSectionForRecordType(
+    resolveRecordType(
+      suggestion.record_type ||
+        suggestion.target_record_type ||
+        suggestion.source_record_type
+    )
+  );
+
+  const targetSection = explicitSection || recordSection;
+  if (!targetSection) return false;
+
+  return setCurrentSection(targetSection);
+}
+
+export function runSuggestionAction(suggestion = {}) {
+  const actionType = resolveActionType(suggestion.action_type);
+
+  if (actionType === "create_record") {
+    return runCreateSuggestion(suggestion);
+  }
+
+  if (actionType === "create_task") {
+    return runTaskSuggestion(suggestion);
+  }
+
+  if (actionType === "review_record") {
+    return runReviewSuggestion(suggestion);
+  }
+
+  if (actionType === "improve_record") {
+    return runImproveSuggestion(suggestion);
+  }
+
+  if (actionType === "escalate") {
+    return runEscalationSuggestion(suggestion);
+  }
+
+  if (actionType === "open_section") {
+    return runOpenSectionSuggestion(suggestion);
+  }
+
+  return runCreateSuggestion(suggestion);
 }
 
 function getActionFromButton(button) {
@@ -392,15 +636,39 @@ function getActionFromButton(button) {
   return getActionForQuickButton(actionKey, {
     section:
       button.dataset.section ||
-      state.currentSection ||
-      state.activeSection ||
-      "workspace",
+      getCurrentSection(),
     scope: getCurrentScope(),
   });
 }
 
+function buildSuggestionFromButton(button) {
+  return {
+    id: button.dataset.suggestionId || null,
+    title: button.dataset.title || "",
+    description: button.dataset.description || "",
+    action_type: button.dataset.actionType || button.dataset.suggestionActionType || "create_record",
+    record_type:
+      button.dataset.recordType ||
+      button.dataset.suggestionAction ||
+      "",
+    target_record_type: button.dataset.targetRecordType || "",
+    target_section: button.dataset.targetSection || "",
+    source_record_type: button.dataset.sourceRecordType || "",
+    source_record_id: button.dataset.sourceRecordId || null,
+    priority: button.dataset.priority || "",
+    prefill: {},
+    metadata: {
+      source_record_type: button.dataset.sourceRecordType || "",
+      source_record_id: button.dataset.sourceRecordId || null,
+      young_person_id: button.dataset.youngPersonId || state.youngPersonId || null,
+      home_id: button.dataset.homeId || state.homeId || null,
+    },
+  };
+}
+
 export function bindActionRouter({
   onMissingYoungPerson,
+  onSectionChange,
   quickButtonSelector = "[data-quick-action], [data-action-router]",
   suggestionButtonSelector = "[data-suggestion-action]",
 } = {}) {
@@ -424,14 +692,15 @@ export function bindActionRouter({
         return;
       }
 
-      const type = resolveRecordType(
-        suggestionButton.dataset.recordType ||
-          suggestionButton.dataset.suggestionAction ||
-          ""
-      );
+      const suggestion = buildSuggestionFromButton(suggestionButton);
+      const didRun = runSuggestionAction(suggestion);
 
-      if (!type) return;
-      safeOpen(type);
+      if (
+        didRun &&
+        resolveActionType(suggestion.action_type) === "open_section"
+      ) {
+        onSectionChange?.(getCurrentSection());
+      }
     }
   });
 }
