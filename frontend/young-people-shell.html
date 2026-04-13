@@ -29,7 +29,7 @@
           id="logoBtn"
           class="brand-button"
           type="button"
-          aria-label="Go to young people home"
+          aria-label="Go to workspace home"
         >
           <span class="brand-mark" aria-hidden="true">IC</span>
           <span class="brand-copy">
@@ -120,7 +120,7 @@
         </button>
 
         <button id="homeBtn" class="ghost-btn" type="button">
-          Young people home
+          Back to selector
         </button>
       </div>
     </header>
@@ -128,7 +128,7 @@
     <main class="shell-main" id="mainContent">
       <section
         id="selectorScreen"
-        class="selector-screen hidden"
+        class="selector-screen"
         aria-labelledby="selectorHeading"
       >
         <div class="selector-screen-inner">
@@ -182,7 +182,7 @@
 
       <section
         id="workspaceScreen"
-        class="workspace-screen"
+        class="workspace-screen hidden"
         aria-labelledby="pageTitle"
       >
         <section id="workspaceShell" class="workspace-screen-inner">
@@ -236,7 +236,7 @@
               <section class="workspace-header-band" aria-labelledby="pageTitle">
                 <div class="workspace-header-main">
                   <div class="workspace-header-copy">
-                    <div class="eyebrow">Young person workspace</div>
+                    <div id="workspaceEyebrow" class="eyebrow">Young person workspace</div>
                     <h1 id="pageTitle">Today’s workspace</h1>
                     <p id="pageSubtitle">
                       A calm operational view for recording, reflection, continuity and thoughtful next steps.
@@ -255,7 +255,7 @@
                     <div
                       id="profileSnapshotPhotoWrap"
                       class="profile-snapshot-photo-wrap"
-                      aria-label="Young person initials"
+                      aria-label="Workspace initials"
                     >
                       <div class="profile-photo-fallback" aria-hidden="true">YP</div>
                     </div>
@@ -276,7 +276,6 @@
                       id="profileOpenBtn"
                       class="secondary-btn"
                       type="button"
-                      data-view="profile"
                     >
                       Open profile
                     </button>
@@ -298,28 +297,32 @@
                   <div class="workspace-summary-strip" aria-label="Current summary">
                     <div class="workspace-summary-item">
                       <span class="workspace-summary-label">Today</span>
-                      <strong class="workspace-summary-value">No summary yet</strong>
+                      <strong id="summaryToday" class="workspace-summary-value">—</strong>
                     </div>
 
                     <div class="workspace-summary-item">
                       <span class="workspace-summary-label">Next event</span>
-                      <strong class="workspace-summary-value">No event loaded</strong>
+                      <strong id="summaryNextEvent" class="workspace-summary-value">—</strong>
                     </div>
 
                     <div class="workspace-summary-item">
                       <span class="workspace-summary-label">Last record</span>
-                      <strong class="workspace-summary-value">No record loaded</strong>
+                      <strong id="summaryLastRecord" class="workspace-summary-value">—</strong>
                     </div>
 
                     <div class="workspace-summary-item">
                       <span class="workspace-summary-label">Open actions</span>
-                      <strong class="workspace-summary-value">No actions loaded</strong>
+                      <strong id="summaryOpenActions" class="workspace-summary-value">—</strong>
                     </div>
                   </div>
                 </div>
               </section>
 
-              <section class="quick-create-bar" aria-label="Quick create actions">
+              <section
+                id="quickCreateBar"
+                class="quick-create-bar"
+                aria-label="Quick create actions"
+              >
                 <div class="quick-create-bar-head">
                   <div>
                     <div class="eyebrow">Quick create</div>
@@ -622,7 +625,7 @@
       id="assistantModal"
       class="assistant-modal hidden"
       aria-hidden="true"
-      aria-label="Young person assistant"
+      aria-label="Workspace assistant"
     >
       <div class="assistant-shell">
         <div class="assistant-header">
@@ -652,7 +655,7 @@
               <article class="assistant-message assistant-message-system">
                 <div class="assistant-message-role">Assistant</div>
                 <div class="assistant-message-body">
-                  Select a young person to begin.
+                  Open a workspace to begin.
                 </div>
               </article>
             </div>
