@@ -5,10 +5,6 @@ import {
   refreshAssistantUi,
   appendAssistantSystemMessage,
   appendAssistantUserMessage,
-  setAssistantSources,
-  setAssistantRuntime,
-  setAssistantExplainability,
-  setAssistantScopeSummary,
 } from "./assistant-ui.js";
 
 let assistantEventsBound = false;
@@ -19,7 +15,12 @@ function getCurrentScope() {
 }
 
 function getCurrentSection() {
-  return state.currentSection || state.activeSection || state.currentView || "workspace";
+  return (
+    state.currentSection ||
+    state.activeSection ||
+    state.currentView ||
+    "workspace"
+  );
 }
 
 function getSelectedYoungPerson() {
@@ -90,55 +91,74 @@ function cloneMessageEntry(entry = {}) {
   };
 }
 
-function syncAssistantMetaToUi() {
+function mergeAssistantMeta(nextMeta = {}) {
   ensureAssistantState();
 
-  const meta = state.assistantMeta || {};
+  const previous = state.assistantMeta || {};
 
-  setAssistantSources(Array.isArray(meta.sources) ? meta.sources : []);
-  setAssistantRuntime(meta.runtime || {});
-  setAssistantExplainability(meta.explainability || {});
-  setAssistantScopeSummary(meta.assistant_context || {});
+  state.assistantMeta = {
+    sources: Array.isArray(nextMeta.sources)
+      ? nextMeta.sources
+      : previous.sources || [],
+    runtime:
+      nextMeta.runtime && typeof nextMeta.runtime === "object"
+        ? {
+            ...(previous.runtime || {}),
+            ...nextMeta.runtime,
+          }
+        : previous.runtime || {},
+    explainability:
+      nextMeta.explainability && typeof nextMeta.explainability === "object"
+        ? {
+            ...(previous.explainability || {}),
+            ...nextMeta.explainability,
+          }
+        : previous.explainability || {},
+    assistant_scope:
+      nextMeta.assistant_scope && typeof nextMeta.assistant_scope === "object"
+        ? {
+            ...(previous.assistant_scope || {}),
+            ...nextMeta.assistant_scope,
+          }
+        : previous.assistant_scope || {},
+    assistant_context:
+      nextMeta.assistant_context && typeof nextMeta.assistant_context === "object"
+        ? {
+            ...(previous.assistant_context || {}),
+            ...nextMeta.assistant_context,
+          }
+        : previous.assistant_context || {},
+    suggested_actions: Array.isArray(nextMeta.suggested_actions)
+      ? nextMeta.suggested_actions
+      : previous.suggested_actions || [],
+  };
+}
 
+function syncAssistantUi() {
+  ensureAssistantState();
   refreshAssistantUi();
 }
 
 export function openAssistant() {
   ensureAssistantState();
   updateAssistantContext();
-  syncAssistantMetaToUi();
   state.assistantOpen = true;
-  refreshAssistantUi();
+  syncAssistantUi();
 }
 
 export function closeAssistant() {
   state.assistantOpen = false;
-  refreshAssistantUi();
+  syncAssistantUi();
 }
 
 export function renderAssistantMessages() {
   ensureAssistantState();
-  refreshAssistantUi();
+  syncAssistantUi();
 }
 
 export function renderAssistantInsights() {
   ensureAssistantState();
-  syncAssistantMetaToUi();
-}
-
-function pushLocalMessage(role, content) {
-  ensureAssistantState();
-
-  const entry = cloneMessageEntry({
-    role,
-    content,
-  });
-
-  state.assistantMessages.push(entry);
-  state.assistantModalMessages.push({ ...entry });
-
-  refreshAssistantUi();
-  return entry;
+  syncAssistantUi();
 }
 
 function addAssistantPlaceholder() {
@@ -153,7 +173,7 @@ function addAssistantPlaceholder() {
   state.assistantMessages.push(entry);
   state.assistantModalMessages.push({ ...entry });
 
-  refreshAssistantUi();
+  syncAssistantUi();
 }
 
 function updateLastAssistantStreamingText(text) {
@@ -169,7 +189,7 @@ function updateLastAssistantStreamingText(text) {
     }
   });
 
-  refreshAssistantUi();
+  syncAssistantUi();
 }
 
 function replaceLastAssistantPlaceholder(text) {
@@ -183,15 +203,23 @@ function replaceLastAssistantPlaceholder(text) {
     if (last?.role === "assistant" && last?._streaming) {
       last.content = safeText;
       last._streaming = false;
+      return;
     }
+
+    list.push(
+      cloneMessageEntry({
+        role: "assistant",
+        content: safeText,
+      })
+    );
   });
 
-  refreshAssistantUi();
+  syncAssistantUi();
 }
 
 function setAssistantSending(flag) {
   state.assistantSending = !!flag;
-  refreshAssistantUi();
+  syncAssistantUi();
 }
 
 function assistantPromptsForView(view, scope = getCurrentScope()) {
@@ -406,20 +434,19 @@ export function updateAssistantContext() {
 
   ensureAssistantState();
 
+  const sectionLabel = String(section).replaceAll("_", " ").replaceAll("-", " ");
+
   const contextSummary =
     scope === "child"
       ? state.youngPersonId
         ? {
-            summary: `Young person: ${getFullYoungPersonName()} • ${getHomeName()} • section: ${String(
-              section
-            )
-              .replaceAll("_", " ")
-              .replaceAll("-", " ")}`,
+            summary: `Young person: ${getFullYoungPersonName()} • ${getHomeName()} • section: ${sectionLabel}`,
             scope_type: "young_person",
             current_scope: scope,
             current_section: section,
             young_person_name: getFullYoungPersonName(),
             home_name: getHomeName(),
+            suggested_prompts: assistantPromptsForView(section, scope),
           }
         : {
             summary: "No young person selected.",
@@ -428,42 +455,33 @@ export function updateAssistantContext() {
             current_section: section,
             young_person_name: null,
             home_name: getHomeName(),
+            suggested_prompts: assistantPromptsForView(section, scope),
           }
       : scope === "home"
       ? {
-          summary: `Home: ${getHomeName()} • scope: home oversight • section: ${String(
-            section
-          )
-            .replaceAll("_", " ")
-            .replaceAll("-", " ")}`,
+          summary: `Home: ${getHomeName()} • scope: home oversight • section: ${sectionLabel}`,
           scope_type: "home",
           current_scope: scope,
           current_section: section,
           young_person_name: null,
           home_name: getHomeName(),
+          suggested_prompts: assistantPromptsForView(section, scope),
         }
       : {
-          summary: `Home: ${getHomeName()} • scope: quality and RI • section: ${String(
-            section
-          )
-            .replaceAll("_", " ")
-            .replaceAll("-", " ")}`,
+          summary: `Home: ${getHomeName()} • scope: quality and RI • section: ${sectionLabel}`,
           scope_type: "quality",
           current_scope: scope,
           current_section: section,
           young_person_name: null,
           home_name: getHomeName(),
+          suggested_prompts: assistantPromptsForView(section, scope),
         };
 
-  state.assistantMeta = {
-    ...(state.assistantMeta || {}),
-    assistant_context: {
-      ...(state.assistantMeta?.assistant_context || {}),
-      ...contextSummary,
-    },
-  };
+  mergeAssistantMeta({
+    assistant_context: contextSummary,
+  });
 
-  syncAssistantMetaToUi();
+  syncAssistantUi();
 }
 
 function buildAssistantContextPayload() {
@@ -511,20 +529,8 @@ function detectAssistantResponseMode(text) {
 }
 
 function applyAssistantMeta(meta = {}) {
-  ensureAssistantState();
-
-  state.assistantMeta = {
-    sources: Array.isArray(meta?.sources) ? meta.sources : [],
-    runtime: meta?.runtime || {},
-    explainability: meta?.explainability || {},
-    assistant_scope: meta?.assistant_scope || {},
-    assistant_context: meta?.assistant_context || {},
-    suggested_actions: Array.isArray(meta?.suggested_actions)
-      ? meta.suggested_actions
-      : [],
-  };
-
-  syncAssistantMetaToUi();
+  mergeAssistantMeta(meta);
+  syncAssistantUi();
 }
 
 export async function askAssistant(question) {
@@ -573,14 +579,14 @@ export async function askAssistant(question) {
     );
   } finally {
     setAssistantSending(false);
-    syncAssistantMetaToUi();
+    syncAssistantUi();
   }
 }
 
 export function clearAssistantMessages() {
   state.assistantMessages = [];
   state.assistantModalMessages = [];
-  refreshAssistantUi();
+  syncAssistantUi();
 }
 
 function bindPromptButtons() {
