@@ -18,7 +18,7 @@ function render(items = []) {
 
   return `
     <div class="record-list">
-      ${items.map(staff => `
+      ${items.map((staff) => `
         <article class="record-row">
           <div class="record-row-main">
             <div class="record-row-title">${safeText(staff.staff_member || "Staff")}</div>
@@ -36,6 +36,16 @@ export async function loadTeam() {
 
   const homeId = getHomeId();
 
+  if (!homeId) {
+    els.viewContent.innerHTML = `
+      <section class="overview-panel">
+        <h2>Team</h2>
+        <div class="empty-state"><p>No home selected.</p></div>
+      </section>
+    `;
+    return;
+  }
+
   els.viewContent.innerHTML = `<p>Loading team…</p>`;
 
   try {
@@ -49,6 +59,11 @@ export async function loadTeam() {
       </section>
     `;
   } catch {
-    els.viewContent.innerHTML = `<p>Failed to load team</p>`;
+    els.viewContent.innerHTML = `
+      <section class="overview-panel">
+        <h2>Team</h2>
+        <p>Failed to load team</p>
+      </section>
+    `;
   }
 }
