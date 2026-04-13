@@ -18,11 +18,9 @@ export const els = {
 
   // Selector
   selectorList: document.getElementById("selectorList"),
-  youngPeopleList: document.getElementById("selectorList"),
   selectorSearch: document.getElementById("selectorSearch"),
   youngPersonSearchInput: document.getElementById("youngPersonSearchInput"),
   selectorRefreshBtn: document.getElementById("selectorRefreshBtn"),
-  youngPeopleEmpty: null,
   backToSelectorBtn: document.getElementById("backToSelectorBtn"),
 
   // Workspace person summary
@@ -34,7 +32,7 @@ export const els = {
   mobilePersonMeta: document.getElementById("mobilePersonMeta"),
   mobileHomeBtn: document.getElementById("mobileHomeBtn"),
 
-  // Main navigation / page chrome
+  // Navigation
   desktopNav: document.getElementById("desktopNav"),
   mobileNavContent: document.getElementById("mobileNavContent"),
   mobileNavDrawer: document.getElementById("mobileNavDrawer"),
@@ -42,7 +40,7 @@ export const els = {
   closeMobileNavBtn: document.getElementById("closeMobileNavBtn"),
   mobileBottomBar: document.getElementById("mobileBottomBar"),
 
-  // Hero / header
+  // Header / hero
   pageTitle: document.getElementById("pageTitle"),
   pageSubtitle: document.getElementById("pageSubtitle"),
   heroQuickActions: document.getElementById("heroQuickActions"),
@@ -55,37 +53,21 @@ export const els = {
   profilePhotoUploadBtn: document.getElementById("profilePhotoUploadBtn"),
   changePersonBtn: document.getElementById("changePersonBtn"),
 
-  // Assistant rail
-  scopeBadge: document.getElementById("scopeBadge"),
-  scopeHomeBadge: document.getElementById("scopeHomeBadge"),
-  scopeChildBadge: document.getElementById("scopeChildBadge"),
-  scopeShiftBadge: document.getElementById("scopeShiftBadge"),
-  assistantExpandBtn: document.getElementById("assistantExpandBtn"),
-  assistantContext: document.getElementById("assistantContext"),
-  assistantSuggestions: document.getElementById("assistantSuggestions"),
+  // Assistant
+  assistantBackdrop: document.getElementById("assistantBackdrop"),
+  assistantModal: document.getElementById("assistantModal"),
+  closeAssistantBtn: document.getElementById("closeAssistantBtn"),
   assistantMessages: document.getElementById("assistantMessages"),
   assistantForm: document.getElementById("assistantForm"),
   assistantInput: document.getElementById("assistantInput"),
   assistantSendBtn: document.getElementById("assistantSendBtn"),
-  assistantScopeSummary: document.getElementById("assistantScopeSummary"),
-  assistantActions: document.getElementById("assistantActions"),
-  assistantSources: document.getElementById("assistantSources"),
-  assistantRuntime: document.getElementById("assistantRuntime"),
-  assistantExplainability: document.getElementById("assistantExplainability"),
+  assistantClearBtn: document.getElementById("assistantClearBtn"),
 
-  // Assistant modal
-  assistantBackdrop: document.getElementById("assistantBackdrop"),
-  assistantModal: document.getElementById("assistantModal"),
-  closeAssistantBtn: document.getElementById("closeAssistantBtn"),
-  modalScopeHomeBadge: document.getElementById("modalScopeHomeBadge"),
-  modalScopeChildBadge: document.getElementById("modalScopeChildBadge"),
+  // Hidden compatibility assistant nodes
   assistantModalMessages: document.getElementById("assistantModalMessages"),
   assistantModalForm: document.getElementById("assistantModalForm"),
   assistantModalInput: document.getElementById("assistantModalInput"),
   assistantModalSendBtn: document.getElementById("assistantModalSendBtn"),
-  assistantModalScopeSummary: document.getElementById("assistantModalScopeSummary"),
-  assistantModalSources: document.getElementById("assistantModalSources"),
-  assistantClearBtn: document.getElementById("assistantClearBtn"),
 
   // Fullscreen panel
   fullscreenPanel: document.getElementById("fullscreenPanel"),
@@ -137,4 +119,8 @@ export const els = {
   suggestionsPanelSubtitle: document.getElementById("suggestionsPanelSubtitle"),
   suggestionsPanelBody: document.getElementById("suggestionsPanelBody"),
   closeSuggestionsPanelBtn: document.getElementById("closeSuggestionsPanelBtn"),
+
+  // Filters
+  recordSearchInput: document.getElementById("recordSearchInput"),
+  recordTypeFilter: document.getElementById("recordTypeFilter"),
 };
