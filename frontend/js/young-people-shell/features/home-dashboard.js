@@ -2,6 +2,7 @@ import { state } from "../state.js";
 import { els } from "../dom.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
+import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 
 function getHomeId() {
   return (
@@ -825,6 +826,13 @@ function renderNoHomeContext() {
       </div>
     </section>
   `;
+
+  updateWorkspaceSummaryStrip({
+    today: "No home context",
+    nextEvent: "No calendar loaded",
+    lastRecord: "No dashboard data",
+    openActions: "No actions loaded",
+  });
 }
 
 function renderLoadingState() {
@@ -840,6 +848,13 @@ function renderLoadingState() {
       </div>
     </section>
   `;
+
+  updateWorkspaceSummaryStrip({
+    today: "Loading home view",
+    nextEvent: "Checking upcoming activity",
+    lastRecord: "Loading latest record",
+    openActions: "Loading actions",
+  });
 }
 
 function renderErrorState(message) {
@@ -856,6 +871,13 @@ function renderErrorState(message) {
       </div>
     </section>
   `;
+
+  updateWorkspaceSummaryStrip({
+    today: "Home dashboard unavailable",
+    nextEvent: "No event loaded",
+    lastRecord: "No record loaded",
+    openActions: "No actions loaded",
+  });
 }
 
 export async function loadHomeDashboard() {
@@ -1015,6 +1037,28 @@ export async function loadHomeDashboard() {
       teamItems,
       progressCards,
       miniMetrics,
+    });
+
+    const nextDueSupervision = dueSupervisions[0];
+    const latestCommunication = communicationItems[0];
+    const todaySummary = `${toNumber(
+      summary.children_count ??
+        summary.young_people_count ??
+        summary.resident_count,
+      0
+    )} children • ${openTasks.length} open actions`;
+
+    updateWorkspaceSummaryStrip({
+      today: todaySummary,
+      nextEvent: nextDueSupervision?.next_due_date
+        ? `Supervision due ${formatDate(nextDueSupervision.next_due_date)}`
+        : "No immediate event loaded",
+      lastRecord: latestCommunication?.contact_datetime || latestCommunication?.created_at
+        ? `Latest comms ${formatDateTime(
+            latestCommunication.contact_datetime || latestCommunication.created_at
+          )}`
+        : "No recent home record loaded",
+      openActions: `${openTasks.length} open • ${overdueTasks.length} overdue`,
     });
   } catch (error) {
     renderErrorState(error?.message || "The home dashboard could not be loaded.");
