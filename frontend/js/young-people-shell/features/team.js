@@ -216,7 +216,7 @@ function renderRecordRows(items = [], emptyMessage = "No team records found.") {
                       item.role || "",
                       item.shift || "",
                       item.update_type || "",
-                      formatDate(item.record_date),
+                      item.record_date ? formatDate(item.record_date) : "",
                     ]
                       .filter(Boolean)
                       .join(" • ")
@@ -225,8 +225,8 @@ function renderRecordRows(items = [], emptyMessage = "No team records found.") {
               </div>
               <div class="record-row-side">
                 <span class="row-pill ${safeText(tone)}">${safeText(
-            item.status || "recorded"
-          )}</span>
+                  item.status || "recorded"
+                )}</span>
               </div>
             </article>
           `;
@@ -294,19 +294,25 @@ function renderTeamPage({
               <span class="overview-stat-note">Team and staffing records logged</span>
             </article>
 
-            <article class="overview-stat-card">
+            <article class="overview-stat-card ${
+              stats.absent > 0 ? "overview-stat-card--danger" : ""
+            }">
               <span class="overview-stat-label">Absent staff</span>
               <strong class="overview-stat-value">${safeText(stats.absent)}</strong>
               <span class="overview-stat-note">Off, sick or unavailable staff</span>
             </article>
 
-            <article class="overview-stat-card">
+            <article class="overview-stat-card ${
+              stats.agency > 0 ? "overview-stat-card--warning" : ""
+            }">
               <span class="overview-stat-label">Agency / cover</span>
               <strong class="overview-stat-value">${safeText(stats.agency)}</strong>
               <span class="overview-stat-note">Agency or cover-related staffing items</span>
             </article>
 
-            <article class="overview-stat-card">
+            <article class="overview-stat-card ${
+              stats.vacancies > 0 ? "overview-stat-card--warning" : ""
+            }">
               <span class="overview-stat-label">Vacancies</span>
               <strong class="overview-stat-value">${safeText(stats.vacancies)}</strong>
               <span class="overview-stat-note">Vacancy-related pressure</span>
