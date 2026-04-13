@@ -17,10 +17,36 @@ function safeArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function unique(values = []) {
+  return [...new Set(safeArray(values).filter(Boolean))];
+}
+
+function hasWeakText(value, minLength = 20) {
+  const text = cleanText(value);
+  return text.length > 0 && text.length < minLength;
+}
+
+function getUserRole(context = {}) {
+  return lower(
+    context?.metadata?.user_role ||
+      context?.userRole ||
+      ""
+  );
+}
+
+function isManagerRole(context = {}) {
+  return ["manager", "ri", "admin"].includes(getUserRole(context));
+}
+
+function isQualityRole(context = {}) {
+  return ["ri", "admin"].includes(getUserRole(context));
+}
+
 function buildSuggestion({
   title,
   description,
   record_type,
+  action_type = "create_record",
   priority = "medium",
   source_record_type = "",
   source_record_id = null,
@@ -28,11 +54,12 @@ function buildSuggestion({
   metadata = {},
 }) {
   return {
-    id: `suggestion-${record_type}-${source_record_id || "new"}-${Math.random()
+    id: `suggestion-${action_type}-${record_type}-${source_record_id || "new"}-${Math.random()
       .toString(36)
       .slice(2, 8)}`,
     title,
     description,
+    action_type,
     record_type,
     priority,
     source_record_type,
@@ -58,6 +85,10 @@ function getSourceMeta(record = {}, context = {}) {
       context?.metadata?.young_person_id ||
       record.young_person_id ||
       null,
+    user_role:
+      context?.metadata?.user_role ||
+      context?.userRole ||
+      "",
   };
 }
 
@@ -69,6 +100,66 @@ function buildLinkedTitle(prefix, record = {}) {
     cleanText(record.record_type) ||
     "record";
   return `${prefix}: ${base}`;
+}
+
+function buildReviewSuggestion({
+  title,
+  description,
+  priority = "medium",
+  source_record_type = "",
+  source_record_id = null,
+  metadata = {},
+}) {
+  return buildSuggestion({
+    title,
+    description,
+    record_type: source_record_type || "record",
+    action_type: "review_record",
+    priority,
+    source_record_type,
+    source_record_id,
+    metadata,
+  });
+}
+
+function buildImproveSuggestion({
+  title,
+  description,
+  source_record_type = "",
+  source_record_id = null,
+  metadata = {},
+  priority = "medium",
+}) {
+  return buildSuggestion({
+    title,
+    description,
+    record_type: source_record_type || "record",
+    action_type: "improve_record",
+    priority,
+    source_record_type,
+    source_record_id,
+    metadata,
+  });
+}
+
+function buildEscalationSuggestion({
+  title,
+  description,
+  priority = "high",
+  source_record_type = "",
+  source_record_id = null,
+  metadata = {},
+}) {
+  return buildSuggestion({
+    title,
+    description,
+    record_type: "manager_action",
+    action_type: "escalate",
+    priority,
+    source_record_type,
+    source_record_id,
+    metadata,
+  });
 }
 
 /* -----------------------------
@@ -109,6 +200,20 @@ function rulesForDailyNote(record = {}, context = {}) {
     record.education_update,
     record.activities,
     record.actions_required,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const wholeText = [
+    record.presentation,
+    record.activities,
+    record.education_update,
+    record.health_update,
+    record.family_update,
+    record.behaviour_update,
+    record.young_person_voice,
+    record.actions_required,
+    record.summary,
   ]
     .filter(Boolean)
     .join(" ");
@@ -374,6 +479,77 @@ function rulesForDailyNote(record = {}, context = {}) {
     );
   }
 
+  if (
+    includesAny(wholeText, ["upset", "distressed", "angry", "worried", "refused"]) &&
+    !cleanText(record.young_person_voice)
+  ) {
+    suggestions.push(
+      buildImproveSuggestion({
+        title: "Add child voice",
+        description:
+          "This note describes presentation or concerns but does not clearly capture the young person's voice.",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        priority: "medium",
+        metadata: meta,
+      })
+    );
+  }
+
+  if (
+    includesAny(wholeText, ["concern", "risk", "unsafe", "incident"]) &&
+    !cleanText(record.actions_required)
+  ) {
+    suggestions.push(
+      buildImproveSuggestion({
+        title: "Add follow-up action",
+        description:
+          "This note describes a concern but does not clearly record what needs to happen next.",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        priority: "high",
+        metadata: meta,
+      })
+    );
+  }
+
+  if (hasWeakText(record.presentation) || hasWeakText(record.summary)) {
+    suggestions.push(
+      buildImproveSuggestion({
+        title: "Strengthen summary wording",
+        description:
+          "This note may be too brief to support handover, oversight, or later review. Expand the summary with clear factual detail.",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        priority: "low",
+        metadata: meta,
+      })
+    );
+  }
+
+  if (
+    isManagerRole(context) &&
+    includesAny(wholeText, ["incident", "police", "unsafe", "restraint", "missing", "self-harm"])
+  ) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create manager action",
+        description:
+          "This daily note suggests an issue that may need explicit management oversight and follow-up.",
+        record_type: "manager_action",
+        action_type: "create_record",
+        priority: "high",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          action_type: "daily_note_review",
+          note: cleanText(record.actions_required || record.presentation || record.summary),
+        },
+        metadata: meta,
+      })
+    );
+  }
+
   return suggestions;
 }
 
@@ -528,6 +704,86 @@ function rulesForIncident(record = {}, context = {}) {
     })
   );
 
+  if (
+    !cleanText(record.antecedent) ||
+    !cleanText(record.staff_response) ||
+    !cleanText(record.outcome)
+  ) {
+    suggestions.push(
+      buildImproveSuggestion({
+        title: "Complete incident analysis",
+        description:
+          "This incident appears to be missing some core analysis fields such as antecedent, staff response, or outcome.",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        priority: "high",
+        metadata: meta,
+      })
+    );
+  }
+
+  if (!cleanText(record.child_voice) && includesAny(text, ["distressed", "upset", "angry", "fear", "harm"])) {
+    suggestions.push(
+      buildImproveSuggestion({
+        title: "Add child voice to incident",
+        description:
+          "This incident describes presentation or distress but does not clearly capture the young person's voice.",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        priority: "medium",
+        metadata: meta,
+      })
+    );
+  }
+
+  if (
+    isManagerRole(context) &&
+    (
+      severity === "high" ||
+      severity === "critical" ||
+      record.police_involved ||
+      record.ofsted_notified ||
+      record.requires_reg40 ||
+      record.safeguarding_flag
+    )
+  ) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create manager action",
+        description:
+          "This incident appears to need explicit management oversight and follow-up.",
+        record_type: "manager_action",
+        action_type: "create_record",
+        priority: "high",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          action_type: "incident_review",
+          note: cleanText(record.review_comment || record.outcome || record.description),
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  if (isQualityRole(context)) {
+    suggestions.push(
+      buildReviewSuggestion({
+        title: "Review for quality oversight",
+        description:
+          "This incident may need to be reflected in quality assurance, audit tracking, or service oversight.",
+        priority:
+          severity === "critical" || severity === "high" ? "high" : "medium",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        metadata: {
+          ...meta,
+          review_type: "quality_oversight",
+        },
+      })
+    );
+  }
+
   return suggestions;
 }
 
@@ -585,6 +841,20 @@ function rulesForHealthRecord(record = {}, context = {}) {
           due_date: record.next_action_date || "",
           completed: false,
         },
+        metadata: meta,
+      })
+    );
+  }
+
+  if (!cleanText(record.outcome) && record.follow_up_required) {
+    suggestions.push(
+      buildImproveSuggestion({
+        title: "Add clear health outcome",
+        description:
+          "This health record indicates follow-up is needed, but the outcome or next step is not clearly explained.",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        priority: "medium",
         metadata: meta,
       })
     );
@@ -650,6 +920,20 @@ function rulesForFamilyContact(record = {}, context = {}) {
     );
   }
 
+  if (!cleanText(record.child_voice) && includesAny(text, ["upset", "distressed", "angry", "worried"])) {
+    suggestions.push(
+      buildImproveSuggestion({
+        title: "Add child voice after contact",
+        description:
+          "This family contact record describes impact or presentation but does not clearly capture the young person's voice.",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        priority: "medium",
+        metadata: meta,
+      })
+    );
+  }
+
   return suggestions;
 }
 
@@ -710,6 +994,20 @@ function rulesForEducationRecord(record = {}, context = {}) {
     );
   }
 
+  if (!cleanText(record.action_taken) && includesAny(text, ["concern", "refused", "excluded", "attendance"])) {
+    suggestions.push(
+      buildImproveSuggestion({
+        title: "Add education follow-up detail",
+        description:
+          "This education record identifies an issue but does not clearly explain the follow-up action.",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        priority: "medium",
+        metadata: meta,
+      })
+    );
+  }
+
   return suggestions;
 }
 
@@ -754,6 +1052,43 @@ function rulesForMissingEpisode(record = {}, context = {}) {
       metadata: meta,
     })
   );
+
+  if (isManagerRole(context)) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create manager action",
+        description:
+          "Missing episodes usually require management oversight and review.",
+        record_type: "manager_action",
+        action_type: "create_record",
+        priority: "high",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          action_type: "missing_episode_review",
+          note: cleanText(record.outcome || record.actions_taken),
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  if (isQualityRole(context)) {
+    suggestions.push(
+      buildReviewSuggestion({
+        title: "Review missing episode pattern",
+        description:
+          "This missing episode may need to be considered in quality assurance, trend review, or service oversight.",
+        priority: "high",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        metadata: {
+          ...meta,
+          review_type: "missing_episode_pattern",
+        },
+      })
+    );
+  }
 
   return suggestions;
 }
@@ -827,6 +1162,20 @@ function rulesForAppointment(record = {}, context = {}) {
     );
   }
 
+  if (!cleanText(record.outcome_notes) && includesAny(text, ["completed", "attended", "seen", "review"])) {
+    suggestions.push(
+      buildImproveSuggestion({
+        title: "Add appointment outcome",
+        description:
+          "This appointment appears to have taken place, but the outcome is not clearly recorded.",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        priority: "medium",
+        metadata: meta,
+      })
+    );
+  }
+
   return suggestions;
 }
 
@@ -851,6 +1200,34 @@ function rulesForRisk(record = {}, context = {}) {
           due_date: record.review_date,
           completed: false,
         },
+        metadata: meta,
+      })
+    );
+  }
+
+  if (!cleanText(record.response_actions) || !cleanText(record.current_controls)) {
+    suggestions.push(
+      buildImproveSuggestion({
+        title: "Strengthen risk controls",
+        description:
+          "This risk assessment may be missing clear controls or response actions for staff.",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        priority: "high",
+        metadata: meta,
+      })
+    );
+  }
+
+  if (isManagerRole(context)) {
+    suggestions.push(
+      buildReviewSuggestion({
+        title: "Review risk oversight",
+        description:
+          "Active risks should be reviewed for current relevance, control quality, and oversight.",
+        priority: "medium",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
         metadata: meta,
       })
     );
@@ -881,6 +1258,57 @@ function rulesForSafeguarding(record = {}, context = {}) {
       metadata: meta,
     })
   );
+
+  if (!cleanText(record.outcome) && !record.closed_at) {
+    suggestions.push(
+      buildImproveSuggestion({
+        title: "Add safeguarding outcome",
+        description:
+          "This safeguarding record does not clearly show the current outcome or whether the concern remains open.",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        priority: "high",
+        metadata: meta,
+      })
+    );
+  }
+
+  if (isManagerRole(context)) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Create manager safeguarding action",
+        description:
+          "This safeguarding concern may need explicit management oversight and tracking.",
+        record_type: "manager_action",
+        action_type: "create_record",
+        priority: "high",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        prefill: {
+          action_type: "safeguarding_review",
+          note: cleanText(record.outcome || record.immediate_action_taken || record.concern_details),
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  if (isQualityRole(context)) {
+    suggestions.push(
+      buildReviewSuggestion({
+        title: "Review safeguarding theme for oversight",
+        description:
+          "This safeguarding record may need to be reflected in quality assurance, audit, or service oversight.",
+        priority: "high",
+        source_record_type: meta.source_record_type,
+        source_record_id: meta.source_record_id,
+        metadata: {
+          ...meta,
+          review_type: "safeguarding_oversight",
+        },
+      })
+    );
+  }
 
   return suggestions;
 }
@@ -922,6 +1350,7 @@ export function mergeSuggestionLists(...lists) {
 
   for (const item of combined) {
     const key = [
+      item.action_type,
       item.record_type,
       item.title,
       item.source_record_type,
@@ -932,6 +1361,19 @@ export function mergeSuggestionLists(...lists) {
     seen.add(key);
     deduped.push(item);
   }
+
+  const priorityRank = {
+    critical: 4,
+    high: 3,
+    medium: 2,
+    low: 1,
+  };
+
+  deduped.sort((a, b) => {
+    const aRank = priorityRank[a.priority] || 0;
+    const bRank = priorityRank[b.priority] || 0;
+    return bRank - aRank;
+  });
 
   return deduped;
 }
