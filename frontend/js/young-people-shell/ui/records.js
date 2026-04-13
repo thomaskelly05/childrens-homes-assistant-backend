@@ -133,6 +133,36 @@ const RECORD_CONFIG = {
     label: "Medication record",
     detailUrl: (id) => `/young-people/medication-records/${id}`,
   },
+
+  // Wider home / quality shell items
+  communication: {
+    label: "Communication",
+    detailUrl: (id) => `/communications/${id}`,
+  },
+  document: {
+    label: "Document",
+    detailUrl: (id) => `/documents/${id}`,
+  },
+  therapy: {
+    label: "Therapy",
+    detailUrl: (id) => `/therapy/${id}`,
+  },
+  team: {
+    label: "Team item",
+    detailUrl: (id) => `/team/${id}`,
+  },
+  supervision: {
+    label: "Supervision",
+    detailUrl: (id) => `/supervisions/${id}`,
+  },
+  compliance: {
+    label: "Compliance",
+    detailUrl: (id) => `/compliance/${id}`,
+  },
+  audit: {
+    label: "Audit",
+    detailUrl: (id) => `/audits/${id}`,
+  },
 };
 
 export function normaliseRecordType(item = {}) {
@@ -142,6 +172,7 @@ export function normaliseRecordType(item = {}) {
       item.source_table ||
       item.event_type ||
       item.category ||
+      item.type ||
       ""
   )
     .toLowerCase()
@@ -166,6 +197,13 @@ export function normaliseRecordType(item = {}) {
   if (raw === "medication_profiles") return "medication_profile";
   if (raw === "medication_records") return "medication_record";
 
+  if (raw === "communications") return "communication";
+  if (raw === "documents") return "document";
+  if (raw === "therapy_records" || raw === "therapeutic_services") return "therapy";
+  if (raw === "team_items" || raw === "staff") return "team";
+  if (raw === "supervisions") return "supervision";
+  if (raw === "audits") return "audit";
+
   return raw;
 }
 
@@ -179,7 +217,9 @@ export function getRecordUrl(item = {}) {
   if (!id) return null;
 
   const config = RECORD_CONFIG[type];
-  if (config?.detailUrl) return config.detailUrl(id);
+  if (config?.detailUrl) {
+    return config.detailUrl(id);
+  }
 
   return null;
 }
@@ -193,6 +233,8 @@ function buildSubtitle(type, item = {}, detail = {}) {
     item.record_date ||
     item.recorded_at ||
     item.occurred_at ||
+    item.audit_date ||
+    item.review_date ||
     item.created_at ||
     detail.event_datetime ||
     detail.start_datetime ||
@@ -201,6 +243,8 @@ function buildSubtitle(type, item = {}, detail = {}) {
     detail.record_date ||
     detail.note_date ||
     detail.incident_datetime ||
+    detail.audit_date ||
+    detail.review_date ||
     detail.created_at ||
     null;
 
@@ -247,6 +291,15 @@ function detailObjectFromResponse(data = {}) {
     data.achievement_record ||
     data.medication_profile ||
     data.medication_record ||
+    data.communication ||
+    data.document ||
+    data.therapy ||
+    data.team ||
+    data.supervision ||
+    data.audit ||
+    data.compliance ||
+    data.item ||
+    data.record ||
     data
   );
 }
@@ -336,6 +389,7 @@ export function openDrawer() {
   els.drawer?.classList.remove("hidden");
   els.drawerBackdrop?.classList.remove("hidden");
   els.drawer?.setAttribute("aria-hidden", "false");
+  state.recordDrawerOpen = true;
 }
 
 export function closeDrawer() {
@@ -345,6 +399,7 @@ export function closeDrawer() {
 
   state.activeRecordItem = null;
   state.activeRecordType = null;
+  state.recordDrawerOpen = false;
 }
 
 function setDrawerButtons(type) {
@@ -384,14 +439,34 @@ function buildSuggestionContext(type, detail = {}, item = {}) {
   };
 }
 
+function shouldShowSuggestionsForType(type) {
+  return [
+    "daily_note",
+    "incident",
+    "support_plan",
+    "risk",
+    "health_record",
+    "education_record",
+    "family_contact",
+    "keywork",
+    "appointment",
+    "safeguarding_record",
+    "missing_episode",
+    "task",
+  ].includes(type);
+}
+
+async function fetchRecordDetail(url) {
+  if (!url) {
+    throw new Error("No detail URL available for this record.");
+  }
+
+  return apiGet(url);
+}
+
 export async function openRecordDetail(item) {
   const type = normaliseRecordType(item);
   const url = getRecordUrl(item);
-
-  if (!url) {
-    console.warn("No record URL found for item:", item);
-    return;
-  }
 
   state.activeRecordItem = item;
   state.activeRecordType = type;
@@ -400,7 +475,11 @@ export async function openRecordDetail(item) {
   setDrawerButtons(type);
 
   if (els.drawerTitle) {
-    els.drawerTitle.textContent = item.title || RECORD_CONFIG[type]?.label || "Details";
+    els.drawerTitle.textContent =
+      item.title ||
+      item.name ||
+      RECORD_CONFIG[type]?.label ||
+      "Details";
   }
 
   if (els.drawerSubtitle) {
@@ -419,15 +498,47 @@ export async function openRecordDetail(item) {
   }
 
   try {
-    const data = await apiGet(url);
+    if (!url) {
+      const fallbackDetail = {
+        ...item,
+        detail_status: "preview_only",
+        detail_note: "This item does not yet have a dedicated detail endpoint.",
+      };
+
+      if (els.drawerTitle) {
+        els.drawerTitle.textContent =
+          item.title ||
+          item.name ||
+          item.staff_member ||
+          item.young_person_name ||
+          RECORD_CONFIG[type]?.label ||
+          "Details";
+      }
+
+      if (els.drawerSubtitle) {
+        els.drawerSubtitle.textContent = buildSubtitle(type, item, fallbackDetail);
+      }
+
+      if (els.drawerBody) {
+        els.drawerBody.innerHTML = renderDrawerSection(fallbackDetail);
+      }
+
+      hideSuggestionsPanel();
+      return;
+    }
+
+    const data = await fetchRecordDetail(url);
     const detail = detailObjectFromResponse(data);
 
     if (els.drawerTitle) {
       els.drawerTitle.textContent =
         item.title ||
         detail.title ||
+        detail.name ||
         detail.incident_type ||
         detail.contact_person ||
+        detail.staff_member ||
+        detail.young_person_name ||
         RECORD_CONFIG[type]?.label ||
         "Details";
     }
@@ -440,16 +551,20 @@ export async function openRecordDetail(item) {
       els.drawerBody.innerHTML = renderDrawerSection(detail);
     }
 
-    const suggestionRecord = buildSuggestionContext(type, detail, item);
-    const suggestions = mergeSuggestionLists(
-      evaluateRecordSuggestions(suggestionRecord)
-    );
+    if (shouldShowSuggestionsForType(type)) {
+      const suggestionRecord = buildSuggestionContext(type, detail, item);
+      const suggestions = mergeSuggestionLists(
+        evaluateRecordSuggestions(suggestionRecord)
+      );
 
-    if (suggestions.length) {
-      showSuggestionsPanel(suggestions, {
-        source_record_type: type,
-        source_record_id: suggestionRecord.id,
-      });
+      if (suggestions.length) {
+        showSuggestionsPanel(suggestions, {
+          source_record_type: type,
+          source_record_id: suggestionRecord.id,
+        });
+      } else {
+        hideSuggestionsPanel();
+      }
     } else {
       hideSuggestionsPanel();
     }
@@ -508,7 +623,12 @@ export async function runDrawerWorkflow(action) {
   await apiSend(url, "POST", body);
 }
 
+let drawerEventsBound = false;
+
 export function bindRecordDrawerEvents({ onEdit, onWorkflowComplete } = {}) {
+  if (drawerEventsBound) return;
+  drawerEventsBound = true;
+
   els.closeDrawerBtn?.addEventListener("click", closeDrawer);
   els.drawerBackdrop?.addEventListener("click", closeDrawer);
 
