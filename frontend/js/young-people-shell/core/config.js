@@ -9,6 +9,7 @@ const NAV_GROUPS = [
         short_label: "Workspace",
         icon: "home",
         description: "The main place to record, reflect and act on what matters today.",
+        scopes: ["child"],
       },
       {
         id: "overview",
@@ -16,6 +17,7 @@ const NAV_GROUPS = [
         short_label: "Overview",
         icon: "layout-dashboard",
         description: "A clear picture of priorities, progress, risks and strengths.",
+        scopes: ["child"],
       },
       {
         id: "timeline",
@@ -23,6 +25,7 @@ const NAV_GROUPS = [
         short_label: "Timeline",
         icon: "list-ordered",
         description: "A clear view of what has happened over time.",
+        scopes: ["child"],
       },
       {
         id: "handover",
@@ -30,6 +33,7 @@ const NAV_GROUPS = [
         short_label: "Handover",
         icon: "repeat",
         description: "Support smooth, thoughtful communication between adults.",
+        scopes: ["child"],
       },
     ],
   },
@@ -43,6 +47,7 @@ const NAV_GROUPS = [
         short_label: "Profile",
         icon: "user",
         description: "Identity, communication, needs, strengths and what matters to them.",
+        scopes: ["child"],
       },
       {
         id: "family",
@@ -50,6 +55,23 @@ const NAV_GROUPS = [
         short_label: "Family",
         icon: "users",
         description: "Family contact, important relationships and how contact is experienced.",
+        scopes: ["child"],
+      },
+      {
+        id: "documents",
+        label: "Upload centre and statutory documents",
+        short_label: "Documents",
+        icon: "folder",
+        description: "Statutory documents, uploads, review dates and missing evidence.",
+        scopes: ["child", "home", "quality"],
+      },
+      {
+        id: "communication",
+        label: "Professional communication",
+        short_label: "Communication",
+        icon: "messages-square",
+        description: "Professional updates, liaison, shared actions and communication logs.",
+        scopes: ["child", "home", "quality"],
       },
     ],
   },
@@ -63,6 +85,7 @@ const NAV_GROUPS = [
         short_label: "Health",
         icon: "heart-pulse",
         description: "Health needs, professionals, appointments, outcomes and follow-up.",
+        scopes: ["child"],
       },
       {
         id: "education",
@@ -70,6 +93,7 @@ const NAV_GROUPS = [
         short_label: "Education",
         icon: "graduation-cap",
         description: "Learning, attendance, strengths, support and educational progress.",
+        scopes: ["child"],
       },
       {
         id: "calendar",
@@ -77,6 +101,15 @@ const NAV_GROUPS = [
         short_label: "Appointments",
         icon: "calendar",
         description: "Appointments, meetings and other important dates.",
+        scopes: ["child", "home", "quality"],
+      },
+      {
+        id: "therapy",
+        label: "Therapeutic services",
+        short_label: "Therapy",
+        icon: "sparkles",
+        description: "Therapy input, recommendations, direct work and therapeutic themes.",
+        scopes: ["child", "home", "quality"],
       },
     ],
   },
@@ -90,6 +123,7 @@ const NAV_GROUPS = [
         short_label: "Readiness",
         icon: "shield-check",
         description: "Tasks, follow-up, oversight and what needs doing next.",
+        scopes: ["child", "home", "quality"],
       },
       {
         id: "manager",
@@ -97,6 +131,7 @@ const NAV_GROUPS = [
         short_label: "Manager view",
         icon: "clipboard-check",
         description: "Review workflows, oversight, quality and decision-making.",
+        scopes: ["child", "home", "quality"],
       },
       {
         id: "reports",
@@ -104,6 +139,45 @@ const NAV_GROUPS = [
         short_label: "Reports",
         icon: "file-text",
         description: "Reports, summaries and structured review outputs.",
+        scopes: ["child", "home", "quality"],
+      },
+    ],
+  },
+  {
+    id: "home_and_quality",
+    title: "Home, team and quality",
+    items: [
+      {
+        id: "home-dashboard",
+        label: "Home dashboard",
+        short_label: "Home",
+        icon: "building-2",
+        description: "Whole-home operational picture across children, staffing, actions and risk.",
+        scopes: ["home", "quality"],
+      },
+      {
+        id: "supervision",
+        label: "Supervision",
+        short_label: "Supervision",
+        icon: "badge-check",
+        description: "Staff supervision schedules, themes, actions and completion.",
+        scopes: ["home", "quality"],
+      },
+      {
+        id: "team",
+        label: "Team meetings",
+        short_label: "Team",
+        icon: "users-round",
+        description: "Team meetings, decisions, actions and service-wide themes.",
+        scopes: ["home", "quality"],
+      },
+      {
+        id: "quality",
+        label: "Quality and audit",
+        short_label: "Quality",
+        icon: "bar-chart-3",
+        description: "Audit themes, regulatory readiness, service patterns and evidence quality.",
+        scopes: ["quality"],
       },
     ],
   },
@@ -113,7 +187,6 @@ export const NAV_GROUPS_CONFIG = NAV_GROUPS;
 
 /**
  * Flat compatibility export for existing code that expects NAV_SECTIONS to be a simple array.
- * Keep this export so current nav/event logic continues to work.
  */
 export const NAV_SECTIONS = NAV_GROUPS.flatMap((group) =>
   group.items.map((item) => ({
@@ -122,6 +195,63 @@ export const NAV_SECTIONS = NAV_GROUPS.flatMap((group) =>
     group_title: group.title,
   }))
 );
+
+export const SCOPE_SECTIONS = {
+  child: [
+    "workspace",
+    "overview",
+    "timeline",
+    "handover",
+    "profile",
+    "family",
+    "documents",
+    "communication",
+    "health",
+    "education",
+    "calendar",
+    "therapy",
+    "readiness",
+    "manager",
+    "reports",
+  ],
+  home: [
+    "manager",
+    "reports",
+    "readiness",
+    "calendar",
+    "documents",
+    "communication",
+    "therapy",
+    "home-dashboard",
+    "supervision",
+    "team",
+  ],
+  quality: [
+    "reports",
+    "manager",
+    "readiness",
+    "calendar",
+    "documents",
+    "communication",
+    "therapy",
+    "home-dashboard",
+    "supervision",
+    "team",
+    "quality",
+  ],
+};
+
+export const SCOPE_DEFAULT_SECTION = {
+  child: "workspace",
+  home: "home-dashboard",
+  quality: "quality",
+};
+
+export const ROLE_SCOPE_ACCESS = {
+  staff: ["child"],
+  manager: ["child", "home"],
+  ri: ["child", "home", "quality"],
+};
 
 export const QUICK_ACTIONS = [
   {
@@ -228,6 +358,46 @@ export const QUICK_ACTIONS = [
     section_hint: "readiness",
     description: "Create a clear action with ownership and next steps.",
   },
+  {
+    id: "document_upload",
+    label: "Upload document",
+    short_label: "Upload document",
+    record_type: "document_upload",
+    section_hint: "documents",
+    description: "Upload statutory, professional or supporting documentation.",
+  },
+  {
+    id: "professional_communication",
+    label: "Add professional communication",
+    short_label: "Communication",
+    record_type: "professional_communication",
+    section_hint: "communication",
+    description: "Log liaison with professionals, schools, social workers or health services.",
+  },
+  {
+    id: "therapy_note",
+    label: "Add therapy note",
+    short_label: "Therapy note",
+    record_type: "therapy_note",
+    section_hint: "therapy",
+    description: "Capture therapeutic recommendations, observations and follow-up.",
+  },
+  {
+    id: "supervision_record",
+    label: "Add supervision record",
+    short_label: "Supervision",
+    record_type: "supervision_record",
+    section_hint: "supervision",
+    description: "Record staff supervision, themes, reflection and agreed actions.",
+  },
+  {
+    id: "team_meeting_record",
+    label: "Add team meeting note",
+    short_label: "Team meeting",
+    record_type: "team_meeting_record",
+    section_hint: "team",
+    description: "Capture meeting themes, decisions, tasks and shared learning.",
+  },
 ];
 
 export const SECTION_DEFAULT_ACTION = {
@@ -243,6 +413,13 @@ export const SECTION_DEFAULT_ACTION = {
   readiness: "task",
   manager: "task",
   reports: "task",
+  documents: "document_upload",
+  communication: "professional_communication",
+  therapy: "therapy_note",
+  supervision: "supervision_record",
+  team: "team_meeting_record",
+  "home-dashboard": "task",
+  quality: "task",
 };
 
 export const PROFILE_ACTIONS = [
@@ -290,9 +467,6 @@ export const PROFILE_ACTIONS = [
   },
 ];
 
-/**
- * Optional helper maps for nicer page chrome if you want to use them in shell-ui.js.
- */
 export const SECTION_TITLES = {
   workspace: "Today’s workspace",
   overview: "What matters today",
@@ -306,6 +480,13 @@ export const SECTION_TITLES = {
   readiness: "Actions and readiness",
   manager: "Leadership and review",
   reports: "Reports and review packs",
+  documents: "Upload centre and statutory documents",
+  communication: "Professional communication",
+  therapy: "Therapeutic services",
+  supervision: "Supervision",
+  team: "Team meetings",
+  "home-dashboard": "Home dashboard",
+  quality: "Quality and audit",
 };
 
 export const SECTION_SUBTITLES = {
@@ -321,4 +502,11 @@ export const SECTION_SUBTITLES = {
   readiness: "Actions, tasks, compliance and practical follow-up that need attention.",
   manager: "Oversight, quality, decision-making and review.",
   reports: "Structured summaries, reports and review outputs for the young person.",
+  documents: "A clear place for statutory uploads, due documents, evidence and review dates.",
+  communication: "Professional communication, liaison and shared working across agencies.",
+  therapy: "Therapeutic work, recommendations, emotional themes and what helps.",
+  supervision: "Staff supervision activity, themes, actions and completion.",
+  team: "Team meeting records, decisions, actions and shared learning.",
+  "home-dashboard": "A whole-home operational picture across children, staffing, risk and actions.",
+  quality: "Audit, patterns, evidence quality, compliance and regulatory readiness.",
 };
