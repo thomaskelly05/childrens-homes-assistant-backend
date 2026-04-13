@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IndiCare OS • Young People Workspace</title>
+  <title>IndiCare OS • Residential Workspace</title>
   <meta
     name="description"
-    content="IndiCare OS young people workspace for clear, child-centred recording, reflection, planning, oversight and support."
+    content="IndiCare OS residential workspace for clear, child-centred recording, planning, compliance, quality oversight and support."
   />
   <meta name="color-scheme" content="light dark" />
   <meta name="theme-color" content="#f3f6fb" />
@@ -16,12 +16,12 @@
   <div
     id="app"
     class="app-shell theme-system"
-    data-assistant-scope-type="young_person"
+    data-assistant-scope-type="child"
     data-young-person-id=""
     data-home-id=""
     data-workspace="young-people-shell"
     data-scope="child"
-    data-user-role="staff"
+    data-user-role="manager"
   >
     <header class="shell-topbar" role="banner">
       <div class="shell-topbar-left">
@@ -29,7 +29,7 @@
           id="logoBtn"
           class="brand-button"
           type="button"
-          aria-label="Go to young people home"
+          aria-label="Go to workspace home"
         >
           <span class="brand-mark" aria-hidden="true">IC</span>
           <span class="brand-copy">
@@ -49,10 +49,10 @@
       <div class="shell-topbar-right">
         <div
           id="scopeSwitch"
-          class="scope-switch desktop-only hidden"
+          class="scope-switch desktop-only"
           role="tablist"
           aria-label="Workspace scope"
-          aria-hidden="true"
+          aria-hidden="false"
         >
           <button
             id="scopeChildBtn"
@@ -68,28 +68,24 @@
 
           <button
             id="scopeHomeBtn"
-            class="scope-switch-btn hidden"
+            class="scope-switch-btn"
             type="button"
             data-scope="home"
             role="tab"
             aria-selected="false"
             aria-pressed="false"
-            aria-hidden="true"
-            tabindex="-1"
           >
             Home
           </button>
 
           <button
             id="scopeQualityBtn"
-            class="scope-switch-btn hidden"
+            class="scope-switch-btn"
             type="button"
             data-scope="quality"
             role="tab"
             aria-selected="false"
             aria-pressed="false"
-            aria-hidden="true"
-            tabindex="-1"
           >
             Quality
           </button>
@@ -121,7 +117,7 @@
         </button>
 
         <button id="homeBtn" class="ghost-btn" type="button">
-          Young people home
+          Workspace home
         </button>
       </div>
     </header>
@@ -196,7 +192,14 @@
 
               <div class="workspace-sidebar-profile-card">
                 <div class="workspace-sidebar-profile-top">
-                  <div class="workspace-sidebar-avatar" id="personAvatar" aria-hidden="true">YP</div>
+                  <div
+                    class="workspace-sidebar-avatar"
+                    id="personAvatar"
+                    aria-hidden="true"
+                  >
+                    YP
+                  </div>
+
                   <div class="workspace-sidebar-profile-copy">
                     <h2 id="personName">Young person</h2>
                     <p id="personMeta">Workspace</p>
@@ -235,10 +238,12 @@
                 >
                   YP
                 </div>
+
                 <div class="workspace-stage-mobile-copy">
                   <h2 id="mobilePersonName">Young person</h2>
                   <p id="mobilePersonMeta">Workspace</p>
                 </div>
+
                 <button id="mobileHomeBtn" class="ghost-btn" type="button">
                   Home
                 </button>
@@ -247,7 +252,7 @@
               <section class="workspace-header-band" aria-labelledby="pageTitle">
                 <div class="workspace-header-main">
                   <div class="workspace-header-copy">
-                    <div class="eyebrow">Young person workspace</div>
+                    <div class="eyebrow">Residential workspace</div>
                     <h1 id="pageTitle">Today’s workspace</h1>
                     <p id="pageSubtitle">
                       A calm operational view for recording, reflection, continuity and thoughtful next steps.
@@ -342,7 +347,11 @@
                 </div>
 
                 <div id="heroQuickActions" class="quick-create-grid">
-                  <button class="quick-create-card" type="button" data-action-router="new-daily-note">
+                  <button
+                    class="quick-create-card"
+                    type="button"
+                    data-action-router="new-daily-note"
+                  >
                     <span class="quick-create-icon" aria-hidden="true">✎</span>
                     <span class="quick-create-copy">
                       <strong>Add daily note</strong>
@@ -350,7 +359,11 @@
                     </span>
                   </button>
 
-                  <button class="quick-create-card" type="button" data-action-router="new-incident">
+                  <button
+                    class="quick-create-card"
+                    type="button"
+                    data-action-router="new-incident"
+                  >
                     <span class="quick-create-icon" aria-hidden="true">!</span>
                     <span class="quick-create-copy">
                       <strong>Add important event</strong>
@@ -358,7 +371,11 @@
                     </span>
                   </button>
 
-                  <button class="quick-create-card" type="button" data-action-router="new-support-plan">
+                  <button
+                    class="quick-create-card"
+                    type="button"
+                    data-action-router="new-support-plan"
+                  >
                     <span class="quick-create-icon" aria-hidden="true">✓</span>
                     <span class="quick-create-copy">
                       <strong>Add support plan</strong>
@@ -366,7 +383,11 @@
                     </span>
                   </button>
 
-                  <button class="quick-create-card" type="button" data-action-router="new-health-record">
+                  <button
+                    class="quick-create-card"
+                    type="button"
+                    data-action-router="new-health-record"
+                  >
                     <span class="quick-create-icon" aria-hidden="true">♥</span>
                     <span class="quick-create-copy">
                       <strong>Add health record</strong>
@@ -374,7 +395,11 @@
                     </span>
                   </button>
 
-                  <button class="quick-create-card" type="button" data-action-router="new-education-record">
+                  <button
+                    class="quick-create-card"
+                    type="button"
+                    data-action-router="new-education-record"
+                  >
                     <span class="quick-create-icon" aria-hidden="true">▣</span>
                     <span class="quick-create-copy">
                       <strong>Add education record</strong>
@@ -382,7 +407,11 @@
                     </span>
                   </button>
 
-                  <button class="quick-create-card" type="button" data-action-router="new-family-contact">
+                  <button
+                    class="quick-create-card"
+                    type="button"
+                    data-action-router="new-family-contact"
+                  >
                     <span class="quick-create-icon" aria-hidden="true">◎</span>
                     <span class="quick-create-copy">
                       <strong>Add family contact</strong>
@@ -390,7 +419,11 @@
                     </span>
                   </button>
 
-                  <button class="quick-create-card" type="button" data-action-router="new-task">
+                  <button
+                    class="quick-create-card"
+                    type="button"
+                    data-action-router="new-task"
+                  >
                     <span class="quick-create-icon" aria-hidden="true">☑</span>
                     <span class="quick-create-copy">
                       <strong>Add task</strong>
@@ -398,11 +431,27 @@
                     </span>
                   </button>
 
-                  <button class="quick-create-card" type="button" data-action-router="upload-document">
+                  <button
+                    class="quick-create-card"
+                    type="button"
+                    data-action-router="upload-document"
+                  >
                     <span class="quick-create-icon" aria-hidden="true">▤</span>
                     <span class="quick-create-copy">
                       <strong>Upload document</strong>
                       <small>Add statutory and supporting documents to the record.</small>
+                    </span>
+                  </button>
+
+                  <button
+                    class="quick-create-card"
+                    type="button"
+                    data-action-router="professional-message"
+                  >
+                    <span class="quick-create-icon" aria-hidden="true">✉</span>
+                    <span class="quick-create-copy">
+                      <strong>Log communication</strong>
+                      <small>Capture contact with professionals, families and partner agencies.</small>
                     </span>
                   </button>
                 </div>
@@ -414,7 +463,10 @@
 
             <div class="workspace-content-wrap workspace-content-wrap--single">
               <section class="workspace-content">
-                <section class="records-toolbar content-section" aria-labelledby="recordsToolbarTitle">
+                <section
+                  class="records-toolbar content-section"
+                  aria-labelledby="recordsToolbarTitle"
+                >
                   <div class="records-toolbar-left">
                     <div>
                       <div class="eyebrow">Records</div>
@@ -431,7 +483,7 @@
                       id="recordSearchInput"
                       class="search-input"
                       type="text"
-                      placeholder="Search records, events, plans or appointments..."
+                      placeholder="Search records, events, plans, documents or communication..."
                       autocomplete="off"
                     />
 
@@ -470,7 +522,11 @@
       </section>
     </main>
 
-    <div id="mobileNavBackdrop" class="mobile-nav-backdrop hidden" aria-hidden="true"></div>
+    <div
+      id="mobileNavBackdrop"
+      class="mobile-nav-backdrop hidden"
+      aria-hidden="true"
+    ></div>
 
     <aside
       id="mobileNavDrawer"
@@ -483,6 +539,7 @@
           <div class="eyebrow">Navigation</div>
           <h3>Young person workspace</h3>
         </div>
+
         <button
           id="closeMobileNavBtn"
           class="secondary-btn icon-btn"
@@ -518,7 +575,11 @@
 
           <div class="fullscreen-panel-head-actions">
             <div id="fullscreenPanelActions" class="fullscreen-panel-actions"></div>
-            <button id="closeFullscreenPanelBtn" class="secondary-btn" type="button">
+            <button
+              id="closeFullscreenPanelBtn"
+              class="secondary-btn"
+              type="button"
+            >
               Close
             </button>
           </div>
@@ -556,8 +617,19 @@
             <div id="composerAutosaveStatus" class="composer-autosave-status">
               Autosave ready
             </div>
-            <button id="closeComposerBtn" class="secondary-btn" type="button">Close</button>
-            <button id="composerSaveDraftBtn" class="secondary-btn" type="button">Save draft</button>
+
+            <button id="closeComposerBtn" class="secondary-btn" type="button">
+              Close
+            </button>
+
+            <button
+              id="composerSaveDraftBtn"
+              class="secondary-btn"
+              type="button"
+            >
+              Save draft
+            </button>
+
             <button
               id="composerSaveBtn"
               class="secondary-btn hidden"
@@ -567,8 +639,14 @@
             >
               Save
             </button>
-            <button id="composerCheckBtn" class="secondary-btn" type="button">Review writing</button>
-            <button id="composerSubmitBtn" class="primary-btn" type="button">Send for review</button>
+
+            <button id="composerCheckBtn" class="secondary-btn" type="button">
+              Review writing
+            </button>
+
+            <button id="composerSubmitBtn" class="primary-btn" type="button">
+              Send for review
+            </button>
           </div>
         </header>
 
@@ -600,11 +678,20 @@
             <section class="composer-side-card">
               <h3>AI review</h3>
               <div class="composer-ai-actions">
-                <button id="composerGrammarBtn" class="secondary-btn" type="button">Check tone and clarity</button>
-                <button id="composerClarityBtn" class="secondary-btn" type="button">Make clearer</button>
-                <button id="composerSafeguardingBtn" class="secondary-btn" type="button">Safeguarding review</button>
-                <button id="composerChildVoiceBtn" class="secondary-btn" type="button">Strengthen young person voice</button>
+                <button id="composerGrammarBtn" class="secondary-btn" type="button">
+                  Check tone and clarity
+                </button>
+                <button id="composerClarityBtn" class="secondary-btn" type="button">
+                  Make clearer
+                </button>
+                <button id="composerSafeguardingBtn" class="secondary-btn" type="button">
+                  Safeguarding review
+                </button>
+                <button id="composerChildVoiceBtn" class="secondary-btn" type="button">
+                  Strengthen young person voice
+                </button>
               </div>
+
               <div id="composerAiFeedback" class="composer-side-body composer-ai-feedback">
                 No AI review has been run yet.
               </div>
@@ -625,11 +712,17 @@
           <div>
             <div class="eyebrow">Suggestions</div>
             <h2 id="suggestionsPanelTitle">Suggested follow-up</h2>
-            <p id="suggestionsPanelSubtitle">Linked records and actions that may be helpful next.</p>
+            <p id="suggestionsPanelSubtitle">
+              Linked records and actions that may be helpful next.
+            </p>
           </div>
 
           <div class="fullscreen-panel-head-actions">
-            <button id="closeSuggestionsPanelBtn" class="secondary-btn" type="button">
+            <button
+              id="closeSuggestionsPanelBtn"
+              class="secondary-btn"
+              type="button"
+            >
               Close
             </button>
           </div>
@@ -647,20 +740,25 @@
       </div>
     </section>
 
-    <div id="assistantBackdrop" class="assistant-backdrop hidden" aria-hidden="true"></div>
+    <div
+      id="assistantBackdrop"
+      class="assistant-backdrop hidden"
+      aria-hidden="true"
+    ></div>
 
     <section
       id="assistantModal"
       class="assistant-modal hidden"
       aria-hidden="true"
-      aria-label="Young person assistant"
+      aria-label="Workspace assistant"
     >
       <div class="assistant-shell">
         <div class="assistant-header">
           <div>
             <h3>Assistant</h3>
-            <p>Ask questions, draft wording and get help with records and next steps.</p>
+            <p>Ask questions, draft wording and get help with records, compliance and next steps.</p>
           </div>
+
           <button
             id="closeAssistantBtn"
             class="secondary-btn icon-btn"
@@ -683,7 +781,7 @@
               <article class="assistant-message assistant-message-system">
                 <div class="assistant-message-role">Assistant</div>
                 <div class="assistant-message-body">
-                  Select a young person to begin.
+                  Ask about this workspace, this child, the home, compliance, quality, records or next steps.
                 </div>
               </article>
             </div>
@@ -705,7 +803,9 @@
         </div>
 
         <div class="assistant-footer">
-          <button id="assistantClearBtn" class="secondary-btn" type="button">Clear chat</button>
+          <button id="assistantClearBtn" class="secondary-btn" type="button">
+            Clear chat
+          </button>
         </div>
       </div>
 
@@ -717,7 +817,11 @@
       </div>
     </section>
 
-    <div id="recordDrawerBackdrop" class="record-drawer-backdrop hidden" aria-hidden="true"></div>
+    <div
+      id="recordDrawerBackdrop"
+      class="record-drawer-backdrop hidden"
+      aria-hidden="true"
+    ></div>
 
     <section
       id="recordDrawer"
@@ -732,7 +836,10 @@
             <h2 id="recordDrawerTitle">Record detail</h2>
             <p id="recordDrawerSubtitle">Open a record to view details.</p>
           </div>
-          <button id="closeRecordDrawerBtn" class="secondary-btn" type="button">Close</button>
+
+          <button id="closeRecordDrawerBtn" class="secondary-btn" type="button">
+            Close
+          </button>
         </header>
 
         <div id="recordDrawerActions" class="record-drawer-actions">
