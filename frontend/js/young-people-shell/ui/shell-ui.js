@@ -1,3 +1,22 @@
+Yes — this is the other file that needs fixing.
+
+Your current shell-ui.js still uses:
+
+ROLE_SCOPE_ACCESS?.[role] || ["child"]
+
+So if state.userRole is "admin", it falls back to ["child"], which is why you appear stuck on the young person area even though you should see everything.
+
+Below is the full upgraded shell-ui.js with:
+	•	support for admin
+	•	safer role normalisation
+	•	better scope labels
+	•	correct visibility for selector-only controls
+	•	cleaner handling of child vs home vs quality chrome
+
+⸻
+
+ui/shell-ui.js
+
 import { state } from "../state.js";
 import { els } from "../dom.js";
 import { refreshAssistantUi } from "./assistant-ui.js";
@@ -51,13 +70,28 @@ function getCurrentScope() {
 }
 
 function getCurrentRole() {
-  return String(state.userRole || "staff").toLowerCase();
+  const rawRole = String(state.userRole || "staff").toLowerCase().trim();
+
+  if (rawRole === "administrator") return "admin";
+  return rawRole;
+}
+
+function getAllowedScopesForRole() {
+  const role = getCurrentRole();
+
+  if (ROLE_SCOPE_ACCESS?.[role]) {
+    return ROLE_SCOPE_ACCESS[role];
+  }
+
+  if (role === "admin") {
+    return ["child", "home", "quality"];
+  }
+
+  return ["child"];
 }
 
 function canAccessScope(scope) {
-  const role = getCurrentRole();
-  const allowed = ROLE_SCOPE_ACCESS?.[role] || ["child"];
-  return allowed.includes(scope);
+  return getAllowedScopesForRole().includes(scope);
 }
 
 function initialsFromPerson(person = {}) {
@@ -202,6 +236,7 @@ function updateYoungPersonText(person = {}) {
 
 function updateScopeButtons() {
   const scope = getCurrentScope();
+  const allowedScopes = getAllowedScopesForRole();
 
   const buttons = [
     { el: els.scopeChildBtn, value: "child" },
@@ -212,7 +247,7 @@ function updateScopeButtons() {
   buttons.forEach(({ el, value }) => {
     if (!el) return;
 
-    const visible = canAccessScope(value);
+    const visible = allowedScopes.includes(value);
     const active = scope === value;
 
     showEl(el, visible, "inline-flex");
@@ -229,10 +264,7 @@ function updateScopeButtons() {
   });
 
   if (els.scopeSwitch) {
-    const visibleScopes = ["child", "home", "quality"].filter((value) =>
-      canAccessScope(value)
-    );
-    showEl(els.scopeSwitch, visibleScopes.length > 1, "inline-flex");
+    showEl(els.scopeSwitch, allowedScopes.length > 1, "inline-flex");
   }
 }
 
@@ -243,6 +275,16 @@ function updateScopeSensitiveActions() {
   showEl(els.profilePhotoUploadBtn, isChildScope, "inline-flex");
   showEl(els.changePersonBtn, isChildScope, "inline-flex");
   showEl(els.backToSelectorBtn, isChildScope, "inline-flex");
+
+  const selectorButtons = [
+    els.homeBtn,
+    els.mobileHomeBtn,
+  ];
+
+  selectorButtons.forEach((button) => {
+    if (!button) return;
+    button.textContent = isChildScope ? "Young people home" : "Workspace home";
+  });
 
   const profileCard = document.querySelector(".workspace-sidebar-profile-card");
   if (profileCard) {
@@ -332,6 +374,14 @@ export function closeMobileNav() {
 }
 
 async function goHomeToSelector() {
+  const scope = getCurrentScope();
+
+  if (scope !== "child") {
+    const { loadSection } = await import("./nav.js");
+    await loadSection(scope === "home" ? "home-dashboard" : "quality");
+    return;
+  }
+
   const { goBackToSelector } = await import("./selector.js");
   goBackToSelector();
 }
@@ -354,6 +404,7 @@ function bindChromeNavDelegates() {
       ".mobile-tab-btn[data-nav-section], #mobileNavContent [data-nav-section]"
     );
     if (!navButton) return;
+
     await openSectionFromButton(navButton);
   });
 }
