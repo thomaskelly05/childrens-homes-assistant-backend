@@ -36,6 +36,7 @@ import { loadCalendar } from "../features/calendar.js";
 import { loadReadiness } from "../features/readiness.js";
 import { loadManager } from "../features/manager.js";
 import { loadCurrentView as loadWorkspace } from "../features/workspace.js";
+import { loadHomeDashboard } from "../features/home-dashboard.js";
 
 /**
  * Temporary placeholder loaders until dedicated feature files are created.
@@ -68,16 +69,6 @@ async function renderPlaceholderSection({
       </div>
     </section>
   `;
-}
-
-async function loadHomeDashboard() {
-  return renderPlaceholderSection({
-    eyebrow: "Home dashboard",
-    title: "Home-wide oversight",
-    subtitle:
-      "A management view across the home, staffing, risks, actions, compliance and reporting.",
-    icon: "▥",
-  });
 }
 
 async function loadQualityDashboard() {
@@ -288,27 +279,31 @@ function renderNavItem(item, { compact = false } = {}) {
 
 function buildDesktopNavHtml() {
   return getScopedNavGroups()
-    .map((group) => `
+    .map(
+      (group) => `
       <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
         <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
         <div class="nav-section-items">
           ${(group.items || []).map((item) => renderNavItem(item)).join("")}
         </div>
       </section>
-    `)
+    `
+    )
     .join("");
 }
 
 function buildMobileDrawerNavHtml() {
   return getScopedNavGroups()
-    .map((group) => `
+    .map(
+      (group) => `
       <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
         <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
         <div class="nav-section-items">
           ${(group.items || []).map((item) => renderNavItem(item)).join("")}
         </div>
       </section>
-    `)
+    `
+    )
     .join("");
 }
 
@@ -721,7 +716,7 @@ export async function initialiseShellNavigation() {
   updateSectionChrome(getCurrentSection());
   updateYoungPersonChrome(state.selectedYoungPerson || {});
 
-  if (!state.youngPersonId) {
+  if (!state.youngPersonId && getCurrentScope() === "child") {
     try {
       await loadYoungPersonSelector?.();
       els.workspaceScreen?.classList.add("hidden");
