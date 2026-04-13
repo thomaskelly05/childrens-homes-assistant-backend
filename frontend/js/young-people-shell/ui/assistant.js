@@ -678,16 +678,16 @@ function renderAssistantSourcesHtml(sources) {
 
 function inferAssistantSuggestedActions() {
   const meta = state.assistantMeta || {};
-  const scope = meta.assistant_scope || {};
   const context = meta.assistant_context || {};
   const actions = [];
   const currentScope = getCurrentScope();
 
-  if (currentScope === "child" || scope.scope_type === "young_person") {
+  if (currentScope === "child") {
     actions.push("Draft handover");
     actions.push("Summarise recent incidents");
     actions.push("Summarise current support guidance");
     actions.push("Review outstanding tasks");
+    actions.push("Draft review summary");
   }
 
   if (currentScope === "home") {
@@ -695,6 +695,7 @@ function inferAssistantSuggestedActions() {
     actions.push("Review open actions");
     actions.push("Check compliance gaps");
     actions.push("Draft leadership summary");
+    actions.push("Summarise workforce pressure");
   }
 
   if (currentScope === "quality") {
@@ -702,6 +703,7 @@ function inferAssistantSuggestedActions() {
     actions.push("Check Ofsted risks");
     actions.push("Review compliance gaps");
     actions.push("Draft RI summary");
+    actions.push("Summarise audit pressure");
   }
 
   if (context.recent_records?.incidents?.length) {
@@ -956,6 +958,8 @@ function bindPromptButtons() {
 export function bindAssistantEvents() {
   if (assistantEventsBound) return;
   assistantEventsBound = true;
+
+  ensureAssistantState();
 
   els.assistantLauncher?.addEventListener("click", openAssistant);
   els.heroAssistantBtn?.addEventListener("click", openAssistant);
