@@ -17,16 +17,14 @@ function qs(id) {
 
 function setText(id, value, fallback = "") {
   const el = qs(id);
-  if (el) {
-    el.textContent = value || fallback;
-  }
+  if (!el) return;
+  el.textContent = value || fallback;
 }
 
 function setHtml(id, value) {
   const el = qs(id);
-  if (el) {
-    el.innerHTML = value || "";
-  }
+  if (!el) return;
+  el.innerHTML = value || "";
 }
 
 function showEl(el, show = true, display = "") {
@@ -44,6 +42,19 @@ function showEl(el, show = true, display = "") {
   if (display) {
     el.style.display = show ? display : "";
   }
+}
+
+function getCurrentScope() {
+  return state.currentScope || "child";
+}
+
+function getCurrentRole() {
+  return String(state.userRole || "staff").toLowerCase();
+}
+
+function canAccessScope(scope) {
+  const allowed = ROLE_SCOPE_ACCESS?.[getCurrentRole()] || ["child"];
+  return allowed.includes(scope);
 }
 
 function initialsFromPerson(person = {}) {
@@ -78,20 +89,6 @@ function buildPersonMeta(person = {}) {
   ]
     .filter(Boolean)
     .join(" • ");
-}
-
-function getCurrentScope() {
-  return state.currentScope || "child";
-}
-
-function getCurrentRole() {
-  return String(state.userRole || "staff").toLowerCase();
-}
-
-function canAccessScope(scope) {
-  const role = getCurrentRole();
-  const allowed = ROLE_SCOPE_ACCESS?.[role] || ["child"];
-  return allowed.includes(scope);
 }
 
 function getWorkspaceContextValue() {
@@ -154,9 +151,8 @@ function updateWorkspaceContextPill() {
 }
 
 function updateSnapshotPhoto(person = {}) {
-  const wrap = qs("profileSnapshotPhotoWrap");
+  const wrap = els.profileSnapshotPhotoWrap;
   if (!wrap) return;
-
   wrap.innerHTML = buildInitialsAvatar(person, "profile-photo-fallback");
 }
 
@@ -215,22 +211,13 @@ function updateScopeButtons() {
     const active = scope === value;
 
     showEl(el, visible, "inline-flex");
-
-    if (visible) {
-      el.classList.toggle("active", active);
-      el.setAttribute("aria-selected", active ? "true" : "false");
-      el.setAttribute("aria-pressed", active ? "true" : "false");
-    } else {
-      el.classList.remove("active");
-      el.setAttribute("aria-selected", "false");
-      el.setAttribute("aria-pressed", "false");
-    }
+    el.classList.toggle("active", visible && active);
+    el.setAttribute("aria-selected", visible && active ? "true" : "false");
+    el.setAttribute("aria-pressed", visible && active ? "true" : "false");
   });
 
   if (els.scopeSwitch) {
-    const visibleScopes = ["child", "home", "quality"].filter((value) =>
-      canAccessScope(value)
-    );
+    const visibleScopes = ["child", "home", "quality"].filter(canAccessScope);
     showEl(els.scopeSwitch, visibleScopes.length > 1, "inline-flex");
   }
 }
@@ -243,23 +230,22 @@ function updateScopeSensitiveActions() {
   showEl(els.changePersonBtn, isChildScope, "inline-flex");
   showEl(els.backToSelectorBtn, isChildScope, "inline-flex");
 
-  const snapshotWrap = qs("profileSnapshotPhotoWrap");
-  if (snapshotWrap) {
-    showEl(snapshotWrap, true, "block");
+  if (els.profileSnapshotPhotoWrap) {
+    showEl(els.profileSnapshotPhotoWrap, true, "block");
   }
 }
 
 function updateHeaderChrome(section = "workspace") {
-  const title =
-    SECTION_TITLES?.[section] ||
-    (getCurrentScope() === "home"
+  const scope = getCurrentScope();
+  const fallbackTitle =
+    scope === "home"
       ? "Home dashboard"
-      : getCurrentScope() === "quality"
+      : scope === "quality"
       ? "Quality dashboard"
-      : "Today’s workspace");
+      : "Today’s workspace";
 
-  const subtitle =
-    SECTION_SUBTITLES?.[section] || getScopeSubtitle();
+  const title = SECTION_TITLES?.[section] || fallbackTitle;
+  const subtitle = SECTION_SUBTITLES?.[section] || getScopeSubtitle();
 
   setText("pageTitle", title, "Workspace");
   setText("pageSubtitle", subtitle, getScopeSubtitle());
@@ -312,23 +298,17 @@ export function updateSectionChrome(section = "workspace") {
 }
 
 export function openMobileNav() {
-  qs("mobileNavBackdrop")?.classList.remove("hidden");
-  qs("mobileNavDrawer")?.classList.remove("hidden");
-  qs("mobileNavDrawer")?.setAttribute("aria-hidden", "false");
-
-  if (els.mobileNavBtn) {
-    els.mobileNavBtn.setAttribute("aria-expanded", "true");
-  }
+  els.mobileNavBackdrop?.classList.remove("hidden");
+  els.mobileNavDrawer?.classList.remove("hidden");
+  els.mobileNavDrawer?.setAttribute("aria-hidden", "false");
+  els.mobileNavBtn?.setAttribute("aria-expanded", "true");
 }
 
 export function closeMobileNav() {
-  qs("mobileNavBackdrop")?.classList.add("hidden");
-  qs("mobileNavDrawer")?.classList.add("hidden");
-  qs("mobileNavDrawer")?.setAttribute("aria-hidden", "true");
-
-  if (els.mobileNavBtn) {
-    els.mobileNavBtn.setAttribute("aria-expanded", "false");
-  }
+  els.mobileNavBackdrop?.classList.add("hidden");
+  els.mobileNavDrawer?.classList.add("hidden");
+  els.mobileNavDrawer?.setAttribute("aria-hidden", "true");
+  els.mobileNavBtn?.setAttribute("aria-expanded", "false");
 }
 
 async function goHomeToSelector() {
@@ -351,9 +331,10 @@ function bindChromeNavDelegates() {
 
   document.addEventListener("click", async (event) => {
     const navButton = event.target.closest(
-      ".mobile-tab-btn[data-nav-section], #mobileNavContent [data-nav-section]"
+      ".mobile-tab-btn[data-nav-section], #mobileNavContent [data-nav-section], #mobileBottomBar [data-nav-section]"
     );
     if (!navButton) return;
+
     await openSectionFromButton(navButton);
   });
 }
@@ -362,17 +343,17 @@ export function bindShellChrome() {
   if (shellChromeBound) return;
   shellChromeBound = true;
 
-  qs("mobileNavBtn")?.addEventListener("click", openMobileNav);
-  qs("closeMobileNavBtn")?.addEventListener("click", closeMobileNav);
-  qs("mobileNavBackdrop")?.addEventListener("click", closeMobileNav);
+  els.mobileNavBtn?.addEventListener("click", openMobileNav);
+  els.closeMobileNavBtn?.addEventListener("click", closeMobileNav);
+  els.mobileNavBackdrop?.addEventListener("click", closeMobileNav);
 
-  qs("backToSelectorBtn")?.addEventListener("click", goHomeToSelector);
-  qs("mobileHomeBtn")?.addEventListener("click", goHomeToSelector);
-  qs("changePersonBtn")?.addEventListener("click", goHomeToSelector);
-  qs("logoBtn")?.addEventListener("click", goHomeToSelector);
-  qs("homeBtn")?.addEventListener("click", goHomeToSelector);
+  els.backToSelectorBtn?.addEventListener("click", goHomeToSelector);
+  els.mobileHomeBtn?.addEventListener("click", goHomeToSelector);
+  els.changePersonBtn?.addEventListener("click", goHomeToSelector);
+  els.logoBtn?.addEventListener("click", goHomeToSelector);
+  els.homeBtn?.addEventListener("click", goHomeToSelector);
 
-  qs("profileOpenBtn")?.addEventListener("click", async () => {
+  els.profileOpenBtn?.addEventListener("click", async () => {
     const { loadSection } = await import("./nav.js");
     await loadSection("profile");
   });
