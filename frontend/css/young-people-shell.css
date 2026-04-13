@@ -224,6 +224,56 @@ textarea {
   color: var(--text);
 }
 
+/* Scope switch */
+
+.scope-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-xs);
+}
+
+.scope-switch-btn {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    background 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    opacity 0.16s ease;
+}
+
+.scope-switch-btn:hover {
+  background: var(--panel-soft);
+  color: var(--text);
+}
+
+.scope-switch-btn.active,
+.scope-switch-btn[aria-selected="true"] {
+  background: linear-gradient(180deg, var(--primary-soft), var(--primary-soft-2));
+  color: var(--primary-strong);
+  border-color: rgba(36, 95, 229, 0.14);
+  box-shadow: var(--shadow-xs);
+}
+
+.scope-switch-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 /* Shared text */
 
 .eyebrow {
@@ -1913,6 +1963,27 @@ textarea:focus-visible {
     box-shadow: inset 3px 0 0 var(--primary), var(--shadow-xs);
   }
 
+  .scope-switch {
+    background: rgba(22, 34, 51, 0.92);
+    border-color: var(--border);
+  }
+
+  .scope-switch-btn {
+    color: var(--text-soft);
+  }
+
+  .scope-switch-btn:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text);
+  }
+
+  .scope-switch-btn.active,
+  .scope-switch-btn[aria-selected="true"] {
+    background: linear-gradient(180deg, rgba(91, 140, 255, 0.16), rgba(91, 140, 255, 0.08));
+    color: #dce7ff;
+    border-color: rgba(91, 140, 255, 0.2);
+  }
+
   .quick-create-card,
   .overview-stat-card,
   .record-row,
@@ -2026,6 +2097,10 @@ textarea:focus-visible {
 
   .workspace-sidebar.desktop-only,
   .shell-topbar-centre.desktop-only {
+    display: none !important;
+  }
+
+  .scope-switch.desktop-only {
     display: none !important;
   }
 
