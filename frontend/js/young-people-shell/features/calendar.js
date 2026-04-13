@@ -2,24 +2,37 @@ import { els } from "../dom.js";
 import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
+import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 import { mapAppointment } from "../core/adapters.js";
 
 function toText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
 }
 
+function getAppointmentStart(item = {}) {
+  return item.start_datetime || item.appointment_date || item.created_at || null;
+}
+
+function getAppointmentEnd(item = {}) {
+  return item.end_datetime || null;
+}
+
+function getAppointmentId(item = {}) {
+  return item.id ?? item.source_id ?? item.record_id ?? null;
+}
+
 function sortByStart(items = []) {
   return [...items].sort((a, b) => {
-    const aTime = new Date(a?.start_datetime || a?.appointment_date || 0).getTime();
-    const bTime = new Date(b?.start_datetime || b?.appointment_date || 0).getTime();
+    const aTime = new Date(getAppointmentStart(a) || 0).getTime();
+    const bTime = new Date(getAppointmentStart(b) || 0).getTime();
     return aTime - bTime;
   });
 }
 
 function sortNewestFirst(items = []) {
   return [...items].sort((a, b) => {
-    const aTime = new Date(a?.start_datetime || a?.created_at || 0).getTime();
-    const bTime = new Date(b?.start_datetime || b?.created_at || 0).getTime();
+    const aTime = new Date(getAppointmentStart(a) || 0).getTime();
+    const bTime = new Date(getAppointmentStart(b) || 0).getTime();
     return bTime - aTime;
   });
 }
@@ -61,6 +74,16 @@ function formatDateTime(value) {
   });
 }
 
+function formatTime(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function isToday(value) {
   if (!value) return false;
   const date = new Date(value);
@@ -82,23 +105,11 @@ function isFuture(value) {
 }
 
 function buildCalendarRow(item = {}) {
-  const start = item.start_datetime || item.appointment_date || item.created_at || null;
-  const end = item.end_datetime || null;
+  const start = getAppointmentStart(item);
+  const end = getAppointmentEnd(item);
 
-  const startLabel = start
-    ? new Date(start).toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "Time not set";
-
-  const endLabel =
-    end && !Number.isNaN(new Date(end).getTime())
-      ? new Date(end).toLocaleTimeString("en-GB", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      : "";
+  const startLabel = formatTime(start) || "Time not set";
+  const endLabel = formatTime(end);
 
   return {
     ...item,
@@ -107,6 +118,7 @@ function buildCalendarRow(item = {}) {
       endLabel ? `${startLabel}–${endLabel}` : startLabel,
       item.location || "",
       item.professional_name || "",
+      item.professional_role || "",
       item.status || "",
     ]
       .filter(Boolean)
@@ -118,7 +130,7 @@ function groupByDay(items = []) {
   const grouped = new Map();
 
   items.forEach((item) => {
-    const key = toDayKey(item.start_datetime || item.appointment_date || item.created_at);
+    const key = toDayKey(getAppointmentStart(item));
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key).push(item);
   });
@@ -152,10 +164,13 @@ function getRowPill(item = {}) {
   }
 
   if (["booked", "scheduled", "confirmed"].includes(status)) {
-    return { label: status.replaceAll("_", " "), tone: "muted" };
+    return { label: status.replaceAll("_", " "), tone: "success" };
   }
 
-  return { label: status ? status.replaceAll("_", " ") : "appointment", tone: "muted" };
+  return {
+    label: status ? status.replaceAll("_", " ") : "appointment",
+    tone: "muted",
+  };
 }
 
 function renderRecordRows(items = [], emptyMessage = "No appointments found.") {
@@ -169,12 +184,13 @@ function renderRecordRows(items = [], emptyMessage = "No appointments found.") {
         .map((item) => {
           const row = buildCalendarRow(item);
           const pill = getRowPill(row);
+          const start = getAppointmentStart(row);
 
           return `
             <article
               class="record-row"
               data-open-record="true"
-              data-record-id="${toText(row.id ?? row.source_id ?? "")}"
+              data-record-id="${toText(getAppointmentId(row) ?? "")}"
               data-record-type="${toText(row.record_type || "appointment")}"
               data-title="${toText(row.title)}"
               role="button"
@@ -183,7 +199,7 @@ function renderRecordRows(items = [], emptyMessage = "No appointments found.") {
               <div class="record-row-main">
                 <div class="record-row-title">${toText(row.title)}</div>
                 <div class="record-row-summary">${toText(row.summary || "Appointment")}</div>
-                <div class="record-row-meta">${toText(formatDateTime(row.start_datetime || row.appointment_date || row.created_at))}</div>
+                <div class="record-row-meta">${toText(formatDateTime(start))}</div>
               </div>
               <div class="record-row-side">
                 <span class="row-pill ${toText(pill.tone)}">${toText(pill.label)}</span>
@@ -198,19 +214,16 @@ function renderRecordRows(items = [], emptyMessage = "No appointments found.") {
 
 function renderCalendarGroups(groups = []) {
   if (!groups.length) {
-    return renderEmptyState("No appointments found.");
+    return renderEmptyState("No upcoming appointments found.");
   }
 
   return groups
     .map(
       (group) => `
-        <section class="overview-side-card">
-          <div class="overview-section-head">
-            <h3>${toText(group.label)}</h3>
-            <p>Appointments planned for this day.</p>
-          </div>
+        <div class="calendar-day-group">
+          <div class="calendar-day-heading">${toText(group.label)}</div>
           ${renderRecordRows(group.records, "No items")}
-        </section>
+        </div>
       `
     )
     .join("");
@@ -332,35 +345,45 @@ export async function loadCalendar() {
       apiGet(`/young-people/${state.youngPersonId}/young-person-appointments`).catch(() => ({ items: [] })),
     ]);
 
-    const appointments = sortByStart(
-      [
-        ...(appointmentsData.items ||
-          appointmentsData.records ||
-          appointmentsData.appointments ||
-          []),
-        ...(youngPersonAppointmentsData.items ||
-          youngPersonAppointmentsData.records ||
-          youngPersonAppointmentsData.young_person_appointments ||
-          []),
-      ].map(mapAppointment)
+    const mergedAppointments = [
+      ...(appointmentsData.items ||
+        appointmentsData.records ||
+        appointmentsData.appointments ||
+        []),
+      ...(youngPersonAppointmentsData.items ||
+        youngPersonAppointmentsData.records ||
+        youngPersonAppointmentsData.young_person_appointments ||
+        []),
+    ].map(mapAppointment);
+
+    const seen = new Set();
+    const uniqueAppointments = sortByStart(
+      mergedAppointments.filter((item, index) => {
+        const id = getAppointmentId(item);
+        const fallbackKey = `${getAppointmentStart(item)}::${item.title || item.appointment_type || ""}::${item.location || ""}`;
+        const key = id ?? fallbackKey ?? index;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
     );
 
-    const uniqueAppointments = appointments.filter((item, index, arr) => {
-      const id = item.id ?? item.source_id;
-      return index === arr.findIndex((x) => (x.id ?? x.source_id) === id);
-    });
+    const todayItems = uniqueAppointments.filter((item) =>
+      isToday(getAppointmentStart(item))
+    );
 
-    const todayItems = uniqueAppointments.filter((item) => isToday(item.start_datetime));
     const upcomingItems = uniqueAppointments.filter(
       (item) =>
-        isFuture(item.start_datetime) &&
+        isFuture(getAppointmentStart(item)) &&
         !["cancelled", "completed"].includes(String(item.status || "").toLowerCase())
     );
+
     const completedItems = sortNewestFirst(
       uniqueAppointments.filter(
         (item) => String(item.status || "").toLowerCase() === "completed"
       )
     );
+
     const cancelledItems = sortNewestFirst(
       uniqueAppointments.filter(
         (item) => String(item.status || "").toLowerCase() === "cancelled"
@@ -377,11 +400,34 @@ export async function loadCalendar() {
       cancelledItems,
       groupedUpcoming,
     });
+
+    const nextUpcoming = upcomingItems[0] || null;
+    const latestCompleted = completedItems[0] || null;
+
+    updateWorkspaceSummaryStrip({
+      today: `${todayItems.length} today • ${upcomingItems.length} upcoming`,
+      nextEvent: nextUpcoming
+        ? `${nextUpcoming.title || nextUpcoming.appointment_type || "Appointment"} • ${formatDateTime(
+            getAppointmentStart(nextUpcoming)
+          )}`
+        : "No upcoming appointments",
+      lastRecord: latestCompleted
+        ? `Last completed ${formatDateTime(getAppointmentStart(latestCompleted))}`
+        : "No completed appointments",
+      openActions: `${cancelledItems.length} cancelled • ${completedItems.length} completed`,
+    });
   } catch (error) {
     els.viewContent.innerHTML = `
       <div class="empty-state">
         <p>${escapeHtml(error.message || "Failed to load calendar.")}</p>
       </div>
     `;
+
+    updateWorkspaceSummaryStrip({
+      today: "Calendar unavailable",
+      nextEvent: "Unable to load appointments",
+      lastRecord: "No calendar data loaded",
+      openActions: "Check API responses",
+    });
   }
 }
