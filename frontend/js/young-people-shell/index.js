@@ -37,17 +37,47 @@ function showSelector() {
   els.selectorScreen?.classList.remove("hidden");
 }
 
+function normaliseRole(role) {
+  const raw = String(role || "").trim().toLowerCase();
+
+  if (!raw) return "staff";
+  if (raw === "administrator") return "admin";
+  if (raw === "super_admin") return "admin";
+  if (raw === "superadmin") return "admin";
+
+  return raw;
+}
+
+function getRoleFromRuntime() {
+  const datasetRole = els.app?.dataset?.userRole;
+  if (datasetRole) return normaliseRole(datasetRole);
+
+  const stateRole =
+    state.currentUser?.role ||
+    state.currentUser?.user_role ||
+    state.currentUser?.userRole;
+  if (stateRole) return normaliseRole(stateRole);
+
+  const windowRole =
+    window.currentUser?.role ||
+    window.currentUser?.user_role ||
+    window.currentUser?.userRole ||
+    window.user?.role ||
+    window.user?.user_role ||
+    window.user?.userRole;
+  if (windowRole) return normaliseRole(windowRole);
+
+  return "staff";
+}
+
 function hydrateRuntimeContextFromDom() {
   if (!els.app) return;
 
-  const datasetRole = String(els.app.dataset.userRole || "").trim().toLowerCase();
   const datasetScope = String(els.app.dataset.scope || "").trim().toLowerCase();
   const datasetHomeId = els.app.dataset.homeId || "";
   const datasetYoungPersonId = els.app.dataset.youngPersonId || "";
 
-  if (datasetRole) {
-    state.userRole = datasetRole;
-  }
+  state.userRole = getRoleFromRuntime();
 
   if (datasetHomeId) {
     state.homeId = datasetHomeId;
@@ -63,13 +93,7 @@ function hydrateRuntimeContextFromDom() {
 }
 
 function getCurrentRole() {
-  const rawRole = String(state.userRole || "staff").toLowerCase().trim();
-
-  if (rawRole === "administrator") return "admin";
-  if (rawRole === "super_admin") return "admin";
-  if (rawRole === "superadmin") return "admin";
-
-  return rawRole;
+  return normaliseRole(state.userRole || "staff");
 }
 
 function getAllowedScopesForRole() {
@@ -295,11 +319,13 @@ async function bootstrap() {
     hydrateRuntimeContextFromDom();
     ensureValidScopeForRole();
 
-    if (!state.currentScope) {
+    if (!state.currentScope || !canAccessScope(state.currentScope)) {
       state.currentScope = getDefaultScopeForRole();
     }
 
-    ensureInitialSectionForScope();
+    state.currentSection = getDefaultSectionForScope(state.currentScope);
+    state.activeSection = state.currentSection;
+    state.currentView = state.currentSection;
 
     bindShellChrome();
     bindAssistantUi();
@@ -327,6 +353,13 @@ async function bootstrap() {
     await bootstrapSelectorIfNeeded(restoredYoungPerson);
     await initialiseShellNavigation();
     refreshAllChrome();
+
+    console.log("[young-people-shell] boot", {
+      role: state.userRole,
+      scope: state.currentScope,
+      section: state.currentSection,
+      allowedScopes: getAllowedScopesForRole(),
+    });
   } catch (error) {
     console.error("[index] bootstrap failed", error);
     showError(error?.message || "Failed to start workspace.");
