@@ -187,7 +187,7 @@
             <div class="workspace-sidebar-shell">
               <div class="workspace-sidebar-brand">
                 <div class="workspace-sidebar-brand-dot" aria-hidden="true"></div>
-                <span>Young person workspace</span>
+                <span>Guided workspace</span>
               </div>
 
               <div class="workspace-sidebar-profile-card">
@@ -208,7 +208,7 @@
 
                 <div class="workspace-sidebar-meta-row">
                   <span class="meta-chip">Live</span>
-                  <span class="meta-chip meta-chip--soft">Overview</span>
+                  <span class="meta-chip meta-chip--soft">Child-centred</span>
                 </div>
               </div>
 
@@ -222,7 +222,7 @@
 
               <nav
                 id="desktopNav"
-                class="workspace-nav"
+                class="workspace-nav workspace-nav--accordion"
                 aria-label="Workspace sections"
               ></nav>
             </div>
@@ -249,25 +249,9 @@
                 </button>
               </div>
 
-              <section class="workspace-header-band" aria-labelledby="pageTitle">
-                <div class="workspace-header-main">
-                  <div class="workspace-header-copy">
-                    <div class="eyebrow">Residential workspace</div>
-                    <h1 id="pageTitle">Today’s workspace</h1>
-                    <p id="pageSubtitle">
-                      A calm operational view for recording, reflection, continuity and thoughtful next steps.
-                    </p>
-                  </div>
-
-                  <div class="workspace-header-actions">
-                    <button id="heroAssistantBtn" class="secondary-btn" type="button">
-                      Ask assistant
-                    </button>
-                  </div>
-                </div>
-
-                <div class="workspace-header-context">
-                  <div class="workspace-person-card">
+              <section class="workspace-header-band workspace-header-band--calm" aria-labelledby="pageTitle">
+                <div class="workspace-header-main workspace-header-main--stacked">
+                  <div class="workspace-person-card workspace-person-card--hero">
                     <div
                       id="profileSnapshotPhotoWrap"
                       class="profile-snapshot-photo-wrap"
@@ -277,17 +261,19 @@
                     </div>
 
                     <div class="workspace-person-copy">
-                      <h3 id="profileSnapshotName">Young person</h3>
-                      <p id="profileSnapshotMeta">Profile snapshot</p>
+                      <div class="eyebrow">Residential workspace</div>
+                      <h1 id="pageTitle">Today’s workspace</h1>
+                      <p id="pageSubtitle">
+                        A calm operational view for recording, reflection, continuity and thoughtful next steps.
+                      </p>
                     </div>
                   </div>
 
-                  <div class="workspace-header-meta">
-                    <span class="meta-chip">Live</span>
-                    <span class="meta-chip meta-chip--soft">Workspace</span>
-                  </div>
+                  <div class="workspace-header-actions workspace-header-actions--minimal">
+                    <button id="heroAssistantBtn" class="primary-btn" type="button">
+                      Ask assistant
+                    </button>
 
-                  <div class="workspace-person-actions">
                     <button
                       id="profileOpenBtn"
                       class="secondary-btn"
@@ -297,164 +283,155 @@
                       Open profile
                     </button>
 
-                    <button
-                      id="profilePhotoUploadBtn"
-                      class="ghost-btn"
-                      type="button"
-                      data-action-router="edit-profile-identity"
-                    >
-                      Update profile
-                    </button>
-
                     <button id="changePersonBtn" class="ghost-btn" type="button">
-                      Change young person
+                      Change
                     </button>
                   </div>
+                </div>
 
-                  <div class="workspace-summary-strip" aria-label="Current summary">
-                    <div class="workspace-summary-item">
-                      <span class="workspace-summary-label">Today</span>
-                      <strong class="workspace-summary-value">No summary yet</strong>
-                    </div>
+                <div class="workspace-summary-strip workspace-summary-strip--hero" aria-label="Current summary">
+                  <div class="workspace-summary-item summary-item--primary">
+                    <span class="workspace-summary-label">What matters now</span>
+                    <strong class="workspace-summary-value">No summary yet</strong>
+                  </div>
 
-                    <div class="workspace-summary-item">
-                      <span class="workspace-summary-label">Next event</span>
-                      <strong class="workspace-summary-value">No event loaded</strong>
-                    </div>
+                  <div class="workspace-summary-item">
+                    <span class="workspace-summary-label">Next event</span>
+                    <strong class="workspace-summary-value">No event loaded</strong>
+                  </div>
 
-                    <div class="workspace-summary-item">
-                      <span class="workspace-summary-label">Last record</span>
-                      <strong class="workspace-summary-value">No record loaded</strong>
-                    </div>
+                  <div class="workspace-summary-item">
+                    <span class="workspace-summary-label">Latest record</span>
+                    <strong class="workspace-summary-value">No record loaded</strong>
+                  </div>
 
-                    <div class="workspace-summary-item">
-                      <span class="workspace-summary-label">Open actions</span>
-                      <strong class="workspace-summary-value">No actions loaded</strong>
-                    </div>
+                  <div class="workspace-summary-item">
+                    <span class="workspace-summary-label">Open actions</span>
+                    <strong class="workspace-summary-value">No actions loaded</strong>
                   </div>
                 </div>
               </section>
 
-              <section class="quick-create-bar" aria-label="Quick create actions">
-                <div class="quick-create-bar-head">
-                  <div>
-                    <div class="eyebrow">Quick create</div>
-                    <h2>Add a record</h2>
+              <section class="quick-create-bar quick-create-bar--collapsible" aria-label="Quick create actions">
+                <details class="quick-create-details">
+                  <summary class="quick-create-summary">
+                    <div>
+                      <div class="eyebrow">Create</div>
+                      <h2>New record</h2>
+                    </div>
+                    <span class="quick-create-summary-note">Open when you need it</span>
+                  </summary>
+
+                  <div id="heroQuickActions" class="quick-create-grid quick-create-grid--calm">
+                    <button
+                      class="quick-create-card"
+                      type="button"
+                      data-action-router="new-daily-note"
+                    >
+                      <span class="quick-create-icon" aria-hidden="true">✎</span>
+                      <span class="quick-create-copy">
+                        <strong>Add daily note</strong>
+                        <small>Capture presentation, activities and what mattered today.</small>
+                      </span>
+                    </button>
+
+                    <button
+                      class="quick-create-card"
+                      type="button"
+                      data-action-router="new-incident"
+                    >
+                      <span class="quick-create-icon" aria-hidden="true">!</span>
+                      <span class="quick-create-copy">
+                        <strong>Add important event</strong>
+                        <small>Record significant events clearly, safely and without blame.</small>
+                      </span>
+                    </button>
+
+                    <button
+                      class="quick-create-card"
+                      type="button"
+                      data-action-router="new-support-plan"
+                    >
+                      <span class="quick-create-icon" aria-hidden="true">✓</span>
+                      <span class="quick-create-copy">
+                        <strong>Add support plan</strong>
+                        <small>Create practical guidance that helps adults respond consistently.</small>
+                      </span>
+                    </button>
+
+                    <button
+                      class="quick-create-card"
+                      type="button"
+                      data-action-router="new-health-record"
+                    >
+                      <span class="quick-create-icon" aria-hidden="true">♥</span>
+                      <span class="quick-create-copy">
+                        <strong>Add health record</strong>
+                        <small>Appointments, outcomes, advice and follow-up.</small>
+                      </span>
+                    </button>
+
+                    <button
+                      class="quick-create-card"
+                      type="button"
+                      data-action-router="new-education-record"
+                    >
+                      <span class="quick-create-icon" aria-hidden="true">▣</span>
+                      <span class="quick-create-copy">
+                        <strong>Add education record</strong>
+                        <small>Learning, attendance, participation and progress.</small>
+                      </span>
+                    </button>
+
+                    <button
+                      class="quick-create-card"
+                      type="button"
+                      data-action-router="new-family-contact"
+                    >
+                      <span class="quick-create-icon" aria-hidden="true">◎</span>
+                      <span class="quick-create-copy">
+                        <strong>Add family contact</strong>
+                        <small>Contact, themes, presentation and next steps.</small>
+                      </span>
+                    </button>
+
+                    <button
+                      class="quick-create-card"
+                      type="button"
+                      data-action-router="new-task"
+                    >
+                      <span class="quick-create-icon" aria-hidden="true">☑</span>
+                      <span class="quick-create-copy">
+                        <strong>Add task</strong>
+                        <small>Create a clear action with ownership and a due date.</small>
+                      </span>
+                    </button>
+
+                    <button
+                      class="quick-create-card"
+                      type="button"
+                      data-action-router="upload-document"
+                    >
+                      <span class="quick-create-icon" aria-hidden="true">▤</span>
+                      <span class="quick-create-copy">
+                        <strong>Upload document</strong>
+                        <small>Add statutory and supporting documents to the record.</small>
+                      </span>
+                    </button>
+
+                    <button
+                      class="quick-create-card"
+                      type="button"
+                      data-action-router="professional-message"
+                    >
+                      <span class="quick-create-icon" aria-hidden="true">✉</span>
+                      <span class="quick-create-copy">
+                        <strong>Log communication</strong>
+                        <small>Capture contact with professionals, families and partner agencies.</small>
+                      </span>
+                    </button>
                   </div>
-                  <p>
-                    Fast access to the records adults most often need during the day.
-                  </p>
-                </div>
-
-                <div id="heroQuickActions" class="quick-create-grid">
-                  <button
-                    class="quick-create-card"
-                    type="button"
-                    data-action-router="new-daily-note"
-                  >
-                    <span class="quick-create-icon" aria-hidden="true">✎</span>
-                    <span class="quick-create-copy">
-                      <strong>Add daily note</strong>
-                      <small>Capture presentation, activities and what mattered today.</small>
-                    </span>
-                  </button>
-
-                  <button
-                    class="quick-create-card"
-                    type="button"
-                    data-action-router="new-incident"
-                  >
-                    <span class="quick-create-icon" aria-hidden="true">!</span>
-                    <span class="quick-create-copy">
-                      <strong>Add important event</strong>
-                      <small>Record significant events clearly, safely and without blame.</small>
-                    </span>
-                  </button>
-
-                  <button
-                    class="quick-create-card"
-                    type="button"
-                    data-action-router="new-support-plan"
-                  >
-                    <span class="quick-create-icon" aria-hidden="true">✓</span>
-                    <span class="quick-create-copy">
-                      <strong>Add support plan</strong>
-                      <small>Create practical guidance that helps adults respond consistently.</small>
-                    </span>
-                  </button>
-
-                  <button
-                    class="quick-create-card"
-                    type="button"
-                    data-action-router="new-health-record"
-                  >
-                    <span class="quick-create-icon" aria-hidden="true">♥</span>
-                    <span class="quick-create-copy">
-                      <strong>Add health record</strong>
-                      <small>Appointments, outcomes, advice and follow-up.</small>
-                    </span>
-                  </button>
-
-                  <button
-                    class="quick-create-card"
-                    type="button"
-                    data-action-router="new-education-record"
-                  >
-                    <span class="quick-create-icon" aria-hidden="true">▣</span>
-                    <span class="quick-create-copy">
-                      <strong>Add education record</strong>
-                      <small>Learning, attendance, participation and progress.</small>
-                    </span>
-                  </button>
-
-                  <button
-                    class="quick-create-card"
-                    type="button"
-                    data-action-router="new-family-contact"
-                  >
-                    <span class="quick-create-icon" aria-hidden="true">◎</span>
-                    <span class="quick-create-copy">
-                      <strong>Add family contact</strong>
-                      <small>Contact, themes, presentation and next steps.</small>
-                    </span>
-                  </button>
-
-                  <button
-                    class="quick-create-card"
-                    type="button"
-                    data-action-router="new-task"
-                  >
-                    <span class="quick-create-icon" aria-hidden="true">☑</span>
-                    <span class="quick-create-copy">
-                      <strong>Add task</strong>
-                      <small>Create a clear action with ownership and a due date.</small>
-                    </span>
-                  </button>
-
-                  <button
-                    class="quick-create-card"
-                    type="button"
-                    data-action-router="upload-document"
-                  >
-                    <span class="quick-create-icon" aria-hidden="true">▤</span>
-                    <span class="quick-create-copy">
-                      <strong>Upload document</strong>
-                      <small>Add statutory and supporting documents to the record.</small>
-                    </span>
-                  </button>
-
-                  <button
-                    class="quick-create-card"
-                    type="button"
-                    data-action-router="professional-message"
-                  >
-                    <span class="quick-create-icon" aria-hidden="true">✉</span>
-                    <span class="quick-create-copy">
-                      <strong>Log communication</strong>
-                      <small>Capture contact with professionals, families and partner agencies.</small>
-                    </span>
-                  </button>
-                </div>
+                </details>
               </section>
 
               <section id="statusBar" class="status-bar hidden" role="status" aria-live="polite"></section>
@@ -470,10 +447,10 @@
                   <div class="records-toolbar-left">
                     <div>
                       <div class="eyebrow">Records</div>
-                      <h2 id="recordsToolbarTitle">Find recent and older records</h2>
+                      <h2 id="recordsToolbarTitle">Find records and follow-up</h2>
                     </div>
                     <p>
-                      Move quickly between recent work, earlier records and key events.
+                      Search across recent work, key events, documents and practical next steps.
                     </p>
                   </div>
 
@@ -537,7 +514,7 @@
       <div class="mobile-nav-head">
         <div>
           <div class="eyebrow">Navigation</div>
-          <h3>Young person workspace</h3>
+          <h3>Workspace sections</h3>
         </div>
 
         <button
