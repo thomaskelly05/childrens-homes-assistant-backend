@@ -20,6 +20,8 @@
     data-young-person-id=""
     data-home-id=""
     data-workspace="young-people-shell"
+    data-scope="child"
+    data-user-role="staff"
   >
     <header class="shell-topbar" role="banner">
       <div class="shell-topbar-left">
@@ -58,28 +60,35 @@
             data-scope="child"
             role="tab"
             aria-selected="true"
+            aria-pressed="true"
           >
             Young person
           </button>
 
           <button
             id="scopeHomeBtn"
-            class="scope-switch-btn"
+            class="scope-switch-btn hidden"
             type="button"
             data-scope="home"
             role="tab"
             aria-selected="false"
+            aria-pressed="false"
+            aria-hidden="true"
+            tabindex="-1"
           >
             Home
           </button>
 
           <button
             id="scopeQualityBtn"
-            class="scope-switch-btn"
+            class="scope-switch-btn hidden"
             type="button"
             data-scope="quality"
             role="tab"
             aria-selected="false"
+            aria-pressed="false"
+            aria-hidden="true"
+            tabindex="-1"
           >
             Quality
           </button>
@@ -167,50 +176,6 @@
                 <p>Loading young people…</p>
               </div>
             </div>
-
-            <div class="selector-grid hidden" aria-hidden="true">
-              <button class="selector-card selector-card--photo" type="button">
-                <div class="selector-card-media">
-                  <div class="selector-card-photo-fallback" aria-hidden="true">J</div>
-                </div>
-
-                <div class="selector-card-body">
-                  <h3>Jamie</h3>
-                  <p>Preferred: Jamie • Maple House</p>
-
-                  <div class="selector-card-meta">
-                    <span class="selector-pill">Active</span>
-                    <span class="selector-pill">1 urgent</span>
-                    <span class="selector-pill">Education today</span>
-                  </div>
-                </div>
-
-                <div class="selector-card-actions">
-                  <span class="secondary-btn">Open workspace</span>
-                </div>
-              </button>
-
-              <button class="selector-card selector-card--photo" type="button">
-                <div class="selector-card-media">
-                  <div class="selector-card-photo-fallback" aria-hidden="true">A</div>
-                </div>
-
-                <div class="selector-card-body">
-                  <h3>Alex</h3>
-                  <p>Preferred: Alex • Cedar House</p>
-
-                  <div class="selector-card-meta">
-                    <span class="selector-pill">Active</span>
-                    <span class="selector-pill">Review due</span>
-                    <span class="selector-pill">2 actions</span>
-                  </div>
-                </div>
-
-                <div class="selector-card-actions">
-                  <span class="secondary-btn">Open workspace</span>
-                </div>
-              </button>
-            </div>
           </div>
         </div>
       </section>
@@ -230,17 +195,16 @@
 
               <div class="workspace-sidebar-profile-card">
                 <div class="workspace-sidebar-profile-top">
-                  <div class="workspace-sidebar-avatar" id="personAvatar" aria-hidden="true">J</div>
+                  <div class="workspace-sidebar-avatar" id="personAvatar" aria-hidden="true">YP</div>
                   <div class="workspace-sidebar-profile-copy">
-                    <h2 id="personName">Jamie</h2>
-                    <p id="personMeta">Preferred: Jamie • Maple House</p>
+                    <h2 id="personName">Young person</h2>
+                    <p id="personMeta">Workspace</p>
                   </div>
                 </div>
 
                 <div class="workspace-sidebar-meta-row">
-                  <span class="meta-chip">Active</span>
-                  <span class="meta-chip meta-chip--soft">Medium support</span>
-                  <span class="meta-chip meta-chip--warning">Review due</span>
+                  <span class="meta-chip">Live</span>
+                  <span class="meta-chip meta-chip--soft">Overview</span>
                 </div>
               </div>
 
@@ -252,133 +216,17 @@
                 Change young person
               </button>
 
-              <nav id="desktopNav" class="workspace-nav" aria-label="Workspace sections">
-                <div class="nav-section">
-                  <div class="nav-section-title">Today</div>
-                  <div class="nav-section-items">
-                    <button class="nav-btn active" type="button" data-view="workspace">
-                      <span class="nav-btn-icon" aria-hidden="true">◉</span>
-                      <span class="nav-btn-copy">
-                        <span class="nav-btn-label">Today’s workspace</span>
-                        <span class="nav-btn-meta">Overview, priorities and recent changes</span>
-                      </span>
-                    </button>
-
-                    <button class="nav-btn" type="button" data-view="matters-now">
-                      <span class="nav-btn-icon" aria-hidden="true">•</span>
-                      <span class="nav-btn-copy">
-                        <span class="nav-btn-label">What matters today</span>
-                        <span class="nav-btn-meta">Immediate needs, actions and readiness</span>
-                      </span>
-                    </button>
-
-                    <button class="nav-btn" type="button" data-view="handover">
-                      <span class="nav-btn-icon" aria-hidden="true">•</span>
-                      <span class="nav-btn-copy">
-                        <span class="nav-btn-label">Handover</span>
-                        <span class="nav-btn-meta">Clear shift-to-shift continuity</span>
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                <div class="nav-section">
-                  <div class="nav-section-title">Records and chronology</div>
-                  <div class="nav-section-items">
-                    <button class="nav-btn" type="button" data-view="records">
-                      <span class="nav-btn-icon" aria-hidden="true">•</span>
-                      <span class="nav-btn-copy">
-                        <span class="nav-btn-label">All records</span>
-                        <span class="nav-btn-meta">Daily notes, events, appointments and more</span>
-                      </span>
-                    </button>
-
-                    <button class="nav-btn" type="button" data-view="chronology">
-                      <span class="nav-btn-icon" aria-hidden="true">•</span>
-                      <span class="nav-btn-copy">
-                        <span class="nav-btn-label">Chronology</span>
-                        <span class="nav-btn-meta">Patterns, events and linked follow-up</span>
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                <div class="nav-section">
-                  <div class="nav-section-title">Care and support</div>
-                  <div class="nav-section-items">
-                    <button class="nav-btn" type="button" data-view="profile">
-                      <span class="nav-btn-icon" aria-hidden="true">•</span>
-                      <span class="nav-btn-copy">
-                        <span class="nav-btn-label">Profile</span>
-                        <span class="nav-btn-meta">Identity, voice and important context</span>
-                      </span>
-                    </button>
-
-                    <button class="nav-btn" type="button" data-view="support-plans">
-                      <span class="nav-btn-icon" aria-hidden="true">•</span>
-                      <span class="nav-btn-copy">
-                        <span class="nav-btn-label">Support plans</span>
-                        <span class="nav-btn-meta">Practical guidance for adults</span>
-                      </span>
-                    </button>
-
-                    <button class="nav-btn" type="button" data-view="health">
-                      <span class="nav-btn-icon" aria-hidden="true">•</span>
-                      <span class="nav-btn-copy">
-                        <span class="nav-btn-label">Health and wellbeing</span>
-                        <span class="nav-btn-meta">Appointments, health notes and follow-up</span>
-                      </span>
-                    </button>
-
-                    <button class="nav-btn" type="button" data-view="education">
-                      <span class="nav-btn-icon" aria-hidden="true">•</span>
-                      <span class="nav-btn-copy">
-                        <span class="nav-btn-label">Learning and education</span>
-                        <span class="nav-btn-meta">Attendance, engagement and progress</span>
-                      </span>
-                    </button>
-
-                    <button class="nav-btn" type="button" data-view="family">
-                      <span class="nav-btn-icon" aria-hidden="true">•</span>
-                      <span class="nav-btn-copy">
-                        <span class="nav-btn-label">Family and relationships</span>
-                        <span class="nav-btn-meta">Contact, themes and important context</span>
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                <div class="nav-section">
-                  <div class="nav-section-title">Review and leadership</div>
-                  <div class="nav-section-items">
-                    <button class="nav-btn" type="button" data-view="actions">
-                      <span class="nav-btn-icon" aria-hidden="true">•</span>
-                      <span class="nav-btn-copy">
-                        <span class="nav-btn-label">Actions and follow-up</span>
-                        <span class="nav-btn-meta">What still needs to happen next</span>
-                      </span>
-                    </button>
-
-                    <button class="nav-btn" type="button" data-view="review">
-                      <span class="nav-btn-icon" aria-hidden="true">•</span>
-                      <span class="nav-btn-copy">
-                        <span class="nav-btn-label">Review and oversight</span>
-                        <span class="nav-btn-meta">Quality, patterns and professional review</span>
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              </nav>
+              <nav id="desktopNav" class="workspace-nav" aria-label="Workspace sections"></nav>
             </div>
           </aside>
 
           <section class="workspace-stage">
             <div class="workspace-stage-top">
               <div class="workspace-stage-mobile-person mobile-only">
-                <div class="workspace-stage-mobile-avatar" id="mobilePersonAvatar" aria-hidden="true">J</div>
+                <div class="workspace-stage-mobile-avatar" id="mobilePersonAvatar" aria-hidden="true">YP</div>
                 <div class="workspace-stage-mobile-copy">
-                  <h2 id="mobilePersonName">Jamie</h2>
-                  <p id="mobilePersonMeta">Preferred: Jamie • Maple House</p>
+                  <h2 id="mobilePersonName">Young person</h2>
+                  <p id="mobilePersonMeta">Workspace</p>
                 </div>
                 <button id="mobileHomeBtn" class="ghost-btn" type="button">
                   Home
@@ -407,22 +255,20 @@
                     <div
                       id="profileSnapshotPhotoWrap"
                       class="profile-snapshot-photo-wrap"
-                      aria-label="Young person photo"
+                      aria-label="Young person initials"
                     >
-                      <div class="profile-photo-fallback" aria-hidden="true">J</div>
+                      <div class="profile-photo-fallback" aria-hidden="true">YP</div>
                     </div>
 
                     <div class="workspace-person-copy">
-                      <h3 id="profileSnapshotName">Jamie</h3>
-                      <p id="profileSnapshotMeta">Preferred: Jamie • Maple House</p>
+                      <h3 id="profileSnapshotName">Young person</h3>
+                      <p id="profileSnapshotMeta">Profile snapshot</p>
                     </div>
                   </div>
 
                   <div class="workspace-header-meta">
-                    <span class="meta-chip">Active</span>
-                    <span class="meta-chip meta-chip--danger">1 urgent</span>
-                    <span class="meta-chip meta-chip--soft">1 upcoming</span>
-                    <span class="meta-chip meta-chip--warning">Review due</span>
+                    <span class="meta-chip">Live</span>
+                    <span class="meta-chip meta-chip--soft">Workspace</span>
                   </div>
 
                   <div class="workspace-person-actions">
@@ -452,22 +298,22 @@
                   <div class="workspace-summary-strip" aria-label="Current summary">
                     <div class="workspace-summary-item">
                       <span class="workspace-summary-label">Today</span>
-                      <strong class="workspace-summary-value">1 urgent item</strong>
+                      <strong class="workspace-summary-value">No summary yet</strong>
                     </div>
 
                     <div class="workspace-summary-item">
                       <span class="workspace-summary-label">Next event</span>
-                      <strong class="workspace-summary-value">CAMHS • 10:30 tomorrow</strong>
+                      <strong class="workspace-summary-value">No event loaded</strong>
                     </div>
 
                     <div class="workspace-summary-item">
                       <span class="workspace-summary-label">Last record</span>
-                      <strong class="workspace-summary-value">18:14 today</strong>
+                      <strong class="workspace-summary-value">No record loaded</strong>
                     </div>
 
                     <div class="workspace-summary-item">
                       <span class="workspace-summary-label">Open actions</span>
-                      <strong class="workspace-summary-value">2 awaiting follow-up</strong>
+                      <strong class="workspace-summary-value">No actions loaded</strong>
                     </div>
                   </div>
                 </div>
@@ -578,162 +424,10 @@
 
                 <div id="viewContent" class="workspace-view-content" aria-live="polite">
                   <section class="overview-panel">
-                    <div class="overview-panel-head">
+                    <div class="loading-state">
                       <div>
-                        <div class="eyebrow">Overview</div>
-                        <h2>Workspace overview</h2>
-                        <p>A live view across care, records, appointments and follow-up.</p>
-                      </div>
-                    </div>
-
-                    <div class="overview-grid">
-                      <section class="overview-main">
-                        <div class="overview-stats-grid">
-                          <article class="overview-stat-card overview-stat-card--danger">
-                            <span class="overview-stat-label">Urgent</span>
-                            <strong class="overview-stat-value">1</strong>
-                            <span class="overview-stat-note">Items needing prompt attention</span>
-                          </article>
-
-                          <article class="overview-stat-card">
-                            <span class="overview-stat-label">Recent</span>
-                            <strong class="overview-stat-value">6</strong>
-                            <span class="overview-stat-note">Recently added records</span>
-                          </article>
-
-                          <article class="overview-stat-card overview-stat-card--success">
-                            <span class="overview-stat-label">Today</span>
-                            <strong class="overview-stat-value">0</strong>
-                            <span class="overview-stat-note">Records or updates today</span>
-                          </article>
-
-                          <article class="overview-stat-card overview-stat-card--warning">
-                            <span class="overview-stat-label">Upcoming</span>
-                            <strong class="overview-stat-value">1</strong>
-                            <span class="overview-stat-note">Planned appointments or actions</span>
-                          </article>
-                        </div>
-
-                        <div class="overview-section-card">
-                          <div class="overview-section-head">
-                            <h3>Recent activity</h3>
-                            <p>What has changed most recently.</p>
-                          </div>
-
-                          <div class="record-list">
-                            <article class="record-row record-row--incident">
-                              <div class="record-row-main">
-                                <div class="record-row-title">Important event added</div>
-                                <div class="record-row-summary">
-                                  Jamie became distressed when the plan for the evening changed unexpectedly.
-                                </div>
-                                <div class="record-row-meta">
-                                  <span>Today</span>
-                                  <span>18:14</span>
-                                  <span>Important event</span>
-                                </div>
-                              </div>
-                              <div class="record-row-side">
-                                <span class="row-pill warning">Needs review</span>
-                              </div>
-                            </article>
-
-                            <article class="record-row record-row--daily">
-                              <div class="record-row-main">
-                                <div class="record-row-title">Daily note updated</div>
-                                <div class="record-row-summary">
-                                  Clearer engagement in the afternoon when routines were predictable and adults stayed consistent.
-                                </div>
-                                <div class="record-row-meta">
-                                  <span>Today</span>
-                                  <span>15:40</span>
-                                  <span>Daily note</span>
-                                </div>
-                              </div>
-                              <div class="record-row-side">
-                                <span class="row-pill muted">Recorded</span>
-                              </div>
-                            </article>
-
-                            <article class="record-row record-row--health">
-                              <div class="record-row-main">
-                                <div class="record-row-title">Health appointment booked</div>
-                                <div class="record-row-summary">
-                                  CAMHS review confirmed for tomorrow morning with transport arrangements pending.
-                                </div>
-                                <div class="record-row-meta">
-                                  <span>Yesterday</span>
-                                  <span>11:05</span>
-                                  <span>Health</span>
-                                </div>
-                              </div>
-                              <div class="record-row-side">
-                                <span class="row-pill success">Booked</span>
-                              </div>
-                            </article>
-                          </div>
-                        </div>
-                      </section>
-
-                      <aside class="overview-side">
-                        <section class="overview-side-card">
-                          <div class="overview-section-head">
-                            <h3>What needs attention</h3>
-                            <p>Items to notice and act on next.</p>
-                          </div>
-
-                          <div class="priority-list">
-                            <article class="priority-item">
-                              <strong>Review tonight’s event</strong>
-                              <p>Check if the support plan needs a practical update for transitions and late changes.</p>
-                            </article>
-
-                            <article class="priority-item">
-                              <strong>Prepare for tomorrow’s appointment</strong>
-                              <p>Confirm timings, transport and who will support Jamie before and after.</p>
-                            </article>
-                          </div>
-                        </section>
-
-                        <section class="overview-side-card">
-                          <div class="overview-section-head">
-                            <h3>What helped recently</h3>
-                            <p>Useful patterns to carry forward.</p>
-                          </div>
-
-                          <div class="support-pattern-list">
-                            <div class="support-pattern-item">Clear routines reduced uncertainty.</div>
-                            <div class="support-pattern-item">Calm adult tone supported re-regulation.</div>
-                            <div class="support-pattern-item">Advance notice helped with transitions.</div>
-                          </div>
-                        </section>
-
-                        <section class="overview-side-card">
-                          <div class="overview-section-head">
-                            <h3>Quick follow-up</h3>
-                            <p>Helpful next actions for this workspace.</p>
-                          </div>
-
-                          <div class="priority-list">
-                            <article class="priority-item">
-                              <strong>Open profile and review communication needs</strong>
-                              <p>Check whether the current support wording still reflects what helps most in moments of change.</p>
-                            </article>
-                          </div>
-                        </section>
-                      </aside>
-                    </div>
-                  </section>
-
-                  <section class="overview-panel hidden" aria-hidden="true">
-                    <div class="empty-state">
-                      <div class="empty-state-inner">
-                        <div class="empty-state-icon" aria-hidden="true">○</div>
-                        <h3>No recent family records</h3>
-                        <p>Add a family contact record to capture presentation, themes and follow-up.</p>
-                        <div class="empty-state-actions">
-                          <button class="primary-btn" type="button">Add family contact</button>
-                        </div>
+                        <div class="spinner" aria-hidden="true"></div>
+                        <p>Loading workspace…</p>
                       </div>
                     </div>
                   </section>
@@ -768,25 +462,7 @@
         </button>
       </div>
 
-      <div id="mobileNavContent" class="mobile-nav-content">
-        <div class="nav-section">
-          <div class="nav-section-title">Today</div>
-          <div class="nav-section-items">
-            <button class="nav-btn active" type="button" data-view="workspace">
-              <span class="nav-btn-copy">
-                <span class="nav-btn-label">Today’s workspace</span>
-                <span class="nav-btn-meta">Overview, priorities and recent changes</span>
-              </span>
-            </button>
-            <button class="nav-btn" type="button" data-view="matters-now">
-              <span class="nav-btn-copy">
-                <span class="nav-btn-label">What matters today</span>
-                <span class="nav-btn-meta">Immediate needs, actions and readiness</span>
-              </span>
-            </button>
-          </div>
-        </div>
-      </div>
+      <div id="mobileNavContent" class="mobile-nav-content"></div>
     </aside>
 
     <nav
@@ -868,9 +544,7 @@
         <div class="composer-layout">
           <section class="composer-main">
             <form id="recordComposerForm" class="composer-form">
-              <div id="composerForm" class="composer-form-compat hidden" aria-hidden="true"></div>
               <div id="recordComposerFields" class="composer-fields"></div>
-              <div id="composerFields" class="composer-fields hidden" aria-hidden="true"></div>
             </form>
           </section>
 
@@ -989,7 +663,7 @@
                 id="assistantInput"
                 class="text-input"
                 type="text"
-                placeholder="Ask about this young person..."
+                placeholder="Ask about this workspace..."
                 autocomplete="off"
               />
               <button id="assistantSendBtn" class="primary-btn" type="submit">
