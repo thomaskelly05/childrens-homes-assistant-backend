@@ -23,6 +23,7 @@ import {
   updateYoungPersonChrome,
   closeMobileNav,
 } from "./shell-ui.js";
+import { resetWorkspaceSummaryStrip } from "./workspace-summary.js";
 
 import { loadOverview } from "../features/overview.js";
 import { loadProfile } from "../features/profile.js";
@@ -280,6 +281,16 @@ function renderNavigation() {
   }
 }
 
+function showWorkspaceScreen() {
+  els.selectorScreen?.classList.add("hidden");
+  els.workspaceScreen?.classList.remove("hidden");
+}
+
+function showSelectorScreen() {
+  els.workspaceScreen?.classList.add("hidden");
+  els.selectorScreen?.classList.remove("hidden");
+}
+
 export function showError(message) {
   const text = escapeHtml(message || "Something went wrong.");
 
@@ -334,6 +345,8 @@ export async function loadSection(section) {
 
   if (!state.youngPersonId && getCurrentScope() === "child") {
     showError("Select a young person first.");
+    showSelectorScreen();
+    resetWorkspaceSummaryStrip();
     return;
   }
 
@@ -341,6 +354,7 @@ export async function loadSection(section) {
 
   if (!loader) {
     showError(`Unknown section: ${safeSection}`);
+    resetWorkspaceSummaryStrip();
     return;
   }
 
@@ -348,10 +362,12 @@ export async function loadSection(section) {
   state.activeSection = safeSection;
   state.currentView = safeSection;
 
+  showWorkspaceScreen();
   markActiveNav(safeSection);
   updateSectionChrome(safeSection);
   updateYoungPersonChrome(state.selectedYoungPerson || {});
   clearStatus();
+  resetWorkspaceSummaryStrip();
 
   try {
     await loader();
@@ -359,6 +375,7 @@ export async function loadSection(section) {
   } catch (error) {
     console.error(`[nav] failed loading section "${safeSection}"`, error);
     showError(error?.message || "Failed to load this section.");
+    resetWorkspaceSummaryStrip();
   }
 }
 
@@ -395,12 +412,12 @@ function bindSelectorControls() {
     state.activeRecordType = null;
     state.activeRecordItem = null;
 
-    els.workspaceScreen?.classList.add("hidden");
-    els.selectorScreen?.classList.remove("hidden");
+    showSelectorScreen();
 
     goBackToSelector?.();
     updateYoungPersonChrome({});
     clearStatus();
+    resetWorkspaceSummaryStrip();
 
     try {
       await loadYoungPersonSelector();
@@ -444,6 +461,17 @@ function bindComposerControls() {
   });
 
   els.composerSaveBtn?.addEventListener("click", async () => {
+    try {
+      await saveComposer("draft");
+      showMessage("Draft saved.");
+      await reloadCurrentSection();
+    } catch (error) {
+      console.error("[nav] save draft failed", error);
+      showError(error?.message || "Could not save draft.");
+    }
+  });
+
+  els.composerSaveDraftBtn?.addEventListener("click", async () => {
     try {
       await saveComposer("draft");
       showMessage("Draft saved.");
@@ -542,8 +570,7 @@ function bindYoungPersonOpen() {
     try {
       await openYoungPerson(id);
 
-      els.selectorScreen?.classList.add("hidden");
-      els.workspaceScreen?.classList.remove("hidden");
+      showWorkspaceScreen();
 
       state.currentScope = "child";
       state.currentSection = getDefaultSectionForScope("child");
@@ -553,6 +580,7 @@ function bindYoungPersonOpen() {
       updateYoungPersonChrome(state.selectedYoungPerson || {});
       updateSectionChrome(getCurrentSection());
       clearStatus();
+      resetWorkspaceSummaryStrip();
 
       renderNavigation();
       markActiveNav(getCurrentSection());
@@ -641,11 +669,11 @@ export async function initialiseShellNavigation() {
   updateSectionChrome(getCurrentSection());
   updateYoungPersonChrome(state.selectedYoungPerson || {});
 
-  if (!state.youngPersonId && getCurrentScope() === "child") {
+  if (getCurrentScope() === "child" && !state.youngPersonId) {
     try {
       await loadYoungPersonSelector();
-      els.workspaceScreen?.classList.add("hidden");
-      els.selectorScreen?.classList.remove("hidden");
+      showSelectorScreen();
+      resetWorkspaceSummaryStrip();
     } catch (error) {
       console.error("[nav] selector load failed", error);
       showError(error?.message || "Unable to load young people.");
@@ -654,11 +682,11 @@ export async function initialiseShellNavigation() {
   }
 
   try {
-    els.selectorScreen?.classList.add("hidden");
-    els.workspaceScreen?.classList.remove("hidden");
+    showWorkspaceScreen();
     await loadSection(getCurrentSection());
   } catch (error) {
     console.error("[nav] initial section load failed", error);
     showError(error?.message || "Failed to load this section.");
+    resetWorkspaceSummaryStrip();
   }
 }
