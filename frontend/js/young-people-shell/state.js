@@ -176,11 +176,11 @@ export function setCurrentSection(section) {
   state.currentView = safeSection;
 }
 
-export function setCurrentScope(scope) {
+export function setCurrentScope(scope, { resetSection = true } = {}) {
   const safeScope = scope || DEFAULT_SCOPE;
   state.currentScope = safeScope;
 
-  if (!state.currentSection) {
+  if (resetSection) {
     setCurrentSection(getDefaultSectionForScope(safeScope));
   }
 }
@@ -194,7 +194,6 @@ export function setSelectedYoungPerson(person = null) {
   state.youngPersonId =
     person?.id ||
     person?.young_person_id ||
-    state.youngPersonId ||
     null;
 }
 
