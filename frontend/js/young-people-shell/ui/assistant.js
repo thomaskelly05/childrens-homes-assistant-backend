@@ -2,7 +2,6 @@ import { state } from "../state.js";
 import { els } from "../dom.js";
 import { apiStreamAssistant } from "../core/api.js";
 import {
-  openAssistant as openAssistantUi,
   refreshAssistantUi,
   appendAssistantSystemMessage,
   appendAssistantUserMessage,
@@ -108,7 +107,8 @@ export function openAssistant() {
   ensureAssistantState();
   updateAssistantContext();
   syncAssistantMetaToUi();
-  openAssistantUi();
+  state.assistantOpen = true;
+  refreshAssistantUi();
 }
 
 export function closeAssistant() {
