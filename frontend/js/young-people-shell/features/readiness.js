@@ -6,7 +6,60 @@ import {
   mapComplianceItem,
   mapTask,
   mapStatutoryDocument,
+  mapManagerAction,
 } from "../core/adapters.js";
+import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
+
+function getCurrentScope() {
+  return state.currentScope || "child";
+}
+
+function getHomeId() {
+  return (
+    state.homeId ||
+    state.currentUser?.home_id ||
+    state.currentUser?.homeId ||
+    state.selectedYoungPerson?.home_id ||
+    null
+  );
+}
+
+function getScopeEntityId() {
+  if (getCurrentScope() === "child") {
+    return state.youngPersonId || null;
+  }
+
+  return getHomeId();
+}
+
+function getScopeTitle() {
+  const scope = getCurrentScope();
+
+  if (scope === "home") {
+    return (
+      state.currentUser?.home_name ||
+      state.currentUser?.homeName ||
+      (getHomeId() ? `Home ${getHomeId()}` : "Home")
+    );
+  }
+
+  if (scope === "quality") {
+    return (
+      state.currentUser?.home_name ||
+      state.currentUser?.homeName ||
+      (getHomeId() ? `Home ${getHomeId()}` : "Quality and RI")
+    );
+  }
+
+  const person = state.selectedYoungPerson || state.youngPerson || {};
+  return (
+    person.full_name ||
+    person.name ||
+    [person.first_name, person.last_name].filter(Boolean).join(" ").trim() ||
+    person.preferred_name ||
+    "Young person"
+  );
+}
 
 function toText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
@@ -93,20 +146,46 @@ function buildDocumentRows(items = []) {
   }));
 }
 
-function buildReadinessOverview({ compliance = [], tasks = [], documents = [] }) {
+function buildManagerActionRows(items = []) {
+  return items.map((item) => ({
+    id: item.id,
+    record_type: "manager_action",
+    title: item.title || item.action_type || "Manager action",
+    summary: [
+      item.related_table || "",
+      item.note || item.summary || "",
+    ]
+      .filter(Boolean)
+      .join(" • "),
+    action_at: item.action_at || item.created_at || null,
+    created_at: item.created_at || null,
+    status: "recorded",
+  }));
+}
+
+function buildReadinessOverview({
+  compliance = [],
+  tasks = [],
+  documents = [],
+  managerActions = [],
+}) {
   const overdue = compliance.filter((item) =>
-    ["overdue", "escalated"].includes(String(item.status || "").toLowerCase())
+    ["overdue", "escalated", "missing", "review_due"].includes(
+      String(item.status || "").toLowerCase()
+    )
   ).length;
 
   const dueSoon = compliance.filter((item) =>
-    ["due_soon", "due soon"].includes(String(item.status || "").toLowerCase())
+    ["due_soon", "due soon", "expiring"].includes(
+      String(item.status || "").toLowerCase()
+    )
   ).length;
 
   const openTasks = tasks.filter((item) => !item.completed).length;
 
   const reviewDueDocs = documents.filter((item) => {
     const status = String(item.status || "").toLowerCase();
-    return ["review_due", "expiring", "expired"].includes(status);
+    return ["review_due", "expiring", "expired", "overdue", "missing"].includes(status);
   }).length;
 
   return {
@@ -114,11 +193,19 @@ function buildReadinessOverview({ compliance = [], tasks = [], documents = [] })
     dueSoon,
     openTasks,
     reviewDueDocs,
+    managerActions: managerActions.length,
   };
 }
 
 function getRowDate(item = {}) {
-  return item.due_date || item.review_date || item.expiry_date || item.created_at || "";
+  return (
+    item.due_date ||
+    item.review_date ||
+    item.expiry_date ||
+    item.action_at ||
+    item.created_at ||
+    ""
+  );
 }
 
 function getRowPill(item = {}) {
@@ -126,7 +213,7 @@ function getRowPill(item = {}) {
   const severity = String(item.severity || "").toLowerCase();
 
   if (
-    ["overdue", "escalated", "expired"].includes(status) ||
+    ["overdue", "escalated", "expired", "missing", "review_due"].includes(status) ||
     ["high", "critical"].includes(severity)
   ) {
     return { label: "Needs review", tone: "warning" };
@@ -136,7 +223,7 @@ function getRowPill(item = {}) {
     return { label: status.replaceAll("_", " "), tone: "warning" };
   }
 
-  if (["completed", "active", "open"].includes(status)) {
+  if (["completed", "active", "open", "recorded"].includes(status)) {
     return { label: status.replaceAll("_", " "), tone: "muted" };
   }
 
@@ -167,7 +254,11 @@ function renderRecordRows(items = [], emptyMessage = "No records found.") {
               <div class="record-row-main">
                 <div class="record-row-title">${toText(item.title)}</div>
                 ${item.summary ? `<div class="record-row-summary">${toText(item.summary)}</div>` : ""}
-                ${getRowDate(item) ? `<div class="record-row-meta">${toText(formatDate(getRowDate(item)))}</div>` : ""}
+                ${
+                  getRowDate(item)
+                    ? `<div class="record-row-meta">${toText(formatDate(getRowDate(item)))}</div>`
+                    : ""
+                }
               </div>
               <div class="record-row-side">
                 <span class="row-pill ${toText(pill.tone)}">${toText(pill.label)}</span>
@@ -187,20 +278,37 @@ function renderReadinessHtml({
   tasks = [],
   openTasks = [],
   documents = [],
+  managerActions = [],
 }) {
+  const scope = getCurrentScope();
   const overview = buildReadinessOverview({
     compliance: complianceItems,
     tasks,
     documents,
+    managerActions,
   });
+
+  const title =
+    scope === "child"
+      ? "Actions and readiness"
+      : scope === "home"
+      ? "Home actions and readiness"
+      : "Quality and readiness";
+
+  const subtitle =
+    scope === "child"
+      ? "A live view of compliance, follow-up actions and document readiness."
+      : scope === "home"
+      ? "A live view of service-level actions, compliance pressure and statutory readiness."
+      : "A live quality and RI view of compliance pressure, oversight actions and readiness gaps.";
 
   return `
     <section class="overview-panel">
       <div class="overview-panel-head">
         <div>
           <div class="eyebrow">Readiness</div>
-          <h2>Actions and readiness</h2>
-          <p>A live view of compliance, follow-up actions and document readiness.</p>
+          <h2>${toText(title)} • ${toText(getScopeTitle())}</h2>
+          <p>${toText(subtitle)}</p>
         </div>
       </div>
 
@@ -210,7 +318,7 @@ function renderReadinessHtml({
             <article class="overview-stat-card">
               <span class="overview-stat-label">Compliance items</span>
               <strong class="overview-stat-value">${toText(complianceItems.length)}</strong>
-              <span class="overview-stat-note">All recorded compliance items</span>
+              <span class="overview-stat-note">All readiness-linked compliance items</span>
             </article>
 
             <article class="overview-stat-card">
@@ -278,6 +386,16 @@ function renderReadinessHtml({
                   <span class="row-pill ${overview.reviewDueDocs > 0 ? "warning" : "muted"}">${toText(overview.reviewDueDocs)}</span>
                 </div>
               </article>
+
+              <article class="record-row">
+                <div class="record-row-main">
+                  <div class="record-row-title">Manager actions</div>
+                  <div class="record-row-summary">Oversight actions linked to readiness.</div>
+                </div>
+                <div class="record-row-side">
+                  <span class="row-pill ${overview.managerActions > 0 ? "warning" : "muted"}">${toText(overview.managerActions)}</span>
+                </div>
+              </article>
             </div>
           </section>
 
@@ -287,7 +405,10 @@ function renderReadinessHtml({
               <p>Items that need immediate attention.</p>
             </div>
 
-            ${renderRecordRows(buildComplianceRows(overdueItems), "No overdue or escalated items found.")}
+            ${renderRecordRows(
+              buildComplianceRows(overdueItems),
+              "No overdue or escalated items found."
+            )}
           </section>
 
           <section class="overview-section-card">
@@ -296,7 +417,10 @@ function renderReadinessHtml({
               <p>Upcoming compliance items that need action soon.</p>
             </div>
 
-            ${renderRecordRows(buildComplianceRows(dueSoonItems), "No due soon items found.")}
+            ${renderRecordRows(
+              buildComplianceRows(dueSoonItems),
+              "No due soon items found."
+            )}
           </section>
         </section>
 
@@ -304,7 +428,7 @@ function renderReadinessHtml({
           <section class="overview-side-card">
             <div class="overview-section-head">
               <h3>Open follow-up tasks</h3>
-              <p>Tasks linked to care, compliance or review actions.</p>
+              <p>Tasks linked to care, compliance, service oversight or review actions.</p>
             </div>
 
             ${renderRecordRows(buildTaskRows(openTasks), "No open tasks found.")}
@@ -321,11 +445,26 @@ function renderReadinessHtml({
 
           <section class="overview-side-card">
             <div class="overview-section-head">
+              <h3>Manager / oversight actions</h3>
+              <p>Actions raised through review, compliance, leadership or quality oversight.</p>
+            </div>
+
+            ${renderRecordRows(
+              buildManagerActionRows(managerActions),
+              "No manager actions found."
+            )}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
               <h3>All compliance items</h3>
               <p>Full compliance list in due-date order.</p>
             </div>
 
-            ${renderRecordRows(buildComplianceRows(complianceItems), "No compliance items found.")}
+            ${renderRecordRows(
+              buildComplianceRows(complianceItems),
+              "No compliance items found."
+            )}
           </section>
         </aside>
       </div>
@@ -333,8 +472,71 @@ function renderReadinessHtml({
   `;
 }
 
+function getReadinessEndpoints() {
+  const scope = getCurrentScope();
+  const id = getScopeEntityId();
+
+  if (!id) {
+    return null;
+  }
+
+  if (scope === "home") {
+    return {
+      compliance: `/homes/${id}/compliance`,
+      tasks: `/homes/${id}/tasks`,
+      documents: `/homes/${id}/documents`,
+      managerActions: `/homes/${id}/manager-actions`,
+    };
+  }
+
+  if (scope === "quality") {
+    return {
+      compliance: `/homes/${id}/compliance`,
+      tasks: `/homes/${id}/tasks`,
+      documents: `/homes/${id}/documents`,
+      managerActions: `/homes/${id}/manager-actions`,
+    };
+  }
+
+  return {
+    compliance: `/young-people/${id}/compliance`,
+    tasks: `/young-people/${id}/tasks`,
+    documents: `/young-people/${id}/documents`,
+    managerActions: `/young-people/${id}/manager-actions`,
+  };
+}
+
+function renderNoContext() {
+  if (!els.viewContent) return;
+
+  const message =
+    getCurrentScope() === "child"
+      ? "Select a young person before opening readiness."
+      : "A home context is needed before readiness can load.";
+
+  els.viewContent.innerHTML = `
+    <div class="empty-state">
+      <p>${toText(message)}</p>
+    </div>
+  `;
+
+  updateWorkspaceSummaryStrip({
+    today: "No readiness context",
+    nextEvent: "No deadline loaded",
+    lastRecord: "No readiness data",
+    openActions: "No actions loaded",
+  });
+}
+
 export async function loadReadiness() {
   if (!els.viewContent) return;
+
+  const endpoints = getReadinessEndpoints();
+
+  if (!endpoints) {
+    renderNoContext();
+    return;
+  }
 
   els.viewContent.innerHTML = `
     <div class="loading-state">
@@ -346,10 +548,11 @@ export async function loadReadiness() {
   `;
 
   try {
-    const [complianceData, tasksData, documentsData] = await Promise.all([
-      apiGet(`/young-people/${state.youngPersonId}/compliance`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/tasks`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/documents`).catch(() => ({ items: [] })),
+    const [complianceData, tasksData, documentsData, managerActionsData] = await Promise.all([
+      apiGet(endpoints.compliance).catch(() => ({ items: [] })),
+      apiGet(endpoints.tasks).catch(() => ({ items: [] })),
+      apiGet(endpoints.documents).catch(() => ({ items: [] })),
+      apiGet(endpoints.managerActions).catch(() => ({ items: [] })),
     ]);
 
     const complianceItems = sortSoonestFirst(
@@ -363,12 +566,7 @@ export async function loadReadiness() {
     );
 
     const tasks = sortSoonestFirst(
-      (
-        tasksData.items ||
-        tasksData.records ||
-        tasksData.tasks ||
-        []
-      ).map(mapTask),
+      (tasksData.items || tasksData.records || tasksData.tasks || []).map(mapTask),
       ["due_date", "created_at"]
     );
 
@@ -383,12 +581,26 @@ export async function loadReadiness() {
       ["review_date", "expiry_date", "created_at"]
     );
 
+    const managerActions = sortNewestFirst(
+      (
+        managerActionsData.items ||
+        managerActionsData.records ||
+        managerActionsData.manager_actions ||
+        []
+      ).map(mapManagerAction),
+      ["action_at", "created_at"]
+    );
+
     const overdueItems = complianceItems.filter((item) =>
-      ["overdue", "escalated"].includes(String(item.status || "").toLowerCase())
+      ["overdue", "escalated", "missing", "review_due"].includes(
+        String(item.status || "").toLowerCase()
+      )
     );
 
     const dueSoonItems = complianceItems.filter((item) =>
-      ["due_soon", "due soon"].includes(String(item.status || "").toLowerCase())
+      ["due_soon", "due soon", "expiring"].includes(
+        String(item.status || "").toLowerCase()
+      )
     );
 
     const openTasks = tasks.filter((item) => !item.completed);
@@ -400,6 +612,30 @@ export async function loadReadiness() {
       tasks,
       openTasks,
       documents,
+      managerActions,
+    });
+
+    const nextDeadline =
+      overdueItems[0] ||
+      dueSoonItems[0] ||
+      openTasks[0] ||
+      documents[0] ||
+      null;
+
+    updateWorkspaceSummaryStrip({
+      today: `${overdueItems.length} overdue • ${openTasks.length} open actions`,
+      nextEvent: nextDeadline
+        ? `Next due ${formatDate(
+            nextDeadline.due_date ||
+              nextDeadline.review_date ||
+              nextDeadline.expiry_date ||
+              nextDeadline.created_at
+          )}`
+        : "No immediate readiness deadline",
+      lastRecord: managerActions[0]
+        ? `${managerActions[0].title || managerActions[0].action_type || "Manager action"}`
+        : "No recent readiness action",
+      openActions: `${openTasks.length} open • ${dueSoonItems.length} due soon`,
     });
   } catch (error) {
     els.viewContent.innerHTML = `
@@ -407,5 +643,12 @@ export async function loadReadiness() {
         <p>${escapeHtml(error.message || "Failed to load readiness.")}</p>
       </div>
     `;
+
+    updateWorkspaceSummaryStrip({
+      today: "Readiness unavailable",
+      nextEvent: "Unable to load",
+      lastRecord: "No readiness data",
+      openActions: "Check API routes",
+    });
   }
 }
