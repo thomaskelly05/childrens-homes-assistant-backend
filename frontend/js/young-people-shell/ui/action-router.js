@@ -1,8 +1,23 @@
 import { state } from "../state.js";
 import { openComposerFor } from "./composer.js";
+import {
+  QUICK_ACTIONS as CONFIG_QUICK_ACTIONS,
+  SECTION_DEFAULT_ACTION,
+  SCOPE_SECTIONS,
+} from "../core/config.js";
 
-function ensureYoungPersonSelected() {
-  return Boolean(state.youngPersonId);
+function getCurrentScope() {
+  return state.currentScope || "child";
+}
+
+function ensureScopeContext() {
+  const scope = getCurrentScope();
+
+  if (scope === "child") {
+    return Boolean(state.youngPersonId);
+  }
+
+  return true;
 }
 
 function resolveRecordType(value = "") {
@@ -11,24 +26,53 @@ function resolveRecordType(value = "") {
   const aliases = {
     risk_assessment: "risk",
     risk_assessments: "risk",
+
     family_contact_record: "family_contact",
     family_contact_records: "family_contact",
+
     keywork_session: "keywork",
     keywork_sessions: "keywork",
+
     achievement: "achievement_record",
+    achievements: "achievement_record",
     achievement_records: "achievement_record",
+
     safeguarding: "safeguarding_record",
     safeguarding_records: "safeguarding_record",
+
     missing: "missing_episode",
     missing_episodes: "missing_episode",
+
     health: "health_record",
     health_records: "health_record",
+
     education: "education_record",
     education_records: "education_record",
+
     appointment_record: "appointment",
     appointments: "appointment",
+
     task_record: "task",
     tasks: "task",
+
+    upload: "document",
+    upload_document: "document",
+    documents: "document",
+
+    message: "communication",
+    professional_message: "communication",
+    communication_log: "communication",
+    communications: "communication",
+
+    therapy_note: "therapy",
+    therapeutic_service: "therapy",
+
+    supervision_record: "supervision",
+    supervision_notes: "supervision",
+
+    team_note: "team",
+    staffing_note: "team",
+
     profile_identity: "profile_identity",
     profile_communication: "profile_communication",
     profile_education: "profile_education",
@@ -58,12 +102,21 @@ function normaliseActionKey(value = "") {
     new_keywork: "keywork",
     new_appointment: "appointment",
     new_task: "task",
+    new_document: "document",
+    new_upload: "document",
+    new_professional_message: "communication",
+    new_communication: "communication",
+    new_therapy: "therapy",
+    new_team: "team",
+    new_supervision: "supervision",
+
     edit_profile_identity: "profile_identity",
     edit_profile_communication: "profile_communication",
     edit_profile_education: "profile_education",
     edit_profile_health: "profile_health",
     edit_profile_legal: "profile_legal",
     edit_profile_formulation: "profile_formulation",
+
     assistant_handover: "daily_note",
     assistant_priorities: "task",
     assistant_chronology: "incident",
@@ -73,15 +126,64 @@ function normaliseActionKey(value = "") {
   return legacy[key] || key;
 }
 
+function isActionAllowedInScope(actionId, scope = getCurrentScope()) {
+  const allowedSections = SCOPE_SECTIONS?.[scope] || [];
+
+  if (scope === "child") {
+    return true;
+  }
+
+  const scopeSpecificMap = {
+    daily_note: false,
+    incident: false,
+    support_plan: false,
+    risk: true,
+    health_record: false,
+    education_record: false,
+    family_contact: false,
+    keywork: false,
+    appointment: allowedSections.includes("calendar"),
+    achievement_record: false,
+    safeguarding_record: true,
+    missing_episode: false,
+    task: true,
+    document: allowedSections.includes("documents"),
+    communication: allowedSections.includes("communication"),
+    therapy: allowedSections.includes("therapy"),
+    team: allowedSections.includes("team"),
+    supervision: allowedSections.includes("supervision"),
+    profile_identity: false,
+    profile_communication: false,
+    profile_education: false,
+    profile_health: false,
+    profile_legal: false,
+    profile_formulation: false,
+  };
+
+  return scopeSpecificMap[actionId] ?? true;
+}
+
 function buildDraftFromSuggestion(suggestion = {}, resolvedType = "") {
   const metadata = suggestion.metadata || {};
+  const scope = getCurrentScope();
 
   const draft = {
     young_person_id:
-      suggestion.young_person_id ||
-      metadata.young_person_id ||
-      state.youngPersonId ||
+      scope === "child"
+        ? suggestion.young_person_id ||
+          metadata.young_person_id ||
+          state.youngPersonId ||
+          null
+        : null,
+
+    home_id:
+      suggestion.home_id ||
+      metadata.home_id ||
+      state.homeId ||
       null,
+
+    scope,
+    current_scope: scope,
 
     ...(suggestion.prefill || {}),
     ...(suggestion.draft || {}),
@@ -120,151 +222,135 @@ function buildDraftFromSuggestion(suggestion = {}, resolvedType = "") {
 
 function safeOpen(recordType, mode = "create", item = null) {
   const resolvedType = resolveRecordType(recordType);
+  const scope = getCurrentScope();
 
-  if (!ensureYoungPersonSelected()) return false;
   if (!resolvedType) return false;
+  if (!ensureScopeContext()) return false;
+  if (!isActionAllowedInScope(resolvedType, scope)) return false;
 
-  openComposerFor(resolvedType, mode, item);
+  const payload =
+    item && typeof item === "object"
+      ? {
+          ...item,
+          current_scope: scope,
+          home_id: item.home_id ?? state.homeId ?? null,
+          young_person_id:
+            scope === "child"
+              ? item.young_person_id ?? state.youngPersonId ?? null
+              : null,
+        }
+      : item;
+
+  openComposerFor(resolvedType, mode, payload);
   return true;
 }
 
-const QUICK_ACTIONS = {
-  daily_note: {
-    id: "daily_note",
-    label: "Daily note",
-    record_type: "daily_note",
-    run: () => safeOpen("daily_note"),
-  },
-  incident: {
-    id: "incident",
-    label: "Important event",
-    record_type: "incident",
-    run: () => safeOpen("incident"),
-  },
-  support_plan: {
-    id: "support_plan",
-    label: "Support plan",
-    record_type: "support_plan",
-    run: () => safeOpen("support_plan"),
-  },
-  risk: {
-    id: "risk",
-    label: "Risk assessment",
-    record_type: "risk",
-    run: () => safeOpen("risk"),
-  },
-  health_record: {
-    id: "health_record",
-    label: "Health record",
-    record_type: "health_record",
-    run: () => safeOpen("health_record"),
-  },
-  education_record: {
-    id: "education_record",
-    label: "Education record",
-    record_type: "education_record",
-    run: () => safeOpen("education_record"),
-  },
-  family_contact: {
-    id: "family_contact",
-    label: "Family contact",
-    record_type: "family_contact",
-    run: () => safeOpen("family_contact"),
-  },
-  keywork: {
-    id: "keywork",
-    label: "Keywork",
-    record_type: "keywork",
-    run: () => safeOpen("keywork"),
-  },
-  appointment: {
-    id: "appointment",
-    label: "Appointment",
-    record_type: "appointment",
-    run: () => safeOpen("appointment"),
-  },
-  achievement_record: {
-    id: "achievement_record",
-    label: "Achievement",
-    record_type: "achievement_record",
-    run: () => safeOpen("achievement_record"),
-  },
-  safeguarding_record: {
-    id: "safeguarding_record",
-    label: "Safeguarding",
-    record_type: "safeguarding_record",
-    run: () => safeOpen("safeguarding_record"),
-  },
-  missing_episode: {
-    id: "missing_episode",
-    label: "Missing episode",
-    record_type: "missing_episode",
-    run: () => safeOpen("missing_episode"),
-  },
-  task: {
-    id: "task",
-    label: "Task",
-    record_type: "task",
-    run: () => safeOpen("task"),
-  },
-  profile_identity: {
-    id: "profile_identity",
-    label: "Identity profile",
-    record_type: "profile_identity",
-    run: () => safeOpen("profile_identity"),
-  },
-  profile_communication: {
-    id: "profile_communication",
-    label: "Communication profile",
-    record_type: "profile_communication",
-    run: () => safeOpen("profile_communication"),
-  },
-  profile_education: {
-    id: "profile_education",
-    label: "Education profile",
-    record_type: "profile_education",
-    run: () => safeOpen("profile_education"),
-  },
-  profile_health: {
-    id: "profile_health",
-    label: "Health profile",
-    record_type: "profile_health",
-    run: () => safeOpen("profile_health"),
-  },
-  profile_legal: {
-    id: "profile_legal",
-    label: "Legal status",
-    record_type: "profile_legal",
-    run: () => safeOpen("profile_legal"),
-  },
-  profile_formulation: {
-    id: "profile_formulation",
-    label: "Formulation",
-    record_type: "profile_formulation",
-    run: () => safeOpen("profile_formulation"),
-  },
-};
+function buildQuickActionMap() {
+  const actions = {};
 
-const SECTION_DEFAULTS = {
-  overview: "daily_note",
-  workspace: "daily_note",
-  timeline: "incident",
-  handover: "daily_note",
-  reports: "task",
-  health: "health_record",
-  education: "education_record",
-  family: "family_contact",
-  calendar: "appointment",
-  readiness: "task",
-  manager: "task",
-  profile: "profile_identity",
-};
+  (CONFIG_QUICK_ACTIONS || []).forEach((action) => {
+    const resolvedType = resolveRecordType(action.record_type || action.id);
+
+    actions[action.id] = {
+      id: action.id,
+      label: action.label || action.id,
+      short_label: action.short_label || action.label || action.id,
+      record_type: resolvedType,
+      section_hint: action.section_hint || "",
+      description: action.description || "",
+      run: () => safeOpen(resolvedType),
+    };
+  });
+
+  if (!actions.document) {
+    actions.document = {
+      id: "document",
+      label: "Upload document",
+      short_label: "Upload",
+      record_type: "document",
+      section_hint: "documents",
+      description: "Upload and organise documents.",
+      run: () => safeOpen("document"),
+    };
+  }
+
+  if (!actions.communication) {
+    actions.communication = {
+      id: "communication",
+      label: "Log communication",
+      short_label: "Communication",
+      record_type: "communication",
+      section_hint: "communication",
+      description: "Log professional communication.",
+      run: () => safeOpen("communication"),
+    };
+  }
+
+  if (!actions.therapy) {
+    actions.therapy = {
+      id: "therapy",
+      label: "Add therapy note",
+      short_label: "Therapy",
+      record_type: "therapy",
+      section_hint: "therapy",
+      description: "Record therapeutic work and recommendations.",
+      run: () => safeOpen("therapy"),
+    };
+  }
+
+  if (!actions.team) {
+    actions.team = {
+      id: "team",
+      label: "Add team item",
+      short_label: "Team",
+      record_type: "team",
+      section_hint: "team",
+      description: "Record staffing or team updates.",
+      run: () => safeOpen("team"),
+    };
+  }
+
+  if (!actions.supervision) {
+    actions.supervision = {
+      id: "supervision",
+      label: "Add supervision note",
+      short_label: "Supervision",
+      record_type: "supervision",
+      section_hint: "supervision",
+      description: "Record supervision and development notes.",
+      run: () => safeOpen("supervision"),
+    };
+  }
+
+  return actions;
+}
+
+const ACTIONS = buildQuickActionMap();
+
+function getFallbackActionKey(section = "", scope = getCurrentScope()) {
+  const sectionKey = String(section || "").trim();
+  const configured = SECTION_DEFAULT_ACTION?.[sectionKey];
+
+  if (configured && isActionAllowedInScope(configured, scope)) {
+    return configured;
+  }
+
+  if (scope === "home") return "task";
+  if (scope === "quality") return "task";
+  return "daily_note";
+}
 
 export function getActionForQuickButton(key, context = {}) {
+  const scope = context.scope || getCurrentScope();
   const resolvedKey = normaliseActionKey(key);
 
-  if (QUICK_ACTIONS[resolvedKey]) {
-    return QUICK_ACTIONS[resolvedKey];
+  if (ACTIONS[resolvedKey] && isActionAllowedInScope(ACTIONS[resolvedKey].record_type, scope)) {
+    return ACTIONS[resolvedKey];
+  }
+
+  const resolvedType = resolveRecordType(resolvedKey);
+  if (ACTIONS[resolvedType] && isActionAllowedInScope(ACTIONS[resolvedType].record_type, scope)) {
+    return ACTIONS[resolvedType];
   }
 
   const section =
@@ -273,11 +359,13 @@ export function getActionForQuickButton(key, context = {}) {
     state.activeSection ||
     "workspace";
 
-  const fallbackKey = SECTION_DEFAULTS[section] || "daily_note";
-  return QUICK_ACTIONS[fallbackKey];
+  const fallbackKey = getFallbackActionKey(section, scope);
+  return ACTIONS[fallbackKey];
 }
 
 export function runSuggestionAction(suggestion = {}) {
+  const scope = getCurrentScope();
+
   const type = resolveRecordType(
     suggestion.action_type ||
       suggestion.record_type ||
@@ -285,11 +373,12 @@ export function runSuggestionAction(suggestion = {}) {
       suggestion.target_record_type
   );
 
-  if (!type || !QUICK_ACTIONS[type]) return false;
-  if (!ensureYoungPersonSelected()) return false;
+  if (!type) return false;
+  if (!ACTIONS[type] && !isActionAllowedInScope(type, scope)) return false;
+  if (!ensureScopeContext()) return false;
+  if (!isActionAllowedInScope(type, scope)) return false;
 
   const draft = buildDraftFromSuggestion(suggestion, type);
-
   openComposerFor(type, "create", draft);
   return true;
 }
@@ -306,6 +395,7 @@ function getActionFromButton(button) {
       state.currentSection ||
       state.activeSection ||
       "workspace",
+    scope: getCurrentScope(),
   });
 }
 
@@ -317,7 +407,7 @@ export function bindActionRouter({
   document.addEventListener("click", (event) => {
     const quickButton = event.target.closest(quickButtonSelector);
     if (quickButton) {
-      if (!ensureYoungPersonSelected()) {
+      if (!ensureScopeContext()) {
         onMissingYoungPerson?.();
         return;
       }
@@ -329,7 +419,7 @@ export function bindActionRouter({
 
     const suggestionButton = event.target.closest(suggestionButtonSelector);
     if (suggestionButton) {
-      if (!ensureYoungPersonSelected()) {
+      if (!ensureScopeContext()) {
         onMissingYoungPerson?.();
         return;
       }
