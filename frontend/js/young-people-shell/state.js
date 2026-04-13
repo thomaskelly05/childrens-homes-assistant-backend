@@ -1,3 +1,7 @@
+export const DEFAULT_SECTION = "workspace";
+export const DEFAULT_SCOPE = "child";
+export const DEFAULT_ROLE = "staff";
+
 export const state = {
   // Selected young person / workspace
   youngPersonId: null,
@@ -6,13 +10,13 @@ export const state = {
   youngPeopleFilter: "",
 
   // Current shell section / view
-  currentSection: "workspace",
-  activeSection: "workspace",
-  currentView: "workspace",
+  currentSection: DEFAULT_SECTION,
+  activeSection: DEFAULT_SECTION,
+  currentView: DEFAULT_SECTION,
 
   // Role / scope layer
-  userRole: "staff", // "staff" | "manager" | "ri"
-  currentScope: "child", // "child" | "home" | "quality"
+  userRole: DEFAULT_ROLE, // "staff" | "manager" | "ri" | "admin"
+  currentScope: DEFAULT_SCOPE, // "child" | "home" | "quality"
 
   // General UI state
   loading: false,
@@ -69,6 +73,32 @@ export const state = {
   requestCooldowns: Object.create(null),
 };
 
+export function normaliseUserRole(role) {
+  const raw = String(role || DEFAULT_ROLE).trim().toLowerCase();
+
+  if (raw === "administrator") return "admin";
+  if (raw === "super_admin") return "admin";
+  if (raw === "superadmin") return "admin";
+
+  return raw || DEFAULT_ROLE;
+}
+
+export function getDefaultScopeForRole(role = state.userRole) {
+  const safeRole = normaliseUserRole(role);
+
+  if (safeRole === "admin") return "home";
+  if (safeRole === "manager") return "home";
+  if (safeRole === "ri") return "quality";
+
+  return DEFAULT_SCOPE;
+}
+
+export function getDefaultSectionForScope(scope = state.currentScope) {
+  if (scope === "home") return "home-dashboard";
+  if (scope === "quality") return "quality";
+  return DEFAULT_SECTION;
+}
+
 export function resetAssistantState() {
   state.assistantMessages = [];
   state.assistantModalMessages = [];
@@ -98,6 +128,7 @@ export function resetComposerState() {
   if (state.autosaveTimer) {
     clearTimeout(state.autosaveTimer);
   }
+
   state.autosaveTimer = null;
 }
 
@@ -110,14 +141,19 @@ export function resetActiveRecordState() {
 export function resetWorkspaceState() {
   state.youngPersonId = null;
   state.selectedYoungPerson = null;
-  state.currentSection = "workspace";
-  state.activeSection = "workspace";
-  state.currentView = "workspace";
-  state.currentScope = "child";
+  state.youngPeopleFilter = "";
+
+  state.currentScope = DEFAULT_SCOPE;
+  state.currentSection = DEFAULT_SECTION;
+  state.activeSection = DEFAULT_SECTION;
+  state.currentView = DEFAULT_SECTION;
+
   state.loading = false;
   state.error = null;
-  state.fullscreenPanelOpen = false;
   state.mobileNavOpen = false;
+  state.assistantOpen = false;
+  state.fullscreenPanelOpen = false;
+
   state.currentSuggestions = [];
   state.currentSuggestionSource = null;
   state.lastSavedRecord = null;
@@ -125,6 +161,7 @@ export function resetWorkspaceState() {
 
   resetActiveRecordState();
   resetComposerState();
+  resetAssistantState();
 }
 
 export function clearRequestOptimisationState() {
@@ -133,16 +170,39 @@ export function clearRequestOptimisationState() {
 }
 
 export function setCurrentSection(section) {
-  const safeSection = section || "workspace";
+  const safeSection = section || getDefaultSectionForScope(state.currentScope);
   state.currentSection = safeSection;
   state.activeSection = safeSection;
   state.currentView = safeSection;
 }
 
 export function setCurrentScope(scope) {
-  state.currentScope = scope || "child";
+  const safeScope = scope || DEFAULT_SCOPE;
+  state.currentScope = safeScope;
+
+  if (!state.currentSection) {
+    setCurrentSection(getDefaultSectionForScope(safeScope));
+  }
 }
 
 export function setUserRole(role) {
-  state.userRole = role || "staff";
+  state.userRole = normaliseUserRole(role);
+}
+
+export function setSelectedYoungPerson(person = null) {
+  state.selectedYoungPerson = person || null;
+  state.youngPersonId =
+    person?.id ||
+    person?.young_person_id ||
+    state.youngPersonId ||
+    null;
+}
+
+export function clearSelectedYoungPerson() {
+  state.youngPersonId = null;
+  state.selectedYoungPerson = null;
+}
+
+export function setHomeContext(homeId = null) {
+  state.homeId = homeId || null;
 }
