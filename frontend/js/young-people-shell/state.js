@@ -2,6 +2,38 @@ export const DEFAULT_SECTION = "workspace";
 export const DEFAULT_SCOPE = "child";
 export const DEFAULT_ROLE = "staff";
 
+export function createAssistantMeta() {
+  return {
+    sources: [],
+    runtime: {},
+    explainability: {},
+    assistant_scope: {},
+    assistant_context: {},
+    suggested_actions: [],
+  };
+}
+
+export function createComposerState() {
+  return {
+    composerOpen: false,
+    composerMode: "create", // "create" | "edit"
+    composerRecordType: null,
+    composerRecordId: null,
+    composerEditItem: null,
+    composerMeta: {},
+    autosaveTimer: null,
+  };
+}
+
+export function createSuggestionState() {
+  return {
+    currentSuggestions: [],
+    currentSuggestionSource: null,
+    lastSavedRecord: null,
+    suggestions: [],
+  };
+}
+
 export const state = {
   // Selected young person / workspace
   youngPersonId: null,
@@ -27,19 +59,10 @@ export const state = {
   recordDrawerOpen: false,
 
   // Suggestions / linked follow-up state
-  currentSuggestions: [],
-  currentSuggestionSource: null,
-  lastSavedRecord: null,
-  suggestions: [],
+  ...createSuggestionState(),
 
   // Composer state
-  composerOpen: false,
-  composerMode: "create", // "create" | "edit"
-  composerRecordType: null,
-  composerRecordId: null,
-  composerEditItem: null,
-  composerMeta: {},
-  autosaveTimer: null,
+  ...createComposerState(),
 
   // Active record / drawer context
   activeRecordType: null,
@@ -59,14 +82,7 @@ export const state = {
   assistantRuntime: null,
   assistantExplainability: null,
   assistantSending: false,
-  assistantMeta: {
-    sources: [],
-    runtime: {},
-    explainability: {},
-    assistant_scope: {},
-    assistant_context: {},
-    suggested_actions: [],
-  },
+  assistantMeta: createAssistantMeta(),
 
   // Request optimisation state
   resourceCache: Object.create(null),
@@ -86,9 +102,9 @@ export function normaliseUserRole(role) {
 export function getDefaultScopeForRole(role = state.userRole) {
   const safeRole = normaliseUserRole(role);
 
-  if (safeRole === "admin") return "home";
-  if (safeRole === "manager") return "home";
   if (safeRole === "ri") return "quality";
+  if (safeRole === "manager") return "home";
+  if (safeRole === "admin") return "home";
 
   return DEFAULT_SCOPE;
 }
@@ -107,29 +123,30 @@ export function resetAssistantState() {
   state.assistantRuntime = null;
   state.assistantExplainability = null;
   state.assistantSending = false;
-  state.assistantMeta = {
-    sources: [],
-    runtime: {},
-    explainability: {},
-    assistant_scope: {},
-    assistant_context: {},
-    suggested_actions: [],
-  };
+  state.assistantMeta = createAssistantMeta();
 }
 
 export function resetComposerState() {
-  state.composerOpen = false;
-  state.composerMode = "create";
-  state.composerRecordType = null;
-  state.composerRecordId = null;
-  state.composerEditItem = null;
-  state.composerMeta = {};
-
   if (state.autosaveTimer) {
     clearTimeout(state.autosaveTimer);
   }
 
-  state.autosaveTimer = null;
+  const next = createComposerState();
+  state.composerOpen = next.composerOpen;
+  state.composerMode = next.composerMode;
+  state.composerRecordType = next.composerRecordType;
+  state.composerRecordId = next.composerRecordId;
+  state.composerEditItem = next.composerEditItem;
+  state.composerMeta = next.composerMeta;
+  state.autosaveTimer = next.autosaveTimer;
+}
+
+export function resetSuggestionState() {
+  const next = createSuggestionState();
+  state.currentSuggestions = next.currentSuggestions;
+  state.currentSuggestionSource = next.currentSuggestionSource;
+  state.lastSavedRecord = next.lastSavedRecord;
+  state.suggestions = next.suggestions;
 }
 
 export function resetActiveRecordState() {
@@ -154,11 +171,7 @@ export function resetWorkspaceState() {
   state.assistantOpen = false;
   state.fullscreenPanelOpen = false;
 
-  state.currentSuggestions = [];
-  state.currentSuggestionSource = null;
-  state.lastSavedRecord = null;
-  state.suggestions = [];
-
+  resetSuggestionState();
   resetActiveRecordState();
   resetComposerState();
   resetAssistantState();
@@ -177,7 +190,11 @@ export function setCurrentSection(section) {
 }
 
 export function setCurrentScope(scope, { resetSection = true } = {}) {
-  const safeScope = scope || DEFAULT_SCOPE;
+  const safeScope =
+    scope === "home" || scope === "quality" || scope === "child"
+      ? scope
+      : DEFAULT_SCOPE;
+
   state.currentScope = safeScope;
 
   if (resetSection) {
@@ -191,10 +208,7 @@ export function setUserRole(role) {
 
 export function setSelectedYoungPerson(person = null) {
   state.selectedYoungPerson = person || null;
-  state.youngPersonId =
-    person?.id ||
-    person?.young_person_id ||
-    null;
+  state.youngPersonId = person?.id || person?.young_person_id || null;
 }
 
 export function clearSelectedYoungPerson() {
@@ -203,5 +217,8 @@ export function clearSelectedYoungPerson() {
 }
 
 export function setHomeContext(homeId = null) {
-  state.homeId = homeId || null;
+  state.homeId =
+    homeId === null || homeId === undefined || homeId === ""
+      ? null
+      : homeId;
 }
