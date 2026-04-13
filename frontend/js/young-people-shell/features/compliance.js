@@ -2,6 +2,7 @@ import { state } from "../state.js";
 import { els } from "../dom.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
+import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 
 function getHomeId() {
   return (
@@ -71,6 +72,7 @@ function getStatusTone(status = "") {
       "missing",
       "non_compliant",
       "failed",
+      "danger",
     ].includes(normalised)
   ) {
     return "danger";
@@ -85,6 +87,7 @@ function getStatusTone(status = "") {
       "attention",
       "incomplete",
       "expiring",
+      "at_risk",
     ].includes(normalised)
   ) {
     return "warning";
@@ -99,6 +102,7 @@ function getStatusTone(status = "") {
       "ok",
       "good",
       "up_to_date",
+      "passed",
     ].includes(normalised)
   ) {
     return "success";
@@ -167,17 +171,14 @@ function buildTopStats({
   overdueChildFiles = [],
   overdueHomeDocs = [],
 }) {
+  const score = toNumber(summary.compliance_score ?? summary.score ?? 0);
+
   return [
     {
       label: "Compliance score",
-      value: `${toNumber(summary.compliance_score ?? summary.score ?? 0)}%`,
+      value: `${score}%`,
       note: "Overall home compliance position",
-      tone:
-        toNumber(summary.compliance_score ?? summary.score ?? 0) < 70
-          ? "danger"
-          : toNumber(summary.compliance_score ?? summary.score ?? 0) < 85
-          ? "warning"
-          : "success",
+      tone: score < 70 ? "danger" : score < 85 ? "warning" : "success",
     },
     {
       label: "Overdue supervisions",
@@ -212,6 +213,89 @@ function buildTopStats({
   ];
 }
 
+function buildProgressCards({
+  workforceItems = [],
+  trainingItems = [],
+  supervisionItems = [],
+  childComplianceItems = [],
+  homeDocumentItems = [],
+}) {
+  const compliantWorkforce = workforceItems.filter((item) =>
+    ["active", "ok", "good", "compliant"].includes(String(item.status || "").toLowerCase())
+  ).length;
+  const workforcePercent = workforceItems.length
+    ? Math.round((compliantWorkforce / workforceItems.length) * 100)
+    : 0;
+
+  const validTraining = trainingItems.filter((item) =>
+    ["active", "current", "up_to_date", "completed", "passed"].includes(
+      String(item.status || "").toLowerCase()
+    )
+  ).length;
+  const trainingPercent = trainingItems.length
+    ? Math.round((validTraining / trainingItems.length) * 100)
+    : 0;
+
+  const completedSupervisions = supervisionItems.filter((item) =>
+    ["completed", "complete", "up_to_date"].includes(String(item.status || "").toLowerCase())
+  ).length;
+  const supervisionPercent = supervisionItems.length
+    ? Math.round((completedSupervisions / supervisionItems.length) * 100)
+    : 0;
+
+  const childFileCurrent = childComplianceItems.filter((item) =>
+    ["compliant", "up_to_date", "current", "completed"].includes(
+      String(item.status || "").toLowerCase()
+    )
+  ).length;
+  const childFilePercent = childComplianceItems.length
+    ? Math.round((childFileCurrent / childComplianceItems.length) * 100)
+    : 0;
+
+  const homeDocsCurrent = homeDocumentItems.filter((item) =>
+    ["compliant", "up_to_date", "current", "completed"].includes(
+      String(item.status || "").toLowerCase()
+    )
+  ).length;
+  const homeDocPercent = homeDocumentItems.length
+    ? Math.round((homeDocsCurrent / homeDocumentItems.length) * 100)
+    : 0;
+
+  return [
+    {
+      label: "Workforce position",
+      value: `${workforcePercent}%`,
+      percent: workforcePercent,
+      tone: workforcePercent >= 90 ? "success" : workforcePercent >= 75 ? "warning" : "danger",
+    },
+    {
+      label: "Training compliance",
+      value: `${trainingPercent}%`,
+      percent: trainingPercent,
+      tone: trainingPercent >= 90 ? "success" : trainingPercent >= 75 ? "warning" : "danger",
+    },
+    {
+      label: "Supervision completion",
+      value: `${supervisionPercent}%`,
+      percent: supervisionPercent,
+      tone:
+        supervisionPercent >= 90 ? "success" : supervisionPercent >= 75 ? "warning" : "danger",
+    },
+    {
+      label: "Child files current",
+      value: `${childFilePercent}%`,
+      percent: childFilePercent,
+      tone: childFilePercent >= 90 ? "success" : childFilePercent >= 75 ? "warning" : "danger",
+    },
+    {
+      label: "Home docs current",
+      value: `${homeDocPercent}%`,
+      percent: homeDocPercent,
+      tone: homeDocPercent >= 90 ? "success" : homeDocPercent >= 75 ? "warning" : "danger",
+    },
+  ];
+}
+
 function renderStatCards(cards = []) {
   return `
     <div class="overview-stats-grid overview-stats-grid--six">
@@ -230,6 +314,31 @@ function renderStatCards(cards = []) {
               <span class="overview-stat-label">${safeText(card.label)}</span>
               <strong class="overview-stat-value">${safeText(card.value)}</strong>
               <span class="overview-stat-note">${safeText(card.note)}</span>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderProgressCards(cards = []) {
+  return `
+    <div class="analytics-progress-grid">
+      ${cards
+        .map(
+          (card) => `
+            <article class="analytics-progress-card">
+              <div class="analytics-progress-head">
+                <span class="analytics-progress-label">${safeText(card.label)}</span>
+                <strong class="analytics-progress-value">${safeText(card.value)}</strong>
+              </div>
+              <div class="analytics-progress-track">
+                <span
+                  class="analytics-progress-bar analytics-progress-bar--${safeText(card.tone || "muted")}"
+                  style="width: ${safeText(card.percent || 0)}%;"
+                ></span>
+              </div>
             </article>
           `
         )
@@ -306,8 +415,8 @@ function renderRows(items = [], options = {}) {
               </div>
               <div class="record-row-side">
                 <span class="row-pill ${safeText(tone)}">${safeText(
-            status || "Recorded"
-          )}</span>
+                  status || "Recorded"
+                )}</span>
               </div>
             </article>
           `;
@@ -413,6 +522,7 @@ function buildPriorityItems({
 function renderComplianceDashboardHtml({
   homeName = "Compliance",
   topStats = [],
+  progressCards = [],
   priorityItems = [],
   overdueSupervisions = [],
   expiringTraining = [],
@@ -422,7 +532,7 @@ function renderComplianceDashboardHtml({
   inspectionReadiness = [],
 }) {
   return `
-    <section class="overview-panel">
+    <section class="overview-panel manager-dashboard manager-dashboard--compliance">
       <div class="overview-panel-head">
         <div>
           <div class="eyebrow">Compliance</div>
@@ -432,6 +542,14 @@ function renderComplianceDashboardHtml({
       </div>
 
       ${renderStatCards(topStats)}
+
+      <div class="overview-section-card">
+        <div class="overview-section-head">
+          <h3>Compliance health</h3>
+          <p>A quick visual read across workforce, files and statutory paperwork.</p>
+        </div>
+        ${renderProgressCards(progressCards)}
+      </div>
 
       <div class="overview-grid">
         <section class="overview-main">
@@ -462,21 +580,24 @@ function renderComplianceDashboardHtml({
               <p>Mandatory training, induction progress and probation checkpoints.</p>
             </div>
 
-            ${renderRows([...expiringTraining.slice(0, 5), ...outstandingProbations.slice(0, 5)], {
-              emptyMessage: "No workforce compliance gaps found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "compliance",
-              metaBuilder: (item) =>
-                [
-                  item.staff_member || "",
-                  item.training_name || "",
-                  item.expiry_date ? `Expires ${formatDate(item.expiry_date)}` : "",
-                  item.review_date ? `Review ${formatDate(item.review_date)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
+            ${renderRows(
+              [...expiringTraining.slice(0, 5), ...outstandingProbations.slice(0, 5)],
+              {
+                emptyMessage: "No workforce compliance gaps found.",
+                titleKey: "title",
+                summaryKey: "summary",
+                recordType: "compliance",
+                metaBuilder: (item) =>
+                  [
+                    item.staff_member || "",
+                    item.training_name || "",
+                    item.expiry_date ? `Expires ${formatDate(item.expiry_date)}` : "",
+                    item.review_date ? `Review ${formatDate(item.review_date)}` : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" • "),
+              }
+            )}
           </div>
 
           <div class="overview-section-card">
@@ -614,6 +735,12 @@ export async function loadCompliance() {
 
   if (!homeId) {
     renderNoHomeContext();
+    updateWorkspaceSummaryStrip({
+      today: "No compliance context",
+      nextEvent: "No home loaded",
+      lastRecord: "No dashboard data",
+      openActions: "No actions loaded",
+    });
     return;
   }
 
@@ -733,6 +860,14 @@ export async function loadCompliance() {
       overdueHomeDocs,
     });
 
+    const progressCards = buildProgressCards({
+      workforceItems,
+      trainingItems,
+      supervisionItems,
+      childComplianceItems,
+      homeDocumentItems,
+    });
+
     const priorityItems = buildPriorityItems({
       overdueSupervisions,
       expiringTraining,
@@ -750,6 +885,7 @@ export async function loadCompliance() {
     els.viewContent.innerHTML = renderComplianceDashboardHtml({
       homeName,
       topStats,
+      progressCards,
       priorityItems,
       overdueSupervisions: overdueSupervisions.slice(0, 8),
       expiringTraining: expiringTraining.slice(0, 6),
@@ -757,9 +893,27 @@ export async function loadCompliance() {
       overdueChildFiles: overdueChildFiles.slice(0, 8),
       overdueHomeDocs: overdueHomeDocs.slice(0, 6),
       inspectionReadiness: inspectionReadiness.slice(0, 6),
-      workforceItems,
+    });
+
+    updateWorkspaceSummaryStrip({
+      today: `${toNumber(summary.compliance_score ?? summary.score ?? 0)}% compliant`,
+      nextEvent:
+        inspectionReadiness[0]?.review_date
+          ? `Inspection item due ${formatDate(inspectionReadiness[0].review_date)}`
+          : "No urgent inspection milestone",
+      lastRecord:
+        overdueHomeDocs[0]?.title ||
+        overdueChildFiles[0]?.young_person_name ||
+        "Latest compliance data loaded",
+      openActions: `${priorityItems.length} priority item${priorityItems.length === 1 ? "" : "s"}`,
     });
   } catch (error) {
     renderErrorState(error?.message || "The compliance dashboard could not be loaded.");
+    updateWorkspaceSummaryStrip({
+      today: "Compliance unavailable",
+      nextEvent: "Unable to load",
+      lastRecord: "No dashboard data",
+      openActions: "Check API routes",
+    });
   }
 }
