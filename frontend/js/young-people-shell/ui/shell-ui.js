@@ -295,31 +295,6 @@ function updateScopeSensitiveActions() {
   }
 }
 
-function updateSummaryStripForScope() {
-  const scope = getCurrentScope();
-
-  if (scope === "home") {
-    setText("summaryToday", "Live home view");
-    setText("summaryNextEvent", "Next service event loading");
-    setText("summaryLastRecord", "Recent home record loading");
-    setText("summaryOpenActions", "Open home actions loading");
-    return;
-  }
-
-  if (scope === "quality") {
-    setText("summaryToday", "Quality snapshot");
-    setText("summaryNextEvent", "Next audit or review loading");
-    setText("summaryLastRecord", "Recent assurance record loading");
-    setText("summaryOpenActions", "Open compliance actions loading");
-    return;
-  }
-
-  setText("summaryToday", "No summary yet");
-  setText("summaryNextEvent", "No event loaded");
-  setText("summaryLastRecord", "No record loaded");
-  setText("summaryOpenActions", "No actions loaded");
-}
-
 function updateHeaderChrome(section = "workspace") {
   const title =
     SECTION_TITLES?.[section] ||
@@ -375,7 +350,6 @@ export function updateYoungPersonChrome(person = {}) {
   updateWorkspaceEyebrow();
   updateScopeButtons();
   updateScopeSensitiveActions();
-  updateSummaryStripForScope();
   updateAppDataset();
 }
 
