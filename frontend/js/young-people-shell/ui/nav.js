@@ -17,7 +17,7 @@ import {
 import { bindRecordDrawerEvents, openRecordDetail } from "./records.js";
 import { closeComposer, saveComposer } from "./composer.js";
 import { bindSuggestionEvents } from "./suggestions.js";
-import { bindActionRouter, getActionForQuickButton } from "./action-router.js";
+import { bindActionRouter } from "./action-router.js";
 import {
   updateSectionChrome,
   updateYoungPersonChrome,
@@ -36,100 +36,14 @@ import { loadCalendar } from "../features/calendar.js";
 import { loadReadiness } from "../features/readiness.js";
 import { loadManager } from "../features/manager.js";
 import { loadCurrentView as loadWorkspace } from "../features/workspace.js";
+
 import { loadHomeDashboard } from "../features/home-dashboard.js";
-
-/**
- * Temporary placeholder loaders until dedicated feature files are created.
- * Replace these with real imports as each section is built.
- */
-async function renderPlaceholderSection({
-  eyebrow = "Section",
-  title = "Coming next",
-  subtitle = "This section is wired and ready.",
-  icon = "•",
-} = {}) {
-  if (!els.viewContent) return;
-
-  els.viewContent.innerHTML = `
-    <section class="overview-panel">
-      <div class="overview-panel-head">
-        <div>
-          <div class="eyebrow">${escapeHtml(eyebrow)}</div>
-          <h2>${escapeHtml(title)}</h2>
-          <p>${escapeHtml(subtitle)}</p>
-        </div>
-      </div>
-
-      <div class="empty-state">
-        <div class="empty-state-inner">
-          <div class="empty-state-icon" aria-hidden="true">${escapeHtml(icon)}</div>
-          <h3>${escapeHtml(title)}</h3>
-          <p>${escapeHtml(subtitle)}</p>
-        </div>
-      </div>
-    </section>
-  `;
-}
-
-async function loadQualityDashboard() {
-  return renderPlaceholderSection({
-    eyebrow: "Quality and RI",
-    title: "Quality dashboard",
-    subtitle:
-      "A regulator and quality view across compliance, audits, themes, reports and service oversight.",
-    icon: "▦",
-  });
-}
-
-async function loadDocuments() {
-  return renderPlaceholderSection({
-    eyebrow: "Documents",
-    title: "Documents and uploads",
-    subtitle:
-      "Upload, organise and review statutory and supporting documents for the child or service.",
-    icon: "▣",
-  });
-}
-
-async function loadCommunication() {
-  return renderPlaceholderSection({
-    eyebrow: "Communication",
-    title: "Professional communication",
-    subtitle:
-      "Log liaison with professionals, families and partner agencies in one clear place.",
-    icon: "✉",
-  });
-}
-
-async function loadTherapy() {
-  return renderPlaceholderSection({
-    eyebrow: "Therapy",
-    title: "Therapeutic services",
-    subtitle:
-      "Track therapeutic input, recommendations, emotional wellbeing support and follow-up.",
-    icon: "✦",
-  });
-}
-
-async function loadTeam() {
-  return renderPlaceholderSection({
-    eyebrow: "Team",
-    title: "Team and staffing",
-    subtitle:
-      "A whole-home view of staffing, deployment, sickness, vacancies and workforce context.",
-    icon: "◍",
-  });
-}
-
-async function loadSupervision() {
-  return renderPlaceholderSection({
-    eyebrow: "Supervision",
-    title: "Supervision and development",
-    subtitle:
-      "Track supervision, appraisal, training, capability and workforce development.",
-    icon: "⬢",
-  });
-}
+import { loadQualityDashboard } from "../features/quality.js";
+import { loadDocuments } from "../features/documents.js";
+import { loadCommunication } from "../features/communication.js";
+import { loadTherapy } from "../features/therapy.js";
+import { loadTeam } from "../features/team.js";
+import { loadSupervision } from "../features/supervision.js";
 
 const SECTION_LOADERS = {
   workspace: loadWorkspace,
@@ -190,7 +104,6 @@ let recordEventsBound = false;
 let youngPersonEventsBound = false;
 let drawerEventsBound = false;
 let suggestionEventsBound = false;
-let quickActionEventsBound = false;
 
 function getNavIcon(icon) {
   return ICON_MAP[icon] || "•";
@@ -281,13 +194,13 @@ function buildDesktopNavHtml() {
   return getScopedNavGroups()
     .map(
       (group) => `
-      <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
-        <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
-        <div class="nav-section-items">
-          ${(group.items || []).map((item) => renderNavItem(item)).join("")}
-        </div>
-      </section>
-    `
+        <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
+          <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
+          <div class="nav-section-items">
+            ${(group.items || []).map((item) => renderNavItem(item)).join("")}
+          </div>
+        </section>
+      `
     )
     .join("");
 }
@@ -296,13 +209,13 @@ function buildMobileDrawerNavHtml() {
   return getScopedNavGroups()
     .map(
       (group) => `
-      <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
-        <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
-        <div class="nav-section-items">
-          ${(group.items || []).map((item) => renderNavItem(item)).join("")}
-        </div>
-      </section>
-    `
+        <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
+          <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
+          <div class="nav-section-items">
+            ${(group.items || []).map((item) => renderNavItem(item)).join("")}
+          </div>
+        </section>
+      `
     )
     .join("");
 }
@@ -399,7 +312,9 @@ function markActiveNav(section) {
 }
 
 export async function loadSection(section) {
-  const safeSection = isSectionAllowed(section) ? section : getDefaultSectionForScope();
+  const safeSection = isSectionAllowed(section)
+    ? section
+    : getDefaultSectionForScope();
 
   if (!state.youngPersonId && getCurrentScope() === "child") {
     showError("Select a young person first.");
@@ -423,7 +338,7 @@ export async function loadSection(section) {
 
   try {
     await loader();
-    closeMobileNav?.();
+    closeMobileNav();
   } catch (error) {
     console.error(`[nav] failed loading section "${safeSection}"`, error);
     showError(error?.message || "Failed to load this section.");
@@ -471,7 +386,7 @@ function bindSelectorControls() {
     clearStatus();
 
     try {
-      await loadYoungPersonSelector?.();
+      await loadYoungPersonSelector();
       renderNavigation();
       markActiveNav(getCurrentSection());
     } catch (error) {
@@ -495,32 +410,11 @@ function bindSelectorControls() {
 
   els.selectorRefreshBtn?.addEventListener("click", async () => {
     try {
-      await loadYoungPersonSelector?.();
+      await loadYoungPersonSelector();
       clearStatus();
     } catch (error) {
       showError(error?.message || "Failed to refresh young people.");
     }
-  });
-}
-
-function bindQuickActionButtons() {
-  if (quickActionEventsBound) return;
-  quickActionEventsBound = true;
-
-  document.querySelectorAll("[data-quick-action]").forEach((button) => {
-    const action = getActionForQuickButton(button.dataset.quickAction || "", {
-      section: button.dataset.section || getCurrentSection(),
-    });
-
-    if (action?.label && !button.textContent.trim()) {
-      button.textContent = action.label;
-    }
-  });
-
-  bindActionRouter({
-    onMissingYoungPerson: () => {
-      showError("Select a young person first.");
-    },
   });
 }
 
@@ -629,7 +523,7 @@ function bindYoungPersonOpen() {
     if (!id) return;
 
     try {
-      await openYoungPerson?.(id);
+      await openYoungPerson(id);
 
       els.selectorScreen?.classList.add("hidden");
       els.workspaceScreen?.classList.remove("hidden");
@@ -674,19 +568,29 @@ function bindDrawerCallbacks() {
   });
 }
 
+function bindQuickActionRouter() {
+  bindActionRouter({
+    onMissingYoungPerson: () => {
+      showError("Select a young person first.");
+    },
+  });
+}
+
 export function bindNavEvents() {
+  if (suggestionEventsBound) {
+    return;
+  }
+
   bindSelectorControls();
-  bindQuickActionButtons();
   bindComposerControls();
   bindRefreshControls();
   bindOpenRecordEvents();
   bindYoungPersonOpen();
   bindDrawerCallbacks();
+  bindQuickActionRouter();
+  bindSuggestionEvents();
 
-  if (!suggestionEventsBound) {
-    bindSuggestionEvents();
-    suggestionEventsBound = true;
-  }
+  suggestionEventsBound = true;
 }
 
 export function rerenderNavigationForScope() {
@@ -718,7 +622,7 @@ export async function initialiseShellNavigation() {
 
   if (!state.youngPersonId && getCurrentScope() === "child") {
     try {
-      await loadYoungPersonSelector?.();
+      await loadYoungPersonSelector();
       els.workspaceScreen?.classList.add("hidden");
       els.selectorScreen?.classList.remove("hidden");
     } catch (error) {
