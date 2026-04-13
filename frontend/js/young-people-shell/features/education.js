@@ -2,6 +2,7 @@ import { els } from "../dom.js";
 import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
+import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 import {
   mapEducationRecord,
   mapEducationProfile,
@@ -49,6 +50,7 @@ function buildEducationRows(items = []) {
       item.learning_engagement ||
       item.behaviour_summary ||
       item.issue_raised ||
+      item.action_taken ||
       "Education update",
     record_date: item.record_date || null,
     created_at: item.created_at || null,
@@ -57,6 +59,9 @@ function buildEducationRows(items = []) {
     follow_up_required: !!item.follow_up_required,
     issue_raised: item.issue_raised || "",
     attendance_status: item.attendance_status || "",
+    achievement_note: item.achievement_note || "",
+    professional_involved: item.professional_involved || "",
+    child_voice: item.child_voice || "",
   }));
 }
 
@@ -73,6 +78,8 @@ function buildAchievementRows(items = []) {
     achievement_date: item.achievement_date || null,
     created_at: item.created_at || null,
     status: item.archived ? "archived" : "active",
+    source: item.source || "",
+    significance: item.significance || "",
   }));
 }
 
@@ -89,7 +96,7 @@ function renderEducationProfile(profile = {}) {
         profile.attendance_baseline !== null &&
         profile.attendance_baseline !== undefined &&
         profile.attendance_baseline !== ""
-          ? String(profile.attendance_baseline)
+          ? `${profile.attendance_baseline}%`
           : "",
     },
     { label: "PEP status", value: profile.pep_status },
@@ -122,7 +129,7 @@ function renderEducationProfile(profile = {}) {
   `;
 }
 
-function buildHeadlineStats(records = []) {
+function buildHeadlineStats(records = [], achievements = []) {
   const attendanceConcerns = records.filter((item) => {
     const value = String(item.attendance_status || "").toLowerCase();
     return ["absent", "late", "refused", "not_attending"].includes(value);
@@ -130,8 +137,36 @@ function buildHeadlineStats(records = []) {
 
   const followUps = records.filter((item) => item.follow_up_required).length;
   const issuesRaised = records.filter((item) => item.issue_raised).length;
+  const positives = achievements.length + records.filter((item) => item.achievement_note).length;
 
-  return { attendanceConcerns, followUps, issuesRaised };
+  return { attendanceConcerns, followUps, issuesRaised, positives };
+}
+
+function buildConcernRows(records = []) {
+  return records.filter(
+    (item) =>
+      item.follow_up_required ||
+      item.issue_raised ||
+      ["absent", "late", "refused", "not_attending"].includes(
+        String(item.attendance_status || "").toLowerCase()
+      )
+  );
+}
+
+function buildPositiveRows(records = [], achievements = []) {
+  const educationPositives = records
+    .filter((item) => item.achievement_note)
+    .map((item) => ({
+      id: `edu-positive-${item.id}`,
+      record_type: "education_record",
+      title: item.provision_name || item.title || "Education positive",
+      summary: item.achievement_note,
+      achievement_date: item.record_date || item.created_at || null,
+      created_at: item.created_at || null,
+      status: "active",
+    }));
+
+  return [...buildAchievementRows(achievements), ...educationPositives].slice(0, 12);
 }
 
 function getRowMeta(item = {}) {
@@ -149,6 +184,10 @@ function getRowPill(item = {}) {
     item.follow_up_required
   ) {
     return { label: "Needs review", tone: "warning" };
+  }
+
+  if (status === "archived") {
+    return { label: "archived", tone: "muted" };
   }
 
   if (status) {
@@ -203,17 +242,8 @@ function renderEducationHtml({
 }) {
   const educationRows = buildEducationRows(educationRecords);
   const achievementRows = buildAchievementRows(achievements);
-
-  const concernRows = buildEducationRows(
-    educationRecords.filter(
-      (item) =>
-        item.follow_up_required ||
-        item.issue_raised ||
-        ["absent", "late", "refused", "not_attending"].includes(
-          String(item.attendance_status || "").toLowerCase()
-        )
-    )
-  );
+  const concernRows = buildConcernRows(educationRows);
+  const positiveRows = buildPositiveRows(educationRows, achievements);
 
   return `
     <section class="overview-panel">
@@ -247,9 +277,9 @@ function renderEducationHtml({
             </article>
 
             <article class="overview-stat-card">
-              <span class="overview-stat-label">Achievements</span>
-              <strong class="overview-stat-value">${toText(achievements.length)}</strong>
-              <span class="overview-stat-note">Strengths and progress recorded</span>
+              <span class="overview-stat-label">Positives</span>
+              <strong class="overview-stat-value">${toText(stats.positives)}</strong>
+              <span class="overview-stat-note">Achievements and strengths recorded</span>
             </article>
           </div>
 
@@ -275,11 +305,11 @@ function renderEducationHtml({
         <aside class="overview-side">
           <section class="overview-side-card">
             <div class="overview-section-head">
-              <h3>Achievements</h3>
+              <h3>Achievements and positives</h3>
               <p>Progress, success and strengths linked to education and wider development.</p>
             </div>
 
-            ${renderRecordRows(achievementRows, "No achievements found.")}
+            ${renderRecordRows(positiveRows, "No achievements or positives found.")}
           </section>
 
           <section class="overview-side-card">
@@ -289,6 +319,15 @@ function renderEducationHtml({
             </div>
 
             ${renderRecordRows(concernRows, "No education concerns needing attention.")}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Achievement records</h3>
+              <p>Formal achievements already recorded.</p>
+            </div>
+
+            ${renderRecordRows(achievementRows, "No achievements found.")}
           </section>
         </aside>
       </div>
@@ -342,7 +381,7 @@ export async function loadEducation() {
       ["achievement_date", "created_at"]
     );
 
-    const stats = buildHeadlineStats(educationRecords);
+    const stats = buildHeadlineStats(educationRecords, achievements);
 
     els.viewContent.innerHTML = renderEducationHtml({
       educationRecords,
@@ -350,11 +389,42 @@ export async function loadEducation() {
       achievements,
       stats,
     });
+
+    const latestEducationRecord = educationRecords[0];
+    const nextConcern = educationRecords.find(
+      (item) =>
+        item.follow_up_required ||
+        ["absent", "late", "refused", "not_attending"].includes(
+          String(item.attendance_status || "").toLowerCase()
+        )
+    );
+
+    updateWorkspaceSummaryStrip({
+      today: `${educationRecords.length} education records • ${achievements.length} achievements`,
+      nextEvent: nextConcern
+        ? `${nextConcern.provision_name || "Education concern"} • ${formatDateValue(
+            nextConcern.record_date || nextConcern.created_at
+          )}`
+        : "No immediate education concern",
+      lastRecord: latestEducationRecord
+        ? `Latest education update ${formatDateValue(
+            latestEducationRecord.record_date || latestEducationRecord.created_at
+          )}`
+        : "No recent education record",
+      openActions: `${stats.followUps} follow-up item${stats.followUps === 1 ? "" : "s"}`,
+    });
   } catch (error) {
     els.viewContent.innerHTML = `
       <div class="empty-state">
         <p>${escapeHtml(error.message || "Failed to load education data.")}</p>
       </div>
     `;
+
+    updateWorkspaceSummaryStrip({
+      today: "Education unavailable",
+      nextEvent: "Unable to load education view",
+      lastRecord: "No education data loaded",
+      openActions: "Check API responses",
+    });
   }
 }
