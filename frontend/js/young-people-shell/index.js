@@ -24,6 +24,8 @@ import {
   SCOPE_DEFAULT_SECTION,
 } from "./core/config.js";
 
+let scopeEventsBound = false;
+
 function showWorkspace() {
   els.selectorScreen?.classList.add("hidden");
   els.workspaceScreen?.classList.remove("hidden");
@@ -46,63 +48,8 @@ function canAccessScope(scope) {
   return getAllowedScopesForRole().includes(scope);
 }
 
-function getDefaultSectionForScope(scope) {
+function getDefaultSectionForScope(scope = state.currentScope || "child") {
   return SCOPE_DEFAULT_SECTION?.[scope] || "workspace";
-}
-
-function syncScopeButtons() {
-  const scope = state.currentScope || "child";
-
-  const buttons = [
-    { el: els.scopeChildBtn, scope: "child" },
-    { el: els.scopeHomeBtn, scope: "home" },
-    { el: els.scopeQualityBtn, scope: "quality" },
-  ];
-
-  buttons.forEach(({ el, scope: value }) => {
-    if (!el) return;
-    const active = scope === value;
-    el.classList.toggle("active", active);
-    el.setAttribute("aria-selected", active ? "true" : "false");
-    el.setAttribute("aria-pressed", active ? "true" : "false");
-  });
-}
-
-function updateScopeVisibility() {
-  const allowedScopes = getAllowedScopesForRole();
-
-  if (els.scopeChildBtn) {
-    const canSee = allowedScopes.includes("child");
-    els.scopeChildBtn.classList.toggle("hidden", !canSee);
-    els.scopeChildBtn.setAttribute("aria-hidden", canSee ? "false" : "true");
-    if (!canSee) {
-      els.scopeChildBtn.setAttribute("tabindex", "-1");
-    } else {
-      els.scopeChildBtn.removeAttribute("tabindex");
-    }
-  }
-
-  if (els.scopeHomeBtn) {
-    const canSee = allowedScopes.includes("home");
-    els.scopeHomeBtn.classList.toggle("hidden", !canSee);
-    els.scopeHomeBtn.setAttribute("aria-hidden", canSee ? "false" : "true");
-    if (!canSee) {
-      els.scopeHomeBtn.setAttribute("tabindex", "-1");
-    } else {
-      els.scopeHomeBtn.removeAttribute("tabindex");
-    }
-  }
-
-  if (els.scopeQualityBtn) {
-    const canSee = allowedScopes.includes("quality");
-    els.scopeQualityBtn.classList.toggle("hidden", !canSee);
-    els.scopeQualityBtn.setAttribute("aria-hidden", canSee ? "false" : "true");
-    if (!canSee) {
-      els.scopeQualityBtn.setAttribute("tabindex", "-1");
-    } else {
-      els.scopeQualityBtn.removeAttribute("tabindex");
-    }
-  }
 }
 
 function ensureValidScopeForRole() {
@@ -114,6 +61,42 @@ function ensureValidScopeForRole() {
   }
 }
 
+function syncScopeButtons() {
+  const scope = state.currentScope || "child";
+  const allowedScopes = getAllowedScopesForRole();
+
+  const buttons = [
+    { el: els.scopeChildBtn, value: "child" },
+    { el: els.scopeHomeBtn, value: "home" },
+    { el: els.scopeQualityBtn, value: "quality" },
+  ];
+
+  buttons.forEach(({ el, value }) => {
+    if (!el) return;
+
+    const visible = allowedScopes.includes(value);
+    const active = scope === value;
+
+    el.classList.toggle("hidden", !visible);
+    el.classList.toggle("active", visible && active);
+    el.setAttribute("aria-hidden", visible ? "false" : "true");
+    el.setAttribute("aria-selected", visible && active ? "true" : "false");
+    el.setAttribute("aria-pressed", visible && active ? "true" : "false");
+
+    if (!visible) {
+      el.setAttribute("tabindex", "-1");
+    } else {
+      el.removeAttribute("tabindex");
+    }
+  });
+
+  if (els.scopeSwitch) {
+    const showSwitch = allowedScopes.length > 1;
+    els.scopeSwitch.classList.toggle("hidden", !showSwitch);
+    els.scopeSwitch.setAttribute("aria-hidden", showSwitch ? "false" : "true");
+  }
+}
+
 function refreshAllChrome() {
   ensureValidScopeForRole();
   refreshShellChrome();
@@ -121,7 +104,6 @@ function refreshAllChrome() {
   updateAssistantContext();
   renderAssistantMessages();
   renderAssistantInsights();
-  updateScopeVisibility();
   syncScopeButtons();
 }
 
@@ -156,6 +138,9 @@ async function setScope(scope) {
 }
 
 function bindScopeEvents() {
+  if (scopeEventsBound) return;
+  scopeEventsBound = true;
+
   els.scopeChildBtn?.addEventListener("click", async () => {
     try {
       await setScope("child");
@@ -215,6 +200,17 @@ async function restoreSelectedYoungPerson() {
   }
 }
 
+async function bootstrapSelectorIfNeeded(restored) {
+  if (restored) return;
+
+  try {
+    await loadYoungPersonSelector();
+  } catch (error) {
+    console.error("[index] selector load failed", error);
+    showError(error?.message || "Failed to load young people.");
+  }
+}
+
 async function bootstrap() {
   try {
     ensureValidScopeForRole();
@@ -227,15 +223,7 @@ async function bootstrap() {
     refreshAllChrome();
 
     const restored = await restoreSelectedYoungPerson();
-
-    if (!restored) {
-      try {
-        await loadYoungPersonSelector();
-      } catch (error) {
-        console.error("[index] selector load failed", error);
-        showError(error?.message || "Failed to load young people.");
-      }
-    }
+    await bootstrapSelectorIfNeeded(restored);
 
     await initialiseShellNavigation();
     refreshAllChrome();
@@ -246,7 +234,7 @@ async function bootstrap() {
 }
 
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", bootstrap);
+  document.addEventListener("DOMContentLoaded", bootstrap, { once: true });
 } else {
   bootstrap();
 }
