@@ -3,7 +3,6 @@ import { els } from "../dom.js";
 import { apiStreamAssistant } from "../core/api.js";
 import {
   openAssistant as openAssistantUi,
-  closeAssistant as closeAssistantUi,
   refreshAssistantUi,
   appendAssistantSystemMessage,
   appendAssistantUserMessage,
@@ -113,7 +112,8 @@ export function openAssistant() {
 }
 
 export function closeAssistant() {
-  closeAssistantUi();
+  state.assistantOpen = false;
+  refreshAssistantUi();
 }
 
 export function renderAssistantMessages() {
