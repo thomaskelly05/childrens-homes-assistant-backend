@@ -1,4 +1,4 @@
-import { state } from "../state.js";
+import { state, createAssistantMeta } from "../state.js";
 import { els } from "../dom.js";
 import { escapeHtml, getDisplayName } from "../core/utils.js";
 import { getActionForQuickButton } from "./action-router.js";
@@ -7,6 +7,19 @@ let assistantUiBound = false;
 
 function qs(id) {
   return document.getElementById(id);
+}
+
+function getEl(...candidates) {
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    if (typeof candidate === "string") {
+      const found = qs(candidate);
+      if (found) return found;
+      continue;
+    }
+    return candidate;
+  }
+  return null;
 }
 
 function getCurrentPerson() {
@@ -21,17 +34,33 @@ function getCurrentSection() {
   return state.currentSection || state.activeSection || state.currentView || "workspace";
 }
 
-function getAssistantMeta() {
-  if (!state.assistantMeta) {
-    state.assistantMeta = {
-      sources: [],
-      runtime: {},
-      explainability: {},
-      assistant_scope: {},
-      assistant_context: {},
-      suggested_actions: [],
-    };
+function ensureAssistantArrays() {
+  if (!Array.isArray(state.assistantMessages)) {
+    state.assistantMessages = [];
   }
+
+  if (!Array.isArray(state.assistantModalMessages)) {
+    state.assistantModalMessages = [];
+  }
+}
+
+function getAssistantMeta() {
+  if (!state.assistantMeta || typeof state.assistantMeta !== "object") {
+    state.assistantMeta = createAssistantMeta();
+  }
+
+  if (!Array.isArray(state.assistantMeta.sources)) {
+    state.assistantMeta.sources = [];
+  }
+
+  if (!Array.isArray(state.assistantMeta.suggested_actions)) {
+    state.assistantMeta.suggested_actions = [];
+  }
+
+  state.assistantMeta.runtime = state.assistantMeta.runtime || {};
+  state.assistantMeta.explainability = state.assistantMeta.explainability || {};
+  state.assistantMeta.assistant_scope = state.assistantMeta.assistant_scope || {};
+  state.assistantMeta.assistant_context = state.assistantMeta.assistant_context || {};
 
   return state.assistantMeta;
 }
@@ -79,15 +108,105 @@ function prettyJson(value) {
   }
 }
 
+function renderAssistantRichText(text = "") {
+  const escaped = escapeHtml(String(text || ""));
+
+  const withRules = escaped
+    .replace(/^---$/gm, '<hr class="assistant-divider" />')
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/^### (.*)$/gm, "<h4>$1</h4>")
+    .replace(/^## (.*)$/gm, "<h4>$1</h4>")
+    .replace(/^# (.*)$/gm, "<h4>$1</h4>");
+
+  const lines = withRules.split("\n");
+  let html = "";
+  let inList = false;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trimEnd();
+
+    if (!line.trim()) {
+      if (inList) {
+        html += "</ul>";
+        inList = false;
+      }
+      html += "<p></p>";
+      continue;
+    }
+
+    if (/^[-*]\s+/.test(line)) {
+      if (!inList) {
+        html += "<ul>";
+        inList = true;
+      }
+      html += `<li>${line.replace(/^[-*]\s+/, "")}</li>`;
+      continue;
+    }
+
+    if (/^\d+\.\s+/.test(line)) {
+      if (inList) {
+        html += "</ul>";
+        inList = false;
+      }
+      html += `<p><strong>${line.replace(/^(\d+\.)\s+/, "$1 ")}</strong></p>`;
+      continue;
+    }
+
+    if (inList) {
+      html += "</ul>";
+      inList = false;
+    }
+
+    if (line.startsWith("<h4>") || line.startsWith("<hr")) {
+      html += line;
+    } else {
+      html += `<p>${line}</p>`;
+    }
+  }
+
+  if (inList) {
+    html += "</ul>";
+  }
+
+  return html || "<p></p>";
+}
+
 function renderMessage(message = {}) {
   const role = message.role || "assistant";
   const roleClass = role === "user" ? "assistant-message-user" : "assistant-message-system";
-  const content = escapeHtml(message.content || message.text || "");
+  const content = String(message.content || message.text || "");
 
   return `
     <article class="assistant-message ${escapeHtml(roleClass)}">
       <div class="assistant-message-role">${escapeHtml(formatRole(role))}</div>
-      <div class="assistant-message-body">${content}</div>
+      <div class="assistant-message-body">
+        ${
+          role === "assistant"
+            ? renderAssistantRichText(content)
+            : `<p>${escapeHtml(content)}</p>`
+        }
+      </div>
+    </article>
+  `;
+}
+
+function buildIntroMessageHtml() {
+  const scope = getCurrentScope();
+
+  return `
+    <article class="assistant-message assistant-message-system">
+      <div class="assistant-message-role">Assistant</div>
+      <div class="assistant-message-body">
+        ${
+          scope === "child"
+            ? state.youngPersonId
+              ? `<p>Ask a question about ${escapeHtml(getPersonLabel())}.</p>`
+              : `<p>Select a young person to start.</p>`
+            : scope === "home"
+            ? `<p>Ask about ${escapeHtml(getHomeLabel())}, staffing, compliance or management oversight.</p>`
+            : `<p>Ask about ${escapeHtml(getHomeLabel())}, quality themes, audit readiness or RI oversight.</p>`
+        }
+      </div>
     </article>
   `;
 }
@@ -95,30 +214,22 @@ function renderMessage(message = {}) {
 function renderMessageList(host, messages = []) {
   if (!host) return;
 
-  const scope = getCurrentScope();
-
-  const intro = `
-    <article class="assistant-message assistant-message-system">
-      <div class="assistant-message-role">Assistant</div>
-      <div class="assistant-message-body">${
-        scope === "child"
-          ? state.youngPersonId
-            ? `Ask a question about ${escapeHtml(getPersonLabel())}.`
-            : "Select a young person to start."
-          : scope === "home"
-          ? `Ask about ${escapeHtml(getHomeLabel())}, staffing, compliance or management oversight.`
-          : `Ask about ${escapeHtml(getHomeLabel())}, quality themes, audit readiness or RI oversight.`
-      }</div>
-    </article>
-  `;
-
-  host.innerHTML = intro + messages.map(renderMessage).join("");
+  host.innerHTML = buildIntroMessageHtml() + messages.map(renderMessage).join("");
   host.scrollTop = host.scrollHeight;
 }
 
 function renderMessages() {
-  renderMessageList(qs("assistantMessages"), state.assistantMessages || []);
-  renderMessageList(qs("assistantModalMessages"), state.assistantModalMessages || []);
+  ensureAssistantArrays();
+
+  renderMessageList(
+    getEl(els.assistantMessages, "assistantMessages"),
+    state.assistantMessages
+  );
+
+  renderMessageList(
+    getEl(els.assistantModalMessages, "assistantModalMessages"),
+    state.assistantModalMessages
+  );
 }
 
 function renderScopeBadges() {
@@ -127,12 +238,12 @@ function renderScopeBadges() {
   const childName = getPersonLabel();
   const section = normaliseSectionLabel(getCurrentSection());
 
-  const scopeBadge = qs("scopeBadge");
-  const homeBadge = qs("scopeHomeBadge");
-  const childBadge = qs("scopeChildBadge");
-  const shiftBadge = qs("scopeShiftBadge");
-  const modalHomeBadge = qs("modalScopeHomeBadge");
-  const modalChildBadge = qs("modalScopeChildBadge");
+  const scopeBadge = getEl(els.scopeBadge, "scopeBadge");
+  const homeBadge = getEl(els.scopeHomeBadge, "scopeHomeBadge");
+  const childBadge = getEl(els.scopeChildBadge, "scopeChildBadge");
+  const shiftBadge = getEl(els.scopeShiftBadge, "scopeShiftBadge");
+  const modalHomeBadge = getEl(els.modalScopeHomeBadge, "modalScopeHomeBadge");
+  const modalChildBadge = getEl(els.modalScopeChildBadge, "modalScopeChildBadge");
 
   if (scopeBadge) {
     scopeBadge.textContent = getScopeLabel();
@@ -171,6 +282,9 @@ function renderScopeBadges() {
 function renderContextText() {
   const scope = getCurrentScope();
   const section = normaliseSectionLabel(getCurrentSection());
+  const contextEl = getEl(els.assistantContext, "assistantContext");
+
+  if (!contextEl) return;
 
   let contextText = "No context loaded.";
 
@@ -178,19 +292,13 @@ function renderContextText() {
     contextText = state.youngPersonId
       ? `Scoped to ${getPersonLabel()} • current section: ${section}`
       : "No young person selected.";
-  }
-
-  if (scope === "home") {
+  } else if (scope === "home") {
     contextText = `Scoped to ${getHomeLabel()} • home oversight • section: ${section}`;
-  }
-
-  if (scope === "quality") {
+  } else if (scope === "quality") {
     contextText = `Scoped to ${getHomeLabel()} • quality and RI • section: ${section}`;
   }
 
-  if (qs("assistantContext")) {
-    qs("assistantContext").textContent = contextText;
-  }
+  contextEl.textContent = contextText;
 }
 
 function buildScopeSummaryCards() {
@@ -265,12 +373,15 @@ function buildScopeSummaryCards() {
 function renderScopeSummary() {
   const html = buildScopeSummaryCards();
 
-  if (qs("assistantScopeSummary")) {
-    qs("assistantScopeSummary").innerHTML = html;
+  const summaryEl = getEl(els.assistantScopeSummary, "assistantScopeSummary");
+  const modalSummaryEl = getEl(els.assistantModalScopeSummary, "assistantModalScopeSummary");
+
+  if (summaryEl) {
+    summaryEl.innerHTML = html;
   }
 
-  if (qs("assistantModalScopeSummary")) {
-    qs("assistantModalScopeSummary").innerHTML = html;
+  if (modalSummaryEl) {
+    modalSummaryEl.innerHTML = html;
   }
 }
 
@@ -311,40 +422,51 @@ function renderSources() {
   const meta = getAssistantMeta();
   const html = renderSourcesHtml(meta.sources || []);
 
-  if (qs("assistantSources")) {
-    qs("assistantSources").innerHTML = html;
+  const sourcesEl = getEl(els.assistantSources, "assistantSources");
+  const modalSourcesEl = getEl(els.assistantModalSources, "assistantModalSources");
+
+  if (sourcesEl) {
+    sourcesEl.innerHTML = html;
   }
 
-  if (qs("assistantModalSources")) {
-    qs("assistantModalSources").innerHTML = html;
+  if (modalSourcesEl) {
+    modalSourcesEl.innerHTML = html;
   }
 }
 
 function renderRuntime() {
   const meta = getAssistantMeta();
-  const runtime = meta.runtime || {
-    mode: "scoped-assistant",
-    current_scope: getCurrentScope(),
-    current_section: getCurrentSection(),
-    selected_young_person_id: state.youngPersonId || null,
-    home_id: state.homeId || null,
-    messages: (state.assistantMessages || []).length,
-  };
+  const runtime =
+    Object.keys(meta.runtime || {}).length > 0
+      ? meta.runtime
+      : {
+          mode: "scoped-assistant",
+          current_scope: getCurrentScope(),
+          current_section: getCurrentSection(),
+          selected_young_person_id: state.youngPersonId || null,
+          home_id: state.homeId || null,
+          messages: (state.assistantMessages || []).length,
+        };
 
-  if (qs("assistantRuntime")) {
-    qs("assistantRuntime").textContent = prettyJson(runtime);
+  const runtimeEl = getEl(els.assistantRuntime, "assistantRuntime");
+  if (runtimeEl) {
+    runtimeEl.textContent = prettyJson(runtime);
   }
 }
 
 function renderExplainability() {
   const meta = getAssistantMeta();
-  const explainability = meta.explainability || {
-    summary:
-      "The assistant will show scoped reasoning and evidence after a response is generated.",
-  };
+  const explainability =
+    Object.keys(meta.explainability || {}).length > 0
+      ? meta.explainability
+      : {
+          summary:
+            "The assistant will show scoped reasoning and evidence after a response is generated.",
+        };
 
-  if (qs("assistantExplainability")) {
-    qs("assistantExplainability").textContent = prettyJson(explainability);
+  const explainabilityEl = getEl(els.assistantExplainability, "assistantExplainability");
+  if (explainabilityEl) {
+    explainabilityEl.textContent = prettyJson(explainability);
   }
 }
 
@@ -373,14 +495,28 @@ function inferSuggestedActions() {
       });
   }
 
-  (meta.suggested_actions || []).forEach((label) => {
-    const clean = String(label || "").trim();
-    if (clean) {
-      actions.push({
-        type: "assistant_chip",
-        id: clean,
-        label: clean,
-      });
+  (meta.suggested_actions || []).forEach((item) => {
+    if (typeof item === "string") {
+      const clean = item.trim();
+      if (clean) {
+        actions.push({
+          type: "assistant_chip",
+          id: clean,
+          label: clean,
+        });
+      }
+      return;
+    }
+
+    if (item && typeof item === "object") {
+      const label = String(item.label || item.title || item.text || "").trim();
+      if (label) {
+        actions.push({
+          type: "assistant_chip",
+          id: label,
+          label,
+        });
+      }
     }
   });
 
@@ -425,12 +561,15 @@ function renderSuggestedActions() {
         .join("")
     : `<p>No suggested actions yet.</p>`;
 
-  if (qs("assistantSuggestions")) {
-    qs("assistantSuggestions").innerHTML = html;
+  const suggestionsEl = getEl(els.assistantSuggestions, "assistantSuggestions");
+  const actionsEl = getEl(els.assistantActions, "assistantActions");
+
+  if (suggestionsEl) {
+    suggestionsEl.innerHTML = html;
   }
 
-  if (qs("assistantActions")) {
-    qs("assistantActions").innerHTML = html;
+  if (actionsEl) {
+    actionsEl.innerHTML = html;
   }
 }
 
@@ -472,6 +611,9 @@ function syncAssistantInputs() {
 }
 
 function renderAllAssistantUi() {
+  ensureAssistantArrays();
+  getAssistantMeta();
+
   syncAssistantVisibility();
   syncAssistantSendButtons();
   syncAssistantInputs();
@@ -488,7 +630,6 @@ function renderAllAssistantUi() {
 export function bindAssistantUi() {
   if (assistantUiBound) return;
   assistantUiBound = true;
-
   renderAllAssistantUi();
 }
 
@@ -497,8 +638,7 @@ export function refreshAssistantUi() {
 }
 
 export function appendAssistantSystemMessage(text) {
-  if (!state.assistantMessages) state.assistantMessages = [];
-  if (!state.assistantModalMessages) state.assistantModalMessages = [];
+  ensureAssistantArrays();
 
   const entry = {
     id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -513,8 +653,7 @@ export function appendAssistantSystemMessage(text) {
 }
 
 export function appendAssistantUserMessage(text) {
-  if (!state.assistantMessages) state.assistantMessages = [];
-  if (!state.assistantModalMessages) state.assistantModalMessages = [];
+  ensureAssistantArrays();
 
   const entry = {
     id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
