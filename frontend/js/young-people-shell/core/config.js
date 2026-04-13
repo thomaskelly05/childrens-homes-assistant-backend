@@ -54,6 +54,50 @@ export const SCOPE_SECTIONS = {
   ],
 };
 
+export const SECTION_TITLES = {
+  workspace: "Today’s workspace",
+  overview: "What matters today",
+  profile: "About this young person",
+  timeline: "Chronology and events",
+  handover: "Handover",
+  health: "Health and wellbeing",
+  education: "Learning and education",
+  family: "Family and relationships",
+  calendar: "Appointments and key dates",
+  readiness: "Actions and readiness",
+  manager: "Leadership and review",
+  reports: "Reports and review packs",
+  documents: "Documents and uploads",
+  communication: "Professional communication",
+  therapy: "Therapeutic services",
+  "home-dashboard": "Home dashboard",
+  team: "Team and staffing",
+  supervision: "Supervision and development",
+  quality: "Quality and RI dashboard",
+};
+
+export const SECTION_SUBTITLES = {
+  workspace: "A calm space to record, reflect and respond to what matters today.",
+  overview: "A clear picture of priorities, wellbeing, risk, strengths and next steps.",
+  profile: "Identity, communication, needs, strengths and what adults should hold in mind.",
+  timeline: "A shared view of significant events, patterns and progress over time.",
+  handover: "Support smooth, thoughtful communication between adults around the young person.",
+  health: "Health needs, professionals, outcomes and follow-up that adults need to know.",
+  education: "Learning, attendance, support, strengths and educational experience.",
+  family: "Family contact, important relationships and how these are experienced.",
+  calendar: "Appointments, meetings and important dates that shape the young person’s week.",
+  readiness: "Actions, tasks, compliance and practical follow-up that need attention.",
+  manager: "Oversight, quality, decision-making and review.",
+  reports: "Structured summaries, reports and review outputs for the young person.",
+  documents: "Upload, organise and review statutory and supporting documents.",
+  communication: "Track professional liaison, family communication and important contact trails.",
+  therapy: "Therapeutic support, recommendations, outcomes and emotional wellbeing input.",
+  "home-dashboard": "A whole-home operational and quality view for managers.",
+  team: "Team capacity, staffing, deployment and workforce context.",
+  supervision: "Supervision, development, training and workforce support.",
+  quality: "Quality assurance, audits, trends, RI oversight and service performance.",
+};
+
 const NAV_GROUPS = [
   {
     id: "today",
@@ -419,47 +463,3 @@ export const PROFILE_ACTIONS = [
     description: "Shared understanding of needs, behaviour, patterns and what helps.",
   },
 ];
-
-export const SECTION_TITLES = {
-  workspace: "Today’s workspace",
-  overview: "What matters today",
-  profile: "About this young person",
-  timeline: "Chronology and events",
-  handover: "Handover",
-  health: "Health and wellbeing",
-  education: "Learning and education",
-  family: "Family and relationships",
-  calendar: "Appointments and key dates",
-  readiness: "Actions and readiness",
-  manager: "Leadership and review",
-  reports: "Reports and review packs",
-  documents: "Documents and uploads",
-  communication: "Professional communication",
-  therapy: "Therapeutic services",
-  "home-dashboard": "Home dashboard",
-  team: "Team and staffing",
-  supervision: "Supervision and development",
-  quality: "Quality and RI dashboard",
-};
-
-export const SECTION_SUBTITLES = {
-  workspace: "A calm space to record, reflect and respond to what matters today.",
-  overview: "A clear picture of priorities, wellbeing, risk, strengths and next steps.",
-  profile: "Identity, communication, needs, strengths and what adults should hold in mind.",
-  timeline: "A shared view of significant events, patterns and progress over time.",
-  handover: "Support smooth, thoughtful communication between adults around the young person.",
-  health: "Health needs, professionals, outcomes and follow-up that adults need to know.",
-  education: "Learning, attendance, support, strengths and educational experience.",
-  family: "Family contact, important relationships and how these are experienced.",
-  calendar: "Appointments, meetings and important dates that shape the young person’s week.",
-  readiness: "Actions, tasks, compliance and practical follow-up that need attention.",
-  manager: "Oversight, quality, decision-making and review.",
-  reports: "Structured summaries, reports and review outputs for the young person.",
-  documents: "Upload, organise and review statutory and supporting documents.",
-  communication: "Track professional liaison, family communication and important contact trails.",
-  therapy: "Therapeutic support, recommendations, outcomes and emotional wellbeing input.",
-  "home-dashboard": "A whole-home operational and quality view for managers.",
-  team: "Team capacity, staffing, deployment and workforce context.",
-  supervision: "Supervision, development, training and workforce support.",
-  quality: "Quality assurance, audits, trends, RI oversight and service performance.",
-};
